@@ -1,6 +1,6 @@
 {
-  "url": "http://localhost:3210/composer-state-map/test1/dev/composer-states?state=recording",
+  "url": "http://localhost:3210/narration-resilience/test1/dev/composer-states?state=recording",
   "title": "Callback Box",
-  "timestamp": "2026-06-04T01:03:02.131Z",
-  "takenInWorktree": "composer-state-map"
+  "timestamp": "2026-06-11T21:35:45.164Z",
+  "takenInWorktree": "narration-resilience"
 }

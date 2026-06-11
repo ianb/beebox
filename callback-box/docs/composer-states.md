@@ -134,7 +134,11 @@ composer with fabricated props. Behaviour is documented from the code.
 Mic button becomes a **red stop square** ("Stop recording"). The textarea goes
 read-only showing the live transcript, with a `RecordingIndicator` dot and
 Cancel (✕) / Edit (✎) / Send controls. Sub-states (`connecting` / `recording` /
-`reconnecting` / `finalizing`) differ only in the indicator + placeholder.
+`reconnecting` / `finalizing`) differ only in the indicator + placeholder
+(`reconnecting` swaps the pulsing dot for a steady warning one). A `MicOverlay`
+floats above the row: live volume bars (flat = no audio reaching the recorder)
+over a rotating voice-keyword hint, filtered to actions valid for the current
+text — only `"mic off"` until words arrive.
 
 ![desktop recording](composer-states/desktop-recording.png)
 

@@ -8,7 +8,7 @@ import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { KeywordHint } from "./KeywordHint";
+import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
@@ -47,7 +47,7 @@ export function MobileTextareaRow({
     <div className="relative flex gap-2 items-center">
       {isTranscribing ? (
         <>
-          <KeywordHint hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
+          <MicOverlay hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
           <div className="flex-shrink-0 self-center">
             <RecordingIndicator degraded={transcription.state === "reconnecting"} />
           </div>
