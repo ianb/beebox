@@ -63,7 +63,7 @@ function getWsClient(): ReturnType<typeof createWSClient> {
  * - Everything else (queries/mutations) goes over the GET/POST batch, with a
  *   capped URL length so an oversized query can't poison its batch.
  */
-export function buildTrpcLink(): TRPCLink<AppRouter> {
+function buildTrpcLink(): TRPCLink<AppRouter> {
   return splitLink({
     condition: (op) => op.type === "subscription",
     true: wsLink({ client: getWsClient() }),
@@ -76,8 +76,17 @@ export function buildTrpcLink(): TRPCLink<AppRouter> {
 }
 
 /**
- * Vanilla tRPC client for use outside React (e.g., inside XState actors).
- * Shares the link config with the React client.
+ * THE app-wide tRPC client — used directly by non-React callers (XState
+ * actors) and handed to `trpc.Provider` for the React hooks.
+ *
+ * One instance is load-bearing, not a convenience: tRPC numbers operations
+ * per client instance, and the WS adapter's per-connection subscription
+ * registry is keyed by that number. Two client instances sharing the
+ * singleton WebSocket each count 1, 2, 3… independently, so the moment a
+ * React-side subscription (e.g. `events.subscribe`) and a vanilla-side one
+ * (e.g. `events.turnStream` on send) hold the same number on the same
+ * socket, the server rejects with `Duplicate id N` — deterministically per
+ * page, invisibly to every log. (Found the hard way, 2026-06.)
  */
 export const trpcClient = createTRPCClient<AppRouter>({
   links: [buildTrpcLink()],

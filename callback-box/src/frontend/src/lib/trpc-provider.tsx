@@ -1,15 +1,15 @@
 import { useEffect } from "react";
 import { QueryClient, QueryClientProvider, useIsFetching, useIsMutating } from "@tanstack/react-query";
-import { trpc, buildTrpcLink } from "./trpc.js";
+// trpcClient is shared with the non-React callers ON PURPOSE — a second
+// client instance restarts tRPC's per-client op numbering and collides
+// with the first on the shared WebSocket ("Duplicate id N"). See the
+// comment on trpcClient in trpc.ts before "simplifying" this.
+import { trpc, trpcClient } from "./trpc.js";
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: { staleTime: 5000, retry: false },
   },
-});
-
-const trpcReactClient = trpc.createClient({
-  links: [buildTrpcLink()],
 });
 
 // Page-readiness signal for headless browser automation (bin/browse / agents).
@@ -67,7 +67,7 @@ function QueryActivityIndicator() {
 
 export function TrpcProvider({ children }: { children: React.ReactNode }) {
   return (
-    <trpc.Provider client={trpcReactClient} queryClient={queryClient}>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <ClearRootClickTrap />
         <QueryActivityIndicator />

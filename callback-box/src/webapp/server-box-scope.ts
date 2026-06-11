@@ -109,6 +109,12 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // without a cast (excess-property checks fire only on inline literals).
   const trpcOptions = {
     router: appRouter,
+    // Without this, an error sent to the client (especially over the WS,
+    // where there's no HTTP access log) leaves no server-side trace at all —
+    // the "Duplicate id N" protocol error hid this way for days.
+    onError: ({ error, type, path }: { error: Error; type: string; path?: string | undefined }) => {
+      console.error(`[trpc] ${type} ${path ?? "<protocol>"} failed: ${error.message}`);
+    },
     // Let the client send a read-only query over POST (input in the body
     // instead of the URL). files.summarize carries a large path list that
     // overflows the GET URL limit; the client routes it via POST. Queries

@@ -311,12 +311,17 @@ export const streamActor = fromCallback(
                 return;
               }
               if (frame.t === "error") {
+                // console.error (not logFsm/debug) so it forwards to the
+                // box's client-debug.log — this path once surfaced a tRPC
+                // protocol error in the banner with no trace in any log.
+                console.error(`[chat] turn stream error frame: ${frame.error}`);
                 terminal({ type: "STREAM_FAILED", error: frame.error });
                 return;
               }
               handleTurnMessage(frame.msg, { sessionInput: input.sessionInput, sendBack, terminal, state });
             },
             onError: (err: { message: string }) => {
+              console.error(`[chat] turn stream subscription failed: ${err.message}`);
               logFsm("stream-throw", { msg: err.message, msgCount });
               if (!terminalFired) sendBack({ type: "STREAM_FAILED", error: err.message });
             },
@@ -335,6 +340,7 @@ export const streamActor = fromCallback(
       .catch((err: unknown) => {
         if (cancelled) return;
         const msg = err instanceof Error ? err.message : "Send failed";
+        console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
         sendBack({ type: "STREAM_FAILED", error: msg });
       });
