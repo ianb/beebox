@@ -5,9 +5,11 @@ an engine**: it routes content (memos, saved pages, tab snapshots) into a
 box's clerk API (`callback-box/src/webapp/routes/clerk.ts`); the box does the
 thinking. Active refresh plan: `callback-box/docs/plans/refresh-clerk.md`.
 
-**Status:** re-platformed on WXT and building (Track A of the plan). Box
-association (Track B) and the save actions (Track C) are not wired up yet —
-the popup is a placeholder.
+**Status:** Tracks A–C of the plan are implemented: WXT re-platform, in-situ
+box association (detect → enable → switch in the popup), and save actions
+(save/do page, memo, tab sync, context menu) against the clerk API. The
+server path is verified end-to-end; loading the built extension in Chrome
+and exercising the popup flows is manual dogfooding still to be done.
 
 ## Layout
 
