@@ -5,18 +5,9 @@
 
 import { Readability } from "@mozilla/readability";
 import TurndownService from "turndown";
+import type { PageExtract } from "../domain/save-page.js";
 
-export interface ExtractResult {
-  title: string;
-  siteName: string | null;
-  byline: string | null;
-  excerpt: string | null;
-  markdown: string;
-  selectedText: string | null;
-  url: string;
-}
-
-export function extractPage(): ExtractResult {
+export function extractPage(): PageExtract {
   const url = document.location.href;
   const selectedText = window.getSelection()?.toString().trim() || null;
 

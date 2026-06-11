@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
-import { isBoxEnabled, type ClerkConfig, type EnabledBox } from "../domain/config.js";
+import { getActiveBox, isBoxEnabled, type ClerkConfig, type EnabledBox } from "../domain/config.js";
 import { loadConfig } from "../platform/config-storage.js";
 import { detectBoxOnActiveTab } from "../platform/detect-box.js";
 import { activateBox, disableBox, enableBox } from "../platform/enable-box.js";
+import { ActionsPanel } from "./actions-panel.js";
 
 export function PopupApp() {
   const [config, setConfig] = useState<ClerkConfig | null>(null);
@@ -35,6 +36,7 @@ export function PopupApp() {
   }
 
   const showOffer = detected !== null && !isBoxEnabled(config, detected.boxUrl);
+  const activeBox = getActiveBox(config);
 
   return (
     <div className="w-80 p-4">
@@ -56,6 +58,7 @@ export function PopupApp() {
           popup will offer to enable it.
         </p>
       ) : null}
+      {activeBox !== null ? <ActionsPanel box={activeBox} /> : null}
     </div>
   );
 }
