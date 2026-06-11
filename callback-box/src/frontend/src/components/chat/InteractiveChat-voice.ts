@@ -19,6 +19,7 @@ import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
 import { detectKeyword, appendSendKeywordTag } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
+import { setLastMessageAudio } from "../../lib/last-audio-cache";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
 import { localTime, buildSpeechMessage, joinTranscript } from "./InteractiveChat-helpers";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
@@ -101,6 +102,9 @@ function runKeywordSend(opts: {
     // fold the prior composer text back in at submit time.
     const full = joinTranscript(priorInput, finalText);
     doSend(buildSpeechMessage({ text: full, diarized, selections: selectionsSnapshot, attrs }));
+    // Keep the original recording around (after doSend, which clears it) so
+    // the agent can fetch it on demand via `cb chat get-last-audio`.
+    if (audioBlob) setLastMessageAudio({ blob: audioBlob, text: full });
     // The segment is committed — drop any persisted draft so the recovery
     // widget doesn't resurface the text we just sent.
     clearDraftRef.current();
@@ -185,8 +189,9 @@ export function useChatVoice(opts: {
     devicesRef.current.speechPlayback = speechPlayback;
   });
 
-  // `wantAudioBlob` is read at keyword-fire time so a mid-session narration
-  // toggle takes effect on the next send. Selections likewise read at fire time.
+  // `narrationEnabledRef` is read at keyword-fire time so a mid-session
+  // narration toggle takes effect on the next send. Selections likewise read
+  // at fire time.
   const narrationEnabledRef = useRef(narrationEnabled);
   useEffect(() => { narrationEnabledRef.current = narrationEnabled; });
   const selectionsRef = useRef(selections);
@@ -197,7 +202,10 @@ export function useChatVoice(opts: {
   useEffect(() => { inputRef.current = input; });
 
   const transcription = useRealtimeTranscription({
-    wantAudioBlob: () => narrationEnabledRef.current,
+    // Always capture the segment's audio: narration's HQ pass uses it when
+    // enabled, and every voice send caches it for `cb chat get-last-audio`.
+    // No latency cost — the actor finalizes the blob synchronously on STOP.
+    wantAudioBlob: () => true,
     onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob }) => runKeywordSend({
       text: processedTranscript, matchedPhrase, audioBlob, transcription, stopTickRef, composerSend, sessionId,
       narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput,
