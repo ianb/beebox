@@ -18,6 +18,7 @@ import { Text } from "./components/ui/Text";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { fetchBoxes } from "./lib/boxes";
 import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
+import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
 
 import { href } from "./lib/routing";
 
@@ -53,6 +54,9 @@ export function AppLayout() {
   }, []);
   const boxExists =
     !boxesState.loaded || boxesState.boxes.some((b) => b.slug === boxSlug);
+
+  // Advertise the validated box to the callback-clerk extension.
+  useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   return (
     <Column className="h-screen h-[100dvh]">
