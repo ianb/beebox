@@ -298,6 +298,20 @@ function cbCommandsScheduling(): string[] {
     "cb scenario run <name> --dry-run          # Preview steps",
     "```",
     "",
+    "## cb chat",
+    "",
+    "Talk to the live chat session.",
+    "",
+    "- `cb chat self-note \"<body>\" [--ref <path>] [--commit <hash>]` — Post an",
+    "  agent-authored record into the chat transcript without triggering a reply.",
+    "- `cb chat get-last-audio [--out <path>]` — Fetch the recording of the",
+    "  user's most recent voice message; prints the saved temp-file path plus",
+    "  `recorded-at:`/`text:` lines identifying the message. For the rare cases",
+    "  where the exact audio matters — a mangled transcription that's important",
+    "  to get right, or sound-sensitive work like language practice — not",
+    "  routine chat. Only the latest voice message is available, and only while",
+    "  the chat tab that recorded it is open.",
+    "",
   ];
 }
 

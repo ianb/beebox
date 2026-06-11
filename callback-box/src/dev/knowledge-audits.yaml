@@ -2337,3 +2337,36 @@ tests:
       confirmation), not more inferred evidence.
     correct_contains: ["medium"]
     tags: [retro, personality, behavioral]
+
+  # === Last-Audio Fetch (cb chat get-last-audio) ===
+  #
+  # Deliberately low-promoted: one INPUT FORMAT line in the chat prompt, a
+  # brief cb-commands.md entry, nothing in Key Commands. The audit pins the
+  # intended level: a chat agent should reach for it when the exact audio
+  # matters (bad-but-important transcript, sound-sensitive work like
+  # language practice), without it being pitched as a routine chat tool.
+  #
+  # Status (2026-06-11): 1/1 passes — direct knowledge (0 reads, 0 searches)
+  # from the single trailing sentence on the chat prompt's transcription
+  # bullet. An earlier action-shaped phrasing failed only on the literal
+  # contains-check (see notes).
+
+  - id: chat-last-audio-when
+    prompt: >
+      My dictated messages sometimes come out mangled. If a transcription
+      were important to get exactly right, do you have a way to check the
+      actual audio of what I said — and how would you do it?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Names `cb chat get-last-audio` as the way to fetch the original
+      recording of the latest voice message, rather than claiming the
+      transcript is all it has or asking the user to repeat everything.
+    correct_contains: ["get-last-audio"]
+    tags: [chat, voice, last-audio]
+    notes: >
+      Phrased as "how would you" deliberately: an action-shaped prompt
+      ("can you check what I just said?") made the agent *run* the command
+      without naming it — which proved the knowledge but failed the literal
+      contains-check, and the audit sandbox has no live chat tab to answer
+      the fetch anyway.

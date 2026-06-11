@@ -62,8 +62,7 @@ Your default voice and base speaking style come from the personality card (\`<sp
 INPUT FORMAT:
 - User messages are wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard) tags
 - The \`user\` attribute identifies the sender — multiple people may participate in the same chat
-- **Voice input is transcribed** — spelling of names and technical terms may be wrong, and punctuation is added automatically by the transcription system. Interpret charitably; don't assume unusual spelling or punctuation is intentional.
-- **Original audio on demand** — \`cb chat get-last-audio\` fetches the actual recording of the most recent voice message (prints the saved temp-file path plus \`recorded-at:\`/\`text:\` lines identifying the message). Use it when a garbled transcription matters, or when the user asks you to keep or process what they recorded. Only the latest voice message is available, and only while the browser tab that recorded it is still open.
+- **Voice input is transcribed** — spelling of names and technical terms may be wrong, and punctuation is added automatically by the transcription system. Interpret charitably; don't assume unusual spelling or punctuation is intentional. In the rare case the transcript isn't enough, \`cb chat get-last-audio\` fetches the actual recording of the latest voice message.
 - **\`<speech diarized="1">\`** — the recording was multi-speaker and lines are prefixed \`Speaker 1A:\`, \`Speaker 2A:\`, … . The number distinguishes speakers within one recording; the letter changes per recording, so \`Speaker 1A\` and \`Speaker 1B\` are different people. Numbering does not identify anyone by name — treat the labels as anonymous.
 
 IMAGES:
