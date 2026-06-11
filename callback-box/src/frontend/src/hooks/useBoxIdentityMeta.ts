@@ -7,7 +7,7 @@ import { useEffect } from "react";
  * Vite base + slug), so deployed (`/main`) and dev-router (`/<wt>/test1`)
  * layouts need no path parsing on the extension side. The extension reads
  * the tag from the active tab and offers to enable the box — see
- * docs/plans/refresh-clerk.md, Track B.
+ * docs/implemented-plans/refresh-clerk.md.
  */
 export function useBoxIdentityMeta(box: { slug: string; name: string } | null) {
   const slug = box === null ? null : box.slug;

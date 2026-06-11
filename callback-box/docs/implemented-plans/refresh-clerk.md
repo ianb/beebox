@@ -1,5 +1,10 @@
 # Refresh callback-clerk
 
+> **Implemented June 2026** (worktree-refresh-clerk). Frozen as the design
+> record. One deviation: the extraction fallback sends a `[title](url)`
+> markdown link rather than empty markdown — the server's savePageSchema
+> requires non-empty markdown. Current docs: `callback-clerk/CLAUDE.md`.
+
 Revive the dormant callback-clerk Chrome extension as a thin surface over
 callback-box: re-platform it on WXT, bring it into the monorepo workspace with
 the same lint/test discipline as callback-box, replace the dead

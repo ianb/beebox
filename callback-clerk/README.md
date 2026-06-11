@@ -15,4 +15,5 @@ Load `.output/chrome-mv3/` unpacked via `chrome://extensions` (enable
 Developer mode), or use `pnpm dev` for a live-reloading dev profile.
 
 Built with [WXT](https://wxt.dev/). See `CLAUDE.md` for architecture and
-`../callback-box/docs/plans/refresh-clerk.md` for the active refresh plan.
+`../callback-box/docs/implemented-plans/refresh-clerk.md` for the design
+record of the 2026 refresh.

@@ -3,13 +3,17 @@
 Chrome (MV3) extension companion for callback-box. Clerk is a **surface, not
 an engine**: it routes content (memos, saved pages, tab snapshots) into a
 box's clerk API (`callback-box/src/webapp/routes/clerk.ts`); the box does the
-thinking. Active refresh plan: `callback-box/docs/plans/refresh-clerk.md`.
+thinking. Design record of the 2026 refresh:
+`callback-box/docs/implemented-plans/refresh-clerk.md`.
 
-**Status:** Tracks A–C of the plan are implemented: WXT re-platform, in-situ
-box association (detect → enable → switch in the popup), and save actions
-(save/do page, memo, tab sync, context menu) against the clerk API. The
-server path is verified end-to-end; loading the built extension in Chrome
-and exercising the popup flows is manual dogfooding still to be done.
+## How association works
+
+The box frontend advertises itself via a `<meta name="callback-box">` tag
+(`useBoxIdentityMeta`); the popup reads it from the active tab, validates it
+(same-origin spoof guard), and offers to enable the box. Enabling requests a
+per-origin host permission — that prompt is the consent. Enabled boxes can
+span servers; one is *active* and receives all actions (save/do page, memo,
+tab sync, context-menu save).
 
 ## Layout
 
