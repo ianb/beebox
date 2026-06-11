@@ -55,7 +55,7 @@ function DesktopComposerRow({
     <div className="relative hidden sm:flex flex-1 items-center gap-2 min-w-0">
       {isTranscribing ? (
         <>
-          <KeywordHint />
+          <KeywordHint hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
           <div className="flex-shrink-0 self-center">
             <RecordingIndicator degraded={transcription.state === "reconnecting"} />
           </div>
