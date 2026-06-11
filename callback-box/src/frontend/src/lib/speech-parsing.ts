@@ -29,6 +29,16 @@ function unescapeAttr(value: string): string {
   return value.replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
 }
 
+// Markdoc `{% redacted %}…{% /redacted %}` spans render as hidden-until-tap in
+// the chat, so they must not be spoken. An unclosed open tag hides through the
+// end of the text — dropping just the marker would leak the hidden content.
+const REDACTED_SPAN = /{%\s*redacted\s*%}[\S\s]*?(?:{%\s*\/redacted\s*%}|$)/gi;
+const REDACTED_STRAY_CLOSE = /{%\s*\/redacted\s*%}/gi;
+
+function stripRedacted(text: string): string {
+  return text.replace(REDACTED_SPAN, "").replace(REDACTED_STRAY_CLOSE, "").trim();
+}
+
 /**
  * Parse all <speech> tags from assistant content.
  * Returns array of speech segments in order.
@@ -100,7 +110,7 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     const name = tag.attrs.name ? unescapeAttr(tag.attrs.name) : undefined;
 
     segments.push({
-      text,
+      text: stripRedacted(text),
       instructions,
       emotion: tag.attrs.emotion || undefined,
       voice,
