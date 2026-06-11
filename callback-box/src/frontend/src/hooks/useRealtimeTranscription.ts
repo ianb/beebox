@@ -182,7 +182,8 @@ export function useRealtimeTranscription(
    * Set when this segment's text was handed to a consumer (stop() promise
    * resolution or a keyword send); checked by the unconsumed-transcript
    * effect below, which must be declared after both so it observes their
-   * same-commit writes. Cleared on each segment end and on start().
+   * same-commit writes, and which resets the mark after every read. Nothing
+   * else may reset it — see the note in start().
    */
   const consumedRef = useRef(false);
   const prevSegmentStateRef = useRef<TranscriptionState>("idle");
@@ -238,6 +239,10 @@ export function useRealtimeTranscription(
     } else if (keyword.action === "erase") {
       send({ type: "CANCEL" });
       send({ type: "START" });
+      // Notify the consumer: the machine restart only clears the live
+      // segment; the chat layer holds the rest of the in-progress message
+      // (composer input, persisted draft) and must erase it too.
+      optionsRef.current?.onKeywordErase?.();
     }
   }, [send]);
 
@@ -306,7 +311,12 @@ export function useRealtimeTranscription(
 
   const start = useCallback((opts?: { earcon?: boolean }) => {
     keywordSpotting.reset();
-    consumedRef.current = false;
+    // Deliberately do NOT touch consumedRef here: a keyword send calls
+    // start() synchronously from inside the consuming effect, BEFORE the
+    // unconsumed-transcript effect below has read the mark. Resetting it
+    // here made every narration send re-fold its own just-sent text into
+    // the composer. The unconsumed effect resets the mark after each read,
+    // so it can't go stale across segments.
     if (opts?.earcon === true) playStartEarconRef.current = true;
     send({ type: "START" });
   }, [send, keywordSpotting]);
