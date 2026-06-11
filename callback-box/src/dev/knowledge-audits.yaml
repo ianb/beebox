@@ -2309,3 +2309,31 @@ tests:
     should_read: ["docs/generated/card-recipe.md"]
     correct_contains_any: ["plain markdown", "## Tips", "heading", "prose", "don't invent"]
     tags: [recipe, cards, behavioral]
+
+  # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
+
+  - id: retro-report-location
+    prompt: >
+      The boxholder asks: "something changed my assistant's personality
+      card last week and the commit says Retro-Run — what was that, and
+      where can I see exactly what it looked at?"
+    expected_level: knows_directly
+    watch_for: >
+      Explains the retrospective (process-retrospective procedure mining
+      past chat sessions) and points at the run reports in
+      store/reviews/retro/ without searching for them.
+    correct_contains: ["store/reviews/retro"]
+    tags: [retro, navigation]
+
+  - id: retro-inferred-belief-policy
+    prompt: >
+      A personality trait reads `confidence: medium, source: inferred`.
+      New chat evidence supports it even more strongly. Should you raise
+      it to high?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — medium is the ceiling for inferred beliefs; promotion
+      past it needs the boxholder (a question card / user-stated
+      confirmation), not more inferred evidence.
+    correct_contains: ["medium"]
+    tags: [retro, personality, behavioral]

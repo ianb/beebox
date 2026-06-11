@@ -3,7 +3,7 @@ import type { parseScheduledScript } from "../../../schemas/scheduled-script.js"
 import {
   loadScriptState,
   saveScriptState,
-  recordRun,
+  recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
   loadRunningScripts,
@@ -15,34 +15,6 @@ import { buildScriptEnv } from "../../../core/script-env.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 
 type ParsedScript = ReturnType<typeof parseScheduledScript>;
-
-interface RecordOutcomeOptions {
-  boxRoot: string;
-  scriptName: string;
-  parsed: ParsedScript;
-  state: Awaited<ReturnType<typeof loadScriptState>>;
-  now: Date;
-  result: "success" | "failure";
-  error: string | null;
-  durationMs: number;
-  sleepAffected: boolean;
-}
-
-/** Persist the outcome of a run (success or failure) to the script's state. */
-async function recordOutcome(options: RecordOutcomeOptions): Promise<void> {
-  const { boxRoot, scriptName, parsed, state, now, result, error, durationMs, sleepAffected } = options;
-  state.lastRun = now.toISOString();
-  state.lastResult = result;
-  state.lastError = error;
-  state.runCount++;
-  const windowMs = parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS;
-  recordRun(state, {
-    record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
-    windowMs,
-    now,
-  });
-  await saveScriptState({ boxRoot, scriptName, state });
-}
 
 interface PreconditionOptions {
   boxRoot: string;
@@ -121,20 +93,22 @@ export async function runScheduledScript(options: RunOptions): Promise<{ success
       env: scriptEnv,
     });
 
-    await recordOutcome({
-      boxRoot, scriptName: name, parsed, state, now,
+    recordOutcome(state, {
       result: "success", error: null, durationMs, sleepAffected,
+      windowMs: parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS, now,
     });
+    await saveScriptState({ boxRoot, scriptName: name, state });
 
     await handleCreateAfterSuccess({ boxRoot, parsed, scriptName: name });
 
     return { success: true, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    await recordOutcome({
-      boxRoot, scriptName: name, parsed, state, now,
+    recordOutcome(state, {
       result: "failure", error: (err as Error).message, durationMs, sleepAffected,
+      windowMs: parsed.budget?.windowMs ?? DEFAULT_RUN_WINDOW_MS, now,
     });
+    await saveScriptState({ boxRoot, scriptName: name, state });
 
     throw new TRPCError({
       code: "INTERNAL_SERVER_ERROR",

@@ -82,6 +82,7 @@ Additional directories observed but not in `BOX_DIRS`:
 - `store/calendar/` — `.ics` files for two-way Google Calendar sync. Referenced in `box-shape.ts`; should be added to `BOX_DIRS`.
 - `store/chat/` — chat-thread cards. Should be added to `BOX_DIRS`.
 - `store/usage/` — usage tracking output.
+- `store/reviews/retro/` — retrospective run reports (`<runId>.md`): what sessions were examined, what was observed, what belief edits were made. Written by `cb retro scan`, finalized by the `process-retrospective` procedure. Committed — this is the boxholder's audit trail for retrospective learning.
 
 ## `config/` — configuration
 
@@ -115,6 +116,7 @@ Generated and managed by callback-box itself; not hand-edited. Most contents are
 | `scheduler.jsonl` | One JSONL line per scheduler tick. Records which scripts ran/skipped/errored. |
 | `usage.db` | Token-usage tracking database. |
 | `chat-session-history.json`, `chat-session-id.json`, `chat-sessions.json`, `chat-thread-sessions.json` | Active chat session state. |
+| `retro/state.json`, `retro/observations.jsonl` | Retrospective walker state (which sessions were observed) and the append-only observation ledger that recurrence judgments draw on. Survives transcript clearing. |
 
 ## `.claude/` — agent configuration
 

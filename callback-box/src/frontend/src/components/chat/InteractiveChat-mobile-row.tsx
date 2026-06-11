@@ -9,7 +9,8 @@ import TextareaAutosize from "react-textarea-autosize";
 import { RecordingIndicator } from "../VoiceRecorder";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { KeywordHint } from "./KeywordHint";
-import { composerTextareaClasses, joinTranscript, localTime, type TranscriptionHandle } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
 /**
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
@@ -17,7 +18,7 @@ import { composerTextareaClasses, joinTranscript, localTime, type TranscriptionH
 export function MobileTextareaRow({
   input, setInput, isTranscribing, transcription,
   handleSend, handleCancelTranscription, clearDraft,
-  turnTakingRef, doSend, zoomedViewAttr, timePassedAttr,
+  onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
   onPaste, onDrop,
 }: {
   input: string;
@@ -28,7 +29,7 @@ export function MobileTextareaRow({
   handleCancelTranscription: () => void;
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
   clearDraft: () => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onStopDictation: () => void;
   doSend: (wrapped: string) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
@@ -79,7 +80,7 @@ export function MobileTextareaRow({
           </button>
           <button
             onClick={() => {
-              turnTakingRef.current = false;
+              onStopDictation();
               const text = transcription.transcript;
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
               transcription.stop();
@@ -103,7 +104,8 @@ export function MobileTextareaRow({
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
             }}
-            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark`}
+            disabled={!joinTranscript(input, transcription.transcript).trim()}
+            className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
             title="Send"
           >
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

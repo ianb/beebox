@@ -7,22 +7,6 @@
  */
 
 import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
-import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
-
-/** The slice of useRealtimeTranscription the composer rows consume. */
-export interface TranscriptionHandle {
-  state: TranscriptionState;
-  transcript: string;
-  start: () => void;
-  stop: () => Promise<string>;
-  cancel: () => void;
-}
-
-/** Round action button shared by the composer button bar and desktop row. */
-export const CIRCLE_BTN = "flex items-center justify-center w-14 h-14 rounded-full flex-shrink-0";
-
-/** Up-arrow send icon path, shared by the send buttons. */
-export const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
 
 /**
  * Format the current local time as HH:MM for the typed/speech tag.

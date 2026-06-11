@@ -174,7 +174,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     addImageFiles: attach.addImageFiles,
-    turnTakingRef: voice.turnTakingRef, isTranscribing: voice.isTranscribing, textareaRef,
+    onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
   });

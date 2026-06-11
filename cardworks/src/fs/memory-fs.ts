@@ -1,4 +1,5 @@
 import type { FileSystem } from "./types.js";
+import { inSkippedDir } from "./glob-skip.js";
 
 /**
  * Error thrown when a path is not present in the in-memory filesystem.
@@ -147,7 +148,7 @@ export class MemoryFileSystem implements FileSystem {
     for (const filePath of allPaths) {
       if (filePath.startsWith(prefix)) {
         const relative = filePath.slice(prefix.length);
-        if (regex.test(relative)) {
+        if (regex.test(relative) && !inSkippedDir(relative)) {
           results.push(filePath);
         }
       }

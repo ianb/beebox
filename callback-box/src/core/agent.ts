@@ -123,9 +123,14 @@ export function createAgent(options: {
       schema: z.ZodType<T>,
       opts: AgentInvokeOptions,
     ): Promise<StructuredAgentResult<T>> {
+      const outputSchema = toJSONSchema(schema) as Record<string, unknown>;
+      // The CLI silently ignores `outputFormat` when the schema carries
+      // zod's `$schema` meta-key — `structured_output` never arrives and
+      // no error is reported. Strip it before handing the schema over.
+      delete outputSchema["$schema"];
       const result = await runAgent({
         ...baseRunOptions(opts),
-        outputSchema: toJSONSchema(schema) as Record<string, unknown>,
+        outputSchema,
       });
       return validateStructuredResult(schema, result);
     },

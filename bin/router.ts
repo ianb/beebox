@@ -28,6 +28,7 @@ import path from "node:path";
 import os from "node:os";
 import fs from "node:fs/promises";
 import { createWriteStream } from "node:fs";
+import { Readable } from "node:stream";
 import type { Socket } from "node:net";
 import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
@@ -54,7 +55,9 @@ const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
 const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-mono");
 const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
 const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
-const STATE_DIR = path.join(os.homedir(), ".cache", "callback-mono");
+// Overridable so a second router can run isolated (tests, dev on the router
+// itself) without fighting the live one over pid files and port state.
+const STATE_DIR = process.env.CALLBACK_STATE_DIR || path.join(os.homedir(), ".cache", "callback-mono");
 const LOG_DIR = path.join(STATE_DIR, "logs");
 const PID_DIR = path.join(STATE_DIR, "pids");
 const BROWSE_DIR = path.join(STATE_DIR, "browse");
@@ -505,11 +508,11 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
 
   vite.on("exit", (code, signal) => {
     log(`[${name}] vite exited code=${code} signal=${signal}`);
-    onChildExit(name);
+    onChildExit(name, entry);
   });
   fastify.on("exit", (code, signal) => {
     log(`[${name}] fastify exited code=${code} signal=${signal}`);
-    onChildExit(name);
+    onChildExit(name, entry);
   });
   // execa-promise rejection handlers are attached at spawn time above — not
   // here — so they're in place even on the waitForHttp-failure path.
@@ -517,16 +520,33 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
   return entry;
 }
 
-let onChildExit = (name: string): void => {
+// A child's exit event can arrive long after its generation was replaced —
+// fastify drains open browser sockets for ~10s after SIGTERM, by which time a
+// reconnecting client has often already spawned the next generation under the
+// same name. Tearing down by name alone let those late exits kill the *new*
+// generation, which the client then restarted, killing the next one: a
+// self-sustaining restart storm with a fresh vite port every cycle (the
+// 2026-06-09 "main restarts every 10s" incident). Every teardown must
+// therefore verify the exiting child belongs to the entry currently in the
+// map, and stale exits reduce to a log line.
+let onChildExit = (name: string, exited: WorktreeEntry): void => {
   const entry = worktrees.get(name);
+  if (entry !== exited) {
+    log(`[${name}] exit event from a replaced generation, ignoring`);
+    return;
+  }
   if (!entry || entry.state !== "ready") return;
   entry.state = "dead";
   if (entry.idleTimer) clearTimeout(entry.idleTimer);
   killGroup(entry.vite?.pid);
   killGroup(entry.fastify?.pid);
+  setTimeout(() => {
+    killGroup(entry.vite?.pid, "SIGKILL");
+    killGroup(entry.fastify?.pid, "SIGKILL");
+  }, KILL_GRACE_MS).unref();
+  worktrees.delete(name);
   stopDashboard(entry).catch(() => {});
   removePidFile(name).catch(() => {});
-  worktrees.delete(name);
 };
 
 let stopWorktree = async (name: string): Promise<void> => {
@@ -536,13 +556,16 @@ let stopWorktree = async (name: string): Promise<void> => {
   entry.state = "stopping";
   killGroup(entry.vite?.pid);
   killGroup(entry.fastify?.pid);
-  await stopDashboard(entry).catch(() => {});
   setTimeout(() => {
     killGroup(entry.vite?.pid, "SIGKILL");
     killGroup(entry.fastify?.pid, "SIGKILL");
   }, KILL_GRACE_MS).unref();
-  await removePidFile(name);
+  // Drop the entry before any await: a request arriving mid-stop must see a
+  // cold worktree and start a fresh generation, and the async cleanup below
+  // must never delete that new generation's state (see onChildExit's comment).
   worktrees.delete(name);
+  await removePidFile(name);
+  await stopDashboard(entry).catch(() => {});
 };
 
 async function stopDashboard(entry: WorktreeEntry): Promise<void> {
@@ -887,8 +910,16 @@ const server = http.createServer(async (req, res) => {
       res.end("missing worktree name");
       return;
     }
+    // POST-only — same reasoning as retry: a GET (curl without -X, a link
+    // prefetcher, a crawler) must not kill a running worktree.
+    if (req.method !== "POST") {
+      res.writeHead(405, { "content-type": "text/plain", allow: "POST" });
+      res.end("stop requires POST\n");
+      return;
+    }
     await stopWorktree(name);
-    if (req.method === "POST") {
+    const wantsHtml = (req.headers.accept ?? "").includes("text/html");
+    if (wantsHtml) {
       res.writeHead(303, { location: "/" });
       res.end();
       return;
@@ -958,9 +989,8 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  let entry: WorktreeEntry;
   try {
-    entry = await ensureRunning(name);
+    await ensureRunning(name);
   } catch (err) {
     const status = (err as StatusError).statusCode ?? 502;
     // If we have a captured failure for this worktree, render the rich
@@ -977,9 +1007,17 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  await proxyWithRetry(req, res, entry, 5);
+  await proxyWithRetry(req, res, name, 5);
 });
 
+// WebSocket upgrades never cold-start a worktree. Clients auto-reconnect on
+// timers (tRPC's wsLink retries forever, first attempt with zero delay), so
+// treating an upgrade as user activity would resurrect an idle-shutdown
+// worktree from any abandoned background tab, forever. Refusal is cheap for
+// the client (it just backs off and retries); the worktree comes back when a
+// real HTTP request arrives — a page load, an API call, or Vite's HMR ping
+// (sent only while the tab is visible), after which the next retry connects.
+const refusedUpgradeLogAt = new Map<string, number>();
 server.on("upgrade", async (req, socket, head) => {
   const reqUrl = req.url || "/";
   const name = parseWorktreeName(reqUrl);
@@ -987,14 +1025,28 @@ server.on("upgrade", async (req, socket, head) => {
     socket.destroy();
     return;
   }
-  let entry: WorktreeEntry;
-  try {
-    entry = await ensureRunning(name);
-  } catch (err) {
-    log(`[${name}] upgrade failed: ${(err as Error).message}`);
-    socket.destroy();
+  let entry = worktrees.get(name);
+  if (entry?.startPromise) {
+    // A cold start is already underway (triggered by an HTTP request) — let
+    // the socket wait for it rather than refusing and forcing a retry cycle.
+    try {
+      entry = await entry.startPromise;
+    } catch (err) {
+      log(`[${name}] upgrade failed: ${(err as Error).message}`);
+      socket.destroy();
+      return;
+    }
+  }
+  if (entry?.state !== "ready") {
+    const last = refusedUpgradeLogAt.get(name) ?? 0;
+    if (Date.now() - last > 60_000) {
+      refusedUpgradeLogAt.set(name, Date.now());
+      log(`[${name}] refusing WS upgrade while not running (logged at most once/min)`);
+    }
+    socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
     return;
   }
+  touch(entry);
   const target = `http://127.0.0.1:${entry.frontendPort}`;
   proxy.ws(req, socket, head, { target }, (err: Error | undefined) => {
     if (err) {
@@ -1004,35 +1056,90 @@ server.on("upgrade", async (req, socket, head) => {
   });
 });
 
+// Proxying consumes the request's body stream, so a naive retry after
+// ECONNREFUSED re-sends the request with no body — the upstream then waits
+// forever for JSON that never arrives (this wedged chat sends that raced an
+// idle shutdown). Requests with a small known body are buffered up front and
+// each attempt replays the buffer; bodies that are large or of unknown length
+// get exactly one attempt.
+const MAX_REPLAY_BODY_BYTES = 1024 * 1024;
+
+/** Body bytes to buffer for replay, or null when the request isn't replayable. */
+function replayableBodyLength(req: http.IncomingMessage): number | null {
+  if (req.method === "GET" || req.method === "HEAD") return 0;
+  const len = Number(req.headers["content-length"] ?? Number.NaN);
+  return Number.isFinite(len) && len <= MAX_REPLAY_BODY_BYTES ? len : null;
+}
+
+async function readBody(req: http.IncomingMessage): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of req) chunks.push(chunk as Buffer);
+  return Buffer.concat(chunks);
+}
+
+/** One proxy attempt. Resolves with the proxy error, or undefined on success. */
+function proxyOnce(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  { entry, body }: { entry: WorktreeEntry; body: Buffer | null },
+): Promise<(Error & { code?: string }) | undefined> {
+  return new Promise((resolve) => {
+    const target = `http://127.0.0.1:${entry.frontendPort}`;
+    // The proxy callback fires only on error; success is the response closing.
+    res.on("close", () => resolve(undefined));
+    const options = body === null
+      ? { target }
+      : { target, buffer: Readable.from(body) };
+    proxy.web(req, res, options, (err: Error & { code?: string } | undefined) => resolve(err));
+  });
+}
+
 async function proxyWithRetry(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  entry: WorktreeEntry,
+  name: string,
   retriesLeft: number,
 ): Promise<void> {
-  return new Promise((resolve) => {
-    const target = `http://127.0.0.1:${entry.frontendPort}`;
-    proxy.web(req, res, { target }, (err: Error & { code?: string } | undefined) => {
-      if (!err) {
-        resolve();
-        return;
-      }
-      if (err.code === "ECONNREFUSED" && retriesLeft > 0) {
-        log(`[${entry.name}] upstream not ready, retry (${retriesLeft} left)`);
-        setTimeout(() => {
-          proxyWithRetry(req, res, entry, retriesLeft - 1).then(resolve);
-        }, 600);
-        return;
-      }
+  const bodyLength = replayableBodyLength(req);
+  const body = bodyLength === null ? null : await readBody(req);
+  for (;;) {
+    let entry: WorktreeEntry;
+    try {
+      // Re-resolve every attempt: after a kill/restart race the worktree's
+      // new generation listens on different ports, so retrying the original
+      // target would hammer a dead port. ensureRunning also restarts a
+      // worktree that died between request arrival and proxying — the HTTP
+      // request already established user intent.
+      entry = await ensureRunning(name);
+    } catch (err) {
       if (!res.headersSent) {
-        res.writeHead(502, { "content-type": "text/plain" });
-        res.end(`Upstream unavailable: ${err.message}\n`);
-      } else {
-        try { res.end(); } catch { /* already ended */ }
+        res.writeHead((err as StatusError).statusCode ?? 502, { "content-type": "text/plain" });
+        res.end(`Failed to start worktree ${name}: ${(err as Error).message}\n`);
       }
-      resolve();
-    });
-  });
+      return;
+    }
+    const err = await proxyOnce(req, res, { entry, body });
+    if (!err) return;
+    // ECONNREFUSED: nothing listening (cold port). ECONNRESET/EPIPE: the
+    // process died with the socket mid-handshake (e.g. a kill racing the
+    // request). All three happen before any response, so a buffered body can
+    // be replayed safely; headersSent guards the mid-response variants.
+    const transientCodes = ["ECONNREFUSED", "ECONNRESET", "EPIPE"];
+    const retryable = transientCodes.includes(err.code ?? "") && body !== null && !res.headersSent;
+    if (retryable && retriesLeft > 0) {
+      retriesLeft--;
+      log(`[${name}] upstream not ready, retry (${retriesLeft} left)`);
+      await sleep(600);
+      continue;
+    }
+    if (!res.headersSent) {
+      res.writeHead(502, { "content-type": "text/plain" });
+      res.end(`Upstream unavailable: ${err.message}\n`);
+    } else {
+      try { res.end(); } catch { /* already ended */ }
+    }
+    return;
+  }
 }
 
 // --- Router PID file ---------------------------------------------------
@@ -1119,7 +1226,7 @@ touch = (entry: WorktreeEntry) => { _origTouch(entry); updateTabTitle(); };
 const _origStop = stopWorktree;
 stopWorktree = async (name: string) => { await _origStop(name); updateTabTitle(); };
 const _origOnExit = onChildExit;
-onChildExit = (name: string) => { _origOnExit(name); updateTabTitle(); };
+onChildExit = (name: string, exited: WorktreeEntry) => { _origOnExit(name, exited); updateTabTitle(); };
 
 // --- Boot --------------------------------------------------------------
 

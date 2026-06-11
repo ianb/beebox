@@ -46,7 +46,7 @@ case "$cmd" in
       echo "router not running"
       exit 0
     fi
-    curl -fsS "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name"
+    curl -fsS -X POST "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name"
     ;;
 
   panic)
@@ -165,7 +165,7 @@ case "$cmd" in
       branch=$(git -C "$d" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
       echo "remove $name (branch=$branch)"
       if [ "$dry_run" = false ]; then
-        curl -fsS -m 3 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name" >/dev/null 2>&1 || true
+        curl -fsS -X POST -m 3 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$name" >/dev/null 2>&1 || true
         git -C "$MONO" worktree remove --force "$d" 2>/dev/null || true
         # A half-deleted worktree can defeat `worktree remove` — fall back
         # to deleting the directory and pruning the registration.
