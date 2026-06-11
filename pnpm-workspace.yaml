@@ -1,11 +1,21 @@
+onlyBuiltDependencies:
+  - "@google/genai"
+  - agent-browser
+  - better-sqlite3
+  - esbuild
+  - protobufjs
+  - unrs-resolver
+
+ignoredBuiltDependencies:
+  - "@ianbicking/personal-vibe-check"
+  - spawn-sync
+
 packages:
   - callback-box
   - callback-box/src/frontend
+  - callback-clerk
   - cardworks
   - personal-vibe-check
   - agent-doctest
   - browse
   - browse/packages/agent-browser-typed
-# callback-clerk is deliberately excluded: it has a file: dep on a deleted
-# sibling (callback-dropbox) that breaks workspace resolution. It's dormant
-# (see callback-clerk/CLAUDE.md) and keeps its own standalone install.

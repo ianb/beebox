@@ -31,3 +31,8 @@ if echo "$staged" | grep -q '^cardworks/'; then
   run_in cardworks pnpm exec lint-staged
   run_in cardworks pnpm typecheck
 fi
+
+if echo "$staged" | grep -q '^callback-clerk/'; then
+  run_in callback-clerk pnpm exec lint-staged
+  run_in callback-clerk pnpm typecheck
+fi

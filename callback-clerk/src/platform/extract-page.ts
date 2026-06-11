@@ -1,9 +1,6 @@
 /**
- * Content script for extracting page content via Readability + Turndown.
- *
- * Declared in manifest.json to run on all pages (at document_idle).
- * Does nothing on load — only responds to "extractPage" messages from
- * the background worker.
+ * Page extraction via Readability + Turndown. Pure DOM — no chrome.* APIs —
+ * so the content-script entrypoint stays a thin message shim.
  */
 
 import { Readability } from "@mozilla/readability";
@@ -19,7 +16,7 @@ export interface ExtractResult {
   url: string;
 }
 
-function extractPage(): ExtractResult {
+export function extractPage(): ExtractResult {
   const url = document.location.href;
   const selectedText = window.getSelection()?.toString().trim() || null;
 
@@ -65,17 +62,3 @@ function extractPage(): ExtractResult {
 
   return { title, siteName, byline, excerpt, markdown, selectedText, url };
 }
-
-// Listen for extraction requests from the background worker
-// eslint-disable-next-line max-params -- Chrome API callback signature
-chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
-  if (message.type === "extractPage") {
-    try {
-      const result = extractPage();
-      sendResponse(result);
-    } catch (err) {
-      sendResponse({ error: (err as Error).message });
-    }
-    return true;
-  }
-});
