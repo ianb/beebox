@@ -132,13 +132,14 @@ composer with fabricated props. Behaviour is documented from the code.
 ## Recording (`isTranscribing`)
 
 Mic button becomes a **red stop square** ("Stop recording"). The textarea goes
-read-only showing the live transcript, with a `RecordingIndicator` dot and
-Cancel (✕) / Edit (✎) / Send controls. Sub-states (`connecting` / `recording` /
-`reconnecting` / `finalizing`) differ only in the indicator + placeholder
-(`reconnecting` swaps the pulsing dot for a steady warning one). A `MicOverlay`
-floats above the row: live volume bars (flat = no audio reaching the recorder)
-over a rotating voice-keyword hint, filtered to actions valid for the current
-text — only `"mic off"` until words arrive.
+read-only showing the live transcript, with Cancel (✕) / Edit (✎) / Send
+controls. All mic status lives in the `MicOverlay` floating above the voice
+button: live volume bars (flat = no audio reaching the recorder, e.g. wrong
+mic selected) over a rotating voice-keyword hint, filtered to actions valid
+for the current text — only `"mic off"` until words arrive. In `reconnecting`
+(network or mic recovery in flight) the bars turn amber and a "recovering…"
+chip replaces the hint: moving amber bars = network blip (mic still hears
+you), flat amber bars = the mic itself is gone.
 
 ![desktop recording](composer-states/desktop-recording.png)
 

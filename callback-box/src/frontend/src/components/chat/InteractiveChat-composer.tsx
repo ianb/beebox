@@ -7,7 +7,6 @@
  */
 
 import TextareaAutosize from "react-textarea-autosize";
-import { RecordingIndicator } from "../VoiceRecorder";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
@@ -52,15 +51,7 @@ function DesktopComposerRow({
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
   return (
-    <div className="relative hidden sm:flex flex-1 items-center gap-2 min-w-0">
-      {isTranscribing ? (
-        <>
-          <MicOverlay hasText={joinTranscript(input, transcription.transcript).trim().length > 0} />
-          <div className="flex-shrink-0 self-center">
-            <RecordingIndicator degraded={transcription.state === "reconnecting"} />
-          </div>
-        </>
-      ) : null}
+    <div className="hidden sm:flex flex-1 items-center gap-2 min-w-0">
       <TextareaAutosize
         ref={textareaRef}
         autoFocus
@@ -181,7 +172,16 @@ export function ChatInputArea({
 }) {
   return (
     <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
-      <div className="flex items-center gap-2">
+      <div className="relative flex items-center gap-2">
+        {/* Floats above the voice button at the bar's right edge — anchored
+            here (not in the textarea rows) so it rides the record/stop
+            control on both desktop and mobile. */}
+        {isTranscribing ? (
+          <MicOverlay
+            hasText={joinTranscript(input, transcription.transcript).trim().length > 0}
+            degraded={transcription.state === "reconnecting"}
+          />
+        ) : null}
         {/* Add menu: camera (coming soon), attach file. Capture lives here in the future. */}
         <Dropdown
           align="left"
