@@ -2311,6 +2311,10 @@ tests:
     tags: [recipe, cards, behavioral]
 
   # === Search and the contains: field ===
+  #
+  # Status (2026-06-12): All 3 pass on first run. Agent answers from the
+  # agent guide without re-reading docs (0 files read); search-over-grep
+  # reaches for cb search (2 cb search invocations, no grep).
 
   - id: contains-writing-rule
     prompt: >
@@ -2355,6 +2359,11 @@ tests:
   #
   # Indirect knowledge: needed only when authoring views, so the agent
   # should know to read docs/generated/views.md rather than recall details.
+  #
+  # Status (2026-06-12): Both pass on first run — agent reads
+  # docs/generated/views.md (1 file read each), then describes the
+  # readFile byte-range tail and attachments-metadata + fileUrl patterns.
+  # Pre-existing view-zoom audits re-verified in the same run.
 
   - id: views-read-large-attachment
     prompt: >
