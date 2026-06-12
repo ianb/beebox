@@ -123,24 +123,19 @@ export function buildVoxtralRequestBody(
   return { body: Buffer.concat(formParts), boundary };
 }
 
-export function logDiarizationDebug(result: VoxtralResponse): void {
+/**
+ * Warn when diarization was requested but no segment carries a speaker id —
+ * the response shape probably changed. Says nothing on success: this runs
+ * inside `cb chat retranscribe`, whose output the calling agent reads in
+ * full (stderr included), so routine diagnostics are pure noise there.
+ */
+export function warnIfDiarizationUnlabeled(result: VoxtralResponse): void {
   const segCount = result.segments?.length ?? 0;
   const labeled = result.segments?.filter(
     (s) => typeof s.speaker_id === "string" && s.speaker_id.length > 0,
   ).length ?? 0;
-  const speakers = new Set(
-    (result.segments ?? [])
-      .map((s) => s.speaker_id)
-      .filter((id): id is string => typeof id === "string" && id.length > 0),
-  );
-  // stderr: this is diagnostics, and `cb chat retranscribe` callers parse
-  // stdout as the transcript.
-  console.error(
-    `[voxtral-diarized] segments=${segCount} labeled=${labeled} ` +
-      `unique-speakers=${speakers.size} ids=${JSON.stringify([...speakers])}`,
-  );
   if (segCount > 0 && labeled === 0) {
-    console.error(
+    console.warn(
       "[voxtral-diarized] no speaker_id on any segment; first segment keys: " +
         JSON.stringify(Object.keys(result.segments?.[0] ?? {})),
     );
