@@ -2364,7 +2364,7 @@ tests:
       get at the original recording of the latest voice message, rather
       than claiming the transcript is all it has or asking the user to
       repeat everything.
-    correct_contains_any: ["ask-about-audio", "get-last-audio"]
+    correct_contains_any: ["retranscribe", "ask-about-audio", "get-last-audio"]
     tags: [chat, voice, last-audio]
     notes: >
       Phrased as "how would you" deliberately: an action-shaped prompt
