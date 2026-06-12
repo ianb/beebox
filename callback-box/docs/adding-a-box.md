@@ -144,7 +144,11 @@ The `add-box.sh` script uses `-A` for SSH agent forwarding. If the clone fails w
 
 ### Box exists but isn't served
 
-The systemd service lists boxes explicitly. If you added a box manually (not via `add-box.sh`), the service file won't include it. Either re-run `add-box.sh` or manually edit `/etc/systemd/system/callback-serve.service` on the server and restart.
+`cb serve` with no path arguments serves every box in the manifest (`cb boxes list`), and the systemd unit should be the argless form: `ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210`. If a box is in the manifest but not served, check whether the unit still hard-codes explicit box paths (the pre-manifest form from `migrate-to-callback-user.sh` — this bit the workshop add, 2026-06-12). Fix by removing the path list from `ExecStart`, then `systemctl daemon-reload && systemctl restart callback-serve`. The startup log line `Serving N box(es) from manifest:` confirms the mode.
+
+### File-watcher errors (ENOSPC) in the serve log
+
+Each served box gets a recursive file watcher, and large trees (e.g. a busy box's `procedure/runs/`) can exhaust `fs.inotify.max_user_watches` — watchers then silently fail for everything initialized after the limit. The server pins a higher limit in `/etc/sysctl.d/90-callback-inotify.conf` (524288, set 2026-06-12). If ENOSPC reappears, raise it again — and consider excluding high-churn directories from the box watcher in code.
 
 ### "API key not configured" errors
 

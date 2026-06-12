@@ -804,6 +804,10 @@ Long horizon. The minimum viable version is just a `docs/patterns/` directory in
 
 Comparison of markdown linters: <https://panache.bz/guide/comparison.html> (covers several dialects but not Markdoc).
 
+## Exclude high-churn directories from the box file watcher
+
+The serve-side box watcher recurses the entire box, so trees like `procedure/runs/` (hundreds of timestamped run dirs on a busy box) consume inotify watches for content no UI ever live-updates. On 2026-06-12 this exhausted the server's `fs.inotify.max_user_watches` (29.5k) and silently broke watching for boxes initialized after the limit. The sysctl is raised (524288, `/etc/sysctl.d/90-callback-inotify.conf`), but the code-level fix is to give the watcher an exclusion list — `procedure/runs/`, `.callback-box/`, `store/trash/`, `.git/` — or an opt-in watch scope per directory class. Same shape as the cardworks glob skip-list (`GLOB_SKIP_DIRS`).
+
 ## Filed for later: sem — semantic git understanding
 
 <https://ataraxy-labs.github.io/sem/> — overlays entity-level (functions, classes, methods) understanding onto git operations. Commands: `diff`, `blame`, `impact`, `log`, `entities`, `context`. The `sem context` command generates token-budgeted context windows for LLM prompts; claims 2.3x accuracy improvement for AI agents vs raw line diffs. Worth exploring for agent workflows — e.g. as input to code review, or for the "before you build this" reuse-search problem. (Came in via `cb feedback` 2026-06-07.)
