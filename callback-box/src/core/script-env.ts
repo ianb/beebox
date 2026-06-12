@@ -21,6 +21,7 @@
 
 import * as path from "node:path";
 import { loadBoxConfig } from "../webapp/box-config.js";
+import { getOrCreateAgentToken } from "./agent-token.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 // Path to callback-box's own bin/ so subprocesses can find `cb`.
@@ -113,6 +114,14 @@ export async function buildScriptEnv(
   const { serverUrl, boxName } = parsePublicUrl(publicUrl);
   if (serverUrl) env.CB_SERVER_URL = serverUrl;
   if (boxName) env.CB_BOX_NAME = boxName;
+
+  // Loopback auth: lets the subprocess's `cb chat ...` calls through the
+  // per-box auth wall in production. See core/agent-token.ts.
+  try {
+    env.CB_AGENT_TOKEN = getOrCreateAgentToken(boxRoot);
+  } catch (e) {
+    console.warn(`[script-env] could not provision agent token for ${boxRoot}:`, e);
+  }
 
   if (additions) {
     for (const [k, v] of Object.entries(additions)) {

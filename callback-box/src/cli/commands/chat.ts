@@ -13,6 +13,19 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { Command } from "commander";
+import { resolveAgentToken } from "../../core/agent-token.js";
+
+/**
+ * Request headers for loopback calls to the live server: JSON content type
+ * plus the per-box agent bearer when available (required to pass the auth
+ * wall in production; harmless when auth is disabled in dev).
+ */
+function loopbackHeaders(): Record<string, string> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = resolveAgentToken();
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+  return headers;
+}
 
 interface SelfNoteOptions {
   ref?: string;
@@ -41,7 +54,7 @@ export async function postSelfNote(args: {
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: loopbackHeaders(),
     body: JSON.stringify(payload),
   });
   const text = await res.text();
@@ -135,7 +148,7 @@ const getLastAudioCommand = new Command("get-last-audio")
     try {
       res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: loopbackHeaders(),
         body: JSON.stringify({ timeoutMs: Math.round(timeoutSeconds * 1000) }),
       });
     } catch (e) {
