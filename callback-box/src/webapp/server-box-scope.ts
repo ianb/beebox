@@ -24,6 +24,7 @@ import { registerCaptureRoutes } from "./routes/capture.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
+import { verifyAgentBearer } from "../core/agent-token.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box-file-watcher.js";
@@ -51,6 +52,12 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     }
     // Diagnostic API key bypass for read-only debug/health endpoints
     if (isDiagnosticBypassRequest(request)) {
+      return;
+    }
+    // The box's own agents (chat subprocess, scheduled scripts) call back in
+    // with the per-box loopback token from their env — box-scoped auth, same
+    // trust as the box user they run as. See core/agent-token.ts.
+    if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
       return;
     }
     const email = getSessionEmail(request);
