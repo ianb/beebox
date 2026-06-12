@@ -15,6 +15,7 @@ import type { CommandContext, CommandResult } from "../command-runner.js";
 import { type ProcedureOptions, type ParsedProcedure } from "./engine-types.js";
 import { loadProcedureDefinition } from "./engine-parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
+import { computeRunExpires } from "./run-expiry.js";
 import { executeStep } from "./engine-step.js";
 
 export type { AgentFactory } from "./engine-types.js";
@@ -90,6 +91,7 @@ async function runSteps(args: {
   runCardPath: string;
   relProcedurePath: string;
   options: ProcedureOptions;
+  ensureMaterialized: () => Promise<void>;
 }): Promise<{ allSucceeded: boolean; failedStepId: string | null }> {
   const { ctx, boxRoot, procedure, procedureCardPath, runCardPath, relProcedurePath, options } =
     args;
@@ -106,6 +108,7 @@ async function runSteps(args: {
       procedureCardPath,
       runCardPath,
       relProcedurePath,
+      ensureMaterialized: args.ensureMaterialized,
       ...(options.directive && { directive: options.directive }),
       ...(options.createAgent && { createAgent: options.createAgent }),
     });
@@ -178,12 +181,21 @@ export async function startProcedure(
   const initialRunCard = buildInitialRunCard({ procedure, procedurePath: relProcedurePath, startedAt: now, ...(options.directive && { directive: options.directive }) });
   await fs.writeFile(runCardPath, initialRunCard);
 
-  // Commit start
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: `Start procedure: ${procedureName}`,
-    trailers: { Procedure: procedureName },
-  });
+  // The on-disk card is the "procedure is running" signal (see
+  // loadRunningProcedures), but the start commit is deferred until a step
+  // actually does something — a run where every step skips is a no-op whose
+  // dir is removed below, leaving no git trace. Provenance for no-op ticks
+  // lives in scheduler.jsonl.
+  let materialized = false;
+  const ensureMaterialized = async (): Promise<void> => {
+    if (materialized) return;
+    materialized = true;
+    await stageAll(boxRoot);
+    await commit(boxRoot, {
+      message: `Start procedure: ${procedureName}`,
+      trailers: { Procedure: procedureName },
+    });
+  };
 
   ctx.writeLine(fmt.header(`Starting procedure: ${procedure.name}`));
   ctx.writeLine(fmt.dim(`Run: ${path.relative(boxRoot, runDir)}`));
@@ -198,14 +210,24 @@ export async function startProcedure(
     runCardPath,
     relProcedurePath,
     options,
+    ensureMaterialized,
   });
+
+  if (!materialized) {
+    // No-op run: every executed step skipped, nothing was ever committed.
+    await fs.rm(runDir, { recursive: true, force: true });
+    ctx.writeLine(fmt.dim(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`));
+    return { success: true };
+  }
 
   // Final run card update
   const completedAt = new Date().toISOString();
+  const status = allSucceeded ? "completed" : "failed";
   await updateRunCardStatus({
     runCardPath,
-    status: allSucceeded ? "completed" : "failed",
+    status,
     completedAt,
+    expires: computeRunExpires({ status, completedAt, procedure }),
   });
   await stageAll(boxRoot);
   await commit(boxRoot, {

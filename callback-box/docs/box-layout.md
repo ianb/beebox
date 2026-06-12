@@ -134,7 +134,7 @@ Generated and managed by callback-box itself; not hand-edited. Most contents are
 | `tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `tricks/lib/` | Shared helpers used by `tricks/scripts/`. |
 | `views/` | Custom view definitions (rendering customization). |
-| `procedure/runs/` | Procedure run state. Created the first time a procedure runs. |
+| `procedure/runs/` | Procedure run state. A recent cache, not an archive — no-op runs never persist and `cb procedure gc` deletes expired runs (git history retains everything). |
 
 ## What's *not* in a box
 

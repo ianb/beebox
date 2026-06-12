@@ -94,15 +94,21 @@ export const ProcedureRunSchema = element("procedure-run", {
     status: z.enum(["pending", "running", "completed", "failed"]),
     "started-at": z.string().datetime({ offset: true }),
     "completed-at": z.string().datetime({ offset: true }).optional(),
+    directive: z.string().optional(),
+    expires: z
+      .union([z.literal("never"), z.string().datetime({ offset: true })])
+      .optional(),
   },
   children: z.array(RunStep),
   instructions: `# Handling Procedure Runs
 
-This card is managed by the procedure engine. Agents should read it to understand execution progress but should NOT modify it directly.
+This card is managed by the procedure engine. Agents should read it to understand execution progress but should NOT modify it directly — with one exception: the \`expires\` attribute.
 
 Check the root \`status\` attribute for overall progress: pending → running → completed/failed. Each <step> child also has its own status.
 
 Step statuses: pending → running → completed/skipped/failed. Look at <precheck status="..."> to see why a step was skipped, and <validate status="..."> to see if validation passed.
+
+The \`expires\` attribute (stamped by the engine at completion) is when \`cb procedure gc\` may delete this run's directory. Run dirs are a recent cache — git history is the archive. To retain a specific run, set \`expires="never"\` or push the date out.
 
 The \`procedure\` attribute names the procedure definition this run belongs to. The run card lives in \`procedure/runs/<name>_<timestamp>/\`.`,
 });

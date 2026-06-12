@@ -51,6 +51,7 @@ await listFiles(tmp, "config/schedules")
 =>
 check-calendar.scheduled-script.card
 check-email.scheduled-script.card
+gc-procedure-runs.scheduled-script.card
 process-retrospective.scheduled-script.card
 refresh-maps.scheduled-script.card
 ```

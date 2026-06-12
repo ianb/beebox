@@ -93,9 +93,19 @@ export const ProcedureStep = element("step", {
 /**
  * Procedure definition schema — the root element.
  */
+/**
+ * Run-expiry attribute value: a duration like "30d"/"12w", or "never".
+ */
+const RunExpiryValue = z.union([
+  z.literal("never"),
+  z.string().regex(/^\d+\.?\d*\s*[dhmsw]$/, 'duration like "30d", or "never"'),
+]);
+
 export const ProcedureSchema = element("procedure", {
   attrs: {
     name: z.string(),
+    "run-expiry": RunExpiryValue.optional(),
+    "failed-run-expiry": RunExpiryValue.optional(),
   },
   children: z.array(z.union([ProcedureDescription, ProcedureStep])),
   instructions: `# Handling Procedure Definitions
@@ -106,7 +116,9 @@ Don't modify a procedure card while a run is active. The engine reads the defini
 
 Each <step> has optional phases: <precheck> (should this step run?), <run> (the main action), <validate> (did it work?). Each phase can contain <shell>, <agent>, or <instruction> elements.
 
-<shell> runs bash commands in the box root. <agent> invokes Claude Code with the text as the prompt. <instruction> is evaluated by a model to produce a pass/fail judgment.`,
+<shell> runs bash commands in the box root. <agent> invokes Claude Code with the text as the prompt. <instruction> is evaluated by a model to produce a pass/fail judgment.
+
+Optional \`run-expiry\` / \`failed-run-expiry\` attributes override how long this procedure's finished run dirs are kept before \`cb procedure gc\` deletes them (defaults: 30d completed, 90d failed). Value is a duration ("60d", "12w") or "never".`,
 });
 
 export type Procedure = z.infer<typeof ProcedureSchema>;

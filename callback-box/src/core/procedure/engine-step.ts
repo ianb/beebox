@@ -36,6 +36,12 @@ export interface ExecuteStepParams {
   procedureCardPath: string;
   runCardPath: string;
   relProcedurePath: string;
+  /**
+   * Commit the run's start the first time a step does something non-skip.
+   * Until this fires the run dir is untracked, so an all-skip run can be
+   * removed without leaving git history (see startProcedure).
+   */
+  ensureMaterialized: () => Promise<void>;
   directive?: string;
   createAgent?: AgentFactory;
 }
@@ -69,6 +75,9 @@ export async function executeStep(
   if (precheck.outcome !== "continue") {
     return precheck.outcome;
   }
+
+  // This step is going to do something — the run now persists
+  await params.ensureMaterialized();
 
   // ── Run ──
   if (!step.run) {
@@ -121,6 +130,9 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
 
   if (precheckResult.skipped) {
     ctx.writeLine(fmt.dim(`  Skipped: ${precheckResult.stdout || "precheck exit $CHECK_SKIP"}`));
+    // Card update only, no commit — if every step skips, the whole run dir
+    // is removed at completion; if a later step does work, the skip history
+    // rides along in that step's "Start procedure" commit.
     await updateStepInRunCard({
       runCardPath,
       stepId: step.id,
@@ -129,16 +141,12 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
         precheck: { status: "skip", stdout: precheckResult.stdout },
       },
     });
-    await stageAll(boxRoot);
-    await commit(boxRoot, {
-      message: `[procedure] Skip step: ${step.id}`,
-      trailers: { Procedure: procedure.name, Step: step.id },
-    });
     ctx.writeLine("");
     return { outcome: "skipped" };
   }
 
   if (precheckResult.exitCode !== 0) {
+    await params.ensureMaterialized();
     ctx.writeLine(fmt.fail(`Precheck failed (exit ${precheckResult.exitCode})`));
     if (precheckResult.stderr) {
       ctx.writeLine(fmt.dim(`  ${precheckResult.stderr}`));

@@ -47,19 +47,24 @@ export interface UpdateRunCardStatusParams {
   runCardPath: string;
   status: string;
   completedAt?: string;
+  /** Expiry stamp ("never" or ISO datetime) — see run-expiry.ts */
+  expires?: string;
 }
 
 /**
  * Update the run card's overall status.
  */
 export async function updateRunCardStatus(params: UpdateRunCardStatusParams): Promise<void> {
-  const { runCardPath, status, completedAt } = params;
+  const { runCardPath, status, completedAt, expires } = params;
   const content = await fs.readFile(runCardPath, "utf-8");
   const root = await parseCard(content, { source: runCardPath });
 
   root.attrs["status"] = status;
   if (completedAt) {
     root.attrs["completed-at"] = completedAt;
+  }
+  if (expires) {
+    root.attrs["expires"] = expires;
   }
 
   await fs.writeFile(runCardPath, serialize(root, { indent: "  " }) + "\n");

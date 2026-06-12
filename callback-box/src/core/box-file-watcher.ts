@@ -15,11 +15,20 @@ import type { EventBus } from "./event-bus.js";
 
 const watchers = new Map<string, FSWatcher>();
 
+const DOT_SEGMENT = /(^|[/\\])\../;
+
+/**
+ * High-churn, never-live-rendered trees that would otherwise eat an inotify
+ * watch per subdirectory (procedure/runs/ alone exhausted the server's limit
+ * on 2026-06-11). Same shape as cardworks' GLOB_SKIP_DIRS.
+ */
+const HIGH_CHURN_DIRS = ["procedure/runs", "store/trash"];
+
 /**
  * Ensure a watcher is running for `boxRoot`. Idempotent — the second and later
  * calls for the same root are no-ops, so every subscriber can call it on start.
- * Dotfiles (.git, .callback-box, …) are excluded so internal churn doesn't
- * surface as file changes.
+ * Dotfiles (.git, .callback-box, …) and high-churn internal trees are excluded
+ * so internal churn doesn't surface as file changes or consume watches.
  */
 export function ensureBoxWatcher(boxRoot: string, eventBus: EventBus): void {
   if (watchers.has(boxRoot)) return;
@@ -27,7 +36,13 @@ export function ensureBoxWatcher(boxRoot: string, eventBus: EventBus): void {
   const watcher = watch([boxRoot], {
     persistent: true,
     ignoreInitial: true,
-    ignored: /(^|[/\\])\../,
+    ignored: (filePath: string) => {
+      if (DOT_SEGMENT.test(filePath)) return true;
+      const rel = path.relative(boxRoot, filePath);
+      return HIGH_CHURN_DIRS.some(
+        (dir) => rel === dir || rel.startsWith(dir + path.sep)
+      );
+    },
   });
 
   watcher.on("all", (fsEvent, filePath) => {
