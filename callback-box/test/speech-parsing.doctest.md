@@ -175,6 +175,68 @@ segs[0].instructions
 => Real note.
 ```
 
+## Redacted content is never spoken
+
+Markdoc `{% redacted %}…{% /redacted %}` spans render as hidden-until-tap in
+the chat. The spoken `text` drops them entirely; `displayText` keeps the
+markup so the rendered message still shows the blur.
+
+```
+const segs = parseAllSpeechTags(
+  "<speech>The answer is {% redacted %}42{% /redacted %} — try it first.</speech>"
+);
+segs[0].text
+=> The answer is  — try it first.
+
+segs[0].displayText
+=> The answer is {% redacted %}42{% /redacted %} — try it first.
+```
+
+Multiple redacted spans in one speech tag are all dropped:
+
+```
+const segs = parseAllSpeechTags(
+  "<speech>{% redacted %}one{% /redacted %} and {% redacted %}two{% /redacted %} stay hidden.</speech>"
+);
+segs[0].text
+=> and  stay hidden.
+```
+
+An unclosed `{% redacted %}` hides everything through the end of the speech —
+dropping just the marker would leak the hidden content:
+
+```
+const segs = parseAllSpeechTags(
+  "<speech>Before. {% redacted %}secret with no close tag</speech>"
+);
+segs[0].text
+=> Before.
+```
+
+A stray close marker is stripped rather than spoken as literal markup:
+
+```
+const segs = parseAllSpeechTags(
+  "<speech>Oops {% /redacted %} extra close.</speech>"
+);
+segs[0].text
+=> Oops  extra close.
+```
+
+A speech tag that is entirely redacted yields empty spoken text (the playback
+machine skips the TTS call for it):
+
+```
+const segs = parseAllSpeechTags(
+  "<speech>{% redacted %}all hidden{% /redacted %}</speech>"
+);
+JSON.stringify(segs[0].text)
+=> ""
+
+segs[0].displayText
+=> {% redacted %}all hidden{% /redacted %}
+```
+
 ## Name attribute
 
 An optional `name` attribute labels the speaker of a chunk:

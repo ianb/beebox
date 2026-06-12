@@ -248,8 +248,10 @@ export async function createIntakeJobsForUnjobbed(
 }
 
 /**
- * Collect every `ref="..."` attribute from existing job cards, so the
- * inbox scan can skip items that are already tracked.
+ * Collect every item ref from existing job cards, so the inbox scan can
+ * skip items that are already tracked. Handles both card generations:
+ * YAML frontmatter `- ref: path` lines and legacy XML `ref="path"`
+ * attributes.
  */
 async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
   const jobsDir = path.join(boxRoot, "box/jobs");
@@ -257,16 +259,30 @@ async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
   try {
     const jobFiles = await fs.readdir(jobsDir);
     for (const file of jobFiles) {
-      if (!file.endsWith(".job.card")) continue;
+      // Matches current `-job.card` types (intake-job, chat-job, ...) and
+      // legacy dotted names like `.intake.job.card`.
+      if (!file.endsWith("job.card")) continue;
       const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
       for (const match of content.matchAll(/ref="([^"]+)"/g)) {
         existingRefs.add(match[1]!);
+      }
+      for (const match of content.matchAll(/^\s*-?\s*ref:\s*(.+?)\s*$/gm)) {
+        existingRefs.add(stripMatchingQuotes(match[1]!));
       }
     }
   } catch (_e) {
     // No jobs dir yet (ENOENT) — treat as no existing refs.
   }
   return existingRefs;
+}
+
+/** Strip one pair of surrounding quotes a YAML stringifier may have added. */
+function stripMatchingQuotes(value: string): string {
+  const quote = value[0];
+  if ((quote === '"' || quote === "'") && value.endsWith(quote) && value.length >= 2) {
+    return value.slice(1, -1);
+  }
+  return value;
 }
 
 /**

@@ -39,7 +39,7 @@ echo "[worktree-remove] name=$NAME"
 # Tell the dev router to stop this worktree's processes immediately (rather
 # than waiting for its idle timeout). Best-effort — if the router isn't
 # running, the call just fails and we move on.
-if curl -fsS -m 5 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$NAME" >/dev/null 2>&1; then
+if curl -fsS -X POST -m 5 "http://127.0.0.1:$ROUTER_PORT/__router/stop/$NAME" >/dev/null 2>&1; then
   echo "[worktree-remove] told router to stop $NAME"
 fi
 

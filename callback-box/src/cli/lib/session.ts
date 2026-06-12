@@ -45,12 +45,24 @@ function encodeProjectDir(cwd: string): string {
 }
 
 /**
+ * Root of Claude Code's per-project transcript storage. Honors the
+ * `CB_CLAUDE_PROJECTS_DIR` env override so doctests (and unusual
+ * installs) can point session discovery at a fixture directory instead
+ * of the real `~/.claude/projects`.
+ */
+function claudeProjectsRoot(): string {
+  const override = process.env["CB_CLAUDE_PROJECTS_DIR"];
+  if (override) return override;
+  return path.join(os.homedir(), ".claude", "projects");
+}
+
+/**
  * Get the path to a Claude Code session log file. `cwd` is whatever
  * was passed as the SDK's `cwd` for the run — usually the box root,
  * but a landmark-bound chat or audit uses a subdirectory.
  */
 export function getSessionLogPath(cwd: string, sessionId: string): string {
-  const claudeDir = path.join(os.homedir(), ".claude", "projects", encodeProjectDir(cwd));
+  const claudeDir = path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
   return path.join(claudeDir, `${sessionId}.jsonl`);
 }
 
@@ -58,7 +70,7 @@ export function getSessionLogPath(cwd: string, sessionId: string): string {
  * Get the Claude Code projects directory for a given SDK cwd.
  */
 export function getSessionDir(cwd: string): string {
-  return path.join(os.homedir(), ".claude", "projects", encodeProjectDir(cwd));
+  return path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
 }
 
 /**
@@ -259,14 +271,17 @@ export async function getSessionMetadata(args: {
 /**
  * A "real" user message is one the human actually typed or spoke, as opposed
  * to system-injected user entries (tool results, schedule-fired notifications,
- * pending-schedules status, etc.). Real user messages start with a <typed> or
- * <speech> tag since the UI wraps human input in those.
+ * pending-schedules status, etc.). Real user messages carry a <typed> or
+ * <speech> tag since the UI wraps human input in those — possibly preceded
+ * by the <chat-app .../> snapshot tag the server prepends to every turn.
  */
 export function isRealUserMessage(entry: SessionEntry): boolean {
   if (entry.type !== "user") return false;
   for (const block of entry.content) {
     if (block.type !== "text") continue;
-    const text = (block.text || "").trimStart();
+    const text = (block.text || "")
+      .trimStart()
+      .replace(/^<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)\s*/i, "");
     if (text.startsWith("<typed") || text.startsWith("<speech")) return true;
   }
   return false;

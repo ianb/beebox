@@ -17,6 +17,7 @@ import { loadScriptState, loadRunningScripts } from "../../core/schedule-state.j
 import {
   readScheduleFiles,
   findBusyBlockers,
+  effectiveBusyBlockers,
   evaluateSkip,
   executeScript,
 } from "./tick-helpers.js";
@@ -26,8 +27,10 @@ export interface TickOptions {
   script?: string;
   /** When true, capture subprocess output instead of inheriting stdio */
   quiet?: boolean;
-  /** Run the script named by `script` even if it isn't due and its budget
-   * is spent. Liveness gates (lock-group, busy system) still apply. */
+  /** Run the script named by `script` even if it isn't due, its budget is
+   * spent, or a chat session is active (a forced run often originates from
+   * chat). Liveness gates still apply: a live lock-group holder and running
+   * scripts/procedures defer even under force. */
   force?: boolean;
 }
 
@@ -74,11 +77,19 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
   // Load currently running scripts for lock-group conflict detection
   const running = await loadRunningScripts(boxRoot);
 
-  // Bail out if anything else is in flight (see findBusyBlockers).
-  const blockers = await findBusyBlockers(boxRoot, running);
+  // Bail out if anything else is in flight (see findBusyBlockers). Under
+  // --force, active chats don't defer (see effectiveBusyBlockers); the
+  // housekeeping-commit hazard they guarded is handled at the commit site.
+  const blockers = effectiveBusyBlockers(
+    await findBusyBlockers(boxRoot, running),
+    { force: options.force === true },
+  );
   if (blockers.length > 0) {
     if (!options.quiet) {
-      console.log(`Tick deferred — system busy: ${blockers.join(", ")}`);
+      const hint = blockers.every((b) => b.startsWith("chat:"))
+        ? " (cb tick --script <name> --force runs despite an active chat)"
+        : "";
+      console.log(`Tick deferred — system busy: ${blockers.join(", ")}${hint}`);
     }
     return { ranCount: 0, skipCount: files.length, errorCount: 0, scripts: [] };
   }
@@ -138,7 +149,7 @@ export const tickCommand = new Command("tick")
   .description("Evaluate and run due scheduled scripts")
   .option("--dry-run", "Show what would run without executing")
   .option("--script <name>", "Only evaluate a specific script (by filename stem)")
-  .option("--force", "Run the --script now, bypassing schedule and budget checks")
+  .option("--force", "Run the --script now, bypassing schedule, budget, and active-chat checks")
   .option("--box <path>", "Box root path (defaults to current directory)")
   .action(async (options: TickOptions & { box?: string }) => {
     if (options.force && !options.script) {

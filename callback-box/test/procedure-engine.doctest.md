@@ -6,6 +6,7 @@ tracking state in run cards, and handling various step outcomes.
 ```ts setup
 import { startProcedure } from "../src/core/procedure/engine.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
+import { getLog } from "../src/cli/lib/git.js";
 import { parseCard } from "cardworks";
 ```
 
@@ -111,6 +112,56 @@ bad.txt exists: false
 good.txt exists: true
 skipped step: skipped = skipped
 runs step: runs = completed
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## No-op run leaves nothing behind
+
+When every step skips, the run was a no-op: the run directory is removed
+at completion and no commits are made. Provenance for no-op ticks lives in
+scheduler.jsonl, not in a dir-per-nothing.
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/idle.procedure.card", `
+<procedure name="idle">
+  <description>Nothing to do</description>
+  <step id="first">
+    <description>Skips</description>
+    <precheck>
+      <shell>echo "nothing new"; exit $CHECK_SKIP</shell>
+    </precheck>
+    <run><shell>echo "NEVER" > box/output/never.txt</shell></run>
+  </step>
+  <step id="second">
+    <description>Also skips</description>
+    <precheck>
+      <shell>exit $CHECK_SKIP</shell>
+    </precheck>
+    <run><shell>echo "ALSO NEVER" > box/output/also.txt</shell></run>
+  </step>
+</procedure>
+`);
+box.commitAll("Add idle procedure");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "idle" });
+print(`success: ${result.success}`);
+
+// No run directory persists
+const runs = await box.list("procedure/runs");
+print(`runs dir contents: "${runs}"`);
+
+// And no commits beyond init + the procedure card itself
+const log = await getLog(box.root);
+print(`commits: ${log.length}`);
+=>
+success: true
+runs dir contents: ""
+commits: 2
 ```
 
 ``` cleanup
@@ -370,6 +421,98 @@ print(`has error: ${result.error?.includes("not found") ?? false}`);
 =>
 success: false
 has error: true
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## Finished runs carry an expires stamp
+
+At completion the engine stamps `expires` on the run card — completed-at
+plus 30 days for completed runs, 90 days for failed runs. `cb procedure gc`
+deletes run dirs past their stamp; anyone can edit the attribute to pin or
+extend a specific run.
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/stamped.procedure.card", `
+<procedure name="stamped">
+  <description>Gets an expires stamp</description>
+  <step id="work">
+    <description>Does work</description>
+    <run><shell>echo "did it" > box/output/did.txt</shell></run>
+  </step>
+</procedure>
+`);
+await box.write("config/procedures/doomed.procedure.card", `
+<procedure name="doomed">
+  <description>Fails</description>
+  <step id="broken">
+    <description>Precheck fails</description>
+    <precheck><shell>exit 1</shell></precheck>
+    <run><shell>true</shell></run>
+  </step>
+</procedure>
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add procedures");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+await startProcedure({ ctx, procedureNameOrPath: "stamped" });
+await startProcedure({ ctx, procedureNameOrPath: "doomed" });
+
+const runs = (await box.list("procedure/runs")).split("\n");
+const dayMs = 24 * 60 * 60 * 1000;
+
+const okDir = runs.find(f => f.includes("stamped_"));
+const okRoot = await parseCard(await box.read(okDir + "/run.procedure-run.card"), { source: "ok" });
+const okDays = (Date.parse(okRoot.attrs["expires"]) - Date.parse(okRoot.attrs["completed-at"])) / dayMs;
+print(`completed run expires after: ${Math.round(okDays)}d`);
+
+const badDir = runs.find(f => f.includes("doomed_"));
+const badRoot = await parseCard(await box.read(badDir + "/run.procedure-run.card"), { source: "bad" });
+const badDays = (Date.parse(badRoot.attrs["expires"]) - Date.parse(badRoot.attrs["completed-at"])) / dayMs;
+print(`failed run status: ${badRoot.attrs["status"]}, expires after: ${Math.round(badDays)}d`);
+=>
+completed run expires after: 30d
+failed run status: failed, expires after: 90d
+```
+
+``` cleanup
+await box.cleanup();
+```
+
+## Procedure cards can override run expiry
+
+`run-expiry` / `failed-run-expiry` attributes on the procedure definition
+override the defaults; "never" pins every run of that procedure.
+
+```
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/keeper.procedure.card", `
+<procedure name="keeper" run-expiry="never">
+  <description>Runs are kept forever</description>
+  <step id="work">
+    <description>Does work</description>
+    <run><shell>echo "kept" > box/output/kept.txt</shell></run>
+  </step>
+</procedure>
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add keeper procedure");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "keeper" });
+print(`success: ${result.success}`);
+
+const runs = (await box.list("procedure/runs")).split("\n");
+const runDir = runs.find(f => f.includes("keeper_"));
+const root = await parseCard(await box.read(runDir + "/run.procedure-run.card"), { source: "run" });
+print(`expires: ${root.attrs["expires"]}`);
+=>
+success: true
+expires: never
 ```
 
 ``` cleanup

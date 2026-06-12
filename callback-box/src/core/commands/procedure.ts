@@ -10,6 +10,7 @@ import {
   listProcedures,
   procedureStatus,
 } from "../procedure/engine.js";
+import { gcProcedureRuns } from "../procedure/gc.js";
 import type { ProcedureOptions } from "../procedure/engine.js";
 
 registerCommand({
@@ -75,6 +76,15 @@ registerCommand({
   args: [],
   execute: async (ctx) => {
     return listProcedures(ctx);
+  },
+});
+
+registerCommand({
+  name: "procedure-gc",
+  description: "Delete expired procedure run directories",
+  args: [],
+  execute: async (ctx) => {
+    return gcProcedureRuns(ctx);
   },
 });
 

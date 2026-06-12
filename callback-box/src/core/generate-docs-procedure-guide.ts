@@ -20,9 +20,10 @@ cb procedure run process-captures --dry-run         # Preview steps
 cb procedure run process-captures --directive "skip the music clips"  # Pass directive
 cb procedure list                                   # List available procedures
 cb procedure status                                 # Show latest run status
+cb procedure gc                                     # Delete expired run dirs
 \`\`\`
 
-Procedure definitions live in \`config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`.
+Procedure definitions live in \`config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`cb procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires="never"\` on its run card.
 
 ## Directives
 

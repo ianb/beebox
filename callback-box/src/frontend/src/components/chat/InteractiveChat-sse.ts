@@ -16,6 +16,7 @@ import { alarm } from "../../lib/earcons";
 import { isTTSVoice } from "../../lib/speech-parsing";
 import { href } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
+import { fulfillLastAudioRequest } from "../../lib/last-audio-cache";
 import { bumpFileVersion } from "../../lib/file-version";
 import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import type { ChatEvent } from "../../machines/chat-types";
@@ -58,6 +59,11 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     if (forSession(data.sessionId, sessionId)) onTaskEvent(data.task);
   } else if (event.event === "file-change") {
     stampFileVersion(event.data);
+  } else if (event.event === "chat-last-audio-request") {
+    // The box agent ran `cb chat get-last-audio` — answer with this tab's
+    // cached recording (or "none"; the server waits out other tabs).
+    const data = event.data as { requestId: string };
+    void fulfillLastAudioRequest(data.requestId);
   } else if (event.event === "chat-features-changed") {
     applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
   } else if (event.event === "chat-session-assigned") {

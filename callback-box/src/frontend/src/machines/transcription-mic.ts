@@ -23,6 +23,7 @@
 
 import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { delay, jitteredBackoff } from "./transcription-backoff";
+import { setMicLevelSource, clearMicLevelSource } from "../lib/mic-level";
 
 /**
  * How long the mic track may sit muted before we treat it as taken away.
@@ -55,13 +56,32 @@ export class MicCapture {
   private stream: MediaStream | null = null;
   private sourceNode: MediaStreamAudioSourceNode | null = null;
   private workletNode: AudioWorkletNode | null = null;
+  private analyser: AnalyserNode | null = null;
+  private levelData: Uint8Array<ArrayBuffer> | null = null;
   private muteGraceId: ReturnType<typeof setTimeout> | null = null;
   private recovering = false;
   private stopped = false;
   private readonly callbacks: MicCaptureCallbacks;
+  /** Stable identity for register/clear with the mic-level bridge. */
+  private readonly levelSource = () => this.readLevel();
 
   constructor(callbacks: MicCaptureCallbacks) {
     this.callbacks = callbacks;
+  }
+
+  /**
+   * Mic input level in [0, 1] off the analyser tap, for the UI volume
+   * indicator. Scale up, then non-linear to emphasize quieter sounds
+   * (formula from memory-atlas). 0 when the graph isn't producing audio —
+   * which makes a flat indicator an honest dead-mic signal.
+   */
+  private readLevel(): number {
+    if (!this.analyser || !this.levelData) return 0;
+    this.analyser.getByteFrequencyData(this.levelData);
+    let sum = 0;
+    for (const v of this.levelData) sum += v;
+    const average = sum / this.levelData.length;
+    return Math.min(1, Math.pow((average / 255) * 3, 0.4));
   }
 
   /**
@@ -87,6 +107,11 @@ export class MicCapture {
     this.workletNode.port.onmessage = (event) => {
       if (event.data.type === "pcm") this.callbacks.onPcm(event.data.samples);
     };
+    this.analyser = this.audioContext.createAnalyser();
+    this.analyser.fftSize = 256;
+    this.sourceNode.connect(this.analyser);
+    this.levelData = new Uint8Array(new ArrayBuffer(this.analyser.frequencyBinCount));
+    setMicLevelSource(this.levelSource);
     this.watchTrack(this.stream);
   }
 
@@ -129,6 +154,7 @@ export class MicCapture {
     this.stream = stream;
     this.sourceNode = this.audioContext.createMediaStreamSource(stream);
     this.sourceNode.connect(this.workletNode);
+    if (this.analyser) this.sourceNode.connect(this.analyser);
     // iOS suspends the AudioContext during interruptions; resume alongside
     // the new stream or the worklet stays silent even with a live track.
     if (this.audioContext.state !== "running") await this.audioContext.resume();
@@ -182,6 +208,7 @@ export class MicCapture {
   /** Stop the mic stream and tear down the worklet; aborts any recovery. */
   stopCapture() {
     this.stopped = true;
+    clearMicLevelSource(this.levelSource);
     this.clearMuteGrace();
     this.stopTracks();
     if (this.sourceNode) {
@@ -191,6 +218,11 @@ export class MicCapture {
     if (this.workletNode) {
       this.workletNode.disconnect();
       this.workletNode = null;
+    }
+    if (this.analyser) {
+      this.analyser.disconnect();
+      this.analyser = null;
+      this.levelData = null;
     }
   }
 

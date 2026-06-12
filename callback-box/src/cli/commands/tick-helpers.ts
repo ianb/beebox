@@ -13,7 +13,7 @@ import type { ParsedScheduledScript } from "../../schemas/scheduled-script.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
   saveScriptState,
-  recordRun,
+  recordOutcome,
   acquireScriptLock,
   releaseScriptLock,
   loadRunningProcedures,
@@ -50,6 +50,24 @@ export async function readScheduleFiles(
     }
     return null;
   }
+}
+
+/**
+ * Which busy blockers still defer the tick, given --force. Chat locks are
+ * an advisory contention heuristic — and a forced tick frequently
+ * ORIGINATES from chat (the boxholder asking the agent to run something
+ * now), so deferring a forced tick on a chat session is self-defeating.
+ * Genuinely running work (scripts, procedures) defers even under force:
+ * it finishes on its own, unlike a chat session that can sit active for
+ * hours. The tree-sweep hazard chat locks also guarded (the housekeeping
+ * commit) is handled at the commit site itself — see handlePostSuccess.
+ */
+export function effectiveBusyBlockers(
+  blockers: string[],
+  { force }: { force: boolean },
+): string[] {
+  if (!force) return blockers;
+  return blockers.filter((b) => !b.startsWith("chat:"));
 }
 
 /** Detect other in-flight work (scripts, procedures, chats). Tick's
@@ -127,32 +145,6 @@ export async function evaluateSkip(ctx: SkipContext): Promise<string | null> {
   return null;
 }
 
-interface RecordOutcomeArgs {
-  state: ScriptState;
-  result: "success" | "failure";
-  error: string | null;
-  durationMs: number;
-  sleepAffected: boolean;
-  windowMs: number;
-  now: Date;
-}
-
-/** Mutate script state to reflect a completed run and append it to the
- * windowed run history. */
-function recordOutcome(args: RecordOutcomeArgs): void {
-  const { state, result, error, durationMs, sleepAffected, windowMs, now } = args;
-  state.lastRun = now.toISOString();
-  state.lastResult = result;
-  state.lastError = error;
-  state.lastDurationMs = durationMs;
-  state.runCount++;
-  recordRun(state, {
-    record: { ts: now.toISOString(), durationMs, ...(sleepAffected ? { sleepAffected: true } : {}) },
-    windowMs,
-    now,
-  });
-}
-
 interface PostSuccessArgs {
   boxRoot: string;
   parsed: ParsedScript;
@@ -192,9 +184,22 @@ async function handlePostSuccess(args: PostSuccessArgs): Promise<void> {
     }
   }
 
-  // Commit housekeeping changes (once deletion, createAfterSuccess files)
+  // Commit housekeeping changes (once deletion, createAfterSuccess files).
+  // stageAll sweeps the WHOLE tree, so re-check for active chats right
+  // before committing: a chat agent's half-written files must not get
+  // swept into a housekeeping commit. This matters under --force (which
+  // bypasses the at-rest gate for chat blockers) and also closes the race
+  // where a chat starts during a long script run. Deferred changes sit
+  // uncommitted until the next at-rest tick sweeps them.
   const postStatus = await getStatus(boxRoot);
   if (!postStatus.clean) {
+    const activeChats = await loadActiveChats(boxRoot);
+    if (activeChats.size > 0) {
+      if (!options.quiet) {
+        console.log("  Housekeeping commit deferred — chat active; changes stay uncommitted until the next at-rest tick");
+      }
+      return;
+    }
     await stageAll(boxRoot);
     const parts: string[] = [];
     if (parsed.once) parts.push(`remove one-shot ${scriptName}`);
@@ -246,7 +251,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
       env: scriptEnv,
     });
 
-    recordOutcome({ state, result: "success", error: null, durationMs, sleepAffected, windowMs, now });
+    recordOutcome(state, { result: "success", error: null, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
 
     await handlePostSuccess({ boxRoot, parsed, scriptName, cardPath, file, preRunMtimeMs, options });
@@ -254,7 +259,7 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    recordOutcome({ state, result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
+    recordOutcome(state, { result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
     if (!options.quiet) console.error(`  Failed: ${(err as Error).message}`);
     return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: (err as Error).message };

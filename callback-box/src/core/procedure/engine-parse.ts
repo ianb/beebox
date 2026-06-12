@@ -6,6 +6,7 @@
 import * as fs from "node:fs/promises";
 import { parseCard, type ElementNode } from "cardworks";
 import { dedent } from "./dedent.js";
+import { validateRunExpiry } from "./run-expiry.js";
 import type { ParsedPhase, ParsedStep, ParsedProcedure } from "./engine-types.js";
 
 /**
@@ -30,7 +31,18 @@ export async function loadProcedureDefinition(
     }
   }
 
-  return { name, description, steps };
+  const result: ParsedProcedure = { name, description, steps };
+  const runExpiry = root.attrs["run-expiry"];
+  if (runExpiry) {
+    validateRunExpiry("run-expiry", runExpiry);
+    result.runExpiry = runExpiry;
+  }
+  const failedRunExpiry = root.attrs["failed-run-expiry"];
+  if (failedRunExpiry) {
+    validateRunExpiry("failed-run-expiry", failedRunExpiry);
+    result.failedRunExpiry = failedRunExpiry;
+  }
+  return result;
 }
 
 /**

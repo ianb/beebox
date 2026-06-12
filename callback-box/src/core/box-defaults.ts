@@ -229,6 +229,29 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     runs: "cb procedure run refresh-maps",
     source: "Daily check; precheck no-ops when nothing changed",
   },
+  {
+    name: "gc-procedure-runs",
+    description:
+      "Delete expired procedure run directories (run dirs are a recent cache — git history is the archive)",
+    cron: "0 6 * * *",
+    notBefore: "20h",
+    onWakeup: false,
+    enabled: true,
+    runs: "cb procedure gc",
+    source: "Daily sweep; each run card carries its own expires stamp",
+  },
+  {
+    name: "process-retrospective",
+    description:
+      "Weekly retrospective: mine chat sessions for what the boxholder taught the agent, integrate into personality/guide cards",
+    cron: "0 7 * * 1",
+    notBefore: "3d",
+    onWakeup: false,
+    enabled: false,
+    lockGroup: "retro",
+    runs: "cb procedure run process-retrospective",
+    source: "Weekly Monday-morning sweep; enable per box once trialed",
+  },
 ];
 
 /**

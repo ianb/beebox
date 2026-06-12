@@ -49,6 +49,10 @@ export interface ParsedProcedure {
   name: string;
   description: string;
   steps: ParsedStep[];
+  /** Override for completed-run expiry: duration ("60d") or "never" */
+  runExpiry?: string;
+  /** Override for failed-run expiry: duration ("180d") or "never" */
+  failedRunExpiry?: string;
 }
 
 export interface StepUpdate {

@@ -31,6 +31,7 @@ import {
   scenarioCommand,
   tickCommand,
   scheduledCommand,
+  healthCommand,
   trickCommand,
   finalizeCommand,
   promptCommand,
@@ -49,6 +50,7 @@ import {
   chatCommand,
   refreshMapsCommand,
   feedbackCommand,
+  retroCommand,
   boxesCommand,
   intakeCommand,
   triageCommand,
@@ -87,6 +89,7 @@ program.addCommand(reactorCommand);
 program.addCommand(scenarioCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
+program.addCommand(healthCommand);
 program.addCommand(trickCommand);
 program.addCommand(finalizeCommand);
 program.addCommand(promptCommand);
@@ -104,6 +107,7 @@ program.addCommand(usageCommand);
 program.addCommand(chatCommand);
 program.addCommand(refreshMapsCommand);
 program.addCommand(feedbackCommand);
+program.addCommand(retroCommand);
 program.addCommand(boxesCommand);
 program.addCommand(intakeCommand);
 program.addCommand(triageCommand);

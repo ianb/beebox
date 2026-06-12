@@ -2396,3 +2396,66 @@ tests:
     should_read: ["docs/generated/views.md"]
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
+
+  # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
+
+  - id: retro-report-location
+    prompt: >
+      The boxholder asks: "something changed my assistant's personality
+      card last week and the commit says Retro-Run — what was that, and
+      where can I see exactly what it looked at?"
+    expected_level: knows_directly
+    watch_for: >
+      Explains the retrospective (process-retrospective procedure mining
+      past chat sessions) and points at the run reports in
+      store/reviews/retro/ without searching for them.
+    correct_contains: ["store/reviews/retro"]
+    tags: [retro, navigation]
+
+  - id: retro-inferred-belief-policy
+    prompt: >
+      A personality trait reads `confidence: medium, source: inferred`.
+      New chat evidence supports it even more strongly. Should you raise
+      it to high?
+    expected_level: knows_directly
+    watch_for: >
+      Says no — medium is the ceiling for inferred beliefs; promotion
+      past it needs the boxholder (a question card / user-stated
+      confirmation), not more inferred evidence.
+    correct_contains: ["medium"]
+    tags: [retro, personality, behavioral]
+
+  # === Last-Audio Fetch (cb chat get-last-audio) ===
+  #
+  # Deliberately low-promoted: one INPUT FORMAT line in the chat prompt, a
+  # brief cb-commands.md entry, nothing in Key Commands. The audit pins the
+  # intended level: a chat agent should reach for it when the exact audio
+  # matters (bad-but-important transcript, sound-sensitive work like
+  # language practice), without it being pitched as a routine chat tool.
+  #
+  # Status (2026-06-12): 1/1 passes — direct knowledge (0 reads, 0 searches)
+  # from the single trailing sentence on the chat prompt's transcription
+  # bullet, after that sentence was reworked to lead with ask-about-audio.
+  # An earlier action-shaped phrasing failed only on the literal
+  # contains-check (see notes).
+
+  - id: chat-last-audio-when
+    prompt: >
+      My dictated messages sometimes come out mangled. If a transcription
+      were important to get exactly right, do you have a way to check the
+      actual audio of what I said — and how would you do it?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Names `cb chat ask-about-audio` (or `get-last-audio`) as the way to
+      get at the original recording of the latest voice message, rather
+      than claiming the transcript is all it has or asking the user to
+      repeat everything.
+    correct_contains_any: ["retranscribe", "ask-about-audio", "get-last-audio"]
+    tags: [chat, voice, last-audio]
+    notes: >
+      Phrased as "how would you" deliberately: an action-shaped prompt
+      ("can you check what I just said?") made the agent *run* the command
+      without naming it — which proved the knowledge but failed the literal
+      contains-check, and the audit sandbox has no live chat tab to answer
+      the fetch anyway.

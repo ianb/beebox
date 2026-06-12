@@ -1,12 +1,14 @@
 /**
  * cb chat - Commands that interact with the live chat session.
  *
- * Currently hosts `cb chat self-note`, which posts an agent-authored note
- * into the chat session transcript without triggering a conversational
- * response.
+ * - `cb chat self-note` posts an agent-authored note into the chat session
+ *   transcript without triggering a conversational response.
+ * - `cb chat get-last-audio` / `cb chat ask-about-audio` work with the
+ *   recording of the user's most recent voice message — see chat-audio.ts.
  */
 
 import { Command } from "commander";
+import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./chat-audio.js";
 
 interface SelfNoteOptions {
   ref?: string;
@@ -35,7 +37,7 @@ export async function postSelfNote(args: {
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: loopbackHeaders(),
     body: JSON.stringify(payload),
   });
   const text = await res.text();
@@ -93,4 +95,7 @@ const selfNoteCommand = new Command("self-note")
 
 export const chatCommand = new Command("chat")
   .description("Interact with the live chat session")
-  .addCommand(selfNoteCommand);
+  .addCommand(selfNoteCommand)
+  .addCommand(getLastAudioCommand)
+  .addCommand(askAboutAudioCommand)
+  .addCommand(retranscribeCommand);

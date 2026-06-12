@@ -147,6 +147,29 @@ noFilter.length
 await box.cleanup();
 ```
 
+### Frontmatter job cards: priority and source come from YAML fields
+
+Current job cards are YAML frontmatter, not XML — discovery reads the
+`priority:` and `source:` fields (this regressed once when discovery
+only grepped XML attributes, silently dropping every frontmatter job
+from source-filtered runs):
+
+```
+const box = await makeTmpBox({ git: true });
+const jobsDir = path.join(box.root, "box/jobs");
+await box.write("box/jobs/y1.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: box/inbox/a.memo.card\n---\n");
+await box.write("box/jobs/y2.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: telegram\npriority: normal\ndescription: Triage 0 items\nitems: []\n---\n");
+
+const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
+JSON.stringify(gmailOnly.map((c) => c.file))
+=> ["y1.intake.job.card"]
+
+gmailOnly[0].priority
+=> low
+
+await box.cleanup();
+```
+
 ### Empty directory returns empty array
 
 ```

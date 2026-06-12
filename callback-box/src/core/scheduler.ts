@@ -11,6 +11,8 @@ import * as os from "node:os";
 import { BOX_MARKER } from "../cli/lib/paths.js";
 import { runTick, type TickResult } from "../cli/commands/tick.js";
 import { getStatus, isRepo } from "../cli/lib/git.js";
+import { touchSchedulerHeartbeat } from "./schedule-health-box.js";
+import { checkHealthAndAlert } from "./schedule-health-alert.js";
 import {
   loadBoxesConfig,
   saveBoxesConfig,
@@ -176,6 +178,10 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
           }
         }
 
+        // Heartbeat before the tick: even a tick that throws proves the
+        // daemon is alive (schedule-health reads this file).
+        await touchSchedulerHeartbeat(boxPath);
+
         const result = await runTick(boxPath, { quiet: true });
         await writeBoxLog(boxPath, {
           ts: new Date().toISOString(),
@@ -192,6 +198,26 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
         await writeBoxLog(boxPath, {
           ts: new Date().toISOString(),
           event: "tick",
+          box: boxPath,
+          error: (err as Error).message,
+        });
+      }
+
+      try {
+        const alert = await checkHealthAndAlert(boxPath, { now: new Date() });
+        if (alert) {
+          await writeBoxLog(boxPath, {
+            ts: new Date().toISOString(),
+            event: "health-alert",
+            box: boxPath,
+            tasks: alert.alerted,
+            delivered: alert.delivered,
+          });
+        }
+      } catch (err) {
+        await writeBoxLog(boxPath, {
+          ts: new Date().toISOString(),
+          event: "health-alert",
           box: boxPath,
           error: (err as Error).message,
         });

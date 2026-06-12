@@ -39,6 +39,7 @@ import {
   whereToRecordSection,
 } from "./behavior.js";
 import { landmarksSection } from "./landmarks.js";
+import { secretsSection } from "./secrets.js";
 import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
 import { searchSection } from "./search.js";
@@ -73,6 +74,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...guidesSection(guides),
     ...schedulesSection(),
     ...tricksSection(),
+    ...secretsSection(),
     ...externalToolsSection(),
     ...chatAttachmentsSection(),
     ...selectionsSection(),

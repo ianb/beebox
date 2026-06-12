@@ -17,7 +17,7 @@ import {
 } from "./transcription-voxtral-errors.js";
 import {
   buildVoxtralRequestBody,
-  logDiarizationDebug,
+  warnIfDiarizationUnlabeled,
   shapeVoxtralResult,
   type VoxtralResponse,
 } from "./transcription-voxtral-request.js";
@@ -70,7 +70,7 @@ export async function transcribeAudioVoxtral(
       .json<VoxtralResponse>();
 
     if (diarization) {
-      logDiarizationDebug(result);
+      warnIfDiarizationUnlabeled(result);
     }
 
     return shapeVoxtralResult(result, {

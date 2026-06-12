@@ -51,6 +51,8 @@ await listFiles(tmp, "config/schedules")
 =>
 check-calendar.scheduled-script.card
 check-email.scheduled-script.card
+gc-procedure-runs.scheduled-script.card
+process-retrospective.scheduled-script.card
 refresh-maps.scheduled-script.card
 ```
 
@@ -87,6 +89,7 @@ await listFiles(tmp, "config/procedures")
 =>
 process-captures.procedure.card
 process-pages.procedure.card
+process-retrospective.procedure.card
 refresh-maps.procedure.card
 ```
 

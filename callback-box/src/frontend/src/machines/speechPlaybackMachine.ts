@@ -68,7 +68,7 @@ function buildQueueItems(
     segment,
     index: baseIndex + i,
     prefetch:
-      prefetchEnabled && queueOffset + i >= 1
+      prefetchEnabled && queueOffset + i >= 1 && segment.text.trim().length > 0
         ? ttsClient.prefetch(segment.text, speechOptions(segment))
         : null,
   }));
@@ -89,6 +89,9 @@ const playOneActor = fromPromise(
       ttsClient: TTSClient;
     };
   }) => {
+    // A segment can be empty after redacted-content stripping; skip the TTS
+    // call but keep the queue slot so segment indexes stay aligned.
+    if (input.item.segment.text.trim().length === 0) return;
     await input.ttsClient.speak(input.item.segment.text, {
       ...speechOptions(input.item.segment),
       prefetch: input.item.prefetch ?? undefined,

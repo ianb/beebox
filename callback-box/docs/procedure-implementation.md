@@ -10,6 +10,8 @@ A **procedure definition** lives in `config/procedures/` and describes the steps
 
 A **procedure run** is created when the procedure executes. It contains a run card tracking progress and per-step results. Effects land in the normal places (inbox, pool, archive, trash) — the run directory is bookkeeping.
 
+Run directories are a **recent cache, not an archive** — git history retains every committed run, so deleting a run dir loses nothing. Two mechanisms keep `procedure/runs/` small (see [Run Hygiene](#run-hygiene)): no-op runs never persist, and finished runs expire.
+
 ```
 config/
   procedures/
@@ -17,7 +19,7 @@ config/
 
 procedure/
   runs/
-    process-captures_2026-02-06T200000/
+    process-captures_2026-02-06T2000/
       run.procedure-run.card
 ```
 
@@ -105,12 +107,21 @@ For each step:
 
 The engine enforces **git-clean between steps**. Agent steps produce two commits (agent's work + engine bookkeeping). Shell steps produce one.
 
+## Run Hygiene
+
+**No-op runs leave nothing behind.** The run dir and card are written to disk at start (the on-disk card is the "procedure is running" signal for `cb tick`'s at-rest gate), but the first git commit is deferred until a step does something non-skip — a precheck pass, a precheck failure, or a step with no run phase. If every executed step skips, the run dir is removed at completion and nothing is committed; the tick's outcome in `scheduler.jsonl` is the provenance. A frequently-scheduled procedure that usually finds nothing to do costs nothing.
+
+**Finished runs expire.** At completion the engine stamps an `expires` attribute on the run card: `completed-at` + 30 days for completed runs, + 90 days for failed runs (failures get investigated late). Procedure cards can override with `run-expiry` / `failed-run-expiry` attributes (`"60d"`, `"12w"`, or `"never"`). Because the expiration lives on the run itself, anyone — agent, human, a future tool — can retain a specific run by editing its card: set `expires="never"` to pin it, or push the date out.
+
+**`cb procedure gc` sweeps expired runs.** Installed by `cb init` as the `gc-procedure-runs` daily schedule. It is deliberately dumb: delete what's past its date. It always keeps the newest run per procedure (`cb procedure status` reads it) and anything still running. Legacy cards without `expires` use the status-based default from their `completed-at`; crashed runs (stuck at `running` with a stale card) expire 90 days after `started-at`.
+
 ## CLI
 
 ```
 cb procedure run <name>       # Start a new run
 cb procedure status           # Show current run status
 cb procedure list             # List available definitions
+cb procedure gc               # Delete expired run directories
 ```
 
 ## Git History
@@ -130,3 +141,5 @@ abc1237 Start procedure: process-captures
 ```
 
 Rewinding to any commit gives a valid, consistent state.
+
+Skipped steps don't commit — their precheck result is recorded in the run card and rides along in the next commit. A run where every step skips produces no commits at all (see [Run Hygiene](#run-hygiene)).

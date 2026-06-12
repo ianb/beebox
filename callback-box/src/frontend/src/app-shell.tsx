@@ -17,6 +17,8 @@ import { Stack } from "./components/ui/Stack";
 import { Text } from "./components/ui/Text";
 import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { fetchBoxes } from "./lib/boxes";
+import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
+import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
 
 import { href } from "./lib/routing";
 
@@ -32,6 +34,7 @@ enableDebugLogCapture();
  * Layout wrapper with navigation.
  */
 export function AppLayout() {
+  useDevWorktreeKeepalive();
   const [showDebugLog, setShowDebugLog] = useState(false);
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
@@ -51,6 +54,9 @@ export function AppLayout() {
   }, []);
   const boxExists =
     !boxesState.loaded || boxesState.boxes.some((b) => b.slug === boxSlug);
+
+  // Advertise the validated box to the callback-clerk extension.
+  useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   return (
     <Column className="h-screen h-[100dvh]">

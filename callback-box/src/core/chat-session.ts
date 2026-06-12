@@ -10,7 +10,6 @@
 
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "./chat-features.js";
-import { composeSendSnapshot } from "./session-context.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./chat-session-features.js";
 import {
   loadSessionHistory,
@@ -31,7 +30,6 @@ import {
   accumulateAssistantText,
   adaptSdkMessage,
   buildContentBlocks,
-  toBackendContent,
   warnGhostEntry,
   type ChatImage,
   type ChatMessage,
@@ -39,6 +37,7 @@ import {
   type ChatSendInput,
   type TaskEvent,
 } from "./chat-session-messages.js";
+import { createTurnDurabilityGate } from "./chat-session-transcript-sync.js";
 import {
   combineQueuedInputs,
   deleteSessionFile,
@@ -53,6 +52,7 @@ import {
 } from "./chat-session-run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
+  composeTurnContent,
 } from "./chat-session-start.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
 
@@ -93,6 +93,10 @@ export class ChatSession extends EventEmitter {
    * reused on drain/restart so we don't re-read history every turn.
    */
   private resolvedContextDir: string | null | undefined = undefined;
+  /** Holds each turn's `result` until the transcript flush lands on disk. */
+  private readonly durability = createTurnDurabilityGate(
+    () => ({ boxRoot: this.boxRoot, sessionId: this.sessionId }),
+  );
 
   constructor(boxRoot: string, options?: ChatSessionOptions) {
     super();
@@ -195,7 +199,13 @@ export class ChatSession extends EventEmitter {
     try {
       for await (const sdkMsg of run.messages) {
         const msg = adaptSdkMessage(sdkMsg);
-        if (msg !== null) this.handleMessage(msg);
+        if (msg === null) continue;
+        this.durability.observe(msg);
+        // Hold `result` until the transcript is flushed: consumers refetch
+        // history the moment a turn ends, and the CLI writes the final
+        // assistant entry ~150ms *after* emitting result.
+        if (msg.type === "result") await this.durability.awaitDurability();
+        this.handleMessage(msg);
       }
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
@@ -300,21 +310,14 @@ export class ChatSession extends EventEmitter {
       ? { text: message }
       : message;
 
-    // Prepend the chat-app snapshot: feature flags, wall-clock time, and
-    // situational context (box-local time always; last-activity and
-    // calendar only on the first message of a brand-new conversation —
-    // sessionId is still unassigned at that point). Visible to the agent on
-    // every user turn; encapsulated to one tag so it's easy to skim past.
-    //
-    // Composed BEFORE the run starts: the snapshot does filesystem I/O, and
-    // observers of "a run exists" (drain-path tests, callers polling the
-    // backend) expect run.send to follow run creation with no awaits in
-    // between.
-    await this.features.ensureLoaded();
-    const snapshot = await composeSendSnapshot(this.boxRoot, {
-      features: this.features.snapshot(),
+    // Composed BEFORE the run starts (it does filesystem I/O), and awaited
+    // before run creation: observers of "a run exists" (drain-path tests,
+    // callers polling the backend) expect run.send to follow run creation
+    // with no awaits in between.
+    const content = await composeTurnContent(this.boxRoot, {
+      rawInput,
+      features: this.features,
       sessionStart: this.sessionId === null,
-      ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
     });
 
     if (this.run === null || this.run.closed) {
@@ -328,16 +331,7 @@ export class ChatSession extends EventEmitter {
 
     this.busy = true;
     this.turnText = "";
-
-    const input: ChatSendInput = {
-      ...rawInput,
-      text: `${snapshot}\n${rawInput.text}`,
-    };
-
-    const content = buildContentBlocks(input);
-    const imgCount = (input.images ?? []).length;
-    log("send", `Sending message (${input.text.length} chars, ${imgCount} image(s), ${content.length} block(s))`);
-    this.run.send(toBackendContent(content));
+    this.run.send(content);
     return true;
   }
 

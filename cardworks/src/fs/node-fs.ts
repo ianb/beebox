@@ -1,6 +1,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { FileSystem } from "./types.js";
+import { GLOB_SKIP_DIRS } from "./glob-skip.js";
 
 /**
  * Context for a recursive directory walk, invariant across the recursion.
@@ -108,7 +109,9 @@ export class NodeFileSystem implements FileSystem {
       try {
         const stat = await fs.stat(fullPath);
         if (stat.isDirectory()) {
-          await this.walkDir(fullPath, { basePath, pattern, results });
+          if (!GLOB_SKIP_DIRS.has(entry)) {
+            await this.walkDir(fullPath, { basePath, pattern, results });
+          }
         } else if (stat.isFile()) {
           if (pattern.test(relativePath)) {
             results.push(fullPath);

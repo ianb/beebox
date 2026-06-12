@@ -5,6 +5,7 @@
  *   cb procedure run <name>      Start a new procedure run
  *   cb procedure list            List available procedure definitions
  *   cb procedure status [dir]    Show status of a procedure run
+ *   cb procedure gc              Delete expired run directories
  */
 
 import { Command } from "commander";
@@ -59,6 +60,30 @@ procedureCommand
 
       const result = await runCommand({
         name: "procedure-list",
+        args: {},
+        ctx,
+      });
+
+      if (!result.success) {
+        console.error(`Error: ${result.error}`);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+procedureCommand
+  .command("gc")
+  .description("Delete expired procedure run directories")
+  .action(async () => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const ctx = createCliContext(boxRoot);
+
+      const result = await runCommand({
+        name: "procedure-gc",
         args: {},
         ctx,
       });

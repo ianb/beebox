@@ -44,6 +44,7 @@ import {
   type IngestResult,
 } from "./telegram-ingest.js";
 import { sendOutbound } from "./telegram-outbound.js";
+import { sendOutputCards } from "./telegram-output-cards.js";
 
 // Re-export the public surface that previously lived in this file so existing
 // importers ("./telegram.js") keep working unchanged.
@@ -108,10 +109,26 @@ class TelegramConnector implements Connector {
 
     // Phase 4: Send outbound messages from thread files
     try {
-      const sentThreads = await this.sendOutbound(config);
+      const sentThreads = await sendOutbound({
+        boxRoot: this.boxRoot,
+        triggeredBy: this.triggeredBy,
+        tg: this.getTelegram(config.botToken),
+      });
       pushed.push(...sentThreads);
     } catch (err) {
       errors.push(`Outbound send failed: ${(err as Error).message}`);
+    }
+
+    // Phase 5: Send pending telegram-message cards from box/output/
+    try {
+      const sentCards = await sendOutputCards({
+        boxRoot: this.boxRoot,
+        triggeredBy: this.triggeredBy,
+        tg: this.getTelegram(config.botToken),
+      });
+      pushed.push(...sentCards);
+    } catch (err) {
+      errors.push(`Output card send failed: ${(err as Error).message}`);
     }
 
     const result: SyncResult = {
@@ -319,16 +336,6 @@ class TelegramConnector implements Connector {
     return jobs;
   }
 
-  /**
-   * Send outbound messages: scan thread files for unsent agent messages.
-   */
-  private async sendOutbound(config: TelegramConfig): Promise<string[]> {
-    return sendOutbound({
-      boxRoot: this.boxRoot,
-      triggeredBy: this.triggeredBy,
-      tg: this.getTelegram(config.botToken),
-    });
-  }
 }
 
 /**

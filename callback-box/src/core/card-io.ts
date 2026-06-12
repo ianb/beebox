@@ -352,11 +352,17 @@ export function loadCardFromText(input: {
 
 /**
  * Extract the card type from a filename matching `Foo.<type>.card`.
- * Returns undefined when the source doesn't fit that pattern (e.g. test
- * fixtures with non-card paths).
+ * Job cards use the dotted convention `Foo.<kind>.job.card` (the reactor
+ * discovers jobs by that suffix — see reactor/job-discovery.ts) while
+ * their schemas are registered under hyphenated names, so e.g.
+ * `Foo.intake.job.card` resolves to type `intake-job`.
+ * Returns undefined when the source doesn't fit either pattern (e.g.
+ * test fixtures with non-card paths).
  */
-function typeFromFilename(source: string): string | undefined {
+export function typeFromFilename(source: string): string | undefined {
   const base = source.split("/").pop() ?? source;
+  const jobMatch = base.match(/^.+\.([^.]+)\.job\.card$/);
+  if (jobMatch) return `${jobMatch[1]}-job`;
   const match = base.match(/^.+\.([^.]+)\.card$/);
   return match ? match[1] : undefined;
 }

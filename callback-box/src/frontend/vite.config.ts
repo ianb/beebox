@@ -23,12 +23,14 @@ const stripBase = (incoming: string) =>
     ? incoming.slice(BASE_PREFIX.length)
     : incoming;
 
-// HMR connects DIRECTLY to this Vite's port — bypassing the router so the
-// router never has to deal with WebSocket upgrades. The browser learns the
-// real internal port from this setting.
-const hmrConfig = {
-  clientPort: FRONTEND_PORT,
-};
+// HMR deliberately has NO host/port config: with nothing set, Vite's client
+// connects its HMR WebSocket (and sends its reconnect pings) to the page's
+// own origin — i.e. through the dev router, which proxies upgrades to this
+// Vite. That makes stale tabs self-healing: the router restarts a shut-down
+// worktree on the ping (an HTTP GET, sent only while the tab is visible),
+// the ping then succeeds, and Vite's client reloads the page. Pinning
+// `hmr.clientPort` to this Vite's internal port (the old setup) wedged tabs
+// forever, because each restart picks a fresh random port.
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -53,7 +55,6 @@ export default defineConfig({
     // reach us. Vite's default localhost-resolution sometimes lands on ::1
     // only, which the router doesn't follow.
     host: "127.0.0.1",
-    hmr: hmrConfig,
     proxy: {
       // Root-level API (box list, admin, etc.). Must be listed before the
       // per-box rule so /<base>/api/* doesn't get caught by /<base>/<box>/api/*.

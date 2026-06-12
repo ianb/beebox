@@ -36,7 +36,7 @@ interface ChatActionsOpts {
   resetAttachments: () => void;
   resetSelections: () => void;
   addImageFiles: (files: File[]) => void;
-  turnTakingRef: React.MutableRefObject<boolean>;
+  onSend: () => void;
   isTranscribing: boolean;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   transcriptTick: string;
@@ -52,7 +52,7 @@ export function useChatActions(opts: ChatActionsOpts) {
   const {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     input, setInput, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
-    turnTakingRef, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
+    onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
   } = opts;
   const navigate = useNavigate();
@@ -73,7 +73,7 @@ export function useChatActions(opts: ChatActionsOpts) {
   const handleSend = useCallback(() => {
     const text = input.trim();
     if (!text && attachments.length === 0 && fileAttachments.length === 0 && selections.length === 0) return;
-    turnTakingRef.current = false;
+    onSend();
     unlockAudioContext();
 
     // Convert UI attachments to the wire-format images payload.
@@ -105,7 +105,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [input, attachments, fileAttachments, selections, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, turnTakingRef, resetAttachments, resetSelections, setInput, setScrollToBottomTrigger, setTypingMode]);
+  }, [input, attachments, fileAttachments, selections, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setInput, setScrollToBottomTrigger, setTypingMode]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const images = extractImageFiles(e.clipboardData);

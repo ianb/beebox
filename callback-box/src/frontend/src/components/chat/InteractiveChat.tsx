@@ -16,6 +16,7 @@ import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { chatMachine } from "../../machines/chatMachine.js";
 import { groupMessages } from "../ChatMessages";
 import { serializeViewUrl } from "../../lib/view-url";
+import { clearLastMessageAudio } from "../../lib/last-audio-cache";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
@@ -99,6 +100,9 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
 
   const doSend = useCallback(
     (wrapped: string) => {
+      // Any send moves "the last message" past the cached voice recording.
+      // A voice send re-caches its own audio right after (see runKeywordSend).
+      clearLastMessageAudio();
       send({ type: "SEND", message: wrapped, messageId: newMessageId() });
     },
     [send]
@@ -174,7 +178,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     addImageFiles: attach.addImageFiles,
-    turnTakingRef: voice.turnTakingRef, isTranscribing: voice.isTranscribing, textareaRef,
+    onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
   });
