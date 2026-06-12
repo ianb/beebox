@@ -232,13 +232,31 @@ unknown: null
 ```
 
 The model prompt wraps the caller's question with framing that keeps the
-answer addressed to the asker, not the recording's speaker:
+answer addressed to the asker, not the recording's speaker. Context and a
+known transcript are optional labeled sections:
 
 ```
-const prompt = buildAudioQuestionPrompt("What language is spoken?");
-print(`has question: ${prompt.includes("Question: What language is spoken?")}`);
-print(`frames the audio: ${prompt.includes("voice message")}`);
+const bare = buildAudioQuestionPrompt({ question: "What language is spoken?" });
+print(`has question: ${bare.includes("Question: What language is spoken?")}`);
+print(`frames the audio: ${bare.includes("voice message")}`);
+print(`no transcript section: ${!bare.includes("automated transcription")}`);
 =>
 has question: true
 frames the audio: true
+no transcript section: true
+```
+
+``` continue
+const full = buildAudioQuestionPrompt({
+  question: "Did the transcript get the Spanish right?",
+  context: "The user is practicing Spanish for a trip.",
+  transcript: "No. No.",
+});
+print(`has context: ${full.includes("practicing Spanish for a trip")}`);
+print(`transcript framed as fallible: ${full.includes("trust the audio over the transcript")}`);
+print(`question last: ${full.trimEnd().endsWith("Did the transcript get the Spanish right?")}`);
+=>
+has context: true
+transcript framed as fallible: true
+question last: true
 ```

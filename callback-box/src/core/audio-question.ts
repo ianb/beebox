@@ -27,14 +27,34 @@ export class AudioQuestionError extends Error {
  * The user-role prompt wrapped around the caller's question. Exported for
  * tests; the framing keeps the model answering about the audio rather than
  * chatting with its speaker.
+ *
+ * `context` is conversational background supplied by the asking agent (what
+ * the message responds to, what the user is working on). `transcript` is the
+ * box's own automated transcription of the recording — framed as fallible so
+ * the model listens to the audio rather than anchoring on the text, and
+ * flags discrepancies, which is often the whole point of the question.
  */
-export function buildAudioQuestionPrompt(question: string): string {
-  return [
+export function buildAudioQuestionPrompt(opts: {
+  question: string;
+  context?: string | undefined;
+  transcript?: string | undefined;
+}): string {
+  const lines = [
     "Listen to the attached audio recording (a voice message from the user of a personal-assistant system) and answer the question below about it.",
     "Answer the question directly and concretely, addressing the person who asked — do not address the speaker in the recording. Quote or transcribe the relevant moments of the audio when that supports the answer.",
-    "",
-    `Question: ${question}`,
-  ].join("\n");
+  ];
+  if (opts.context) {
+    lines.push("", "Context from the conversation, provided by the assistant asking the question:", opts.context);
+  }
+  if (opts.transcript) {
+    lines.push(
+      "",
+      "For reference, the system's automated transcription of this recording. It may contain errors — trust the audio over the transcript, and point out meaningful discrepancies when they bear on the question:",
+      opts.transcript,
+    );
+  }
+  lines.push("", `Question: ${opts.question}`);
+  return lines.join("\n");
 }
 
 /** Resolve the Gemini API key from env (same vars `cb describe-images` uses). */
@@ -44,7 +64,13 @@ export function resolveGeminiKey(): string | null {
 
 export async function askAudioQuestion(
   apiKey: string,
-  { audio, mimeType, question }: { audio: Buffer; mimeType: string; question: string }
+  { audio, mimeType, question, context, transcript }: {
+    audio: Buffer;
+    mimeType: string;
+    question: string;
+    context?: string | undefined;
+    transcript?: string | undefined;
+  }
 ): Promise<{ answer: string; model: string }> {
   const ai = new GoogleGenAI({ apiKey });
   const response = await ai.models.generateContent({
@@ -53,7 +79,7 @@ export async function askAudioQuestion(
       {
         role: "user",
         parts: [
-          { text: buildAudioQuestionPrompt(question) },
+          { text: buildAudioQuestionPrompt({ question, context, transcript }) },
           { inlineData: { mimeType, data: audio.toString("base64") } },
         ],
       },

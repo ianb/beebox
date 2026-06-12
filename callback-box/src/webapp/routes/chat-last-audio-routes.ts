@@ -22,8 +22,13 @@ import type { ChatRoutesContext } from "./chat-context.js";
 const DEFAULT_TIMEOUT_MS = 10_000;
 const MIN_TIMEOUT_MS = 100;
 const MAX_TIMEOUT_MS = 30_000;
-/** Cap on the text snippet header (pre-encoding) — headers must stay small. */
-const MAX_TEXT_HEADER_CHARS = 300;
+/**
+ * Cap on the transcript header (pre-encoding). Generous because
+ * `ask-about-audio` feeds it to the audio model for flaw-detection on long
+ * dictations; even fully percent-encoded it stays well under Node's 16KB
+ * total-header limit.
+ */
+const MAX_TEXT_HEADER_CHARS = 1500;
 
 interface LastAudioRequestBody {
   /** How long to wait for a browser answer. Clamped to [100, 30000]. */
