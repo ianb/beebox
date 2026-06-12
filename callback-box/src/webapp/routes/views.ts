@@ -12,6 +12,8 @@ import { glob } from "glob";
 import { promises as fs } from "node:fs";
 import { compileView, listViews, buildErrorModule } from "../views/compiler.js";
 import { createLoader } from "../../cli/lib/loader.js";
+import { getStatus, isRepo } from "../../cli/lib/git.js";
+import { fileEtag } from "../file-etag.js";
 import { attachDirFor } from "../../lib/attach-path.js";
 import type { ViewCard, ViewCardChild, ViewFile } from "../../types/views.js";
 import type { ElementNode } from "cardworks";
@@ -140,9 +142,47 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
         if (meta !== null) files.push(meta);
       }
 
+      // Annotate git working-tree state so views can show unsaved/uncommitted
+      // indicators and decide when to offer a commit affordance.
+      const gitStatusOf = await buildGitStatusLookup(boxRoot);
+      if (gitStatusOf !== null) {
+        for (const file of files) annotateGitStatus(file, gitStatusOf);
+        for (const card of cards) {
+          for (const att of card.attachments ?? []) annotateGitStatus(att, gitStatusOf);
+        }
+      }
+
       return { cards, files };
     }
   );
+}
+
+type GitStatusLookup = (relPath: string) => "dirty" | "untracked" | null;
+
+/**
+ * One repo-wide status call mapped to a per-path lookup. Untracked entries
+ * from porcelain can be whole directories ("?? new-dir/"), so untracked
+ * matching is prefix-aware; dirty (modified/staged) entries are exact.
+ */
+async function buildGitStatusLookup(boxRoot: string): Promise<GitStatusLookup | null> {
+  if (!(await isRepo(boxRoot))) return null;
+  const status = await getStatus(boxRoot);
+  const dirty = new Set([...status.modified, ...status.staged]);
+  const untracked = status.untracked;
+  return (relPath: string) => {
+    if (dirty.has(relPath)) return "dirty";
+    for (const entry of untracked) {
+      if (entry === relPath || (entry.endsWith("/") && relPath.startsWith(entry))) {
+        return "untracked";
+      }
+    }
+    return null;
+  };
+}
+
+function annotateGitStatus(file: ViewFile, lookup: GitStatusLookup): void {
+  const status = lookup(file.path);
+  if (status !== null) file.gitStatus = status;
 }
 
 /** Stat one file into ViewFile metadata; null when it vanished mid-request. */
@@ -150,7 +190,7 @@ async function statViewFile(boxRoot: string, relPath: string): Promise<ViewFile 
   try {
     const st = await fs.stat(path.join(boxRoot, relPath));
     if (!st.isFile()) return null;
-    return { path: relPath, size: st.size, mtimeMs: st.mtimeMs };
+    return { path: relPath, size: st.size, mtimeMs: st.mtimeMs, etag: fileEtag(st) };
   } catch (_e) {
     return null;
   }

@@ -4,6 +4,8 @@
  * Called by generate-docs.ts to produce docs/generated/views.md.
  */
 
+import { dependenciesAndParamsSection } from "./views-doc-files.js";
+
 const introSection = `# Views: Agent-Generated React Components
 
 Views are \`.tsx\` files in the \`views/\` directory at the box root. They get compiled server-side and rendered in the browser — either as standalone pages or embedded in chat messages.
@@ -73,6 +75,9 @@ The default export receives a \`ViewProps\` object:
 | \`files\` | ViewFile[] | Metadata for non-card files matching the globs: \`{path, size, mtimeMs}\` |
 | \`readFile\` | (path, opts?) => Promise<string> | Fetch a file's text; \`{start, end}\` byte range, negative start = tail |
 | \`fileUrl\` | (path) => string | URL for a box file — \`<img src>\`, \`<audio src>\`, download links |
+| \`writeFile\` | (path, {content, expect?}) => Promise<ViewFile> | Create/overwrite (parents made); returns the new ViewFile; never commits |
+| \`appendFile\` | (path, {content, expect?}) => Promise<ViewFile> | Append (creates when missing); same semantics |
+| \`commitFile\` | (path, message) => Promise<{committed, hash?}> | Commit the file + its attachments, nothing else |
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
@@ -101,85 +106,6 @@ box-relative paths (e.g.
 \`store/playground/Playground.attach/sessions/history.jsonl\`). Content is
 never inlined — attachments can be huge or binary — fetch it with
 \`readFile(path)\` or point an \`<img>\`/\`<audio>\` at \`fileUrl(path)\`.`;
-
-const dependenciesAndParamsSection = `## Dependencies
-
-The \`dependencies\` array controls two things:
-1. **Which data is loaded** — matching \`.card\` files arrive parsed in \`cards\`;
-   any other matching file arrives as metadata in \`files\`
-   (\`{path, size, mtimeMs}\` — fetch content with \`readFile\`/\`fileUrl\`)
-2. **When to re-render** — the view refreshes automatically when matching files change
-
-Use glob patterns relative to the box root:
-- \`"box/inbox/**/*.card"\` — all cards in the inbox
-- \`"store/archive/**/*.record.card"\` — all record cards in the archive
-- \`"store/todos/**/*.card"\` — all todo cards
-- \`"box/**/*.card"\` — everything in box/
-- \`"store/playground/Playground.attach/**/*.jsonl"\` — a card's attachment files
-
-### Reading a card's attachments
-
-A card's extra data usually lives in its attach scope. The card's
-\`attachments\` listing (or a dependency glob into the \`.attach/\` dir) tells
-you what exists; \`readFile\` fetches content on demand. Attachments can be
-very large — fetch only what you render. A byte-range tail is the right way
-to show "recent entries" from an append-only log:
-
-\`\`\`tsx
-export const dependencies = [
-  "store/playground/*.card",
-  "store/playground/Playground.attach/**/*.jsonl",
-];
-
-export default function PlaygroundHistory({ files, readFile }) {
-  const [entries, setEntries] = useState([]);
-  const log = files.find((f) => f.path.endsWith("sessions/history.jsonl"));
-  useEffect(() => {
-    if (!log) return;
-    // Tail the last 64KB — enough for recent entries, cheap for a huge log.
-    readFile(log.path, { start: -65536 }).then((text) => {
-      const lines = text.split("\\n").filter(Boolean);
-      // A tail can start mid-line; drop the first line unless we read from byte 0.
-      if (log.size > 65536) lines.shift();
-      setEntries(lines.map((line) => JSON.parse(line)));
-    });
-  }, [log && log.path, log && log.mtimeMs]);
-  return <ul>{entries.map((e, i) => <li key={i}>{e.summary}</li>)}</ul>;
-}
-\`\`\`
-
-\`mtimeMs\` in the effect deps makes the view re-fetch when the log grows.
-For images and audio, don't fetch — render \`<img src={fileUrl(f.path)} />\`.
-
-## Query Parameters (path and others)
-
-Views receive query parameters via \`params\`. The most important parameter is \`path\`, which scopes what the view shows.
-
-**Always provide a \`path\` parameter** when linking to or embedding a view:
-- \`path=/\` — the entire box
-- \`path=store/archive/bills/\` — a specific directory
-- \`path=store/archive/bills/Electric.record.card\` — a specific card
-
-The view component reads it from \`params.path\`:
-
-\`\`\`tsx
-export default function MyView({ cards, params }) {
-  const viewPath = params.path || "/";
-  // Filter cards by path, or use it as context
-  const filtered = viewPath === "/"
-    ? cards
-    : cards.filter(c => c.path.startsWith(viewPath));
-  // ...
-}
-\`\`\`
-
-You can also use custom query parameters for filtering, sorting, etc. — they all arrive in \`params\`.
-
-## React
-
-React is provided automatically. **Do NOT import React** — the build system handles it. If you do write \`import React from "react"\`, it will still work (the compiler intercepts it), but it's unnecessary.
-
-You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.`;
 
 const showingFilesSection = `## Showing Files in Chat
 

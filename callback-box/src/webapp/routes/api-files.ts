@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { commitPaths, pathsHaveChanges, stageFiles } from "../../cli/lib/git.js";
 import type { EventBus } from "../../core/event-bus.js";
+import { fileEtag } from "../file-etag.js";
 
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -88,7 +89,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         // browser keeps the body but must revalidate every time, so an agent
         // editing the file on disk becomes visible on the next reload.
         const lastModified = stat.mtime.toUTCString();
-        const etag = `W/"${stat.mtimeMs.toString(36)}-${stat.size.toString(36)}"`;
+        const etag = fileEtag(stat);
         const ifNoneMatch = request.headers["if-none-match"];
         const ifModifiedSince = request.headers["if-modified-since"];
         const etagMatches = ifNoneMatch === etag;

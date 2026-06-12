@@ -2360,9 +2360,10 @@ tests:
   # Indirect knowledge: needed only when authoring views, so the agent
   # should know to read docs/generated/views.md rather than recall details.
   #
-  # Status (2026-06-12): Both pass on first run — agent reads
+  # Status (2026-06-12): All 3 pass on first run — agent reads
   # docs/generated/views.md (1 file read each), then describes the
-  # readFile byte-range tail and attachments-metadata + fileUrl patterns.
+  # readFile byte-range tail, attachments-metadata + fileUrl, and the
+  # conflict-safe write pattern (expect/ViewFileConflictError/commitFile).
   # Pre-existing view-zoom audits re-verified in the same run.
 
   - id: views-read-large-attachment
@@ -2459,3 +2460,22 @@ tests:
       without naming it — which proved the knowledge but failed the literal
       contains-check, and the audit sandbox has no live chat tab to answer
       the fetch anyway.
+
+  - id: views-write-conflict-safe
+    prompt: >
+      I'm writing a view where the user edits a markdown attachment and
+      saves it. Another agent might modify the same file while they're
+      editing. How do I save without silently clobbering their change,
+      and when does the result get committed to git?
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/views.md, then describes the conflict-safe
+      pattern: writeFile(path, {content, expect: file}) asserting the
+      ViewFile's etag, catching ViewFileConflictError (which carries the
+      current state) to refresh instead of overwriting. Knows writes do
+      NOT auto-commit — commitFile(path, message) commits the file plus
+      its attachments at meaningful boundaries, and housekeeping sweeps
+      stragglers.
+    should_read: ["docs/generated/views.md"]
+    correct_contains_any: ["expect", "ViewFileConflictError", "commitFile"]
+    tags: [views, attachments]

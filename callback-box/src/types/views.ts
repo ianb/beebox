@@ -16,6 +16,29 @@ export interface ViewProps {
   readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
   /** URL for a box file — use for <img src>, <audio src>, download links. */
   fileUrl: (path: string) => string;
+  /**
+   * Create or overwrite a box file (parent dirs created); returns the new
+   * ViewFile. Does NOT commit. Conflict-safe saves pass {expect}: the
+   * ViewFile you read (write fails 412 → ViewFileConflictError carrying
+   * the current state if someone else changed it) or "absent"
+   * (create-only — fails if the file appeared).
+   */
+  writeFile: (
+    path: string,
+    opts: { content: string; expect?: ViewFile | "absent" }
+  ) => Promise<ViewFile>;
+  /** Append to a box file (created when missing); same {expect} semantics. */
+  appendFile: (
+    path: string,
+    opts: { content: string; expect?: ViewFile | "absent" }
+  ) => Promise<ViewFile>;
+  /**
+   * Commit a file and its attachments (a card commits with its attach
+   * scope; an attach-scope file commits with its owning card + scope) —
+   * nothing else. Call at meaningful boundaries, not per keystroke;
+   * box housekeeping sweeps anything left uncommitted.
+   */
+  commitFile: (path: string, message: string) => Promise<{ committed: boolean; hash?: string }>;
   navigate: (path: string) => void;
   boxSlug: string;
   /** Query parameters from the view URL (e.g., path, custom filters). */
@@ -42,6 +65,13 @@ export interface ViewFile {
   path: string;
   size: number;
   mtimeMs: number;
+  /** Version token (mtime+size). Pass back via writeFile {expect} for conflict-safe saves. */
+  etag: string;
+  /**
+   * Git working-tree state: "dirty" (tracked, uncommitted changes) or
+   * "untracked" (git has never seen it). Absent = committed and clean.
+   */
+  gitStatus?: "dirty" | "untracked";
 }
 
 export interface ViewCardChild {

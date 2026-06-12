@@ -1,0 +1,133 @@
+/**
+ * The file-access chapter of the generated views doc: dependency globs,
+ * reading attachments (metadata + readFile/fileUrl), and conflict-safe
+ * writes + commit semantics. Split from views-doc.ts for the line cap.
+ */
+
+export const dependenciesAndParamsSection = `## Dependencies
+
+The \`dependencies\` array controls two things:
+1. **Which data is loaded** — matching \`.card\` files arrive parsed in \`cards\`;
+   any other matching file arrives as metadata in \`files\`
+   (\`{path, size, mtimeMs}\` — fetch content with \`readFile\`/\`fileUrl\`)
+2. **When to re-render** — the view refreshes automatically when matching files change
+
+Use glob patterns relative to the box root:
+- \`"box/inbox/**/*.card"\` — all cards in the inbox
+- \`"store/archive/**/*.record.card"\` — all record cards in the archive
+- \`"store/todos/**/*.card"\` — all todo cards
+- \`"box/**/*.card"\` — everything in box/
+- \`"store/playground/Playground.attach/**/*.jsonl"\` — a card's attachment files
+
+### Reading a card's attachments
+
+A card's extra data usually lives in its attach scope. The card's
+\`attachments\` listing (or a dependency glob into the \`.attach/\` dir) tells
+you what exists; \`readFile\` fetches content on demand. Attachments can be
+very large — fetch only what you render. A byte-range tail is the right way
+to show "recent entries" from an append-only log:
+
+\`\`\`tsx
+export const dependencies = [
+  "store/playground/*.card",
+  "store/playground/Playground.attach/**/*.jsonl",
+];
+
+export default function PlaygroundHistory({ files, readFile }) {
+  const [entries, setEntries] = useState([]);
+  const log = files.find((f) => f.path.endsWith("sessions/history.jsonl"));
+  useEffect(() => {
+    if (!log) return;
+    // Tail the last 64KB — enough for recent entries, cheap for a huge log.
+    readFile(log.path, { start: -65536 }).then((text) => {
+      const lines = text.split("\\n").filter(Boolean);
+      // A tail can start mid-line; drop the first line unless we read from byte 0.
+      if (log.size > 65536) lines.shift();
+      setEntries(lines.map((line) => JSON.parse(line)));
+    });
+  }, [log && log.path, log && log.mtimeMs]);
+  return <ul>{entries.map((e, i) => <li key={i}>{e.summary}</li>)}</ul>;
+}
+\`\`\`
+
+\`mtimeMs\` in the effect deps makes the view re-fetch when the log grows.
+For images and audio, don't fetch — render \`<img src={fileUrl(f.path)} />\`.
+
+### Writing files from a view
+
+Views can create, overwrite, and append to box files (everything except
+\`.card\` files — cards validate, so they go through the card API or
+\`cb create\`). A ViewFile is an identity + version: its \`etag\` is the
+version token. The conflict-safe pattern — assert the version you read,
+and refresh instead of clobbering when someone else changed the file:
+
+\`\`\`tsx
+export default function Notes({ files, readFile, writeFile, commitFile }) {
+  const [file, setFile] = useState(files.find((f) => f.path.endsWith("notes.md")));
+  const [text, setText] = useState("");
+  useEffect(() => { if (file) readFile(file.path).then(setText); }, [file && file.etag]);
+
+  async function save() {
+    try {
+      // expect: file → the write fails (412) if the file changed since we read it
+      const next = await writeFile(file.path, { content: text, expect: file });
+      setFile(next); // the returned ViewFile is the new version — chain saves from it
+    } catch (e) {
+      if (e.name === "ViewFileConflictError") {
+        setFile(e.current); // someone else wrote — e.current is the fresh version; reload
+        return;
+      }
+      throw e;
+    }
+  }
+
+  return <div>
+    <textarea value={text} onChange={(e) => setText(e.target.value)} />
+    <button onClick={save}>Save</button>
+    <button onClick={() => commitFile(file.path, "Edited notes from view")}>Commit</button>
+  </div>;
+}
+\`\`\`
+
+- \`expect: someViewFile\` — overwrite only if unchanged since you read it.
+- \`expect: "absent"\` — create-only; conflicts if the file appeared meanwhile.
+- Omit \`expect\` for unconditional writes (append-only logs rarely need it).
+
+**Git semantics.** Writes never auto-commit — interactive saves are chatty
+and a commit per keystroke would spam history. \`gitStatus\` on each
+ViewFile shows working-tree state (\`"dirty"\`, \`"untracked"\`, absent =
+committed clean) so a view can render an unsaved-changes indicator. Call
+\`commitFile(path, message)\` at meaningful boundaries — it commits the
+file's card and attach scope (and nothing else); a card path sweeps its
+scope, an attachment path sweeps its owning card + scope. Anything left
+uncommitted is safe: box housekeeping sweeps stray changes on wakeup.
+
+## Query Parameters (path and others)
+
+Views receive query parameters via \`params\`. The most important parameter is \`path\`, which scopes what the view shows.
+
+**Always provide a \`path\` parameter** when linking to or embedding a view:
+- \`path=/\` — the entire box
+- \`path=store/archive/bills/\` — a specific directory
+- \`path=store/archive/bills/Electric.record.card\` — a specific card
+
+The view component reads it from \`params.path\`:
+
+\`\`\`tsx
+export default function MyView({ cards, params }) {
+  const viewPath = params.path || "/";
+  // Filter cards by path, or use it as context
+  const filtered = viewPath === "/"
+    ? cards
+    : cards.filter(c => c.path.startsWith(viewPath));
+  // ...
+}
+\`\`\`
+
+You can also use custom query parameters for filtering, sorting, etc. — they all arrive in \`params\`.
+
+## React
+
+React is provided automatically. **Do NOT import React** — the build system handles it. If you do write \`import React from "react"\`, it will still work (the compiler intercepts it), but it's unnecessary.
+
+You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.`;
