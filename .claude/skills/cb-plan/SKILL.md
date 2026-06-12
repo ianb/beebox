@@ -260,6 +260,13 @@ Default: each new agent-facing concept gets at least one
 infrastructural; no agent needs to recall it") is fine — just say so
 explicitly.
 
+Audits land **run**, not just written: execute
+`pnpm knowledge-audit run --box <test-box> --filter <tag-or-id>` and
+record the status comment in `knowledge-audits.yaml` before the plan
+completes. A never-run audit is unverified in both directions — the
+agent may fail it, or the audit itself may be broken. The agent-session
+cost is part of authoring, not a separate decision to defer.
+
 ### Implementation order
 
 How the chunks land, in order. Each chunk is a commit (or a few

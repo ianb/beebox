@@ -11,6 +11,11 @@ The harness lives in `src/dev/`:
 
 ## When to run
 
+- **Immediately after adding or editing audit entries** — filtered to the
+  new entries (`--filter <tag-or-id>`). A never-run audit is unverified in
+  both directions: the agent may fail it, or the audit itself may be
+  broken (bad `correct_contains`, wrong `should_read` path). Running is
+  part of authoring, not a follow-up.
 - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
 - On a periodic cadence (monthly is probably enough) to catch slow drift.
 
