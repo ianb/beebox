@@ -159,12 +159,16 @@ export const getLastAudioCommand = new Command("get-last-audio")
 interface AskAboutAudioOptions {
   file?: string;
   timeout?: string;
+  context?: string;
+  transcript?: string;
 }
 
 export const askAboutAudioCommand = new Command("ask-about-audio")
   .description("Ask an audio-capable model a question about the user's most recent voice message (or --file)")
   .argument("<question>", "Question to answer about the audio (e.g. pronunciation critique, what's said, background sounds)")
   .option("--file <path>", "Ask about this audio file instead of fetching the last voice message")
+  .option("--context <text>", "Conversational context for the model — what the recording is in response to, what the user is working on")
+  .option("--transcript <text>", "Known transcription of the recording, for the model to verify against the audio (defaults to the system's own transcript when fetching the last voice message)")
   .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
   .action(async (question: string, options: AskAboutAudioOptions) => {
     const label = "cb chat ask-about-audio";
@@ -182,7 +186,7 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     let audio: Buffer;
     let mimeType: string;
     let recordedAt: string | null = null;
-    let transcript: string | null = null;
+    let transcript: string | null = options.transcript ?? null;
     if (options.file !== undefined) {
       const filePath = path.resolve(options.file);
       const mime = audioMimeType(filePath);
@@ -206,11 +210,19 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
       audio = fetched.audio;
       mimeType = fetched.contentType || "audio/wav";
       recordedAt = fetched.recordedAt;
-      transcript = fetched.text;
+      // The system's own transcript rides along automatically so the model
+      // can flag transcription flaws; an explicit --transcript wins.
+      transcript = transcript ?? fetched.text;
     }
 
     try {
-      const { answer, model } = await askAudioQuestion(apiKey, { audio, mimeType, question });
+      const { answer, model } = await askAudioQuestion(apiKey, {
+        audio,
+        mimeType,
+        question,
+        context: options.context,
+        transcript: transcript ?? undefined,
+      });
       console.log(answer.trim());
       // Footer identifies which recording was analyzed and by what.
       console.log("--");

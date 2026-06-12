@@ -19,8 +19,12 @@ interface CachedMessageAudio {
   text: string;
 }
 
-/** Cap on the transcript snippet sent with the audio (it rides an HTTP header server-side). */
-const MAX_TEXT_CHARS = 300;
+/**
+ * Cap on the transcript sent with the audio. It rides an HTTP header
+ * server-side, so it can't be unbounded — but long dictations are exactly
+ * where transcript-vs-audio comparison matters, so the cap is generous.
+ */
+const MAX_TEXT_CHARS = 1500;
 
 let cached: CachedMessageAudio | null = null;
 
