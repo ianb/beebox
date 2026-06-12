@@ -2350,3 +2350,40 @@ tests:
       clears the staleness flag, and doesn't just ignore the warning.
     correct_contains: ["cb contains update"]
     tags: [search, cards, behavioral]
+
+  # === Views: reading attachments ===
+  #
+  # Indirect knowledge: needed only when authoring views, so the agent
+  # should know to read docs/generated/views.md rather than recall details.
+
+  - id: views-read-large-attachment
+    prompt: >
+      I want a view that shows the most recent entries from
+      store/playground/Playground.attach/sessions/history.jsonl. The
+      file can be hundreds of megabytes. How does the view get that
+      data?
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/views.md, then describes the metadata +
+      on-demand pattern: a dependency glob (or the card's attachments
+      listing) provides {path, size, mtimeMs}, and readFile with a
+      byte-range tail (negative start, e.g. {start: -65536}) fetches
+      just the recent end. Must NOT claim file content arrives inlined
+      in props, and must not fetch the whole file.
+    should_read: ["docs/generated/views.md"]
+    correct_contains_any: ["readFile", "tail", "range", "Range"]
+    tags: [views, attachments]
+
+  - id: views-discover-attachments
+    prompt: >
+      Inside a view component, how do I find out what files live in a
+      card's attach scope, and how would I display an image from there?
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/views.md, then names the card's attachments
+      metadata listing ({path, size, mtimeMs}, box-relative, recursive)
+      and uses fileUrl(path) as the <img src> — not readFile on a
+      binary.
+    should_read: ["docs/generated/views.md"]
+    correct_contains_any: ["attachments", "fileUrl"]
+    tags: [views, attachments]

@@ -67,6 +67,9 @@ export function viewsSection(): string[] {
     "- Each view declares metadata (name, description, dependencies, modes) as named exports",
     "- Views receive query parameters via `params` — always include `path=` to scope what the view shows",
     "- Views re-render automatically when files matching their dependency globs change",
+    "- Views can read any box file: cards arrive parsed; attachments and other",
+    "  files arrive as metadata, with on-demand `readFile` (byte-range tails for",
+    "  large logs) and `fileUrl` for images/audio",
     "- **Read `docs/generated/views.md` before creating or modifying views.**",
     "",
   ];
