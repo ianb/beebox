@@ -671,7 +671,11 @@ When processing image cards, prefer the date from EXIF `DateTimeOriginal` over f
 
 If a message in the box loses its triggering label in Gmail (user archives it, removes the label, etc.), the box still has the inbox card and the seen ID. There's no signal back. A periodic reconciliation pass — list current matches, remove cards whose IDs no longer match — would close the loop, but needs careful design to avoid deleting cards the user has already acted on. (The history API plumbing now exists; `labelsRemoved` records would be the incremental signal.)
 
-## Full-text + semantic search over a box
+## Full-text + semantic search over a box — IMPLEMENTED (text phase)
+
+Shipped June 2026 as `cb search` + the global `contains:` field — see
+`docs/implemented-plans/box-search.md`. Embeddings/hybrid remain future
+(phase 3, own plan); the notes below are the original thinking.
 
 Today discovery in a box is path-based and rule-injected (great for agents, weak for humans). There's no Quick-Switcher / Cmd-Shift-F equivalent — a boxholder who wants to find a specific card has to `grep` or ask the agent. Worth borrowing the Obsidian-style read surface even though writing remains agent-driven.
 

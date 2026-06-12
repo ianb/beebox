@@ -7,6 +7,16 @@ one-sentence, agent-maintained statement of what can be found inside a card.
 embedding unit when semantic search lands later; it also serves listings and
 triage views independent of the index.
 
+**IMPLEMENTED (June 2026).** Frozen as the historical record. All tracks
+shipped, plus evaluation-driven extensions the plan didn't anticipate:
+standalone `.md` files index (kind `markdown`); image OCR `text:` blocks
+fold into content; persistence is JSON, not msgpack (radix depth limit);
+role separation resolved the image-`description`/`contains` overlap
+(effective-contains fallback; `cb describe-images` writes both); views
+gained attachment metadata + `readFile`/`fileUrl` with byte ranges. The
+current behavior lives in the code, `docs/generated/views.md`, and the
+agent guide — this doc is how it was decided.
+
 (Revised after a cross-model codex review; the connector-ownership policy,
 attachment-content decisions, and hook-warning work below came out of that
 pass.)
