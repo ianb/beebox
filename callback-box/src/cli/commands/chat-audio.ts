@@ -9,6 +9,10 @@
  *   recording (or take `--file`) and put the question to an audio-capable
  *   model (Claude cannot listen to audio; Gemini can — see
  *   core/audio-question.ts), printing its answer.
+ * - `cb chat retranscribe` re-runs the recording through the HQ
+ *   transcription pass (Whisper/Voxtral) — for when narration mode was off,
+ *   so the message committed with the realtime transcript, and that
+ *   transcript looks wrong.
  *
  * Registered on the `cb chat` command in chat.ts.
  */
@@ -19,6 +23,12 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { resolveAgentToken } from "../../core/agent-token.js";
 import { askAudioQuestion, resolveGeminiKey } from "../../core/audio-question.js";
+import {
+  transcribeAudioHq,
+  HQ_TRANSCRIPTION_SERVICES,
+  type HqTranscriptionService,
+} from "../../core/transcription.js";
+import { findBoxRoot } from "../lib/paths.js";
 
 /**
  * Request headers for loopback calls to the live server: JSON content type
@@ -232,6 +242,74 @@ export const askAboutAudioCommand = new Command("ask-about-audio")
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       console.error(`${label}: audio model request failed: ${msg}`);
+      process.exit(1);
+    }
+  });
+
+interface RetranscribeOptions {
+  service?: string;
+  file?: string;
+  timeout?: string;
+}
+
+export const retranscribeCommand = new Command("retranscribe")
+  .description("Re-run the user's most recent voice message (or --file) through high-quality transcription")
+  .option("--service <name>", `HQ service to use: ${HQ_TRANSCRIPTION_SERVICES.join(", ")} (default: the box's hqService config)`)
+  .option("--file <path>", "Transcribe this audio file instead of fetching the last voice message")
+  .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
+  .action(async (options: RetranscribeOptions) => {
+    const label = "cb chat retranscribe";
+    let service: HqTranscriptionService | undefined;
+    if (options.service !== undefined) {
+      if (!(HQ_TRANSCRIPTION_SERVICES as readonly string[]).includes(options.service)) {
+        console.error(`${label}: unknown --service ${options.service} (expected one of: ${HQ_TRANSCRIPTION_SERVICES.join(", ")})`);
+        process.exit(1);
+      }
+      service = options.service as HqTranscriptionService;
+    }
+
+    let audio: Buffer;
+    let filename: string;
+    let recordedAt: string | null = null;
+    let realtimeTranscript: string | null = null;
+    if (options.file !== undefined) {
+      const filePath = path.resolve(options.file);
+      try {
+        audio = await fs.readFile(filePath);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error(`${label}: cannot read ${filePath}: ${msg}`);
+        process.exit(1);
+      }
+      filename = path.basename(filePath);
+    } else {
+      const fetched = await fetchLastAudio({
+        commandLabel: label,
+        timeoutSeconds: options.timeout !== undefined ? Number(options.timeout) : 10,
+      });
+      audio = fetched.audio;
+      filename = `last-message.${audioExtension(fetched.contentType)}`;
+      recordedAt = fetched.recordedAt;
+      realtimeTranscript = fetched.text;
+    }
+
+    const boxRoot = await findBoxRoot(process.cwd());
+    try {
+      const result = await transcribeAudioHq(
+        { audioBuffer: audio, filename, ...(boxRoot !== null ? { boxRoot } : {}) },
+        { service },
+      );
+      console.log(result.text.trim());
+      // Footer: what produced this, and the realtime transcript it replaces
+      // so the caller can see what the live pass got wrong.
+      console.log("--");
+      console.log(`service: ${service ?? "(box default)"}`);
+      if (result.diarized === true) console.log("diarized: true");
+      if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
+      if (realtimeTranscript !== null) console.log(`realtime-transcript: ${realtimeTranscript}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error(`${label}: transcription failed: ${msg}`);
       process.exit(1);
     }
   });

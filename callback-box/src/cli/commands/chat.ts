@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand } from "./chat-audio.js";
+import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./chat-audio.js";
 
 interface SelfNoteOptions {
   ref?: string;
@@ -97,4 +97,5 @@ export const chatCommand = new Command("chat")
   .description("Interact with the live chat session")
   .addCommand(selfNoteCommand)
   .addCommand(getLastAudioCommand)
-  .addCommand(askAboutAudioCommand);
+  .addCommand(askAboutAudioCommand)
+  .addCommand(retranscribeCommand);

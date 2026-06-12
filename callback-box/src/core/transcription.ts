@@ -115,7 +115,8 @@ export type TranscriptionService = "whisper" | "voxtral" | "deepgram" | "openai-
  * - `voxtral-diarized`: Voxtral with diarization on — output is
  *   speaker-prefixed lines ("Speaker 0: …\nSpeaker 1: …").
  */
-export type HqTranscriptionService = "whisper" | "whisper-llm" | "whisper-llm-mini" | "voxtral" | "voxtral-diarized";
+export const HQ_TRANSCRIPTION_SERVICES = ["whisper", "whisper-llm", "whisper-llm-mini", "voxtral", "voxtral-diarized"] as const;
+export type HqTranscriptionService = (typeof HQ_TRANSCRIPTION_SERVICES)[number];
 
 export interface TranscriptionConfig {
   /**
@@ -215,20 +216,22 @@ export async function transcribeAudio(
 /**
  * HQ transcription pass for narration mode's checkpoint flow. Uses the
  * `hqService` config field (any non-deepgram service — deepgram is
- * realtime-only). Same shape as `transcribeAudio` so callers can use
- * either interchangeably; this just routes by the HQ field.
+ * realtime-only), unless the caller picks a service explicitly
+ * (`cb chat retranscribe --service ...`). Same shape as `transcribeAudio`
+ * so callers can use either interchangeably; this just routes by service.
  */
 export async function transcribeAudioHq(
-  params: TranscribeAudioParams
+  params: TranscribeAudioParams,
+  overrides?: { service?: HqTranscriptionService | undefined }
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
-  const config = await loadTranscriptionConfig(params.boxRoot);
-  if (config.hqService === "voxtral") {
+  const service = overrides?.service ?? (await loadTranscriptionConfig(params.boxRoot)).hqService;
+  if (service === "voxtral") {
     return transcribeAudioVoxtral(params);
   }
-  if (config.hqService === "voxtral-diarized") {
+  if (service === "voxtral-diarized") {
     return transcribeAudioVoxtral(params, { diarization: true });
   }
-  return transcribeAudioWhisper(params, { variant: config.hqService });
+  return transcribeAudioWhisper(params, { variant: service });
 }
 
 /**
