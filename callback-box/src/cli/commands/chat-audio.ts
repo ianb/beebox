@@ -250,11 +250,13 @@ interface RetranscribeOptions {
   service?: string;
   file?: string;
   timeout?: string;
+  diarize?: boolean;
 }
 
 export const retranscribeCommand = new Command("retranscribe")
   .description("Re-run the user's most recent voice message (or --file) through high-quality transcription")
   .option("--service <name>", `HQ service to use: ${HQ_TRANSCRIPTION_SERVICES.join(", ")} (default: the box's hqService config)`)
+  .option("--diarize", "Label speakers in the output (uses Voxtral — the only HQ service with diarization)")
   .option("--file <path>", "Transcribe this audio file instead of fetching the last voice message")
   .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
   .action(async (options: RetranscribeOptions) => {
@@ -266,6 +268,14 @@ export const retranscribeCommand = new Command("retranscribe")
         process.exit(1);
       }
       service = options.service as HqTranscriptionService;
+    }
+    if (options.diarize === true) {
+      // --diarize asks for the capability; only Voxtral has it.
+      if (service !== undefined && service !== "voxtral" && service !== "voxtral-diarized") {
+        console.error(`${label}: --service ${service} does not support diarization (only voxtral does)`);
+        process.exit(1);
+      }
+      service = "voxtral-diarized";
     }
 
     let audio: Buffer;
