@@ -133,12 +133,14 @@ export function logDiarizationDebug(result: VoxtralResponse): void {
       .map((s) => s.speaker_id)
       .filter((id): id is string => typeof id === "string" && id.length > 0),
   );
-  console.log(
+  // stderr: this is diagnostics, and `cb chat retranscribe` callers parse
+  // stdout as the transcript.
+  console.error(
     `[voxtral-diarized] segments=${segCount} labeled=${labeled} ` +
       `unique-speakers=${speakers.size} ids=${JSON.stringify([...speakers])}`,
   );
   if (segCount > 0 && labeled === 0) {
-    console.log(
+    console.error(
       "[voxtral-diarized] no speaker_id on any segment; first segment keys: " +
         JSON.stringify(Object.keys(result.segments?.[0] ?? {})),
     );

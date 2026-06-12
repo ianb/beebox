@@ -129,6 +129,13 @@ export function cbCommandsScheduling(): string[] {
     "cb scenario run <name> --dry-run          # Preview steps",
     "```",
     "",
+    ...cbCommandsChat(),
+  ];
+}
+
+/** The `## cb chat` section: self-note + the voice-recording commands. */
+function cbCommandsChat(): string[] {
+  return [
     "## cb chat",
     "",
     "Talk to the live chat session.",
@@ -143,12 +150,13 @@ export function cbCommandsScheduling(): string[] {
     "  transcript rides along automatically so the model can flag transcription",
     "  flaws; `--context` supplies conversational background (what the message",
     "  responds to), and `--transcript` overrides the known transcription.",
-    "- `cb chat retranscribe [--service <name>] [--file <path>]` — Re-run the",
-    "  most recent voice message through the high-quality transcription pass",
-    "  (Whisper/Voxtral; default is the box's `hqService` config). For when the",
-    "  realtime transcript looks wrong and you just need the correct text —",
-    "  cheaper and more direct than `ask-about-audio`. Prints the HQ transcript",
-    "  plus a `realtime-transcript:` line for comparison.",
+    "- `cb chat retranscribe [--diarize] [--service <name>] [--file <path>]` —",
+    "  Re-run the most recent voice message through the high-quality",
+    "  transcription pass (Whisper/Voxtral; default is the box's `hqService`",
+    "  config). For when the realtime transcript looks wrong and you just need",
+    "  the correct text — cheaper and more direct than `ask-about-audio`.",
+    "  `--diarize` labels speakers. Prints the HQ transcript plus a",
+    "  `realtime-transcript:` line for comparison.",
     "- `cb chat get-last-audio [--out <path>]` — Fetch the raw recording of the",
     "  most recent voice message to a temp file; prints the path. Use when you",
     "  need the file itself rather than an answer about it.",
