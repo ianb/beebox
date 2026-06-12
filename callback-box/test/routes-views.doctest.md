@@ -146,17 +146,50 @@ res.statusCode
 ```
 
 ``` continue
-res.body.length
+res.body.cards.length
 => 1
 
-res.body[0].tagName
+res.body.cards[0].tagName
 => memo
 
-res.body[0].path
+res.body.cards[0].path
 => box/inbox/Test.memo.card
 
-res.body[0].attrs.status
+res.body.cards[0].attrs.status
 => new
+
+JSON.stringify(res.body.files)
+=> []
+```
+
+Non-card files matching the globs arrive in `files`, and each card lists
+its attach scope so views can discover what lives next to it:
+
+``` continue
+const PLAYGROUND_VIEW = `
+export const name = "Playground";
+export const description = "Session history";
+export const dependencies = ["box/**/*.card", "box/inbox/Test.attach/**/*.jsonl"];
+export const modes = ["page"];
+export default function P({ cards, files }) { return <div>{files.length}</div>; }
+`;
+await ctx.seed("views/playground.tsx", PLAYGROUND_VIEW);
+await ctx.seed("box/inbox/Test.attach/sessions/history.jsonl", '{"summary":"first run"}\n{"summary":"second run"}\n');
+const res2 = await ctx.request({ method: "GET", url: "/api/views/playground/cards" });
+res2.statusCode
+=> 200
+
+JSON.stringify(res2.body.cards[0].attachments)
+=> ["sessions/history.jsonl"]
+
+res2.body.files.length
+=> 1
+
+res2.body.files[0].path
+=> box/inbox/Test.attach/sessions/history.jsonl
+
+res2.body.files[0].content.split("\n").filter(Boolean).map((l) => JSON.parse(l).summary).join(", ")
+=> first run, second run
 ```
 
 ``` cleanup
@@ -182,7 +215,7 @@ const res = await ctx.request({ method: "GET", url: "/api/views/empty/cards" });
 res.statusCode
 => 200
 
-res.body.length
+res.body.cards.length
 => 0
 ```
 

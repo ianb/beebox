@@ -70,6 +70,7 @@ The default export receives a \`ViewProps\` object:
 | Prop | Type | Description |
 |------|------|-------------|
 | \`cards\` | ViewCard[] | All cards matching the dependency globs |
+| \`files\` | ViewFile[] | All non-card text files matching the globs: \`{path, content}\` |
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
@@ -86,15 +87,22 @@ Each card in the \`cards\` array has:
   text?: string;       // Text content of the root element (if leaf node)
   status?: string;     // Shortcut for attrs.status
   children?: ViewCardChild[];     // Child elements (recursive)
+  attachments?: string[];         // Files in the card's attach scope, scope-relative
 }
 \`\`\`
 
-Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.`;
+Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.
+
+\`attachments\` is how a view discovers what lives next to a card: a card at
+\`store/playground/Playground.card\` with \`attachments: ["sessions/history.jsonl"]\`
+has that file at \`store/playground/Playground.attach/sessions/history.jsonl\`.`;
 
 const dependenciesAndParamsSection = `## Dependencies
 
 The \`dependencies\` array controls two things:
-1. **Which cards are loaded** — only \`.card\` files matching these globs are passed as \`cards\`
+1. **Which data is loaded** — matching \`.card\` files arrive parsed in \`cards\`;
+   any other matching text file (attachments, \`.md\`, \`.jsonl\`, \`.csv\`)
+   arrives raw in \`files\` as \`{path, content}\`
 2. **When to re-render** — the view refreshes automatically when matching files change
 
 Use glob patterns relative to the box root:
@@ -102,6 +110,29 @@ Use glob patterns relative to the box root:
 - \`"store/archive/**/*.record.card"\` — all record cards in the archive
 - \`"store/todos/**/*.card"\` — all todo cards
 - \`"box/**/*.card"\` — everything in box/
+- \`"store/playground/Playground.attach/**/*.jsonl"\` — a card's attachment files
+
+### Reading a card's attachments
+
+A card's extra data usually lives in its attach scope. Depend on both the
+card and the attachment, then read the attachment from \`files\`:
+
+\`\`\`tsx
+export const dependencies = [
+  "store/playground/*.card",
+  "store/playground/Playground.attach/**/*.jsonl",
+];
+
+export default function PlaygroundHistory({ cards, files }) {
+  const history = files
+    .filter((f) => f.path.endsWith("sessions/history.jsonl"))
+    .flatMap((f) => f.content.split("\\n").filter(Boolean).map((line) => JSON.parse(line)));
+  return <ul>{history.map((entry, i) => <li key={i}>{entry.summary}</li>)}</ul>;
+}
+\`\`\`
+
+Binary files (images, audio, pdf) and files over 1MB are skipped — link to
+those with \`view:\` links instead of rendering their content.
 
 ## Query Parameters (path and others)
 

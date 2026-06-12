@@ -19,6 +19,14 @@ interface ViewCard {
   text?: string;
   children?: ViewCardChild[];
   status?: string;
+  /** Files in this card's attach scope, scope-relative. */
+  attachments?: string[];
+}
+
+/** A non-card file matched by the view's dependency globs. */
+interface ViewFile {
+  path: string;
+  content: string;
 }
 
 interface ViewCardChild {
@@ -31,6 +39,7 @@ interface ViewCardChild {
 /** Props passed to every view component */
 interface ViewProps {
   cards: ViewCard[];
+  files: ViewFile[];
   navigate: (path: string) => void;
   boxSlug: string;
   params: Record<string, string>;
@@ -74,6 +83,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
   const navigate = useNavigate();
   const [mod, setMod] = useState<ViewModule | null>(null);
   const [cards, setCards] = useState<ViewCard[]>([]);
+  const [files, setFiles] = useState<ViewFile[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Cache-bust suffix for re-imports — set on first load and bumped per
@@ -108,8 +118,9 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
         setError(`Failed to load cards: ${resp.status}`);
         return;
       }
-      const data = await resp.json() as ViewCard[];
-      setCards(data);
+      const data = await resp.json() as { cards: ViewCard[]; files: ViewFile[] };
+      setCards(data.cards);
+      setFiles(data.files);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -138,12 +149,17 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
         if (changedPath === `views/${slug}.tsx`) {
           loadModule();
         }
-        // Card changed — reload cards
-        if (changedPath.endsWith(".card")) {
+        // Card changed — reload data. Non-card files reload too when they
+        // sit under a dependency glob's static prefix (e.g. an attach-scope
+        // .jsonl the view renders).
+        const depPrefixes = (mod?.dependencies ?? [])
+          .map((d) => d.split("*")[0] ?? "")
+          .filter((prefix) => prefix !== "");
+        if (changedPath.endsWith(".card") || depPrefixes.some((prefix) => changedPath.startsWith(prefix))) {
           loadCards();
         }
       }
-    }, [slug, loadModule, loadCards]),
+    }, [slug, loadModule, loadCards, mod]),
   });
 
   const viewNavigate = useCallback((path: string) => {
@@ -185,6 +201,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
       <ViewErrorBoundary onRetry={loadModule}>
         <Component
           cards={cards}
+          files={files}
           navigate={viewNavigate}
           boxSlug={boxSlug || ""}
           params={viewParams}

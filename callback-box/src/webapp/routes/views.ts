@@ -9,9 +9,11 @@
 import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import { glob } from "glob";
+import { promises as fs } from "node:fs";
 import { compileView, listViews, buildErrorModule } from "../views/compiler.js";
 import { createLoader } from "../../cli/lib/loader.js";
-import type { ViewCard, ViewCardChild } from "../../types/views.js";
+import { attachDirFor } from "../../lib/attach-path.js";
+import type { ViewCard, ViewCardChild, ViewFile } from "../../types/views.js";
 import type { ElementNode } from "cardworks";
 
 interface RegisterViewRoutesOptions {
@@ -66,7 +68,7 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
     }
   );
 
-  // GET /api/views/:slug/cards — cards matching view dependencies
+  // GET /api/views/:slug/cards — cards + non-card files matching view dependencies
   server.get<{ Params: { slug: string } }>(
     "/api/views/:slug/cards",
     async (request, reply) => {
@@ -82,17 +84,19 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
       }
 
       if (dependencies.length === 0) {
-        return [];
+        return { cards: [], files: [] };
       }
 
-      // Collect matching card files from all dependency globs
+      // Collect matching files from all dependency globs: cards parse into
+      // ViewCard; everything else (attachments, .md, .jsonl, ...) arrives
+      // as raw text in `files`.
       const cardPaths = new Set<string>();
+      const filePaths = new Set<string>();
       for (const pattern of dependencies) {
-        const matches = await glob(pattern, { cwd: boxRoot });
+        const matches = await glob(pattern, { cwd: boxRoot, nodir: true });
         for (const m of matches) {
-          if (m.endsWith(".card")) {
-            cardPaths.add(m);
-          }
+          if (m.endsWith(".card")) cardPaths.add(m);
+          else filePaths.add(m);
         }
       }
 
@@ -120,13 +124,74 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
               .filter((c): c is ElementNode => typeof c !== "string" && "tagName" in c)
               .map(elementToViewCardChild);
           }
+          const attachments = await listAttachments(boxRoot, relPath);
+          if (attachments.length > 0) {
+            viewCard.attachments = attachments;
+          }
           cards.push(viewCard);
         } catch (_e) {
           // Skip cards that fail to load (validation errors, etc.)
         }
       }
 
-      return cards;
+      const files: ViewFile[] = [];
+      for (const relPath of [...filePaths].toSorted()) {
+        const content = await readViewFile(boxRoot, relPath);
+        if (content !== null) files.push({ path: relPath, content });
+      }
+
+      return { cards, files };
     }
   );
+}
+
+/** Extensions never delivered as view file content. */
+const BINARY_EXTENSIONS = new Set([
+  ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic",
+  ".pdf", ".zip", ".m4a", ".mp3", ".mp4", ".wav", ".webm",
+]);
+
+/** Views are a render surface, not a download channel — cap per-file size. */
+const MAX_VIEW_FILE_BYTES = 1024 * 1024;
+
+async function readViewFile(boxRoot: string, relPath: string): Promise<string | null> {
+  if (BINARY_EXTENSIONS.has(path.extname(relPath).toLowerCase())) return null;
+  try {
+    const abs = path.join(boxRoot, relPath);
+    const st = await fs.stat(abs);
+    if (st.size > MAX_VIEW_FILE_BYTES) return null;
+    return await fs.readFile(abs, "utf8");
+  } catch (_e) {
+    // Vanished between glob and read — contributes nothing this render.
+    return null;
+  }
+}
+
+/**
+ * Files in a card's attach scope, scope-relative — so a view can discover
+ * e.g. "sessions/history.jsonl" next to its card and add a dependency glob
+ * (or view: link) for it.
+ */
+async function listAttachments(boxRoot: string, cardRelPath: string): Promise<string[]> {
+  const scopeRel = attachDirFor(cardRelPath);
+  const scopeAbs = path.join(boxRoot, scopeRel);
+  const out: string[] = [];
+  async function walk(absDir: string, relPrefix: string): Promise<void> {
+    let entries;
+    try {
+      entries = await fs.readdir(absDir, { withFileTypes: true });
+    } catch (_e) {
+      return; // no attach scope — the common case
+    }
+    for (const entry of entries) {
+      const rel = relPrefix === "" ? entry.name : `${relPrefix}/${entry.name}`;
+      if (entry.isDirectory()) {
+        await walk(path.join(absDir, entry.name), rel);
+      } else if (entry.isFile()) {
+        out.push(rel);
+      }
+    }
+  }
+  await walk(scopeAbs, "");
+  return out.toSorted();
 }
