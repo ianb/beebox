@@ -6,6 +6,8 @@ CLI long-poll to the browser tab holding the recording.
 
 ```ts setup
 import { createLastAudioPending } from "../src/core/last-audio-pending.js";
+import { buildAudioQuestionPrompt } from "../src/core/audio-question.js";
+import { audioMimeType } from "../src/cli/commands/chat-audio.js";
 import { makeTestServer } from "./helpers/doctest-server.js";
 ```
 
@@ -210,4 +212,33 @@ audio: RIFFfakewavbytes
 
 ``` cleanup
 await ctx.cleanup();
+```
+
+## ask-about-audio helpers
+
+`audioMimeType` maps `--file` extensions to MIME types; unknown extensions
+are rejected rather than guessed:
+
+```
+print(`wav: ${audioMimeType("/tmp/x/clip.WAV")}`);
+print(`m4a: ${audioMimeType("voice.m4a")}`);
+print(`mp3: ${audioMimeType("song.mp3")}`);
+print(`unknown: ${audioMimeType("notes.txt")}`);
+=>
+wav: audio/wav
+m4a: audio/mp4
+mp3: audio/mpeg
+unknown: null
+```
+
+The model prompt wraps the caller's question with framing that keeps the
+answer addressed to the asker, not the recording's speaker:
+
+```
+const prompt = buildAudioQuestionPrompt("What language is spoken?");
+print(`has question: ${prompt.includes("Question: What language is spoken?")}`);
+print(`frames the audio: ${prompt.includes("voice message")}`);
+=>
+has question: true
+frames the audio: true
 ```

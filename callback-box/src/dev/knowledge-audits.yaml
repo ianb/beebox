@@ -2346,9 +2346,10 @@ tests:
   # matters (bad-but-important transcript, sound-sensitive work like
   # language practice), without it being pitched as a routine chat tool.
   #
-  # Status (2026-06-11): 1/1 passes — direct knowledge (0 reads, 0 searches)
+  # Status (2026-06-12): 1/1 passes — direct knowledge (0 reads, 0 searches)
   # from the single trailing sentence on the chat prompt's transcription
-  # bullet. An earlier action-shaped phrasing failed only on the literal
+  # bullet, after that sentence was reworked to lead with ask-about-audio.
+  # An earlier action-shaped phrasing failed only on the literal
   # contains-check (see notes).
 
   - id: chat-last-audio-when
@@ -2359,10 +2360,11 @@ tests:
     expected_level: knows_directly
     chat_mode: true
     watch_for: >
-      Names `cb chat get-last-audio` as the way to fetch the original
-      recording of the latest voice message, rather than claiming the
-      transcript is all it has or asking the user to repeat everything.
-    correct_contains: ["get-last-audio"]
+      Names `cb chat ask-about-audio` (or `get-last-audio`) as the way to
+      get at the original recording of the latest voice message, rather
+      than claiming the transcript is all it has or asking the user to
+      repeat everything.
+    correct_contains_any: ["ask-about-audio", "get-last-audio"]
     tags: [chat, voice, last-audio]
     notes: >
       Phrased as "how would you" deliberately: an action-shaped prompt

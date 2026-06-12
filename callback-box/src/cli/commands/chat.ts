@@ -3,29 +3,12 @@
  *
  * - `cb chat self-note` posts an agent-authored note into the chat session
  *   transcript without triggering a conversational response.
- * - `cb chat get-last-audio` fetches the original recording of the user's
- *   most recent voice message from the connected browser tab and writes it
- *   to a temp file (the browser caches the last segment's WAV; the server
- *   relays the request over the event bus — see chat-last-audio-routes.ts).
+ * - `cb chat get-last-audio` / `cb chat ask-about-audio` work with the
+ *   recording of the user's most recent voice message — see chat-audio.ts.
  */
 
-import * as fs from "node:fs/promises";
-import * as os from "node:os";
-import * as path from "node:path";
 import { Command } from "commander";
-import { resolveAgentToken } from "../../core/agent-token.js";
-
-/**
- * Request headers for loopback calls to the live server: JSON content type
- * plus the per-box agent bearer when available (required to pass the auth
- * wall in production; harmless when auth is disabled in dev).
- */
-function loopbackHeaders(): Record<string, string> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  const token = resolveAgentToken();
-  if (token) headers["Authorization"] = `Bearer ${token}`;
-  return headers;
-}
+import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand } from "./chat-audio.js";
 
 interface SelfNoteOptions {
   ref?: string;
@@ -110,89 +93,8 @@ const selfNoteCommand = new Command("self-note")
     }
   });
 
-interface GetLastAudioOptions {
-  out?: string;
-  timeout?: string;
-}
-
-/** File extension for the audio Content-Type the browser sent. */
-function audioExtension(contentType: string): string {
-  if (contentType.includes("wav")) return "wav";
-  if (contentType.includes("webm")) return "webm";
-  if (contentType.includes("ogg")) return "ogg";
-  if (contentType.includes("mpeg")) return "mp3";
-  if (contentType.includes("mp4")) return "m4a";
-  return "bin";
-}
-
-const getLastAudioCommand = new Command("get-last-audio")
-  .description("Fetch the recording of the user's most recent voice message from the connected chat tab")
-  .option("--out <path>", "Write the audio to this path (default: a fresh temp file)")
-  .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
-  .action(async (options: GetLastAudioOptions) => {
-    const serverUrl = process.env.CB_SERVER_URL;
-    const boxName = process.env.CB_BOX_NAME;
-    if (!serverUrl || !boxName) {
-      console.error("cb chat get-last-audio: CB_SERVER_URL and CB_BOX_NAME must be set");
-      process.exit(1);
-    }
-
-    const timeoutSeconds = options.timeout !== undefined ? Number(options.timeout) : 10;
-    if (!Number.isFinite(timeoutSeconds) || timeoutSeconds <= 0) {
-      console.error(`cb chat get-last-audio: invalid --timeout ${options.timeout}`);
-      process.exit(1);
-    }
-
-    const url = `${serverUrl.replace(/\/+$/, "")}/${boxName}/api/chat/last-audio/request`;
-    let res: Response;
-    try {
-      res = await fetch(url, {
-        method: "POST",
-        headers: loopbackHeaders(),
-        body: JSON.stringify({ timeoutMs: Math.round(timeoutSeconds * 1000) }),
-      });
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      console.error(`cb chat get-last-audio: request failed: ${msg}`);
-      process.exit(1);
-    }
-
-    if (!res.ok) {
-      const text = await res.text();
-      let message = text;
-      try {
-        const parsed: unknown = JSON.parse(text);
-        if (parsed !== null && typeof parsed === "object" && "message" in parsed && typeof parsed.message === "string") {
-          message = parsed.message;
-        }
-      } catch (_e) {
-        // Not JSON — report the raw body.
-      }
-      console.error(`cb chat get-last-audio: ${message} (HTTP ${res.status})`);
-      process.exit(1);
-    }
-
-    const audio = Buffer.from(await res.arrayBuffer());
-    const contentType = res.headers.get("content-type") ?? "";
-    let outPath: string;
-    if (options.out !== undefined) {
-      outPath = path.resolve(options.out);
-    } else {
-      const dir = await fs.mkdtemp(path.join(os.tmpdir(), "cb-last-audio-"));
-      outPath = path.join(dir, `last-message.${audioExtension(contentType)}`);
-    }
-    await fs.writeFile(outPath, audio);
-
-    // Path first so callers can take line 1; metadata lines identify which
-    // message the recording belongs to.
-    console.log(outPath);
-    const recordedAt = res.headers.get("x-recorded-at");
-    if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
-    const text = res.headers.get("x-message-text");
-    if (text !== null) console.log(`text: ${decodeURIComponent(text)}`);
-  });
-
 export const chatCommand = new Command("chat")
   .description("Interact with the live chat session")
   .addCommand(selfNoteCommand)
-  .addCommand(getLastAudioCommand);
+  .addCommand(getLastAudioCommand)
+  .addCommand(askAboutAudioCommand);
