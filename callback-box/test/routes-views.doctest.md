@@ -162,8 +162,9 @@ JSON.stringify(res.body.files)
 => []
 ```
 
-Non-card files matching the globs arrive in `files`, and each card lists
-its attach scope so views can discover what lives next to it:
+Non-card files matching the globs arrive in `files` as metadata (content
+can be huge or binary, so it's fetched separately), and each card carries a
+deep metadata listing of its attach scope:
 
 ``` continue
 const PLAYGROUND_VIEW = `
@@ -179,8 +180,11 @@ const res2 = await ctx.request({ method: "GET", url: "/api/views/playground/card
 res2.statusCode
 => 200
 
-JSON.stringify(res2.body.cards[0].attachments)
-=> ["sessions/history.jsonl"]
+res2.body.cards[0].attachments.map((a) => a.path).join(", ")
+=> box/inbox/Test.attach/sessions/history.jsonl
+
+res2.body.cards[0].attachments[0].size > 0
+=> true
 
 res2.body.files.length
 => 1
@@ -188,8 +192,41 @@ res2.body.files.length
 res2.body.files[0].path
 => box/inbox/Test.attach/sessions/history.jsonl
 
-res2.body.files[0].content.split("\n").filter(Boolean).map((l) => JSON.parse(l).summary).join(", ")
-=> first run, second run
+typeof res2.body.files[0].content
+=> undefined
+
+typeof res2.body.files[0].mtimeMs
+=> number
+```
+
+Content comes from `/api/files/*`, which supports byte ranges — a view
+tails a large log instead of downloading it (suffix form `bytes=-N`):
+
+``` continue
+const full = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl" });
+full.statusCode
+=> 200
+
+full.headers["accept-ranges"]
+=> bytes
+
+const tail = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=-25" } });
+tail.statusCode
+=> 206
+
+tail.headers["content-range"]
+=> bytes 24-48/49
+
+JSON.parse(tail.payload.trim()).summary
+=> second run
+
+const mid = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=0-22" } });
+mid.payload
+=> {"summary":"first run"}
+
+const past = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl", headers: { range: "bytes=999-" } });
+past.statusCode
+=> 416
 ```
 
 ``` cleanup

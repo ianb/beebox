@@ -105,12 +105,40 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
             .send();
         }
 
+        // Range support: views and agents tail large attachments (e.g. a
+        // sessions/history.jsonl) without pulling the whole file. Only the
+        // requested slice is read from disk.
+        const rangeHeader = request.headers["range"];
+        if (typeof rangeHeader === "string" && request.method !== "HEAD") {
+          const range = parseByteRange(rangeHeader, stat.size);
+          if (range === "unsatisfiable") {
+            return reply
+              .header("Content-Range", `bytes */${String(stat.size)}`)
+              .status(416)
+              .send({ error: "Range not satisfiable" });
+          }
+          if (range !== null) {
+            const slice = await readSlice(resolved, range);
+            return reply
+              .status(206)
+              .header("Content-Type", contentType)
+              .header("Cache-Control", "no-cache")
+              .header("ETag", etag)
+              .header("Last-Modified", lastModified)
+              .header("Accept-Ranges", "bytes")
+              .header("Content-Range", `bytes ${String(range.start)}-${String(range.end)}/${String(stat.size)}`)
+              .send(slice);
+          }
+          // Malformed Range headers fall through to a normal 200 (per spec).
+        }
+
         const content = await fs.readFile(resolved);
         return reply
           .header("Content-Type", contentType)
           .header("Cache-Control", "no-cache")
           .header("ETag", etag)
           .header("Last-Modified", lastModified)
+          .header("Accept-Ranges", "bytes")
           .send(content);
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -180,4 +208,47 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
       };
     }
   );
+}
+
+/**
+ * Parse a single-range `Range: bytes=...` header against a file size.
+ * Returns the inclusive byte range, "unsatisfiable" (→ 416), or null for
+ * forms we don't serve (multi-range, malformed) — those get the full file.
+ */
+function parseByteRange(
+  header: string,
+  size: number
+): { start: number; end: number } | "unsatisfiable" | null {
+  const match = header.match(/^bytes=(\d*)-(\d*)$/);
+  if (match === null) return null;
+  const [, startStr, endStr] = match;
+  if (startStr === "" && endStr === "") return null;
+  if (startStr === "") {
+    // Suffix form: bytes=-N → the last N bytes.
+    const suffix = Number(endStr);
+    if (suffix === 0) return "unsatisfiable";
+    const start = Math.max(0, size - suffix);
+    return size === 0 ? "unsatisfiable" : { start, end: size - 1 };
+  }
+  const start = Number(startStr);
+  if (start >= size) return "unsatisfiable";
+  const end = endStr === "" ? size - 1 : Math.min(Number(endStr), size - 1);
+  if (end < start) return null;
+  return { start, end };
+}
+
+/** Read just [start, end] (inclusive) from a file. */
+async function readSlice(
+  absPath: string,
+  { start, end }: { start: number; end: number }
+): Promise<Buffer> {
+  const length = end - start + 1;
+  const handle = await fs.open(absPath, "r");
+  try {
+    const buffer = Buffer.alloc(length);
+    await handle.read(buffer, 0, length, start);
+    return buffer;
+  } finally {
+    await handle.close();
+  }
 }

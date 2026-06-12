@@ -19,14 +19,15 @@ interface ViewCard {
   text?: string;
   children?: ViewCardChild[];
   status?: string;
-  /** Files in this card's attach scope, scope-relative. */
-  attachments?: string[];
+  /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
+  attachments?: ViewFile[];
 }
 
-/** A non-card file matched by the view's dependency globs. */
+/** File metadata matched by the view's dependency globs; content fetched on demand. */
 interface ViewFile {
   path: string;
-  content: string;
+  size: number;
+  mtimeMs: number;
 }
 
 interface ViewCardChild {
@@ -40,12 +41,26 @@ interface ViewCardChild {
 interface ViewProps {
   cards: ViewCard[];
   files: ViewFile[];
+  readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
+  fileUrl: (path: string) => string;
   navigate: (path: string) => void;
   boxSlug: string;
   params: Record<string, string>;
 }
 
 type ViewMode = "page" | "chat";
+
+/** readFile() helper failure — carries the path and HTTP status for view code to inspect. */
+class ViewFileFetchError extends Error {
+  readonly path: string;
+  readonly status: number;
+  constructor(path: string, { status }: { status: number }) {
+    super(`readFile(${path}): HTTP ${String(status)}`);
+    this.name = "ViewFileFetchError";
+    this.path = path;
+    this.status = status;
+  }
+}
 
 // Expose React globally so agent-generated views can use it
 // via the esbuild shim that references window.__cbReact
@@ -162,6 +177,29 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
     }, [slug, loadModule, loadCards, mod]),
   });
 
+  const fileUrl = useCallback(
+    (filePath: string) => `${apiBase}/files/${filePath}`,
+    [apiBase]
+  );
+
+  const readFile = useCallback(
+    async (filePath: string, opts?: { start?: number; end?: number }) => {
+      const headers: Record<string, string> = {};
+      if (opts !== undefined && (opts.start !== undefined || opts.end !== undefined)) {
+        const start = opts.start ?? 0;
+        headers["Range"] = start < 0
+          ? `bytes=${start}` // suffix form: last |start| bytes
+          : `bytes=${start}-${opts.end !== undefined ? opts.end : ""}`;
+      }
+      const resp = await fetch(`${apiBase}/files/${filePath}`, { headers });
+      if (!resp.ok) {
+        throw new ViewFileFetchError(filePath, { status: resp.status });
+      }
+      return resp.text();
+    },
+    [apiBase]
+  );
+
   const viewNavigate = useCallback((path: string) => {
     if (boxSlug) {
       navigate({ to: `/${boxSlug}/${path}` });
@@ -202,6 +240,8 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
         <Component
           cards={cards}
           files={files}
+          readFile={readFile}
+          fileUrl={fileUrl}
           navigate={viewNavigate}
           boxSlug={boxSlug || ""}
           params={viewParams}

@@ -136,8 +136,8 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
 
       const files: ViewFile[] = [];
       for (const relPath of [...filePaths].toSorted()) {
-        const content = await readViewFile(boxRoot, relPath);
-        if (content !== null) files.push({ path: relPath, content });
+        const meta = await statViewFile(boxRoot, relPath);
+        if (meta !== null) files.push(meta);
       }
 
       return { cards, files };
@@ -145,37 +145,27 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
   );
 }
 
-/** Extensions never delivered as view file content. */
-const BINARY_EXTENSIONS = new Set([
-  ".jpg", ".jpeg", ".png", ".gif", ".webp", ".heic",
-  ".pdf", ".zip", ".m4a", ".mp3", ".mp4", ".wav", ".webm",
-]);
-
-/** Views are a render surface, not a download channel — cap per-file size. */
-const MAX_VIEW_FILE_BYTES = 1024 * 1024;
-
-async function readViewFile(boxRoot: string, relPath: string): Promise<string | null> {
-  if (BINARY_EXTENSIONS.has(path.extname(relPath).toLowerCase())) return null;
+/** Stat one file into ViewFile metadata; null when it vanished mid-request. */
+async function statViewFile(boxRoot: string, relPath: string): Promise<ViewFile | null> {
   try {
-    const abs = path.join(boxRoot, relPath);
-    const st = await fs.stat(abs);
-    if (st.size > MAX_VIEW_FILE_BYTES) return null;
-    return await fs.readFile(abs, "utf8");
+    const st = await fs.stat(path.join(boxRoot, relPath));
+    if (!st.isFile()) return null;
+    return { path: relPath, size: st.size, mtimeMs: st.mtimeMs };
   } catch (_e) {
-    // Vanished between glob and read — contributes nothing this render.
     return null;
   }
 }
 
 /**
- * Files in a card's attach scope, scope-relative — so a view can discover
- * e.g. "sessions/history.jsonl" next to its card and add a dependency glob
- * (or view: link) for it.
+ * Deep metadata listing of a card's attach scope (box-relative paths with
+ * size/mtime) — so a view can discover e.g. ".../sessions/history.jsonl"
+ * next to its card and fetch it via readFile()/fileUrl(). Metadata only:
+ * attachments can be huge or binary, so content is never inlined here.
  */
-async function listAttachments(boxRoot: string, cardRelPath: string): Promise<string[]> {
+async function listAttachments(boxRoot: string, cardRelPath: string): Promise<ViewFile[]> {
   const scopeRel = attachDirFor(cardRelPath);
   const scopeAbs = path.join(boxRoot, scopeRel);
-  const out: string[] = [];
+  const out: ViewFile[] = [];
   async function walk(absDir: string, relPrefix: string): Promise<void> {
     let entries;
     try {
@@ -188,10 +178,11 @@ async function listAttachments(boxRoot: string, cardRelPath: string): Promise<st
       if (entry.isDirectory()) {
         await walk(path.join(absDir, entry.name), rel);
       } else if (entry.isFile()) {
-        out.push(rel);
+        const meta = await statViewFile(boxRoot, `${scopeRel}/${rel}`);
+        if (meta !== null) out.push(meta);
       }
     }
   }
   await walk(scopeAbs, "");
-  return out.toSorted();
+  return out.toSorted((a, b) => a.path.localeCompare(b.path));
 }

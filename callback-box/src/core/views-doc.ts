@@ -70,7 +70,9 @@ The default export receives a \`ViewProps\` object:
 | Prop | Type | Description |
 |------|------|-------------|
 | \`cards\` | ViewCard[] | All cards matching the dependency globs |
-| \`files\` | ViewFile[] | All non-card text files matching the globs: \`{path, content}\` |
+| \`files\` | ViewFile[] | Metadata for non-card files matching the globs: \`{path, size, mtimeMs}\` |
+| \`readFile\` | (path, opts?) => Promise<string> | Fetch a file's text; \`{start, end}\` byte range, negative start = tail |
+| \`fileUrl\` | (path) => string | URL for a box file — \`<img src>\`, \`<audio src>\`, download links |
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
@@ -87,22 +89,25 @@ Each card in the \`cards\` array has:
   text?: string;       // Text content of the root element (if leaf node)
   status?: string;     // Shortcut for attrs.status
   children?: ViewCardChild[];     // Child elements (recursive)
-  attachments?: string[];         // Files in the card's attach scope, scope-relative
+  attachments?: ViewFile[];       // Deep listing of the card's attach scope
 }
 \`\`\`
 
 Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.
 
-\`attachments\` is how a view discovers what lives next to a card: a card at
-\`store/playground/Playground.card\` with \`attachments: ["sessions/history.jsonl"]\`
-has that file at \`store/playground/Playground.attach/sessions/history.jsonl\`.`;
+\`attachments\` is how a view discovers what lives next to a card — every file
+in the card's attach scope, recursively, as \`{path, size, mtimeMs}\` with
+box-relative paths (e.g.
+\`store/playground/Playground.attach/sessions/history.jsonl\`). Content is
+never inlined — attachments can be huge or binary — fetch it with
+\`readFile(path)\` or point an \`<img>\`/\`<audio>\` at \`fileUrl(path)\`.`;
 
 const dependenciesAndParamsSection = `## Dependencies
 
 The \`dependencies\` array controls two things:
 1. **Which data is loaded** — matching \`.card\` files arrive parsed in \`cards\`;
-   any other matching text file (attachments, \`.md\`, \`.jsonl\`, \`.csv\`)
-   arrives raw in \`files\` as \`{path, content}\`
+   any other matching file arrives as metadata in \`files\`
+   (\`{path, size, mtimeMs}\` — fetch content with \`readFile\`/\`fileUrl\`)
 2. **When to re-render** — the view refreshes automatically when matching files change
 
 Use glob patterns relative to the box root:
@@ -114,8 +119,11 @@ Use glob patterns relative to the box root:
 
 ### Reading a card's attachments
 
-A card's extra data usually lives in its attach scope. Depend on both the
-card and the attachment, then read the attachment from \`files\`:
+A card's extra data usually lives in its attach scope. The card's
+\`attachments\` listing (or a dependency glob into the \`.attach/\` dir) tells
+you what exists; \`readFile\` fetches content on demand. Attachments can be
+very large — fetch only what you render. A byte-range tail is the right way
+to show "recent entries" from an append-only log:
 
 \`\`\`tsx
 export const dependencies = [
@@ -123,16 +131,25 @@ export const dependencies = [
   "store/playground/Playground.attach/**/*.jsonl",
 ];
 
-export default function PlaygroundHistory({ cards, files }) {
-  const history = files
-    .filter((f) => f.path.endsWith("sessions/history.jsonl"))
-    .flatMap((f) => f.content.split("\\n").filter(Boolean).map((line) => JSON.parse(line)));
-  return <ul>{history.map((entry, i) => <li key={i}>{entry.summary}</li>)}</ul>;
+export default function PlaygroundHistory({ files, readFile }) {
+  const [entries, setEntries] = useState([]);
+  const log = files.find((f) => f.path.endsWith("sessions/history.jsonl"));
+  useEffect(() => {
+    if (!log) return;
+    // Tail the last 64KB — enough for recent entries, cheap for a huge log.
+    readFile(log.path, { start: -65536 }).then((text) => {
+      const lines = text.split("\\n").filter(Boolean);
+      // A tail can start mid-line; drop the first line unless we read from byte 0.
+      if (log.size > 65536) lines.shift();
+      setEntries(lines.map((line) => JSON.parse(line)));
+    });
+  }, [log && log.path, log && log.mtimeMs]);
+  return <ul>{entries.map((e, i) => <li key={i}>{e.summary}</li>)}</ul>;
 }
 \`\`\`
 
-Binary files (images, audio, pdf) and files over 1MB are skipped — link to
-those with \`view:\` links instead of rendering their content.
+\`mtimeMs\` in the effect deps makes the view re-fetch when the log grows.
+For images and audio, don't fetch — render \`<img src={fileUrl(f.path)} />\`.
 
 ## Query Parameters (path and others)
 

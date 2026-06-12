@@ -7,8 +7,15 @@
 
 export interface ViewProps {
   cards: ViewCard[];
-  /** Non-card text files matched by the dependency globs (attachments, .md, .jsonl, ...). */
+  /** Metadata for non-card files matched by the dependency globs. */
   files: ViewFile[];
+  /**
+   * Fetch a box file's text content; pass {start, end} byte offsets for a
+   * slice, or a negative start for a tail (start: -65536 → last 64KB).
+   */
+  readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
+  /** URL for a box file — use for <img src>, <audio src>, download links. */
+  fileUrl: (path: string) => string;
   navigate: (path: string) => void;
   boxSlug: string;
   /** Query parameters from the view URL (e.g., path, custom filters). */
@@ -22,14 +29,19 @@ export interface ViewCard {
   text?: string;
   children?: ViewCardChild[];
   status?: string;
-  /** Files in this card's attach scope, scope-relative (e.g. "sessions/history.jsonl"). */
-  attachments?: string[];
+  /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
+  attachments?: ViewFile[];
 }
 
-/** A non-card file delivered to a view: box-relative path + text content. */
+/**
+ * File metadata delivered to a view. Content is fetched on demand via
+ * readFile()/fileUrl() — attachments can be huge or binary, so nothing is
+ * eagerly inlined.
+ */
 export interface ViewFile {
   path: string;
-  content: string;
+  size: number;
+  mtimeMs: number;
 }
 
 export interface ViewCardChild {
