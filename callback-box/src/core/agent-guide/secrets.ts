@@ -1,21 +1,18 @@
 /**
- * API keys & secrets — where credentials live and the never-commit rule.
+ * API keys & secrets — a compact pointer, not the policy.
  *
- * Kept in the always-loaded guide (not just the connectors doc) because the
- * failure mode of an agent guessing is severe: a key written into a card or
- * any committed file gets pushed to the box's remote. The agent must know
- * the one correct location without having to discover it.
+ * The always-loaded guide carries indirect knowledge ("where to look"),
+ * and the full rules live in the on-demand connectors doc. The one rule
+ * stated inline is the never-commit rule, because the failure mode of an
+ * agent guessing is a credential pushed to the box's remote — that can't
+ * wait for the agent to think of opening the right doc.
  */
 
 export function secretsSection(): string[] {
   return [
     "## API keys & secrets",
     "",
-    "Per-service credentials live in `config/connectors/<service>.secret.json` — e.g. `replicate.secret.json` containing `{\"apiKey\": \"...\"}`. That path is gitignored; it is the ONLY place to put a key.",
-    "",
-    "- **Never** write a key into a card, CLAUDE.md, a doc, or any other file — the box repo is pushed to a remote. After saving a secret, confirm `git status` shows nothing new staged.",
-    "- To use a key, read its JSON file. If the file is missing, the service isn't configured for this box — tell the boxholder what's missing and the exact path it belongs at; don't guess or invent values.",
-    "- Scheduled scripts can declare a connector requirement; the scheduler checks the secret file exists and skips cleanly when it doesn't (see `docs/generated/connectors.md`).",
+    "Credentials live under `config/connectors/` (gitignored) — never in a card or any committed file. Before saving or reading a key, see the Credentials section of `docs/generated/connectors.md` for the file convention.",
     "",
   ];
 }
