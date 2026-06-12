@@ -815,6 +815,12 @@ If we ever want richer PDF handling than scan-import currently does — form-fie
 - <https://github.com/jbarrow/commonforms>
 - HN discussion: <https://news.ycombinator.com/item?id=47984675>
 
+## Knowledge budget for always-loaded agent context
+
+The always-loaded layer (agent-guide.md, CLAUDE.md includes, system prompts) has no size discipline: every addition feels individually justified, and the layer only grows. Establish an explicit budget — a token/line cap the always-loaded corpus must stay under — so adding direct knowledge forces a trade: make the new thing indirect (a pointer to an on-demand doc), or demote something else to indirect to make room. Triggered 2026-06-12 when a credentials section initially landed as full inline policy and got corrected to a pointer; the principle generalizes: **direct knowledge is "where to look + the one rule that can't wait"; everything else is indirect.**
+
+Mechanics worth considering: a generate-docs check that fails (or warns) when agent-guide.md exceeds the budget; a per-section line allowance; pairing with [[doc-usage-mining]] so demotion candidates are chosen by observed usage rather than guesswork. Connects to the [[capability-map]] global-vs-conditional-load question and the IA pass below — all three are the same tension (context cost vs. discoverability) at different scales.
+
 ## IA pass: chat agent's output-vocabulary docs
 
 Triggered by adding `{% redacted %}` — there was no obvious place to document it for the chat agent. Looked into existing patterns and the categorization isn't clean. The chat agent's emit-side vocabulary currently splits along several un-aligned axes:
