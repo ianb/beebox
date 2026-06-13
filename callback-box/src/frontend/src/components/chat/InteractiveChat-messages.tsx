@@ -232,7 +232,15 @@ export function VirtualizedMessageList({
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
-  const streamingShown = snapshot.matches("streaming");
+  // Keep the streamed bubble visible through `refreshing` too — the brief
+  // fetchHistory roundtrip after a turn completes. The machine holds
+  // streamText until refreshing's onDone swaps in the authoritative history
+  // entry and clears the stream atomically, so showing it here closes the
+  // gap where the response would otherwise vanish and pop back in complete
+  // form. Gate on actual content so the STREAM_FAILED path (which clears
+  // streamText before refreshing) doesn't flash an empty bubble.
+  const streamingShown = snapshot.matches("streaming")
+    || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
     () => buildDataItems({ groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView }),
