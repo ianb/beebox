@@ -1,10 +1,15 @@
 /**
  * CommentaryView — renderer for `commentary` cards (the in-box review surface).
  *
- * Renders the wrapped external target(s) live (fetched through the dev-only
- * `/api/external` route) alongside the card's commentary body. This is the
- * single-target version (Track C, chunk 4b); multi-target compare and
- * `{% source %}` anchor-linking land in chunk 5.
+ * Renders the wrapped target(s) live alongside the card's commentary body.
+ * Two target shapes:
+ *   - external `defaultHref`/`targets` — fetched through the dev-only
+ *     `/api/external` route;
+ *   - in-box `defaultRef` — fetched through the production `/api/files`
+ *     route (the web-page-commentary flow stores its readable rendering in
+ *     the card's `.attach/` and points `defaultRef` at it).
+ * Both render through the file-renderer registry. Multi-target compare and
+ * `{% source %}` anchor-linking land later.
  */
 
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +19,7 @@ import { Markdown } from "./Markdown";
 import { Pre } from "./ui/Pre";
 import { Text } from "./ui/Text";
 import { getRenderers, type FileData, type RendererProps } from "../renderers";
-import type { NavigateHint, ViewTarget } from "../lib/view-url";
+import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
 
 class ExternalFetchError extends Error {
   readonly status: number;
@@ -111,6 +116,82 @@ function TargetPane({
   );
 }
 
+class InboxFetchError extends Error {
+  readonly status: number;
+  constructor(status: number) {
+    super("Failed to load in-box target");
+    this.name = "InboxFetchError";
+    this.status = status;
+  }
+}
+
+function useInboxTarget(boxPath: string) {
+  const apiBase = getApiBase();
+  return useQuery({
+    queryKey: ["inbox-target", boxPath],
+    queryFn: async ({ signal }): Promise<string> => {
+      const resp = await fetch(`${apiBase}/files/${boxPath}`, { signal });
+      if (!resp.ok) {
+        throw new InboxFetchError(resp.status);
+      }
+      return resp.text();
+    },
+  });
+}
+
+/**
+ * Render one in-box target's content through the file-renderer registry,
+ * keyed on its path — so `.md` renders as Markdown, source as Plaintext, etc.
+ * Falls back to preformatted text when nothing in the registry matches.
+ */
+function InboxDocument({
+  boxPath,
+  content,
+  onNavigate,
+}: {
+  boxPath: string;
+  content: string;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}) {
+  const fileData: FileData = { path: boxPath, content };
+  const [renderer] = getRenderers(boxPath, fileData);
+  if (renderer === undefined) {
+    return <Pre boxed scroll="lg">{content}</Pre>;
+  }
+  const Component = renderer.Component;
+  return <Component data={fileData} onNavigate={onNavigate} />;
+}
+
+/** Render one in-box target (a `defaultRef`) live through `/api/files`. */
+function InboxTargetPane({
+  boxPath,
+  onNavigate,
+}: {
+  boxPath: string;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+}) {
+  const { data, isLoading, error } = useInboxTarget(boxPath);
+
+  // Label the column with its box-relative path so a {% source ref=… %} anchor
+  // can locate its target column (the in-box parity of the href panes below).
+  return (
+    <div className="min-w-0 flex-1" data-card-section="body" data-target-ref={boxPath}>
+      <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-warm-200 pb-1">
+        <Text as="div" size="xs" tone="subtle" className="truncate font-mono">{boxPath}</Text>
+      </div>
+      {isLoading ? (
+        <Text as="div" tone="subtle" className="p-2 italic">Loading target…</Text>
+      ) : error !== null ? (
+        <Text as="div" tone="danger" className="p-2">
+          Couldn’t load this target. It may be missing.
+        </Text>
+      ) : data !== undefined ? (
+        <InboxDocument boxPath={boxPath} content={data} onNavigate={onNavigate} />
+      ) : null}
+    </div>
+  );
+}
+
 /** The external hrefs to render as panes: the default target plus any `targets`. */
 function targetHrefs(frontmatter: Record<string, unknown>): string[] {
   const hrefs: string[] = [];
@@ -131,6 +212,10 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
   const title = frontmatter["title"];
   const body = data.body;
   const hrefs = targetHrefs(frontmatter);
+  const inboxPath =
+    typeof defaultRef === "string" && defaultRef !== ""
+      ? resolveRelativePath(data.path, defaultRef)
+      : null;
 
   return (
     <div className="p-4">
@@ -143,11 +228,12 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
           hrefs.map((href) => (
             <TargetPane key={href} href={href} onNavigate={onNavigate} />
           ))
+        ) : inboxPath !== null ? (
+          <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
         ) : (
           <div className="min-w-0 flex-1">
             <Text as="div" tone="subtle" className="p-2 italic">
-              In-box target{typeof defaultRef === "string" ? ` (${defaultRef})` : ""} — live rendering of in-box
-              defaults is not wired yet.
+              No target set for this commentary.
             </Text>
           </div>
         )}
