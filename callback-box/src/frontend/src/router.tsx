@@ -77,6 +77,9 @@ const chatRoute = createRoute({
   validateSearch: z.object({
     session: z.string().optional(),
     contextDir: z.string().optional(),
+    // A `view:` URL to open in the companion pane when the chat loads (e.g. a
+    // commentary card captured by the clerk extension). Opened once on mount.
+    companion: z.string().optional(),
   }),
 });
 

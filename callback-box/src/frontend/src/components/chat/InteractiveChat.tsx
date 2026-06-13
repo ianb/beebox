@@ -24,7 +24,7 @@ import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from ".
 import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
-import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs } from "./InteractiveChat-hooks";
+import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
@@ -61,9 +61,14 @@ interface InteractiveChatProps {
    * the session id is assigned, future resumes look it up server-side.
    */
   contextDir?: string;
+  /**
+   * A `view:` URL to open in the companion pane once, on mount — set by
+   * deep-links such as the clerk extension's "comment on this page" flow.
+   */
+  companion?: string;
 }
 
-export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -93,6 +98,7 @@ export function InteractiveChat({ sessionInput, contextDir }: InteractiveChatPro
   const mute = useChatMute();
   const tabs = useChatTabs();
   const { activeView } = tabs;
+  useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView });
   const schedules = useChatSchedules({ messages, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });

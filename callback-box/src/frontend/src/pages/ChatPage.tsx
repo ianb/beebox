@@ -23,6 +23,11 @@ interface ChatSearch {
    * persisted to chat-session-history.
    */
   contextDir?: string;
+  /**
+   * A `view:` URL to open in the companion pane once the chat loads — set by
+   * deep-links like the clerk extension's "comment on this page" flow.
+   */
+  companion?: string;
 }
 
 export function ChatPage() {
@@ -31,6 +36,7 @@ export function ChatPage() {
   const navigate = useNavigate();
   const sessionParam = search.session;
   const contextDir = search.contextDir;
+  const companion = search.companion;
   const [resolved, setResolved] = useState<string | null>(null);
 
   // Bare `/chat`: resolve the box's most-active session and navigate to it.
@@ -92,6 +98,7 @@ export function ChatPage() {
       key={keyState.epoch}
       sessionInput={rendered}
       contextDir={rendered === "new" ? contextDir : undefined}
+      companion={companion}
     />
   );
 }

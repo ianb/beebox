@@ -11,6 +11,7 @@ import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
+import { parseViewUrl } from "../../lib/view-url";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -50,6 +51,24 @@ export function useChatTabs() {
   }, []);
 
   return { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel };
+}
+
+/**
+ * Open a deep-linked companion doc once on mount. `companion` is a `view:`
+ * URL (e.g. the commentary card the clerk extension just captured, passed via
+ * the chat route's `?companion=` param). Guarded so a re-render doesn't reopen
+ * a tab the user has since closed.
+ */
+export function useCompanionDeepLink(opts: { companion: string | undefined; onZoomView: OnZoomView }) {
+  const { companion, onZoomView } = opts;
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (openedRef.current) return;
+    if (companion === undefined || companion === "") return;
+    openedRef.current = true;
+    const target = parseViewUrl(companion);
+    onZoomView({ target, label: target.path });
+  }, [companion, onZoomView]);
 }
 
 interface ChatSendFn {
