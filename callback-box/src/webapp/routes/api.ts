@@ -23,6 +23,7 @@ import { registerApiCardRoutes } from "./api-card-routes.js";
 import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
 import { registerApiFilesWriteRoutes } from "./api-files-write.js";
+import { registerApiAdapterRoutes } from "./api-adapters.js";
 import { registerApiExternalRoute } from "./api-external.js";
 import { registerApiDebugLogRoutes } from "./api-debug-log.js";
 import { registerApiImageRoutes } from "./api-image.js";
@@ -117,6 +118,7 @@ export async function registerApiRoutes(
   // /api/files/* — serve and delete raw box files (images, audio, etc.)
   registerApiFilesRoutes({ server, boxRoot, eventBus });
   registerApiFilesWriteRoutes({ server, boxRoot, eventBus });
+  registerApiAdapterRoutes({ server, boxRoot });
 
   // /api/image/* — unified image resolver (plain files + .image.card)
   registerApiImageRoutes({ server, boxRoot });

@@ -2360,9 +2360,12 @@ tests:
   # Indirect knowledge: needed only when authoring views, so the agent
   # should know to read docs/generated/views.md rather than recall details.
   #
-  # Status (2026-06-12): All 4 pass on first run (views-render-card-type
-  # added + run 2026-06-13: agent reads views.md, names rendersCardTypes,
-  # doesn't propose frontend edits) — agent reads
+  # Status (2026-06-13): All 6 pass. views-render-card-type and
+  # views-llm-via-adapter are knows_directly — their capability lives in
+  # the always-loaded agent guide, so the agent recalls the mechanism
+  # (rendersCardTypes / adapterFetch) without a file read; the precise
+  # signature it looks up in views.md when coding. The earlier
+  # attachment/write audits stay knows_about — agent reads
   # docs/generated/views.md (1 file read each), then describes the
   # readFile byte-range tail, attachments-metadata + fileUrl, and the
   # conflict-safe write pattern (expect/ViewFileConflictError/commitFile).
@@ -2483,19 +2486,38 @@ tests:
     tags: [views, attachments]
 
   - id: views-render-card-type
+    # knows_directly: rendersCardTypes is named in the always-loaded agent
+    # guide, so the agent should reach for it without reading a doc.
     prompt: >
       I created a custom card type "sandbox" (box-local schema in
       config/schemas/) and built views/sandbox.tsx as its UI. But when the
       boxholder opens the card at /card/store/play/Demo.sandbox.card they
       get the generic card page, not my view. How do I make my view what
       they see there?
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
-      Reads docs/generated/views.md, then names the binding: export
-      rendersCardTypes = ["sandbox"] from the view, with dependencies
-      covering the type's glob and params.path identifying the displayed
-      card. Does not suggest editing the app frontend or registering
-      renderers in source.
-    should_read: ["docs/generated/views.md"]
+      Names the binding: export rendersCardTypes = ["sandbox"] from the
+      view, with dependencies covering the type's glob and params.path
+      identifying the displayed card. Does not suggest editing the app
+      frontend or registering renderers in source.
     correct_contains: ["rendersCardTypes"]
     tags: [views, cards]
+
+  - id: views-llm-via-adapter
+    # knows_directly: adapterFetch is named in the always-loaded agent
+    # guide, so the agent should reach for it without reading a doc — the
+    # exact signature it can look up in views.md when writing code.
+    prompt: >
+      My view needs to call Replicate's prediction API when the user
+      clicks Run, but the browser blocks the request with a CORS error.
+      The box has a Replicate API key. How should the view make this
+      call?
+    expected_level: knows_directly
+    watch_for: >
+      Names adapterFetch (routes through the box's /api/adapters/replicate
+      so the server injects the key from
+      config/connectors/replicate.secret.json). Must NOT suggest reading
+      the secret file into the browser, embedding the key in view source,
+      or any CORS workaround.
+    correct_contains: ["adapterFetch"]
+    tags: [views, adapters]

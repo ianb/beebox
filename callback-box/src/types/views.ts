@@ -10,6 +10,15 @@ export interface ViewProps {
   /** Metadata for non-card files matched by the dependency globs. */
   files: ViewFile[];
   /**
+   * Call an external provider API (replicate, mistral, anthropic, openai)
+   * through the box's authenticated adapter — the server injects the API
+   * key from config/connectors/<adapter>.secret.json; the browser never
+   * sees it, and CORS doesn't apply. `path` accepts upstream absolute
+   * URLs (polling URLs) — the origin is stripped and routed via the
+   * adapter. The rest of the options object is standard RequestInit.
+   */
+  adapterFetch: (adapter: string, opts: { path: string } & RequestInit) => Promise<Response>;
+  /**
    * Fetch a box file's text content; pass {start, end} byte offsets for a
    * slice, or a negative start for a tail (start: -65536 → last 64KB).
    */

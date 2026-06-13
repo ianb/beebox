@@ -93,6 +93,32 @@ export default function Notes({ files, readFile, writeFile, commitFile }) {
 - \`expect: "absent"\` — create-only; conflicts if the file appeared meanwhile.
 - Omit \`expect\` for unconditional writes (append-only logs rarely need it).
 
+### Calling external APIs (LLMs) from a view
+
+Browsers can't call provider APIs directly: providers (correctly) refuse
+CORS so API keys never live in pages. Views go through the box's **API
+adapters** instead — \`adapterFetch(adapter, {path, ...init})\` hits
+\`/api/adapters/<adapter>/<path>\`, where the server injects the key from
+\`config/connectors/<adapter>.secret.json\` (\`{"apiKey": "..."}\`).
+Adapters: \`replicate\`, \`mistral\`, \`anthropic\`, \`openai\`.
+
+\`\`\`tsx
+const resp = await adapterFetch("replicate", {
+  path: "/v1/models/meta/llama-2-7b-chat/predictions",
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ input: { prompt } }),
+});
+const prediction = await resp.json();
+// Polling URLs from the provider are absolute; pass them straight back —
+// the origin is stripped and routed through the adapter:
+const poll = await adapterFetch("replicate", { path: prediction.urls.get });
+\`\`\`
+
+Never read a \`*.secret.json\` into the browser with \`readFile\` and never
+put an API key in view source — the adapter exists so keys stay
+server-side.
+
 **Git semantics.** Writes never auto-commit — interactive saves are chatty
 and a commit per keystroke would spam history. \`gitStatus\` on each
 ViewFile shows working-tree state (\`"dirty"\`, \`"untracked"\`, absent =

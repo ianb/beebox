@@ -70,6 +70,13 @@ export interface WriteOpts {
 }
 
 export interface ViewFileHelpers {
+  /**
+   * Call an external provider API through the box's authenticated adapter
+   * (server injects the key; the browser never sees it). `pathOrUrl` may
+   * be an upstream absolute URL (e.g. a Replicate polling URL) — the
+   * origin is stripped and the path routed through the adapter.
+   */
+  adapterFetch: (adapter: string, opts: { path: string } & RequestInit) => Promise<Response>;
   readFile: (path: string, opts?: { start?: number; end?: number }) => Promise<string>;
   fileUrl: (path: string) => string;
   writeFile: (path: string, opts: WriteOpts) => Promise<ViewFile>;
@@ -83,6 +90,17 @@ export function useViewFileHelpers(apiBase: string): ViewFileHelpers {
 
 function makeHelpers(apiBase: string): ViewFileHelpers {
   const fileUrl = (filePath: string): string => `${apiBase}/files/${filePath}`;
+
+  const adapterFetch = (
+    adapter: string,
+    { path: pathOrUrl, ...init }: { path: string } & RequestInit
+  ): Promise<Response> => {
+    const upstreamPath = pathOrUrl.startsWith("http")
+      ? new URL(pathOrUrl).pathname + new URL(pathOrUrl).search
+      : pathOrUrl;
+    const joined = upstreamPath.startsWith("/") ? upstreamPath : `/${upstreamPath}`;
+    return fetch(`${apiBase}/adapters/${adapter}${joined}`, init);
+  };
 
   const readFile = async (
     filePath: string,
@@ -141,6 +159,7 @@ function makeHelpers(apiBase: string): ViewFileHelpers {
   };
 
   return {
+    adapterFetch,
     readFile,
     fileUrl,
     writeFile: (filePath, opts) =>

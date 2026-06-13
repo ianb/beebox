@@ -106,6 +106,7 @@ The default export receives a \`ViewProps\` object:
 | \`writeFile\` | (path, {content, expect?}) => Promise<ViewFile> | Create/overwrite (parents made); returns the new ViewFile; never commits |
 | \`appendFile\` | (path, {content, expect?}) => Promise<ViewFile> | Append (creates when missing); same semantics |
 | \`commitFile\` | (path, message) => Promise<{committed, hash?}> | Commit the file + its attachments, nothing else |
+| \`adapterFetch\` | (adapter, {path, ...init}) => Promise<Response> | Call an external API with the box's key injected server-side |
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
