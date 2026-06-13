@@ -27,10 +27,13 @@ Implemented on branch `worktree-callback-clerk` (not yet merged to main):
 - **Track 2.1 / 2.2 — done.** `GET /api/clerk/commentary-destinations` and
   `POST /api/clerk/commentary` (bundle: commentary card + `attach/readable.md`
   + `attach/page.frozen`, returns `{created, open}`). Route doctests green.
-- **Track 3.1 — done.** In-box `defaultRef` rendering in `CommentaryView`
-  (was "not wired yet"). Typechecks; **not yet visually verified in-browser.**
-- **Track 3.2 — done.** Chat `?companion=` deep-link via `useCompanionDeepLink`.
-  Typechecks; **not yet visually verified in-browser.**
+- **Track 3.1 — done, verified live.** In-box `defaultRef` rendering in
+  `CommentaryView` (was "not wired yet"). Browsed a real commentary card on
+  the dev router: the readable `attach/readable.md` renders in the left pane,
+  the body + "Original page" link in the right.
+- **Track 3.2 — done, verified live.** Chat `?companion=` deep-link via
+  `useCompanionDeepLink`. Browsed the endpoint's `open` URL: lands in a fresh
+  chat with the commentary card in a companion tab, scoped to the dest dir.
 - **Track 4 — done.** Defuddle extraction (+DOMPurify+Turndown), SingleFile
   freeze (`single-file-core`, **bundles** — confirmed by `pnpm build` — but
   **runtime freeze fidelity not verified in a loaded extension**), "Comment on
@@ -39,9 +42,16 @@ Implemented on branch `worktree-callback-clerk` (not yet merged to main):
 
 **Verification done:** full box suite 2077/2077; full extension suite 67/67;
 typecheck + lint clean both projects; extension `pnpm build` succeeds.
-**Verification still owed:** (a) load the built extension in Chrome and capture
-a real page end-to-end (freeze fidelity, the open-in-chat hop); (b) eyeball the
-commentary card + companion pane rendering in the running box.
+**Live e2e (dev router, real box clone):** seeded a `<destination
+for="commentary">` landmark → `GET /api/clerk/commentary-destinations`
+returns it → `POST /api/clerk/commentary` writes the card + `attach/readable.md`
++ `attach/page.frozen` and returns the `open` URL → browsing the card shows the
+in-box render, browsing `open` shows the companion-pane chat. Screenshot
+confirms the side-by-side layout.
+**Verification still owed (needs a loaded extension — can't do headlessly):**
+the extension popup → Defuddle extract → SingleFile freeze → POST → open hop,
+in a real Chrome with the unpacked build. Server contract and rendering it
+feeds are verified; what's unverified is the in-page capture itself.
 
 **Follow-ups discovered:**
 - The always-on content script is now ~1.15 MB (Defuddle + SingleFile bundle
