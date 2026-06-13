@@ -7,6 +7,8 @@
  * value-import cycle.
  */
 
+import { simpleGit } from "simple-git";
+
 /**
  * A git command failed with an error we don't specifically handle (i.e. not an
  * index.lock collision). Wraps the underlying cause so callers get a typed,
@@ -44,6 +46,55 @@ export function isIndexLockError(err: unknown): boolean {
 
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * A housekeeping `git add -A` must never sweep a large blob into the box
+ * repo. The limit is on the STAGED object size (git's actual cost), not
+ * disk size — so git-lfs media (committed as ~130-byte pointers) always
+ * passes regardless of how big the file is, while a big regular file is
+ * caught. Files over the limit are left unstaged for a human/agent to
+ * handle deliberately (LFS-track it, gitignore it, or remove it).
+ */
+const MAX_AUTO_STAGE_BYTES = 10 * 1024 * 1024;
+
+/**
+ * After a blind `add -A`, unstage any staged file whose object exceeds
+ * MAX_AUTO_STAGE_BYTES. Best-effort: a failure in the size check must never
+ * break the commit, so it logs and proceeds with whatever is staged.
+ */
+export async function unstageOversizedBlobs(boxRoot: string): Promise<void> {
+  try {
+    const git = simpleGit(boxRoot);
+    const out = await git.raw(["diff", "--cached", "--name-only", "-z"]);
+    const paths = out.split("\0").filter((p) => p.length > 0);
+    const oversized: Array<{ path: string; bytes: number }> = [];
+    for (const path of paths) {
+      // `:path` is the staged (index) blob — a tiny pointer for LFS files.
+      // Missing for staged deletions; those throw and are skipped (a
+      // deletion isn't "adding a big file").
+      try {
+        const bytes = Number.parseInt((await git.raw(["cat-file", "-s", `:${path}`])).trim(), 10);
+        if (Number.isFinite(bytes) && bytes > MAX_AUTO_STAGE_BYTES) {
+          oversized.push({ path, bytes });
+        }
+      } catch (_e) {
+        continue;
+      }
+    }
+    if (oversized.length > 0) {
+      await git.raw(["restore", "--staged", "--", ...oversized.map((o) => o.path)]);
+      const mb = (MAX_AUTO_STAGE_BYTES / (1024 * 1024)).toFixed(0);
+      const list = oversized
+        .map((o) => `${o.path} (${(o.bytes / (1024 * 1024)).toFixed(1)}MB)`)
+        .join(", ");
+      console.warn(
+        `[git] Housekeeping skipped staging ${oversized.length} file(s) over ${mb}MB (left uncommitted — LFS-track, gitignore, or remove): ${list}`,
+      );
+    }
+  } catch (err) {
+    console.warn(`[git] Oversized-blob guard failed (proceeding): ${err instanceof Error ? err.message : String(err)}`);
+  }
 }
 
 /** Shape of our custom git log format. */

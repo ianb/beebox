@@ -308,3 +308,40 @@ log.length
 ``` cleanup
 await box.cleanup();
 ```
+
+## stageAll skips oversized blobs (housekeeping guard)
+
+A blind `stageAll` (the housekeeping sweep) must never stage a regular file
+over the size limit (10MB), so a stray big file can't bloat the box repo.
+The check is on the staged object size, so git-lfs media (pointers) would
+pass — here we just verify a plain oversized file is left unstaged while a
+normal file alongside it stages fine.
+
+```ts setup
+import { writeFile as writeFileFs } from "node:fs/promises";
+import { join as joinPath } from "node:path";
+```
+
+```
+const box = await makeTmpBox({ git: true });
+await writeFileFs(joinPath(box.root, "small.txt"), "ok");
+// 11MB regular file — over the 10MB housekeeping limit.
+await writeFileFs(joinPath(box.root, "big.bin"), Buffer.alloc(11 * 1024 * 1024, 1));
+
+// Silence the documented console.warn about the skipped file.
+const _warn = console.warn; console.warn = () => {};
+await stageAll(box.root);
+console.warn = _warn;
+
+const status = await getStatus(box.root);
+// small.txt is staged (added); big.bin is NOT staged (left as untracked).
+status.staged.includes("small.txt")
+=> true
+
+status.staged.includes("big.bin")
+=> false
+```
+
+``` cleanup
+await box.cleanup();
+```

@@ -16,6 +16,7 @@ import {
   NoPathsError,
   isIndexLockError,
   sleep,
+  unstageOversizedBlobs,
   LOG_FORMAT,
 } from "./git-internal.js";
 import type { GitLogFormat } from "./git-internal.js";
@@ -141,7 +142,9 @@ export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promis
 }
 
 /**
- * Stage all changes. Retries once on index.lock errors, which occur when
+ * Stage all changes, then drop any oversized regular blob from the index
+ * (see unstageOversizedBlobs) so a blind housekeeping sweep can't commit a
+ * big file. Retries the add once on index.lock errors, which occur when
  * git-lfs post-commit hooks or filter-process operations overlap with the
  * next git operation — common in boxes that track images/audio via LFS.
  */
@@ -156,6 +159,7 @@ export async function stageAll(boxRoot: string): Promise<void> {
       throw new GitCommandError(err);
     }
   }
+  await unstageOversizedBlobs(boxRoot);
 }
 
 /**
