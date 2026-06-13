@@ -22,7 +22,18 @@ export interface SyncTabsMessage {
   type: "syncTabs";
 }
 
-export type ClerkMessage = SendMemoMessage | SavePageMessage | SyncTabsMessage;
+export interface CommentOnPageMessage {
+  type: "commentOnPage";
+  tabId: number;
+  /** Box-relative dir of a chosen commentary destination; omitted → inbox. */
+  destinationDir?: string;
+}
+
+export type ClerkMessage =
+  | SendMemoMessage
+  | SavePageMessage
+  | SyncTabsMessage
+  | CommentOnPageMessage;
 
 export interface ActionFailure {
   ok: false;
@@ -37,6 +48,9 @@ export function isClerkMessage(value: unknown): value is ClerkMessage {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
   return (
-    record.type === "sendMemo" || record.type === "savePage" || record.type === "syncTabs"
+    record.type === "sendMemo" ||
+    record.type === "savePage" ||
+    record.type === "syncTabs" ||
+    record.type === "commentOnPage"
   );
 }
