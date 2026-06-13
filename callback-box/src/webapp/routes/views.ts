@@ -12,6 +12,8 @@ import { glob } from "glob";
 import { promises as fs } from "node:fs";
 import { compileView, listViews, buildErrorModule } from "../views/compiler.js";
 import { createLoader } from "../../cli/lib/loader.js";
+import { loadCardFile } from "../../core/card-io.js";
+import { buildLoadContext } from "../../core/load-context.js";
 import { getStatus, isRepo } from "../../cli/lib/git.js";
 import { fileEtag } from "../file-etag.js";
 import { attachDirFor } from "../../lib/attach-path.js";
@@ -103,29 +105,17 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
       }
 
       const loader = await createLoader(boxRoot);
+      const ctx = await buildLoadContext(boxRoot);
       const cards: ViewCard[] = [];
 
       for (const relPath of cardPaths) {
         try {
           const absPath = path.join(boxRoot, relPath);
-          const card = await loader.load(absPath);
-          const el = card.element;
-          const viewCard: ViewCard = {
-            path: relPath,
-            tagName: el.tagName,
-            attrs: el.attrs,
-          };
-          if (el.text) {
-            viewCard.text = el.text;
-          }
-          if (el.attrs["status"]) {
-            viewCard.status = el.attrs["status"];
-          }
-          if (el.children && el.children.length > 0) {
-            viewCard.children = el.children
-              .filter((c): c is ElementNode => typeof c !== "string" && "tagName" in c)
-              .map(elementToViewCardChild);
-          }
+          const loaded = await loadCardFile(absPath, ctx);
+          const viewCard =
+            loaded.kind === "frontmatter"
+              ? frontmatterViewCard(relPath, loaded.fields)
+              : await xmlViewCard(relPath, { loader, absPath });
           const attachments = await listAttachments(boxRoot, relPath);
           if (attachments.length > 0) {
             viewCard.attachments = attachments;
@@ -155,6 +145,49 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
       return { cards, files };
     }
   );
+}
+
+/** Phase-2 card → ViewCard: parsed fields in `frontmatter`, body split out. */
+function frontmatterViewCard(relPath: string, fields: Record<string, unknown>): ViewCard {
+  const frontmatter: Record<string, unknown> = {};
+  let body: string | undefined;
+  for (const [key, value] of Object.entries(fields)) {
+    if (key === "type") continue;
+    if (key === "body") {
+      // The body field is always named `body` — enforced by cardSchema().
+      if (typeof value === "string") body = value;
+      continue;
+    }
+    frontmatter[key] = value;
+  }
+  const type = fields["type"];
+  const viewCard: ViewCard = {
+    path: relPath,
+    tagName: typeof type === "string" ? type : "",
+    attrs: {},
+    frontmatter,
+  };
+  if (body !== undefined) viewCard.body = body;
+  if (typeof frontmatter["status"] === "string") viewCard.status = frontmatter["status"];
+  return viewCard;
+}
+
+/** Legacy XML card → ViewCard via the element tree (original shape). */
+async function xmlViewCard(
+  relPath: string,
+  { loader, absPath }: { loader: Awaited<ReturnType<typeof createLoader>>; absPath: string }
+): Promise<ViewCard> {
+  const card = await loader.load(absPath);
+  const el = card.element;
+  const viewCard: ViewCard = { path: relPath, tagName: el.tagName, attrs: el.attrs };
+  if (el.text) viewCard.text = el.text;
+  if (el.attrs["status"]) viewCard.status = el.attrs["status"];
+  if (el.children && el.children.length > 0) {
+    viewCard.children = el.children
+      .filter((c): c is ElementNode => typeof c !== "string" && "tagName" in c)
+      .map(elementToViewCardChild);
+  }
+  return viewCard;
 }
 
 type GitStatusLookup = (relPath: string) => "dirty" | "untracked" | null;

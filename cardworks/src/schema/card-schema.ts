@@ -143,10 +143,14 @@ export function cardSchema<
   };
   for (const [name, decl] of Object.entries(config.fields)) {
     if (isBodyField(decl)) {
-      if (bodyFieldName !== null) {
+      if (name !== "body") {
+        // One vocabulary across every card type: the file-body field is
+        // always `body`. (On disk the body has no field name at all, so
+        // this constrains code, not card files. It also makes multiple
+        // body fields impossible — object keys are unique.)
         throw new CardSchemaDeclarationError(
           type,
-          `multiple body fields not supported (${bodyFieldName}, ${name})`
+          `the body field must be named "body" (got "${name}")`
         );
       }
       bodyFieldName = name;

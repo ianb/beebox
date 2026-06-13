@@ -52,6 +52,10 @@ export interface ViewCard {
   text?: string;
   children?: ViewCardChild[];
   status?: string;
+  /** Frontmatter fields for Phase-2 cards (body excluded). */
+  frontmatter?: Record<string, unknown>;
+  /** Markdown body for Phase-2 cards. */
+  body?: string;
   /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
   attachments?: ViewFile[];
 }

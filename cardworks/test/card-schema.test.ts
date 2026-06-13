@@ -47,12 +47,12 @@ test("cardSchema with one body field extracts it from the frontmatter shape", (t
     fields: {
       "drive-id": z.string(),
       title: z.string(),
-      content: body(z.string()),
+      body: body(z.string()),
     },
   });
-  t.equal(schema.bodyFieldName, "content");
+  t.equal(schema.bodyFieldName, "body");
   t.equal(schema.bodyField?.kind, "markdown");
-  // Frontmatter shape should NOT include "content" — that's the body.
+  // Frontmatter shape should NOT include "body" — that's the body.
   const ok = schema.frontmatterSchema.safeParse({
     type: "doc",
     "drive-id": "x",
@@ -69,15 +69,15 @@ test("cardSchema with one body field extracts it from the frontmatter shape", (t
   t.end();
 });
 
-test("cardSchema rejects two body fields", (t) => {
+test("cardSchema rejects a second body field (it can't be named \"body\")", (t) => {
   t.throws(() =>
     cardSchema("twobody", {
       fields: {
-        a: body(z.string()),
+        body: body(z.string()),
         b: body(z.string()),
       },
     }),
-    /multiple body fields/
+    /must be named "body"/
   );
   t.end();
 });
@@ -122,12 +122,11 @@ test("a schema's own declaration wins over the global field", (t) => {
   t.end();
 });
 
-test("a body field of a global name suppresses the global injection", (t) => {
-  const schema = cardSchema("body-titled", {
-    fields: { title: body(z.string()) },
-  });
-  t.strictSame([...schema.globalFieldNames], ["contains"]);
-  t.equal(schema.bodyFieldName, "title");
+test("a body field named anything but \"body\" is rejected", (t) => {
+  t.throws(
+    () => cardSchema("misnamed", { fields: { content: body(z.string()) } }),
+    /must be named "body"/
+  );
   t.end();
 });
 

@@ -71,7 +71,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
-- `body(z.string())` declares a markdown body field. Omit to declare a body-less card (then any non-empty body errors on load).
+- `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
 - Avoid `?: T | undefined` in `*Fields` interfaces — use `?: T` and spread conditionally at call sites. Zod recursive types are the exception (they need the explicit `| undefined`).

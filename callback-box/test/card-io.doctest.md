@@ -26,7 +26,7 @@ const docSchema: CardSchema = cardSchema("doc", {
   fields: {
     "drive-id": z.string(),
     title: z.string(),
-    content: body(z.string()),
+    body: body(z.string()),
   },
 });
 
@@ -64,7 +64,7 @@ const card = parseCardText(text, { source: "x.doc.card", schemas });
 card.fields["title"]
 => Project Notes
 
-JSON.stringify(card.fields["content"])
+JSON.stringify(card.fields["body"])
 => "# Project Notes\n\nBody content goes here.\n"
 ```
 
@@ -86,12 +86,12 @@ const fields = {
   type: "doc",
   "drive-id": "drv-42",
   title: "Round-trip",
-  content: "Hello, world.\n",
+  body: "Hello, world.\n",
 };
 const text = serializeCardText({ schema: docSchema, fields });
 const parsed = parseCardText(text, { source: "rt.doc.card", schemas });
 JSON.stringify(parsed.fields)
-=> {"type":"doc","drive-id":"drv-42","title":"Round-trip","content":"Hello, world.\n"}
+=> {"type":"doc","drive-id":"drv-42","title":"Round-trip","body":"Hello, world.\n"}
 ```
 
 ## Frontmatter-only schemas reject body content
