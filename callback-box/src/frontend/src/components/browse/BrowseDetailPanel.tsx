@@ -8,6 +8,7 @@ import { Link } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { FileView } from "../FileView";
+import { useCardViewBinding } from "../../lib/view-bindings";
 import { MobileBackButton } from "../ui/MobileBackButton";
 
 interface BrowseDetailPanelProps {
@@ -26,6 +27,11 @@ function displayName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
+/** Card type from a `Name.type.card` path (the enforced naming convention). */
+function cardTypeFromPath(path: string): string | undefined {
+  return path.match(/\.([^.]+)\.card$/)?.[1];
+}
+
 export function BrowseDetailPanel({
   boxSlug,
   deleteError,
@@ -37,8 +43,16 @@ export function BrowseDetailPanel({
   selectedFilePath,
   selectedRawFile,
 }: BrowseDetailPanelProps) {
+  // A card type rendered by a custom box view is an app, not prose — give it
+  // the wide container (like raw files) instead of the prose-readability cap,
+  // so a view is consistently wide rather than squeezed to max-w-4xl. Prose
+  // cards (memo, doc, recipe, …) keep the narrower readable width.
+  const viewBinding = useCardViewBinding(
+    selectedRawFile ? undefined : cardTypeFromPath(selectedFilePath),
+  );
+  const wide = selectedRawFile !== null || viewBinding !== null;
   return (
-    <div className={`${selectedRawFile ? "max-w-7xl" : "max-w-4xl"} mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
+    <div className={`${wide ? "max-w-7xl" : "max-w-4xl"} mx-auto py-4 sm:py-8 print:max-w-none print:mx-0 print:py-0`}>
       <MobileBackButton label="Back" onClick={onBack} className="mb-4 mx-4 print:hidden" />
       {deleteError ? (
         <div className="mb-4 mx-4 rounded-lg border border-danger/30 bg-danger/10 px-3 py-2 text-sm text-danger-dark print:hidden">
