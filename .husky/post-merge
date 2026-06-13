@@ -17,6 +17,9 @@ if [ "$BRANCH" = "main" ]; then
   "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
   disown
   echo "[post-merge] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+
+  # Rebuild the clerk extension if its sources changed in this merge.
+  "$REPO_DIR/callback-clerk/build/auto-build.sh" ORIG_HEAD HEAD || true
 else
   echo "[post-merge] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
 fi

@@ -2,6 +2,7 @@ node_modules/
 dist/
 .wxt/
 .tap/
+.last-build.log
 .env.local
 *.tsbuildinfo
 .claude/session-*

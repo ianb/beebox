@@ -41,6 +41,13 @@ React, WXT, or chrome.*.
 - `wxt prepare` (runs on install) generates `.wxt/` types; `tsconfig.json`
   extends `.wxt/tsconfig.json`.
 
+**Auto-build on main.** When a commit/merge lands clerk source changes on
+`main`, the root post-commit/post-merge hooks run `build/auto-build.sh`,
+which rebuilds `dist/chrome-mv3/` in the background (log:
+`.last-build.log`). It's gated on `callback-clerk/` actually changing, so
+box-only commits don't trigger it. Chrome picks up the refreshed unpacked
+build automatically the next time the extension reloads.
+
 ## Conventions
 
 Lint/style comes from `@ianbicking/personal-vibe-check` (workspace package) —
