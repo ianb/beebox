@@ -99,6 +99,150 @@ pageFiles.some((name) => name.endsWith(".frozen"))
 await ctx.cleanup();
 ```
 
+## GET `/api/clerk/commentary-destinations`
+
+Lists landmarks whose `<destination for>` includes `commentary`. A triage-only
+landmark is not offered as a commentary destination.
+
+```
+const ctx = await makeTestServer();
+await ctx.seed("store/reading/Reading.landmark.card", `<landmark>
+<navigation>
+<label>Reading</label>
+<symbol>📖</symbol>
+</navigation>
+<destination for="commentary"/>
+</landmark>`);
+await ctx.seed("store/recipes/Recipes.landmark.card", `<landmark>
+<navigation>
+<label>Recipes</label>
+</navigation>
+<triage-destination>
+<rules>Recipes.</rules>
+</triage-destination>
+</landmark>`);
+
+const res = await ctx.request({ method: "GET", url: "/api/clerk/commentary-destinations" });
+JSON.stringify(res.body)
+=> {"destinations":[{"dir":"store/reading","label":"Reading","symbol":"📖"}]}
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+## POST `/api/clerk/commentary`
+
+Captures a page as a commentary bundle into a chosen destination: a commentary
+card pointing at the in-box readable rendering, the readable doc itself, and
+the frozen page — committed together. The response carries the chat URL that
+opens the card in a companion pane.
+
+```
+const ctx = await makeTestServer();
+await ctx.seed("store/reading/Reading.landmark.card", `<landmark>
+<navigation><label>Reading</label></navigation>
+<destination for="commentary"/>
+</landmark>`);
+
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/clerk/commentary",
+  payload: {
+    url: "https://example.com/article",
+    title: "An Article",
+    readableMarkdown: "# An Article\n\nBody text.",
+    frozenHtml: "<html>frozen</html>",
+    destinationDir: "store/reading",
+    timestamp: "2026-03-01T12:00:00Z",
+  },
+});
+res.statusCode
+=> 200
+```
+
+The commentary card points at the readable doc via an in-box `defaultRef`, and
+records the original URL in its body:
+
+``` continue
+const files = await readdir(join(ctx.boxRoot, "store/reading"));
+const cardFile = files.find((name) => name.endsWith(".commentary.card"));
+const cardContent = await ctx.read(`store/reading/${cardFile}`);
+cardContent.includes("defaultRef: attach/readable.md")
+=> true
+
+cardContent.includes("https://example.com/article")
+=> true
+```
+
+The readable rendering and the frozen page sit in the card's `.attach/`:
+
+``` continue
+const attachDir = files.find((name) => name.endsWith(".attach"));
+const readable = await ctx.read(`store/reading/${attachDir}/readable.md`);
+readable.includes("Body text.")
+=> true
+
+const attachFiles = await readdir(join(ctx.boxRoot, "store/reading", attachDir));
+attachFiles.includes("page.frozen")
+=> true
+```
+
+The `open` URL opens a fresh chat scoped to the destination, with the card in
+the companion pane:
+
+``` continue
+res.body.open.includes("contextDir=store%2Freading")
+=> true
+
+res.body.open.includes("companion=view%3Astore%2Freading%2F")
+=> true
+```
+
+A `destinationDir` that isn't a real commentary destination is rejected:
+
+``` continue
+const bad = await ctx.request({
+  method: "POST",
+  url: "/api/clerk/commentary",
+  payload: {
+    url: "https://example.com/x",
+    title: "X",
+    readableMarkdown: "x",
+    destinationDir: "store/nope",
+  },
+});
+bad.statusCode
+=> 400
+```
+
+Omitting `destinationDir` files into the inbox:
+
+``` continue
+const inboxRes = await ctx.request({
+  method: "POST",
+  url: "/api/clerk/commentary",
+  payload: {
+    url: "https://example.com/y",
+    title: "Y Article",
+    readableMarkdown: "# Y",
+  },
+});
+inboxRes.statusCode
+=> 200
+
+inboxRes.body.open.includes("contextDir=box%2Finbox")
+=> true
+
+const inboxFiles = await readdir(join(ctx.boxRoot, "box/inbox"));
+inboxFiles.some((name) => name.endsWith(".commentary.card"))
+=> true
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
 ## POST `/api/clerk/tabs`
 
 Tab snapshots are stored for diagnostics; the route always returns `{ ok: true }`:

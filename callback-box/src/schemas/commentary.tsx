@@ -14,6 +14,7 @@
  */
 
 import { body, cardSchema, type CardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
@@ -84,3 +85,29 @@ append a \`{% source %}\` block:
 Your own framing stays *outside* the tag, as prose. One commentary card per
 coherent set of targets.`,
 });
+
+/**
+ * Build a commentary card that wraps an *in-box* target (`defaultRef`) — the
+ * shape produced by the web-page-commentary capture flow, where the readable
+ * rendering is stored in the card's `.attach/` and the frozen page sits beside
+ * it. The body is seeded with a link to the original source; the boxholder
+ * (and chat agent) add `{% source %}` commentary afterward.
+ *
+ * `sourceUrl` is the live page the capture came from; it becomes the
+ * "link to original" line in the body (commentary has no source frontmatter
+ * field — see docs/plans/web-page-commentary.md Q2).
+ */
+export function createCommentaryTemplate(options: {
+  title: string;
+  defaultRef: string;
+  sourceUrl: string;
+  capturedAt: string;
+}): string {
+  const fields: Record<string, unknown> = {
+    title: options.title,
+    defaultRef: options.defaultRef,
+  };
+  const yamlText = stringifyYaml(fields);
+  const body = `[Original page](${options.sourceUrl}) · captured ${options.capturedAt}\n`;
+  return `---\n${yamlText}---\n${body}`;
+}

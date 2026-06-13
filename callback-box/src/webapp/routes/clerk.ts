@@ -11,6 +11,9 @@ import * as path from "node:path";
 import { z } from "zod";
 import { createDropboxMemoTemplate } from "../../schemas/memo.js";
 import { createRecordTemplate } from "../../schemas/record.js";
+import { createCommentaryTemplate } from "../../schemas/commentary.js";
+import { attachmentPath } from "../../lib/attach-path.js";
+import { listDestinations } from "../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../connectors/chat-utils.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 
@@ -39,6 +42,24 @@ const savePageSchema = z.object({
   selectedText: z.string().optional(),
   timestamp: z.string().optional(),
 });
+
+const commentarySchema = z.object({
+  url: z.string().url(),
+  title: z.string().min(1),
+  siteName: z.string().optional(),
+  byline: z.string().optional(),
+  excerpt: z.string().optional(),
+  // The readable rendering of the page (Defuddle markdown), stored in-box.
+  readableMarkdown: z.string().min(1),
+  // The frozen, self-contained page (SingleFile HTML) — optional attachment.
+  frozenHtml: z.string().optional(),
+  // Box-relative dir of a landmark commentary destination; omitted → inbox.
+  destinationDir: z.string().optional(),
+  timestamp: z.string().optional(),
+});
+
+/** Default filing spot when no commentary destination is chosen. */
+const DEFAULT_COMMENTARY_DIR = "box/inbox";
 
 interface RegisterClerkRoutesOptions {
   server: FastifyInstance;
@@ -125,6 +146,73 @@ export async function registerClerkRoutes(
     await gitCommit(boxRoot, { relPaths: createdPaths, message: `Add saved page from Clerk: "${data.title}"` });
 
     return { created: createdPaths };
+  });
+
+  server.get("/api/clerk/commentary-destinations", async (request, reply) => {
+    applyExtensionCors(request, reply);
+    const destinations = await listDestinations(boxRoot, "commentary");
+    return { destinations };
+  });
+
+  server.post("/api/clerk/commentary", async (request, reply) => {
+    applyExtensionCors(request, reply);
+    const parsed = commentarySchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.status(400).send({ error: "Invalid commentary payload" });
+    }
+
+    const data = parsed.data;
+    const capturedAt = data.timestamp ?? new Date().toISOString();
+
+    // A provided destination must be a real commentary destination; otherwise
+    // file into the inbox. Validating here turns a stale/typo'd dir into a
+    // clear 400 rather than a card silently landing somewhere unexpected.
+    let destDir = DEFAULT_COMMENTARY_DIR;
+    if (data.destinationDir !== undefined && data.destinationDir !== "") {
+      const destinations = await listDestinations(boxRoot, "commentary");
+      const match = destinations.find((d) => d.dir === data.destinationDir);
+      if (match === undefined) {
+        return reply
+          .status(400)
+          .send({ error: `Unknown commentary destination: ${data.destinationDir}` });
+      }
+      destDir = data.destinationDir;
+    }
+
+    const filename = buildFilename(data.title, "Page");
+    const cardRel = path.join(destDir, `${filename}.commentary.card`);
+    const readableRel = attachmentPath(cardRel, "readable.md");
+
+    const card = createCommentaryTemplate({
+      title: data.title,
+      defaultRef: "attach/readable.md",
+      sourceUrl: data.url,
+      capturedAt,
+    });
+
+    await writeCard(path.join(boxRoot, cardRel), card);
+    await writeCard(path.join(boxRoot, readableRel), data.readableMarkdown);
+    const createdPaths = [cardRel, readableRel];
+
+    if (data.frozenHtml) {
+      const frozenRel = attachmentPath(cardRel, "page.frozen");
+      await writeCard(path.join(boxRoot, frozenRel), data.frozenHtml);
+      createdPaths.push(frozenRel);
+    }
+
+    await gitCommit(boxRoot, {
+      relPaths: createdPaths,
+      message: `Add commentary from Clerk: "${data.title}"`,
+    });
+
+    // Open the commentary card in a chat companion pane, with the chat scoped
+    // to the destination dir. Returned relative to the box URL — the extension
+    // joins it onto box.boxUrl.
+    const companion = `view:${cardRel}`;
+    const open =
+      `chat?session=new&contextDir=${encodeURIComponent(destDir)}` +
+      `&companion=${encodeURIComponent(companion)}`;
+    return { created: createdPaths, open };
   });
 
   server.post("/api/clerk/tabs", async (request, reply) => {
