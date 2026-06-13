@@ -17,6 +17,7 @@ import {
   commentaryOpenUrl,
   type CommentaryCapture,
 } from "../domain/commentary.js";
+import { isCaptureResultMessage } from "../domain/capture-messages.js";
 import {
   ClerkApiError,
   postCommentary,
@@ -83,20 +84,37 @@ class CommentUnavailableError extends Error {
   }
 }
 
+// The heavy capture code (Defuddle + single-file-core) isn't in any always-on
+// content script — inject it into the active tab on demand, then await the
+// result it messages back (a file injection can't return a value directly).
+// The "comment" click is a user gesture, so activeTab covers the injection.
+const CAPTURE_SCRIPT = "content-scripts/commentary-capture.js";
+const CAPTURE_TIMEOUT_MS = 60000;
+
 function tryCaptureCommentary(tabId: number): Promise<CommentaryCapture | null> {
   return new Promise((resolve) => {
-    chrome.tabs.sendMessage(tabId, { type: "captureCommentary" }, (response) => {
-      if (chrome.runtime.lastError) {
-        console.debug("[callback-clerk] capture unavailable:", chrome.runtime.lastError.message);
-        resolve(null);
-        return;
-      }
-      if (typeof response !== "object" || response === null || "error" in response) {
-        resolve(null);
-        return;
-      }
-      resolve(response as CommentaryCapture);
-    });
+    let settled = false;
+    const finish = (value: CommentaryCapture | null) => {
+      if (settled) return;
+      settled = true;
+      chrome.runtime.onMessage.removeListener(listener);
+      clearTimeout(timer);
+      resolve(value);
+    };
+    const timer = setTimeout(() => finish(null), CAPTURE_TIMEOUT_MS);
+    function listener(message: unknown): void {
+      if (!isCaptureResultMessage(message)) return;
+      finish("error" in message ? null : message.capture);
+    }
+    chrome.runtime.onMessage.addListener(listener);
+
+    chrome.scripting
+      .executeScript({ target: { tabId }, files: [CAPTURE_SCRIPT] })
+      .catch((e: unknown) => {
+        // Injection failed (chrome://, Web Store, missing host access, …).
+        console.debug("[callback-clerk] capture injection failed:", e);
+        finish(null);
+      });
   });
 }
 
