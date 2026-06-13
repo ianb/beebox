@@ -33,7 +33,7 @@ async function loadAudioCard(cardPath: string): Promise<AudioFields> {
   const content = await fs.readFile(cardPath, "utf-8");
   const parsed = parseCardText(content, {
     source: cardPath,
-    schemas: createCardSchemaMap(),
+    schemas: await createCardSchemaMap(),
   });
   return parsed.fields as unknown as AudioFields;
 }
@@ -41,7 +41,7 @@ async function loadAudioCard(cardPath: string): Promise<AudioFields> {
 async function saveAudioCard(cardPath: string, fields: AudioFields): Promise<void> {
   const parsed = parseCardText(`---\n${stringifyYaml(fields)}---\n`, {
     source: cardPath,
-    schemas: createCardSchemaMap(),
+    schemas: await createCardSchemaMap(),
   });
   await fs.writeFile(cardPath, serializeCardText({
     schema: parsed.schema,

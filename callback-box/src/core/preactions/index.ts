@@ -18,10 +18,10 @@
 
 import { writeFile } from "node:fs/promises";
 import { stringify as stringifyYaml } from "yaml";
-import type { ICardLoader, ElementSchema } from "cardworks";
+import type { ICardLoader } from "cardworks";
 import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 import { loadCardFile } from "../card-io.js";
-import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
+import { buildLoadContext } from "../load-context.js";
 
 import { transcribePreAction } from "./transcribe.js";
 
@@ -95,17 +95,8 @@ async function buildContext(input: {
 
   // Try frontmatter (Phase 2) first; if the file isn't a CardSchema card
   // it will fall through to the XML path on its own.
-  const schemaRegistry = await createSchemaRegistry(boxRoot);
-  const elementSchemas = new Map<string, ElementSchema>();
-  for (const tag of schemaRegistry.tagNames()) {
-    const s = schemaRegistry.get(tag);
-    if (s) elementSchemas.set(tag, s as ElementSchema);
-  }
   try {
-    const loaded = await loadCardFile(cardPath, {
-      cardSchemas: createCardSchemaMap(),
-      elementSchemas,
-    });
+    const loaded = await loadCardFile(cardPath, await buildLoadContext(boxRoot));
     if (loaded.kind === "frontmatter") {
       return {
         boxRoot,

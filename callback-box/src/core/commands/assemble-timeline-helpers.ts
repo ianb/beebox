@@ -15,7 +15,7 @@ async function readImageCard(cardPath: string): Promise<ImageFields | null> {
     const content = await fs.readFile(cardPath, "utf-8");
     const parsed = parseCardText(content, {
       source: cardPath,
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(),
     });
     return parsed.fields as unknown as ImageFields;
   } catch (e) {
@@ -31,7 +31,7 @@ async function readAudioCard(cardPath: string): Promise<AudioFields | null> {
     const content = await fs.readFile(cardPath, "utf-8");
     const parsed = parseCardText(content, {
       source: cardPath,
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(),
     });
     return parsed.fields as unknown as AudioFields;
   } catch (e) {

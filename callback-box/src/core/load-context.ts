@@ -15,5 +15,5 @@ export async function buildLoadContext(boxRoot: string): Promise<LoadCardContext
     const schema = registry.get(tag);
     if (schema) elementSchemas.set(tag, schema as ElementSchema);
   }
-  return { cardSchemas: createCardSchemaMap(), elementSchemas };
+  return { cardSchemas: await createCardSchemaMap(boxRoot), elementSchemas };
 }

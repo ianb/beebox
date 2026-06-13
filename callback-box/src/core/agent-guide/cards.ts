@@ -16,7 +16,7 @@ export function cardTypesSection(allSchemas: ElementSchema[]): string[] {
     lines.push(`- **${schema.tagName}**${hasDoc}`);
   }
   lines.push("");
-  lines.push("New card types can be defined in `config/schemas/` using `element()` + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");
+  lines.push("New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");
   lines.push("");
   return lines;
 }

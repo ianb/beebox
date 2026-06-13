@@ -15,46 +15,72 @@ const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 Box-local schemas let you define new card types inside your box. Each schema is a \`.ts\` file
 in \`config/schemas/\` that uses the same tools as built-in schemas.
 
+**Default to the frontmatter form** (\`cardSchema\`) shown below: it produces standard cards —
+YAML frontmatter plus a markdown body. Reach for the legacy \`element()\` / XML form only when
+your card needs Markdoc-shaped inline content (see the end of this guide).
+
 ## Creating a Schema
 
-Create a \`.ts\` file in \`config/schemas/\` that exports a default \`ElementSchema\`:
+Create a \`.ts\` file in \`config/schemas/\` that default-exports a \`cardSchema()\`:
 
 \`\`\`typescript
-import { element } from "cardworks";
+import { body, cardSchema } from "cardworks";
 import { z } from "zod";
 
-export default element("my-type", {
-  attrs: {
+export default cardSchema("my-type", {
+  fields: {
     status: z.enum(["draft", "final"]).default("draft"),
     priority: z.enum(["low", "medium", "high"]).optional(),
+    body: body(z.string()),  // omit this line if the card has no prose body
   },
-  children: z.array(z.unknown()),
   instructions: \\\`# My Type Cards
 
 Instructions for the agent on how to handle this card type.
-These appear in .claude/rules/ and are loaded when the agent
-reads or edits a matching card file.\\\`,
+These appear in .claude/rules/ and docs/generated/, and are loaded
+when the agent reads or edits a matching card file.\\\`,
 });
 \`\`\`
 
 The filename becomes the card type: \`config/schemas/task.ts\` → \`*.task.card\` files.
 
+On disk, a card of this type is YAML frontmatter + markdown body:
+
+\`\`\`
+---
+status: draft
+priority: high
+---
+The markdown body (present only when the schema declares a \`body\` field).
+\`\`\`
+
+Key patterns:
+- \`cardSchema(type, { fields, instructions? })\` is the entry point. \`fields\` is a flat object
+  of Zod validators; nest with \`z.object\` / \`z.array\` as needed.
+- \`body(z.string())\` declares the markdown body field — it must be named \`body\`. Omit it for a
+  body-less card (then any non-empty body errors on load).
+- \`type\` is the discriminator; don't list it under \`fields\`, and the on-disk YAML needn't carry
+  it — the filename \`Foo.<type>.card\` supplies it.
+- \`title\` and \`contains\` are available on every card type automatically.
+
 ## Available Imports
 
 From \`cardworks\`:
-- \`element(tagName, config)\` — define a schema
-- \`escapeText(str)\` — XML-escape text content
-- \`escapeAttr(str)\` — XML-escape attribute values
+- \`cardSchema(type, config)\` — define a frontmatter card schema (the default)
+- \`body(zodSchema)\` — declare the single markdown body field
+- \`element(tagName, config)\` — define a legacy XML schema (see below)
+- \`escapeText(str)\` / \`escapeAttr(str)\` — XML-escape helpers (only for \`element()\` schemas)
 
 From \`zod\`:
 - \`z\` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)
 
 ## Optional: Templates
 
-Export a \`template\` to enable \`cb create\` support for your card type:
+Export a \`template\` to enable \`cb create\` for your card type. For frontmatter schemas,
+\`generate\` returns the card text — a YAML frontmatter block built with \`stringify\` from \`yaml\`:
 
 \`\`\`typescript
-import { element, escapeText } from "cardworks";
+import { cardSchema } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const template = {
@@ -65,19 +91,15 @@ export const template = {
     priority: z.enum(["low", "medium", "high"]).optional().describe("Priority level"),
   }),
   generate: (args: { title: string; priority?: string }) => {
-    const now = new Date().toISOString();
-    return \\\`<task status="todo"\${args.priority ? \\\` priority="\${args.priority}"\\\` : ""}>
-  <created>\${now}</created>
-  <title>\${escapeText(args.title)}</title>
-  <description></description>
-</task>
-\\\`;
+    const fields: Record<string, unknown> = { status: "todo", title: args.title };
+    if (args.priority !== undefined) fields.priority = args.priority;
+    return "---\\n" + stringifyYaml(fields) + "---\\n";
   },
   cardTypes: ["task"],
   defaultForTypes: ["task"],
 };
 
-export default element("task", {
+export default cardSchema("task", {
   // ... schema definition
 });
 \`\`\`
@@ -93,14 +115,38 @@ cb init .
 This will:
 - Generate \`.claude/rules/card-<type>.md\` (if the schema has \`instructions\`)
 - Generate \`docs/generated/card-<type>.md\`
-- Update the agent guide with the new card type
 - Register any templates for \`cb create\`
+
+Schema changes are picked up on the next \`cb\` invocation; a running dev server needs a restart.
+
+## Legacy: XML / \`element()\` schemas
+
+Use \`element()\` only when the card body is Markdoc-shaped inline content — nested, attributed
+inline structure that doesn't fit YAML frontmatter. This is why the built-in \`guide\`, \`recipe\`,
+\`procedure\`, and \`landmark\` types still use it. For everything else, prefer \`cardSchema\` above.
+
+\`\`\`typescript
+import { element } from "cardworks";
+import { z } from "zod";
+
+export default element("note", {
+  attrs: {
+    status: z.enum(["draft", "final"]).default("draft"),
+  },
+  children: z.array(z.unknown()),
+  instructions: \\\`# Note Cards
+
+Instructions for the agent on how to handle this card type.\\\`,
+});
+\`\`\`
+
+A legacy template's \`generate\` emits XML instead of YAML, using \`escapeText\` / \`escapeAttr\` for
+interpolated values. See the built-in XML schemas in callback-box's \`src/schemas/\` for examples.
 
 ## Tips
 
 - Keep schema files focused — one card type per file
 - Always include \`instructions\` so the agent knows how to handle the card type
-- Use \`z.unknown()\` for children if the card can contain arbitrary XML elements
 - Test with \`cb validate\` after creating cards of the new type
 `;
 

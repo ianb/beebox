@@ -49,7 +49,7 @@ export async function sendOutputCards(ctx: OutputCardsContext): Promise<string[]
     const absPath = path.join(outputDir, file);
     try {
       const content = await fs.readFile(absPath, "utf-8");
-      const card = parseCardText(content, { source: relPath, schemas: createCardSchemaMap() });
+      const card = parseCardText(content, { source: relPath, schemas: await createCardSchemaMap(boxRoot) });
       // Parse boundary: parseCardText validated against the schema.
       const fields = card.fields as unknown as TelegramMessageFields;
       if (fields.status !== "pending") continue;

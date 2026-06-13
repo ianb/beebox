@@ -29,7 +29,7 @@ export interface ContextOutput {
 export async function generateContext(boxRoot?: string): Promise<ContextOutput> {
   const root = boxRoot ?? await requireBoxRoot();
   const state = await getSystemState(root);
-  const schemas = createCardSchemaMap();
+  const schemas = await createCardSchemaMap(root);
 
   const pendingQuestions: PendingQuestion[] = [];
 

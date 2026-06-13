@@ -113,7 +113,7 @@ export async function registerSchedulerRoutes(
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+        const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
         parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
       } catch (e) {
         console.warn(`[scheduler] failed to parse ${file}, listing as parse error:`, e);

@@ -149,7 +149,7 @@ export const schedulerRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 
-      const card = parseCardText(content, { source: fileName, schemas: createCardSchemaMap() });
+      const card = parseCardText(content, { source: fileName, schemas: await createCardSchemaMap(ctx.boxRoot) });
       const parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
 
       await checkTriggerPreconditions({ boxRoot: ctx.boxRoot, name: input.name, parsed });

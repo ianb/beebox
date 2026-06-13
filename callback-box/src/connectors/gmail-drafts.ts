@@ -132,7 +132,7 @@ async function uploadOneDraft(opts: {
   const content = await fs.readFile(opts.cardPath, "utf-8");
   const parsed = parseCardText(content, {
     source: path.basename(opts.cardPath),
-    schemas: createCardSchemaMap(),
+    schemas: await createCardSchemaMap(opts.boxRoot),
   });
   const fields = readDraftFields(parsed.fields);
 
@@ -231,7 +231,7 @@ async function readSourceMessage(
     const content = await fs.readFile(absPath, "utf-8");
     const parsed = parseCardText(content, {
       source: path.basename(absPath),
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(),
     });
     const messageId = parsed.fields["message-id"];
     const threadId = parsed.fields["thread-id"];

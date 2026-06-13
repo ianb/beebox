@@ -306,6 +306,7 @@ interface DocWritePlan {
   debug: boolean;
   procedures: ProcedureSummary[];
   allSchemas: typeof schemas;
+  allCardSchemas: typeof cardSchemas;
   personalitySection: string | undefined;
 }
 
@@ -314,7 +315,7 @@ interface DocWritePlan {
  * connectors, views, voice, per-card-type, etc.) in parallel.
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, debug, procedures, allSchemas, personalitySection } = plan;
+  const { boxRoot, debug, procedures, allSchemas, allCardSchemas, personalitySection } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
       withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection }), debug })),
@@ -336,7 +337,7 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
     // with `tagName`) and phase-2 frontmatter schemas (CardSchema with
     // `type`). Both expose an optional `instructions` field; only schemas
     // that supply one get a doc written.
-    ...writeCardDocs({ boxRoot, debug, allSchemas }),
+    ...writeCardDocs({ boxRoot, debug, allSchemas, allCardSchemas }),
   ]);
 }
 
@@ -348,11 +349,12 @@ function writeCardDocs(params: {
   boxRoot: string;
   debug: boolean;
   allSchemas: typeof schemas;
+  allCardSchemas: typeof cardSchemas;
 }): Array<Promise<void>> {
-  const { boxRoot, debug, allSchemas } = params;
+  const { boxRoot, debug, allSchemas, allCardSchemas } = params;
   return [
     ...allSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
-    ...cardSchemas.map((s) => ({
+    ...allCardSchemas.map((s) => ({
       name: s.type,
       // Searchable types get the canonical contains: writing rule appended.
       instructions:
@@ -404,14 +406,17 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   const procedures = await scanProcedures(boxRoot);
 
-  // Load box-local schemas alongside built-in ones
+  // Load box-local schemas alongside built-in ones. Both formats are
+  // box-aware: legacy XML element schemas join allSchemas, phase-2
+  // frontmatter card schemas join allCardSchemas.
   const boxSchemas = await loadBoxSchemas(boxRoot);
-  const allSchemas = [...schemas, ...boxSchemas];
+  const allSchemas = [...schemas, ...boxSchemas.elementSchemas];
+  const allCardSchemas = [...cardSchemas, ...boxSchemas.cardSchemas];
 
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot, debug);
 
-  await writeStaticDocs({ boxRoot, debug, procedures, allSchemas, personalitySection });
+  await writeStaticDocs({ boxRoot, debug, procedures, allSchemas, allCardSchemas, personalitySection });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot, debug);

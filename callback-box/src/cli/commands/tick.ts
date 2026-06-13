@@ -101,7 +101,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     let parsed;
     try {
       const content = await fs.readFile(cardPath, "utf-8");
-      const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+      const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
       parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
     } catch (err) {
       if (!options.quiet) console.error(`  Error parsing ${file}: ${(err as Error).message}`);

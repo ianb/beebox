@@ -12,8 +12,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { router, publicProcedure } from "../trpc.js";
 import { loadCardFile } from "../../../core/card-io.js";
-import { createCardSchemaMap, createSchemaRegistry } from "../../../schemas/registry.js";
-import type { ElementSchema } from "cardworks";
+import { buildLoadContext } from "../../../core/load-context.js";
 import { registerBuiltinLoaders } from "../../../core/loader-registrations.js";
 import { summarize } from "../../../core/loader-registry.js";
 import type { FileSummary, LoaderInput } from "../../../core/file-summary.js";
@@ -43,16 +42,7 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
 
   if (relPath.endsWith(".card")) {
     try {
-      const registry = await createSchemaRegistry(boxRoot);
-      const elementSchemas = new Map<string, ElementSchema>();
-      for (const tag of registry.tagNames()) {
-        const s = registry.get(tag);
-        if (s) elementSchemas.set(tag, s as ElementSchema);
-      }
-      const loaded = await loadCardFile(fullPath, {
-        cardSchemas: createCardSchemaMap(),
-        elementSchemas,
-      });
+      const loaded = await loadCardFile(fullPath, await buildLoadContext(boxRoot));
       if (loaded.kind === "xml") {
         input.element = loaded.element;
         input.type = loaded.element.tagName;
