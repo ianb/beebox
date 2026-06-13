@@ -718,6 +718,19 @@ Design questions:
 - **Capability surface.** Likely read-mostly: navigate, snapshot the a11y tree, screenshot, read console — the self-verification loop. Click/fill is more fraught (real mutations as the principal) and can come later behind explicit intent.
 - **Connection to the views/interactive-app work.** This is the missing half of "agent builds an interactive app": build it (the view write API + card-type→view binding) AND look at it. Pairs with [[capability-map]] — "I can view the rendered box" is a composed capability the agent won't infer from its tool list.
 
+## Card-level prominence ("landmark-ish" marker in the card itself)
+
+Landmarks today are *directory*-level and a *separate* artifact — one curated `*.landmark.card` per opted-in directory saying "this spot is notable" (see `docs/landmarks.md`). This idea is the orthogonal axis: a lightweight marker *inside an ordinary card* declaring "this card is a main document," so that **from certain views the marked cards are what's shown — the principal documents — and the rest (notes, attachments, scratch, intermediate cards) recede.** Not a hard filter that hides everything ("not entirely"), but an editorial default that flips the browse experience from flat-everything to here-are-the-real-things.
+
+Why card-level and self-contained matters: no curation artifact alongside the file, any card can self-declare (or be marked by the agent as it works), and prominence travels *with* the card through moves/renames. The `.sandbox.card` case (2026-06-12) is the motivating shape — that card IS the activity; it should be the headline of its directory, not one entry in a file tree next to its attachments and logs.
+
+Design questions:
+- **What's the marker.** A boolean-ish attribute (`prominent` / `featured`), a small enum (`prominence="primary|normal|hidden"` — note `hidden` is the useful inverse: demote housekeeping cards), or a dedicated element. Frontmatter/attribute keeps it cheap. Distinct from `status` (lifecycle) — this is editorial weight, orthogonal.
+- **Who sets it.** Human, or the agent as it produces the main artifact of a piece of work ("this is the thing, the rest is supporting"). The agent marking its own headline output is the high-value case.
+- **View-conditional, not global.** Browse's default view honors it (lead with prominent cards, collapse the rest behind "show all"); a raw/flat mode still shows everything. Each view opts in.
+- **Composition with directory landmarks.** A landmark's `<expand>` could target "the prominent cards here" instead of a hand-listed set, so the two layers reinforce: directory landmark = "this spot matters," card prominence = "these documents in it matter." Also feeds the [[today-view]] aggregation and search/excerpt ranking (a prominent card outranks a buried note).
+- **Relation to the card-type→view binding.** A prominent `.sandbox.card` rendered through its custom view (the binding the interactive-views work needs) is the full picture: the right document, surfaced by default, shown as its app.
+
 ## Backlinks surface ("what links here?")
 
 Cardworks already exposes the ref graph — `findIncomingRefs(targetPath)` and `findOutgoingRefs(sourcePath)` in `cardworks/src/loader/loader.ts`. The data exists; no read surface does. Obsidian's Backlinks pane is widely considered its most-used navigation surface, and we have a richer (typed, versioned, fragment-addressable) reference model — closing the UI gap is mostly plumbing.
