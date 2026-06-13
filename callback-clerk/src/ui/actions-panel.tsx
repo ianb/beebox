@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { EnabledBox } from "../domain/config.js";
 import type { ActionResponse, ClerkMessage } from "../domain/messages.js";
 import type { SaveIntent } from "../domain/save-page.js";
+import type { CommentaryDestination } from "../domain/commentary.js";
+import { getCommentaryDestinations } from "../platform/clerk-api.js";
 
 interface Notice {
   kind: "ok" | "error" | "auth";
@@ -44,6 +46,8 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   const [notice, setNotice] = useState<Notice | null>(null);
   const [memo, setMemo] = useState("");
   const [tab, setTab] = useState<CurrentTab | null>(null);
+  const [destinations, setDestinations] = useState<CommentaryDestination[]>([]);
+  const [selectedDir, setSelectedDir] = useState("");
 
   useEffect(() => {
     chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
@@ -54,6 +58,18 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
       setTab({ id: current.id, url, title: current.title ?? "" });
     });
   }, []);
+
+  // Load the box's commentary destinations. With exactly one, file there
+  // automatically (no selector); with several, the user picks (default inbox).
+  useEffect(() => {
+    getCommentaryDestinations(box)
+      .then((dests) => {
+        setDestinations(dests);
+        const sole = dests.length === 1 ? dests[0] : undefined;
+        if (sole !== undefined) setSelectedDir(sole.dir);
+      })
+      .catch(() => setDestinations([]));
+  }, [box]);
 
   const runAction = useCallback(
     (params: { label: string; message: ClerkMessage; okText: string }) => {
@@ -66,6 +82,19 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
     },
     [],
   );
+
+  const handleComment = useCallback(() => {
+    if (tab === null) return;
+    const message: ClerkMessage =
+      selectedDir === ""
+        ? { type: "commentOnPage", tabId: tab.id }
+        : { type: "commentOnPage", tabId: tab.id, destinationDir: selectedDir };
+    runAction({ label: "comment", message, okText: "Commentary created — opening…" });
+  }, [tab, selectedDir, runAction]);
+
+  const handleSelectDir = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedDir(e.target.value);
+  }, []);
 
   const handleSavePage = useCallback(() => {
     if (tab === null) return;
@@ -107,21 +136,78 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   }, [box.boxUrl]);
 
   return (
-    <div className="mt-3 space-y-2 border-t border-gray-200 pt-3">
+    <div className="mt-3 space-y-3 border-t border-gray-200 pt-3">
       {tab !== null ? (
-        <SaveButtons busyLabel={busy} onSave={handleSavePage} onDo={handleDoPage} />
-      ) : null}
-      <form onSubmit={handleSendMemo}>
-        <textarea
-          value={memo}
-          onChange={handleMemoChange}
-          placeholder={`Send a memo to ${box.title}…`}
-          rows={2}
-          className="w-full resize-none rounded border border-gray-300 px-2 py-1.5 text-sm"
+        <CommentSection
+          busyLabel={busy}
+          destinations={destinations}
+          selectedDir={selectedDir}
+          onSelectDir={handleSelectDir}
+          onComment={handleComment}
         />
-        <SubmitRow isBusy={busy !== null} canSend={memo.trim() !== ""} onSyncTabs={handleSyncTabs} />
-      </form>
+      ) : null}
+      <div className="space-y-2 border-t border-gray-100 pt-3">
+        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Other actions</p>
+        {tab !== null ? (
+          <SaveButtons busyLabel={busy} onSave={handleSavePage} onDo={handleDoPage} />
+        ) : null}
+        <form onSubmit={handleSendMemo}>
+          <textarea
+            value={memo}
+            onChange={handleMemoChange}
+            placeholder={`Send a memo to ${box.title}…`}
+            rows={2}
+            className="w-full resize-none rounded border border-gray-300 px-2 py-1.5 text-sm"
+          />
+          <SubmitRow isBusy={busy !== null} canSend={memo.trim() !== ""} onSyncTabs={handleSyncTabs} />
+        </form>
+      </div>
       {notice !== null ? <NoticeLine notice={notice} onOpenBox={handleOpenBox} /> : null}
+    </div>
+  );
+}
+
+interface CommentSectionProps {
+  busyLabel: string | null;
+  destinations: CommentaryDestination[];
+  selectedDir: string;
+  onSelectDir: (e: React.ChangeEvent<HTMLSelectElement>) => void;
+  onComment: () => void;
+}
+
+function CommentSection({ busyLabel, destinations, selectedDir, onSelectDir, onComment }: CommentSectionProps) {
+  const soleDestination = destinations.length === 1 ? destinations[0] ?? null : null;
+  return (
+    <div className="space-y-2">
+      <button
+        onClick={onComment}
+        disabled={busyLabel !== null}
+        className="w-full rounded bg-teal-600 px-3 py-2 text-sm font-semibold text-white hover:bg-teal-700 disabled:opacity-50"
+      >
+        {busyLabel === "comment" ? "Creating commentary…" : "Comment on this page"}
+      </button>
+      {destinations.length > 1 ? (
+        <label className="block text-xs text-gray-500">
+          File to
+          <select
+            value={selectedDir}
+            onChange={onSelectDir}
+            className="mt-1 w-full rounded border border-gray-300 px-2 py-1.5 text-sm text-gray-800"
+          >
+            <option value="">Inbox</option>
+            {destinations.map((d) => (
+              <option key={d.dir} value={d.dir}>
+                {d.symbol !== null ? `${d.symbol} ` : ""}{d.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      ) : soleDestination !== null ? (
+        <p className="text-xs text-gray-500">
+          Filing to {soleDestination.symbol !== null ? `${soleDestination.symbol} ` : ""}
+          {soleDestination.label}
+        </p>
+      ) : null}
     </div>
   );
 }

@@ -17,6 +17,15 @@ export interface ReadablePage {
   url: string;
 }
 
+/**
+ * What the content script returns for a "captureCommentary" request: the
+ * readable rendering plus the frozen page (null when freezing failed).
+ */
+export interface CommentaryCapture {
+  page: ReadablePage;
+  frozenHtml: string | null;
+}
+
 /** A landmark commentary destination, as returned by the box. */
 export interface CommentaryDestination {
   /** Box-relative directory (empty string = box root). */

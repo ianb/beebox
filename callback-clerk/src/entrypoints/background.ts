@@ -12,7 +12,18 @@ import {
   type PageExtract,
   type SaveIntent,
 } from "../domain/save-page.js";
-import { ClerkApiError, postMemo, postSavePage, postTabs } from "../platform/clerk-api.js";
+import {
+  buildCommentaryPayload,
+  commentaryOpenUrl,
+  type CommentaryCapture,
+} from "../domain/commentary.js";
+import {
+  ClerkApiError,
+  postCommentary,
+  postMemo,
+  postSavePage,
+  postTabs,
+} from "../platform/clerk-api.js";
 import { loadConfig } from "../platform/config-storage.js";
 import { getTabSnapshot } from "../platform/tabs.js";
 
@@ -65,6 +76,44 @@ async function saveTabPage(intent: SaveIntent, tabId: number): Promise<void> {
   await postSavePage(box, payload);
 }
 
+class CommentUnavailableError extends Error {
+  constructor() {
+    super("Can't comment on this page — it has no extractable content (e.g. a browser or store page).");
+    this.name = "CommentUnavailableError";
+  }
+}
+
+function tryCaptureCommentary(tabId: number): Promise<CommentaryCapture | null> {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { type: "captureCommentary" }, (response) => {
+      if (chrome.runtime.lastError) {
+        console.debug("[callback-clerk] capture unavailable:", chrome.runtime.lastError.message);
+        resolve(null);
+        return;
+      }
+      if (typeof response !== "object" || response === null || "error" in response) {
+        resolve(null);
+        return;
+      }
+      resolve(response as CommentaryCapture);
+    });
+  });
+}
+
+async function commentOnPage(tabId: number, destinationDir: string | undefined): Promise<void> {
+  const box = await requireActiveBox();
+  const capture = await tryCaptureCommentary(tabId);
+  if (capture === null) throw new CommentUnavailableError();
+  const payload = buildCommentaryPayload({
+    page: capture.page,
+    frozenHtml: capture.frozenHtml,
+    destinationDir: destinationDir ?? null,
+    timestamp: new Date().toISOString(),
+  });
+  const { open } = await postCommentary(box, payload);
+  await chrome.tabs.create({ url: commentaryOpenUrl(box.boxUrl, open) });
+}
+
 async function sendMemo(memo: { text: string; url?: string; title?: string }): Promise<void> {
   const box = await requireActiveBox();
   await postMemo(box, memo);
@@ -81,6 +130,9 @@ function dispatch(message: ClerkMessage): Promise<void> {
   }
   if (message.type === "savePage") {
     return saveTabPage(message.intent, message.tabId);
+  }
+  if (message.type === "commentOnPage") {
+    return commentOnPage(message.tabId, message.destinationDir);
   }
   return syncTabs();
 }
