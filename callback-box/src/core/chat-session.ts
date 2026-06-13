@@ -30,7 +30,7 @@ import {
   accumulateAssistantText,
   adaptSdkMessage,
   buildContentBlocks,
-  warnGhostEntry,
+  warnErroredTurn,
   type ChatImage,
   type ChatMessage,
   type ChatMessageContent,
@@ -45,6 +45,7 @@ import {
   loadSessionId,
   saveCurrentModel,
   saveSessionId,
+  DEFAULT_MODEL_FILE,
 } from "./chat-session-state.js";
 import {
   acquireSessionRunLock,
@@ -62,7 +63,6 @@ export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEve
 export type { ChatSessionOptions };
 
 const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
-const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatSession:${context}]`, ...args);
@@ -250,7 +250,7 @@ export class ChatSession extends EventEmitter {
     if (msg.type === "result") {
       log("done", `Turn complete, is_error: ${msg.is_error}`);
       if (msg.is_error === true) {
-        warnGhostEntry({ sessionId: this.sessionId, msg });
+        warnErroredTurn({ sessionId: this.sessionId, msg });
       }
       const completedText = this.turnText;
       this.turnText = "";

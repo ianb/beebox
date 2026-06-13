@@ -85,6 +85,19 @@ export async function releaseRunLock(lockPath: string): Promise<void> {
 }
 
 /**
+ * Default location of the box's persisted chat-model override. Shared by
+ * the ChatSession (which the live run reads) and the status endpoint (which
+ * the model picker reads), so the displayed model can't diverge from the
+ * model the next turn actually uses.
+ */
+export const DEFAULT_MODEL_FILE = ".callback-box/chat-model.json";
+
+/** Read the box's persisted chat-model override from the default file. */
+export function loadPersistedChatModel(boxRoot: string): string | null {
+  return loadCurrentModel(boxRoot, DEFAULT_MODEL_FILE);
+}
+
+/**
  * Read the persisted model override for a session, or null if absent or
  * unreadable. `modelFile` is relative to `boxRoot`.
  */

@@ -75,10 +75,12 @@ export function ChatStatusBanners(props: {
       {/* Error display */}
       {error || transcriptionError ? (
         <div className="px-4 py-2 bg-danger-50 border-t border-danger-light text-danger-dark text-sm">
-          {error || transcriptionError}
+          {/* Real space text node (not just margin) so a copy of the banner
+              keeps the message and "dismiss" separated. */}
+          {error || transcriptionError}{"  "}
           <button
             onClick={onDismissError}
-            className="ml-2 text-danger hover:text-danger-dark"
+            className="text-danger hover:text-danger-dark underline"
           >
             dismiss
           </button>

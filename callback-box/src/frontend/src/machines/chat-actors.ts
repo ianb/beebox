@@ -213,15 +213,18 @@ function handleTurnMessage(
   }
 
   if (msg.type === "result") {
-    // The SDK signals turn-level failures (e.g. resume of a session id with no
-    // log on disk) by setting is_error on an otherwise empty result. Treat
-    // those as stream errors so the UI shows a message instead of going idle.
+    // A result with is_error=true means the turn errored even though the run
+    // "completed" (subtype is often "success"). Surface the SDK's own error
+    // text when present rather than guessing a cause — the previous hardcoded
+    // "no log on disk" message was wrong for the common case where the
+    // selected model is unavailable (it fails in ~500ms with is_error=true,
+    // subtype=success). Real causes vary: unavailable model, unresumable
+    // session, server error.
     if (msg.is_error === true) {
-      const subtype = msg.subtype ?? "unknown";
-      terminal({
-        type: "STREAM_ERROR",
-        error: `Agent turn failed (${subtype}). The session id in this tab's URL has no log on disk — start a new chat.`,
-      });
+      const detail = typeof msg.result === "string" && msg.result.trim()
+        ? msg.result.trim()
+        : `the run reported an error with no detail (subtype: ${msg.subtype ?? "unknown"}). Common causes: the selected model is unavailable, or this session can't be resumed.`;
+      terminal({ type: "STREAM_ERROR", error: `Chat turn failed — ${detail}` });
     } else {
       terminal({ type: "STREAM_RESULT" });
     }

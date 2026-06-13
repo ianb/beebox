@@ -25,6 +25,7 @@ import {
   resolveSessionLogPath,
 } from "../../core/chat-session-history.js";
 import { resolveFeatures } from "../../core/chat-features.js";
+import { loadPersistedChatModel } from "../../core/chat-session-state.js";
 import {
   getSessionMetadata,
   parseSessionLog,
@@ -144,12 +145,18 @@ export function registerChatSessionRoutes(ctx: ChatRoutesContext): void {
   // Without `session`, returns empty/default — bare /chat resolves via /default.
   server.get<{ Querystring: { session?: string } }>("/api/chat/status", async (request) => {
     const sessionId = request.query.session;
+    // Model is read from the persisted file, not just the live registry
+    // entry: a session that isn't currently instantiated (idle-evicted, or
+    // not yet sent to) would otherwise report model=null and the picker
+    // would show "default" while the next turn loads the pinned model from
+    // disk and uses it — the "shows Opus but runs Fable" desync.
+    const persistedModel = loadPersistedChatModel(boxRoot);
     if (!sessionId) {
-      return { sessionId: null, running: false, busy: false, model: null };
+      return { sessionId: null, running: false, busy: false, model: persistedModel };
     }
     const target = registry.get(sessionId);
     if (!target) {
-      return { sessionId, running: false, busy: false, model: null };
+      return { sessionId, running: false, busy: false, model: persistedModel };
     }
     return {
       sessionId: target.getSessionId(),

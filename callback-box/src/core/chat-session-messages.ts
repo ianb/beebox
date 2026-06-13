@@ -374,20 +374,24 @@ export function accumulateAssistantText(prior: string, msg: ChatMessage): string
 }
 
 /**
- * Warn loudly when a turn ends with `is_error=true`: such a turn can leave a
- * "ghost" row in chat-session-history (the id was assigned, but the SDK wrote
- * no JSONL), and future landmark "Chat" clicks would re-hit the same resume
- * failure. The log line makes that recoverable from logs.
+ * Warn loudly when a turn ends with `is_error=true`. Causes vary —
+ * unavailable model (fails in ~500ms, subtype=success), an unresumable
+ * session id (would-be ghost row in chat-session-history), or a server
+ * error — so log the SDK's own result text and the timing rather than
+ * asserting one cause. Makes the failure recoverable from logs.
  */
-export function warnGhostEntry(
+export function warnErroredTurn(
   { sessionId, msg }: { sessionId: string | null; msg: ChatMessage },
 ): void {
   const sid = sessionId === null ? "<unassigned>" : sessionId;
   const subtype = msg.subtype === undefined ? "unknown" : msg.subtype;
   const turns = msg.num_turns === undefined ? "?" : String(msg.num_turns);
   const dur = msg.duration_ms === undefined ? "?" : String(msg.duration_ms);
+  const detail = typeof msg.result === "string" && msg.result.trim()
+    ? ` result=${JSON.stringify(msg.result.trim().slice(0, 300))}`
+    : "";
   console.warn(
-    `[chat-session] Turn ended with is_error=true; session ${sid} may now be a ghost entry in chat-session-history. subtype=${subtype} num_turns=${turns} duration_ms=${dur}`,
+    `[chat-session] Turn ended with is_error=true (session ${sid}). Likely an unavailable model, an unresumable session, or a server error. subtype=${subtype} num_turns=${turns} duration_ms=${dur}${detail}`,
   );
 }
 
