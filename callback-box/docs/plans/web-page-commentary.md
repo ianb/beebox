@@ -12,6 +12,47 @@ deep-link). It generalizes the landmark `<triage-destination>` role into a
 single `<destination for="…">` role so "where commentary goes" reuses the
 existing destination concept rather than adding a parallel one.
 
+## Implementation status (2026-06-13)
+
+Implemented on branch `worktree-callback-clerk` (not yet merged to main):
+
+- **Track 1.1 — done.** `<destination for="…">` role + `<triage-destination>`
+  back-compat alias; shared `core/landmark/destination.ts`
+  (`findDestination`/`roleDestinationKinds`); triage consumer updated;
+  doctests green.
+- **Track 1.2 — deferred.** No migrator written. The back-compat alias makes
+  existing `<triage-destination>` cards keep working, so this is non-urgent;
+  a migrator can rewrite cards at leisure. (Existing real card:
+  test1 `Box.landmark.card`.)
+- **Track 2.1 / 2.2 — done.** `GET /api/clerk/commentary-destinations` and
+  `POST /api/clerk/commentary` (bundle: commentary card + `attach/readable.md`
+  + `attach/page.frozen`, returns `{created, open}`). Route doctests green.
+- **Track 3.1 — done.** In-box `defaultRef` rendering in `CommentaryView`
+  (was "not wired yet"). Typechecks; **not yet visually verified in-browser.**
+- **Track 3.2 — done.** Chat `?companion=` deep-link via `useCompanionDeepLink`.
+  Typechecks; **not yet visually verified in-browser.**
+- **Track 4 — done.** Defuddle extraction (+DOMPurify+Turndown), SingleFile
+  freeze (`single-file-core`, **bundles** — confirmed by `pnpm build` — but
+  **runtime freeze fidelity not verified in a loaded extension**), "Comment on
+  this page" primary popup action + destination selector, background
+  orchestration. Extension domain logic has tap tests.
+
+**Verification done:** full box suite 2077/2077; full extension suite 67/67;
+typecheck + lint clean both projects; extension `pnpm build` succeeds.
+**Verification still owed:** (a) load the built extension in Chrome and capture
+a real page end-to-end (freeze fidelity, the open-in-chat hop); (b) eyeball the
+commentary card + companion pane rendering in the running box.
+
+**Follow-ups discovered:**
+- The always-on content script is now ~1.15 MB (Defuddle + SingleFile bundle
+  into every http(s) page). Lazy-inject the heavy capture code on click instead
+  of bundling it into the declarative content script.
+- Knowledge-audit entries (below) are written-as-proposed but **not yet added
+  to `knowledge-audits.yaml` or run.**
+- Real boxes need `*.frozen filter=lfs` in `.gitattributes` (test1 already has
+  it) before they receive frozen attachments — wire into `cb init` /
+  adding-a-box.
+
 ## Stated preferences this plan trades against
 
 - **`callback-box/CLAUDE.md:101`** — *"Read before writing. Don't guess file
