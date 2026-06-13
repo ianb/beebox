@@ -34,7 +34,7 @@ React, WXT, or chrome.*.
 
 - `pnpm dev` — WXT dev mode (opens a Chrome profile with the extension
   loaded, HMR).
-- `pnpm build` — production build to `.output/chrome-mv3/`; load that
+- `pnpm build` — production build to `dist/chrome-mv3/`; load that
   directory unpacked via chrome://extensions.
 - `pnpm test` / `pnpm typecheck` / `pnpm lint` — tap, tsc, eslint. All must
   stay green; the root pre-commit hook runs lint-staged + typecheck.
