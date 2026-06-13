@@ -83,7 +83,7 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
     const content = await readFile(rootBriefingPath, "utf-8");
     const parsed = parseCardText(content, {
       source: "briefing.briefing.card",
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(boxRoot),
     });
     const compiled = compileBriefing(parsed.fields as unknown as BriefingFields);
     const mdPath = join(boxRoot, "briefing.md");
@@ -352,7 +352,7 @@ export async function compilePersonalities(boxRoot: string, debug: boolean): Pro
     const content = await readFile(join(configDir, filename), "utf-8");
     const parsed = parseCardText(content, {
       source: filename,
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(boxRoot),
     });
     const fields = parsed.fields as unknown as PersonalityFields;
     const compiled = compilePersonality(fields);

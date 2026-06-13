@@ -185,7 +185,7 @@ export const cardRouter = router({
 
       const split = splitCardContent(raw);
       const fileType = typeFromFilename(input.path);
-      const cardSchemas = createCardSchemaMap();
+      const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
       if (split.hasFrontmatter && fileType !== undefined && cardSchemas.has(fileType)) {
         return loadFrontmatterCard({ raw, source: input.path, type: fileType, cardSchemas });
       }

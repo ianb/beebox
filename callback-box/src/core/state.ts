@@ -10,9 +10,8 @@ import * as path from "node:path";
 import { getBoxDir, parseCardName, requireBoxRoot } from "../cli/lib/paths.js";
 import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../cli/lib/git.js";
 import { loadCardFile } from "./card-io.js";
-import { createCardSchemaMap, getAllSchemas } from "../schemas/registry.js";
+import { buildLoadContext } from "./load-context.js";
 import { getBoxMetadata } from "./box.js";
-import type { ElementSchema } from "cardworks";
 
 class InvalidBoxError extends Error {
   constructor() {
@@ -60,10 +59,7 @@ interface ScanCardsParams {
 async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
   const { dir, boxRoot, subdir } = params;
   const cards: CardInfo[] = [];
-  const cardSchemas = createCardSchemaMap();
-  const elementSchemasArr = await getAllSchemas(boxRoot);
-  const elementSchemas = new Map<string, ElementSchema>();
-  for (const s of elementSchemasArr) elementSchemas.set(s.tagName, s);
+  const ctx = await buildLoadContext(boxRoot);
 
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
@@ -91,7 +87,7 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
     if (!parsed) continue;
 
     try {
-      const loaded = await loadCardFile(fullPath, { cardSchemas, elementSchemas });
+      const loaded = await loadCardFile(fullPath, ctx);
       if (loaded.kind === "frontmatter") {
         cards.push({
           path: fullPath,

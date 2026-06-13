@@ -17,7 +17,7 @@ import { schemas, createCardSchemaMap } from "../src/schemas/registry.js";
 import type { ElementSchema } from "cardworks";
 
 const ctx: LoadCardContext = {
-  cardSchemas: createCardSchemaMap(),
+  cardSchemas: await createCardSchemaMap(),
   elementSchemas: new Map<string, ElementSchema>(schemas.map((s) => [s.tagName, s])),
 };
 

@@ -19,8 +19,7 @@ import {
   getTemplateNames,
 } from "../../schemas/index.js";
 import { loadCardFromText } from "../card-io.js";
-import { createCardSchemaMap, createSchemaRegistry } from "../../schemas/registry.js";
-import type { ElementSchema } from "cardworks";
+import { buildLoadContext } from "../load-context.js";
 
 async function validateGeneratedCard(input: {
   boxRoot: string;
@@ -28,16 +27,10 @@ async function validateGeneratedCard(input: {
   fullPath: string;
 }): Promise<void> {
   const { boxRoot, content, fullPath } = input;
-  const registry = await createSchemaRegistry(boxRoot);
-  const elementSchemas = new Map<string, ElementSchema>();
-  for (const tag of registry.tagNames()) {
-    const s = registry.get(tag);
-    if (s) elementSchemas.set(tag, s as ElementSchema);
-  }
   await loadCardFromText({
     content,
     source: fullPath,
-    ctx: { cardSchemas: createCardSchemaMap(), elementSchemas },
+    ctx: await buildLoadContext(boxRoot),
   });
 }
 

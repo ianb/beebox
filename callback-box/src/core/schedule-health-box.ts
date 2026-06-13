@@ -99,7 +99,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
     try {
       cardMtime = (await fs.stat(cardPath)).mtime;
       const content = await fs.readFile(cardPath, "utf-8");
-      const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+      const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
       const parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
       const missingConnectors = parsed.requires
         ? await checkMissingConnectors(boxRoot, parsed.requires)

@@ -50,7 +50,7 @@ export const scheduledCommand = new Command("scheduled")
       let parsed;
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const card = parseCardText(content, { source: file, schemas: createCardSchemaMap() });
+        const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
         parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
       } catch (err) {
         console.log(`  ${scriptName.padEnd(22)} [parse error: ${(err as Error).message}]`);

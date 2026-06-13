@@ -20,7 +20,7 @@ async function loadImageCard(cardPath: string): Promise<ImageFields> {
   const content = await fs.readFile(cardPath, "utf-8");
   const parsed = parseCardText(content, {
     source: cardPath,
-    schemas: createCardSchemaMap(),
+    schemas: await createCardSchemaMap(),
   });
   return parsed.fields as unknown as ImageFields;
 }
@@ -28,7 +28,7 @@ async function loadImageCard(cardPath: string): Promise<ImageFields> {
 async function saveImageCard(cardPath: string, fields: ImageFields): Promise<void> {
   const parsed = parseCardText(`---\n${stringifyYaml(fields)}---\n`, {
     source: cardPath,
-    schemas: createCardSchemaMap(),
+    schemas: await createCardSchemaMap(),
   });
   await fs.writeFile(cardPath, serializeCardText({
     schema: parsed.schema,

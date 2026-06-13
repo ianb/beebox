@@ -149,7 +149,7 @@ segment ("job"), making every generated job card fail validation:
 
 ```
 const registryCtx: LoadCardContext = {
-  cardSchemas: createCardSchemaMap(),
+  cardSchemas: await createCardSchemaMap(),
   elementSchemas: new Map(),
 };
 const content = createIntakeJobTemplate({

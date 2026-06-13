@@ -95,8 +95,9 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const cardRuleSources: Array<{ name: string; instructions: string | undefined }> = [
     ...schemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
-    ...boxSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
+    ...boxSchemas.elementSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
     ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
+    ...boxSchemas.cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
   ];
 
   for (const { name, instructions } of cardRuleSources) {

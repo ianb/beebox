@@ -81,7 +81,7 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
     const content = await readFile(cardPath, "utf-8");
     const parsed = parseCardText(content, {
       source: cardPath,
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(),
     });
     const fields = parsed.fields as unknown as AudioFields;
     fields.transcript = transcriptionResult.text;
@@ -142,7 +142,7 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
     const content = await readFile(cardPath, "utf-8");
     const parsed = parseCardText(content, {
       source: cardPath,
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(),
     });
     const fields = parsed.fields as unknown as ImageFields;
     const analysis = geminiResult.analyses.find((a: ImageAnalysis) => a.index === i);

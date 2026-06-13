@@ -22,7 +22,7 @@ import type { ElementSchema } from "cardworks";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const ctx: LoadCardContext = {
-  cardSchemas: createCardSchemaMap(),
+  cardSchemas: await createCardSchemaMap(),
   elementSchemas: new Map<string, ElementSchema>(schemas.map((s) => [s.tagName, s])),
 };
 

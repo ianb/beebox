@@ -52,7 +52,7 @@ async function loadPendingQuestion(
   try {
     const card = parseCardText(content, {
       source: fullPath,
-      schemas: createCardSchemaMap(),
+      schemas: await createCardSchemaMap(),
     });
     if (card.schema.type !== "question") {
       return {
