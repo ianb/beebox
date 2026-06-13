@@ -52,6 +52,16 @@ export interface ChatContext {
   streamNeedsSeparator: boolean;
   error: string | null;
   /**
+   * True once the user clicked stop for the current turn. The SDK ends an
+   * interrupted turn with is_error / subtype "error_during_execution" — a
+   * user-initiated abort, not a failure — so this flag tells the result
+   * handler to suppress the error banner. Set by INTERRUPT, cleared when the
+   * error is suppressed and when the next turn starts (SEND from idle).
+   * `error_during_execution` can also be a real crash, so the flag, not the
+   * subtype, is the discriminator.
+   */
+  interrupting: boolean;
+  /**
    * What to address backend chat calls by — either an existing session id
    * or `"new"` to start a fresh conversation. Held alongside `sessionId`
    * because for a freshly-created chat the server-assigned id arrives

@@ -31,6 +31,8 @@ import {
   applyServerMessages,
   appendOtherUserMessage,
   promoteLastToPending,
+  applyStreamError,
+  clearInterrupt,
 } from "./chat-actions";
 
 export { HISTORY_TAIL, MIN_REAL_USER_MESSAGES };
@@ -58,6 +60,7 @@ export const chatMachine = setup({
     streamTools: [],
     streamNeedsSeparator: false,
     error: null,
+    interrupting: false,
     sessionInput: input.sessionInput,
     sessionId: input.sessionInput === "new" ? null : input.sessionInput,
     ...(input.sessionInput === "new" && input.contextDir !== undefined
@@ -158,6 +161,7 @@ export const chatMachine = setup({
             ({ event }) => logFsm("send-from-idle", { len: event.message.length }),
             assign(({ context, event }) => ({
               error: null,
+              interrupting: false,
               streamText: "",
               streamTools: [],
               messages: [
@@ -256,32 +260,29 @@ export const chatMachine = setup({
           // and there's no visible signal that work is still pending.
           actions: assign(promoteLastToPending),
         },
-        STREAM_ERROR: {
-          target: "idle",
-          actions: assign(({ event }) => ({
-            error: event.error,
-            streamText: "",
-            streamTools: [],
-          })),
-        },
+        // A user interrupt ends the turn with is_error — suppress that
+        // (clearInterrupt) and refresh for the partial; otherwise show it.
+        STREAM_ERROR: [
+          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: assign(clearInterrupt) },
+          { target: "idle", actions: assign(applyStreamError) },
+        ],
         STREAM_RESULT: "refreshing",
-        STREAM_FAILED: {
+        STREAM_FAILED: [
+          { guard: ({ context }) => context.interrupting, target: "refreshing", actions: assign(clearInterrupt) },
           // Go to refreshing instead of idle — the agent may still be
           // running on the server. Fetching history will pick up any
           // response that completed while we were disconnected.
-          target: "refreshing",
-          actions: assign(({ event }) => ({
-            error: event.error,
-            streamText: "",
-            streamTools: [],
-          })),
-        },
+          { target: "refreshing", actions: assign(applyStreamError) },
+        ],
         INTERRUPT: {
-          actions: ({ context }) => {
-            if (context.sessionId) {
-              interruptChat({ sessionId: context.sessionId }).catch(() => {});
-            }
-          },
+          actions: [
+            assign({ interrupting: true }),
+            ({ context }) => {
+              if (context.sessionId) {
+                interruptChat({ sessionId: context.sessionId }).catch(() => {});
+              }
+            },
+          ],
         },
       },
     },
