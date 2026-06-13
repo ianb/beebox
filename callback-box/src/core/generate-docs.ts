@@ -27,6 +27,7 @@ import {
   installBriefing,
   installSchedules,
 } from "./box.js";
+import { installSchemasGuide } from "./box-templates.js";
 import { pruneStaleTemplateUpdates } from "./install-template-file.js";
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
@@ -213,6 +214,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/.+\.(?:guide|orig-guide)\.card$/,
   /^config\/.+\.(?:personality|orig-personality)\.card$/,
   /^config\/_template-updates\/.+$/,
+  /^config\/schemas\/CLAUDE\.md$/,
   /^briefing\.(?:briefing|orig-briefing)\.card$/,
   /^briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
@@ -242,6 +244,11 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   await installPersonality(boxRoot);
   await installBriefing(boxRoot);
   await installSchedules(boxRoot);
+  // Refresh the box-local schemas guide so boxes carrying the old XML-only
+  // version pick up the frontmatter-first rewrite on the normal cycle (not
+  // just on an explicit `cb init`). Tracker-based, so user-edited guides are
+  // parked, not clobbered.
+  await installSchemasGuide(boxRoot);
   await generateRules(boxRoot);
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);

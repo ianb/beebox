@@ -3,12 +3,16 @@
  *
  * These are the box-local guide/scaffold documents whose content is a large
  * embedded string (tricks scaffolding, the schemas authoring guide, the views
- * authoring guide). Each installer is a "create if missing" no-op on re-run, so
- * `cb init` can safely run repeatedly without clobbering user edits.
+ * authoring guide). The tricks and views installers are "create if missing"
+ * no-ops on re-run; the schemas guide goes through the template tracker
+ * (refresh-if-unmodified, park-if-edited) so its frontmatter-first rewrite
+ * reaches boxes that still carry the old XML-only version. Either way, `cb
+ * init` can run repeatedly without clobbering user edits.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { installTemplateFile } from "./install-template-file.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -288,18 +292,28 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
 }
 
 /**
- * Install schemas CLAUDE.md guide if it doesn't exist.
+ * sha256 of the pre-frontmatter, XML-only schemas guide shipped before the
+ * guide adopted the template tracker. Every box installed by an older
+ * callback-box has this exact file; recognizing it lets the new
+ * frontmatter-first guide overwrite the stale one (which actively steers box
+ * agents toward `element()`/XML) while still parking any guide a boxholder
+ * has actually edited.
+ */
+const OLD_XML_SCHEMAS_GUIDE_SHA256 =
+  "127bdcaa2598ad8664037bd01659e8f23d4fcd5af493788102b9387b090b5452";
+
+/**
+ * Install (or refresh) the box-local schemas guide. Uses the template tracker
+ * so the stock guide is refreshed when unmodified and parked under
+ * `config/_template-updates/` when the boxholder has customized it.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
-  const claudeMdPath = path.join(boxRoot, "config/schemas/CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No schemas guide yet (fs.access throws ENOENT) — install it. The
-    // error carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "config/schemas"), { recursive: true });
-    await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD);
-  }
+  await installTemplateFile({
+    boxRoot,
+    relPath: "config/schemas/CLAUDE.md",
+    templateContent: SCHEMAS_CLAUDE_MD,
+    priorStockHashes: [OLD_XML_SCHEMAS_GUIDE_SHA256],
+  });
 }
 
 /**

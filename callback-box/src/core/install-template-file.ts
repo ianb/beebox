@@ -50,6 +50,16 @@ export interface InstallTemplateOptions {
    * so timestamp-only differences don't read as "user modified."
    */
   normalize?: (content: string) => string;
+  /**
+   * sha256 hashes (of the normalized content) of prior stock versions we
+   * shipped before this file was tracked in template-versions.json. A local
+   * file matching one of these is recognized as our own unmodified output and
+   * overwritten with the new template — the bootstrap path for files that were
+   * installed create-if-missing before adopting the tracker. A local file
+   * matching none of them (and lacking a recorded hash) is treated as
+   * user-edited and parked.
+   */
+  priorStockHashes?: string[];
 }
 
 export type InstallOutcome =
@@ -136,10 +146,15 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
 
   const versions = await readVersions(boxRoot);
   const lastInstalledHash = versions[relPath]?.sha256;
+  const priorStockHashes = opts.priorStockHashes ?? [];
 
-  // Local matches the version we last installed → user hasn't touched
-  // it since. Safe to overwrite with the new template.
-  if (lastInstalledHash !== undefined && lastInstalledHash === localHash) {
+  // Local matches the version we last installed (or a known prior stock
+  // version shipped before this file was tracked) → it's our own unmodified
+  // output. Safe to overwrite with the new template.
+  if (
+    (lastInstalledHash !== undefined && lastInstalledHash === localHash)
+    || priorStockHashes.includes(localHash)
+  ) {
     await fs.writeFile(targetAbs, templateContent);
     versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
     await writeVersions(boxRoot, versions);
