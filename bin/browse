@@ -6,8 +6,9 @@
 #   - `bin/browse screenshot [path]` adds a URL/title sidecar and indexed default path
 #   - Per-worktree env vars (AGENT_BROWSER_SOCKET_DIR / _PROFILE) so each worktree
 #     runs a fully isolated agent-browser daemon with its own Chrome profile
-#   - Loads the callback-clerk extension (a core part of the system) when built,
-#     so the browse agent can exercise and observe it. Opt out: BROWSE_NO_EXTENSION=1
+#   - Loads the callback-clerk extension when BROWSE_CLERK=1, so the browse
+#     agent can exercise it. Opt-in because loading any extension forces
+#     agent-browser into headed mode (no --headless=new) — see below.
 
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -39,14 +40,19 @@ export AGENT_BROWSER_SOCKET_DIR="${browse_base}/socket"
 export AGENT_BROWSER_PROFILE="${browse_base}/profile"
 export AGENT_BROWSER_IDLE_TIMEOUT_MS="${AGENT_BROWSER_IDLE_TIMEOUT_MS:-300000}"
 
-# Load callback-clerk as an unpacked extension (agent-browser's --extension /
-# AGENT_BROWSER_EXTENSIONS; .crx can't be sideloaded via CLI). Only when built —
-# absent in a fresh worktree, so guard on the manifest and skip silently rather
-# than fail the launch. Append so a caller's own AGENT_BROWSER_EXTENSIONS wins.
-# Build it with: (cd callback-clerk && pnpm build).
+# Load callback-clerk as an unpacked extension when BROWSE_CLERK=1 (agent-browser's
+# --extension / AGENT_BROWSER_EXTENSIONS; a .crx can't be sideloaded via CLI).
+# Opt-in: agent-browser drops --headless=new whenever an extension is present, so
+# every browse would otherwise spawn a visible window (and break headless/CI).
+# Append so a caller's own AGENT_BROWSER_EXTENSIONS still applies. Build first:
+# (cd callback-clerk && pnpm build).
 clerk_ext="${REPO_DIR}/callback-clerk/dist/chrome-mv3"
-if [[ -z "${BROWSE_NO_EXTENSION:-}" && -f "${clerk_ext}/manifest.json" ]]; then
-  export AGENT_BROWSER_EXTENSIONS="${AGENT_BROWSER_EXTENSIONS:+${AGENT_BROWSER_EXTENSIONS},}${clerk_ext}"
+if [[ -n "${BROWSE_CLERK:-}" ]]; then
+  if [[ -f "${clerk_ext}/manifest.json" ]]; then
+    export AGENT_BROWSER_EXTENSIONS="${AGENT_BROWSER_EXTENSIONS:+${AGENT_BROWSER_EXTENSIONS},}${clerk_ext}"
+  else
+    echo "browse: BROWSE_CLERK set but extension not built — run (cd callback-clerk && pnpm build)" >&2
+  fi
 fi
 
 exec "$TSX" "$REPO_DIR/browse/src/cli.ts" "$@"
