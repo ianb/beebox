@@ -1,7 +1,8 @@
 /**
- * Compile the triage-instructions doc from landmarks with a
- * `<triage-destination>` role. The doc is what the triage subagent
- * reads to decide where to route each staged item.
+ * Compile the triage-instructions doc from landmarks with a `triage`
+ * destination role (`<destination for="triage">`, or the legacy
+ * `<triage-destination>`). The doc is what the triage subagent reads to
+ * decide where to route each staged item.
  *
  * See `docs/plans/triage-design.md` §3 and §Triage (stage 2).
  */
@@ -10,6 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { parseCard, type ElementNode } from "cardworks";
+import { findDestination } from "./landmark/destination.js";
 
 /**
  * One triage category, derived from a landmark with a
@@ -90,7 +92,7 @@ async function loadLandmark(absPath: string): Promise<ElementNode | null> {
 }
 
 /**
- * Find every landmark with a `<triage-destination>` role and build a
+ * Find every landmark with a `triage` destination role and build a
  * structured + textual representation suitable for the triage agent.
  */
 export async function compileTriageInstructions(
@@ -108,7 +110,7 @@ export async function compileTriageInstructions(
     const element = await loadLandmark(absPath);
     if (!element || element.tagName !== "landmark") continue;
 
-    const triageDest = findChild(element, "triage-destination");
+    const triageDest = findDestination(element, "triage");
     if (!triageDest) continue;
 
     const dir = path.dirname(relPath);

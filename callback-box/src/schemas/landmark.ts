@@ -7,10 +7,12 @@
  *
  *   <landmark>
  *     <navigation>…label/symbol/links…</navigation>     (human-facing surface)
- *     <triage-destination>…rules/procedure…</triage-destination>  (routing target)
+ *     <destination for="triage commentary">…</destination>  (filing target)
  *   </landmark>
  *
- * At least one role must be present; any combination is allowed.
+ * At least one role must be present; any combination is allowed. The legacy
+ * `<triage-destination>` element is still accepted and means
+ * `<destination for="triage">` (see docs/plans/web-page-commentary.md, Track 1).
  * See docs/landmarks.md and docs/plans/triage-design.md.
  */
 
@@ -159,6 +161,28 @@ export const LandmarkTriageDestination = element("triage-destination", {
 });
 
 /**
+ * Filing-target role: marks the landmark's directory as a destination for one
+ * or more *kinds* of content. `for` is a space-separated set of kinds:
+ *
+ *   <destination for="triage">…rules/procedure…</destination>  inbox-triage target
+ *   <destination for="commentary"/>                             commentary filing spot
+ *   <destination for="triage commentary">…</destination>        both
+ *
+ * `<rules>`/`<procedure>` are only meaningful when `for` includes `triage`
+ * (the triage stage reads them); a `commentary`-only destination needs
+ * neither. Unknown kinds are tolerated (forward-compat) — see
+ * `roleDestinationKinds` in `core/landmark/destination.ts`. This supersedes
+ * `<triage-destination>`, which remains a back-compat alias for
+ * `for="triage"`.
+ */
+export const LandmarkDestination = element("destination", {
+  attrs: {
+    for: z.string(),
+  },
+  children: z.array(z.union([TriageRules, TriageProcedure])),
+});
+
+/**
  * Landmark card schema.
  *
  * ```xml
@@ -171,15 +195,17 @@ export const LandmarkTriageDestination = element("triage-destination", {
  *     <link template-ref="${path}">${title}</link>
  *   </expand>
  * </navigation>
- * <triage-destination>
+ * <destination for="triage">
  *   <rules>Recipes — anything describing how to cook a dish.</rules>
  *   <procedure ref="archive-recipe.procedure.card"/>
- * </triage-destination>
+ * </destination>
  * </landmark>
  * ```
  */
 export const LandmarkSchema = element("landmark", {
-  children: z.array(z.union([LandmarkNavigation, LandmarkTriageDestination])),
+  children: z.array(
+    z.union([LandmarkNavigation, LandmarkDestination, LandmarkTriageDestination]),
+  ),
   instructions: `# Landmark Cards
 
 A landmark marks a directory as a notable spot in the box. It's a hand-curated bookmark that can also be a triage destination — anywhere the system needs a named spot with metadata.
@@ -188,9 +214,11 @@ A landmark marks a directory as a notable spot in the box. It's a hand-curated b
 
 **Roles.** A landmark carries one or more role child elements:
 - \`<navigation>\` — human-facing: appears on the Landmarks page, carries the bookmark fields.
-- \`<triage-destination>\` — agent-facing: a routing target for triage, carries the rules and handler procedure.
+- \`<destination for="…">\` — agent-facing: marks this directory as a filing target. \`for\` is a space-separated set of kinds: \`triage\` (a routing target for the inbox→triage pipeline) and/or \`commentary\` (a place web-page commentary documents are filed). A \`triage\` destination carries \`<rules>\`/\`<procedure>\`; a \`commentary\`-only destination needs neither.
 
-A landmark must have at least one role; many will have both. A pure routing target (an archive humans don't browse) can have only \`<triage-destination>\`; a pure bookmark (a Recipes tile) can have only \`<navigation>\`.
+A landmark must have at least one role; many will have both. A pure routing target (an archive humans don't browse) can have only \`<destination>\`; a pure bookmark (a Recipes tile) can have only \`<navigation>\`.
+
+> Back-compat: \`<triage-destination>…</triage-destination>\` is still accepted and means \`<destination for="triage">…</destination>\`. Prefer \`<destination>\` in new cards.
 
 **\`<navigation>\` fields:**
 - \`<label>\` — short bookmark name. Treat like a tab name, not a sentence.
@@ -201,7 +229,7 @@ A landmark must have at least one role; many will have both. A pure routing targ
 
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and \`<link>\` to it.
 
-**\`<triage-destination>\` fields:**
+**\`<destination for="triage">\` fields:**
 - \`<rules>\` — prose describing what kinds of items belong here. Read by the triage agent. Aim for general rules over enumerated examples.
 - \`<procedure>\` — the handler procedure run at the *handle* stage. Either inline (children are procedure steps) or by reference (\`<procedure ref="path/to/proc.procedure.card"/>\`).
 

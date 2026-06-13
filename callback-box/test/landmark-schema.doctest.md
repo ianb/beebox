@@ -18,6 +18,7 @@ import {
 } from "../src/schemas/index.js";
 import { parseCard } from "cardworks";
 import { resolveLandmark } from "../src/core/landmark/resolve.js";
+import { findDestination, roleDestinationKinds } from "../src/core/landmark/destination.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 ```
 
@@ -133,6 +134,70 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 
 ```cleanup
 await box.cleanup();
+```
+
+## Destination role: `for` kinds
+
+A `<destination for="…">` role validates and advertises one or more filing
+kinds. `roleDestinationKinds` reads the space-separated `for` tokens.
+
+```
+const xml = `<landmark>
+<navigation>
+<label>Reading</label>
+<symbol>📖</symbol>
+</navigation>
+<destination for="triage commentary">
+<rules>Articles saved for close reading and commentary.</rules>
+</destination>
+</landmark>`;
+
+const root = await parseCard(xml, { source: "test.xml" });
+const dest = root.children.find((c) => c.tagName === "destination");
+JSON.stringify(roleDestinationKinds(dest))
+=> ["triage","commentary"]
+```
+
+`findDestination` locates the role advertising a given kind:
+
+```continue
+findDestination(root, "commentary") === dest
+=> true
+
+findDestination(root, "triage") === dest
+=> true
+
+findDestination(root, "navigation")
+=> null
+```
+
+## Destination role: legacy `<triage-destination>` alias
+
+The legacy element still validates and is treated as `for="triage"`, so triage
+keeps finding it during the migration window. It does **not** advertise
+`commentary`.
+
+```
+const xml = `<landmark>
+<navigation>
+<label>Recipes</label>
+<symbol>🍳</symbol>
+</navigation>
+<triage-destination>
+<rules>Recipes — anything describing how to cook a dish.</rules>
+</triage-destination>
+</landmark>`;
+
+const root = await parseCard(xml, { source: "test.xml" });
+const legacy = root.children.find((c) => c.tagName === "triage-destination");
+JSON.stringify(roleDestinationKinds(legacy))
+=> ["triage"]
+
+findDestination(root, "triage") === legacy
+=> true
+
+findDestination(root, "commentary")
+=> null
 ```
 
 ## Missing targets are flagged but not dropped
