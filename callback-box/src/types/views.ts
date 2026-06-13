@@ -89,5 +89,7 @@ export interface ViewMeta {
   description: string;
   dependencies: string[];
   modes: ViewMode[];
+  /** Card types this view renders — bound on card pages, peeks, and view: links. */
+  rendersCardTypes: string[];
   lastModified: string;
 }

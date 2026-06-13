@@ -34,6 +34,8 @@ import { RequestError } from "../lib/errors";
 import { SelectionCapture } from "./SelectionCapture";
 import type { AddSelectionInput } from "../lib/selection-position";
 import { Pre } from "./ui/Pre";
+import { ViewRenderer } from "./ViewRenderer";
+import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { StatusBadge } from "./ui/StatusBadge";
 
@@ -237,8 +239,8 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode, rendererName, onNavigate, onAddSelection }: FileViewProps) {
-  mode = mode ?? "page";
+export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection }: FileViewProps) {
+  const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
   const handleCapture = useCallback((selection: { text: string; position: string }) => {
@@ -255,10 +257,17 @@ export function FileView({ path, mode, rendererName, onNavigate, onAddSelection 
     setUserSelection({ path, name });
   }, [path]);
 
-  const renderers: FileRenderer[] = useMemo(
-    () => (data ? getRenderers(path, data) : []),
-    [path, data],
-  );
+  // A box view exporting `rendersCardTypes` becomes this card type's
+  // default renderer; the built-ins stay available through the toggle.
+  const binding = useCardViewBinding(data?.tagName);
+  const renderers: FileRenderer[] = useMemo(() => {
+    const base = data ? getRenderers(path, data) : [];
+    if (binding === null || !data) return base;
+    const Bound = () => (
+      <ViewRenderer slug={binding.slug} mode={mode === "chat" ? "chat" : "page"} params={{ path }} />
+    );
+    return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
+  }, [path, data, binding, mode]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) {

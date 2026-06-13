@@ -2360,7 +2360,9 @@ tests:
   # Indirect knowledge: needed only when authoring views, so the agent
   # should know to read docs/generated/views.md rather than recall details.
   #
-  # Status (2026-06-12): All 3 pass on first run — agent reads
+  # Status (2026-06-12): All 4 pass on first run (views-render-card-type
+  # added + run 2026-06-13: agent reads views.md, names rendersCardTypes,
+  # doesn't propose frontend edits) — agent reads
   # docs/generated/views.md (1 file read each), then describes the
   # readFile byte-range tail, attachments-metadata + fileUrl, and the
   # conflict-safe write pattern (expect/ViewFileConflictError/commitFile).
@@ -2479,3 +2481,21 @@ tests:
     should_read: ["docs/generated/views.md"]
     correct_contains_any: ["expect", "ViewFileConflictError", "commitFile"]
     tags: [views, attachments]
+
+  - id: views-render-card-type
+    prompt: >
+      I created a custom card type "sandbox" (box-local schema in
+      config/schemas/) and built views/sandbox.tsx as its UI. But when the
+      boxholder opens the card at /card/store/play/Demo.sandbox.card they
+      get the generic card page, not my view. How do I make my view what
+      they see there?
+    expected_level: knows_about
+    watch_for: >
+      Reads docs/generated/views.md, then names the binding: export
+      rendersCardTypes = ["sandbox"] from the view, with dependencies
+      covering the type's glob and params.path identifying the displayed
+      card. Does not suggest editing the app frontend or registering
+      renderers in source.
+    should_read: ["docs/generated/views.md"]
+    correct_contains: ["rendersCardTypes"]
+    tags: [views, cards]

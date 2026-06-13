@@ -12,7 +12,7 @@ import { compileView, listViews, buildErrorModule, invalidateView } from "../src
 
 ## Metadata extraction
 
-The compiler extracts name, description, dependencies, and modes from `export const` declarations via regex:
+The compiler extracts name, description, dependencies, modes, and rendersCardTypes from `export const` declarations via regex:
 
 ```
 const tmp = await mkdtemp(join(tmpdir(), "views-test-"));
@@ -24,6 +24,7 @@ export const name = "Test View";
 export const description = "A simple test";
 export const dependencies = ["box/**/*.card", "store/**/*.card"];
 export const modes = ["page", "chat"];
+export const rendersCardTypes = ["sandbox"];
 export default function Test() {
   return window.__cbReact.createElement("div", null, "hello");
 }
@@ -44,6 +45,9 @@ meta.description
 
 JSON.stringify(meta.dependencies)
 => ["box/**/*.card","store/**/*.card"]
+
+JSON.stringify(meta.rendersCardTypes)
+=> ["sandbox"]
 
 JSON.stringify(meta.modes)
 => ["page","chat"]

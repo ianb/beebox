@@ -91,6 +91,7 @@ function extractMeta(source: string, { slug, mtime }: { slug: string; mtime: str
     description: extractString("description") || "",
     dependencies: extractStringArray("dependencies"),
     modes: extractStringArray("modes") as ViewMode[] || ["page"],
+    rendersCardTypes: extractStringArray("rendersCardTypes"),
     lastModified: mtime,
   };
 }
@@ -184,6 +185,7 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
         description: "Failed to compile",
         dependencies: [],
         modes: ["page"],
+        rendersCardTypes: [],
         lastModified: stat.mtime.toISOString(),
       });
     }

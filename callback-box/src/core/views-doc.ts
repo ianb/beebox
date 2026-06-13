@@ -64,6 +64,34 @@ const metadataAndPropsSection = `## Metadata Exports
 | \`description\` | string | Yes | What this view shows |
 | \`dependencies\` | string[] | Yes | Glob patterns for files that affect rendering |
 | \`modes\` | string[] | Yes | Where the view can appear: \`"page"\`, \`"chat"\`, or both |
+| \`rendersCardTypes\` | string[] | No | Card types this view renders — see below |
+
+### Rendering a card type
+
+A view that exports \`rendersCardTypes\` becomes the **default renderer for
+those card types everywhere cards display** — the card page
+(\`/card/<path>\`), chat embeds, and peeks. This is how a custom card type
+(e.g. a box-local schema) gets a custom UI without touching the app:
+
+\`\`\`tsx
+export const name = "Sandbox";
+export const description = "Interactive sandbox card UI";
+export const dependencies = ["**/*.sandbox.card"];
+export const modes = ["page", "chat"];
+export const rendersCardTypes = ["sandbox"];
+
+export default function Sandbox({ cards, params }) {
+  const card = cards.find((c) => c.path === params.path);
+  // params.path is the card being displayed; dependencies must cover the
+  // type so the card arrives in \`cards\`.
+  ...
+}
+\`\`\`
+
+The built-in renderers (Source, Card Tree, ...) stay available through the
+renderer toggle. One view per type: if several views claim the same card
+type, the first by slug order wins. Without \`rendersCardTypes\`, custom
+types fall back to the generic built-ins.
 
 ## Component Props
 

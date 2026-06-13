@@ -72,6 +72,9 @@ export function viewsSection(): string[] {
     "  with on-demand `readFile` (byte-range tails for large logs), `fileUrl` for",
     "  images/audio, conflict-safe `writeFile`/`appendFile` (etag preconditions),",
     "  and `commitFile` for deliberate git commits of a file + its attachments",
+    "- A view exporting `rendersCardTypes = [\"<type>\"]` becomes that card",
+    "  type's default UI on card pages, peeks, and chat embeds — the way a",
+    "  custom card type gets a custom interface",
     "- **Read `docs/generated/views.md` before creating or modifying views.**",
     "",
   ];
