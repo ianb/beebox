@@ -13,8 +13,11 @@
   },
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
+    "defuddle": "^0.18.1",
+    "dompurify": "^3.4.8",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "single-file-core": "^1.5.84",
     "turndown": "^7.2.2"
   },
   "devDependencies": {
