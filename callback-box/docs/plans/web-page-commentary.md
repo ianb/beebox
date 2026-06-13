@@ -53,15 +53,29 @@ the extension popup → Defuddle extract → SingleFile freeze → POST → open
 in a real Chrome with the unpacked build. Server contract and rendering it
 feeds are verified; what's unverified is the in-page capture itself.
 
-**Follow-ups discovered:**
-- The always-on content script is now ~1.15 MB (Defuddle + SingleFile bundle
-  into every http(s) page). Lazy-inject the heavy capture code on click instead
-  of bundling it into the declarative content script.
+**Follow-ups:**
+- ~~Always-on content script ~1.15 MB.~~ **DONE** — capture moved to a
+  `registration:"runtime"` content script (`commentary-capture.content.ts`)
+  injected on demand via `chrome.scripting` (activeTab from the "Comment"
+  click); the messaged-back result reaches the background. Always-on
+  `extract.js` is now 49 kB (just the Readability save-page path).
+- **Browse integration (added this session).** `bin/browse` loads the built
+  extension when `BROWSE_CLERK=1` (unpacked dir via `AGENT_BROWSER_EXTENSIONS`).
+  Opt-in, not default, because agent-browser forces Chrome **headed** whenever
+  an extension is present (intentional upstream, v0.17.0 #652 — `.crx` can't be
+  CLI-loaded either; unpacked is the only path). General/headless browse stays
+  window-free. If headless-with-extension is ever needed: launch Chrome with
+  `--headless=new --load-extension=<dist> --remote-debugging-port` and
+  `agent-browser connect <port>` (verified Chrome loads the extension headless
+  that way; agent-browser just won't do it via its own launcher).
 - Knowledge-audit entries (below) are written-as-proposed but **not yet added
   to `knowledge-audits.yaml` or run.**
 - Real boxes need `*.frozen filter=lfs` in `.gitattributes` (test1 already has
   it) before they receive frozen attachments — wire into `cb init` /
   adding-a-box.
+- **Still owed:** the in-extension capture path (popup → Defuddle → SingleFile →
+  POST → open) verified in a loaded Chrome; the landmark migrator (Track 1.2,
+  deferred behind the alias).
 
 ## Stated preferences this plan trades against
 
