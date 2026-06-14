@@ -29,6 +29,12 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
     // Additional external targets to render side-by-side for compare (each a
     // full URL). The default target is always rendered; these are extras.
     targets: z.array(z.string()).optional(),
+    // Captured-web-page metadata (set by the clerk capture flow): the original
+    // page URL, the capture date (YYYY-MM-DD), and an in-box ref to the frozen
+    // snapshot. Rendered as a header; all optional.
+    source: z.string().optional(),
+    captured: z.string().optional(),
+    frozen: z.string().optional(),
     body: body(z.string()),
   },
   instructions: `# Commentary Cards
@@ -102,14 +108,20 @@ export function createCommentaryTemplate(options: {
   defaultRef: string;
   sourceUrl: string;
   capturedAt: string;
+  frozenRef?: string;
 }): string {
   const fields: Record<string, unknown> = {
     title: options.title,
     defaultRef: options.defaultRef,
+    source: options.sourceUrl,
+    // Just the calendar date, not the raw ISO timestamp.
+    captured: options.capturedAt.slice(0, 10),
   };
+  if (options.frozenRef !== undefined && options.frozenRef !== "") {
+    fields["frozen"] = options.frozenRef;
+  }
   const yamlText = stringifyYaml(fields);
-  // Show just the calendar date, not the raw ISO timestamp.
-  const capturedDay = options.capturedAt.slice(0, 10);
-  const body = `[Original page](${options.sourceUrl}) · captured ${capturedDay}\n`;
-  return `---\n${yamlText}---\n${body}`;
+  // Body starts empty: the page's metadata lives in frontmatter (rendered as a
+  // header), leaving the body for the boxholder's actual commentary.
+  return `---\n${yamlText}---\n`;
 }

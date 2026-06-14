@@ -212,6 +212,35 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       ? resolveRelativePath(data.path, defaultRef)
       : null;
 
+  // Captured-page metadata (frontmatter): the original URL, the capture date,
+  // and the in-box frozen snapshot. The snapshot opens through /api/files,
+  // which serves it sandboxed HTML. Older cards carry these in their body
+  // instead — no header then, the body still renders the link.
+  const source = frontmatter["source"];
+  const captured = frontmatter["captured"];
+  const frozen = frontmatter["frozen"];
+  const sourceUrl = typeof source === "string" && source !== "" ? source : null;
+  const frozenUrl =
+    typeof frozen === "string" && frozen !== ""
+      ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozen)}`
+      : null;
+  const capturedDay = typeof captured === "string" && captured !== "" ? captured : null;
+  const meta =
+    sourceUrl !== null || frozenUrl !== null ? (
+      <Text as="div" size="sm" tone="subtle" className="mb-3">
+        {sourceUrl !== null ? (
+          <a href={sourceUrl} target="_blank" rel="noreferrer" className="underline">Original page</a>
+        ) : null}
+        {frozenUrl !== null ? (
+          <>
+            {sourceUrl !== null ? " · " : ""}
+            <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline">Frozen snapshot ↗</a>
+          </>
+        ) : null}
+        {capturedDay !== null ? <> · captured {capturedDay}</> : null}
+      </Text>
+    ) : null;
+
   const commentary = (
     <div className="min-w-0 flex-1" data-card-section="body">
       {body !== undefined && body.trim() !== "" ? (
@@ -225,8 +254,9 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
   return (
     <div className="p-4">
       {typeof title === "string" && title !== "" ? (
-        <Text as="h1" size="lg" weight="semibold" className="mb-3">{title}</Text>
+        <Text as="h1" size="lg" weight="semibold" className="mb-1">{title}</Text>
       ) : null}
+      {meta}
 
       {hrefs.length > 0 ? (
         // External targets: render side-by-side with the commentary for compare.

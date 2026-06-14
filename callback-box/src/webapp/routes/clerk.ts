@@ -182,12 +182,14 @@ export async function registerClerkRoutes(
     const filename = buildFilename(data.title, "Page");
     const cardRel = path.join(destDir, `${filename}.commentary.card`);
     const readableRel = attachmentPath(cardRel, "readable.md");
+    const hasFrozen = typeof data.frozenHtml === "string" && data.frozenHtml !== "";
 
     const card = createCommentaryTemplate({
       title: data.title,
       defaultRef: "attach/readable.md",
       sourceUrl: data.url,
       capturedAt,
+      ...(hasFrozen ? { frozenRef: "attach/page.frozen" } : {}),
     });
 
     await writeCard(path.join(boxRoot, cardRel), card);

@@ -35,6 +35,9 @@ const MIME_TYPES: Record<string, string> = {
   ".txt": "text/plain",
   ".csv": "text/csv",
   ".html": "text/html",
+  // Frozen page captures (SingleFile output, scripts stripped) — serve as HTML
+  // so "open snapshot" renders the page instead of downloading it.
+  ".frozen": "text/html",
   ".doc": "application/msword",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   ".xls": "application/vnd.ms-excel",
@@ -84,6 +87,13 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         const ext = path.extname(resolved).toLowerCase();
         const contentType = MIME_TYPES[ext] || "application/octet-stream";
 
+        // Frozen page captures are untrusted, user-saved HTML. We serve them as
+        // HTML so "open snapshot" renders, but isolate them: `sandbox` (no
+        // tokens) disables scripts and gives the page a null origin, so it
+        // can't reach the box's cookies or APIs; nosniff blocks content-type
+        // games. Applied on every bodied response below.
+        const isFrozen = ext === ".frozen";
+
         // Conditional GET: build weak ETag from mtime + size, serve 304 when
         // the client already has the current version. `no-cache` means the
         // browser keeps the body but must revalidate every time, so an agent
@@ -120,6 +130,11 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           }
           if (range !== null) {
             const slice = await readSlice(resolved, range);
+            if (isFrozen) {
+              reply
+                .header("Content-Security-Policy", "sandbox")
+                .header("X-Content-Type-Options", "nosniff");
+            }
             return reply
               .status(206)
               .header("Content-Type", contentType)
@@ -134,6 +149,11 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         }
 
         const content = await fs.readFile(resolved);
+        if (isFrozen) {
+          reply
+            .header("Content-Security-Policy", "sandbox")
+            .header("X-Content-Type-Options", "nosniff");
+        }
         return reply
           .header("Content-Type", contentType)
           .header("Cache-Control", "no-cache")
