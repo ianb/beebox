@@ -1,5 +1,17 @@
 # Companion-pane card activity awareness for chat
 
+> **Status: implemented (2026-06-14).** Shipped as five tracks. Where the
+> work lives now: snapshot attrs + vocabulary in `src/core/chat-features.ts`
+> and `src/core/chat-card-activity.ts` (Track A); URL persistence + the
+> activity accumulator/reporters in
+> `src/frontend/src/components/chat/InteractiveChat-card-hooks.ts`
+> (`useCompanionCard`), wired through `ViewRenderer`/`FileView`/
+> `CompanionViewPanel` (Tracks B+C); the turn marker + `cb chat whats-changed`
+> in `src/core/chat-turn-marker.ts`, `src/core/chat-whats-changed.ts`,
+> `src/cli/lib/git-range.ts`, and the `/api/chat/whats-changed` route (Track D);
+> prompt + view-API docs + knowledge audits (Track E). This file is the frozen
+> design record.
+
 This plan makes the chat agent aware of the card open in the two-pane companion
 layout and what the user is doing to it. The chat's leading per-turn context
 (`<chat-app>` snapshot) gains two **additive** read-only attributes —
