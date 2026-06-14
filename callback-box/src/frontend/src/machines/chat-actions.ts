@@ -68,6 +68,22 @@ export function appendOtherUserMessage(
   };
 }
 
+/** STREAM_ERROR / STREAM_FAILED: surface the error and clear the live stream. */
+export function applyStreamError(
+  { event }: { event: Extract<ChatEvent, { type: "STREAM_ERROR" | "STREAM_FAILED" }> },
+): Pick<ChatContext, "error" | "streamText" | "streamTools"> {
+  return { error: event.error, streamText: "", streamTools: [] };
+}
+
+/**
+ * STREAM_ERROR / STREAM_FAILED when the user interrupted: the turn-ending
+ * error is a user-initiated abort, not a failure — drop it and clear the
+ * interrupt flag. streamText is left for `refreshing` to swap into history.
+ */
+export function clearInterrupt(): Pick<ChatContext, "interrupting" | "error"> {
+  return { interrupting: false, error: null };
+}
+
 /** SET_MESSAGES (global): reconcile a server-pushed message set against pending. */
 export function applyServerMessages(
   { context, event }: { context: ChatContext; event: Extract<ChatEvent, { type: "SET_MESSAGES" }> },
