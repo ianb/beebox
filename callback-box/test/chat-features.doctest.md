@@ -177,6 +177,33 @@ composeChatAppSnapshot({
 => <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago" calendar="16:00-17:00 Dentist"/>
 ```
 
+The companion-pane attributes `open-card` (box-relative path) and
+`card-activity` (canonical comma-joined kinds) ride on every send when a card
+is open, serializing after the session-start extras.
+
+```
+composeChatAppSnapshot({
+  features: {},
+  time: "2026-05-13T15:00:00Z",
+  localTime: "Wednesday 2026-05-13 10:00 (morning)",
+  openCard: "store/notes/Trip.memo.card",
+  cardActivity: "scrolled,modified",
+})
+=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" local-time="Wednesday 2026-05-13 10:00 (morning)" open-card="store/notes/Trip.memo.card" card-activity="scrolled,modified"/>
+```
+
+Both are omitted when `undefined` — the caller passes `undefined`, never
+`""`, since the pipeline renders empty strings rather than dropping them.
+
+```
+composeChatAppSnapshot({
+  features: {},
+  time: "2026-05-13T15:00:00Z",
+  openCard: "store/notes/Trip.memo.card",
+})
+=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" open-card="store/notes/Trip.memo.card"/>
+```
+
 ## Delta parsing
 
 The agent emits `<chat-app>` tags as state mutations. The parser
@@ -213,12 +240,12 @@ r.deltas
 
 Unknown features and invalid values are dropped. The system-written
 context attributes (`time`, `local-time`, `channel`, `last-activity`,
-`calendar`) are always ignored on input — they're read-only; the agent
-echoing one back is not a mutation.
+`calendar`, `open-card`, `card-activity`) are always ignored on input —
+they're read-only; the agent echoing one back is not a mutation.
 
 ```
 const r = parseChatAppDeltas(
-  "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\" local-time=\"x\" channel=\"y\" last-activity=\"z\" calendar=\"w\"/>"
+  "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\" local-time=\"x\" channel=\"y\" last-activity=\"z\" calendar=\"w\" open-card=\"a.card\" card-activity=\"modified\"/>"
 );
 r.deltas
 => [

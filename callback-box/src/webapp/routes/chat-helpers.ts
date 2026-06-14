@@ -35,6 +35,19 @@ export interface SendBody {
    * first turn. Unknown features / invalid values are dropped server-side.
    */
   seedFeatures?: Record<string, string>;
+  /**
+   * Box-relative path of the card open in the companion pane when this
+   * message was sent, surfaced to the agent as the `open-card` snapshot
+   * attribute. Omitted when no card is open.
+   */
+  openCard?: string;
+  /**
+   * What the user did to the companion-pane card since the agent's last
+   * reply (`scrolled`/`navigated`/`explored`/`modified`), surfaced as the
+   * `card-activity` snapshot attribute. Unrecognized kinds are dropped at
+   * serialization. Omitted when empty.
+   */
+  cardActivity?: string[];
 }
 
 export interface SelfNoteBody {

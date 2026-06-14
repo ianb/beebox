@@ -123,9 +123,10 @@ export function mergeSeedFeatures(input: {
 
 /**
  * Attributes the system writes into the snapshot that the agent can
- * never set back via a delta tag. `time`/`local-time`/`channel` ride on
- * every message; `last-activity`/`calendar`/`health` only on the first
- * message of a new session (see `session-context.ts`).
+ * never set back via a delta tag. `time`/`local-time`/`channel`, plus
+ * `open-card`/`card-activity` (companion-pane state), ride on every
+ * message; `last-activity`/`calendar`/`health` only on the first message
+ * of a new session (see `session-context.ts`).
  */
 const READ_ONLY_ATTRS = new Set([
   "time",
@@ -134,6 +135,8 @@ const READ_ONLY_ATTRS = new Set([
   "last-activity",
   "calendar",
   "health",
+  "open-card",
+  "card-activity",
 ]);
 
 /**
@@ -153,6 +156,8 @@ export function composeChatAppSnapshot(input: {
   lastActivity?: string;
   calendar?: string;
   health?: string;
+  openCard?: string;
+  cardActivity?: string;
 }): string {
   const resolved = resolveFeatures(input.features);
   const attrs: string[] = [];
@@ -168,6 +173,8 @@ export function composeChatAppSnapshot(input: {
     ["last-activity", input.lastActivity],
     ["calendar", input.calendar],
     ["health", input.health],
+    ["open-card", input.openCard],
+    ["card-activity", input.cardActivity],
   ];
   for (const [name, value] of contextAttrs) {
     if (value !== undefined) attrs.push(`${name}="${escapeAttr(value)}"`);

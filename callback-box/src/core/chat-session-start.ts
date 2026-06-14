@@ -13,6 +13,7 @@ import { getDirectoryForSession } from "./chat-session-history.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import { composeSendSnapshot } from "./session-context.js";
+import { joinActivityKinds } from "./chat-card-activity.js";
 import {
   CHAT_SYSTEM_PROMPT,
   NARRATION_OVERLAY,
@@ -139,10 +140,19 @@ export async function composeTurnContent(
   },
 ): Promise<ChatContentBlock[]> {
   await features.ensureLoaded();
+  // Omit-when-empty: `undefined` (not `""`) drops the attribute, since the
+  // snapshot pipeline renders empty strings. `card-activity` collapses to
+  // `undefined` when nothing survives the canonical join.
+  const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
+    ? rawInput.openCard
+    : undefined;
+  const cardActivity = joinActivityKinds(rawInput.cardActivity ?? []);
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     sessionStart,
     ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
+    ...(openCard !== undefined ? { openCard } : {}),
+    ...(cardActivity !== undefined ? { cardActivity } : {}),
   });
   const input: ChatSendInput = {
     ...rawInput,

@@ -14,6 +14,7 @@ import {
   type SessionEntry,
 } from "../cli/lib/session.js";
 import type { ChatContentBlock } from "../services/claude-chat.js";
+import type { ActivityKind } from "./chat-card-activity.js";
 import type {
   SDKMessage,
   SDKTaskNotificationMessage,
@@ -128,6 +129,18 @@ export interface ChatSendInput {
    * device. Omitted when the transport doesn't know.
    */
   channel?: string;
+  /**
+   * Box-relative path of the card open in the chat's companion pane when
+   * this message was sent. Surfaces to the agent as the read-only
+   * `open-card` snapshot attribute. Omitted when no card is open.
+   */
+  openCard?: string;
+  /**
+   * What the user did to the companion-pane card since the agent's last
+   * reply (see `ActivityKind`). Unioned across queued sends and surfaced as
+   * the read-only `card-activity` snapshot attribute. Omitted when empty.
+   */
+  cardActivity?: ActivityKind[];
 }
 
 /**

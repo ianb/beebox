@@ -16,6 +16,7 @@ import { resolveSessionLogPath } from "./chat-session-history.js";
 import { parseSessionLog, type SessionEntry } from "../cli/lib/session.js";
 import { effectiveTailSize } from "./chat-session-messages.js";
 import type { ChatImage, ChatSendInput } from "./chat-session-messages.js";
+import { unionActivityKinds } from "./chat-card-activity.js";
 
 export interface SessionHistory {
   sessionId: string | null;
@@ -232,16 +233,21 @@ export function deleteSessionFile(boxRoot: string, sessionFile: string | null): 
 /**
  * Combine several queued sends into one turn: text joined with blank lines,
  * image attachments concatenated with per-message id offsets so `[imageN]`
- * tokens from different messages don't collide. The latest queued
- * channel wins — it reflects where the user is now.
+ * tokens from different messages don't collide. The latest queued `channel`
+ * and `openCard` win — they reflect where the user is now — but
+ * `cardActivity` is **unioned** across the batch: an earlier queued
+ * message's "scrolled"/"modified" must survive into the combined turn, not
+ * be clobbered by a later send that reported different activity.
  */
 export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
   const combinedImages: ChatImage[] = [];
   const combinedTextParts: string[] = [];
   let channel: string | undefined;
+  let openCard: string | undefined;
   let idOffset = 0;
   for (const q of queued) {
     if (q.channel !== undefined) channel = q.channel;
+    if (q.openCard !== undefined) openCard = q.openCard;
     const imgs = q.images ?? [];
     let text = q.text;
     if (imgs.length > 0 && idOffset > 0) {
@@ -260,9 +266,12 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     combinedTextParts.push(text);
     idOffset += imgs.length;
   }
+  const cardActivity = unionActivityKinds(queued.map((q) => q.cardActivity));
   return {
     text: combinedTextParts.join("\n\n"),
     images: combinedImages,
     ...(channel !== undefined ? { channel } : {}),
+    ...(openCard !== undefined ? { openCard } : {}),
+    ...(cardActivity.length > 0 ? { cardActivity } : {}),
   };
 }

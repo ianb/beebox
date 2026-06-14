@@ -13,6 +13,7 @@ import { type ChatMessage, type ChatSession } from "../../core/chat-session.js";
 import { getMostActive } from "../../core/chat-session-history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { mergeSeedFeatures } from "../../core/chat-features.js";
+import { isActivityKind, type ActivityKind } from "../../core/chat-card-activity.js";
 import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat-turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
@@ -146,7 +147,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>("/api/chat/send", async (request, reply) => {
     const body = request.body ?? ({} as Partial<SendBody>);
-    const { message, messageId, images, session: sessionParam, contextDir, seedFeatures } = body;
+    const { message, messageId, images, session: sessionParam, contextDir, seedFeatures, openCard, cardActivity } = body;
 
     if (!message) {
       return reply.status(400).send({ error: "message is required" });
@@ -195,6 +196,18 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     // Where the user is sending from, for the snapshot's `channel` attr.
     const channel = classifyChannel(request.headers["user-agent"]);
 
+    // Companion-pane state for the `open-card`/`card-activity` snapshot attrs.
+    // Filter activity to recognized kinds at this parse boundary; the
+    // serializer drops the rest anyway, but typing it as ActivityKind[] keeps
+    // ChatSendInput honest. Both ride enqueue and send like `channel`.
+    const cardKinds: ActivityKind[] = Array.isArray(cardActivity)
+      ? cardActivity.filter(isActivityKind)
+      : [];
+    const cardFields = {
+      ...(typeof openCard === "string" && openCard !== "" ? { openCard } : {}),
+      ...(cardKinds.length > 0 ? { cardActivity: cardKinds } : {}),
+    };
+
     // If busy, queue and return — the queue drains on the next "done", and the
     // completed turn surfaces via the chat-complete event → history refresh.
     if (chatSession.isBusy()) {
@@ -202,6 +215,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         text: attributed,
         ...(images ? { images } : {}),
         ...(channel !== undefined ? { channel } : {}),
+        ...cardFields,
       });
       return reply.send({ queued: true });
     }
@@ -236,6 +250,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
       text: fullMessage,
       ...(images ? { images } : {}),
       ...(channel !== undefined ? { channel } : {}),
+      ...cardFields,
     });
     if (!sent) {
       capture.cancel();
