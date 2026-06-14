@@ -114,8 +114,8 @@ export function createCommentaryTemplate(options: {
     title: options.title,
     defaultRef: options.defaultRef,
     source: options.sourceUrl,
-    // Just the calendar date, not the raw ISO timestamp.
-    captured: options.capturedAt.slice(0, 10),
+    // Full ISO instant; the renderer formats it in the viewer's local zone.
+    captured: options.capturedAt,
   };
   if (options.frozenRef !== undefined && options.frozenRef !== "") {
     fields["frozen"] = options.frozenRef;

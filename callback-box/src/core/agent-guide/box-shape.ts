@@ -51,6 +51,7 @@ export function howItemsEnterSection(): string[] {
     "- **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during `cb wakeup`. Connectors create cards in `box/inbox/` and job cards in `box/jobs/` for processing.",
     "- **`cb create`** — the CLI command creates cards from templates. Use this when YOU need to create a card (e.g., a question, todo, or record). Example: `cb create box/questions/Color.question.card -t question`",
     "- **Chat** — users send messages through the chat UI, which creates/updates chat-thread cards.",
+    "- **Clerk browser extension** — the user's \"Comment on this page\" captures a web page as a commentary bundle: a `*.commentary.card` (with `source`/`captured`/`frozen` frontmatter) plus its attachments — the readable markdown at `attach/readable.md` (the card's `defaultRef`) and a frozen self-contained snapshot at `attach/page.frozen`. It lands in the chosen `<destination for=\"commentary\">` landmark dir, or `box/inbox/` by default.",
     "",
     "Two parallel sorting paths process items that land in `box/inbox/`:",
     "",

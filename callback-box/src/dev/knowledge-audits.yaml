@@ -2546,3 +2546,49 @@ tests:
       or any CORS workaround.
     correct_contains: ["adapterFetch"]
     tags: [views, adapters]
+
+  # === Web-page commentary (clerk capture) ===
+  #
+  # Conventions from docs/plans/web-page-commentary.md. The landmark
+  # <destination for="…"> role and the commentary-capture flow are documented
+  # in the agent guide (behavior.ts + box-shape.ts) + schema instructions.
+  #
+  # Status (2026-06-14): all 3 pass. commentary-capture-files initially failed
+  # (agent searched, no answer) until the capture bundle layout was added to
+  # the "How Items Enter the Box" guide section — then it knew it directly.
+
+  - id: commentary-destination
+    prompt: >
+      A boxholder wants a directory to be the place their saved web-page
+      commentary documents get filed. How does a landmark mark a directory as
+      a commentary destination?
+    expected_level: knows_directly
+    watch_for: >
+      Names <destination for="commentary"> on the landmark card. Does not
+      invent a new role, conflate it with <navigation>, or suggest editing
+      app source.
+    correct_contains: ["destination", "commentary"]
+    tags: [landmarks, commentary]
+
+  - id: commentary-capture-files
+    prompt: >
+      The boxholder captures a web page with the clerk browser extension's
+      "Comment on this page" action. What files appear in the box?
+    expected_level: knows_directly
+    watch_for: >
+      A .commentary.card plus its attachments — the readable markdown
+      (attach/readable.md) and the frozen page snapshot (attach/page.frozen).
+    correct_contains: ["readable", "frozen"]
+    tags: [commentary, clerk]
+
+  - id: commentary-anchors-author
+    prompt: >
+      In a commentary card, who turns the boxholder's selected spans into
+      {% source %} anchors — the browser extension, or the box's chat agent?
+    expected_level: knows_directly
+    watch_for: >
+      The chat agent authors the anchors from the user's selection; the
+      extension only captures the page (readable + frozen) and creates the
+      card. Must not credit the extension with the anchoring.
+    correct_contains_any: ["chat agent", "the agent", "box's agent", "assistant"]
+    tags: [commentary]

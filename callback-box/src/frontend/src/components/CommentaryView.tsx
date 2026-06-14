@@ -18,6 +18,7 @@ import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
 import { Pre } from "./ui/Pre";
 import { Text } from "./ui/Text";
+import { FriendlyDate } from "./ui/FriendlyDate";
 import { getRenderers, type FileData, type RendererProps } from "../renderers";
 import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
 
@@ -224,7 +225,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
     typeof frozen === "string" && frozen !== ""
       ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozen)}`
       : null;
-  const capturedDay = typeof captured === "string" && captured !== "" ? captured : null;
+  const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
   const meta =
     sourceUrl !== null || frozenUrl !== null ? (
       <Text as="div" size="sm" tone="subtle" className="mb-3">
@@ -237,7 +238,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
             <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline">Frozen snapshot ↗</a>
           </>
         ) : null}
-        {capturedDay !== null ? <> · captured {capturedDay}</> : null}
+        {capturedAt !== null ? <> · captured <FriendlyDate iso={capturedAt} /></> : null}
       </Text>
     ) : null;
 
