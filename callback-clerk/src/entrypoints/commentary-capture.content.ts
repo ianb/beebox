@@ -10,10 +10,13 @@ import { freezePage } from "../platform/freeze-page.js";
 import { CAPTURE_RESULT, type CaptureResultMessage } from "../domain/capture-messages.js";
 
 export default defineContentScript({
-  // Not in the manifest; matches still drives host_permissions so the
-  // background may inject into these origins.
+  // Built but NOT registered in the manifest; the background injects it via
+  // chrome.scripting.executeScript on the "Comment" click (activeTab covers
+  // the active tab — no host permission needed). matches is empty on purpose:
+  // any value here is added to host_permissions, and we must NOT request broad
+  // host access at install (host access is per-origin, granted on box-enable).
   registration: "runtime",
-  matches: ["http://*/*", "https://*/*"],
+  matches: [],
   async main() {
     let result: CaptureResultMessage;
     try {
