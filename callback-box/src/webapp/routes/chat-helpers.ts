@@ -57,6 +57,13 @@ export interface SelfNoteBody {
   session?: string;
 }
 
+export interface WhatsChangedBody {
+  /** Target session id; defaults to the most-active session server-side. */
+  session?: string;
+  /** Box-relative card path to scope the report to (the open companion card). */
+  card?: string;
+}
+
 /** Soft cap on total base64 image payload per request (25 MB). */
 const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 

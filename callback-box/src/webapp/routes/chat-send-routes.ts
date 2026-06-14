@@ -14,12 +14,14 @@ import { getMostActive } from "../../core/chat-session-history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
 import { mergeSeedFeatures } from "../../core/chat-features.js";
 import { isActivityKind, type ActivityKind } from "../../core/chat-card-activity.js";
+import { summarizeWhatsChanged } from "../../core/chat-whats-changed.js";
 import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat-turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import {
   type SendBody,
   type SelfNoteBody,
+  type WhatsChangedBody,
   classifyChannel,
   escapeXmlAttr,
   injectUserAttr,
@@ -301,5 +303,20 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     }
 
     return reply.send({ ok: true, sessionId: target.getSessionId() });
+  });
+
+  // POST /api/chat/whats-changed — git-grounded "what changed since my last
+  // reply" for the agent. Resolves the marker against the live/most-active
+  // session; the report is committed (marker.head..HEAD) plus the uncommitted
+  // working tree, optionally scoped to a card path. No registry liveness needed
+  // — the marker is on disk, and a missing one yields the labeled fallback.
+  server.post<{ Body: WhatsChangedBody }>("/api/chat/whats-changed", async (request, reply) => {
+    const { session: requestedSession, card } = request.body ?? ({} as Partial<WhatsChangedBody>);
+    const sessionId = requestedSession ?? (await getMostActive(boxRoot));
+    const report = await summarizeWhatsChanged(boxRoot, {
+      sessionId,
+      ...(card !== undefined && card !== "" ? { card } : {}),
+    });
+    return reply.send({ report });
   });
 }
