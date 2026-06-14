@@ -24,7 +24,7 @@ import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from ".
 import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
-import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
+import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink, useCardUrlPersistence } from "./InteractiveChat-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
@@ -66,9 +66,15 @@ interface InteractiveChatProps {
    * deep-links such as the clerk extension's "comment on this page" flow.
    */
   companion?: string;
+  /**
+   * The card live-open in the companion pane, persisted in `?card=` (a
+   * serialized view URL, no `view:` prefix). Restored on mount and kept in
+   * sync as the active card changes. Distinct from `companion` (one-shot).
+   */
+  card?: string;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -99,6 +105,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion }: Interac
   const tabs = useChatTabs();
   const { activeView } = tabs;
   useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView });
+  useCardUrlPersistence({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug });
   const schedules = useChatSchedules({ messages, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });

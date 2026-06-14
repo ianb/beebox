@@ -8,7 +8,7 @@
  */
 
 import { useEffect, useCallback } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
 import { getApiBase, type SessionEntry } from "../../api";
 import { getTTSClient } from "../../lib/tts-client";
@@ -94,6 +94,7 @@ export function useChatSse(opts: {
 }) {
   const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
   const navigate = useNavigate();
+  const search = useSearch({ strict: false });
 
   // Subscribe to the box event stream over the shared WebSocket: schedule-fired,
   // chat-history, chat-complete, chat-user-message, chat-session-assigned.
@@ -156,12 +157,16 @@ export function useChatSse(opts: {
   useEffect(() => {
     if (sessionInput !== "new") return;
     if (!sessionId) return;
+    // Spread the previous search so a live `?card=` (and any other param)
+    // survives the id assignment — a fresh `{ session }` object would drop it.
+    // `as never` is the router-boundary cast this loosely-typed `navigate`
+    // requires (same pattern as HistoryPage/SessionListButton).
     navigate({
       to: href(`/${boxSlug}/chat`),
-      search: { session: sessionId } as never,
+      search: { ...search, session: sessionId } as never,
       replace: true,
     });
-  }, [sessionInput, sessionId, navigate, boxSlug]);
+  }, [sessionInput, sessionId, navigate, boxSlug, search]);
 
   // Load voice config from personality on mount
   useEffect(() => {

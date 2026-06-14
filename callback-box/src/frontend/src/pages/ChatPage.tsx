@@ -28,6 +28,11 @@ interface ChatSearch {
    * deep-links like the clerk extension's "comment on this page" flow.
    */
   companion?: string;
+  /**
+   * The card live-open in the companion pane (serialized view URL). Persisted
+   * here so a reload restores it; kept in sync by `useCardUrlPersistence`.
+   */
+  card?: string;
 }
 
 export function ChatPage() {
@@ -37,10 +42,13 @@ export function ChatPage() {
   const sessionParam = search.session;
   const contextDir = search.contextDir;
   const companion = search.companion;
+  const card = search.card;
   const [resolved, setResolved] = useState<string | null>(null);
 
   // Bare `/chat`: resolve the box's most-active session and navigate to it.
-  // If none exists, fall through to a fresh-chat shell.
+  // If none exists, fall through to a fresh-chat shell. Spread the previous
+  // search so a live `?card=` (or any other param) survives the redirect —
+  // assigning a fresh `{ session }` object would silently drop it.
   useEffect(() => {
     if (sessionParam !== undefined) return;
     let cancelled = false;
@@ -48,7 +56,7 @@ export function ChatPage() {
       .then(({ sessionId }) => {
         if (cancelled) return;
         if (sessionId) {
-          navigate({ to: href(`/${boxSlug}/chat`), search: { session: sessionId } as never, replace: true });
+          navigate({ to: href(`/${boxSlug}/chat`), search: { ...search, session: sessionId } as never, replace: true });
         } else {
           setResolved("new");
         }
@@ -59,7 +67,7 @@ export function ChatPage() {
     return () => {
       cancelled = true;
     };
-  }, [sessionParam, boxSlug, navigate]);
+  }, [sessionParam, boxSlug, navigate, search]);
 
   const sessionInput = sessionParam ?? resolved;
 
@@ -99,6 +107,7 @@ export function ChatPage() {
       sessionInput={rendered}
       contextDir={rendered === "new" ? contextDir : undefined}
       companion={companion}
+      card={card}
     />
   );
 }
