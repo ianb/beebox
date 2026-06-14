@@ -108,6 +108,8 @@ export function createCommentaryTemplate(options: {
     defaultRef: options.defaultRef,
   };
   const yamlText = stringifyYaml(fields);
-  const body = `[Original page](${options.sourceUrl}) · captured ${options.capturedAt}\n`;
+  // Show just the calendar date, not the raw ISO timestamp.
+  const capturedDay = options.capturedAt.slice(0, 10);
+  const body = `[Original page](${options.sourceUrl}) · captured ${capturedDay}\n`;
   return `---\n${yamlText}---\n${body}`;
 }

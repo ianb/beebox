@@ -172,19 +172,14 @@ function InboxTargetPane({
 }) {
   const { data, isLoading, error } = useInboxTarget(boxPath);
 
-  // Label the column with its box-relative path so a {% source ref=… %} anchor
-  // can locate its target column (the in-box parity of the href panes below).
+  // data-target-ref lets a future {% source ref=… %} anchor locate this content.
+  // No file-path header — the saved page reads as the document, not a "file".
   return (
-    <div className="min-w-0 flex-1" data-card-section="body" data-target-ref={boxPath}>
-      <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-warm-200 pb-1">
-        <Text as="div" size="xs" tone="subtle" className="truncate font-mono">{boxPath}</Text>
-      </div>
+    <div className="min-w-0" data-card-section="body" data-target-ref={boxPath}>
       {isLoading ? (
-        <Text as="div" tone="subtle" className="p-2 italic">Loading target…</Text>
+        <Text as="div" tone="subtle" className="p-2 italic">Loading saved page…</Text>
       ) : error !== null ? (
-        <Text as="div" tone="danger" className="p-2">
-          Couldn’t load this target. It may be missing.
-        </Text>
+        <Text as="div" tone="danger" className="p-2">Couldn’t load the saved page.</Text>
       ) : data !== undefined ? (
         <InboxDocument boxPath={boxPath} content={data} onNavigate={onNavigate} />
       ) : null}
@@ -217,35 +212,45 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       ? resolveRelativePath(data.path, defaultRef)
       : null;
 
+  const commentary = (
+    <div className="min-w-0 flex-1" data-card-section="body">
+      {body !== undefined && body.trim() !== "" ? (
+        <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
+      ) : (
+        <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-4">
       {typeof title === "string" && title !== "" ? (
         <Text as="h1" size="lg" weight="semibold" className="mb-3">{title}</Text>
       ) : null}
 
-      <div className="flex flex-col gap-6 lg:flex-row">
-        {hrefs.length > 0 ? (
-          hrefs.map((href) => (
+      {hrefs.length > 0 ? (
+        // External targets: render side-by-side with the commentary for compare.
+        <div className="flex flex-col gap-6 lg:flex-row">
+          {hrefs.map((href) => (
             <TargetPane key={href} href={href} onNavigate={onNavigate} />
-          ))
-        ) : inboxPath !== null ? (
-          <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
-        ) : (
-          <div className="min-w-0 flex-1">
-            <Text as="div" tone="subtle" className="p-2 italic">
-              No target set for this commentary.
-            </Text>
-          </div>
-        )}
-
-        <div className="min-w-0 flex-1" data-card-section="body">
-          {body !== undefined && body.trim() !== "" ? (
-            <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
-          ) : (
-            <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>
-          )}
+          ))}
+          {commentary}
         </div>
-      </div>
+      ) : inboxPath !== null ? (
+        // Captured page: one column — the commentary (with its link to the
+        // original) leads, the saved page reads full-width below.
+        <div className="flex flex-col gap-6">
+          {commentary}
+          <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {commentary}
+          <Text as="div" tone="subtle" className="p-2 italic">
+            No target set for this commentary.
+          </Text>
+        </div>
+      )}
     </div>
   );
 }
