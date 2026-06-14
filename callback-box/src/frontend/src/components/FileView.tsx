@@ -29,6 +29,7 @@ import { getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
+import type { ActivityKind } from "../../../core/chat-card-activity";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { RequestError } from "../lib/errors";
 import { SelectionCapture } from "./SelectionCapture";
@@ -59,6 +60,12 @@ interface FileViewProps {
    * without a composer to receive it.
    */
   onAddSelection?: (selection: AddSelectionInput) => void;
+  /**
+   * Optional. Report user activity on this card to the chat's companion-pane
+   * accumulator. Threaded into agent-generated views (writes → `"modified"`,
+   * `reportActivity("explored")` opt-in). Absent outside the companion pane.
+   */
+  reportActivity?: (kind: ActivityKind) => void;
 }
 
 /* ---------- path classification ---------- */
@@ -239,7 +246,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -264,10 +271,15 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     const base = data ? getRenderers(path, data) : [];
     if (binding === null || !data) return base;
     const Bound = () => (
-      <ViewRenderer slug={binding.slug} mode={mode === "chat" ? "chat" : "page"} params={{ path }} />
+      <ViewRenderer
+        slug={binding.slug}
+        mode={mode === "chat" ? "chat" : "page"}
+        params={{ path }}
+        {...(reportActivity !== undefined ? { reportActivity } : {})}
+      />
     );
     return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
-  }, [path, data, binding, mode]);
+  }, [path, data, binding, mode, reportActivity]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) {

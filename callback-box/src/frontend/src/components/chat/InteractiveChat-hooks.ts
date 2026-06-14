@@ -6,14 +6,12 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate, useSearch } from "@tanstack/react-router";
 import { getApiBase, getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
-import { href } from "../../lib/routing";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
-import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
+import { parseViewUrl } from "../../lib/view-url";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -71,60 +69,6 @@ export function useCompanionDeepLink(opts: { companion: string | undefined; onZo
     const target = parseViewUrl(companion);
     onZoomView({ target, label: target.path });
   }, [companion, onZoomView]);
-}
-
-/**
- * Persist the live companion-pane card in the URL (`?card=`) so a reload
- * restores it, and keep the param in sync as the active card changes.
- *
- * Two effects, both guarded against the TanStack search-param sync loop
- * (spread-previous, navigate only on a real change, `replace: true`):
- *
- *  - **Restore once on mount.** `initialCard` is a serialized view URL (no
- *    `view:` prefix); parse it and open the tab. A ref guards re-runs so a
- *    re-render — or the user closing the tab — can't reopen it. Distinct from
- *    `useCompanionDeepLink`, which is the one-shot `?companion=` deep-link.
- *  - **Sync active card → URL.** Serialize `activeView.target` to the canonical
- *    form and write it through a spread-previous search updater that returns
- *    the previous object untouched when nothing changed, so it never clobbers
- *    `session`/`contextDir` and never loops (serialize∘parse is stable).
- */
-export function useCardUrlPersistence(opts: {
-  initialCard: string | undefined;
-  activeView: PanelTab | null;
-  onZoomView: OnZoomView;
-  boxSlug: string | undefined;
-}) {
-  const { initialCard, activeView, onZoomView, boxSlug } = opts;
-  const navigate = useNavigate();
-  const search = useSearch({ strict: false });
-  const liveCard = typeof search.card === "string" ? search.card : undefined;
-
-  const restoredRef = useRef(false);
-  useEffect(() => {
-    if (restoredRef.current) return;
-    restoredRef.current = true;
-    if (initialCard === undefined || initialCard === "") return;
-    const target = parseViewUrl(initialCard);
-    onZoomView({ target, label: target.path });
-  }, [initialCard, onZoomView]);
-
-  const currentCard = activeView ? serializeViewUrl(activeView.target) : undefined;
-  useEffect(() => {
-    // Don't write before the restore has had its chance — otherwise the first
-    // render (activeView still null) would strip a card from the URL before we
-    // ever open it. Navigate only on a real change (serialize∘parse is stable,
-    // so this can't loop); spread the previous search so other params survive;
-    // `replace: true` keeps reload on the same card and doesn't spam history.
-    // `as never` is the router-boundary cast this loosely-typed `navigate`
-    // requires (same pattern as HistoryPage).
-    if (!restoredRef.current) return;
-    if (liveCard === currentCard) return;
-    const next = { ...search };
-    if (currentCard === undefined) delete next.card;
-    else next.card = currentCard;
-    void navigate({ to: href(`/${boxSlug}/chat`), search: next as never, replace: true });
-  }, [currentCard, liveCard, search, navigate, boxSlug]);
 }
 
 interface ChatSendFn {

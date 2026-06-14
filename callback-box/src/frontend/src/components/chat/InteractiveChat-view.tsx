@@ -25,6 +25,7 @@ import type { useChatVoice } from "./InteractiveChat-voice";
 import type { useChatAttachments } from "./InteractiveChat-attachments";
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
+import type { ActivityKind } from "../../../../core/chat-card-activity";
 
 interface ChatBodyProps {
   tabs: ReturnType<typeof useChatTabs>;
@@ -71,6 +72,8 @@ interface ChatBodyProps {
   send: (event: { type: "DISMISS_ERROR" }) => void;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
+  /** Report user activity on the open companion card (scrolled/navigated/…). */
+  reportCardActivity: (kind: ActivityKind) => void;
 }
 
 function HeaderRegion(props: ChatBodyProps) {
@@ -257,11 +260,16 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onSelectTab={onSelectTab}
             onCloseTab={onCloseTab}
             onClosePanel={onClosePanel}
-            onNavigate={(target, hint) => onZoomView({
-              target: { ...target, zoom: false },
-              label: hint && hint.label ? hint.label : target.path,
-            })}
+            onNavigate={(target, hint) => {
+              // A link followed within the pane is active consumption.
+              props.reportCardActivity("navigated");
+              onZoomView({
+                target: { ...target, zoom: false },
+                label: hint && hint.label ? hint.label : target.path,
+              });
+            }}
             onAddSelection={handleAddSelection}
+            reportActivity={props.reportCardActivity}
           />
         ) : null
       }

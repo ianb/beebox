@@ -17,6 +17,7 @@ import { localTime, newMessageId } from "./InteractiveChat-helpers";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
+import type { CardSendFields } from "./InteractiveChat-card-hooks";
 import type { ChatEvent } from "../../machines/chat-types";
 
 interface ChatActionsOpts {
@@ -46,6 +47,7 @@ interface ChatActionsOpts {
   setScrollToBottomTrigger: React.Dispatch<React.SetStateAction<number>>;
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
+  captureCardSend: () => CardSendFields;
 }
 
 export function useChatActions(opts: ChatActionsOpts) {
@@ -53,21 +55,23 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     input, setInput, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
+    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr, captureCardSend,
   } = opts;
   const navigate = useNavigate();
 
-  // doSend with attachments — used by handleSend below.
+  // doSend with attachments — used by handleSend below. Stamps the companion
+  // card state (open card + activity since last reply) onto every user turn.
   const doSendWithImages = useCallback(
     (wrapped: string, images: ChatImageAttachment[]) => {
       const messageId = newMessageId();
+      const cardFields = captureCardSend();
       if (images.length > 0) {
-        send({ type: "SEND", message: wrapped, messageId, images });
+        send({ type: "SEND", message: wrapped, messageId, images, ...cardFields });
       } else {
-        send({ type: "SEND", message: wrapped, messageId });
+        send({ type: "SEND", message: wrapped, messageId, ...cardFields });
       }
     },
-    [send]
+    [send, captureCardSend]
   );
 
   const handleSend = useCallback(() => {
