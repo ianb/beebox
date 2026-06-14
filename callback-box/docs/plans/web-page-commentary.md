@@ -48,10 +48,11 @@ returns it → `POST /api/clerk/commentary` writes the card + `attach/readable.m
 + `attach/page.frozen` and returns the `open` URL → browsing the card shows the
 in-box render, browsing `open` shows the companion-pane chat. Screenshot
 confirms the side-by-side layout.
-**Verification still owed (needs a loaded extension — can't do headlessly):**
-the extension popup → Defuddle extract → SingleFile freeze → POST → open hop,
-in a real Chrome with the unpacked build. Server contract and rendering it
-feeds are verified; what's unverified is the in-page capture itself.
+**In-extension capture — VERIFIED (2026-06-14):** the boxholder ran "Comment
+on this page" against a hosted box (`box.example.com/hearth`) and it
+captured a real page end-to-end — popup → Defuddle → SingleFile freeze → POST
+→ commentary card + companion-pane chat. The full flow works in a loaded
+extension.
 
 **Follow-ups:**
 - ~~Always-on content script ~1.15 MB.~~ **DONE** — capture moved to a
@@ -68,14 +69,21 @@ feeds are verified; what's unverified is the in-page capture itself.
   `--headless=new --load-extension=<dist> --remote-debugging-port` and
   `agent-browser connect <port>` (verified Chrome loads the extension headless
   that way; agent-browser just won't do it via its own launcher).
+- **Captured-page rendering (2026-06-14, from dogfooding).** The card renders
+  single-column (the side-by-side compare layout is reserved for external
+  multi-target commentary); page metadata (`source`/`captured`/`frozen`) lives
+  in frontmatter and renders as a header line, leaving the body for commentary.
+  The frozen snapshot is linked from the header and served by `/api/files` as
+  `text/html` with `Content-Security-Policy: sandbox` + `nosniff` (scripts
+  disabled, null origin) so the untrusted captured HTML can't reach the box.
 - Knowledge-audit entries (below) are written-as-proposed but **not yet added
   to `knowledge-audits.yaml` or run.**
 - Real boxes need `*.frozen filter=lfs` in `.gitattributes` (test1 already has
   it) before they receive frozen attachments — wire into `cb init` /
   adding-a-box.
-- **Still owed:** the in-extension capture path (popup → Defuddle → SingleFile →
-  POST → open) verified in a loaded Chrome; the landmark migrator (Track 1.2,
-  deferred behind the alias).
+- **Still owed:** the landmark migrator (Track 1.2, deferred behind the alias);
+  freeze fidelity on heavy/complex pages (works, but slow — 20s cap drops the
+  snapshot rather than blocking).
 
 ## Stated preferences this plan trades against
 
