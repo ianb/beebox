@@ -110,6 +110,7 @@ The default export receives a \`ViewProps\` object:
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
+| \`reportActivity\` | (kind) => void | When open in the chat companion pane, tell the agent the user touched this card. Writes auto-report \`"modified"\`; call \`reportActivity("explored")\` when the user changes the view's *parameters* (filters, ranges, a selected tab) without changing data. A no-op for inline/page renders, so always safe to call. |
 
 ### ViewCard Structure
 
@@ -199,6 +200,8 @@ When a companion view is open, every user message includes a \`zoomed-view\` att
 \`\`\`
 
 This tells the agent what the user is looking at, so it can tailor its responses. The attribute value is the full view URI (without \`&zoom\`).
+
+The per-turn \`<chat-app>\` snapshot also carries this as the read-only \`open-card\` attribute (box-relative path) alongside \`card-activity\` — a low-confidence hint of what the user did to the card since the agent's last reply (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`). A view contributes the \`explored\` signal by calling \`reportActivity("explored")\` when the user changes its parameters; writes contribute \`modified\` automatically. For the precise change set, the agent runs \`cb chat whats-changed --card <path>\`.
 
 **Note:** Companion views are a chat-only feature. The \`&zoom\` parameter and \`zoomed-view\` attribute are only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't support them.`;
 
