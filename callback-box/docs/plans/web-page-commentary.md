@@ -76,8 +76,11 @@ extension.
   The frozen snapshot is linked from the header and served by `/api/files` as
   `text/html` with `Content-Security-Policy: sandbox` + `nosniff` (scripts
   disabled, null origin) so the untrusted captured HTML can't reach the box.
-- Knowledge-audit entries (below) are written-as-proposed but **not yet added
-  to `knowledge-audits.yaml` or run.**
+- ~~Knowledge-audit entries written-as-proposed but not run.~~ **DONE
+  (2026-06-14)** — three entries added to `knowledge-audits.yaml`
+  (`commentary-destination`, `commentary-capture-files`,
+  `commentary-anchors-author`), all pass `knows_directly`. The capture-files
+  one drove a guide addition (the bundle layout in "How Items Enter the Box").
 - Real boxes need `*.frozen filter=lfs` in `.gitattributes` (test1 already has
   it) before they receive frozen attachments — wire into `cb init` /
   adding-a-box.
