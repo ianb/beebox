@@ -14,6 +14,8 @@
     "lint:circular": "madge --circular --extensions ts,tsx src/"
   },
   "dependencies": {
+    "@apache-annotator/dom": "^0.2.0",
+    "@apache-annotator/selector": "^0.2.0",
     "@markdoc/markdoc": "^0.5.2",
     "@tailwindcss/typography": "^0.5.19",
     "@tanstack/react-query": "^5.90.21",

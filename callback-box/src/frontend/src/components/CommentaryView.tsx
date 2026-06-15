@@ -12,7 +12,9 @@
  * `{% source %}` anchor-linking land later.
  */
 
+import { useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { createTextQuoteSelectorMatcher } from "@apache-annotator/dom";
 import { z } from "zod";
 import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
@@ -202,6 +204,25 @@ function targetHrefs(frontmatter: Record<string, unknown>): string[] {
   return hrefs;
 }
 
+/** Named highlight for the span a source chip jumped to (see index.css). */
+const QUOTE_HIGHLIGHT = "cb-quote-anchor";
+
+/**
+ * Highlight a matched range non-destructively via the CSS Custom Highlight
+ * API — no DOM mutation, so it never fights React's ownership of the rendered
+ * markdown. No-op where the API is unavailable.
+ */
+function highlightRange(range: Range): void {
+  if (typeof Highlight === "undefined" || !("highlights" in CSS)) return;
+  CSS.highlights.set(QUOTE_HIGHLIGHT, new Highlight(range));
+}
+
+function scrollRangeIntoView(range: Range): void {
+  const start = range.startContainer;
+  const el = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element);
+  el?.scrollIntoView({ block: "center", behavior: "smooth" });
+}
+
 export function CommentaryView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
   const defaultRef = frontmatter["defaultRef"];
@@ -242,10 +263,27 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       </Text>
     ) : null;
 
+  // Clicking a source chip in the commentary jumps to that verbatim span in
+  // the saved page beside it: match the quote text within the saved-page pane
+  // (W3C TextQuoteSelector via @apache-annotator), highlight it, scroll to it.
+  const savedPaneRef = useRef<HTMLDivElement>(null);
+  const onJumpToQuote = useCallback(async (quoteText: string): Promise<boolean> => {
+    const root = savedPaneRef.current;
+    const exact = quoteText.trim();
+    if (root === null || exact === "") return false;
+    const matcher = createTextQuoteSelectorMatcher({ type: "TextQuoteSelector", exact });
+    for await (const range of matcher(root)) {
+      highlightRange(range);
+      scrollRangeIntoView(range);
+      return true;
+    }
+    return false;
+  }, []);
+
   const commentary = (
     <div className="min-w-0 flex-1" data-card-section="body">
       {body !== undefined && body.trim() !== "" ? (
-        <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
+        <Markdown prose="block" onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} basePath={data.path}>{body}</Markdown>
       ) : (
         <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>
       )}
@@ -282,7 +320,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
             >
               Saved page
             </Text>
-            <div className="p-3">
+            <div className="p-3" ref={savedPaneRef}>
               <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
             </div>
           </div>

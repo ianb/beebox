@@ -26,13 +26,28 @@
  * handing the tag to React.
  */
 
-import type { ReactNode } from "react";
+import { isValidElement, type ReactNode } from "react";
 import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
 
 export interface SourceLinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /** The host doc's path, so relative / `attach/` refs resolve correctly. */
   basePath: string | undefined;
+  /**
+   * Optional: jump to this source's verbatim span in a sibling pane (the saved
+   * page beside a commentary). Returns true if it scrolled there; false → fall
+   * back to navigating to the target doc.
+   */
+  onJumpToQuote: ((quoteText: string) => Promise<boolean>) | undefined;
+}
+
+/** Plain text of a React subtree — the verbatim words inside a {% quote %}. */
+function flattenText(node: ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flattenText).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) return flattenText(node.props.children);
+  return "";
 }
 
 /**
@@ -84,20 +99,36 @@ function externalLabel(href: string): string {
 function CitationChip({
   sourceRef,
   as,
+  quoteText,
   linkCtx,
 }: {
   sourceRef: string;
   as: string | undefined;
+  quoteText: string;
   linkCtx: SourceLinkContext;
 }): ReactNode {
   const label = sourceLabel(sourceRef);
   const title = as === undefined || as === ""
     ? `Source: ${sourceRef}`
     : `${as} — ${sourceRef}`;
+  const navigate = (): void => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label });
+  // Prefer jumping to the verbatim span in the sibling pane (commentary →
+  // saved page); fall back to navigating to the target doc when there's no
+  // jump handler or the text isn't found there.
+  const handleClick = (): void => {
+    const jump = linkCtx.onJumpToQuote;
+    if (jump !== undefined && quoteText !== "") {
+      void jump(quoteText).then((handled) => {
+        if (!handled) navigate();
+      });
+      return;
+    }
+    navigate();
+  };
   return (
     <button
       type="button"
-      onClick={() => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label })}
+      onClick={handleClick}
       title={title}
       className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
     >
@@ -130,14 +161,15 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
   SourceInline: (props: SourceProps) => ReactNode;
   SourceBlock: (props: SourceProps) => ReactNode;
 } {
-  function Citation({ sourceRef, href, as, version }: SourceProps): ReactNode {
+  function Citation({ sourceRef, href, as, version, children }: SourceProps): ReactNode {
+    const quoteText = flattenText(children);
     if (sourceRef !== undefined && sourceRef !== "") {
-      return <CitationChip sourceRef={sourceRef} as={as} linkCtx={linkCtx} />;
+      return <CitationChip sourceRef={sourceRef} as={as} quoteText={quoteText} linkCtx={linkCtx} />;
     }
     if (href !== undefined && href !== "") {
       return <ExternalChip href={href} version={version} />;
     }
-    return <CitationChip sourceRef="" as={as} linkCtx={linkCtx} />;
+    return <CitationChip sourceRef="" as={as} quoteText={quoteText} linkCtx={linkCtx} />;
   }
 
   function SourceInline(props: SourceProps) {

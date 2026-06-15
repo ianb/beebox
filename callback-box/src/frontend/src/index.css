@@ -496,3 +496,9 @@ body {
     display: block;
   }
 }
+
+/* Span a commentary source-chip jumped to in the saved page (CommentaryView). */
+::highlight(cb-quote-anchor) {
+  background-color: #fde68a;
+  color: inherit;
+}
