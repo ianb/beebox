@@ -38,6 +38,7 @@ import { Pre } from "./ui/Pre";
 import { ViewRenderer } from "./ViewRenderer";
 import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
+import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { StatusBadge } from "./ui/StatusBadge";
 
 export type FileViewMode = "page" | "chat" | "companion";
@@ -66,6 +67,12 @@ interface FileViewProps {
    * `reportActivity("explored")` opt-in). Absent outside the companion pane.
    */
   reportActivity?: (kind: ActivityKind) => void;
+  /**
+   * Optional. When provided (chat-embedded cards only), the chat header shows
+   * an "open in sidebar" button beside open-in-new-tab that escalates this
+   * card into the companion pane. Absent where no companion pane exists.
+   */
+  onOpenInPanel?: () => void;
 }
 
 /* ---------- path classification ---------- */
@@ -195,14 +202,15 @@ function RendererToggle({
   );
 }
 
-/** Chat-mode header: name + full path (truncated, hover for full) + open-in-browse icon. */
+/** Chat-mode header: name + full path (truncated, hover for full), open-in-sidebar + open-in-browse icons. */
 function ChatHeader({
-  path, renderers, active, onSelect,
+  path, renderers, active, onSelect, onOpenInPanel,
 }: {
   path: string;
   renderers: FileRenderer[];
   active: FileRenderer;
   onSelect: (name: string) => void;
+  onOpenInPanel?: () => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const browseHref = withBase(`/${boxSlug}/browse/${path}`);
@@ -213,6 +221,9 @@ function ChatHeader({
         <div className="text-xs text-warm-500 truncate" title={path}>{path}</div>
       </div>
       <RendererToggle renderers={renderers} active={active} onSelect={onSelect} compact />
+      {onOpenInPanel ? (
+        <OpenInPanelButton onClick={onOpenInPanel} label="Open in sidebar" size="sm" />
+      ) : null}
       <ExternalIconLink href={browseHref} label="Open in browse view (new tab)" size="sm" />
     </div>
   );
@@ -246,7 +257,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -308,7 +319,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
   if (mode === "chat") {
     return (
       <div className="border rounded-lg overflow-hidden bg-white">
-        <ChatHeader path={path} renderers={renderers} active={active} onSelect={selectForPath} />
+        <ChatHeader path={path} renderers={renderers} active={active} onSelect={selectForPath} onOpenInPanel={onOpenInPanel} />
         <div className="max-h-96 overflow-auto">{body}</div>
       </div>
     );
