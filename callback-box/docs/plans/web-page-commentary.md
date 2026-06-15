@@ -77,11 +77,14 @@ extension.
   `text/html` with `Content-Security-Policy: sandbox` + `nosniff` (scripts
   disabled, null origin) so the untrusted captured HTML can't reach the box.
 - **Anchoring + links (2026-06-15, from dogfooding).** Clicking a `{% source %}`
-  chip now jumps to its verbatim span *in the saved-page pane*: the quote text
-  is resolved to a DOM range with the W3C TextQuoteSelector
-  (`@apache-annotator/dom`) and highlighted via the CSS Custom Highlight API —
-  so the agent's `pos` quality no longer matters for navigation. Two fixes
-  alongside: the chip's `attach/readable.md` ref now resolves through
+  chip now jumps to its verbatim span using Chrome's text-fragment matching
+  algorithm (`text-fragments-polyfill`): it matches the quote in the in-pane
+  readable markdown (scoped to the saved-page pane) and highlights it via the
+  CSS Custom Highlight API; if the quote isn't in the markdown it opens the
+  frozen original at the quote with a native `#:~:text=` fragment. So the
+  agent's `pos` quality no longer matters for navigation — the match is on the
+  quoted text. Two fixes alongside: the chip's `attach/readable.md` ref now
+  resolves through
   `resolveRelativePath` (was navigating to a dead literal path), and captured
   article links are absolutized against the source URL at extraction (site-/
   doc-relative links were resolving into the box). The `pos`-precision idea
