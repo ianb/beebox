@@ -222,7 +222,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const Link = makeLink(linkCtx);
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
-  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate });
+  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath });
   const briefing = makeBriefingComponents({ onNavigate: linkCtx.onNavigate });
   const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (

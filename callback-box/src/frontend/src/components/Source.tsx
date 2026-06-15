@@ -27,10 +27,12 @@
  */
 
 import type { ReactNode } from "react";
-import type { NavigateHint, ViewTarget } from "../lib/view-url";
+import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
 
 export interface SourceLinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /** The host doc's path, so relative / `attach/` refs resolve correctly. */
+  basePath: string | undefined;
 }
 
 /**
@@ -57,16 +59,17 @@ function sourceLabel(sourceRef: string): string {
 }
 
 /**
- * Resolve a ref to a `ViewTarget` for navigation. Mirrors the
- * absolute-vs-relative resolution rule used by cardworks' ref system:
- * leading `/` is box-root-absolute (strip the `/`); anything else is
- * already box-root-relative for navigation purposes. Fragments after
- * `#` are dropped from the path; the router doesn't take them today.
+ * Resolve a ref to a `ViewTarget` for navigation, against the host doc's
+ * `basePath`. Uses the same rule as markdown links (`resolveRelativePath`):
+ * leading `/` is box-root-absolute, `attach/` resolves into the host card's
+ * attach scope, anything else is relative to the host doc's directory. So a
+ * commentary anchor's `ref="attach/readable.md"` lands on the actual
+ * `<dir>/<card>.attach/readable.md`, not the literal path. Fragments after `#`
+ * are dropped; the router doesn't take them today.
  */
-function refToViewTarget(sourceRef: string): ViewTarget {
+function refToViewTarget(sourceRef: string, basePath: string | undefined): ViewTarget {
   const noFrag = sourceRef.split("#")[0] ?? sourceRef;
-  const path = noFrag.replace(/^\/+/, "");
-  return { path, viewer: null, params: {}, zoom: false };
+  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {}, zoom: false };
 }
 
 /** Short label from an external `href` — basename of the file:/URL path. */
@@ -94,7 +97,7 @@ function CitationChip({
   return (
     <button
       type="button"
-      onClick={() => linkCtx.onNavigate(refToViewTarget(sourceRef), { label })}
+      onClick={() => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label })}
       title={title}
       className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
     >
