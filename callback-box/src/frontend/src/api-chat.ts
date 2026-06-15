@@ -7,6 +7,7 @@
 
 import { RequestError } from "./lib/errors";
 import { fetchJson, getApiBase } from "./api-core";
+import type { ActivityKind } from "../../core/chat-card-activity";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -192,8 +193,12 @@ export async function startChatTurn(params: {
   contextDir?: string;
   /** Pre-session chat-feature seeds (session "new"). */
   seedFeatures?: Record<string, string>;
+  /** Box-relative path of the card open in the companion pane at send time. */
+  openCard?: string;
+  /** What the user did to the companion-pane card since the last reply. */
+  cardActivity?: ActivityKind[];
 }): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures } = params;
+  const { session, message, images, contextDir, seedFeatures, openCard, cardActivity } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (): Promise<Response> => {
@@ -207,6 +212,8 @@ export async function startChatTurn(params: {
         ...(images && images.length > 0 ? { images } : {}),
         ...(contextDir !== undefined ? { contextDir } : {}),
         ...(seedFeatures !== undefined ? { seedFeatures } : {}),
+        ...(openCard !== undefined ? { openCard } : {}),
+        ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
       }),
     });
 

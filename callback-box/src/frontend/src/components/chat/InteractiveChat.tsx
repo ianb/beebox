@@ -25,6 +25,7 @@ import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
+import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
@@ -66,9 +67,15 @@ interface InteractiveChatProps {
    * deep-links such as the clerk extension's "comment on this page" flow.
    */
   companion?: string;
+  /**
+   * The card live-open in the companion pane, persisted in `?card=` (a
+   * serialized view URL, no `view:` prefix). Restored on mount and kept in
+   * sync as the active card changes. Distinct from `companion` (one-shot).
+   */
+  card?: string;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -99,19 +106,23 @@ export function InteractiveChat({ sessionInput, contextDir, companion }: Interac
   const tabs = useChatTabs();
   const { activeView } = tabs;
   useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView });
+  const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
   const schedules = useChatSchedules({ messages, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
+  // Both user-send funnels (`doSend`, `doSendWithImages` in useChatActions) call
+  // `cardSend.capture()` so every turn carries the open card + activity since the
+  // last reply; system sends (e.g. /compact) don't, leaving the accumulator be.
   const doSend = useCallback(
     (wrapped: string) => {
       // Any send moves "the last message" past the cached voice recording.
       // A voice send re-caches its own audio right after (see runKeywordSend).
       clearLastMessageAudio();
-      send({ type: "SEND", message: wrapped, messageId: newMessageId() });
+      send({ type: "SEND", message: wrapped, messageId: newMessageId(), ...cardSend.capture() });
     },
-    [send]
+    [send, cardSend]
   );
 
   const zoomedViewAttr = useCallback(() => {
@@ -186,7 +197,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion }: Interac
     addImageFiles: attach.addImageFiles,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr,
+    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr, captureCardSend: cardSend.capture,
   });
 
   if (isLoading) {
@@ -242,6 +253,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion }: Interac
       send={send}
       zoomedViewAttr={zoomedViewAttr}
       timePassedAttr={timePassedAttr}
+      reportCardActivity={cardSend.report}
     />
   );
 }

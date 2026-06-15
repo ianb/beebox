@@ -16,6 +16,7 @@ import { cn } from "../../lib/cn";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import type { AddSelectionInput } from "../../lib/selection-position";
+import type { ActivityKind } from "../../../../core/chat-card-activity";
 
 /**
  * Countdown pill showing time remaining for an active schedule.
@@ -193,6 +194,7 @@ export function CompanionViewPanel({
   onClosePanel,
   onNavigate,
   onAddSelection,
+  reportActivity,
 }: {
   tabs: PanelTab[];
   activePath: string;
@@ -201,6 +203,8 @@ export function CompanionViewPanel({
   onClosePanel: () => void;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   onAddSelection?: (selection: AddSelectionInput) => void;
+  /** Report user activity on the active card to the chat accumulator. */
+  reportActivity: (kind: ActivityKind) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Tabs that have been activated at least once. We mount a tab's view on
@@ -280,6 +284,10 @@ export function CompanionViewPanel({
               role="tabpanel"
               aria-hidden={!isActive}
               className={cn("absolute inset-0 overflow-auto", !isActive && "hidden")}
+              // Scrolling the active card is passive consumption. `report` is an
+              // idempotent Set.add, so firing per scroll event is cheap and
+              // collapses to one "scrolled" kind; only the visible tab scrolls.
+              onScroll={isActive ? () => reportActivity("scrolled") : undefined}
             >
               <FileView
                 path={tab.target.path}
@@ -287,6 +295,7 @@ export function CompanionViewPanel({
                 rendererName={tab.target.viewer}
                 onNavigate={onNavigate}
                 onAddSelection={onAddSelection}
+                reportActivity={reportActivity}
               />
             </div>
           );

@@ -35,6 +35,19 @@ export interface SendBody {
    * first turn. Unknown features / invalid values are dropped server-side.
    */
   seedFeatures?: Record<string, string>;
+  /**
+   * Box-relative path of the card open in the companion pane when this
+   * message was sent, surfaced to the agent as the `open-card` snapshot
+   * attribute. Omitted when no card is open.
+   */
+  openCard?: string;
+  /**
+   * What the user did to the companion-pane card since the agent's last
+   * reply (`scrolled`/`navigated`/`explored`/`modified`), surfaced as the
+   * `card-activity` snapshot attribute. Unrecognized kinds are dropped at
+   * serialization. Omitted when empty.
+   */
+  cardActivity?: string[];
 }
 
 export interface SelfNoteBody {
@@ -42,6 +55,13 @@ export interface SelfNoteBody {
   ref?: string;
   commit?: string;
   session?: string;
+}
+
+export interface WhatsChangedBody {
+  /** Target session id; defaults to the most-active session server-side. */
+  session?: string;
+  /** Box-relative card path to scope the report to (the open companion card). */
+  card?: string;
 }
 
 /** Soft cap on total base64 image payload per request (25 MB). */

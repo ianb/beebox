@@ -167,10 +167,12 @@ interface SnapshotContext {
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel }: {
+  { features, sessionStart, channel, openCard, cardActivity }: {
     features: FeatureMap;
     sessionStart: boolean;
     channel?: string;
+    openCard?: string;
+    cardActivity?: string;
   },
 ): Promise<string> {
   const now = new Date();
@@ -180,6 +182,8 @@ export async function composeSendSnapshot(
     time: now.toISOString(),
     ...context,
     ...(channel !== undefined ? { channel } : {}),
+    ...(openCard !== undefined ? { openCard } : {}),
+    ...(cardActivity !== undefined ? { cardActivity } : {}),
   });
 }
 

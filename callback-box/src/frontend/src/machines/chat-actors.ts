@@ -19,6 +19,7 @@ import {
 } from "../api";
 import { trpcClient } from "../lib/trpc";
 import type { ChatMessage } from "../../../core/chat-session-messages.js";
+import type { ActivityKind } from "../../../core/chat-card-activity";
 import {
   HISTORY_TAIL,
   MIN_REAL_USER_MESSAGES,
@@ -248,7 +249,7 @@ export const streamActor = fromCallback(
     input,
   }: {
     sendBack: (event: ChatEvent) => void;
-    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string> };
+    input: { sessionInput: string; message: string; messageId: string; images?: ChatImageAttachment[]; contextDir?: string; seedFeatures?: Record<string, string>; openCard?: string; cardActivity?: ActivityKind[] };
   }) => {
     let terminalFired = false;
     let msgCount = 0;
@@ -281,6 +282,8 @@ export const streamActor = fromCallback(
       ...(input.images && input.images.length > 0 ? { images: input.images } : {}),
       ...(input.contextDir ? { contextDir: input.contextDir } : {}),
       ...(input.seedFeatures ? { seedFeatures: input.seedFeatures } : {}),
+      ...(input.openCard !== undefined ? { openCard: input.openCard } : {}),
+      ...(input.cardActivity && input.cardActivity.length > 0 ? { cardActivity: input.cardActivity } : {}),
     })
       .then((result) => {
         if (cancelled) return;
@@ -381,12 +384,14 @@ export function rollupStreamToEntry(
  * We don't track the outcome — the backend enqueues it and the chat-complete
  * event triggers a history refresh when the queued turn finishes.
  */
-export function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[] }): void {
-  const { session, message, messageId, images } = opts;
+export function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[] }): void {
+  const { session, message, messageId, images, openCard, cardActivity } = opts;
   startChatTurn({
     session,
     message,
     messageId,
     ...(images && images.length > 0 ? { images } : {}),
+    ...(openCard !== undefined ? { openCard } : {}),
+    ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
   }).catch(() => {}); // fire-and-forget
 }

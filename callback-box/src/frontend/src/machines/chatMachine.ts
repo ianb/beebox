@@ -200,6 +200,8 @@ export const chatMachine = setup({
               ? { contextDir: context.contextDir }
               : {}),
             ...(context.sessionInput === "new" && context.seedFeatures ? { seedFeatures: context.seedFeatures } : {}),
+            ...(sendEvent.openCard !== undefined ? { openCard: sendEvent.openCard } : {}),
+            ...(sendEvent.cardActivity && sendEvent.cardActivity.length > 0 ? { cardActivity: sendEvent.cardActivity } : {}),
           };
         },
       },

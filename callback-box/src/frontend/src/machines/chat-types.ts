@@ -9,11 +9,12 @@ import type {
   SessionContentBlock,
   ChatImageAttachment,
 } from "../api";
+import type { ActivityKind } from "../../../core/chat-card-activity";
 
 // -- Events --
 
 export type ChatEvent =
-  | { type: "SEND"; message: string; messageId: string; images?: ChatImageAttachment[] }
+  | { type: "SEND"; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[] }
   | { type: "INTERRUPT" }
   | { type: "DISMISS_ERROR" }
   | { type: "STREAM_TEXT"; text: string }

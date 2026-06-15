@@ -47,6 +47,8 @@ export function dispatchQueuedSend(
     message: event.message,
     messageId: event.messageId,
     ...(event.images ? { images: event.images } : {}),
+    ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
+    ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
   });
 }
 

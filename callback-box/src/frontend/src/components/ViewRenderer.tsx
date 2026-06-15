@@ -5,9 +5,10 @@
  * and subscribes to SSE for live updates.
  */
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase, withBase } from "../api";
+import type { ActivityKind } from "../../../core/chat-card-activity";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
@@ -40,6 +41,30 @@ interface ViewProps extends ViewFileHelpers {
   navigate: (path: string) => void;
   boxSlug: string;
   params: Record<string, string>;
+  /**
+   * Report user activity on this card to the chat's companion-pane
+   * accumulator. Writes auto-report `"modified"`; a view that changes
+   * parameters without changing data should call `reportActivity("explored")`.
+   * A no-op outside the companion pane (inline/page renders don't accumulate).
+   */
+  reportActivity: (kind: ActivityKind) => void;
+}
+
+/**
+ * Wrap the file helpers so a successful write/append/commit reports
+ * `"modified"`. Only the companion-pane ViewRenderer passes a real reporter,
+ * so inline/page views can write freely without polluting the accumulator.
+ */
+function withModifiedReporting(
+  helpers: ViewFileHelpers,
+  report: (kind: ActivityKind) => void,
+): ViewFileHelpers {
+  return {
+    ...helpers,
+    writeFile: async (path, opts) => { const r = await helpers.writeFile(path, opts); report("modified"); return r; },
+    appendFile: async (path, opts) => { const r = await helpers.appendFile(path, opts); report("modified"); return r; },
+    commitFile: async (path, message) => { const r = await helpers.commitFile(path, message); report("modified"); return r; },
+  };
 }
 
 type ViewMode = "page" | "chat";
@@ -62,6 +87,8 @@ interface ViewRendererProps {
   mode: ViewMode;
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
+  /** Companion-pane activity reporter; omitted for inline/page renders. */
+  reportActivity?: (kind: ActivityKind) => void;
 }
 
 interface ViewModule {
@@ -72,7 +99,7 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
-export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps) {
+export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: ViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -161,6 +188,8 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
   });
 
   const fileHelpers = useViewFileHelpers(apiBase);
+  const report = useCallback((kind: ActivityKind) => { reportActivity?.(kind); }, [reportActivity]);
+  const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
 
   const viewNavigate = useCallback((path: string) => {
     if (boxSlug) {
@@ -202,10 +231,11 @@ export function ViewRenderer({ slug: rawSlug, mode, params }: ViewRendererProps)
         <Component
           cards={cards}
           files={files}
-          {...fileHelpers}
+          {...activityHelpers}
           navigate={viewNavigate}
           boxSlug={boxSlug || ""}
           params={viewParams}
+          reportActivity={report}
         />
       </ViewErrorBoundary>
       {mode === "chat" && Boolean(boxSlug) && (

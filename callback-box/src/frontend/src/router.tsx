@@ -80,6 +80,11 @@ const chatRoute = createRoute({
     // A `view:` URL to open in the companion pane when the chat loads (e.g. a
     // commentary card captured by the clerk extension). Opened once on mount.
     companion: z.string().optional(),
+    // The card live-open in the companion pane (serialized view URL, no
+    // `view:` prefix). Persisted so a reload restores it; kept in sync as the
+    // active card changes. Distinct from `companion`, which is a one-shot
+    // deep-link opened only on mount.
+    card: z.string().optional(),
   }),
 });
 

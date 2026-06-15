@@ -872,6 +872,31 @@ tests:
       When a companion view is open, user messages include a zoomed-view attribute.
       Chat-only — this attribute is only added by the chat frontend.
 
+  - id: companion-card-activity
+    prompt: "A card is open in the chat companion pane. How do you learn what the user did to it since your last reply, and how do you get the precise changes?"
+    expected_level: knows_directly
+    watch_for: "Names the open-card / card-activity snapshot attributes and cb chat whats-changed for the precise delta"
+    correct_contains_any: ["card-activity", "open-card"]
+    correct_contains: ["whats-changed"]
+    tags: [chat, views]
+    notes: >
+      The per-turn <chat-app> snapshot carries open-card (path) and card-activity
+      (scrolled/navigated/explored/modified). The precise change set comes from
+      `cb chat whats-changed --card <path>` — commits since the last reply plus
+      the uncommitted working tree. The snapshot is referential by design.
+
+  - id: companion-card-activity-hints
+    prompt: "The chat snapshot shows card-activity=\"modified\" on the open card. What exactly does that tell you, and what should you not assume?"
+    expected_level: knows_directly
+    watch_for: "Treats the activity kinds as low-confidence hints, not assertions of intent; knows modified = data changed"
+    correct_contains_any: ["hint", "not assume", "low-confidence", "don't assume"]
+    tags: [chat, views]
+    notes: >
+      The four kinds (scrolled/navigated/explored/modified) are attention hints,
+      not statements of intent. modified = the underlying data changed; explored
+      = parameters changed without data changing. The agent should not narrate
+      them back or infer why — run `cb chat whats-changed` for ground truth.
+
   # === Chat Voice ===
   #
   # Chat-only TTS features. The chat system prompt mentions <speech> tags and

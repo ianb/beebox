@@ -38,6 +38,7 @@ import {
   type TaskEvent,
 } from "./chat-session-messages.js";
 import { createTurnDurabilityGate } from "./chat-session-transcript-sync.js";
+import { recordTurnMarkerForSession } from "./chat-turn-marker.js";
 import {
   combineQueuedInputs,
   deleteSessionFile,
@@ -47,10 +48,7 @@ import {
   saveSessionId,
   DEFAULT_MODEL_FILE,
 } from "./chat-session-state.js";
-import {
-  acquireSessionRunLock,
-  releaseSessionRunLock,
-} from "./chat-session-run-lock.js";
+import { acquireSessionRunLock, releaseSessionRunLock } from "./chat-session-run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
   composeTurnContent,
@@ -204,7 +202,11 @@ export class ChatSession extends EventEmitter {
         // Hold `result` until the transcript is flushed: consumers refetch
         // history the moment a turn ends, and the CLI writes the final
         // assistant entry ~150ms *after* emitting result.
-        if (msg.type === "result") await this.durability.awaitDurability();
+        if (msg.type === "result") {
+          await this.durability.awaitDurability();
+          // Record the "since my last reply" marker before the queue drains.
+          if (this.sessionId) await recordTurnMarkerForSession(this.boxRoot, this.sessionId);
+        }
         this.handleMessage(msg);
       }
     } catch (e) {
