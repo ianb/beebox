@@ -43,6 +43,13 @@ export default defineConfig({
     // a runtime alias is only needed for paths used as value imports.
     alias: {
       "@shared": resolvePath(__dirname, "../shared"),
+      // @apache-annotator/dom (used for commentary text anchoring) pulls in
+      // optimal-select via its unused CSS-selector path; that package's
+      // `module` field points at a `src/` dir it doesn't actually publish, so
+      // Vite fails to resolve it. Pin to its real entry. We never call into
+      // it (only the TextQuoteSelector matcher is used), so this just lets the
+      // import graph resolve.
+      "optimal-select": resolvePath(__dirname, "../../../node_modules/optimal-select/lib/index.js"),
     },
   },
   build: {
