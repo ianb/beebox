@@ -54,6 +54,9 @@ export function useChatAttachments(opts: {
 }) {
   const { input, setInput, textareaRef } = opts;
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
+  // Number of pasted/dropped images still being downscaled + base64-encoded.
+  // Drives a placeholder tile so cmd-V → thumbnail isn't a silent dead beat.
+  const [pendingImageCount, setPendingImageCount] = useState(0);
   const nextAttachmentIdRef = useRef(1);
   const [fileAttachments, setFileAttachments] = useState<FileAttachmentItem[]>([]);
   const nextFileAttachmentIdRef = useRef(1);
@@ -61,6 +64,9 @@ export function useChatAttachments(opts: {
 
   const addImageFiles = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
+    // Show placeholder tiles immediately; each clears as its image finishes
+    // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
+    setPendingImageCount((n) => n + files.length);
     // Process images in parallel; collect results in original order.
     const processed = await Promise.all(
       files.map(async (f) => {
@@ -69,6 +75,8 @@ export function useChatAttachments(opts: {
         } catch (e) {
           console.error("[chat] Failed to process pasted image:", e);
           return null;
+        } finally {
+          setPendingImageCount((n) => Math.max(0, n - 1));
         }
       })
     );
@@ -178,7 +186,7 @@ export function useChatAttachments(opts: {
   }, []);
 
   return {
-    attachments, fileAttachments, fileInputRef,
+    attachments, pendingImageCount, fileAttachments, fileInputRef,
     addImageFiles, removeAttachment, addFileUploads, removeFileAttachment,
     handleAttachFiles, handleFileInputChange, resetAttachments,
   };

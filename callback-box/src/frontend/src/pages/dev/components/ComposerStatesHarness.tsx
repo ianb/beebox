@@ -190,6 +190,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       </header>
       <ChatComposerSection
         attachments={[]}
+        pendingImageCount={0}
         fileAttachments={[]}
         selections={[]}
         onRemoveAttachment={noop}
