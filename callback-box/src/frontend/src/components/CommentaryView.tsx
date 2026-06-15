@@ -268,11 +268,24 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
           {commentary}
         </div>
       ) : inboxPath !== null ? (
-        // Captured page: one column — the commentary (with its link to the
-        // original) leads, the saved page reads full-width below.
-        <div className="flex flex-col gap-6">
+        // Captured page: the commentary leads; the saved page sits below in
+        // its own bordered, labeled block so it reads as a distinct embedded
+        // document rather than blurring into the commentary above it.
+        <div className="flex flex-col gap-4">
           {commentary}
-          <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
+          <div className="overflow-hidden rounded-md border border-warm-200">
+            <Text
+              as="div"
+              size="xs"
+              tone="subtle"
+              className="border-b border-warm-200 px-3 py-1.5 font-medium uppercase tracking-wide"
+            >
+              Saved page
+            </Text>
+            <div className="p-3">
+              <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
+            </div>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-6">
