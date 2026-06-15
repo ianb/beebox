@@ -14,7 +14,7 @@
 
 import { useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { createTextQuoteSelectorMatcher } from "@apache-annotator/dom";
+import { processTextFragmentDirective } from "text-fragments-polyfill/text-fragment-utils";
 import { z } from "zod";
 import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
@@ -263,22 +263,33 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       </Text>
     ) : null;
 
-  // Clicking a source chip in the commentary jumps to that verbatim span in
-  // the saved page beside it: match the quote text within the saved-page pane
-  // (W3C TextQuoteSelector via @apache-annotator), highlight it, scroll to it.
+  // Clicking a source chip jumps to that verbatim span using Chrome's
+  // text-fragment matching algorithm (text-fragments-polyfill), working on
+  // either representation of the saved page:
+  //   1. the in-pane readable markdown — matched (scoped to the pane) and
+  //      highlighted in place via the CSS Custom Highlight API;
+  //   2. else the frozen original — opened at the quote via a native
+  //      `#:~:text=` fragment (the snapshot is a real document, so the browser
+  //      scrolls + highlights it for us).
   const savedPaneRef = useRef<HTMLDivElement>(null);
-  const onJumpToQuote = useCallback(async (quoteText: string): Promise<boolean> => {
-    const root = savedPaneRef.current;
+  const onJumpToQuote = useCallback((quoteText: string): Promise<boolean> => {
     const exact = quoteText.trim();
-    if (root === null || exact === "") return false;
-    const matcher = createTextQuoteSelectorMatcher({ type: "TextQuoteSelector", exact });
-    for await (const range of matcher(root)) {
-      highlightRange(range);
-      scrollRangeIntoView(range);
-      return true;
+    if (exact === "") return Promise.resolve(false);
+    const root = savedPaneRef.current;
+    if (root !== null) {
+      const range = processTextFragmentDirective({ textStart: exact }, document, root)[0];
+      if (range !== undefined) {
+        highlightRange(range);
+        scrollRangeIntoView(range);
+        return Promise.resolve(true);
+      }
     }
-    return false;
-  }, []);
+    if (frozenUrl !== null) {
+      window.open(`${frozenUrl}#:~:text=${encodeURIComponent(exact)}`, "_blank", "noreferrer");
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(false);
+  }, [frozenUrl]);
 
   const commentary = (
     <div className="min-w-0 flex-1" data-card-section="body">
