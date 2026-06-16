@@ -137,6 +137,34 @@ function CitationChip({
   );
 }
 
+/**
+ * Container citation: a ref-free anchor targets the *containing document* (the
+ * page that owns this commentary's attach scope). There's no separate doc to
+ * navigate to — clicking only jumps to the verbatim span in the page body.
+ */
+function ContainerChip({
+  quoteText,
+  linkCtx,
+}: {
+  quoteText: string;
+  linkCtx: SourceLinkContext;
+}): ReactNode {
+  const handleClick = (): void => {
+    const jump = linkCtx.onJumpToQuote;
+    if (jump !== undefined && quoteText !== "") void jump(quoteText);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title="Jump to this passage on the page"
+      className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
+    >
+      [→]
+    </button>
+  );
+}
+
 /** External (href) citation: a static chip — the target lives outside the box. */
 function ExternalChip({ href, version }: { href: string; version: string | undefined }): ReactNode {
   const title = version === undefined || version === "" ? href : `${href} @ ${version}`;
@@ -169,7 +197,7 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
     if (href !== undefined && href !== "") {
       return <ExternalChip href={href} version={version} />;
     }
-    return <CitationChip sourceRef="" as={as} quoteText={quoteText} linkCtx={linkCtx} />;
+    return <ContainerChip quoteText={quoteText} linkCtx={linkCtx} />;
   }
 
   function SourceInline(props: SourceProps) {

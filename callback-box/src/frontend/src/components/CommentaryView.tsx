@@ -14,7 +14,6 @@
 
 import { useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { processTextFragmentDirective } from "text-fragments-polyfill/text-fragment-utils";
 import { z } from "zod";
 import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
@@ -23,6 +22,7 @@ import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { getRenderers, type FileData, type RendererProps } from "../renderers";
 import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
 
 class ExternalFetchError extends Error {
   readonly status: number;
@@ -204,25 +204,6 @@ function targetHrefs(frontmatter: Record<string, unknown>): string[] {
   return hrefs;
 }
 
-/** Named highlight for the span a source chip jumped to (see index.css). */
-const QUOTE_HIGHLIGHT = "cb-quote-anchor";
-
-/**
- * Highlight a matched range non-destructively via the CSS Custom Highlight
- * API — no DOM mutation, so it never fights React's ownership of the rendered
- * markdown. No-op where the API is unavailable.
- */
-function highlightRange(range: Range): void {
-  if (typeof Highlight === "undefined" || !("highlights" in CSS)) return;
-  CSS.highlights.set(QUOTE_HIGHLIGHT, new Highlight(range));
-}
-
-function scrollRangeIntoView(range: Range): void {
-  const start = range.startContainer;
-  const el = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element);
-  el?.scrollIntoView({ block: "center", behavior: "smooth" });
-}
-
 export function CommentaryView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
   const defaultRef = frontmatter["defaultRef"];
@@ -277,8 +258,8 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
     if (exact === "") return Promise.resolve(false);
     const root = savedPaneRef.current;
     if (root !== null) {
-      const range = processTextFragmentDirective({ textStart: exact }, document, root)[0];
-      if (range !== undefined) {
+      const range = findQuoteRange(root, exact);
+      if (range !== null) {
         highlightRange(range);
         scrollRangeIntoView(range);
         return Promise.resolve(true);
