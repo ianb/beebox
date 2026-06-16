@@ -13,6 +13,7 @@ import { Command } from "commander";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
+import { assertStandaloneBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { generateReport } from "./lib/report.js";
 import { generateDocs } from "../core/generate-docs.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -53,6 +54,22 @@ program
     const boxRoot = options.box ?? path.join(process.env.HOME ?? "~", "src/boxes/test1");
 
     const resolvedBox = path.resolve(boxRoot);
+
+    // Refuse a box that isn't its own git repo BEFORE generating docs into it.
+    // runTest does `git reset --hard` + `git clean -fd` in the box between
+    // tests; a box nested in another repo (e.g. `--box test1` → a dir inside
+    // the monorepo) would have those hit the enclosing repo and discard
+    // uncommitted work. Fail with guidance instead.
+    try {
+      assertStandaloneBox(resolvedBox);
+    } catch (e) {
+      if (e instanceof UnsafeAuditBoxError) {
+        console.error(formatUnsafeAuditBox(e));
+        process.exit(1);
+      }
+      throw e;
+    }
+
     const suite = await loadTests(testsPath);
 
     // Filter audits if requested

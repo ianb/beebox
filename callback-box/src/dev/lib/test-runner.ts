@@ -7,6 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
+import { assertStandaloneBox } from "./box-guard.js";
 import { createAgent } from "../../core/agent.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat-session.js";
 import {
@@ -113,6 +114,8 @@ export interface RunTestOptions {
 
 export async function runTest(options: RunTestOptions): Promise<TestResult> {
   const { test, boxRoot, onOutput } = options;
+  // Guard before any destructive git op — boxRoot must be its own repo.
+  assertStandaloneBox(boxRoot);
   const prompt = test.style
     ? `${test.style}. ${test.prompt}`
     : test.prompt;
