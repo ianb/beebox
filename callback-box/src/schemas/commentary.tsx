@@ -98,35 +98,15 @@ coherent set of targets.`,
 });
 
 /**
- * Build a commentary card that wraps an *in-box* target (`defaultRef`) — the
- * shape produced by the web-page-commentary capture flow, where the readable
- * rendering is stored in the card's `.attach/` and the frozen page sits beside
- * it. The body is seeded with a link to the original source; the boxholder
- * (and chat agent) add `{% source %}` commentary afterward.
- *
- * `sourceUrl` is the live page the capture came from; it becomes the
- * "link to original" line in the body (commentary has no source frontmatter
- * field — see docs/plans/web-page-commentary.md Q2).
+ * Build an empty commentary card to live inside a host document's attach scope
+ * (e.g. a `.webpage.card`'s `<basename>.attach/`). It carries no default target
+ * — the *containing* document is the default, so bare `{% source %}` anchors
+ * point at it. The body starts empty; the boxholder (and chat agent) add
+ * `{% source %}` commentary afterward. Capture provenance lives on the host
+ * webpage card, not here.
  */
-export function createCommentaryTemplate(options: {
-  title: string;
-  defaultRef: string;
-  sourceUrl: string;
-  capturedAt: string;
-  frozenRef?: string;
-}): string {
-  const fields: Record<string, unknown> = {
-    title: options.title,
-    defaultRef: options.defaultRef,
-    source: options.sourceUrl,
-    // Full ISO instant; the renderer formats it in the viewer's local zone.
-    captured: options.capturedAt,
-  };
-  if (options.frozenRef !== undefined && options.frozenRef !== "") {
-    fields["frozen"] = options.frozenRef;
-  }
-  const yamlText = stringifyYaml(fields);
-  // Body starts empty: the page's metadata lives in frontmatter (rendered as a
-  // header), leaving the body for the boxholder's actual commentary.
+export function createCommentaryTemplate(options: { title?: string | undefined }): string {
+  const hasTitle = options.title !== undefined && options.title !== "";
+  const yamlText = hasTitle ? stringifyYaml({ title: options.title }) : "";
   return `---\n${yamlText}---\n`;
 }
