@@ -120,8 +120,12 @@ function tryCaptureCommentary(tabId: number): Promise<CommentaryCapture | null> 
 
 async function commentOnPage(tabId: number, destinationDir: string | undefined): Promise<void> {
   const box = await requireActiveBox();
+  // Timed so the cost is visible in the service-worker console: capture is the
+  // in-page extract+freeze, post is the upload to the box.
+  const tCaptureStart = performance.now();
   const capture = await tryCaptureCommentary(tabId);
   if (capture === null) throw new CommentUnavailableError();
+  const tCaptureEnd = performance.now();
   const payload = buildCommentaryPayload({
     page: capture.page,
     frozenHtml: capture.frozenHtml,
@@ -129,6 +133,11 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
     timestamp: new Date().toISOString(),
   });
   const { open } = await postCommentary(box, payload);
+  console.debug(
+    `[clerk] commentOnPage: capture ${Math.round(tCaptureEnd - tCaptureStart)}ms, ` +
+      `post ${Math.round(performance.now() - tCaptureEnd)}ms` +
+      `${capture.frozenHtml === null ? " (no frozen snapshot)" : ` (frozen ${Math.round(capture.frozenHtml.length / 1024)}kB)`}`,
+  );
   await chrome.tabs.create({ url: commentaryOpenUrl(box.boxUrl, open) });
 }
 

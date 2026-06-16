@@ -20,10 +20,17 @@ export default defineContentScript({
   async main() {
     let result: CaptureResultMessage;
     try {
-      // Extract first (cheap, clones the DOM); then freeze (heavy, may load
-      // deferred images) so freezing's side effects can't perturb extraction.
+      // Extract first (cheap, clones the DOM); then freeze so freezing's side
+      // effects can't perturb the extraction. Both timed — see the page console.
+      const t0 = performance.now();
       const page = extractReadable();
+      const t1 = performance.now();
       const frozenHtml = await freezePage();
+      const t2 = performance.now();
+      console.debug(
+        `[clerk] capture: extract ${Math.round(t1 - t0)}ms, freeze ${Math.round(t2 - t1)}ms` +
+          `${frozenHtml === null ? " (no snapshot)" : ""}`,
+      );
       result = { type: CAPTURE_RESULT, capture: { page, frozenHtml } };
     } catch (err) {
       result = { type: CAPTURE_RESULT, error: err instanceof Error ? err.message : String(err) };
