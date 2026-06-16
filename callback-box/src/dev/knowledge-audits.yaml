@@ -2547,15 +2547,17 @@ tests:
     correct_contains: ["adapterFetch"]
     tags: [views, adapters]
 
-  # === Web-page commentary (clerk capture) ===
+  # === Web-page capture + commentary (clerk) ===
   #
-  # Conventions from docs/plans/web-page-commentary.md. The landmark
-  # <destination for="…"> role and the commentary-capture flow are documented
-  # in the agent guide (behavior.ts + box-shape.ts) + schema instructions.
+  # Conventions from docs/plans/webpage-card-and-commentary.md. The landmark
+  # <destination for="…"> role and the capture flow are documented in the agent
+  # guide (behavior.ts + box-shape.ts) + the webpage/commentary schema
+  # instructions.
   #
-  # Status (2026-06-14): all 3 pass. commentary-capture-files initially failed
-  # (agent searched, no answer) until the capture bundle layout was added to
-  # the "How Items Enter the Box" guide section — then it knew it directly.
+  # Status (2026-06-15): all 4 pass (verified). Captured page is a
+  # .webpage.card; the boxholder's remarks are a separate .commentary.card in
+  # its attach scope. Audits updated for the split, plus a new
+  # webpage-vs-commentary entry.
 
   - id: commentary-destination
     prompt: >
@@ -2576,10 +2578,27 @@ tests:
       "Comment on this page" action. What files appear in the box?
     expected_level: knows_directly
     watch_for: >
-      A .commentary.card plus its attachments — the readable markdown
-      (attach/readable.md) and the frozen page snapshot (attach/page.frozen).
-    correct_contains: ["readable", "frozen"]
-    tags: [commentary, clerk]
+      A .webpage.card (the readable rendering as its body, with
+      source/captured/frozen frontmatter) plus the frozen snapshot at
+      attach/page.frozen, and a separate .commentary.card inside the webpage
+      card's attach scope for the remarks. Must not describe a single fused
+      commentary card with attach/readable.md.
+    correct_contains: ["webpage", "frozen"]
+    tags: [commentary, clerk, webpage]
+
+  - id: webpage-vs-commentary
+    prompt: >
+      In the box, what's the difference between a .webpage.card and a
+      .commentary.card?
+    expected_level: knows_directly
+    watch_for: >
+      webpage = a captured external page (readable markdown body + the original
+      URL/capture provenance + a frozen snapshot). commentary = the boxholder's
+      remarks about a document, living in that document's attach scope, with
+      {% source %} anchors; a ref-free anchor points at the containing page.
+      Must not conflate the two or say commentary holds the captured page.
+    correct_contains: ["webpage", "commentary"]
+    tags: [commentary, webpage]
 
   - id: commentary-anchors-author
     prompt: >
