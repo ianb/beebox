@@ -121,6 +121,7 @@ export function ChatStatusBanners(props: {
 
 export interface ComposerSectionProps {
   attachments: AttachmentItem[];
+  pendingImageCount: number;
   fileAttachments: FileAttachmentItem[];
   selections: SelectionItem[];
   onRemoveAttachment: (id: number) => void;
@@ -141,7 +142,7 @@ export interface ComposerSectionProps {
 
 export function ChatComposerSection(props: ComposerSectionProps) {
   const {
-    attachments, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
+    attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
     isTranscribing, recoveredDictation, inputArea, mobileRow,
   } = props;
@@ -151,7 +152,7 @@ export function ChatComposerSection(props: ComposerSectionProps) {
       {recoveredDictation}
 
       {/* Image attachment panel: shows thumbnails above the composer */}
-      <AttachmentPanel attachments={attachments} onRemove={onRemoveAttachment} />
+      <AttachmentPanel attachments={attachments} pendingCount={pendingImageCount} onRemove={onRemoveAttachment} />
 
       {/* Selection panel: pills for document text attached from the companion pane */}
       <SelectionPanel selections={selections} onRemove={onRemoveSelection} />

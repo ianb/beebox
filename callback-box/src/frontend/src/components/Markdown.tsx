@@ -42,14 +42,16 @@ import {
   type ViewTarget,
 } from "../lib/view-url";
 import { withBase } from "../api";
+import { parseMarkdown } from "../lib/markdoc-parse";
 import type { ReactNode } from "react";
 
-// Value named imports (`{ parse, … }`) don't resolve from this CommonJS module
-// under Node's ESM loader (used by `cb render` SSR); Vite tolerates them but the
-// SSR path does not. Destructure off the default import — same pattern and lint
-// exception as `markdoc-config.ts` / `body-refs.ts`.
+// Value named imports (`{ transform, … }`) don't resolve from this CommonJS
+// module under Node's ESM loader (used by `cb render` SSR); Vite tolerates them
+// but the SSR path does not. Destructure off the default import — same pattern
+// and lint exception as `markdoc-config.ts` / `body-refs.ts`. Parsing itself
+// goes through `parseMarkdown` (linkify-enabled) rather than the raw `parse`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
-const { parse, transform, renderers } = Markdoc;
+const { transform, renderers } = Markdoc;
 
 interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
@@ -304,7 +306,7 @@ export function Markdown({
   const { tree, mergedComponents } = useMemo(() => {
     const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
     const { config, components: defaults } = buildRenderConfig(ctx);
-    const ast = parse(children);
+    const ast = parseMarkdown(children);
     const t: RenderableTreeNode = transform(ast, config);
     const merged = components === undefined ? defaults : { ...defaults, ...components };
     return { tree: t, mergedComponents: merged };
