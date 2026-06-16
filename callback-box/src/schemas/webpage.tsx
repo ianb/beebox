@@ -23,8 +23,8 @@ export const WebpageSchema: CardSchema = cardSchema("webpage", {
     // The original page URL the capture came from.
     source: z.string(),
     // Full ISO instant of capture; the renderer formats it in the viewer's
-    // local zone.
-    captured: z.string(),
+    // local zone. Optional — a page imported without capture metadata omits it.
+    captured: z.string().optional(),
     siteName: z.string().optional(),
     byline: z.string().optional(),
     excerpt: z.string().optional(),
@@ -44,7 +44,7 @@ said, and edit it only to fix capture artifacts, not to rewrite the page.
 ## Frontmatter
 
 - \`source:\` — required. The original page URL.
-- \`captured:\` — required. Full ISO instant of capture; rendered in the
+- \`captured:\` — optional. Full ISO instant of capture; rendered in the
   viewer's local timezone.
 - \`siteName:\` / \`byline:\` / \`excerpt:\` — optional capture metadata.
 - \`frozen:\` — optional in-box ref (\`attach/page.frozen\`) to the frozen
@@ -78,7 +78,7 @@ export interface WebpageFields {
   type: "webpage";
   title?: string;
   source: string;
-  captured: string;
+  captured?: string;
   siteName?: string;
   byline?: string;
   excerpt?: string;
@@ -89,7 +89,7 @@ export interface WebpageFields {
 export function createWebpageTemplate(options: {
   title: string;
   source: string;
-  capturedAt: string;
+  capturedAt?: string | undefined;
   content: string;
   siteName?: string | undefined;
   byline?: string | undefined;
@@ -99,8 +99,10 @@ export function createWebpageTemplate(options: {
   const fields: Record<string, unknown> = {
     title: options.title,
     source: options.source,
-    captured: options.capturedAt,
   };
+  if (options.capturedAt !== undefined && options.capturedAt !== "") {
+    fields["captured"] = options.capturedAt;
+  }
   if (options.siteName !== undefined && options.siteName !== "") {
     fields["siteName"] = options.siteName;
   }
