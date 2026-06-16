@@ -182,51 +182,84 @@ when the bundle is a "comment" action, a commentary card pointing at it.
 the split, the *page* is always written; the *commentary* is the annotation
 layer on top (initially empty body — the chat agent fills it).
 
-**Direction.** Files written:
-`<destDir>/<name>.webpage.card` + `<destDir>/<name>.attach/page.frozen`, plus
-the commentary card (placement per Track 3 / Open questions). Response `open`
-still opens chat with the **commentary** as `companion=view:…` (the surface
-the boxholder builds up), context dir = the destination. Request schema is
-unchanged (`url`, `title`, `readableMarkdown`, `frozenHtml?`,
-`destinationDir?`).
+**Direction.** Files written, all in one commit:
+- `<destDir>/<name>.webpage.card` — body = readable markdown, provenance
+  frontmatter.
+- `<destDir>/<name>.attach/page.frozen` — the snapshot.
+- `<destDir>/<name>.attach/<name>.commentary.card` — the commentary, **inside
+  the webpage's attach scope** (resolved: ownership is correct — the
+  commentary is invalidated/moved when the page is; `cb mv` already moves an
+  attach scope as a unit). Body starts empty; the chat agent authors the
+  anchors. Its primary subject is the owning page (see Open question 1 for how
+  the anchor refs name the owner); `targets[]` may add cross-doc references.
 
-**First chunk:** endpoint writes the `.webpage.card` only (no commentary yet)
-+ route doctest; commentary wiring follows once Track 3 settles placement.
+Response `open` opens chat with the **webpage card** as `companion=view:…` —
+the webpage view renders the page *and* surfaces its attach-scoped commentary
+inline (Track 3), so the companion shows the annotated document as it fills in.
+Context dir = the destination. Request schema unchanged (`url`, `title`,
+`readableMarkdown`, `frozenHtml?`, `destinationDir?`).
 
-### Track 3 — Renderer split
+**First chunk:** endpoint writes `.webpage.card` + `attach/page.frozen` + an
+empty-body `attach/*.commentary.card` + route doctest asserting the three-file
+shape and the `open` companion target.
 
-**What.** Extract a `WebpageView` that renders a `.webpage.card` (readable
-body + "Original page" link + "Frozen snapshot ↗" link + local-zone
-`captured` date). `CommentaryView` renders only the remarks and pulls in its
-target(s) via `defaultRef`/`targets[]` — reusing `WebpageView` (through the
-existing `InboxTargetPane` path) to render the referenced page as the source
-pane.
+### Track 3 — Renderer: webpage view surfaces its commentary inline
 
-**Why.** `WebpageView` is then reusable for a plain saved page with no
-commentary (Track 5), and the jump-to-quote (`onJumpToQuote`,
-`CommentaryView.tsx:266-292`) anchors against the rendered webpage body
-exactly as it anchors against `readable.md` today.
+**What.** Two pieces:
+1. **`WebpageView`** renders a `.webpage.card`: the readable body + "Original
+   page" link + "Frozen snapshot ↗" link + local-zone `captured` date.
+2. **Card views surface attach-scoped commentary.** When a card is viewed,
+   load any `*.commentary.card` from its attach scope and render the remarks
+   **inline** alongside the body — each `{% source %}` anchor's chip jumps into
+   the *already-displayed* body (no second source pane: the page body is shown
+   once, as the card's own content, and the anchors highlight within it). This
+   is the standard-card-view surfacing the boxholder described; it's written
+   generically (any host card can carry attach commentary), with `webpage` as
+   the first consumer.
 
-**First chunk:** lift the saved-page block (`CommentaryView.tsx:319-338`) into
-`WebpageView.tsx` keyed on card type `webpage`; register it in the
-file/card-renderer registry; CommentaryView references it.
+**Why.** This is cleaner than today's `CommentaryView`, which renders a
+*separate* "Saved page" block (`CommentaryView.tsx:319-338`) duplicating the
+source. With the split, the page body is the card's content and the commentary
+anchors jump within it — one rendering of the page, annotations layered on.
+`WebpageView` is also reusable for a plain saved page with no commentary
+(Track 5). The jump-to-quote machinery (`onJumpToQuote`,
+`CommentaryView.tsx:266-292`) is retargeted from the saved-pane to the webpage
+body — same text-fragments-polyfill + CSS-highlight path.
+
+**Note on independent commentary viewing.** Viewing a commentary card *on its
+own* (outside its host) rides the general "attachments are viewable" UI path
+(deferred, see NOT in scope) — a different browse route, not radically
+different. The primary capture→annotate flow never needs it: the webpage view
+is the surface.
+
+**First chunk:** `WebpageView.tsx` registered for card type `webpage` (renders
+a hand-made `.webpage.card`); then the attach-commentary loader + inline
+anchor rendering, retargeting `onJumpToQuote` to the body. Today's
+`CommentaryView` saved-page block is retired once both land.
 
 ### Track 4 — Migration
 
-**What.** `scripts/migrate/webpage-card.ts` + a `MIGRATIONS` entry: for each
-existing `*.commentary.card` carrying `source`/`captured`/`frozen`
-provenance, create a sibling `.webpage.card` (body from its
-`attach/readable.md`, move `attach/page.frozen` under the new card's attach
-scope), and rewrite the commentary's `defaultRef` to point at the new webpage
-card. Remarks-only commentaries (no provenance) are left untouched.
+**What.** `scripts/migrate/webpage-card.ts` + a `MIGRATIONS` entry. For each
+existing fused `Foo.commentary.card` carrying `source`/`captured`/`frozen`
+provenance:
+- create `Foo.webpage.card` taking over the basename — body lifted from
+  `Foo.attach/readable.md`, provenance frontmatter copied over, `frozen` ref
+  kept (`Foo.attach/page.frozen` stays in place);
+- move the remarks into the attach scope as `Foo.attach/Foo.commentary.card`,
+  stripped of the relocated provenance fields, its anchors repointed from
+  `attach/readable.md` to the owning page (per Open question 1);
+- delete `Foo.attach/readable.md` (now the webpage body).
 
-**Why.** Dogfooding produced a handful of real `.commentary.card`s on the
-hosted box; they must not break. Volume is small (single digits), so the
-migrator can be simple and is safe to also run by hand if needed.
+Remarks-only commentaries (no provenance) are left untouched.
+
+**Why.** Dogfooding produced a handful of real fused `.commentary.card`s on
+the hosted box; they must not break. Volume is small (single digits), so the
+migrator can be simple and is safe to run by hand if needed.
 
 **First chunk:** migrator script + a fixture-box doctest that migrates one
-captured commentary and asserts the resulting two-card shape + working
-`defaultRef`.
+fused commentary and asserts the resulting shape (`Foo.webpage.card` +
+`Foo.attach/Foo.commentary.card`, no stray `readable.md`) and that the webpage
+view renders the migrated remarks inline.
 
 ### Track 5 — (Decision) save-page convergence
 
@@ -244,12 +277,11 @@ in-or-out decision rather than assumed (see NOT in scope).
 
 ## Subplans
 
-None required. The placement question (Track 3 / Open questions) is a
-*decision*, not a design problem needing its own research phase — it's
-settled by verifying one existing behavior (are attach-scoped cards
-independently addressable?). If that verification reveals attach-scoped cards
-need new addressing machinery, *that* would warrant a subplan; until verified,
-it's an open question with a clear lean.
+None required. Commentary placement is **resolved**: the commentary lives in
+the webpage's attach scope (ownership is correct — it's invalidated/moved with
+the page), and the webpage view surfaces it inline rather than relying on an
+independent route. Independent attachment viewing is a separate, deferred UI
+path (general "attachments are viewable" work), not a blocker for this plan.
 
 ---
 
@@ -257,24 +289,24 @@ it's an open question with a clear lean.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Attach-scoped commentary isn't independently addressable → chat `companion=view:<commentary>` 404s | No | No | **Silent** (chat opens with broken companion) |
-| `defaultRef` from commentary → `.webpage.card` is relative *out of* attach scope; ref resolution may not support outward/owner refs | No | Partial (resolveRelativePath exists; direction unverified) | Silent (empty source pane) |
+| Webpage view doesn't load its attach-scoped commentary → annotations invisible despite being captured | No | No (new codepath) | **Silent** (page renders, remarks vanish) |
+| Commentary's anchor refs to the owning page don't resolve from inside the attach scope | No | Partial (resolveRelativePath exists; owner-direction unverified) | Silent (chips don't jump) |
 | Migrator runs twice / on an already-split card | No | manifest dedups by name | Clear (manifest skip) |
 | Migrator hits a `.commentary.card` with `frozen` set but no `attach/page.frozen` on disk | No | No | Silent (webpage card with dangling frozen ref) |
 | Large readable markdown inline in `.webpage.card` body | n/a (record cards already do this) | yes | Clear |
 | Real box lacks `*.frozen filter=lfs` before receiving a snapshot | No | No | Silent (huge blob committed to git) |
 | `save-page` (if converged) writes a duplicate `.webpage.card` for a URL already captured | No | No | Silent (two cards, same source) |
 
-**Critical gap:** *attach-scoped commentary addressability* — `walk.ts:35`
-says attach-scope cards "belong to the owning card," which strongly implies
-they do **not** get an independent view route. If so, burying the commentary
-in `Host.attach/` silently breaks the chat companion deep-link — the entire
-point of the flow. This gates Track 3 and must be verified before any
-commentary is written into an attach scope. Lean: keep commentary a
-first-class, addressable sibling card (the head-card *peer* model from
-`ideas.md:750`, not the private-bag model), expressing "belongs to the page"
-via `defaultRef` rather than physical burial — unless verification shows
-attach-scoped cards are fully addressable.
+**Critical gap:** *webpage view must surface attach-scoped commentary.* This is
+the new load-bearing codepath the split introduces: with the commentary living
+inside `Host.attach/` (correctly owned, per the boxholder), the *only* way the
+boxholder sees their remarks in the primary flow is the webpage view loading
+and rendering them inline (Track 3). If that loader is missing or silently
+returns nothing, capture succeeds but the annotations are invisible — the whole
+point of the flow. This must have a doctest (a `.webpage.card` with an
+attach-scoped commentary renders the remarks + a working anchor jump) before
+the plan completes. It is *handling*, not just *verification* — the loader is
+net-new code, not an existing behavior to confirm.
 
 ---
 
@@ -334,32 +366,27 @@ attach-scoped cards are fully addressable.
 
 ## Open design questions
 
-1. **Where does a contained commentary physically live?** (Load-bearing —
-   gates Tracks 2-4.) Three candidates:
-   - **(a) Inside `Host.attach/`** — literal reading of "inside the
-     attachments." *Risk:* attach-scope cards may not be independently
-     addressable (`walk.ts:35`), breaking the chat companion + outward
-     `defaultRef`. Must verify before committing.
-   - **(b) Peer in a `Host/` head-card directory** — the `ideas.md:750`
-     "peers, not private bag" model. Addressable, clean, but introduces the
-     head-card pairing the ideas doc itself flags as unbuilt
-     (`ideas.md:753-755`).
-   - **(c) First-class sibling card** referencing the webpage via
-     `defaultRef` — simplest, fully addressable, "containment" expressed
-     semantically rather than physically.
-   **Lean: (c) for now**, treating "inside the attachments" as *conceptual
-   ownership via `defaultRef`*, because it preserves addressability (the
-   companion deep-link and multi-doc refs both require it) with zero new
-   machinery. Revisit toward (a)/(b) if/when the head-card idea lands and
-   makes attach-scoped cards first-class. **Verification task that decides
-   this:** confirm whether a `.card` inside `.attach/` gets a `view:` route
-   and resolves an outward `defaultRef`.
+1. **How does a commentary anchor name its owning page?** The commentary
+   lives in `Host.attach/` and its `{% source %}` anchors point at the owning
+   `Host.webpage.card` (one level up out of the attach scope). Two sub-questions
+   to settle in the first chunk of Track 2/3:
+   - Does an anchor `ref` resolve *out* of an attach scope to the owner
+     (`resolveRelativePath` direction)? Verify; if it doesn't, add an
+     "owner" sentinel the renderer resolves to the host card.
+   - Is the owner link even explicit, or implicit from containment? Lean:
+     the webpage view already knows it's loading commentary from its *own*
+     attach scope, so the *primary* target is implicit (the host); only
+     `targets[]` cross-doc references need explicit refs. This keeps the
+     common case ref-free.
 
-2. **Does `resolveRelativePath` resolve a ref pointing *out* of an attach
-   scope to its owner?** Only matters under placement (a). Verify or drop (a).
+2. **Save-page convergence (Track 5): in or out?** Lean *in* (divergent shapes
+   for the same artifact is the smell this plan removes), but the boxholder
+   decides given the extra `.record.card` → `.webpage.card` migration cost.
 
-3. **Save-page convergence (Track 5): in or out?** Lean *in*, but the
-   boxholder decides given the extra migration cost.
+3. **Independent commentary/attachment viewing** — deferred to the general
+   "attachments are viewable" UI path (a distinct browse route). Not designed
+   here; the webpage view is the only surface the capture→annotate flow needs.
+   Noted so it's an explicit hand-off, not an omission.
 
 ---
 
@@ -390,20 +417,20 @@ yaml.
 ## Implementation order
 
 1. **Track 1** — `webpage` schema + registry + round-trip doctest. (No deps.)
-2. **Verification spike** — resolve Open question 1 (attach-scoped card
-   addressability). Decides Track 3 placement. *Must precede Tracks 2-4.*
-3. **Track 3** — `WebpageView` renderer extraction (independent of endpoint;
-   can render a hand-made `.webpage.card`).
-4. **Track 2** — endpoint writes webpage card, then (once placement settled)
-   the commentary satellite.
-5. **Track 4** — migrator + fixture doctest; run against a test1 clone.
-6. **Track 5** — *if* in-scope per Open question 3: converge save-page; its
+2. **Track 3** — `WebpageView` + the attach-scoped commentary inline loader
+   (renders a hand-made `.webpage.card` + `attach/*.commentary.card`,
+   independent of the endpoint). Settles Open question 1's owner-ref direction
+   in passing — the loader is what exercises it.
+3. **Track 2** — endpoint writes `.webpage.card` + `attach/page.frozen` +
+   empty commentary; companion points at the webpage card.
+4. **Track 4** — migrator + fixture doctest; run against a test1 clone.
+5. **Track 5** — *if* in-scope per Open question 2: converge save-page; its
    own `.record.card` → `.webpage.card` migration.
-7. Update knowledge audits; run them.
+6. Update knowledge audits; run them.
 
-Dependencies: 2→1, 3→(spike), 4→(1,2,3), 5→(1,2,3). The plan ships as one
-unit after all in-scope tracks complete; chunks commit independently within
-the worktree.
+Dependencies: 3→1, 2→(1,3), 4→(1,2,3), 5→(1,2,3). The plan ships as one unit
+after all in-scope tracks complete; chunks commit independently within the
+worktree.
 
 ---
 
