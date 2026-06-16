@@ -366,22 +366,19 @@ net-new code, not an existing behavior to confirm.
 
 ## Open design questions
 
-1. **How does a commentary anchor name its owning page?** The commentary
-   lives in `Host.attach/` and its `{% source %}` anchors point at the owning
-   `Host.webpage.card` (one level up out of the attach scope). Two sub-questions
-   to settle in the first chunk of Track 2/3:
-   - Does an anchor `ref` resolve *out* of an attach scope to the owner
-     (`resolveRelativePath` direction)? Verify; if it doesn't, add an
-     "owner" sentinel the renderer resolves to the host card.
-   - Is the owner link even explicit, or implicit from containment? Lean:
-     the webpage view already knows it's loading commentary from its *own*
-     attach scope, so the *primary* target is implicit (the host); only
-     `targets[]` cross-doc references need explicit refs. This keeps the
-     common case ref-free.
+1. **How does a commentary anchor name its owning page? — RESOLVED: ref-free
+   default.** A `{% source %}` anchor with *no* `ref`/`href` targets the
+   **containing document** (the webpage card that owns the attach scope). `ref`
+   is still available for the other situations — cross-doc anchors via
+   `targets[]`. The webpage view loads commentary from its own attach scope, so
+   the primary target is implicit; the common case carries no ref at all. This
+   means `defaultRef`/`defaultHref` are no longer required on a commentary
+   that's attach-scoped to its target (the container *is* the default), though
+   they remain valid for free-floating commentary.
 
-2. **Save-page convergence (Track 5): in or out?** Lean *in* (divergent shapes
-   for the same artifact is the smell this plan removes), but the boxholder
-   decides given the extra `.record.card` → `.webpage.card` migration cost.
+2. **Save-page convergence (Track 5): RESOLVED — in.** `save-page` writes a
+   `.webpage.card` (replacing `.record.card` + sibling `.frozen`), with its own
+   `.record.card` → `.webpage.card` migration.
 
 3. **Independent commentary/attachment viewing** — deferred to the general
    "attachments are viewable" UI path (a distinct browse route). Not designed
