@@ -1,12 +1,10 @@
 # `.webpage.card` + commentary-as-attachment
 
-**Status (2026-06-15): implemented on branch `worktree-callback-clerk`, not yet
-merged.** All six tracks landed: the `webpage` schema (ref-free anchors target
-the container), `WebpageView` with inline attach-scoped commentary (verified
-live), the clerk capture endpoints, save-page convergence, the migrator
-(verified on real box data + fixture doctest), and the agent guide + knowledge
-audits (4/4 pass). Full suite 2126/2126. On merge, `/finish` moves this to
-`docs/implemented-plans/`.
+**Status: shipped to main 2026-06-16 — this doc is the frozen record.** All six
+tracks landed: the `webpage` schema (ref-free anchors target the container),
+`WebpageView` with inline attach-scoped commentary (verified live), the clerk
+capture endpoints, save-page convergence, the migrator (verified on real box
+data + fixture doctest), and the agent guide + knowledge audits (4/4 pass).
 
 Restructure the web-page commentary feature so the captured page and the
 remarks about it are two separate things. Today a single
