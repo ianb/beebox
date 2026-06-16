@@ -8,21 +8,35 @@
  * (the frozen attachment is optional in the clerk payload). It's raced against
  * a hard timeout as a backstop.
  *
- * NOT loadDeferredImages: that option makes single-file-core scroll the whole
- * page and wait for network-idle to trigger lazy-loaded images — it's slow
- * (seconds), visibly scrolls the user's page, and on never-idle pages (ads,
- * analytics, infinite scroll) burns the entire timeout and returns nothing.
- * We freeze what's already loaded instead, which is fast and what the user is
- * actually looking at.
+ * Lazy images: rather than single-file-core's loadDeferredImages — which waits
+ * for network-IDLE to settle (unbounded: on never-idle pages with ads,
+ * analytics, or infinite scroll it burns the whole timeout and returns nothing)
+ * — we do one bounded pass ourselves: jump to the bottom to trip the page's
+ * intersection-observer lazy-loaders, wait a CONSTANT settle for those requests
+ * to land, restore scroll, then freeze what's now in the DOM. Bounded by design,
+ * so a busy page can't hang the capture.
  */
 
 import { getPageData } from "single-file-core/single-file.js";
 
 const FREEZE_TIMEOUT_MS = 12000;
+const SCROLL_SETTLE_MS = 1000;
+
+// Trip lazy-load observers by jumping to the bottom, then wait a fixed beat for
+// the triggered image requests to resolve. Constant cost (~1s), unlike
+// single-file's network-idle wait. Scroll is restored so the user's position
+// isn't disturbed; the images stay loaded in the DOM for the freeze to inline.
+async function loadLazyImagesByScrolling(): Promise<void> {
+  const originalY = window.scrollY;
+  window.scrollTo(0, document.documentElement.scrollHeight);
+  await new Promise((resolve) => setTimeout(resolve, SCROLL_SETTLE_MS));
+  window.scrollTo(0, originalY);
+}
 
 export async function freezePage(): Promise<string | null> {
   const started = performance.now();
   try {
+    await loadLazyImagesByScrolling();
     const pageData = await Promise.race([
       getPageData({
         removeHiddenElements: true,
