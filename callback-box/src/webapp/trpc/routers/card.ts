@@ -170,6 +170,16 @@ export const cardRouter = router({
     .query(async ({ input, ctx }) => {
       const fullPath = path.join(ctx.boxRoot, input.path);
 
+      // Security: `input.path` arrives from the client (and now from the chat
+      // `?card=` deep-link a card-page click writes). Ensure the resolved path
+      // stays inside the box before any read — `path.join` collapses `..`, so a
+      // crafted `../../etc/...` would otherwise escape boxRoot. Mirrors the
+      // `/api/files` boundary guard (routes/api-files.ts); card.get had none.
+      const resolved = path.resolve(fullPath);
+      if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
+      }
+
       // Dispatch on file shape: frontmatter cards parse via parseCardText;
       // legacy XML cards fall through to the cardworks loader.
       let raw: string | null = null;
