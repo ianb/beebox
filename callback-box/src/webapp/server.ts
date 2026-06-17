@@ -45,6 +45,11 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
     // tRPC batch requests encode multiple procedure names in the URL path,
     // which can exceed Fastify's default 100-char param length limit.
     routerOptions: { maxParamLength: 500 },
+    // Raise the JSON body limit well above Fastify's 1 MB default: the clerk
+    // extension POSTs frozen web-page snapshots (single-file HTML with inlined
+    // CSS/images) that routinely exceed 1 MB. At the default, those 413'd and
+    // the capture silently saved nothing. Matches the 50 MB multipart cap.
+    bodyLimit: 50 * 1024 * 1024,
   });
 
   registerChromeExtensionCors(server);
