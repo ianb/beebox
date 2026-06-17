@@ -54,7 +54,7 @@ export async function freezePage(): Promise<string | null> {
       console.warn(`[clerk] page freeze timed out after ${FREEZE_TIMEOUT_MS}ms; skipping snapshot`);
       return null;
     }
-    console.debug(`[clerk] page freeze took ${ms}ms (${Math.round(pageData.content.length / 1024)}kB)`);
+    console.info(`[clerk] page freeze took ${ms}ms (${Math.round(pageData.content.length / 1024)}kB)`);
     return pageData.content !== "" ? pageData.content : null;
   } catch (e) {
     const ms = Math.round(performance.now() - started);
