@@ -15,6 +15,13 @@
  * intersection-observer lazy-loaders, wait a CONSTANT settle for those requests
  * to land, restore scroll, then freeze what's now in the DOM. Bounded by design,
  * so a busy page can't hang the capture.
+ *
+ * removeFrames: REQUIRED here. single-file collects the iframe tree by posting
+ * an init message to every child frame and awaiting a reply. We inject the
+ * capture script into the top frame only, so cross-origin / ad / embed frames
+ * never reply — single-file waits out its per-frame 5s/10s timeouts on nearly
+ * every page (almost all have an iframe), which was the consistent ~12s hang.
+ * We only want the top document, so skip frame collection entirely.
  */
 
 import { getPageData } from "single-file-core/single-file.js";
@@ -46,6 +53,7 @@ export async function freezePage(): Promise<string | null> {
         removeScripts: true,
         compressHTML: true,
         loadDeferredImages: false,
+        removeFrames: true,
       }),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), FREEZE_TIMEOUT_MS)),
     ]);
