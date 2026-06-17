@@ -16,6 +16,7 @@ import { createLoader } from "../lib/loader.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
+import { isClaudeMdFile, lintClaudeMdFile, lintAllClaudeMd } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import type { LoadCardContext } from "../../core/card-io.js";
@@ -154,6 +155,8 @@ interface ValidationResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
   attachErrors: AttachLintError[];
+  /** Soft, non-blocking size warnings for oversized CLAUDE.md files. */
+  claudeMdWarnings: string[];
 }
 
 /**
@@ -164,7 +167,21 @@ interface ValidationResults {
  */
 async function runHookMode(): Promise<never> {
   const fp = await readHookFilePath();
-  if (fp === undefined || !isCardFile(fp)) {
+  if (fp === undefined) {
+    process.exit(0);
+  }
+  // CLAUDE.md gets only the soft size lint (it isn't a card and isn't markdown-
+  // validity-checked); a too-large one is surfaced as a warning, never blocked.
+  if (isClaudeMdFile(fp)) {
+    const boxRoot = await requireBoxRoot();
+    const warning = await lintClaudeMdFile(boxRoot, fp);
+    if (warning !== null) {
+      process.stderr.write(`${warning}\n`);
+      process.exit(2);
+    }
+    process.exit(0);
+  }
+  if (!isCardFile(fp)) {
     process.exit(0);
   }
   const boxRoot = await requireBoxRoot();
@@ -217,7 +234,7 @@ async function collectStagedResults({ boxRoot, loader, ctx, resolved, json }: Co
     console.log("No staged cards to validate.");
   }
   const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { loader, ctx }) : null;
-  return { cardSummary, mdSummary: null, attachErrors: [] };
+  return { cardSummary, mdSummary: null, attachErrors: [], claudeMdWarnings: [] };
 }
 
 /** Validate every card, markdown file, and attach layout in the box. */
@@ -227,7 +244,8 @@ async function collectAllResults({ boxRoot, loader, ctx }: CollectArgs): Promise
   const mdFiles = await findMarkdownFiles(boxRoot);
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
-  return { cardSummary, mdSummary, attachErrors };
+  const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
+  return { cardSummary, mdSummary, attachErrors, claudeMdWarnings };
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
@@ -241,11 +259,11 @@ async function collectExplicitResults({ loader, ctx, resolved }: CollectArgs): P
   }
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { loader, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths) : null;
-  return { cardSummary, mdSummary, attachErrors: [] };
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }
 
 /** Print human-readable card/markdown/attach results to stdout. */
-function printTextResults({ cardSummary, mdSummary, attachErrors }: ValidationResults): void {
+function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings }: ValidationResults): void {
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors: true });
     if (output) console.log(output);
@@ -266,6 +284,9 @@ function printTextResults({ cardSummary, mdSummary, attachErrors }: ValidationRe
     const output = formatAttachLintErrors(attachErrors, { colors: true });
     console.log(`\n${output}`);
     console.log(`\nAttach layout: ${attachErrors.length} issue(s)`);
+  }
+  if (claudeMdWarnings.length > 0) {
+    console.log(`\n${claudeMdWarnings.join("\n")}`);
   }
 }
 
@@ -326,13 +347,8 @@ export const validateCommand = new Command("validate")
         const results = await collectResults(options, { boxRoot, loader, ctx, resolved, json });
 
         if (json) {
-          console.log(
-            JSON.stringify(
-              { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors },
-              null,
-              2
-            )
-          );
+          const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings };
+          console.log(JSON.stringify(payload, null, 2));
         } else {
           printTextResults(results);
         }
