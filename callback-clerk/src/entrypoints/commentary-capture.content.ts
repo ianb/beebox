@@ -27,7 +27,7 @@ export default defineContentScript({
       const t1 = performance.now();
       const frozenHtml = await freezePage();
       const t2 = performance.now();
-      console.info(
+      console.debug(
         `[clerk] capture: extract ${Math.round(t1 - t0)}ms, freeze ${Math.round(t2 - t1)}ms` +
           `${frozenHtml === null ? " (no snapshot)" : ""}`,
       );

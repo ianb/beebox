@@ -133,7 +133,7 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
     timestamp: new Date().toISOString(),
   });
   const { open } = await postCommentary(box, payload);
-  console.info(
+  console.debug(
     `[clerk] commentOnPage: capture ${Math.round(tCaptureEnd - tCaptureStart)}ms, ` +
       `post ${Math.round(performance.now() - tCaptureEnd)}ms` +
       `${capture.frozenHtml === null ? " (no frozen snapshot)" : ` (frozen ${Math.round(capture.frozenHtml.length / 1024)}kB)`}`,
