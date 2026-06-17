@@ -6,11 +6,13 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useNavigate } from "@tanstack/react-router";
 import { getApiBase, getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
+import { href } from "../../lib/routing";
 import { parseViewUrl } from "../../lib/view-url";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { ChatEvent } from "../../machines/chat-types";
@@ -55,12 +57,24 @@ export function useChatTabs() {
 
 /**
  * Open a deep-linked companion doc once on mount. `companion` is a `view:`
- * URL (e.g. the commentary card the clerk extension just captured, passed via
+ * URL (e.g. the webpage card the clerk extension just captured, passed via
  * the chat route's `?companion=` param). Guarded so a re-render doesn't reopen
  * a tab the user has since closed.
+ *
+ * After opening, the `?companion=` param is stripped from the URL: it's a
+ * one-shot, and the open card is thereafter tracked by `?card=`
+ * (useCardUrlPersistence). Leaving it in place meant closing the last tab —
+ * which clears `?card=` — still left `?companion=` behind, so a reload
+ * re-fired the deep-link and reopened the card. A functional search updater is
+ * used so this composes with the `?card=` write without clobbering it.
  */
-export function useCompanionDeepLink(opts: { companion: string | undefined; onZoomView: OnZoomView }) {
-  const { companion, onZoomView } = opts;
+export function useCompanionDeepLink(opts: {
+  companion: string | undefined;
+  onZoomView: OnZoomView;
+  boxSlug: string | undefined;
+}) {
+  const { companion, onZoomView, boxSlug } = opts;
+  const navigate = useNavigate();
   const openedRef = useRef(false);
   useEffect(() => {
     if (openedRef.current) return;
@@ -68,7 +82,16 @@ export function useCompanionDeepLink(opts: { companion: string | undefined; onZo
     openedRef.current = true;
     const target = parseViewUrl(companion);
     onZoomView({ target, label: target.path });
-  }, [companion, onZoomView]);
+    void navigate({
+      to: href(`/${boxSlug}/chat`),
+      search: ((prev: Record<string, unknown>) => {
+        const next = { ...prev };
+        delete next["companion"];
+        return next;
+      }) as never,
+      replace: true,
+    });
+  }, [companion, onZoomView, navigate, boxSlug]);
 }
 
 interface ChatSendFn {
