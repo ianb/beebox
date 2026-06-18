@@ -7,6 +7,18 @@ const sendPattern = KeywordPattern.compile(`
   send now
 `);
 
+// "Send and close": send the message, then close the mic and leave it closed
+// (the deliberate "I'm done, take it from here" sign-off), in contrast to plain
+// `send`, which restarts the mic for a continuous conversation. Checked BEFORE
+// `sendPattern` in detectKeyword — phrases like "send and finish the message"
+// also satisfy the plain-send pattern (`finish … message`), so the close
+// variant has to win the overlap.
+const sendClosePattern = KeywordPattern.compile(`
+  send and (close | stop | finish | done | sign off)
+  send and close (the)? (mic | microphone | message)
+  over and out
+`);
+
 const cancelPattern = KeywordPattern.compile(`
   (cancel | abort | nevermind) (a | the | an)? (message | microphone)
   (message | microphone) (cancel | abort | nevermind)
@@ -26,7 +38,7 @@ const erasePattern = KeywordPattern.compile(`
   start over
 `);
 
-export type KeywordAction = "send" | "cancel" | "micOff" | "erase";
+export type KeywordAction = "send" | "sendClose" | "cancel" | "micOff" | "erase";
 
 export interface KeywordResult {
   action: KeywordAction;
@@ -46,6 +58,7 @@ export interface DetectKeywordOptions {
 
 const ACTION_TAG_NAMES: Record<KeywordAction, string> = {
   send: "send-message",
+  sendClose: "send-close-message",
   cancel: "cancel-message",
   micOff: "mic-off",
   erase: "erase-message",
@@ -69,10 +82,14 @@ function asResult(action: KeywordAction, match: InputMatch): KeywordResult {
  * The realtime pass already heard the trigger phrase (that's what fired the
  * send), so an HQ result without it means the normalizer smoothed the phrase
  * away — append the tag rather than lose the trigger. A duplicate trigger is
- * harmless; a silently vanished one isn't.
+ * harmless; a silently vanished one isn't. `action` carries the send variant
+ * (`send` vs `sendClose`) so the persisted record reflects the close sign-off.
  */
-export function appendSendKeywordTag(transcript: string, matchedPhrase: string): string {
-  return `${transcript.trim()} ${keywordTag("send", matchedPhrase)}`.trim();
+export function appendSendKeywordTag(
+  transcript: string,
+  { action, matchedPhrase }: { action: "send" | "sendClose"; matchedPhrase: string }
+): string {
+  return `${transcript.trim()} ${keywordTag(action, matchedPhrase)}`.trim();
 }
 
 export function detectKeyword(
@@ -95,6 +112,11 @@ export function detectKeyword(
 
   const eraseMatch = tryMatch(erasePattern);
   if (eraseMatch) return asResult("erase", eraseMatch);
+
+  // Must precede plain `send`: "send and finish the message" matches both, and
+  // the close variant has to win (see sendClosePattern).
+  const sendCloseMatch = tryMatch(sendClosePattern);
+  if (sendCloseMatch) return asResult("sendClose", sendCloseMatch);
 
   const sendMatch = tryMatch(sendPattern);
   if (sendMatch) return asResult("send", sendMatch);

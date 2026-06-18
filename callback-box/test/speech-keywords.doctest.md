@@ -50,6 +50,38 @@ detectKeyword("OK send message")?.processedTranscript
 => OK <send-message phrase="send message" />
 ```
 
+## Send and close
+
+"Send and close" sends the message like a plain send, but signals the mic
+should stay closed afterward (the "I'm done, take it from here" sign-off). It
+gets its own action and tag:
+
+```
+detectKeyword("send and close")?.action
+=> sendClose
+
+detectKeyword("send and stop")?.action
+=> sendClose
+
+detectKeyword("send and close the mic")?.action
+=> sendClose
+
+detectKeyword("over and out")?.action
+=> sendClose
+
+detectKeyword("OK send and close")?.processedTranscript
+=> OK <send-close-message phrase="send and close" />
+```
+
+Precedence matters: "send and finish the message" satisfies the plain-send
+pattern too (`finish … message`), but the close variant is checked first and
+wins:
+
+```
+detectKeyword("send and finish the message")?.action
+=> sendClose
+```
+
 ## Cancel commands
 
 ```
@@ -116,13 +148,21 @@ Narration mode replaces the realtime transcript with a high-quality pass, and th
 detectKeyword("Buy milk tomorrow.")
 => null
 
-appendSendKeywordTag("Buy milk tomorrow.", "send message")
+appendSendKeywordTag("Buy milk tomorrow.", { action: "send", matchedPhrase: "send message" })
 => Buy milk tomorrow. <send-message phrase="send message" />
+```
+
+The close variant re-injects its own tag, so a dropped "send and close" stays a
+close sign-off in the persisted record:
+
+```
+appendSendKeywordTag("Buy milk tomorrow.", { action: "sendClose", matchedPhrase: "send and close" })
+=> Buy milk tomorrow. <send-close-message phrase="send and close" />
 ```
 
 Phrases with characters meaningful in XML are escaped, matching the tag form `detectKeyword` itself produces:
 
 ```
-appendSendKeywordTag("Ping R&D.", 'send "the" message')
+appendSendKeywordTag("Ping R&D.", { action: "send", matchedPhrase: 'send "the" message' })
 => Ping R&D. <send-message phrase="send &quot;the&quot; message" />
 ```
