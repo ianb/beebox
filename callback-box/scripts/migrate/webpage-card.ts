@@ -87,15 +87,41 @@ function firstHttpRef(sources: unknown): string | null {
   return null;
 }
 
+/**
+ * The earliest capture template put provenance in the body as a line like
+ * `[Original page](https://…) · captured 2026-…`, not in frontmatter. Pull the
+ * source URL + captured date out and strip that line, so those cards migrate
+ * too. Returns null when there's no such line.
+ */
+function bodyProvenance(body: string): { source: string; captured: string | undefined; remarks: string } | null {
+  const link = body.match(/\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/);
+  if (link === null) return null;
+  const captured = body.match(/captured\s+(\S+)/);
+  const remarks = body.replace(/^[^\n]*\[[^\]]*\]\((?:https?:\/\/[^)\s]+)\)[^\n]*\n+/, "");
+  return { source: link[1] ?? "", captured: captured === null ? undefined : captured[1], remarks };
+}
+
 async function convertCommentary(absPath: string): Promise<ConvertOutcome> {
   const raw = await readFile(absPath, "utf8");
   const { fm, body } = splitCard(raw);
-  const source = fm["source"];
   // Only the fused web-page capture shape converts: a readable-backed default
-  // ref plus a source URL. Anything else (external-file commentary, repros
-  // with no source) keeps working through the legacy CommentaryView path.
+  // ref. External-file commentary keeps working through the legacy path.
   if (fm["defaultRef"] !== "attach/readable.md") return "already";
-  if (typeof source !== "string" || source === "") return "already";
+
+  // Source/captured come from frontmatter (later shape) or, failing that, the
+  // body provenance line (earliest shape). Remarks have that line stripped.
+  let source = typeof fm["source"] === "string" ? fm["source"] : "";
+  let captured = typeof fm["captured"] === "string" ? fm["captured"] : undefined;
+  let remarks = body;
+  if (source === "") {
+    const prov = bodyProvenance(body);
+    if (prov !== null && prov.source !== "") {
+      source = prov.source;
+      captured = prov.captured;
+      remarks = prov.remarks;
+    }
+  }
+  if (source === "") return "already"; // no URL anywhere — can't form a webpage card
 
   const dir = dirname(absPath);
   const base = cardBasename(basename(absPath));
@@ -110,7 +136,7 @@ async function convertCommentary(absPath: string): Promise<ConvertOutcome> {
     {
       title: fm["title"],
       source,
-      captured: fm["captured"],
+      captured,
       frozen: frozenExists ? "attach/page.frozen" : undefined,
     },
     readable,
@@ -119,8 +145,8 @@ async function convertCommentary(absPath: string): Promise<ConvertOutcome> {
 
   // The remarks become an attach-scoped commentary. Anchors that pointed at
   // the readable doc now default to the containing page — strip the ref.
-  const remarks = body.replace(/\s*ref="attach\/readable\.md"/g, "");
-  await writeFile(join(attachDir, `${base}.commentary.card`), buildCard({ title: fm["title"] }, remarks));
+  const commentaryRemarks = remarks.replace(/\s*ref="attach\/readable\.md"/g, "");
+  await writeFile(join(attachDir, `${base}.commentary.card`), buildCard({ title: fm["title"] }, commentaryRemarks));
 
   await rm(absPath);
   await rm(readablePath);

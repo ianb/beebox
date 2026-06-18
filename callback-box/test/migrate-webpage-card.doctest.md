@@ -83,6 +83,38 @@ const cm = await loadCardFromText({ content: cmText, source: "store/reading/Foo.
 await fs.rm(box, { recursive: true, force: true });
 ```
 
+## The earliest shape — provenance in the body — also migrates
+
+The first capture template put the source URL + capture date in the body as an
+`[Original page](…) · captured …` line rather than in frontmatter. The migrator
+recovers them from there and strips that line from the remarks.
+
+```
+const box = await makeTmpBox();
+await fs.mkdir(path.join(box, "store/reading/Old.attach"), { recursive: true });
+const BODYPROV = "---\ntitle: Old\ndefaultRef: attach/readable.md\n---\n[Original page](https://old.example.com/x) · captured 2026-06-14T10:36:55.904Z\n\n{% source ref=\"attach/readable.md\" pos=\"body\" version=\"sha256:1\" %}{% quote %}a span{% /quote %}{% /source %}\n\nA remark here.\n";
+await fs.writeFile(path.join(box, "store/reading/Old.commentary.card"), BODYPROV);
+await fs.writeFile(path.join(box, "store/reading/Old.attach/readable.md"), "# Old\n\nThe page body.\n");
+
+await convertFile(path.join(box, "store/reading/Old.commentary.card"));
+
+const wpText = await fs.readFile(path.join(box, "store/reading/Old.webpage.card"), "utf8");
+[wpText.includes("source: https://old.example.com/x"), wpText.includes("captured: 2026-06-14T10:36:55.904Z")].join(",")
+=> true,true
+```
+
+The remarks keep the comment but drop the provenance line:
+
+``` continue
+const cmText = await fs.readFile(path.join(box, "store/reading/Old.attach/Old.commentary.card"), "utf8");
+[cmText.includes("A remark here."), cmText.includes("Original page"), cmText.includes("attach/readable.md")].join(",")
+=> true,false,false
+```
+
+``` cleanup
+await fs.rm(box, { recursive: true, force: true });
+```
+
 ## A saved-page record converges onto a webpage card
 
 ```
