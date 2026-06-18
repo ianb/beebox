@@ -9,39 +9,12 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { createDropboxMemoTemplate } from "../../schemas/memo.js";
 import { createWebpageTemplate } from "../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../schemas/commentary.js";
 import { attachmentPath } from "../../lib/attach-path.js";
 import { listDestinations } from "../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../connectors/chat-utils.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
-
-const memoSchema = z.object({
-  text: z.string().min(1),
-  context: z
-    .object({
-      url: z.string().url().optional(),
-      title: z.string().optional(),
-      selectedText: z.string().optional(),
-    })
-    .optional(),
-  url: z.string().url().optional(),
-  timestamp: z.string().optional(),
-});
-
-const savePageSchema = z.object({
-  intent: z.enum(["save", "do"]),
-  url: z.string().url(),
-  title: z.string().min(1),
-  siteName: z.string().optional(),
-  byline: z.string().optional(),
-  excerpt: z.string().optional(),
-  markdown: z.string().min(1),
-  frozenHtml: z.string().optional(),
-  selectedText: z.string().optional(),
-  timestamp: z.string().optional(),
-});
 
 const commentarySchema = z.object({
   url: z.string().url(),
@@ -77,63 +50,6 @@ export async function registerClerkRoutes(
       .header("Access-Control-Allow-Methods", "GET,POST,DELETE,OPTIONS")
       .header("Access-Control-Allow-Headers", "Content-Type")
       .send();
-  });
-
-  server.post("/api/clerk/memo", async (request, reply) => {
-    applyExtensionCors(request, reply);
-    const parsed = memoSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Invalid memo payload" });
-    }
-
-    const { text, context, timestamp } = parsed.data;
-    const created = timestamp ?? new Date().toISOString();
-    const title = text.slice(0, 80);
-    const filename = buildFilename(title, "Memo");
-    const relPath = path.join("box/inbox", `${filename}.memo.card`);
-    const absPath = path.join(boxRoot, relPath);
-
-    const content = createDropboxMemoTemplate({
-      content: text,
-      timestamp: created,
-      context: context ?? (parsed.data.url ? { url: parsed.data.url } : undefined),
-    });
-
-    await writeCard(absPath, content);
-    await gitCommit(boxRoot, { relPaths: [relPath], message: `Add memo from Clerk: "${title}"` });
-
-    return { created: relPath };
-  });
-
-  server.post("/api/clerk/save-page", async (request, reply) => {
-    applyExtensionCors(request, reply);
-    const parsed = savePageSchema.safeParse(request.body);
-    if (!parsed.success) {
-      return reply.status(400).send({ error: "Invalid page payload" });
-    }
-
-    const data = parsed.data;
-    const intentDir =
-      data.intent === "do" ? "box/inbox/pages-todo" : "box/inbox/pages-saved";
-    const filename = buildFilename(data.title, "Page");
-    const cardRel = path.join(intentDir, `${filename}.webpage.card`);
-
-    const createdPaths = await writeWebpageCard({
-      boxRoot,
-      cardRel,
-      title: data.title,
-      url: data.url,
-      capturedAt: data.timestamp ?? new Date().toISOString(),
-      markdown: data.markdown,
-      siteName: data.siteName,
-      byline: data.byline,
-      excerpt: data.excerpt,
-      frozenHtml: data.frozenHtml,
-    });
-
-    await gitCommit(boxRoot, { relPaths: createdPaths, message: `Add saved page from Clerk: "${data.title}"` });
-
-    return { created: createdPaths };
   });
 
   server.get("/api/clerk/commentary-destinations", async (request, reply) => {
