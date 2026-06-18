@@ -7,23 +7,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { getApiBase } from "../api";
 import { isBinaryPath } from "../lib/binary-files";
+import { formatBytes } from "../lib/format-bytes";
 import { registerFileRenderer, type RendererProps } from "./index";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { RequestError } from "../lib/errors";
-
-function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  let i = 0;
-  let n = bytes;
-  while (n >= 1024 && i < units.length - 1) {
-    n /= 1024;
-    i++;
-  }
-  return `${n >= 10 || i === 0 ? Math.round(n) : n.toFixed(1)} ${units[i]}`;
-}
 
 function BinaryRenderer({ data }: RendererProps) {
   const apiBase = getApiBase();
