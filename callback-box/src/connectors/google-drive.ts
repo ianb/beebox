@@ -27,7 +27,7 @@ import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import type { FileState } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
-import { attachDirFor } from "../lib/attach-path.js";
+import { attachDirFor } from "../shared/attach-path.js";
 
 // Ensure handlers are registered
 import "./drive-handler-sheets.js";

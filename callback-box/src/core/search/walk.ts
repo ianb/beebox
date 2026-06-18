@@ -8,7 +8,7 @@
 
 import { promises as fs, type Dirent } from "node:fs";
 import path from "node:path";
-import { isInsideAttachScope } from "../../lib/attach-path.js";
+import { isInsideAttachScope } from "../../shared/attach-path.js";
 
 /** Directories never descended into. `store/trash` is handled by path. */
 const SKIP_DIRS = new Set([

@@ -18,23 +18,7 @@ import { getApiBase } from "../api";
 import { type RendererProps } from "../renderers";
 import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
-
-/**
- * Box-relative attach-scope directory for a card path:
- * `box/x/Foo.webpage.card` → `box/x/Foo.attach`. Mirrors `attachDirFor` in
- * `src/lib/attach-path.ts`, reimplemented here because that module sits outside
- * the frontend tsconfig's roots.
- */
-function attachDirForCard(cardPath: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  const dir = slash === -1 ? "" : cardPath.slice(0, slash);
-  const name = slash === -1 ? cardPath : cardPath.slice(slash + 1);
-  const noCard = name.endsWith(".card") ? name.slice(0, -".card".length) : name;
-  const lastDot = noCard.lastIndexOf(".");
-  const base = lastDot === -1 ? noCard : noCard.slice(0, lastDot);
-  const attach = `${base}.attach`;
-  return dir === "" ? attach : `${dir}/${attach}`;
-}
+import { attachDirFor } from "@shared/attach-path";
 
 type JumpToQuote = (quoteText: string) => Promise<boolean>;
 
@@ -88,7 +72,7 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
   // Discover commentary in the page's attach scope. A missing scope browses to
   // an empty result (the route swallows readdir errors), so no commentary just
   // renders nothing.
-  const attachDir = attachDirForCard(data.path);
+  const attachDir = attachDirFor(data.path);
   const { data: browse } = trpc.status.browse.useQuery({ path: attachDir });
   const commentaryPaths = (browse?.cards ?? [])
     .filter((c) => c.type === "commentary")

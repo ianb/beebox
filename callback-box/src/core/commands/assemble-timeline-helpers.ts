@@ -8,7 +8,7 @@ import { parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import type { ImageFields } from "../../schemas/image.js";
 import type { AudioFields } from "../../schemas/audio.js";
-import { attachDirFor, resolveAttachRef } from "../../lib/attach-path.js";
+import { attachDirFor, resolveAttachRef } from "../../shared/attach-path.js";
 
 async function readImageCard(cardPath: string): Promise<ImageFields | null> {
   try {

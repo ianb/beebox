@@ -16,7 +16,7 @@ import { loadCardFile } from "../../core/card-io.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { getStatus, isRepo } from "../../cli/lib/git.js";
 import { fileEtag } from "../file-etag.js";
-import { attachDirFor } from "../../lib/attach-path.js";
+import { attachDirFor } from "../../shared/attach-path.js";
 import type { ViewCard, ViewCardChild, ViewFile } from "../../types/views.js";
 import type { ElementNode } from "cardworks";
 
