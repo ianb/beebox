@@ -100,7 +100,7 @@ export function stripSpeechWrappers(text: string): string {
   // Drop self-closing voice-keyword marker tags
   out = out.replace(/<(?:send-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
   // Drop the <chat-app .../> snapshot tag prepended to every user message
-  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)/gi, "");
+  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)/gi, "");
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
   return out;

@@ -72,7 +72,7 @@ export function stripUserDisplayTags(text: string): string {
     .replace(/<\/typed>/gi, "")
     .replace(/<speech[^>]*>/gi, "")
     .replace(/<\/speech>/gi, "")
-    .replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)\n?/gi, "")
+    .replace(/<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\n?/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
     .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "");

@@ -139,3 +139,12 @@ stripStructuredOutputTags("before <chat-app narration=\"on\"/> after")
 stripStructuredOutputTags("plain text only")
 => plain text only
 ```
+
+The paired `<chat-app>` form with `<card-activity>` children (the
+companion-pane snapshot) strips whole, body included — otherwise the
+snapshot leaks into the displayed message.
+
+```
+stripStructuredOutputTags("<chat-app prose=\"on\" open-card=\"x\">\n<card-activity kind=\"explored\">king -> chief</card-activity>\n</chat-app>kept")
+=> kept
+```

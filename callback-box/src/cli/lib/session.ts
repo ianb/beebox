@@ -281,7 +281,7 @@ export function isRealUserMessage(entry: SessionEntry): boolean {
     if (block.type !== "text") continue;
     const text = (block.text || "")
       .trimStart()
-      .replace(/^<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)\s*/i, "");
+      .replace(/^<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\s*/i, "");
     if (text.startsWith("<typed") || text.startsWith("<speech")) return true;
   }
   return false;
