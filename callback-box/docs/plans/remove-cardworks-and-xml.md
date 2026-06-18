@@ -13,17 +13,22 @@ optionally followed by a markdown body that may carry Markdoc tags.
 There is no second format, no `content-type: application/x-card+xml`,
 no element tree, no XPath.
 
-> **Status update (in progress).** Round 1 shipped: landmark, recipe,
-> guide, procedure, and procedure-run are migrated off XML, each with a
-> registered migrator and per-schema commit; the full suite stays green
-> (2174). **Key finding that overrode the plan: none of them needed
-> Markdoc.** Every one of their parsers already produces flat, structured
-> data (procedure/procedure-run group phase children by kind; guide
-> flattens to `ParsedGuide`; landmark is pure navigation metadata), so
-> all five went to **pure YAML frontmatter**. That leaves **capture-session
-> as the only schema that genuinely needs Markdoc** (its transcript is
-> ordered mixed content) — deferred to round 2, along with removing the
-> dual-format loader and deleting cardworks.
+> **Status update.** **All six schemas are migrated off XML.** Round 1:
+> landmark, recipe, guide, procedure, procedure-run — all **pure YAML**
+> (key finding that overrode the plan: their parsers already produce flat
+> structured data, so none needed Markdoc). Round 2: **capture-session**
+> — the one schema that genuinely needed Markdoc (its transcript is
+> ordered mixed content), now frontmatter + a markdown body with
+> `{% image %}` / `{% silence %}` tags. Each schema has a registered
+> migrator and a per-schema commit; the full suite stays green (2173).
+> `schemas[]` (the XML `ElementSchema` list) is now empty.
+>
+> **Remaining (its own round): delete cardworks.** With no XML schema
+> left, the dormant dual-format loader branch, `element()`, `serialize`,
+> the XML parser, JSX runtime, and `evaluateXPathString` have no users.
+> That round removes them, absorbs the frontmatter primitives
+> (`cardSchema`, `body`, `splitCardContent`, `extractRefs`) into
+> callback-box, and drops the package + symlink + `workspace:*` dep.
 
 This is plan-only. Nothing here is executed until the plan is approved
 and then run end-to-end on this worktree branch.
