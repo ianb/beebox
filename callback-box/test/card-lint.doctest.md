@@ -18,6 +18,7 @@ import { createLoader } from "../src/cli/lib/loader.js";
 import { lintCardsDispatch } from "../src/core/card-lint.js";
 import type { LoadCardContext } from "../src/core/card-io.js";
 import { CommentarySchema } from "../src/schemas/commentary.js";
+import { ExtfileSchema } from "../src/schemas/extfile.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -48,6 +49,7 @@ const ctx: LoadCardContext = {
     ["email-thread", threadSchema],
     ["doc", docSchema],
     ["commentary", CommentarySchema],
+    ["extfile", ExtfileSchema],
   ]),
   elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
@@ -252,65 +254,55 @@ result.totalErrors
 => 0
 ```
 
-## A commentary card with one default target and valid anchors lints clean
+## An attach-only commentary card with valid anchors lints clean
+
+Commentary is attach-only — it carries no target field; bare `{% source %}`
+anchors point at the containing host card.
 
 ```
 const box = await makeTmpBox();
 await box.write(
-  "store/review/Plan.commentary.card",
-  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\n{% source href=\"file:/Users/x/doc.md\" pos=\"body; ~line 4\" version=\"sha256:9f3a1c2b\" %}{% quote %}a span{% /quote %}{% /source %}\n\nThis reads well.\n",
+  "store/review/Plan.attach/Plan.commentary.card",
+  "---\ntype: commentary\n---\n{% source pos=\"body; ~line 4\" version=\"sha256:9f3a1c2b\" %}{% quote %}a span{% /quote %}{% /source %}\n\nThis reads well.\n",
 );
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
-  [box.path("store/review/Plan.commentary.card")],
+  [box.path("store/review/Plan.attach/Plan.commentary.card")],
   { loader, ctx },
 );
 result.totalErrors
 => 0
 ```
 
-## A commentary card with BOTH default targets is an error (at-most-one)
+## A leftover target field on a commentary card is a warning, not an error
+
+Commentary no longer has `defaultHref`/`defaultRef`/`targets`. A card still
+carrying one (pre-attach drift) loads fine — the key is stripped — and surfaces
+as an unknown-key warning so it gets cleaned off disk.
 
 ```
 const box = await makeTmpBox();
 await box.write(
-  "store/review/Both.commentary.card",
-  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\ndefaultRef: \"/box/notes/a.doc.card\"\n---\nbody\n",
+  "store/review/Stale.commentary.card",
+  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\nbody\n",
 );
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
-  [box.path("store/review/Both.commentary.card")],
-  { loader, ctx },
-);
-result.results[0]!.errors[0]!.message
-=> commentary card takes at most one of defaultHref or defaultRef, not both
-```
-
-## A commentary card with NEITHER default target is valid (container is the default)
-
-An attach-scoped commentary defaults to its containing document, so it needs no
-explicit default target.
-
-```
-const box = await makeTmpBox();
-await box.write(
-  "store/review/Neither.commentary.card",
-  "---\ntype: commentary\n---\nbody\n",
-);
-const loader = await createLoader(box.root);
-const result = await lintCardsDispatch(
-  [box.path("store/review/Neither.commentary.card")],
+  [box.path("store/review/Stale.commentary.card")],
   { loader, ctx },
 );
 result.totalErrors
 => 0
+
+result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "defaultHref"'))
+=> true
 ```
 
-## A ref-free `{% source %}` in a commentary body is valid — it targets the container
+## A ref-free `{% source %}` in a commentary body is valid — it targets the host
 
 Markdoc validation runs on commentary bodies (it does not run elsewhere). A
-`{% source %}` with neither `ref` nor `href` points at the containing document
-and is allowed; only *both* at once is an error.
+`{% source %}` with neither `ref` nor `href` points at the containing host card
+and is allowed.
 
 ```
 const box = await makeTmpBox();
@@ -325,4 +317,60 @@ const result = await lintCardsDispatch(
 );
 result.totalErrors
 => 0
+```
+
+## Extfile cards validate their href and stamped version
+
+An extfile card's `href` must be a `file:` URL, and a present `version` must
+carry a `sha256:<hex>` marker (it is compared against the live file's hash). A
+well-formed card lints clean; a non-`file:` href or a malformed `version` is an
+error. Whether the href resolves on this machine is *not* checked here.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Good.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: \"sha256:9f3a1c2b git:7ffeae4\"\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Good.extfile.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 0
+```
+
+A non-`file:` href is an error:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/BadHref.extfile.card",
+  "---\ntype: extfile\nhref: https://example.com/foo.ts\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/BadHref.extfile.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("must be a file: URL")
+=> true
+```
+
+A malformed `version` (no `sha256:` marker) is an error:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/BadVer.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: not-a-hash\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/BadVer.extfile.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker")
+=> true
 ```

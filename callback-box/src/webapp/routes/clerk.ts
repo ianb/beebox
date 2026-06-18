@@ -11,7 +11,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { createWebpageTemplate } from "../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../schemas/commentary.js";
-import { attachmentPath } from "../../lib/attach-path.js";
+import { attachmentPath } from "../../shared/attach-path.js";
 import { listDestinations } from "../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../connectors/chat-utils.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";

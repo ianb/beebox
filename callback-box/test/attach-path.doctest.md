@@ -14,7 +14,7 @@ import {
   isAttachDirName,
   attachDirOwnerBasename,
   isInsideAttachScope,
-} from "../src/lib/attach-path.js";
+} from "../src/shared/attach-path.js";
 ```
 
 ## cardBasename

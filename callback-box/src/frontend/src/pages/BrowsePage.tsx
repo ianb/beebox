@@ -20,6 +20,7 @@ import { Column } from "../components/ui/Column";
 import { Text } from "../components/ui/Text";
 import { useDocumentTitle } from "../hooks/useDocumentTitle";
 import { RequestError } from "../lib/errors";
+import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
 
 /**
  * Strip a trailing extension and convert underscores to spaces.
@@ -50,6 +51,9 @@ interface BrowsePageProps {
 function isFilePath(p: string): boolean {
   if (!p) return false;
   const base = p.split("/").pop() ?? "";
+  // `<basename>.attach` is a card's attach scope — a directory we browse into,
+  // not a file — despite carrying a dotted suffix.
+  if (isAttachDirName(base)) return false;
   const dot = base.lastIndexOf(".");
   return dot > 0 && dot < base.length - 1;
 }
@@ -147,7 +151,8 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
     }
     if (dirPath) {
       const last = dirPath.split("/").pop() ?? dirPath;
-      return last.replace(/_/g, " ");
+      // Inside a card's attach scope, title by the owning card, not `Foo.attach`.
+      return (attachDirOwnerBasename(last) ?? last).replace(/_/g, " ");
     }
     return "Browse";
   }, [selectedFilePath, selectedCard, dirPath]);

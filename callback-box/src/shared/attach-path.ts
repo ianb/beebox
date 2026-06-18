@@ -6,8 +6,9 @@
  * attached files use the virtual prefix `attach/<file>`; the resolver expands
  * the prefix against the card's attach scope.
  *
- * Pure string operations — no Node deps. Safe to import from both the backend
- * (CLI, connectors, webapp) and the frontend.
+ * Pure string operations — no Node deps. Lives in `src/shared/` so both the
+ * backend (CLI, connectors, webapp; relative `../shared/attach-path.js`) and
+ * the frontend (`@shared/attach-path`) import the one source of truth.
  */
 
 /** Suffix that marks a directory as a card's attach scope. */

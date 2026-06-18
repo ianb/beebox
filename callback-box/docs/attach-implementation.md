@@ -53,7 +53,7 @@ Phase 1 doesn't change what cardworks does. The application code that *uses* an 
 
 **Possible small addition** (optional): a helper in `cardworks/fs/` or similar called `attachmentPath(cardPath, fileName) → string` that computes `<basename>.attach/<fileName>`. Centralizes the convention. Could live in callback-box instead. Lean toward callback-box — keep cardworks format-agnostic.
 
-**Verdict:** zero cardworks changes for phase 1. If a helper for path computation feels needed, it lives in callback-box (`src/lib/attach-path.ts` or similar).
+**Verdict:** zero cardworks changes for phase 1. If a helper for path computation feels needed, it lives in callback-box (`src/shared/attach-path.ts` or similar).
 
 ### Callback-box: file-walking and card loading
 
@@ -324,7 +324,7 @@ The scenarios in `src/scenario/` are end-to-end multi-step tests. After migratin
 
 Reasonable order to implement (all on a branch, no production rollout until step 9):
 
-1. **Resolution helper** for the `attach/` virtual prefix. A small util in `src/lib/attach-path.ts`: parse `attach/<file>` refs against a current-card context. Used everywhere attached files are resolved.
+1. **Resolution helper** for the `attach/` virtual prefix. A small util in `src/shared/attach-path.ts`: parse `attach/<file>` refs against a current-card context. Used everywhere attached files are resolved.
 2. **File walker + loader** updated to recognize `.attach/` directories as part of card scope (still walks them; not opaque).
 3. **Lint rules**: basename collisions in same directory, exact-name `attach` forbidden in box tree.
 4. **Schemas and templates** updated: `createXxxTemplate()` functions emit `attach/`-prefixed refs.
