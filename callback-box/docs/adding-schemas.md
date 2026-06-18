@@ -77,6 +77,50 @@ Key patterns:
 - Avoid `?: T | undefined` in `*Fields` interfaces — use `?: T` and spread conditionally at call sites. Zod recursive types are the exception (they need the explicit `| undefined`).
 - The `instructions` string is what agents see — make it thorough.
 
+#### Validation beyond Zod — the `validate` hook
+
+When a card type needs a rule Zod field types can't express — a cross-field
+constraint, a format refinement on a string, or validation of the body's parsed
+structure — put it in a **`validate` hook on the schema**, *not* in a branch of
+`src/core/card-lint.ts`. The hook co-locates the rule with the schema that
+defines the type, and card-lint dispatches it generically.
+
+```ts
+import { cardSchema, type CardSchema, type LintIssue } from "cardworks";
+
+function myThingErrors(fields: Record<string, unknown>): LintIssue[] {
+  const errors: LintIssue[] = [];
+  const href = fields["href"];
+  if (typeof href === "string" && !href.startsWith("file:")) {
+    errors.push({ type: "validation", severity: "error", message: `href must be a file: URL (got "${href}")` });
+  }
+  return errors;
+}
+
+export const MyThingSchema: CardSchema = cardSchema("my-thing", {
+  validate: ({ fields }) => myThingErrors(fields),
+  fields: { /* ... */ },
+});
+```
+
+- The hook receives `{ fields }` — the parsed, Zod-validated frontmatter, with
+  the body value at `fields["body"]` when the schema declares a body. Narrow
+  `fields[...]` yourself (`typeof x === "string"`) before using it.
+- It is **self-contained**: it sees only this card's own data — no loader, no
+  box, no access to other cards. Generic ref-existence checking (does the card
+  a `ref:` points at exist?) is box-aware and stays centralized in `card-lint.ts`;
+  don't reimplement it per schema.
+- It returns cardworks `LintIssue[]` (`type: "validation"`, `severity: "error"`
+  for blocking rules). Return `[]` when the card is fine.
+- Keep the error/helper functions **module-private** (don't export them — knip
+  flags unused exports); only the `validate` reference uses them. `extfile.tsx`
+  and `commentary.tsx` are worked examples (a `file:`-URL refinement and a
+  Markdoc body check, respectively).
+
+There is intentionally **no box-aware validate variant** today — if you find
+yourself wanting one (resolve a ref, inspect another card), raise it rather than
+smuggling box access in; the self-contained shape is the deliberate contract.
+
 ### 2. Register in `src/schemas/registry.ts`
 
 ```ts

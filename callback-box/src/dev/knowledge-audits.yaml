@@ -134,6 +134,24 @@ tests:
     should_read: ["config/schemas/CLAUDE.md"]
     tags: [schemas, extension]
 
+  # Status (2026-06-18): pass (verified). Agent discovered config/schemas/CLAUDE.md
+  # and named the `validate` hook — self-contained, returns LintIssue[], not a
+  # card-lint.ts branch. Convention also in the repo's docs/adding-schemas.md.
+  - id: schema-validate-hook
+    prompt: >
+      You're adding a card type whose rules go beyond what Zod field types can
+      express — e.g. a cross-field constraint, or validating the body's parsed
+      structure. Where does that validation go?
+    expected_level: discoverable
+    watch_for: >
+      Names the schema's `validate` hook on cardSchema() — self-contained,
+      co-located with the schema, returning LintIssue[]. Must NOT say to add a
+      branch/type=== check to a central dispatch (card-lint.ts). Knowing it sees
+      only the card's own data (no loader/cross-card access) is a plus.
+    should_read: ["config/schemas/CLAUDE.md"]
+    correct_contains: ["validate"]
+    tags: [schemas, extension, validation]
+
   # === CLI Commands ===
 
   - id: list-cb-commands

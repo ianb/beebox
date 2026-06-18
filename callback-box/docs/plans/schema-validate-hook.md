@@ -270,9 +270,16 @@ not part of this refactor (it would change behavior, not just relocate it).
 
 This plan introduces an **agent-facing convention**: "validation a Zod schema
 can't express now goes in the schema's `validate` hook, not in
-`card-lint.ts`." A schema author is an agent role, so this gets a
-`knows_directly` audit (default per the skill; the `{% quote %}` work is the
-precedent).
+`card-lint.ts`." A schema author is an agent role, so this gets an audit.
+
+*(As-shipped correction: the level is `discoverable`, not `knows_directly`.
+The convention lives in the box-local schema guide
+(`config/schemas/CLAUDE.md`, generated from `box-templates.ts` — updated by
+this plan), which a box agent reads on demand rather than carrying in context.
+This matches the sibling `create-new-card-type` audit, which is also
+`discoverable` with `should_read: ["config/schemas/CLAUDE.md"]`. The audit was
+run against the worktree box and passed — the agent discovered the doc and
+named the hook; status recorded in the yaml.)*
 
 Add one entry to `callback-box/src/dev/knowledge-audits.yaml`, tagged
 `[schemas, validation]`:
@@ -336,14 +343,15 @@ so it runs in Chunk 5, after docs.
 
 ## Rollout shape
 
-- **Test posture.** Two new tests land *with* the change, not deferred — this
-  is a refactor of validation behavior, so regression protection at ship is
-  warranted (overriding the default "dogfood-then-test"): (a) a `tap` unit test
-  in `cardworks/test/card-schema.test.ts` for the hook's presence/absence and
-  invocation; (b) a `card-lint.doctest.md` case proving generic dispatch fires
-  a schema's `validate` and is a no-op without one. The existing
-  `card-lint.doctest.md` extfile/commentary cases (if any) must stay green —
-  identical `LintIssue` output is the contract.
+- **Test posture.** *(As-shipped: per the boxholder's direction to favor
+  Markdown doctests over cardworks/XML unit tests since XML is being removed,
+  the planned cardworks `tap` unit test was dropped.)* One new test lands *with*
+  the change: a `card-lint.doctest.md` case proving generic dispatch fires an
+  arbitrary schema's `validate` hook and is a clean no-op for a schema without
+  one. The existing `card-lint.doctest.md` extfile/commentary cases stay green
+  unchanged — identical `LintIssue` output through the new hook is the contract,
+  and that is the real regression guard (the hook's presence/absence behavior is
+  fully observable through dispatch).
 - **Knowledge audits.** One `knows_directly` entry (`schema-validate-hook`),
   authored and **run** with status recorded, lands with the plan (Chunk 5).
   None deferred.

@@ -66,11 +66,42 @@ Key patterns:
   it — the filename \`Foo.<type>.card\` supplies it.
 - \`title\` and \`contains\` are available on every card type automatically.
 
+## Validation beyond Zod — the \`validate\` hook
+
+When a card type needs a rule Zod field types can't express — a cross-field
+constraint, a format refinement, or checking the body's parsed structure — add a
+\`validate\` hook to the schema. The rule lives **on the schema**, co-located with
+the type it governs; \`cb validate\` invokes it automatically.
+
+\`\`\`typescript
+import { cardSchema, type LintIssue } from "cardworks";
+import { z } from "zod";
+
+export default cardSchema("link", {
+  validate: ({ fields }) => {
+    const errors: LintIssue[] = [];
+    const url = fields["url"];
+    if (typeof url === "string" && !url.startsWith("https://")) {
+      errors.push({ type: "validation", severity: "error", message: \`url must be https (got "\${url}")\` });
+    }
+    return errors;
+  },
+  fields: { url: z.string() },
+});
+\`\`\`
+
+- The hook receives \`{ fields }\` — the parsed frontmatter, with the body at
+  \`fields["body"]\` when the schema has one. Narrow values yourself (\`typeof\`).
+- It is **self-contained**: it sees only this card's own data, never other cards
+  or the box. Broken-ref checking is handled for you and is not its job.
+- Return \`LintIssue[]\` (\`severity: "error"\` blocks; \`[]\` means clean).
+
 ## Available Imports
 
 From \`cardworks\`:
 - \`cardSchema(type, config)\` — define a frontmatter card schema (the default)
 - \`body(zodSchema)\` — declare the single markdown body field
+- \`type LintIssue\` — the issue type a \`validate\` hook returns (see above)
 - \`element(tagName, config)\` — define a legacy XML schema (see below)
 - \`escapeText(str)\` / \`escapeAttr(str)\` — XML-escape helpers (only for \`element()\` schemas)
 
