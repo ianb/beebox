@@ -22,6 +22,7 @@ import type { EventBus } from "../../core/event-bus.js";
 import { registerApiCardRoutes } from "./api-card-routes.js";
 import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
+import { registerProxyImageRoutes } from "./proxy-image.js";
 import { registerApiFilesWriteRoutes } from "./api-files-write.js";
 import { registerApiAdapterRoutes } from "./api-adapters.js";
 import { registerApiExternalRoute } from "./api-external.js";
@@ -117,6 +118,8 @@ export async function registerApiRoutes(
 
   // /api/files/* — serve and delete raw box files (images, audio, etc.)
   registerApiFilesRoutes({ server, boxRoot, eventBus });
+  // /api/proxy-image — SSRF-guarded fetch for frozen-page hot-link fallback
+  registerProxyImageRoutes({ server });
   registerApiFilesWriteRoutes({ server, boxRoot, eventBus });
   registerApiAdapterRoutes({ server, boxRoot });
 

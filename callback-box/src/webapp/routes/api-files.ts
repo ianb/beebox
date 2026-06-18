@@ -12,9 +12,38 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import { commitPaths, pathsHaveChanges, stageFiles } from "../../cli/lib/git.js";
 import type { EventBus } from "../../core/event-bus.js";
 import { fileEtag } from "../file-etag.js";
+
+// Injected into frozen pages at serve time so a hot-linked image that fails
+// (hot-link blockers, auth, dead origin) retries once through the box image
+// proxy. Fixed text → fixed sha256, so the CSP below allows exactly this one
+// script and nothing else (captured inline scripts/handlers stay blocked). It
+// derives the box base from the frozen page's own URL (everything before
+// /api/files/), so it works under any path prefix (prod slug, dev worktree).
+const FROZEN_FALLBACK_SCRIPT =
+  '(function(){var b=location.href.split("/api/files/")[0]+"/api/proxy-image?url=";' +
+  'document.addEventListener("error",function(e){var i=e.target;' +
+  'if(!i||i.tagName!=="IMG"||i.dataset.cbProxied)return;' +
+  'i.dataset.cbProxied="1";i.src=b+encodeURIComponent(i.src);},true);})();';
+
+const FROZEN_SCRIPT_HASH = `sha256-${createHash("sha256").update(FROZEN_FALLBACK_SCRIPT).digest("base64")}`;
+
+// Frozen pages are untrusted captured HTML. `sandbox` keeps the opaque origin
+// (no access to box cookies/APIs); `allow-scripts` + a hash-pinned `script-src`
+// runs ONLY our fallback script — any captured <script> or inline handler is
+// still refused. Styles/fonts/images stay unrestricted so the page renders and
+// images hot-link.
+const FROZEN_CSP = `sandbox allow-scripts; script-src '${FROZEN_SCRIPT_HASH}'`;
+
+/** Insert the fallback script just before </body> (or append if absent). */
+function injectFrozenFallback(html: string): string {
+  const tag = `<script>${FROZEN_FALLBACK_SCRIPT}</script>`;
+  const idx = html.lastIndexOf("</body>");
+  return idx === -1 ? html + tag : html.slice(0, idx) + tag + html.slice(idx);
+}
 
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
@@ -119,8 +148,11 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         // Range support: views and agents tail large attachments (e.g. a
         // sessions/history.jsonl) without pulling the whole file. Only the
         // requested slice is read from disk.
+        // Frozen pages are never range-served: we inject a fallback script into
+        // the full document, so partial responses would corrupt it (and they're
+        // small now that images hot-link). Range requests fall through to 200.
         const rangeHeader = request.headers["range"];
-        if (typeof rangeHeader === "string" && request.method !== "HEAD") {
+        if (!isFrozen && typeof rangeHeader === "string" && request.method !== "HEAD") {
           const range = parseByteRange(rangeHeader, stat.size);
           if (range === "unsatisfiable") {
             return reply
@@ -130,11 +162,6 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           }
           if (range !== null) {
             const slice = await readSlice(resolved, range);
-            if (isFrozen) {
-              reply
-                .header("Content-Security-Policy", "sandbox")
-                .header("X-Content-Type-Options", "nosniff");
-            }
             return reply
               .status(206)
               .header("Content-Type", contentType)
@@ -148,12 +175,19 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           // Malformed Range headers fall through to a normal 200 (per spec).
         }
 
-        const content = await fs.readFile(resolved);
         if (isFrozen) {
-          reply
-            .header("Content-Security-Policy", "sandbox")
-            .header("X-Content-Type-Options", "nosniff");
+          const html = injectFrozenFallback((await fs.readFile(resolved)).toString("utf8"));
+          return reply
+            .header("Content-Security-Policy", FROZEN_CSP)
+            .header("X-Content-Type-Options", "nosniff")
+            .header("Content-Type", contentType)
+            .header("Cache-Control", "no-cache")
+            .header("ETag", etag)
+            .header("Last-Modified", lastModified)
+            .send(html);
         }
+
+        const content = await fs.readFile(resolved);
         return reply
           .header("Content-Type", contentType)
           .header("Cache-Control", "no-cache")
