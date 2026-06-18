@@ -79,10 +79,17 @@ export type FieldDecl = ZodType | BodyField;
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
  *   the prime retrieval field for search and listings.
+ * - `content-type` — body encoding marker the host reads to know how to parse
+ *   the body (e.g. an XML-bodied card carries `application/x-card+xml`). It is a
+ *   structural field set by the serializer, not author data, so it is allowed on
+ *   every card type rather than redeclared per schema. Required now that the
+ *   frontmatter schema is `.strict()` — otherwise XML-bodied cards would be
+ *   rejected for carrying it.
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),
   contains: z.string().optional(),
+  "content-type": z.string().optional(),
 };
 
 /**
@@ -173,6 +180,13 @@ export function cardSchema<
     fields: config.fields,
     bodyFieldName,
     bodyField,
+    // Lenient (not `.strict()`): an unknown frontmatter key is stripped in
+    // memory, so a card that has drifted past its schema still loads, renders,
+    // and indexes — it lives in a usable middle-ground rather than vanishing.
+    // The unknown key is surfaced separately as a lint *warning* (see
+    // card-lint.ts) so it gets cleaned off disk eventually. A missing required
+    // field or wrong type still fails here at parse — those are genuine
+    // can't-use-this-card errors, not recoverable cruft.
     frontmatterSchema: z.object(frontmatterShape),
     globalFieldNames,
     searchable: config.searchable ?? true,
