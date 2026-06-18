@@ -3,10 +3,6 @@
  * uniform action response the popup renders from.
  */
 
-export interface SyncTabsMessage {
-  type: "syncTabs";
-}
-
 export interface CommentOnPageMessage {
   type: "commentOnPage";
   tabId: number;
@@ -14,7 +10,7 @@ export interface CommentOnPageMessage {
   destinationDir?: string;
 }
 
-export type ClerkMessage = SyncTabsMessage | CommentOnPageMessage;
+export type ClerkMessage = CommentOnPageMessage;
 
 export interface ActionFailure {
   ok: false;
@@ -28,5 +24,5 @@ export type ActionResponse = { ok: true } | ActionFailure;
 export function isClerkMessage(value: unknown): value is ClerkMessage {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return record.type === "syncTabs" || record.type === "commentOnPage";
+  return record.type === "commentOnPage";
 }

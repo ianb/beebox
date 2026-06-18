@@ -140,3 +140,24 @@ export async function buildVersionMarkers(absPath: string): Promise<string> {
   if (rev !== null) markers.push(`git:${rev}`);
   return markers.join(" ");
 }
+
+/** The full stamped state of an external file: drift markers + size + mtime. */
+export interface ExternalStamp {
+  /** `buildVersionMarkers` output — `sha256:<hex>` (drift primary) + optional `git:<rev>`. */
+  version: string;
+  /** File size in bytes. */
+  size: number;
+  /** File mtime as a full ISO instant. */
+  mtime: string;
+}
+
+/**
+ * Build the full stamp an extfile card records: the version markers (the drift
+ * signal) plus `size`/`mtime` (informational). One definition of "the file's
+ * stamped state" so `cb extfile sync` and any future stamper agree.
+ */
+export async function buildExternalStamp(absPath: string): Promise<ExternalStamp> {
+  const version = await buildVersionMarkers(absPath);
+  const stat = await fs.stat(absPath);
+  return { version, size: stat.size, mtime: stat.mtime.toISOString() };
+}

@@ -139,12 +139,57 @@ async function lintFrontmatterCard(input: {
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
   const errors =
     type === "commentary"
-      ? commentaryErrors({
-          fields: parsed.fields,
-          body: typeof bodyField === "string" ? bodyField : "",
-        })
-      : [];
+      ? commentaryErrors({ body: typeof bodyField === "string" ? bodyField : "" })
+      : type === "extfile"
+        ? extfileErrors({ fields: parsed.fields })
+        : [];
   return { path, errors, warnings };
+}
+
+/**
+ * Cross-field validation for extfile cards that Zod can't express: `href` must
+ * be a parseable `file:` URL (the schema only types it as a string), and a
+ * present `version` must carry a well-formed `sha256:<hex>` marker (it is
+ * compared byte-for-byte against the live file's hash, so a malformed one would
+ * never match). Whether the href *resolves* on this machine is deliberately not
+ * checked here — that's machine-specific and the renderer/`cb extfile sync`
+ * report it at use time.
+ */
+function extfileErrors(input: { fields: Record<string, unknown> }): LintIssue[] {
+  const { fields } = input;
+  const errors: LintIssue[] = [];
+  const href = fields["href"];
+  // A missing href is already a schema (Zod) error from parseCardText; here we
+  // only refine a present href's shape.
+  if (typeof href === "string" && href !== "" && !isFileUrl(href)) {
+    errors.push({
+      type: "validation",
+      severity: "error",
+      message: `extfile href must be a file: URL (got "${href}")`,
+    });
+  }
+  const version = fields["version"];
+  if (typeof version === "string" && version !== "" && !hasSha256Marker(version)) {
+    errors.push({
+      type: "validation",
+      severity: "error",
+      message: `extfile version must contain a sha256:<hex> marker (got "${version}")`,
+    });
+  }
+  return errors;
+}
+
+function isFileUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "file:";
+  } catch (_e) {
+    return false;
+  }
+}
+
+/** A space-separated marker set containing at least one `sha256:<hex>` token. */
+function hasSha256Marker(version: string): boolean {
+  return version.split(/\s+/).some((marker) => /^sha256:[\da-f]+$/.test(marker));
 }
 
 /**
@@ -201,27 +246,17 @@ function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
 }
 
 /**
- * Validation cardworks/Zod can't express for commentary cards: at most one of
- * `defaultHref`/`defaultRef`, and Markdoc validation of the body's tags (which
- * fires the `{% source %}` ref-xor-href rule — nothing else runs
- * `Markdoc.validate`, so this is where it lands).
+ * Validation cardworks/Zod can't express for commentary cards: Markdoc
+ * validation of the body's tags (which fires the `{% source %}` ref-xor-href
+ * rule — nothing else runs `Markdoc.validate`, so this is where it lands).
  *
- * Neither default is allowed: an attach-scoped commentary defaults to its
- * *containing* document (the card that owns the attach scope), so it needs no
- * explicit default target. Both at once is still an error.
+ * Commentary is attach-only — it carries no target field of its own. A leftover
+ * `defaultHref`/`defaultRef`/`targets` from the pre-attach era is caught by the
+ * generic unknown-key warning (the fields are no longer in the schema).
  */
-function commentaryErrors(input: { fields: Record<string, unknown>; body: string }): LintIssue[] {
-  const { fields, body } = input;
+function commentaryErrors(input: { body: string }): LintIssue[] {
+  const { body } = input;
   const errors: LintIssue[] = [];
-  const hasHref = typeof fields["defaultHref"] === "string" && fields["defaultHref"] !== "";
-  const hasRef = typeof fields["defaultRef"] === "string" && fields["defaultRef"] !== "";
-  if (hasHref && hasRef) {
-    errors.push({
-      type: "validation",
-      severity: "error",
-      message: "commentary card takes at most one of defaultHref or defaultRef, not both",
-    });
-  }
   for (const message of validateMarkdocBody(body)) {
     errors.push({ type: "validation", severity: "error", message });
   }

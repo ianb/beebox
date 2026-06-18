@@ -94,10 +94,6 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
     setSelectedDir(e.target.value);
   }, []);
 
-  const handleSyncTabs = useCallback(() => {
-    runAction({ label: "tabs", message: { type: "syncTabs" }, okText: "Tabs synced" });
-  }, [runAction]);
-
   const handleOpenBox = useCallback(() => {
     chrome.tabs.create({ url: box.boxUrl });
   }, [box.boxUrl]);
@@ -113,16 +109,6 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
           onComment={handleComment}
         />
       ) : null}
-      <div className="space-y-2 border-t border-gray-100 pt-3">
-        <button
-          type="button"
-          onClick={handleSyncTabs}
-          disabled={busy !== null}
-          className="rounded bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-        >
-          {busy === "tabs" ? "Syncing…" : "Sync tabs"}
-        </button>
-      </div>
       {notice !== null ? <NoticeLine notice={notice} onOpenBox={handleOpenBox} /> : null}
     </div>
   );
