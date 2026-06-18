@@ -1,5 +1,12 @@
 # Schema `validate` hook — co-locate non-Zod card validation with its schema
 
+> **Status: implemented (2026-06-18).** Frozen historical record. The shipped
+> convention lives in `docs/adding-schemas.md`, the box-local schema guide
+> (`src/core/box-templates.ts` → `config/schemas/CLAUDE.md`), and the
+> `commentary.tsx` / `extfile.tsx` schema modules. As-shipped deviations from
+> the original plan are flagged inline in the Rollout / Knowledge-audits
+> sections.
+
 Add a first-class `validate` hook to cardworks' `cardSchema()` so that
 validation a Zod schema can't express (cross-field rules, body parsing) lives
 **on the schema that defines the card type**, instead of in a central
