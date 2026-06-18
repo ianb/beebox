@@ -7,6 +7,7 @@ import "./builtins";
 import "./markdown-card";
 import "./commentary";
 import "./webpage";
+import "./extfile";
 import "./image";
 import "./pdf";
 import "./recipe";

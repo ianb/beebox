@@ -10,63 +10,14 @@
  */
 
 import { useCallback, useRef } from "react";
-import { trpc } from "../lib/trpc";
 import { Markdown } from "./Markdown";
 import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { getApiBase } from "../api";
 import { type RendererProps } from "../renderers";
-import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { resolveRelativePath } from "../lib/view-url";
 import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
-
-/**
- * Box-relative attach-scope directory for a card path:
- * `box/x/Foo.webpage.card` → `box/x/Foo.attach`. Mirrors `attachDirFor` in
- * `src/lib/attach-path.ts`, reimplemented here because that module sits outside
- * the frontend tsconfig's roots.
- */
-function attachDirForCard(cardPath: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  const dir = slash === -1 ? "" : cardPath.slice(0, slash);
-  const name = slash === -1 ? cardPath : cardPath.slice(slash + 1);
-  const noCard = name.endsWith(".card") ? name.slice(0, -".card".length) : name;
-  const lastDot = noCard.lastIndexOf(".");
-  const base = lastDot === -1 ? noCard : noCard.slice(0, lastDot);
-  const attach = `${base}.attach`;
-  return dir === "" ? attach : `${dir}/${attach}`;
-}
-
-type JumpToQuote = (quoteText: string) => Promise<boolean>;
-
-/** One commentary card's remarks, fetched from the page's attach scope. */
-function CommentaryRemarks({
-  cardPath,
-  onNavigate,
-  onJumpToQuote,
-}: {
-  cardPath: string;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-  onJumpToQuote: JumpToQuote;
-}) {
-  const { data, isLoading, error } = trpc.card.get.useQuery({ path: cardPath });
-  if (isLoading) {
-    return <Text as="div" tone="subtle" className="italic">Loading commentary…</Text>;
-  }
-  if (error !== null) {
-    return <Text as="div" tone="danger">Couldn’t load commentary.</Text>;
-  }
-  const body = data?.body;
-  if (body === undefined || body.trim() === "") {
-    return <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>;
-  }
-  return (
-    <div data-card-section="body">
-      <Markdown prose="block" onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} basePath={cardPath}>
-        {body}
-      </Markdown>
-    </div>
-  );
-}
+import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";
 
 export function WebpageView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
@@ -84,15 +35,6 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
       ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozen)}`
       : null;
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
-
-  // Discover commentary in the page's attach scope. A missing scope browses to
-  // an empty result (the route swallows readdir errors), so no commentary just
-  // renders nothing.
-  const attachDir = attachDirForCard(data.path);
-  const { data: browse } = trpc.status.browse.useQuery({ path: attachDir });
-  const commentaryPaths = (browse?.cards ?? [])
-    .filter((c) => c.type === "commentary")
-    .map((c) => c.relativePath);
 
   // A source chip jumps to its verbatim span in the page body (matched in-pane
   // and highlighted via the CSS Custom Highlight API); failing that, it opens
@@ -143,23 +85,9 @@ export function WebpageView({ data, onNavigate }: RendererProps) {
       ) : null}
       {meta}
 
-      {commentaryPaths.length > 0 ? (
-        // Commentary leads — the boxholder's remarks, with chips that jump down
-        // into the page body below.
-        <div className="mb-4 flex flex-col gap-3 rounded-md border border-warm-200 p-3">
-          <Text as="div" size="xs" tone="subtle" className="font-medium uppercase tracking-wide">
-            Commentary
-          </Text>
-          {commentaryPaths.map((cardPath) => (
-            <CommentaryRemarks
-              key={cardPath}
-              cardPath={cardPath}
-              onNavigate={onNavigate}
-              onJumpToQuote={onJumpToQuote}
-            />
-          ))}
-        </div>
-      ) : null}
+      {/* Commentary leads — the boxholder's remarks, with chips that jump down
+          into the page body below. */}
+      <AttachedCommentary cardPath={data.path} onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} />
 
       <div className="min-w-0" data-card-section="body" ref={pageBodyRef}>
         {body !== undefined && body.trim() !== "" ? (
