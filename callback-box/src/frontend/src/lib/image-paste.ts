@@ -2,16 +2,26 @@
  * Utilities for accepting images pasted/dropped into the chat composer.
  *
  * Images get downscaled client-side before being encoded as base64 so we
- * don't ship multi-megabyte phone photos through JSON. We re-encode to
- * JPEG at 0.85 quality (photos) or keep PNG when the source is PNG with
- * possible transparency.
+ * don't ship multi-megabyte phone photos through JSON. We re-encode to WebP —
+ * smaller than JPEG at matching quality, and (unlike JPEG) it keeps alpha, so
+ * PNG sources convert cleanly instead of needing a passthrough. PNG-origin
+ * images get a higher quality so lossy WebP doesn't soften sharp edges. If a
+ * browser can't encode WebP, canvas.toBlob falls back to PNG and we label the
+ * blob by its actual type.
+ *
+ * This is the transient chat-attachment path (already downscaled). Archival
+ * *intake* compression — lossless, high-effort, for anything kept long-term —
+ * is a separate server-side concern (see docs/ideas.md, "AVIF / WebP for
+ * stored images"); the browser canvas can do neither.
  */
 
 /** Max longest-side dimension after downscaling. */
 const MAX_DIMENSION = 1920;
 
-/** JPEG quality for re-encoded photos. */
-const JPEG_QUALITY = 0.85;
+/** WebP quality for re-encoded photos (≈ JPEG 0.85 visually, smaller file). */
+const WEBP_QUALITY_PHOTO = 0.85;
+/** Higher WebP quality for PNG-origin images (screenshots/graphics, sharp edges). */
+const WEBP_QUALITY_GRAPHIC = 0.92;
 
 /**
  * Something went wrong while decoding/re-encoding a pasted or dropped image.
@@ -88,9 +98,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 /**
  * Downscale and re-encode an image blob for chat attachment.
  *
- * Skips resize when the source already fits within MAX_DIMENSION. Keeps
- * PNG encoding for PNG sources (preserves transparency/screenshots);
- * converts everything else to JPEG.
+ * Skips resize when the source already fits within MAX_DIMENSION. Re-encodes
+ * to WebP (PNG-origin images at a higher quality to protect sharp edges);
+ * falls back to PNG if the browser can't encode WebP.
  */
 export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const img = await readImageElement(blob);
@@ -101,8 +111,9 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const width = Math.round(srcW * scale);
   const height = Math.round(srcH * scale);
 
-  const isPng = blob.type === "image/png";
-  const outputType = isPng ? "image/png" : "image/jpeg";
+  // PNG-origin images (screenshots/graphics) get the higher quality; photos
+  // the standard one. WebP keeps alpha, so the old PNG passthrough is gone.
+  const quality = blob.type === "image/png" ? WEBP_QUALITY_GRAPHIC : WEBP_QUALITY_PHOTO;
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -114,16 +125,19 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const outBlob = await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new ImageProcessingError(IMG_ERR.toBlob))),
-      outputType,
-      isPng ? undefined : JPEG_QUALITY
+      "image/webp",
+      quality
     );
   });
 
+  // canvas.toBlob falls back to image/png when WebP encoding isn't supported,
+  // so trust the produced blob's type rather than the type we requested.
+  const mimeType = outBlob.type || "image/webp";
   const dataBase64 = await blobToBase64(outBlob);
   const objectUrl = URL.createObjectURL(outBlob);
 
   return {
-    mimeType: outputType,
+    mimeType,
     dataBase64,
     objectUrl,
     width,
