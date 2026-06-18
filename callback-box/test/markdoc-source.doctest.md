@@ -1,9 +1,11 @@
 # Markdoc `{% source %}` — ref/href validation
 
-The `source` tag carries provenance. It takes **exactly one** of `ref` (an
+The `source` tag carries provenance. It takes **at most one** of `ref` (an
 in-box, `cb mv`-tracked target) or `href` (an external full URL), plus optional
-anchoring metadata (`pos`, `version`, `placement`). The tag's `validate` rule
-enforces the ref/href exclusivity.
+anchoring metadata (`pos`, `version`, `placement`). A bare anchor with neither
+targets the **containing document** — the ref-free default for commentary
+attached to the page it annotates. The tag's `validate` rule rejects only
+*both* at once.
 
 Markdoc does not run `validate` during normal `parse`/`transform` rendering —
 `card-lint` invokes `Markdoc.validate` on commentary card bodies so the rule
@@ -40,12 +42,12 @@ check('{% source ref="/store/notes/Bread.doc.card" as="summary" %}\nshe went bac
 valid
 ```
 
-## Neither ref nor href fails
+## Neither ref nor href is valid — targets the containing document
 
 ```
-check('{% source pos="body" %}\norphaned span\n{% /source %}')
+check('{% source pos="body" %}\nthe span, anchored to this page\n{% /source %}')
 =>
-source-ref-xor-href
+valid
 ```
 
 ## Both ref and href fails

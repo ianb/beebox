@@ -27,14 +27,17 @@ export interface AttachmentItem {
 
 export function AttachmentPanel({
   attachments,
+  pendingCount,
   onRemove,
 }: {
   attachments: AttachmentItem[];
+  /** Images pasted/dropped but still encoding — shown as placeholder tiles. */
+  pendingCount: number;
   onRemove: (id: number) => void;
 }) {
   const lightbox = useLightbox();
 
-  if (attachments.length === 0) return null;
+  if (attachments.length === 0 && pendingCount === 0) return null;
 
   const openAt = (clickedId: number) => {
     const images = attachments.map((a) => ({
@@ -55,6 +58,25 @@ export function AttachmentPanel({
           onRemove={() => onRemove(att.id)}
         />
       ))}
+      {Array.from({ length: pendingCount }, (_unused, i) => (
+        <PendingThumb key={`pending-${i}`} />
+      ))}
+    </div>
+  );
+}
+
+/** Placeholder tile shown while a pasted image is still being encoded. */
+function PendingThumb() {
+  return (
+    <div
+      className="w-16 h-16 rounded border border-warm-300 bg-warm-200 flex items-center justify-center"
+      title="Processing image…"
+      aria-label="Processing image"
+    >
+      <svg className="w-5 h-5 animate-spin text-warm-500" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth={4} />
+        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 0 1 8-8V0C5.373 0 0 5.373 0 12h4z" />
+      </svg>
     </div>
   );
 }

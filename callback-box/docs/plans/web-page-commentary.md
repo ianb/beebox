@@ -76,8 +76,25 @@ extension.
   The frozen snapshot is linked from the header and served by `/api/files` as
   `text/html` with `Content-Security-Policy: sandbox` + `nosniff` (scripts
   disabled, null origin) so the untrusted captured HTML can't reach the box.
-- Knowledge-audit entries (below) are written-as-proposed but **not yet added
-  to `knowledge-audits.yaml` or run.**
+- **Anchoring + links (2026-06-15, from dogfooding).** Clicking a `{% source %}`
+  chip now jumps to its verbatim span using Chrome's text-fragment matching
+  algorithm (`text-fragments-polyfill`): it matches the quote in the in-pane
+  readable markdown (scoped to the saved-page pane) and highlights it via the
+  CSS Custom Highlight API; if the quote isn't in the markdown it opens the
+  frozen original at the quote with a native `#:~:text=` fragment. So the
+  agent's `pos` quality no longer matters for navigation — the match is on the
+  quoted text. Two fixes alongside: the chip's `attach/readable.md` ref now
+  resolves through
+  `resolveRelativePath` (was navigating to a dead literal path), and captured
+  article links are absolutized against the source URL at extraction (site-/
+  doc-relative links were resolving into the box). The `pos`-precision idea
+  (heading/line anchors in the conversion) is moot for navigation now, though
+  it could still help a human reading the raw markdown.
+- ~~Knowledge-audit entries written-as-proposed but not run.~~ **DONE
+  (2026-06-14)** — three entries added to `knowledge-audits.yaml`
+  (`commentary-destination`, `commentary-capture-files`,
+  `commentary-anchors-author`), all pass `knows_directly`. The capture-files
+  one drove a guide addition (the bundle layout in "How Items Enter the Box").
 - Real boxes need `*.frozen filter=lfs` in `.gitattributes` (test1 already has
   it) before they receive frozen attachments — wire into `cb init` /
   adding-a-box.

@@ -26,11 +26,28 @@
  * handing the tag to React.
  */
 
-import type { ReactNode } from "react";
-import type { NavigateHint, ViewTarget } from "../lib/view-url";
+import { isValidElement, type ReactNode } from "react";
+import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
 
 export interface SourceLinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /** The host doc's path, so relative / `attach/` refs resolve correctly. */
+  basePath: string | undefined;
+  /**
+   * Optional: jump to this source's verbatim span in a sibling pane (the saved
+   * page beside a commentary). Returns true if it scrolled there; false → fall
+   * back to navigating to the target doc.
+   */
+  onJumpToQuote: ((quoteText: string) => Promise<boolean>) | undefined;
+}
+
+/** Plain text of a React subtree — the verbatim words inside a {% quote %}. */
+function flattenText(node: ReactNode): string {
+  if (typeof node === "string") return node;
+  if (typeof node === "number") return String(node);
+  if (Array.isArray(node)) return node.map(flattenText).join("");
+  if (isValidElement<{ children?: ReactNode }>(node)) return flattenText(node.props.children);
+  return "";
 }
 
 /**
@@ -57,16 +74,17 @@ function sourceLabel(sourceRef: string): string {
 }
 
 /**
- * Resolve a ref to a `ViewTarget` for navigation. Mirrors the
- * absolute-vs-relative resolution rule used by cardworks' ref system:
- * leading `/` is box-root-absolute (strip the `/`); anything else is
- * already box-root-relative for navigation purposes. Fragments after
- * `#` are dropped from the path; the router doesn't take them today.
+ * Resolve a ref to a `ViewTarget` for navigation, against the host doc's
+ * `basePath`. Uses the same rule as markdown links (`resolveRelativePath`):
+ * leading `/` is box-root-absolute, `attach/` resolves into the host card's
+ * attach scope, anything else is relative to the host doc's directory. So a
+ * commentary anchor's `ref="attach/readable.md"` lands on the actual
+ * `<dir>/<card>.attach/readable.md`, not the literal path. Fragments after `#`
+ * are dropped; the router doesn't take them today.
  */
-function refToViewTarget(sourceRef: string): ViewTarget {
+function refToViewTarget(sourceRef: string, basePath: string | undefined): ViewTarget {
   const noFrag = sourceRef.split("#")[0] ?? sourceRef;
-  const path = noFrag.replace(/^\/+/, "");
-  return { path, viewer: null, params: {}, zoom: false };
+  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {}, zoom: false };
 }
 
 /** Short label from an external `href` — basename of the file:/URL path. */
@@ -81,24 +99,68 @@ function externalLabel(href: string): string {
 function CitationChip({
   sourceRef,
   as,
+  quoteText,
   linkCtx,
 }: {
   sourceRef: string;
   as: string | undefined;
+  quoteText: string;
   linkCtx: SourceLinkContext;
 }): ReactNode {
   const label = sourceLabel(sourceRef);
   const title = as === undefined || as === ""
     ? `Source: ${sourceRef}`
     : `${as} — ${sourceRef}`;
+  const navigate = (): void => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label });
+  // Prefer jumping to the verbatim span in the sibling pane (commentary →
+  // saved page); fall back to navigating to the target doc when there's no
+  // jump handler or the text isn't found there.
+  const handleClick = (): void => {
+    const jump = linkCtx.onJumpToQuote;
+    if (jump !== undefined && quoteText !== "") {
+      void jump(quoteText).then((handled) => {
+        if (!handled) navigate();
+      });
+      return;
+    }
+    navigate();
+  };
   return (
     <button
       type="button"
-      onClick={() => linkCtx.onNavigate(refToViewTarget(sourceRef), { label })}
+      onClick={handleClick}
       title={title}
       className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
     >
       [→ {label}{as !== undefined && as !== "" ? <span className="italic">{`: ${as}`}</span> : null}]
+    </button>
+  );
+}
+
+/**
+ * Container citation: a ref-free anchor targets the *containing document* (the
+ * page that owns this commentary's attach scope). There's no separate doc to
+ * navigate to — clicking only jumps to the verbatim span in the page body.
+ */
+function ContainerChip({
+  quoteText,
+  linkCtx,
+}: {
+  quoteText: string;
+  linkCtx: SourceLinkContext;
+}): ReactNode {
+  const handleClick = (): void => {
+    const jump = linkCtx.onJumpToQuote;
+    if (jump !== undefined && quoteText !== "") void jump(quoteText);
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      title="Jump to this passage on the page"
+      className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
+    >
+      [→]
     </button>
   );
 }
@@ -127,14 +189,15 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
   SourceInline: (props: SourceProps) => ReactNode;
   SourceBlock: (props: SourceProps) => ReactNode;
 } {
-  function Citation({ sourceRef, href, as, version }: SourceProps): ReactNode {
+  function Citation({ sourceRef, href, as, version, children }: SourceProps): ReactNode {
+    const quoteText = flattenText(children);
     if (sourceRef !== undefined && sourceRef !== "") {
-      return <CitationChip sourceRef={sourceRef} as={as} linkCtx={linkCtx} />;
+      return <CitationChip sourceRef={sourceRef} as={as} quoteText={quoteText} linkCtx={linkCtx} />;
     }
     if (href !== undefined && href !== "") {
       return <ExternalChip href={href} version={version} />;
     }
-    return <CitationChip sourceRef="" as={as} linkCtx={linkCtx} />;
+    return <ContainerChip quoteText={quoteText} linkCtx={linkCtx} />;
   }
 
   function SourceInline(props: SourceProps) {

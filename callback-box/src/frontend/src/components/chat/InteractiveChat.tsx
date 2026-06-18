@@ -105,7 +105,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const mute = useChatMute();
   const tabs = useChatTabs();
   const { activeView } = tabs;
-  useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView });
+  useCompanionDeepLink({ companion, onZoomView: tabs.onZoomView, boxSlug });
   const cardSend = useCompanionCard({ initialCard: card, activeView, onZoomView: tabs.onZoomView, boxSlug, error });
   const schedules = useChatSchedules({ messages, isStreaming, send });
   usePendingMessagePoll({ pendingCount: pendingMessages.length, sessionId, send });

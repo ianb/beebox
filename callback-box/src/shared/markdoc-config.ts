@@ -136,10 +136,11 @@ const quote: Schema = {
 
 const source: Schema = {
   attributes: {
-    // In-box target (box-relative, `cb mv`-tracked) XOR external target
-    // (`href`, a full URL — untracked). Exactly one is required; the `validate`
-    // below enforces it. `ref` is no longer `required: true` on its own because
-    // `href` can stand in its place.
+    // In-box target (box-relative, `cb mv`-tracked) or external target
+    // (`href`, a full URL — untracked). At most one; the `validate` below
+    // enforces it. Neither is allowed: a bare `{% source %}` targets the
+    // **containing document** (the card that owns this body's attach scope) —
+    // the ref-free default for commentary attached to the page it annotates.
     ref: { type: String },
     href: { type: String },
     as: { type: String },
@@ -157,14 +158,12 @@ const source: Schema = {
     const href: unknown = node.attributes["href"];
     const hasRef = typeof ref === "string" && ref !== "";
     const hasHref = typeof href === "string" && href !== "";
-    if (hasRef === hasHref) {
+    if (hasRef && hasHref) {
       return [
         {
           id: "source-ref-xor-href",
           level: "error",
-          message: hasRef
-            ? "{% source %} takes exactly one of `ref` or `href`, not both"
-            : "{% source %} requires exactly one of `ref` (in-box) or `href` (external)",
+          message: "{% source %} takes at most one of `ref` or `href`, not both",
         },
       ];
     }

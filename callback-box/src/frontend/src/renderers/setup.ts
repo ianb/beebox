@@ -6,6 +6,7 @@
 import "./builtins";
 import "./markdown-card";
 import "./commentary";
+import "./webpage";
 import "./image";
 import "./pdf";
 import "./recipe";

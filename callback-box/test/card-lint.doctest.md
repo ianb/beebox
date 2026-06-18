@@ -245,7 +245,7 @@ result.totalErrors
 => 0
 ```
 
-## A commentary card with BOTH default targets is an error (xor)
+## A commentary card with BOTH default targets is an error (at-most-one)
 
 ```
 const box = await makeTmpBox();
@@ -259,10 +259,13 @@ const result = await lintCardsDispatch(
   { loader, ctx },
 );
 result.results[0]!.errors[0]!.message
-=> commentary card requires exactly one of defaultHref or defaultRef
+=> commentary card takes at most one of defaultHref or defaultRef, not both
 ```
 
-## A commentary card with NEITHER default target is an error (xor)
+## A commentary card with NEITHER default target is valid (container is the default)
+
+An attach-scoped commentary defaults to its containing document, so it needs no
+explicit default target.
 
 ```
 const box = await makeTmpBox();
@@ -275,26 +278,27 @@ const result = await lintCardsDispatch(
   [box.path("store/review/Neither.commentary.card")],
   { loader, ctx },
 );
-result.results[0]!.errors[0]!.message
-=> commentary card requires exactly one of defaultHref or defaultRef
+result.totalErrors
+=> 0
 ```
 
-## An anchor-less `{% source %}` in a commentary body is an error
+## A ref-free `{% source %}` in a commentary body is valid — it targets the container
 
-Markdoc validation runs on commentary bodies (it does not run elsewhere), so a
-`{% source %}` with neither `ref` nor `href` is caught here.
+Markdoc validation runs on commentary bodies (it does not run elsewhere). A
+`{% source %}` with neither `ref` nor `href` points at the containing document
+and is allowed; only *both* at once is an error.
 
 ```
 const box = await makeTmpBox();
 await box.write(
-  "store/review/Bad.commentary.card",
-  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\n{% source pos=\"body\" %}orphan span{% /source %}\n",
+  "store/review/RefFree.commentary.card",
+  "---\ntype: commentary\n---\n{% source pos=\"body\" %}a span anchored to this page{% /source %}\n",
 );
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
-  [box.path("store/review/Bad.commentary.card")],
+  [box.path("store/review/RefFree.commentary.card")],
   { loader, ctx },
 );
-result.results[0]!.errors[0]!.message.includes("exactly one of")
-=> true
+result.totalErrors
+=> 0
 ```

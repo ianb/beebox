@@ -134,12 +134,16 @@ function makeChatMarkdownComponents(
           </button>
         );
       }
+      const panelLabel = typeof children === "string" ? children : target.path;
       return (
         <FileView
           path={target.path}
           mode="chat"
           rendererName={target.viewer}
           onNavigate={onNavigate}
+          {...(onZoomView
+            ? { onOpenInPanel: () => onZoomView({ target: { ...target, zoom: false }, label: panelLabel }) }
+            : {})}
         />
       );
     }

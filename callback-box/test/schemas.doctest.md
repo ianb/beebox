@@ -14,6 +14,7 @@ import {
 } from "../src/schemas/index.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../src/schemas/calendar-review-job.js";
+import { WebpageSchema, createWebpageTemplate } from "../src/schemas/webpage.js";
 import { parseCard } from "cardworks";
 ```
 
@@ -34,6 +35,9 @@ getCardTypes().includes("intake-job")
 getCardTypes().includes("calendar-review-job")
 => true
 
+getCardTypes().includes("webpage")
+=> true
+
 ```
 
 XML schemas have a `tagName`; Phase 2 frontmatter schemas (memo,
@@ -45,6 +49,9 @@ MemoSchema.type
 
 QuestionSchema.type
 => question
+
+WebpageSchema.type
+=> webpage
 
 ```
 
@@ -256,4 +263,48 @@ const out = createCalendarReviewJobTemplate({
 });
 out.includes("priority: low")
 => true
+```
+
+## Webpage
+
+A webpage card is a captured external page: provenance in frontmatter, the
+readable rendering inline as the body.
+
+```
+createWebpageTemplate({
+  title: "Example Page",
+  source: "https://example.com/article",
+  capturedAt: "2026-06-15T12:00:00Z",
+  content: "The readable page body.",
+})
+=>
+---
+title: Example Page
+source: https://example.com/article
+captured: 2026-06-15T12:00:00Z
+---
+The readable page body.
+```
+
+Optional capture metadata and the frozen-snapshot ref are included only when
+set:
+
+```
+createWebpageTemplate({
+  title: "Example Page",
+  source: "https://example.com/article",
+  capturedAt: "2026-06-15T12:00:00Z",
+  content: "Body.",
+  siteName: "Example",
+  frozenRef: "attach/page.frozen",
+})
+=>
+---
+title: Example Page
+source: https://example.com/article
+captured: 2026-06-15T12:00:00Z
+siteName: Example
+frozen: attach/page.frozen
+---
+Body.
 ```

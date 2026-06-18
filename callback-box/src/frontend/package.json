@@ -29,6 +29,7 @@
     "react-dom": "^18.3.1",
     "react-textarea-autosize": "^8.5.9",
     "tailwind-merge": "^3.5.0",
+    "text-fragments-polyfill": "^6.7.0",
     "xstate": "^5.28.0"
   },
   "devDependencies": {

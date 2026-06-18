@@ -20,8 +20,10 @@ import { z } from "zod";
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
   fields: {
     title: z.string().optional(),
-    // The default target the body's anchors point at. Exactly one of these is
-    // required (enforced in card-lint). `defaultHref` is an external full URL
+    // The default target the body's anchors point at. At most one of these
+    // (enforced in card-lint); omit both when the commentary lives in the
+    // attach scope of the document it annotates — then the *containing*
+    // document is the default target. `defaultHref` is an external full URL
     // (file:, http(s):) — untracked by `cb mv`; `defaultRef` is an in-box,
     // box-relative path.
     defaultHref: z.string().optional(),
@@ -46,10 +48,12 @@ boxholder's selections into durable, anchored commentary.
 
 ## Frontmatter
 
-- \`defaultHref\` **xor** \`defaultRef\` — the default target every body anchor
-  points at unless it says otherwise. \`defaultHref\` is an external full URL
-  (\`file:/abs/path\`, or \`http(s):\`); \`defaultRef\` is an in-box path. Exactly
-  one; not both.
+- \`defaultHref\` / \`defaultRef\` — the default target every body anchor points
+  at unless it says otherwise. \`defaultHref\` is an external full URL
+  (\`file:/abs/path\`, or \`http(s):\`); \`defaultRef\` is an in-box path. **At most
+  one.** Omit both when this commentary lives in the attach scope of the
+  document it annotates (e.g. a \`.webpage.card\`) — the **containing document**
+  is then the default target, and bare \`{% source %}\` anchors point at it.
 - \`targets\` — optional list of additional external URLs to render alongside
   the default (for comparing the same file across worktrees, say).
 - \`title\` — optional human label.
@@ -81,47 +85,28 @@ append a \`{% source %}\` block:
   code-wrap \`<…>\`, escape a stray \` \`\` \`, \`{%\`, or \`%}\` so a span that
   contains markup neither breaks the tag nor renders wrong. This is faithful
   rendering of what was shown, not paraphrase.
-- Write an **explicit** target and \`version\` on *every* anchor (never rely on
-  inheritance): the card's default target unless the selection was against a
-  different one, and the \`version\` markers measured from the file
-  (\`sha256:\` content hash, plus \`git:\` when tracked).
+- Target: a source carries \`href\` (external) or \`ref\` (in-box), **never
+  both** — or **neither**, which points at the containing document (the default
+  target). For commentary attached to the page it annotates, leave the anchor
+  ref-free; add \`ref\`/\`href\` only when the selection was against a *different*
+  target. Always write \`version\` markers measured from the file (\`sha256:\`
+  content hash, plus \`git:\` when tracked).
 - Copy \`pos\` (and \`placement\`, if present) from the selection.
-- A source carries \`href\` (external) **xor** \`ref\` (in-box), never both.
 
 Your own framing stays *outside* the tag, as prose. One commentary card per
 coherent set of targets.`,
 });
 
 /**
- * Build a commentary card that wraps an *in-box* target (`defaultRef`) — the
- * shape produced by the web-page-commentary capture flow, where the readable
- * rendering is stored in the card's `.attach/` and the frozen page sits beside
- * it. The body is seeded with a link to the original source; the boxholder
- * (and chat agent) add `{% source %}` commentary afterward.
- *
- * `sourceUrl` is the live page the capture came from; it becomes the
- * "link to original" line in the body (commentary has no source frontmatter
- * field — see docs/plans/web-page-commentary.md Q2).
+ * Build an empty commentary card to live inside a host document's attach scope
+ * (e.g. a `.webpage.card`'s `<basename>.attach/`). It carries no default target
+ * — the *containing* document is the default, so bare `{% source %}` anchors
+ * point at it. The body starts empty; the boxholder (and chat agent) add
+ * `{% source %}` commentary afterward. Capture provenance lives on the host
+ * webpage card, not here.
  */
-export function createCommentaryTemplate(options: {
-  title: string;
-  defaultRef: string;
-  sourceUrl: string;
-  capturedAt: string;
-  frozenRef?: string;
-}): string {
-  const fields: Record<string, unknown> = {
-    title: options.title,
-    defaultRef: options.defaultRef,
-    source: options.sourceUrl,
-    // Just the calendar date, not the raw ISO timestamp.
-    captured: options.capturedAt.slice(0, 10),
-  };
-  if (options.frozenRef !== undefined && options.frozenRef !== "") {
-    fields["frozen"] = options.frozenRef;
-  }
-  const yamlText = stringifyYaml(fields);
-  // Body starts empty: the page's metadata lives in frontmatter (rendered as a
-  // header), leaving the body for the boxholder's actual commentary.
+export function createCommentaryTemplate(options: { title?: string | undefined }): string {
+  const hasTitle = options.title !== undefined && options.title !== "";
+  const yamlText = hasTitle ? stringifyYaml({ title: options.title }) : "";
   return `---\n${yamlText}---\n`;
 }

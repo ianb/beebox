@@ -2546,3 +2546,68 @@ tests:
       or any CORS workaround.
     correct_contains: ["adapterFetch"]
     tags: [views, adapters]
+
+  # === Web-page capture + commentary (clerk) ===
+  #
+  # Conventions from docs/plans/webpage-card-and-commentary.md. The landmark
+  # <destination for="…"> role and the capture flow are documented in the agent
+  # guide (behavior.ts + box-shape.ts) + the webpage/commentary schema
+  # instructions.
+  #
+  # Status (2026-06-15): all 4 pass (verified). Captured page is a
+  # .webpage.card; the boxholder's remarks are a separate .commentary.card in
+  # its attach scope. Audits updated for the split, plus a new
+  # webpage-vs-commentary entry.
+
+  - id: commentary-destination
+    prompt: >
+      A boxholder wants a directory to be the place their saved web-page
+      commentary documents get filed. How does a landmark mark a directory as
+      a commentary destination?
+    expected_level: knows_directly
+    watch_for: >
+      Names <destination for="commentary"> on the landmark card. Does not
+      invent a new role, conflate it with <navigation>, or suggest editing
+      app source.
+    correct_contains: ["destination", "commentary"]
+    tags: [landmarks, commentary]
+
+  - id: commentary-capture-files
+    prompt: >
+      The boxholder captures a web page with the clerk browser extension's
+      "Comment on this page" action. What files appear in the box?
+    expected_level: knows_directly
+    watch_for: >
+      A .webpage.card (the readable rendering as its body, with
+      source/captured/frozen frontmatter) plus the frozen snapshot at
+      attach/page.frozen, and a separate .commentary.card inside the webpage
+      card's attach scope for the remarks. Must not describe a single fused
+      commentary card with attach/readable.md.
+    correct_contains: ["webpage", "frozen"]
+    tags: [commentary, clerk, webpage]
+
+  - id: webpage-vs-commentary
+    prompt: >
+      In the box, what's the difference between a .webpage.card and a
+      .commentary.card?
+    expected_level: knows_directly
+    watch_for: >
+      webpage = a captured external page (readable markdown body + the original
+      URL/capture provenance + a frozen snapshot). commentary = the boxholder's
+      remarks about a document, living in that document's attach scope, with
+      {% source %} anchors; a ref-free anchor points at the containing page.
+      Must not conflate the two or say commentary holds the captured page.
+    correct_contains: ["webpage", "commentary"]
+    tags: [commentary, webpage]
+
+  - id: commentary-anchors-author
+    prompt: >
+      In a commentary card, who turns the boxholder's selected spans into
+      {% source %} anchors — the browser extension, or the box's chat agent?
+    expected_level: knows_directly
+    watch_for: >
+      The chat agent authors the anchors from the user's selection; the
+      extension only captures the page (readable + frozen) and creates the
+      card. Must not credit the extension with the anchoring.
+    correct_contains_any: ["chat agent", "the agent", "box's agent", "assistant"]
+    tags: [commentary]

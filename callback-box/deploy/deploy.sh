@@ -33,6 +33,14 @@ RSYNC_OPTS=(-az --delete
   --exclude 'deploy-history.json'
 )
 
+# Reconcile local node_modules to the committed lockfile before any local
+# build. A just-merged dependency change (added/removed dep) otherwise builds
+# the frontend/cardworks against stale modules and fails — this has bitten the
+# auto-deploy repeatedly. Frozen so it's deterministic and never rewrites the
+# lockfile; a no-op when already in sync.
+echo "Reconciling local deps..."
+(cd "$MONO_DIR" && HUSKY=0 pnpm install --frozen-lockfile --silent)
+
 # Build frontend locally (fast — already has node_modules)
 if [[ "$SKIP_FRONTEND" != true ]]; then
   echo "Building frontend..."

@@ -155,12 +155,13 @@ function ComposerRegion(props: ChatBodyProps) {
     typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
   } = props;
   const { speechPlayback, transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { attachments, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
+  const { attachments, pendingImageCount, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
   const { selections: selectionItems, removeSelection } = selections;
   const { handleSend, handleKeyDown, handleInterrupt, handlePaste, handleDrop } = actions;
   return (
     <ChatComposerSection
       attachments={attachments}
+      pendingImageCount={pendingImageCount}
       fileAttachments={fileAttachments}
       selections={selectionItems}
       onRemoveSelection={removeSelection}

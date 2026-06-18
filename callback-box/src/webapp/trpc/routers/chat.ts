@@ -17,6 +17,7 @@ import {
   loadHistoryEntries,
   resolveSessionLogPath,
 } from "../../../core/chat-session-history.js";
+import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
 import { getSessionMetadata } from "../../../cli/lib/session.js";
 
 const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
@@ -187,6 +188,28 @@ export const chatRouter = router({
     .query(async ({ ctx, input }) => {
       const sessionId = await getLastSessionForDirectory(ctx.boxRoot, input.contextDir);
       return { sessionId };
+    }),
+
+  /**
+   * Resolve where a "chat about this card" click should land: the nearest
+   * enclosing landmark directory for the card, plus the most-recent session
+   * already bound to it (null when none exists, so the caller starts a new
+   * one). The card path is validated here — it flows into `?card=` and thence
+   * `card.get`, so reject anything that could escape the box.
+   */
+  openForCard: publicProcedure
+    .input(
+      z.object({
+        cardPath: z
+          .string()
+          .min(1)
+          .refine(isBoxRelativeCardPath, "card path must be box-relative and contain no '..' segments"),
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<{ contextDir: string; sessionId: string | null }> => {
+      const contextDir = await nearestLandmarkDir(ctx.boxRoot, { cardPath: input.cardPath });
+      const sessionId = await getLastSessionForDirectory(ctx.boxRoot, contextDir);
+      return { contextDir, sessionId };
     }),
 
   /**

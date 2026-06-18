@@ -12,14 +12,17 @@
  * `{% source %}` anchor-linking land later.
  */
 
+import { useCallback, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
 import { Pre } from "./ui/Pre";
 import { Text } from "./ui/Text";
+import { FriendlyDate } from "./ui/FriendlyDate";
 import { getRenderers, type FileData, type RendererProps } from "../renderers";
 import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
 
 class ExternalFetchError extends Error {
   readonly status: number;
@@ -224,7 +227,7 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
     typeof frozen === "string" && frozen !== ""
       ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozen)}`
       : null;
-  const capturedDay = typeof captured === "string" && captured !== "" ? captured : null;
+  const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
   const meta =
     sourceUrl !== null || frozenUrl !== null ? (
       <Text as="div" size="sm" tone="subtle" className="mb-3">
@@ -237,14 +240,42 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
             <a href={frozenUrl} target="_blank" rel="noreferrer" className="underline">Frozen snapshot ↗</a>
           </>
         ) : null}
-        {capturedDay !== null ? <> · captured {capturedDay}</> : null}
+        {capturedAt !== null ? <> · captured <FriendlyDate iso={capturedAt} /></> : null}
       </Text>
     ) : null;
+
+  // Clicking a source chip jumps to that verbatim span using Chrome's
+  // text-fragment matching algorithm (text-fragments-polyfill), working on
+  // either representation of the saved page:
+  //   1. the in-pane readable markdown — matched (scoped to the pane) and
+  //      highlighted in place via the CSS Custom Highlight API;
+  //   2. else the frozen original — opened at the quote via a native
+  //      `#:~:text=` fragment (the snapshot is a real document, so the browser
+  //      scrolls + highlights it for us).
+  const savedPaneRef = useRef<HTMLDivElement>(null);
+  const onJumpToQuote = useCallback((quoteText: string): Promise<boolean> => {
+    const exact = quoteText.trim();
+    if (exact === "") return Promise.resolve(false);
+    const root = savedPaneRef.current;
+    if (root !== null) {
+      const range = findQuoteRange(root, exact);
+      if (range !== null) {
+        highlightRange(range);
+        scrollRangeIntoView(range);
+        return Promise.resolve(true);
+      }
+    }
+    if (frozenUrl !== null) {
+      window.open(`${frozenUrl}#:~:text=${encodeURIComponent(exact)}`, "_blank", "noreferrer");
+      return Promise.resolve(true);
+    }
+    return Promise.resolve(false);
+  }, [frozenUrl]);
 
   const commentary = (
     <div className="min-w-0 flex-1" data-card-section="body">
       {body !== undefined && body.trim() !== "" ? (
-        <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{body}</Markdown>
+        <Markdown prose="block" onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} basePath={data.path}>{body}</Markdown>
       ) : (
         <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>
       )}
@@ -267,11 +298,24 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
           {commentary}
         </div>
       ) : inboxPath !== null ? (
-        // Captured page: one column — the commentary (with its link to the
-        // original) leads, the saved page reads full-width below.
-        <div className="flex flex-col gap-6">
+        // Captured page: the commentary leads; the saved page sits below in
+        // its own bordered, labeled block so it reads as a distinct embedded
+        // document rather than blurring into the commentary above it.
+        <div className="flex flex-col gap-4">
           {commentary}
-          <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
+          <div className="overflow-hidden rounded-md border border-warm-200">
+            <Text
+              as="div"
+              size="xs"
+              tone="subtle"
+              className="border-b border-warm-200 px-3 py-1.5 font-medium uppercase tracking-wide"
+            >
+              Saved page
+            </Text>
+            <div className="p-3" ref={savedPaneRef}>
+              <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
+            </div>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-6">

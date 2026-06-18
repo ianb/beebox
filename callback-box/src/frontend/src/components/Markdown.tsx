@@ -42,19 +42,27 @@ import {
   type ViewTarget,
 } from "../lib/view-url";
 import { withBase } from "../api";
+import { parseMarkdown } from "../lib/markdoc-parse";
 import type { ReactNode } from "react";
 
-// Value named imports (`{ parse, … }`) don't resolve from this CommonJS module
-// under Node's ESM loader (used by `cb render` SSR); Vite tolerates them but the
-// SSR path does not. Destructure off the default import — same pattern and lint
-// exception as `markdoc-config.ts` / `body-refs.ts`.
+// Value named imports (`{ transform, … }`) don't resolve from this CommonJS
+// module under Node's ESM loader (used by `cb render` SSR); Vite tolerates them
+// but the SSR path does not. Destructure off the default import — same pattern
+// and lint exception as `markdoc-config.ts` / `body-refs.ts`. Parsing itself
+// goes through `parseMarkdown` (linkify-enabled) rather than the raw `parse`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
-const { parse, transform, renderers } = Markdoc;
+const { transform, renderers } = Markdoc;
 
 interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath: string | undefined;
   boxSlug: string | undefined;
+  /**
+   * Optional: jump to a quoted span in a sibling pane (e.g. the saved page
+   * beside a commentary). Given the verbatim quote text; resolves true if it
+   * found and scrolled to the span, false to fall back to navigation.
+   */
+  onJumpToQuote: ((quoteText: string) => Promise<boolean>) | undefined;
 }
 
 function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
@@ -222,7 +230,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const Link = makeLink(linkCtx);
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
-  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate });
+  const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
   const briefing = makeBriefingComponents({ onNavigate: linkCtx.onNavigate });
   const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (
@@ -281,6 +289,8 @@ interface MarkdownProps {
   prose?: ProseVariant;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath?: string;
+  /** See LinkContext.onJumpToQuote — wired by CommentaryView for source chips. */
+  onJumpToQuote?: (quoteText: string) => Promise<boolean>;
 }
 
 export function Markdown({
@@ -289,17 +299,18 @@ export function Markdown({
   prose,
   onNavigate,
   basePath,
+  onJumpToQuote,
 }: MarkdownProps) {
   prose = prose ?? false;
   const { boxSlug } = useParams({ strict: false });
   const { tree, mergedComponents } = useMemo(() => {
-    const ctx: LinkContext = { onNavigate, basePath, boxSlug };
+    const ctx: LinkContext = { onNavigate, basePath, boxSlug, onJumpToQuote };
     const { config, components: defaults } = buildRenderConfig(ctx);
-    const ast = parse(children);
+    const ast = parseMarkdown(children);
     const t: RenderableTreeNode = transform(ast, config);
     const merged = components === undefined ? defaults : { ...defaults, ...components };
     return { tree: t, mergedComponents: merged };
-  }, [children, onNavigate, basePath, boxSlug, components]);
+  }, [children, onNavigate, basePath, boxSlug, components, onJumpToQuote]);
 
   const rendered = renderers.react(tree, React, {
     components: mergedComponents as Record<string, React.ComponentType<Record<string, unknown>>>,

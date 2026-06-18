@@ -160,21 +160,25 @@ function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
 }
 
 /**
- * Validation cardworks/Zod can't express for commentary cards: exactly one of
+ * Validation cardworks/Zod can't express for commentary cards: at most one of
  * `defaultHref`/`defaultRef`, and Markdoc validation of the body's tags (which
  * fires the `{% source %}` ref-xor-href rule — nothing else runs
  * `Markdoc.validate`, so this is where it lands).
+ *
+ * Neither default is allowed: an attach-scoped commentary defaults to its
+ * *containing* document (the card that owns the attach scope), so it needs no
+ * explicit default target. Both at once is still an error.
  */
 function commentaryErrors(input: { fields: Record<string, unknown>; body: string }): LintIssue[] {
   const { fields, body } = input;
   const errors: LintIssue[] = [];
   const hasHref = typeof fields["defaultHref"] === "string" && fields["defaultHref"] !== "";
   const hasRef = typeof fields["defaultRef"] === "string" && fields["defaultRef"] !== "";
-  if (hasHref === hasRef) {
+  if (hasHref && hasRef) {
     errors.push({
       type: "validation",
       severity: "error",
-      message: "commentary card requires exactly one of defaultHref or defaultRef",
+      message: "commentary card takes at most one of defaultHref or defaultRef, not both",
     });
   }
   for (const message of validateMarkdocBody(body)) {

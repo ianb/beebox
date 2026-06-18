@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { createDropboxMemoTemplate } from "../../schemas/memo.js";
-import { createRecordTemplate } from "../../schemas/record.js";
+import { createWebpageTemplate } from "../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../schemas/commentary.js";
 import { attachmentPath } from "../../lib/attach-path.js";
 import { listDestinations } from "../../core/landmark/list-destinations.js";
@@ -116,32 +116,20 @@ export async function registerClerkRoutes(
     const intentDir =
       data.intent === "do" ? "box/inbox/pages-todo" : "box/inbox/pages-saved";
     const filename = buildFilename(data.title, "Page");
-    const relPath = path.join(intentDir, `${filename}.record.card`);
-    const absPath = path.join(boxRoot, relPath);
+    const cardRel = path.join(intentDir, `${filename}.webpage.card`);
 
-    const sources: Array<{ ref: string; text?: string }> = [
-      {
-        ref: data.url,
-        text: [data.siteName, data.byline].filter(Boolean).join(" — ") || "Saved from browser",
-      },
-    ];
-
-    const record = createRecordTemplate({
-      name: data.title,
-      content: data.markdown,
-      sources,
-      description: data.excerpt,
+    const createdPaths = await writeWebpageCard({
+      boxRoot,
+      cardRel,
+      title: data.title,
+      url: data.url,
+      capturedAt: data.timestamp ?? new Date().toISOString(),
+      markdown: data.markdown,
+      siteName: data.siteName,
+      byline: data.byline,
+      excerpt: data.excerpt,
+      frozenHtml: data.frozenHtml,
     });
-
-    await writeCard(absPath, record);
-
-    const createdPaths = [relPath];
-
-    if (data.frozenHtml) {
-      const frozenRel = path.join(intentDir, `${filename}.frozen`);
-      await writeCard(path.join(boxRoot, frozenRel), data.frozenHtml);
-      createdPaths.push(frozenRel);
-    }
 
     await gitCommit(boxRoot, { relPaths: createdPaths, message: `Add saved page from Clerk: "${data.title}"` });
 
@@ -180,36 +168,40 @@ export async function registerClerkRoutes(
     }
 
     const filename = buildFilename(data.title, "Page");
-    const cardRel = path.join(destDir, `${filename}.commentary.card`);
-    const readableRel = attachmentPath(cardRel, "readable.md");
-    const hasFrozen = typeof data.frozenHtml === "string" && data.frozenHtml !== "";
+    const cardRel = path.join(destDir, `${filename}.webpage.card`);
 
-    const card = createCommentaryTemplate({
+    // The captured page is the webpage card (readable body + frozen snapshot).
+    const createdPaths = await writeWebpageCard({
+      boxRoot,
+      cardRel,
       title: data.title,
-      defaultRef: "attach/readable.md",
-      sourceUrl: data.url,
+      url: data.url,
       capturedAt,
-      ...(hasFrozen ? { frozenRef: "attach/page.frozen" } : {}),
+      markdown: data.readableMarkdown,
+      siteName: data.siteName,
+      byline: data.byline,
+      excerpt: data.excerpt,
+      frozenHtml: data.frozenHtml,
     });
 
-    await writeCard(path.join(boxRoot, cardRel), card);
-    await writeCard(path.join(boxRoot, readableRel), data.readableMarkdown);
-    const createdPaths = [cardRel, readableRel];
-
-    if (data.frozenHtml) {
-      const frozenRel = attachmentPath(cardRel, "page.frozen");
-      await writeCard(path.join(boxRoot, frozenRel), data.frozenHtml);
-      createdPaths.push(frozenRel);
-    }
+    // The commentary is a separate card inside the webpage's attach scope: it
+    // belongs to the page (moves/dies with it). Empty to start — the chat agent
+    // authors the {% source %} anchors. The webpage view surfaces it inline.
+    const commentaryRel = attachmentPath(cardRel, `${filename}.commentary.card`);
+    await writeCard(
+      path.join(boxRoot, commentaryRel),
+      createCommentaryTemplate({ title: data.title }),
+    );
+    createdPaths.push(commentaryRel);
 
     await gitCommit(boxRoot, {
       relPaths: createdPaths,
       message: `Add commentary from Clerk: "${data.title}"`,
     });
 
-    // Open the commentary card in a chat companion pane, with the chat scoped
-    // to the destination dir. Returned relative to the box URL — the extension
-    // joins it onto box.boxUrl.
+    // Open the webpage card in a chat companion pane (it renders the page plus
+    // its inline commentary), with the chat scoped to the destination dir.
+    // Returned relative to the box URL — the extension joins it onto box.boxUrl.
     const companion = `view:${cardRel}`;
     const open =
       `chat?session=new&contextDir=${encodeURIComponent(destDir)}` +
@@ -260,6 +252,46 @@ function buildFilename(title: string, fallback: string): string {
 async function writeCard(filePath: string, content: string): Promise<void> {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, content, "utf-8");
+}
+
+/**
+ * Write a `.webpage.card` (readable body + capture provenance) and, when a
+ * frozen snapshot is provided, `<card>.attach/page.frozen` beside it. Returns
+ * the box-relative paths written, in commit order. Shared by save-page and
+ * commentary capture — both produce the same captured-page artifact.
+ */
+async function writeWebpageCard(opts: {
+  boxRoot: string;
+  cardRel: string;
+  title: string;
+  url: string;
+  capturedAt: string;
+  markdown: string;
+  siteName?: string | undefined;
+  byline?: string | undefined;
+  excerpt?: string | undefined;
+  frozenHtml?: string | undefined;
+}): Promise<string[]> {
+  const frozen = opts.frozenHtml;
+  const hasFrozen = typeof frozen === "string" && frozen !== "";
+  const card = createWebpageTemplate({
+    title: opts.title,
+    source: opts.url,
+    capturedAt: opts.capturedAt,
+    content: opts.markdown,
+    siteName: opts.siteName,
+    byline: opts.byline,
+    excerpt: opts.excerpt,
+    frozenRef: hasFrozen ? "attach/page.frozen" : undefined,
+  });
+  await writeCard(path.join(opts.boxRoot, opts.cardRel), card);
+  const created = [opts.cardRel];
+  if (hasFrozen) {
+    const frozenRel = attachmentPath(opts.cardRel, "page.frozen");
+    await writeCard(path.join(opts.boxRoot, frozenRel), frozen);
+    created.push(frozenRel);
+  }
+  return created;
 }
 
 async function gitCommit(boxRoot: string, { relPaths, message }: { relPaths: string[]; message: string }): Promise<void> {

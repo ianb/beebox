@@ -51,7 +51,9 @@ await ctx.cleanup();
 
 ## POST `/api/clerk/save-page`
 
-Saves the extracted page as a record card (and optional frozen HTML). The intent controls the destination directory:
+Saves the extracted page as a webpage card (readable body + capture provenance,
+and an optional frozen snapshot in its attach scope). The intent controls the
+destination directory:
 
 ```
 const ctx = await makeTestServer();
@@ -76,22 +78,24 @@ res.statusCode
 
 ``` continue
 const pageFiles = await readdir(join(ctx.boxRoot, "box/inbox/pages-saved"));
-pageFiles.some((name) => name.endsWith(".record.card"))
+pageFiles.some((name) => name.endsWith(".webpage.card"))
 => true
 
-const recordFile = pageFiles.find((name) => name.endsWith(".record.card"))!;
-const recordContent = await ctx.read(`box/inbox/pages-saved/${recordFile}`);
-recordContent.includes("Great Post")
+const cardFile = pageFiles.find((name) => name.endsWith(".webpage.card"))!;
+const cardContent = await ctx.read(`box/inbox/pages-saved/${cardFile}`);
+cardContent.includes("Great Post")
 => true
 
-recordContent.includes("Example Blog")
+cardContent.includes("Example Blog")
 => true
 ```
 
-Additional frozen HTML is stored alongside the record:
+The frozen snapshot is stored in the card's attach scope:
 
 ``` continue
-pageFiles.some((name) => name.endsWith(".frozen"))
+const attachDir = pageFiles.find((name) => name.endsWith(".attach"))!;
+const attachFiles = await readdir(join(ctx.boxRoot, "box/inbox/pages-saved", attachDir));
+attachFiles.includes("page.frozen")
 => true
 ```
 
@@ -133,10 +137,10 @@ await ctx.cleanup();
 
 ## POST `/api/clerk/commentary`
 
-Captures a page as a commentary bundle into a chosen destination: a commentary
-card pointing at the in-box readable rendering, the readable doc itself, and
-the frozen page — committed together. The response carries the chat URL that
-opens the card in a companion pane.
+Captures a page as a webpage card into a chosen destination, with an initially
+empty commentary card inside its attach scope (and the frozen page beside it) —
+committed together. The response carries the chat URL that opens the webpage
+card (which renders the page plus its inline commentary) in a companion pane.
 
 ```
 const ctx = await makeTestServer();
@@ -161,30 +165,29 @@ res.statusCode
 => 200
 ```
 
-The commentary card points at the readable doc via an in-box `defaultRef`, and
-records the original URL in its body:
+The captured page is a webpage card recording the original URL, with the
+readable rendering as its body:
 
 ``` continue
 const files = await readdir(join(ctx.boxRoot, "store/reading"));
-const cardFile = files.find((name) => name.endsWith(".commentary.card"));
+const cardFile = files.find((name) => name.endsWith(".webpage.card"));
 const cardContent = await ctx.read(`store/reading/${cardFile}`);
-cardContent.includes("defaultRef: attach/readable.md")
+cardContent.includes("source: https://example.com/article")
 => true
 
-cardContent.includes("https://example.com/article")
+cardContent.includes("Body text.")
 => true
 ```
 
-The readable rendering and the frozen page sit in the card's `.attach/`:
+The frozen page and the empty commentary card sit in the webpage's attach scope:
 
 ``` continue
 const attachDir = files.find((name) => name.endsWith(".attach"));
-const readable = await ctx.read(`store/reading/${attachDir}/readable.md`);
-readable.includes("Body text.")
-=> true
-
 const attachFiles = await readdir(join(ctx.boxRoot, "store/reading", attachDir));
 attachFiles.includes("page.frozen")
+=> true
+
+attachFiles.some((name) => name.endsWith(".commentary.card"))
 => true
 ```
 
@@ -235,7 +238,40 @@ inboxRes.body.open.includes("contextDir=box%2Finbox")
 => true
 
 const inboxFiles = await readdir(join(ctx.boxRoot, "box/inbox"));
-inboxFiles.some((name) => name.endsWith(".commentary.card"))
+inboxFiles.some((name) => name.endsWith(".webpage.card"))
+=> true
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
+A frozen snapshot larger than Fastify's default 1 MB body limit must still be
+accepted — a self-contained page with inlined CSS/images routinely exceeds it,
+and a 413 here means the capture silently saves nothing:
+
+```
+const ctx = await makeTestServer();
+const bigFrozen = `<html><body>${"a".repeat(2 * 1024 * 1024)}</body></html>`;
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/clerk/commentary",
+  payload: {
+    url: "https://example.com/big",
+    title: "Big Page",
+    readableMarkdown: "# Big Page\n\nBody.",
+    frozenHtml: bigFrozen,
+  },
+});
+res.statusCode
+=> 200
+```
+
+``` continue
+const inboxFiles = await readdir(join(ctx.boxRoot, "box/inbox"));
+const attachDir = inboxFiles.find((name) => name.endsWith(".attach"));
+const attachFiles = await readdir(join(ctx.boxRoot, "box/inbox", attachDir));
+attachFiles.includes("page.frozen")
 => true
 ```
 

@@ -10,9 +10,11 @@ import { useViewNavigate } from "../../hooks/useViewNavigate";
 import { FileView } from "../../components/FileView";
 import { Card } from "../../components/ui/Card";
 import { Column } from "../../components/ui/Column";
+import { Row } from "../../components/ui/Row";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
 import { TextLink } from "../../components/ui/TextLink";
+import { OpenChatControl } from "./components/OpenChatControl";
 
 export function CardViewPage() {
   const { boxSlug, _splat: cardPath } = useParams({ strict: false });
@@ -25,9 +27,14 @@ export function CardViewPage() {
   return (
     <Column overflow="auto" className="h-full">
       <Stack gap="md" className="max-w-4xl mx-auto py-8 px-4 w-full">
-        <TextLink to={href(`/${boxSlug}`)} underline={false}>
-          {"\u2190 Back to Dashboard"}
-        </TextLink>
+        <Row gap="md" align="center" justify="between">
+          <TextLink to={href(`/${boxSlug}`)} underline={false}>
+            {"\u2190 Back to Dashboard"}
+          </TextLink>
+          {boxSlug !== undefined ? (
+            <OpenChatControl boxSlug={boxSlug} cardPath={cardPath} />
+          ) : null}
+        </Row>
         <Card padding="none" shadow>
           <FileView path={cardPath} onNavigate={handleNavigate} />
         </Card>
