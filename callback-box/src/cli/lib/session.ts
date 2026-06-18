@@ -11,6 +11,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 
 import { type SessionEntry, buildEntry } from "./session-entry.js";
+import { stripChatAppTags } from "../../core/chat-features.js";
 import {
   extractSnippet,
   isCompactionSummary,
@@ -279,9 +280,7 @@ export function isRealUserMessage(entry: SessionEntry): boolean {
   if (entry.type !== "user") return false;
   for (const block of entry.content) {
     if (block.type !== "text") continue;
-    const text = (block.text || "")
-      .trimStart()
-      .replace(/^<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\s*/i, "");
+    const text = stripChatAppTags((block.text || "").trimStart()).trimStart();
     if (text.startsWith("<typed") || text.startsWith("<speech")) return true;
   }
   return false;

@@ -189,6 +189,22 @@ export function composeChatAppSnapshot(input: {
     : `${open}/>`;
 }
 
+const CHAT_APP_TAG_RE = /<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\n?/gi;
+
+/**
+ * Strip every `<chat-app>` snapshot tag from a message — self-closing
+ * (`<chat-app …/>`) or paired with a body, including `<card-activity>`
+ * children (`<chat-app …>…</chat-app>`) — for display and stored history.
+ * The single source of truth so consumers can't drift from the serializer:
+ * five separate copies of this regex once leaked the paired form into
+ * rendered messages (each only matched an empty body). `parseChatAppDeltas`
+ * keeps its own variant — it captures attrs to extract feature deltas, a
+ * different job.
+ */
+export function stripChatAppTags(text: string): string {
+  return text.replace(CHAT_APP_TAG_RE, "");
+}
+
 export interface ChatAppDelta {
   feature: string;
   value: string;
@@ -202,15 +218,16 @@ export interface ChatAppDelta {
  *
  * The parsed tags are removed from the returned content so they don't
  * surface in chat history. Tags can be self-closing (`<chat-app .../>`)
- * or have an empty body (`<chat-app ...></chat-app>`); both are accepted.
+ * or paired with a body (`<chat-app ...>...</chat-app>`); both are accepted.
  */
 export function parseChatAppDeltas(content: string): {
   deltas: ChatAppDelta[];
   cleaned: string;
 } {
   const deltas: ChatAppDelta[] = [];
-  // Match both self-closing and paired forms. The body (if any) is ignored.
-  const re = /<chat-app\b([^>]*?)(?:\/\s*>|>\s*<\/chat-app\s*>)/gi;
+  // Match both self-closing and paired forms (body, if any, ignored) — the
+  // attrs capture mirrors CHAT_APP_TAG_SOURCE's shape.
+  const re = /<chat-app\b([^>]*?)(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)/gi;
   const cleaned = content.replace(re, (_match, attrsRaw: string) => {
     const attrs = parseAttrs(attrsRaw);
     for (const [name, value] of attrs) {
