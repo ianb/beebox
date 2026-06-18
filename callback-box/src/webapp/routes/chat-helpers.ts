@@ -51,7 +51,7 @@ export interface SendBody {
   cardActivity?: string[];
   /**
    * Per-kind free-text detail for the activity (e.g. the embedding query
-   * typed), surfaced as the `card-state` snapshot attribute. Keys are
+   * typed), surfaced as `<card-activity>` snapshot child element text. Keys are
    * activity kinds; non-kind keys and non-string values are dropped.
    */
   cardState?: Record<string, unknown>;

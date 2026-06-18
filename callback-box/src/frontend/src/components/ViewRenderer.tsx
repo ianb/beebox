@@ -43,7 +43,7 @@ interface ViewProps extends ViewFileHelpers {
   params: Record<string, string>;
   /**
    * Report user activity on this card to the chat's companion-pane accumulator,
-   * with an optional free-text detail surfaced as `card-state` (e.g. the query
+   * with an optional free-text detail surfaced as the `<card-activity>` element text (e.g. the query
    * the user typed). Writes auto-report `"modified"` with the path; a view that
    * changes parameters without changing data should call
    * `reportActivity("explored", "<what they're looking at>")`. A no-op outside

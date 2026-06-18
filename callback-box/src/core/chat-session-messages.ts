@@ -144,7 +144,8 @@ export interface ChatSendInput {
   /**
    * Per-kind free-text detail for the companion-pane activity (e.g. the
    * embedding query typed, the path modified). Latest-wins per kind across
-   * queued sends; surfaced as the read-only `card-state` snapshot attribute.
+   * queued sends; surfaced as the text of the read-only `<card-activity>`
+   * snapshot child elements.
    */
   cardState?: CardStateDetails;
 }

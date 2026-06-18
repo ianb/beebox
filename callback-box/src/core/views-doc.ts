@@ -110,7 +110,7 @@ The default export receives a \`ViewProps\` object:
 | \`navigate\` | (path: string) => void | Navigate within the box (e.g., \`navigate("chat")\`) |
 | \`boxSlug\` | string | The current box slug |
 | \`params\` | Record<string, string> | Query parameters from the URL (e.g., \`params.path\`) |
-| \`reportActivity\` | (kind, detail?) => void | When open in the chat companion pane, tell the agent the user touched this card. Writes auto-report \`"modified"\`; call \`reportActivity("explored", detail)\` when the user changes the view's *parameters* (filters, ranges, a selected tab) without changing data. The optional \`detail\` is a short free-text string surfaced to the agent as \`card-state\` (e.g. the query the user typed and its top result) — it overwrites any prior detail for the same kind, so calling it on every keystroke is fine. A no-op for inline/page renders, so always safe to call. |
+| \`reportActivity\` | (kind, detail?) => void | When open in the chat companion pane, tell the agent the user touched this card. Writes auto-report \`"modified"\`; call \`reportActivity("explored", detail)\` when the user changes the view's *parameters* (filters, ranges, a selected tab) without changing data. The optional \`detail\` is a short free-text string surfaced to the agent as the \`<card-activity>\` element's text (e.g. the query the user typed and its top result) — it overwrites any prior detail for the same kind, so calling it on every keystroke is fine. A no-op for inline/page renders, so always safe to call. |
 
 ### ViewCard Structure
 
@@ -201,7 +201,7 @@ When a companion view is open, every user message includes a \`zoomed-view\` att
 
 This tells the agent what the user is looking at, so it can tailor its responses. The attribute value is the full view URI (without \`&zoom\`).
 
-The per-turn \`<chat-app>\` snapshot also carries this as the read-only \`open-card\` attribute (box-relative path) alongside \`card-activity\` — a low-confidence hint of what the user did to the card since the agent's last reply (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`) — and \`card-state\`, the optional free-text detail a view attaches via \`reportActivity(kind, detail)\` (e.g. the query typed). A view contributes the \`explored\` signal by calling \`reportActivity("explored", detail)\` when the user changes its parameters; writes contribute \`modified\` automatically. For the precise change set, the agent runs \`cb chat whats-changed --card <path>\`.
+The per-turn \`<chat-app>\` snapshot also carries this as the read-only \`open-card\` attribute (box-relative path), plus a \`<card-activity kind="…">\` child element per kind of activity since the agent's last reply (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`), the element text being the optional free-text detail a view attaches via \`reportActivity(kind, detail)\` (e.g. the query typed). A view contributes the \`explored\` signal by calling \`reportActivity("explored", detail)\` when the user changes its parameters; writes contribute \`modified\` automatically. For the precise change set, the agent runs \`cb chat whats-changed --card <path>\`.
 
 **Note:** Companion views are a chat-only feature. The \`&zoom\` parameter and \`zoomed-view\` attribute are only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't support them.`;
 
@@ -209,7 +209,7 @@ const reportingActivitySection = `## Reporting Card Activity (\`reportActivity\`
 
 If your view is meant to be opened beside the chat — a companion view the user pokes at while talking — report what they do, so the chat agent has context. Otherwise the agent sees only the card's *config file*, never the live state the user is looking at. For a static, read-only display there's nothing to report; skip this.
 
-The signal reaches the agent as two read-only snapshot attributes: \`card-activity\` (which of \`scrolled\`/\`navigated\`/\`explored\`/\`modified\` happened) and \`card-state\` (your optional free-text **detail** per kind). \`reportActivity\` is a no-op outside the companion pane, so it's always safe to call.
+The signal reaches the agent as read-only \`<card-activity kind="…">\` child elements of the per-turn snapshot — one per kind (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`), with the element text being your optional free-text **detail** for that kind. \`reportActivity\` is a no-op outside the companion pane, so it's always safe to call.
 
 **What's automatic vs. what you wire:**
 - \`modified\` — automatic. A successful \`writeFile\`/\`appendFile\`/\`commitFile\` reports it with the path; don't call it yourself.
@@ -217,7 +217,7 @@ The signal reaches the agent as two read-only snapshot attributes: \`card-activi
 - \`explored\` — **you call it.** This is the important one: fire it when the user changes what the view is *showing* without changing data — the query they typed, a filter, a selected tab, a slider — and pass a detail describing the new state.
 - \`navigated\` — automatic when a link inside the view opens another card.
 
-**How to write the detail.** Report \`explored\` from your *primary* inputs, not every control. The detail is a short, human-legible line of what the user is now looking at — the input plus the salient result — because that exact string is what the agent reads as \`card-state\`. Keep it terse (a hint, not a dump): \`boat-water+road → boats (0.568)\`, not the whole result list.
+**How to write the detail.** Report \`explored\` from your *primary* inputs, not every control. The detail is a short, human-legible line of what the user is now looking at — the input plus the salient result — because that exact string is what the agent reads (the \`<card-activity>\` element text). Keep it terse (a hint, not a dump): \`boat-water+road -> boats (0.568)\`, not the whole result list.
 
 **Pattern: report from a text input as the user types.** Reporting on every keystroke is fine — details overwrite per kind, so \`b\`,\`bo\`,\`boat\` collapse to the final state; no debounce needed.
 
@@ -239,7 +239,7 @@ function NearestNeighbors({ reportActivity }) {
 }
 \`\`\`
 
-For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`cb chat whats-changed --card <path>\` for the exact, git-grounded change set — \`card-state\` is the cheap live hint, not the source of truth.`;
+For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`cb chat whats-changed --card <path>\` for the exact, git-grounded change set — \`<card-activity> detail\` is the cheap live hint, not the source of truth.`;
 
 const examplesSection = `## Examples
 

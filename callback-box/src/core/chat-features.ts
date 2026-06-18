@@ -124,9 +124,10 @@ export function mergeSeedFeatures(input: {
 /**
  * Attributes the system writes into the snapshot that the agent can
  * never set back via a delta tag. `time`/`local-time`/`channel`, plus
- * `open-card`/`card-activity` (companion-pane state), ride on every
- * message; `last-activity`/`calendar`/`health` only on the first message
- * of a new session (see `session-context.ts`).
+ * `open-card` (companion-pane state), ride on every message;
+ * `last-activity`/`calendar`/`health` only on the first message of a new
+ * session (see `session-context.ts`). Companion-pane activity rides as
+ * `<card-activity>` child elements, not attributes (see `card-activity.ts`).
  */
 const READ_ONLY_ATTRS = new Set([
   "time",
@@ -136,14 +137,16 @@ const READ_ONLY_ATTRS = new Set([
   "calendar",
   "health",
   "open-card",
-  "card-activity",
-  "card-state",
 ]);
 
 /**
  * Serialize the system → agent snapshot. Carries `time` (lowercase,
  * free-form ISO string), the optional read-only context attributes,
  * plus all current feature states.
+ *
+ * Companion-pane activity, when present, rides as `<card-activity>` child
+ * elements (so `<chat-app>` becomes a paired tag); otherwise it's
+ * self-closing.
  *
  * Example output:
  *   <chat-app narration="on" prose="off" time="2026-05-13T14:23:00-05:00"
@@ -158,8 +161,8 @@ export function composeChatAppSnapshot(input: {
   calendar?: string;
   health?: string;
   openCard?: string;
-  cardActivity?: string;
-  cardState?: string;
+  /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
+  activityChildren?: string;
 }): string {
   const resolved = resolveFeatures(input.features);
   const attrs: string[] = [];
@@ -176,13 +179,14 @@ export function composeChatAppSnapshot(input: {
     ["calendar", input.calendar],
     ["health", input.health],
     ["open-card", input.openCard],
-    ["card-activity", input.cardActivity],
-    ["card-state", input.cardState],
   ];
   for (const [name, value] of contextAttrs) {
     if (value !== undefined) attrs.push(`${name}="${escapeAttr(value)}"`);
   }
-  return `<chat-app ${attrs.join(" ")}/>`;
+  const open = `<chat-app ${attrs.join(" ")}`;
+  return input.activityChildren !== undefined && input.activityChildren !== ""
+    ? `${open}>\n${input.activityChildren}\n</chat-app>`
+    : `${open}/>`;
 }
 
 export interface ChatAppDelta {
