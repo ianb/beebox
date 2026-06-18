@@ -9,14 +9,59 @@
  *
  * Body-bearing (like `doc`/`briefing`): the body is markdown commentary whose
  * `{% source %}` anchors quote the spans being commented on. Markdoc validation
- * of those tags lives in `card-lint.ts`, scoped to this card type.
+ * of those tags is the schema's `validate` hook (see `commentaryErrors` below),
+ * scoped to this card type.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
+import { body, cardSchema, type CardSchema, type LintIssue } from "cardworks";
+import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { markdocConfig } from "../shared/markdoc-config.js";
+
+// Value named imports (`{ parse, validate }`) don't resolve from this CommonJS
+// module under Node's ESM loader (used by tsx / the doctest runner). Destructure
+// off the default import — same pattern as `markdoc-config.ts` / `card-lint.ts`.
+const { parse: markdocParse, validate: markdocValidate } = Markdoc;
+
+/**
+ * Validation cardworks/Zod can't express for commentary cards: Markdoc
+ * validation of the body's tags (which fires the `{% source %}` ref-xor-href
+ * rule — nothing else runs `Markdoc.validate`, so this is where it lands).
+ *
+ * Wired onto the schema as its `validate` hook (cardworks invokes it during
+ * lint); it is self-contained — it reads only this card's own body.
+ *
+ * Commentary is attach-only — it carries no target field of its own. A leftover
+ * `defaultHref`/`defaultRef`/`targets` from the pre-attach era is caught by the
+ * generic unknown-key warning (the fields are no longer in the schema).
+ */
+function commentaryErrors(body: string): LintIssue[] {
+  const errors: LintIssue[] = [];
+  for (const message of validateMarkdocBody(body)) {
+    errors.push({ type: "validation", severity: "error", message });
+  }
+  return errors;
+}
+
+function validateMarkdocBody(body: string): string[] {
+  if (body === "") return [];
+  let ast: MarkdocNode;
+  try {
+    ast = markdocParse(body);
+  } catch (_e) {
+    return ["commentary body is not parseable Markdoc"];
+  }
+  return markdocValidate(ast, markdocConfig)
+    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical")
+    .map((entry) => entry.error.message);
+}
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
+  validate: ({ fields }) => {
+    const body = fields["body"];
+    return commentaryErrors(typeof body === "string" ? body : "");
+  },
   fields: {
     title: z.string().optional(),
     // Captured-web-page metadata (set by the clerk capture flow): the original

@@ -12,6 +12,12 @@
  * frontmatter fields, and `extractBodyRefs` over the Markdoc body. Both
  * yield `{path, ref}` entries with the same shape; both are surfaced as
  * warnings (not errors) so legitimate moves don't block commits.
+ *
+ * Type-specific, self-contained validation (rules Zod can't express, e.g.
+ * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
+ * it lives on each schema as a `validate` hook (cardworks), invoked generically
+ * below. The ref-existence walk stays here because it is box-aware (needs the
+ * loader), which the self-contained hook deliberately lacks.
  */
 
 import { readFile } from "node:fs/promises";
@@ -28,14 +34,6 @@ import {
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
-import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
-import { markdocConfig } from "../shared/markdoc-config.js";
-
-// Value named imports (`{ parse, validate }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by tsx / the doctest runner). Destructure
-// off the default import — same pattern + lint exception as `markdoc-config.ts`.
-// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse: markdocParse, validate: markdocValidate } = Markdoc;
 
 export interface LintDispatchOptions {
   loader: ICardLoader;
@@ -137,59 +135,12 @@ async function lintFrontmatterCard(input: {
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
-  const errors =
-    type === "commentary"
-      ? commentaryErrors({ body: typeof bodyField === "string" ? bodyField : "" })
-      : type === "extfile"
-        ? extfileErrors({ fields: parsed.fields })
-        : [];
+  // Type-specific, self-contained validation (rules Zod can't express) lives on
+  // the schema as its `validate` hook — see the commentary/extfile schema
+  // modules. The generic ref-existence walk above stays here because it needs
+  // the loader (box-aware), which the self-contained hook deliberately lacks.
+  const errors = parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : [];
   return { path, errors, warnings };
-}
-
-/**
- * Cross-field validation for extfile cards that Zod can't express: `href` must
- * be a parseable `file:` URL (the schema only types it as a string), and a
- * present `version` must carry a well-formed `sha256:<hex>` marker (it is
- * compared byte-for-byte against the live file's hash, so a malformed one would
- * never match). Whether the href *resolves* on this machine is deliberately not
- * checked here — that's machine-specific and the renderer/`cb extfile sync`
- * report it at use time.
- */
-function extfileErrors(input: { fields: Record<string, unknown> }): LintIssue[] {
-  const { fields } = input;
-  const errors: LintIssue[] = [];
-  const href = fields["href"];
-  // A missing href is already a schema (Zod) error from parseCardText; here we
-  // only refine a present href's shape.
-  if (typeof href === "string" && href !== "" && !isFileUrl(href)) {
-    errors.push({
-      type: "validation",
-      severity: "error",
-      message: `extfile href must be a file: URL (got "${href}")`,
-    });
-  }
-  const version = fields["version"];
-  if (typeof version === "string" && version !== "" && !hasSha256Marker(version)) {
-    errors.push({
-      type: "validation",
-      severity: "error",
-      message: `extfile version must contain a sha256:<hex> marker (got "${version}")`,
-    });
-  }
-  return errors;
-}
-
-function isFileUrl(value: string): boolean {
-  try {
-    return new URL(value).protocol === "file:";
-  } catch (_e) {
-    return false;
-  }
-}
-
-/** A space-separated marker set containing at least one `sha256:<hex>` token. */
-function hasSha256Marker(version: string): boolean {
-  return version.split(/\s+/).some((marker) => /^sha256:[\da-f]+$/.test(marker));
 }
 
 /**
@@ -243,37 +194,6 @@ function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
       `contains: is ${String(contains.length)} chars (budget ${String(CONTAINS_MAX_CHARS)}) — ` +
       "tighten it to one sentence stating what can be found in this card",
   };
-}
-
-/**
- * Validation cardworks/Zod can't express for commentary cards: Markdoc
- * validation of the body's tags (which fires the `{% source %}` ref-xor-href
- * rule — nothing else runs `Markdoc.validate`, so this is where it lands).
- *
- * Commentary is attach-only — it carries no target field of its own. A leftover
- * `defaultHref`/`defaultRef`/`targets` from the pre-attach era is caught by the
- * generic unknown-key warning (the fields are no longer in the schema).
- */
-function commentaryErrors(input: { body: string }): LintIssue[] {
-  const { body } = input;
-  const errors: LintIssue[] = [];
-  for (const message of validateMarkdocBody(body)) {
-    errors.push({ type: "validation", severity: "error", message });
-  }
-  return errors;
-}
-
-function validateMarkdocBody(body: string): string[] {
-  if (body === "") return [];
-  let ast: MarkdocNode;
-  try {
-    ast = markdocParse(body);
-  } catch (_e) {
-    return ["commentary body is not parseable Markdoc"];
-  }
-  return markdocValidate(ast, markdocConfig)
-    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical")
-    .map((entry) => entry.error.message);
 }
 
 function errorResult(path: string, message: string): LintResult {
