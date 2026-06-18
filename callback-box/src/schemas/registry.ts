@@ -43,6 +43,7 @@ import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
 import { CommentarySchema } from "./commentary.js";
 import { WebpageSchema } from "./webpage.js";
+import { ExtfileSchema } from "./extfile.js";
 import { LandmarkSchema } from "./landmark.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
@@ -72,6 +73,7 @@ export const cardSchemas: CardSchema[] = [
   GdocSchema,
   CommentarySchema,
   WebpageSchema,
+  ExtfileSchema,
   SheetSchema,
   FileSchema,
   ImageSchema,
@@ -385,4 +387,5 @@ export { PersonSchema } from "./person.js";
 export { SheetSchema } from "./sheet.js";
 export { DocSchema } from "./doc.js";
 export { GdocSchema } from "./gdoc.js";
+export { ExtfileSchema } from "./extfile.js";
 export { LandmarkSchema } from "./landmark.js";

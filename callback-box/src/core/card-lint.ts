@@ -143,8 +143,56 @@ async function lintFrontmatterCard(input: {
           fields: parsed.fields,
           body: typeof bodyField === "string" ? bodyField : "",
         })
-      : [];
+      : type === "extfile"
+        ? extfileErrors({ fields: parsed.fields })
+        : [];
   return { path, errors, warnings };
+}
+
+/**
+ * Cross-field validation for extfile cards that Zod can't express: `href` must
+ * be a parseable `file:` URL (the schema only types it as a string), and a
+ * present `version` must carry a well-formed `sha256:<hex>` marker (it is
+ * compared byte-for-byte against the live file's hash, so a malformed one would
+ * never match). Whether the href *resolves* on this machine is deliberately not
+ * checked here — that's machine-specific and the renderer/`cb extfile sync`
+ * report it at use time.
+ */
+function extfileErrors(input: { fields: Record<string, unknown> }): LintIssue[] {
+  const { fields } = input;
+  const errors: LintIssue[] = [];
+  const href = fields["href"];
+  // A missing href is already a schema (Zod) error from parseCardText; here we
+  // only refine a present href's shape.
+  if (typeof href === "string" && href !== "" && !isFileUrl(href)) {
+    errors.push({
+      type: "validation",
+      severity: "error",
+      message: `extfile href must be a file: URL (got "${href}")`,
+    });
+  }
+  const version = fields["version"];
+  if (typeof version === "string" && version !== "" && !hasSha256Marker(version)) {
+    errors.push({
+      type: "validation",
+      severity: "error",
+      message: `extfile version must contain a sha256:<hex> marker (got "${version}")`,
+    });
+  }
+  return errors;
+}
+
+function isFileUrl(value: string): boolean {
+  try {
+    return new URL(value).protocol === "file:";
+  } catch (_e) {
+    return false;
+  }
+}
+
+/** A space-separated marker set containing at least one `sha256:<hex>` token. */
+function hasSha256Marker(version: string): boolean {
+  return version.split(/\s+/).some((marker) => /^sha256:[\da-f]+$/.test(marker));
 }
 
 /**

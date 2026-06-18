@@ -18,6 +18,7 @@ import { createLoader } from "../src/cli/lib/loader.js";
 import { lintCardsDispatch } from "../src/core/card-lint.js";
 import type { LoadCardContext } from "../src/core/card-io.js";
 import { CommentarySchema } from "../src/schemas/commentary.js";
+import { ExtfileSchema } from "../src/schemas/extfile.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -48,6 +49,7 @@ const ctx: LoadCardContext = {
     ["email-thread", threadSchema],
     ["doc", docSchema],
     ["commentary", CommentarySchema],
+    ["extfile", ExtfileSchema],
   ]),
   elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
@@ -325,4 +327,60 @@ const result = await lintCardsDispatch(
 );
 result.totalErrors
 => 0
+```
+
+## Extfile cards validate their href and stamped version
+
+An extfile card's `href` must be a `file:` URL, and a present `version` must
+carry a `sha256:<hex>` marker (it is compared against the live file's hash). A
+well-formed card lints clean; a non-`file:` href or a malformed `version` is an
+error. Whether the href resolves on this machine is *not* checked here.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Good.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: \"sha256:9f3a1c2b git:7ffeae4\"\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Good.extfile.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 0
+```
+
+A non-`file:` href is an error:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/BadHref.extfile.card",
+  "---\ntype: extfile\nhref: https://example.com/foo.ts\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/BadHref.extfile.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("must be a file: URL")
+=> true
+```
+
+A malformed `version` (no `sha256:` marker) is an error:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/BadVer.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: not-a-hash\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/review/BadVer.extfile.card")],
+  { loader, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker")
+=> true
 ```
