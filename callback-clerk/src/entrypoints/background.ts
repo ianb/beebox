@@ -119,26 +119,39 @@ function tryCaptureCommentary(tabId: number): Promise<CommentaryCapture | null> 
 }
 
 async function commentOnPage(tabId: number, destinationDir: string | undefined): Promise<void> {
-  const box = await requireActiveBox();
-  // Timed so the cost is visible in the service-worker console: capture is the
-  // in-page extract+freeze, post is the upload to the box.
-  const tCaptureStart = performance.now();
-  const capture = await tryCaptureCommentary(tabId);
-  if (capture === null) throw new CommentUnavailableError();
-  const tCaptureEnd = performance.now();
-  const payload = buildCommentaryPayload({
-    page: capture.page,
-    frozenHtml: capture.frozenHtml,
-    destinationDir: destinationDir ?? null,
-    timestamp: new Date().toISOString(),
-  });
-  const { open } = await postCommentary(box, payload);
-  console.info(
-    `[clerk] commentOnPage: capture ${Math.round(tCaptureEnd - tCaptureStart)}ms, ` +
-      `post ${Math.round(performance.now() - tCaptureEnd)}ms` +
-      `${capture.frozenHtml === null ? " (no frozen snapshot)" : ` (frozen ${Math.round(capture.frozenHtml.length / 1024)}kB)`}`,
-  );
-  await chrome.tabs.create({ url: commentaryOpenUrl(box.boxUrl, open) });
+  // "Comment" runs for several seconds (capture + freeze + upload), during which
+  // the popup almost always closes — so its failure response goes nowhere. Make
+  // failures visible regardless: log to the service-worker console AND toast the
+  // page itself (the same channel context-menu saves use), then rethrow so an
+  // open popup still sees it too. This is the difference between a silent no-op
+  // and an actionable error.
+  try {
+    const box = await requireActiveBox();
+    // Timed so the cost is visible in the service-worker console: capture is the
+    // in-page extract+freeze, post is the upload to the box.
+    const tCaptureStart = performance.now();
+    const capture = await tryCaptureCommentary(tabId);
+    if (capture === null) throw new CommentUnavailableError();
+    const tCaptureEnd = performance.now();
+    const payload = buildCommentaryPayload({
+      page: capture.page,
+      frozenHtml: capture.frozenHtml,
+      destinationDir: destinationDir ?? null,
+      timestamp: new Date().toISOString(),
+    });
+    const { open } = await postCommentary(box, payload);
+    console.info(
+      `[clerk] commentOnPage: capture ${Math.round(tCaptureEnd - tCaptureStart)}ms, ` +
+        `post ${Math.round(performance.now() - tCaptureEnd)}ms` +
+        `${capture.frozenHtml === null ? " (no frozen snapshot)" : ` (frozen ${Math.round(capture.frozenHtml.length / 1024)}kB)`}`,
+    );
+    await chrome.tabs.create({ url: commentaryOpenUrl(box.boxUrl, open) });
+  } catch (e) {
+    const failure = failureResponse(e);
+    console.error("[callback-clerk] comment failed:", failure.message);
+    toastInTab(tabId, { text: `Comment failed: ${failure.message}`, isError: true });
+    throw e;
+  }
 }
 
 async function sendMemo(memo: { text: string; url?: string; title?: string }): Promise<void> {

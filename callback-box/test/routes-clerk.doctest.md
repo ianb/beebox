@@ -246,6 +246,39 @@ inboxFiles.some((name) => name.endsWith(".webpage.card"))
 await ctx.cleanup();
 ```
 
+A frozen snapshot larger than Fastify's default 1 MB body limit must still be
+accepted — a self-contained page with inlined CSS/images routinely exceeds it,
+and a 413 here means the capture silently saves nothing:
+
+```
+const ctx = await makeTestServer();
+const bigFrozen = `<html><body>${"a".repeat(2 * 1024 * 1024)}</body></html>`;
+const res = await ctx.request({
+  method: "POST",
+  url: "/api/clerk/commentary",
+  payload: {
+    url: "https://example.com/big",
+    title: "Big Page",
+    readableMarkdown: "# Big Page\n\nBody.",
+    frozenHtml: bigFrozen,
+  },
+});
+res.statusCode
+=> 200
+```
+
+``` continue
+const inboxFiles = await readdir(join(ctx.boxRoot, "box/inbox"));
+const attachDir = inboxFiles.find((name) => name.endsWith(".attach"));
+const attachFiles = await readdir(join(ctx.boxRoot, "box/inbox", attachDir));
+attachFiles.includes("page.frozen")
+=> true
+```
+
+``` cleanup
+await ctx.cleanup();
+```
+
 ## POST `/api/clerk/tabs`
 
 Tab snapshots are stored for diagnostics; the route always returns `{ ok: true }`:
