@@ -125,27 +125,6 @@ export async function registerClerkRoutes(
     return { created: createdPaths, open };
   });
 
-  server.post("/api/clerk/tabs", async (request, reply) => {
-    applyExtensionCors(request, reply);
-    // Tabs are currently used only for UI context; store latest snapshot for reference.
-    try {
-      const body = JSON.stringify(
-        {
-          receivedAt: new Date().toISOString(),
-          payload: request.body,
-        },
-        null,
-        2,
-      );
-      await fs.mkdir(path.join(boxRoot, ".callback-box"), { recursive: true });
-      await fs.writeFile(path.join(boxRoot, ".callback-box/clerk-tabs.json"), body);
-    } catch (err) {
-      console.error("[clerk] Failed to persist tab snapshot:", err);
-    }
-
-    return { ok: true };
-  });
-
   server.get("/api/clerk/actions", async (request, reply) => {
     applyExtensionCors(request, reply);
     // Placeholder — no outbound actions yet.

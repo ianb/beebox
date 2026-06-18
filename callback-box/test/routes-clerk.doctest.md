@@ -1,9 +1,9 @@
 # Clerk API
 
-The Clerk API powers the browser extension. These routes create cards directly in the box and expose lightweight endpoints for tab snapshots and pending actions.
+The Clerk API powers the browser extension: capturing web pages as commentary and exposing the commentary destinations + a pending-actions stub.
 
 ```ts setup
-import { readdir, readFile } from "node:fs/promises";
+import { readdir } from "node:fs/promises";
 import { join } from "node:path";
 import { makeTestServer } from "./helpers/doctest-server.js";
 ```
@@ -177,40 +177,6 @@ const inboxFiles = await readdir(join(ctx.boxRoot, "box/inbox"));
 const attachDir = inboxFiles.find((name) => name.endsWith(".attach"));
 const attachFiles = await readdir(join(ctx.boxRoot, "box/inbox", attachDir));
 attachFiles.includes("page.frozen")
-=> true
-```
-
-``` cleanup
-await ctx.cleanup();
-```
-
-## POST `/api/clerk/tabs`
-
-Tab snapshots are stored for diagnostics; the route always returns `{ ok: true }`:
-
-```
-const ctx = await makeTestServer();
-const res = await ctx.request({
-  method: "POST",
-  url: "/api/clerk/tabs",
-  payload: {
-    tabs: [{ id: 1, windowId: 1, url: "https://tab.example", title: "Tab", active: true, pinned: false }],
-    timestamp: "2026-03-01T15:00:00Z",
-  },
-});
-res.statusCode
-=> 200
-
-res.body
-=>
-{
-  "ok": true
-}
-```
-
-``` continue
-const snapshot = await readFile(join(ctx.boxRoot, ".callback-box/clerk-tabs.json"), "utf-8");
-snapshot.includes("tab.example")
 => true
 ```
 

@@ -12,9 +12,8 @@ import {
   type CommentaryCapture,
 } from "../domain/commentary.js";
 import { isCaptureResultMessage } from "../domain/capture-messages.js";
-import { ClerkApiError, postCommentary, postTabs } from "../platform/clerk-api.js";
+import { ClerkApiError, postCommentary } from "../platform/clerk-api.js";
 import { loadConfig } from "../platform/config-storage.js";
-import { getTabSnapshot } from "../platform/tabs.js";
 
 class NoActiveBoxError extends Error {
   constructor() {
@@ -106,16 +105,8 @@ async function commentOnPage(tabId: number, destinationDir: string | undefined):
   }
 }
 
-async function syncTabs(): Promise<void> {
-  const box = await requireActiveBox();
-  await postTabs(box, await getTabSnapshot());
-}
-
 function dispatch(message: ClerkMessage): Promise<void> {
-  if (message.type === "commentOnPage") {
-    return commentOnPage(message.tabId, message.destinationDir);
-  }
-  return syncTabs();
+  return commentOnPage(message.tabId, message.destinationDir);
 }
 
 function failureResponse(error: unknown): ActionFailure {
