@@ -52,7 +52,6 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  */
 export const schemas: ElementSchema[] = [
   ProcedureSchema,
-  ProcedureRunSchema,
   CaptureSessionSchema,
   GuideSchema,
 ];
@@ -64,6 +63,7 @@ export const schemas: ElementSchema[] = [
  */
 export const cardSchemas: CardSchema[] = [
   LandmarkSchema,
+  ProcedureRunSchema,
   RecipeSchema,
   EmailThreadSchema,
   EmailMessageSchema,

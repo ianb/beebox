@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseCard, type ElementNode } from "cardworks";
+import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import type { CommandContext, CommandResult } from "../command-runner.js";
@@ -315,33 +315,32 @@ export async function procedureStatus(
 
   try {
     const content = await fs.readFile(runCardPath, "utf-8");
-    const element = await parseCard(content, { source: runCardPath });
+    const run = parseProcedureRun(content);
+    if (run === null) {
+      return { success: false, error: `Could not read run card: ${runCardPath}` };
+    }
 
-    ctx.writeLine(
-      fmt.header(`Procedure Run: ${element.attrs["procedure"]}`)
-    );
-    ctx.writeLine(fmt.kv("Status", fmt.status(element.attrs["status"] ?? "unknown")));
-    ctx.writeLine(fmt.kv("Started", element.attrs["started-at"] ?? "unknown"));
-    if (element.attrs["completed-at"]) {
-      ctx.writeLine(fmt.kv("Completed", element.attrs["completed-at"]));
+    ctx.writeLine(fmt.header(`Procedure Run: ${run.procedure}`));
+    ctx.writeLine(fmt.kv("Status", fmt.status(run.status)));
+    ctx.writeLine(fmt.kv("Started", run["started-at"]));
+    if (run["completed-at"] !== undefined) {
+      ctx.writeLine(fmt.kv("Completed", run["completed-at"]));
     }
     ctx.writeLine("");
 
-    for (const child of element.children as ElementNode[]) {
-      if (child.tagName === "step") {
-        const status = child.attrs["status"] ?? "unknown";
-        const icon =
-          status === "completed"
-            ? fmt.success("✓")
-            : status === "skipped"
-              ? fmt.dim("○")
-              : status === "failed"
-                ? fmt.error("✗")
-                : status === "running"
-                  ? fmt.warn("▸")
-                  : fmt.dim("·");
-        ctx.writeLine(`  ${icon} ${fmt.strong(child.attrs["id"] ?? "?")} ${fmt.dim(`(${status})`)}`);
-      }
+    for (const step of run.steps) {
+      const status = step.status;
+      const icon =
+        status === "completed"
+          ? fmt.success("✓")
+          : status === "skipped"
+            ? fmt.dim("○")
+            : status === "failed"
+              ? fmt.error("✗")
+              : status === "running"
+                ? fmt.warn("▸")
+                : fmt.dim("·");
+      ctx.writeLine(`  ${icon} ${fmt.strong(step.id)} ${fmt.dim(`(${status})`)}`);
     }
 
     return { success: true };

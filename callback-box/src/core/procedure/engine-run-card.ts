@@ -1,11 +1,80 @@
 /**
  * Run-card serialization and mutation — building the initial run card and
  * applying status/step updates as the procedure executes.
+ *
+ * Run cards are Phase-2 frontmatter (YAML, no body). The engine owns the
+ * read-mutate-write cycle; strict Zod validation happens when the card is
+ * loaded (cb validate / parseProcedureRun), so the mutators here work on a
+ * plain mutable shape whose statuses are strings (matching StepUpdate).
  */
 
 import * as fs from "node:fs/promises";
-import { createElement, serialize, parseCard, type ElementNode } from "cardworks";
+import { splitCardContent } from "cardworks";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type { ParsedProcedure, StepUpdate } from "./engine-types.js";
+
+/** Raised when a run card can't be read as YAML frontmatter. */
+export class RunCardParseError extends Error {
+  constructor(runCardPath: string) {
+    super(`Run card is not valid frontmatter: ${runCardPath}`);
+    this.name = "RunCardParseError";
+  }
+}
+
+interface MutablePhasePrecheck {
+  status: string;
+  stdout?: string;
+}
+interface MutablePhaseRun {
+  "session-id"?: string;
+  stdout?: string;
+  "git-ref"?: string;
+}
+interface MutablePhaseValidate {
+  status: string;
+  stdout?: string;
+  review?: string;
+}
+interface MutableStep {
+  id: string;
+  status: string;
+  "started-at"?: string;
+  "completed-at"?: string;
+  precheck?: MutablePhasePrecheck;
+  run?: MutablePhaseRun;
+  validate?: MutablePhaseValidate;
+}
+interface MutableRunCard {
+  procedure: string;
+  status: string;
+  "started-at": string;
+  "completed-at"?: string;
+  directive?: string;
+  expires?: string;
+  steps: MutableStep[];
+}
+
+function serializeRunCard(card: MutableRunCard): string {
+  return `---\n${stringifyYaml(card)}---\n`;
+}
+
+async function readRunCard(runCardPath: string): Promise<MutableRunCard> {
+  const content = await fs.readFile(runCardPath, "utf-8");
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) throw new RunCardParseError(runCardPath);
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(split.frontmatterText);
+  } catch (_e) {
+    throw new RunCardParseError(runCardPath);
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new RunCardParseError(runCardPath);
+  }
+  // Parse boundary: run cards are engine-written YAML, strict-validated on
+  // load (cb validate / parseProcedureRun); the mutators trust the shape.
+  return parsed as MutableRunCard;
+}
 
 /**
  * Parameters for buildInitialRunCard
@@ -18,26 +87,22 @@ export interface BuildInitialRunCardParams {
 }
 
 /**
- * Build the initial run card XML.
+ * Build the initial run card (all steps pending).
  */
 export function buildInitialRunCard(params: BuildInitialRunCardParams): string {
   const { procedure, procedurePath, startedAt, directive } = params;
-  const stepElements = procedure.steps.map((step) =>
-    createElement("step", {
-      id: step.id,
-      status: "pending",
-    })
-  );
-
-  const root = createElement("procedure-run", {
+  const steps: MutableStep[] = procedure.steps.map((step) => ({
+    id: step.id,
+    status: "pending",
+  }));
+  const card: MutableRunCard = {
     procedure: procedurePath,
     status: "running",
     "started-at": startedAt,
-    ...(directive && { directive }),
-    children: stepElements,
-  });
-
-  return serialize(root, { indent: "  " }) + "\n";
+    ...(directive !== undefined && directive !== "" ? { directive } : {}),
+    steps,
+  };
+  return serializeRunCard(card);
 }
 
 /**
@@ -56,18 +121,11 @@ export interface UpdateRunCardStatusParams {
  */
 export async function updateRunCardStatus(params: UpdateRunCardStatusParams): Promise<void> {
   const { runCardPath, status, completedAt, expires } = params;
-  const content = await fs.readFile(runCardPath, "utf-8");
-  const root = await parseCard(content, { source: runCardPath });
-
-  root.attrs["status"] = status;
-  if (completedAt) {
-    root.attrs["completed-at"] = completedAt;
-  }
-  if (expires) {
-    root.attrs["expires"] = expires;
-  }
-
-  await fs.writeFile(runCardPath, serialize(root, { indent: "  " }) + "\n");
+  const card = await readRunCard(runCardPath);
+  card.status = status;
+  if (completedAt !== undefined) card["completed-at"] = completedAt;
+  if (expires !== undefined) card.expires = expires;
+  await fs.writeFile(runCardPath, serializeRunCard(card));
 }
 
 /**
@@ -80,67 +138,34 @@ export interface UpdateStepInRunCardParams {
 }
 
 /**
- * Build the precheck/run/validate result child elements for a step update.
+ * Build a step's execution record from an update. Timestamps persist from
+ * the previous record; precheck/run/validate are replaced wholesale (the
+ * final update carries the complete set).
  */
-function buildStepResultChildren(update: StepUpdate): ElementNode[] {
-  const resultChildren: ElementNode[] = [];
+function applyStepUpdate(prev: MutableStep, update: StepUpdate): MutableStep {
+  const step: MutableStep = { id: prev.id, status: update.status };
+  const startedAt = update.startedAt ?? prev["started-at"];
+  if (startedAt !== undefined) step["started-at"] = startedAt;
+  const completedAt = update.completedAt ?? prev["completed-at"];
+  if (completedAt !== undefined) step["completed-at"] = completedAt;
 
   if (update.precheck) {
-    const precheckChildren: ElementNode[] = [];
-    if (update.precheck.stdout) {
-      precheckChildren.push(
-        createElement("stdout", { children: update.precheck.stdout })
-      );
-    }
-    resultChildren.push(
-      createElement("precheck", {
-        status: update.precheck.status,
-        children: precheckChildren,
-      })
-    );
+    step.precheck = { status: update.precheck.status };
+    if (update.precheck.stdout) step.precheck.stdout = update.precheck.stdout;
   }
-
   if (update.run) {
-    const runChildren: ElementNode[] = [];
-    if (update.run.sessionId) {
-      runChildren.push(
-        createElement("session-id", { children: update.run.sessionId })
-      );
-    }
-    if (update.run.stdout) {
-      runChildren.push(
-        createElement("stdout", { children: update.run.stdout })
-      );
-    }
-    if (update.run.gitRef) {
-      runChildren.push(
-        createElement("git-ref", { children: update.run.gitRef })
-      );
-    }
-    resultChildren.push(createElement("run", { children: runChildren }));
+    const run: MutablePhaseRun = {};
+    if (update.run.sessionId) run["session-id"] = update.run.sessionId;
+    if (update.run.stdout) run.stdout = update.run.stdout;
+    if (update.run.gitRef) run["git-ref"] = update.run.gitRef;
+    step.run = run;
   }
-
   if (update.validate) {
-    const validateChildren: ElementNode[] = [];
-    if (update.validate.stdout) {
-      validateChildren.push(
-        createElement("stdout", { children: update.validate.stdout })
-      );
-    }
-    if (update.validate.review) {
-      validateChildren.push(
-        createElement("review", { children: update.validate.review })
-      );
-    }
-    resultChildren.push(
-      createElement("validate", {
-        status: update.validate.status,
-        children: validateChildren,
-      })
-    );
+    step.validate = { status: update.validate.status };
+    if (update.validate.stdout) step.validate.stdout = update.validate.stdout;
+    if (update.validate.review) step.validate.review = update.validate.review;
   }
-
-  return resultChildren;
+  return step;
 }
 
 /**
@@ -148,23 +173,11 @@ function buildStepResultChildren(update: StepUpdate): ElementNode[] {
  */
 export async function updateStepInRunCard(params: UpdateStepInRunCardParams): Promise<void> {
   const { runCardPath, stepId, update } = params;
-  const content = await fs.readFile(runCardPath, "utf-8");
-  const root = await parseCard(content, { source: runCardPath });
-
-  for (const child of root.children as ElementNode[]) {
-    if (child.tagName === "step" && child.attrs["id"] === stepId) {
-      child.attrs["status"] = update.status;
-      if (update.startedAt) {
-        child.attrs["started-at"] = update.startedAt;
-      }
-      if (update.completedAt) {
-        child.attrs["completed-at"] = update.completedAt;
-      }
-
-      child.children = buildStepResultChildren(update);
-      break;
-    }
+  const card = await readRunCard(runCardPath);
+  const idx = card.steps.findIndex((s) => s.id === stepId);
+  const prev = idx === -1 ? undefined : card.steps[idx];
+  if (prev !== undefined) {
+    card.steps[idx] = applyStepUpdate(prev, update);
   }
-
-  await fs.writeFile(runCardPath, serialize(root, { indent: "  " }) + "\n");
+  await fs.writeFile(runCardPath, serializeRunCard(card));
 }

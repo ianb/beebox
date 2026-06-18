@@ -33,7 +33,7 @@ A **directive** is an opaque runtime string passed when invoking a procedure. It
 cb procedure run process-captures --directive "Only process today's session"
 \`\`\`
 
-The directive is also recorded as an attribute on the \`<procedure-run>\` element for auditability. Step prompts can reference "the Directive" to act on it.
+The directive is also recorded as the \`directive\` field on the procedure-run card for auditability. Step prompts can reference "the Directive" to act on it.
 
 ## Procedures in Jobs
 

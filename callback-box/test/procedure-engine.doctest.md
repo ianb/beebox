@@ -7,7 +7,7 @@ tracking state in run cards, and handling various step outcomes.
 import { startProcedure } from "../src/core/procedure/engine.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { getLog } from "../src/cli/lib/git.js";
-import { parseCard } from "cardworks";
+import { parseProcedureRun } from "../src/schemas/procedure-run.js";
 ```
 
 ## Shell-only procedure: happy path
@@ -45,9 +45,9 @@ print(`greeting: ${greeting.trim()}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("greet_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseCard(runCard, { source: "run.card" });
-print(`procedure status: ${root.attrs["status"]}`);
-print(`step status: ${root.children[0].attrs["status"]}`);
+const run = parseProcedureRun(runCard);
+print(`procedure status: ${run.status}`);
+print(`step status: ${run.steps[0].status}`);
 =>
 success: true
 greeting: Hello from procedure
@@ -102,10 +102,9 @@ print(`good.txt exists: ${files.includes("good.txt")}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("maybe_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseCard(runCard, { source: "run.card" });
-const steps = root.children.filter(c => c.tagName === "step");
-print(`skipped step: ${steps[0].attrs["id"]} = ${steps[0].attrs["status"]}`);
-print(`runs step: ${steps[1].attrs["id"]} = ${steps[1].attrs["status"]}`);
+const run = parseProcedureRun(runCard);
+print(`skipped step: ${run.steps[0].id} = ${run.steps[0].status}`);
+print(`runs step: ${run.steps[1].id} = ${run.steps[1].status}`);
 =>
 success: true
 bad.txt exists: false
@@ -259,10 +258,9 @@ print(`still.txt: ${files.includes("still.txt")}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("validate_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseCard(runCard, { source: "run.card" });
-const warnedStep = root.children.find(c => c.attrs?.["id"] === "warned");
-const valEl = warnedStep.children.find(c => c.tagName === "validate");
-print(`validate status: ${valEl.attrs["status"]}`);
+const run = parseProcedureRun(runCard);
+const warnedStep = run.steps.find(s => s.id === "warned");
+print(`validate status: ${warnedStep.validate.status}`);
 =>
 success: true
 work.txt: true
@@ -466,14 +464,14 @@ const runs = (await box.list("procedure/runs")).split("\n");
 const dayMs = 24 * 60 * 60 * 1000;
 
 const okDir = runs.find(f => f.includes("stamped_"));
-const okRoot = await parseCard(await box.read(okDir + "/run.procedure-run.card"), { source: "ok" });
-const okDays = (Date.parse(okRoot.attrs["expires"]) - Date.parse(okRoot.attrs["completed-at"])) / dayMs;
+const okRun = parseProcedureRun(await box.read(okDir + "/run.procedure-run.card"));
+const okDays = (Date.parse(okRun.expires) - Date.parse(okRun["completed-at"])) / dayMs;
 print(`completed run expires after: ${Math.round(okDays)}d`);
 
 const badDir = runs.find(f => f.includes("doomed_"));
-const badRoot = await parseCard(await box.read(badDir + "/run.procedure-run.card"), { source: "bad" });
-const badDays = (Date.parse(badRoot.attrs["expires"]) - Date.parse(badRoot.attrs["completed-at"])) / dayMs;
-print(`failed run status: ${badRoot.attrs["status"]}, expires after: ${Math.round(badDays)}d`);
+const badRun = parseProcedureRun(await box.read(badDir + "/run.procedure-run.card"));
+const badDays = (Date.parse(badRun.expires) - Date.parse(badRun["completed-at"])) / dayMs;
+print(`failed run status: ${badRun.status}, expires after: ${Math.round(badDays)}d`);
 =>
 completed run expires after: 30d
 failed run status: failed, expires after: 90d
@@ -508,8 +506,8 @@ print(`success: ${result.success}`);
 
 const runs = (await box.list("procedure/runs")).split("\n");
 const runDir = runs.find(f => f.includes("keeper_"));
-const root = await parseCard(await box.read(runDir + "/run.procedure-run.card"), { source: "run" });
-print(`expires: ${root.attrs["expires"]}`);
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`expires: ${run.expires}`);
 =>
 success: true
 expires: never

@@ -323,10 +323,10 @@ const STALE_RUN_CARD_AGE_MS = 60 * 60 * 1000;
  * before scheduled work fires.
  *
  * Reads `procedure/runs/<runDir>/run.procedure-run.card` and matches the
- * root `status="..."` attribute via regex — full XML parsing is overkill
- * here and would couple this helper to the schemas package. Stale cards
- * (older than STALE_RUN_CARD_AGE_MS) are skipped so an orphaned card from
- * a long-dead procedure doesn't permanently block the at-rest gate.
+ * top-level `status:` frontmatter field via regex — full parsing is
+ * overkill here and would couple this helper to the schemas package. Stale
+ * cards (older than STALE_RUN_CARD_AGE_MS) are skipped so an orphaned card
+ * from a long-dead procedure doesn't permanently block the at-rest gate.
  */
 export async function loadRunningProcedures(boxRoot: string): Promise<string[]> {
   const runsDir = path.join(boxRoot, "procedure/runs");
@@ -363,7 +363,10 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
       }
       continue;
     }
-    if (/<procedure-run[^>]*\bstatus=["'](?:pending|running)["']/.test(content)) {
+    // Top-level `status:` line (step statuses are indented, so the
+    // start-of-line anchor skips them). Tolerate optional quotes around
+    // the value (`status: running` or `status: "running"`).
+    if (/^status:\s*["']?(?:pending|running)\b/m.test(content)) {
       running.push(entry);
     }
   }

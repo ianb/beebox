@@ -311,7 +311,7 @@ const box = await makeTmpBox();
 const runDir = box.root + "/procedure/runs/test-run_2026-05-16T1200";
 await fs.mkdir(runDir, { recursive: true });
 await fs.writeFile(runDir + "/run.procedure-run.card",
-  `<procedure-run procedure="test" status="running" started-at="2026-05-16T12:00:00Z"/>\n`);
+  `---\nprocedure: test\nstatus: running\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
 
 await loadRunningProcedures(box.root)
 => [
@@ -335,7 +335,7 @@ const runDir = box.root + "/procedure/runs/orphan_2026-03-16T2056";
 await fs.mkdir(runDir, { recursive: true });
 const cardPath = runDir + "/run.procedure-run.card";
 await fs.writeFile(cardPath,
-  `<procedure-run procedure="test" status="running" started-at="2026-03-16T20:56:00Z"/>\n`);
+  `---\nprocedure: test\nstatus: running\nstarted-at: 2026-03-16T20:56:00Z\nsteps: []\n---\n`);
 
 // Backdate the run card to two hours ago.
 const twoHoursAgo = (Date.now() - 2 * 60 * 60 * 1000) / 1000;
@@ -357,7 +357,7 @@ for (const [name, status] of [["completed_run", "completed"], ["failed_run", "fa
   const runDir = box.root + "/procedure/runs/" + name;
   await fs.mkdir(runDir, { recursive: true });
   await fs.writeFile(runDir + "/run.procedure-run.card",
-    `<procedure-run procedure="test" status="${status}"/>\n`);
+    `---\nprocedure: test\nstatus: ${status}\nstarted-at: 2026-05-16T12:00:00Z\nsteps: []\n---\n`);
 }
 
 await loadRunningProcedures(box.root)
