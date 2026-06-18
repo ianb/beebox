@@ -40,6 +40,37 @@ async function loadLazyImagesByScrolling(): Promise<void> {
   window.scrollTo(0, originalY);
 }
 
+/**
+ * Restore blocked images to hot-links. With blockImages + saveOriginalURLs,
+ * single-file blanks each `<img>` src but records the original in a
+ * `data-sf-original-src` attribute. Rewrite that back to the absolute original
+ * URL (resolved against the page) so the snapshot loads images from their
+ * source instead of carrying tens of MB of inlined base64. srcset is dropped —
+ * we keep only the single hot-linked src. (CSS background images aren't
+ * recoverable — single-file empties them — and SVGs are removed by blockImages;
+ * both acceptable for a best-effort archival snapshot.)
+ */
+function hotlinkImages(html: string): string {
+  const base = document.baseURI;
+  const parsed = new DOMParser().parseFromString(html, "text/html");
+  for (const el of parsed.querySelectorAll("img")) {
+    const orig = el.getAttribute("data-sf-original-src");
+    el.removeAttribute("data-sf-original-src");
+    el.removeAttribute("srcset");
+    if (orig === null || orig === "") continue;
+    try {
+      el.setAttribute("src", new URL(orig, base).href);
+    } catch (_e) {
+      el.removeAttribute("src");
+    }
+  }
+  for (const el of parsed.querySelectorAll("source[srcset]")) {
+    el.removeAttribute("srcset");
+  }
+  const doctype = parsed.doctype !== null ? "<!DOCTYPE html>\n" : "";
+  return doctype + parsed.documentElement.outerHTML;
+}
+
 export async function freezePage(): Promise<string | null> {
   const started = performance.now();
   try {
@@ -58,16 +89,25 @@ export async function freezePage(): Promise<string | null> {
         // `removeScripts`/`removeImports` were not recognized by
         // single-file-core (silent no-ops), which is why the JS leaked in.
         blockScripts: true,
+        // Don't inline images — base64-inlining them was ~35MB of a 41MB
+        // capture (one chart-heavy page had 43 PNGs, several >4MB). Block the
+        // inlining and hot-link to the originals instead (see hotlinkImages).
+        // saveOriginalURLs records each blocked resource's URL in a
+        // `data-sf-original-*` attribute so we can restore it as the live src.
+        blockImages: true,
+        saveOriginalURLs: true,
       }),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), FREEZE_TIMEOUT_MS)),
     ]);
-    const ms = Math.round(performance.now() - started);
     if (pageData === null) {
       console.warn(`[clerk] page freeze timed out after ${FREEZE_TIMEOUT_MS}ms; skipping snapshot`);
       return null;
     }
-    console.info(`[clerk] page freeze took ${ms}ms (${Math.round(pageData.content.length / 1024)}kB)`);
-    return pageData.content !== "" ? pageData.content : null;
+    if (pageData.content === "") return null;
+    const content = hotlinkImages(pageData.content);
+    const ms = Math.round(performance.now() - started);
+    console.info(`[clerk] page freeze took ${ms}ms (${Math.round(content.length / 1024)}kB)`);
+    return content;
   } catch (e) {
     const ms = Math.round(performance.now() - started);
     console.warn(`[clerk] page freeze failed after ${ms}ms: ${e instanceof Error ? e.message : String(e)}`);
