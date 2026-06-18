@@ -16,7 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { attachDirFor } from "../../lib/attach-path.js";
+import { attachDirFor } from "../../shared/attach-path.js";
 import { cardSchemas } from "../../schemas/registry.js";
 
 const PHASE2_TYPES = new Set(cardSchemas.map((s) => s.type));

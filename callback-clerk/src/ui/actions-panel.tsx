@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EnabledBox } from "../domain/config.js";
 import type { ActionResponse, ClerkMessage } from "../domain/messages.js";
-import type { SaveIntent } from "../domain/save-page.js";
 import type { CommentaryDestination } from "../domain/commentary.js";
 import { getCommentaryDestinations } from "../platform/clerk-api.js";
 
@@ -44,7 +43,6 @@ interface ActionsPanelProps {
 export function ActionsPanel({ box }: ActionsPanelProps) {
   const [busy, setBusy] = useState<string | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
-  const [memo, setMemo] = useState("");
   const [tab, setTab] = useState<CurrentTab | null>(null);
   const [destinations, setDestinations] = useState<CommentaryDestination[]>([]);
   const [selectedDir, setSelectedDir] = useState("");
@@ -96,37 +94,6 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
     setSelectedDir(e.target.value);
   }, []);
 
-  const handleSavePage = useCallback(() => {
-    if (tab === null) return;
-    const message: ClerkMessage = { type: "savePage", intent: "save" as SaveIntent, tabId: tab.id };
-    runAction({ label: "save", message, okText: "Page saved" });
-  }, [tab, runAction]);
-
-  const handleDoPage = useCallback(() => {
-    if (tab === null) return;
-    const message: ClerkMessage = { type: "savePage", intent: "do" as SaveIntent, tabId: tab.id };
-    runAction({ label: "do", message, okText: "Page saved as to-do" });
-  }, [tab, runAction]);
-
-  const handleSendMemo = useCallback(
-    (e: React.FormEvent) => {
-      e.preventDefault();
-      const text = memo.trim();
-      if (text === "") return;
-      setMemo("");
-      runAction({
-        label: "memo",
-        message: { type: "sendMemo", text, url: tab?.url, title: tab?.title },
-        okText: "Memo sent",
-      });
-    },
-    [memo, tab, runAction],
-  );
-
-  const handleMemoChange = useCallback((e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setMemo(e.target.value);
-  }, []);
-
   const handleSyncTabs = useCallback(() => {
     runAction({ label: "tabs", message: { type: "syncTabs" }, okText: "Tabs synced" });
   }, [runAction]);
@@ -147,20 +114,14 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
         />
       ) : null}
       <div className="space-y-2 border-t border-gray-100 pt-3">
-        <p className="text-xs font-medium uppercase tracking-wide text-gray-400">Other actions</p>
-        {tab !== null ? (
-          <SaveButtons busyLabel={busy} onSave={handleSavePage} onDo={handleDoPage} />
-        ) : null}
-        <form onSubmit={handleSendMemo}>
-          <textarea
-            value={memo}
-            onChange={handleMemoChange}
-            placeholder={`Send a memo to ${box.title}…`}
-            rows={2}
-            className="w-full resize-none rounded border border-gray-300 px-2 py-1.5 text-sm"
-          />
-          <SubmitRow isBusy={busy !== null} canSend={memo.trim() !== ""} onSyncTabs={handleSyncTabs} />
-        </form>
+        <button
+          type="button"
+          onClick={handleSyncTabs}
+          disabled={busy !== null}
+          className="rounded bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
+        >
+          {busy === "tabs" ? "Syncing…" : "Sync tabs"}
+        </button>
       </div>
       {notice !== null ? <NoticeLine notice={notice} onOpenBox={handleOpenBox} /> : null}
     </div>
@@ -208,61 +169,6 @@ function CommentSection({ busyLabel, destinations, selectedDir, onSelectDir, onC
           {soleDestination.label}
         </p>
       ) : null}
-    </div>
-  );
-}
-
-interface SaveButtonsProps {
-  busyLabel: string | null;
-  onSave: () => void;
-  onDo: () => void;
-}
-
-function SaveButtons({ busyLabel, onSave, onDo }: SaveButtonsProps) {
-  return (
-    <div className="flex gap-2">
-      <button
-        onClick={onSave}
-        disabled={busyLabel !== null}
-        className="flex-1 rounded bg-teal-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-teal-700 disabled:opacity-50"
-      >
-        {busyLabel === "save" ? "Saving…" : "Save page"}
-      </button>
-      <button
-        onClick={onDo}
-        disabled={busyLabel !== null}
-        className="flex-1 rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
-      >
-        {busyLabel === "do" ? "Saving…" : "Do page"}
-      </button>
-    </div>
-  );
-}
-
-interface SubmitRowProps {
-  isBusy: boolean;
-  canSend: boolean;
-  onSyncTabs: () => void;
-}
-
-function SubmitRow({ isBusy, canSend, onSyncTabs }: SubmitRowProps) {
-  return (
-    <div className="mt-1 flex gap-2">
-      <button
-        type="submit"
-        disabled={isBusy || !canSend}
-        className="flex-1 rounded bg-gray-800 px-3 py-1.5 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
-      >
-        Send memo
-      </button>
-      <button
-        type="button"
-        onClick={onSyncTabs}
-        disabled={isBusy}
-        className="rounded bg-gray-100 px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-200 disabled:opacity-50"
-      >
-        Sync tabs
-      </button>
     </div>
   );
 }

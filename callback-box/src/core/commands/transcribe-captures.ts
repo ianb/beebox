@@ -27,7 +27,7 @@ import {
 import {
   attachDirFor,
   resolveAttachRef,
-} from "../../lib/attach-path.js";
+} from "../../shared/attach-path.js";
 
 async function loadAudioCard(cardPath: string): Promise<AudioFields> {
   const content = await fs.readFile(cardPath, "utf-8");

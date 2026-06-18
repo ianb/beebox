@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { CardLoader } from "cardworks";
 import type { CommandContext } from "../command-runner.js";
-import { attachDirFor } from "../../lib/attach-path.js";
+import { attachDirFor } from "../../shared/attach-path.js";
 import {
   rewriteReferrerRefs,
   rewriteMovedCardRefs,

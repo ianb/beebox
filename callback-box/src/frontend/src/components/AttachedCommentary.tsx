@@ -6,29 +6,13 @@
  * attached commentary above their document.
  */
 
+import { attachDirFor } from "@shared/attach-path";
 import { trpc } from "../lib/trpc";
 import { Markdown } from "./Markdown";
 import { Text } from "./ui/Text";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
 
 export type JumpToQuote = (quoteText: string) => Promise<boolean>;
-
-/**
- * Box-relative attach-scope directory for a card path:
- * `box/x/Foo.webpage.card` → `box/x/Foo.attach`. Mirrors `attachDirFor` in
- * `src/lib/attach-path.ts`, reimplemented here because that module sits outside
- * the frontend tsconfig's roots.
- */
-export function attachDirForCard(cardPath: string): string {
-  const slash = cardPath.lastIndexOf("/");
-  const dir = slash === -1 ? "" : cardPath.slice(0, slash);
-  const name = slash === -1 ? cardPath : cardPath.slice(slash + 1);
-  const noCard = name.endsWith(".card") ? name.slice(0, -".card".length) : name;
-  const lastDot = noCard.lastIndexOf(".");
-  const base = lastDot === -1 ? noCard : noCard.slice(0, lastDot);
-  const attach = `${base}.attach`;
-  return dir === "" ? attach : `${dir}/${attach}`;
-}
 
 /** One commentary card's remarks, fetched from the host's attach scope. */
 function CommentaryRemarks({
@@ -75,7 +59,7 @@ export function AttachedCommentary({
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   onJumpToQuote: JumpToQuote;
 }) {
-  const attachDir = attachDirForCard(cardPath);
+  const attachDir = attachDirFor(cardPath);
   const { data: browse } = trpc.status.browse.useQuery({ path: attachDir });
   const commentaryPaths = (browse?.cards ?? [])
     .filter((c) => c.type === "commentary")

@@ -1,8 +1,7 @@
 /**
  * Readable-page extraction for the commentary flow: Defuddle isolates the main
  * content, DOMPurify sanitizes it, Turndown converts to markdown. Pure DOM —
- * no chrome.* APIs — so the content-script entrypoint stays a thin shim
- * (mirrors `extract-page.ts`, which the secondary save-page action still uses).
+ * no chrome.* APIs — so the content-script entrypoint stays a thin shim.
  *
  * extract→sanitize→convert keeps the three concerns separate: Defuddle decides
  * what's content, DOMPurify makes it safe before it ever reaches the box, and

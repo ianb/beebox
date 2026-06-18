@@ -23,7 +23,7 @@ import {
   isAttachDirName,
   isInsideAttachScope,
   isLiteralAttachName,
-} from "./attach-path.js";
+} from "../shared/attach-path.js";
 
 export interface AttachLintError {
   /** Box-root-relative path the error applies to. */

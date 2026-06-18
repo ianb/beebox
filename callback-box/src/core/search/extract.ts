@@ -18,7 +18,7 @@
 
 import type { ElementNode } from "cardworks";
 import type { LoadedCard, FrontmatterLoadedCard, XmlLoadedCard } from "../card-io.js";
-import { resolveAttachRef } from "../../lib/attach-path.js";
+import { resolveAttachRef } from "../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../file-summary.js";
 import { splitMarkdownSections } from "./markdown-sections.js";
 
