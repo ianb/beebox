@@ -28,6 +28,9 @@ registerFileRenderer(
     const base = path.split("/").pop();
     if (!base || !base.includes(".")) return false;
     if (path.endsWith(".card")) return false;
+    // JSON has its own renderer that loads on its own terms (size-gated); the
+    // shell doesn't prefetch its text, so plaintext has nothing to show.
+    if (path.endsWith(".json")) return false;
     return !isBinaryPath(path);
   },
   { name: "Plaintext", Component: PlaintextRenderer, priority: 1 },

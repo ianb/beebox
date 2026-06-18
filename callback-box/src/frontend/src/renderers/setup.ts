@@ -12,6 +12,7 @@ import "./pdf";
 import "./recipe";
 import "./sheet";
 import "./markdown";
+import "./json";
 import "./plaintext";
 import "./binary";
 import "./directory";
