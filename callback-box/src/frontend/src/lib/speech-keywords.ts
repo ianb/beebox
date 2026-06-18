@@ -9,10 +9,10 @@ const sendPattern = KeywordPattern.compile(`
 
 // "Send and close": send the message, then close the mic and leave it closed
 // (the deliberate "I'm done, take it from here" sign-off), in contrast to plain
-// `send`, which restarts the mic for a continuous conversation. Checked BEFORE
-// `sendPattern` in detectKeyword — phrases like "send and finish the message"
-// also satisfy the plain-send pattern (`finish … message`), so the close
-// variant has to win the overlap.
+// `send`, which restarts the mic for a continuous conversation. Checked FIRST in
+// detectKeyword — it owns the "send and …" / "over and out" shape, which overlaps
+// both plain `send` ("send and finish the message" → `finish … message`) and
+// micOff ("send and stop the mic" → `stop the mic`); the close variant wins both.
 const sendClosePattern = KeywordPattern.compile(`
   send and (close | stop | finish | done | sign off)
   send and close (the)? (mic | microphone | message)
@@ -104,6 +104,14 @@ export function detectKeyword(
     return match;
   };
 
+  // Checked first. Its patterns only match "send and …" / "over and out", which
+  // no other keyword contains, so leading steals nothing — and it has to win
+  // over the overlaps: plain `send` ("send and finish the message" → also
+  // `finish … message`) and micOff ("send and stop the mic" → also `stop the
+  // mic`). Both of those should send-and-close, not just send / just mute.
+  const sendCloseMatch = tryMatch(sendClosePattern);
+  if (sendCloseMatch) return asResult("sendClose", sendCloseMatch);
+
   const micOffMatch = tryMatch(micOffPattern);
   if (micOffMatch) return asResult("micOff", micOffMatch);
 
@@ -112,11 +120,6 @@ export function detectKeyword(
 
   const eraseMatch = tryMatch(erasePattern);
   if (eraseMatch) return asResult("erase", eraseMatch);
-
-  // Must precede plain `send`: "send and finish the message" matches both, and
-  // the close variant has to win (see sendClosePattern).
-  const sendCloseMatch = tryMatch(sendClosePattern);
-  if (sendCloseMatch) return asResult("sendClose", sendCloseMatch);
 
   const sendMatch = tryMatch(sendPattern);
   if (sendMatch) return asResult("send", sendMatch);

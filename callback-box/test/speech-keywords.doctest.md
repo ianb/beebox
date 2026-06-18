@@ -74,11 +74,15 @@ detectKeyword("OK send and close")?.processedTranscript
 ```
 
 Precedence matters: "send and finish the message" satisfies the plain-send
-pattern too (`finish … message`), but the close variant is checked first and
-wins:
+pattern too (`finish … message`), and "send and stop the mic" satisfies the
+mic-off pattern (`stop the mic`) — but the close variant is checked first and
+wins both, so neither degrades to a plain send or a bare mute:
 
 ```
 detectKeyword("send and finish the message")?.action
+=> sendClose
+
+detectKeyword("send and stop the mic")?.action
 => sendClose
 ```
 
