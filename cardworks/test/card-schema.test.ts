@@ -91,7 +91,7 @@ test("cardSchema injects global fields as optional frontmatter", (t) => {
   const schema = cardSchema("memo-like", {
     fields: { status: z.string() },
   });
-  t.strictSame([...schema.globalFieldNames].sort(), ["contains", "title"]);
+  t.strictSame([...schema.globalFieldNames].sort(), ["contains", "content-type", "title"]);
   const ok = schema.frontmatterSchema.safeParse({
     type: "memo-like",
     status: "new",
@@ -112,11 +112,34 @@ test("cardSchema injects global fields as optional frontmatter", (t) => {
   t.end();
 });
 
+test("frontmatterSchema is lenient — unknown keys are stripped, not rejected", (t) => {
+  const schema = cardSchema("memo-like", {
+    fields: { status: z.string() },
+  });
+  // A drifted card still parses; the unknown key is dropped from the result so
+  // the card stays usable. (The unknown key is surfaced as a lint warning.)
+  const result = schema.frontmatterSchema.safeParse({
+    type: "memo-like",
+    status: "new",
+    "bogus-field": "oops",
+  });
+  t.equal(result.success, true);
+  t.notOk(result.success && "bogus-field" in result.data, "unknown key is stripped");
+  // The content-type global is preserved (XML-bodied cards carry it).
+  const withContentType = schema.frontmatterSchema.safeParse({
+    type: "memo-like",
+    status: "new",
+    "content-type": "application/x-card+xml",
+  });
+  t.ok(withContentType.success && "content-type" in withContentType.data, "content-type is kept");
+  t.end();
+});
+
 test("a schema's own declaration wins over the global field", (t) => {
   const schema = cardSchema("titled", {
     fields: { title: z.string() }, // required, unlike the optional global
   });
-  t.strictSame([...schema.globalFieldNames], ["contains"]);
+  t.strictSame([...schema.globalFieldNames].sort(), ["contains", "content-type"]);
   const missingTitle = schema.frontmatterSchema.safeParse({ type: "titled" });
   t.equal(missingTitle.success, false);
   t.end();

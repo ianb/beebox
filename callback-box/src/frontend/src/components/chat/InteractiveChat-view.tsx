@@ -73,7 +73,7 @@ interface ChatBodyProps {
   zoomedViewAttr: () => string;
   timePassedAttr: () => string;
   /** Report user activity on the open companion card (scrolled/navigated/…). */
-  reportCardActivity: (kind: ActivityKind) => void;
+  reportCardActivity: (kind: ActivityKind, detail?: string) => void;
 }
 
 function HeaderRegion(props: ChatBodyProps) {
@@ -262,8 +262,9 @@ export function InteractiveChatBody(props: ChatBodyProps) {
             onCloseTab={onCloseTab}
             onClosePanel={onClosePanel}
             onNavigate={(target, hint) => {
-              // A link followed within the pane is active consumption.
-              props.reportCardActivity("navigated");
+              // A link followed within the pane is active consumption; the
+              // detail is where they navigated to.
+              props.reportCardActivity("navigated", target.path);
               onZoomView({
                 target: { ...target, zoom: false },
                 label: hint && hint.label ? hint.label : target.path,

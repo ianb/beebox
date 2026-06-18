@@ -97,6 +97,30 @@ result.results[0]!.errors[0]!.message.includes("invalid email-thread frontmatter
 => true
 ```
 
+## Unknown frontmatter keys are reported as warnings
+
+A key the schema doesn't declare is stripped on load, so the card still loads,
+renders, and indexes. Lint surfaces it as a warning (not an error) so it gets
+cleaned off disk eventually without blocking commits.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/inbox/notes/drift.doc.card",
+  "---\ntype: doc\ntitle: Drift\nbogus-field: oops\n---\nBody.\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/notes/drift.doc.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 0
+
+result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "bogus-field"'))
+=> true
+```
+
 ## Broken refs in frontmatter cards are reported as warnings
 
 Each entry in a ref-declared field is resolved against the loader; missing

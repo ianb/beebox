@@ -1,3 +1,5 @@
+import { encodeCanvasBlob } from "./canvas-encode";
+
 export type FacingMode = "user" | "environment";
 
 // Request the highest resolution the camera supports.
@@ -91,9 +93,9 @@ export class CameraCapture {
     const ctx = canvas.getContext("2d");
     if (!ctx) return Promise.resolve(null);
     ctx.drawImage(this.videoEl, 0, 0);
-    return new Promise<Blob | null>((resolve) => {
-      canvas.toBlob((b) => resolve(b), "image/jpeg", 0.85);
-    });
+    // AVIF/WebP when the browser can encode them, else JPEG — a direct encode
+    // of the captured frame (no extra re-encode generation).
+    return encodeCanvasBlob(canvas, { quality: 0.85, fallback: "image/jpeg" });
   }
 
   stop(): void {

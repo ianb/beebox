@@ -10,6 +10,8 @@ import {
   isActivityKind,
   joinActivityKinds,
   unionActivityKinds,
+  renderActivityChildren,
+  mergeCardStateDetails,
 } from "../src/core/chat-card-activity.js";
 import { combineQueuedInputs } from "../src/core/chat-session-state.js";
 ```
@@ -24,25 +26,33 @@ isActivityKind("clicked")
 => false
 ```
 
-## Joining for the snapshot attribute
+## Rendering the snapshot children
 
-`joinActivityKinds` de-duplicates, drops unrecognized kinds, and emits the
-canonical order regardless of arrival order. Empty input collapses to
-`undefined` so the attribute is omitted (the snapshot pipeline renders empty
-strings, so the caller must pass `undefined`, not `""`).
+`renderActivityChildren` emits one `<card-activity>` element per kind, in
+canonical order, dropping unrecognized kinds. A kind with a detail carries it as
+element text (XML-escaped); without one it's self-closing. Empty input renders
+`""` so the caller keeps `<chat-app>` self-closing.
 
 ```
-joinActivityKinds(["modified", "scrolled", "modified"])
-=> scrolled,modified
+renderActivityChildren(["scrolled"], {})
+=> <card-activity kind="scrolled"/>
 
-joinActivityKinds(["explored", "bogus", "navigated"])
-=> navigated,explored
+renderActivityChildren(["explored"], { explored: "boat-water+road -> boats" })
+=> <card-activity kind="explored">boat-water+road -> boats</card-activity>
 
-JSON.stringify(joinActivityKinds([]))
-=> undefined
+JSON.stringify(renderActivityChildren([], {}))
+=> ""
 
-JSON.stringify(joinActivityKinds(["bogus"]))
-=> undefined
+JSON.stringify(renderActivityChildren(["bogus"], {}))
+=> ""
+```
+
+Multiple kinds come out in canonical order regardless of arrival order, one per
+line; detail text is escaped.
+
+```
+JSON.stringify(renderActivityChildren(["explored", "scrolled"], { explored: "a < b & c" }))
+=> "<card-activity kind=\"scrolled\"/>\n<card-activity kind=\"explored\">a &lt; b &amp; c</card-activity>"
 ```
 
 ## Unioning across queued sends
@@ -62,6 +72,24 @@ JSON.stringify(unionActivityKinds([]))
 => []
 ```
 
+## Per-kind detail (card-state)
+
+`reportActivity(kind, detail)` attaches a free-text detail per kind, carried as
+the `<card-activity>` element text. `mergeCardStateDetails` merges detail maps
+latest-wins per kind, dropping unrecognized kinds and empty strings — so a later
+queued send's detail for a kind overrides an earlier one.
+
+```
+JSON.stringify(mergeCardStateDetails([
+  { explored: "boa" },
+  { explored: "boat", modified: "x.card" },
+]))
+=> {"explored":"boat","modified":"x.card"}
+
+JSON.stringify(mergeCardStateDetails([{ bogus: "y" }, { explored: "" }]))
+=> {}
+```
+
 ## Combining queued inputs
 
 `combineQueuedInputs` joins text, renumbers image tokens, and for the
@@ -71,8 +99,8 @@ must not clobber an earlier "scrolled".
 
 ```
 const combined = combineQueuedInputs([
-  { text: "first", openCard: "a.card", cardActivity: ["scrolled"] },
-  { text: "second", openCard: "b.card", cardActivity: ["modified"] },
+  { text: "first", openCard: "a.card", cardActivity: ["scrolled", "explored"], cardState: { explored: "bo" } },
+  { text: "second", openCard: "b.card", cardActivity: ["modified"], cardState: { explored: "boat" } },
 ]);
 JSON.stringify(combined.text)
 => "first\n\nsecond"
@@ -81,7 +109,10 @@ combined.openCard
 => b.card
 
 JSON.stringify(combined.cardActivity)
-=> ["scrolled","modified"]
+=> ["scrolled","explored","modified"]
+
+JSON.stringify(combined.cardState)
+=> {"explored":"boat"}
 ```
 
 When no queued send carries companion-pane state, both fields are absent (not

@@ -44,6 +44,7 @@ interface LocalParts {
   day: string;
   hour: string;
   minute: string;
+  zone: string;
 }
 
 /**
@@ -60,6 +61,7 @@ function localParts(date: Date, timezone: string | null): LocalParts {
     hour: "2-digit",
     minute: "2-digit",
     hourCycle: "h23",
+    timeZoneName: "short",
   };
   let fmt: Intl.DateTimeFormat;
   try {
@@ -85,14 +87,16 @@ function localParts(date: Date, timezone: string | null): LocalParts {
     day: raw.day ?? "",
     hour: raw.hour ?? "",
     minute: raw.minute ?? "",
+    zone: raw.timeZoneName ?? "",
   };
 }
 
 /**
- * Human-oriented local time: named weekday, local date and clock, phase
- * of day. E.g. `Tuesday 2026-06-09 14:32 (afternoon)`. The named
- * weekday and phase are the point — models misderive both from a UTC
- * ISO timestamp.
+ * Human-oriented local time: named weekday, local date and clock, zone
+ * abbreviation, phase of day. E.g. `Tuesday 2026-06-09 14:32 PDT
+ * (afternoon)`. The named weekday, zone, and phase are the point — models
+ * misderive all three from a UTC ISO timestamp. The zone label is dropped
+ * if the platform's Intl can't supply one.
  */
 export function formatLocalTime(
   date: Date,
@@ -100,7 +104,8 @@ export function formatLocalTime(
 ): string {
   const p = localParts(date, timezone);
   const phase = phaseOfDay(Number(p.hour));
-  return `${p.weekday} ${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} (${phase})`;
+  const zone = p.zone !== "" ? `${p.zone} ` : "";
+  return `${p.weekday} ${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute} ${zone}(${phase})`;
 }
 
 /**
@@ -167,12 +172,12 @@ interface SnapshotContext {
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel, openCard, cardActivity }: {
+  { features, sessionStart, channel, openCard, activityChildren }: {
     features: FeatureMap;
     sessionStart: boolean;
     channel?: string;
     openCard?: string;
-    cardActivity?: string;
+    activityChildren?: string;
   },
 ): Promise<string> {
   const now = new Date();
@@ -183,7 +188,7 @@ export async function composeSendSnapshot(
     ...context,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
-    ...(cardActivity !== undefined ? { cardActivity } : {}),
+    ...(activityChildren !== undefined ? { activityChildren } : {}),
   });
 }
 

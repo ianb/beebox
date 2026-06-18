@@ -13,6 +13,16 @@ import type { ChatContext, ChatEvent } from "./chat-types";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
 
+/** Pull the companion-card fields off a SEND event, omitting empties — shared
+ *  by the streaming input builder and the queued-send dispatcher. */
+export function cardFieldsFromEvent(event: SendEvent): Pick<SendEvent, "openCard" | "cardActivity" | "cardState"> {
+  return {
+    ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
+    ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
+    ...(event.cardState && Object.keys(event.cardState).length > 0 ? { cardState: event.cardState } : {}),
+  };
+}
+
 /** Build the optimistic, pending user entry appended when a SEND is queued. */
 function buildPendingEntry(event: SendEvent): SessionEntry {
   return {
@@ -47,8 +57,7 @@ export function dispatchQueuedSend(
     message: event.message,
     messageId: event.messageId,
     ...(event.images ? { images: event.images } : {}),
-    ...(event.openCard !== undefined ? { openCard: event.openCard } : {}),
-    ...(event.cardActivity && event.cardActivity.length > 0 ? { cardActivity: event.cardActivity } : {}),
+    ...cardFieldsFromEvent(event),
   });
 }
 

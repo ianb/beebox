@@ -14,7 +14,7 @@ import {
   type SessionEntry,
 } from "../cli/lib/session.js";
 import type { ChatContentBlock } from "../services/claude-chat.js";
-import type { ActivityKind } from "./chat-card-activity.js";
+import type { ActivityKind, CardStateDetails } from "./chat-card-activity.js";
 import type {
   SDKMessage,
   SDKTaskNotificationMessage,
@@ -141,6 +141,13 @@ export interface ChatSendInput {
    * the read-only `card-activity` snapshot attribute. Omitted when empty.
    */
   cardActivity?: ActivityKind[];
+  /**
+   * Per-kind free-text detail for the companion-pane activity (e.g. the
+   * embedding query typed, the path modified). Latest-wins per kind across
+   * queued sends; surfaced as the text of the read-only `<card-activity>`
+   * snapshot child elements.
+   */
+  cardState?: CardStateDetails;
 }
 
 /**

@@ -2,16 +2,25 @@
  * Utilities for accepting images pasted/dropped into the chat composer.
  *
  * Images get downscaled client-side before being encoded as base64 so we
- * don't ship multi-megabyte phone photos through JSON. We re-encode to
- * JPEG at 0.85 quality (photos) or keep PNG when the source is PNG with
- * possible transparency.
+ * don't ship multi-megabyte phone photos through JSON. Photos re-encode via
+ * `encodeCanvasBlob` — AVIF when the browser can, else WebP, else JPEG — all
+ * far smaller than the source. PNG sources are kept as **lossless PNG**: the
+ * browser canvas only produces *lossy* WebP/AVIF (no lossless flag exists), so
+ * converting a screenshot / line-art PNG here would silently degrade it.
+ * PNG→WebP belongs to the lossless, high-effort server-side intake step, not
+ * this lossy client path (see docs/ideas.md, "AVIF / WebP for stored images").
+ *
+ * This is the transient chat-attachment path (already downscaled); archival
+ * fidelity is the server's job.
  */
+
+import { encodeCanvasBlob } from "./canvas-encode";
 
 /** Max longest-side dimension after downscaling. */
 const MAX_DIMENSION = 1920;
 
-/** JPEG quality for re-encoded photos. */
-const JPEG_QUALITY = 0.85;
+/** Quality for re-encoded photos. */
+const PHOTO_QUALITY = 0.85;
 
 /**
  * Something went wrong while decoding/re-encoding a pasted or dropped image.
@@ -88,9 +97,9 @@ function blobToBase64(blob: Blob): Promise<string> {
 /**
  * Downscale and re-encode an image blob for chat attachment.
  *
- * Skips resize when the source already fits within MAX_DIMENSION. Keeps
- * PNG encoding for PNG sources (preserves transparency/screenshots);
- * converts everything else to JPEG.
+ * Skips resize when the source already fits within MAX_DIMENSION. Photos
+ * re-encode to AVIF/WebP when supported (else JPEG); PNG sources stay lossless
+ * PNG, since the canvas can only produce lossy WebP/AVIF.
  */
 export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const img = await readImageElement(blob);
@@ -101,8 +110,7 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const width = Math.round(srcW * scale);
   const height = Math.round(srcH * scale);
 
-  const isPng = blob.type === "image/png";
-  const outputType = isPng ? "image/png" : "image/jpeg";
+  const wasPng = blob.type === "image/png";
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -111,19 +119,21 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   if (!ctx) throw new ImageProcessingError(IMG_ERR.canvasContext);
   ctx.drawImage(img, 0, 0, width, height);
 
-  const outBlob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new ImageProcessingError(IMG_ERR.toBlob))),
-      outputType,
-      isPng ? undefined : JPEG_QUALITY
-    );
-  });
+  // PNG sources stay lossless PNG — canvas WebP/AVIF is always lossy, so a
+  // pasted screenshot/line-art would degrade. Photos take the AVIF → WebP →
+  // JPEG cascade (already lossy, so re-encoding is a clean win). The produced
+  // blob's type is the format actually written, so label by it.
+  const outBlob = wasPng
+    ? await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"))
+    : await encodeCanvasBlob(canvas, { quality: PHOTO_QUALITY, fallback: "image/jpeg" });
+  if (!outBlob) throw new ImageProcessingError(IMG_ERR.toBlob);
 
+  const mimeType = outBlob.type;
   const dataBase64 = await blobToBase64(outBlob);
   const objectUrl = URL.createObjectURL(outBlob);
 
   return {
-    mimeType: outputType,
+    mimeType,
     dataBase64,
     objectUrl,
     width,

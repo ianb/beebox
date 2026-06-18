@@ -66,7 +66,7 @@ interface FileViewProps {
    * accumulator. Threaded into agent-generated views (writes → `"modified"`,
    * `reportActivity("explored")` opt-in). Absent outside the companion pane.
    */
-  reportActivity?: (kind: ActivityKind) => void;
+  reportActivity?: (kind: ActivityKind, detail?: string) => void;
   /**
    * Optional. When provided (chat-embedded cards only), the chat header shows
    * an "open in sidebar" button beside open-in-new-tab that escalates this
@@ -273,7 +273,10 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
   const [userSelection, setUserSelection] = useState<{ path: string; name: string } | null>(null);
   const selectForPath = useCallback((name: string) => {
     setUserSelection({ path, name });
-  }, [path]);
+    // Switching how the same card is viewed (Sandbox/Card Tree/XML/…) is an
+    // "explored" action. No-op outside the companion pane (reportActivity unset).
+    reportActivity?.("explored", `viewing as ${name}`);
+  }, [path, reportActivity]);
 
   // A box view exporting `rendersCardTypes` becomes this card type's
   // default renderer; the built-ins stay available through the toggle.

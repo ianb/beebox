@@ -98,9 +98,9 @@ export function stripSpeechWrappers(text: string): string {
   // Drop <instructions>...</instructions> voice-direction blocks
   out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
   // Drop self-closing voice-keyword marker tags
-  out = out.replace(/<(?:send-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
+  out = out.replace(/<(?:send-message|send-close-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
   // Drop the <chat-app .../> snapshot tag prepended to every user message
-  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>\s*<\/chat-app\s*>)/gi, "");
+  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)/gi, "");
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
   return out;

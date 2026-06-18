@@ -75,9 +75,11 @@ export function UserMessageText({ text }: { text: string }) {
   const stripped = stripUserDisplayTags(text);
 
   const parts: MessagePart[] = [];
-  // Pills: <send-message phrase="…"/> (voice keyword) and <user-selection
-  // ref="…" pos="…">quoted text</user-selection> (attached document text).
-  const tagRe = /<send-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>/gi;
+  // Pills: <send-message phrase="…"/> / <send-close-message phrase="…"/> (voice
+  // keyword — plain send and the "send and close" sign-off render the same pill)
+  // and <user-selection ref="…" pos="…">quoted text</user-selection> (attached
+  // document text).
+  const tagRe = /<send(?:-close)?-message\s+phrase="([^"]*?)"\s*\/>|<user-selection\b([^>]*)>([\S\s]*?)<\/user-selection>/gi;
   let lastIndex = 0;
   let match;
   while ((match = tagRe.exec(stripped)) !== null) {

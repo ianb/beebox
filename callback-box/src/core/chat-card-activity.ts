@@ -11,9 +11,18 @@
  * and are deliberately framed as low-confidence hints, not assertions of
  * intent (`cb chat whats-changed` is the verifiable surface).
  *
+ * Each kind can also carry an optional free-text **detail** string (e.g. the
+ * embedding query the user typed, the path that was modified) that a view
+ * supplies via `reportActivity(kind, detail)`. Both ride the snapshot as
+ * `<card-activity kind="…">detail</card-activity>` child elements of
+ * `<chat-app>` (children, not attributes, so a detail can be long/multi-line).
+ * Details are kept per-kind and latest-wins — typing `b`,`bo`,`boa`,`boat`
+ * overwrites the same `explored` detail rather than accumulating, so the
+ * snapshot shows only the final state.
+ *
  * Canonical order (least → most consequential): `scrolled`, `navigated`,
- * `explored`, `modified`. Serialization and union both project onto this
- * order, so the attribute value is stable regardless of arrival order.
+ * `explored`, `modified`. Rendering and union both project onto this order, so
+ * the output is stable regardless of arrival order.
  */
 
 export const ACTIVITY_KINDS = ["scrolled", "navigated", "explored", "modified"] as const;
@@ -25,19 +34,6 @@ const ACTIVITY_KIND_SET: ReadonlySet<string> = new Set(ACTIVITY_KINDS);
 /** True if the string is one of the four recognized activity kinds. */
 export function isActivityKind(s: string): s is ActivityKind {
   return ACTIVITY_KIND_SET.has(s);
-}
-
-/**
- * Project any collection of kind strings onto the canonical order,
- * de-duplicated, dropping anything unrecognized. Returns the joined string
- * for the snapshot attribute, or `undefined` when nothing survives — so the
- * caller passes `undefined` (not `""`) and the attribute is omitted (the
- * snapshot pipeline renders empty strings).
- */
-export function joinActivityKinds(kinds: Iterable<string>): string | undefined {
-  const present = new Set(kinds);
-  const ordered = ACTIVITY_KINDS.filter((k) => present.has(k));
-  return ordered.length > 0 ? ordered.join(",") : undefined;
 }
 
 /**
@@ -53,4 +49,55 @@ export function unionActivityKinds(lists: Iterable<Iterable<string> | undefined>
     for (const k of list) present.add(k);
   }
   return ACTIVITY_KINDS.filter((k) => present.has(k));
+}
+
+/** Per-kind detail strings supplied via `reportActivity(kind, detail)`. */
+export type CardStateDetails = Partial<Record<ActivityKind, string>>;
+
+/**
+ * Merge several detail maps into one, latest-wins per kind, dropping
+ * unrecognized kinds and empty strings. Used to combine queued sends so a
+ * later send's detail for a kind overrides an earlier one (matching the
+ * latest-wins overwrite the live accumulator already does within a turn).
+ */
+export function mergeCardStateDetails(maps: Iterable<CardStateDetails | undefined>): CardStateDetails {
+  const out: CardStateDetails = {};
+  for (const map of maps) {
+    if (map === undefined) continue;
+    for (const [kind, detail] of Object.entries(map)) {
+      if (isActivityKind(kind) && typeof detail === "string" && detail !== "") out[kind] = detail;
+    }
+  }
+  return out;
+}
+
+function escapeXmlText(s: string): string {
+  // `<` and `&` must be escaped in element text; `>` need not be, and leaving
+  // it raw keeps details like "boat -> boats" legible to the agent.
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+}
+
+/**
+ * Render the per-turn activity as `<card-activity>` child elements of
+ * `<chat-app>` — one per kind in canonical order, with the optional detail as
+ * element text (kinds without a detail are self-closing). Returns `""` when
+ * there's no activity, so the caller keeps `<chat-app>` self-closing.
+ *
+ * Children rather than attributes (which is what this replaced): a detail is
+ * free-form and can be long or multi-line, which an XML attribute can't carry
+ * cleanly, and the set of kinds grows without an ever-widening attribute.
+ */
+export function renderActivityChildren(kinds: Iterable<string>, details: CardStateDetails): string {
+  const present = new Set(kinds);
+  const lines: string[] = [];
+  for (const kind of ACTIVITY_KINDS) {
+    if (!present.has(kind)) continue;
+    const detail = details[kind];
+    lines.push(
+      typeof detail === "string" && detail !== ""
+        ? `<card-activity kind="${kind}">${escapeXmlText(detail)}</card-activity>`
+        : `<card-activity kind="${kind}"/>`,
+    );
+  }
+  return lines.join("\n");
 }

@@ -23,7 +23,9 @@ import {
   type LintSummary,
   type LintIssue,
   type ICardLoader,
+  type CardSchema,
 } from "cardworks";
+import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
 import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
@@ -134,6 +136,7 @@ async function lintFrontmatterCard(input: {
   }
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
+  warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
   const errors =
     type === "commentary"
       ? commentaryErrors({
@@ -142,6 +145,44 @@ async function lintFrontmatterCard(input: {
         })
       : [];
   return { path, errors, warnings };
+}
+
+/**
+ * Frontmatter keys present on disk that the card's schema doesn't declare. The
+ * loader strips these in memory (a drifted card still loads, renders, and
+ * indexes), so they are surfaced as **warnings** — visible to `cb validate` and
+ * the PostToolUse hook — to be cleaned off disk eventually, without blocking
+ * commits or breaking load. Allowed keys are the schema's own fields (minus the
+ * body field, which lives in the file body, not frontmatter), the injected
+ * global fields, and `type`.
+ */
+function unknownKeyWarnings(input: { content: string; schema: CardSchema }): LintIssue[] {
+  const { content, schema } = input;
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return [];
+  let fm: unknown;
+  try {
+    fm = parseYaml(split.frontmatterText);
+  } catch (_e) {
+    // Malformed YAML is a separate, error-level failure already surfaced by
+    // parseCardText (which threw → errorResult); nothing to add here.
+    return [];
+  }
+  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return [];
+  const allowed = new Set<string>(["type", ...schema.globalFieldNames, ...Object.keys(schema.fields)]);
+  if (schema.bodyFieldName !== null) allowed.delete(schema.bodyFieldName);
+  const warnings: LintIssue[] = [];
+  for (const key of Object.keys(fm as Record<string, unknown>)) {
+    if (allowed.has(key)) continue;
+    warnings.push({
+      type: "schema",
+      severity: "warning",
+      message:
+        `Unknown frontmatter key "${key}" — not declared by the ${schema.type} schema; ` +
+        "it is ignored on load and should be removed",
+    });
+  }
+  return warnings;
 }
 
 /** Soft budget for the `contains` field — one concise sentence, not a summary essay. */

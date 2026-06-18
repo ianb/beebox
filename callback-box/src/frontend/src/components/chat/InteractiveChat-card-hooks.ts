@@ -9,7 +9,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { href } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
-import { ACTIVITY_KINDS, type ActivityKind } from "../../../../core/chat-card-activity";
+import { ACTIVITY_KINDS, type ActivityKind, type CardStateDetails } from "../../../../core/chat-card-activity";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
 
@@ -68,60 +68,72 @@ function useCardUrlPersistence(opts: {
 }
 
 /** What `useCardSend` carries on a SEND event: open card + activity since the
- *  last reply. Both omitted when empty. */
+ *  last reply + per-kind detail. All omitted when empty. */
 export interface CardSendFields {
   openCard?: string;
   cardActivity?: ActivityKind[];
+  cardState?: CardStateDetails;
 }
 
 export interface CardSend {
-  /** Report a kind of activity on the open card (wired to pane interactions). */
-  report: (kind: ActivityKind) => void;
-  /** Capture the card fields for a SEND event, clearing the live activity set. */
+  /** Report activity on the open card with an optional free-text detail (e.g.
+   *  the query typed). The detail overwrites any prior detail for the same kind
+   *  — typing `b`,`bo`,`boat` collapses to the final state. */
+  report: (kind: ActivityKind, detail?: string) => void;
+  /** Capture the card fields for a SEND event, clearing the live state. */
   capture: () => CardSendFields;
 }
 
 /**
  * Own the per-turn companion-card activity accumulator and the capture/clear
- * lifecycle for the `open-card`/`card-activity` snapshot fields.
+ * lifecycle for the `open-card`/`card-activity`/`card-state` snapshot fields.
  *
- * Lifecycle (the cross-model review's review #3): `report` adds kinds as they
- * happen; `capture` snapshots the canonical-ordered kinds for a SEND event and
- * optimistically clears the live set (so activity *after* the send accumulates
- * fresh for the next turn). If that send errors, the effect below re-arms the
- * snapshot so it isn't silently lost. The SEND event carries the immutable
- * array — the live set stays here.
+ * The accumulator is a per-kind map: `report(kind, detail)` records the kind
+ * and overwrites its detail (so per-keystroke reporting collapses to the latest
+ * state, no debounce needed). Lifecycle (review #3): `capture` snapshots the
+ * kinds + details for a SEND event and optimistically clears the live map (so
+ * activity *after* the send accumulates fresh); if that send errors, the effect
+ * below re-arms the snapshot so it isn't silently lost.
  */
 function useCardSend(opts: {
   activeView: PanelTab | null;
   error: string | null;
 }): CardSend {
   const { activeView, error } = opts;
-  const kindsRef = useRef<Set<ActivityKind>>(new Set());
-  const lastSentRef = useRef<ActivityKind[]>([]);
+  const kindsRef = useRef<Map<ActivityKind, string | undefined>>(new Map());
+  const lastSentRef = useRef<Map<ActivityKind, string | undefined>>(new Map());
 
-  const report = useCallback((kind: ActivityKind) => {
-    kindsRef.current.add(kind);
+  const report = useCallback((kind: ActivityKind, detail?: string) => {
+    kindsRef.current.set(kind, detail);
   }, []);
 
   const capture = useCallback((): CardSendFields => {
     const kinds = ACTIVITY_KINDS.filter((k) => kindsRef.current.has(k));
-    lastSentRef.current = kinds;
+    const cardState: CardStateDetails = {};
+    for (const k of kinds) {
+      const detail = kindsRef.current.get(k);
+      if (typeof detail === "string" && detail !== "") cardState[k] = detail;
+    }
+    lastSentRef.current = new Map(kindsRef.current);
     kindsRef.current.clear();
     const openCard = activeView ? activeView.target.path : undefined;
     return {
       ...(openCard !== undefined ? { openCard } : {}),
       ...(kinds.length > 0 ? { cardActivity: kinds } : {}),
+      ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
     };
   }, [activeView]);
 
   // `error` flips null→set only on STREAM_FAILED/STREAM_ERROR; track the edge so
-  // a failed send's activity is re-armed exactly once.
+  // a failed send's activity (kinds + details) is re-armed exactly once, without
+  // clobbering anything reported since.
   const prevErrorRef = useRef<string | null>(null);
   useEffect(() => {
     if (error && !prevErrorRef.current) {
-      for (const k of lastSentRef.current) kindsRef.current.add(k);
-      lastSentRef.current = [];
+      for (const [k, detail] of lastSentRef.current) {
+        if (!kindsRef.current.has(k)) kindsRef.current.set(k, detail);
+      }
+      lastSentRef.current.clear();
     }
     prevErrorRef.current = error;
   }, [error]);
