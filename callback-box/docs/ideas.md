@@ -1217,3 +1217,16 @@ Open questions:
 - **Pinning loses its surface.** `expires="never"` works because the run is an editable artifact; with jsonl, retaining an interesting run needs another home (copy the record into a review card? a pinned-runs file?).
 - **Payload size.** Run cards hold step stdout and validation/review prose — fine as a card, awkward as a jsonl line. Maybe the line holds a summary + git refs and the prose stays only in commit history.
 - **Consumers.** `cb procedure status` and the at-rest gate read run cards today; both have straightforward jsonl/lock-file equivalents, but it's a real migration, and legacy boxes have years of run dirs in history that tooling shouldn't choke on.
+
+## AVIF / WebP for stored images — biggest win on intake
+
+Every re-encode path today emits **JPEG** (or passes PNG through): `src/frontend/src/lib/image-paste.ts` downscales pasted/captured images to JPEG @0.85 (`outputType = isPng ? "image/png" : "image/jpeg"`). Connector intake (gmail attachments, etc.) stores originals as-is — usually JPEG, often *many* per thread. The box already **accepts** `.webp`/`.avif` (LFS + gitignore patterns at `src/core/box.ts:158-159`, mime maps in `commands/create.ts` and `describe-images-helpers.ts`), so storage/serving is ready — nothing *produces* the compact formats. AVIF cuts ~50% over JPEG at similar quality; WebP ~25–30%.
+
+Where it pays off, in order:
+
+- **Bulk connector intake (the real prize).** The paths where lots of images land, usually JPEG. This is server-side, so it needs a real encoder (`sharp`, or a WASM codec) — not the browser canvas. The crux is **convert-in-place vs keep-original-and-derive**: re-encoding originals is lossy and irreversible, risky for an archival box; keeping originals + a compressed derivative is safe but doubles storage. Since the motivation is "lots of images," the retention question is the whole decision.
+- **Capture / paste re-encode (low-hanging).** `image-paste.ts` already re-encodes through `canvas.toBlob`, so **capture emitting WebP instead of JPEG is nearly a one-liner** (`image/jpeg` → `image/webp`) wherever the browser supports WebP encode — which is broad today. So the direct answer to "could capture use WebP?": yes, cheaply. **AVIF** via `canvas.toBlob` is far less universally supported, so AVIF on the client likely needs a WASM encoder; server-side AVIF (sharp) is the cleaner route.
+
+Decode/serving is a non-issue — WebP and AVIF are universally supported in current browsers; this is purely an encode-on-the-producer-side question.
+
+Open questions: keep-originals-and-derive vs convert-in-place (archival safety vs storage); where the server encoder lives (deploy already installs imagemagick but nothing uses it for this — `sharp` would be the clean dep); a size threshold so tiny images aren't re-encoded; AVIF's slower encode on big intake batches.
