@@ -1,6 +1,6 @@
 # Adding a New Card Schema
 
-How to add a new card type to callback-box. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body) for the current format. The older XML form (`element()` + child element schemas) is still used by guide, recipe, procedure, procedure-run, capture-session, and landmark — see those files only if your card has Markdoc-shaped inline content. For new card types, default to the frontmatter form below.
+How to add a new card type to callback-box. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body) for the current format. The older XML form (`element()` + child element schemas) is still used by capture-session only (its transcript is ordered mixed content) — see that file if your card has interleaved inline content. For new card types, default to the frontmatter form below.
 
 ## When to Create a New Card Type
 

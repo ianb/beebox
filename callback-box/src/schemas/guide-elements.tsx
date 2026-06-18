@@ -1,14 +1,14 @@
 /**
- * Guide schema element definitions and shared enums.
+ * Guide schema definition and shared enums (Phase-2 frontmatter, no body).
  *
  * The guide is the "theory of user" for any domain — a living document
  * capturing triage rules, named actions, experiments, reactions, and
- * context notes. This module holds the cardworks `element()` definitions
- * and the Zod-inferred types; parsing/compiling/templating live in sibling
- * modules.
+ * context notes. Everything is structured metadata (the parser flattens it
+ * into `ParsedGuide`), so it lives in YAML frontmatter; per-rule
+ * confidence/source are just fields on each rule object.
  */
 
-import { element } from "cardworks";
+import { cardSchema, type CardSchema } from "cardworks";
 import { z } from "zod";
 
 // ============================================
@@ -49,178 +49,80 @@ export const ReactionSentiment = z.enum([
 ]);
 export type ReactionSentiment = z.infer<typeof ReactionSentiment>;
 
+const ContextDuration = z.enum(["ongoing", "temporary", "past"]);
+
 // ============================================
-// Guide elements
+// Field validators
 // ============================================
 
-/**
- * Natural language description of when this guide applies.
- */
-export const AppliesTo = element("applies-to", {
+const Iso = z.string().datetime({ offset: true });
+
+const TriageRuleField = z.object({
   text: z.string(),
+  confidence: ConfidenceLevel.default("low"),
+  source: BeliefSource.default("inferred"),
+  ref: z.string().optional(),
+  action: z.string().optional(),
 });
 
-/**
- * A triage rule — guidance for what matters.
- */
-export const TriageRule = element("rule", {
-  attrs: {
-    confidence: ConfidenceLevel.default("low"),
-    source: BeliefSource.default("inferred"),
-    ref: z.string().optional(),
-    /** Optional action name to take when this rule matches */
-    action: z.string().optional(),
-  },
-  text: z.string(),
-});
-
-/**
- * Default action when no triage rule matches.
- */
-export const DefaultAction = element("default-action", {
-  attrs: {
-    action: z.string(),
-  },
+const DefaultActionField = z.object({
+  action: z.string(),
   text: z.string().optional(),
 });
 
-/**
- * Container for triage rules.
- */
-export const Triage = element("triage", {
-  children: z.array(z.union([TriageRule, DefaultAction])),
+const ActionField = z.object({
+  name: z.string(),
+  when: z.string().optional(),
+  instructions: z.string().optional(),
 });
 
-/**
- * When an action should be taken.
- */
-export const ActionWhen = element("when", {
+const ObservationField = z.object({
+  text: z.string(),
+  ref: z.string().optional(),
+  date: z.string().optional(),
+});
+
+const ExperimentField = z.object({
+  id: z.string(),
+  status: ExperimentStatus.default("proposed"),
+  "created-at": Iso.optional(),
+  "updated-at": Iso.optional(),
+  hypothesis: z.string().optional(),
+  approach: z.string().optional(),
+  observations: z.array(ObservationField).optional(),
+  conclusion: z.string().optional(),
+});
+
+const ReactionField = z.object({
+  id: z.string(),
+  sentiment: ReactionSentiment.default("neutral"),
   text: z.string(),
 });
 
-/**
- * Instructions for how to perform an action.
- */
-export const ActionInstructions = element("instructions", {
+const ContextNoteField = z.object({
   text: z.string(),
+  duration: ContextDuration.default("ongoing"),
+  "added-at": Iso.optional(),
 });
 
-/**
- * A named action the agent can take.
- */
-export const Action = element("action", {
-  attrs: {
-    name: z.string(),
-  },
-  children: z.array(z.union([ActionWhen, ActionInstructions])),
-});
+const guideFields = {
+  version: z.string().default("1.0.0"),
+  "job-types": z.array(z.string()).optional(),
+  "applies-to": z.string().optional(),
+  "triage-rules": z.array(TriageRuleField).optional(),
+  "default-action": DefaultActionField.optional(),
+  actions: z.array(ActionField).optional(),
+  experiments: z.array(ExperimentField).optional(),
+  reactions: z.array(ReactionField).optional(),
+  "context-notes": z.array(ContextNoteField).optional(),
+};
 
-/**
- * Container for actions.
- */
-export const Actions = element("actions", {
-  children: z.array(Action),
-});
-
-/**
- * An experiment — a direction to try.
- */
-export const Experiment = element("experiment", {
-  attrs: {
-    id: z.string(),
-    status: ExperimentStatus.default("proposed"),
-    "created-at": z.string().datetime({ offset: true }).optional(),
-    "updated-at": z.string().datetime({ offset: true }).optional(),
-  },
-  children: z.array(
-    z.union([
-      element("hypothesis", { text: z.string() }),
-      element("approach", { text: z.string() }),
-      element("tested-in", {
-        attrs: {
-          ref: z.string(),
-          date: z.string().optional(),
-        },
-        text: z.string().optional(),
-      }),
-      element("observation", {
-        attrs: {
-          ref: z.string().optional(),
-          date: z.string().optional(),
-        },
-        text: z.string(),
-      }),
-      element("conclusion", { text: z.string() }),
-    ])
-  ),
-});
-
-/**
- * Container for experiments.
- */
-export const Experiments = element("experiments", {
-  children: z.array(Experiment),
-});
-
-/**
- * A reaction option for user feedback.
- */
-export const Reaction = element("reaction", {
-  attrs: {
-    id: z.string(),
-    sentiment: ReactionSentiment.default("neutral"),
-  },
-  text: z.string(),
-});
-
-/**
- * Container for reactions.
- */
-export const Reactions = element("reactions", {
-  children: z.array(Reaction),
-});
-
-/**
- * A context note — situational info affecting decisions.
- */
-export const ContextNote = element("context", {
-  attrs: {
-    duration: z.enum(["ongoing", "temporary", "past"]).default("ongoing"),
-    "added-at": z.string().datetime({ offset: true }).optional(),
-  },
-  text: z.string(),
-});
-
-/**
- * Container for context notes.
- */
-export const ContextNotes = element("context-notes", {
-  children: z.array(ContextNote),
-});
-
-// ============================================
-// Guide schema
-// ============================================
-
-export const GuideSchema = element("guide", {
-  attrs: {
-    version: z.string().default("1.0.0"),
-    /** Space-separated job types this guide applies to */
-    "job-types": z.string().optional(),
-  },
-  children: z.array(
-    z.union([
-      AppliesTo,
-      Triage,
-      Actions,
-      Experiments,
-      Reactions,
-      ContextNotes,
-    ])
-  ),
+export const GuideSchema: CardSchema = cardSchema("guide", {
+  searchable: false,
+  fields: guideFields,
   instructions: `# Handling Guides
 
-A guide is a living document — the theory of the user. Treat it as a model to be refined, not a static config.
+A guide is a living document — the theory of the user. Treat it as a model to be refined, not a static config. It is pure YAML frontmatter (no body).
 
 **Confidence ladder:** hypothesis → low → medium → high → confirmed. Only upgrade when there's evidence. Only downgrade when evidence contradicts. Never jump from hypothesis to confirmed in one step.
 
@@ -228,16 +130,20 @@ A guide is a living document — the theory of the user. Treat it as a model to 
 
 **ALWAYS have active experiments.** If all experiments are resolved, propose new ones. Experiments are how the system learns — without them it stagnates. Aim for 1-3 active experiments at any time.
 
-**Triage rules** can reference named actions with the \`action\` attribute. The \`<default-action>\` specifies what happens when no rule matches.
+**\`triage-rules\`** is a list of \`{ text, confidence, source, ref?, action? }\`. A rule's \`action\` names an entry in \`actions\`. \`default-action\` says what happens when no rule matches.
 
-**Actions** are named things the agent can do (proper nouns like "Write Brief", "Archive"). Each has \`<when>\` conditions and \`<instructions>\`.
+**\`actions\`** are named things the agent can do (proper nouns like "Write Brief", "Archive"). Each is \`{ name, when?, instructions? }\`.
 
-When revising based on feedback: cite the specific source in \`ref\` attributes and explain changes in experiment observations. Every change should be traceable to evidence.
+When revising based on feedback: cite the specific source in a rule's \`ref\` and explain changes in experiment \`observations\`. Every change should be traceable to evidence.
 
 Don't remove rules just because one interaction got a "meh" rating. Look for patterns across multiple interactions before downgrading confidence.`,
 });
 
-export type Guide = z.infer<typeof GuideSchema>;
+/** Standalone object schema for parsing a guide's frontmatter directly. */
+export const GuideObject = z.object(guideFields);
+export type GuideFields = z.infer<typeof GuideObject>;
+/** Back-compat alias for the guide fields type. */
+export type Guide = GuideFields;
 
 // ============================================
 // Parsed guide

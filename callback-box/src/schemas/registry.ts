@@ -52,7 +52,6 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  */
 export const schemas: ElementSchema[] = [
   CaptureSessionSchema,
-  GuideSchema,
 ];
 
 /**
@@ -61,6 +60,7 @@ export const schemas: ElementSchema[] = [
  * from XML to frontmatter, they move from the array above to this one.
  */
 export const cardSchemas: CardSchema[] = [
+  GuideSchema,
   LandmarkSchema,
   ProcedureSchema,
   ProcedureRunSchema,

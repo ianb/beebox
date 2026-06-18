@@ -10,7 +10,7 @@
 import { join } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { parseCard } from "cardworks";
-import { parseGuide, compileGuide, type Guide } from "../schemas/guide.js";
+import { parseGuide, parseGuideCard, compileGuide } from "../schemas/guide.js";
 import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
 import { compileBriefing, type BriefingFields } from "../schemas/briefing.js";
 import { parseCardText } from "./card-io.js";
@@ -168,8 +168,12 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
 
     try {
       const content = await readFile(join(configDir, filename), "utf-8");
-      const root = await parseCard(content, { source: filename }) as Guide;
-      const parsed = parseGuide(root);
+      const fields = parseGuideCard(content);
+      if (fields === null) {
+        console.warn(`Skipping unparseable guide: ${guidePath}`);
+        continue;
+      }
+      const parsed = parseGuide(fields);
       const compiled = compileGuide(parsed, guideName);
       const compiledFilename = `${guideName}-guide.md`;
       const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
@@ -293,8 +297,9 @@ async function compileChatGuide(params: ChatGuideParams): Promise<void> {
   }
 
   try {
-    const root = await parseCard(content, { source: "chat.guide.card" }) as Guide;
-    const parsed = parseGuide(root);
+    const fields = parseGuideCard(content);
+    if (fields === null) return; // Malformed chat guide — skip silently.
+    const parsed = parseGuide(fields);
     const guideName = `chat-${connector}-${slug}`;
     const compiled = compileGuide(parsed, guideName);
     const compiledFilename = `${guideName}-guide.md`;

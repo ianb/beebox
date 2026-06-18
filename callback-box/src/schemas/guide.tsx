@@ -24,25 +24,12 @@ export {
   BeliefSource,
   ExperimentStatus,
   ReactionSentiment,
-  AppliesTo,
-  TriageRule,
-  DefaultAction,
-  Triage,
-  ActionWhen,
-  ActionInstructions,
-  Action,
-  Actions,
-  Experiment,
-  Experiments,
-  Reaction,
-  Reactions,
-  ContextNote,
-  ContextNotes,
   GuideSchema,
   type Guide,
+  type GuideFields,
   type ParsedGuide,
 } from "./guide-elements.js";
 
-export { parseGuide } from "./guide-parse.js";
+export { parseGuide, parseGuideCard } from "./guide-parse.js";
 export { compileGuide } from "./guide-compile.js";
 export { createInitialGuideTemplate } from "./guide-templates.js";

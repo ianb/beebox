@@ -1,11 +1,11 @@
 /**
  * Domain-specific seed configurations and the initial-guide template builder.
  *
- * `createInitialGuideTemplate` emits the XML body for a fresh guide card,
- * either from a known domain seed or a generic fallback.
+ * `createInitialGuideTemplate` emits the YAML frontmatter for a fresh guide
+ * card, either from a known domain seed or a generic fallback.
  */
 
-import { escapeAttr, escapeText } from "cardworks";
+import { stringify as stringifyYaml } from "yaml";
 
 /**
  * Domain-specific seed configurations for initial guides.
@@ -184,70 +184,53 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
 export function createInitialGuideTemplate(options: { name: string }): string {
   const seed = DOMAIN_SEEDS[options.name];
   const now = new Date().toISOString();
+  const fields: Record<string, unknown> = { version: "1.0.0" };
 
   if (!seed) {
-    // Generic fallback
-    return `<guide version="1.0.0">
-<applies-to>Describe when this guide applies</applies-to>
-<triage>
-<!-- Add rules as you learn what matters -->
-<default-action action="Ask User">When unsure, ask the user</default-action>
-</triage>
-<actions>
-<action name="Ask User">
-<when>Unsure about disposition</when>
-<instructions>Create a question card in box/questions/</instructions>
-</action>
-</actions>
-<experiments>
-<experiment id="exp-initial" status="active" created-at="${now}">
-<hypothesis>Initial rules need calibration through feedback</hypothesis>
-<approach>Start conservative, learn from user responses</approach>
-</experiment>
-</experiments>
-<reactions>
-</reactions>
-<context-notes>
-</context-notes>
-</guide>
-`;
+    fields["applies-to"] = "Describe when this guide applies";
+    fields["default-action"] = { action: "Ask User", text: "When unsure, ask the user" };
+    fields.actions = [
+      {
+        name: "Ask User",
+        when: "Unsure about disposition",
+        instructions: "Create a question card in box/questions/",
+      },
+    ];
+    fields.experiments = [
+      {
+        id: "exp-initial",
+        status: "active",
+        "created-at": now,
+        hypothesis: "Initial rules need calibration through feedback",
+        approach: "Start conservative, learn from user responses",
+      },
+    ];
+    return `---\n${stringifyYaml(fields)}---\n`;
   }
 
-  const triageRulesXml = seed.triageRules
-    .map((r) => `<rule confidence="low" source="default">${escapeText(r)}</rule>`)
-    .join("\n");
-
-  const actionsXml = seed.actions
-    .map(
-      (a) => `<action name="${escapeAttr(a.name)}">
-<when>${escapeText(a.when)}</when>
-<instructions>${escapeText(a.instructions)}</instructions>
-</action>`
-    )
-    .join("\n");
-
-  const reactionsXml = seed.reactions
-    .map((r) => `<reaction id="${escapeAttr(r.id)}" sentiment="${escapeAttr(r.sentiment)}">${escapeText(r.text)}</reaction>`)
-    .join("\n");
-
-  return `<guide version="1.0.0" job-types="${escapeAttr(seed.jobTypes)}">
-<applies-to>${escapeText(seed.appliesTo)}</applies-to>
-<triage>
-${triageRulesXml ? triageRulesXml + "\n" : ""}<default-action action="${escapeAttr(seed.defaultAction.action)}">${escapeText(seed.defaultAction.text)}</default-action>
-</triage>
-<actions>
-${actionsXml}
-</actions>
-<experiments>
-<experiment id="${escapeAttr(seed.experiment.id)}" status="active" created-at="${now}">
-<hypothesis>${escapeText(seed.experiment.hypothesis)}</hypothesis>
-<approach>${escapeText(seed.experiment.approach)}</approach>
-</experiment>
-</experiments>
-<reactions>
-${reactionsXml ? reactionsXml + "\n" : ""}</reactions>
-<context-notes>
-</context-notes>
-</guide>
-`;
+  const jobTypes = seed.jobTypes.split(/\s+/).filter(Boolean);
+  if (jobTypes.length > 0) fields["job-types"] = jobTypes;
+  fields["applies-to"] = seed.appliesTo;
+  if (seed.triageRules.length > 0) {
+    fields["triage-rules"] = seed.triageRules.map((text) => ({
+      text,
+      confidence: "low",
+      source: "default",
+    }));
+  }
+  fields["default-action"] = { action: seed.defaultAction.action, text: seed.defaultAction.text };
+  fields.actions = seed.actions.map((a) => ({ name: a.name, when: a.when, instructions: a.instructions }));
+  fields.experiments = [
+    {
+      id: seed.experiment.id,
+      status: "active",
+      "created-at": now,
+      hypothesis: seed.experiment.hypothesis,
+      approach: seed.experiment.approach,
+    },
+  ];
+  if (seed.reactions.length > 0) {
+    fields.reactions = seed.reactions.map((r) => ({ id: r.id, sentiment: r.sentiment, text: r.text }));
+  }
+  return `---\n${stringifyYaml(fields)}---\n`;
 }
