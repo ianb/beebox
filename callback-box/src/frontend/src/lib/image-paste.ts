@@ -2,12 +2,11 @@
  * Utilities for accepting images pasted/dropped into the chat composer.
  *
  * Images get downscaled client-side before being encoded as base64 so we
- * don't ship multi-megabyte phone photos through JSON. We re-encode to WebP —
- * smaller than JPEG at matching quality, and (unlike JPEG) it keeps alpha, so
- * PNG sources convert cleanly instead of needing a passthrough. PNG-origin
- * images get a higher quality so lossy WebP doesn't soften sharp edges. If a
- * browser can't encode WebP, canvas.toBlob falls back to PNG and we label the
- * blob by its actual type.
+ * don't ship multi-megabyte phone photos through JSON. We re-encode via
+ * `encodeCanvasBlob` — AVIF when the browser can, else WebP, else JPEG/PNG —
+ * all far smaller than the originals, and (unlike JPEG) AVIF/WebP keep alpha,
+ * so PNG sources convert cleanly instead of needing a passthrough. PNG-origin
+ * images get a higher quality so lossy encoding doesn't soften sharp edges.
  *
  * This is the transient chat-attachment path (already downscaled). Archival
  * *intake* compression — lossless, high-effort, for anything kept long-term —
@@ -15,13 +14,15 @@
  * stored images"); the browser canvas can do neither.
  */
 
+import { encodeCanvasBlob } from "./canvas-encode";
+
 /** Max longest-side dimension after downscaling. */
 const MAX_DIMENSION = 1920;
 
-/** WebP quality for re-encoded photos (≈ JPEG 0.85 visually, smaller file). */
-const WEBP_QUALITY_PHOTO = 0.85;
-/** Higher WebP quality for PNG-origin images (screenshots/graphics, sharp edges). */
-const WEBP_QUALITY_GRAPHIC = 0.92;
+/** Quality for re-encoded photos. */
+const PHOTO_QUALITY = 0.85;
+/** Higher quality for PNG-origin images (screenshots/graphics, sharp edges). */
+const GRAPHIC_QUALITY = 0.92;
 
 /**
  * Something went wrong while decoding/re-encoding a pasted or dropped image.
@@ -99,8 +100,8 @@ function blobToBase64(blob: Blob): Promise<string> {
  * Downscale and re-encode an image blob for chat attachment.
  *
  * Skips resize when the source already fits within MAX_DIMENSION. Re-encodes
- * to WebP (PNG-origin images at a higher quality to protect sharp edges);
- * falls back to PNG if the browser can't encode WebP.
+ * to AVIF/WebP when supported (PNG-origin images at a higher quality to protect
+ * sharp edges), falling back to JPEG/PNG otherwise.
  */
 export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const img = await readImageElement(blob);
@@ -111,9 +112,10 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   const width = Math.round(srcW * scale);
   const height = Math.round(srcH * scale);
 
-  // PNG-origin images (screenshots/graphics) get the higher quality; photos
-  // the standard one. WebP keeps alpha, so the old PNG passthrough is gone.
-  const quality = blob.type === "image/png" ? WEBP_QUALITY_GRAPHIC : WEBP_QUALITY_PHOTO;
+  // PNG-origin images (screenshots/graphics) get the higher quality and a PNG
+  // fallback; photos the standard quality and a JPEG fallback. AVIF/WebP keep
+  // alpha, so the old PNG passthrough is gone.
+  const wasPng = blob.type === "image/png";
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -122,17 +124,15 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
   if (!ctx) throw new ImageProcessingError(IMG_ERR.canvasContext);
   ctx.drawImage(img, 0, 0, width, height);
 
-  const outBlob = await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new ImageProcessingError(IMG_ERR.toBlob))),
-      "image/webp",
-      quality
-    );
+  const outBlob = await encodeCanvasBlob(canvas, {
+    quality: wasPng ? GRAPHIC_QUALITY : PHOTO_QUALITY,
+    fallback: wasPng ? "image/png" : "image/jpeg",
   });
+  if (!outBlob) throw new ImageProcessingError(IMG_ERR.toBlob);
 
-  // canvas.toBlob falls back to image/png when WebP encoding isn't supported,
-  // so trust the produced blob's type rather than the type we requested.
-  const mimeType = outBlob.type || "image/webp";
+  // encodeCanvasBlob falls through AVIF → WebP → fallback; the produced blob's
+  // type is the format actually written, so label by it, never the request.
+  const mimeType = outBlob.type;
   const dataBase64 = await blobToBase64(outBlob);
   const objectUrl = URL.createObjectURL(outBlob);
 
