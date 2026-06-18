@@ -108,6 +108,28 @@ tryParse2("---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n 
 => extra.email-thread.card: schema "email-thread" declares no body, but file has body content
 ```
 
+## Unknown frontmatter keys are stripped on load (not rejected)
+
+The frontmatter schema is lenient: a key the schema doesn't declare is dropped
+from the parsed fields rather than failing the parse, so a card that has drifted
+past its schema still loads and stays usable. (The unknown key is surfaced as a
+lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
+
+```
+const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
+JSON.stringify(drifted.fields)
+=> {"type":"doc","drive-id":"d1","title":"T","body":""}
+```
+
+The `content-type` marker is a global field, so an XML-bodied card carrying it
+keeps it through the parse.
+
+```
+const ct = parseCardText("---\ntype: email-thread\nthread-id: t1\nsubject: hi\ncontent-type: text/plain\nparticipants:\n  - a@x\n---\n", { source: "ct.email-thread.card", schemas });
+ct.fields["content-type"]
+=> text/plain
+```
+
 ## Loader dispatch routes new and legacy cards to the right path
 
 ```ts setup
