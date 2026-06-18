@@ -154,28 +154,28 @@ refs:
 body
 ```
 
-## Legacy XML card: `ref=` attributes rewritten (relative + absolute)
+## Single card move: `ref=` strings in referrers rewritten (relative + absolute)
 
-XML-body cards (guide, capture-session, …) go through cardworks' loader, which
-re-serializes `ref=` attributes in referrers — relative refs become relative
-to the new location (cardworks writes a leading `./`), absolute refs stay
-box-root-absolute.
+Moving a card rewrites references to it in other cards via substring rewrite —
+a relative ref becomes relative to the new location, an absolute (box-root) ref
+stays box-root-absolute. (No leading `./`; that was a cardworks XML-loader
+artifact, gone now that every card is frontmatter.)
 
 ```
 const box = await makeTmpBox();
-await box.write("store/Scan.capture-session.card", "<capture-session>\n<note>s</note>\n</capture-session>\n");
+await box.write("store/Scan.capture-session.card", "---\nsession-id: s\n---\n");
 await box.write(
   "store/Guide.guide.card",
-  '<guide>\n<see ref="Scan.capture-session.card"/>\n<see ref="/store/Scan.capture-session.card"/>\n</guide>\n',
+  '---\nversion: "1.0.0"\n---\nrel [a](Scan.capture-session.card) abs [b](/store/Scan.capture-session.card)\n',
 );
 
 await mv(box, { from: "store/Scan.capture-session.card", to: "store/sub/Scan.capture-session.card" });
-await box.read("store/Guide.guide.card")
+(await box.read("store/Guide.guide.card")).trim()
 =>
-<guide>
-<see ref="./sub/Scan.capture-session.card"/>
-<see ref="/store/sub/Scan.capture-session.card"/>
-</guide>
+---
+version: "1.0.0"
+---
+rel [a](sub/Scan.capture-session.card) abs [b](/store/sub/Scan.capture-session.card)
 ```
 
 ## Directory move: recursive, external refs rewritten (relative + absolute)

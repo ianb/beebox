@@ -242,6 +242,36 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
       className="mr-2 align-middle accent-warm-500"
     />
   );
+  // Capture-session transcript markers. `{% image %}` links to the child
+  // image card; `{% silence %}` is a dim gap marker. The `ref` attribute is
+  // renamed to `sourceRef` by the Markdoc transform (React reserves `ref`).
+  const CaptureImage = ({ sourceRef }: { sourceRef?: string }) => {
+    const ref = typeof sourceRef === "string" ? sourceRef : "";
+    const label = ref.replace(/^attach\//, "").replace(/\.image\.card$/, "");
+    return (
+      <button
+        type="button"
+        onClick={() => {
+          if (ref === "") return;
+          const target: ViewTarget = {
+            path: resolveRelativePath(linkCtx.basePath, ref),
+            viewer: null,
+            params: {},
+            zoom: false,
+          };
+          linkCtx.onNavigate(target, label === "" ? undefined : { label });
+        }}
+        className="mx-0.5 rounded bg-warm-100 px-1.5 py-0.5 align-middle text-xs text-warm-700 hover:bg-warm-200"
+      >
+        📷 {label === "" ? "image" : label}
+      </button>
+    );
+  };
+  const Silence = ({ duration }: { duration?: string }) => (
+    <span className="mx-1 align-middle text-xs text-warm-400">
+      — {typeof duration === "string" ? duration : ""} silence —
+    </span>
+  );
   const cast = <T,>(c: T) => c as unknown as React.ComponentType<Record<string, unknown>>;
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
     Fragment: cast(Fragment),
@@ -265,6 +295,8 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     Subrecipe: cast(recipe.Subrecipe),
     RecipeSection: cast(recipe.RecipeSection),
     Task: cast(Task),
+    CaptureImage: cast(CaptureImage),
+    Silence: cast(Silence),
     RedactedInline: cast(RedactedInline),
     RedactedBlock: cast(RedactedBlock),
   };

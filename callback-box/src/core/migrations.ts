@@ -49,6 +49,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "procedure-run",     script: "scripts/migrate/procedure-run.ts" },
   { name: "procedure",         script: "scripts/migrate/procedure.ts" },
   { name: "guide",             script: "scripts/migrate/guide.ts" },
+  { name: "capture-session",   script: "scripts/migrate/capture-session.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

@@ -25,7 +25,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same
 
 ## Cards
 
-Cards are the core data format. The current format is **YAML frontmatter + markdown body** (Phase 2, May 2026); one schema with ordered mixed content (capture-session) remains on the older **XML body** until they migrate to Markdoc-style body tags. Both formats coexist behind the loader.
+Cards are the core data format. The format is **YAML frontmatter + markdown body** (Phase 2). Every built-in schema is now frontmatter; the legacy XML-body format and its loader branch remain in place but dormant (no schema uses them) until cardworks is removed in a follow-up.
 
 ```
 ---
@@ -36,7 +36,7 @@ created: 2026-05-22T10:00:00Z
 Body content as plain markdown.
 ```
 
-**Schemas** live in `src/schemas/`. Phase-2 cards use `cardSchema(type, { fields, instructions? })` from cardworks. Legacy XML cards use `element(tagName, ...)`. `src/schemas/registry.ts` lists both sets (`cardSchemas[]` for frontmatter, `schemas[]` for XML); boxes can add local schemas under `config/schemas/`. The `type:` field in frontmatter (or root element tag for XML) selects the schema.
+**Schemas** live in `src/schemas/`. Cards use `cardSchema(type, { fields, instructions? })` from cardworks. `src/schemas/registry.ts` lists them in `cardSchemas[]` (the legacy `schemas[]` XML list is now empty); boxes can add local schemas under `config/schemas/`. The type is taken from the filename (`Foo.<type>.card`) — there is no `type:` field in frontmatter.
 
 **Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a discriminated `FrontmatterLoadedCard | XmlLoadedCard`. Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations to frontmatter cards are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
 
@@ -70,7 +70,7 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/hooks/          Shared React hooks
   src/lib/            Helpers (cn, source-tag, view-url, trpc, audio-context, ...)
   src/ssr/            Server-side rendering setup for `cb render`
-src/schemas/      Card type definitions (Zod + cardworks: cardSchema for frontmatter, element for legacy XML)
+src/schemas/      Card type definitions (Zod + cardworks `cardSchema`)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
@@ -94,7 +94,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 **Connectors** — Sync external services with the box filesystem. Each implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
 
-**Procedures** — Multi-step workflows defined in XML. Engine in `src/core/`. Config in box at `config/procedures/`, runs at `procedure/runs/`.
+**Procedures** — Multi-step workflows defined as YAML-frontmatter cards. Engine in `src/core/`. Config in box at `config/procedures/`, runs at `procedure/runs/`.
 
 ## Behavioral Notes
 

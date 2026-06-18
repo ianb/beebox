@@ -48,18 +48,18 @@ import { LandmarkSchema } from "./landmark.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
- * All built-in card schemas.
+ * Built-in XML (legacy `element()`) card schemas. Now empty — every schema
+ * has migrated to the frontmatter form below. The array and the XML loader
+ * path remain until cardworks itself is removed in a follow-up.
  */
-export const schemas: ElementSchema[] = [
-  CaptureSessionSchema,
-];
+export const schemas: ElementSchema[] = [];
 
 /**
  * Phase-2 markdown-frontmatter card schemas. Loaded into a separate
- * Map<type, CardSchema> by createCardSchemaMap below. As schemas migrate
- * from XML to frontmatter, they move from the array above to this one.
+ * Map<type, CardSchema> by createCardSchemaMap below.
  */
 export const cardSchemas: CardSchema[] = [
+  CaptureSessionSchema,
   GuideSchema,
   LandmarkSchema,
   ProcedureSchema,
