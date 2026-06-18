@@ -126,8 +126,8 @@ Schema changes are picked up on the next \`cb\` invocation; a running dev server
 ## Legacy: XML / \`element()\` schemas
 
 Use \`element()\` only when the card body is Markdoc-shaped inline content — nested, attributed
-inline structure that doesn't fit YAML frontmatter. This is why the built-in \`guide\`, \`recipe\`,
-\`procedure\`, and \`landmark\` types still use it. For everything else, prefer \`cardSchema\` above.
+inline structure that doesn't fit YAML frontmatter. This is why the built-in \`guide\` and
+\`capture-session\` types still use it. For everything else, prefer \`cardSchema\` above.
 
 \`\`\`typescript
 import { element } from "cardworks";

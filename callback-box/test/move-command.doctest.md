@@ -156,25 +156,25 @@ body
 
 ## Legacy XML card: `ref=` attributes rewritten (relative + absolute)
 
-XML-body cards (procedure, guide, …) go through cardworks' loader, which
+XML-body cards (guide, capture-session, …) go through cardworks' loader, which
 re-serializes `ref=` attributes in referrers — relative refs become relative
 to the new location (cardworks writes a leading `./`), absolute refs stay
 box-root-absolute.
 
 ```
 const box = await makeTmpBox();
-await box.write("store/Recipe.procedure.card", "<procedure>\n<step>do it</step>\n</procedure>\n");
+await box.write("store/Scan.capture-session.card", "<capture-session>\n<note>s</note>\n</capture-session>\n");
 await box.write(
   "store/Guide.guide.card",
-  '<guide>\n<see ref="Recipe.procedure.card"/>\n<see ref="/store/Recipe.procedure.card"/>\n</guide>\n',
+  '<guide>\n<see ref="Scan.capture-session.card"/>\n<see ref="/store/Scan.capture-session.card"/>\n</guide>\n',
 );
 
-await mv(box, { from: "store/Recipe.procedure.card", to: "store/sub/Recipe.procedure.card" });
+await mv(box, { from: "store/Scan.capture-session.card", to: "store/sub/Scan.capture-session.card" });
 await box.read("store/Guide.guide.card")
 =>
 <guide>
-<see ref="./sub/Recipe.procedure.card"/>
-<see ref="/store/sub/Recipe.procedure.card"/>
+<see ref="./sub/Scan.capture-session.card"/>
+<see ref="/store/sub/Scan.capture-session.card"/>
 </guide>
 ```
 

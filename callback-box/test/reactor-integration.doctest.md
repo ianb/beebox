@@ -273,12 +273,15 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/simple.procedure.card", `
-<procedure name="simple">
-  <step id="do-it">
-    <run><shell>true</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/simple.procedure.card", `---
+name: simple
+steps:
+  - id: do-it
+    run:
+      shells:
+        - |
+          true
+---
 `);
 await box.write("box/jobs/run-proc.job.card", `<job><procedure ref="simple" /></job>`);
 box.commitAll("Add procedure job");

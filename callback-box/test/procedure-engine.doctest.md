@@ -18,16 +18,17 @@ results in the run card.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/greet.procedure.card", `
-<procedure name="greet">
-  <description>A simple greeting procedure</description>
-  <step id="hello">
-    <description>Say hello</description>
-    <run>
-      <shell>echo "Hello from procedure" > box/output/greeting.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/greet.procedure.card", `---
+name: greet
+description: A simple greeting procedure
+steps:
+  - id: hello
+    description: Say hello
+    run:
+      shells:
+        - |
+          echo "Hello from procedure" > box/output/greeting.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add greet procedure");
@@ -66,25 +67,27 @@ failed. The procedure continues to the next step.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/maybe.procedure.card", `
-<procedure name="maybe">
-  <description>Conditional steps</description>
-  <step id="skipped">
-    <description>This step skips</description>
-    <precheck>
-      <shell>exit $CHECK_SKIP</shell>
-    </precheck>
-    <run>
-      <shell>echo "SHOULD NOT RUN" > box/output/bad.txt</shell>
-    </run>
-  </step>
-  <step id="runs">
-    <description>This step runs</description>
-    <run>
-      <shell>echo "OK" > box/output/good.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/maybe.procedure.card", `---
+name: maybe
+description: Conditional steps
+steps:
+  - id: skipped
+    description: This step skips
+    precheck:
+      shells:
+        - |
+          exit $CHECK_SKIP
+    run:
+      shells:
+        - |
+          echo "SHOULD NOT RUN" > box/output/bad.txt
+  - id: runs
+    description: This step runs
+    run:
+      shells:
+        - |
+          echo "OK" > box/output/good.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add maybe procedure");
@@ -125,24 +128,31 @@ scheduler.jsonl, not in a dir-per-nothing.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/idle.procedure.card", `
-<procedure name="idle">
-  <description>Nothing to do</description>
-  <step id="first">
-    <description>Skips</description>
-    <precheck>
-      <shell>echo "nothing new"; exit $CHECK_SKIP</shell>
-    </precheck>
-    <run><shell>echo "NEVER" > box/output/never.txt</shell></run>
-  </step>
-  <step id="second">
-    <description>Also skips</description>
-    <precheck>
-      <shell>exit $CHECK_SKIP</shell>
-    </precheck>
-    <run><shell>echo "ALSO NEVER" > box/output/also.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/idle.procedure.card", `---
+name: idle
+description: Nothing to do
+steps:
+  - id: first
+    description: Skips
+    precheck:
+      shells:
+        - |
+          echo "nothing new"; exit $CHECK_SKIP
+    run:
+      shells:
+        - |
+          echo "NEVER" > box/output/never.txt
+  - id: second
+    description: Also skips
+    precheck:
+      shells:
+        - |
+          exit $CHECK_SKIP
+    run:
+      shells:
+        - |
+          echo "ALSO NEVER" > box/output/also.txt
+---
 `);
 box.commitAll("Add idle procedure");
 
@@ -174,25 +184,27 @@ and the procedure halts — later steps don't run.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/fail-early.procedure.card", `
-<procedure name="fail-early">
-  <description>First step fails</description>
-  <step id="broken">
-    <description>Precheck fails</description>
-    <precheck>
-      <shell>echo "something wrong"; exit 1</shell>
-    </precheck>
-    <run>
-      <shell>echo "NEVER" > box/output/never.txt</shell>
-    </run>
-  </step>
-  <step id="after">
-    <description>Should not run</description>
-    <run>
-      <shell>echo "ALSO NEVER" > box/output/also.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/fail-early.procedure.card", `---
+name: fail-early
+description: First step fails
+steps:
+  - id: broken
+    description: Precheck fails
+    precheck:
+      shells:
+        - |
+          echo "something wrong"; exit 1
+    run:
+      shells:
+        - |
+          echo "NEVER" > box/output/never.txt
+  - id: after
+    description: Should not run
+    run:
+      shells:
+        - |
+          echo "ALSO NEVER" > box/output/also.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add fail-early procedure");
@@ -222,25 +234,28 @@ lets the procedure continue; `severity="abort"` stops it.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/validate.procedure.card", `
-<procedure name="validate">
-  <description>Validation test</description>
-  <step id="warned">
-    <description>Validation warns but continues</description>
-    <run>
-      <shell>echo "did work" > box/output/work.txt</shell>
-    </run>
-    <validate severity="warn">
-      <shell>echo "not ideal"; exit 1</shell>
-    </validate>
-  </step>
-  <step id="after-warn">
-    <description>Runs after warning</description>
-    <run>
-      <shell>echo "still going" > box/output/still.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/validate.procedure.card", `---
+name: validate
+description: Validation test
+steps:
+  - id: warned
+    description: Validation warns but continues
+    run:
+      shells:
+        - |
+          echo "did work" > box/output/work.txt
+    validate:
+      severity: warn
+      shells:
+        - |
+          echo "not ideal"; exit 1
+  - id: after-warn
+    description: Runs after warning
+    run:
+      shells:
+        - |
+          echo "still going" > box/output/still.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add validate procedure");
@@ -276,25 +291,28 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/abort.procedure.card", `
-<procedure name="abort">
-  <description>Abort on validation failure</description>
-  <step id="checked">
-    <description>Validation aborts</description>
-    <run>
-      <shell>echo "ran" > box/output/ran.txt</shell>
-    </run>
-    <validate severity="abort">
-      <shell>echo "bad output"; exit 1</shell>
-    </validate>
-  </step>
-  <step id="never">
-    <description>Should not run</description>
-    <run>
-      <shell>echo "nope" > box/output/nope.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/abort.procedure.card", `---
+name: abort
+description: Abort on validation failure
+steps:
+  - id: checked
+    description: Validation aborts
+    run:
+      shells:
+        - |
+          echo "ran" > box/output/ran.txt
+    validate:
+      severity: abort
+      shells:
+        - |
+          echo "bad output"; exit 1
+  - id: never
+    description: Should not run
+    run:
+      shells:
+        - |
+          echo "nope" > box/output/nope.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add abort procedure");
@@ -320,24 +338,31 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/preview.procedure.card", `
-<procedure name="preview">
-  <description>Preview procedure</description>
-  <step id="first">
-    <description>First step</description>
-    <precheck><shell>true</shell></precheck>
-    <run>
-      <shell>echo "side effect" > box/output/effect.txt</shell>
-    </run>
-    <validate severity="warn"><shell>true</shell></validate>
-  </step>
-  <step id="second">
-    <description>Second step</description>
-    <run>
-      <agent>Do something</agent>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/preview.procedure.card", `---
+name: preview
+description: Preview procedure
+steps:
+  - id: first
+    description: First step
+    precheck:
+      shells:
+        - |
+          true
+    run:
+      shells:
+        - |
+          echo "side effect" > box/output/effect.txt
+    validate:
+      severity: warn
+      shells:
+        - |
+          true
+  - id: second
+    description: Second step
+    run:
+      agents:
+        - prompt: Do something
+---
 `);
 box.commitAll("Add preview procedure");
 
@@ -371,18 +396,23 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/multi.procedure.card", `
-<procedure name="multi">
-  <description>Multi-step</description>
-  <step id="alpha">
-    <description>Alpha</description>
-    <run><shell>echo "a" > box/output/a.txt</shell></run>
-  </step>
-  <step id="beta">
-    <description>Beta</description>
-    <run><shell>echo "b" > box/output/b.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/multi.procedure.card", `---
+name: multi
+description: Multi-step
+steps:
+  - id: alpha
+    description: Alpha
+    run:
+      shells:
+        - |
+          echo "a" > box/output/a.txt
+  - id: beta
+    description: Beta
+    run:
+      shells:
+        - |
+          echo "b" > box/output/b.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add multi procedure");
@@ -434,24 +464,33 @@ extend a specific run.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/stamped.procedure.card", `
-<procedure name="stamped">
-  <description>Gets an expires stamp</description>
-  <step id="work">
-    <description>Does work</description>
-    <run><shell>echo "did it" > box/output/did.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/stamped.procedure.card", `---
+name: stamped
+description: Gets an expires stamp
+steps:
+  - id: work
+    description: Does work
+    run:
+      shells:
+        - |
+          echo "did it" > box/output/did.txt
+---
 `);
-await box.write("config/procedures/doomed.procedure.card", `
-<procedure name="doomed">
-  <description>Fails</description>
-  <step id="broken">
-    <description>Precheck fails</description>
-    <precheck><shell>exit 1</shell></precheck>
-    <run><shell>true</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/doomed.procedure.card", `---
+name: doomed
+description: Fails
+steps:
+  - id: broken
+    description: Precheck fails
+    precheck:
+      shells:
+        - |
+          exit 1
+    run:
+      shells:
+        - |
+          true
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add procedures");
@@ -488,14 +527,18 @@ override the defaults; "never" pins every run of that procedure.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/keeper.procedure.card", `
-<procedure name="keeper" run-expiry="never">
-  <description>Runs are kept forever</description>
-  <step id="work">
-    <description>Does work</description>
-    <run><shell>echo "kept" > box/output/kept.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/keeper.procedure.card", `---
+name: keeper
+run-expiry: never
+description: Runs are kept forever
+steps:
+  - id: work
+    description: Does work
+    run:
+      shells:
+        - |
+          echo "kept" > box/output/kept.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add keeper procedure");
@@ -521,11 +564,17 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/steps.procedure.card", `
-<procedure name="steps">
-  <description>Has steps</description>
-  <step id="real"><description>Real</description><run><shell>true</shell></run></step>
-</procedure>
+await box.write("config/procedures/steps.procedure.card", `---
+name: steps
+description: Has steps
+steps:
+  - id: real
+    description: Real
+    run:
+      shells:
+        - |
+          true
+---
 `);
 box.commitAll("Add steps procedure");
 

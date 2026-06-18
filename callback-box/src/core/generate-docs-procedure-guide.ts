@@ -8,7 +8,7 @@
 function procedureGuideOverview(): string {
   return `# Procedures
 
-Procedures are multi-step processes defined as XML cards. The procedure engine runs each step in order, checking preconditions, executing actions, and validating results. Everything is tracked in git.
+Procedures are multi-step processes defined as YAML-frontmatter cards. The procedure engine runs each step in order, checking preconditions, executing actions, and validating results. Everything is tracked in git.
 
 ## Running Procedures
 
@@ -23,7 +23,7 @@ cb procedure status                                 # Show latest run status
 cb procedure gc                                     # Delete expired run dirs
 \`\`\`
 
-Procedure definitions live in \`config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`cb procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires="never"\` on its run card.
+Procedure definitions live in \`config/procedures/\`. Each run creates a tracking card in \`procedure/runs/<name>_<timestamp>/\`. Run dirs are a recent cache, not an archive: a run where every step skips is removed at completion, and finished runs get an \`expires\` stamp (30d completed / 90d failed, or the procedure card's \`run-expiry\`/\`failed-run-expiry\` override) that \`cb procedure gc\` enforces daily. Git history retains every committed run. To pin a specific run, set \`expires: never\` on its run card.
 
 ## Directives
 
@@ -61,42 +61,47 @@ The engine enforces a clean git state between steps. Every step's work is commit
 
 ## Procedure Card Structure
 
-\`\`\`xml
-<procedure name="my-procedure">
-<description>What this procedure does</description>
-<step id="first-step">
-<description>Human-readable description of this step</description>
-<precheck>
-<shell>
-# Exit 0 to proceed, exit $CHECK_SKIP to skip
-count=$(ls box/inbox/*.card 2>/dev/null | wc -l)
-if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-echo "Found $count items"
-</shell>
-<why>Explanation of when/why this step should be skipped</why>
-</precheck>
-<run>
-<agent model="haiku" max-turns="20">
-Agent prompt goes here. The engine prepends context
-(date, procedure name, step ID, working directory).
-</agent>
-</run>
-<validate severity="review">
-<shell>
-# Exit 0 = pass, non-zero = fail
-remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
-echo "Remaining: $remaining"
-[ "$remaining" -eq 0 ]
-</shell>
-<instruction>
-Natural language description of what success looks like.
-A model evaluates the git diff against this instruction.
-</instruction>
-<why>Why this validation matters</why>
-</validate>
-</step>
-</procedure>
+\`\`\`yaml
+---
+name: my-procedure
+description: What this procedure does
+steps:
+  - id: first-step
+    description: Human-readable description of this step
+    precheck:
+      shells:
+        - |
+          # Exit 0 to proceed, exit $CHECK_SKIP to skip
+          count=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+          if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
+          echo "Found $count items"
+      whys:
+        - Explanation of when/why this step should be skipped
+    run:
+      agents:
+        - model: haiku
+          max-turns: 20
+          prompt: |
+            Agent prompt goes here. The engine prepends context
+            (date, procedure name, step ID, working directory).
+    validate:
+      severity: review
+      shells:
+        - |
+          # Exit 0 = pass, non-zero = fail
+          remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
+          echo "Remaining: $remaining"
+          [ "$remaining" -eq 0 ]
+      instructions:
+        - |
+          Natural language description of what success looks like.
+          A model evaluates the git diff against this instruction.
+      whys:
+        - Why this validation matters
+---
 \`\`\`
+
+Each phase (\`precheck\`/\`run\`/\`validate\`) groups its actions by kind: \`shells\`, \`agents\`, \`instructions\`, \`whys\` — each a list. Use YAML block scalars (\`|\`) for multi-line scripts and prompts.
 `;
 }
 
@@ -114,25 +119,28 @@ Shell scripts run in the box root via \`bash -c\`. Three outcomes:
 
 ### Agent Invocations
 
-\`\`\`xml
-<agent model="haiku" max-turns="25">
-Prompt text here...
-</agent>
+\`\`\`yaml
+agents:
+  - model: haiku
+    max-turns: 25
+    prompt: |
+      Prompt text here...
 \`\`\`
 
 - \`model\`: \`haiku\` (fast/cheap), \`sonnet\` (balanced), \`opus\` (most capable). Default: sonnet.
 - \`max-turns\`: Maximum tool-use rounds. Default: 20.
 - The engine injects a context block with the date, run card path, step ID, and procedure source location.
-- Agent text is automatically dedented, so indent freely within the XML.
+- Use a YAML block scalar (\`|\`) for the prompt so indentation is preserved.
 
 ### Passing Precheck Data to Agents
 
-Add \`pass-output="true"\` to a precheck to include its stdout in the agent's context:
+Add \`pass-output: true\` to a precheck to include its stdout in the agent's context:
 
-\`\`\`xml
-<precheck pass-output="true">
-<shell>echo "Items to process: 5"</shell>
-</precheck>
+\`\`\`yaml
+precheck:
+  pass-output: true
+  shells:
+    - echo "Items to process: 5"
 \`\`\`
 
 The agent sees this as a \`<precheck>\` block in its system prompt. Use this to avoid redundant work — the precheck can compute a manifest that the agent acts on.
@@ -143,9 +151,9 @@ The agent sees this as a \`<precheck>\` block in its system prompt. Use this to 
 - \`severity="review"\` — A model evaluates the git diff against the \`<instruction>\`. If it fails, the agent gets one retry attempt.
 - \`severity="abort"\` — Stop the procedure immediately
 
-### Why Elements
+### Why Entries
 
-\`<why>\` elements explain the purpose of a phase. They're shown to:
+\`whys\` entries explain the purpose of a phase. They're shown to:
 - Humans reading the procedure
 - Review models evaluating validation failures
 - Agents retrying failed steps

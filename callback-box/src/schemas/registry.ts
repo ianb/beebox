@@ -51,7 +51,6 @@ import { registerTemplate, type TemplateDefinition } from "./templates.js";
  * All built-in card schemas.
  */
 export const schemas: ElementSchema[] = [
-  ProcedureSchema,
   CaptureSessionSchema,
   GuideSchema,
 ];
@@ -63,6 +62,7 @@ export const schemas: ElementSchema[] = [
  */
 export const cardSchemas: CardSchema[] = [
   LandmarkSchema,
+  ProcedureSchema,
   ProcedureRunSchema,
   RecipeSchema,
   EmailThreadSchema,
