@@ -1,5 +1,15 @@
 # `extfile` Card — an In-Box Pointer to a Live External File
 
+> **Implemented (2026-06).** Shipped as Tracks A–D: the `extfile` schema
+> (`src/schemas/extfile.tsx`) + lint (`src/core/card-lint.ts`), `cb extfile sync`
+> (`src/cli/commands/extfile.ts`, `src/core/extfile-sync.ts`,
+> `src/core/external-roots.ts`), the `ExtfileView` renderer
+> (`src/frontend/src/components/ExtfileView.tsx` + shared `ExternalDocument` /
+> `AttachedCommentary`), and commentary made attach-only
+> (`src/schemas/commentary.tsx`, `CommentaryView`). The O7 strict-validation
+> question shipped as the unknown-key lint *warning*. The `ia-review` box
+> migration (plan step 7) remains a usage action against that external box.
+
 A new frontmatter card type, `extfile`, that is a first-class in-box object
 standing in for an external file (`file:` URL). It is the snapshot-less sibling
 of `webpage`: no body, no frozen copy, no markdown extraction. The card holds
