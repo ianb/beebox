@@ -1,21 +1,21 @@
 /**
  * tRPC router for landmark cards.
  *
- * Reads every `**\/*.landmark.card` in the box, parses it, and resolves
- * its `<link>` and `<expand>` children into a flat list ready to render.
+ * Reads every `**\/*.landmark.card` in the box, parses its frontmatter,
+ * and resolves its `navigation` links into a flat list ready to render.
  * See docs/landmarks.md.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseCard, type ElementNode } from "cardworks";
 import { router, publicProcedure } from "../trpc.js";
 import {
   resolveLandmark,
   type ResolvedLink,
 } from "../../../core/landmark/resolve.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
+import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
 
 export interface LandmarkPayload {
   /** Box-relative path of the landmark card. */
@@ -33,52 +33,28 @@ export interface LandmarkPayload {
   /** Nesting depth relative to ancestor landmarks (root = 0). */
   depth: number;
   /**
-   * Chat-feature seeds (e.g. `{ narration: "on" }`) declared via a
-   * `<chat-app>` child of the landmark. Applied at session-open time
-   * for chats bound to this landmark's directory.
+   * Chat-feature seeds (e.g. `{ narration: "on" }`) declared via
+   * `navigation.chat-app`. Applied at session-open time for chats bound
+   * to this landmark's directory.
    */
   features: Record<string, string>;
 }
 
-function findNavigation(element: ElementNode): ElementNode | null {
-  for (const child of element.children) {
-    if (child.tagName === "navigation") return child;
-  }
-  return null;
-}
-
-function readChildText(navigation: ElementNode | null, tagName: string): string {
-  if (!navigation) return "";
-  for (const child of navigation.children) {
-    if (child.tagName === tagName && typeof child.text === "string") {
-      return child.text.trim();
-    }
-  }
-  return "";
-}
-
 /**
- * Pull `<symbol>`'s text and `src` attribute (if any). The `src` is
- * resolved from "relative to landmark directory" to "box-relative" so
- * the frontend can pipe it directly to /api/files.
+ * Pull the navigation `symbol`'s text and image src (if any). A string
+ * symbol is text; a `{ src }` symbol is an image whose path is resolved
+ * from "relative to landmark directory" to "box-relative" so the frontend
+ * can pipe it directly to /api/files.
  */
 function readSymbol(
-  navigation: ElementNode | null,
+  navigation: LandmarkNavigationData | undefined,
   { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
 ): { text: string; src: string | null } {
-  if (!navigation) return { text: "", src: null };
-  for (const child of navigation.children) {
-    if (child.tagName !== "symbol") continue;
-    const rawSrc = child.attrs["src"];
-    let src: string | null = null;
-    if (typeof rawSrc === "string" && rawSrc !== "") {
-      const absolute = path.resolve(landmarkDir, rawSrc);
-      src = path.relative(boxRoot, absolute);
-    }
-    const text = typeof child.text === "string" ? child.text.trim() : "";
-    return { text, src };
-  }
-  return { text: "", src: null };
+  const symbol = navigation?.symbol;
+  if (symbol === undefined) return { text: "", src: null };
+  if (typeof symbol === "string") return { text: symbol.trim(), src: null };
+  const absolute = path.resolve(landmarkDir, symbol.src);
+  return { text: "", src: path.relative(boxRoot, absolute) };
 }
 
 export const landmarksRouter = router({
@@ -93,21 +69,20 @@ export const landmarksRouter = router({
 
     for (const relPath of matches) {
       const absPath = path.join(ctx.boxRoot, relPath);
-      let element: ElementNode;
+      let fields;
       try {
         const content = await fs.readFile(absPath, "utf-8");
-        element = await parseCard(content, { source: absPath });
+        fields = parseLandmarkFields(content);
       } catch (e) {
         console.warn(`landmarks.list: failed to read ${relPath}: ${(e as Error).message}`);
         continue;
       }
+      if (fields === null) continue;
 
-      if (element.tagName !== "landmark") continue;
-
+      const navigation = fields.navigation;
       const dir = path.dirname(relPath);
       const landmarkDir = path.dirname(absPath);
-      const navigation = findNavigation(element);
-      const links = await resolveLandmark(element, {
+      const links = await resolveLandmark(navigation, {
         landmarkDir,
         boxRoot: ctx.boxRoot,
       });
@@ -116,12 +91,12 @@ export const landmarksRouter = router({
       payloads.push({
         path: relPath,
         dir: dir === "." ? "" : dir,
-        label: readChildText(navigation, "label"),
+        label: navigation?.label ?? "",
         symbol: symbol.text,
         symbolSrc: symbol.src,
         links,
         depth: 0,
-        features: readLandmarkFeatures(element),
+        features: readLandmarkFeatures(navigation),
       });
     }
 

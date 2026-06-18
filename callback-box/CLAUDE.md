@@ -25,7 +25,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same
 
 ## Cards
 
-Cards are the core data format. The current format is **YAML frontmatter + markdown body** (Phase 2, May 2026); a handful of schemas with inline-attributed structure (guide, recipe, procedure, procedure-run, capture-session, landmark) remain on the older **XML body** until cardworks grows Markdoc-style body tags. Both formats coexist behind the loader.
+Cards are the core data format. The current format is **YAML frontmatter + markdown body** (Phase 2, May 2026); a few schemas with inline-attributed structure (guide, procedure, procedure-run, capture-session) remain on the older **XML body** until they migrate to Markdoc-style body tags. Both formats coexist behind the loader.
 
 ```
 ---

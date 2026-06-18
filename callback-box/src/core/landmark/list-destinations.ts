@@ -1,16 +1,16 @@
 /**
  * List the landmark destinations of a given kind across a box.
  *
- * A destination is a landmark whose `<destination for="…">` role advertises
- * the requested kind (see `destination.ts`; the legacy `<triage-destination>`
- * counts as `triage`). Used by the clerk commentary endpoint to offer filing
- * spots, and available to any caller that needs "where can <kind> go?".
+ * A destination is a landmark whose `destinations` advertise the requested
+ * kind (see `destination.ts`). Used by the clerk commentary endpoint to
+ * offer filing spots, and available to any caller that needs "where can
+ * <kind> go?".
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseCard, type ElementNode } from "cardworks";
+import { parseLandmarkFields, type LandmarkSymbolData } from "../../schemas/landmark.js";
 import { findDestination, type DestinationKind } from "./destination.js";
 
 export interface DestinationInfo {
@@ -18,24 +18,13 @@ export interface DestinationInfo {
   dir: string;
   /** Navigation label, falling back to the directory's last segment. */
   label: string;
-  /** `<symbol>` text (emoji/short text), or null if none / image-only. */
+  /** Symbol text (emoji/short text), or null if none / image-only. */
   symbol: string | null;
 }
 
-function findNavigation(element: ElementNode): ElementNode | null {
-  for (const child of element.children) {
-    if (child.tagName === "navigation") return child;
-  }
-  return null;
-}
-
-function navText(navigation: ElementNode | null, tagName: string): string | null {
-  if (navigation === null) return null;
-  for (const child of navigation.children) {
-    if (child.tagName === tagName && typeof child.text === "string" && child.text.trim() !== "") {
-      return child.text.trim();
-    }
-  }
+/** A symbol is displayable text only when it's a plain string (not an image). */
+function symbolText(symbol: LandmarkSymbolData | undefined): string | null {
+  if (typeof symbol === "string" && symbol.trim() !== "") return symbol.trim();
   return null;
 }
 
@@ -52,22 +41,21 @@ export async function listDestinations(
   const out: DestinationInfo[] = [];
   for (const relPath of matches) {
     const absPath = path.join(boxRoot, relPath);
-    let element: ElementNode;
+    let fields;
     try {
       const content = await fs.readFile(absPath, "utf-8");
-      element = await parseCard(content, { source: absPath });
+      fields = parseLandmarkFields(content);
     } catch (e) {
       console.warn(`list-destinations: failed to parse ${absPath}: ${(e as Error).message}`);
       continue;
     }
-    if (element.tagName !== "landmark") continue;
-    if (findDestination(element, kind) === null) continue;
+    if (fields === null) continue;
+    if (findDestination(fields.destinations, kind) === null) continue;
 
     const dir = path.dirname(relPath);
     const normalizedDir = dir === "." ? "" : dir;
-    const navigation = findNavigation(element);
-    const label = navText(navigation, "label") ?? (normalizedDir === "" ? "root" : path.basename(normalizedDir));
-    out.push({ dir: normalizedDir, label, symbol: navText(navigation, "symbol") });
+    const label = fields.navigation?.label ?? (normalizedDir === "" ? "root" : path.basename(normalizedDir));
+    out.push({ dir: normalizedDir, label, symbol: symbolText(fields.navigation?.symbol) });
   }
 
   out.sort((a, b) => {

@@ -1,8 +1,8 @@
 /**
  * Compile the triage-instructions doc from landmarks with a `triage`
- * destination role (`<destination for="triage">`, or the legacy
- * `<triage-destination>`). The doc is what the triage subagent reads to
- * decide where to route each staged item.
+ * destination role (a `destinations` entry whose `for` includes
+ * `triage`). The doc is what the triage subagent reads to decide where
+ * to route each staged item.
  *
  * See `docs/plans/triage-design.md` §3 and §Triage (stage 2).
  */
@@ -10,12 +10,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseCard, type ElementNode } from "cardworks";
+import { parseLandmarkFields, type LandmarkFields } from "../schemas/landmark.js";
 import { findDestination } from "./landmark/destination.js";
 
 /**
- * One triage category, derived from a landmark with a
- * `<triage-destination>` child.
+ * One triage category, derived from a landmark with a `triage`
+ * destination.
  */
 export interface TriageCategory {
   /**
@@ -27,12 +27,12 @@ export interface TriageCategory {
   name: string;
   /** Box-relative directory containing the landmark. */
   dir: string;
-  /** `<rules>` text, trimmed; empty string if no rules element. */
+  /** `rules` text, trimmed; empty string if none. */
   rules: string;
   /**
-   * Inline handler procedure (raw XML) or a `ref` attribute. The
-   * triage stage only needs to know the destination — the handle
-   * stage runs the procedure later.
+   * The destination's handler procedure ref, or null if none. The triage
+   * stage only needs to know the destination — the handle stage runs the
+   * procedure later.
    */
   procedureRef: string | null;
 }
@@ -55,40 +55,17 @@ function deriveCategoryName(dir: string): string {
   return last;
 }
 
-function findChild(element: ElementNode, tagName: string): ElementNode | null {
-  for (const child of element.children) {
-    if (child.tagName === tagName) return child;
-  }
-  return null;
-}
-
-function extractRules(triageDest: ElementNode): string {
-  const rules = findChild(triageDest, "rules");
-  if (!rules || typeof rules.text !== "string") return "";
-  return rules.text.trim();
-}
-
-function extractProcedureRef(triageDest: ElementNode): string | null {
-  const proc = findChild(triageDest, "procedure");
-  if (!proc) return null;
-  const ref = proc.attrs["ref"];
-  if (typeof ref === "string" && ref !== "") return ref;
-  // Inline procedure: store the serialized XML so the handler can find
-  // it. We don't try to re-serialize here — the handle stage re-reads
-  // the landmark to access the inline form.
-  return "inline";
-}
-
-async function loadLandmark(absPath: string): Promise<ElementNode | null> {
+async function loadLandmarkFields(absPath: string): Promise<LandmarkFields | null> {
+  let content: string;
   try {
-    const content = await fs.readFile(absPath, "utf-8");
-    return await parseCard(content, { source: absPath });
+    content = await fs.readFile(absPath, "utf-8");
   } catch (e) {
     const err = e as NodeJS.ErrnoException;
     if (err.code === "ENOENT") return null;
-    console.warn(`triage-instructions: failed to parse ${absPath}: ${err.message}`);
+    console.warn(`triage-instructions: failed to read ${absPath}: ${err.message}`);
     return null;
   }
+  return parseLandmarkFields(content);
 }
 
 /**
@@ -107,19 +84,19 @@ export async function compileTriageInstructions(
   const categories: TriageCategory[] = [];
   for (const relPath of matches) {
     const absPath = path.join(boxRoot, relPath);
-    const element = await loadLandmark(absPath);
-    if (!element || element.tagName !== "landmark") continue;
+    const fields = await loadLandmarkFields(absPath);
+    if (fields === null) continue;
 
-    const triageDest = findDestination(element, "triage");
-    if (!triageDest) continue;
+    const triageDest = findDestination(fields.destinations, "triage");
+    if (triageDest === null) continue;
 
     const dir = path.dirname(relPath);
     const normalizedDir = dir === "." ? "" : dir;
     categories.push({
       name: deriveCategoryName(normalizedDir),
       dir: normalizedDir,
-      rules: extractRules(triageDest),
-      procedureRef: extractProcedureRef(triageDest),
+      rules: triageDest.rules?.trim() ?? "",
+      procedureRef: triageDest["procedure-ref"] ?? null,
     });
   }
 

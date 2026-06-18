@@ -10,26 +10,27 @@ import { makeTestServer } from "./helpers/doctest-server.js";
 
 ## GET `/api/clerk/commentary-destinations`
 
-Lists landmarks whose `<destination for>` includes `commentary`. A triage-only
+Lists landmarks whose `destinations` include `commentary`. A triage-only
 landmark is not offered as a commentary destination.
 
 ```
 const ctx = await makeTestServer();
-await ctx.seed("store/reading/Reading.landmark.card", `<landmark>
-<navigation>
-<label>Reading</label>
-<symbol>📖</symbol>
-</navigation>
-<destination for="commentary"/>
-</landmark>`);
-await ctx.seed("store/recipes/Recipes.landmark.card", `<landmark>
-<navigation>
-<label>Recipes</label>
-</navigation>
-<triage-destination>
-<rules>Recipes.</rules>
-</triage-destination>
-</landmark>`);
+await ctx.seed("store/reading/Reading.landmark.card", `---
+navigation:
+  label: Reading
+  symbol: 📖
+destinations:
+  - for: [commentary]
+---
+`);
+await ctx.seed("store/recipes/Recipes.landmark.card", `---
+navigation:
+  label: Recipes
+destinations:
+  - for: [triage]
+    rules: Recipes.
+---
+`);
 
 const res = await ctx.request({ method: "GET", url: "/api/clerk/commentary-destinations" });
 JSON.stringify(res.body)
@@ -49,10 +50,13 @@ card (which renders the page plus its inline commentary) in a companion pane.
 
 ```
 const ctx = await makeTestServer();
-await ctx.seed("store/reading/Reading.landmark.card", `<landmark>
-<navigation><label>Reading</label></navigation>
-<destination for="commentary"/>
-</landmark>`);
+await ctx.seed("store/reading/Reading.landmark.card", `---
+navigation:
+  label: Reading
+destinations:
+  - for: [commentary]
+---
+`);
 
 const res = await ctx.request({
   method: "POST",

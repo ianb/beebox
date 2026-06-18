@@ -15,7 +15,7 @@ Key properties:
 - **Singular per directory.** One `*.landmark.card` per opted-in directory. Directories without one are invisible to the navigation surface — that's the point.
 - **Thing-first, container-secondary.** The card itself is the widget. It can point at nearby cards, but it doesn't *contain* them — it references them.
 - **Evergreen.** Content describes what the spot is and what's notable, long-term. Not "this week's top three." Permanence is implied by the metaphor.
-- **Hand-curated and ordered.** No auto-discovery. A `<expand>` element provides templated fan-out for "list everything matching X" cases, but it's still an explicit editorial choice to include it.
+- **Hand-curated and ordered.** No auto-discovery. An `expand` entry provides templated fan-out for "list everything matching X" cases, but it's still an explicit editorial choice to include it.
 
 ### Distinct from `briefing`
 
@@ -30,87 +30,81 @@ Both can coexist in the same directory.
 
 ## Card schema
 
-A landmark is a root `<landmark>` with one or more **role** child elements. The navigation role (`<navigation>`) carries the bookmark fields; the triage-destination role (`<triage-destination>`) carries category rules and a handler procedure. A landmark can carry one or both; everything below describes the navigation role. See `docs/plans/triage-design.md` for the triage role.
+A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/plans/triage-design.md` for the destination role.
 
-```xml
-<landmark>
-<navigation>
-<label>Recipes</label>
-<symbol>🍳</symbol>
-<link ref="Bread.recipe.card">the bread</link>
-<link ref="techniques/Knife_Skills.doc.card"/>
-<expand query="*.recipe.card" order="modified-desc">
-  <link template-ref="${path}">${title}</link>
-</expand>
-</navigation>
-</landmark>
+```yaml
+---
+navigation:
+  label: Recipes
+  symbol: 🍳
+  links:
+    - { ref: Bread.recipe.card, label: the bread }
+    - { ref: techniques/Knife_Skills.doc.card }
+  expand:
+    - query: "*.recipe.card"
+      order: modified-desc
+      template-ref: "${path}"
+      template-label: "${title}"
+---
 ```
 
-### Elements
+### Fields
 
-All of these are children of `<navigation>`.
+All of these live under `navigation`.
 
-**`<label>`** (required, one) — short bookmark name. Displayed prominently on the tile. Not a sentence; treat it like a tab name.
+**`label`** (one) — short bookmark name. Displayed prominently on the tile. Not a sentence; treat it like a tab name.
 
-**`<symbol>`** (required, one) — the iconic mark. Two forms:
+**`symbol`** (one) — the iconic mark. Two forms:
 
-```xml
-<symbol>🍳</symbol>                            <!-- emoji or short text -->
-<symbol src="images/portrait.webp"/>            <!-- image -->
+```yaml
+symbol: 🍳                          # emoji or short text
+symbol: { src: images/portrait.webp }   # image
 ```
 
 For character-driven scenarios where the face is the bookmark, the image form makes the Landmarks page look like a real launcher rather than an emoji grid. Image `src` is a path relative to the landmark's directory; cross-directory paths are allowed. The symbol carries most of the "iconic and unique expression" weight — pick well.
 
-**`<link ref="..." [text]>`** (zero or more) — a pinned reference to another card. `ref` is a literal path to the target (relative to the landmark's directory; may cross directories). It's validated like any other ref — it must point at a real file. Optional inner text is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When inner text is omitted, the renderer falls back to the target's own title.
+**`links`** (zero or more `{ ref, label? }`) — pinned references to other cards. `ref` is a literal path to the target (relative to the landmark's directory; may cross directories). It's validated like any other ref — it must point at a real file. Optional `label` is a per-landmark contextual label — call this card "the bread" here even if its real title is "Bread Basics." When omitted, the renderer falls back to the target's own title.
 
-**`<expand query="..." [order=...]>[template]</expand>`** (zero or more) — templated fan-out. Runs the query, applies the template per match, generates `<link>` elements. See below.
+**`expand`** (zero or more) — templated fan-out. Runs a query, applies a template per match, generates links. See below.
 
-### Why no `<description>` / `<purpose>` / `<intent>`
+### Why no `description` / `purpose` / `intent`
 
-Earlier sketches included prose fields. Removed: a bookmark seen hundreds of times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs a written rationale, write a doc card and `<link>` to it as the first reference. That keeps the schema honest about its job.
+Earlier sketches included prose fields. Removed: a bookmark seen hundreds of times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs a written rationale, write a doc card and add it to `links` as the first reference. That keeps the schema honest about its job.
 
-## The `<expand>` element
+## The `expand` entry
 
-A landmark like Recipes naturally wants to surface "all recipe cards in this directory" without listing them by hand. `<expand>` is the editorial way to opt into that.
+A landmark like Recipes naturally wants to surface "all recipe cards in this directory" without listing them by hand. `expand` is the editorial way to opt into that.
 
 ### Query
 
-The `query` attribute is a glob pattern, matching `cb ls` conventions (`*.recipe.card`, `**/*.todo-list.card`, etc.). Resolved relative to the landmark's directory.
+`query` is a glob pattern, matching `cb ls` conventions (`*.recipe.card`, `**/*.todo-list.card`, etc.). Resolved relative to the landmark's directory.
 
 ### Template
 
-The element's children are a template, applied to each matched card. The default template (when children are omitted) is the equivalent of:
-
-```xml
-<link template-ref="${path}"/>
-```
-
-**Templates use `template-ref="..."`, not `ref="..."`.** The two attributes are distinct types: `ref` is a literal path that the cardworks ref-checker resolves at load time; `template-ref` carries `${...}` placeholders that get substituted per match at render time. Putting `${path}` in `ref` would (rightly) be flagged as a broken reference.
+`template-ref` / `template-label` are placeholder strings applied to each matched card. When `template-ref` is omitted, the default is `${path}` (a bare link to each match).
 
 `${...}` placeholders interpolate at expand time:
 
 - **`${path}`** — special-cased; resolves to the file path of the matched card, relative to the landmark's directory.
-- **`${expr}`** for any other `expr` — evaluated as XPath against the matched card's root, via cardworks' `evaluateXPathString`. So `${title}` grabs the `<title>` element's text; `${/some/nested/value}` works for deeper paths.
+- **`${field}`** for any other name — reads that field from the matched card's **frontmatter**. So `${title}` grabs the card's `title:` field; dotted paths like `${exif.camera}` walk nested mappings. Missing or non-scalar values render as the empty string.
 
-Inner text on a template `<link>` is also placeholder-substituted (`<link template-ref="${path}">${title}</link>`), so you can derive the per-match label from the matched card's content.
-
-(Note: cardworks calls this XPath, not XQuery, but the user-facing shape is the same as `cb ls`.)
+`template-label` derives the per-match label the same way (`template-label: "${title}"`).
 
 The `${}` syntax differs from `cb ls`'s `{...}` deliberately — it avoids interpolating literal braces that appear in card body text.
 
 ### Order
 
-Optional `order=""` attribute on `<expand>`:
+Optional `order` on an `expand` entry:
 
-- `"alphabetical"` — by file path. Default; matches `cb ls`.
-- `"modified-desc"` — most-recently-edited first.
-- `"modified-asc"` — oldest first.
+- `alphabetical` — by file path. Default; matches `cb ls`.
+- `modified-desc` — most-recently-edited first.
+- `modified-asc` — oldest first.
 
-The enum can grow (by-attribute, by-XPath-value) without breaking existing cards.
+The enum can grow without breaking existing cards.
 
 ### Dedup
 
-A card appearing both in a hand-listed `<link>` and in an `<expand>` result shows once: first occurrence in source order wins. This lets a landmark hoist a few items to the top with custom labels and let the rest fill in via expand below, without doubling.
+A card appearing both in a hand-listed `links` entry and in an `expand` result shows once: hand-listed links come first and win. This lets a landmark hoist a few items to the top with custom labels and let the rest fill in via expand below, without doubling.
 
 ## Rendering
 
@@ -143,7 +137,7 @@ Eventually Browse can surface "the landmark for this directory" as a header crum
 
 | Component | Location |
 |---|---|
-| Schema | `src/schemas/landmark.tsx` |
+| Schema | `src/schemas/landmark.ts` |
 | Schema registration | `src/schemas/registry.ts` |
 | Expand evaluator | `src/core/landmark/` (resolves queries, applies templates, dedups, orders) |
 | Tile-renderer registry | `src/frontend/src/renderers/tile.ts` (mirrors existing renderer registry) |
@@ -151,9 +145,9 @@ Eventually Browse can surface "the landmark for this directory" as a header crum
 | Landmarks page | `src/frontend/src/pages/LandmarksPage.tsx` |
 | Route + nav entry | `src/frontend/src/components/AppNav.tsx` + router |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
-| Doctest coverage | `test/landmark.doctest.md` (schema validation, expand semantics, dedup, order) |
+| Doctest coverage | `test/landmark-schema.doctest.md` (schema validation, expand semantics, dedup, order) |
 
-The expand evaluator runs server-side at fetch time so the wire response is a fully-resolved list of links (no client-side glob/XPath).
+The expand evaluator runs server-side at fetch time so the wire response is a fully-resolved list of links (no client-side glob or field lookup).
 
 ## Open questions
 
