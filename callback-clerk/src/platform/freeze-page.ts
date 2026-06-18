@@ -49,11 +49,15 @@ export async function freezePage(): Promise<string | null> {
         removeHiddenElements: true,
         removeUnusedStyles: true,
         removeUnusedFonts: true,
-        removeImports: true,
-        removeScripts: true,
         compressHTML: true,
+        compressCSS: true,
         loadDeferredImages: false,
         removeFrames: true,
+        // Drop all scripts — dead weight in a static snapshot, and ~5MB of a
+        // 41MB capture. NOTE: the option is `blockScripts`; the earlier
+        // `removeScripts`/`removeImports` were not recognized by
+        // single-file-core (silent no-ops), which is why the JS leaked in.
+        blockScripts: true,
       }),
       new Promise<null>((resolve) => setTimeout(() => resolve(null), FREEZE_TIMEOUT_MS)),
     ]);
