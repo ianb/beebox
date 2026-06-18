@@ -13,6 +13,18 @@ optionally followed by a markdown body that may carry Markdoc tags.
 There is no second format, no `content-type: application/x-card+xml`,
 no element tree, no XPath.
 
+> **Status update (in progress).** Round 1 shipped: landmark, recipe,
+> guide, procedure, and procedure-run are migrated off XML, each with a
+> registered migrator and per-schema commit; the full suite stays green
+> (2174). **Key finding that overrode the plan: none of them needed
+> Markdoc.** Every one of their parsers already produces flat, structured
+> data (procedure/procedure-run group phase children by kind; guide
+> flattens to `ParsedGuide`; landmark is pure navigation metadata), so
+> all five went to **pure YAML frontmatter**. That leaves **capture-session
+> as the only schema that genuinely needs Markdoc** (its transcript is
+> ordered mixed content) — deferred to round 2, along with removing the
+> dual-format loader and deleting cardworks.
+
 This is plan-only. Nothing here is executed until the plan is approved
 and then run end-to-end on this worktree branch.
 
