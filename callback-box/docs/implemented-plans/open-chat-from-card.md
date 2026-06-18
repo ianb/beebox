@@ -1,5 +1,10 @@
 # Open chat from a card browse page
 
+**Status:** Implemented (2026-06). Shipped in `OpenChatControl` on `CardViewPage`,
+`chat.openForCard` + the `card.get` boundary guard, and `src/core/landmark/nearest.ts`;
+covered by `test/landmark-nearest.doctest.md`. This doc is the frozen design record
+(codex review folded in); the code and doctests are the living reference.
+
 Add an "open chat" affordance to the full-page card viewer (`/:boxSlug/card/<splat>`).
 Clicking it navigates to the existing chat layout with this card pre-attached as the
 companion document, bound to the chat for the nearest enclosing landmark directory.
