@@ -190,21 +190,29 @@ inside this chunk (these two files have no transitive deps).
 
 **What.** Remove the `cardworks/` directory, the
 `callback-box/node_modules/cardworks` symlink, the `"cardworks": "workspace:*"`
-dependency (`callback-box/package.json:80`), and the `- cardworks` line in
-`pnpm-workspace.yaml:17`; run `pnpm install` to settle the lockfile; update
-docs.
+dependency (`callback-box/package.json:80`), the `- cardworks` line in
+`pnpm-workspace.yaml:17`, **and the now-spent XML migrators**
+(`scripts/migrate/*.ts` plus the `_warnings.ts`/`_harness.ts` they share, and
+their `MIGRATIONS` entries in `src/core/migrations.ts`); run `pnpm install` to
+settle the lockfile; update docs.
 
-**Why this needs to change.** The point — no cardworks.
+**Why this needs to change.** The point — no cardworks. The migrators are
+the last cardworks consumer (they read pre-migration XML cards via
+`parseCard`); once every box is migrated (decided: box-migration-first) they
+have done their job and are deleted in the same push.
 
-**Direction.** This track only runs once Tracks A+B make
-`grep -rl 'from "cardworks"' callback-box/src` empty. The migrators
-(`scripts/migrate/*.ts`) still import cardworks; their fate is the one open
-question (below). Doc updates: `CLAUDE.md:87` (the cardworks bullet),
+**Gated on box migration.** This track runs only once (1) Tracks A+B make
+`grep -rl 'from "cardworks"' callback-box/src` empty, **and** (2) every box
+has been migrated off XML so the migrators are no longer needed. Box
+migration is the user's separate effort; Tracks A+B do not wait on it (they
+touch only callback-box source), so they land first while boxes are migrated
+out of band. Doc updates: `CLAUDE.md:87` (the cardworks bullet),
 `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
-it now means "from `src/cards/`").
+it now means "from `src/cards/`"); retire `docs/migrations.md` references to
+the deleted migrators as appropriate.
 
-**First implementation chunk.** Resolve the migrator question (Open
-questions), then delete the package + wiring + `pnpm install`, with a clean
+**First implementation chunk.** After box migration is confirmed complete,
+delete the package + wiring + migrators + `pnpm install`, with a clean
 `pnpm typecheck && pnpm lint && pnpm test`.
 
 ## Subplans
@@ -222,7 +230,7 @@ step.
 | `ls --format` removed but a box config / agent still calls it | No | No | **Silent** (format arg ignored) |
 | Copied `extractRefs` drifts from cardworks' (behavior change in ref-checking) | Yes — `cb validate` ref doctests | Yes — copy is verbatim | Clear |
 | Local minimal `Location` loses a field the formatter reads | Yes — validate output doctests | Yes — formatter only reads source/line/column | Clear (format looks wrong) |
-| Migrator run after cardworks deletion (XML parser gone) | No | No — import fails | Clear-but-fatal (script won't load) |
+| Box still on XML when cardworks deleted (migrators already gone) | No | Gate: Track C waits until all boxes migrated | Clear-but-fatal (that box's cards won't load) |
 | Lockfile/`pnpm install` leaves a dangling `cardworks` reference | No | Partial — install errors on missing workspace pkg | Clear (install fails) |
 
 **Critical gap: `ls --format` silent removal.** `commands/ls.ts:74`'s
@@ -262,8 +270,10 @@ frontmatter-field lookup — small, and keeps `cb ls --format '{title}'` working
   have zero real consumers; deleting beats porting (CLAUDE.md "don't add
   features beyond what the task requires").
 - **Migrating the boxes themselves.** That is the user's separate task
-  ("I'll set you on migrating the individual boxes"); this plan only removes
-  the package. The migrator/box sequencing is surfaced as an Open question.
+  ("I'll set you on migrating the individual boxes"). It is *not* part of this
+  plan's work, but it is a **prerequisite for Track C** (the deletion can't
+  land while a box still has XML cards the about-to-be-deleted migrators would
+  service). Tracks A+B are independent of it.
 - **Reworking `card-lint.ts` / `body-refs.ts` Markdoc validation.** Already
   callback-box-owned and working; only its cardworks *imports* change.
 - **A general "vendor any npm dep" mechanism.** We copy these specific files;
@@ -273,19 +283,12 @@ frontmatter-field lookup — small, and keeps `cb ls --format '{title}'` working
 
 ## Open design questions
 
-1. **Migrator dependency on the XML parser (the sequencing crux).** The
-   migrators (`scripts/migrate/*.ts`) need cardworks' `parseCard`/
-   `splitCardContent` to read pre-migration XML box cards, and boxes aren't
-   migrated yet. Options: (a) **vendor a minimal XML reader** into
-   `scripts/migrate/` (snapshot `parse.ts`+`dom-to-object.ts`+`provenance.ts`,
-   ~850 LOC, scripts-only so outside `pnpm lint`) so migrators stay runnable
-   after deletion; (b) **box-migration-first** — run all migrators against
-   every box, then delete cardworks *and* the now-spent XML migrators together;
-   (c) leave migrators importing cardworks and **defer cardworks deletion**
-   until boxes are done. **Lean: (a)** — it decouples package deletion from
-   box-migration scheduling and keeps the migrators self-contained historically,
-   at the cost of a one-time ~850-LOC scripts-only snapshot. Confirm with the
-   user, since it trades a vendored XML blob against deletion timing.
+1. ~~**Migrator dependency on the XML parser.**~~ **Resolved:
+   box-migration-first.** Run the migrators against every box, then delete
+   cardworks *and* the now-spent migrators together (Track C). No XML parser is
+   vendored; the migrators die with cardworks once they've done their job. This
+   makes box migration (the user's separate effort) a prerequisite for Track C
+   only — Tracks A+B land first, independent of box state.
 2. **Home for the copied primitives.** `src/cards/` (proposed) vs
    `src/lib/cards/` vs `src/core/cards/`. Lean: `src/cards/` — top-level,
    sibling to `src/schemas/`, reads as "the card primitive layer." Minor;
@@ -318,14 +321,17 @@ the existing "cards are frontmatter" understanding is unchanged.
 4. **Track B** — create `src/cards/` (frontmatter.ts + schema.ts first, then
    registry/lint-format/errors), repoint all keep-set imports. Now
    `grep -rl 'from "cardworks"' callback-box/src` is empty.
-5. **Resolve Open question 1** (migrators), then **Track C** — delete
-   cardworks + symlink + dep + workspace entry, `pnpm install`, update docs.
-   Final `pnpm typecheck && pnpm lint && pnpm test` clean.
+5. **[Out of band] Migrate every box** off XML with the migrators (the
+   user's separate effort; can overlap Tracks A+B).
+6. **Track C** — once boxes are migrated, delete cardworks + symlink + dep +
+   workspace entry + the spent migrators, `pnpm install`, update docs. Final
+   `pnpm typecheck && pnpm lint && pnpm test` clean.
 
-Dependencies: Track C is gated on A+B (no cardworks imports) and on the
-migrator decision. Track B's repoint is what makes the deleted XML symbols
-disappear, so Track A's "compiler as checklist" verification happens as B
-lands.
+Dependencies: Track C is gated on A+B (no cardworks imports in src) *and* on
+box migration being complete (so the deleted migrators aren't needed). Track
+B's repoint is what makes the deleted XML symbols disappear, so Track A's
+"compiler as checklist" verification happens as B lands. Tracks A+B do not
+depend on box state and can land while boxes are migrated.
 
 ## Rollout shape
 
