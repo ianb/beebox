@@ -10,6 +10,7 @@ import * as fs from "node:fs/promises";
 import type { ChatImage } from "../../core/chat-session.js";
 import type { SessionUser } from "../auth.js";
 import { resolveSessionLogPath } from "../../core/chat-session-history.js";
+import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat-card-activity.js";
 
 export interface SendBody {
   message: string;
@@ -48,6 +49,12 @@ export interface SendBody {
    * serialization. Omitted when empty.
    */
   cardActivity?: string[];
+  /**
+   * Per-kind free-text detail for the activity (e.g. the embedding query
+   * typed), surfaced as the `card-state` snapshot attribute. Keys are
+   * activity kinds; non-kind keys and non-string values are dropped.
+   */
+  cardState?: Record<string, unknown>;
 }
 
 export interface SelfNoteBody {
@@ -76,6 +83,29 @@ const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 export function classifyChannel(userAgent: string | undefined): string | undefined {
   if (!userAgent) return undefined;
   return /mobi|android|iphone|ipad/i.test(userAgent) ? "web-mobile" : "web-desktop";
+}
+
+/**
+ * Normalize the companion-pane fields off a send body into the shape
+ * `ChatSendInput` wants: `openCard` (non-empty path), `cardActivity` (valid
+ * kinds only), `cardState` (per-kind detail strings). Everything is filtered
+ * defensively at this parse boundary; absent/invalid fields are simply omitted.
+ */
+export function extractCardFields(
+  body: Pick<SendBody, "openCard" | "cardActivity" | "cardState">,
+): { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails } {
+  const out: { openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails } = {};
+  if (typeof body.openCard === "string" && body.openCard !== "") out.openCard = body.openCard;
+  const kinds = Array.isArray(body.cardActivity) ? body.cardActivity.filter(isActivityKind) : [];
+  if (kinds.length > 0) out.cardActivity = kinds;
+  const details: CardStateDetails = {};
+  if (body.cardState !== null && typeof body.cardState === "object") {
+    for (const [kind, detail] of Object.entries(body.cardState)) {
+      if (isActivityKind(kind) && typeof detail === "string" && detail !== "") details[kind] = detail;
+    }
+  }
+  if (Object.keys(details).length > 0) out.cardState = details;
+  return out;
 }
 
 export function escapeXmlAttr(v: string): string {

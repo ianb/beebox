@@ -16,7 +16,7 @@ import { resolveSessionLogPath } from "./chat-session-history.js";
 import { parseSessionLog, type SessionEntry } from "../cli/lib/session.js";
 import { effectiveTailSize } from "./chat-session-messages.js";
 import type { ChatImage, ChatSendInput } from "./chat-session-messages.js";
-import { unionActivityKinds } from "./chat-card-activity.js";
+import { unionActivityKinds, mergeCardStateDetails } from "./chat-card-activity.js";
 
 export interface SessionHistory {
   sessionId: string | null;
@@ -267,11 +267,13 @@ export function combineQueuedInputs(queued: ChatSendInput[]): ChatSendInput {
     idOffset += imgs.length;
   }
   const cardActivity = unionActivityKinds(queued.map((q) => q.cardActivity));
+  const cardState = mergeCardStateDetails(queued.map((q) => q.cardState));
   return {
     text: combinedTextParts.join("\n\n"),
     images: combinedImages,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
     ...(cardActivity.length > 0 ? { cardActivity } : {}),
+    ...(Object.keys(cardState).length > 0 ? { cardState } : {}),
   };
 }

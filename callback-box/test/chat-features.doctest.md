@@ -192,6 +192,20 @@ composeChatAppSnapshot({
 => <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" local-time="Wednesday 2026-05-13 10:00 (morning)" open-card="store/notes/Trip.memo.card" card-activity="scrolled,modified"/>
 ```
 
+The optional `card-state` attribute carries the view's free-text detail for that
+activity, serialized after `card-activity`.
+
+```
+composeChatAppSnapshot({
+  features: {},
+  time: "2026-05-13T15:00:00Z",
+  openCard: "store/notes/Trip.memo.card",
+  cardActivity: "explored",
+  cardState: "explored: boat-water+road → boats",
+})
+=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" open-card="store/notes/Trip.memo.card" card-activity="explored" card-state="explored: boat-water+road → boats"/>
+```
+
 Both are omitted when `undefined` — the caller passes `undefined`, never
 `""`, since the pipeline renders empty strings rather than dropping them.
 
@@ -240,12 +254,12 @@ r.deltas
 
 Unknown features and invalid values are dropped. The system-written
 context attributes (`time`, `local-time`, `channel`, `last-activity`,
-`calendar`, `open-card`, `card-activity`) are always ignored on input —
-they're read-only; the agent echoing one back is not a mutation.
+`calendar`, `open-card`, `card-activity`, `card-state`) are always ignored on
+input — they're read-only; the agent echoing one back is not a mutation.
 
 ```
 const r = parseChatAppDeltas(
-  "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\" local-time=\"x\" channel=\"y\" last-activity=\"z\" calendar=\"w\" open-card=\"a.card\" card-activity=\"modified\"/>"
+  "<chat-app narration=\"on\" bogus=\"yes\" prose=\"maybe\" time=\"now\" local-time=\"x\" channel=\"y\" last-activity=\"z\" calendar=\"w\" open-card=\"a.card\" card-activity=\"modified\" card-state=\"explored: x\"/>"
 );
 r.deltas
 => [

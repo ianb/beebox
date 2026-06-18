@@ -137,6 +137,7 @@ const READ_ONLY_ATTRS = new Set([
   "health",
   "open-card",
   "card-activity",
+  "card-state",
 ]);
 
 /**
@@ -158,6 +159,7 @@ export function composeChatAppSnapshot(input: {
   health?: string;
   openCard?: string;
   cardActivity?: string;
+  cardState?: string;
 }): string {
   const resolved = resolveFeatures(input.features);
   const attrs: string[] = [];
@@ -175,6 +177,7 @@ export function composeChatAppSnapshot(input: {
     ["health", input.health],
     ["open-card", input.openCard],
     ["card-activity", input.cardActivity],
+    ["card-state", input.cardState],
   ];
   for (const [name, value] of contextAttrs) {
     if (value !== undefined) attrs.push(`${name}="${escapeAttr(value)}"`);

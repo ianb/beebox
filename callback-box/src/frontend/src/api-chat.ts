@@ -7,7 +7,7 @@
 
 import { RequestError } from "./lib/errors";
 import { fetchJson, getApiBase } from "./api-core";
-import type { ActivityKind } from "../../core/chat-card-activity";
+import type { ActivityKind, CardStateDetails } from "../../core/chat-card-activity";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";
@@ -197,8 +197,10 @@ export async function startChatTurn(params: {
   openCard?: string;
   /** What the user did to the companion-pane card since the last reply. */
   cardActivity?: ActivityKind[];
+  /** Per-kind free-text detail for that activity (e.g. the query typed). */
+  cardState?: CardStateDetails;
 }): Promise<ChatTurnStart> {
-  const { session, message, images, contextDir, seedFeatures, openCard, cardActivity } = params;
+  const { session, message, images, contextDir, seedFeatures, openCard, cardActivity, cardState } = params;
   const messageId = params.messageId ?? `msg-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
   const attempt = async (): Promise<Response> => {
@@ -214,6 +216,7 @@ export async function startChatTurn(params: {
         ...(seedFeatures !== undefined ? { seedFeatures } : {}),
         ...(openCard !== undefined ? { openCard } : {}),
         ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
+        ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
       }),
     });
 

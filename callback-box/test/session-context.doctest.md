@@ -24,19 +24,19 @@ console.warn = () => {};
 
 ## formatLocalTime
 
-Renders a moment in the given IANA timezone with the named weekday and a
-phase-of-day label — the two things models misderive from a UTC ISO
-timestamp.
+Renders a moment in the given IANA timezone with the named weekday, the zone
+abbreviation, and a phase-of-day label — the three things models misderive
+from a UTC ISO timestamp.
 
 ```
 formatLocalTime(new Date("2026-06-09T19:32:00Z"), { timezone: "America/Chicago" })
-=> Tuesday 2026-06-09 14:32 (afternoon)
+=> Tuesday 2026-06-09 14:32 CDT (afternoon)
 
 formatLocalTime(new Date("2026-06-09T19:32:00Z"), { timezone: "UTC" })
-=> Tuesday 2026-06-09 19:32 (evening)
+=> Tuesday 2026-06-09 19:32 UTC (evening)
 
 formatLocalTime(new Date("2026-06-09T11:00:00Z"), { timezone: "America/Chicago" })
-=> Tuesday 2026-06-09 06:00 (morning)
+=> Tuesday 2026-06-09 06:00 CDT (morning)
 ```
 
 The local date can differ from the UTC date — late evening in Chicago is
@@ -44,7 +44,7 @@ already the next day in UTC. The weekday and date follow the local zone.
 
 ```
 formatLocalTime(new Date("2026-06-10T03:30:00Z"), { timezone: "America/Chicago" })
-=> Tuesday 2026-06-09 22:30 (late night)
+=> Tuesday 2026-06-09 22:30 CDT (late night)
 ```
 
 An unusable timezone falls back to server-local time (with a console
@@ -153,10 +153,10 @@ await box.write("config/box.json", JSON.stringify({ timezone: "UTC" }));
 const sendNow = new Date("2026-06-09T10:00:00Z");
 
 JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: false }))
-=> {"localTime":"Tuesday 2026-06-09 10:00 (morning)"}
+=> {"localTime":"Tuesday 2026-06-09 10:00 UTC (morning)"}
 
 JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true }))
-=> {"localTime":"Tuesday 2026-06-09 10:00 (morning)"}
+=> {"localTime":"Tuesday 2026-06-09 10:00 UTC (morning)"}
 ```
 
 With a most-active pointer (written whenever any chat session on the box
@@ -179,7 +179,7 @@ END:VCALENDAR`);
 
 JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true }), null, 2)
 => {
-  "localTime": "Tuesday 2026-06-09 10:00 (morning)",
+  "localTime": "Tuesday 2026-06-09 10:00 UTC (morning)",
   "lastActivity": "3 days ago",
   "calendar": "16:00-17:00 Dentist"
 }

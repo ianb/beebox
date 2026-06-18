@@ -204,7 +204,7 @@ export function CompanionViewPanel({
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   onAddSelection?: (selection: AddSelectionInput) => void;
   /** Report user activity on the active card to the chat accumulator. */
-  reportActivity: (kind: ActivityKind) => void;
+  reportActivity: (kind: ActivityKind, detail?: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   // Tabs that have been activated at least once. We mount a tab's view on

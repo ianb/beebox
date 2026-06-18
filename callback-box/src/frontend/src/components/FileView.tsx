@@ -65,7 +65,7 @@ interface FileViewProps {
    * accumulator. Threaded into agent-generated views (writes → `"modified"`,
    * `reportActivity("explored")` opt-in). Absent outside the companion pane.
    */
-  reportActivity?: (kind: ActivityKind) => void;
+  reportActivity?: (kind: ActivityKind, detail?: string) => void;
 }
 
 /* ---------- path classification ---------- */

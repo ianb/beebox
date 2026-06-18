@@ -13,7 +13,7 @@ import { getDirectoryForSession } from "./chat-session-history.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import { composeSendSnapshot } from "./session-context.js";
-import { joinActivityKinds } from "./chat-card-activity.js";
+import { joinActivityKinds, formatCardState } from "./chat-card-activity.js";
 import {
   CHAT_SYSTEM_PROMPT,
   NARRATION_OVERLAY,
@@ -147,12 +147,14 @@ export async function composeTurnContent(
     ? rawInput.openCard
     : undefined;
   const cardActivity = joinActivityKinds(rawInput.cardActivity ?? []);
+  const cardState = formatCardState(rawInput.cardState ?? {});
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     sessionStart,
     ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
     ...(cardActivity !== undefined ? { cardActivity } : {}),
+    ...(cardState !== undefined ? { cardState } : {}),
   });
   const input: ChatSendInput = {
     ...rawInput,

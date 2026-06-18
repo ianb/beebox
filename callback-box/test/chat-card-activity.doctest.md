@@ -10,6 +10,8 @@ import {
   isActivityKind,
   joinActivityKinds,
   unionActivityKinds,
+  formatCardState,
+  mergeCardStateDetails,
 } from "../src/core/chat-card-activity.js";
 import { combineQueuedInputs } from "../src/core/chat-session-state.js";
 ```
@@ -62,6 +64,41 @@ JSON.stringify(unionActivityKinds([]))
 => []
 ```
 
+## Per-kind detail (card-state)
+
+`reportActivity(kind, detail)` attaches a free-text detail per kind. `formatCardState`
+renders the details as `kind: detail` pairs in canonical order, joined by `; `;
+empty input collapses to `undefined` so the attribute is omitted.
+
+```
+formatCardState({ explored: "boat-water+road → boats" })
+=> explored: boat-water+road → boats
+
+formatCardState({ modified: "store/Trip.memo.card", explored: "king-man+woman → queen" })
+=> explored: king-man+woman → queen; modified: store/Trip.memo.card
+
+JSON.stringify(formatCardState({}))
+=> undefined
+
+JSON.stringify(formatCardState({ explored: "" }))
+=> undefined
+```
+
+`mergeCardStateDetails` merges detail maps latest-wins per kind, dropping
+unrecognized kinds and empty strings — so a later queued send's detail for a
+kind overrides an earlier one.
+
+```
+JSON.stringify(mergeCardStateDetails([
+  { explored: "boa" },
+  { explored: "boat", modified: "x.card" },
+]))
+=> {"explored":"boat","modified":"x.card"}
+
+JSON.stringify(mergeCardStateDetails([{ bogus: "y" }, { explored: "" }]))
+=> {}
+```
+
 ## Combining queued inputs
 
 `combineQueuedInputs` joins text, renumbers image tokens, and for the
@@ -71,8 +108,8 @@ must not clobber an earlier "scrolled".
 
 ```
 const combined = combineQueuedInputs([
-  { text: "first", openCard: "a.card", cardActivity: ["scrolled"] },
-  { text: "second", openCard: "b.card", cardActivity: ["modified"] },
+  { text: "first", openCard: "a.card", cardActivity: ["scrolled", "explored"], cardState: { explored: "bo" } },
+  { text: "second", openCard: "b.card", cardActivity: ["modified"], cardState: { explored: "boat" } },
 ]);
 JSON.stringify(combined.text)
 => "first\n\nsecond"
@@ -81,7 +118,10 @@ combined.openCard
 => b.card
 
 JSON.stringify(combined.cardActivity)
-=> ["scrolled","modified"]
+=> ["scrolled","explored","modified"]
+
+JSON.stringify(combined.cardState)
+=> {"explored":"boat"}
 ```
 
 When no queued send carries companion-pane state, both fields are absent (not

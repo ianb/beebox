@@ -42,28 +42,31 @@ interface ViewProps extends ViewFileHelpers {
   boxSlug: string;
   params: Record<string, string>;
   /**
-   * Report user activity on this card to the chat's companion-pane
-   * accumulator. Writes auto-report `"modified"`; a view that changes
-   * parameters without changing data should call `reportActivity("explored")`.
-   * A no-op outside the companion pane (inline/page renders don't accumulate).
+   * Report user activity on this card to the chat's companion-pane accumulator,
+   * with an optional free-text detail surfaced as `card-state` (e.g. the query
+   * the user typed). Writes auto-report `"modified"` with the path; a view that
+   * changes parameters without changing data should call
+   * `reportActivity("explored", "<what they're looking at>")`. A no-op outside
+   * the companion pane (inline/page renders don't accumulate).
    */
-  reportActivity: (kind: ActivityKind) => void;
+  reportActivity: (kind: ActivityKind, detail?: string) => void;
 }
 
 /**
  * Wrap the file helpers so a successful write/append/commit reports
- * `"modified"`. Only the companion-pane ViewRenderer passes a real reporter,
- * so inline/page views can write freely without polluting the accumulator.
+ * `"modified"` with the path. Only the companion-pane ViewRenderer passes a
+ * real reporter, so inline/page views can write freely without polluting the
+ * accumulator.
  */
 function withModifiedReporting(
   helpers: ViewFileHelpers,
-  report: (kind: ActivityKind) => void,
+  report: (kind: ActivityKind, detail?: string) => void,
 ): ViewFileHelpers {
   return {
     ...helpers,
-    writeFile: async (path, opts) => { const r = await helpers.writeFile(path, opts); report("modified"); return r; },
-    appendFile: async (path, opts) => { const r = await helpers.appendFile(path, opts); report("modified"); return r; },
-    commitFile: async (path, message) => { const r = await helpers.commitFile(path, message); report("modified"); return r; },
+    writeFile: async (path, opts) => { const r = await helpers.writeFile(path, opts); report("modified", path); return r; },
+    appendFile: async (path, opts) => { const r = await helpers.appendFile(path, opts); report("modified", path); return r; },
+    commitFile: async (path, message) => { const r = await helpers.commitFile(path, message); report("modified", path); return r; },
   };
 }
 
@@ -88,7 +91,7 @@ interface ViewRendererProps {
   /** Query parameters passed to the view component and cards API. */
   params?: Record<string, string>;
   /** Companion-pane activity reporter; omitted for inline/page renders. */
-  reportActivity?: (kind: ActivityKind) => void;
+  reportActivity?: (kind: ActivityKind, detail?: string) => void;
 }
 
 interface ViewModule {
@@ -188,7 +191,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: Vi
   });
 
   const fileHelpers = useViewFileHelpers(apiBase);
-  const report = useCallback((kind: ActivityKind) => { reportActivity?.(kind); }, [reportActivity]);
+  const report = useCallback((kind: ActivityKind, detail?: string) => { reportActivity?.(kind, detail); }, [reportActivity]);
   const activityHelpers = useMemo(() => withModifiedReporting(fileHelpers, report), [fileHelpers, report]);
 
   const viewNavigate = useCallback((path: string) => {
