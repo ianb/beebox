@@ -7,8 +7,8 @@
  * the raw card text.
  */
 
-import { splitCardContent } from "cardworks";
 import { parse as parseYaml } from "yaml";
+import { splitCardContent } from "../cards/index.js";
 import {
   GuideObject,
   type GuideFields,

@@ -13,9 +13,9 @@
  * live file's hash is the drift signal.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const ExtfileSchema: CardSchema = cardSchema("extfile", {
   fields: {

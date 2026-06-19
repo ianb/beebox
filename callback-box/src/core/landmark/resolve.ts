@@ -9,7 +9,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import type {
   LandmarkExpandData,

@@ -24,7 +24,7 @@
  * See docs/landmarks.md and docs/plans/triage-design.md.
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "cardworks";
+import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 

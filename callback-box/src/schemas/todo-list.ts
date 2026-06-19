@@ -6,7 +6,7 @@
  * notes. Everything is structured frontmatter — no markdown body.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 

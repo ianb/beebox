@@ -10,9 +10,9 @@
  * for creation/modification.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const DocSchema: CardSchema = cardSchema("doc", {
   fields: {

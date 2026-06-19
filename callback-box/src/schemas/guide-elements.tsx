@@ -8,8 +8,8 @@
  * confidence/source are just fields on each rule object.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 // ============================================
 // Shared enums

@@ -6,7 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";

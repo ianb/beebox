@@ -1,4 +1,5 @@
-import type { Card, ICardLoader, CardSchema } from "cardworks";
+import type { Card, ICardLoader } from "cardworks";
+import type { CardSchema } from "../../cards/index.js";
 
 /**
  * Context for a pre-action invocation. Exactly one of `xml` or

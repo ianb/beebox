@@ -9,7 +9,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../../cards/index.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import type { ParsedProcedure, StepUpdate } from "./engine-types.js";
 

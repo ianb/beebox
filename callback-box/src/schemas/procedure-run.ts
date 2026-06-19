@@ -5,7 +5,7 @@
  * procedure/runs/<name>_<timestamp>/run.procedure-run.card
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "cardworks";
+import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 

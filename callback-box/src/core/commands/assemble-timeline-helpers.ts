@@ -2,7 +2,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../../cards/index.js";
 import { parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import type { ImageFields } from "../../schemas/image.js";

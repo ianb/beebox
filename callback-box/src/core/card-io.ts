@@ -18,13 +18,8 @@
 
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import {
-  splitCardContent,
-  parseCard,
-  type CardSchema,
-  type ElementSchema,
-  type ElementNode,
-} from "cardworks";
+import { parseCard, type ElementSchema, type ElementNode } from "cardworks";
+import { splitCardContent, type CardSchema } from "../cards/index.js";
 
 const CARD_XML_CONTENT_TYPE = "application/x-card+xml";
 

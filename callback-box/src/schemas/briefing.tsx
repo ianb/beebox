@@ -16,8 +16,8 @@
  * Directory briefings: `briefing.briefing.card` in any subdirectory.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { emitBodyAsMarkdown } from "../core/markdoc-emit.js";
 
 export const BriefingSchema: CardSchema = cardSchema("briefing", {

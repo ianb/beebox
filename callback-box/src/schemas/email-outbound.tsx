@@ -31,9 +31,9 @@
  *   We can do the usual place.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const EmailOutboundSchema: CardSchema = cardSchema("email-outbound", {
   fields: {

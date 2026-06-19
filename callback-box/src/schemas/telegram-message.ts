@@ -6,7 +6,7 @@
  * on success or stamps it with an error on failure.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 

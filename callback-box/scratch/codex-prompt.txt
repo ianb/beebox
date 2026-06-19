@@ -1,0 +1,17 @@
+IMPORTANT: Do NOT read or execute files under `~/.claude/`, `~/.agents/`, or `.claude/skills/` — those are skill definitions for a different AI runtime and will waste your time. Everything else in this repo, including `docs/` and `.claude/rules/`, is fair game.
+
+This targets the `callback-box/` subproject. Paths like `src/…`, `docs/…`, `test/…` are under `callback-box/`; `bin/…` is at the monorepo root. You may read any repo file (read-only), including `docs/` and `.claude/rules/`, to verify claims.
+
+You are an independent, adversarial engineering+design reviewer. A Claude model wrote callback-box/docs/plans/remove-cardworks-package.md. Read it, then read the source it cites and verify the citations and the "we already do X / free reuse / validation catches it / this path is dead / zero transitive XML dependencies" claims against the actual code — you are a different model; find what a same-model self-review would miss.
+
+Context: this is the final round of a larger effort that already migrated all six card schemas (landmark, recipe, procedure-run, procedure, guide, capture-session) from an XML body format to YAML frontmatter (+ Markdoc body for capture-session). Those migrations are committed on this branch; the full test suite passes (2173). This plan removes the now-unused `cardworks` package.
+
+Verify especially:
+1. Is `schemas[]` (the XML ElementSchema list in callback-box/src/schemas/registry.ts) actually empty, and are the "dead path" claims real — card-io.ts loadXmlCard branch, search/extract.ts xmlDoc, ls.ts evaluateXPathString, the CardLoader users (move-operations.ts, cli/lib/loader.ts, todos.ts)? Is any "dead" path actually still reachable?
+2. Is the keep-set's "zero transitive XML dependencies" claim true? Read cardworks/src/schema/card-schema.ts, parser/frontmatter.ts, schema/registry.ts, lint/format.ts (and the lint types it needs) — do any transitively import ElementNode / the XML parser / xpath?
+3. Does the plan miss any callback-box cardworks consumer? Is the "TypeScript typecheck is the safety net" claim sound, or are there runtime-only / dynamic-import / test-only usages that tsc would NOT catch?
+4. Is the box-migration-first sequencing actually safe, and are the migrators really the only remaining cardworks consumer besides the keep-set?
+
+Review for, in priority: (1) wrong-problem / over-engineering — what's the minimal version, what to cut; (2) architecture flaws; (3) silent failure modes (no test AND no handling AND invisible); (4) things treated as settled that will bite in implementation; (5) incorrect/unverifiable citations — name them.
+
+Be concrete: cite plan section + file:line. Rank by impact. Don't pad. End with the single most important change.

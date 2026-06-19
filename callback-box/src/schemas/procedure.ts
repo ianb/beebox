@@ -8,7 +8,7 @@
  * interleaved), which is why flat YAML fits.
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "cardworks";
+import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 

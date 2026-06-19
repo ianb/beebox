@@ -9,9 +9,9 @@
  * something with no textual content (e.g., a couch).
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const RecordStatus = z.enum(["draft", "reviewed", "archived"]);
 export type RecordStatus = z.infer<typeof RecordStatus>;

@@ -11,9 +11,9 @@
  *   store/drive/Budget.attach/Expenses.json
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 const SheetTab = z.object({
   ref: z.string(),

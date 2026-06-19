@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import sanitize from "sanitize-filename";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../cards/index.js";
 import {
   createChatThreadTemplate,
   createMessageEntry,

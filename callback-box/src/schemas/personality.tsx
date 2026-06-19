@@ -10,8 +10,8 @@
  * the structured frontmatter.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import {
   ConfidenceLevel,
   BeliefSource,

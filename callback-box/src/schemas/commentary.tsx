@@ -12,9 +12,9 @@
  * of those tags lives in `card-lint.ts`, scoped to this card type.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
   fields: {

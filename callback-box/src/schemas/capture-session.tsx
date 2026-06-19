@@ -12,9 +12,9 @@
  * transcript (`assemble-timeline`).
  */
 
-import { splitCardContent, body, cardSchema, type CardSchema } from "cardworks";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { splitCardContent, body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const CaptureSessionStatus = z.enum([
   "new",
