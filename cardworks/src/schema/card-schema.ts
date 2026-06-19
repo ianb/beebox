@@ -1,4 +1,5 @@
 import { z, type ZodType } from "zod";
+import type { LintIssue } from "../lint/lint.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -93,6 +94,21 @@ export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
 };
 
 /**
+ * Input to a schema's self-contained {@link CardSchemaConfig.validate} hook:
+ * the card's own parsed data and nothing else (no loader / box / cross-card
+ * access). `fields` is the Zod-validated frontmatter, with the body value at
+ * `fields["body"]` when the schema declares a body field.
+ *
+ * This is an object (not a bare `fields` argument) so future self-contained
+ * inputs can be added without breaking existing hooks. Box-aware validation
+ * (ref resolution, looking at other cards) is deliberately not expressible
+ * here — that belongs to a separate, host-side mechanism.
+ */
+export interface CardValidateInput {
+  fields: Record<string, unknown>;
+}
+
+/**
  * Configuration for cardSchema().
  */
 export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
@@ -105,6 +121,14 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    * Defaults to true; operational/bookkeeping card types set false.
    */
   searchable?: boolean;
+  /**
+   * Self-contained validation a Zod schema can't express — cross-field rules,
+   * body parsing, format refinements. Returns cardworks {@link LintIssue}[].
+   * It sees only the card's own data ({@link CardValidateInput}); generic,
+   * box-aware checks (e.g. ref existence) stay in the host's lint dispatch
+   * rather than moving per-schema. Omit when Zod `fields` cover the type.
+   */
+  validate?: (input: CardValidateInput) => LintIssue[];
 }
 
 /**
@@ -129,6 +153,8 @@ export interface CardSchema<
   readonly searchable: boolean;
   /** Handling instructions for agents. */
   readonly instructions?: string;
+  /** Self-contained validation hook (see {@link CardSchemaConfig.validate}). */
+  readonly validate?: (input: CardValidateInput) => LintIssue[];
 }
 
 /**
@@ -191,10 +217,16 @@ export function cardSchema<
     globalFieldNames,
     searchable: config.searchable ?? true,
   };
+  // Optional members are spread in only when present so a schema that declares
+  // neither still produces the same object shape (exactOptionalPropertyTypes).
+  let resolved = schema;
   if (config.instructions !== undefined) {
-    return { ...schema, instructions: config.instructions };
+    resolved = { ...resolved, instructions: config.instructions };
   }
-  return schema;
+  if (config.validate !== undefined) {
+    resolved = { ...resolved, validate: config.validate };
+  }
+  return resolved;
 }
 
 /**

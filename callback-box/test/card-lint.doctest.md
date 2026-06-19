@@ -40,6 +40,18 @@ const docSchema: CardSchema = cardSchema("doc", {
   },
 });
 
+// A throwaway type whose only special rule lives in a self-contained `validate`
+// hook on its schema — proves card-lint's dispatch invokes whatever `validate`
+// a schema declares, generically, without knowing the type name. The hook sees
+// only the card's own parsed fields (no loader / box access).
+const gadgetSchema: CardSchema = cardSchema("gadget", {
+  fields: { mode: z.string() },
+  validate: ({ fields }) =>
+    fields["mode"] === "forbidden"
+      ? [{ type: "validation", severity: "error", message: "gadget mode must not be \"forbidden\"" }]
+      : [],
+});
+
 const memoSchema: ElementSchema = element("memo", {
   attrs: { status: z.string() },
 });
@@ -50,6 +62,7 @@ const ctx: LoadCardContext = {
     ["doc", docSchema],
     ["commentary", CommentarySchema],
     ["extfile", ExtfileSchema],
+    ["gadget", gadgetSchema],
   ]),
   elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
@@ -373,4 +386,36 @@ const result = await lintCardsDispatch(
 );
 result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker")
 => true
+```
+
+## A schema's `validate` hook is dispatched generically by type
+
+card-lint no longer hardcodes which types get extra validation — it calls
+`schema.validate` for whatever type the card declares. The `gadget` schema
+(setup) errors when `mode: forbidden`; a card that trips it surfaces the hook's
+message, and a card that doesn't lints clean.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/Bad.gadget.card",
+  "---\ntype: gadget\nmode: forbidden\n---\n",
+);
+await box.write(
+  "store/Ok.gadget.card",
+  "---\ntype: gadget\nmode: allowed\n---\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("store/Bad.gadget.card"), box.path("store/Ok.gadget.card")],
+  { loader, ctx },
+);
+result.totalErrors
+=> 1
+
+result.results[0]!.errors[0]!.message
+=> gadget mode must not be "forbidden"
+
+result.results[1]!.errors.length
+=> 0
 ```
