@@ -20,7 +20,7 @@ Adding a frontmatter schema touches 4 files, plus creates 1 new one.
 `src/schemas/<name>.ts` (use `.tsx` only if you need JSX somewhere; templates emit YAML strings now, not JSX).
 
 ```ts
-import { body, cardSchema, type CardSchema } from "cardworks";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -157,7 +157,7 @@ registerFileType({ tagName: "my-thing" }, { icon: CardIcon });
 When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
 
 ```ts
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../cards/index.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 const content = await fs.readFile(absPath, "utf-8");

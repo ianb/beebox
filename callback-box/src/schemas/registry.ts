@@ -95,22 +95,33 @@ export const cardSchemas: CardSchema[] = [
   ChatThreadSchema,
 ];
 
-/** Packages that box-local schemas can import from callback-box's tree. */
-const SCHEMA_DEPS = new Set(["cardworks", "zod"]);
+/**
+ * Specifiers a box-local schema file may import from callback-box's tree:
+ * - `callback-box/cards` — the public card-primitive surface (cardSchema,
+ *   body, splitCardContent, …); the specifier new box schemas should use.
+ * - `zod` — peer dependency every schema needs.
+ * - `cardworks` — legacy alias, still resolvable while boxes migrate their
+ *   schema files to `callback-box/cards`; goes away with cardworks itself.
+ */
+const SCHEMA_DEPS = new Set(["callback-box", "zod", "cardworks"]);
 
 /**
- * Virtual parent URL inside callback-box's node_modules.
- * When we rewrite parentURL to this, Node resolves bare specifiers
- * by searching callback-box's node_modules.
+ * Virtual parent URL at callback-box's package root (NOT inside
+ * node_modules). Rewriting a box schema's parentURL to this makes Node
+ * resolve bare deps (`zod`, `cardworks`) from callback-box's node_modules
+ * AND self-references (`callback-box/cards`) via callback-box's own
+ * `exports` map. Pointing it *inside* node_modules would break the
+ * self-reference: Node's LOOKUP_PACKAGE_SCOPE returns null at a
+ * node_modules boundary, so the package's own exports never match. The
+ * file need not exist — only the directory's package.json scope is read.
  */
-const CB_VIRTUAL_PARENT = pathToFileURL(
-  join(PACKAGE_ROOT, "node_modules", "_virtual.js")
-).href;
+const CB_VIRTUAL_PARENT = pathToFileURL(join(PACKAGE_ROOT, "_virtual.js")).href;
 
 /**
  * Register module resolution hooks so that box-local schema files
- * (under config/schemas/) can import "cardworks" and "zod" even though
- * those packages live in callback-box's node_modules, not the box's.
+ * (under config/schemas/) can import `callback-box/cards`, `zod`, and the
+ * legacy `cardworks` alias even though none of those resolve from the
+ * box's own node_modules.
  *
  * Uses Node's synchronous registerHooks API which chains correctly
  * with tsx's async loader hooks.

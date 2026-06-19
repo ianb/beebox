@@ -28,7 +28,7 @@ your card needs Markdoc-shaped inline content (see the end of this guide).
 Create a \`.ts\` file in \`config/schemas/\` that default-exports a \`cardSchema()\`:
 
 \`\`\`typescript
-import { body, cardSchema } from "cardworks";
+import { body, cardSchema } from "callback-box/cards";
 import { z } from "zod";
 
 export default cardSchema("my-type", {
@@ -68,11 +68,13 @@ Key patterns:
 
 ## Available Imports
 
-From \`cardworks\`:
+From \`callback-box/cards\`:
 - \`cardSchema(type, config)\` — define a frontmatter card schema (the default)
 - \`body(zodSchema)\` — declare the single markdown body field
-- \`element(tagName, config)\` — define a legacy XML schema (see below)
-- \`escapeText(str)\` / \`escapeAttr(str)\` — XML-escape helpers (only for \`element()\` schemas)
+
+From \`cardworks\` (legacy — only for \`element()\` XML schemas, see below):
+- \`element(tagName, config)\` — define a legacy XML schema
+- \`escapeText(str)\` / \`escapeAttr(str)\` — XML-escape helpers
 
 From \`zod\`:
 - \`z\` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)
@@ -83,7 +85,7 @@ Export a \`template\` to enable \`cb create\` for your card type. For frontmatte
 \`generate\` returns the card text — a YAML frontmatter block built with \`stringify\` from \`yaml\`:
 
 \`\`\`typescript
-import { cardSchema } from "cardworks";
+import { cardSchema } from "callback-box/cards";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 

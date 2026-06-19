@@ -30,8 +30,10 @@ async function loadErrorName(content, source, ctx) {
   }
 }
 
-// A frontmatter card type: config in YAML + a markdown body.
-const WIDGET_SCHEMA = `import { body, cardSchema } from "cardworks";
+// A frontmatter card type: config in YAML + a markdown body. Box-local
+// frontmatter schemas import the card primitives via the public
+// `callback-box/cards` specifier (resolved by the tsx hook in registry.ts).
+const WIDGET_SCHEMA = `import { body, cardSchema } from "callback-box/cards";
 import { z } from "zod";
 
 export default cardSchema("widget", {

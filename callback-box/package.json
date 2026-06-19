@@ -4,6 +4,10 @@
   "description": "A Claude Code wrapper system for file-based processing",
   "type": "module",
   "main": "dist/cli/index.js",
+  "exports": {
+    ".": "./dist/cli/index.js",
+    "./cards": "./src/cards/index.ts"
+  },
   "bin": {
     "cb": "./bin/cb"
   },
