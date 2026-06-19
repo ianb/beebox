@@ -3,17 +3,17 @@
  * the user via question cards.
  */
 
-import type { ElementSchema } from "cardworks";
+import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 
-export function cardTypesSection(allSchemas: ElementSchema[]): string[] {
+export function cardTypesSection(allCardSchemas: CardSchema[]): string[] {
   const lines: string[] = [
     "## Card Types",
     "",
   ];
-  for (const schema of allSchemas) {
-    const hasDoc = schema.instructions ? ` — see \`docs/generated/card-${schema.tagName}.md\`` : "";
-    lines.push(`- **${schema.tagName}**${hasDoc}`);
+  for (const schema of allCardSchemas) {
+    const hasDoc = schema.instructions ? ` — see \`docs/generated/card-${schema.type}.md\`` : "";
+    lines.push(`- **${schema.type}**${hasDoc}`);
   }
   lines.push("");
   lines.push("New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");

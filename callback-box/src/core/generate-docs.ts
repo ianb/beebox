@@ -325,7 +325,7 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
   const { boxRoot, debug, procedures, allSchemas, allCardSchemas, personalitySection } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection }), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection }), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
@@ -430,7 +430,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection, guides }), debug }));
+    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides }), debug }));
 
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);

@@ -8,8 +8,8 @@
  * file and slot it into the array below.
  */
 
-import type { ElementSchema } from "cardworks";
-import { schemas } from "../../schemas/registry.js";
+import type { CardSchema } from "../../cards/index.js";
+import { cardSchemas } from "../../schemas/registry.js";
 import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
 
 import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
@@ -47,7 +47,7 @@ import { briefingTagsSection } from "./briefing-tags.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
-  allSchemas?: ElementSchema[];
+  allCardSchemas?: CardSchema[];
   personalitySection?: string | undefined;
   guides?: GuideSummary[];
 }
@@ -55,7 +55,7 @@ export interface AgentGuideOptions {
 export function generateAgentGuide(options: AgentGuideOptions): string {
   const {
     procedures,
-    allSchemas = schemas,
+    allCardSchemas = cardSchemas,
     personalitySection,
     guides = [],
   } = options;
@@ -79,7 +79,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...chatAttachmentsSection(),
     ...selectionsSection(),
     ...viewsSection(),
-    ...cardTypesSection(allSchemas),
+    ...cardTypesSection(allCardSchemas),
     ...creatingCardsSection(),
     ...questionsSection(),
     ...quotesSection(),
