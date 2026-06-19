@@ -191,7 +191,8 @@ function convertOne(node: ElementNode, source: string): { fields: BriefingOut; b
 
 async function migrateFile(absPath: string): Promise<"converted" | "already-migrated"> {
   const raw = await readFile(absPath, "utf8");
-  if (/^---\r?\n[\s\S]*?\btype:\s*briefing\b/m.test(raw)) {
+  // Already frontmatter (or empty/degenerate) — only an XML card starts with "<".
+  if (!raw.trimStart().startsWith("<")) {
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });

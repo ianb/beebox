@@ -215,9 +215,8 @@ async function migrateFile(
   kind: "record" | "person"
 ): Promise<"converted" | "already-migrated"> {
   const raw = await readFile(absPath, "utf8");
-  const typeMarker = kind === "record" ? "type:\\s*record\\b" : "type:\\s*person\\b";
-  const re = new RegExp(`^---\\r?\\n[\\s\\S]*?\\b${typeMarker}`, "m");
-  if (re.test(raw)) return "already-migrated";
+  // Already frontmatter (or empty/degenerate) — only an XML card starts with "<".
+  if (!raw.trimStart().startsWith("<")) return "already-migrated";
   const node = await parseCard(raw, { source: absPath });
   checkElement({ node, source: absPath, spec: kind === "record" ? RECORD_SPEC : PERSON_SPEC, warnings });
   const { fields, body } = kind === "record"

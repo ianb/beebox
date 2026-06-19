@@ -220,9 +220,8 @@ function convertFeedback(node: ElementNode, source: string): { fields: Record<st
 
 async function migrateFile(absPath: string, kind: Kind): Promise<"converted" | "already-migrated"> {
   const raw = await readFile(absPath, "utf8");
-  const typeMarker = `type:\\s*${kind}\\b`;
-  const re = new RegExp(`^---\\r?\\n[\\s\\S]*?\\b${typeMarker}`, "m");
-  if (re.test(raw)) return "already-migrated";
+  // Already frontmatter (or empty/degenerate) — only an XML card starts with "<".
+  if (!raw.trimStart().startsWith("<")) return "already-migrated";
   const node = await parseCard(raw, { source: absPath });
   checkElement({ node, source: absPath, spec: SPECS[kind], warnings });
   let fields: Record<string, unknown>;
