@@ -3,35 +3,22 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { createLoader } from "../../../cli/lib/loader.js";
-import { parseCard, type ElementNode } from "cardworks";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
 import { parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { parse as parseYaml } from "yaml";
 
 /**
- * JSON-safe element node for the frontend.
+ * JSON-safe element node for the frontend's legacy XML tree view. Cards are all
+ * frontmatter now, so `card.get` never populates `element` — it stays in the
+ * response type only as the (always-undefined) field the frontend renderers
+ * type against.
  */
 export interface JsonElement {
   tagName: string;
   attrs: Record<string, string>;
   text?: string;
   children?: JsonElement[];
-}
-
-function sanitizeElement(el: ElementNode): JsonElement {
-  const result: JsonElement = { tagName: el.tagName, attrs: {} };
-  for (const [key, value] of Object.entries(el.attrs)) {
-    if (typeof value === "string") result.attrs[key] = value;
-  }
-  if (el.text !== undefined && el.text !== null) {
-    result.text = String(el.text).trim();
-  }
-  if (el.children && Array.isArray(el.children) && el.children.length > 0) {
-    result.children = el.children.map((child) => sanitizeElement(child as ElementNode));
-  }
-  return result;
 }
 
 function typeFromFilename(source: string): string | undefined {
@@ -127,8 +114,6 @@ export const cardRouter = router({
         throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
       }
 
-      // Dispatch on file shape: frontmatter cards parse via parseCardText;
-      // legacy XML cards fall through to the cardworks loader.
       let raw: string | null = null;
       try {
         raw = await fs.readFile(fullPath, "utf-8");
@@ -142,76 +127,28 @@ export const cardRouter = router({
 
       const split = splitCardContent(raw);
       const fileType = typeFromFilename(input.path);
-      const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
-      if (split.hasFrontmatter && fileType !== undefined && cardSchemas.has(fileType)) {
+      if (split.hasFrontmatter && fileType !== undefined) {
+        // loadFrontmatterCard is robust to an unregistered/invalid schema: it
+        // surfaces what it can (loose YAML + body) with a validationError, so a
+        // box-local-typed or drifted card still renders.
+        const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
         return loadFrontmatterCard({ raw, source: input.path, type: fileType, cardSchemas });
       }
 
-      const loader = await createLoader(ctx.boxRoot);
-
-      try {
-        const card = await loader.load(fullPath);
-        const xml = loader.serialize(card.element);
-        const element = sanitizeElement(card.element);
-
-        return {
-          path: input.path,
-          kind: "xml" as const,
-          tagName: card.element.tagName,
-          status: card.element.attrs["status"] as string | undefined,
-          version: card.version,
-          xml,
-          element,
-          frontmatter: undefined as Record<string, unknown> | undefined,
-          body: undefined as string | undefined,
-          validationError: undefined as string | undefined,
-        };
-      } catch (error) {
-        const msg = (error as Error).message;
-        const isNotFound = msg.includes("ENOENT") || msg.includes("no such file");
-        if (isNotFound) {
-          throw new TRPCError({
-            code: "NOT_FOUND",
-            message: `Card not found: ${input.path}`,
-          });
-        }
-
-        // Validation failed — parse XML without validation so we can still show the tree
-        let rawXml: string;
-        try {
-          rawXml = await fs.readFile(fullPath, "utf-8");
-        } catch (e) {
-          console.warn(`Could not re-read ${input.path} after validation failure:`, e);
-          throw new TRPCError({
-            code: "BAD_REQUEST",
-            message: `Card validation failed: ${msg}`,
-          });
-        }
-
-        // Try to parse the raw XML into a tree (no schema validation)
-        let element: JsonElement | undefined;
-        let tagName: string | undefined;
-        try {
-          const parsed = await parseCard(rawXml, { source: input.path });
-          element = sanitizeElement(parsed);
-          tagName = parsed.tagName;
-        } catch (e) {
-          // XML itself is malformed — fall back to raw text only.
-          console.warn(`Could not parse raw XML for ${input.path}, showing raw text only:`, e);
-        }
-
-        return {
-          path: input.path,
-          kind: "xml" as const,
-          tagName,
-          status: undefined as string | undefined,
-          version: undefined as string | undefined,
-          xml: rawXml,
-          element,
-          frontmatter: undefined as Record<string, unknown> | undefined,
-          body: undefined as string | undefined,
-          validationError: msg,
-        };
-      }
+      // Not a typed frontmatter card. Every real `.card` is frontmatter now, so
+      // this is a malformed or partially-written file — surface its raw text
+      // rather than failing, so the viewer can still show something.
+      return {
+        path: input.path,
+        kind: "frontmatter" as const,
+        tagName: fileType ?? "",
+        status: undefined as string | undefined,
+        version: undefined as string | undefined,
+        xml: raw,
+        element: undefined as JsonElement | undefined,
+        frontmatter: undefined as Record<string, unknown> | undefined,
+        body: split.hasFrontmatter ? split.body : raw,
+        validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",
+      };
     }),
 });

@@ -69,46 +69,6 @@ res.body.items.length > 0
 await ctx.cleanup();
 ```
 
-## Loading a card
-
-`GET /api/card/*` returns a parsed card by path:
-
-```
-const ctx = await makeTestServer();
-await ctx.seed(
-  "box/inbox/hello.memo.card",
-  '<memo status="new"><created>2026-01-01T00:00:00Z</created><content>Hello world</content></memo>\n',
-);
-await ctx.inject({ method: "GET", url: "/api/card/box/inbox/hello.memo.card" })
-=>
-200
-{
-  "path": "box/inbox/hello.memo.card",
-  "tagName": "memo",
-  «*»
-  "element": {
-    "tagName": "memo"«*»
-  }
-}
-```
-
-``` cleanup
-await ctx.cleanup();
-```
-
-Missing cards return 404:
-
-```
-const ctx = await makeTestServer();
-const res = await ctx.request({ method: "GET", url: "/api/card/box/inbox/nope.memo.card" });
-res.statusCode
-=> 404
-```
-
-``` cleanup
-await ctx.cleanup();
-```
-
 ## Browsing directories
 
 `GET /api/browse/*` lists directory contents with parsed card metadata:
