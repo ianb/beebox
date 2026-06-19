@@ -189,9 +189,19 @@ need a frontmatter replacement.
   a frontmatter-field lookup (the dotted-path accessor already written for
   landmark in `core/landmark/resolve.ts` is the model);
   `preactions/transcribe.ts` XML transcription helpers;
-  `reactor/procedure-trampoline.ts` XML `<procedure ref>` detection;
   `webapp/trpc/routers/todos.ts` (XML `loader.load`/mutate/`save`);
   the `card-lint.ts` fallback to cardworks `lintCard` (`card-lint.ts:92`).
+- **CORRECTION (found during implementation): `procedure-trampoline.ts` is
+  NOT a dead path.** `detectProcedureInJob` (`procedure-trampoline.ts:22`) is
+  called live for every job card by the reactor (`engine.ts:344`), and
+  procedure-job cards are still **XML** (`<procedure ref="...">`) — the docs
+  (`generate-docs-procedure-guide.ts:40`) and triage
+  (`triage-instructions.ts`/`handle.ts`) actively generate that shape. This is
+  an un-migrated XML *feature*, not cleanup: removing cardworks here requires
+  its own subtask — a frontmatter procedure-job representation, a rewritten
+  detector, migration of existing box `<procedure>` job cards, and updated
+  doc/triage generators. Out of scope for the dead-path sweep; needs a
+  decision (subplan) before Track C can delete cardworks.
 - **Rewrite the live `CardLoader` users.** `cli/lib/loader.ts` (the factory
   re-exporting `CardLoader`/`MemoryCardLoader`), `commands/move-operations.ts`
   (`move-operations.ts:104` `new CardLoader(...)` → uses `listCards()` for
