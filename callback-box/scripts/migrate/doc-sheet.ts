@@ -158,9 +158,10 @@ async function migrateFile(
   kind: "doc" | "sheet"
 ): Promise<"converted" | "already-migrated"> {
   const raw = await readFile(absPath, "utf8");
-  const typeMarker = kind === "doc" ? "type:\\s*doc\\b" : "type:\\s*sheet\\b";
-  const re = new RegExp(`^---\\r?\\n[\\s\\S]*?\\b${typeMarker}`, "m");
-  if (re.test(raw)) {
+  // Already frontmatter (or empty/degenerate) — only an XML card starts with "<".
+  // Drive-synced sheets are frontmatter without a `type:` field, so a
+  // type-keyed check would mis-flag them; key on "is it XML" instead.
+  if (!raw.trimStart().startsWith("<")) {
     return "already-migrated";
   }
   const node = await parseCard(raw, { source: absPath });
