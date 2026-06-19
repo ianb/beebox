@@ -4,7 +4,7 @@ import * as path from "node:path";
 import { router, publicProcedure } from "../trpc.js";
 import { getSystemState } from "../../../core/state.js";
 import { generateContext } from "../../context.js";
-import { createLoader } from "../../../cli/lib/loader.js";
+import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../cli/lib/paths.js";
 import { getLog } from "../../../cli/lib/git.js";
 
@@ -97,7 +97,6 @@ export const statusRouter = router({
       const dirs: BrowseDir[] = [];
       const cards: BrowseCard[] = [];
       const files: BrowseFile[] = [];
-      const loader = await createLoader(ctx.boxRoot);
 
       // Build a set of card basenames so we can fold owned `<basename>.attach/`
       // directories into their owning card (cards-as-directories UI).
@@ -144,22 +143,24 @@ export const statusRouter = router({
             (e) => e.isDirectory() && e.name === attachDirName,
           );
 
-          try {
-            const card = await loader.load(fullPath);
-            cards.push({
-              relativePath,
-              name: parsed.name,
-              type: parsed.type,
-              tagName: card.element.tagName,
-              status: card.element.attrs["status"],
-              title: card.element.attrs["title"],
-              hasAttachments,
-            });
-          } catch (e) {
-            // Card failed to load/parse — still list it (as unknown) so the UI shows it.
-            console.warn(`browse: cannot load card ${fullPath}:`, e);
+          const fm = await loadCardFrontmatter(fullPath);
+          if (fm === null) {
+            // Card failed to parse — still list it (as unknown) so the UI shows it.
             cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown", hasAttachments });
+            continue;
           }
+          const str = (key: string): string | undefined =>
+            typeof fm[key] === "string" ? (fm[key] as string) : undefined;
+          cards.push({
+            relativePath,
+            name: parsed.name,
+            type: parsed.type,
+            // The filename type is the discriminator (the old XML root tag).
+            tagName: parsed.type,
+            ...(str("status") !== undefined && { status: str("status") }),
+            ...(str("title") !== undefined && { title: str("title") }),
+            hasAttachments,
+          });
           continue;
         }
 

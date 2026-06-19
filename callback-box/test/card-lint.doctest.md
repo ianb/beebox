@@ -1,4 +1,4 @@
-# card-lint: dispatching XML and frontmatter cards
+# card-lint: validating frontmatter cards
 
 `lintCardsDispatch` is the validate-time counterpart to
 `loadCardFile`: it picks the right validator for each file based on
@@ -9,12 +9,9 @@ import { z } from "zod";
 import {
   body,
   cardSchema,
-  element,
   type CardSchema,
-  type ElementSchema,
-} from "cardworks";
+} from "../src/cards/index.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
-import { createLoader } from "../src/cli/lib/loader.js";
 import { lintCardsDispatch } from "../src/core/card-lint.js";
 import type { LoadCardContext } from "../src/core/card-io.js";
 import { CommentarySchema } from "../src/schemas/commentary.js";
@@ -52,10 +49,6 @@ const gadgetSchema: CardSchema = cardSchema("gadget", {
       : [],
 });
 
-const memoSchema: ElementSchema = element("memo", {
-  attrs: { status: z.string() },
-});
-
 const ctx: LoadCardContext = {
   cardSchemas: new Map<string, CardSchema>([
     ["email-thread", threadSchema],
@@ -64,7 +57,6 @@ const ctx: LoadCardContext = {
     ["extfile", ExtfileSchema],
     ["gadget", gadgetSchema],
   ]),
-  elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
 ```
 
@@ -80,10 +72,9 @@ await box.write(
   "box/inbox/email/thread-x.attach/msg-001.email-message.card",
   "---\ncontent-type: application/x-card+xml\n---\n<email-message message-id=\"m1\" thread-id=\"t1\"><from>a@x</from><date>2026-02-15T10:00:00Z</date><subject>hi</subject><body-file>attach/msg-001.body.txt</body-file></email-message>\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x.email-thread.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -100,10 +91,9 @@ await box.write(
   "box/inbox/email/broken.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/broken.email-thread.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 1
@@ -124,10 +114,9 @@ await box.write(
   "box/inbox/notes/drift.doc.card",
   "---\ntype: doc\ntitle: Drift\nbogus-field: oops\n---\nBody.\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/notes/drift.doc.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -138,7 +127,7 @@ result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter ke
 
 ## Broken refs in frontmatter cards are reported as warnings
 
-Each entry in a ref-declared field is resolved against the loader; missing
+Each entry in a ref-declared field is resolved against the box; missing
 targets surface as lint warnings (not errors) carrying the field path. Broken
 refs are warnings because they commonly arise from legitimate operations
 (referents being moved, archived, trashed, or hand-deleted), and treating
@@ -150,10 +139,9 @@ await box.write(
   "box/inbox/email/thread-x/thread.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: thread.attach/missing.email-message.card\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -179,10 +167,9 @@ await box.write(
   "store/notes/Wordy.doc.card",
   "---\ntitle: Wordy\ncontains: " + longContains + "\n---\nbody\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/notes/Wordy.doc.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -198,7 +185,7 @@ result.results[0]!.warnings[0]!.message
 
 Refs carried by Markdoc tag attributes inside a card body (e.g.
 `{% source ref="..." %}`, `{% subrecipe ref="..." %}`) get the same
-broken-ref treatment as frontmatter refs — resolved against the loader,
+broken-ref treatment as frontmatter refs — resolved against the box,
 missing targets reported as warnings. The path field on the warning
 points at `body:<line>:<tagName>.<attr>` so the human can locate it.
 Ref paths follow the same convention as frontmatter refs: leading `/`
@@ -211,10 +198,9 @@ await box.write(
   "box/notes/Meeting.doc.card",
   "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" as=\"verbatim\" %}{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -241,10 +227,9 @@ await box.write(
   "box/notes/Meeting.doc.card",
   "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" as=\"verbatim\" %}ship Friday{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalWarnings
 => 0
@@ -268,10 +253,9 @@ await box.write(
   "box/notes/Ver.doc.card",
   "---\ntype: doc\ntitle: V\n---\nSee {% source ref=\"/box/people/dana.person.card@1.2.3\" as=\"x\" %}{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Ver.doc.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalWarnings
 => 0
@@ -287,10 +271,9 @@ await box.write(
   "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" as=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" as=\"b\" %}{% /source %}\n",
 );
 await box.write("box/notes/Note.attach/photo.jpg", "JPG");
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Note.doc.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalWarnings
 => 1
@@ -299,21 +282,27 @@ result.results[0]!.warnings[0]!.message.includes("attach/missing.jpg does not ex
 => true
 ```
 
-## XML cards still flow through the existing cardworks lintCard path
+## A card whose type has no registered schema warns, never errors
+
+There's no XML loader fallback anymore: a `.card` with frontmatter whose
+filename type isn't a registered schema (a typo, or a box-local type the test
+ctx doesn't include) is surfaced as a non-blocking warning rather than failing.
 
 ```
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/Note.memo.card",
-  "---\ncontent-type: application/x-card+xml\n---\n<memo status=\"new\"/>\n",
+  "box/inbox/Note.unknowntype.card",
+  "---\nstatus: new\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/Note.memo.card")],
-  { boxRoot: box.root, loader, ctx },
+  [box.path("box/inbox/Note.unknowntype.card")],
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
+
+result.results[0]!.warnings[0]!.message
+=> no schema registered for card type "unknowntype" — card not validated
 ```
 
 ## An attach-only commentary card with valid anchors lints clean
@@ -327,10 +316,9 @@ await box.write(
   "store/review/Plan.attach/Plan.commentary.card",
   "---\ntype: commentary\n---\n{% source pos=\"body; ~line 4\" version=\"sha256:9f3a1c2b\" %}{% quote %}a span{% /quote %}{% /source %}\n\nThis reads well.\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/Plan.attach/Plan.commentary.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -348,10 +336,9 @@ await box.write(
   "store/review/Stale.commentary.card",
   "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\nbody\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/Stale.commentary.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -372,10 +359,9 @@ await box.write(
   "store/review/RefFree.commentary.card",
   "---\ntype: commentary\n---\n{% source pos=\"body\" %}a span anchored to this page{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/RefFree.commentary.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -394,10 +380,9 @@ await box.write(
   "store/review/Good.extfile.card",
   "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: \"sha256:9f3a1c2b git:7ffeae4\"\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/Good.extfile.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -411,10 +396,9 @@ await box.write(
   "store/review/BadHref.extfile.card",
   "---\ntype: extfile\nhref: https://example.com/foo.ts\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/BadHref.extfile.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.results[0]!.errors[0]!.message.includes("must be a file: URL")
 => true
@@ -428,10 +412,9 @@ await box.write(
   "store/review/BadVer.extfile.card",
   "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: not-a-hash\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/BadVer.extfile.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker")
 => true
@@ -454,10 +437,9 @@ await box.write(
   "store/Ok.gadget.card",
   "---\ntype: gadget\nmode: allowed\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/Bad.gadget.card"), box.path("store/Ok.gadget.card")],
-  { boxRoot: box.root, loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 1

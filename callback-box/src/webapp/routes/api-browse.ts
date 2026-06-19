@@ -9,7 +9,7 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { createLoader } from "../../cli/lib/loader.js";
+import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../cli/lib/paths.js";
 
 interface BrowseCard {
@@ -60,8 +60,6 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       const dirs: string[] = [];
       const cards: BrowseCard[] = [];
 
-      const loader = await createLoader(boxRoot);
-
       // Build basename → owning-card lookup so we can fold `<basename>.attach/`
       // directories into their owning cards (rendered as navigable cards, not
       // as standalone directories).
@@ -99,26 +97,18 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
           (e) => e.isDirectory() && e.name === attachDirName,
         );
 
-        try {
-          const card = await loader.load(fullPath);
-          cards.push({
-            relativePath,
-            name: parsed.name,
-            type: parsed.type,
-            tagName: card.element.tagName,
-            status: card.element.attrs["status"],
-            hasAttachments,
-          });
-        } catch (e) {
-          console.warn(`Could not load card for browse listing, marking unknown: ${relativePath}:`, e);
-          cards.push({
-            relativePath,
-            name: parsed.name,
-            type: parsed.type,
-            tagName: "unknown",
-            hasAttachments,
-          });
-        }
+        const fm = await loadCardFrontmatter(fullPath);
+        const status = fm !== null && typeof fm["status"] === "string" ? fm["status"] : undefined;
+        cards.push({
+          relativePath,
+          name: parsed.name,
+          type: parsed.type,
+          // The filename type is the discriminator; a card that won't parse is
+          // marked unknown.
+          tagName: fm === null ? "unknown" : parsed.type,
+          ...(status !== undefined && { status }),
+          hasAttachments,
+        });
       }
 
       dirs.sort();

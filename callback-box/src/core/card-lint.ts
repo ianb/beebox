@@ -21,7 +21,6 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { lintCard, type ICardLoader } from "cardworks";
 import {
   splitCardContent,
   extractRefs,
@@ -41,12 +40,6 @@ export interface LintDispatchOptions {
    * broken-ref walk (see resolveRefExists).
    */
   boxRoot: string;
-  /**
-   * Cardworks XML loader — only still used by the legacy XML lint fallback
-   * (lintCard) below; the frontmatter path no longer needs it. Removed with
-   * that fallback when cardworks goes (Track C4).
-   */
-  loader: ICardLoader;
   ctx: LoadCardContext;
 }
 
@@ -96,8 +89,26 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
     if (type !== undefined && options.ctx.cardSchemas.has(type)) {
       return lintFrontmatterCard({ path, content, options, type });
     }
+    // Frontmatter present but no registered schema for the filename type: there
+    // is no XML loader anymore. Surface a non-blocking warning so a typo'd or
+    // unknown type is visible without failing the commit hook.
+    return {
+      path,
+      errors: [],
+      warnings: [
+        {
+          type: "schema",
+          severity: "warning",
+          message:
+            type === undefined
+              ? "card filename does not encode a type (expected Name.<type>.card)"
+              : `no schema registered for card type "${type}" — card not validated`,
+        },
+      ],
+    };
   }
-  return lintCard(options.loader, { path });
+  // Not a frontmatter card at all — nothing to validate.
+  return { path, errors: [], warnings: [] };
 }
 
 async function lintFrontmatterCard(input: {

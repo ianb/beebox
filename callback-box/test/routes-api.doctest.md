@@ -77,7 +77,7 @@ await ctx.cleanup();
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/inbox/browse-test.memo.card",
-  '<memo status="new"><created>2026-01-01T00:00:00Z</created><content>Browse</content></memo>\n',
+  "---\nstatus: new\ncreated: 2026-01-01T00:00:00Z\n---\nBrowse\n",
 );
 await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
 =>
