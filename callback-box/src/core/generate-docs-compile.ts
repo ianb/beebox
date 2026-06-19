@@ -9,7 +9,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
-import { parseCard } from "cardworks";
+import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { parseGuide, parseGuideCard, compileGuide } from "../schemas/guide.js";
 import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
 import { compileBriefing, type BriefingFields } from "../schemas/briefing.js";
@@ -42,26 +42,21 @@ export async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[
   const results: ProcedureSummary[] = [];
 
   for (const filename of cards) {
-    try {
-      const content = await readFile(join(procedureDir, filename), "utf-8");
-      const root = await parseCard(content, { source: filename });
-      const name = root.attrs["name"] ?? filename.replace(".procedure.card", "");
-      const descEl = (root.children ?? []).find(
-        (c: { tagName?: string }) => c.tagName === "description"
-      );
-      const desc = (descEl as { text?: string })?.text?.trim() ?? "";
-      // Take just the first sentence/line for the compact index
-      const shortDesc = desc.split(/\n/)[0]?.replace(/\.\s.*/, ".").trim() || desc;
-      results.push({ name, filename, description: shortDesc });
-    } catch (e) {
-      // Skip unparseable procedure cards — still index them with a placeholder.
-      console.warn(`[generate-docs] could not parse procedure card ${filename}:`, e);
-      results.push({
-        name: filename.replace(".procedure.card", ""),
-        filename,
-        description: "(could not parse)",
-      });
+    const fallbackName = filename.replace(".procedure.card", "");
+    const fields = await loadCardFrontmatter(join(procedureDir, filename));
+    if (fields === null) {
+      // No readable frontmatter — index with a placeholder rather than dropping it.
+      console.warn(`[generate-docs] could not read procedure frontmatter ${filename}`);
+      results.push({ name: fallbackName, filename, description: "(could not parse)" });
+      continue;
     }
+    const nameField = fields["name"];
+    const name = typeof nameField === "string" && nameField !== "" ? nameField : fallbackName;
+    const descField = fields["description"];
+    const desc = typeof descField === "string" ? descField.trim() : "";
+    // Take just the first sentence/line for the compact index.
+    const shortDesc = desc.split(/\n/)[0]?.replace(/\.\s.*/, ".").trim() || desc;
+    results.push({ name, filename, description: shortDesc });
   }
 
   return results;
