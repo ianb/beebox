@@ -18,7 +18,6 @@
 
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { parseCard, type ElementSchema, type ElementNode } from "cardworks";
 import { splitCardContent, type CardSchema } from "../cards/index.js";
 
 const CARD_XML_CONTENT_TYPE = "application/x-card+xml";
@@ -274,10 +273,10 @@ export function serializeCardText(input: {
 }
 
 /**
- * A card loaded via the dispatcher. New (CardSchema) and legacy (XML)
- * schemas coexist; callers narrow on `kind` to access the right shape.
+ * A card loaded via the dispatcher. Every card is markdown-frontmatter now;
+ * the type alias is kept for the many consumers that name it.
  */
-export type LoadedCard = FrontmatterLoadedCard | XmlLoadedCard;
+export type LoadedCard = FrontmatterLoadedCard;
 
 export interface FrontmatterLoadedCard {
   readonly kind: "frontmatter";
@@ -287,28 +286,15 @@ export interface FrontmatterLoadedCard {
   readonly contentType: string | undefined;
 }
 
-export interface XmlLoadedCard {
-  readonly kind: "xml";
-  readonly path: string;
-  readonly schema: ElementSchema | undefined;
-  readonly element: ElementNode;
-}
-
 export interface LoadCardContext {
   /** Schemas keyed by frontmatter `type:` value. */
   cardSchemas: Map<string, CardSchema>;
-  /** XML schemas keyed by root element tag name (cardworks ElementSchema). */
-  elementSchemas: Map<string, ElementSchema>;
 }
 
 /**
- * Load a `.card` file, dispatching on the file's frontmatter:
- *
- * - If the file has a `---` frontmatter block whose YAML carries a
- *   `type:` field matching a registered CardSchema, it's parsed as the
- *   new markdown-frontmatter format.
- * - Otherwise the body is parsed as XML (legacy format) and the root
- *   tag's ElementSchema (if any) is used for validation.
+ * Load a `.card` file. The file must have a `---` frontmatter block whose
+ * filename type (`Foo.<type>.card`) matches a registered CardSchema; anything
+ * else throws a CardIOError.
  */
 export async function loadCardFile(
   absPath: string,
@@ -342,7 +328,9 @@ export function loadCardFromText(input: {
       });
     }
   }
-  return loadXmlCard({ content, source, ctx });
+  return Promise.reject(
+    new CardIOError(source, "not a recognized card: no frontmatter block with a registered type")
+  );
 }
 
 /**
@@ -362,14 +350,4 @@ export function typeFromFilename(source: string): string | undefined {
   return match ? match[1] : undefined;
 }
 
-async function loadXmlCard(input: {
-  content: string;
-  source: string;
-  ctx: LoadCardContext;
-}): Promise<XmlLoadedCard> {
-  const { content, source, ctx } = input;
-  const element = await parseCard(content, { source });
-  const schema = ctx.elementSchemas.get(element.tagName);
-  return { kind: "xml", path: source, schema, element };
-}
 

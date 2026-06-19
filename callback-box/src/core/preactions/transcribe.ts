@@ -2,9 +2,8 @@
  * Transcribe voice content pre-action.
  *
  * Looks for cards with audio attachments and transcribes them via OpenAI
- * Whisper. Works on memo (Phase 2 frontmatter) and feedback (still
- * XML); the audio attachment lives as a sibling file sharing the card's
- * basename.
+ * Whisper. Works on memo and feedback cards (both frontmatter); the audio
+ * attachment lives as a sibling file sharing the card's basename.
  *
  * `audio` was historically handled here too; that path is dead now —
  * capture-session audio is transcribed by `cb transcribe-captures`
@@ -15,7 +14,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { PreAction, PreActionContext } from "./types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription.js";
-import type { ElementNode } from "cardworks";
 
 /** Audio file extensions we can transcribe. */
 const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];
@@ -40,15 +38,9 @@ export const transcribePreAction: PreAction = {
   async shouldRun(ctx: PreActionContext): Promise<boolean> {
     const audioFile = await findAudioAttachment(ctx.cardPath);
     if (audioFile === null) return false;
-    if ("frontmatter" in ctx) {
-      const fields = ctx.frontmatter.fields;
-      if (fields["transcription"] !== undefined) return false;
-      if (isPermanentError(fields["transcription-error"])) return false;
-      return true;
-    }
-    const element = ctx.xml.card.element;
-    if (hasXmlTranscription(element)) return false;
-    if (hasXmlPermanentError(element)) return false;
+    const fields = ctx.frontmatter.fields;
+    if (fields["transcription"] !== undefined) return false;
+    if (isPermanentError(fields["transcription-error"])) return false;
     return true;
   },
 
@@ -61,9 +53,7 @@ export const transcribePreAction: PreAction = {
     try {
       const audioBuffer = await fs.readFile(audioFile);
       const filename = path.basename(audioFile);
-      const existingContent = "frontmatter" in ctx
-        ? getFrontmatterContent(ctx.frontmatter.fields)
-        : getXmlContent(ctx.xml.card.element);
+      const existingContent = getFrontmatterContent(ctx.frontmatter.fields);
       const result = await transcribeAudio({
         audioBuffer,
         filename,
@@ -71,11 +61,7 @@ export const transcribePreAction: PreAction = {
         boxRoot: ctx.boxRoot,
       });
 
-      if ("frontmatter" in ctx) {
-        applyFrontmatterTranscription({ fields: ctx.frontmatter.fields, text: result.text, language: result.language });
-      } else {
-        applyXmlTranscription({ element: ctx.xml.card.element, text: result.text, language: result.language });
-      }
+      applyFrontmatterTranscription({ fields: ctx.frontmatter.fields, text: result.text, language: result.language });
 
       return {
         modified: true,
@@ -84,21 +70,12 @@ export const transcribePreAction: PreAction = {
     } catch (error) {
       const transcriptionError = error as TranscriptionError;
       const attemptedAt = new Date().toISOString();
-      if ("frontmatter" in ctx) {
-        applyFrontmatterError(ctx.frontmatter.fields, {
-          permanent: transcriptionError.permanent,
-          ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
-          "attempted-at": attemptedAt,
-          message: transcriptionError.message,
-        });
-      } else {
-        applyXmlError(ctx.xml.card.element, {
-          permanent: transcriptionError.permanent,
-          ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
-          attemptedAt,
-          message: transcriptionError.message,
-        });
-      }
+      applyFrontmatterError(ctx.frontmatter.fields, {
+        permanent: transcriptionError.permanent,
+        ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
+        "attempted-at": attemptedAt,
+        message: transcriptionError.message,
+      });
       return { modified: true, error: transcriptionError.message };
     }
   },
@@ -158,70 +135,4 @@ function applyFrontmatterError(
   err: TranscriptionErrorFields,
 ): void {
   fields["transcription-error"] = err;
-}
-
-// ─── XML (Phase 1) helpers ──────────────────────────────────────────────────
-
-function hasXmlTranscription(element: ElementNode): boolean {
-  const children = element.children;
-  return children.some((c) => c.tagName === "transcription");
-}
-
-function hasXmlPermanentError(element: ElementNode): boolean {
-  const errEl = element.children.find((c) => c.tagName === "transcription-error");
-  return errEl !== undefined && errEl.attrs["permanent"] === "true";
-}
-
-function getXmlContent(element: ElementNode): string | null {
-  const contentEl = element.children.find((c) => c.tagName === "content");
-  return contentEl?.text === undefined || contentEl.text === "" ? null : contentEl.text;
-}
-
-function applyXmlTranscription(input: {
-  element: ElementNode;
-  text: string;
-  language: string;
-}): void {
-  const { element, text, language } = input;
-  const children = element.children;
-  const errorIndex = children.findIndex((c) => c.tagName === "transcription-error");
-  if (errorIndex !== -1) {
-    children.splice(errorIndex, 1);
-  }
-  children.push({
-    tagName: "transcription",
-    attrs: { language, "transcribed-at": new Date().toISOString() },
-    children: [],
-    text,
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    comments: {},
-    dirty: true,
-  });
-  element.dirty = true;
-}
-
-function applyXmlError(
-  element: ElementNode,
-  err: { permanent: boolean; code?: string; attemptedAt: string; message: string },
-): void {
-  const children = element.children;
-  const errorIndex = children.findIndex((c) => c.tagName === "transcription-error");
-  if (errorIndex !== -1) {
-    children.splice(errorIndex, 1);
-  }
-  const attrs: Record<string, string> = {
-    permanent: err.permanent ? "true" : "false",
-    code: err.code ?? "unknown",
-    "attempted-at": err.attemptedAt,
-  };
-  children.push({
-    tagName: "transcription-error",
-    attrs,
-    children: [],
-    text: err.message,
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    comments: {},
-    dirty: true,
-  });
-  element.dirty = true;
 }

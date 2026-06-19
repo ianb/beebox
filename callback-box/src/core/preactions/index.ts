@@ -7,18 +7,13 @@
  * - Extract text from images (OCR)
  * - Parse email attachments
  *
- * Pre-actions work against both shapes of card:
- * - Phase 1 XML-bodied cards (loaded via cardworks ICardLoader)
- * - Phase 2 frontmatter cards (loaded via card-io)
- *
- * The runner dispatches based on what `loadCardFile` returns; the
- * pre-action's `execute()` branches on `"xml" in ctx` vs
- * `"frontmatter" in ctx`.
+ * Pre-actions work against frontmatter cards (loaded via card-io). The runner
+ * loads the card, builds the context, and persists the (possibly mutated)
+ * fields back to disk when an action reports `modified`.
  */
 
 import { writeFile } from "node:fs/promises";
 import { stringify as stringifyYaml } from "yaml";
-import type { ICardLoader } from "cardworks";
 import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 import { loadCardFile } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
@@ -47,11 +42,10 @@ export function getPreActionsForType(cardType: string): PreAction[] {
  */
 export async function runPreActions(input: {
   boxRoot: string;
-  loader: ICardLoader;
   cardPath: string;
 }): Promise<Array<{ name: string; result: PreActionResult }>> {
-  const { boxRoot, loader, cardPath } = input;
-  const ctx = await buildContext({ boxRoot, loader, cardPath });
+  const { boxRoot, cardPath } = input;
+  const ctx = await buildContext({ boxRoot, cardPath });
   if (ctx === null) return [];
 
   const applicable = getPreActionsForType(ctx.cardType);
@@ -88,31 +82,17 @@ export async function runPreActions(input: {
 
 async function buildContext(input: {
   boxRoot: string;
-  loader: ICardLoader;
   cardPath: string;
 }): Promise<PreActionContext | null> {
-  const { boxRoot, loader, cardPath } = input;
+  const { boxRoot, cardPath } = input;
 
-  // Try frontmatter (Phase 2) first; if the file isn't a CardSchema card
-  // it will fall through to the XML path on its own.
   try {
     const loaded = await loadCardFile(cardPath, await buildLoadContext(boxRoot));
-    if (loaded.kind === "frontmatter") {
-      return {
-        boxRoot,
-        loader,
-        cardPath,
-        cardType: loaded.schema.type,
-        frontmatter: { schema: loaded.schema, fields: loaded.fields },
-      };
-    }
-    // XML branch
     return {
       boxRoot,
-      loader,
       cardPath,
-      cardType: loaded.element.tagName,
-      xml: { card: await loader.load(cardPath) },
+      cardType: loaded.schema.type,
+      frontmatter: { schema: loaded.schema, fields: loaded.fields },
     };
   } catch (e) {
     // Couldn't load as a known card — skip pre-actions for this file.
@@ -122,11 +102,7 @@ async function buildContext(input: {
 }
 
 async function persistContext(ctx: PreActionContext): Promise<void> {
-  if ("xml" in ctx) {
-    await ctx.loader.save(ctx.xml.card);
-    return;
-  }
-  // Frontmatter path: rewrite the file with the (possibly mutated) fields.
+  // Rewrite the file with the (possibly mutated) fields.
   await writeFile(ctx.cardPath, `---\n${stringifyYaml(ctx.frontmatter.fields)}---\n`);
 }
 

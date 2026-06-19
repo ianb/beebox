@@ -75,12 +75,12 @@ export const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
 
 /**
  * Find the matching loader for a file. Dispatch order:
- *   1. tagName exact match (input.element.tagName)
+ *   1. type exact match (input.type — the card's frontmatter type)
  *   2. path predicate match
  *   3. fallback
  */
 export function resolveLoader(input: LoaderInput): FileLoader<unknown> {
-  const tagName = input.type ?? (input.element ? input.element.tagName : undefined);
+  const tagName = input.type;
   if (tagName) {
     const match = registrations.find(r => r.kind === "tagName" && r.tagName === tagName);
     if (match) return match.loader;
