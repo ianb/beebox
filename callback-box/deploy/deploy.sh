@@ -59,6 +59,16 @@ if [[ -d "$MONO_DIR/cardworks" ]]; then
   cd "$MONO_DIR/cardworks" && pnpm --silent build
 fi
 
+# Build the CLI bundle locally before syncing. dist/ is rsynced (not excluded),
+# and while the server runs cb via tsx (not the bundle), it DOES need
+# dist/cards/index.js on disk: box-local schema files import `callback-box/cards`,
+# which package.json `exports` maps to ./dist/cards/index.js (a plain-JS build of
+# the card-primitive layer, emitted by build-cli.mjs alongside dist/cli.mjs). If
+# that file is missing or stale on the server, every box-local schema fails to
+# load. Building here keeps dist/ in lockstep with the source we rsync.
+echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
+cd "$REPO_DIR" && node scripts/build-cli.mjs >/dev/null
+
 # Sync monorepo packages. These are pnpm workspace members linked via
 # `workspace:*` deps, so they must all be present alongside callback-box on the
 # server for the root `pnpm install` to resolve. personal-vibe-check and

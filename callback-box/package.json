@@ -6,7 +6,7 @@
   "main": "dist/cli/index.js",
   "exports": {
     ".": "./dist/cli/index.js",
-    "./cards": "./src/cards/index.ts"
+    "./cards": "./dist/cards/index.js"
   },
   "bin": {
     "cb": "./bin/cb"

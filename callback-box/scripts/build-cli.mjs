@@ -40,5 +40,25 @@ await rename(join(tmpDir, "cli.mjs.map"), join(distDir, "cli.mjs.map"));
 await rename(join(tmpDir, "cli.mjs"), join(distDir, "cli.mjs"));
 await rm(tmpDir, { recursive: true, force: true });
 
+// Also build the public card-primitive layer (the `callback-box/cards` export)
+// to a single bundled dist/cards/index.js. Box-local schema files import this
+// specifier; it must be plain JS with no TS-source `.js` re-exports, because
+// the CLI loads box schemas with Node's native type-stripping (under the
+// dist/cli.mjs bundle) which does NOT remap `./schema.js` → `schema.ts`.
+// Bundling collapses src/cards/{schema,frontmatter,lint-format,errors}.ts into
+// one file, so there are no internal `.js` specifiers to resolve; zod/yaml stay
+// external (resolved from node_modules at runtime).
+await build({
+  entryPoints: [join(root, "src/cards/index.ts")],
+  outfile: join(distDir, "cards", "index.js"),
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+  packages: "external",
+  sourcemap: true,
+  logLevel: "warning",
+});
+
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);
