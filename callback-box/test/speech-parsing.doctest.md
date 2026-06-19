@@ -132,6 +132,10 @@ segs[0].instructions
 
 ### Typo'd close followed by correct close
 
+The agent sometimes misspells the instructions tag (`intructions`, missing the
+second "s"). `normalizeInstructionTags` canonicalizes it before parsing, so the
+direction is recovered (not lost) and never leaks into the spoken text.
+
 ```
 const segs = parseAllSpeechTags(
   "<speech><instructions>Slow and clipped</intructions></instructions>The alarm fired.</speech>"
@@ -141,10 +145,33 @@ segs.length
 
 segs[0].text
 => The alarm fired.
+
+segs[0].instructions
+=> Slow and clipped
 ```
 
-The instructions content may be lost when the open tag has a typo'd close
-that doesn't match, but the spoken text must still come through.
+### Typo'd open tag (both ends misspelled)
+
+When *both* the open and close are typo'd, the whole block still normalizes —
+the instructions are extracted and the prose stays out of the spoken text
+(previously it leaked in as content).
+
+```
+const segs = parseAllSpeechTags(
+  "<speech name=\"Honey\" override-instructions=\"1\">What a thing to name it.\n<intructions>Quiet, dry, each word careful.</intructions></speech>"
+);
+segs.length
+=> 1
+
+segs[0].text
+=> What a thing to name it.
+
+segs[0].instructions
+=> Quiet, dry, each word careful.
+
+segs[0].overrideInstructions
+=> true
+```
 
 ### Multiple `<instructions>` blocks in one `<speech>`
 

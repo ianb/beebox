@@ -39,19 +39,33 @@ function stripRedacted(text: string): string {
   return text.replace(REDACTED_SPAN, "").replace(REDACTED_STRAY_CLOSE, "").trim();
 }
 
+// The agent occasionally misspells the nested instructions tag (e.g.
+// `<intructions>`, dropping the second "s"). Canonicalize any such open/close
+// tag to `<instructions>` *before* parsing, so the exact-name extraction below
+// recognizes it — recovering the direction AND keeping its prose out of the
+// spoken text, instead of leaking it as content. Matches `in<anything>truction`
+// with an optional plural `s`, and preserves attributes. `<speech>` markers are
+// untouched, so downstream position tracking stays aligned.
+const INSTRUCTIONS_TAG_TYPO = /<(\/?)in[a-z]*tructions?((?:\s[^>]*)?)>/gi;
+
+function normalizeInstructionTags(content: string): string {
+  return content.replace(INSTRUCTIONS_TAG_TYPO, "<$1instructions$2>");
+}
+
 /**
  * Parse all <speech> tags from assistant content.
  * Returns array of speech segments in order.
  */
 export function parseAllSpeechTags(content: string): SpeechSegment[] {
-  const tags = parseTags(content, ["speech", "instructions"]);
+  const norm = normalizeInstructionTags(content);
+  const tags = parseTags(norm, ["speech", "instructions"]);
   const segments: SpeechSegment[] = [];
 
   // Track positions for hasTextBefore
   const speechStarts: number[] = [];
   const speechRegex = /<speech[\s>]/gi;
   let m;
-  while ((m = speechRegex.exec(content)) !== null) {
+  while ((m = speechRegex.exec(norm)) !== null) {
     speechStarts.push(m.index);
   }
 
@@ -62,12 +76,12 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
     if (tag.type !== "speech") continue;
 
     const tagStart = speechStarts[posIndex] ?? 0;
-    const textBefore = content.slice(lastEnd, tagStart);
+    const textBefore = norm.slice(lastEnd, tagStart);
     const hasTextBefore = textBefore.trim().length > 0;
 
     // Find end of this speech tag
-    const closeIndex = content.indexOf("</speech>", tagStart);
-    lastEnd = closeIndex !== -1 ? closeIndex + "</speech>".length : content.length;
+    const closeIndex = norm.indexOf("</speech>", tagStart);
+    lastEnd = closeIndex !== -1 ? closeIndex + "</speech>".length : norm.length;
     posIndex++;
 
     // Extract instructions from subTags. If multiple <instructions> blocks
@@ -88,12 +102,11 @@ export function parseAllSpeechTags(content: string): SpeechSegment[] {
         text = text.replace(/<instructions>[\S\s]*?<\/instructions>/gi, "").trim();
       }
     }
-    // Strip any orphan instructions open/close fragments (e.g. a stray extra
-    // </instructions> the agent emitted alongside the real one, or a typo'd
-    // close like </intructions>). Pattern matches `instructions`,
-    // `intructions`, with optional trailing `s`. Without this strip the TTS
-    // would speak the literal tag markup.
-    text = text.replace(/<\/?in[a-z]*tructions?[^>]*>/gi, "").trim();
+    // Safety net for orphan instruction fragments left in the spoken text — a
+    // stray `</instructions>` with no matching open, or an open whose pair the
+    // tag parser didn't form. Typo'd tags were already canonicalized upstream
+    // (normalizeInstructionTags), so this only needs the canonical spelling.
+    text = text.replace(/<\/?instructions[^>]*>/gi, "").trim();
 
     // Validate voice attribute against known list
     let voice: TTSVoice | undefined;
