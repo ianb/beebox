@@ -1,12 +1,12 @@
 /**
- * Lint dispatcher for mixed XML / markdown-frontmatter cards.
+ * Lint dispatcher for markdown-frontmatter cards.
  *
  * For each card path, peeks at the frontmatter to decide which path to
- * take: cards declaring a `type:` that matches a registered CardSchema
- * are validated through parseCardText (Zod schema check); everything
- * else falls through to cardworks' existing XML lintCard. Results are
- * merged into a single LintSummary so callers (e.g. cb validate) can
- * format them uniformly.
+ * take: cards declaring a filename `type` that matches a registered
+ * CardSchema are validated through parseCardText (Zod schema check); a
+ * `.card` with no matching schema is surfaced as a non-blocking warning.
+ * Results are merged into a single LintSummary so callers (e.g. cb validate)
+ * can format them uniformly.
  *
  * Ref-checking walks two sides: `extractRefs` (src/cards) over parsed
  * frontmatter fields, and `extractBodyRefs` over the Markdoc body. Both
@@ -15,9 +15,9 @@
  *
  * Type-specific, self-contained validation (rules Zod can't express, e.g.
  * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
- * it lives on each schema as a `validate` hook (cardworks), invoked generically
- * below. The ref-existence walk stays here because it is box-aware (needs the
- * loader), which the self-contained hook deliberately lacks.
+ * it lives on each schema as a `validate` hook, invoked generically below.
+ * The ref-existence walk stays here because it is box-aware (resolves refs
+ * against the box root), which the self-contained hook deliberately lacks.
  */
 
 import { readFile } from "node:fs/promises";

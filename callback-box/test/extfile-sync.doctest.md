@@ -9,7 +9,7 @@ inside the box resolves without extra `externalRoots` config.
 ```ts setup
 import { readFile, utimes, writeFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../src/cards/index.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { syncExtfile } from "../src/core/extfile-sync.js";
 

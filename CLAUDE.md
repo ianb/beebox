@@ -1,16 +1,15 @@
 ## Monorepo Layout
 
-Five projects live in one git repository (previously independent repos, merged 2026-05):
+Four projects live in one git repository (previously independent repos, merged 2026-05):
 
-- **callback-box/** — Main system. See its CLAUDE.md for details.
+- **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `cardworks` XML library are now absorbed into `callback-box/src/cards/`; cardworks has been removed.)
 - **callback-clerk/** — Chrome extension that talks to a hosted callback-box instance.
-- **cardworks/** — XML card library (parsing, validation, JSX). Used by callback-box (consumed via `file:../cardworks` symlink in `callback-box/node_modules/`).
 - **agent-doctest/** — Doctest framework extracted from callback-box.
 - **personal-vibe-check/** — The shared ESLint/TS/Prettier preset (`@ianbicking/personal-vibe-check`), consumed by the other packages via `workspace:*`. Edit it HERE — the old standalone checkout at `~/src/personal-vibe-check` is stale and no longer what anything resolves to.
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box.
 
-**Worktrees** — `claude --worktree <name>` creates a Claude Code worktree at `~/src/callback-worktrees/<name>/` on branch `worktree-<name>` and starts a session in it. The `WorktreeCreate` hook handles setup: git-clones `~/src/boxes/test1` to `~/src/box-worktrees/<name>/test1/` (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename stays `test1` so URL slugs match across worktrees and links like `/<wt>/test1/...` swap cleanly), runs `pnpm install` at every level, builds cardworks. On session exit with no changes the worktree is auto-removed and the `WorktreeRemove` hook deletes the cloned box + tells the router to stop the worktree's dev server. With uncommitted changes, Claude Code prompts you to keep or remove.
+**Worktrees** — `claude --worktree <name>` creates a Claude Code worktree at `~/src/callback-worktrees/<name>/` on branch `worktree-<name>` and starts a session in it. The `WorktreeCreate` hook handles setup: git-clones `~/src/boxes/test1` to `~/src/box-worktrees/<name>/test1/` (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md; basename stays `test1` so URL slugs match across worktrees and links like `/<wt>/test1/...` swap cleanly), runs `pnpm install` at every level. On session exit with no changes the worktree is auto-removed and the `WorktreeRemove` hook deletes the cloned box + tells the router to stop the worktree's dev server. With uncommitted changes, Claude Code prompts you to keep or remove.
 
 **Dev server — single router, lazy per-worktree.** Run `pnpm dev` at the monorepo root (or `bin/worktrees serve`). The router listens on port 3210 and routes by URL path prefix:
 

@@ -8,15 +8,10 @@ set -euo pipefail
 INSTALL_DIR="/opt/callback"
 
 echo "=== Pulling latest code ==="
-for repo in cardworks callback-box; do
+for repo in callback-box; do
   echo "  $repo..."
   cd "$INSTALL_DIR/$repo" && git pull --ff-only
 done
-
-echo "=== Rebuilding cardworks ==="
-cd "$INSTALL_DIR/cardworks"
-pnpm install
-pnpm build
 
 echo "=== Rebuilding callback-box ==="
 cd "$INSTALL_DIR/callback-box"

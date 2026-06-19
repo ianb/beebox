@@ -100,7 +100,7 @@ const SCHEMA_DEPS = new Set(["callback-box", "zod", "yaml"]);
 /**
  * Virtual parent URL at callback-box's package root (NOT inside
  * node_modules). Rewriting a box schema's parentURL to this makes Node
- * resolve bare deps (`zod`, `cardworks`) from callback-box's node_modules
+ * resolve bare deps (`zod`, `yaml`) from callback-box's node_modules
  * AND self-references (`callback-box/cards`) via callback-box's own
  * `exports` map. Pointing it *inside* node_modules would break the
  * self-reference: Node's LOOKUP_PACKAGE_SCOPE returns null at a
@@ -111,9 +111,9 @@ const CB_VIRTUAL_PARENT = pathToFileURL(join(PACKAGE_ROOT, "_virtual.js")).href;
 
 /**
  * Register module resolution hooks so that box-local schema files
- * (under config/schemas/) can import `callback-box/cards`, `zod`, and the
- * legacy `cardworks` alias even though none of those resolve from the
- * box's own node_modules.
+ * (under config/schemas/) can import `callback-box/cards`, `zod`, and
+ * `yaml` even though none of those resolve from the box's own
+ * node_modules.
  *
  * Uses Node's synchronous registerHooks API which chains correctly
  * with tsx's async loader hooks.

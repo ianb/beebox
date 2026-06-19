@@ -11,9 +11,9 @@
  *   ---
  *   markdown body, if the schema declares one
  *
- * The host application (this module) owns YAML parsing so cardworks
- * stays YAML-free. cardworks provides the schema declaration primitives
- * (`cardSchema`, `body`) and the frontmatter splitter (`splitCardContent`).
+ * The card-primitive layer (`src/cards/`) provides the schema declaration
+ * primitives (`cardSchema`, `body`) and the frontmatter splitter
+ * (`splitCardContent`); this module owns the YAML parsing on top of them.
  */
 
 import { readFile } from "node:fs/promises";

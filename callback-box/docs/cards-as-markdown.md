@@ -37,7 +37,7 @@
 
 Each of these has cases where a YAML array of items would either lose inline-prose context or require an awkward nested workaround. They stay XML until cardworks grows a body-tag (Markdoc-style) story. See "Awkward cases in detail" below.
 
-**Loader dispatch:** `src/core/card-io.ts` `loadCardFile()` returns a discriminated union of `FrontmatterLoadedCard | XmlLoadedCard`. Frontmatter dispatch uses `cardSchemas` (Map keyed by `type:` field); XML falls through to the legacy cardworks `parseCard`. This lets XML and frontmatter cards coexist during and after the migration.
+**Loader dispatch:** `src/core/card-io.ts` `loadCardFile()` returns a `FrontmatterLoadedCard`, dispatching on the `cardSchemas` Map (keyed by the filename `type`). (Historically this was a `FrontmatterLoadedCard | XmlLoadedCard` union with an XML fallback through cardworks `parseCard`; the migration is complete and cardworks has been removed, so only the frontmatter path remains. The rest of this document is the original decision record from before the migration.)
 
 **Migration infrastructure:** `scripts/migrate/*.ts` per schema, plus `scripts/migrate/_warnings.ts` shared helper that declares the known attrs/children per element and surfaces anything outside that allow-list at the end of the run. Surfaced real data loss during the production migration (e.g. ledger's box-local `<legal>`/`<properties>`/`<finances>` children on briefing; `role`/`notes` attrs on `<person>` children in records; `<boxholder ref="...">` on personality). All known gaps fixed in the migrators and re-run cleanly.
 

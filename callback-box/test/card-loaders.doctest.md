@@ -5,22 +5,6 @@ Per-card-type loaders produce typed `FileSummary` values from parsed card elemen
 ```ts setup
 import { memoLoader } from "../src/schemas/memo.js";
 import { imageLoader } from "../src/schemas/image.js";
-import { emptyLocation, type ElementNode } from "cardworks";
-
-function el(tagName: string, attrs: Record<string, string>, children: ElementNode[] = []): ElementNode {
-  return {
-    tagName,
-    attrs,
-    children,
-    comments: {},
-    location: emptyLocation(),
-    dirty: false,
-  } as ElementNode;
-}
-
-function textChild(tagName: string, text: string): ElementNode {
-  return { ...el(tagName, {}), text } as ElementNode;
-}
 ```
 
 ## Memo — title from body

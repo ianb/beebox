@@ -4,7 +4,7 @@
 //
 // node_modules are externalized (`packages: "external"`): native addons like
 // better-sqlite3 can't be bundled, and loading deps from disk keeps their own
-// __dirname / asset resolution intact. cardworks resolves to its built dist.
+// __dirname / asset resolution intact.
 //
 // An external sourcemap (cli.mjs.map) gives real stack traces under
 // `node --enable-source-maps` without slowing startup — node loads the map

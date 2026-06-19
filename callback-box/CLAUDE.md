@@ -25,7 +25,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same
 
 ## Cards
 
-Cards are the core data format. The format is **YAML frontmatter + markdown body** (Phase 2). Every built-in schema is now frontmatter; the legacy XML-body format and its loader branch remain in place but dormant (no schema uses them) until cardworks is removed in a follow-up.
+Cards are the core data format. The format is **YAML frontmatter + markdown body** (Phase 2). Every schema is frontmatter; the legacy XML card format, its loader, and the `cardworks` package have been removed. The card primitives (`cardSchema`, `body`, `splitCardContent`, lint formatting, …) now live in `src/cards/` and are exposed to box-local schemas via the public `callback-box/cards` specifier.
 
 ```
 ---
@@ -36,7 +36,7 @@ created: 2026-05-22T10:00:00Z
 Body content as plain markdown.
 ```
 
-**Schemas** live in `src/schemas/`. Cards use `cardSchema(type, { fields, instructions? })` from cardworks. `src/schemas/registry.ts` lists them in `cardSchemas[]` (the legacy `schemas[]` XML list is now empty); boxes can add local schemas under `config/schemas/`. The type is taken from the filename (`Foo.<type>.card`) — there is no `type:` field in frontmatter.
+**Schemas** live in `src/schemas/`. Cards use `cardSchema(type, { fields, instructions? })` from `src/cards/` (box-local schemas import the same via `callback-box/cards`). `src/schemas/registry.ts` lists them in `cardSchemas[]`; boxes can add local schemas under `config/schemas/`. The type is taken from the filename (`Foo.<type>.card`) — there is no `type:` field in frontmatter.
 
 **Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a discriminated `FrontmatterLoadedCard | XmlLoadedCard`. Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations to frontmatter cards are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
 
@@ -70,7 +70,7 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/hooks/          Shared React hooks
   src/lib/            Helpers (cn, source-tag, view-url, trpc, audio-context, ...)
   src/ssr/            Server-side rendering setup for `cb render`
-src/schemas/      Card type definitions (Zod + cardworks `cardSchema`)
+src/schemas/      Card type definitions (Zod + `cardSchema` from src/cards/)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
@@ -83,8 +83,6 @@ plugins/          Claude Code plugins (card-validator hook)
 ```
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`.
-
-**cardworks** (`../cardworks`, sibling in the monorepo) — XML card library. Parsing, serialization, validation, JSX. Edit as needed — it's part of this ecosystem.
 
 ## Key Concepts
 
