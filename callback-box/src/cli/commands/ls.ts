@@ -1,5 +1,5 @@
 /**
- * cb ls - List cards with optional XPath template extraction.
+ * cb ls - List cards with optional frontmatter-field template extraction.
  *
  * Thin wrapper around the core ls command.
  */
@@ -9,11 +9,11 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
 export const lsCommand = new Command("ls")
-  .description("List cards with optional XPath template extraction")
+  .description("List cards with optional frontmatter-field template extraction")
   .argument("<paths...>", "Glob patterns or directories to list")
   .option(
     "-f, --format <template>",
-    "Template with {xpath} placeholders, e.g. '{title} by {author}'"
+    "Template with {field} placeholders (dotted frontmatter paths), e.g. '{title} by {author}'"
   )
   .action(async (paths: string[], options: { format?: string }) => {
     try {

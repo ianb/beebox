@@ -1,20 +1,21 @@
 /**
- * ls command - List cards with optional XPath-based template extraction.
+ * ls command - List cards with optional frontmatter-field template extraction.
  *
- * Supports glob patterns for file matching and {xpath} placeholders
- * in format templates for extracting card metadata.
+ * Supports glob patterns for file matching and {field} placeholders in format
+ * templates, where each placeholder is a dotted path into the card's YAML
+ * frontmatter (e.g. '{title} by {author}', '{exif.camera}').
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { type ElementNode, parseCard, evaluateXPathString } from "cardworks";
 import {
   registerCommand,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
+import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 
 /**
  * Check if a string contains glob special characters.
@@ -66,13 +67,11 @@ async function expandPath(
 }
 
 /**
- * Apply a format template to a card file, replacing {xpath} placeholders
- * with values extracted from the card XML.
+ * Apply a format template to a card's frontmatter, replacing {field}
+ * placeholders with the scalar value at that dotted frontmatter path.
  */
-function applyTemplate(template: string, rootNode: ElementNode): string {
-  return template.replace(/{([^}]+)}/g, (_match, expr: string) => {
-    return evaluateXPathString(expr, rootNode);
-  });
+function applyTemplate(template: string, frontmatter: Record<string, unknown>): string {
+  return template.replace(/{([^}]+)}/g, (_match, expr: string) => lookupField(frontmatter, expr));
 }
 
 /**
@@ -111,22 +110,21 @@ async function executeLs(
       continue;
     }
 
-    // Parse and apply template
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      const root = await parseCard(content, { source: filePath });
-      const formatted = applyTemplate(format, root);
-      const line = `${relativePath}\t${formatted}`;
-      ctx.writeLine(line);
-      lines.push(line);
-    } catch (e) {
-      // Can't read or parse this card — fall back to showing just the path
-      // so `ls` still lists it. Warn so an unreadable/malformed card is
-      // visible rather than silently rendered template-free.
-      console.warn(`ls: could not apply format to ${relativePath}: ${e instanceof Error ? e.message : String(e)}`);
+    // Read frontmatter and apply the template. A card that can't be read or
+    // has no frontmatter falls back to showing just the path so `ls` still
+    // lists it; warn so a malformed/bodiless card is visible rather than
+    // silently rendered template-free.
+    const frontmatter = await loadCardFrontmatter(filePath);
+    if (frontmatter === null) {
+      console.warn(`ls: could not read frontmatter for ${relativePath}`);
       ctx.writeLine(relativePath);
       lines.push(relativePath);
+      continue;
     }
+    const formatted = applyTemplate(format, frontmatter);
+    const line = `${relativePath}\t${formatted}`;
+    ctx.writeLine(line);
+    lines.push(line);
   }
 
   return { success: true, data: { count: lines.length, lines } };
@@ -135,7 +133,7 @@ async function executeLs(
 // Register the command
 registerCommand({
   name: "ls",
-  description: "List cards with optional XPath template extraction",
+  description: "List cards with optional frontmatter-field template extraction",
   args: [
     {
       name: "paths",
@@ -146,7 +144,7 @@ registerCommand({
     {
       name: "format",
       description:
-        "Template string with {xpath} placeholders, e.g. '{title} by {author}'",
+        "Template with {field} placeholders (dotted frontmatter paths), e.g. '{title} by {author}'",
       required: false,
       type: "string",
     },

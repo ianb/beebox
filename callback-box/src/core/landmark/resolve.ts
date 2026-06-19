@@ -9,8 +9,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { splitCardContent } from "../../cards/index.js";
-import { parse as parseYaml } from "yaml";
 import type {
   LandmarkExpandData,
   LandmarkNavigationData,
@@ -18,6 +16,7 @@ import type {
 } from "../../schemas/landmark.js";
 import { isCardFile } from "../../cli/lib/paths.js";
 import { titleFromFilename } from "../file-summary.js";
+import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 
 export interface ResolvedLink {
   /** Box-relative path to the target card. */
@@ -91,7 +90,7 @@ async function resolveExpand(
   for (const matchRel of sorted) {
     let frontmatter: Record<string, unknown> | null = null;
     if (needsLookup(refTpl) || needsLookup(labelTpl)) {
-      frontmatter = await loadFrontmatter(path.join(options.landmarkDir, matchRel));
+      frontmatter = await loadCardFrontmatter(path.join(options.landmarkDir, matchRel));
     }
     const vars: TemplateVars = { matchRel, frontmatter };
     const ref = applyTemplate(refTpl, vars);
@@ -124,42 +123,6 @@ function applyTemplate(template: string, vars: TemplateVars): string {
     if (vars.frontmatter === null) return "";
     return lookupField(vars.frontmatter, expr);
   });
-}
-
-/**
- * Read a dotted field path out of a frontmatter mapping. `${title}` →
- * `frontmatter.title`; `${exif.camera}` walks nested mappings. Missing or
- * non-scalar values render as the empty string. This replaces the old
- * XPath-over-XML evaluation now that cards are YAML frontmatter.
- */
-function lookupField(frontmatter: Record<string, unknown>, expr: string): string {
-  let cursor: unknown = frontmatter;
-  for (const key of expr.split(".")) {
-    if (cursor === null || typeof cursor !== "object") return "";
-    cursor = (cursor as Record<string, unknown>)[key];
-  }
-  if (cursor === null || cursor === undefined) return "";
-  if (typeof cursor === "object") return "";
-  return String(cursor);
-}
-
-async function loadFrontmatter(absPath: string): Promise<Record<string, unknown> | null> {
-  let content: string;
-  try {
-    content = await fs.readFile(absPath, "utf-8");
-  } catch (_e) {
-    return null;
-  }
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  let fm: unknown;
-  try {
-    fm = parseYaml(split.frontmatterText);
-  } catch (_e) {
-    return null;
-  }
-  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return null;
-  return fm as Record<string, unknown>;
 }
 
 function parseOrder(value: LandmarkOrderType | undefined): LandmarkOrderType {
