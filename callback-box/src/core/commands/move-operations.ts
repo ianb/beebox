@@ -21,7 +21,7 @@ import {
   rewriteMovedCardRefs,
   type Remap,
 } from "../rewrite-card-refs.js";
-import { isPhase2CardPath, movePhase2CardFiles } from "./move-phase2.js";
+import { isPhase2CardFile, movePhase2CardFiles } from "./move-phase2.js";
 
 export interface MoveOneResult {
   from: string;
@@ -169,7 +169,7 @@ async function relocateCardFiles({
   // Phase-2 cards: cardworks' XML-only loader can't parse them, so handle
   // the file + attach-dir rename ourselves. XML cards: delegate to cardworks
   // for the file moves and referrer re-serialization.
-  if (isPhase2CardPath(sourcePath)) {
+  if (await isPhase2CardFile(sourcePath)) {
     return { movedFiles: await movePhase2CardFiles(sourcePath, destPath), updatedCards: [] };
   }
   const card = await loader.load(sourcePath);

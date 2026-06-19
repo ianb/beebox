@@ -8,18 +8,19 @@
  * the move ourselves; the substring rewrite pass in the move command
  * picks up ref updates in every other card regardless of card kind.
  *
- * Detect by extracting the type from the filename and checking it
- * against the registered Phase-2 card schemas. Anything else (XML
- * card, plain file, unknown type) falls through to the cardworks
- * loader path.
+ * Detect by file shape: a `.card` file whose content carries a YAML
+ * frontmatter block is a Phase-2 card, regardless of whether its type
+ * is built-in or box-local. (The earlier type-against-`cardSchemas`
+ * check only knew built-in types, so a migrated box-local frontmatter
+ * card — e.g. `bill` — wrongly fell through to the cardworks loader and
+ * failed to parse.) Anything else (legacy XML card, plain file, unreadable)
+ * falls through to the cardworks loader path.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { attachDirFor } from "../../shared/attach-path.js";
-import { cardSchemas } from "../../schemas/registry.js";
-
-const PHASE2_TYPES = new Set(cardSchemas.map((s) => s.type));
+import { splitCardContent } from "../../cards/index.js";
 
 class AttachDirRenameError extends Error {
   readonly from: string;
@@ -32,20 +33,21 @@ class AttachDirRenameError extends Error {
   }
 }
 
-function cardTypeFromPath(p: string): string | undefined {
-  const base = p.split("/").pop() ?? p;
-  const match = /^.+\.([^.]+)\.card$/.exec(base);
-  if (match === null) return undefined;
-  return match[1];
-}
-
 /**
- * Whether a path names a Phase-2 frontmatter+markdown card (vs. a legacy
- * XML card, plain file, or unknown type).
+ * Whether a file is a Phase-2 frontmatter+markdown card (vs. a legacy XML
+ * card, plain file, or unreadable). Classified by content shape — a `.card`
+ * file with a YAML frontmatter block — so box-local frontmatter card types
+ * (loaded at runtime, not in the built-in registry) are recognized too.
  */
-export function isPhase2CardPath(p: string): boolean {
-  const type = cardTypeFromPath(p);
-  return type !== undefined && PHASE2_TYPES.has(type);
+export async function isPhase2CardFile(p: string): Promise<boolean> {
+  if (!p.endsWith(".card")) return false;
+  let content: string;
+  try {
+    content = await fs.readFile(p, "utf-8");
+  } catch (_e) {
+    return false;
+  }
+  return splitCardContent(content).hasFrontmatter;
 }
 
 /**

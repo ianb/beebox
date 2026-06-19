@@ -103,6 +103,52 @@ title: Index
 Abs [Engine](/store/archive/Engine.doc.card) and [photo](/store/archive/Engine.attach/photo.jpg).
 ```
 
+## Box-local card type: classified by frontmatter shape, not the built-in registry
+
+A box can define its own frontmatter card types (e.g. `bill`) under
+`config/schemas/`. Those types aren't in callback-box's built-in schema list,
+so a move must recognize them by file *shape* — a `.card` with a frontmatter
+block — not by matching a built-in type. (Earlier the type-based check sent any
+non-built-in type to the cardworks XML loader, which can't parse frontmatter, so
+`cb mv` on a migrated box-local card failed.) Here a `bill` card with an attach
+dir and an inbound ref moves cleanly.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/bills/Water.bill.card",
+  "---\nstatus: due\nvendor: City Water\namount: 42.5\n---\nScan: ![s](attach/scan.pdf)\n",
+);
+await box.write("box/bills/Water.attach/scan.pdf", "PDF");
+await box.write(
+  "box/index.doc.card",
+  "---\ntype: doc\ntitle: Index\n---\nUnpaid: [Water](/box/bills/Water.bill.card).\n",
+);
+
+const result = await mv(box, { from: "box/bills/Water.bill.card", to: "store/archive/Water.bill.card" });
+result.success
+=> true
+```
+
+The card and its attach directory moved, and the inbound absolute ref was
+repointed:
+
+```continue
+await box.list("store/archive")
+=>
+store/archive/Water.attach
+store/archive/Water.attach/scan.pdf
+store/archive/Water.bill.card
+
+await box.read("box/index.doc.card")
+=>
+---
+type: doc
+title: Index
+---
+Unpaid: [Water](/store/archive/Water.bill.card).
+```
+
 ## Body Markdoc `{% source ref %}` rewritten (relative + absolute)
 
 Refs carried by Markdoc body tags follow the move in either style.
