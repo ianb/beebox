@@ -1,9 +1,10 @@
 /**
  * TodoListView — card renderer for todo-list cards.
  *
- * Parses the XML element into items + nested sub-items, renders them with a
- * tri-state round checkbox (pending/done/deferred), and toggles status via
- * the todos.updateItem mutation.
+ * Reads the card's frontmatter (`name`, `details`, nested `items`) into a
+ * render tree, draws each item with a tri-state round checkbox
+ * (pending/done/deferred), and toggles status via the todos.updateItem
+ * mutation.
  *
  * Lives in components/ because the bespoke round-checkbox look is
  * appearance-heavy.
@@ -11,7 +12,6 @@
 
 import { cbSource, cbSourceItem } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
-import type { ElementNode } from "../api";
 import type { RendererProps } from "../renderers";
 
 interface TodoItemInfo {
@@ -28,16 +28,34 @@ interface TodoListInfo {
   counts: { pending: number; done: number; cancelled: number; deferred: number };
 }
 
-function parseItem(el: ElementNode): TodoItemInfo {
-  const children = el.children ?? [];
-  const detailsEl = children.find((c) => c.tagName === "details");
-  const subItems = children.filter((c) => c.tagName === "item");
+/** Frontmatter arrives over the wire as untyped JSON; narrow before reading. */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
 
+function stringField(record: Record<string, unknown>, key: string): string | undefined {
+  const value = record[key];
+  return typeof value === "string" ? value : undefined;
+}
+
+function itemArray(record: Record<string, unknown>, key: string): unknown[] {
+  const value = record[key];
+  return Array.isArray(value) ? value : [];
+}
+
+function parseItem(raw: unknown): TodoItemInfo | null {
+  if (!isRecord(raw)) return null;
+  const children: TodoItemInfo[] = [];
+  for (const sub of itemArray(raw, "items")) {
+    const parsed = parseItem(sub);
+    if (parsed !== null) children.push(parsed);
+  }
+  const status = stringField(raw, "status");
   return {
-    name: el.attrs.name ?? "",
-    status: el.attrs.status ?? "pending",
-    details: detailsEl ? (detailsEl.text ?? "") : undefined,
-    children: subItems.map(parseItem),
+    name: stringField(raw, "name") ?? "",
+    status: status === undefined ? "pending" : status,
+    details: stringField(raw, "details"),
+    children,
   };
 }
 
@@ -55,15 +73,16 @@ function countStatuses(items: TodoItemInfo[]): TodoListInfo["counts"] {
   return counts;
 }
 
-function parseTodoList(element: ElementNode): TodoListInfo {
-  const children = element.children ?? [];
-  const detailsEl = children.find((c) => c.tagName === "details");
-  const itemEls = children.filter((c) => c.tagName === "item");
-  const items = itemEls.map(parseItem);
+function parseTodoList(frontmatter: Record<string, unknown>): TodoListInfo {
+  const items: TodoItemInfo[] = [];
+  for (const raw of itemArray(frontmatter, "items")) {
+    const parsed = parseItem(raw);
+    if (parsed !== null) items.push(parsed);
+  }
 
   return {
-    name: element.attrs.name ?? "",
-    details: detailsEl ? (detailsEl.text ?? "") : undefined,
+    name: stringField(frontmatter, "name") ?? "",
+    details: stringField(frontmatter, "details"),
     items,
     counts: countStatuses(items),
   };
@@ -138,11 +157,11 @@ export function TodoListView({ data }: RendererProps) {
     },
   });
 
-  if (!data.element) {
+  if (!data.frontmatter) {
     return <div className="p-4 text-warm-600">No todo list data</div>;
   }
 
-  const list = parseTodoList(data.element);
+  const list = parseTodoList(data.frontmatter);
   const total = list.counts.pending + list.counts.done + list.counts.cancelled + list.counts.deferred;
   const completed = list.counts.done + list.counts.cancelled;
 
