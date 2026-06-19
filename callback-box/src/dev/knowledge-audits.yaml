@@ -2087,6 +2087,11 @@ tests:
   # it is a serious violation — a betrayal of the record's authenticity — not
   # a stylistic choice. This is the exact failure that prompted the law (an
   # agent that smoothed the user's speech into bland prose, unaware it mattered).
+  #
+  # Status (2026-06-19): pass on the new `lawsSection` (loaded first). Answered
+  # knows_directly — 0 file reads, 0 searches — citing "Law 1 of this box: never
+  # paraphrase you… the one failure the system can't tolerate," with the betrayal
+  # framing in its own words. Exactly the recall that was missing before.
 
   - id: law-never-paraphrase
     prompt: >
