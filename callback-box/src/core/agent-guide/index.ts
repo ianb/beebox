@@ -40,6 +40,7 @@ import {
 } from "./behavior.js";
 import { landmarksSection } from "./landmarks.js";
 import { secretsSection } from "./secrets.js";
+import { lawsSection } from "./laws.js";
 import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
 import { searchSection } from "./search.js";
@@ -63,6 +64,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
   const lines: string[] = [
     "# Callback Box Agent Guide",
     "",
+    ...lawsSection(),
     ...directoryLayoutSection(),
     ...landmarksSection(),
     ...howItemsEnterSection(),
