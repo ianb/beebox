@@ -299,7 +299,7 @@ step.
 | A box still defines an `element()` schema after box-local XML is dropped | No | Gate: box-schema audit before deletion (`bill` in ledger boxes is the known case) | Clear-but-fatal (that card type won't load) |
 | `cli/lib/loader.ts` rewrite changes card-listing semantics | Yes — move/validate doctests | Yes — `isCardFile` filter | Clear (tests / validate output) |
 | `ls --format` dropped but a box/agent still calls it | No | No | **Silent** (format arg ignored) |
-| `card.patch` / `todos.updateItem` deleted — UI card-edit/todo-edit feature lost | No | Decision pending (Open question 4) | Clear-but-feature-gone |
+| `todos.updateItem` left on XML `CardLoader` (todo-toggle UI already errors on frontmatter cards) | No | Plan rewrites it to frontmatter (Open question 4) | **Silent today** — UI toggle errors; rewrite fixes it |
 | Local minimal `Location` uses wrong field names (`line` vs `startLine`) | Yes — validate output doctests | Yes — match `startLine`/`startColumn` per `format.ts:37` | Clear (format looks wrong) |
 | Removing a `MIGRATIONS` entry shifts a box's applied-manifest | No | Yes — keep entries, stub scripts only | Clear-but-fatal if violated |
 | Stale `dist/cli.mjs` keeps baked `cardworks` imports | No | Yes — Track C rebuilds dist | Clear (import error if dist is run) |
@@ -366,15 +366,20 @@ fields.
    would corrupt a box's applied-set). Box migration (which now includes
    converting box-local XML schemas) is a prerequisite for Track C only; Tracks
    A+B land first, independent of box state.
-4. **`card.patch` and `todos.updateItem` (XML-only live endpoints).** Both are
-   entirely XML/`CardLoader`-based (`card.ts:271`, `todos.ts`). They were dead
-   the moment todo-list/the cards became frontmatter, but they are *registered
-   API* — so the choice is (a) delete the endpoints (todo-editing-via-UI and
-   card-patching disappear), or (b) rewrite them against frontmatter `card-io`
-   if those UI features are still wanted. Lean: confirm with the user whether
-   the todo-edit / card-patch UI surfaces are used; default to deleting unless
-   they are. This is the one place "delete the dead path" is also a product
-   decision.
+4. ~~**`card.patch` and `todos.updateItem`.**~~ **Investigated — they differ:**
+   - **`card.patch` — delete.** No frontend caller (no `trpc` call, no raw
+     `fetch` to the `/api/card/*` PATCH route). Genuinely unused; remove the
+     PATCH handler + its XML serialization (`api-card-patch.ts`, `card.ts:271`).
+   - **`todos.updateItem` — rewrite to frontmatter (do NOT delete).** It is the
+     mutation behind the todo-list checkbox UI: `TodoListView` (the registered
+     `todo-list` renderer, `renderers/todo-list.tsx:11`) calls it on toggle. But
+     it still uses the XML `CardLoader` and XML `<item>` elements (`todos.ts:21`/
+     `:30`/`:58`) while `todo-list` is now frontmatter with an `items:` YAML
+     array (`schemas/todo-list.ts:36`/`:41`) — so the feature is **already
+     broken** (a latent bug the todo-list migration left behind; toggling errors
+     today). Fix: load via `card-io`, mutate the `items` array, reserialize via
+     `yaml` — the standard frontmatter parse-mutate-write. This removes the last
+     `CardLoader`/`ElementNode` use in the webapp *and* fixes a live bug.
 2. **Home for the copied primitives.** `src/cards/` (proposed) vs
    `src/lib/cards/` vs `src/core/cards/`. Lean: `src/cards/` — top-level,
    sibling to `src/schemas/`, reads as "the card primitive layer." Minor;
