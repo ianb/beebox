@@ -50,6 +50,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "procedure",         script: "scripts/migrate/procedure.ts" },
   { name: "guide",             script: "scripts/migrate/guide.ts" },
   { name: "capture-session",   script: "scripts/migrate/capture-session.ts" },
+  { name: "delete-deprecated-cards", script: "scripts/migrate/delete-deprecated-cards.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
