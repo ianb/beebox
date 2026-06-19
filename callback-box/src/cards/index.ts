@@ -25,3 +25,12 @@ export {
   splitCardContent,
   type SplitCardContent,
 } from "./frontmatter.js";
+
+export {
+  formatLintResults,
+  type LintIssue,
+  type LintResult,
+  type LintSummary,
+} from "./lint-format.js";
+
+export { ParseError } from "./errors.js";

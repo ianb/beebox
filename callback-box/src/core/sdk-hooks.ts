@@ -11,7 +11,7 @@ import type {
   HookJSONOutput,
   PostToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { formatLintResults } from "cardworks";
+import { formatLintResults } from "../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
 import { noViewLabelLinks, noBrokenInternalLinks } from "./markdown-lint-rules.js";
 import { createLoader } from "../cli/lib/loader.js";

@@ -15,14 +15,15 @@
  */
 
 import { readFile } from "node:fs/promises";
+import { lintCard, type ICardLoader } from "cardworks";
 import {
-  lintCard,
+  splitCardContent,
+  extractRefs,
+  type CardSchema,
   type LintResult,
   type LintSummary,
   type LintIssue,
-  type ICardLoader,
-} from "cardworks";
-import { splitCardContent, extractRefs, type CardSchema } from "../cards/index.js";
+} from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";

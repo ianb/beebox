@@ -7,7 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { Command } from "commander";
-import { formatLintResults, type LintSummary } from "cardworks";
+import { formatLintResults, type LintSummary } from "../../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
