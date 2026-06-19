@@ -100,10 +100,12 @@ export const cardSchemas: CardSchema[] = [
  * - `callback-box/cards` — the public card-primitive surface (cardSchema,
  *   body, splitCardContent, …); the specifier new box schemas should use.
  * - `zod` — peer dependency every schema needs.
+ * - `yaml` — frontmatter card templates `stringify` their fields with it (the
+ *   scaffolding in box-templates.ts shows exactly this).
  * - `cardworks` — legacy alias, still resolvable while boxes migrate their
  *   schema files to `callback-box/cards`; goes away with cardworks itself.
  */
-const SCHEMA_DEPS = new Set(["callback-box", "zod", "cardworks"]);
+const SCHEMA_DEPS = new Set(["callback-box", "zod", "yaml", "cardworks"]);
 
 /**
  * Virtual parent URL at callback-box's package root (NOT inside
