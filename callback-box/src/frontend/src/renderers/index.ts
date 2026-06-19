@@ -30,7 +30,6 @@ export interface FileData {
 /** Props passed to every renderer component */
 export interface RendererProps {
   data: FileData;
-  onPatch?: (ops: PatchOp[]) => Promise<void>;
   /**
    * Called when the user clicks a link that should switch this surface to
    * view a different file. `target` carries the resolved path plus any
@@ -39,14 +38,6 @@ export interface RendererProps {
    */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
 }
-
-/** A patch operation for modifying a card */
-export type PatchOp =
-  | { op: "set-attr"; path?: string; attr: string; value: string }
-  | { op: "remove-attr"; path?: string; attr: string }
-  | { op: "set-text"; path: string; value: string }
-  | { op: "append-child"; path?: string; xml: string }
-  | { op: "remove-child"; path: string; index: number };
 
 /** A renderer that can display a file */
 export interface FileRenderer {

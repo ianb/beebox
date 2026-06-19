@@ -34,52 +34,6 @@ function sanitizeElement(el: ElementNode): JsonElement {
   return result;
 }
 
-/**
- * Navigate to a child element by a simple path like "section/ingredients/ing[2]".
- */
-function navigateToChild(el: ElementNode, pathStr: string): ElementNode | null {
-  const segments = pathStr.split("/").filter(Boolean);
-  let current: ElementNode = el;
-  for (const seg of segments) {
-    const match = seg.match(/^(\w[\w-]*?)(?:\[(\d+)])?$/);
-    if (!match) return null;
-    const tagName = match[1]!;
-    const idx = match[2] !== undefined ? parseInt(match[2], 10) : 0;
-    const matches = current.children.filter((c) => c.tagName === tagName);
-    if (idx >= matches.length) return null;
-    current = matches[idx]!;
-  }
-  return current;
-}
-
-/**
- * Parse a simple XML fragment into an ElementNode.
- */
-function parseXmlFragment(xml: string): ElementNode | null {
-  const match = xml.match(/^<(\w[\w-]*)((?:\s+[\w-]+="[^"]*")*)(?:\s*\/>|>([\S\s]*?)<\/\1>)$/);
-  if (!match) return null;
-  const tagName = match[1]!;
-  const attrStr = match[2] ?? "";
-  const text = match[3]?.trim();
-
-  const attrs: Record<string, string> = {};
-  const attrRegex = /([\w-]+)="([^"]*)"/g;
-  let attrMatch;
-  while ((attrMatch = attrRegex.exec(attrStr))) {
-    attrs[attrMatch[1]!] = attrMatch[2]!;
-  }
-
-  return {
-    tagName,
-    attrs,
-    children: [],
-    text: text || undefined,
-    comments: {},
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    dirty: true,
-  } as ElementNode;
-}
-
 function typeFromFilename(source: string): string | undefined {
   const base = source.split("/").pop();
   if (base === undefined) return undefined;
@@ -156,14 +110,6 @@ function loadFrontmatterCard(input: {
     validationError,
   };
 }
-
-const patchOpSchema = z.discriminatedUnion("op", [
-  z.object({ op: z.literal("set-attr"), path: z.string().optional(), attr: z.string(), value: z.string() }),
-  z.object({ op: z.literal("remove-attr"), path: z.string().optional(), attr: z.string() }),
-  z.object({ op: z.literal("set-text"), path: z.string(), value: z.string() }),
-  z.object({ op: z.literal("append-child"), path: z.string().optional(), xml: z.string() }),
-  z.object({ op: z.literal("remove-child"), path: z.string(), index: z.number() }),
-]);
 
 export const cardRouter = router({
   get: publicProcedure
@@ -266,74 +212,6 @@ export const cardRouter = router({
           body: undefined as string | undefined,
           validationError: msg,
         };
-      }
-    }),
-
-  patch: publicProcedure
-    .input(z.object({
-      path: z.string().min(1),
-      ops: z.array(patchOpSchema).min(1),
-    }))
-    .mutation(async ({ input, ctx }) => {
-      const fullPath = path.join(ctx.boxRoot, input.path);
-      const loader = await createLoader(ctx.boxRoot);
-
-      try {
-        const card = await loader.load(fullPath);
-
-        for (const op of input.ops) {
-          const target = op.path ? navigateToChild(card.element, op.path) : card.element;
-          if (!target) {
-            throw new TRPCError({ code: "BAD_REQUEST", message: `Path not found: ${op.path}` });
-          }
-
-          switch (op.op) {
-            case "set-attr":
-              target.attrs[op.attr] = op.value;
-              break;
-            case "remove-attr":
-              delete target.attrs[op.attr];
-              break;
-            case "set-text":
-              target.text = op.value;
-              break;
-            case "append-child": {
-              const fragment = parseXmlFragment(op.xml);
-              if (fragment) target.children.push(fragment);
-              break;
-            }
-            case "remove-child": {
-              const idx = op.index;
-              if (idx >= 0 && idx < target.children.length) {
-                target.children.splice(idx, 1);
-              }
-              break;
-            }
-          }
-        }
-
-        await loader.save(card);
-
-        const updated = await loader.load(fullPath);
-        const xml = loader.serialize(updated.element);
-        const element = sanitizeElement(updated.element);
-
-        return {
-          path: input.path,
-          tagName: updated.element.tagName,
-          status: updated.element.attrs["status"] as string | undefined,
-          version: updated.version,
-          xml,
-          element,
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw new TRPCError({ code: error.code, message: error.message, cause: error.cause });
-        }
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: `Patch failed: ${(error as Error).message}`,
-        });
       }
     }),
 });

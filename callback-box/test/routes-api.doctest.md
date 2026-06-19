@@ -109,28 +109,6 @@ res.statusCode
 await ctx.cleanup();
 ```
 
-## Patching a card
-
-`PATCH /api/card/*` applies operations to a card. The `set-attr` op modifies an attribute:
-
-```
-const ctx = await makeTestServer();
-await ctx.seed(
-  "box/inbox/patch-test.memo.card",
-  '<memo status="new"><created>2026-01-01T00:00:00Z</created><content>Patch me</content></memo>\n',
-);
-await ctx.inject({ method: "PATCH", url: "/api/card/box/inbox/patch-test.memo.card", payload: {
-  ops: [{ op: "set-attr", attr: "status", value: "processed" }],
-}})
-=>
-200
-«*»"status": "processed"«*»"element":«*»"status": "processed"«*»
-```
-
-``` cleanup
-await ctx.cleanup();
-```
-
 ## Browsing directories
 
 `GET /api/browse/*` lists directory contents with parsed card metadata:

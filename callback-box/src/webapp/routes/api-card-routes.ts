@@ -1,23 +1,17 @@
 /**
- * Single-card read + patch routes for the REST API.
+ * Single-card read route for the REST API.
  *
- * Split out of `api.ts`. Owns the `/api/card/*` family:
+ * Split out of `api.ts`. Owns the legacy XML read endpoint:
  *
- *   GET   /api/card/* — load a card, return its xml + sanitized element tree
- *   PATCH /api/card/* — apply patch operations, re-validate, return the result
+ *   GET /api/card/* — load a card, return its xml + sanitized element tree
  *
- * The patch-operation shape and element helpers live in `api-card-patch.ts`.
+ * The element-sanitization helper lives in `api-card-patch.ts`.
  */
 
 import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import { createLoader } from "../../cli/lib/loader.js";
-import {
-  type PatchOp,
-  navigateToChild,
-  parseXmlFragment,
-  sanitizeElement,
-} from "./api-card-patch.js";
+import { sanitizeElement } from "./api-card-patch.js";
 
 interface RegisterApiCardRoutesOptions {
   server: FastifyInstance;
@@ -63,84 +57,6 @@ export function registerApiCardRoutes(options: RegisterApiCardRoutesOptions): vo
         return reply.status(isNotFound ? 404 : 422).send({
           error: isNotFound ? `Card not found: ${cardPath}` : `Card validation failed: ${cardPath}`,
           details: msg,
-        });
-      }
-    }
-  );
-
-  // PATCH /api/card/:path - Apply patch operations to a card
-  server.patch<{ Params: { "*": string }; Body: { ops: PatchOp[] } }>(
-    "/api/card/*",
-    async (request, reply) => {
-      const cardPath = request.params["*"];
-      if (!cardPath) {
-        return reply.status(400).send({ error: "Card path required" });
-      }
-
-      const { ops } = request.body as { ops: PatchOp[] };
-      if (!Array.isArray(ops) || ops.length === 0) {
-        return reply.status(400).send({ error: "Patch ops required" });
-      }
-
-      const fullPath = path.join(boxRoot, cardPath);
-      const loader = await createLoader(boxRoot);
-
-      try {
-        const card = await loader.load(fullPath);
-
-        // Apply each patch operation
-        for (const op of ops) {
-          const target = op.path ? navigateToChild(card.element, op.path) : card.element;
-          if (!target) {
-            return reply.status(400).send({ error: `Path not found: ${op.path}` });
-          }
-
-          switch (op.op) {
-            case "set-attr":
-              target.attrs[op.attr] = op.value;
-              break;
-            case "remove-attr":
-              delete target.attrs[op.attr];
-              break;
-            case "set-text":
-              target.text = op.value;
-              break;
-            case "append-child": {
-              const fragment = parseXmlFragment(op.xml);
-              if (fragment) {
-                target.children.push(fragment);
-              }
-              break;
-            }
-            case "remove-child": {
-              const idx = op.index;
-              if (idx >= 0 && idx < target.children.length) {
-                target.children.splice(idx, 1);
-              }
-              break;
-            }
-          }
-        }
-
-        // Save (validates against schema if one exists)
-        await loader.save(card);
-
-        // Re-read and return updated card
-        const updated = await loader.load(fullPath);
-        const xml = loader.serialize(updated.element);
-        const element = sanitizeElement(updated.element);
-
-        return {
-          path: cardPath,
-          tagName: updated.element.tagName,
-          status: updated.element.attrs["status"],
-          version: updated.version,
-          xml,
-          element,
-        };
-      } catch (error) {
-        return reply.status(400).send({
-          error: `Patch failed: ${(error as Error).message}`,
         });
       }
     }

@@ -1,70 +1,12 @@
 /**
- * Card patch + element serialization helpers for the REST API.
+ * Element-sanitization helper for the REST API's `GET /api/card/*` route.
  *
- * Split out of `api.ts`. These are the pure, self-contained pieces the
- * `/api/card/*` GET and PATCH handlers lean on:
- *
- * - `PatchOp` — the wire shape of a single patch operation
- * - `navigateToChild` / `parseXmlFragment` — element navigation + fragment parse
- * - `JsonElement` / `sanitizeElement` — JSON-safe element tree for the frontend
+ * Converts a cardworks `ElementNode` (legacy XML card tree) into a
+ * JSON-safe structure for the frontend. The patch helpers that once lived
+ * here went away with the unused `card.patch` endpoint.
  */
 
 import type { ElementNode } from "cardworks";
-
-export type PatchOp =
-  | { op: "set-attr"; path?: string; attr: string; value: string }
-  | { op: "remove-attr"; path?: string; attr: string }
-  | { op: "set-text"; path: string; value: string }
-  | { op: "append-child"; path?: string; xml: string }
-  | { op: "remove-child"; path: string; index: number };
-
-/**
- * Navigate to a child element by a simple path like "section/ingredients/ing[2]".
- * Segments are tag names; [N] picks the Nth match (0-indexed).
- */
-export function navigateToChild(el: ElementNode, pathStr: string): ElementNode | null {
-  const segments = pathStr.split("/").filter(Boolean);
-  let current: ElementNode = el;
-  for (const seg of segments) {
-    const match = seg.match(/^(\w[\w-]*?)(?:\[(\d+)])?$/);
-    if (!match) return null;
-    const tagName = match[1]!;
-    const idx = match[2] !== undefined ? parseInt(match[2], 10) : 0;
-    const matches = current.children.filter(c => c.tagName === tagName);
-    if (idx >= matches.length) return null;
-    current = matches[idx]!;
-  }
-  return current;
-}
-
-/**
- * Parse a simple XML fragment like `<tag attr="val">text</tag>` into an ElementNode.
- * Very basic — handles single elements only.
- */
-export function parseXmlFragment(xml: string): ElementNode | null {
-  const match = xml.match(/^<(\w[\w-]*)((?:\s+[\w-]+="[^"]*")*)(?:\s*\/>|>([\S\s]*?)<\/\1>)$/);
-  if (!match) return null;
-  const tagName = match[1]!;
-  const attrStr = match[2] ?? "";
-  const text = match[3]?.trim();
-
-  const attrs: Record<string, string> = {};
-  const attrRegex = /([\w-]+)="([^"]*)"/g;
-  let attrMatch;
-  while ((attrMatch = attrRegex.exec(attrStr))) {
-    attrs[attrMatch[1]!] = attrMatch[2]!;
-  }
-
-  return {
-    tagName,
-    attrs,
-    children: [],
-    text: text || undefined,
-    comments: {},
-    location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-    dirty: true,
-  } as ElementNode;
-}
 
 /**
  * JSON-safe element node for the frontend.
