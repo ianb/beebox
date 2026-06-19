@@ -78,16 +78,32 @@ if there's a diff against `main` → ask review-or-challenge.
 
 ### Invocation
 
-Plain text, captured to `scratch/` (gitignored work area), then read the tail:
+**Always pipe the prompt via stdin (`codex exec -`), never pass it as a
+positional arg.** Write the prompt to a file under `scratch/` and pipe it in,
+capturing output to `scratch/`:
 
 ```bash
 mkdir -p scratch
-codex exec -s read-only -C "$ROOT" -c 'model_reasoning_effort="high"' \
-  "$PROMPT" 2>&1 | tee scratch/codex-out.md
+cat > scratch/codex-prompt.txt <<'PROMPT_EOF'
+…full prompt here…
+PROMPT_EOF
+codex exec - -s read-only -C "$ROOT" -c 'model_reasoning_effort="high"' \
+  < scratch/codex-prompt.txt > scratch/codex-out.md 2>&1
 ```
-- `$PROMPT` can be passed as the arg, or piped via stdin (`codex exec - … < file`)
-  when it's long. For **plan mode, do NOT embed the plan** — pass a short prompt
-  that names the path and tells codex to read it (see plan mode below).
+
+> ⚠️ **STDIN STALL — this is the #1 way this skill wastes a run.** If you pass
+> the prompt as a positional arg (`codex exec "$PROMPT" …`), `codex exec` *also*
+> reads stdin and waits for EOF. In a backgrounded Bash command stdin never
+> closes, so codex hangs forever printing only *"Reading additional input from
+> stdin..."* — it looks frozen but is just blocked. The `codex exec -` form
+> reads the prompt from stdin and gets a clean EOF when the piped file ends, so
+> it never stalls. (If you ever do pass the prompt as an arg, you MUST add
+> `< /dev/null` to close stdin.) Don't `pkill -f codex` to recover — that also
+> matches the macOS **Codex.app** and any sibling sessions; target the stuck
+> `codex exec` PID instead.
+
+- For **plan mode, do NOT embed the plan** — the prompt file names the plan
+  path and tells codex to read it (see plan mode below).
 - The final review is the **last block before `tokens used`** in the output.
   Codex sometimes prints the final message twice — dedupe. Read the tail:
   ```bash

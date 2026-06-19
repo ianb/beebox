@@ -13,6 +13,50 @@ This is the follow-up round to `remove-cardworks-and-xml.md` (the schema
 migrations). Plan-only; nothing executes until approved and run end-to-end on
 this worktree branch.
 
+> **Load-bearing decision (settled): drop box-local XML schema support.**
+> The built-in `schemas[]` is empty, but boxes can still author *their own* XML
+> card types via `config/schemas/*.ts` + cardworks' `element()` — and two real
+> boxes do (`ledger-copy`/`ledger-shrink-test` define a `bill` schema in
+> `config/schemas/bill.ts`, with 23 `.bill.card` data files). So the XML loader
+> is **not** dead — it's live for box-authored schemas. This plan therefore
+> includes an explicit decision, confirmed with the boxholder, that **boxes may
+> define only frontmatter (`cardSchema`) card types going forward**; the
+> box-local `element()` path is removed, and existing box-local XML schemas
+> (the `bill` schema + its cards) are migrated to frontmatter as part of the
+> box-migration prerequisite before deletion. Without this decision the "dead
+> XML path" premise is false (see Cross-model review applied).
+
+## Cross-model review applied (Codex)
+
+A Codex (different model family) read this plan against the source and
+falsified several claims; the findings are folded in above and throughout:
+
+- **Box-local XML is live** (`test/box-schemas.doctest.md` proves a `gadget`
+  XML card loads; `loadBoxSchemas` segregates `elementSchemas`,
+  `src/schemas/registry.ts:257`). → New load-bearing decision (drop it) above;
+  Track A now *removes* that path rather than treating it as already-dead.
+- **`tsc` is not a complete safety net** (`callback-box/tsconfig.json` covers
+  only `src/**/*`, so `scripts/`, `test/`, box `config/schemas/*.ts` runtime
+  imports, and `dist/` are invisible to it). → Track B's completeness check is
+  grep-based across those surfaces, not typecheck-only.
+- **Don't delete `MIGRATIONS` entries** — `src/core/migrations.ts:6`: *"never
+  reorder or remove existing entries — the `name` is the manifest key."* →
+  Track C keeps the entries; spent XML migrator *scripts* may be stubbed, not
+  unlisted.
+- **Keep-set is not all copy-verbatim:** `SchemaRegistry`
+  (`cardworks/src/schema/registry.ts`) is `ElementSchema`/`.tagName`-oriented,
+  not a generic frontmatter registry; and the lint/`ParseError` `Location`
+  reads `startLine`/`startColumn`, not `line`/`column`
+  (`cardworks/src/lint/format.ts:37`). → Track B adapts these, not copies.
+- **`card`/`todos` tRPC endpoints are XML-only live API** (`card.ts:271`
+  patch, `todos.ts` updateItem) → an explicit keep-rewrite-or-remove decision,
+  not a silent delete (Open question 4).
+- **`ls --format` lives in two files** (the CLI wrapper `cli/commands/ls.ts:14`
+  registers the flag; core evaluates XPath) and the dotted-path helper is
+  private → both surfaces updated (Critical gap resolution).
+- **`dist/cli.mjs` has baked `cardworks` imports** → Track C rebuilds/validates
+  the artifact.
+
 ## Stated preferences this plan trades against
 
 - **`callback-box/CLAUDE.md`** — `CLAUDE.md:28` (current): *"Every built-in
@@ -32,24 +76,32 @@ this worktree branch.
 
 ## What already exists
 
-- **The dead XML loader branch.** `callback-box/src/core/card-io.ts:285`:
-  *"export type LoadedCard = FrontmatterLoadedCard | XmlLoadedCard"*;
-  `card-io.ts:350` falls through to `loadXmlCard` (`card-io.ts:370`) only when
-  the file has no frontmatter / unknown type. With `schemas[]` empty
-  (`src/schemas/registry.ts`), the `elementSchemas` map is always empty and
-  the XML branch is unreachable for any real card. **Rebuild:** collapse the
-  union to `FrontmatterLoadedCard`, delete `loadXmlCard`/`XmlLoadedCard` and
-  the `elementSchemas` plumbing.
+- **The XML loader branch — live for box-local schemas, made dead by this
+  plan.** `callback-box/src/core/card-io.ts:285`: *"export type LoadedCard =
+  FrontmatterLoadedCard | XmlLoadedCard"*; `card-io.ts:350` falls through to
+  `loadXmlCard` (`card-io.ts:370`). Built-in `schemas[]` is empty, but
+  `loadBoxSchemas` populates `elementSchemas` from `config/schemas/*.ts`
+  (`src/schemas/registry.ts:240`/`:257`) and `box-schemas.doctest.md` proves a
+  box `gadget` XML card loads — so the branch is **reachable** today. **Rebuild
+  (after the box-local-XML decision):** migrate existing box-local XML schemas
+  to frontmatter, remove the box-local `element()` path (the `elementSchemas`
+  half of `loadBoxSchemas`, `isElementSchema`, the gadget doctest, and the
+  `element()` scaffolding in `box-templates.ts:31`/`:126`), then collapse the
+  `LoadedCard` union to `FrontmatterLoadedCard` and delete `loadXmlCard`.
 - **The frontmatter primitives, in cardworks.** `cardSchema`/`body`/
   `extractRefs` (`cardworks/src/schema/card-schema.ts`, 249 LOC, imports
-  `zod` only); `splitCardContent` (`cardworks/src/parser/frontmatter.ts`, 65
-  LOC, zero imports); `SchemaRegistry` (`cardworks/src/schema/registry.ts`,
-  63 LOC, generic `Map<string, ZodType>`); `formatLintResults` and the
-  `LintSummary`/`LintResult`/`LintIssue` types (`cardworks/src/lint/format.ts`
-  130 LOC + a handful of types from `lint/lint.ts`); `ParseError`
-  (`cardworks/src/parser/parse.ts`, ~15 LOC of the file). **Reuse by
-  copying:** these ~560 LOC have zero transitive XML dependencies (confirmed:
-  `card-schema.ts` imports only zod; `frontmatter.ts` imports nothing).
+  `zod` only — copy-verbatim); `splitCardContent`
+  (`cardworks/src/parser/frontmatter.ts`, 65 LOC, zero imports — copy-verbatim);
+  `formatLintResults` (`cardworks/src/lint/format.ts`, 130 LOC) plus the
+  `LintSummary`/`LintResult`/`LintIssue` types from `lint/lint.ts`; `ParseError`
+  (`cardworks/src/parser/parse.ts`). **Caveats (Codex-verified, not
+  copy-verbatim):** (a) `SchemaRegistry` (`cardworks/src/schema/registry.ts`)
+  is `ElementSchema`/`.tagName`-keyed, **not** a generic frontmatter registry —
+  adapt it to `CardSchema`/`.type` or check whether callback-box's
+  `registry.ts` still needs it at all post-migration; (b) the `Location` these
+  carry reads `startLine`/`startColumn` (`format.ts:37`), not `line`/`column` —
+  the local minimal `Location` must match. ~560 LOC of *frontmatter* primitives,
+  but the copy is an adaptation, not a verbatim lift.
 - **The XML bulk, in cardworks, with no real consumer.** parser
   (`parse.ts`/`dom-to-object.ts`/`provenance.ts`), `serialize/serialize.ts`,
   `jsx/*`, `loader/*` (`CardLoader`, 473 LOC), `refs/xpath.ts` (334),
@@ -131,14 +183,20 @@ need a frontmatter replacement.
   genuinely still needed it is replaced by a local type or removed with the
   dead path.
 
-**Compiler as the checklist.** After repointing the keep-set (Track B), the
-deleted XML exports vanish; `pnpm typecheck` then enumerates every remaining
-stale consumer. A site the agents flagged as a latent bug (e.g.
-`chat.ts` reading a now-frontmatter landmark via `parseCard`,
-`generate-docs-compile.ts:47` parsing a procedure via `parseCard`) surfaces
-here and is fixed or deleted — none can be silently missed. (These pass tests
-today only because no test exercises them; the typecheck is what closes the
-gap.)
+**Completeness check — typecheck PLUS grep (Codex finding #2).** After
+repointing the keep-set (Track B), the deleted XML exports vanish and
+`pnpm typecheck` enumerates every stale consumer *in `src/`* — surfacing
+latent bugs like `chat.ts` reading a now-frontmatter landmark via `parseCard`
+or `generate-docs-compile.ts:47`. **But `tsc` is not sufficient:**
+`callback-box/tsconfig.json` covers only `src/**/*`, so it misses
+`scripts/*.ts` (e.g. `clean-broken-refs.ts` imports `splitCardContent`),
+`test/`, the `dist/` artifact, and — critically — box `config/schemas/*.ts`,
+which import `"cardworks"` at *runtime* via a custom resolver
+(`registry.ts:97`/`:122`) that no compile pass sees. The completeness gate is
+therefore: `pnpm typecheck && pnpm lint && pnpm test`, **plus**
+`grep -rl 'cardworks' callback-box/{src,scripts,test}` empty, **plus** the
+box-schema audit (`grep -rl 'cardworks' ~/src/boxes/*/config/schemas/`) clean,
+**plus** a `dist` rebuild (Track C).
 
 **First implementation chunk.** Delete the three unambiguously-dead,
 self-contained paths and confirm green: `card-io.ts` XML branch + union
@@ -163,16 +221,22 @@ can be deleted.
 - `frontmatter.ts` ← `cardworks/src/parser/frontmatter.ts` (`splitCardContent`).
   Zero deps — copy verbatim.
 - `registry.ts` ← `cardworks/src/schema/registry.ts` (`SchemaRegistry`).
+  **Adapt, don't copy verbatim:** as shipped it keys on `ElementSchema.tagName`
+  (`registry.ts:27`). First check whether callback-box's `registry.ts` still
+  uses `SchemaRegistry` at all after the migrations (it may be reducible to the
+  plain `cardSchemas` Map + `createCardSchemaMap`); if kept, re-type it to
+  `CardSchema`/`.type`.
 - `lint-format.ts` ← `cardworks/src/lint/format.ts` (`formatLintResults`,
   `formatLintResult`, `formatLintResultsJson`) plus the `LintSummary`/
   `LintResult`/`LintIssue`/`LintOptions` types extracted from
   `cardworks/src/lint/lint.ts`. The types reference a `Location` from the
-  XML `provenance.ts`; redefine a minimal local `Location`
-  (`{ source: string; line?: number; column?: number }`) — the formatter only
-  reads `source`/`line`/`column`.
+  XML `provenance.ts`; redefine a minimal local `Location` matching what the
+  formatter actually reads — **`{ source: string; startLine?: number;
+  startColumn?: number }`** (`format.ts:37` reads `startLine`/`startColumn`,
+  not `line`/`column`).
 - `errors.ts` ← the `ParseError` class extracted from
   `cardworks/src/parser/parse.ts` (used by `search/refresh-file.ts:15`), with
-  the same minimal local `Location`.
+  the same `startLine`/`startColumn` `Location` (`parse.ts:31`).
 
 Then a barrel `src/cards/index.ts` re-exports them, and a codemod-style
 find/replace switches `from "cardworks"` → `from "../cards/index.js"` (path
@@ -190,11 +254,16 @@ inside this chunk (these two files have no transitive deps).
 
 **What.** Remove the `cardworks/` directory, the
 `callback-box/node_modules/cardworks` symlink, the `"cardworks": "workspace:*"`
-dependency (`callback-box/package.json:80`), the `- cardworks` line in
-`pnpm-workspace.yaml:17`, **and the now-spent XML migrators**
-(`scripts/migrate/*.ts` plus the `_warnings.ts`/`_harness.ts` they share, and
-their `MIGRATIONS` entries in `src/core/migrations.ts`); run `pnpm install` to
-settle the lockfile; update docs.
+dependency (`callback-box/package.json:80`), and the `- cardworks` line in
+`pnpm-workspace.yaml:17`; **neutralize (do not unlist) the spent XML
+migrators** — replace each cardworks-importing `scripts/migrate/*.ts` with an
+obsolete no-op stub *while keeping its `MIGRATIONS` entry*, because
+`src/core/migrations.ts:6` is explicit: *"never reorder or remove existing
+entries — the `name` is the manifest key"* (28 entries, several non-XML like
+`attachments`/`doc-to-gdoc`/`strip-type-field` — removing any rewrites what a
+box thinks it has applied); **rebuild and validate `dist/`** (`dist/cli.mjs`
+bakes in `cardworks` imports — a stale committed/deployed artifact would carry
+dead imports); run `pnpm install` to settle the lockfile; update docs.
 
 **Why this needs to change.** The point — no cardworks. The migrators are
 the last cardworks consumer (they read pre-migration XML cards via
@@ -225,22 +294,25 @@ step.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A stale consumer reads a frontmatter card via deleted `parseCard` | Partial | Yes — `tsc` fails to compile once the symbol is gone | Clear (compile error) |
-| `cli/lib/loader.ts` rewrite changes card-listing semantics (misses a card / includes a non-card) | Yes — move/validate doctests | Yes — `isCardFile` filter | Clear (tests / validate output) |
-| `ls --format` removed but a box config / agent still calls it | No | No | **Silent** (format arg ignored) |
-| Copied `extractRefs` drifts from cardworks' (behavior change in ref-checking) | Yes — `cb validate` ref doctests | Yes — copy is verbatim | Clear |
-| Local minimal `Location` loses a field the formatter reads | Yes — validate output doctests | Yes — formatter only reads source/line/column | Clear (format looks wrong) |
-| Box still on XML when cardworks deleted (migrators already gone) | No | Gate: Track C waits until all boxes migrated | Clear-but-fatal (that box's cards won't load) |
-| Lockfile/`pnpm install` leaves a dangling `cardworks` reference | No | Partial — install errors on missing workspace pkg | Clear (install fails) |
+| A stale consumer in `src/` reads a card via deleted `parseCard` | Partial | Yes — `tsc` fails once the symbol is gone | Clear (compile error) |
+| A `scripts/` or box `config/schemas/*.ts` cardworks import (NOT in tsconfig) | No | No — `tsc` doesn't see it | **Silent until runtime** — covered by the grep gate, not the compiler |
+| A box still defines an `element()` schema after box-local XML is dropped | No | Gate: box-schema audit before deletion (`bill` in ledger boxes is the known case) | Clear-but-fatal (that card type won't load) |
+| `cli/lib/loader.ts` rewrite changes card-listing semantics | Yes — move/validate doctests | Yes — `isCardFile` filter | Clear (tests / validate output) |
+| `ls --format` dropped but a box/agent still calls it | No | No | **Silent** (format arg ignored) |
+| `card.patch` / `todos.updateItem` deleted — UI card-edit/todo-edit feature lost | No | Decision pending (Open question 4) | Clear-but-feature-gone |
+| Local minimal `Location` uses wrong field names (`line` vs `startLine`) | Yes — validate output doctests | Yes — match `startLine`/`startColumn` per `format.ts:37` | Clear (format looks wrong) |
+| Removing a `MIGRATIONS` entry shifts a box's applied-manifest | No | Yes — keep entries, stub scripts only | Clear-but-fatal if violated |
+| Stale `dist/cli.mjs` keeps baked `cardworks` imports | No | Yes — Track C rebuilds dist | Clear (import error if dist is run) |
 
 **Critical gap: `ls --format` silent removal.** `commands/ls.ts:74`'s
-XPath `--format` is the one user-facing feature being dropped. If an agent or
-box command still passes `--format`, today it would XPath-extract (broken on
-frontmatter anyway); after removal the arg is ignored silently. **Resolution
-in the plan:** either reduce `--format` to a dotted-path frontmatter accessor
-(reusing the landmark resolver's `lookupField`), or remove the arg from the
-command registration so an unknown-arg error fires. Lean: reduce to
-frontmatter-field lookup — small, and keeps `cb ls --format '{title}'` working.
+XPath `--format` is the one user-facing feature being dropped, and it lives in
+**two** files — the CLI wrapper registers the flag (`cli/commands/ls.ts:14`)
+and core evaluates XPath. If only one is touched the flag can keep being
+accepted and then misbehave. **Resolution:** reduce `--format` to a dotted-path
+frontmatter accessor in *both* surfaces, extracting the landmark resolver's
+currently-private `lookupField` (`core/landmark/resolve.ts`) into a shared
+helper. Lean: keep `cb ls --format '{title}'` working against frontmatter
+fields.
 
 ## Agent-flow / user-flow edge cases
 
@@ -269,26 +341,40 @@ frontmatter-field lookup — small, and keeps `cb ls --format '{title}'` working
 - **Re-implementing the XML loader/serializer/XPath in callback-box.** They
   have zero real consumers; deleting beats porting (CLAUDE.md "don't add
   features beyond what the task requires").
-- **Migrating the boxes themselves.** That is the user's separate task
-  ("I'll set you on migrating the individual boxes"). It is *not* part of this
-  plan's work, but it is a **prerequisite for Track C** (the deletion can't
-  land while a box still has XML cards the about-to-be-deleted migrators would
-  service). Tracks A+B are independent of it.
+- **Migrating the boxes themselves.** The user's separate task — and broader
+  than just data: it now also includes **migrating any box-local `element()`
+  schema to `cardSchema`** (known case: `bill.ts` in `ledger-copy`/
+  `ledger-shrink-test`, + 23 `.bill.card` files) since box-local XML support is
+  being dropped. Not part of this plan's *code* work, but a **prerequisite for
+  Track C** — the deletion can't land while any box still has an XML schema or
+  XML cards. Tracks A+B are independent of it; the box-schema audit is the gate.
 - **Reworking `card-lint.ts` / `body-refs.ts` Markdoc validation.** Already
   callback-box-owned and working; only its cardworks *imports* change.
 - **A general "vendor any npm dep" mechanism.** We copy these specific files;
   no reusable vendoring infra.
-- **Renaming `.card` semantics or the schema-registry API.** `SchemaRegistry`
-  is copied as-is; callers unchanged.
+- **Renaming `.card` semantics.** Unchanged. (Note: `SchemaRegistry` is
+  *adapted*, not copied as-is — see Track B; its `.tagName` keying becomes
+  `.type` or is dropped if unused.)
 
 ## Open design questions
 
 1. ~~**Migrator dependency on the XML parser.**~~ **Resolved:
-   box-migration-first.** Run the migrators against every box, then delete
-   cardworks *and* the now-spent migrators together (Track C). No XML parser is
-   vendored; the migrators die with cardworks once they've done their job. This
-   makes box migration (the user's separate effort) a prerequisite for Track C
-   only — Tracks A+B land first, independent of box state.
+   box-migration-first.** Run the migrators against every box, then (Track C)
+   neutralize the spent migrators — **stub each cardworks-importing
+   `scripts/migrate/*.ts` to an obsolete no-op but keep its `MIGRATIONS` entry**
+   (the entry is an append-only manifest key, `migrations.ts:6`; deleting it
+   would corrupt a box's applied-set). Box migration (which now includes
+   converting box-local XML schemas) is a prerequisite for Track C only; Tracks
+   A+B land first, independent of box state.
+4. **`card.patch` and `todos.updateItem` (XML-only live endpoints).** Both are
+   entirely XML/`CardLoader`-based (`card.ts:271`, `todos.ts`). They were dead
+   the moment todo-list/the cards became frontmatter, but they are *registered
+   API* — so the choice is (a) delete the endpoints (todo-editing-via-UI and
+   card-patching disappear), or (b) rewrite them against frontmatter `card-io`
+   if those UI features are still wanted. Lean: confirm with the user whether
+   the todo-edit / card-patch UI surfaces are used; default to deleting unless
+   they are. This is the one place "delete the dead path" is also a product
+   decision.
 2. **Home for the copied primitives.** `src/cards/` (proposed) vs
    `src/lib/cards/` vs `src/core/cards/`. Lean: `src/cards/` — top-level,
    sibling to `src/schemas/`, reads as "the card primitive layer." Minor;
@@ -311,26 +397,33 @@ the existing "cards are frontmatter" understanding is unchanged.
 ## Implementation order
 
 1. **Track A, chunk 1** — delete the self-contained dead paths (`card-io.ts`
-   XML branch, `search/extract.ts` `xmlDoc`, `ls.ts` `--format`). Green.
-2. **Track A, chunk 2** — delete the remaining dead paths (`transcribe.ts`
-   XML helpers, `procedure-trampoline.ts`, `todos.ts`, `card-lint.ts`
-   fallback) and the type-only `ElementNode`/`ElementSchema`/`Card` carriers.
-3. **Track A, chunk 3** — rewrite the live `CardLoader` users
-   (`cli/lib/loader.ts`, `move-operations.ts`, routers). After this,
-   callback-box imports only the keep-set from cardworks.
+   XML branch, `search/extract.ts` `xmlDoc`, `ls.ts` `--format` in *both*
+   wrapper + core). Green.
+2. **Track A, chunk 2 — drop box-local XML support.** Remove the
+   `elementSchemas` half of `loadBoxSchemas` + `isElementSchema`
+   (`src/schemas/registry.ts`), the `element()` scaffolding in
+   `box-templates.ts`, and the `box-schemas.doctest.md` gadget case; collapse
+   `LoadedCard` to frontmatter-only. (Decision settled in the header.)
+3. **Track A, chunk 3** — delete the remaining dead paths (`transcribe.ts` XML
+   helpers, `procedure-trampoline.ts`, `card-lint.ts` fallback), resolve the
+   `card.patch`/`todos.updateItem` endpoints (Open question 4), and rewrite the
+   live `CardLoader` users (`cli/lib/loader.ts`, `move-operations.ts`, routers).
 4. **Track B** — create `src/cards/` (frontmatter.ts + schema.ts first, then
-   registry/lint-format/errors), repoint all keep-set imports. Now
-   `grep -rl 'from "cardworks"' callback-box/src` is empty.
-5. **[Out of band] Migrate every box** off XML with the migrators (the
-   user's separate effort; can overlap Tracks A+B).
-6. **Track C** — once boxes are migrated, delete cardworks + symlink + dep +
-   workspace entry + the spent migrators, `pnpm install`, update docs. Final
-   `pnpm typecheck && pnpm lint && pnpm test` clean.
+   the *adapted* registry/lint-format/errors), repoint all keep-set imports.
+   Completeness gate: `grep -rl cardworks callback-box/{src,scripts,test}` empty
+   AND typecheck/lint/test green.
+5. **[Out of band] Migrate every box** off XML — both data *and* any box-local
+   `element()` schema → `cardSchema` (the `bill` schema is the known case). The
+   user's separate effort; can overlap Tracks A+B.
+6. **Track C** — once the box-schema audit is clean, delete cardworks + symlink
+   + dep + workspace entry, **stub the spent migrators (keeping `MIGRATIONS`
+   entries)**, `pnpm install`, **rebuild/validate `dist`**, update docs. Final
+   gate clean.
 
-Dependencies: Track C is gated on A+B (no cardworks imports in src) *and* on
-box migration being complete (so the deleted migrators aren't needed). Track
-B's repoint is what makes the deleted XML symbols disappear, so Track A's
-"compiler as checklist" verification happens as B lands. Tracks A+B do not
+Dependencies: Track C is gated on A+B (no cardworks imports in src/scripts/test)
+*and* on box migration + box-schema audit being complete. Track B's repoint is
+what makes the deleted XML symbols disappear, so Track A's compile-time
+verification happens as B lands. Tracks A+B do not
 depend on box state and can land while boxes are migrated.
 
 ## Rollout shape
