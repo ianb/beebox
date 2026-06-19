@@ -4,8 +4,6 @@
 
 // Re-export everything from the registry
 export {
-  schemas,
-  createSchemaRegistry,
   getCardTypes,
   isKnownCardType,
   MemoSchema,

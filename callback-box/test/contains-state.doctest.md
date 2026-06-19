@@ -16,14 +16,12 @@ import {
   rebaseContains,
   saveContainsState,
 } from "../src/core/search/contains-state.js";
-import { schemas, createCardSchemaMap } from "../src/schemas/registry.js";
+import { createCardSchemaMap } from "../src/schemas/registry.js";
 import type { LoadCardContext } from "../src/core/card-io.js";
-import type { ElementSchema } from "cardworks";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const ctx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),
-  elementSchemas: new Map<string, ElementSchema>(schemas.map((s) => [s.tagName, s])),
 };
 
 const MEMO = (text: string, contains?: string) =>

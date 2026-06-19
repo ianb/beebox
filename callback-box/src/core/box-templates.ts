@@ -99,13 +99,9 @@ export default cardSchema("link", {
 ## Available Imports
 
 From \`callback-box/cards\`:
-- \`cardSchema(type, config)\` — define a frontmatter card schema (the default)
+- \`cardSchema(type, config)\` — define a frontmatter card schema
 - \`body(zodSchema)\` — declare the single markdown body field
 - \`type LintIssue\` — the issue type a \`validate\` hook returns (see above)
-
-From \`cardworks\` (legacy — only for \`element()\` XML schemas, see below):
-- \`element(tagName, config)\` — define a legacy XML schema
-- \`escapeText(str)\` / \`escapeAttr(str)\` — XML-escape helpers
 
 From \`zod\`:
 - \`z\` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)
@@ -155,30 +151,6 @@ This will:
 - Register any templates for \`cb create\`
 
 Schema changes are picked up on the next \`cb\` invocation; a running dev server needs a restart.
-
-## Legacy: XML / \`element()\` schemas
-
-Use \`element()\` only when the card body is Markdoc-shaped inline content — nested, attributed
-inline structure that doesn't fit YAML frontmatter. This is why the built-in \`guide\` and
-\`capture-session\` types still use it. For everything else, prefer \`cardSchema\` above.
-
-\`\`\`typescript
-import { element } from "cardworks";
-import { z } from "zod";
-
-export default element("note", {
-  attrs: {
-    status: z.enum(["draft", "final"]).default("draft"),
-  },
-  children: z.array(z.unknown()),
-  instructions: \\\`# Note Cards
-
-Instructions for the agent on how to handle this card type.\\\`,
-});
-\`\`\`
-
-A legacy template's \`generate\` emits XML instead of YAML, using \`escapeText\` / \`escapeAttr\` for
-interpolated values. See the built-in XML schemas in callback-box's \`src/schemas/\` for examples.
 
 ## Tips
 

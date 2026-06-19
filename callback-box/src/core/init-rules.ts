@@ -10,7 +10,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
-import { schemas, cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
+import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -86,16 +86,12 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
 
   const generated: string[] = [];
 
-  // Load box-local schemas alongside built-in ones. Card rules cover
-  // both legacy XML schemas (ElementSchema with `tagName`) and phase-2
-  // frontmatter schemas (CardSchema with `type`); each gets a
-  // path-conditional rule keyed off its filename glob so the agent
-  // loads the right instructions when it reads or edits a matching
+  // Load box-local schemas alongside built-in ones. Each card type (built-in
+  // or box-local) gets a path-conditional rule keyed off its filename glob so
+  // the agent loads the right instructions when it reads or edits a matching
   // `.<type>.card` file.
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const cardRuleSources: Array<{ name: string; instructions: string | undefined }> = [
-    ...schemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
-    ...boxSchemas.elementSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
     ...cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
     ...boxSchemas.cardSchemas.map((s) => ({ name: s.type, instructions: s.instructions })),
   ];

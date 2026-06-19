@@ -10,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { schemas } from "../schemas/registry.js";
+import { cardSchemas } from "../schemas/registry.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../core/reactor/prompts.js";
 import { CHAT_SYSTEM_PROMPT } from "../core/chat-session.js";
 import { buildThreadSystemPrompt } from "../core/chat-thread-session.js";
@@ -96,12 +96,12 @@ async function collectPrompts(): Promise<PromptEntry[]> {
 
   // ── 2. Schema instructions ───────────────────────────────────────
 
-  for (const schema of schemas) {
+  for (const schema of cardSchemas) {
     if (!schema.instructions) continue;
     entries.push({
-      title: `Schema: ${schema.tagName}`,
-      source: `src/schemas/ → ${schema.tagName} schema instructions`,
-      scope: `Injected into agent context when processing a \`*.${schema.tagName}.card\` file. Delivered two ways: (1) appended to the job description in batch processing, and (2) auto-loaded as a .claude/rules/ file (generated when \`cb init\` runs) matching \`**/*.${schema.tagName}.card\`.`,
+      title: `Schema: ${schema.type}`,
+      source: `src/schemas/ → ${schema.type} schema instructions`,
+      scope: `Injected into agent context when processing a \`*.${schema.type}.card\` file. Delivered two ways: (1) appended to the job description in batch processing, and (2) auto-loaded as a .claude/rules/ file (generated when \`cb init\` runs) matching \`**/*.${schema.type}.card\`.`,
       text: schema.instructions,
     });
   }

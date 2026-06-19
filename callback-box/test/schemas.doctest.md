@@ -1,6 +1,6 @@
 # Card Schemas
 
-The schema system registers card types, provides template generators, and validates card XML. Each card type has a tag name, template generator, and optional instructions for agents.
+The schema system registers card types, provides template generators, and validates cards. Each card type has a type name, template generator, and optional instructions for agents.
 
 ```ts setup
 import {
@@ -8,14 +8,12 @@ import {
   QuestionSchema,
   createMemoTemplate,
   createSelectQuestionTemplate,
-  createSchemaRegistry,
   getCardTypes,
   getDefaultTemplate,
 } from "../src/schemas/index.js";
 import { createIntakeJobTemplate } from "../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../src/schemas/calendar-review-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../src/schemas/webpage.js";
-import { parseCard } from "cardworks";
 ```
 
 ## Schema Registry
@@ -40,8 +38,7 @@ getCardTypes().includes("webpage")
 
 ```
 
-XML schemas have a `tagName`; Phase 2 frontmatter schemas (memo,
-email-thread, etc.) carry a `type` instead.
+Each frontmatter schema (memo, email-thread, etc.) carries a `type`:
 
 ```
 MemoSchema.type
@@ -55,17 +52,9 @@ WebpageSchema.type
 
 ```
 
-The full registry of XML schemas is available via `createSchemaRegistry()`:
-
-```
-const registry = await createSchemaRegistry();
-registry.get("memo")
-=> «*»
-```
-
 ## Templates
 
-Template generators produce XML card content for the core card types. All templates escape special characters and produce well-formed XML.
+Template generators produce frontmatter card content for the core card types.
 
 ## Memo
 
