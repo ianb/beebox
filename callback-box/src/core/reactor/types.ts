@@ -10,18 +10,11 @@ export interface JobCardInfo {
   priority: "normal" | "low";
 }
 
-/** A job card with its content loaded and procedure detection done. */
+/** A job card with its content loaded. */
 export interface JobWithContent {
   card: JobCardInfo;
   relPath: string;
   content: string;
-  procedureInfo: ProcedureJobInfo | null;
-}
-
-/** Info extracted from a job card that contains a `<procedure ref="...">` element. */
-export interface ProcedureJobInfo {
-  procedureRef: string;
-  directive?: string;
 }
 
 /** Options passed to processBatchJobs / processChatJobs. */

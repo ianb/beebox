@@ -33,7 +33,6 @@ import {
   resetAllSessions,
 } from "../chat-reactor-sessions.js";
 import { findJobCards } from "./job-discovery.js";
-import { detectProcedureInJob, processProcedureJobs } from "./procedure-trampoline.js";
 import { processBatchJobs } from "./batch-jobs.js";
 import { processChatJobs } from "./chat-jobs.js";
 import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
@@ -295,15 +294,8 @@ async function runOneCycle(params: RunCycleParams): Promise<ReactorResult> {
     onLog?.(`  - box/jobs/${card.file}${label}\n`);
   }
 
-  // Read job cards and partition into procedure jobs vs agent jobs
-  const jobsWithContent = await readJobsWithContent({ jobCards, boxRoot });
-  const procedureJobs = jobsWithContent.filter((j) => j.procedureInfo !== null);
-  const agentJobs = jobsWithContent.filter((j) => j.procedureInfo === null);
-
-  // Process procedure jobs first (trampoline)
-  if (procedureJobs.length > 0) {
-    await processProcedureJobs({ procedureJobs, boxRoot, dryRun, onLog });
-  }
+  // Read job cards; every job is handled by an agent.
+  const agentJobs = await readJobsWithContent({ jobCards, boxRoot });
 
   if (dryRun && agentJobs.length === 0) {
     return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
@@ -326,9 +318,8 @@ async function runOneCycle(params: RunCycleParams): Promise<ReactorResult> {
 }
 
 /**
- * Read each job card's content and detect whether it's a procedure job.
- * Unreadable cards are queued with empty content (procedureInfo null) so the
- * batch path reports "(could not read)" rather than crashing the cycle.
+ * Read each job card's content. Unreadable cards are queued with empty content
+ * so the batch path reports "(could not read)" rather than crashing the cycle.
  */
 async function readJobsWithContent(opts: {
   jobCards: Awaited<ReturnType<typeof findJobCards>>;
@@ -341,11 +332,10 @@ async function readJobsWithContent(opts: {
     const absPath = path.join(boxRoot, jp);
     try {
       const content = await fs.readFile(absPath, "utf-8");
-      const procedureInfo = await detectProcedureInJob(content, absPath);
-      jobsWithContent.push({ card, relPath: jp, content, procedureInfo });
+      jobsWithContent.push({ card, relPath: jp, content });
     } catch (e) {
       console.warn(`Could not read job card ${jp}:`, e);
-      jobsWithContent.push({ card, relPath: jp, content: "", procedureInfo: null });
+      jobsWithContent.push({ card, relPath: jp, content: "" });
     }
   }
   return jobsWithContent;

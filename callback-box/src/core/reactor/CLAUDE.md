@@ -10,7 +10,6 @@ See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
 | `batch-jobs.ts` | Batch processing: all jobs in one agent session |
 | `chat-jobs.ts` | Chat processing: per-thread sessions with resume |
 | `job-discovery.ts` | Scan `box/jobs/` for pending job cards |
-| `procedure-trampoline.ts` | Detect and run procedure jobs without an agent |
 | `prompts.ts` | System and user prompt builders |
 | `subprocess.ts` | `cb wakeup` and `cb finalize` subprocess wrappers |
 | `types.ts` | Shared internal types |

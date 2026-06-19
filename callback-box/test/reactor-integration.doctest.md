@@ -1,7 +1,7 @@
 # Reactor Integration Tests
 
 Integration tests for the reactor with fake agents. Tests batch/chat
-processing, procedure trampoline, lock management, and cycle behavior.
+processing, lock management, and cycle behavior.
 
 ```ts setup
 import {
@@ -263,55 +263,6 @@ result.jobsProcessed
 // Each chat job got its own agent
 agents.length
 => 2
-
-await box.cleanup();
-```
-
-## Procedure trampoline
-
-### Procedure job bypasses agent entirely
-
-```
-const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/simple.procedure.card", `---
-name: simple
-steps:
-  - id: do-it
-    run:
-      shells:
-        - |
-          true
----
-`);
-await box.write("box/jobs/run-proc.job.card", `<job><procedure ref="simple" /></job>`);
-box.commitAll("Add procedure job");
-
-let agentCreated = false;
-const agentFactory = (opts) => {
-  agentCreated = true;
-  return createFakeAgent({ name: opts.name, act: async () => ({ success: true }) });
-};
-
-const logs = [];
-const result = await runReactor({
-  boxRoot: box.root,
-  ...testOverrides,
-  createAgent: agentFactory,
-  onLog: (text) => logs.push(text),
-});
-
-// Procedure ran without creating an agent
-agentCreated
-=> false
-
-result.success
-=> true
-
-result.jobsProcessed
-=> 1
-
-result.jobsRemaining
-=> 0
 
 await box.cleanup();
 ```

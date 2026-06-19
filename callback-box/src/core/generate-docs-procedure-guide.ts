@@ -35,20 +35,6 @@ cb procedure run process-captures --directive "Only process today's session"
 
 The directive is also recorded as the \`directive\` field on the procedure-run card for auditability. Step prompts can reference "the Directive" to act on it.
 
-## Procedures in Jobs
-
-Job cards can trigger a procedure directly using the \`<procedure>\` element:
-
-\`\`\`xml
-<some-job-type>
-<procedure ref="process-captures">
-<directive>Focus on the meeting recordings</directive>
-</procedure>
-</some-job-type>
-\`\`\`
-
-The reactor detects \`<procedure ref="...">\` in job cards and runs the procedure engine directly — no nested agent session is needed. The job is automatically finished when the procedure completes. If the procedure fails, the job remains for retry.
-
 ## How Steps Work
 
 Each step has three optional phases:
