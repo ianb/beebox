@@ -57,6 +57,31 @@ falsified several claims; the findings are folded in above and throughout:
 - **`dist/cli.mjs` has baked `cardworks` imports** → Track C rebuilds/validates
   the artifact.
 
+A **second Codex pass on the revised plan** (the revision was same-model, so it
+carried my blind spots) found more:
+
+- **Box-local frontmatter schemas need a public import contract.** Box
+  `config/schemas/*.ts` import bare `"cardworks"` via a custom tsx resolver
+  (`SCHEMA_DEPS = {"cardworks","zod"}`, `src/schemas/registry.ts:97`), and
+  package.json has **no `exports` map** (`package.json:6`). After cardworks is
+  deleted, a migrated box schema (e.g. frontmatter `bill.ts`) has nothing to
+  import `cardSchema` from. → **New Track B requirement:** expose the primitives
+  under a public specifier — add an `exports` entry and have box schemas import
+  `callback-box/cards`, or keep `"cardworks"` as a resolver alias mapping to
+  `src/cards/`. This must land *before* deletion.
+- **The box-local-`element()` removal (Track A chunk 2) is NOT box-state
+  independent** — it breaks the ledger boxes' live `bill` schema, so it's gated
+  on the box-schema audit like Track C, not free to ship early.
+- **Drop `SchemaRegistry`, don't copy it** — it's reached only through the XML
+  `CardLoader`/`load-context.ts` bridges; once those go it has no user.
+- **`todos` is broken on *both* sides** — `TodoListView` parses XML
+  (`TodoListView.tsx:31`) and frontmatter responses set `element: undefined`
+  (`card.ts:152`), so the render *and* the edit need a frontmatter rewrite.
+- **`card.patch` removal has a REST-route + doctest tail**
+  (`api-card-routes.ts:71-120`, `test/routes-api.doctest.md:112-128`).
+- **Migrator wording fix** — Track C *stubs* the migrator scripts in place
+  (files remain, exit 0); it does not "delete" them.
+
 ## Stated preferences this plan trades against
 
 - **`callback-box/CLAUDE.md`** — `CLAUDE.md:28` (current): *"Every built-in
@@ -220,12 +245,18 @@ can be deleted.
   Imports zod only — copy verbatim.
 - `frontmatter.ts` ← `cardworks/src/parser/frontmatter.ts` (`splitCardContent`).
   Zero deps — copy verbatim.
-- `registry.ts` ← `cardworks/src/schema/registry.ts` (`SchemaRegistry`).
-  **Adapt, don't copy verbatim:** as shipped it keys on `ElementSchema.tagName`
-  (`registry.ts:27`). First check whether callback-box's `registry.ts` still
-  uses `SchemaRegistry` at all after the migrations (it may be reducible to the
-  plain `cardSchemas` Map + `createCardSchemaMap`); if kept, re-type it to
-  `CardSchema`/`.type`.
+- **`SchemaRegistry` — drop it, don't copy** (Codex round 2). It keys on
+  `ElementSchema.tagName` and is reached only through the XML `CardLoader` /
+  `load-context.ts` bridges (`cli/lib/loader.ts:7`, `load-context.ts:7`); once
+  Track A removes those bridges it has no user. callback-box's own
+  `cardSchemas` Map + `createCardSchemaMap` already cover frontmatter lookup.
+- **Public import specifier for box-local schemas (must land before Track C).**
+  Box `config/schemas/*.ts` import bare `"cardworks"` via the tsx resolver
+  (`registry.ts:97`); package.json has no `exports` map (`package.json:6`).
+  Add an `exports` entry exposing `src/cards/` as `callback-box/cards` (or keep
+  `"cardworks"` as a resolver alias → `src/cards/`), and update the box-schema
+  template/scaffolding + the migrated `bill.ts` to import from it. Without this,
+  every future frontmatter box schema breaks at runtime when cardworks is gone.
 - `lint-format.ts` ← `cardworks/src/lint/format.ts` (`formatLintResults`,
   `formatLintResult`, `formatLintResultsJson`) plus the `LintSummary`/
   `LintResult`/`LintIssue`/`LintOptions` types extracted from
@@ -268,14 +299,17 @@ dead imports); run `pnpm install` to settle the lockfile; update docs.
 **Why this needs to change.** The point — no cardworks. The migrators are
 the last cardworks consumer (they read pre-migration XML cards via
 `parseCard`); once every box is migrated (decided: box-migration-first) they
-have done their job and are deleted in the same push.
+have done their job and are stubbed in place (files remain, exit 0) in the
+same push — **not deleted** (their `MIGRATIONS` entries are manifest keys).
 
 **Gated on box migration.** This track runs only once (1) Tracks A+B make
-`grep -rl 'from "cardworks"' callback-box/src` empty, **and** (2) every box
-has been migrated off XML so the migrators are no longer needed. Box
-migration is the user's separate effort; Tracks A+B do not wait on it (they
-touch only callback-box source), so they land first while boxes are migrated
-out of band. Doc updates: `CLAUDE.md:87` (the cardworks bullet),
+`grep -rl 'from "cardworks"' callback-box/{src,scripts,test}` empty, **and**
+(2) the box-schema audit is clean — every box migrated off XML *data* and every
+box-local `element()` schema converted to `cardSchema`. Note (Codex round 2):
+**Track A chunk 2 — removing box-local `element()` loading — is itself gated on
+that audit**, since it breaks any box still defining an XML schema (the ledger
+`bill` schema). So "A+B land first, box-independent" holds for everything
+*except* chunk 2, which ships with Track C's gate. Doc updates: `CLAUDE.md:87` (the cardworks bullet),
 `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 it now means "from `src/cards/`"); retire `docs/migrations.md` references to
 the deleted migrators as appropriate.
@@ -347,7 +381,9 @@ fields.
   `ledger-shrink-test`, + 23 `.bill.card` files) since box-local XML support is
   being dropped. Not part of this plan's *code* work, but a **prerequisite for
   Track C** — the deletion can't land while any box still has an XML schema or
-  XML cards. Tracks A+B are independent of it; the box-schema audit is the gate.
+  XML cards. Most of Tracks A+B are independent of it — **except Track A chunk 2
+  (box-local `element()` removal), which is gated on the box-schema audit** like
+  Track C, since it breaks any box still defining an XML schema.
 - **Reworking `card-lint.ts` / `body-refs.ts` Markdoc validation.** Already
   callback-box-owned and working; only its cardworks *imports* change.
 - **A general "vendor any npm dep" mechanism.** We copy these specific files;
@@ -364,21 +400,25 @@ fields.
    `scripts/migrate/*.ts` to an obsolete no-op but keep its `MIGRATIONS` entry**
    (the entry is an append-only manifest key, `migrations.ts:6`; deleting it
    would corrupt a box's applied-set). Box migration (which now includes
-   converting box-local XML schemas) is a prerequisite for Track C only; Tracks
-   A+B land first, independent of box state.
+   converting box-local XML schemas) is a prerequisite for Track C *and* for
+   Track A chunk 2 (box-local `element()` removal); the rest of A+B is
+   box-independent.
 4. ~~**`card.patch` and `todos.updateItem`.**~~ **Investigated — they differ:**
    - **`card.patch` — delete.** No frontend caller (no `trpc` call, no raw
      `fetch` to the `/api/card/*` PATCH route). Genuinely unused; remove the
-     PATCH handler + its XML serialization (`api-card-patch.ts`, `card.ts:271`).
-   - **`todos.updateItem` — rewrite to frontmatter (do NOT delete).** It is the
-     mutation behind the todo-list checkbox UI: `TodoListView` (the registered
-     `todo-list` renderer, `renderers/todo-list.tsx:11`) calls it on toggle. But
-     it still uses the XML `CardLoader` and XML `<item>` elements (`todos.ts:21`/
-     `:30`/`:58`) while `todo-list` is now frontmatter with an `items:` YAML
-     array (`schemas/todo-list.ts:36`/`:41`) — so the feature is **already
-     broken** (a latent bug the todo-list migration left behind; toggling errors
-     today). Fix: load via `card-io`, mutate the `items` array, reserialize via
-     `yaml` — the standard frontmatter parse-mutate-write. This removes the last
+     PATCH handler + its XML serialization (`api-card-patch.ts`, `card.ts:271`),
+     **and the REST route + its doctest** (`api-card-routes.ts:71-120`,
+     `test/routes-api.doctest.md:112-128`) — Codex round 2.
+   - **`todos` — rewrite BOTH sides to frontmatter (do NOT delete).** The whole
+     todo-list UI is XML-based and **already broken** on frontmatter cards (a
+     latent bug the todo-list migration left behind): the renderer
+     `TodoListView` parses XML `<item>` elements (`TodoListView.tsx:31`) but
+     frontmatter card responses set `element: undefined` (`card.ts:152`), so it
+     shows "No todo list data"; and the `todos.updateItem` mutation uses the XML
+     `CardLoader` (`todos.ts:21`/`:30`/`:58`) while the schema is frontmatter
+     `items:` (`schemas/todo-list.ts:36`/`:41`). Fix: **frontend** reads
+     `data.frontmatter.items`; **backend** parses via `card-io`, mutates
+     `fields.items`, writes via `serializeCardText`. Removes the last
      `CardLoader`/`ElementNode` use in the webapp *and* fixes a live bug.
 2. **Home for the copied primitives.** `src/cards/` (proposed) vs
    `src/lib/cards/` vs `src/core/cards/`. Lean: `src/cards/` — top-level,
@@ -404,11 +444,14 @@ the existing "cards are frontmatter" understanding is unchanged.
 1. **Track A, chunk 1** — delete the self-contained dead paths (`card-io.ts`
    XML branch, `search/extract.ts` `xmlDoc`, `ls.ts` `--format` in *both*
    wrapper + core). Green.
-2. **Track A, chunk 2 — drop box-local XML support.** Remove the
-   `elementSchemas` half of `loadBoxSchemas` + `isElementSchema`
-   (`src/schemas/registry.ts`), the `element()` scaffolding in
-   `box-templates.ts`, and the `box-schemas.doctest.md` gadget case; collapse
-   `LoadedCard` to frontmatter-only. (Decision settled in the header.)
+2. **Track A, chunk 2 — drop box-local XML support (GATED on the box-schema
+   audit; breaks any box still on `element()`).** Remove the `elementSchemas`
+   half of `loadBoxSchemas` + `isElementSchema`, `createSchemaRegistry`/the XML
+   side of `getAllSchemas`/`getSearchableTypes` (`src/schemas/registry.ts`),
+   `load-context.ts`'s `elementSchemas`, the XML branch of `agent-guide/cards.ts`
+   and `generate-docs.ts:420`, the `element()` scaffolding in `box-templates.ts`,
+   and the `box-schemas.doctest.md` gadget case; collapse `LoadedCard` to
+   frontmatter-only. (Decision settled in the header; ships with Track C's gate.)
 3. **Track A, chunk 3** — delete the remaining dead paths (`transcribe.ts` XML
    helpers, `procedure-trampoline.ts`, `card-lint.ts` fallback), resolve the
    `card.patch`/`todos.updateItem` endpoints (Open question 4), and rewrite the
