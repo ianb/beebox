@@ -187,7 +187,7 @@ async function runHookMode(): Promise<never> {
   const boxRoot = await requireBoxRoot();
   const loader = await createLoader(boxRoot);
   const ctx = await buildLoadContext(boxRoot);
-  const summary = await lintCardsDispatch([fp], { loader, ctx });
+  const summary = await lintCardsDispatch([fp], { boxRoot, loader, ctx });
   const stale = await staleContainsWarning(boxRoot, {
     relPath: path.relative(boxRoot, fp),
     ctx,
@@ -233,14 +233,14 @@ async function collectStagedResults({ boxRoot, loader, ctx, resolved, json }: Co
   if (all.length === 0 && !json) {
     console.log("No staged cards to validate.");
   }
-  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { loader, ctx }) : null;
+  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { boxRoot, loader, ctx }) : null;
   return { cardSummary, mdSummary: null, attachErrors: [], claudeMdWarnings: [] };
 }
 
 /** Validate every card, markdown file, and attach layout in the box. */
 async function collectAllResults({ boxRoot, loader, ctx }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = (await loader.listCards()).filter((p) => !isTrashedCard(p));
-  const cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
+  const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, loader, ctx });
   const mdFiles = await findMarkdownFiles(boxRoot);
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
@@ -249,7 +249,7 @@ async function collectAllResults({ boxRoot, loader, ctx }: CollectArgs): Promise
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
-async function collectExplicitResults({ loader, ctx, resolved }: CollectArgs): Promise<ValidationResults> {
+async function collectExplicitResults({ boxRoot, loader, ctx, resolved }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = resolved.filter(isCardFile);
   const mdPaths = resolved.filter(isMarkdownFile);
   const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
@@ -257,7 +257,7 @@ async function collectExplicitResults({ loader, ctx, resolved }: CollectArgs): P
     console.error(`Error: not a card or markdown file: ${unknown.join(", ")}`);
     process.exit(1);
   }
-  const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { loader, ctx }) : null;
+  const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, loader, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths) : null;
   return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }

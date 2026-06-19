@@ -33,8 +33,19 @@ import {
 import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
+import { resolveRefExists } from "./ref-exists.js";
 
 export interface LintDispatchOptions {
+  /**
+   * Box root, used to resolve box-root-absolute (`/…`) refs during the
+   * broken-ref walk (see resolveRefExists).
+   */
+  boxRoot: string;
+  /**
+   * Cardworks XML loader — only still used by the legacy XML lint fallback
+   * (lintCard) below; the frontmatter path no longer needs it. Removed with
+   * that fallback when cardworks goes (Track C4).
+   */
   loader: ICardLoader;
   ctx: LoadCardContext;
 }
@@ -115,8 +126,8 @@ async function lintFrontmatterCard(input: {
   const warnings: LintIssue[] = [];
   for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs]) {
     try {
-      const resolved = await options.loader.resolveRef(ref, path);
-      if (!resolved.exists) {
+      const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
+      if (!exists) {
         warnings.push({
           type: "reference",
           severity: "warning",

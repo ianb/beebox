@@ -108,7 +108,7 @@ async function runCardLint(cwd: string, filePath: string): Promise<string | null
   try {
     const loader = await createLoader(cwd);
     const ctx = await buildLoadContext(cwd);
-    const summary = await lintCardsDispatch([filePath], { loader, ctx });
+    const summary = await lintCardsDispatch([filePath], { boxRoot: cwd, loader, ctx });
     if (summary.totalErrors === 0 && summary.totalWarnings === 0) return null;
     const formatted = formatLintResults(summary, { colors: false });
     return `Card validation warning for ${filePath}:\n${formatted}`;

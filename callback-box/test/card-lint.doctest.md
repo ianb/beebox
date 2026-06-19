@@ -83,7 +83,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x.email-thread.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -103,7 +103,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/broken.email-thread.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 1
@@ -127,7 +127,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/notes/drift.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -153,7 +153,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -182,7 +182,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/notes/Wordy.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -214,7 +214,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -244,10 +244,59 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalWarnings
 => 0
+```
+
+## Ref existence honors `@version` stripping and `attach/` scope
+
+The broken-ref walk resolves refs the same way the cards do: a version-like
+`@x.y.z` suffix is stripped before the file is located (so a versioned ref to
+an existing card is not reported broken), and an `attach/`-prefixed ref resolves
+into the referring card's `<basename>.attach/` scope. These mirror the cardworks
+loader semantics the walk replaced.
+
+A versioned ref to an existing target lints clean — the `@1.2.3` is not treated
+as part of the filename:
+
+```
+const box = await makeTmpBox();
+await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
+await box.write(
+  "box/notes/Ver.doc.card",
+  "---\ntype: doc\ntitle: V\n---\nSee {% source ref=\"/box/people/dana.person.card@1.2.3\" as=\"x\" %}{% /source %}\n",
+);
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Ver.doc.card")],
+  { boxRoot: box.root, loader, ctx },
+);
+result.totalWarnings
+=> 0
+```
+
+An `attach/` ref resolving into the card's attach scope is clean; a missing one
+in the same scope warns:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/notes/Note.doc.card",
+  "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" as=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" as=\"b\" %}{% /source %}\n",
+);
+await box.write("box/notes/Note.attach/photo.jpg", "JPG");
+const loader = await createLoader(box.root);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Note.doc.card")],
+  { boxRoot: box.root, loader, ctx },
+);
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message.includes("attach/missing.jpg does not exist")
+=> true
 ```
 
 ## XML cards still flow through the existing cardworks lintCard path
@@ -261,7 +310,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/Note.memo.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -281,7 +330,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/Plan.attach/Plan.commentary.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -302,7 +351,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/Stale.commentary.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -326,7 +375,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/RefFree.commentary.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -348,7 +397,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/Good.extfile.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 0
@@ -365,7 +414,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/BadHref.extfile.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.results[0]!.errors[0]!.message.includes("must be a file: URL")
 => true
@@ -382,7 +431,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/BadVer.extfile.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker")
 => true
@@ -408,7 +457,7 @@ await box.write(
 const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/Bad.gadget.card"), box.path("store/Ok.gadget.card")],
-  { loader, ctx },
+  { boxRoot: box.root, loader, ctx },
 );
 result.totalErrors
 => 1
