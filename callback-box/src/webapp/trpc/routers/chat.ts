@@ -8,9 +8,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseCard, type ElementNode } from "cardworks";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
+import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
@@ -40,43 +40,23 @@ export interface PickerLandmark {
   olderSessions: PickerSession[];
 }
 
-function findNavigation(element: ElementNode): ElementNode | null {
-  for (const child of element.children) {
-    if (child.tagName === "navigation") return child;
-  }
-  return null;
-}
-
-function readChildText(navigation: ElementNode | null, tagName: string): string {
-  if (!navigation) return "";
-  for (const child of navigation.children) {
-    if (child.tagName === tagName && typeof child.text === "string") {
-      return child.text.trim();
-    }
-  }
-  return "";
-}
-
+/**
+ * Pull the navigation `symbol`'s text and image src (if any). A string symbol
+ * is text; a `{ src }` symbol is an image whose path is resolved from "relative
+ * to the landmark directory" to "box-relative" so the frontend can request it.
+ */
 function readSymbol(
-  navigation: ElementNode | null,
+  navigation: LandmarkNavigationData | undefined,
   { landmarkDir, boxRoot }: { landmarkDir: string; boxRoot: string },
 ): { text: string; src: string | null } {
-  if (!navigation) return { text: "", src: null };
-  for (const child of navigation.children) {
-    if (child.tagName !== "symbol") continue;
-    const rawSrc = child.attrs["src"];
-    let src: string | null = null;
-    if (typeof rawSrc === "string" && rawSrc !== "") {
-      const absolute = path.resolve(landmarkDir, rawSrc);
-      src = path.relative(boxRoot, absolute);
-    }
-    const text = typeof child.text === "string" ? child.text.trim() : "";
-    return { text, src };
-  }
-  return { text: "", src: null };
+  const symbol = navigation === undefined ? undefined : navigation.symbol;
+  if (symbol === undefined) return { text: "", src: null };
+  if (typeof symbol === "string") return { text: symbol.trim(), src: null };
+  const absolute = path.resolve(landmarkDir, symbol.src);
+  return { text: "", src: path.relative(boxRoot, absolute) };
 }
 
-interface LandmarkSummary {
+export interface LandmarkSummary {
   dir: string;
   label: string;
   symbol: string;
@@ -85,9 +65,15 @@ interface LandmarkSummary {
 
 /**
  * Like `landmarks.list` but without resolving links/expand — just the
- * tile-level metadata the picker needs.
+ * tile-level metadata the picker needs. Reads each card's YAML frontmatter
+ * `navigation` (label + symbol); cards whose frontmatter doesn't parse as a
+ * landmark are skipped.
+ *
+ * Exported for the chat-picker regression doctest: this read once used the XML
+ * `parseCard`, which silently threw on every (now-frontmatter) landmark card
+ * and left the picker landmark-less.
  */
-async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]> {
+export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]> {
   const matches = await glob("**/*.landmark.card", {
     cwd: boxRoot,
     nodir: true,
@@ -97,24 +83,24 @@ async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSummary[]
   const out: LandmarkSummary[] = [];
   for (const relPath of matches) {
     const absPath = path.join(boxRoot, relPath);
-    let element: ElementNode;
+    let fields;
     try {
       const content = await fs.readFile(absPath, "utf-8");
-      element = await parseCard(content, { source: absPath });
+      fields = parseLandmarkFields(content);
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.warn(`Skipping unreadable/unparsable landmark card ${absPath}:`, e);
+        console.warn(`Skipping unreadable landmark card ${absPath}:`, e);
       }
       continue;
     }
-    if (element.tagName !== "landmark") continue;
+    if (fields === null) continue;
 
+    const navigation = fields.navigation;
     const dir = path.dirname(relPath);
-    const navigation = findNavigation(element);
     const symbol = readSymbol(navigation, { landmarkDir: path.dirname(absPath), boxRoot });
     out.push({
       dir: dir === "." ? "" : dir,
-      label: readChildText(navigation, "label") || path.basename(relPath, ".landmark.card"),
+      label: (navigation === undefined ? "" : navigation.label ?? "") || path.basename(relPath, ".landmark.card"),
       symbol: symbol.text,
       symbolSrc: symbol.src,
     });
