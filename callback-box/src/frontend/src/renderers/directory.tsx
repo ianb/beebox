@@ -9,7 +9,6 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { Accordion } from "../components/ui/Accordion";
-import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
@@ -74,17 +73,15 @@ function CardAccordionBody({
     path: card.path,
     kind: card.kind,
     type: card.type,
-    raw: card.raw,
     frontmatter: card.frontmatter,
     body: card.body,
   };
 
+  // A frontmatter card always matches at least the Source/Card renderers.
   const renderers = getRenderers(cardPath, fileData);
-  if (renderers.length > 0) {
-    const Renderer = renderers[0].Component;
-    return <Renderer data={fileData} onNavigate={onNavigate} />;
-  }
-  return <Pre size="xs">{card.raw}</Pre>;
+  if (renderers.length === 0) return null;
+  const Renderer = renderers[0].Component;
+  return <Renderer data={fileData} onNavigate={onNavigate} />;
 }
 
 function DirectoryRenderer({ data, onNavigate }: RendererProps) {

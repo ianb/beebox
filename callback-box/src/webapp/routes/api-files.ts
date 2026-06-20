@@ -61,6 +61,7 @@ const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf",
   ".json": "application/json",
   ".md": "text/markdown",
+  ".card": "text/markdown",
   ".txt": "text/plain",
   ".csv": "text/csv",
   ".html": "text/html",
@@ -101,9 +102,11 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         return reply.status(403).send({ error: "Access denied" });
       }
 
-      // Don't serve .card files or dotfiles through this endpoint
-      if (resolved.endsWith(".card") || path.basename(resolved).startsWith(".")) {
-        return reply.status(403).send({ error: "Use card API for card files" });
+      // Don't serve dotfiles through this endpoint. Cards (.card) are plain
+      // text and served like any other file — the Source view fetches them
+      // here; card.get is for the parsed/validated form.
+      if (path.basename(resolved).startsWith(".")) {
+        return reply.status(403).send({ error: "Access denied" });
       }
 
       try {

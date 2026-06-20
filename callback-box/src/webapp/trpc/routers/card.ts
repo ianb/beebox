@@ -19,8 +19,6 @@ export interface FrontmatterCardResponse {
   path: string;
   kind: "frontmatter";
   type: string;
-  /** Raw card file text (frontmatter + markdown body). */
-  raw: string;
   frontmatter: Record<string, unknown> | undefined;
   body: string | undefined;
   validationError: string | undefined;
@@ -68,7 +66,6 @@ function loadFrontmatterCard(input: {
     path: source,
     kind: "frontmatter",
     type,
-    raw,
     frontmatter,
     body,
     validationError,
@@ -119,7 +116,6 @@ export const cardRouter = router({
         path: input.path,
         kind: "frontmatter" as const,
         type: fileType ?? "",
-        raw,
         frontmatter: undefined as Record<string, unknown> | undefined,
         body: split.hasFrontmatter ? split.body : raw,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",

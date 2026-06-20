@@ -157,7 +157,6 @@ function useFileData(path: string): LoadResult {
           path: card.path,
           kind: card.kind,
           type: card.type,
-          raw: card.raw,
           frontmatter: card.frontmatter,
           body: card.body,
         },
