@@ -53,11 +53,17 @@ one-line why). Mark status as you go.
 
 ## B. Worktree / finish
 
-- [ ] **B1 — superpowers `finishing-a-development-branch` vs our `finish`
-  skill.** Theirs: verify tests → offer merge/PR/keep/discard, with
-  cleanup-provenance (only removes worktrees it created). Decide: does `finish`
-  already cover the option-handling + provenance, or graft gaps? → fold-in or
-  skip.
+- [x] **B1 — superpowers `finishing-a-development-branch` vs our `finish`.
+  DONE → `skip`.** `finish` is more opinionated + deeper-integrated (ship by
+  merge-to-main → auto-deploy; no PRs) and its test gate is stronger (the
+  "NEVER acceptable" + anti-rationalization; and because it pulls main into the
+  worktree *before* testing, the tested tree == what fast-forwards onto main).
+  Theirs adds a 4-option menu (merge/PR/keep/discard) that's N/A for our
+  merge-only model, and mechanical worktree-removal pitfalls (cd-to-main-root
+  before remove, prune after, merge-before-branch-delete, provenance) — **all
+  already handled by `.claude/hooks/session-end.sh`, more robustly** (it also
+  survives an interrupted mid-removal). Nothing to fold. Its Common-Mistakes /
+  Red-Flags structure is another bulletproofing example → F2.
 
 ## C. Debugging (we currently wing it — and it works okay)
 
