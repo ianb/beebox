@@ -88,11 +88,14 @@ on that path from where you are — promote the helper to a shared location
 (suggested: `tools/run-on-server.ts` at the monorepo root) and update both
 callers. Don't write a fresh `ssh root@... 'command'` line.
 
-## Code runs from source, not dist
+## Prod runs the bundled `dist/cli.mjs`
 
-`cb serve` uses `node --import tsx` to execute TypeScript source directly. **Building to `dist/` and deploying that has no effect** — the server reads `.ts` files. `deploy/deploy.sh` rsyncs source files to `/opt/callback/callback-box/src/`.
+`cb serve` runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.mjs`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle locally and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes.
 
-Consequence: if a behavior seems not to have deployed, check that the file got rsynced as `.ts`, not that `dist/` is up to date.
+Consequences:
+
+- The bundle lives at `dist/` — one level below the package root, **not** `dist/webapp/`. So `import.meta.dirname` inside the running code is `/opt/callback/callback-box/dist`. Resolve package-relative asset paths (frontend dist, templates, tsconfig) via `src/lib/package-root.ts` `PACKAGE_ROOT` (walks up to the `callback-box` package.json — correct under both the bundle and tsx), never a hardcoded `import.meta.dirname + "../.."` that assumes a 2-level layout. A `../..` path that worked under tsx silently overshoots under the bundle — this is what made the frontend serve its "not built yet" fallback for every box (fixed 2026-06-20).
+- If a behavior seems not to have deployed, the source rsync isn't enough — confirm `dist/cli.mjs` rebuilt (its mtime should be newer than the sources). A stale bundle keeps serving old code even with fresh `.ts` on disk.
 
 ## Claude Code credentials
 

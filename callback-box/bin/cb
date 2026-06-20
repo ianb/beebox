@@ -36,9 +36,9 @@ run_tsx() {
   # tsx is hoisted to the workspace-root node_modules, not callback-box's — so
   # a hardcoded ./node_modules/tsx path is wrong on the server (and anywhere
   # the workspace hoists). require.resolve walks up from PROJECT_DIR and finds
-  # it wherever it landed. This is the path prod actually runs: the dist bundle
-  # rebuild fails on the server (dist/ is owned by the deploying user, not the
-  # callback service user), so cb self-heals through tsx every time.
+  # it wherever it landed. This is the build-failure fallback only — prod
+  # normally runs the bundle (the deploy ships a fresh dist/cli.mjs that's
+  # newer than every source, so the staleness scan below is a no-op).
   local tsx_dir
   tsx_dir="$(node -e "process.stdout.write(require('path').dirname(require.resolve('tsx/package.json',{paths:['$PROJECT_DIR']})))")"
   exec node \
