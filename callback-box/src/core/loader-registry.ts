@@ -1,17 +1,18 @@
 /**
- * Registry for FileLoaders — maps a file (by tagName or path pattern) to a loader
- * that produces a typed FileSummary. One custom registration per match key;
- * additional matches are reported as warnings.
+ * Registry for FileLoaders — maps a file (by card type or path pattern) to a
+ * loader that produces a typed FileSummary. One custom registration per match
+ * key; additional matches are reported as warnings.
  *
- * Dispatch rule: exact tagName match wins over path-pattern match. If no custom
- * loader matches, the built-in fallback produces { path, title: stripExt(basename) }.
+ * Dispatch rule: exact card-type match wins over path-pattern match. If no
+ * custom loader matches, the built-in fallback produces
+ * { path, title: stripExt(basename) }.
  */
 
 import { type FileLoader, type FileSummary, type LoaderInput, titleFromFilename } from "./file-summary.js";
 
-interface TagRegistration {
-  kind: "tagName";
-  tagName: string;
+interface TypeRegistration {
+  kind: "type";
+  type: string;
   loader: FileLoader<unknown>;
 }
 
@@ -21,7 +22,7 @@ interface PathRegistration {
   loader: FileLoader<unknown>;
 }
 
-type Registration = TagRegistration | PathRegistration;
+type Registration = TypeRegistration | PathRegistration;
 
 const registrations: Registration[] = [];
 
@@ -33,26 +34,26 @@ export class LoaderCollisionError extends Error {
 }
 
 /**
- * Register a loader for a specific card tagName.
- * Colliding tagName registrations log a warning — last-wins.
+ * Register a loader for a specific card type.
+ * Colliding type registrations log a warning — last-wins.
  */
-export function registerTagLoader<T>(tagName: string, loader: FileLoader<T>): void {
-  const existing = registrations.find(r => r.kind === "tagName" && r.tagName === tagName);
+export function registerTypeLoader<T>(type: string, loader: FileLoader<T>): void {
+  const existing = registrations.find(r => r.kind === "type" && r.type === type);
   if (existing) {
-    console.warn(`Loader collision for tagName "${tagName}": overriding previous registration`);
+    console.warn(`Loader collision for type "${type}": overriding previous registration`);
     const idx = registrations.indexOf(existing);
     registrations.splice(idx, 1);
   }
   registrations.push({
-    kind: "tagName",
-    tagName,
+    kind: "type",
+    type,
     loader: loader as FileLoader<unknown>,
   });
 }
 
 /**
  * Register a loader matched by path predicate (e.g. `p => p.endsWith(".md")`).
- * Path matches are checked after tagName matches miss.
+ * Path matches are checked after card-type matches miss.
  */
 export function registerPathLoader<T>(
   match: (path: string) => boolean,
@@ -75,14 +76,14 @@ export const fallbackLoader: FileLoader<unknown> = (raw: LoaderInput) => ({
 
 /**
  * Find the matching loader for a file. Dispatch order:
- *   1. type exact match (input.type — the card's frontmatter type)
+ *   1. card-type exact match (input.type)
  *   2. path predicate match
  *   3. fallback
  */
 export function resolveLoader(input: LoaderInput): FileLoader<unknown> {
-  const tagName = input.type;
-  if (tagName) {
-    const match = registrations.find(r => r.kind === "tagName" && r.tagName === tagName);
+  const type = input.type;
+  if (type) {
+    const match = registrations.find(r => r.kind === "type" && r.type === type);
     if (match) return match.loader;
   }
   const pathMatches = registrations.filter(

@@ -31,7 +31,7 @@ function typeFromFilename(source: string): string | undefined {
 export interface FrontmatterCardResponse {
   path: string;
   kind: "frontmatter";
-  tagName: string;
+  type: string;
   status: string | undefined;
   version: string | undefined;
   xml: string;
@@ -87,7 +87,7 @@ function loadFrontmatterCard(input: {
   return {
     path: source,
     kind: "frontmatter",
-    tagName: type,
+    type,
     status,
     version: undefined,
     xml: raw,
@@ -141,7 +141,7 @@ export const cardRouter = router({
       return {
         path: input.path,
         kind: "frontmatter" as const,
-        tagName: fileType ?? "",
+        type: fileType ?? "",
         status: undefined as string | undefined,
         version: undefined as string | undefined,
         xml: raw,

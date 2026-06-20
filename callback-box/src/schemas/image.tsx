@@ -163,7 +163,7 @@ export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
   // eslint-disable-next-line no-restricted-syntax -- raw is the loosely-typed loader input; reading the optional Phase-2 `fields` object off it requires one boundary cast.
   const fields = (raw as { fields?: Partial<ImageFields> }).fields;
   if (fields === undefined) {
-    return { path: raw.path, tagName: "image", title: fallback, attrs: { status: "new" } };
+    return { path: raw.path, type: "image", title: fallback, attrs: { status: "new" } };
   }
   const description = fields.description;
   const ref = fields.filename?.ref;
@@ -179,7 +179,7 @@ export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
   if (typeof fields["has-text"] === "boolean") attrs["has-text"] = fields["has-text"];
   if (fields.rotation !== undefined) attrs.rotation = fields.rotation;
   if (typeof ref === "string" && ref !== "") attrs.filename = ref;
-  return { path: raw.path, tagName: "image", title, attrs };
+  return { path: raw.path, type: "image", title, attrs };
 };
 
 /**

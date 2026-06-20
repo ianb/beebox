@@ -73,7 +73,7 @@ function CardAccordionBody({
 
   const fileData: FileData = {
     path: card.path,
-    tagName: card.tagName,
+    type: card.type,
     element: card.element,
     xml: card.xml,
     version: card.version,

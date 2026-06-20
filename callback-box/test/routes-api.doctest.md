@@ -89,7 +89,7 @@ await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
     {
       "relativePath": "box/inbox/browse-test.memo.card",
       «*»
-      "tagName": "memo"«*»
+      "type": "memo"«*»
     }
   ]
 }

@@ -51,7 +51,6 @@ export interface CardInfo {
   relativePath: string;
   name: string;
   type: string;
-  tagName: string;
   status?: string;
   prompt?: string;
   options?: string[];

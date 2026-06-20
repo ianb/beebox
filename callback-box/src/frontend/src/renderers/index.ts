@@ -13,7 +13,8 @@ export interface FileData {
   path: string;
   /** "frontmatter" for Phase 2 YAML+markdown cards, "xml" for legacy XML cards. */
   kind?: "frontmatter" | "xml";
-  tagName?: string;
+  /** Card type (from the filename). */
+  type?: string;
   attrs?: Record<string, string>;
   element?: ElementNode;
   xml?: string;
@@ -51,15 +52,15 @@ export interface FileRenderer {
 
 interface RendererMatch {
   fileMatch?: (path: string, data: FileData) => boolean;
-  tagName?: string;
+  type?: string;
   renderer: FileRenderer;
 }
 
 const renderers: RendererMatch[] = [];
 
 /** Register a renderer for a specific card type */
-export function registerCardRenderer(tagName: string, renderer: FileRenderer) {
-  renderers.push({ tagName, renderer });
+export function registerCardRenderer(type: string, renderer: FileRenderer) {
+  renderers.push({ type, renderer });
 }
 
 /** Register a renderer for files matching a predicate */
@@ -74,7 +75,7 @@ export function registerFileRenderer(
 export function getRenderers(filePath: string, data: FileData): FileRenderer[] {
   return renderers
     .filter(r => {
-      if (r.tagName) return data.tagName === r.tagName;
+      if (r.type) return data.type === r.type;
       if (r.fileMatch) return r.fileMatch(filePath, data);
       return false;
     })

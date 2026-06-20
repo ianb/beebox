@@ -132,12 +132,12 @@ function RefExpander({ refPath, onNavigate }: { refPath: string; onNavigate: Nav
  */
 function RefExpanderCard({ refPath, data, onNavigate }: {
   refPath: string;
-  data: { element?: ElementNode; path: string; tagName?: string; xml?: string; version?: string; status?: string };
+  data: { element?: ElementNode; path: string; type?: string; xml?: string; version?: string; status?: string };
   onNavigate: NavigateFn;
 }) {
   const fileData: FileData = {
     path: data.path || refPath,
-    tagName: data.tagName,
+    type: data.type,
     element: data.element,
     xml: data.xml,
     version: data.version,
