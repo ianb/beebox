@@ -86,10 +86,14 @@ one-line why). Mark status as you go.
 
 ## F. Skill infrastructure / meta
 
-- [ ] **F1 — anthropic `skill-creator`: adopt directly.** Boxholder inclined
-  yes ("why not after all"). Vendor it into `.claude/skills/`; it brings a
-  draft→test→eval→optimize loop + eval harness. Decide: adopt (confirm no heavy
-  deps), then it becomes the engine for F2.
+- [x] **F1 — anthropic `skill-creator`. DONE → `adopt` (vendored wholesale).**
+  Turned out to be a heavy Python eval/benchmark harness (9 `.py` scripts +
+  eval-viewer + grader/comparator/analyzer agents), not a light skill. Boxholder
+  chose to vendor it verbatim anyway → `.claude/skills/skill-creator/` (provenance
+  + "do not hand-edit, re-pull to update" in `VENDORED.md`; Apache-2.0
+  `LICENSE.txt` carried along). Live — appears in the skill list. The eval
+  harness needs Python to run; the authoring *guidance* in its SKILL.md is the
+  engine for F2.
 - [ ] **F2 — skill-audit-with-bulletproofing over our existing skills.** Use
   `skill-creator` + mattpocock `writing-great-skills` + superpowers
   `writing-skills` as an audit lens on cb-plan / finish / browse / codex / etc.:
