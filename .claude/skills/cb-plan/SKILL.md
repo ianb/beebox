@@ -1,6 +1,6 @@
 ---
 name: cb-plan
-description: Use when the human wants to write a plan for non-trivial work (a new feature, a refactor, a vocabulary or schema change, a multi-track effort) — or to review an existing plan. Drives a structured form-as-prompt where review is baked into the writing, not bolted on after. A plan is a complete unit of work — designed end-to-end and shipped end-to-end; partial shipping is not a mode here. Triggers include "write a plan", "make a plan for X", "let's plan", "review this plan", "/cb-plan".
+description: Use when the human wants to write a plan for non-trivial work — a new feature, a refactor, a vocabulary or schema change, a multi-track effort — or to review an existing plan. Triggers include "write a plan", "make a plan for X", "let's plan", "review this plan", "/cb-plan".
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, WebFetch, WebSearch
 ---
 
@@ -407,6 +407,10 @@ fought the way work actually happens here.
 
 (Yes, the skill writes plans, and this skill's failure modes apply to
 the skill's own use.)
+
+These are the shortcuts you'll be tempted to take — each is a
+rationalization the plan exists to resist. If you catch yourself
+thinking one of them, you're hollowing out the plan, not saving time:
 
 - **Filling sections perfunctorily.** Sections filled with "N/A" or
   one-line dismissals undo the value. If a section genuinely doesn't

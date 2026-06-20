@@ -1,6 +1,6 @@
 ---
 name: codex
-description: Get an independent, cross-model review from OpenAI's codex CLI — of a plan in docs/plans/, of the current branch diff, or as an adversarial "find how this fails" pass. Codex is a different model family, so its blind spots differ from Claude's; its highest value is reading the real repo and falsifying a plan's "it's fine / we already do X / reuse" claims. Triggers include "codex review", "codex challenge", "have codex review the plan", "second opinion from codex", "/codex".
+description: Use when the human wants an independent, cross-model review from OpenAI's codex CLI — of a plan in docs/plans/, of the current branch diff, or as an adversarial "find how this fails" pass on either. Triggers include "codex review", "codex challenge", "have codex review the plan", "second opinion from codex", "/codex".
 allowed-tools: Bash, Read, Grep, Glob
 ---
 
