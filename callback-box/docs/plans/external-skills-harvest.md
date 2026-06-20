@@ -113,19 +113,25 @@ one-line why). Mark status as you go.
   `LICENSE.txt` carried along). Live — appears in the skill list. The eval
   harness needs Python to run; the authoring *guidance* in its SKILL.md is the
   engine for F2.
-- [ ] **F2 — skill-audit-with-bulletproofing over our existing skills.** Use
-  `skill-creator` + mattpocock `writing-great-skills` + superpowers
-  `writing-skills` as an audit lens on cb-plan / finish / browse / codex / etc.:
-  is each `description` a *trigger* (not a workflow summary, per SDO)? clear
-  completion criterion? failure modes covered? Apply the **bulletproofing
-  technique** (rationalization tables, red-flag lists, "you'll be tempted to…")
-  — and apply it to **The Laws** too (Law 1's "smooth it just this once" =
-  the betrayal). Decide: run the audit, fix gaps. *(Boxholder's two strongest
-  interests converge here.)* **Inherits from A2:** while bulletproofing cb-plan,
-  also graft addyosmani spec-driven's harvested bits — a "Boundaries: Always /
-  Ask first / Never" per-plan tier, a "reframe vague reqs as testable success
-  criteria" element, and a "Common Rationalizations / Red Flags" table (the
-  bulletproofing itself). *(Boundaries tier dropped — see A2.)*
+- [x] **F2 — skill-audit-with-bulletproofing over our existing skills. DONE.**
+  Planned at `docs/plans/` (approved). Outcomes:
+  - **SDO descriptions trimmed to triggers-only** for `finish` (was spelling out
+    the whole merge flow — highest risk), `cb-plan`, `codex`, `browse`. All
+    trimmed prose already lived in the skill bodies. `launch-worktree-session`
+    left as-is (already trigger-first).
+  - **The Laws / Law 1 bulletproofed** — added a "you will be tempted, every
+    excuse is the betrayal in disguise" block (rebuts "basically what they said",
+    "reads better cleaned up", "just the gist", "long ramble") + the genuine
+    transcription exception. Verified: re-ran `law-never-paraphrase` (no
+    regression) and added a **pressure-scenario audit** `law-paraphrase-pressure`
+    ("just save the gist") — both pass `knows_directly`, 0 reads; the agent
+    refuses the summary and offers quote-trimmed + framing outside the tag.
+  - **cb-plan bulletproofing already existed** (its "Failure modes for this skill
+    itself" section is the rationalization list, and the template already calls
+    an open-question-in-the-first-chunk a missing decision) — so A2's
+    rationalizations nugget was satisfied; just added the punchy "shortcuts
+    you'll be tempted to take" framing. A2 nugget 1 (testable success criteria)
+    already folded in X1. Boundaries tier dropped (see A2).
 - [ ] **F3 — write-new: docs-index skills.** *(Boxholder idea.)* Skills that,
   when invoked, pull in a *relevant index of docs* rather than the full text —
   a lazy, task-triggered pointer into `docs/`. Relates to the loading-eagerness
