@@ -85,18 +85,31 @@ one-line why). Mark status as you go.
 
 ## D. Codebase health / continuous de-crufting
 
-- [ ] **D1 — mattpocock `improve-codebase-architecture`.** Walks the codebase
-  for friction (scattered understanding, shallow modules, untestable seams),
-  emits a report, then grills a chosen candidate. *(Boxholder flagged this as a
-  felt need: continuous investment to avoid cruft.)* Decide: write-new (a
-  recurring "architecture health" skill) vs adopt vs idea.
-- [ ] **D2 — addyosmani `code-simplification` vs our `simplify` skill.** Theirs:
-  preserve-behavior-exactly + "would a new teammate understand this faster?"
-  litmus. Decide: fold its litmus/principles into `simplify`, or skip.
-- [ ] **D3 — addyosmani `api-and-interface-design`.** Contract-first +
-  Hyrum's-Law ("every observable behavior becomes a de facto contract"). Decide:
-  reference for `cb` CLI / API-boundary reviews → fold-in to code-review, idea,
-  or skip.
+- [x] **D1 — mattpocock `improve-codebase-architecture`. DONE → `write-new`:
+  `cb-codehealth`.** Built `.claude/skills/cb-codehealth/SKILL.md` — a recurring
+  health pass. Spine = the deepening-opportunities framing + the deletion test +
+  the depth vocabulary (module/interface/depth/seam/adapter/leverage/locality,
+  from `codebase-design`). **Dropped** the HTML/Tailwind/Mermaid report (→
+  Markdown), the CONTEXT.md/ADR coupling (→ `docs/glossary.md` + git history +
+  `docs/implemented-plans/`), and the grilling/codebase-design/domain-modeling
+  skill chain (→ pick a candidate, `cb-plan` it, `launch-worktree-session`).
+  Native killer angle: the scan *runs* our existing de-cruft tooling
+  (`lint:knip` dead code, `lint:circular` madge, `lint:oxlint`, the 300-line
+  caps). Lands `cb-debug`'s circuit-breaker handoff. F2 discipline applied.
+- [x] **D2 — addyosmani `code-simplification`. DONE → `fold-in` (cb-codehealth).**
+  Its "Principles when deepening" section carries the keepers: preserve-behaviour-
+  exactly, "would a new teammate understand this faster?" litmus, clarity over
+  cleverness, follow project conventions, maintain balance / scope to the cruft.
+  Our `simplify` skill stays for inline cleanup; cb-codehealth is the deliberate
+  pass.
+- [x] **D3 — addyosmani `api-and-interface-design`. DONE → `fold-in`
+  (cb-codehealth).** Folded **Hyrum's Law** ("every observable behaviour — error
+  text, ordering, timing — is a de facto contract; tests alone aren't a safety
+  guarantee") + "shrink the interface, not the implementation" into the deepening
+  principles + a rationalization. Also harvested deprecation-and-migration's
+  "code is a liability" framing + "delete the tests/docs/config too." (No
+  standalone API skill — the seam/contract discipline lives where modules get
+  reshaped.)
 
 ## E. Frontend / design (vs FRONTEND.md)
 
