@@ -1,5 +1,5 @@
 /**
- * Retired migrator — see docs/plans/remove-cardworks-deletion.md.
+ * Retired migrator — see docs/implemented-plans/remove-cardworks-deletion.md.
  *
  * This XML→frontmatter migration needed the `cardworks` XML parser, which was
  * removed once every box was migrated. The MIGRATIONS entry (the manifest key
