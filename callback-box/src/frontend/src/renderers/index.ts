@@ -16,7 +16,6 @@ export interface FileData {
   type?: string;
   /** Raw card file text (frontmatter + markdown) — used by the Source renderer. */
   raw?: string;
-  status?: string;
   /** Frontmatter fields for cards (body field excluded). */
   frontmatter?: Record<string, unknown>;
   /** Markdown body for cards. */

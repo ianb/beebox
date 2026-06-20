@@ -19,7 +19,6 @@ export interface FrontmatterCardResponse {
   path: string;
   kind: "frontmatter";
   type: string;
-  status: string | undefined;
   /** Raw card file text (frontmatter + markdown body). */
   raw: string;
   frontmatter: Record<string, unknown> | undefined;
@@ -37,7 +36,6 @@ function loadFrontmatterCard(input: {
   let frontmatter: Record<string, unknown> | undefined;
   let body: string | undefined;
   let validationError: string | undefined;
-  let status: string | undefined;
 
   try {
     const parsed = parseCardText(raw, { source, schemas: cardSchemas, type });
@@ -51,8 +49,6 @@ function loadFrontmatterCard(input: {
     }
     delete fields["type"];
     frontmatter = fields;
-    const statusField = fields["status"];
-    if (typeof statusField === "string") status = statusField;
   } catch (e) {
     validationError = (e as Error).message;
     // Still surface what we can — split the file and parse YAML loosely.
@@ -62,8 +58,6 @@ function loadFrontmatterCard(input: {
       const fm = parseYaml(split.frontmatterText);
       if (fm !== null && typeof fm === "object" && !Array.isArray(fm)) {
         frontmatter = fm as Record<string, unknown>;
-        const statusField = (fm as Record<string, unknown>)["status"];
-        if (typeof statusField === "string") status = statusField;
       }
     } catch (_e) {
       // YAML itself is malformed — leave frontmatter undefined.
@@ -74,7 +68,6 @@ function loadFrontmatterCard(input: {
     path: source,
     kind: "frontmatter",
     type,
-    status,
     raw,
     frontmatter,
     body,
@@ -126,7 +119,6 @@ export const cardRouter = router({
         path: input.path,
         kind: "frontmatter" as const,
         type: fileType ?? "",
-        status: undefined as string | undefined,
         raw,
         frontmatter: undefined as Record<string, unknown> | undefined,
         body: split.hasFrontmatter ? split.body : raw,

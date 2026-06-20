@@ -158,7 +158,6 @@ function useFileData(path: string): LoadResult {
           kind: card.kind,
           type: card.type,
           raw: card.raw,
-          status: card.status,
           frontmatter: card.frontmatter,
           body: card.body,
         },
@@ -247,6 +246,7 @@ function PageHeader({
   active: FileRenderer;
   onSelect: (name: string) => void;
 }) {
+  const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
   return (
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
@@ -254,7 +254,7 @@ function PageHeader({
           <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h1>
           <div className="flex items-center gap-2 mt-1">
             {data.type ? <span className="text-sm text-warm-600">Type: {data.type}</span> : null}
-            {data.status ? <StatusBadge status={data.status} /> : null}
+            {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
         <RendererToggle renderers={renderers} active={active} onSelect={onSelect} />

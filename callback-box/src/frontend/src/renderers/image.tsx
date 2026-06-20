@@ -31,8 +31,6 @@ type Rotation = 0 | 90 | 180 | 270;
 interface ParsedImageCard {
   filename: string | null;
   description: string | null;
-  status: string;
-  hasText: boolean;
   rotation: Rotation;
   subjectBbox: { y1: number; x1: number; y2: number; x2: number } | null;
   textBlocks: Array<{ source: string; text: string }>;
@@ -67,8 +65,6 @@ function parseImageCard(fm: Record<string, unknown>): ParsedImageCard {
   return {
     filename: filenameRef,
     description: strOf(fm.description),
-    status: strOf(fm.status) ?? "new",
-    hasText: fm["has-text"] === true,
     rotation,
     subjectBbox: bbox
       ? { y1: num(bbox.y1), x1: num(bbox.x1), y2: num(bbox.y2), x2: num(bbox.x2) }

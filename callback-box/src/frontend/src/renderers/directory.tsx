@@ -75,7 +75,6 @@ function CardAccordionBody({
     kind: card.kind,
     type: card.type,
     raw: card.raw,
-    status: card.status,
     frontmatter: card.frontmatter,
     body: card.body,
   };
