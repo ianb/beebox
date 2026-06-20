@@ -305,6 +305,23 @@ result.results[0]!.warnings[0]!.message
 => no schema registered for card type "unknowntype" — card not validated
 ```
 
+A `.card` with no frontmatter block at all is malformed (every card is
+frontmatter now) and is an error, not a silent pass:
+
+```
+const box = await makeTmpBox();
+await box.write("box/inbox/Broken.memo.card", "this is not a frontmatter card\n");
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/Broken.memo.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 1
+
+result.results[0]!.errors[0]!.message
+=> card has no frontmatter block
+```
+
 ## An attach-only commentary card with valid anchors lints clean
 
 Commentary is attach-only — it carries no target field; bare `{% source %}`

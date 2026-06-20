@@ -107,8 +107,11 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
       ],
     };
   }
-  // Not a frontmatter card at all — nothing to validate.
-  return { path, errors: [], warnings: [] };
+  // A `.card` with no frontmatter block is malformed — every card is
+  // frontmatter now (the legacy XML format is gone). This used to surface via
+  // cardworks' XML lint; keep it an error so a broken card stays visible and
+  // blocks the pre-commit hook rather than passing silently.
+  return errorResult(path, "card has no frontmatter block");
 }
 
 async function lintFrontmatterCard(input: {

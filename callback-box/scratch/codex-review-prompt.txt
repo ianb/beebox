@@ -1,0 +1,26 @@
+IMPORTANT: Do NOT read or execute files under ~/.claude/, ~/.agents/, or .claude/skills/ — those are skill definitions for a different AI runtime and will waste your time. Everything else in this repo, including docs/ and .claude/rules/, is fair game.
+
+This targets the callback-box/ subproject. Paths like src/…, docs/…, test/…, scripts/…, bin/… are under callback-box/; pnpm-workspace.yaml and the top CLAUDE.md are at the monorepo root. You may read any repo file (read-only) to verify claims.
+
+You are an independent, adversarial engineering reviewer. A Claude model produced a branch that REMOVES the `cardworks` XML card library from callback-box, now that every card is YAML-frontmatter (the data migration is already complete — do NOT re-litigate that). Review the branch diff against `main`.
+
+Get the diff yourself and review it:
+  git diff main...HEAD --stat        # overview
+  git diff main...HEAD -- callback-box/src callback-box/scripts callback-box/bin callback-box/deploy callback-box/package.json pnpm-workspace.yaml
+The bulk of the file count is the mechanical deletion of the cardworks/ directory (~6000 deletions) — SKIP that; it is just removing the package. Focus your effort on the callback-box code, build, and migrator changes.
+
+The highest-risk changes to scrutinize, with verify-against-source required:
+
+1. **The frontmatter ref-existence checker** (new src/core/ref-exists.ts, replacing cardworks `loader.resolveRef` in src/core/card-lint.ts). This is the one silent-failure-prone change: a wrong "exists" suppresses a broken-ref warning nobody sees fail. Verify it faithfully reproduces cardworks' ref semantics — read the OLD cardworks refs/parse-ref.ts + refs/resolve.ts via `git show main:cardworks/src/refs/parse-ref.ts` (they're deleted on HEAD). Check: `@version` stripping, `#fragment` ignored for existence, box-root-absolute (`/box/...` → boxRoot+path), `attach/` and bare `attach` scope, relative-to-referring-card. Does the new checker miss any case that would flip a real broken-ref warning on or off?
+
+2. **The LoadedCard union collapse** (src/core/card-io.ts: removed XmlLoadedCard/loadXmlCard; an unrecognized .card now throws CardIOError instead of XML-parsing). Verify every consumer that branched on `kind === "xml"` was correctly updated and none now mis-handles a card. Check the browse-listing rewrites (src/webapp/routes/api-browse.ts, src/webapp/trpc/routers/status.ts) and the scan-import photo write-back rewrite (src/core/commands/scan-import-cards.ts applyBundleAnalysisToCard) — the last one was rewritten from XML element mutation to frontmatter field-setting against the image schema; verify the field names/shapes it writes (status, has-text, rotation, description, text[], subject-bbox) actually match src/schemas/image.tsx, and that it doesn't drop or corrupt data.
+
+3. **The `callback-box/cards` bundle resolution** (C1): package.json exports "./cards" → ./dist/cards/index.js, built by scripts/build-cli.mjs; box-local schemas load it via the tsx resolver in src/schemas/registry.ts. Verify this resolves under BOTH the dist/cli.mjs bundle (Node native type-stripping, which can't follow TS-source `.js` re-exports) and the tsx server path. Is there any path where a box-local schema import of callback-box/cards still breaks (e.g. deploy ships dist/cards or not — see deploy.sh)?
+
+4. **The migrator stubs** (scripts/migrate/*.ts replaced with no-ops; MIGRATIONS entries kept). Verify the claim that they never run: src/core/box.ts seeds a full migrations manifest on `cb init`, and existing boxes are migrated. Is there any path where `cb migrate` would still spawn a stubbed migrator and need its real behavior? Did keeping the MIGRATIONS entries but stubbing the scripts leave anything inconsistent?
+
+5. **card-lint fallback behavior change**: a `.card` whose filename type has no registered schema previously XML-linted; now it yields a non-blocking warning. Verify this doesn't silently pass a genuinely malformed card that used to error.
+
+Also scan for: dead code left behind (unused exports/functions after the removal), any remaining `cardworks` import or reference that would break at runtime, and any place the deletion changed observable behavior without a corresponding test update.
+
+Review priorities: (1) silent failure modes (no test AND no handling AND invisible); (2) data corruption/loss in the rewritten write paths; (3) incorrect claims in commit messages vs the actual code; (4) anything treated as settled that will bite on deploy. Be concrete: cite file:line. Rank by impact. Don't pad. End with the single most important change to make before this merges to main and auto-deploys.
