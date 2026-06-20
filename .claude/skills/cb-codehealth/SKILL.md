@@ -23,6 +23,17 @@ maintainers (change, bugs, and verification concentrate in one place). Use this
 vocabulary *exactly* — module / interface / implementation / depth / seam /
 adapter / leverage / locality — not "component / service / API / boundary."
 
+**A module can be a whole directory** — and those are often the highest-leverage
+ones. A deep *subsystem* has a small public surface (an `index.ts` re-exporting
+only the intended API; `knip` keeps it honest by flagging exports nothing uses)
+and a short usage doc at its root (a directory `CLAUDE.md` / README — like
+`src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
+agent — can use it correctly *from the surface alone*. **The real test of depth:
+investigation at depth isn't necessary to use it.** If you had to read the
+implementation to learn how to call it, the interface is too big, undocumented,
+or both — that's a top deepening candidate, and creating these is the
+codehealth move the boxholder most wants to make.
+
 **The deletion test** (your sharpest probe): would deleting this *concentrate*
 complexity or just *move* it? "Concentrates" means it earns its keep; a thing
 you could delete by smearing its job across callers was shallow.
@@ -51,6 +62,10 @@ friction:
   how it's called (no **locality**) — that's a shallow split, not a deep module.
 - Tightly-coupled modules leak across their seams.
 - A part is untested or hard to test *through its current interface*.
+- You had to **read the implementation to learn how to use** a module — there's
+  no small, documented surface to call it from. For a directory: no `index.ts`
+  entry point and no root `CLAUDE.md`/README. This is the boxholder's priority
+  signal: flag these.
 - Tech-debt markers the code already admits ("older raw routes are tech debt —
   migrate when you touch the area"), duplicated logic, or routinely-noisy command
   output (a bug per CLAUDE.md, not background).
@@ -96,6 +111,10 @@ docs, and config — not just the code.
   faster than the original?"* If not, it's not simpler.
 - **Shrink the interface, not the implementation** — fewer methods, simpler
   params, more complexity *hidden inside*. Depth, not surface.
+- **Make the surface self-explaining** — a small interface is only deep if a
+  caller can use it *without reading the body*. Give it a usage doc (interface
+  doc-comments; for a directory, an `index.ts` that exposes only the intended API
+  plus a root `CLAUDE.md`/README) so depth investigation isn't needed.
 - **One adapter = a hypothetical seam; two = a real one.** Don't introduce the
   interface until a second implementation actually exists.
 - **Follow project conventions** — make code consistent with its neighbours, not
@@ -113,6 +132,7 @@ docs, and config — not just the code.
 | "One adapter, let me add the interface now." | One adapter is a hypothetical seam. Wait for the second before abstracting — premature interfaces are their own cruft. |
 | "While I'm here, I'll simplify all of it." | Scope to the cruft. Churning clean code adds review burden and risk for no health gain. |
 | "Tests pass, the refactor is safe." | Hyrum's Law: a caller may depend on behaviour no test covers. Be intentional about the interface; don't assume green = safe. |
+| "The code is clear, it doesn't need a doc or an index." | If a caller has to read the implementation to use the module correctly, it isn't deep yet. A small *documented* surface (index + a usage doc) is the deepening, not an extra. |
 
 ## Red flags — you're shaving, not deepening
 
