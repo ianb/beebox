@@ -13,12 +13,10 @@ import {
   SECTION_SPLIT_THRESHOLD,
 } from "../src/core/search/extract.js";
 import { splitMarkdownSections } from "../src/core/search/markdown-sections.js";
-import { schemas, createCardSchemaMap } from "../src/schemas/registry.js";
-import type { ElementSchema } from "cardworks";
+import { createCardSchemaMap } from "../src/schemas/registry.js";
 
 const ctx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),
-  elementSchemas: new Map<string, ElementSchema>(schemas.map((s) => [s.tagName, s])),
 };
 
 async function docsFor(path: string, text: string, inputContents?: Map<string, string>) {
@@ -166,25 +164,6 @@ JSON.stringify(split.sections.map((s) => s.fragment))
 const docs = await docsFor("box/examples/Short.doc.card", "---\ntitle: Short\n---\nPreamble.\n\n# One\nalpha\n");
 docs.length
 => 1
-```
-
-## XML cards index their walked text
-
-```
-const card = await loadCardFromText({
-  content: "<note title=\"Saute step\"><step>Heat the pan.</step><step>Add onions.</step></note>",
-  source: "store/Note.note.card",
-  ctx,
-});
-card.kind
-=> xml
-
-const docs = extractCardDocs({ path: "store/Note.note.card", card, contentHash: "h2" });
-docs[0].title
-=> Saute step
-
-docs[0].content
-=> Heat the pan. Add onions.
 ```
 
 ## Sheets index their tab titles

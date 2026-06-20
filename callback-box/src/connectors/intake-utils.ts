@@ -14,7 +14,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 

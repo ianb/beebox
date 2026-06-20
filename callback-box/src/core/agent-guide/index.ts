@@ -8,8 +8,8 @@
  * file and slot it into the array below.
  */
 
-import type { ElementSchema } from "cardworks";
-import { schemas } from "../../schemas/registry.js";
+import type { CardSchema } from "../../cards/index.js";
+import { cardSchemas } from "../../schemas/registry.js";
 import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
 
 import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
@@ -40,6 +40,7 @@ import {
 } from "./behavior.js";
 import { landmarksSection } from "./landmarks.js";
 import { secretsSection } from "./secrets.js";
+import { lawsSection } from "./laws.js";
 import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
 import { searchSection } from "./search.js";
@@ -47,7 +48,7 @@ import { briefingTagsSection } from "./briefing-tags.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
-  allSchemas?: ElementSchema[];
+  allCardSchemas?: CardSchema[];
   personalitySection?: string | undefined;
   guides?: GuideSummary[];
 }
@@ -55,7 +56,7 @@ export interface AgentGuideOptions {
 export function generateAgentGuide(options: AgentGuideOptions): string {
   const {
     procedures,
-    allSchemas = schemas,
+    allCardSchemas = cardSchemas,
     personalitySection,
     guides = [],
   } = options;
@@ -63,6 +64,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
   const lines: string[] = [
     "# Callback Box Agent Guide",
     "",
+    ...lawsSection(),
     ...directoryLayoutSection(),
     ...landmarksSection(),
     ...howItemsEnterSection(),
@@ -79,7 +81,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...chatAttachmentsSection(),
     ...selectionsSection(),
     ...viewsSection(),
-    ...cardTypesSection(allSchemas),
+    ...cardTypesSection(allCardSchemas),
     ...creatingCardsSection(),
     ...questionsSection(),
     ...quotesSection(),

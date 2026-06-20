@@ -36,6 +36,8 @@ export interface UseRealtimeTranscriptionOptions {
     processedTranscript: string;
     matchedPhrase: string;
     audioBlob: Blob | null;
+    /** "send and close" variant: send, then leave the mic closed (no re-arm). */
+    closeMic: boolean;
   }) => void;
   onKeywordCancel?: () => void;
   onKeywordMicOff?: () => void;
@@ -168,7 +170,7 @@ export function useRealtimeTranscription(
    * text + matched phrase are parked here in the meantime; the
    * idle-transition effect picks them up and fires onKeywordSend.
    */
-  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string } | null>(null);
+  const pendingSendRef = useRef<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean } | null>(null);
   /**
    * Set by `start({ earcon: true })`. The recording-start earcon plays only
    * when the machine actually reaches `recording` — so the "you're recording
@@ -208,7 +210,10 @@ export function useRealtimeTranscription(
   // window where the mic is intentionally paused.
 
   const fireKeyword = useCallback((keyword: KeywordResult) => {
-    if (keyword.action === "send") {
+    if (keyword.action === "send" || keyword.action === "sendClose") {
+      // Both variants run the same send path; the only difference is whether
+      // the mic re-arms afterward, which the chat layer decides off `closeMic`.
+      const closeMic = keyword.action === "sendClose";
       const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
       if (wantBlob) {
         // Slow path: park the text and STOP so the machine finalizes and
@@ -218,6 +223,7 @@ export function useRealtimeTranscription(
         pendingSendRef.current = {
           processedTranscript: keyword.processedTranscript,
           matchedPhrase: keyword.matchedPhrase,
+          closeMic,
         };
         send({ type: "STOP" });
       } else {
@@ -229,6 +235,7 @@ export function useRealtimeTranscription(
           processedTranscript: keyword.processedTranscript,
           matchedPhrase: keyword.matchedPhrase,
           audioBlob: null,
+          closeMic,
         });
       }
     } else if (keyword.action === "micOff") {

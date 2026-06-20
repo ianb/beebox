@@ -36,9 +36,9 @@ run_tsx() {
   # tsx is hoisted to the workspace-root node_modules, not callback-box's — so
   # a hardcoded ./node_modules/tsx path is wrong on the server (and anywhere
   # the workspace hoists). require.resolve walks up from PROJECT_DIR and finds
-  # it wherever it landed. This is the path prod actually runs: the dist bundle
-  # rebuild fails on the server (dist/ is owned by the deploying user, not the
-  # callback service user), so cb self-heals through tsx every time.
+  # it wherever it landed. This is the build-failure fallback only — prod
+  # normally runs the bundle (the deploy ships a fresh dist/cli.mjs that's
+  # newer than every source, so the staleness scan below is a no-op).
   local tsx_dir
   tsx_dir="$(node -e "process.stdout.write(require('path').dirname(require.resolve('tsx/package.json',{paths:['$PROJECT_DIR']})))")"
   exec node \
@@ -59,21 +59,12 @@ fi
 # the frontend tree, which is spawned separately and not in the bundle) is
 # newer than it. Pruning src/frontend keeps this scan ~5ms even on a fresh
 # bundle. package.json is checked too so dependency changes trigger a rebuild.
-#
-# cardworks/dist is checked as well: it's a sibling workspace package inlined
-# into the bundle (consumed via `link:../cardworks`), so a cardworks rebuild
-# must invalidate our bundle too. Without this, a stale inlined cardworks
-# silently ships an old API surface — exactly how chat broke when cardworks'
-# named-params refactor landed but the bundle wasn't rebundled. `-L` follows
-# the node_modules symlink into the live build.
 needs_build=0
 if [ ! -f "$BUNDLE" ]; then
   needs_build=1
 elif [ "$PROJECT_DIR/package.json" -nt "$BUNDLE" ]; then
   needs_build=1
 elif [ -n "$(find "$PROJECT_DIR/src" -path "$PROJECT_DIR/src/frontend" -prune -o -name '*.ts' -newer "$BUNDLE" -print -quit 2>/dev/null)" ]; then
-  needs_build=1
-elif [ -n "$(find -L "$PROJECT_DIR/node_modules/cardworks/dist" -name '*.js' -newer "$BUNDLE" -print -quit 2>/dev/null)" ]; then
   needs_build=1
 fi
 

@@ -7,7 +7,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../../cards/index.js";
 import {
   registerCommand,
   type CommandContext,

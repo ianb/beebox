@@ -1,6 +1,6 @@
 # Adding a New Card Schema
 
-How to add a new card type to callback-box. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body) for the current format. The older XML form (`element()` + child element schemas) is still used by guide, recipe, procedure, procedure-run, capture-session, and landmark — see those files only if your card has Markdoc-shaped inline content. For new card types, default to the frontmatter form below.
+How to add a new card type to callback-box. Reference: `src/schemas/briefing.tsx` (frontmatter with body) or `src/schemas/intake-job.tsx` (frontmatter, no body) for the current format. The older XML form (`element()` + child element schemas) is still used by capture-session only (its transcript is ordered mixed content) — see that file if your card has interleaved inline content. For new card types, default to the frontmatter form below.
 
 ## When to Create a New Card Type
 
@@ -20,7 +20,7 @@ Adding a frontmatter schema touches 4 files, plus creates 1 new one.
 `src/schemas/<name>.ts` (use `.tsx` only if you need JSX somewhere; templates emit YAML strings now, not JSX).
 
 ```ts
-import { body, cardSchema, type CardSchema } from "cardworks";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -76,6 +76,50 @@ Key patterns:
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
 - Avoid `?: T | undefined` in `*Fields` interfaces — use `?: T` and spread conditionally at call sites. Zod recursive types are the exception (they need the explicit `| undefined`).
 - The `instructions` string is what agents see — make it thorough.
+
+#### Validation beyond Zod — the `validate` hook
+
+When a card type needs a rule Zod field types can't express — a cross-field
+constraint, a format refinement on a string, or validation of the body's parsed
+structure — put it in a **`validate` hook on the schema**, *not* in a branch of
+`src/core/card-lint.ts`. The hook co-locates the rule with the schema that
+defines the type, and card-lint dispatches it generically.
+
+```ts
+import { cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
+
+function myThingErrors(fields: Record<string, unknown>): LintIssue[] {
+  const errors: LintIssue[] = [];
+  const href = fields["href"];
+  if (typeof href === "string" && !href.startsWith("file:")) {
+    errors.push({ type: "validation", severity: "error", message: `href must be a file: URL (got "${href}")` });
+  }
+  return errors;
+}
+
+export const MyThingSchema: CardSchema = cardSchema("my-thing", {
+  validate: ({ fields }) => myThingErrors(fields),
+  fields: { /* ... */ },
+});
+```
+
+- The hook receives `{ fields }` — the parsed, Zod-validated frontmatter, with
+  the body value at `fields["body"]` when the schema declares a body. Narrow
+  `fields[...]` yourself (`typeof x === "string"`) before using it.
+- It is **self-contained**: it sees only this card's own data — no loader, no
+  box, no access to other cards. Generic ref-existence checking (does the card
+  a `ref:` points at exist?) is box-aware and stays centralized in `card-lint.ts`;
+  don't reimplement it per schema.
+- It returns `LintIssue[]` (`type: "validation"`, `severity: "error"`
+  for blocking rules). Return `[]` when the card is fine.
+- Keep the error/helper functions **module-private** (don't export them — knip
+  flags unused exports); only the `validate` reference uses them. `extfile.tsx`
+  and `commentary.tsx` are worked examples (a `file:`-URL refinement and a
+  Markdoc body check, respectively).
+
+There is intentionally **no box-aware validate variant** today — if you find
+yourself wanting one (resolve a ref, inspect another card), raise it rather than
+smuggling box access in; the self-contained shape is the deliberate contract.
 
 ### 2. Register in `src/schemas/registry.ts`
 
@@ -157,7 +201,7 @@ registerFileType({ tagName: "my-thing" }, { icon: CardIcon });
 When code needs to update a frontmatter card on disk (e.g. setting `status: answered` on a question), use `splitCardContent` + `yaml`:
 
 ```ts
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../cards/index.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 const content = await fs.readFile(absPath, "utf-8");

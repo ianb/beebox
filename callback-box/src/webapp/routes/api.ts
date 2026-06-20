@@ -5,7 +5,6 @@
  * inbox, questions, activity, context, task-output) and wires up the larger,
  * self-contained route families that live in sibling modules:
  *
- *   api-card-routes.ts — GET/PATCH /api/card/* (helpers in api-card-patch.ts)
  *   api-browse.ts      — GET /api/browse/*
  *   api-files.ts       — GET/HEAD + DELETE /api/files/*
  *   api-debug-log.ts   — GET/POST/DELETE /api/debug-log
@@ -19,7 +18,6 @@ import { generateContext } from "../context.js";
 import { runHealthChecks } from "../trpc/routers/health.js";
 import { getLog } from "../../cli/lib/git.js";
 import type { EventBus } from "../../core/event-bus.js";
-import { registerApiCardRoutes } from "./api-card-routes.js";
 import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
 import { registerProxyImageRoutes } from "./proxy-image.js";
@@ -94,9 +92,6 @@ export async function registerApiRoutes(
       items: enriched,
     };
   });
-
-  // /api/card/* — load + patch a single card
-  registerApiCardRoutes({ server, boxRoot });
 
   // GET /api/activity - Recent git commits (renamed from /api/log to avoid ad blockers)
   server.get<{ Querystring: { count?: string } }>("/api/activity", async (request) => {

@@ -19,13 +19,16 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark>
-<navigation><label>Recipes</label><symbol>🍳</symbol></navigation>
-<triage-destination>
-<rules>Cooking instructions.</rules>
-<procedure ref="archive.procedure.card"/>
-</triage-destination>
-</landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    rules: Cooking instructions.
+    procedure-ref: archive.procedure.card
+---
+`,
 );
 await box.write("box/inbox/triaged/recipes/Bread.memo.card", "<memo>bread</memo>");
 await box.write("box/inbox/triaged/recipes/Pasta.memo.card", "<memo>pasta</memo>");
@@ -68,7 +71,15 @@ await box.cleanup();
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark><navigation><label>Recipes</label><symbol>🍳</symbol></navigation><triage-destination><procedure ref="archive.procedure.card"/></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    procedure-ref: archive.procedure.card
+---
+`,
 );
 // Create the bucket directory but no items.
 await box.write("box/inbox/triaged/recipes/.gitkeep", "");
@@ -99,7 +110,15 @@ await box.cleanup();
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark><navigation><label>Recipes</label><symbol>🍳</symbol></navigation><triage-destination><procedure ref="archive.procedure.card"/></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    procedure-ref: archive.procedure.card
+---
+`,
 );
 await box.write("box/inbox/triaged/recipes/Item.memo.card", "<memo/>");
 await box.write("box/inbox/triaged/recipes/Item.memo.card.probable.txt", "Reason: judgment call.");
@@ -130,7 +149,15 @@ await box.cleanup();
 const box = await makeTmpBox();
 await box.write(
   "store/notes/Notes.landmark.card",
-  `<landmark><navigation><label>Notes</label><symbol>📝</symbol></navigation><triage-destination><rules>Free-form notes.</rules></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Notes
+  symbol: 📝
+destinations:
+  - for: [triage]
+    rules: Free-form notes.
+---
+`,
 );
 await box.write("box/inbox/triaged/notes/Item.memo.card", "<memo/>");
 

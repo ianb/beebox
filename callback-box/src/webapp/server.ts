@@ -16,6 +16,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerSystemAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
 import { isAuthEnabled } from "./auth.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { ServerOptions } from "./server-types.js";
 import { resolveBoxes, killPreviousServer } from "./server-lifecycle.js";
 import { registerBox } from "./server-box-scope.js";
@@ -89,8 +90,11 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
 
   registerRootInfoRoutes(server, boxes);
 
-  // Path from dist/webapp/ to src/frontend/dist
-  const frontendPath = path.join(import.meta.dirname, "../../src/frontend/dist");
+  // Resolve from the package root (bundle-safe) rather than a fixed depth off
+  // import.meta.dirname: the prod bundle lives at dist/cli.mjs (one level down)
+  // while tsx runs this from src/webapp/ (two levels), so a hardcoded `../..`
+  // overshoots under the bundle and the frontend silently never loads.
+  const frontendPath = path.join(PACKAGE_ROOT, "src/frontend/dist");
   const frontendExists = fs.existsSync(path.join(frontendPath, "index.html"));
 
   // Serve static frontend assets at root level (for the box selector page at /)

@@ -27,9 +27,9 @@
  * For OUTBOUND email (drafts the agent authors), see `email-outbound.tsx`.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const EmailMessageSchema: CardSchema = cardSchema("email-message", {
   fields: {

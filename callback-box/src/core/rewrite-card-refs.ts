@@ -28,7 +28,7 @@
  */
 
 import * as path from "node:path";
-import { isAttachRef, resolveAttachRef } from "../lib/attach-path.js";
+import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns

@@ -21,11 +21,11 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
 - Run tests before committing. If tests fail, fix them. If a test failure is clearly pre-existing and unrelated to your changes, note it but don't ignore your own failures.
 
-**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. The server runs `tsx` directly (not compiled `dist/`).
+**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. Prod runs the bundled `dist/cli.mjs` (built by `scripts/build-cli.mjs`, rsynced by the deploy) via `cb serve` — not tsx, and not the per-file compiled tree. Because the bundle lives at `dist/` (one level below the package root, not `dist/webapp/`), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`.
 
 ## Cards
 
-Cards are the core data format. The current format is **YAML frontmatter + markdown body** (Phase 2, May 2026); a handful of schemas with inline-attributed structure (guide, recipe, procedure, procedure-run, capture-session, landmark) remain on the older **XML body** until cardworks grows Markdoc-style body tags. Both formats coexist behind the loader.
+Cards are the core data format. The format is **YAML frontmatter + markdown body** (Phase 2). Every schema is frontmatter; the legacy XML card format, its loader, and the `cardworks` package have been removed. The card primitives (`cardSchema`, `body`, `splitCardContent`, lint formatting, …) now live in `src/cards/` and are exposed to box-local schemas via the public `callback-box/cards` specifier.
 
 ```
 ---
@@ -36,7 +36,7 @@ created: 2026-05-22T10:00:00Z
 Body content as plain markdown.
 ```
 
-**Schemas** live in `src/schemas/`. Phase-2 cards use `cardSchema(type, { fields, instructions? })` from cardworks. Legacy XML cards use `element(tagName, ...)`. `src/schemas/registry.ts` lists both sets (`cardSchemas[]` for frontmatter, `schemas[]` for XML); boxes can add local schemas under `config/schemas/`. The `type:` field in frontmatter (or root element tag for XML) selects the schema.
+**Schemas** live in `src/schemas/`. Cards use `cardSchema(type, { fields, instructions? })` from `src/cards/` (box-local schemas import the same via `callback-box/cards`). `src/schemas/registry.ts` lists them in `cardSchemas[]`; boxes can add local schemas under `config/schemas/`. The type is taken from the filename (`Foo.<type>.card`) — there is no `type:` field in frontmatter.
 
 **Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a discriminated `FrontmatterLoadedCard | XmlLoadedCard`. Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations to frontmatter cards are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
 
@@ -70,7 +70,7 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/hooks/          Shared React hooks
   src/lib/            Helpers (cn, source-tag, view-url, trpc, audio-context, ...)
   src/ssr/            Server-side rendering setup for `cb render`
-src/schemas/      Card type definitions (Zod + cardworks: cardSchema for frontmatter, element for legacy XML)
+src/schemas/      Card type definitions (Zod + `cardSchema` from src/cards/)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
@@ -84,8 +84,6 @@ plugins/          Claude Code plugins (card-validator hook)
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`.
 
-**cardworks** (`../cardworks`, sibling in the monorepo) — XML card library. Parsing, serialization, validation, JSX. Edit as needed — it's part of this ecosystem.
-
 ## Key Concepts
 
 **Wakeup cycle** — `cb wakeup` syncs connectors → processes inbox → executes commands → archives → schedules next wakeup.
@@ -94,7 +92,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 **Connectors** — Sync external services with the box filesystem. Each implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
 
-**Procedures** — Multi-step workflows defined in XML. Engine in `src/core/`. Config in box at `config/procedures/`, runs at `procedure/runs/`.
+**Procedures** — Multi-step workflows defined as YAML-frontmatter cards. Engine in `src/core/`. Config in box at `config/procedures/`, runs at `procedure/runs/`.
 
 ## Behavioral Notes
 

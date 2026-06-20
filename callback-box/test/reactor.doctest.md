@@ -9,7 +9,6 @@ import {
   buildReactorUserPrompt,
 } from "../src/core/reactor/index.js";
 import { findJobCards } from "../src/core/reactor/job-discovery.js";
-import { detectProcedureInJob } from "../src/core/reactor/procedure-trampoline.js";
 import { buildJobDescription } from "../src/core/reactor/batch-jobs.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
@@ -190,55 +189,6 @@ cards.length
 => 0
 ```
 
-## detectProcedureInJob
-
-### Detects procedure ref
-
-```
-const result = await detectProcedureInJob(
-  `<job><procedure ref="daily-digest" /></job>`,
-  "test.card",
-);
-result.procedureRef
-=> daily-digest
-```
-
-### Detects procedure with directive
-
-```
-const result = await detectProcedureInJob(
-  `<job><procedure ref="summarize"><directive>Focus on key points</directive></procedure></job>`,
-  "test.card",
-);
-result.procedureRef
-=> summarize
-
-result.directive
-=> Focus on key points
-```
-
-### Returns null for non-procedure jobs
-
-```
-const result = await detectProcedureInJob(
-  `<chat-job><description>Just a chat</description></chat-job>`,
-  "test.card",
-);
-result
-=> null
-```
-
-### Returns null for malformed XML
-
-```
-const result = await detectProcedureInJob(
-  `this is not xml at all <><>`,
-  "test.card",
-);
-result
-=> null
-```
-
 ## buildJobDescription
 
 ### Includes XML content and priority label
@@ -248,9 +198,7 @@ const desc = await buildJobDescription(
   {
     card: { file: "task.job.card", priority: "low" },
     relPath: "box/jobs/task.job.card",
-    content: `<job priority="low"><description>Do something</description></job>`,
-    procedureInfo: null,
-  },
+    content: `<job priority="low"><description>Do something</description></job>`,  },
   "/tmp/fake-box",
 );
 desc.includes("*(low priority)*")
@@ -273,9 +221,7 @@ const desc = await buildJobDescription(
   {
     card: { file: "reply.chat.job.card", priority: "normal" },
     relPath: "box/jobs/reply.chat.job.card",
-    content: `<chat-job><thread ref="store/threads/t1.card" /><description>Reply</description></chat-job>`,
-    procedureInfo: null,
-  },
+    content: `<chat-job><thread ref="store/threads/t1.card" /><description>Reply</description></chat-job>`,  },
   box.root,
 );
 desc.includes("Hello world")
@@ -294,9 +240,7 @@ const desc = await buildJobDescription(
   {
     card: { file: "task.job.card", priority: "normal" },
     relPath: "box/jobs/task.job.card",
-    content: `<job><item ref="store/items/missing.card" /><description>Process</description></job>`,
-    procedureInfo: null,
-  },
+    content: `<job><item ref="store/items/missing.card" /><description>Process</description></job>`,  },
   "/tmp/fake-box",
 );
 // Should not crash, just omit the missing ref

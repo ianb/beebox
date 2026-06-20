@@ -4,6 +4,10 @@
   "description": "A Claude Code wrapper system for file-based processing",
   "type": "module",
   "main": "dist/cli/index.js",
+  "exports": {
+    ".": "./dist/cli/index.js",
+    "./cards": "./dist/cards/index.js"
+  },
   "bin": {
     "cb": "./bin/cb"
   },
@@ -77,7 +81,6 @@
     "@types/ws": "^8.18.1",
     "ansi-to-html": "^0.7.2",
     "better-sqlite3": "^12.6.2",
-    "cardworks": "workspace:*",
     "chalk": "^5.6.2",
     "cheerio": "^1.2.0",
     "chokidar": "^5.0.0",

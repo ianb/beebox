@@ -8,7 +8,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../../cards/index.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { buildLoadContext } from "../load-context.js";

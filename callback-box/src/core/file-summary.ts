@@ -10,8 +10,6 @@
  * path not to reach into attrs.
  */
 
-import type { ElementNode } from "cardworks";
-
 export interface FileSummary<T = unknown> {
   /** Box-relative path to the file */
   path: string;
@@ -26,17 +24,15 @@ export interface FileSummary<T = unknown> {
 }
 
 /**
- * Input passed to a loader. The server populates `element` for parsed cards
+ * Input passed to a loader. The server populates `fields` for parsed cards
  * and `content` for text files; loaders that don't need either just return
  * a summary keyed on `path`.
  */
 export interface LoaderInput {
   path: string;
-  /** Populated for Phase 1 XML-bodied cards. */
-  element?: ElementNode;
-  /** Populated for Phase 2 frontmatter-bodied cards. */
+  /** Populated for frontmatter cards: the parsed frontmatter fields. */
   fields?: Record<string, unknown>;
-  /** Card type — from `element.tagName` (XML) or `fields.type` (frontmatter). */
+  /** Card type — from the card's `fields.type`. */
   type?: string;
   /** Plain text content for non-card files. */
   content?: string;

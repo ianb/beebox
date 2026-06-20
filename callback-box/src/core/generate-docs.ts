@@ -13,10 +13,11 @@ import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
-import { schemas, cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
+import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 import { generateViewsDoc } from "./views-doc.js";
 import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 import { generateNarrationModeDoc } from "./narration-mode-doc.js";
+import { generateReducingClaudeMdDoc } from "./reducing-claude-md-doc.js";
 import { generatePythonToolsDoc } from "./python-tools-doc.js";
 import { generateAgentGuide } from "./agent-guide/index.js";
 import { CONTAINS_DOC_APPENDIX } from "./agent-guide/search.js";
@@ -312,7 +313,6 @@ interface DocWritePlan {
   boxRoot: string;
   debug: boolean;
   procedures: ProcedureSummary[];
-  allSchemas: typeof schemas;
   allCardSchemas: typeof cardSchemas;
   personalitySection: string | undefined;
 }
@@ -322,10 +322,10 @@ interface DocWritePlan {
  * connectors, views, voice, per-card-type, etc.) in parallel.
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, debug, procedures, allSchemas, allCardSchemas, personalitySection } = plan;
+  const { boxRoot, debug, procedures, allCardSchemas, personalitySection } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection }), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection }), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
@@ -336,31 +336,29 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
       withDocId({ relativePath: `${DOCS_DIR}/chat-voice.md`, content: generateChatVoiceDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "narration-mode.md"),
       withDocId({ relativePath: `${DOCS_DIR}/narration-mode.md`, content: generateNarrationModeDoc(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "reducing-claude-md.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/reducing-claude-md.md`, content: generateReducingClaudeMdDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
       withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
-    // Per-schema generated docs cover both legacy XML schemas (ElementSchema
-    // with `tagName`) and phase-2 frontmatter schemas (CardSchema with
-    // `type`). Both expose an optional `instructions` field; only schemas
-    // that supply one get a doc written.
-    ...writeCardDocs({ boxRoot, debug, allSchemas, allCardSchemas }),
+    // Per-schema generated docs: each frontmatter schema with an optional
+    // `instructions` field gets a `card-<type>.md` doc.
+    ...writeCardDocs({ boxRoot, debug, allCardSchemas }),
   ]);
 }
 
 /**
- * Build the per-schema card-doc writes for every schema that supplies
- * `instructions` (both legacy XML and phase-2 frontmatter schemas).
+ * Build the per-schema card-doc writes for every frontmatter schema that
+ * supplies `instructions`.
  */
 function writeCardDocs(params: {
   boxRoot: string;
   debug: boolean;
-  allSchemas: typeof schemas;
   allCardSchemas: typeof cardSchemas;
 }): Array<Promise<void>> {
-  const { boxRoot, debug, allSchemas, allCardSchemas } = params;
+  const { boxRoot, debug, allCardSchemas } = params;
   return [
-    ...allSchemas.map((s) => ({ name: s.tagName, instructions: s.instructions })),
     ...allCardSchemas.map((s) => ({
       name: s.type,
       // Searchable types get the canonical contains: writing rule appended.
@@ -413,24 +411,21 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   const procedures = await scanProcedures(boxRoot);
 
-  // Load box-local schemas alongside built-in ones. Both formats are
-  // box-aware: legacy XML element schemas join allSchemas, phase-2
-  // frontmatter card schemas join allCardSchemas.
+  // Load box-local frontmatter schemas alongside built-in ones.
   const boxSchemas = await loadBoxSchemas(boxRoot);
-  const allSchemas = [...schemas, ...boxSchemas.elementSchemas];
   const allCardSchemas = [...cardSchemas, ...boxSchemas.cardSchemas];
 
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot, debug);
 
-  await writeStaticDocs({ boxRoot, debug, procedures, allSchemas, allCardSchemas, personalitySection });
+  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, personalitySection });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot, debug);
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allSchemas, personalitySection, guides }), debug }));
+    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides }), debug }));
 
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);

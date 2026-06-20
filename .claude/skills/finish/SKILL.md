@@ -1,6 +1,6 @@
 ---
 name: finish
-description: Use when the human wants the worktree's work merged back to main — either as a final close-out or as a mid-stream checkpoint with the session continuing. Drives the merge flow: commit any straggling changes, pull main into the worktree, run the test suite (ALL tests must pass — no exceptions), resolve any feedback item the work addressed, then merge the worktree branch into main. The close-out report must match the work's actual status (complete vs partial, verified vs tests-only) and only suggest exiting the session when the work is truly done. Triggers include "finish", "wrap this up", "ship it", "merge this back", "checkpoint this", "/finish".
+description: Use when the human says they're done with a worktree and wants its work landed in main — either a final close-out or a mid-stream checkpoint with the session continuing. Triggers include "finish", "wrap this up", "ship it", "merge this back", "checkpoint this", "/finish".
 allowed-tools: Bash, Read, Edit, Write
 ---
 

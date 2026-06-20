@@ -26,9 +26,9 @@
  *   ---
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 const StatusEnum = z.enum(["new", "read", "replied", "archived"]);
 

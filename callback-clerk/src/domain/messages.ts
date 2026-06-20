@@ -3,25 +3,6 @@
  * uniform action response the popup renders from.
  */
 
-import type { SaveIntent } from "./save-page.js";
-
-export interface SendMemoMessage {
-  type: "sendMemo";
-  text: string;
-  url?: string;
-  title?: string;
-}
-
-export interface SavePageMessage {
-  type: "savePage";
-  intent: SaveIntent;
-  tabId: number;
-}
-
-export interface SyncTabsMessage {
-  type: "syncTabs";
-}
-
 export interface CommentOnPageMessage {
   type: "commentOnPage";
   tabId: number;
@@ -29,11 +10,7 @@ export interface CommentOnPageMessage {
   destinationDir?: string;
 }
 
-export type ClerkMessage =
-  | SendMemoMessage
-  | SavePageMessage
-  | SyncTabsMessage
-  | CommentOnPageMessage;
+export type ClerkMessage = CommentOnPageMessage;
 
 export interface ActionFailure {
   ok: false;
@@ -47,10 +24,5 @@ export type ActionResponse = { ok: true } | ActionFailure;
 export function isClerkMessage(value: unknown): value is ClerkMessage {
   if (typeof value !== "object" || value === null) return false;
   const record = value as Record<string, unknown>;
-  return (
-    record.type === "sendMemo" ||
-    record.type === "savePage" ||
-    record.type === "syncTabs" ||
-    record.type === "commentOnPage"
-  );
+  return record.type === "commentOnPage";
 }

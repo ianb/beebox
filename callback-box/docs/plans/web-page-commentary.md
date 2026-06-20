@@ -170,7 +170,7 @@ extension.
   `TriageProcedure` (`:145-150`); `LandmarkSchema` union (`:181-209`);
   `createLandmarkTemplate` (`:247-262`); `landmarkLoader` (`:217-238`).
   *Rebuild the role* into `<destination for="…">` (Track 1).
-- **Attach convention** — `src/lib/attach-path.ts`: `attachDirFor` (`:44-49`),
+- **Attach convention** — `src/shared/attach-path.ts`: `attachDirFor` (`:44-49`),
   `attachmentPath` (`:60-63`), `attach/` ref prefix (`:17`). *Reuse* to place
   the frozen capture and (optionally) the readable doc under the card's
   `.attach/`.

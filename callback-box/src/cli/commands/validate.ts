@@ -7,12 +7,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { Command } from "commander";
-import { formatLintResults, type LintSummary } from "cardworks";
+import { formatLintResults, type LintSummary } from "../../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile } from "../lib/paths.js";
-import { createLoader } from "../lib/loader.js";
+import { listBoxCardFiles } from "../../core/list-cards.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
@@ -146,11 +146,6 @@ function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors:
     .join("\n");
 }
 
-interface ValidationContext {
-  loader: Awaited<ReturnType<typeof createLoader>>;
-  ctx: LoadCardContext;
-}
-
 interface ValidationResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
@@ -185,9 +180,8 @@ async function runHookMode(): Promise<never> {
     process.exit(0);
   }
   const boxRoot = await requireBoxRoot();
-  const loader = await createLoader(boxRoot);
   const ctx = await buildLoadContext(boxRoot);
-  const summary = await lintCardsDispatch([fp], { loader, ctx });
+  const summary = await lintCardsDispatch([fp], { boxRoot, ctx });
   const stale = await staleContainsWarning(boxRoot, {
     relPath: path.relative(boxRoot, fp),
     ctx,
@@ -206,7 +200,6 @@ async function runHookMode(): Promise<never> {
 
 interface CollectArgs {
   boxRoot: string;
-  loader: ValidationContext["loader"];
   ctx: LoadCardContext;
   resolved: string[];
   json: boolean;
@@ -226,21 +219,21 @@ async function collectResults(
 }
 
 /** Validate the union of git-staged cards and any explicit card paths given. */
-async function collectStagedResults({ boxRoot, loader, ctx, resolved, json }: CollectArgs): Promise<ValidationResults> {
+async function collectStagedResults({ boxRoot, ctx, resolved, json }: CollectArgs): Promise<ValidationResults> {
   const staged = await listStagedCards(boxRoot);
   const explicit = resolved.filter(isCardFile);
   const all = [...staged, ...explicit];
   if (all.length === 0 && !json) {
     console.log("No staged cards to validate.");
   }
-  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { loader, ctx }) : null;
+  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { boxRoot, ctx }) : null;
   return { cardSummary, mdSummary: null, attachErrors: [], claudeMdWarnings: [] };
 }
 
 /** Validate every card, markdown file, and attach layout in the box. */
-async function collectAllResults({ boxRoot, loader, ctx }: CollectArgs): Promise<ValidationResults> {
-  const cardPaths = (await loader.listCards()).filter((p) => !isTrashedCard(p));
-  const cardSummary = await lintCardsDispatch(cardPaths, { loader, ctx });
+async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<ValidationResults> {
+  const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p));
+  const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
   const mdFiles = await findMarkdownFiles(boxRoot);
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
@@ -249,7 +242,7 @@ async function collectAllResults({ boxRoot, loader, ctx }: CollectArgs): Promise
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
-async function collectExplicitResults({ loader, ctx, resolved }: CollectArgs): Promise<ValidationResults> {
+async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = resolved.filter(isCardFile);
   const mdPaths = resolved.filter(isMarkdownFile);
   const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
@@ -257,7 +250,7 @@ async function collectExplicitResults({ loader, ctx, resolved }: CollectArgs): P
     console.error(`Error: not a card or markdown file: ${unknown.join(", ")}`);
     process.exit(1);
   }
-  const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { loader, ctx }) : null;
+  const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths) : null;
   return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }
@@ -336,7 +329,6 @@ export const validateCommand = new Command("validate")
         }
 
         const boxRoot = await requireBoxRoot();
-        const loader = await createLoader(boxRoot);
         const ctx = await buildLoadContext(boxRoot);
         const json = options.json === true;
 
@@ -344,7 +336,7 @@ export const validateCommand = new Command("validate")
           path.isAbsolute(p) ? p : path.join(process.cwd(), p)
         );
 
-        const results = await collectResults(options, { boxRoot, loader, ctx, resolved, json });
+        const results = await collectResults(options, { boxRoot, ctx, resolved, json });
 
         if (json) {
           const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings };

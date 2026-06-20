@@ -1,164 +1,166 @@
-<procedure name="refresh-maps">
-  <description>
-    Refresh the box's MAP.md files. Each directory in the box has a MAP.md
-    listing its immediate children with one-line annotations; this procedure
-    keeps that listing accurate as files and directories are added or
-    removed. Plain edits to existing files do not trigger updates.
+---
+name: refresh-maps
+description: |-
+  Refresh the box's MAP.md files. Each directory in the box has a MAP.md
+  listing its immediate children with one-line annotations; this procedure
+  keeps that listing accurate as files and directories are added or
+  removed. Plain edits to existing files do not trigger updates.
 
-    The precheck exits with CHECK_SKIP when no immediate-children set has
-    changed since the last refresh, so on quiet days this procedure does
-    no work and invokes no agent.
-  </description>
+  The precheck exits with CHECK_SKIP when no immediate-children set has
+  changed since the last refresh, so on quiet days this procedure does
+  no work and invokes no agent.
+steps:
+  - id: refresh
+    description: Identify dirty MAP.md files and rewrite them with current annotated
+      listings
+    precheck:
+      shells:
+        - |-
+          cb refresh-maps
+          # cb refresh-maps exits CHECK_SKIP_CODE (75) when there's nothing
+          # to do, or when the box is in an unworkable state (uncommitted
+          # work, not a git repo, no commits yet).
+      whys:
+        - |-
+          No need to invoke an agent if no immediate-children sets have
+          changed since the last refresh.
+    run:
+      agents:
+        - prompt: |-
+            You are refreshing the box's MAP.md index files.
 
-  <step id="refresh">
-    <description>Identify dirty MAP.md files and rewrite them with current annotated listings</description>
+            Each directory in the box has (or should have) a MAP.md that lists
+            its immediate children with one-line annotations. CLAUDE.md
+            @-imports MAP.md so agents working in the box see the listing.
 
-    <precheck>
-      <shell>
-        cb refresh-maps
-        # cb refresh-maps exits CHECK_SKIP_CODE (75) when there's nothing
-        # to do, or when the box is in an unworkable state (uncommitted
-        # work, not a git repo, no commits yet).
-      </shell>
-      <why>
-        No need to invoke an agent if no immediate-children sets have
-        changed since the last refresh.
-      </why>
-    </precheck>
+            STEP 1 - GET THE BRIEF:
+            ```
+            cb refresh-maps --brief
+            ```
+            This prints a JSON brief with one task per MAP.md that needs work:
 
-    <run>
-      <agent model="haiku" max-turns="40">
-        You are refreshing the box's MAP.md index files.
-
-        Each directory in the box has (or should have) a MAP.md that lists
-        its immediate children with one-line annotations. CLAUDE.md
-        @-imports MAP.md so agents working in the box see the listing.
-
-        STEP 1 - GET THE BRIEF:
-        ```
-        cb refresh-maps --brief
-        ```
-        This prints a JSON brief with one task per MAP.md that needs work:
-
-        ```json
-        {
-          "needsWork": true,
-          "head": "&lt;commit-hash&gt;",
-          "tasks": [
+            ```json
             {
-              "map": "inbox/MAP.md",
-              "dir": "inbox",
-              "action": "update",
-              "asOf": "&lt;previous-commit&gt;",
-              "head": "&lt;commit-hash&gt;",
-              "added": ["new.card", "triage/"],
-              "deleted": ["old.card"],
-              "children": ["bar.card", "new.card", "triage/"]
+              "needsWork": true,
+              "head": "<commit-hash>",
+              "tasks": [
+                {
+                  "map": "inbox/MAP.md",
+                  "dir": "inbox",
+                  "action": "update",
+                  "asOf": "<previous-commit>",
+                  "head": "<commit-hash>",
+                  "added": ["new.card", "triage/"],
+                  "deleted": ["old.card"],
+                  "children": ["bar.card", "new.card", "triage/"]
+                }
+              ]
             }
-          ]
-        }
-        ```
+            ```
 
-        - `action: "create"` — MAP.md is missing. Write a fresh one
-          covering all entries in `children`.
-        - `action: "update"` — MAP.md already exists. Read it, then add
-          lines for `added` items and remove lines for `deleted` items.
-          Preserve annotations for unchanged entries.
+            - `action: "create"` — MAP.md is missing. Write a fresh one
+              covering all entries in `children`.
+            - `action: "update"` — MAP.md already exists. Read it, then add
+              lines for `added` items and remove lines for `deleted` items.
+              Preserve annotations for unchanged entries.
 
-        STEP 2 - WRITE EACH MAP.md:
+            STEP 2 - WRITE EACH MAP.md:
 
-        MAP.md is primarily a directory index. List subdirectories, not
-        every file. Only mention files when they anchor the directory:
-        briefing cards (`*.briefing.card`), `README.md`, landmark cards
-        (`*.landmark.card`), or top-level docs. Don't enumerate per-item
-        card files, attachments, or generated files — the parent's
-        listing already names this dir, and an `ls` shows contents
-        directly.
+            MAP.md is primarily a directory index. List subdirectories, not
+            every file. Only mention files when they anchor the directory:
+            briefing cards (`*.briefing.card`), `README.md`, landmark cards
+            (`*.landmark.card`), or top-level docs. Don't enumerate per-item
+            card files, attachments, or generated files — the parent's
+            listing already names this dir, and an `ls` shows contents
+            directly.
 
-        Format:
+            Format:
 
-        ```
-        # Map: &lt;dir-path&gt;
+            ```
+            # Map: <dir-path>
 
-        - `subdir/` — what kind of contents this subdir holds
-        - `self-explanatory-name/`
-        - `briefing.briefing.card` — context for this area (only if present)
-        ```
+            - `subdir/` — what kind of contents this subdir holds
+            - `self-explanatory-name/`
+            - `briefing.briefing.card` — context for this area (only if present)
+            ```
 
-        Rules for annotations:
-        - Annotations are OPTIONAL. If the filename or directory name is
-          already self-explanatory (e.g. `2024/`, `recipes/`, `README.md`,
-          a person's name), just list it as a bare bullet — no ` — …`.
-          The annotation only earns its place when it tells a reader
-          something the name doesn't.
-        - When you do annotate: ≤ 100 characters.
-        - Say what's in the dir, not what kind of dir it is.
-          ("Per-property document folders", not "directory of subdirs")
-        - Skip filler ("this is a", "contains", "directory of").
+            Rules for annotations:
+            - Annotations are OPTIONAL. If the filename or directory name is
+              already self-explanatory (e.g. `2024/`, `recipes/`, `README.md`,
+              a person's name), just list it as a bare bullet — no ` — …`.
+              The annotation only earns its place when it tells a reader
+              something the name doesn't.
+            - When you do annotate: ≤ 100 characters.
+            - Say what's in the dir, not what kind of dir it is.
+              ("Per-property document folders", not "directory of subdirs")
+            - Skip filler ("this is a", "contains", "directory of").
 
-        SHELL DIRS — when a subdir's contents are hidden by ignore
-        patterns (e.g. `store/archive/captures/` whose dated capture
-        sessions are excluded by `store/archive/captures/*`), the dir
-        appears in the parent's listing but its own children list will
-        look empty. Peek inside with `ls` to give an honest count and
-        characterization, e.g. "captures/ — 143 archived voice/photo
-        capture sessions (per-item maps disabled)".
+            SHELL DIRS — when a subdir's contents are hidden by ignore
+            patterns (e.g. `store/archive/captures/` whose dated capture
+            sessions are excluded by `store/archive/captures/*`), the dir
+            appears in the parent's listing but its own children list will
+            look empty. Peek inside with `ls` to give an honest count and
+            characterization, e.g. "captures/ — 143 archived voice/photo
+            capture sessions (per-item maps disabled)".
 
-        Use `cb create` or just `Write` to author each MAP.md. Don't
-        modify any other files.
+            Use `cb create` or just `Write` to author each MAP.md. Don't
+            modify any other files.
 
-        STEP 3 - COMMIT:
+            STEP 3 - COMMIT:
 
-        ```bash
-        git add -A &amp;&amp; git commit -m "$(cat &lt;&lt;'EOF'
-        Refresh maps: &lt;N&gt; map(s)
+            ```bash
+            git add -A && git commit -m "$(cat <<'EOF'
+            Refresh maps: <N> map(s)
 
-        - &lt;dir1&gt;/MAP.md (&lt;created|updated&gt;)
-        - &lt;dir2&gt;/MAP.md (&lt;created|updated&gt;)
+            - <dir1>/MAP.md (<created|updated>)
+            - <dir2>/MAP.md (<created|updated>)
 
-        Triggered-By: cb procedure
-        Phase: refresh
-        EOF
-        )"
-        ```
+            Triggered-By: cb procedure
+            Phase: refresh
+            EOF
+            )"
+            ```
 
-        STEP 4 - FINALIZE:
-        ```
-        cb refresh-maps --finalize
-        ```
-        This adds an `@MAP.md` line to each affected directory's CLAUDE.md
-        (creating a stub if it doesn't exist), stamps the state file at
-        HEAD, and prunes entries for deleted directories. Don't commit
-        after — the procedure engine's "Complete step" commit sweeps
-        those file changes into the same step commit.
+            STEP 4 - FINALIZE:
+            ```
+            cb refresh-maps --finalize
+            ```
+            This adds an `@MAP.md` line to each affected directory's CLAUDE.md
+            (creating a stub if it doesn't exist), stamps the state file at
+            HEAD, and prunes entries for deleted directories. Don't commit
+            after — the procedure engine's "Complete step" commit sweeps
+            those file changes into the same step commit.
 
-        GIT: Do NOT add Co-Authored-By to commits. The system adds the
-        appropriate trailers automatically.
-      </agent>
-    </run>
+            GIT: Do NOT add Co-Authored-By to commits. The system adds the
+            appropriate trailers automatically.
+          model: haiku
+          max-turns: 40
+    validate:
+      shells:
+        - >-
+          # If --brief still reports needsWork=true, the agent missed something.
 
-    <validate severity="review">
-      <shell>
-        # If --brief still reports needsWork=true, the agent missed something.
-        # Use --brief (not the bare command) so we don't re-save the brief file.
-        output=$(cb refresh-maps --brief 2&gt;/dev/null || true)
-        if echo "$output" | grep -q '"needsWork": true'; then
-          echo "WARNING: cb refresh-maps --brief still reports outstanding work."
-          echo "$output" | head -40
-          exit 1
-        fi
-        echo "All MAP.md files current."
-      </shell>
-      <instruction>
-        After the agent runs, the next precheck should be a no-op
-        (needsWork=false). If it still reports tasks, the agent missed
-        one or more — re-run the procedure or inspect manually.
-      </instruction>
-      <why>
-        If a dirty MAP.md is silently missed, state stamping will move
-        the asOf forward and future precheck runs won't notice the
-        stale listing.
-      </why>
-    </validate>
-  </step>
-</procedure>
+          # Use --brief (not the bare command) so we don't re-save the brief
+          file.
+
+          output=$(cb refresh-maps --brief 2>/dev/null || true)
+
+          if echo "$output" | grep -q '"needsWork": true'; then
+            echo "WARNING: cb refresh-maps --brief still reports outstanding work."
+            echo "$output" | head -40
+            exit 1
+          fi
+
+          echo "All MAP.md files current."
+      instructions:
+        - |-
+          After the agent runs, the next precheck should be a no-op
+          (needsWork=false). If it still reports tasks, the agent missed
+          one or more — re-run the procedure or inspect manually.
+      whys:
+        - |-
+          If a dirty MAP.md is silently missed, state stamping will move
+          the asOf forward and future precheck runs won't notice the
+          stale listing.
+      severity: review
+---

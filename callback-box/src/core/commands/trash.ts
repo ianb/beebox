@@ -14,7 +14,7 @@ import {
 } from "../command-runner.js";
 import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
-import { attachDirFor } from "../../lib/attach-path.js";
+import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 
 class NotACardFileError extends Error {

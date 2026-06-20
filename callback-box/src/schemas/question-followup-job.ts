@@ -5,7 +5,7 @@
  * agent acts on the directive with the user's answer.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 

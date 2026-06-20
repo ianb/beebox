@@ -12,6 +12,7 @@
 
 import { Image } from "./ui/Image";
 import { useLightbox } from "./LightboxProvider";
+import { formatBytes } from "../lib/format-bytes";
 
 /** UI-side attachment record (pairs ChatImageAttachment payload with preview metadata). */
 export interface AttachmentItem {
@@ -135,12 +136,6 @@ export interface FileAttachmentItem {
   originalName: string;
   size: number;
   mimetype: string;
-}
-
-function formatBytes(n: number): string {
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 * 1024) return `${Math.round(n / 1024)} KB`;
-  return `${(n / (1024 * 1024)).toFixed(1)} MB`;
 }
 
 export function FileAttachmentPanel({

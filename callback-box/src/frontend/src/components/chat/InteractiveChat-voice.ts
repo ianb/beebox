@@ -49,9 +49,10 @@ interface VoiceDevices {
 
 /**
  * Run the realtime-transcription `onKeywordSend` flow: commit the utterance and
- * restart the mic so the user can keep talking. Narration mode runs a
- * high-quality transcription pass before sending; the `hq` region of the
- * composer machine carries the in-flight + pending-draft state for the UI.
+ * either restart the mic so the user can keep talking (plain `send`) or close it
+ * and leave it closed (`closeMic`, the "send and close" sign-off). Narration
+ * mode runs a high-quality transcription pass before sending; the `hq` region of
+ * the composer machine carries the in-flight + pending-draft state for the UI.
  * Module-level so the hook body stays under the per-function line budget.
  */
 function runKeywordSend(opts: {
@@ -59,6 +60,12 @@ function runKeywordSend(opts: {
   /** Trigger phrase the realtime pass matched (e.g. "send message"). */
   matchedPhrase: string;
   audioBlob: Blob | null;
+  /**
+   * "Send and close": after the message commits, leave the mic closed instead
+   * of restarting it. Sends STOP_DICTATION so the post-response re-arm
+   * (gated on `turnTaking`) is suppressed too.
+   */
+  closeMic: boolean;
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
   composerSend: (event: ComposerEvent) => void;
@@ -74,12 +81,19 @@ function runKeywordSend(opts: {
   inputRef: React.MutableRefObject<string>;
   setInput: React.Dispatch<React.SetStateAction<string>>;
 }) {
-  const { text, matchedPhrase, audioBlob, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput } = opts;
+  const { text, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput } = opts;
+  // Restart the mic for a continuous conversation, or — for "send and close" —
+  // end dictation (STOP_DICTATION clears turnTaking, suppressing the
+  // post-response re-arm too). Called at every exit below.
+  const settleMic = () => {
+    if (closeMic) composerSend({ type: "STOP_DICTATION" });
+    else transcription.start();
+  };
   // Any text already in the composer (a prior stopped segment, or typing)
   // continues into this utterance rather than being discarded.
   const priorInput = inputRef.current.trim();
   if (!priorInput && !text.trim()) {
-    transcription.start();
+    settleMic();
     return;
   }
   // The prior text is being committed with this utterance — clear it so the
@@ -129,7 +143,7 @@ function runKeywordSend(opts: {
         const keyword = detectKeyword(hqResult.text);
         const hqText = keyword
           ? keyword.processedTranscript
-          : appendSendKeywordTag(hqResult.text, matchedPhrase);
+          : appendSendKeywordTag(hqResult.text, { action: closeMic ? "sendClose" : "send", matchedPhrase });
         submit(hqText, { diarized: hqResult.diarized });
       })
       .catch(() => { composerSend({ type: "HQ_DONE" }); });
@@ -139,8 +153,7 @@ function runKeywordSend(opts: {
     }
     submit(text);
   }
-  // Restart recording so the user can keep talking.
-  transcription.start();
+  settleMic();
 }
 
 export function useChatVoice(opts: {
@@ -206,8 +219,8 @@ export function useChatVoice(opts: {
     // enabled, and every voice send caches it for `cb chat get-last-audio`.
     // No latency cost — the actor finalizes the blob synchronously on STOP.
     wantAudioBlob: () => true,
-    onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob }) => runKeywordSend({
-      text: processedTranscript, matchedPhrase, audioBlob, transcription, stopTickRef, composerSend, sessionId,
+    onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob, closeMic }) => runKeywordSend({
+      text: processedTranscript, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId,
       narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputRef, setInput,
     }),
     onKeywordCancel: () => {

@@ -47,26 +47,24 @@ if [[ "$SKIP_FRONTEND" != true ]]; then
   cd "$REPO_DIR/src/frontend" && pnpm --silent build
 fi
 
-# Build cardworks locally before syncing. The server consumes it through a
-# workspace symlink (callback-box/node_modules/cardworks -> ../../cardworks)
-# and the remote deploy step installs deps but never builds cardworks. So the
-# dist/ we rsync must already match the source we rsync. cardworks/dist is
-# gitignored, so rsync ships whatever build is on disk here; a stale one once
-# shipped an old API surface that crashed `cb validate` and hung chat. Always
-# rebuild so source and dist stay in lockstep on the server.
-if [[ -d "$MONO_DIR/cardworks" ]]; then
-  echo "Building cardworks..."
-  cd "$MONO_DIR/cardworks" && pnpm --silent build
-fi
+# Build the CLI bundle locally before syncing. dist/ is rsynced (not excluded),
+# and while the server runs cb via tsx (not the bundle), it DOES need
+# dist/cards/index.js on disk: box-local schema files import `callback-box/cards`,
+# which package.json `exports` maps to ./dist/cards/index.js (a plain-JS build of
+# the card-primitive layer, emitted by build-cli.mjs alongside dist/cli.mjs). If
+# that file is missing or stale on the server, every box-local schema fails to
+# load. Building here keeps dist/ in lockstep with the source we rsync.
+echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
+cd "$REPO_DIR" && node scripts/build-cli.mjs >/dev/null
 
 # Sync monorepo packages. These are pnpm workspace members linked via
 # `workspace:*` deps, so they must all be present alongside callback-box on the
 # server for the root `pnpm install` to resolve. personal-vibe-check and
 # agent-doctest are devDeps of callback-box (the server install is non-prod
-# because the runtime uses tsx, itself a devDep); cardworks is a runtime dep.
+# because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
-for repo in cardworks personal-vibe-check agent-doctest callback-box; do
+for repo in personal-vibe-check agent-doctest callback-box; do
   local_path="$MONO_DIR/$repo/"
   if [[ ! -d "$local_path" ]]; then
     echo "  $repo: not found at $local_path, skipping"
@@ -107,6 +105,13 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
     echo "  Removing stale /opt/personal-vibe-check (superseded by /opt/callback/personal-vibe-check)..."
     rm -rf /opt/personal-vibe-check
   fi
+  # One-time cleanup: the cardworks package was removed (absorbed into
+  # callback-box/src/cards). The deploy no longer syncs it, so an old
+  # /opt/callback/cardworks just lingers — drop it idempotently.
+  if [[ -d /opt/callback/cardworks ]]; then
+    echo "  Removing stale /opt/callback/cardworks (package removed)..."
+    rm -rf /opt/callback/cardworks
+  fi
   # One-time cutover from the old per-subdir installs to a single workspace
   # install. Before this change each subdir had its own isolated node_modules;
   # the workspace uses a hoisted node_modules at the root. Remove the legacy
@@ -139,26 +144,16 @@ REMOTE
 # expansion in the node script body.
 echo "Writing deploy info..."
 DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-CARDWORKS_HASH=""
-CARDWORKS_SUBJECT=""
 CALLBACK_BOX_HASH=""
 CALLBACK_BOX_SUBJECT=""
-if [[ -d "$MONO_DIR/cardworks/.git" ]]; then
-  CARDWORKS_HASH=$(cd "$MONO_DIR/cardworks" && git rev-parse --short HEAD)
-  CARDWORKS_SUBJECT=$(cd "$MONO_DIR/cardworks" && git log -1 --format=%s)
-fi
 if [[ -d "$MONO_DIR/callback-box/.git" ]]; then
   CALLBACK_BOX_HASH=$(cd "$MONO_DIR/callback-box" && git rev-parse --short HEAD)
   CALLBACK_BOX_SUBJECT=$(cd "$MONO_DIR/callback-box" && git log -1 --format=%s)
 fi
 DEPLOY_INFO=$(DEPLOYED_AT="$DEPLOYED_AT" \
-  CARDWORKS_HASH="$CARDWORKS_HASH" CARDWORKS_SUBJECT="$CARDWORKS_SUBJECT" \
   CALLBACK_BOX_HASH="$CALLBACK_BOX_HASH" CALLBACK_BOX_SUBJECT="$CALLBACK_BOX_SUBJECT" \
   node -e '
 const out = { deployedAt: process.env.DEPLOYED_AT, commits: {} };
-if (process.env.CARDWORKS_HASH) {
-  out.commits.cardworks = { hash: process.env.CARDWORKS_HASH, subject: process.env.CARDWORKS_SUBJECT };
-}
 if (process.env.CALLBACK_BOX_HASH) {
   out.commits["callback-box"] = { hash: process.env.CALLBACK_BOX_HASH, subject: process.env.CALLBACK_BOX_SUBJECT };
 }

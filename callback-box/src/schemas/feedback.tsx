@@ -12,9 +12,9 @@
  * than spoken).
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const FeedbackType = z.enum(["query-response", "comment", "brief"]);
 export type FeedbackTypeValue = z.infer<typeof FeedbackType>;

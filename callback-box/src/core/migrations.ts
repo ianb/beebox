@@ -44,6 +44,14 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "repair-refs",       script: "scripts/migrate/repair-refs.ts" },
   { name: "asset-marker",      script: "scripts/migrate/asset-marker.ts" },
   { name: "webpage-card",      script: "scripts/migrate/webpage-card.ts" },
+  { name: "landmark",          script: "scripts/migrate/landmark.ts" },
+  { name: "recipe",            script: "scripts/migrate/recipe.ts" },
+  { name: "procedure-run",     script: "scripts/migrate/procedure-run.ts" },
+  { name: "procedure",         script: "scripts/migrate/procedure.ts" },
+  { name: "guide",             script: "scripts/migrate/guide.ts" },
+  { name: "capture-session",   script: "scripts/migrate/capture-session.ts" },
+  { name: "delete-deprecated-cards", script: "scripts/migrate/delete-deprecated-cards.ts" },
+  { name: "bill",              script: "scripts/migrate/bill.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

@@ -6,7 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
@@ -167,24 +167,4 @@ export function createMemoTemplate(content: string, source?: string): string {
 
 export function createVoiceMemoTemplate(): string {
   return buildMemoCard({ content: "", source: "voice" });
-}
-
-export function createDropboxMemoTemplate(options: {
-  content: string;
-  timestamp?: string | undefined;
-  context?: { url?: string | undefined; title?: string | undefined; selectedText?: string | undefined } | undefined;
-}): string {
-  const context = options.context === undefined
-    ? undefined
-    : {
-        ...(options.context.url !== undefined && { url: options.context.url }),
-        ...(options.context.title !== undefined && { title: options.context.title }),
-        ...(options.context.selectedText !== undefined && { text: options.context.selectedText }),
-      };
-  return buildMemoCard({
-    content: options.content,
-    source: "dropbox",
-    ...(context !== undefined && { context }),
-    ...(options.timestamp !== undefined && { created: options.timestamp }),
-  });
 }

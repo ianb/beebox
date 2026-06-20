@@ -43,13 +43,8 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
   if (relPath.endsWith(".card")) {
     try {
       const loaded = await loadCardFile(fullPath, await buildLoadContext(boxRoot));
-      if (loaded.kind === "xml") {
-        input.element = loaded.element;
-        input.type = loaded.element.tagName;
-      } else {
-        input.fields = loaded.fields;
-        input.type = loaded.schema.type;
-      }
+      input.fields = loaded.fields;
+      input.type = loaded.schema.type;
     } catch (e) {
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
         console.warn(`Failed to load card ${relPath}, falling through to fallback loader:`, e);

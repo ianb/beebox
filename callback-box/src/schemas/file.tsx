@@ -11,9 +11,9 @@
  *   inbox/scan-XX.attach/source.attach/tax-return.pdf
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const FileStatus = z.enum(["new", "processed", "invalid"]);
 export type FileStatus = z.infer<typeof FileStatus>;

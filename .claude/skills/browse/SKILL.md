@@ -1,6 +1,6 @@
 ---
 name: browse
-description: Drive a Chromium browser. Use for any browser task — navigating pages, snapshotting a11y tree, clicking, filling forms, taking screenshots, checking responsive behavior, on the local dev app or any other site. Independent of the dev router: `snapshot`, `click`, `eval`, etc. drive Chrome directly and don't care whether the router is up. As a convenience, `bin/browse open /path` rewrites leading-slash paths to this worktree's router URL — but only that one rewrite touches the router, everything else is just Chromium. Screenshots include a JSON sidecar with URL/title/timestamp so they're self-describing.
+description: Use when you need to drive a real browser — navigating pages, snapshotting the a11y tree, clicking, filling forms, taking screenshots, or checking responsive behavior, on the local dev app or any other site.
 allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*)
 ---
 

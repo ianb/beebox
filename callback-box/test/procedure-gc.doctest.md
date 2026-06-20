@@ -3,7 +3,7 @@
 `cb procedure gc` deletes run directories whose `expires` stamp has passed.
 The policy lives on each run card; the sweeper is dumb. Always kept: the
 newest run per procedure (`cb procedure status` reads it), runs pinned with
-`expires="never"`, and anything still running.
+`expires: never`, and anything still running.
 
 ```ts setup
 import { gcProcedureRuns } from "../src/core/procedure/gc.js";
@@ -11,8 +11,14 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { getLog } from "../src/cli/lib/git.js";
 import { utimes } from "node:fs/promises";
 
+// Builds a frontmatter run card from the legacy `key="value"` attr string
+// the test cases use — values are JSON-quoted so ISO timestamps stay strings.
 function runCard(attrs: string): string {
-  return `<procedure-run ${attrs}>\n  <step id="s" status="completed"/>\n</procedure-run>\n`;
+  const lines = [];
+  for (const m of attrs.matchAll(/([\w-]+)="([^"]*)"/g)) {
+    lines.push(`${m[1]}: ${JSON.stringify(m[2])}`);
+  }
+  return `---\n${lines.join("\n")}\nsteps:\n  - id: s\n    status: completed\n---\n`;
 }
 ```
 

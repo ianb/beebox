@@ -9,9 +9,9 @@
  * `audio-001.attach/audio-001.timing.json`.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const AudioStatus = z.enum(["new", "transcribed"]);
 export type AudioStatus = z.infer<typeof AudioStatus>;

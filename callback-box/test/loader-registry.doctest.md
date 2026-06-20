@@ -10,19 +10,6 @@ import {
   summarize,
 } from "../src/core/loader-registry.js";
 import type { FileLoader } from "../src/core/file-summary.js";
-import { emptyLocation, type ElementNode } from "cardworks";
-
-function makeElement(tagName: string, attrs: Record<string, string>, text?: string): ElementNode {
-  return {
-    tagName,
-    attrs,
-    children: [],
-    text,
-    comments: {},
-    location: emptyLocation(),
-    dirty: false,
-  } as ElementNode;
-}
 ```
 
 ## Fallback strips extensions and underscores
@@ -55,10 +42,9 @@ registerTagLoader<{ status: string }>("memo", (raw) => ({
   path: raw.path,
   tagName: "memo",
   title: "tag-matched",
-  attrs: { status: String(raw.element!.attrs["status"] ?? "unknown") },
+  attrs: { status: String(raw.fields === undefined ? "unknown" : raw.fields["status"] ?? "unknown") },
 }));
-const el = makeElement("memo", { status: "new" });
-const s = summarize({ path: "box/inbox/foo.memo.card", element: el });
+const s = summarize({ path: "box/inbox/foo.memo.card", type: "memo", fields: { status: "new" } });
 s.title
 => tag-matched
 
@@ -96,7 +82,6 @@ warnings.length
 ```
 
 ``` continue
-const el = makeElement("memo", {});
-summarize({ path: "a.memo.card", element: el }).title
+summarize({ path: "a.memo.card", type: "memo" }).title
 => second
 ```

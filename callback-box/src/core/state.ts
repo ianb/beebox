@@ -88,27 +88,15 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
 
     try {
       const loaded = await loadCardFile(fullPath, ctx);
-      if (loaded.kind === "frontmatter") {
-        cards.push({
-          path: fullPath,
-          relativePath: path.relative(boxRoot, fullPath),
-          name: parsed.name,
-          type: parsed.type,
-          tagName: loaded.schema.type,
-          status: typeof loaded.fields["status"] === "string" ? loaded.fields["status"] : undefined,
-          subdir,
-        });
-      } else {
-        cards.push({
-          path: fullPath,
-          relativePath: path.relative(boxRoot, fullPath),
-          name: parsed.name,
-          type: parsed.type,
-          tagName: loaded.element.tagName,
-          status: loaded.element.attrs["status"],
-          subdir,
-        });
-      }
+      cards.push({
+        path: fullPath,
+        relativePath: path.relative(boxRoot, fullPath),
+        name: parsed.name,
+        type: parsed.type,
+        tagName: loaded.schema.type,
+        status: typeof loaded.fields["status"] === "string" ? loaded.fields["status"] : undefined,
+        subdir,
+      });
     } catch (e) {
       console.warn(`Could not load card ${fullPath}, listing as unknown:`, e);
       cards.push({

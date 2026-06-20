@@ -17,15 +17,14 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import type { createLoader } from "../../cli/lib/loader.js";
+import { parseCardText, serializeCardText } from "../card-io.js";
+import { type CardSchema } from "../../cards/index.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
 import type { PhotoBundle, OrphanBack, ResolvedPage } from "./scan-import-helpers.js";
 
-type Loader = Awaited<ReturnType<typeof createLoader>>;
-
 interface PhotoBundleEmitContext {
-  loader: Loader;
+  cardSchemas: Map<string, CardSchema>;
   index: number;
   bundle: PhotoBundle;
   startedAt: string;
@@ -39,7 +38,7 @@ interface PhotoBundleEmitContext {
 
 export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<void> {
   const {
-    loader,
+    cardSchemas,
     index,
     bundle,
     startedAt,
@@ -75,7 +74,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
   });
   const cardPath = path.join(sessionAttachAbsDir, cardFilename);
   await fs.writeFile(cardPath, cardContent);
-  await applyBundleAnalysisToCard(loader, { cardPath, bundle });
+  await applyBundleAnalysisToCard({ cardPath, bundle, cardSchemas });
   filesToStage.push(`${sessionAttachRelDir}/${cardFilename}`);
   imageRefs.push(cardFilename);
 
@@ -165,70 +164,38 @@ export async function emitUnsureQuestion(
 }
 
 async function applyBundleAnalysisToCard(
-  loader: Loader,
-  { cardPath, bundle }: { cardPath: string; bundle: PhotoBundle }
+  { cardPath, bundle, cardSchemas }: { cardPath: string; bundle: PhotoBundle; cardSchemas: Map<string, CardSchema> }
 ): Promise<void> {
-  const card = await loader.load(cardPath);
-  const el = card.element;
+  const content = await fs.readFile(cardPath, "utf-8");
+  const parsed = parseCardText(content, { source: cardPath, schemas: cardSchemas, type: "image" });
+  const fields = { ...parsed.fields };
 
-  el.attrs["status"] = "analyzed";
   const photo = bundle.photo;
   const back = bundle.back;
 
-  const photoTextBlocks = photo.text_blocks.map((b) => ({
-    source: b.source || "photo",
-    text: b.text,
-  }));
+  // The image schema's `text` field is an array of { source, content }.
+  const photoTextBlocks = photo.text_blocks.map((b) => ({ source: b.source || "photo", content: b.text }));
   const backTextBlocks = back
-    ? back.text_blocks.map((b) => ({ source: b.source || "back", text: b.text }))
+    ? back.text_blocks.map((b) => ({ source: b.source || "back", content: b.text }))
     : [];
   const allTextBlocks = [...photoTextBlocks, ...backTextBlocks];
-  const hasText = allTextBlocks.length > 0;
 
-  el.attrs["has-text"] = hasText ? "true" : "false";
-  if (photo.rotation !== 0) {
-    el.attrs["rotation"] = String(photo.rotation);
-  }
+  fields["status"] = "analyzed";
+  fields["has-text"] = allTextBlocks.length > 0;
+  fields["description"] = photo.description;
+  if (photo.rotation !== 0) fields["rotation"] = String(photo.rotation);
 
-  const descChild = el.children.find((c) => c.tagName === "description");
-  if (descChild) descChild.text = photo.description;
-
-  el.children = el.children.filter(
-    (c) =>
-      c.tagName !== "text" &&
-      c.tagName !== "exif" &&
-      c.tagName !== "subject-bbox" &&
-      c.tagName !== "document"
-  );
-
-  for (const block of allTextBlocks) {
-    el.children.push({
-      tagName: "text",
-      attrs: { source: block.source },
-      text: block.text,
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
-  }
+  if (allTextBlocks.length > 0) fields["text"] = allTextBlocks;
+  else delete fields["text"];
 
   if (photo.subject_bbox && photo.subject_bbox.length === 4) {
-    el.children.push({
-      tagName: "subject-bbox",
-      attrs: {
-        y1: String(photo.subject_bbox[0]),
-        x1: String(photo.subject_bbox[1]),
-        y2: String(photo.subject_bbox[2]),
-        x2: String(photo.subject_bbox[3]),
-      },
-      text: "",
-      children: [],
-      comments: {},
-      location: { source: "", startLine: 0, startColumn: 0, endLine: 0, endColumn: 0 },
-      dirty: true,
-    });
+    fields["subject-bbox"] = {
+      y1: String(photo.subject_bbox[0]),
+      x1: String(photo.subject_bbox[1]),
+      y2: String(photo.subject_bbox[2]),
+      x2: String(photo.subject_bbox[3]),
+    };
   }
 
-  await loader.save(card);
+  await fs.writeFile(cardPath, serializeCardText({ schema: parsed.schema, fields }));
 }

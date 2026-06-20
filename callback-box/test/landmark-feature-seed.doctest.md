@@ -1,15 +1,13 @@
 # Landmark feature seeds
 
-Landmarks can declare default chat-feature values via a `<chat-app>`
-child element. When a chat is started from a landmark, those defaults
-seed the session's features; the user can still toggle afterward.
+Landmarks can declare default chat-feature values via a `navigation.chat-app`
+mapping. When a chat is started from a landmark, those defaults seed the
+session's features; the user can still toggle afterward.
 
 See `src/core/landmark/features.ts` for the readers and
 `docs/narration-mode-design.md` for the design.
 
 ```ts setup
-import { join } from "node:path";
-import { parseCard } from "cardworks";
 import {
   readLandmarkFeatures,
   readLandmarkFeaturesForDir,
@@ -17,25 +15,18 @@ import {
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 ```
 
-## readLandmarkFeatures — parse from a landmark element
+## readLandmarkFeatures — read from a navigation role
 
 ```
-const el = await parseCard(
-  '<landmark><navigation><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on" prose="off"/></navigation></landmark>',
-  { source: "in-memory.landmark.card" },
-);
-JSON.stringify(readLandmarkFeatures(el))
+const navigation = { label: "Daily dump", symbol: "🎙️", "chat-app": { narration: "on", prose: "off" } };
+JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on","prose":"off"}
 ```
 
-A landmark without a `<chat-app>` child returns an empty map.
+A navigation without a `chat-app` mapping returns an empty map.
 
 ```
-const el = await parseCard(
-  '<landmark><navigation><label>Plain</label><symbol>📁</symbol></navigation></landmark>',
-  { source: "in-memory.landmark.card" },
-);
-JSON.stringify(readLandmarkFeatures(el))
+JSON.stringify(readLandmarkFeatures({ label: "Plain", symbol: "📁" }))
 => {}
 ```
 
@@ -44,11 +35,8 @@ depth — the schema rejects them at parse time, but hand-edited cards
 might bypass validation).
 
 ```
-const el = await parseCard(
-  '<landmark><navigation><label>x</label><chat-app narration="on" bogus="yes" prose="maybe"/></navigation></landmark>',
-  { source: "in-memory.landmark.card" },
-);
-JSON.stringify(readLandmarkFeatures(el))
+const navigation = { label: "x", "chat-app": { narration: "on", bogus: "yes", prose: "maybe" } };
+JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on"}
 ```
 
@@ -58,7 +46,7 @@ JSON.stringify(readLandmarkFeatures(el))
 const box = await makeTmpBox();
 await box.write(
   "store/dump/Daily.landmark.card",
-  '<landmark><navigation><label>Daily dump</label><symbol>🎙️</symbol><chat-app narration="on"/></navigation></landmark>\n',
+  "---\nnavigation:\n  label: Daily dump\n  symbol: 🎙️\n  chat-app:\n    narration: on\n---\n",
 );
 JSON.stringify(await readLandmarkFeaturesForDir(box.root, "store/dump"))
 => {"narration":"on"}
@@ -81,14 +69,14 @@ await readLandmarkFeaturesForDir(box.root, "store/empty")
 await box.cleanup();
 ```
 
-A landmark without `<chat-app>` returns null too — empty seeds and no
+A landmark without `chat-app` returns null too — empty seeds and no
 landmark look the same to callers.
 
 ```
 const box = await makeTmpBox();
 await box.write(
   "store/plain/Plain.landmark.card",
-  '<landmark><navigation><label>Plain</label><symbol>📁</symbol></navigation></landmark>\n',
+  "---\nnavigation:\n  label: Plain\n  symbol: 📁\n---\n",
 );
 await readLandmarkFeaturesForDir(box.root, "store/plain")
 => null

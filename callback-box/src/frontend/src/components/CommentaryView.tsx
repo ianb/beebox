@@ -1,224 +1,30 @@
 /**
- * CommentaryView — renderer for `commentary` cards (the in-box review surface).
+ * CommentaryView — renderer for a `commentary` card opened on its own.
  *
- * Renders the wrapped target(s) live alongside the card's commentary body.
- * Two target shapes:
- *   - external `defaultHref`/`targets` — fetched through the dev-only
- *     `/api/external` route;
- *   - in-box `defaultRef` — fetched through the production `/api/files`
- *     route (the web-page-commentary flow stores its readable rendering in
- *     the card's `.attach/` and points `defaultRef` at it).
- * Both render through the file-renderer registry. Multi-target compare and
- * `{% source %}` anchor-linking land later.
+ * Commentary is **attach-only**: it lives in a host card's `.attach/` scope and
+ * its bare `{% source %}` anchors target the containing card (an extfile /
+ * webpage / doc), which surfaces the remarks inline (see `AttachedCommentary`).
+ * Opened directly, a commentary card shows its remarks body plus any
+ * captured-page metadata header; a source chip falls back to opening the frozen
+ * snapshot (when the card carries one) at the quote — there is no live target
+ * pane to search when the commentary is viewed on its own.
  */
 
-import { useCallback, useRef } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { z } from "zod";
+import { useCallback } from "react";
 import { getApiBase } from "../api";
 import { Markdown } from "./Markdown";
-import { Pre } from "./ui/Pre";
 import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
-import { getRenderers, type FileData, type RendererProps } from "../renderers";
-import { resolveRelativePath, type NavigateHint, type ViewTarget } from "../lib/view-url";
-import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
-
-class ExternalFetchError extends Error {
-  readonly status: number;
-  constructor(status: number) {
-    super("Failed to load external target");
-    this.name = "ExternalFetchError";
-    this.status = status;
-  }
-}
-
-const EnvelopeSchema = z.object({
-  contentBase64: z.string(),
-  contentType: z.string(),
-  markers: z.string(),
-});
-type Envelope = z.infer<typeof EnvelopeSchema>;
-
-function decodeBase64Utf8(base64: string): string {
-  const bytes = Uint8Array.from(atob(base64), (ch) => ch.codePointAt(0) ?? 0);
-  return new TextDecoder().decode(bytes);
-}
-
-/**
- * Render fetched external content through the file-renderer registry, keyed on
- * the target's own path — so an included `.md` renders as Markdown, source as
- * Plaintext, and any future type through its own renderer, recursively. Falls
- * back to preformatted text when nothing in the registry matches.
- */
-function ExternalDocument({
-  href,
-  envelope,
-  onNavigate,
-}: {
-  href: string;
-  envelope: Envelope;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}) {
-  const filePath = decodeURIComponent(new URL(href).pathname);
-  const fileData: FileData = { path: filePath, content: decodeBase64Utf8(envelope.contentBase64) };
-  const [renderer] = getRenderers(filePath, fileData);
-  if (renderer === undefined) {
-    return <Pre boxed scroll="lg">{fileData.content}</Pre>;
-  }
-  const Component = renderer.Component;
-  return <Component data={fileData} onNavigate={onNavigate} />;
-}
-
-function useExternalTarget(href: string) {
-  const apiBase = getApiBase();
-  return useQuery({
-    queryKey: ["external-target", href],
-    queryFn: async ({ signal }): Promise<Envelope> => {
-      const resp = await fetch(`${apiBase}/external?href=${encodeURIComponent(href)}`, { signal });
-      if (!resp.ok) {
-        throw new ExternalFetchError(resp.status);
-      }
-      return EnvelopeSchema.parse(await resp.json());
-    },
-  });
-}
-
-/** Render one external target's live content through the file-renderer registry. */
-function TargetPane({
-  href,
-  onNavigate,
-}: {
-  href: string;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}) {
-  const { data, isLoading, error } = useExternalTarget(href);
-
-  // Label the column with its href so a {% source href=… %} anchor (which
-  // carries `data-source-href`) can locate its target column, and so a
-  // selection captured in this pane knows which target it's against. The
-  // ref/href parity here is what chunk 5b's anchor-linking + capture build on.
-  return (
-    <div className="min-w-0 flex-1" data-card-section="body" data-target-href={href}>
-      <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-warm-200 pb-1">
-        <Text as="div" size="xs" tone="subtle" className="truncate font-mono">{href}</Text>
-        {data !== undefined ? (
-          <Text as="div" size="xs" tone="subtle" className="shrink-0 font-mono">{data.markers}</Text>
-        ) : null}
-      </div>
-      {isLoading ? (
-        <Text as="div" tone="subtle" className="p-2 italic">Loading target…</Text>
-      ) : error !== null ? (
-        <Text as="div" tone="danger" className="p-2">
-          Couldn’t load this target. It may be missing or outside the allowed roots.
-        </Text>
-      ) : data !== undefined ? (
-        <ExternalDocument href={href} envelope={data} onNavigate={onNavigate} />
-      ) : null}
-    </div>
-  );
-}
-
-class InboxFetchError extends Error {
-  readonly status: number;
-  constructor(status: number) {
-    super("Failed to load in-box target");
-    this.name = "InboxFetchError";
-    this.status = status;
-  }
-}
-
-function useInboxTarget(boxPath: string) {
-  const apiBase = getApiBase();
-  return useQuery({
-    queryKey: ["inbox-target", boxPath],
-    queryFn: async ({ signal }): Promise<string> => {
-      const resp = await fetch(`${apiBase}/files/${boxPath}`, { signal });
-      if (!resp.ok) {
-        throw new InboxFetchError(resp.status);
-      }
-      return resp.text();
-    },
-  });
-}
-
-/**
- * Render one in-box target's content through the file-renderer registry,
- * keyed on its path — so `.md` renders as Markdown, source as Plaintext, etc.
- * Falls back to preformatted text when nothing in the registry matches.
- */
-function InboxDocument({
-  boxPath,
-  content,
-  onNavigate,
-}: {
-  boxPath: string;
-  content: string;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}) {
-  const fileData: FileData = { path: boxPath, content };
-  const [renderer] = getRenderers(boxPath, fileData);
-  if (renderer === undefined) {
-    return <Pre boxed scroll="lg">{content}</Pre>;
-  }
-  const Component = renderer.Component;
-  return <Component data={fileData} onNavigate={onNavigate} />;
-}
-
-/** Render one in-box target (a `defaultRef`) live through `/api/files`. */
-function InboxTargetPane({
-  boxPath,
-  onNavigate,
-}: {
-  boxPath: string;
-  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
-}) {
-  const { data, isLoading, error } = useInboxTarget(boxPath);
-
-  // data-target-ref lets a future {% source ref=… %} anchor locate this content.
-  // No file-path header — the saved page reads as the document, not a "file".
-  return (
-    <div className="min-w-0" data-card-section="body" data-target-ref={boxPath}>
-      {isLoading ? (
-        <Text as="div" tone="subtle" className="p-2 italic">Loading saved page…</Text>
-      ) : error !== null ? (
-        <Text as="div" tone="danger" className="p-2">Couldn’t load the saved page.</Text>
-      ) : data !== undefined ? (
-        <InboxDocument boxPath={boxPath} content={data} onNavigate={onNavigate} />
-      ) : null}
-    </div>
-  );
-}
-
-/** The external hrefs to render as panes: the default target plus any `targets`. */
-function targetHrefs(frontmatter: Record<string, unknown>): string[] {
-  const hrefs: string[] = [];
-  const defaultHref = frontmatter["defaultHref"];
-  if (typeof defaultHref === "string" && defaultHref !== "") hrefs.push(defaultHref);
-  const targets = frontmatter["targets"];
-  if (Array.isArray(targets)) {
-    for (const entry of targets) {
-      if (typeof entry === "string" && entry !== "") hrefs.push(entry);
-    }
-  }
-  return hrefs;
-}
+import { type RendererProps } from "../renderers";
+import { resolveRelativePath } from "../lib/view-url";
 
 export function CommentaryView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter ?? {};
-  const defaultRef = frontmatter["defaultRef"];
   const title = frontmatter["title"];
   const body = data.body;
-  const hrefs = targetHrefs(frontmatter);
-  const inboxPath =
-    typeof defaultRef === "string" && defaultRef !== ""
-      ? resolveRelativePath(data.path, defaultRef)
-      : null;
 
-  // Captured-page metadata (frontmatter): the original URL, the capture date,
-  // and the in-box frozen snapshot. The snapshot opens through /api/files,
-  // which serves it sandboxed HTML. Older cards carry these in their body
-  // instead — no header then, the body still renders the link.
+  // Captured-page metadata (set by the clerk capture flow): the original URL,
+  // the capture date, and an in-box frozen snapshot. Rendered as a header.
   const source = frontmatter["source"];
   const captured = frontmatter["captured"];
   const frozen = frontmatter["frozen"];
@@ -228,6 +34,14 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozen)}`
       : null;
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
+
+  const onJumpToQuote = useCallback((quoteText: string): Promise<boolean> => {
+    const exact = quoteText.trim();
+    if (exact === "" || frozenUrl === null) return Promise.resolve(false);
+    window.open(`${frozenUrl}#:~:text=${encodeURIComponent(exact)}`, "_blank", "noreferrer");
+    return Promise.resolve(true);
+  }, [frozenUrl]);
+
   const meta =
     sourceUrl !== null || frozenUrl !== null ? (
       <Text as="div" size="sm" tone="subtle" className="mb-3">
@@ -244,87 +58,19 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
       </Text>
     ) : null;
 
-  // Clicking a source chip jumps to that verbatim span using Chrome's
-  // text-fragment matching algorithm (text-fragments-polyfill), working on
-  // either representation of the saved page:
-  //   1. the in-pane readable markdown — matched (scoped to the pane) and
-  //      highlighted in place via the CSS Custom Highlight API;
-  //   2. else the frozen original — opened at the quote via a native
-  //      `#:~:text=` fragment (the snapshot is a real document, so the browser
-  //      scrolls + highlights it for us).
-  const savedPaneRef = useRef<HTMLDivElement>(null);
-  const onJumpToQuote = useCallback((quoteText: string): Promise<boolean> => {
-    const exact = quoteText.trim();
-    if (exact === "") return Promise.resolve(false);
-    const root = savedPaneRef.current;
-    if (root !== null) {
-      const range = findQuoteRange(root, exact);
-      if (range !== null) {
-        highlightRange(range);
-        scrollRangeIntoView(range);
-        return Promise.resolve(true);
-      }
-    }
-    if (frozenUrl !== null) {
-      window.open(`${frozenUrl}#:~:text=${encodeURIComponent(exact)}`, "_blank", "noreferrer");
-      return Promise.resolve(true);
-    }
-    return Promise.resolve(false);
-  }, [frozenUrl]);
-
-  const commentary = (
-    <div className="min-w-0 flex-1" data-card-section="body">
-      {body !== undefined && body.trim() !== "" ? (
-        <Markdown prose="block" onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} basePath={data.path}>{body}</Markdown>
-      ) : (
-        <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>
-      )}
-    </div>
-  );
-
   return (
     <div className="p-4">
       {typeof title === "string" && title !== "" ? (
         <Text as="h1" size="lg" weight="semibold" className="mb-1">{title}</Text>
       ) : null}
       {meta}
-
-      {hrefs.length > 0 ? (
-        // External targets: render side-by-side with the commentary for compare.
-        <div className="flex flex-col gap-6 lg:flex-row">
-          {hrefs.map((href) => (
-            <TargetPane key={href} href={href} onNavigate={onNavigate} />
-          ))}
-          {commentary}
-        </div>
-      ) : inboxPath !== null ? (
-        // Captured page: the commentary leads; the saved page sits below in
-        // its own bordered, labeled block so it reads as a distinct embedded
-        // document rather than blurring into the commentary above it.
-        <div className="flex flex-col gap-4">
-          {commentary}
-          <div className="overflow-hidden rounded-md border border-warm-200">
-            <Text
-              as="div"
-              size="xs"
-              tone="subtle"
-              className="border-b border-warm-200 px-3 py-1.5 font-medium uppercase tracking-wide"
-            >
-              Saved page
-            </Text>
-            <div className="p-3" ref={savedPaneRef}>
-              <InboxTargetPane boxPath={inboxPath} onNavigate={onNavigate} />
-            </div>
-          </div>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-6">
-          {commentary}
-          <Text as="div" tone="subtle" className="p-2 italic">
-            No target set for this commentary.
-          </Text>
-        </div>
-      )}
+      <div className="min-w-0" data-card-section="body">
+        {body !== undefined && body.trim() !== "" ? (
+          <Markdown prose="block" onNavigate={onNavigate} onJumpToQuote={onJumpToQuote} basePath={data.path}>{body}</Markdown>
+        ) : (
+          <Text as="div" tone="subtle" className="italic">No commentary yet.</Text>
+        )}
+      </div>
     </div>
   );
 }

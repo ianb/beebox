@@ -1,36 +1,70 @@
 /**
- * Commentary card schema — review-and-comment over one or more *external*
- * files (repo docs/source, across worktrees, or a web page) from inside a box.
- * See `docs/plans/box-commentary-surface.md`.
+ * Commentary card schema — review-and-comment on a host card from inside a box.
+ * See `docs/plans/box-commentary-surface.md` and `docs/plans/extfile-card.md`.
+ *
+ * **Attach-only:** a commentary card lives in a host card's `.attach/` scope and
+ * its bare `{% source %}` anchors target the containing card — an `extfile`
+ * (live external file), a `webpage` (captured page), or an in-box `doc`. It
+ * carries no target of its own (no `defaultHref`/`defaultRef`/`targets`).
  *
  * Body-bearing (like `doc`/`briefing`): the body is markdown commentary whose
- * `{% source %}` anchors point into the wrapped target(s). Frontmatter declares
- * the render canvas — a default target (`defaultHref` xor `defaultRef`) plus an
- * optional `targets` list for side-by-side compare.
- *
- * Validation that cardworks/Zod can't express (the defaultHref-xor-defaultRef
- * rule, and Markdoc validation of the body's `{% source %}` tags) lives in
- * `card-lint.ts`, scoped to this card type.
+ * `{% source %}` anchors quote the spans being commented on. Markdoc validation
+ * of those tags is the schema's `validate` hook (see `commentaryErrors` below),
+ * scoped to this card type.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
+import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
+import { markdocConfig } from "../shared/markdoc-config.js";
+
+// Value named imports (`{ parse, validate }`) don't resolve from this CommonJS
+// module under Node's ESM loader (used by tsx / the doctest runner). Destructure
+// off the default import — same pattern as `markdoc-config.ts` / `card-lint.ts`.
+const { parse: markdocParse, validate: markdocValidate } = Markdoc;
+
+/**
+ * Validation Zod can't express for commentary cards: Markdoc validation of the
+ * body's tags (which fires the `{% source %}` ref-xor-href rule — nothing else
+ * runs `Markdoc.validate`, so this is where it lands).
+ *
+ * Wired onto the schema as its `validate` hook (the host's lint dispatch in
+ * card-lint.ts invokes it); it is self-contained — it reads only this card's
+ * own body.
+ *
+ * Commentary is attach-only — it carries no target field of its own. A leftover
+ * `defaultHref`/`defaultRef`/`targets` from the pre-attach era is caught by the
+ * generic unknown-key warning (the fields are no longer in the schema).
+ */
+function commentaryErrors(body: string): LintIssue[] {
+  const errors: LintIssue[] = [];
+  for (const message of validateMarkdocBody(body)) {
+    errors.push({ type: "validation", severity: "error", message });
+  }
+  return errors;
+}
+
+function validateMarkdocBody(body: string): string[] {
+  if (body === "") return [];
+  let ast: MarkdocNode;
+  try {
+    ast = markdocParse(body);
+  } catch (_e) {
+    return ["commentary body is not parseable Markdoc"];
+  }
+  return markdocValidate(ast, markdocConfig)
+    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical")
+    .map((entry) => entry.error.message);
+}
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
+  validate: ({ fields }) => {
+    const body = fields["body"];
+    return commentaryErrors(typeof body === "string" ? body : "");
+  },
   fields: {
     title: z.string().optional(),
-    // The default target the body's anchors point at. At most one of these
-    // (enforced in card-lint); omit both when the commentary lives in the
-    // attach scope of the document it annotates — then the *containing*
-    // document is the default target. `defaultHref` is an external full URL
-    // (file:, http(s):) — untracked by `cb mv`; `defaultRef` is an in-box,
-    // box-relative path.
-    defaultHref: z.string().optional(),
-    defaultRef: z.string().optional(),
-    // Additional external targets to render side-by-side for compare (each a
-    // full URL). The default target is always rendered; these are extras.
-    targets: z.array(z.string()).optional(),
     // Captured-web-page metadata (set by the clerk capture flow): the original
     // page URL, the capture date (YYYY-MM-DD), and an in-box ref to the frozen
     // snapshot. Rendered as a header; all optional.
@@ -41,22 +75,20 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
   },
   instructions: `# Commentary Cards
 
-A commentary card lets the boxholder review and comment on files that live
-**outside** the box — repo docs and source (including the same file across git
-worktrees) and web pages. The wrapped file is rendered live; you turn the
-boxholder's selections into durable, anchored commentary.
+A commentary card holds the boxholder's anchored remarks about a **host card**.
+It is **attach-only**: it lives in the host's \`.attach/\` scope
+(\`<host-basename>.attach/<name>.commentary.card\`) and the host's view surfaces
+the remarks inline. The host is whatever the commentary annotates:
 
-## Frontmatter
+- an **\`extfile\`** card — to comment on a live external file (repo docs/source,
+  across worktrees). This is the way to review an out-of-box file: make an
+  \`extfile\` pointer, then attach the commentary to it.
+- a **\`webpage\`** card — to comment on a captured page.
+- an in-box **\`doc\`** — to comment on a box document.
 
-- \`defaultHref\` / \`defaultRef\` — the default target every body anchor points
-  at unless it says otherwise. \`defaultHref\` is an external full URL
-  (\`file:/abs/path\`, or \`http(s):\`); \`defaultRef\` is an in-box path. **At most
-  one.** Omit both when this commentary lives in the attach scope of the
-  document it annotates (e.g. a \`.webpage.card\`) — the **containing document**
-  is then the default target, and bare \`{% source %}\` anchors point at it.
-- \`targets\` — optional list of additional external URLs to render alongside
-  the default (for comparing the same file across worktrees, say).
-- \`title\` — optional human label.
+A commentary card carries **no target of its own** — no \`defaultHref\`,
+\`defaultRef\`, or \`targets\`. The containing host card *is* the target, and bare
+\`{% source %}\` anchors point at it.
 
 ## Body — quote-then-remark
 
@@ -85,16 +117,15 @@ append a \`{% source %}\` block:
   code-wrap \`<…>\`, escape a stray \` \`\` \`, \`{%\`, or \`%}\` so a span that
   contains markup neither breaks the tag nor renders wrong. This is faithful
   rendering of what was shown, not paraphrase.
-- Target: a source carries \`href\` (external) or \`ref\` (in-box), **never
-  both** — or **neither**, which points at the containing document (the default
-  target). For commentary attached to the page it annotates, leave the anchor
-  ref-free; add \`ref\`/\`href\` only when the selection was against a *different*
-  target. Always write \`version\` markers measured from the file (\`sha256:\`
-  content hash, plus \`git:\` when tracked).
+- Target: leave the anchor **ref-free** — a bare \`{% source %}\` points at the
+  containing host card (the \`extfile\`/\`webpage\`/\`doc\` this commentary is
+  attached to). Add an explicit \`ref\`/\`href\` only in the rare case the
+  selection was against a *different* card. Always write \`version\` markers
+  measured from the file (\`sha256:\` content hash, plus \`git:\` when tracked).
 - Copy \`pos\` (and \`placement\`, if present) from the selection.
 
 Your own framing stays *outside* the tag, as prose. One commentary card per
-coherent set of targets.`,
+host.`,
 });
 
 /**

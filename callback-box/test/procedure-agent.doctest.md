@@ -17,19 +17,22 @@ with a fake agent that simulates agent behavior.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/agent-test.procedure.card", `
-<procedure name="agent-test">
-  <description>Test agent injection</description>
-  <step id="agent-step">
-    <description>An agent does work</description>
-    <precheck pass-output="true">
-      <shell>echo "3 items to process"</shell>
-    </precheck>
-    <run>
-      <agent model="haiku">Process the items listed in the precheck output.</agent>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/agent-test.procedure.card", `---
+name: agent-test
+description: Test agent injection
+steps:
+  - id: agent-step
+    description: An agent does work
+    precheck:
+      pass-output: true
+      shells:
+        - |
+          echo "3 items to process"
+    run:
+      agents:
+        - model: haiku
+          prompt: Process the items listed in the precheck output.
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add agent-test procedure");
@@ -89,16 +92,16 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/directed.procedure.card", `
-<procedure name="directed">
-  <description>Directive test</description>
-  <step id="work">
-    <description>Do work</description>
-    <run>
-      <agent>Follow the directive.</agent>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/directed.procedure.card", `---
+name: directed
+description: Directive test
+steps:
+  - id: work
+    description: Do work
+    run:
+      agents:
+        - prompt: Follow the directive.
+---
 `);
 box.commitAll("Add directed procedure");
 
@@ -137,16 +140,16 @@ fallback commit to keep git clean between steps.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/messy.procedure.card", `
-<procedure name="messy">
-  <description>Agent forgets to commit</description>
-  <step id="forgetful">
-    <description>Agent leaves uncommitted changes</description>
-    <run>
-      <agent>Do work but forget to commit.</agent>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/messy.procedure.card", `---
+name: messy
+description: Agent forgets to commit
+steps:
+  - id: forgetful
+    description: Agent leaves uncommitted changes
+    run:
+      agents:
+        - prompt: Do work but forget to commit.
+---
 `);
 box.commitAll("Add messy procedure");
 

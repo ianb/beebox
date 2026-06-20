@@ -9,7 +9,7 @@
  */
 
 import { promises as fs } from "node:fs";
-import { splitCardContent } from "cardworks";
+import { splitCardContent } from "../cards/index.js";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 /** Fields agents own on connector-managed cards. */

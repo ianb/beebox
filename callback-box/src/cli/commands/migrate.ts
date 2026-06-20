@@ -151,15 +151,34 @@ export const migrateCommand = new Command("migrate")
     }
 
     console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);
+    // Exit-code convention shared by the harness and every migrator: 2 means
+    // the migration ran but some individual cards couldn't be converted (left
+    // unchanged) — a soft, per-card failure; 1 (or any other non-zero) means a
+    // hard/precondition failure that should stop the sweep. A single malformed
+    // card in a large box must not halt the whole migration, so a soft failure
+    // records the migration as applied and continues; the unconverted cards are
+    // printed above and surfaced by `cb validate` for manual cleanup.
+    const softFailures: string[] = [];
     for (const m of pending) {
       console.log(`=== ${m.name} (${m.script}) ===`);
       const code = await runScript({ script: m.script, boxRoot });
-      if (code !== 0) {
-        console.error(`\nMigration "${m.name}" failed (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
+      if (code !== 0 && code !== 2) {
+        console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
         process.exit(code);
       }
       await appendManifestEntry(boxRoot, { name: m.name, "applied-at": new Date().toISOString() });
-      console.log(`✓ ${m.name} applied and recorded.\n`);
+      if (code === 2) {
+        softFailures.push(m.name);
+        console.log(`⚠ ${m.name} applied with per-card failures (see above); continuing.\n`);
+      } else {
+        console.log(`✓ ${m.name} applied and recorded.\n`);
+      }
     }
-    console.log("All pending migrations applied.");
+    if (softFailures.length > 0) {
+      console.log(
+        `All pending migrations ran. ${String(softFailures.length)} had per-card failures (some cards left unconverted): ${softFailures.join(", ")}.\nRun \`cb validate\` to see the affected cards.`,
+      );
+    } else {
+      console.log("All pending migrations applied.");
+    }
   });

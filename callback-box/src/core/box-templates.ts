@@ -28,7 +28,7 @@ your card needs Markdoc-shaped inline content (see the end of this guide).
 Create a \`.ts\` file in \`config/schemas/\` that default-exports a \`cardSchema()\`:
 
 \`\`\`typescript
-import { body, cardSchema } from "cardworks";
+import { body, cardSchema } from "callback-box/cards";
 import { z } from "zod";
 
 export default cardSchema("my-type", {
@@ -66,13 +66,42 @@ Key patterns:
   it — the filename \`Foo.<type>.card\` supplies it.
 - \`title\` and \`contains\` are available on every card type automatically.
 
+## Validation beyond Zod — the \`validate\` hook
+
+When a card type needs a rule Zod field types can't express — a cross-field
+constraint, a format refinement, or checking the body's parsed structure — add a
+\`validate\` hook to the schema. The rule lives **on the schema**, co-located with
+the type it governs; \`cb validate\` invokes it automatically.
+
+\`\`\`typescript
+import { cardSchema, type LintIssue } from "callback-box/cards";
+import { z } from "zod";
+
+export default cardSchema("link", {
+  validate: ({ fields }) => {
+    const errors: LintIssue[] = [];
+    const url = fields["url"];
+    if (typeof url === "string" && !url.startsWith("https://")) {
+      errors.push({ type: "validation", severity: "error", message: \`url must be https (got "\${url}")\` });
+    }
+    return errors;
+  },
+  fields: { url: z.string() },
+});
+\`\`\`
+
+- The hook receives \`{ fields }\` — the parsed frontmatter, with the body at
+  \`fields["body"]\` when the schema has one. Narrow values yourself (\`typeof\`).
+- It is **self-contained**: it sees only this card's own data, never other cards
+  or the box. Broken-ref checking is handled for you and is not its job.
+- Return \`LintIssue[]\` (\`severity: "error"\` blocks; \`[]\` means clean).
+
 ## Available Imports
 
-From \`cardworks\`:
-- \`cardSchema(type, config)\` — define a frontmatter card schema (the default)
+From \`callback-box/cards\`:
+- \`cardSchema(type, config)\` — define a frontmatter card schema
 - \`body(zodSchema)\` — declare the single markdown body field
-- \`element(tagName, config)\` — define a legacy XML schema (see below)
-- \`escapeText(str)\` / \`escapeAttr(str)\` — XML-escape helpers (only for \`element()\` schemas)
+- \`type LintIssue\` — the issue type a \`validate\` hook returns (see above)
 
 From \`zod\`:
 - \`z\` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)
@@ -83,7 +112,7 @@ Export a \`template\` to enable \`cb create\` for your card type. For frontmatte
 \`generate\` returns the card text — a YAML frontmatter block built with \`stringify\` from \`yaml\`:
 
 \`\`\`typescript
-import { cardSchema } from "cardworks";
+import { cardSchema } from "callback-box/cards";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -122,30 +151,6 @@ This will:
 - Register any templates for \`cb create\`
 
 Schema changes are picked up on the next \`cb\` invocation; a running dev server needs a restart.
-
-## Legacy: XML / \`element()\` schemas
-
-Use \`element()\` only when the card body is Markdoc-shaped inline content — nested, attributed
-inline structure that doesn't fit YAML frontmatter. This is why the built-in \`guide\`, \`recipe\`,
-\`procedure\`, and \`landmark\` types still use it. For everything else, prefer \`cardSchema\` above.
-
-\`\`\`typescript
-import { element } from "cardworks";
-import { z } from "zod";
-
-export default element("note", {
-  attrs: {
-    status: z.enum(["draft", "final"]).default("draft"),
-  },
-  children: z.array(z.unknown()),
-  instructions: \\\`# Note Cards
-
-Instructions for the agent on how to handle this card type.\\\`,
-});
-\`\`\`
-
-A legacy template's \`generate\` emits XML instead of YAML, using \`escapeText\` / \`escapeAttr\` for
-interpolated values. See the built-in XML schemas in callback-box's \`src/schemas/\` for examples.
 
 ## Tips
 

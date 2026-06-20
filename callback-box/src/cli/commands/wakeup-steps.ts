@@ -12,7 +12,6 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { type Connector } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
-import { createLoader } from "../lib/loader.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { createNewIntakeJob } from "../../connectors/intake-utils.js";
@@ -28,14 +27,12 @@ export async function runPreprocessors(boxRoot: string): Promise<number> {
   const state = await getSystemState(boxRoot);
   if (state.inbox.length === 0) return 0;
 
-  const loader = await createLoader(boxRoot);
   const actionNotes: string[] = [];
 
   for (const item of state.inbox) {
     try {
       const results = await runPreActions({
         boxRoot,
-        loader,
         cardPath: item.path,
       });
 

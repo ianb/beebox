@@ -1,4 +1,4 @@
-# card-lint: dispatching XML and frontmatter cards
+# card-lint: validating frontmatter cards
 
 `lintCardsDispatch` is the validate-time counterpart to
 `loadCardFile`: it picks the right validator for each file based on
@@ -9,15 +9,13 @@ import { z } from "zod";
 import {
   body,
   cardSchema,
-  element,
   type CardSchema,
-  type ElementSchema,
-} from "cardworks";
+} from "../src/cards/index.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
-import { createLoader } from "../src/cli/lib/loader.js";
 import { lintCardsDispatch } from "../src/core/card-lint.js";
 import type { LoadCardContext } from "../src/core/card-io.js";
 import { CommentarySchema } from "../src/schemas/commentary.js";
+import { ExtfileSchema } from "../src/schemas/extfile.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -39,8 +37,16 @@ const docSchema: CardSchema = cardSchema("doc", {
   },
 });
 
-const memoSchema: ElementSchema = element("memo", {
-  attrs: { status: z.string() },
+// A throwaway type whose only special rule lives in a self-contained `validate`
+// hook on its schema — proves card-lint's dispatch invokes whatever `validate`
+// a schema declares, generically, without knowing the type name. The hook sees
+// only the card's own parsed fields (no loader / box access).
+const gadgetSchema: CardSchema = cardSchema("gadget", {
+  fields: { mode: z.string() },
+  validate: ({ fields }) =>
+    fields["mode"] === "forbidden"
+      ? [{ type: "validation", severity: "error", message: "gadget mode must not be \"forbidden\"" }]
+      : [],
 });
 
 const ctx: LoadCardContext = {
@@ -48,8 +54,9 @@ const ctx: LoadCardContext = {
     ["email-thread", threadSchema],
     ["doc", docSchema],
     ["commentary", CommentarySchema],
+    ["extfile", ExtfileSchema],
+    ["gadget", gadgetSchema],
   ]),
-  elementSchemas: new Map<string, ElementSchema>([["memo", memoSchema]]),
 };
 ```
 
@@ -65,10 +72,9 @@ await box.write(
   "box/inbox/email/thread-x.attach/msg-001.email-message.card",
   "---\ncontent-type: application/x-card+xml\n---\n<email-message message-id=\"m1\" thread-id=\"t1\"><from>a@x</from><date>2026-02-15T10:00:00Z</date><subject>hi</subject><body-file>attach/msg-001.body.txt</body-file></email-message>\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x.email-thread.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -85,10 +91,9 @@ await box.write(
   "box/inbox/email/broken.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/broken.email-thread.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 1
@@ -97,9 +102,32 @@ result.results[0]!.errors[0]!.message.includes("invalid email-thread frontmatter
 => true
 ```
 
+## Unknown frontmatter keys are reported as warnings
+
+A key the schema doesn't declare is stripped on load, so the card still loads,
+renders, and indexes. Lint surfaces it as a warning (not an error) so it gets
+cleaned off disk eventually without blocking commits.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/inbox/notes/drift.doc.card",
+  "---\ntype: doc\ntitle: Drift\nbogus-field: oops\n---\nBody.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/notes/drift.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "bogus-field"'))
+=> true
+```
+
 ## Broken refs in frontmatter cards are reported as warnings
 
-Each entry in a ref-declared field is resolved against the loader; missing
+Each entry in a ref-declared field is resolved against the box; missing
 targets surface as lint warnings (not errors) carrying the field path. Broken
 refs are warnings because they commonly arise from legitimate operations
 (referents being moved, archived, trashed, or hand-deleted), and treating
@@ -111,10 +139,9 @@ await box.write(
   "box/inbox/email/thread-x/thread.email-thread.card",
   "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: thread.attach/missing.email-message.card\n---\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -140,10 +167,9 @@ await box.write(
   "store/notes/Wordy.doc.card",
   "---\ntitle: Wordy\ncontains: " + longContains + "\n---\nbody\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/notes/Wordy.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -159,7 +185,7 @@ result.results[0]!.warnings[0]!.message
 
 Refs carried by Markdoc tag attributes inside a card body (e.g.
 `{% source ref="..." %}`, `{% subrecipe ref="..." %}`) get the same
-broken-ref treatment as frontmatter refs — resolved against the loader,
+broken-ref treatment as frontmatter refs — resolved against the box,
 missing targets reported as warnings. The path field on the warning
 points at `body:<line>:<tagName>.<attr>` so the human can locate it.
 Ref paths follow the same convention as frontmatter refs: leading `/`
@@ -172,10 +198,9 @@ await box.write(
   "box/notes/Meeting.doc.card",
   "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" as=\"verbatim\" %}{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
@@ -202,91 +227,152 @@ await box.write(
   "box/notes/Meeting.doc.card",
   "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" as=\"verbatim\" %}ship Friday{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalWarnings
 => 0
 ```
 
-## XML cards still flow through the existing cardworks lintCard path
+## Ref existence honors `@version` stripping and `attach/` scope
+
+The broken-ref walk resolves refs the same way the cards do: a version-like
+`@x.y.z` suffix is stripped before the file is located (so a versioned ref to
+an existing card is not reported broken), and an `attach/`-prefixed ref resolves
+into the referring card's `<basename>.attach/` scope. These mirror the cardworks
+loader semantics the walk replaced.
+
+A versioned ref to an existing target lints clean — the `@1.2.3` is not treated
+as part of the filename:
+
+```
+const box = await makeTmpBox();
+await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
+await box.write(
+  "box/notes/Ver.doc.card",
+  "---\ntype: doc\ntitle: V\n---\nSee {% source ref=\"/box/people/dana.person.card@1.2.3\" as=\"x\" %}{% /source %}\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/notes/Ver.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 0
+```
+
+An `attach/` ref resolving into the card's attach scope is clean; a missing one
+in the same scope warns:
 
 ```
 const box = await makeTmpBox();
 await box.write(
-  "box/inbox/Note.memo.card",
-  "---\ncontent-type: application/x-card+xml\n---\n<memo status=\"new\"/>\n",
+  "box/notes/Note.doc.card",
+  "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" as=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" as=\"b\" %}{% /source %}\n",
 );
-const loader = await createLoader(box.root);
+await box.write("box/notes/Note.attach/photo.jpg", "JPG");
 const result = await lintCardsDispatch(
-  [box.path("box/inbox/Note.memo.card")],
-  { loader, ctx },
+  [box.path("box/notes/Note.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message.includes("attach/missing.jpg does not exist")
+=> true
+```
+
+## A card whose type has no registered schema warns, never errors
+
+There's no XML loader fallback anymore: a `.card` with frontmatter whose
+filename type isn't a registered schema (a typo, or a box-local type the test
+ctx doesn't include) is surfaced as a non-blocking warning rather than failing.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/inbox/Note.unknowntype.card",
+  "---\nstatus: new\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/Note.unknowntype.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.results[0]!.warnings[0]!.message
+=> no schema registered for card type "unknowntype" — card not validated
+```
+
+A `.card` with no frontmatter block at all is malformed (every card is
+frontmatter now). It's surfaced as a warning — visible, but non-blocking so one
+stray card doesn't brick a box's pre-commit/automation:
+
+```
+const box = await makeTmpBox();
+await box.write("box/inbox/Broken.memo.card", "this is not a frontmatter card\n");
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/Broken.memo.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message
+=> card has no frontmatter block
+```
+
+## An attach-only commentary card with valid anchors lints clean
+
+Commentary is attach-only — it carries no target field; bare `{% source %}`
+anchors point at the containing host card.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Plan.attach/Plan.commentary.card",
+  "---\ntype: commentary\n---\n{% source pos=\"body; ~line 4\" version=\"sha256:9f3a1c2b\" %}{% quote %}a span{% /quote %}{% /source %}\n\nThis reads well.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Plan.attach/Plan.commentary.card")],
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
 ```
 
-## A commentary card with one default target and valid anchors lints clean
+## A leftover target field on a commentary card is a warning, not an error
+
+Commentary no longer has `defaultHref`/`defaultRef`/`targets`. A card still
+carrying one (pre-attach drift) loads fine — the key is stripped — and surfaces
+as an unknown-key warning so it gets cleaned off disk.
 
 ```
 const box = await makeTmpBox();
 await box.write(
-  "store/review/Plan.commentary.card",
-  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\n{% source href=\"file:/Users/x/doc.md\" pos=\"body; ~line 4\" version=\"sha256:9f3a1c2b\" %}{% quote %}a span{% /quote %}{% /source %}\n\nThis reads well.\n",
+  "store/review/Stale.commentary.card",
+  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\n---\nbody\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
-  [box.path("store/review/Plan.commentary.card")],
-  { loader, ctx },
+  [box.path("store/review/Stale.commentary.card")],
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
 => 0
+
+result.results[0]!.warnings.some(w => w.message.includes('Unknown frontmatter key "defaultHref"'))
+=> true
 ```
 
-## A commentary card with BOTH default targets is an error (at-most-one)
-
-```
-const box = await makeTmpBox();
-await box.write(
-  "store/review/Both.commentary.card",
-  "---\ntype: commentary\ndefaultHref: \"file:/Users/x/doc.md\"\ndefaultRef: \"/box/notes/a.doc.card\"\n---\nbody\n",
-);
-const loader = await createLoader(box.root);
-const result = await lintCardsDispatch(
-  [box.path("store/review/Both.commentary.card")],
-  { loader, ctx },
-);
-result.results[0]!.errors[0]!.message
-=> commentary card takes at most one of defaultHref or defaultRef, not both
-```
-
-## A commentary card with NEITHER default target is valid (container is the default)
-
-An attach-scoped commentary defaults to its containing document, so it needs no
-explicit default target.
-
-```
-const box = await makeTmpBox();
-await box.write(
-  "store/review/Neither.commentary.card",
-  "---\ntype: commentary\n---\nbody\n",
-);
-const loader = await createLoader(box.root);
-const result = await lintCardsDispatch(
-  [box.path("store/review/Neither.commentary.card")],
-  { loader, ctx },
-);
-result.totalErrors
-=> 0
-```
-
-## A ref-free `{% source %}` in a commentary body is valid — it targets the container
+## A ref-free `{% source %}` in a commentary body is valid — it targets the host
 
 Markdoc validation runs on commentary bodies (it does not run elsewhere). A
-`{% source %}` with neither `ref` nor `href` points at the containing document
-and is allowed; only *both* at once is an error.
+`{% source %}` with neither `ref` nor `href` points at the containing host card
+and is allowed.
 
 ```
 const box = await makeTmpBox();
@@ -294,11 +380,94 @@ await box.write(
   "store/review/RefFree.commentary.card",
   "---\ntype: commentary\n---\n{% source pos=\"body\" %}a span anchored to this page{% /source %}\n",
 );
-const loader = await createLoader(box.root);
 const result = await lintCardsDispatch(
   [box.path("store/review/RefFree.commentary.card")],
-  { loader, ctx },
+  { boxRoot: box.root, ctx },
 );
 result.totalErrors
+=> 0
+```
+
+## Extfile cards validate their href and stamped version
+
+An extfile card's `href` must be a `file:` URL, and a present `version` must
+carry a `sha256:<hex>` marker (it is compared against the live file's hash). A
+well-formed card lints clean; a non-`file:` href or a malformed `version` is an
+error. Whether the href resolves on this machine is *not* checked here.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/Good.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: \"sha256:9f3a1c2b git:7ffeae4\"\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/review/Good.extfile.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+```
+
+A non-`file:` href is an error:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/BadHref.extfile.card",
+  "---\ntype: extfile\nhref: https://example.com/foo.ts\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/review/BadHref.extfile.card")],
+  { boxRoot: box.root, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("must be a file: URL")
+=> true
+```
+
+A malformed `version` (no `sha256:` marker) is an error:
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/review/BadVer.extfile.card",
+  "---\ntype: extfile\nhref: file:/Users/me/src/project/src/foo.ts\nversion: not-a-hash\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/review/BadVer.extfile.card")],
+  { boxRoot: box.root, ctx },
+);
+result.results[0]!.errors[0]!.message.includes("sha256:<hex> marker")
+=> true
+```
+
+## A schema's `validate` hook is dispatched generically by type
+
+card-lint no longer hardcodes which types get extra validation — it calls
+`schema.validate` for whatever type the card declares. The `gadget` schema
+(setup) errors when `mode: forbidden`; a card that trips it surfaces the hook's
+message, and a card that doesn't lints clean.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "store/Bad.gadget.card",
+  "---\ntype: gadget\nmode: forbidden\n---\n",
+);
+await box.write(
+  "store/Ok.gadget.card",
+  "---\ntype: gadget\nmode: allowed\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Bad.gadget.card"), box.path("store/Ok.gadget.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 1
+
+result.results[0]!.errors[0]!.message
+=> gadget mode must not be "forbidden"
+
+result.results[1]!.errors.length
 => 0
 ```

@@ -6,9 +6,7 @@
  */
 
 import type { EnabledBox } from "../domain/config.js";
-import type { SavePagePayload } from "../domain/save-page.js";
 import type { CommentaryDestination, CommentaryPayload } from "../domain/commentary.js";
-import type { TabInfo } from "./tabs.js";
 
 export class ClerkApiError extends Error {
   constructor(
@@ -44,14 +42,6 @@ async function fetchOrThrow(url: string, init: RequestInit): Promise<Response> {
   return res;
 }
 
-async function postJson(url: string, body: unknown): Promise<void> {
-  await fetchOrThrow(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
-
 async function postJsonResult<T>(url: string, body: unknown): Promise<T> {
   const res = await fetchOrThrow(url, {
     method: "POST",
@@ -66,26 +56,6 @@ async function getJson<T>(url: string): Promise<T> {
   const res = await fetchOrThrow(url, { method: "GET" });
   const data: T = await res.json();
   return data;
-}
-
-export async function postMemo(
-  box: EnabledBox,
-  memo: { text: string; url?: string; title?: string },
-): Promise<void> {
-  const context = memo.url === undefined ? undefined : { url: memo.url, title: memo.title };
-  await postJson(`${box.boxUrl}/api/clerk/memo`, {
-    text: memo.text,
-    context,
-    timestamp: new Date().toISOString(),
-  });
-}
-
-export async function postSavePage(box: EnabledBox, payload: SavePagePayload): Promise<void> {
-  await postJson(`${box.boxUrl}/api/clerk/save-page`, payload);
-}
-
-export async function postTabs(box: EnabledBox, tabs: TabInfo[]): Promise<void> {
-  await postJson(`${box.boxUrl}/api/clerk/tabs`, { tabs });
 }
 
 export async function getCommentaryDestinations(box: EnabledBox): Promise<CommentaryDestination[]> {

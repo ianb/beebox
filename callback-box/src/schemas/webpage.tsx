@@ -13,9 +13,9 @@
  * page at capture time — edit it sparingly.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const WebpageSchema: CardSchema = cardSchema("webpage", {
   fields: {

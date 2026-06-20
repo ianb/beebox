@@ -336,6 +336,31 @@ const task: Schema = {
   },
 };
 
+// Capture-session transcript markers. `{% image %}` points at a child image
+// card (description/filename come from that card); `{% silence %}` marks a gap.
+const captureImage: Schema = {
+  selfClosing: true,
+  attributes: {
+    ref: { type: String, required: true },
+  },
+  transform(node, config) {
+    // `ref` → `sourceRef` rename (React reserves `ref`), as with `source`.
+    const { ref, ...rest } = node.transformAttributes(config) as { ref?: string };
+    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
+    return new Tag("CaptureImage", renamed, []);
+  },
+};
+
+const silence: Schema = {
+  selfClosing: true,
+  attributes: {
+    duration: { type: String, required: true },
+  },
+  transform(node, config) {
+    return new Tag("Silence", node.transformAttributes(config), []);
+  },
+};
+
 /**
  * `item` node override that recognises GFM task-list markers. If the first
  * rendered child is a string starting with `[ ] ` / `[x] ` / `[X] `, that
@@ -384,6 +409,8 @@ export const markdocConfig: Config = {
     "recipe-section": recipeSection,
     redacted,
     task,
+    image: captureImage,
+    silence,
   },
   nodes: { item },
 };

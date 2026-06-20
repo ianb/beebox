@@ -8,9 +8,9 @@
  * Referenced from briefing cards via the `key-people[].ref` field.
  */
 
-import { body, cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const PersonStatus = z.enum(["active", "inactive", "archived"]);
 export type PersonStatusType = z.infer<typeof PersonStatus>;

@@ -8,7 +8,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { schemas } from "../../schemas/registry.js";
+import { cardSchemas } from "../../schemas/registry.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
@@ -121,9 +121,9 @@ function extractRootTag(xmlContent: string): string | null {
 }
 
 /**
- * Look up schema instructions for a given root tag name.
+ * Look up schema instructions for a given card type.
  */
-function getSchemaInstructions(tagName: string): string | null {
-  const schema = schemas.find((s) => s.tagName === tagName);
+function getSchemaInstructions(type: string): string | null {
+  const schema = cardSchemas.find((s) => s.type === type);
   return schema?.instructions ?? null;
 }

@@ -4,11 +4,43 @@
  */
 
 import * as path from "node:path";
+import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
-import { CardLoader, type ElementNode } from "cardworks";
 import { router, publicProcedure } from "../trpc.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
+import { parseCardText, serializeCardText, typeFromFilename } from "../../../core/card-io.js";
+import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { type TodoItem, type TodoItemStatusType, type TodoListFields } from "../../../schemas/todo-list.js";
+
+/**
+ * Find the item named `itemName` anywhere in the (possibly nested) item
+ * tree and apply the new status. A `done` item gains a `completed`
+ * timestamp; any other status clears it. Returns true once the item is
+ * found and mutated.
+ */
+function updateInItems(input: {
+  items: TodoItem[];
+  itemName: string;
+  status: TodoItemStatusType;
+}): boolean {
+  const { items, itemName, status } = input;
+  for (const item of items) {
+    if (item.name === itemName) {
+      item.status = status;
+      if (status === "done") {
+        item.completed = new Date().toISOString();
+      } else {
+        delete item.completed;
+      }
+      return true;
+    }
+    if (item.items !== undefined && updateInItems({ items: item.items, itemName, status })) {
+      return true;
+    }
+  }
+  return false;
+}
 
 export const todosRouter = router({
   updateItem: publicProcedure
@@ -18,44 +50,37 @@ export const todosRouter = router({
       status: z.enum(["pending", "done", "cancelled", "deferred"]),
     }))
     .mutation(async ({ input, ctx }) => {
+      if (typeFromFilename(input.listPath) !== "todo-list") {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Not a todo-list card" });
+      }
+
       const fullPath = path.join(ctx.boxRoot, input.listPath);
-      const loader = new CardLoader(ctx.boxRoot);
-      let card;
+      let content: string;
       try {
-        card = await loader.load(fullPath);
+        content = await fs.readFile(fullPath, "utf8");
       } catch (_e) {
         throw new TRPCError({ code: "NOT_FOUND", message: `Todo list not found: ${input.listPath}` });
       }
 
-      if (card.element.tagName !== "todo-list") {
-        throw new TRPCError({ code: "BAD_REQUEST", message: "Not a todo-list card" });
+      const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
+      let parsed;
+      try {
+        parsed = parseCardText(content, { source: fullPath, schemas: cardSchemas, type: "todo-list" });
+      } catch (e) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid todo list: ${(e as Error).message}` });
       }
 
-      // Find and update the item by name (recursive)
-      function updateInChildren(children: ElementNode[]): boolean {
-        for (const child of children) {
-          if (child.tagName === "item" && child.attrs.name === input.itemName) {
-            child.attrs.status = input.status;
-            if (input.status === "done") {
-              child.attrs.completed = new Date().toISOString();
-            } else {
-              delete child.attrs.completed;
-            }
-            return true;
-          }
-          if (child.tagName === "item" && child.children) {
-            if (updateInChildren(child.children as ElementNode[])) return true;
-          }
-        }
-        return false;
-      }
-
-      const found = updateInChildren((card.element.children ?? []) as ElementNode[]);
+      // parseCardText validated the fields against TodoListSchema, so the
+      // shape conforms to TodoListFields — this is the parse boundary.
+      const fields = parsed.fields as unknown as TodoListFields;
+      const found =
+        fields.items !== undefined &&
+        updateInItems({ items: fields.items, itemName: input.itemName, status: input.status });
       if (!found) {
         throw new TRPCError({ code: "NOT_FOUND", message: `Item not found: ${input.itemName}` });
       }
 
-      await loader.save(card);
+      await fs.writeFile(fullPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
       await stageFiles(ctx.boxRoot, [input.listPath]);
       await commit(ctx.boxRoot, {
         message: `Update todo item "${input.itemName}" to ${input.status}`,

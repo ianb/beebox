@@ -17,11 +17,12 @@ export default function TestView({ cards }) {
 }
 `;
 
-const MEMO_CARD = `<memo status="new">
-<created>2026-03-01T12:00:00Z</created>
-<content>Test memo content</content>
-<source>text</source>
-</memo>`;
+const MEMO_CARD = `---
+status: new
+created: 2026-03-01T12:00:00Z
+---
+Test memo content
+`;
 ```
 
 ## Listing views
@@ -155,7 +156,7 @@ res.body.cards[0].tagName
 res.body.cards[0].path
 => box/inbox/Test.memo.card
 
-res.body.cards[0].attrs.status
+res.body.cards[0].status
 => new
 
 JSON.stringify(res.body.files)

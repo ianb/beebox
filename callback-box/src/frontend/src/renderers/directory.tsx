@@ -16,6 +16,7 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Badge } from "../components/ui/Badge";
 import { TextLink } from "../components/ui/TextLink";
+import { attachDirFor } from "@shared/attach-path";
 import { getRenderers, registerFileRenderer, type FileData, type RendererProps } from "./index";
 
 function CardAccordion({
@@ -36,11 +37,9 @@ function CardAccordion({
   onNavigate: RendererProps["onNavigate"];
 }) {
   // Card-as-directory: when a card has its own attach scope, expose a link to
-  // browse INTO it. The literal segment is `<basename>.<type>.attach` — we
-  // surface it as "contents" rather than the .attach implementation detail.
-  const attachPath = hasAttachments
-    ? cardPath.replace(/\.card$/, ".attach")
-    : null;
+  // browse INTO it. The scope dir is `<basename>.attach` (basename only, no
+  // type) — we surface it as "contents" rather than the .attach detail.
+  const attachPath = hasAttachments ? attachDirFor(cardPath) : null;
   const title = (
     <Row gap="sm">
       <Text size="sm" weight="medium" tone="emphasis">{name}</Text>

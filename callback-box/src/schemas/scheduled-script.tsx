@@ -8,11 +8,11 @@
  * The filename stem is the identity (e.g., check-email.scheduled-script.card).
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 import { parseDuration, parseBudget } from "./scheduled-script-duration.js";
 const { rrulestr } = rrulePkg;
 

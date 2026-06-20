@@ -1,18 +1,16 @@
 # card-io: Phase 2 markdown-frontmatter card format
 
-End-to-end round-trip for the new `.card` file format. The host (this
-module) owns YAML parsing; cardworks provides the schema primitives
-and the frontmatter splitter.
+End-to-end round-trip for the `.card` file format. The host (this module) owns
+YAML parsing; the absorbed card layer (`src/cards`) provides the schema
+primitives and the frontmatter splitter.
 
 ```ts setup
 import { z } from "zod";
 import {
   cardSchema,
   body,
-  element,
   type CardSchema,
-  type ElementSchema,
-} from "cardworks";
+} from "../src/cards/index.js";
 import {
   parseCardText,
   serializeCardText,
@@ -108,20 +106,35 @@ tryParse2("---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n 
 => extra.email-thread.card: schema "email-thread" declares no body, but file has body content
 ```
 
-## Loader dispatch routes new and legacy cards to the right path
+## Unknown frontmatter keys are stripped on load (not rejected)
+
+The frontmatter schema is lenient: a key the schema doesn't declare is dropped
+from the parsed fields rather than failing the parse, so a card that has drifted
+past its schema still loads and stays usable. (The unknown key is surfaced as a
+lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
+
+```
+const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
+JSON.stringify(drifted.fields)
+=> {"type":"doc","drive-id":"d1","title":"T","body":""}
+```
+
+The `content-type` marker is a global field, so a card carrying it keeps it
+through the parse.
+
+```
+const ct = parseCardText("---\ntype: email-thread\nthread-id: t1\nsubject: hi\ncontent-type: text/plain\nparticipants:\n  - a@x\n---\n", { source: "ct.email-thread.card", schemas });
+ct.fields["content-type"]
+=> text/plain
+```
+
+## Loader dispatch parses recognized frontmatter cards
 
 ```ts setup
-const xmlMemo: ElementSchema = element("memo", {
-  attrs: { status: z.string() },
-});
-
 const ctx: LoadCardContext = {
   cardSchemas: new Map<string, CardSchema>([
     ["doc", docSchema],
     ["email-thread", threadSchema],
-  ]),
-  elementSchemas: new Map<string, ElementSchema>([
-    ["memo", xmlMemo],
   ]),
 };
 ```
@@ -150,7 +163,6 @@ segment ("job"), making every generated job card fail validation:
 ```
 const registryCtx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),
-  elementSchemas: new Map(),
 };
 const content = createIntakeJobTemplate({
   created: "2026-06-09T00:00:00Z",
@@ -166,17 +178,20 @@ loaded.kind === "frontmatter" ? loaded.schema.type : "?"
 => intake-job
 ```
 
-A file whose frontmatter `type:` is unknown falls through to the XML path so legacy XML cards (with a content-type frontmatter only) keep working.
+A file that isn't a recognized frontmatter card (no `---` block, or a filename
+type with no registered schema) is rejected — there is no XML fallback.
 
 ```
-const text = "---\ncontent-type: application/x-card+xml\n---\n<memo status=\"new\"/>";
-const loaded = await loadCardFromText({ content: text, source: "legacy.memo.card", ctx });
-loaded.kind
-=> xml
+const tryLoad = async (content: string, source: string): Promise<string> => {
+  try { await loadCardFromText({ content, source, ctx }); return "did not throw"; }
+  catch (e) { return (e as Error).message; }
+};
 
-loaded.kind === "xml" ? loaded.element.tagName : "?"
-=> memo
+// A bare XML body (no frontmatter) no longer loads
+await tryLoad("<memo status=\"new\"/>", "legacy.memo.card")
+=> legacy.memo.card: not a recognized card: no frontmatter block with a registered type
 
-loaded.kind === "xml" ? loaded.schema?.tagName : "?"
-=> memo
+// Frontmatter whose filename type has no registered schema is also rejected
+await tryLoad("---\nthread-id: t1\n---\n", "x.unknown.card")
+=> x.unknown.card: not a recognized card: no frontmatter block with a registered type
 ```

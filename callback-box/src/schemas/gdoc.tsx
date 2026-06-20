@@ -15,9 +15,9 @@
  * would otherwise reach for a plain `.md` file.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 const LossyType = z.enum([
   "comments",

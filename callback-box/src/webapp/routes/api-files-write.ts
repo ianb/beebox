@@ -24,7 +24,7 @@ import {
   attachDirFor,
   attachDirOwnerBasename,
   isInsideAttachScope,
-} from "../../lib/attach-path.js";
+} from "../../shared/attach-path.js";
 
 interface RegisterApiFilesWriteRoutesOptions {
   server: FastifyInstance;

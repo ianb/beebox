@@ -16,9 +16,8 @@
  * agent-written `contains`.
  */
 
-import type { ElementNode } from "cardworks";
-import type { LoadedCard, FrontmatterLoadedCard, XmlLoadedCard } from "../card-io.js";
-import { resolveAttachRef } from "../../lib/attach-path.js";
+import type { LoadedCard, FrontmatterLoadedCard } from "../card-io.js";
+import { resolveAttachRef } from "../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../file-summary.js";
 import { splitMarkdownSections } from "./markdown-sections.js";
 
@@ -75,7 +74,6 @@ export function effectiveContains(kind: string, fields: Record<string, unknown>)
  */
 export function declareInputFiles(input: { path: string; card: LoadedCard }): string[] {
   const { path, card } = input;
-  if (card.kind !== "frontmatter") return [];
   if (card.schema.type !== "gdoc") return [];
   const content = card.fields["content"];
   const ref = isRefObject(content) ? content.ref : undefined;
@@ -100,8 +98,6 @@ export interface ExtractInput {
  */
 export function extractCardDocs(input: ExtractInput): SearchDoc[] {
   const { path, card, contentHash } = input;
-  if (card.kind === "xml") return [xmlDoc(path, { card, contentHash })];
-
   const fields = card.fields;
   const kind = card.schema.type;
   const fold = foldFields(kind, fields);
@@ -264,54 +260,6 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
     default:
       return { extra: [] };
   }
-}
-
-function xmlDoc(path: string, input: { card: XmlLoadedCard; contentHash: string }): SearchDoc {
-  const { card, contentHash } = input;
-  const attrs = card.element.attrs;
-  const title = truncateTitle(
-    firstNonEmpty([str(attrs["title"]), str(attrs["name"]), titleFromFilename(path)]),
-    TITLE_MAX
-  );
-  return {
-    id: docId(path, ""),
-    path,
-    fragment: "",
-    kind: card.element.tagName,
-    title,
-    contains: "",
-    content: normalizeContent(collectElementText(card.element)),
-    created: "",
-    contentHash,
-  };
-}
-
-/** Collect all text content from an XML element tree (text, mixed, children). */
-function collectElementText(node: ElementNode): string {
-  const parts: string[] = [];
-  const visit = (n: ElementNode): void => {
-    if (typeof n.text === "string" && n.text.trim() !== "") parts.push(n.text);
-    if (Array.isArray(n.mixed)) {
-      for (const m of n.mixed) {
-        if (typeof m === "string") parts.push(m);
-        else if (isElementNode(m)) visit(m);
-      }
-    }
-    for (const child of n.children) {
-      if (isElementNode(child)) visit(child);
-    }
-  };
-  visit(node);
-  return parts.join(" ").replace(/\s+/g, " ").trim();
-}
-
-function isElementNode(value: unknown): value is ElementNode {
-  return (
-    typeof value === "object"
-    && value !== null
-    && "tagName" in value
-    && "children" in value
-  );
 }
 
 function isRefObject(value: unknown): value is { ref: string } {

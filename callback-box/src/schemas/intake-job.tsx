@@ -6,9 +6,9 @@
  * Processed by the reactor agent, which triages each item.
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const IntakeJobSchema: CardSchema = cardSchema("intake-job", {
   searchable: false,

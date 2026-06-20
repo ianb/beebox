@@ -15,33 +15,44 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## Compile instructions from landmarks
 
-A landmark with a `<triage-destination>` child becomes a category;
-landmarks without one are ignored.
+A landmark with a `triage` destination becomes a category; landmarks
+without one are ignored.
 
 ```
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark>
-<navigation><label>Recipes</label><symbol>🍳</symbol></navigation>
-<triage-destination>
-<rules>Anything describing how to cook a dish.</rules>
-<procedure ref="archive-recipe.procedure.card"/>
-</triage-destination>
-</landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    rules: Anything describing how to cook a dish.
+    procedure-ref: archive-recipe.procedure.card
+---
+`,
 );
 await box.write(
   "store/todos/Todos.landmark.card",
-  `<landmark>
-<navigation><label>Todos</label><symbol>✅</symbol></navigation>
-<triage-destination>
-<rules>Action items the user has to do.</rules>
-</triage-destination>
-</landmark>`,
+  `---
+navigation:
+  label: Todos
+  symbol: ✅
+destinations:
+  - for: [triage]
+    rules: Action items the user has to do.
+---
+`,
 );
 await box.write(
   "store/bookmarks/Bookmarks.landmark.card",
-  `<landmark><navigation><label>Bookmarks</label><symbol>🔖</symbol></navigation></landmark>`,
+  `---
+navigation:
+  label: Bookmarks
+  symbol: 🔖
+---
+`,
 );
 
 const { categories } = await compileTriageInstructions(box.root);
@@ -75,7 +86,15 @@ The triage agent's decisions are applied verbatim for `confident` and
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark><navigation><label>Recipes</label><symbol>🍳</symbol></navigation><triage-destination><rules>Cooking instructions.</rules></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    rules: Cooking instructions.
+---
+`,
 );
 await box.write("box/inbox/staged/Bread.memo.card", "<memo>flour, water, salt</memo>");
 
@@ -115,7 +134,15 @@ await box.cleanup();
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark><navigation><label>Recipes</label><symbol>🍳</symbol></navigation><triage-destination><rules>Cooking instructions.</rules></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    rules: Cooking instructions.
+---
+`,
 );
 await box.write("box/inbox/staged/Maybe.memo.card", "<memo>could be a recipe</memo>");
 
@@ -150,11 +177,27 @@ question card naming the candidate categories.
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
-  `<landmark><navigation><label>Recipes</label><symbol>🍳</symbol></navigation><triage-destination><rules>Cooking instructions.</rules></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Recipes
+  symbol: 🍳
+destinations:
+  - for: [triage]
+    rules: Cooking instructions.
+---
+`,
 );
 await box.write(
   "store/todos/Todos.landmark.card",
-  `<landmark><navigation><label>Todos</label><symbol>✅</symbol></navigation><triage-destination><rules>Action items.</rules></triage-destination></landmark>`,
+  `---
+navigation:
+  label: Todos
+  symbol: ✅
+destinations:
+  - for: [triage]
+    rules: Action items.
+---
+`,
 );
 await box.write("box/inbox/staged/Mystery.memo.card", "<memo>ambiguous</memo>");
 

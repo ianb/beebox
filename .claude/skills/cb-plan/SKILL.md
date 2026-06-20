@@ -1,6 +1,6 @@
 ---
 name: cb-plan
-description: Use when the human wants to write a plan for non-trivial work (a new feature, a refactor, a vocabulary or schema change, a multi-track effort) — or to review an existing plan. Drives a structured form-as-prompt where review is baked into the writing, not bolted on after. A plan is a complete unit of work — designed end-to-end and shipped end-to-end; partial shipping is not a mode here. Triggers include "write a plan", "make a plan for X", "let's plan", "review this plan", "/cb-plan".
+description: Use when the human wants to write a plan for non-trivial work — a new feature, a refactor, a vocabulary or schema change, a multi-track effort — or to review an existing plan. Triggers include "write a plan", "make a plan for X", "let's plan", "review this plan", "/cb-plan".
 allowed-tools: Bash, Read, Write, Edit, Grep, Glob, Agent, WebFetch, WebSearch
 ---
 
@@ -278,10 +278,17 @@ when all chunks complete.
 
 How the completed plan actually goes out as one unit:
 
-- Test posture. Default deferral: "dogfooding precedes tests; one
-  doctest per substantial new codepath lands once the shape feels
-  settled." Override if there's a regression-risk piece that needs
-  tests at ship.
+- Test posture. **Tests come first, as a design tool** (per
+  `docs/testing.md`): a test's first job is to force decomposition —
+  writing it sharpens a function's purpose and boundaries — then
+  documentation, then regression-anchoring. So name the doctest for each
+  substantial new codepath *as part of designing it*, not deferred until
+  the shape "settles," and encode the plan's done-when as the tests that
+  must pass (a vague "make it faster" becomes a checkable assertion).
+  Not every line, though: tests aren't for coverage percentages or
+  verification-for-its-own-sake (`docs/testing.md`) — cover the
+  substantial codepaths and the Failure-modes table's "Test exists?"
+  column, not everything.
 - Knowledge-audit entries (see the Knowledge audits section above) —
   what lands with the plan vs deferred.
 - Migration approach if the plan changes existing data shape (hand-done
@@ -400,6 +407,10 @@ fought the way work actually happens here.
 
 (Yes, the skill writes plans, and this skill's failure modes apply to
 the skill's own use.)
+
+These are the shortcuts you'll be tempted to take — each is a
+rationalization the plan exists to resist. If you catch yourself
+thinking one of them, you're hollowing out the plan, not saving time:
 
 - **Filling sections perfunctorily.** Sections filled with "N/A" or
   one-line dismissals undo the value. If a section genuinely doesn't

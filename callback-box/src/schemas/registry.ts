@@ -11,7 +11,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { SchemaRegistry, type ElementSchema, type CardSchema } from "cardworks";
+import { type CardSchema } from "../cards/index.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -43,26 +43,20 @@ import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
 import { CommentarySchema } from "./commentary.js";
 import { WebpageSchema } from "./webpage.js";
+import { ExtfileSchema } from "./extfile.js";
 import { LandmarkSchema } from "./landmark.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
- * All built-in card schemas.
+ * Markdown-frontmatter card schemas. Loaded into a Map<type, CardSchema> by
+ * createCardSchemaMap below.
  */
-export const schemas: ElementSchema[] = [
-  ProcedureSchema,
-  ProcedureRunSchema,
+export const cardSchemas: CardSchema[] = [
   CaptureSessionSchema,
   GuideSchema,
   LandmarkSchema,
-];
-
-/**
- * Phase-2 markdown-frontmatter card schemas. Loaded into a separate
- * Map<type, CardSchema> by createCardSchemaMap below. As schemas migrate
- * from XML to frontmatter, they move from the array above to this one.
- */
-export const cardSchemas: CardSchema[] = [
+  ProcedureSchema,
+  ProcedureRunSchema,
   RecipeSchema,
   EmailThreadSchema,
   EmailMessageSchema,
@@ -72,6 +66,7 @@ export const cardSchemas: CardSchema[] = [
   GdocSchema,
   CommentarySchema,
   WebpageSchema,
+  ExtfileSchema,
   SheetSchema,
   FileSchema,
   ImageSchema,
@@ -92,22 +87,33 @@ export const cardSchemas: CardSchema[] = [
   ChatThreadSchema,
 ];
 
-/** Packages that box-local schemas can import from callback-box's tree. */
-const SCHEMA_DEPS = new Set(["cardworks", "zod"]);
+/**
+ * Specifiers a box-local schema file may import from callback-box's tree:
+ * - `callback-box/cards` — the public card-primitive surface (cardSchema,
+ *   body, splitCardContent, …); the specifier new box schemas should use.
+ * - `zod` — peer dependency every schema needs.
+ * - `yaml` — frontmatter card templates `stringify` their fields with it (the
+ *   scaffolding in box-templates.ts shows exactly this).
+ */
+const SCHEMA_DEPS = new Set(["callback-box", "zod", "yaml"]);
 
 /**
- * Virtual parent URL inside callback-box's node_modules.
- * When we rewrite parentURL to this, Node resolves bare specifiers
- * by searching callback-box's node_modules.
+ * Virtual parent URL at callback-box's package root (NOT inside
+ * node_modules). Rewriting a box schema's parentURL to this makes Node
+ * resolve bare deps (`zod`, `yaml`) from callback-box's node_modules
+ * AND self-references (`callback-box/cards`) via callback-box's own
+ * `exports` map. Pointing it *inside* node_modules would break the
+ * self-reference: Node's LOOKUP_PACKAGE_SCOPE returns null at a
+ * node_modules boundary, so the package's own exports never match. The
+ * file need not exist — only the directory's package.json scope is read.
  */
-const CB_VIRTUAL_PARENT = pathToFileURL(
-  join(PACKAGE_ROOT, "node_modules", "_virtual.js")
-).href;
+const CB_VIRTUAL_PARENT = pathToFileURL(join(PACKAGE_ROOT, "_virtual.js")).href;
 
 /**
  * Register module resolution hooks so that box-local schema files
- * (under config/schemas/) can import "cardworks" and "zod" even though
- * those packages live in callback-box's node_modules, not the box's.
+ * (under config/schemas/) can import `callback-box/cards`, `zod`, and
+ * `yaml` even though none of those resolve from the box's own
+ * node_modules.
  *
  * Uses Node's synchronous registerHooks API which chains correctly
  * with tsx's async loader hooks.
@@ -156,16 +162,11 @@ async function ensureEsmPackageJson(schemasDir: string): Promise<void> {
 
 /**
  * Box-local schemas, segregated by format. A box's `config/schemas/*.ts`
- * files may default-export either a frontmatter `cardSchema()` (the default
- * for new card types) or a legacy XML `element()` schema; we branch on the
- * discriminator (`.type` vs `.tagName`) and keep the two kinds apart so each
- * flows into the right runtime map.
+ * files default-export a frontmatter `cardSchema()`.
  */
 export interface BoxSchemas {
-  /** Frontmatter card schemas (cardworks CardSchema, keyed by `.type`). */
+  /** Frontmatter card schemas (CardSchema, keyed by `.type`). */
   cardSchemas: CardSchema[];
-  /** Legacy XML element schemas (cardworks ElementSchema, keyed by `.tagName`). */
-  elementSchemas: ElementSchema[];
 }
 
 /**
@@ -183,10 +184,8 @@ const boxSchemaCache = new Map<string, BoxSchemas>();
 /**
  * Load box-local schemas from config/schemas/*.ts.
  *
- * Each file should default-export either a frontmatter `cardSchema()` or a
- * legacy XML `element()` schema. Optionally it can also export a `template`
- * (TemplateDefinition) for `cb create` — registered the same way regardless
- * of schema kind.
+ * Each file should default-export a frontmatter `cardSchema()`. Optionally it
+ * can also export a `template` (TemplateDefinition) for `cb create`.
  *
  * Errors in individual files are logged as warnings, not fatal.
  */
@@ -200,7 +199,7 @@ export async function loadBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
 }
 
 async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
-  const empty: BoxSchemas = { cardSchemas: [], elementSchemas: [] };
+  const empty: BoxSchemas = { cardSchemas: [] };
   const schemasDir = join(boxRoot, "config/schemas");
   let files: string[];
   try {
@@ -216,11 +215,10 @@ async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
   if (tsFiles.length === 0) return empty;
 
   const loadedCard: CardSchema[] = [];
-  const loadedElement: ElementSchema[] = [];
 
   // Ensure package.json with "type": "module" so .ts files load as ESM,
-  // and register resolve hooks so bare specifiers (cardworks, zod) resolve
-  // from callback-box's node_modules.
+  // and register resolve hooks so bare specifiers (callback-box/cards, zod,
+  // yaml) resolve from callback-box's node_modules.
   await ensureEsmPackageJson(schemasDir);
   ensureResolveHooks();
 
@@ -230,17 +228,10 @@ async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
       const mod = await import(pathToFileURL(filePath).href);
       const def: unknown = mod.default;
 
-      // Branch on the discriminator. ElementSchema (legacy XML) is a cardworks
-      // Zod type carrying `.tagName`; check it first, because ElementSchema also
-      // inherits a string `.type` from ZodType, so a `.type`-only check would
-      // misclassify it. CardSchema (frontmatter) is a plain object identified by
-      // its `.frontmatterSchema`.
-      if (isElementSchema(def)) {
-        loadedElement.push(def);
-      } else if (isCardSchema(def)) {
+      if (isCardSchema(def)) {
         loadedCard.push(def);
       } else {
-        console.warn(`Warning: ${file} does not export a default cardSchema() or element(), skipping`);
+        console.warn(`Warning: ${file} does not export a default cardSchema(), skipping`);
         continue;
       }
 
@@ -252,11 +243,7 @@ async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
     }
   }
 
-  return { cardSchemas: loadedCard, elementSchemas: loadedElement };
-}
-
-function isElementSchema(def: unknown): def is ElementSchema {
-  return typeof def === "object" && def !== null && typeof (def as ElementSchema).tagName === "string";
+  return { cardSchemas: loadedCard };
 }
 
 function isCardSchema(def: unknown): def is CardSchema {
@@ -269,43 +256,10 @@ function isCardSchema(def: unknown): def is CardSchema {
 }
 
 /**
- * Create a SchemaRegistry populated with all known schemas.
- *
- * If boxRoot is provided, also loads box-local schemas from config/schemas/.
- */
-export async function createSchemaRegistry(boxRoot?: string): Promise<SchemaRegistry> {
-  const registry = new SchemaRegistry();
-  for (const schema of schemas) {
-    registry.register(schema);
-  }
-  if (boxRoot) {
-    const { elementSchemas } = await loadBoxSchemas(boxRoot);
-    for (const schema of elementSchemas) {
-      registry.register(schema);
-    }
-  }
-  return registry;
-}
-
-/**
- * Get all schemas (built-in + box-local).
- *
- * If boxRoot is provided, includes box-local schemas.
- */
-export async function getAllSchemas(boxRoot?: string): Promise<ElementSchema[]> {
-  if (!boxRoot) return schemas;
-  const { elementSchemas } = await loadBoxSchemas(boxRoot);
-  return [...schemas, ...elementSchemas];
-}
-
-/**
- * Get the list of known card types.
+ * Get the list of known card types (built-in frontmatter schemas).
  */
 export function getCardTypes(): string[] {
-  return [
-    ...schemas.map(s => s.tagName),
-    ...cardSchemas.map(s => s.type),
-  ];
+  return cardSchemas.map(s => s.type);
 }
 
 /**
@@ -314,23 +268,16 @@ export function getCardTypes(): string[] {
  * when a boxRoot is given (they default to searchable).
  */
 export async function getSearchableTypes(boxRoot?: string): Promise<string[]> {
-  const elementSchemas = await getAllSchemas(boxRoot);
   const boxCardSchemas = boxRoot ? (await loadBoxSchemas(boxRoot)).cardSchemas : [];
   const allCardSchemas = [...cardSchemas, ...boxCardSchemas];
-  return [
-    ...elementSchemas.filter(s => s.searchable !== false).map(s => s.tagName),
-    ...allCardSchemas.filter(s => s.searchable).map(s => s.type),
-  ];
+  return allCardSchemas.filter(s => s.searchable).map(s => s.type);
 }
 
 /**
  * Check if a card type is known.
  */
 export function isKnownCardType(type: string): boolean {
-  return (
-    schemas.some(s => s.tagName === type)
-    || cardSchemas.some(s => s.type === type)
-  );
+  return cardSchemas.some(s => s.type === type);
 }
 
 /**
@@ -385,4 +332,5 @@ export { PersonSchema } from "./person.js";
 export { SheetSchema } from "./sheet.js";
 export { DocSchema } from "./doc.js";
 export { GdocSchema } from "./gdoc.js";
+export { ExtfileSchema } from "./extfile.js";
 export { LandmarkSchema } from "./landmark.js";

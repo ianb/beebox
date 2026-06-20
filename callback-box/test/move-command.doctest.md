@@ -103,6 +103,52 @@ title: Index
 Abs [Engine](/store/archive/Engine.doc.card) and [photo](/store/archive/Engine.attach/photo.jpg).
 ```
 
+## Box-local card type: classified by frontmatter shape, not the built-in registry
+
+A box can define its own frontmatter card types (e.g. `bill`) under
+`config/schemas/`. Those types aren't in callback-box's built-in schema list,
+so a move must recognize them by file *shape* — a `.card` with a frontmatter
+block — not by matching a built-in type. (Earlier the type-based check sent any
+non-built-in type to the cardworks XML loader, which can't parse frontmatter, so
+`cb mv` on a migrated box-local card failed.) Here a `bill` card with an attach
+dir and an inbound ref moves cleanly.
+
+```
+const box = await makeTmpBox();
+await box.write(
+  "box/bills/Water.bill.card",
+  "---\nstatus: due\nvendor: City Water\namount: 42.5\n---\nScan: ![s](attach/scan.pdf)\n",
+);
+await box.write("box/bills/Water.attach/scan.pdf", "PDF");
+await box.write(
+  "box/index.doc.card",
+  "---\ntype: doc\ntitle: Index\n---\nUnpaid: [Water](/box/bills/Water.bill.card).\n",
+);
+
+const result = await mv(box, { from: "box/bills/Water.bill.card", to: "store/archive/Water.bill.card" });
+result.success
+=> true
+```
+
+The card and its attach directory moved, and the inbound absolute ref was
+repointed:
+
+```continue
+await box.list("store/archive")
+=>
+store/archive/Water.attach
+store/archive/Water.attach/scan.pdf
+store/archive/Water.bill.card
+
+await box.read("box/index.doc.card")
+=>
+---
+type: doc
+title: Index
+---
+Unpaid: [Water](/store/archive/Water.bill.card).
+```
+
 ## Body Markdoc `{% source ref %}` rewritten (relative + absolute)
 
 Refs carried by Markdoc body tags follow the move in either style.
@@ -154,28 +200,28 @@ refs:
 body
 ```
 
-## Legacy XML card: `ref=` attributes rewritten (relative + absolute)
+## Single card move: `ref=` strings in referrers rewritten (relative + absolute)
 
-XML-body cards (procedure, guide, …) go through cardworks' loader, which
-re-serializes `ref=` attributes in referrers — relative refs become relative
-to the new location (cardworks writes a leading `./`), absolute refs stay
-box-root-absolute.
+Moving a card rewrites references to it in other cards via substring rewrite —
+a relative ref becomes relative to the new location, an absolute (box-root) ref
+stays box-root-absolute. (No leading `./`; that was a cardworks XML-loader
+artifact, gone now that every card is frontmatter.)
 
 ```
 const box = await makeTmpBox();
-await box.write("store/Recipe.procedure.card", "<procedure>\n<step>do it</step>\n</procedure>\n");
+await box.write("store/Scan.capture-session.card", "---\nsession-id: s\n---\n");
 await box.write(
   "store/Guide.guide.card",
-  '<guide>\n<see ref="Recipe.procedure.card"/>\n<see ref="/store/Recipe.procedure.card"/>\n</guide>\n',
+  '---\nversion: "1.0.0"\n---\nrel [a](Scan.capture-session.card) abs [b](/store/Scan.capture-session.card)\n',
 );
 
-await mv(box, { from: "store/Recipe.procedure.card", to: "store/sub/Recipe.procedure.card" });
-await box.read("store/Guide.guide.card")
+await mv(box, { from: "store/Scan.capture-session.card", to: "store/sub/Scan.capture-session.card" });
+(await box.read("store/Guide.guide.card")).trim()
 =>
-<guide>
-<see ref="./sub/Recipe.procedure.card"/>
-<see ref="/store/sub/Recipe.procedure.card"/>
-</guide>
+---
+version: "1.0.0"
+---
+rel [a](sub/Scan.capture-session.card) abs [b](/store/sub/Scan.capture-session.card)
 ```
 
 ## Directory move: recursive, external refs rewritten (relative + absolute)

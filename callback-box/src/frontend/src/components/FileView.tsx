@@ -85,6 +85,15 @@ function isDirectoryPath(path: string): boolean {
   return pathExt(path) === "";
 }
 
+/**
+ * JSON is fetched by its own renderer (renderers/json.tsx), which gates on
+ * file size before pulling a potentially-huge body — so, like binary files,
+ * the shell must not prefetch it as text.
+ */
+function isJsonPath(path: string): boolean {
+  return pathExt(path) === ".json";
+}
+
 /* ---------- data loading ---------- */
 
 interface LoadResult {
@@ -97,7 +106,10 @@ function useFileData(path: string): LoadResult {
   const isCard = isCardPath(path);
   const isDir = isDirectoryPath(path);
   const isBinary = isBinaryPath(path);
-  const fetchText = !isCard && !isDir && !isBinary;
+  const isJson = isJsonPath(path);
+  // JSON, like binary files, is loaded by its own renderer, so the shell
+  // passes the path through without prefetching the body.
+  const fetchText = !isCard && !isDir && !isBinary && !isJson;
   const apiBase = getApiBase();
 
   // Card data via tRPC
@@ -157,7 +169,7 @@ function useFileData(path: string): LoadResult {
         error: null,
       };
     }
-    if (isDir || isBinary) {
+    if (isDir || isBinary || isJson) {
       return { data: { path }, loading: false, error: null };
     }
     // fetchText
@@ -165,7 +177,7 @@ function useFileData(path: string): LoadResult {
     if (textQuery.error) return { data: null, loading: false, error: textQuery.error.message };
     if (textQuery.data === undefined) return { data: null, loading: true, error: null };
     return { data: { path, content: textQuery.data }, loading: false, error: null };
-  }, [isCard, isDir, isBinary, path, card, cardLoading, cardError, textQuery.data, textQuery.isLoading, textQuery.error]);
+  }, [isCard, isDir, isBinary, isJson, path, card, cardLoading, cardError, textQuery.data, textQuery.isLoading, textQuery.error]);
 }
 
 /* ---------- chrome helpers ---------- */

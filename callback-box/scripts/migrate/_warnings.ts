@@ -15,7 +15,19 @@
  */
 
 import { relative } from "node:path";
-import type { ElementNode } from "cardworks";
+
+/**
+ * Minimal XML element shape — the subset the field-loss checker walks. The
+ * (now-retired) XML migrators that call `checkElement` passed structurally
+ * matching nodes; defining it locally keeps this shared helper free of the
+ * deleted `cardworks` package.
+ */
+interface ElementNode {
+  tagName: string;
+  attrs: Record<string, unknown>;
+  children: ElementNode[];
+  text?: string;
+}
 
 export interface Warning {
   file: string;

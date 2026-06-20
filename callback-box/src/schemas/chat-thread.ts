@@ -8,7 +8,7 @@
  * message (its reply) or seen-marker (acknowledge without replying).
  */
 
-import { cardSchema, type CardSchema } from "cardworks";
+import { cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 

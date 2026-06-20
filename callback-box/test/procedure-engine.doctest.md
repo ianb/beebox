@@ -7,7 +7,7 @@ tracking state in run cards, and handling various step outcomes.
 import { startProcedure } from "../src/core/procedure/engine.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 import { getLog } from "../src/cli/lib/git.js";
-import { parseCard } from "cardworks";
+import { parseProcedureRun } from "../src/schemas/procedure-run.js";
 ```
 
 ## Shell-only procedure: happy path
@@ -18,16 +18,17 @@ results in the run card.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/greet.procedure.card", `
-<procedure name="greet">
-  <description>A simple greeting procedure</description>
-  <step id="hello">
-    <description>Say hello</description>
-    <run>
-      <shell>echo "Hello from procedure" > box/output/greeting.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/greet.procedure.card", `---
+name: greet
+description: A simple greeting procedure
+steps:
+  - id: hello
+    description: Say hello
+    run:
+      shells:
+        - |
+          echo "Hello from procedure" > box/output/greeting.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add greet procedure");
@@ -45,9 +46,9 @@ print(`greeting: ${greeting.trim()}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("greet_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseCard(runCard, { source: "run.card" });
-print(`procedure status: ${root.attrs["status"]}`);
-print(`step status: ${root.children[0].attrs["status"]}`);
+const run = parseProcedureRun(runCard);
+print(`procedure status: ${run.status}`);
+print(`step status: ${run.steps[0].status}`);
 =>
 success: true
 greeting: Hello from procedure
@@ -66,25 +67,27 @@ failed. The procedure continues to the next step.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/maybe.procedure.card", `
-<procedure name="maybe">
-  <description>Conditional steps</description>
-  <step id="skipped">
-    <description>This step skips</description>
-    <precheck>
-      <shell>exit $CHECK_SKIP</shell>
-    </precheck>
-    <run>
-      <shell>echo "SHOULD NOT RUN" > box/output/bad.txt</shell>
-    </run>
-  </step>
-  <step id="runs">
-    <description>This step runs</description>
-    <run>
-      <shell>echo "OK" > box/output/good.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/maybe.procedure.card", `---
+name: maybe
+description: Conditional steps
+steps:
+  - id: skipped
+    description: This step skips
+    precheck:
+      shells:
+        - |
+          exit $CHECK_SKIP
+    run:
+      shells:
+        - |
+          echo "SHOULD NOT RUN" > box/output/bad.txt
+  - id: runs
+    description: This step runs
+    run:
+      shells:
+        - |
+          echo "OK" > box/output/good.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add maybe procedure");
@@ -102,10 +105,9 @@ print(`good.txt exists: ${files.includes("good.txt")}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("maybe_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseCard(runCard, { source: "run.card" });
-const steps = root.children.filter(c => c.tagName === "step");
-print(`skipped step: ${steps[0].attrs["id"]} = ${steps[0].attrs["status"]}`);
-print(`runs step: ${steps[1].attrs["id"]} = ${steps[1].attrs["status"]}`);
+const run = parseProcedureRun(runCard);
+print(`skipped step: ${run.steps[0].id} = ${run.steps[0].status}`);
+print(`runs step: ${run.steps[1].id} = ${run.steps[1].status}`);
 =>
 success: true
 bad.txt exists: false
@@ -126,24 +128,31 @@ scheduler.jsonl, not in a dir-per-nothing.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/idle.procedure.card", `
-<procedure name="idle">
-  <description>Nothing to do</description>
-  <step id="first">
-    <description>Skips</description>
-    <precheck>
-      <shell>echo "nothing new"; exit $CHECK_SKIP</shell>
-    </precheck>
-    <run><shell>echo "NEVER" > box/output/never.txt</shell></run>
-  </step>
-  <step id="second">
-    <description>Also skips</description>
-    <precheck>
-      <shell>exit $CHECK_SKIP</shell>
-    </precheck>
-    <run><shell>echo "ALSO NEVER" > box/output/also.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/idle.procedure.card", `---
+name: idle
+description: Nothing to do
+steps:
+  - id: first
+    description: Skips
+    precheck:
+      shells:
+        - |
+          echo "nothing new"; exit $CHECK_SKIP
+    run:
+      shells:
+        - |
+          echo "NEVER" > box/output/never.txt
+  - id: second
+    description: Also skips
+    precheck:
+      shells:
+        - |
+          exit $CHECK_SKIP
+    run:
+      shells:
+        - |
+          echo "ALSO NEVER" > box/output/also.txt
+---
 `);
 box.commitAll("Add idle procedure");
 
@@ -175,25 +184,27 @@ and the procedure halts — later steps don't run.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/fail-early.procedure.card", `
-<procedure name="fail-early">
-  <description>First step fails</description>
-  <step id="broken">
-    <description>Precheck fails</description>
-    <precheck>
-      <shell>echo "something wrong"; exit 1</shell>
-    </precheck>
-    <run>
-      <shell>echo "NEVER" > box/output/never.txt</shell>
-    </run>
-  </step>
-  <step id="after">
-    <description>Should not run</description>
-    <run>
-      <shell>echo "ALSO NEVER" > box/output/also.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/fail-early.procedure.card", `---
+name: fail-early
+description: First step fails
+steps:
+  - id: broken
+    description: Precheck fails
+    precheck:
+      shells:
+        - |
+          echo "something wrong"; exit 1
+    run:
+      shells:
+        - |
+          echo "NEVER" > box/output/never.txt
+  - id: after
+    description: Should not run
+    run:
+      shells:
+        - |
+          echo "ALSO NEVER" > box/output/also.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add fail-early procedure");
@@ -223,25 +234,28 @@ lets the procedure continue; `severity="abort"` stops it.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/validate.procedure.card", `
-<procedure name="validate">
-  <description>Validation test</description>
-  <step id="warned">
-    <description>Validation warns but continues</description>
-    <run>
-      <shell>echo "did work" > box/output/work.txt</shell>
-    </run>
-    <validate severity="warn">
-      <shell>echo "not ideal"; exit 1</shell>
-    </validate>
-  </step>
-  <step id="after-warn">
-    <description>Runs after warning</description>
-    <run>
-      <shell>echo "still going" > box/output/still.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/validate.procedure.card", `---
+name: validate
+description: Validation test
+steps:
+  - id: warned
+    description: Validation warns but continues
+    run:
+      shells:
+        - |
+          echo "did work" > box/output/work.txt
+    validate:
+      severity: warn
+      shells:
+        - |
+          echo "not ideal"; exit 1
+  - id: after-warn
+    description: Runs after warning
+    run:
+      shells:
+        - |
+          echo "still going" > box/output/still.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add validate procedure");
@@ -259,10 +273,9 @@ print(`still.txt: ${files.includes("still.txt")}`);
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("validate_"));
 const runCard = await box.read(runDir + "/run.procedure-run.card");
-const root = await parseCard(runCard, { source: "run.card" });
-const warnedStep = root.children.find(c => c.attrs?.["id"] === "warned");
-const valEl = warnedStep.children.find(c => c.tagName === "validate");
-print(`validate status: ${valEl.attrs["status"]}`);
+const run = parseProcedureRun(runCard);
+const warnedStep = run.steps.find(s => s.id === "warned");
+print(`validate status: ${warnedStep.validate.status}`);
 =>
 success: true
 work.txt: true
@@ -278,25 +291,28 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/abort.procedure.card", `
-<procedure name="abort">
-  <description>Abort on validation failure</description>
-  <step id="checked">
-    <description>Validation aborts</description>
-    <run>
-      <shell>echo "ran" > box/output/ran.txt</shell>
-    </run>
-    <validate severity="abort">
-      <shell>echo "bad output"; exit 1</shell>
-    </validate>
-  </step>
-  <step id="never">
-    <description>Should not run</description>
-    <run>
-      <shell>echo "nope" > box/output/nope.txt</shell>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/abort.procedure.card", `---
+name: abort
+description: Abort on validation failure
+steps:
+  - id: checked
+    description: Validation aborts
+    run:
+      shells:
+        - |
+          echo "ran" > box/output/ran.txt
+    validate:
+      severity: abort
+      shells:
+        - |
+          echo "bad output"; exit 1
+  - id: never
+    description: Should not run
+    run:
+      shells:
+        - |
+          echo "nope" > box/output/nope.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add abort procedure");
@@ -322,24 +338,31 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/preview.procedure.card", `
-<procedure name="preview">
-  <description>Preview procedure</description>
-  <step id="first">
-    <description>First step</description>
-    <precheck><shell>true</shell></precheck>
-    <run>
-      <shell>echo "side effect" > box/output/effect.txt</shell>
-    </run>
-    <validate severity="warn"><shell>true</shell></validate>
-  </step>
-  <step id="second">
-    <description>Second step</description>
-    <run>
-      <agent>Do something</agent>
-    </run>
-  </step>
-</procedure>
+await box.write("config/procedures/preview.procedure.card", `---
+name: preview
+description: Preview procedure
+steps:
+  - id: first
+    description: First step
+    precheck:
+      shells:
+        - |
+          true
+    run:
+      shells:
+        - |
+          echo "side effect" > box/output/effect.txt
+    validate:
+      severity: warn
+      shells:
+        - |
+          true
+  - id: second
+    description: Second step
+    run:
+      agents:
+        - prompt: Do something
+---
 `);
 box.commitAll("Add preview procedure");
 
@@ -373,18 +396,23 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/multi.procedure.card", `
-<procedure name="multi">
-  <description>Multi-step</description>
-  <step id="alpha">
-    <description>Alpha</description>
-    <run><shell>echo "a" > box/output/a.txt</shell></run>
-  </step>
-  <step id="beta">
-    <description>Beta</description>
-    <run><shell>echo "b" > box/output/b.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/multi.procedure.card", `---
+name: multi
+description: Multi-step
+steps:
+  - id: alpha
+    description: Alpha
+    run:
+      shells:
+        - |
+          echo "a" > box/output/a.txt
+  - id: beta
+    description: Beta
+    run:
+      shells:
+        - |
+          echo "b" > box/output/b.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add multi procedure");
@@ -436,24 +464,33 @@ extend a specific run.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/stamped.procedure.card", `
-<procedure name="stamped">
-  <description>Gets an expires stamp</description>
-  <step id="work">
-    <description>Does work</description>
-    <run><shell>echo "did it" > box/output/did.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/stamped.procedure.card", `---
+name: stamped
+description: Gets an expires stamp
+steps:
+  - id: work
+    description: Does work
+    run:
+      shells:
+        - |
+          echo "did it" > box/output/did.txt
+---
 `);
-await box.write("config/procedures/doomed.procedure.card", `
-<procedure name="doomed">
-  <description>Fails</description>
-  <step id="broken">
-    <description>Precheck fails</description>
-    <precheck><shell>exit 1</shell></precheck>
-    <run><shell>true</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/doomed.procedure.card", `---
+name: doomed
+description: Fails
+steps:
+  - id: broken
+    description: Precheck fails
+    precheck:
+      shells:
+        - |
+          exit 1
+    run:
+      shells:
+        - |
+          true
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add procedures");
@@ -466,14 +503,14 @@ const runs = (await box.list("procedure/runs")).split("\n");
 const dayMs = 24 * 60 * 60 * 1000;
 
 const okDir = runs.find(f => f.includes("stamped_"));
-const okRoot = await parseCard(await box.read(okDir + "/run.procedure-run.card"), { source: "ok" });
-const okDays = (Date.parse(okRoot.attrs["expires"]) - Date.parse(okRoot.attrs["completed-at"])) / dayMs;
+const okRun = parseProcedureRun(await box.read(okDir + "/run.procedure-run.card"));
+const okDays = (Date.parse(okRun.expires) - Date.parse(okRun["completed-at"])) / dayMs;
 print(`completed run expires after: ${Math.round(okDays)}d`);
 
 const badDir = runs.find(f => f.includes("doomed_"));
-const badRoot = await parseCard(await box.read(badDir + "/run.procedure-run.card"), { source: "bad" });
-const badDays = (Date.parse(badRoot.attrs["expires"]) - Date.parse(badRoot.attrs["completed-at"])) / dayMs;
-print(`failed run status: ${badRoot.attrs["status"]}, expires after: ${Math.round(badDays)}d`);
+const badRun = parseProcedureRun(await box.read(badDir + "/run.procedure-run.card"));
+const badDays = (Date.parse(badRun.expires) - Date.parse(badRun["completed-at"])) / dayMs;
+print(`failed run status: ${badRun.status}, expires after: ${Math.round(badDays)}d`);
 =>
 completed run expires after: 30d
 failed run status: failed, expires after: 90d
@@ -490,14 +527,18 @@ override the defaults; "never" pins every run of that procedure.
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/keeper.procedure.card", `
-<procedure name="keeper" run-expiry="never">
-  <description>Runs are kept forever</description>
-  <step id="work">
-    <description>Does work</description>
-    <run><shell>echo "kept" > box/output/kept.txt</shell></run>
-  </step>
-</procedure>
+await box.write("config/procedures/keeper.procedure.card", `---
+name: keeper
+run-expiry: never
+description: Runs are kept forever
+steps:
+  - id: work
+    description: Does work
+    run:
+      shells:
+        - |
+          echo "kept" > box/output/kept.txt
+---
 `);
 await box.write("box/output/.gitkeep", "");
 box.commitAll("Add keeper procedure");
@@ -508,8 +549,8 @@ print(`success: ${result.success}`);
 
 const runs = (await box.list("procedure/runs")).split("\n");
 const runDir = runs.find(f => f.includes("keeper_"));
-const root = await parseCard(await box.read(runDir + "/run.procedure-run.card"), { source: "run" });
-print(`expires: ${root.attrs["expires"]}`);
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`expires: ${run.expires}`);
 =>
 success: true
 expires: never
@@ -523,11 +564,17 @@ await box.cleanup();
 
 ```
 const box = await makeTmpBox({ git: true });
-await box.write("config/procedures/steps.procedure.card", `
-<procedure name="steps">
-  <description>Has steps</description>
-  <step id="real"><description>Real</description><run><shell>true</shell></run></step>
-</procedure>
+await box.write("config/procedures/steps.procedure.card", `---
+name: steps
+description: Has steps
+steps:
+  - id: real
+    description: Real
+    run:
+      shells:
+        - |
+          true
+---
 `);
 box.commitAll("Add steps procedure");
 

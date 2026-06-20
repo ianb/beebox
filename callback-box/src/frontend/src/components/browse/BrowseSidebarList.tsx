@@ -8,6 +8,7 @@ import { cbSource } from "../../lib/source-tag";
 import { StatusBadge } from "../ui/StatusBadge";
 import type { RouterOutput } from "../../lib/trpc";
 import { getApiBase, withBase } from "../../api";
+import { attachDirFor } from "@shared/attach-path";
 
 type BrowseData = RouterOutput["status"]["browse"];
 
@@ -72,36 +73,59 @@ export function BrowseSidebarList({
         </button>
       ))}
 
-      {data.cards.map((card) => (
-        <button
-          key={card.relativePath}
-          onClick={() => {
-            onSelectFile(card.relativePath);
-            window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${card.relativePath}`));
-          }}
-          {...cbSource("card", card.relativePath)}
-          {...(card.type === "image" ? {
-            "data-image-src": `${getApiBase()}/image/${card.relativePath}`,
-            "data-image-alt": card.name,
-          } : {})}
-          aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}
-          className={`w-full text-left px-4 py-2.5 hover:bg-warm-50 transition-colors border-b border-warm-200 ${
-            selectedFilePath === card.relativePath ? "bg-info-50" : ""
-          }`}
-        >
-          <div className="flex items-start justify-between gap-2">
-            <div className="min-w-0 flex-1">
-              <div className="font-medium text-warm-900 text-sm truncate">
-                {card.name}
+      {data.cards.map((card) => {
+        // A card with an `.attach/` scope behaves like a directory: the row
+        // still opens the card in the detail panel, but a trailing chevron
+        // navigates INTO the attach scope (presented as the card itself —
+        // the breadcrumb relabels the `.attach` segment to the card name).
+        const attachPath = card.hasAttachments ? attachDirFor(card.relativePath) : null;
+        return (
+          <div
+            key={card.relativePath}
+            className={`flex items-stretch border-b border-warm-200 ${
+              selectedFilePath === card.relativePath ? "bg-info-50" : ""
+            }`}
+          >
+            <button
+              onClick={() => {
+                onSelectFile(card.relativePath);
+                window.history.replaceState(null, "", withBase(`/${boxSlug}/browse/${card.relativePath}`));
+              }}
+              {...cbSource("card", card.relativePath)}
+              {...(card.type === "image" ? {
+                "data-image-src": `${getApiBase()}/image/${card.relativePath}`,
+                "data-image-alt": card.name,
+              } : {})}
+              aria-label={card.name === card.type ? `${card.name} card${card.status ? `, ${card.status}` : ""}` : `${card.name}, ${card.type} card${card.status ? `, ${card.status}` : ""}`}
+              className="min-w-0 flex-1 text-left px-4 py-2.5 hover:bg-warm-50 transition-colors"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium text-warm-900 text-sm truncate">
+                    {card.name}
+                  </div>
+                </div>
+                <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                  <span className="text-xs text-warm-500">{card.type}</span>
+                  {card.status ? <StatusBadge status={card.status} size="sm" /> : null}
+                </div>
               </div>
-            </div>
-            <div className="flex flex-col items-end gap-1 flex-shrink-0">
-              <span className="text-xs text-warm-500">{card.type}</span>
-              {card.status ? <StatusBadge status={card.status} size="sm" /> : null}
-            </div>
+            </button>
+            {attachPath ? (
+              <button
+                onClick={() => onNavigate(attachPath)}
+                aria-label={`Open ${card.name} attachments`}
+                title="Open attachments"
+                className="flex-shrink-0 flex items-center px-3 text-primary hover:bg-warm-50 transition-colors border-l border-warm-200"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            ) : null}
           </div>
-        </button>
-      ))}
+        );
+      })}
 
       {(data.files ?? []).map((file) => (
         <button

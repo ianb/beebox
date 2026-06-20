@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseCard } from "cardworks";
+import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { commitPaths, pathsHaveChanges } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { parseDuration } from "../../schemas/scheduled-script-duration.js";
@@ -36,30 +36,32 @@ function procedureNameOf(dirName: string): string {
  */
 async function resolveExpiry(runDir: string): Promise<number | "never" | "invalid"> {
   const cardPath = path.join(runDir, "run.procedure-run.card");
-  let attrs: Record<string, string | undefined>;
+  let run;
   try {
     const content = await fs.readFile(cardPath, "utf-8");
-    attrs = (await parseCard(content, { source: cardPath })).attrs;
+    run = parseProcedureRun(content);
   } catch (_e) {
+    run = null;
+  }
+  if (run === null) {
     // Missing or unparseable card — expire by dir age, failure-like
     const stat = await fs.stat(runDir);
     return stat.mtimeMs + parseDuration(FAILED_RUN_EXPIRY);
   }
 
-  const expires = attrs["expires"];
+  const expires = run.expires;
   if (expires === "never") return "never";
-  if (expires) {
+  if (expires !== undefined) {
     const at = Date.parse(expires);
     // A hand-edited, unparseable expires was an attempt to pin — keep it
     return Number.isNaN(at) ? "invalid" : at;
   }
 
-  const status = attrs["status"];
   const defaultExpiry =
-    status === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY;
+    run.status === "completed" ? COMPLETED_RUN_EXPIRY : FAILED_RUN_EXPIRY;
   const baseline =
-    Date.parse(attrs["completed-at"] ?? "") ||
-    Date.parse(attrs["started-at"] ?? "") ||
+    Date.parse(run["completed-at"] ?? "") ||
+    Date.parse(run["started-at"]) ||
     (await fs.stat(runDir)).mtimeMs;
   return baseline + parseDuration(defaultExpiry);
 }

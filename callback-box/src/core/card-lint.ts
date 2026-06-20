@@ -1,42 +1,45 @@
 /**
- * Lint dispatcher for mixed XML / markdown-frontmatter cards.
+ * Lint dispatcher for markdown-frontmatter cards.
  *
  * For each card path, peeks at the frontmatter to decide which path to
- * take: cards declaring a `type:` that matches a registered CardSchema
- * are validated through parseCardText (Zod schema check); everything
- * else falls through to cardworks' existing XML lintCard. Results are
- * merged into a single LintSummary so callers (e.g. cb validate) can
- * format them uniformly.
+ * take: cards declaring a filename `type` that matches a registered
+ * CardSchema are validated through parseCardText (Zod schema check); a
+ * `.card` with no matching schema is surfaced as a non-blocking warning.
+ * Results are merged into a single LintSummary so callers (e.g. cb validate)
+ * can format them uniformly.
  *
- * Ref-checking walks two sides: cardworks' `extractRefs` over parsed
+ * Ref-checking walks two sides: `extractRefs` (src/cards) over parsed
  * frontmatter fields, and `extractBodyRefs` over the Markdoc body. Both
  * yield `{path, ref}` entries with the same shape; both are surfaced as
  * warnings (not errors) so legitimate moves don't block commits.
+ *
+ * Type-specific, self-contained validation (rules Zod can't express, e.g.
+ * commentary's Markdoc check or extfile's `file:`-URL refinement) is NOT here:
+ * it lives on each schema as a `validate` hook, invoked generically below.
+ * The ref-existence walk stays here because it is box-aware (resolves refs
+ * against the box root), which the self-contained hook deliberately lacks.
  */
 
 import { readFile } from "node:fs/promises";
 import {
-  lintCard,
   splitCardContent,
   extractRefs,
+  type CardSchema,
   type LintResult,
   type LintSummary,
   type LintIssue,
-  type ICardLoader,
-} from "cardworks";
+} from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
-import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
-import { markdocConfig } from "../shared/markdoc-config.js";
-
-// Value named imports (`{ parse, validate }`) don't resolve from this CommonJS
-// module under Node's ESM loader (used by tsx / the doctest runner). Destructure
-// off the default import — same pattern + lint exception as `markdoc-config.ts`.
-// eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
-const { parse: markdocParse, validate: markdocValidate } = Markdoc;
+import { resolveRefExists } from "./ref-exists.js";
 
 export interface LintDispatchOptions {
-  loader: ICardLoader;
+  /**
+   * Box root, used to resolve box-root-absolute (`/…`) refs during the
+   * broken-ref walk (see resolveRefExists).
+   */
+  boxRoot: string;
   ctx: LoadCardContext;
 }
 
@@ -86,8 +89,34 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
     if (type !== undefined && options.ctx.cardSchemas.has(type)) {
       return lintFrontmatterCard({ path, content, options, type });
     }
+    // Frontmatter present but no registered schema for the filename type: there
+    // is no XML loader anymore. Surface a non-blocking warning so a typo'd or
+    // unknown type is visible without failing the commit hook.
+    return {
+      path,
+      errors: [],
+      warnings: [
+        {
+          type: "schema",
+          severity: "warning",
+          message:
+            type === undefined
+              ? "card filename does not encode a type (expected Name.<type>.card)"
+              : `no schema registered for card type "${type}" — card not validated`,
+        },
+      ],
+    };
   }
-  return lintCard(options.loader, { path });
+  // A `.card` with no frontmatter block is malformed — every card is
+  // frontmatter now (the legacy XML format is gone). Surface it as a WARNING,
+  // not an error: it's visible in `cb validate` and the PostToolUse hook, but a
+  // single stray malformed card must not block the pre-commit hook and brick a
+  // box's automated commit workflow (the reactor commits through this path).
+  return {
+    path,
+    errors: [],
+    warnings: [{ type: "schema", severity: "warning", message: "card has no frontmatter block" }],
+  };
 }
 
 async function lintFrontmatterCard(input: {
@@ -116,8 +145,8 @@ async function lintFrontmatterCard(input: {
   const warnings: LintIssue[] = [];
   for (const { path: refPath, ref } of [...frontmatterRefs, ...bodyRefs]) {
     try {
-      const resolved = await options.loader.resolveRef(ref, path);
-      if (!resolved.exists) {
+      const exists = await resolveRefExists({ ref, fromPath: path, boxRoot: options.boxRoot });
+      if (!exists) {
         warnings.push({
           type: "reference",
           severity: "warning",
@@ -134,14 +163,51 @@ async function lintFrontmatterCard(input: {
   }
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
-  const errors =
-    type === "commentary"
-      ? commentaryErrors({
-          fields: parsed.fields,
-          body: typeof bodyField === "string" ? bodyField : "",
-        })
-      : [];
+  warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
+  // Type-specific, self-contained validation (rules Zod can't express) lives on
+  // the schema as its `validate` hook — see the commentary/extfile schema
+  // modules. The generic ref-existence walk above stays here because it needs
+  // the loader (box-aware), which the self-contained hook deliberately lacks.
+  const errors = parsed.schema.validate ? parsed.schema.validate({ fields: parsed.fields }) : [];
   return { path, errors, warnings };
+}
+
+/**
+ * Frontmatter keys present on disk that the card's schema doesn't declare. The
+ * loader strips these in memory (a drifted card still loads, renders, and
+ * indexes), so they are surfaced as **warnings** — visible to `cb validate` and
+ * the PostToolUse hook — to be cleaned off disk eventually, without blocking
+ * commits or breaking load. Allowed keys are the schema's own fields (minus the
+ * body field, which lives in the file body, not frontmatter), the injected
+ * global fields, and `type`.
+ */
+function unknownKeyWarnings(input: { content: string; schema: CardSchema }): LintIssue[] {
+  const { content, schema } = input;
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return [];
+  let fm: unknown;
+  try {
+    fm = parseYaml(split.frontmatterText);
+  } catch (_e) {
+    // Malformed YAML is a separate, error-level failure already surfaced by
+    // parseCardText (which threw → errorResult); nothing to add here.
+    return [];
+  }
+  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return [];
+  const allowed = new Set<string>(["type", ...schema.globalFieldNames, ...Object.keys(schema.fields)]);
+  if (schema.bodyFieldName !== null) allowed.delete(schema.bodyFieldName);
+  const warnings: LintIssue[] = [];
+  for (const key of Object.keys(fm as Record<string, unknown>)) {
+    if (allowed.has(key)) continue;
+    warnings.push({
+      type: "schema",
+      severity: "warning",
+      message:
+        `Unknown frontmatter key "${key}" — not declared by the ${schema.type} schema; ` +
+        "it is ignored on load and should be removed",
+    });
+  }
+  return warnings;
 }
 
 /** Soft budget for the `contains` field — one concise sentence, not a summary essay. */
@@ -157,47 +223,6 @@ function lintContainsLength(fields: Record<string, unknown>): LintIssue | null {
       `contains: is ${String(contains.length)} chars (budget ${String(CONTAINS_MAX_CHARS)}) — ` +
       "tighten it to one sentence stating what can be found in this card",
   };
-}
-
-/**
- * Validation cardworks/Zod can't express for commentary cards: at most one of
- * `defaultHref`/`defaultRef`, and Markdoc validation of the body's tags (which
- * fires the `{% source %}` ref-xor-href rule — nothing else runs
- * `Markdoc.validate`, so this is where it lands).
- *
- * Neither default is allowed: an attach-scoped commentary defaults to its
- * *containing* document (the card that owns the attach scope), so it needs no
- * explicit default target. Both at once is still an error.
- */
-function commentaryErrors(input: { fields: Record<string, unknown>; body: string }): LintIssue[] {
-  const { fields, body } = input;
-  const errors: LintIssue[] = [];
-  const hasHref = typeof fields["defaultHref"] === "string" && fields["defaultHref"] !== "";
-  const hasRef = typeof fields["defaultRef"] === "string" && fields["defaultRef"] !== "";
-  if (hasHref && hasRef) {
-    errors.push({
-      type: "validation",
-      severity: "error",
-      message: "commentary card takes at most one of defaultHref or defaultRef, not both",
-    });
-  }
-  for (const message of validateMarkdocBody(body)) {
-    errors.push({ type: "validation", severity: "error", message });
-  }
-  return errors;
-}
-
-function validateMarkdocBody(body: string): string[] {
-  if (body === "") return [];
-  let ast: MarkdocNode;
-  try {
-    ast = markdocParse(body);
-  } catch (_e) {
-    return ["commentary body is not parseable Markdoc"];
-  }
-  return markdocValidate(ast, markdocConfig)
-    .filter((entry) => entry.error.level === "error" || entry.error.level === "critical")
-    .map((entry) => entry.error.message);
 }
 
 function errorResult(path: string, message: string): LintResult {

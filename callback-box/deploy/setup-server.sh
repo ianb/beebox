@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ── Config ──────────────────────────────────────────────────────────
 REPO_BASE="git@github.com:ianb"
-REPOS=(cardworks callback-box)
+REPOS=(callback-box)
 INSTALL_DIR="/opt/callback"
 CB_USER="callback"
 CB_HOME="/home/$CB_USER"
@@ -69,12 +69,7 @@ for repo in "${REPOS[@]}"; do
   fi
 done
 
-# ── Install and build in dependency order ───────────────────────────
-echo "Building cardworks..."
-cd "$INSTALL_DIR/cardworks"
-pnpm install
-pnpm build
-
+# ── Install and build ───────────────────────────────────────────────
 echo "Installing callback-box..."
 cd "$INSTALL_DIR/callback-box"
 pnpm install

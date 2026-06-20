@@ -206,14 +206,11 @@ test("capture pipeline: transcribe → describe → assemble", async (t) => {
   if (assembleResult.error) t.comment(`Error: ${assembleResult.error}`);
   t.ok(assembleResult.success, "assemble-timeline succeeded");
 
-  // Verify the session card now has a structured transcript
+  // Verify the session card now has an assembled transcript body
   const sessionCard = await box.read(sessionCardRel);
-  t.ok(sessionCard.includes("<text>"), "session card has <text> elements in transcript");
-  t.ok(sessionCard.includes("<image "), "session card has <image> elements in transcript");
-  t.notOk(
-    sessionCard.includes("<transcript/>"),
-    "session card no longer has empty <transcript/>"
-  );
+  const transcriptBody = sessionCard.split(/\n---\n/).slice(1).join("\n---\n");
+  t.ok(transcriptBody.trim().length > 0, "session card has an assembled transcript body");
+  t.ok(sessionCard.includes("{% image "), "transcript has {% image %} markers");
 
   // ── Summary ──
 

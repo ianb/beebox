@@ -13,15 +13,15 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { CardLoader } from "cardworks";
 import type { CommandContext } from "../command-runner.js";
-import { attachDirFor } from "../../lib/attach-path.js";
+import { attachDirFor } from "../../shared/attach-path.js";
+import { listBoxCardFiles } from "../list-cards.js";
 import {
   rewriteReferrerRefs,
   rewriteMovedCardRefs,
   type Remap,
 } from "../rewrite-card-refs.js";
-import { isPhase2CardPath, movePhase2CardFiles } from "./move-phase2.js";
+import { movePhase2CardFiles } from "./move-phase2.js";
 
 export interface MoveOneResult {
   from: string;
@@ -101,8 +101,7 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
   // Rewrite refs from cards *outside* the moved directory that point into it
   // (relative or absolute), and recompute the moved cards' own *outgoing*
   // relative refs to targets that stayed outside.
-  const loader = new CardLoader(ctx.boxRoot);
-  const allCards = await loader.listCards();
+  const allCards = await listBoxCardFiles(ctx.boxRoot);
   for (const cardPath of allCards) {
     const inside = cardPath === destPath || cardPath.startsWith(destPath + path.sep);
     try {
@@ -149,38 +148,22 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
 }
 
 /**
- * Perform the actual file relocation for a single card, returning the moved
- * files and any references cardworks itself re-serialized.
+ * Perform the actual file relocation for a single card: rename the `.card`
+ * file and its sibling `<basename>.attach/` directory. Every card is
+ * frontmatter, so the substring ref-rewrite pass (rewriteOtherCards) handles
+ * all referrer updates — there's nothing to re-serialize.
  */
 async function relocateCardFiles({
-  ctx,
-  loader,
   sourcePath,
   destPath,
 }: {
-  ctx: CommandContext;
-  loader: CardLoader;
   sourcePath: string;
   destPath: string;
 }): Promise<{
   movedFiles: Array<{ from: string; to: string }>;
   updatedCards: Array<{ path: string; refsUpdated: number }>;
 }> {
-  // Phase-2 cards: cardworks' XML-only loader can't parse them, so handle
-  // the file + attach-dir rename ourselves. XML cards: delegate to cardworks
-  // for the file moves and referrer re-serialization.
-  if (isPhase2CardPath(sourcePath)) {
-    return { movedFiles: await movePhase2CardFiles(sourcePath, destPath), updatedCards: [] };
-  }
-  const card = await loader.load(sourcePath);
-  const { result } = await loader.move(card, destPath);
-  return {
-    movedFiles: result.movedFiles,
-    updatedCards: result.updatedCards.map((u) => ({
-      path: path.relative(ctx.boxRoot, u.path),
-      refsUpdated: u.refsUpdated,
-    })),
-  };
+  return { movedFiles: await movePhase2CardFiles(sourcePath, destPath), updatedCards: [] };
 }
 
 /**
@@ -194,13 +177,11 @@ async function relocateCardFiles({
  */
 async function rewriteOtherCards({
   ctx,
-  loader,
   destPath,
   newAttachAbsDir,
   remap,
 }: {
   ctx: CommandContext;
-  loader: CardLoader;
   destPath: string;
   newAttachAbsDir: string;
   remap: Remap;
@@ -210,7 +191,7 @@ async function rewriteOtherCards({
 }> {
   const extraStaged: string[] = [];
   const extraUpdated: Array<{ path: string; refsUpdated: number }> = [];
-  const allCards = await loader.listCards();
+  const allCards = await listBoxCardFiles(ctx.boxRoot);
   for (const cardPath of allCards) {
     // Skip the moved card (handled separately) and cards that just moved into
     // the new attach scope (their internal refs travelled with them intact).
@@ -315,12 +296,7 @@ export async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
   const oldAttachAbsDir = attachDirFor(sourcePath);
   const newAttachAbsDir = attachDirFor(destPath);
 
-  // The loader is constructed unconditionally because `listCards()` is
-  // needed for the ref rewrite pass below regardless of card kind.
-  const loader = new CardLoader(ctx.boxRoot);
   const { movedFiles, updatedCards } = await relocateCardFiles({
-    ctx,
-    loader,
     sourcePath,
     destPath,
   });
@@ -338,7 +314,6 @@ export async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
 
   const { extraStaged, extraUpdated } = await rewriteOtherCards({
     ctx,
-    loader,
     destPath,
     newAttachAbsDir,
     remap,

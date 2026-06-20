@@ -48,3 +48,4 @@ export { boxesCommand } from "./boxes.js";
 export { intakeCommand } from "./intake.js";
 export { triageCommand } from "./triage.js";
 export { handleCommand } from "./handle.js";
+export { extfileCommand } from "./extfile.js";

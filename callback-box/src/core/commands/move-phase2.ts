@@ -8,18 +8,14 @@
  * the move ourselves; the substring rewrite pass in the move command
  * picks up ref updates in every other card regardless of card kind.
  *
- * Detect by extracting the type from the filename and checking it
- * against the registered Phase-2 card schemas. Anything else (XML
- * card, plain file, unknown type) falls through to the cardworks
- * loader path.
+ * Every card is YAML-frontmatter, so a card move is always a file +
+ * attach-dir rename; referrer ref updates are handled by the substring
+ * rewrite pass in move-operations.ts.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { attachDirFor } from "../../lib/attach-path.js";
-import { cardSchemas } from "../../schemas/registry.js";
-
-const PHASE2_TYPES = new Set(cardSchemas.map((s) => s.type));
+import { attachDirFor } from "../../shared/attach-path.js";
 
 class AttachDirRenameError extends Error {
   readonly from: string;
@@ -32,22 +28,7 @@ class AttachDirRenameError extends Error {
   }
 }
 
-function cardTypeFromPath(p: string): string | undefined {
-  const base = p.split("/").pop() ?? p;
-  const match = /^.+\.([^.]+)\.card$/.exec(base);
-  if (match === null) return undefined;
-  return match[1];
-}
-
 /**
- * Whether a path names a Phase-2 frontmatter+markdown card (vs. a legacy
- * XML card, plain file, or unknown type).
- */
-export function isPhase2CardPath(p: string): boolean {
-  const type = cardTypeFromPath(p);
-  return type !== undefined && PHASE2_TYPES.has(type);
-}
-
 /**
  * Rename a file and (if present) its sibling `<basename>.attach/`
  * directory atomically — the Phase-2 analogue of what cardworks'

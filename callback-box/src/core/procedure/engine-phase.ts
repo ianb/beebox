@@ -253,21 +253,34 @@ export async function getStepLineRange(
     const content = await fs.readFile(procedureCardPath, "utf-8");
     const lines = content.split("\n");
 
+    // Steps are YAML list items: `  - id: <stepId>`. The step runs until
+    // the next list item at the same indent (another `- id:`) or EOF.
+    const idRe = /^(\s*)-\s+id:\s*["']?([^\s"']+)/;
     let startLine: number | undefined;
     let endLine: number | undefined;
+    let stepIndent = "";
 
     for (const [i, line_] of lines.entries()) {
       const line = line_!;
-      if (line.includes("<step") && line.includes(`id="${stepId}"`)) {
-        startLine = i + 1; // 1-indexed
+      const m = idRe.exec(line);
+      if (startLine === undefined) {
+        if (m && m[2] === stepId) {
+          startLine = i + 1; // 1-indexed
+          stepIndent = m[1] ?? "";
+        }
+        continue;
       }
-      if (startLine && !endLine && line.includes("</step>")) {
-        endLine = i + 1;
+      // A subsequent list item at the same indent ends this step.
+      if (m && (m[1] ?? "") === stepIndent) {
+        endLine = i; // previous line is the last of this step
         break;
       }
     }
+    if (startLine !== undefined && endLine === undefined) {
+      endLine = lines.length;
+    }
 
-    if (startLine && endLine) {
+    if (startLine !== undefined && endLine !== undefined) {
       return `lines ${startLine}-${endLine}`;
     }
   } catch (e) {

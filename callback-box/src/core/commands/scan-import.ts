@@ -37,7 +37,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { createLoader } from "../../cli/lib/loader.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
@@ -203,13 +203,13 @@ async function runPhotoMode(
     `\nResults: ${bundles.length} photos (${bundles.filter((b) => b.backIndex !== null).length} with backs), ${orphanBacks.length} orphan backs, ${unsurePages.length} unsure, ${blankPages.length} blank`
   );
 
-  const loader = await createLoader(ctx.boxRoot);
+  const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
   const imageRefs: string[] = [];
   const questionPaths: string[] = [];
 
   for (const [i, bundle] of bundles.entries()) {
     await emitPhotoBundle({
-      loader,
+      cardSchemas,
       index: i,
       bundle,
       startedAt,

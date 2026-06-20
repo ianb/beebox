@@ -11,10 +11,9 @@ import type {
   HookJSONOutput,
   PostToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
-import { formatLintResults } from "cardworks";
+import { formatLintResults } from "../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
 import { noViewLabelLinks, noBrokenInternalLinks } from "./markdown-lint-rules.js";
-import { createLoader } from "../cli/lib/loader.js";
 import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
 
@@ -106,9 +105,8 @@ async function runMarkdownLint(filePath: string): Promise<string | null> {
 
 async function runCardLint(cwd: string, filePath: string): Promise<string | null> {
   try {
-    const loader = await createLoader(cwd);
     const ctx = await buildLoadContext(cwd);
-    const summary = await lintCardsDispatch([filePath], { loader, ctx });
+    const summary = await lintCardsDispatch([filePath], { boxRoot: cwd, ctx });
     if (summary.totalErrors === 0 && summary.totalWarnings === 0) return null;
     const formatted = formatLintResults(summary, { colors: false });
     return `Card validation warning for ${filePath}:\n${formatted}`;

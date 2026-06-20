@@ -7,7 +7,7 @@ export function generalPrinciplesSection(): string[] {
   return [
     "## General Principles",
     "",
-    "- Prefer `cb create` with templates over writing XML by hand",
+    "- Prefer `cb create` with templates over writing card files by hand",
     "- Always `cb validate` after creating or modifying cards",
     "- Commit with meaningful messages describing what changed and why",
     "- Use `cb mv` to change card state (not `git mv` or `mv`)",

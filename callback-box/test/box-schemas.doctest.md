@@ -1,9 +1,8 @@
 # Box-Local Schemas
 
-Boxes define their own card types under `config/schemas/*.ts`. Each file default-exports
-either a frontmatter `cardSchema()` (the default for new types) or a legacy XML `element()`
-schema. `loadBoxSchemas` discovers both, segregating them by format; box frontmatter schemas
-become first-class in the same parse/validate path as built-in ones.
+Boxes define their own card types under `config/schemas/*.ts`. Each file
+default-exports a frontmatter `cardSchema()`. `loadBoxSchemas` discovers them and
+they become first-class in the same parse/validate path as built-in ones.
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -30,8 +29,10 @@ async function loadErrorName(content, source, ctx) {
   }
 }
 
-// A frontmatter card type: config in YAML + a markdown body.
-const WIDGET_SCHEMA = `import { body, cardSchema } from "cardworks";
+// A frontmatter card type: config in YAML + a markdown body. Box-local
+// frontmatter schemas import the card primitives via the public
+// `callback-box/cards` specifier (resolved by the tsx hook in registry.ts).
+const WIDGET_SCHEMA = `import { body, cardSchema } from "callback-box/cards";
 import { z } from "zod";
 
 export default cardSchema("widget", {
@@ -44,41 +45,22 @@ export default cardSchema("widget", {
 });
 `;
 
-// A legacy XML card type, to prove both formats coexist.
-const GADGET_SCHEMA = `import { element } from "cardworks";
-import { z } from "zod";
-
-export default element("gadget", {
-  attrs: {
-    status: z.enum(["on", "off"]).default("off"),
-  },
-  children: z.array(z.unknown()),
-});
-`;
-
 const WIDGET_CARD = `---
 size: 3
 ---
 Hello widget body.
 `;
-
-const GADGET_CARD = `<gadget status="on"></gadget>`;
 ```
 
-## Loading segregates frontmatter from XML
-
-Both schema files must exist before the first `loadBoxSchemas` call (results are cached per
-box). The loader segregates them: the `cardSchema()` lands in `cardSchemas`, the `element()`
-in `elementSchemas`:
+## Loading discovers box frontmatter schemas
 
 ```
 const box = await makeTmpBox();
 await fs.writeFile(path.join(box, "config/schemas/widget.ts"), WIDGET_SCHEMA);
-await fs.writeFile(path.join(box, "config/schemas/gadget.ts"), GADGET_SCHEMA);
 
 const loaded = await loadBoxSchemas(box);
-[loaded.cardSchemas.length, loaded.elementSchemas.length, loaded.cardSchemas[0].type, loaded.elementSchemas[0].tagName].join("|")
-=> 1|1|widget|gadget
+[loaded.cardSchemas.length, loaded.cardSchemas[0].type].join("|")
+=> 1|widget
 ```
 
 ## Box frontmatter cards load and validate
@@ -99,14 +81,6 @@ Validation rejects a malformed card — `size` must be a number:
 const bad = "---\nsize: not-a-number\n---\n";
 await loadErrorName(bad, "X.widget.card", ctx)
 => CardIOError
-```
-
-The legacy XML `gadget` card still loads through the same context:
-
-``` continue
-const gadget = await loadCardFromText({ content: GADGET_CARD, source: "G.gadget.card", ctx });
-[gadget.kind, gadget.element.tagName].join("|")
-=> xml|gadget
 ```
 
 ## The box type is a first-class entry in the card-schema map

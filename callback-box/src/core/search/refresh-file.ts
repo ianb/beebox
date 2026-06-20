@@ -7,7 +7,7 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
 import { insertMultiple, remove } from "@orama/orama";
-import { ParseError } from "cardworks";
+import { ParseError } from "../../cards/index.js";
 import { loadCardFromText, CardIOError, type LoadCardContext } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import {

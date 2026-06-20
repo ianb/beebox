@@ -4,8 +4,6 @@
 
 // Re-export everything from the registry
 export {
-  schemas,
-  createSchemaRegistry,
   getCardTypes,
   isKnownCardType,
   MemoSchema,
@@ -75,7 +73,12 @@ export { createChatThreadTemplate, createMessageEntry } from "./chat-thread.js";
 export { createChatJobTemplate } from "./chat-job.js";
 export { createTodoListTemplate } from "./todo-list.js";
 export { createSheetTemplate } from "./sheet.js";
-export { createLandmarkTemplate } from "./landmark.js";
+export { createLandmarkTemplate, parseLandmarkFields } from "./landmark.js";
+export type {
+  LandmarkFields,
+  LandmarkNavigationData,
+  LandmarkDestinationData,
+} from "./landmark.js";
 export { createDocTemplate } from "./doc.js";
 export { createGdocTemplate } from "./gdoc.js";
 
