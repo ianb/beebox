@@ -19,8 +19,12 @@
  * size is.
  *
  * Sources (June 2026):
- *  - https://www.anthropic.com/engineering/claude-code-best-practices
+ *  - https://code.claude.com/docs/en/best-practices ("Write an effective CLAUDE.md")
  *  - https://www.humanlayer.dev/blog/writing-a-good-claude-md
+ *
+ * Concrete fixing strategies for an oversized file are documented per-box at
+ * docs/generated/reducing-claude-md.md (src/core/reducing-claude-md-doc.ts),
+ * which the warning below points to.
  */
 
 import * as fs from "node:fs/promises";
@@ -33,7 +37,10 @@ export const CLAUDE_MD_FIRM_CHARS = 20_000;
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 
-const MOVE_ADVICE = "Move detail into a nested CLAUDE.md, a .claude/rules/ glob, or a skill.";
+const MOVE_ADVICE =
+  "Trim it, consolidate duplication, or move detail onto a lazier surface " +
+  "(a sibling doc, a nested CLAUDE.md, a .claude/rules/ glob, or a skill). " +
+  "See docs/generated/reducing-claude-md.md for concrete strategies.";
 
 export function isClaudeMdFile(filePath: string): boolean {
   return path.basename(filePath) === "CLAUDE.md";
@@ -53,7 +60,7 @@ export function lintClaudeMdSize(relPath: string, content: string): string | nul
     return (
       `warning  ${relPath}  [claude-md-size] ${size} — too large. CLAUDE.md loads into agent context ` +
       `every turn, and past ~${String(CLAUDE_MD_FIRM_CHARS)} chars Claude reliably drops instructions. ` +
-      `Trim it now. ${MOVE_ADVICE}`
+      `Fix it now: ${MOVE_ADVICE}`
     );
   }
   return (

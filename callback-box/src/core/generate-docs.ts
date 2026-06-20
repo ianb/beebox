@@ -17,6 +17,7 @@ import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 import { generateViewsDoc } from "./views-doc.js";
 import { generateChatVoiceDoc } from "./chat-voice-doc.js";
 import { generateNarrationModeDoc } from "./narration-mode-doc.js";
+import { generateReducingClaudeMdDoc } from "./reducing-claude-md-doc.js";
 import { generatePythonToolsDoc } from "./python-tools-doc.js";
 import { generateAgentGuide } from "./agent-guide/index.js";
 import { CONTAINS_DOC_APPENDIX } from "./agent-guide/search.js";
@@ -335,6 +336,8 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
       withDocId({ relativePath: `${DOCS_DIR}/chat-voice.md`, content: generateChatVoiceDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "narration-mode.md"),
       withDocId({ relativePath: `${DOCS_DIR}/narration-mode.md`, content: generateNarrationModeDoc(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "reducing-claude-md.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/reducing-claude-md.md`, content: generateReducingClaudeMdDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
