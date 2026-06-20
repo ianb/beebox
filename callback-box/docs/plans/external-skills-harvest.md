@@ -113,11 +113,34 @@ one-line why). Mark status as you go.
 
 ## E. Frontend / design (vs FRONTEND.md)
 
-- [ ] **E1 — ui-ux-pro-max `ckm:ui-styling` checked against FRONTEND.md.** It's
-  shadcn/ui + Tailwind-coupled; we have a semantic palette + primitives +
-  `restrict-component-classes`. Decide: are there *gaps* in FRONTEND.md it
-  surfaces, or is it pure conflict? → fold-in (rare) or skip. (The broader
-  ui-ux-pro-max searchable DB is a separate maybe — see I-series.)
+- [x] **E1 — ui-ux-pro-max ckm skills vs FRONTEND.md/cb-frontend. DONE →
+  `skip` ckm:ui-styling; `fold-in` four tidbits from `ui-ux-pro-max`.** Surveyed
+  the whole `nextlevelbuilder/ui-ux-pro-max-skill` repo:
+  - `ckm:ui-styling` → **skip** (pure conflict): shadcn/ui + Radix + raw-Tailwind
+    (`bg-white dark:bg-gray-900`, arbitrary values, dynamic class names) — the
+    opposite of our semantic palette + primitives + `restrict-component-classes`.
+  - `ckm:design-system` → **skip**: half token-architecture we already have
+    (semantic roles in `tailwind.config.js`; `restrict-component-classes` already
+    bans raw hex in components), half slide-deck generation. The three-layer
+    primitive→semantic→component model isn't worth restructuring our two-layer
+    palette for.
+  - `design` / `brand` / `banner-design` / `slides` → **skip** by category
+    (greenfield identity + visual-asset generation; N/A for our app).
+  - The **searchable design DB** (161 palettes / 57 font pairings / 50 styles via
+    a Python BM25 script) → **skip**: it's the *opposite* of "we have one design
+    system" — this is the I5 conflict, now confirmed concrete.
+  - **`ui-ux-pro-max`** (the main skill) is a strong UI/UX *review checklist*;
+    most of it is iOS-HIG / Material / React-Native (we're desktop-first web), but
+    **four web-applicable gaps in `cb-frontend` got folded in**: (1) a compact
+    **"Motion, sparingly"** section (150–300ms, transform/opacity-only to avoid
+    reflow, 1–2 elements, honor `prefers-reduced-motion`); (2) **heading
+    hierarchy** (one h1/page, no level-skipping, level≠size — added to the a11y
+    baseline); (3) **one primary action per area** (per region, not per screen — our screens are
+    dashboard-style mishmashes; added to component structure);
+    (4) a **forms** bullet (field primitives give label+error+helper; validate on
+    blur, error below field, focus first invalid on submit — added to the
+    three-states section). Rejected the rest as mobile/native-specific or
+    conflicting with our one design system. Closes E1 + the I5 design-DB question.
 - [x] **E2 — write-new: a behavioral frontend skill. DONE → `write-new`:
   `cb-frontend`.** Boxholder's split: FRONTEND.md **stays as the reference
   catalog** (palette, primitive index, the `className` rule); the new skill is

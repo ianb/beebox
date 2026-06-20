@@ -36,6 +36,11 @@ verify in a real browser before calling it done.
   a wall of variant props doesn't.
 - **One job per component.** A component near the 300-line cap (CODE-STYLE.md)
   is usually two components. Split by responsibility, not to game the line count.
+- **One primary action per area.** Our screens are usually a mishmash of
+  regions (a dashboard panel, a card, a form) — each *area* gets a single
+  primary CTA (`<Button intent="primary">`) with the rest secondary/ghost, not
+  one primary for the whole screen. Two equal primaries *within one area* means
+  that area's hierarchy isn't decided yet.
 - **Separate data from presentation.** A container does the fetching and owns
   the three states; a pure presentational child takes already-loaded props and
   just renders. This is what makes the empty/error/loading states impossible to
@@ -79,6 +84,11 @@ while data resolves is a bug, not a default.
 - **Error:** a real message + a retry affordance. Our browser forwards console
   errors to `client-debug.log` — a silently-swallowed error still surfaces
   there, so don't swallow it.
+- **Forms** get the same care: the field primitives (`<TextField>` and friends)
+  already render label + error + helper — use them rather than a bare `<input>`.
+  Validate on **blur**, not every keystroke; on a failed submit, put the error
+  *below the field* and move focus to the first invalid one; mark required
+  fields. A label is not a placeholder.
 
 `<StatusBadge>`, `<Badge>`, and the field primitives already encode the states
 they need; reach for them.
@@ -95,6 +105,9 @@ they need; reach for them.
   color alone (pair it with text or an icon — a danger Badge says "Failed", it
   isn't just red).
 - **Focus:** when a dialog/overlay opens, move focus into it; restore on close.
+- **Headings:** one `<h1>` per page; don't skip levels (`<Text as="h2">` then
+  `as="h3">`, never `h2`→`h4`). Heading level is structure, not size — pick the
+  level for the outline, the `size`/`weight` props for the look.
 - **Icons:** an inline SVG icon, never an emoji, for UI affordances.
 
 ## Avoid the "AI aesthetic"
@@ -103,6 +116,22 @@ Our semantic palette already blocks the worst of it, but the habit matters:
 no purple/indigo-everything, no gradient soup, no `rounded-2xl` on everything,
 no shadow-stacking, no uniformly oversized padding. Match the design system's
 existing rhythm — consistency reads as "designed," novelty reads as "generated."
+
+## Motion, sparingly
+
+Animation should explain a change, not decorate. When you reach for it:
+
+- **Short:** 150–300ms for a micro-interaction; anything past ~500ms feels slow.
+- **Cheap:** animate `transform` and `opacity` only — animating `width`/
+  `height`/`top`/`left` forces layout reflow and visible jank (the same
+  reflow-cost lens cb-debug uses for perf bugs).
+- **Few:** one or two elements per view, not the whole page.
+- **Honor `prefers-reduced-motion`** — gate non-essential motion behind it; some
+  users have it on for a reason, and the content must be fully usable without
+  the animation.
+
+A spinner that could be a skeleton, a card that pulses for no reason, a
+500ms page fade — those read as "generated," not "designed." Skip them.
 
 ## Verify in a real browser before you're done
 
