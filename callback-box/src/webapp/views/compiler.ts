@@ -12,6 +12,18 @@ import * as path from "node:path";
 import { glob } from "glob";
 import type { ViewMeta, ViewMode } from "../../types/views.js";
 
+/**
+ * Where the compiled view will run:
+ * - "browser" (default) — React externalized to the `window.__cbReact` shim, as
+ *   the running app's frontend dynamically imports it.
+ * - "node" — React externalized to the bare `react`/`react/jsx-runtime`
+ *   specifiers so a Node renderer (`cb view test`) resolves the real React from
+ *   node_modules and shares one instance with `react-dom/server`. Emits an inline
+ *   source map and a box-relative source name so render-time stack traces map
+ *   back to the `.tsx`.
+ */
+export type ViewCompileTarget = "browser" | "node";
+
 interface CacheEntry {
   mtime: number;
   output: string;
@@ -98,13 +110,23 @@ function extractMeta(source: string, { slug, mtime }: { slug: string; mtime: str
 
 /**
  * Compile a single view file. Returns { output, meta } or throws.
+ * `target` selects React resolution (browser shim vs bare Node specifiers) —
+ * see {@link ViewCompileTarget}; defaults to "browser".
  */
-export async function compileView(viewPath: string): Promise<{ output: string; meta: ViewMeta }> {
+export async function compileView(
+  viewPath: string,
+  opts?: { target?: ViewCompileTarget }
+): Promise<{ output: string; meta: ViewMeta }> {
+  const target = opts?.target ?? "browser";
   const stat = await fs.stat(viewPath);
   const mtime = stat.mtimeMs;
   const slug = slugFromFilename(viewPath);
 
-  const cached = cache.get(viewPath);
+  // Key the cache by target too: the browser and node builds of the same file
+  // produce incompatible output (window shim vs bare imports), so sharing one
+  // slot would let one target's compile poison the other's.
+  const cacheKey = `${target}:${viewPath}`;
+  const cached = cache.get(cacheKey);
   if (cached && cached.mtime === mtime) {
     return { output: cached.output, meta: cached.meta };
   }
@@ -112,21 +134,31 @@ export async function compileView(viewPath: string): Promise<{ output: string; m
   const source = await fs.readFile(viewPath, "utf-8");
   const meta = extractMeta(source, { slug, mtime: stat.mtime.toISOString() });
 
+  // Node target: externalize React to bare specifiers and emit an inline source
+  // map named by the box-relative path (views/<slug>.tsx), so a render-time
+  // throw maps to the real source line. Browser target: the window-shim plugin.
+  const reactConfig: Pick<esbuild.BuildOptions, "plugins" | "external" | "sourcemap"> =
+    target === "node"
+      ? { external: ["react", "react/jsx-runtime", "react/jsx-dev-runtime"], sourcemap: "inline" }
+      : { plugins: [reactExternalPlugin] };
+  const sourcefile = target === "node" ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
+
   const result = await esbuild.build({
     stdin: {
       contents: source,
       loader: "tsx",
       resolveDir: path.dirname(viewPath),
-      sourcefile: path.basename(viewPath),
+      sourcefile,
     },
     bundle: true,
     format: "esm",
     target: "es2020",
     jsx: "automatic",
     write: false,
-    plugins: [reactExternalPlugin],
-    // Surfacing compile errors is the route's job (it returns an ErrorView
-    // module); esbuild's own stderr printout is redundant noise here.
+    ...reactConfig,
+    // Surfacing compile errors is the caller's job (the route returns an
+    // ErrorView module; the CLI prints the message); esbuild's own stderr
+    // printout is redundant noise here.
     logLevel: "silent",
   });
 
@@ -135,7 +167,7 @@ export async function compileView(viewPath: string): Promise<{ output: string; m
     throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
-  cache.set(viewPath, { mtime, output, meta });
+  cache.set(cacheKey, { mtime, output, meta });
   return { output, meta };
 }
 
@@ -195,8 +227,9 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
 }
 
 /**
- * Invalidate cache for a specific view file.
+ * Invalidate cache for a specific view file (all compile targets).
  */
 export function invalidateView(viewPath: string): void {
-  cache.delete(viewPath);
+  cache.delete(`browser:${viewPath}`);
+  cache.delete(`node:${viewPath}`);
 }
