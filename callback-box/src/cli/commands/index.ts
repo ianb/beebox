@@ -38,6 +38,7 @@ export { lsCommand } from "./ls.js";
 export { searchCommand } from "./search.js";
 export { containsCommand } from "./contains.js";
 export { renderCommand } from "./render.js";
+export { viewCommand } from "./view.js";
 export { usageCommand } from "./usage.js";
 export { driveCommand } from "./drive.js";
 export { chatCommand } from "./chat.js";

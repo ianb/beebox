@@ -45,6 +45,7 @@ import {
   searchCommand,
   containsCommand,
   renderCommand,
+  viewCommand,
   usageCommand,
   driveCommand,
   chatCommand,
@@ -104,6 +105,7 @@ program.addCommand(lsCommand);
 program.addCommand(searchCommand);
 program.addCommand(containsCommand);
 program.addCommand(renderCommand);
+program.addCommand(viewCommand);
 program.addCommand(usageCommand);
 program.addCommand(chatCommand);
 program.addCommand(refreshMapsCommand);

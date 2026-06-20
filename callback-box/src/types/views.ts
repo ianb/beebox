@@ -5,6 +5,8 @@
  * server-side with esbuild and rendered in the browser.
  */
 
+import type { ActivityKind } from "../core/chat-card-activity.js";
+
 export interface ViewProps {
   cards: ViewCard[];
   /** Metadata for non-card files matched by the dependency globs. */
@@ -52,6 +54,12 @@ export interface ViewProps {
   boxSlug: string;
   /** Query parameters from the view URL (e.g., path, custom filters). */
   params: Record<string, string>;
+  /**
+   * Report user activity on this card to the chat's companion-pane accumulator,
+   * with an optional free-text detail. A no-op outside the companion pane
+   * (inline/page renders), so always safe to call.
+   */
+  reportActivity: (kind: ActivityKind, detail?: string) => void;
 }
 
 export interface ViewCard {
