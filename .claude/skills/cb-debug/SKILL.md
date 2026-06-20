@@ -87,24 +87,30 @@ The move you reach for too rarely — do it more. When the bug surface is a
 **third-party library** (Markdoc, Vite, tRPC, the Agent SDK, Fastify, React,
 XState, yaml…) or a **platform/system quirk** (browser APIs, Node and its
 ESM-vs-CJS resolution, a specific server or runtime), someone has almost
-certainly hit it and written it down. Search *before* you reverse-engineer a
-workaround from first principles — a web search of "library + symptom" often
-turns a two-hour derivation into a five-minute known fix.
+certainly hit it and written it down.
 
-- The library's **GitHub issues** (open *and* closed) and its **changelog /
-  migration notes** — regressions and documented limitations live there.
-- **Stack Overflow / the broader web** for the exact error string or behavior.
-- **MDN / caniuse** for browser-API behavior; the runtime's release notes for
-  Node/engine quirks.
+**Search for what your training data doesn't have.** Canonical reference (MDN,
+caniuse, the happy-path README, the API docs) is mostly already in your weights
+— re-deriving that from a search wastes the call. The payoff is the long tail
+training lacks: recent, version-specific, and verbatim-symptom material.
+
+- **Recent GitHub issues** (open *and* closed) — especially regressions filed
+  *after* your knowledge cutoff and anything against versions newer than you
+  know. An exact error string in an issue title is gold.
+- **Changelogs / release notes for the version actually installed** — behavior
+  may have changed since the version you "remember." Check `package.json` / the
+  lockfile for the real version, then read *its* notes, not your recollection.
+- **The exact error string or symptom, verbatim**, in a general web search —
+  niche Stack Overflow answers, forum threads, blog write-ups of the same quirk.
 
 Still build the loop and reproduce locally — but don't reinvent a documented
-workaround. This session's bugs were exactly this shape: `canvas.toBlob`
-produces only *lossy* WebP/AVIF (a known browser-API limit), macOS timers
-advance during sleep (Node ≥20.3 platform behavior), and named value imports
-fail under Node's ESM loader for CJS modules — each a "someone already solved
-this" search, not a first-principles fight. (For a deep, multi-source dig, hand
-off to the `deep-research` skill; for a quick known-issue check, a couple of
-`WebSearch`/`WebFetch` calls is enough.)
+workaround, and don't trust your memory of a library over its *current*
+version's reality. This session's bugs were exactly this shape: `canvas.toBlob`
+produces only *lossy* WebP/AVIF, macOS timers advance during sleep (Node ≥20.3),
+and named value imports fail under Node's ESM loader for CJS modules — "someone
+already solved this" searches, not first-principles fights. (For a deep,
+multi-source dig, hand off to `deep-research`; for a quick known-issue check, a
+couple of `WebSearch`/`WebFetch` calls is enough.)
 
 ## Phase 4 — Instrument
 
