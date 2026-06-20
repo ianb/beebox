@@ -15,8 +15,14 @@ import { BboxOverlay } from "../components/ui/BboxOverlay";
 import { getApiBase } from "../api";
 import type { RendererProps } from "./index";
 import { registerCardRenderer, registerFileRenderer } from "./index";
-import type { ElementNode } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
+
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+function strOf(v: unknown): string | null {
+  return typeof v === "string" ? v : null;
+}
 
 const RAW_IMAGE_EXT = /\.(png|jpe?g|gif|webp|bmp|svg|ico)$/i;
 
@@ -33,45 +39,51 @@ interface ParsedImageCard {
   exif: Record<string, string>;
 }
 
-function parseImageCard(element: ElementNode): ParsedImageCard {
-  const children = (element.children || []) as ElementNode[];
+function parseImageCard(fm: Record<string, unknown>): ParsedImageCard {
+  const filenameRef = isRecord(fm.filename) ? strOf(fm.filename.ref) : null;
+  const bbox = isRecord(fm["subject-bbox"]) ? fm["subject-bbox"] : null;
 
-  const filenameEl = children.find((c) => c.tagName === "filename");
-  const descEl = children.find((c) => c.tagName === "description");
-  const bboxEl = children.find((c) => c.tagName === "subject-bbox");
-  const exifEl = children.find((c) => c.tagName === "exif");
+  const exif: Record<string, string> = {};
+  if (isRecord(fm.exif)) {
+    for (const [key, value] of Object.entries(fm.exif)) {
+      if (typeof value === "string") exif[key] = value;
+    }
+  }
 
-  const textBlocks = children
-    .filter((c) => c.tagName === "text")
-    .map((c) => ({ source: c.attrs.source || "unknown", text: c.text || "" }));
+  const textBlocks = Array.isArray(fm.text)
+    ? fm.text.flatMap((b) =>
+        isRecord(b) && typeof b.content === "string"
+          ? [{ source: strOf(b.source) ?? "unknown", text: b.content }]
+          : [],
+      )
+    : [];
 
-  const rawRotation = parseInt(element.attrs.rotation || "0", 10);
+  const rawRotation = parseInt(strOf(fm.rotation) ?? "0", 10);
   const rotation: Rotation =
     rawRotation === 90 || rawRotation === 180 || rawRotation === 270 ? rawRotation : 0;
 
+  const num = (v: unknown): number => parseInt(strOf(v) ?? "", 10);
+
   return {
-    filename: filenameEl ? (filenameEl.attrs.ref as string) : null,
-    description: descEl ? (descEl.text as string) || null : null,
-    status: (element.attrs.status as string) || "new",
-    hasText: element.attrs["has-text"] === "true",
+    filename: filenameRef,
+    description: strOf(fm.description),
+    status: strOf(fm.status) ?? "new",
+    hasText: fm["has-text"] === true,
     rotation,
-    subjectBbox: bboxEl ? {
-      y1: parseInt(bboxEl.attrs.y1 as string, 10),
-      x1: parseInt(bboxEl.attrs.x1 as string, 10),
-      y2: parseInt(bboxEl.attrs.y2 as string, 10),
-      x2: parseInt(bboxEl.attrs.x2 as string, 10),
-    } : null,
+    subjectBbox: bbox
+      ? { y1: num(bbox.y1), x1: num(bbox.x1), y2: num(bbox.y2), x2: num(bbox.x2) }
+      : null,
     textBlocks,
-    exif: exifEl ? { ...exifEl.attrs } as Record<string, string> : {},
+    exif,
   };
 }
 
 function ImageCardRenderer({ data, onNavigate }: RendererProps) {
   const [showBbox, setShowBbox] = useState(true);
 
-  if (!data.element) return null;
+  if (!data.frontmatter) return null;
 
-  const card = parseImageCard(data.element as ElementNode);
+  const card = parseImageCard(data.frontmatter);
   if (!card.filename) return null;
 
   // Resolve the ref against the card's path. Refs use the `attach/` virtual

@@ -5,7 +5,6 @@
 import { useState, useEffect } from "react";
 import type { RendererProps } from "./index";
 import { registerCardRenderer } from "./index";
-import type { ElementNode } from "../api";
 import { getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";
@@ -26,52 +25,36 @@ interface ParsedSheet {
   tabs: Array<{ ref: string; title: string; gid: string }>;
 }
 
-function parseSheetElement(el: ElementNode): ParsedSheet {
-  const result: ParsedSheet = {
-    title: "",
-    modified: "",
-    link: "",
-    owner: "",
-    driveId: el.attrs["drive-id"] ?? "",
-    tabs: [],
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+function strOf(v: unknown): string {
+  return typeof v === "string" ? v : "";
+}
+
+function parseSheetFrontmatter(fm: Record<string, unknown>): ParsedSheet {
+  const tabs = Array.isArray(fm.sheets)
+    ? fm.sheets.flatMap((tab) =>
+        isRecord(tab)
+          ? [{ ref: strOf(tab.ref), title: strOf(tab.title), gid: strOf(tab.gid) }]
+          : [],
+      )
+    : [];
+
+  return {
+    title: strOf(fm.title),
+    modified: strOf(fm.modified),
+    link: strOf(fm.link),
+    owner: strOf(fm.owner),
+    driveId: strOf(fm["drive-id"]),
+    tabs,
   };
-
-  for (const child of el.children ?? []) {
-    switch (child.tagName) {
-      case "title":
-        result.title = child.text ?? "";
-        break;
-      case "modified":
-        result.modified = child.text ?? "";
-        break;
-      case "link":
-        result.link = child.text ?? "";
-        break;
-      case "owner":
-        result.owner = child.text ?? "";
-        break;
-      case "sheets":
-        for (const tab of child.children ?? []) {
-          if (tab.tagName === "sheet-tab") {
-            result.tabs.push({
-              ref: tab.attrs["ref"] ?? "",
-              title: tab.attrs["title"] ?? "",
-              gid: tab.attrs["gid"] ?? "",
-            });
-          }
-        }
-        break;
-    }
-  }
-
-  return result;
 }
 
 // ─── Component ──────────────────────────────────────────────────────────────
 
 function SheetView({ data }: RendererProps) {
-  const el = data.element;
-  const sheet = el ? parseSheetElement(el) : null;
+  const sheet = data.frontmatter ? parseSheetFrontmatter(data.frontmatter) : null;
   const [activeTabGid, setActiveTabGid] = useState<string>("");
   const [tabData, setTabData] = useState<Map<string, CellValue[][]>>(new Map());
   const [loading, setLoading] = useState(true);

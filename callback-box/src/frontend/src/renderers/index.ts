@@ -5,24 +5,21 @@
  * The highest-priority renderer is shown by default; the user can toggle between them.
  */
 
-import type { ElementNode } from "../api";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 /** Data for rendering a file */
 export interface FileData {
   path: string;
-  /** "frontmatter" for Phase 2 YAML+markdown cards, "xml" for legacy XML cards. */
-  kind?: "frontmatter" | "xml";
+  /** Set for YAML frontmatter + markdown cards; absent for non-card files. */
+  kind?: "frontmatter";
   /** Card type (from the filename). */
   type?: string;
-  attrs?: Record<string, string>;
-  element?: ElementNode;
-  xml?: string;
-  version?: string;
+  /** Raw card file text (frontmatter + markdown) — used by the Source renderer. */
+  raw?: string;
   status?: string;
-  /** Frontmatter fields for `kind === "frontmatter"` cards (body field excluded). */
+  /** Frontmatter fields for cards (body field excluded). */
   frontmatter?: Record<string, unknown>;
-  /** Markdown body for `kind === "frontmatter"` cards. */
+  /** Markdown body for cards. */
   body?: string;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;

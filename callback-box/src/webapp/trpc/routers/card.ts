@@ -8,19 +8,6 @@ import { parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { parse as parseYaml } from "yaml";
 
-/**
- * JSON-safe element node for the frontend's legacy XML tree view. Cards are all
- * frontmatter now, so `card.get` never populates `element` — it stays in the
- * response type only as the (always-undefined) field the frontend renderers
- * type against.
- */
-export interface JsonElement {
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: JsonElement[];
-}
-
 function typeFromFilename(source: string): string | undefined {
   const base = source.split("/").pop();
   if (base === undefined) return undefined;
@@ -33,9 +20,8 @@ export interface FrontmatterCardResponse {
   kind: "frontmatter";
   type: string;
   status: string | undefined;
-  version: string | undefined;
-  xml: string;
-  element: JsonElement | undefined;
+  /** Raw card file text (frontmatter + markdown body). */
+  raw: string;
   frontmatter: Record<string, unknown> | undefined;
   body: string | undefined;
   validationError: string | undefined;
@@ -89,9 +75,7 @@ function loadFrontmatterCard(input: {
     kind: "frontmatter",
     type,
     status,
-    version: undefined,
-    xml: raw,
-    element: undefined,
+    raw,
     frontmatter,
     body,
     validationError,
@@ -143,9 +127,7 @@ export const cardRouter = router({
         kind: "frontmatter" as const,
         type: fileType ?? "",
         status: undefined as string | undefined,
-        version: undefined as string | undefined,
-        xml: raw,
-        element: undefined as JsonElement | undefined,
+        raw,
         frontmatter: undefined as Record<string, unknown> | undefined,
         body: split.hasFrontmatter ? split.body : raw,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",

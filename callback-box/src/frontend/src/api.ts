@@ -58,16 +58,6 @@ export interface CardInfo {
   subdir?: string;
 }
 
-/**
- * Element node structure from parsed XML.
- */
-export interface ElementNode {
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: ElementNode[];
-}
-
 export interface CommandResult {
   success: boolean;
   data?: unknown;

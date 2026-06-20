@@ -157,10 +157,7 @@ function useFileData(path: string): LoadResult {
           path: card.path,
           kind: card.kind,
           type: card.type,
-          attrs: card.element ? card.element.attrs : undefined,
-          element: card.element,
-          xml: card.xml,
-          version: card.version,
+          raw: card.raw,
           status: card.status,
           frontmatter: card.frontmatter,
           body: card.body,
@@ -241,7 +238,7 @@ function ChatHeader({
   );
 }
 
-/** Page-mode header: path as title, metadata (type/status/version), renderer toggle. */
+/** Page-mode header: path as title, metadata (type/status), renderer toggle. */
 function PageHeader({
   data, renderers, active, onSelect,
 }: {
@@ -258,7 +255,6 @@ function PageHeader({
           <div className="flex items-center gap-2 mt-1">
             {data.type ? <span className="text-sm text-warm-600">Type: {data.type}</span> : null}
             {data.status ? <StatusBadge status={data.status} /> : null}
-            {data.version ? <span className="text-sm text-warm-500">v{data.version}</span> : null}
           </div>
         </div>
         <RendererToggle renderers={renderers} active={active} onSelect={onSelect} />
