@@ -2079,6 +2079,37 @@ tests:
     correct_contains_any: ["fabricat", "exact", "actual words", "verbatim", "no"]
     tags: [quotes, behavioral, integrity]
 
+  # --- The Law (normative force, not just mechanics) ---
+  #
+  # The audits above test that the agent knows the `{% quote %}` mechanics.
+  # This one tests that it has internalized Law 1 (agent-guide `lawsSection`,
+  # loaded first): that paraphrasing the user's own expression when recording
+  # it is a serious violation — a betrayal of the record's authenticity — not
+  # a stylistic choice. This is the exact failure that prompted the law (an
+  # agent that smoothed the user's speech into bland prose, unaware it mattered).
+  #
+  # Status (2026-06-19): pass on the new `lawsSection` (loaded first). Answered
+  # knows_directly — 0 file reads, 0 searches — citing "Law 1 of this box: never
+  # paraphrase you… the one failure the system can't tolerate," with the betrayal
+  # framing in its own words. Exactly the recall that was missing before.
+
+  - id: law-never-paraphrase
+    prompt: >
+      I just left you a long, raw voice memo pouring out how I feel about
+      leaving my job — my own words. You're putting it into a card for the
+      record. How do you handle what I said, and how much does getting that
+      exactly right matter?
+    expected_level: knows_directly
+    watch_for: >
+      Quotes the user's expressive words verbatim with `{% quote %}` and
+      treats paraphrasing as a serious violation, not optional smoothing —
+      frames verbatim fidelity as foundational (a law / betrayal of
+      authenticity / the most important thing), and applies everywhere a
+      record is written, not just chat. Does NOT offer to summarize or
+      "clean up" the memo into its own prose.
+    correct_contains_any: ["{% quote", "verbatim", "exact words", "paraphras", "betrayal", "authentic"]
+    tags: [quotes, laws, behavioral, integrity]
+
   # --- Behavior audit (not knowledge) ---
   #
   # The four audits above test what the agent *knows* about `{% quote %}`
