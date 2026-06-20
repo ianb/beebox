@@ -33,6 +33,7 @@ import type { Socket } from "node:net";
 import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
+import { reclaimOrphans } from "./process-cleanup.js";
 
 type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
@@ -155,9 +156,31 @@ async function writePidFile(name: string, data: PidRecord): Promise<void> {
   );
 }
 
-async function removePidFile(name: string): Promise<void> {
+// Remove a worktree's pidfile. The pidfile is single-slot (`<name>.json`),
+// holding only the *current* generation — so a teardown that races a fresh
+// start must NOT delete a pidfile that a newer generation has already written,
+// or that generation becomes invisible to the startup sweep (an untracked
+// orphan if the router later dies). Callers that know which generation they're
+// tearing down pass `expect`; removal is skipped when the on-disk record names
+// different pids. Generation-agnostic callers (shutdown) omit it.
+async function removePidFile(
+  name: string,
+  expect?: { vitePid: number | undefined; fastifyPid: number | undefined },
+): Promise<void> {
+  const fullPath = path.join(PID_DIR, `${name}.json`);
+  if (expect) {
+    try {
+      const data = JSON.parse(await fs.readFile(fullPath, "utf8")) as Partial<PidRecord>;
+      if (data.vitePid !== expect.vitePid || data.fastifyPid !== expect.fastifyPid) {
+        // A newer generation owns the slot now — leave it alone.
+        return;
+      }
+    } catch {
+      // Missing or unreadable — fall through to the unlink (a no-op if gone).
+    }
+  }
   try {
-    await fs.unlink(path.join(PID_DIR, `${name}.json`));
+    await fs.unlink(fullPath);
   } catch {
     // Already gone — fine.
   }
@@ -287,28 +310,36 @@ async function ensureRunning(name: string): Promise<WorktreeEntry> {
     throw err;
   }
 
-  // Validate the name BEFORE registering anything. Browsers fire background
-  // requests whose first path segment is not a worktree (`/.well-known/...`
-  // from Chrome devtools, crawler probes, typos); registering those — even
-  // as failures — pollutes the index page with phantom entries and burns a
-  // spawn attempt. Unknown names 404 without leaving a trace.
-  if ((await resolveWorktree(name)) === null) {
-    const err: StatusError = new Error(`Worktree ${JSON.stringify(name)} not found`);
-    err.statusCode = 404;
-    throw err;
-  }
-
-  const startPromise = startWorktree(name);
-  worktrees.set(name, {
+  // Register the placeholder and its startPromise *atomically* — there must be
+  // NO await between the worktrees.get() above and the worktrees.set() below,
+  // or two near-simultaneous cold requests for the same worktree both observe
+  // an empty map, both call startWorktree, and each spawns a full vite+fastify
+  // pair. Only the last startWorktree to resolve wins the map slot; the loser's
+  // pair stays alive but unreferenced (a leaked generation), and its eventual
+  // exit is swallowed by onChildExit's replaced-generation guard. The old code
+  // awaited resolveWorktree() here, before registering — which is exactly the
+  // window that leaked. startWorktree does its own resolveWorktree()/404 check,
+  // so we no longer need (or want) one before the placeholder.
+  const placeholder: WorktreeEntry = {
     state: "starting",
-    startPromise,
     name,
     dashboardPort: null,
     dashboardUrl: null,
     idleTimer: null,
+  };
+  placeholder.startPromise = startWorktree(name);
+  worktrees.set(name, placeholder);
+  // On rejection that ISN'T a captured waitForHttp failure (e.g. an
+  // unknown-name 404 from a `/.well-known/...` probe, crawler, or typo —
+  // startWorktree throws before parking a "failed" entry), drop the bare
+  // placeholder so it leaves no phantom index entry and a later valid request
+  // can retry. The waitForHttp path replaces the map entry with its own
+  // "failed" record, so the `cur === placeholder` guard leaves that intact.
+  placeholder.startPromise.catch(() => {
+    const cur = worktrees.get(name);
+    if (cur === placeholder && cur.state === "starting") worktrees.delete(name);
   });
-  const ready = await startPromise;
-  return ready;
+  return placeholder.startPromise;
 }
 
 let touch = (entry: WorktreeEntry): void => {
@@ -458,9 +489,26 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       waitForHttp(backendPort, "/healthz", 30000, `fastify/${name}`),
     ]);
   } catch (err) {
+    // Match the SIGTERM→SIGKILL escalation of the other teardown paths: a vite
+    // that's slow to die on SIGTERM (e.g. mid esbuild/optimizeDeps) would
+    // otherwise survive as an orphan, and we've already removed its pidfile
+    // below so the sweep couldn't find it either.
     killGroup(vite.pid);
     killGroup(fastify.pid);
-    await removePidFile(name);
+    setTimeout(() => {
+      killGroup(vite.pid, "SIGKILL");
+      killGroup(fastify.pid, "SIGKILL");
+    }, KILL_GRACE_MS).unref();
+    // The dashboard daemon started before waitForHttp; stop it too so a failed
+    // startup doesn't leak an agent-browser process.
+    if (dashboardStarted) {
+      await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
+        env: browseEnv,
+        stdio: "ignore",
+        timeout: 5000,
+      }).catch(() => { /* nothing to stop, fine */ });
+    }
+    await removePidFile(name, { vitePid: vite.pid, fastifyPid: fastify.pid });
     // Park the entry in `failed` with what we captured. The HTTP request
     // handler (and /__router/retry/<name>) reads `lastError` to render
     // the error page; ensureRunning won't auto-restart a failed worktree.
@@ -546,7 +594,7 @@ let onChildExit = (name: string, exited: WorktreeEntry): void => {
   }, KILL_GRACE_MS).unref();
   worktrees.delete(name);
   stopDashboard(entry).catch(() => {});
-  removePidFile(name).catch(() => {});
+  removePidFile(name, { vitePid: entry.vite?.pid, fastifyPid: entry.fastify?.pid }).catch(() => {});
 };
 
 let stopWorktree = async (name: string): Promise<void> => {
@@ -564,7 +612,7 @@ let stopWorktree = async (name: string): Promise<void> => {
   // cold worktree and start a fresh generation, and the async cleanup below
   // must never delete that new generation's state (see onChildExit's comment).
   worktrees.delete(name);
-  await removePidFile(name);
+  await removePidFile(name, { vitePid: entry.vite?.pid, fastifyPid: entry.fastify?.pid });
   await stopDashboard(entry).catch(() => {});
 };
 
@@ -1232,7 +1280,22 @@ onChildExit = (name: string, exited: WorktreeEntry) => { _origOnExit(name, exite
 
 (async () => {
   await acquireRouterPidFile();
+  // Two-stage sweep. sweepStaleChildren clears THIS state dir's pidfile-tracked
+  // children (current generation + dashboard daemons). reclaimOrphans then
+  // pattern-matches what pidfiles can't see: leaked older generations and
+  // agent-browsers orphaned by a previous router's crash/restart. It's
+  // session-safe (skips vite/fastify still parented by a live router — e.g. an
+  // isolated test router — and agent-browsers owned by an active claude
+  // session), so it's safe to run unconditionally on every startup.
   await sweepStaleChildren();
+  try {
+    const { killed, spared } = await reclaimOrphans({ aggressive: false, log });
+    if (killed.length > 0 || spared.length > 0) {
+      log(`startup reclaim: killed ${killed.length} orphan(s), spared ${spared.length}`);
+    }
+  } catch (err) {
+    log(`startup reclaim failed (continuing): ${(err as Error).message}`);
+  }
   server.listen(ROUTER_PORT, () => {
     log(`listening on http://localhost:${ROUTER_PORT}  (pid ${process.pid})`);
     log(`open http://localhost:${ROUTER_PORT}/main/ to dev the main checkout (root: ${MAIN_ROOT})`);

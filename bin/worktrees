@@ -110,6 +110,15 @@ case "$cmd" in
         kill -KILL "$p" 2>/dev/null && echo "killed leftover on :$ROUTER_PORT (pid $p)" || true
       done
     fi
+    # The pidfile-tracked kills above only ever knew the CURRENT generation of
+    # each worktree plus the dashboard daemons. Reclaim what they can't see:
+    # leaked older vite/fastify generations and any agent-browser daemons,
+    # scoped to this project. With the router now dead, those vite/fastify are
+    # orphans, so the aggressive sweep takes them; agent-browsers owned by an
+    # active sibling claude session are still spared (never sabotage live work).
+    if [ -x "$REPO_DIR/node_modules/.bin/tsx" ]; then
+      "$REPO_DIR/node_modules/.bin/tsx" "$REPO_DIR/bin/process-cleanup.ts" panic || true
+    fi
     echo "router stopped, state cleaned"
     ;;
 

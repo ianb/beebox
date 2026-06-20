@@ -20,9 +20,9 @@ Each worktree gets its own Vite + Fastify pair, spawned as direct children of th
 
 - `bin/worktrees status` — JSON of running worktrees, PIDs, ports, idle ms
 - `bin/worktrees down <name>` — stop one worktree's processes now
-- `bin/worktrees panic` — kill router + all known children + wipe state (use if you suspect orphans)
+- `bin/worktrees panic` — kill router + all known children + wipe state, then reclaim project-scoped agent-browsers and any stray vite/fastify the pidfiles never tracked (use if you suspect orphans). Spares processes owned by an active sibling `claude` session.
 
-Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json`; router sweeps and kills survivors on startup; clean SIGTERM/SIGINT kills children with SIGKILL fallback after 2 seconds.
+Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json` (single-slot — current generation only); router sweeps and kills survivors on startup; clean SIGTERM/SIGINT kills children with SIGKILL fallback after 2 seconds. Because pidfiles can't see leaked older generations or agent-browser daemons, the startup sweep also pattern-matches project-scoped orphans (`bin/process-cleanup.ts`, shared with `panic`): vite/fastify orphaned to PID 1 (a live router — incl. an isolated test one — keeps its children, so they're spared) and agent-browsers whose worktree has no active `claude` session. The generation leak that made this necessary (concurrent cold requests racing to spawn duplicate vite+fastify pairs) is fixed at the source in `ensureRunning`.
 
 **Agents reporting URLs:** when an agent in a worktree wants to show you (or itself) a working URL, it's `http://localhost:3210/<its-worktree-name>/<box>/<path>`. First hit takes ~4s (cold start); subsequent are ~10ms.
 
