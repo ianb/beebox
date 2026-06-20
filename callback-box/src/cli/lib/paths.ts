@@ -197,3 +197,11 @@ export function isCardFile(filePath: string): boolean {
 export function isMarkdownFile(filePath: string): boolean {
   return filePath.endsWith(".md");
 }
+
+/**
+ * Check if a path is an agent-authored view: a `.tsx` directly in a box's
+ * `views/` directory (matching the `views/*.tsx` glob the compiler scans).
+ */
+export function isViewFile(filePath: string): boolean {
+  return /(^|\/)views\/[^/]+\.tsx$/.test(filePath);
+}

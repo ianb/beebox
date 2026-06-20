@@ -172,6 +172,23 @@ export async function compileView(
 }
 
 /**
+ * Edit-time compile check for the validation hooks: returns null if the view
+ * compiles, or a human-readable error message otherwise. Compile only — no
+ * execution, no type-check (the deeper signal is `cb view test`). Shared by the
+ * shell `cb validate --hook` and the in-process `cardValidatorHook` so both
+ * surface the same error. Uses the default browser target — the exact compile
+ * the running app does.
+ */
+export async function lintViewFile(viewPath: string): Promise<string | null> {
+  try {
+    await compileView(viewPath);
+    return null;
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e);
+  }
+}
+
+/**
  * Build an error module that exports an error component.
  */
 export function buildErrorModule(message: string): string {
