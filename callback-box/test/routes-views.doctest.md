@@ -150,7 +150,7 @@ res.statusCode
 res.body.cards.length
 => 1
 
-res.body.cards[0].tagName
+res.body.cards[0].type
 => memo
 
 res.body.cards[0].path

@@ -36,8 +36,8 @@ export const modes = ["page", "chat"];
 export default function EstateOverview({ cards, navigate, boxSlug, params }) {
   const viewPath = params.path || "/";
   // Use viewPath to scope what the view shows
-  const records = cards.filter(c => c.tagName === "record");
-  const memos = cards.filter(c => c.tagName === "memo");
+  const records = cards.filter(c => c.type === "record");
+  const memos = cards.filter(c => c.type === "memo");
 
   return (
     <div>
@@ -46,7 +46,7 @@ export default function EstateOverview({ cards, navigate, boxSlug, params }) {
       <ul>
         {records.map(card => (
           <li key={card.path}>
-            <strong>{card.attrs.title || card.path}</strong>
+            <strong>{card.frontmatter?.title || card.path}</strong>
             {card.status && <span> — {card.status}</span>}
           </li>
         ))}
@@ -114,21 +114,24 @@ The default export receives a \`ViewProps\` object:
 
 ### ViewCard Structure
 
-Each card in the \`cards\` array has:
+Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array has:
 
 \`\`\`typescript
 {
-  path: string;        // Relative path (e.g., "store/archive/Foo.record.card")
-  tagName: string;     // Root element name (e.g., "record", "memo")
-  attrs: Record<string, string>;  // All attributes on the root element
-  text?: string;       // Text content of the root element (if leaf node)
-  status?: string;     // Shortcut for attrs.status
-  children?: ViewCardChild[];     // Child elements (recursive)
+  path: string;        // Box-relative path (e.g., "store/archive/Foo.record.card")
+  type: string;        // Card type, from the filename Foo.<type>.card (e.g., "record", "memo")
+  frontmatter?: Record<string, unknown>;  // Parsed YAML frontmatter (body and type excluded)
+  body?: string;       // Markdown body
+  status?: string;     // Shortcut for frontmatter.status, when present
   attachments?: ViewFile[];       // Deep listing of the card's attach scope
 }
 \`\`\`
 
-Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.
+Read a card's fields from \`frontmatter\` (e.g. \`card.frontmatter?.title\`) and its
+prose from \`body\`. \`type\` is the card type — filter a mixed \`cards\` array with
+\`cards.filter(c => c.type === "memo")\`. \`frontmatter\` values are whatever the
+card's schema declares (strings, numbers, arrays, nested objects), so they are
+typed \`unknown\` — narrow before use.
 
 \`attachments\` is how a view discovers what lives next to a card — every file
 in the card's attach scope, recursively, as \`{path, size, mtimeMs}\` with
@@ -252,20 +255,24 @@ export const dependencies = ["store/todos/**/*.card"];
 export const modes = ["page", "chat"];
 
 export default function TodoList({ cards }) {
-  const todos = cards.filter(c => c.tagName === "todo-list");
+  const todos = cards.filter(c => c.type === "todo-list");
   return (
     <div>
       <h2>Todos</h2>
-      {todos.map(card => (
-        <div key={card.path} style={{ marginBottom: "1rem" }}>
-          <h3>{card.attrs.title}</h3>
-          {card.children?.filter(c => c.tagName === "item").map((item, i) => (
-            <div key={i} style={{ padding: "0.25rem 0", color: item.attrs.status === "done" ? "#999" : "#000" }}>
-              {item.attrs.status === "done" ? "\\u2713" : "\\u25cb"} {item.text}
-            </div>
-          ))}
-        </div>
-      ))}
+      {todos.map(card => {
+        // List fields live in frontmatter (typed unknown — narrow before use).
+        const items = Array.isArray(card.frontmatter?.items) ? card.frontmatter.items : [];
+        return (
+          <div key={card.path} style={{ marginBottom: "1rem" }}>
+            <h3>{String(card.frontmatter?.title ?? card.path)}</h3>
+            {items.map((item, i) => (
+              <div key={i} style={{ padding: "0.25rem 0", color: item.status === "done" ? "#999" : "#000" }}>
+                {item.status === "done" ? "\\u2713" : "\\u25cb"} {item.text}
+              </div>
+            ))}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -283,12 +290,12 @@ export default function InboxDashboard({ cards }) {
   const [filter, setFilter] = useState("");
 
   const filtered = cards.filter(c =>
-    !filter || c.tagName.includes(filter) || c.path.includes(filter)
+    !filter || c.type.includes(filter) || c.path.includes(filter)
   );
 
   const byType = {};
   for (const card of filtered) {
-    byType[card.tagName] = (byType[card.tagName] || 0) + 1;
+    byType[card.type] = (byType[card.type] || 0) + 1;
   }
 
   return (
@@ -309,7 +316,7 @@ export default function InboxDashboard({ cards }) {
       </div>
       <ul>
         {filtered.map(card => (
-          <li key={card.path}>{card.path} ({card.tagName})</li>
+          <li key={card.path}>{card.path} ({card.type})</li>
         ))}
       </ul>
     </div>
