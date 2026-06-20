@@ -100,6 +100,39 @@ r.stderr.includes("views/boom.tsx")
 await box.cleanup();
 ```
 
+## Top-level (module-eval) failure — also source-mapped
+
+A view that throws while the module evaluates (not in the component body) gets
+the same source-mapped diagnostics — the import shares the render's error block:
+
+```
+const box = await makeTmpBox();
+await box.write("views/topthrow.tsx", `
+export const name = "TopThrow";
+export const dependencies = [];
+export const modes = ["page"];
+const missing = undefined;
+const boom = missing.value;
+export default function TopThrow() { return <div>{boom}</div>; }
+`);
+
+const r = await runViewTest(box.root, ["topthrow"]);
+r.code
+=> 1
+```
+
+``` continue
+r.stderr.includes("View render failed")
+=> true
+
+r.stderr.includes("views/topthrow.tsx")
+=> true
+```
+
+``` cleanup
+await box.cleanup();
+```
+
 ## Async helper called during render throws
 
 `fileUrl` is fine in render, but the async helpers (`readFile`, `writeFile`,

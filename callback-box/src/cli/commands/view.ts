@@ -4,9 +4,17 @@
  * Compiles the view for the node target (real React, not the browser
  * window-shim), loads the same cards the running app would pass it, renders it
  * once with renderToString, and prints the output — or, on failure, the error
- * with a source-mapped stack. Runs entirely in-process: no server, nothing
- * long-lived, nothing that can orphan. The only spawned process is esbuild's
- * internal service child (torn down via esbuild.stop() before exit).
+ * with a source-mapped stack. Runs in-process: no server, and it spawns nothing
+ * long-lived (esbuild's service child is torn down via esbuild.stop()), so
+ * nothing can orphan in the background.
+ *
+ * Note: this executes the box-authored view code in the cb process (the same
+ * code the browser would run). That's acceptable under the box trust model — a
+ * box agent already has a shell — but it does mean a pathological view (an
+ * infinite loop in the render body, or a stray setInterval) can hang this
+ * foreground command. That's a killable hang, not a background orphan; the
+ * caller (the agent) interrupts it. v1 deliberately stays in-process rather than
+ * isolating the render in a killable child + timeout.
  *
  * v1 is a synchronous render: renderToString runs the component body once and
  * does NOT run effects. It catches syntax/JSX errors, undefined.map, bad prop
@@ -137,18 +145,25 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     }
   }
 
-  // Write the compiled module to a temp file inside the package so its bare
-  // `react`/`react/jsx-runtime` imports resolve to the same node_modules React
-  // this process uses (single instance — hooks work, no dispatcher mismatch).
-  const tmpFile = path.join(PACKAGE_ROOT, `.view-test-${randomUUID()}.mjs`);
+  // Write the compiled module to a temp file under the package's node_modules
+  // cache: bare `react`/`react/jsx-runtime` imports resolve to the same
+  // node_modules React this process uses (single instance — hooks work, no
+  // dispatcher mismatch), and it's a gitignored, writable location, so a file
+  // leaked by an interrupted run never lands in the tracked tree.
+  const tmpDir = path.join(PACKAGE_ROOT, "node_modules", ".cache", "cb-view-test");
+  await fs.mkdir(tmpDir, { recursive: true });
+  const tmpFile = path.join(tmpDir, `view-${randomUUID()}.mjs`);
   await fs.writeFile(tmpFile, output, "utf-8");
   try {
     process.setSourceMapsEnabled(true);
-    const mod = (await import(pathToFileURL(tmpFile).href)) as LoadedViewModule;
-    const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
 
+    // Import (module evaluation) and render share one diagnostic block so a
+    // top-level throw in the view gets the same source-mapped stack a render
+    // throw does — both are the same class of authoring bug.
     let html: string;
     try {
+      const mod = (await import(pathToFileURL(tmpFile).href)) as LoadedViewModule;
+      const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
       html = renderToString(createElement(mod.default, props));
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
