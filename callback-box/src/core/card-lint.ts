@@ -108,10 +108,15 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
     };
   }
   // A `.card` with no frontmatter block is malformed — every card is
-  // frontmatter now (the legacy XML format is gone). This used to surface via
-  // cardworks' XML lint; keep it an error so a broken card stays visible and
-  // blocks the pre-commit hook rather than passing silently.
-  return errorResult(path, "card has no frontmatter block");
+  // frontmatter now (the legacy XML format is gone). Surface it as a WARNING,
+  // not an error: it's visible in `cb validate` and the PostToolUse hook, but a
+  // single stray malformed card must not block the pre-commit hook and brick a
+  // box's automated commit workflow (the reactor commits through this path).
+  return {
+    path,
+    errors: [],
+    warnings: [{ type: "schema", severity: "warning", message: "card has no frontmatter block" }],
+  };
 }
 
 async function lintFrontmatterCard(input: {

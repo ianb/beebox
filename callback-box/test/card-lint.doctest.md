@@ -306,7 +306,8 @@ result.results[0]!.warnings[0]!.message
 ```
 
 A `.card` with no frontmatter block at all is malformed (every card is
-frontmatter now) and is an error, not a silent pass:
+frontmatter now). It's surfaced as a warning — visible, but non-blocking so one
+stray card doesn't brick a box's pre-commit/automation:
 
 ```
 const box = await makeTmpBox();
@@ -316,9 +317,12 @@ const result = await lintCardsDispatch(
   { boxRoot: box.root, ctx },
 );
 result.totalErrors
+=> 0
+
+result.totalWarnings
 => 1
 
-result.results[0]!.errors[0]!.message
+result.results[0]!.warnings[0]!.message
 => card has no frontmatter block
 ```
 
