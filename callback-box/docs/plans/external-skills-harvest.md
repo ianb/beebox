@@ -29,16 +29,21 @@ one-line why). Mark status as you go.
   altitude: a mechanical *execution* task-list (exact paths, full code per step,
   consumes/produces signatures, rigid TDD step sequence) for a context-free
   subagent. cb-plan stays at design altitude; we deliberately let the worktree
-  agent do its own task decomposition. Its TDD-first core also *conflicts* with
-  our stated dogfood-first test posture. Nothing portable survives the mismatch.
+  agent do its own task decomposition — so the skip stands on altitude grounds.
+  (Earlier I also cited a conflict with our "dogfood-first" test posture; that
+  was overstated — see Finding X1: that posture is a single unverified phrase in
+  cb-plan, not a grounded convention.) Nothing portable survives the altitude gap.
 - [x] **A2 — addyosmani `spec-driven-development` vs cb-plan. DONE → `fold-in`
   (routed to F2).** Its 6-area spec template duplicates CLAUDE.md / CODE-STYLE /
-  FRONTEND.md (which cb-plan points at via "Stated preferences"). Three portable
-  nuggets to graft into cb-plan **during F2**: (1) a "Boundaries: Always / Ask
-  first / Never" per-plan tier; (2) "reframe vague reqs as testable success
-  criteria"; (3) its "Common Rationalizations" + "Red Flags" tables — which *are*
-  the bulletproofing technique F2 is about. The gated 4-phase flow: skip (cb-plan
-  is one artifact, reviewed as written).
+  FRONTEND.md (which cb-plan points at via "Stated preferences"). Two portable
+  nuggets to graft into cb-plan **during F2**: (1) "reframe vague reqs as testable
+  success criteria"; (2) its "Common Rationalizations" + "Red Flags" tables —
+  which *are* the bulletproofing technique F2 is about. **Dropped** the
+  "Boundaries: Always / Ask first / Never" tier (boxholder call): our boundaries
+  already live globally in CLAUDE.md / CODE-STYLE, so a per-plan version
+  duplicates them — that tier earns its keep only when each spec is a different
+  project. The gated 4-phase flow: skip (cb-plan is one artifact, reviewed as
+  written).
 - [x] **A3 — superpowers `executing-plans` vs launch-worktree-session. DONE →
   `skip`.** Mechanical plan-execution — the *opposite* of our briefing-driven
   spin-off (hand over understanding; agent forms its own approach). Its one good
@@ -113,7 +118,7 @@ one-line why). Mark status as you go.
   also graft addyosmani spec-driven's harvested bits — a "Boundaries: Always /
   Ask first / Never" per-plan tier, a "reframe vague reqs as testable success
   criteria" element, and a "Common Rationalizations / Red Flags" table (the
-  bulletproofing itself).
+  bulletproofing itself). *(Boundaries tier dropped — see A2.)*
 - [ ] **F3 — write-new: docs-index skills.** *(Boxholder idea.)* Skills that,
   when invoked, pull in a *relevant index of docs* rather than the full text —
   a lazy, task-triggered pointer into `docs/`. Relates to the loading-eagerness
@@ -153,6 +158,19 @@ one-line why). Mark status as you go.
   (conflicts with FRONTEND.md). Decide: near-certain skip; note why.
 
 ---
+
+## Findings surfaced along the way
+
+- [ ] **X1 — reconcile cb-plan's "dogfood-first" test posture with
+  `docs/testing.md`.** Surfaced while doing A1. cb-plan's "dogfooding precedes
+  tests; one doctest once the shape settles" is a single unverified phrase
+  (introduced when the skill was first drafted, commit `3add1946`) that
+  propagated into every plan via the template — while `docs/testing.md` states
+  the *opposite emphasis* (purpose #1: "writing a test first helps force
+  decomposition"). They contradict and nothing reconciled them. **Decision the
+  boxholder must make:** test-first-for-decomposition, dogfood-then-test, or a
+  deliberate mix — then fix whichever doc is wrong so a stray phrase stops
+  defining policy. (Convention-drift; same family as the Laws concern.)
 
 ## Suggested order
 
