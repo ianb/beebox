@@ -67,11 +67,21 @@ one-line why). Mark status as you go.
 
 ## C. Debugging (we currently wing it — and it works okay)
 
-- [ ] **C1 — a debugging skill? Compare the two candidates and decide if we even
-  want one.** superpowers `systematic-debugging` (4-phase + 3-fix
-  circuit-breaker) vs mattpocock `diagnosing-bugs` (6-phase, "a tight
-  red-capable loop is 90% of the work"). Decide: write-new (pick/merge the best
-  of both) or skip (winging it is fine). Lean: evaluate, low urgency.
+- [x] **C1 — a debugging skill. DONE → `write-new`: `cb-debug`.** Merged the
+  best of both into `.claude/skills/cb-debug/SKILL.md`: mattpocock's "the
+  feedback loop *is* the skill" (tight, red-capable signal first) as the spine,
+  superpowers' Iron Law (no fix without root cause) + the 3-fix circuit-breaker
+  (3 failures = wrong architecture → boxholder). Made the loop menu
+  callback-box-native (doctests-as-loop-and-regression per our test-first stance,
+  `cb scenario`, curl the router / Fastify `inject()`, `bin/browse`,
+  `client-debug.log`, knowledge-audits for agent-behavior bugs, git-as-history),
+  scoped to **hard bugs only** (winging the easy ones is fine — boxholder's
+  note), and applied the F2 discipline (trigger-only SDO description +
+  rationalizations table + red flags). Added (boxholder) a **"search the web for
+  known library/platform quirks"** section — the under-used move for bugs in
+  someone else's code (deps, browser APIs, ESM/CJS, runtimes), with this
+  session's `canvas.toBlob`/macOS-timers/ESM examples. The circuit-breaker hands
+  off to D1 (codebase-health) when that lands.
 
 ## D. Codebase health / continuous de-crufting
 
