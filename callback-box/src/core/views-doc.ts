@@ -317,6 +317,41 @@ export default function InboxDashboard({ cards }) {
 }
 \`\`\``;
 
+const testingSection = `## Testing a View
+
+After writing or changing a view, render-test it from the command line instead
+of only checking it in the browser:
+
+\`\`\`
+cb view test <slug>
+\`\`\`
+
+This compiles the view in Node, loads the **real cards** your \`dependencies\`
+globs select (the same data the running app passes), renders the component once,
+and prints the resulting HTML. On success it exits 0 and prints the output — so
+you can confirm the view shows the right thing, not just that it didn't crash.
+On failure it exits non-zero and prints the error with a stack mapped back to
+your \`.tsx\` source lines.
+
+- \`--path <card-path>\` sets \`params.path\` for a card-bound view (e.g. one with
+  \`rendersCardTypes\`), exactly as the card page would. It does not filter
+  \`cards\` — your view still receives every card the globs select and filters
+  itself. If the path isn't among them, the command warns (your globs don't
+  cover that card).
+- \`--raw\` keeps \`<script>\`/\`<style>\` in the output (stripped by default).
+- If a dependency glob selects a card that fails to validate, the command
+  reports it and exits non-zero (pass \`--allow-invalid-cards\` to ignore).
+
+**What it covers (and doesn't).** This is a *synchronous* render: it runs the
+component body once. It catches the common bugs — syntax/JSX errors,
+\`undefined.map()\`, bad prop access, type mistakes. It does **not** run
+\`useEffect\`, post-mount state, or the async helpers (\`readFile\`, \`writeFile\`,
+\`adapterFetch\`, …) — those run only in effects/handlers in the real app. Calling
+an async helper directly in the render body is a bug, and the test throws to tell
+you so (\`fileUrl\` is synchronous and fine to call in render). Editing a view also
+triggers a quick compile-check automatically, the same way cards are validated on
+save.`;
+
 const stylingAndErrorsSection = `## Styling
 
 Views render inside the app's existing layout. You can use:
@@ -339,6 +374,7 @@ export function generateViewsDoc(): string {
       companionViewsSection,
       reportingActivitySection,
       examplesSection,
+      testingSection,
       stylingAndErrorsSection,
     ].join("\n\n") + "\n"
   );

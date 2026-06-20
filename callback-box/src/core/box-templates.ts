@@ -268,6 +268,9 @@ Each view must export:
 
 React is provided automatically — do not import it.
 
+After writing or changing a view, render-test it: \`cb view test <slug>\` (loads
+the real cards, renders once, prints the output or a source-mapped error).
+
 Full documentation: \`docs/generated/views.md\`
 `;
 

@@ -2499,6 +2499,26 @@ tests:
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
 
+  # === Views: render-test command (cb view test) ===
+  #
+  # Indirect knowledge, like the other view-authoring audits: the command lives
+  # in docs/generated/views.md (Testing a View) and the views/CLAUDE.md stub, not
+  # the always-loaded guide — appropriate altitude for a view-authoring tool. The
+  # agent reads the views guide and names the command. The failure mode is
+  # telling the user to open it in a browser or asking them whether it works.
+
+  - id: views-render-test-command
+    prompt: >
+      You just wrote a new view in views/. How do you check it actually
+      works without opening it in a browser or asking the user?
+    expected_level: knows_about
+    watch_for: >
+      Reads the views guide, then names `cb view test <slug>` — does NOT say
+      "open it in the browser", "visit the page", or "ask the user to check".
+    should_read: ["docs/generated/views.md"]
+    correct_contains: ["cb view test"]
+    tags: [views]
+
   # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
 
   - id: retro-report-location
