@@ -2509,12 +2509,13 @@ tests:
 
   - id: views-render-test-command
     prompt: >
-      You just wrote a new view in views/. How do you check it actually
-      works without opening it in a browser or asking the user?
+      Build a view in views/ that lists every memo card, and make sure it
+      actually renders before you tell me it's ready. Walk me through it.
     expected_level: knows_about
     watch_for: >
-      Reads the views guide, then names `cb view test <slug>` — does NOT say
-      "open it in the browser", "visit the page", or "ask the user to check".
+      Reads the views guide (per the views/ stub's "read before creating
+      views"), then uses `cb view test <slug>` to verify the view renders —
+      not "open it in the browser", "visit the page", or "ask the user".
     should_read: ["docs/generated/views.md"]
     correct_contains: ["cb view test"]
     tags: [views]
