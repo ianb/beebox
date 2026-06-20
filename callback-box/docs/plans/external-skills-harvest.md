@@ -118,13 +118,32 @@ one-line why). Mark status as you go.
   `restrict-component-classes`. Decide: are there *gaps* in FRONTEND.md it
   surfaces, or is it pure conflict? → fold-in (rare) or skip. (The broader
   ui-ux-pro-max searchable DB is a separate maybe — see I-series.)
-- [ ] **E2 — write-new: a "FRONTEND.md" skill?** *(Boxholder idea.)* A skill
-  that surfaces FRONTEND.md conventions (palette, primitives, the className
-  rule) when doing UI work, instead of relying on the agent to have read it.
-  Decide: write-new vs "the rule + CLAUDE.md pointer already suffices." Relates
-  to F3 (docs-index skills).
-- [ ] **E3 — anthropic `frontend-design`.** Boxholder recalls it being "almost
-  nothing." Quick confirm → near-certain skip.
+- [x] **E2 — write-new: a behavioral frontend skill. DONE → `write-new`:
+  `cb-frontend`.** Boxholder's split: FRONTEND.md **stays as the reference
+  catalog** (palette, primitive index, the `className` rule); the new skill is
+  the *behavioral* half it can't enforce, and points at FRONTEND.md rather than
+  duplicating it. Built `.claude/skills/cb-frontend/SKILL.md` (smallish, as
+  asked), harvesting the portable discipline from addyosmani
+  `frontend-ui-engineering`: reach-for-primitives-first + semantic-palette-only
+  (mapped to our `restrict-component-classes` rule), compose-over-configure,
+  separate data from presentation (so the three states can't be forgotten),
+  one-job-per-component (tied to our 300-line cap), the simplest-state ladder
+  (mapped to URL state + tRPC/`useWSS`, not React Query), the
+  loading/empty/error trio (mapped to skeletons + `client-debug.log` +
+  `StatusBadge`), the WCAG-AA baseline (keyboard, labels, contrast, focus,
+  not-color-alone), and "avoid the AI aesthetic." Two callback-box-native
+  anchors the source lacked: **components own their own a11y landmarks** (memory
+  `feedback_components_own_a11y`) and **verify in a real browser via `bin/browse`
+  + report visible errors** (memories `feedback_report_visible_errors`,
+  the `browse` skill). F2 discipline applied (trigger-only SDO description +
+  rationalizations table + red flags). Relates to F3 (docs-index skills) — this
+  is the "skill that fronts a reference doc" pattern in the concrete.
+- [x] **E3 — anthropic `frontend-design`. DONE → `skip`.** Confirmed the
+  boxholder's recollection: ~55 lines of greenfield *visual-design* process
+  (pick fonts, establish a palette, set up tokens from scratch) for a project
+  with no design system. callback-box already has one (semantic palette +
+  primitives + FRONTEND.md), so the whole skill is N/A — nothing portable that
+  cb-frontend doesn't already cover behaviorally.
 
 ## F. Skill infrastructure / meta
 
