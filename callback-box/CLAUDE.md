@@ -21,7 +21,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
 - Run tests before committing. If tests fail, fix them. If a test failure is clearly pre-existing and unrelated to your changes, note it but don't ignore your own failures.
 
-**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. The server runs `tsx` directly (not compiled `dist/`).
+**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. Prod runs the bundled `dist/cli.mjs` (built by `scripts/build-cli.mjs`, rsynced by the deploy) via `cb serve` — not tsx, and not the per-file compiled tree. Because the bundle lives at `dist/` (one level below the package root, not `dist/webapp/`), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`.
 
 ## Cards
 
