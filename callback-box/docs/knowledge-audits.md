@@ -38,6 +38,25 @@ After running audits, **update the status comments in `knowledge-audits.yaml`** 
 
 The status comment is the durable record. Reports in `reports/` are gitignored and ephemeral — they're a working artifact, not a result log.
 
+## Context size
+
+Each report entry shows a **Context** line — the loaded-context size the box
+agent carried during that audit, read from the session log's per-turn `usage`
+(summed across `input + cache_creation + cache_read`, since prompt caching
+leaves raw `input_tokens` tiny). The *initial* number is the always-on baseline
+the box pays every turn (system prompt + agent-guide + box CLAUDE.md + tool
+schemas); *peak* and *added* show how much answering grew it. A `knows_directly`
+/ 0-read audit doubles as a baseline gauge: trim a box's always-on context, re-
+run, watch *initial* drop. Logic lives in `lib/context-usage.ts`.
+
+Every run also appends these numbers to **`src/dev/context-history.yaml`** — a
+committed ledger keyed by box → audit id → entries, each stamped with the date,
+the box's HEAD, and the monorepo's HEAD. The file's git history is the trend
+line: a CLAUDE.md trim that drops the baseline shows up as a diff. (`boxCommit`
+is the box's HEAD *before* the harness regenerates docs — stable for a current
+box, but the throwaway worktree box clone is behind upstream templates, so its
+hash moves each run.) Logic lives in `lib/context-history.ts`.
+
 ## Test structure
 
 Each entry in `knowledge-audits.yaml` has these fields:

@@ -15,6 +15,11 @@ import {
   parseSessionLog,
   type SessionContentBlock,
 } from "../../cli/lib/session.js";
+import {
+  readTurnUsage,
+  summarizeContextUsage,
+  type ContextStats,
+} from "./context-usage.js";
 
 export interface AuditTest {
   id: string;
@@ -69,6 +74,8 @@ export interface AgentBehavior {
   bashRawCommands: string[];
   responseText: string;
   responseLength: number;
+  /** Loaded-context size of this run (null if the session had no turns). */
+  context: ContextStats | null;
 }
 
 export interface AutomatedChecks {
@@ -266,10 +273,16 @@ async function extractBehavior(
 
   const responseText = responseChunks.join("\n").trim();
 
+  // Context-size accounting reads the same main session log (not subagent
+  // logs — those are separate contexts; baseline/peak is about what the box
+  // agent itself carries every turn).
+  const context = summarizeContextUsage(await readTurnUsage(logPath));
+
   return {
     ...acc,
     responseText,
     responseLength: responseText.split(/\s+/).length,
+    context,
   };
 }
 

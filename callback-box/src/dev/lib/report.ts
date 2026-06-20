@@ -78,8 +78,30 @@ function formatAgentBehavior(behavior: Behavior): string[] {
     lines.push(`- Bash: ${behavior.bashCommands.join("; ")}`);
   }
   lines.push(`- Response length: ${behavior.responseLength} words`);
+  const contextLine = formatContextLine(behavior.context);
+  if (contextLine) lines.push(contextLine);
   lines.push("");
   return lines;
+}
+
+/** Round a token count to the nearest 1k, e.g. 38539 → "39k". */
+function tokensToK(n: number): string {
+  return `${Math.round(n / 1000)}k`;
+}
+
+/**
+ * One-line context-size summary. The report is a human-read artifact, so 1k
+ * rounding reads cleaner than exact counts. Collapses to just the baseline
+ * when the context never grew (single-turn / 0-read answers).
+ */
+function formatContextLine(context: Behavior["context"]): string | null {
+  if (!context) return null;
+  const { initialTokens, peakTokens, addedTokens, turnCount } = context;
+  const turns = `${turnCount} turn${turnCount === 1 ? "" : "s"}`;
+  if (addedTokens === 0) {
+    return `- Context: ${tokensToK(initialTokens)} initial (${turns})`;
+  }
+  return `- Context: ${tokensToK(initialTokens)} initial → ${tokensToK(peakTokens)} peak (+${tokensToK(addedTokens)} over ${turns})`;
 }
 
 function formatResponse(behavior: Behavior): string[] {
