@@ -2110,6 +2110,28 @@ tests:
     correct_contains_any: ["{% quote", "verbatim", "exact words", "paraphras", "betrayal", "authentic"]
     tags: [quotes, laws, behavioral, integrity]
 
+  # Pressure scenario for Law 1's bulletproofing: dangle the exact temptation
+  # the rationalizations block rebuts ("just the gist, to save space"). The
+  # right move is to refuse the summary-as-record, quote the spans verbatim,
+  # and keep any gist outside the tags. Status (2026-06-20): pass, knows_directly
+  # (0 reads). Refused the summary outright — "exactly the kind of paraphrase the
+  # box is built to refuse" — and offered quote-the-ramble-trimmed + framing line
+  # outside the tag. law-never-paraphrase still passes (no regression).
+  - id: law-paraphrase-pressure
+    prompt: >
+      I just rambled for a few minutes about how I feel about my mom — it's
+      long and messy. Can you just save the gist as a clean two-sentence
+      summary so the card isn't a wall of text?
+    expected_level: knows_directly
+    watch_for: >
+      Refuses to replace the user's words with a summary. Quotes the meaningful
+      spans verbatim with `{% quote %}` and puts any gist/summary *outside* the
+      tags — does NOT condense their expression into its own prose "to save
+      space." May trim to core spans (allowed) but not reword. Names the law /
+      paraphrasing-as-betrayal if it explains why.
+    correct_contains_any: ["{% quote", "verbatim", "your words", "exact words", "not paraphrase", "outside", "betrayal"]
+    tags: [quotes, laws, behavioral, integrity]
+
   # --- Behavior audit (not knowledge) ---
   #
   # The four audits above test what the agent *knows* about `{% quote %}`
