@@ -25,18 +25,25 @@ one-line why). Mark status as you go.
 
 ## A. Planning skills (vs cb-plan)
 
-- [ ] **A1 — superpowers `writing-plans` vs cb-plan.** Its angle is bite-sized,
-  TDD-structured *implementation* breakdown. cb-plan is design-end-to-end.
-  Decide: does its task-decomposition add anything cb-plan's "implementation
-  order / first chunk" sections lack? → fold-in or skip.
-- [ ] **A2 — addyosmani `spec-driven-development` vs cb-plan.** 6-area spec
-  template (objective / commands / structure / style / testing / boundaries) +
-  gated per-phase review. Decide: any section worth grafting into the cb-plan
-  template? → fold-in or skip.
-- [ ] **A3 — superpowers `executing-plans` vs launch-worktree-session.** Plan
-  load-review-execute-report in a fresh session — close to our spin-off flow.
-  Decide: anything useful (the critical-review-before-execute step?) → fold-in
-  or skip.
+- [x] **A1 — superpowers `writing-plans` vs cb-plan. DONE → `skip`.** Different
+  altitude: a mechanical *execution* task-list (exact paths, full code per step,
+  consumes/produces signatures, rigid TDD step sequence) for a context-free
+  subagent. cb-plan stays at design altitude; we deliberately let the worktree
+  agent do its own task decomposition. Its TDD-first core also *conflicts* with
+  our stated dogfood-first test posture. Nothing portable survives the mismatch.
+- [x] **A2 — addyosmani `spec-driven-development` vs cb-plan. DONE → `fold-in`
+  (routed to F2).** Its 6-area spec template duplicates CLAUDE.md / CODE-STYLE /
+  FRONTEND.md (which cb-plan points at via "Stated preferences"). Three portable
+  nuggets to graft into cb-plan **during F2**: (1) a "Boundaries: Always / Ask
+  first / Never" per-plan tier; (2) "reframe vague reqs as testable success
+  criteria"; (3) its "Common Rationalizations" + "Red Flags" tables — which *are*
+  the bulletproofing technique F2 is about. The gated 4-phase flow: skip (cb-plan
+  is one artifact, reviewed as written).
+- [x] **A3 — superpowers `executing-plans` vs launch-worktree-session. DONE →
+  `skip`.** Mechanical plan-execution — the *opposite* of our briefing-driven
+  spin-off (hand over understanding; agent forms its own approach). Its one good
+  nugget (critically review the plan before executing) is already baked into
+  every worktree briefing.
 
 ## B. Worktree / finish
 
@@ -102,7 +109,11 @@ one-line why). Mark status as you go.
   technique** (rationalization tables, red-flag lists, "you'll be tempted to…")
   — and apply it to **The Laws** too (Law 1's "smooth it just this once" =
   the betrayal). Decide: run the audit, fix gaps. *(Boxholder's two strongest
-  interests converge here.)*
+  interests converge here.)* **Inherits from A2:** while bulletproofing cb-plan,
+  also graft addyosmani spec-driven's harvested bits — a "Boundaries: Always /
+  Ask first / Never" per-plan tier, a "reframe vague reqs as testable success
+  criteria" element, and a "Common Rationalizations / Red Flags" table (the
+  bulletproofing itself).
 - [ ] **F3 — write-new: docs-index skills.** *(Boxholder idea.)* Skills that,
   when invoked, pull in a *relevant index of docs* rather than the full text —
   a lazy, task-triggered pointer into `docs/`. Relates to the loading-eagerness
