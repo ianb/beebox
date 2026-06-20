@@ -24,20 +24,5 @@ else
   echo "[post-merge] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
 fi
 
-# Rebuild cardworks if its sources changed in this merge. Dependents
-# (callback-box tests, the dev server, typecheck) import cardworks via its
-# gitignored dist/, so merging main into a worktree refreshes cardworks/src
-# without rebuilding dist — leaving everything on stale behavior, which shows
-# up as confusing "flaky"-looking test failures. Runs on every branch (a
-# worktree is exactly where this bites, and worktrees aren't 'main'), and
-# rebuilds in the worktree the merge happened in (GIT_WORK_TREE via
-# --show-toplevel), not $REPO_DIR — which always points at the main checkout.
-if git diff --name-only ORIG_HEAD HEAD -- cardworks/src 2>/dev/null | grep -q .; then
-  TOPLEVEL="$(git rev-parse --show-toplevel)"
-  echo "[post-merge] cardworks sources changed; rebuilding dist..."
-  ( cd "$TOPLEVEL" && pnpm --filter cardworks run build ) \
-    || echo "[post-merge] cardworks rebuild failed — run 'pnpm --filter cardworks build' manually"
-fi
-
 # Let git-lfs do its post-merge work.
 command -v git-lfs >/dev/null 2>&1 && git lfs post-merge "$@" || true
