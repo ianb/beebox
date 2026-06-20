@@ -36,9 +36,10 @@ one-line why). Mark status as you go.
 - [x] **A2 — addyosmani `spec-driven-development` vs cb-plan. DONE → `fold-in`
   (routed to F2).** Its 6-area spec template duplicates CLAUDE.md / CODE-STYLE /
   FRONTEND.md (which cb-plan points at via "Stated preferences"). Two portable
-  nuggets to graft into cb-plan **during F2**: (1) "reframe vague reqs as testable
-  success criteria"; (2) its "Common Rationalizations" + "Red Flags" tables —
-  which *are* the bulletproofing technique F2 is about. **Dropped** the
+  nuggets: (1) "reframe vague reqs as testable success criteria" — **DONE**,
+  folded into cb-plan's test posture as part of X1; (2) its "Common
+  Rationalizations" + "Red Flags" tables — which *are* the bulletproofing
+  technique F2 is about, still pending → F2. **Dropped** the
   "Boundaries: Always / Ask first / Never" tier (boxholder call): our boundaries
   already live globally in CLAUDE.md / CODE-STYLE, so a per-plan version
   duplicates them — that tier earns its keep only when each spec is a different
@@ -161,16 +162,15 @@ one-line why). Mark status as you go.
 
 ## Findings surfaced along the way
 
-- [ ] **X1 — reconcile cb-plan's "dogfood-first" test posture with
-  `docs/testing.md`.** Surfaced while doing A1. cb-plan's "dogfooding precedes
-  tests; one doctest once the shape settles" is a single unverified phrase
-  (introduced when the skill was first drafted, commit `3add1946`) that
-  propagated into every plan via the template — while `docs/testing.md` states
-  the *opposite emphasis* (purpose #1: "writing a test first helps force
-  decomposition"). They contradict and nothing reconciled them. **Decision the
-  boxholder must make:** test-first-for-decomposition, dogfood-then-test, or a
-  deliberate mix — then fix whichever doc is wrong so a stray phrase stops
-  defining policy. (Convention-drift; same family as the Laws concern.)
+- [x] **X1 — reconcile cb-plan's test posture with `docs/testing.md`. DONE →
+  test-first.** Boxholder chose **test-first** (which `docs/testing.md` already
+  endorses — its purpose #1 is "writing a test first forces decomposition"), so
+  cb-plan was the outlier. Rewrote cb-plan's "Test posture" bullet: tests come
+  first as a *design tool* (decomposition → documentation → regression, not
+  coverage), name the doctest as part of designing each codepath, and **encode
+  the plan's done-when as the tests that must pass** — which also folds in A2's
+  testable-success-criteria nugget. Historical/implemented plan docs still carry
+  the old phrase; left as frozen records (the fix is to the template source).
 
 ## Suggested order
 

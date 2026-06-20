@@ -278,10 +278,17 @@ when all chunks complete.
 
 How the completed plan actually goes out as one unit:
 
-- Test posture. Default deferral: "dogfooding precedes tests; one
-  doctest per substantial new codepath lands once the shape feels
-  settled." Override if there's a regression-risk piece that needs
-  tests at ship.
+- Test posture. **Tests come first, as a design tool** (per
+  `docs/testing.md`): a test's first job is to force decomposition —
+  writing it sharpens a function's purpose and boundaries — then
+  documentation, then regression-anchoring. So name the doctest for each
+  substantial new codepath *as part of designing it*, not deferred until
+  the shape "settles," and encode the plan's done-when as the tests that
+  must pass (a vague "make it faster" becomes a checkable assertion).
+  Not every line, though: tests aren't for coverage percentages or
+  verification-for-its-own-sake (`docs/testing.md`) — cover the
+  substantial codepaths and the Failure-modes table's "Test exists?"
+  column, not everything.
 - Knowledge-audit entries (see the Knowledge audits section above) —
   what lands with the plan vs deferred.
 - Migration approach if the plan changes existing data shape (hand-done
