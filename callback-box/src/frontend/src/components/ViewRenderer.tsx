@@ -18,7 +18,6 @@ interface ViewCard {
   path: string;
   /** Card type, from the filename (`Foo.<type>.card`). */
   type: string;
-  status?: string;
   /** Frontmatter fields (body and type excluded). */
   frontmatter?: Record<string, unknown>;
   /** Markdown body. */

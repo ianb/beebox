@@ -156,7 +156,7 @@ res.body.cards[0].type
 res.body.cards[0].path
 => box/inbox/Test.memo.card
 
-res.body.cards[0].status
+res.body.cards[0].frontmatter.status
 => new
 
 JSON.stringify(res.body.files)

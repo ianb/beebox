@@ -145,7 +145,6 @@ function frontmatterViewCard(relPath: string, fields: Record<string, unknown>): 
     frontmatter,
   };
   if (body !== undefined) viewCard.body = body;
-  if (typeof frontmatter["status"] === "string") viewCard.status = frontmatter["status"];
   return viewCard;
 }
 
