@@ -8,6 +8,32 @@ component under one stable React key**, so finalize becomes an in-place props
 update rather than a remount. It also brings the now-playing speech highlight to
 the streaming state (today it only appears after finalize).
 
+## Implementation notes (as shipped — supersedes details below)
+
+The plan body below is the original design; a cross-model (codex) review of the
+implementation corrected three points. As shipped:
+
+- **Keying binds to a *specific* group, not "the newest assistant."** The early
+  draft (Track 3, Implementation order) keyed whichever assistant group was
+  newest while `liveTurnId` was set — which a background/queued turn appending
+  later would hijack (remounting the real turn, mis-keying the new one).
+  `MessageList` instead tracks the live group's uuid across renders
+  (`nextLiveTargetUuid` + set-state-during-render): the provisional's synthetic
+  uuid while streaming, then the finalized group's real uuid captured at the
+  transition, held until the next turn. A no-response turn finalizes to no
+  assistant group, so nothing stays live and the provisional simply unmounts.
+- **`liveTurnId` is set only on the idle `SEND`**, not in `dispatchQueuedSend`
+  (the queued/background path doesn't stream a fresh provisional bubble, and the
+  specific-group binding above means it can't steal the live key anyway). The
+  "dispatchQueuedSend sets it" mentions below are not implemented.
+- **Provisional content order is `[...streamTools, textBlock]`** (tools above
+  text) — this matches the typical finalized order (tools usually run before the
+  answer), minimizing reshuffle. The "[textBlock, ...toolBlocks]" note below is
+  wrong.
+- Verified via `bin/browse` node-identity checks (the tagged streaming node keeps
+  its JS identity through finalize) on synthetic and real turns, plus a
+  `buildStreamEntry` doctest. No automated queued-path test was added.
+
 ## Stated preferences this plan trades against
 
 - `callback-box/CLAUDE.md` — *"don't add features beyond what the task
