@@ -19,7 +19,6 @@
     "@ianbicking/personal-vibe-check",
     "@parcel/markdown-ansi",
     "ansi-to-html",
-    "@tanstack/react-virtual",
     "agent-doctest"
   ]
 }

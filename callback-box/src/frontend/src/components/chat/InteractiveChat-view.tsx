@@ -8,7 +8,7 @@
 
 import { useRef, useCallback, useEffect, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
-import { VirtualizedMessageList } from "./InteractiveChat-messages";
+import { MessageList } from "./InteractiveChat-messages";
 import { lastWords, countWords } from "../../lib/selection-serialize";
 import type { AddSelectionInput } from "../../lib/selection-position";
 import {
@@ -123,7 +123,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
   const { handleLoadOlder } = actions;
   return (
-    <VirtualizedMessageList
+    <MessageList
       messages={messages}
       groups={groups}
       modelMarkers={modelMarkers}
