@@ -240,11 +240,25 @@ one-line why). Mark status as you go.
 
 ## I. Other flagged candidates (lower priority)
 
-- [ ] **I1 — mattpocock `git-guardrails-claude-code`.** A PreToolUse hook that
-  blocks `git push` / `reset --hard` / `clean -f` / `branch -D` before they run.
-  Decide: adopt as a safety hook (we commit a lot via agents) vs skip.
-- [ ] **I2 — mattpocock `decision-mapping`.** Defer multi-session decisions in an
-  explicit fog-of-war markdown. Decide: idea vs skip.
+- [x] **I1 — mattpocock `git-guardrails-claude-code`. DONE → `skip`** (boxholder
+  call). A narrow tailored hook (block the irreversible work-destroyers +
+  force-push) was defensible and fits the project's mechanical-safeguard ethos,
+  but for this repo the genuinely-scary action is commit-to-main (auto-deploys to
+  prod), which can't be hook-blocked because it's the intended flow; plain
+  `git push` is low-value (deploy is rsync, not push). Boxholder: "you're good at
+  this, don't need extra instructions." Skip.
+- [x] **I2 — mattpocock `decision-mapping`. DONE → `skip`** (nothing to harvest).
+  Its core artifact (a compact git-tracked numbered-ticket map resolved
+  one-per-session) is something we **already do informally** — the harvest
+  backlog itself is one, `launch-worktree-session` is "one ticket = one session,"
+  and cb-plan already has Subplans + Open-design-questions. Its skill machinery is
+  wired to mattpocock's `/grilling` `/domain-modelling` `/prototype` `/to-prd`
+  chain we don't have. The one portable idea — the **fog-of-war / investigate-
+  iteratively-because-you-can't-design-ahead** framing — is the *opposite* of how
+  the boxholder works: they push to plan *more and end-to-end*, not less (see
+  memory `feedback_plan_more_not_less`). cb-plan's "a plan is a complete unit,
+  designed end-to-end" stance already matches them, so there's no gap to fill.
+  Pure skip — no fold-in.
 - [x] **I3 — addyosmani `performance-optimization`. DONE → `fold-in`
   (cb-frontend) + one finding.** Most of it was already covered or N/A: the
   measure-first/profile-then-fix **methodology already lives in cb-debug**
