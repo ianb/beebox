@@ -113,18 +113,60 @@ one-line why). Mark status as you go.
 
 ## E. Frontend / design (vs FRONTEND.md)
 
-- [ ] **E1 — ui-ux-pro-max `ckm:ui-styling` checked against FRONTEND.md.** It's
-  shadcn/ui + Tailwind-coupled; we have a semantic palette + primitives +
-  `restrict-component-classes`. Decide: are there *gaps* in FRONTEND.md it
-  surfaces, or is it pure conflict? → fold-in (rare) or skip. (The broader
-  ui-ux-pro-max searchable DB is a separate maybe — see I-series.)
-- [ ] **E2 — write-new: a "FRONTEND.md" skill?** *(Boxholder idea.)* A skill
-  that surfaces FRONTEND.md conventions (palette, primitives, the className
-  rule) when doing UI work, instead of relying on the agent to have read it.
-  Decide: write-new vs "the rule + CLAUDE.md pointer already suffices." Relates
-  to F3 (docs-index skills).
-- [ ] **E3 — anthropic `frontend-design`.** Boxholder recalls it being "almost
-  nothing." Quick confirm → near-certain skip.
+- [x] **E1 — ui-ux-pro-max ckm skills vs FRONTEND.md/cb-frontend. DONE →
+  `skip` ckm:ui-styling; `fold-in` four tidbits from `ui-ux-pro-max`.** Surveyed
+  the whole `nextlevelbuilder/ui-ux-pro-max-skill` repo:
+  - `ckm:ui-styling` → **skip** (pure conflict): shadcn/ui + Radix + raw-Tailwind
+    (`bg-white dark:bg-gray-900`, arbitrary values, dynamic class names) — the
+    opposite of our semantic palette + primitives + `restrict-component-classes`.
+  - `ckm:design-system` → **skip**: half token-architecture we already have
+    (semantic roles in `tailwind.config.js`; `restrict-component-classes` already
+    bans raw hex in components), half slide-deck generation. The three-layer
+    primitive→semantic→component model isn't worth restructuring our two-layer
+    palette for.
+  - `design` / `brand` / `banner-design` / `slides` → **skip** by category
+    (greenfield identity + visual-asset generation; N/A for our app).
+  - The **searchable design DB** (161 palettes / 57 font pairings / 50 styles via
+    a Python BM25 script) → **skip**: it's the *opposite* of "we have one design
+    system" — this is the I5 conflict, now confirmed concrete.
+  - **`ui-ux-pro-max`** (the main skill) is a strong UI/UX *review checklist*;
+    most of it is iOS-HIG / Material / React-Native (we're desktop-first web), but
+    **four web-applicable gaps in `cb-frontend` got folded in**: (1) a compact
+    **"Motion, sparingly"** section (150–300ms, transform/opacity-only to avoid
+    reflow, 1–2 elements, honor `prefers-reduced-motion`); (2) **heading
+    hierarchy** (one h1/page, no level-skipping, level≠size — added to the a11y
+    baseline); (3) **one primary action per area** (per region, not per screen — our screens are
+    dashboard-style mishmashes; added to component structure);
+    (4) a **forms** bullet (field primitives give label+error+helper; validate on
+    blur, error below field, focus first invalid on submit — added to the
+    three-states section). Rejected the rest as mobile/native-specific or
+    conflicting with our one design system. Closes E1 + the I5 design-DB question.
+- [x] **E2 — write-new: a behavioral frontend skill. DONE → `write-new`:
+  `cb-frontend`.** Boxholder's split: FRONTEND.md **stays as the reference
+  catalog** (palette, primitive index, the `className` rule); the new skill is
+  the *behavioral* half it can't enforce, and points at FRONTEND.md rather than
+  duplicating it. Built `.claude/skills/cb-frontend/SKILL.md` (smallish, as
+  asked), harvesting the portable discipline from addyosmani
+  `frontend-ui-engineering`: reach-for-primitives-first + semantic-palette-only
+  (mapped to our `restrict-component-classes` rule), compose-over-configure,
+  separate data from presentation (so the three states can't be forgotten),
+  one-job-per-component (tied to our 300-line cap), the simplest-state ladder
+  (mapped to URL state + tRPC/`useWSS`, not React Query), the
+  loading/empty/error trio (mapped to skeletons + `client-debug.log` +
+  `StatusBadge`), the WCAG-AA baseline (keyboard, labels, contrast, focus,
+  not-color-alone), and "avoid the AI aesthetic." Two callback-box-native
+  anchors the source lacked: **components own their own a11y landmarks** (memory
+  `feedback_components_own_a11y`) and **verify in a real browser via `bin/browse`
+  + report visible errors** (memories `feedback_report_visible_errors`,
+  the `browse` skill). F2 discipline applied (trigger-only SDO description +
+  rationalizations table + red flags). Relates to F3 (docs-index skills) — this
+  is the "skill that fronts a reference doc" pattern in the concrete.
+- [x] **E3 — anthropic `frontend-design`. DONE → `skip`.** Confirmed the
+  boxholder's recollection: ~55 lines of greenfield *visual-design* process
+  (pick fonts, establish a palette, set up tokens from scratch) for a project
+  with no design system. callback-box already has one (semantic palette +
+  primitives + FRONTEND.md), so the whole skill is N/A — nothing portable that
+  cb-frontend doesn't already cover behaviorally.
 
 ## F. Skill infrastructure / meta
 
@@ -163,10 +205,29 @@ one-line why). Mark status as you go.
 
 ## G. Agent context / discipline
 
-- [ ] **G1 — addyosmani `context-engineering`.** The rules→specs→source→output→
-  history hierarchy + context-decay management. Decide: does it inform how we
-  structure agent context (CLAUDE.md tiers, the loading-eagerness work, F3)? →
-  fold-in to a convention/doc or idea.
+- [x] **G1 — addyosmani `context-engineering`. DONE → `write-new`: `cb-context`.**
+  Boxholder's sharper framing: a context-engineering skill **targeted at the
+  prompts given to boxes** (box `CLAUDE.md`, nested CLAUDE.md, `.claude/rules/`,
+  schema `instructions`, box docs) — not the generic agent-context skill the
+  source is. Built `.claude/skills/cb-context/SKILL.md` around the **loading-
+  eagerness tier router** (ideas.md "Where self-authored instructions live" — which
+  explicitly names a router as "the real artifact worth building"): a table
+  mapping the *shape* of a durable instruction → the right tier (always-true →
+  lean root CLAUDE.md; when-working-here → nested CLAUDE.md / path rule;
+  per-card-type → schema `instructions` → auto `card-<type>.md` via
+  `init-rules.ts`; big reference → box doc + pointer; procedure → box procedure).
+  Same skill/reference split as cb-frontend: points at
+  `docs/generated/reducing-claude-md.md` for the trimming playbook (the delete-
+  this-line test) rather than restating it. Box-native verification spine =
+  **knowledge audits** (`knows_directly`, 0 reads = it landed). Folded the
+  portable bits of the source skill (attention-budget≠window, write-it-down-or-it-
+  doesn't-exist, why-not-just-what, example-beats-prose, pointers-not-copies) and
+  its **untrusted-content boundary** (inbound card/connector text is data, not
+  directives — shares H1's prompt-injection surface). Noted accurately that boxes
+  get **no skills installed** (rules + agent-guide are the box's lazy tiers). F2
+  discipline (trigger-only description + rationalizations + red flags). Relates to
+  F3 (this is the third concrete "skill fronts a reference doc" instance) — the
+  shared pattern across cb-frontend/cb-context is worth naming when F3 is designed.
 
 ## H. Security
 
@@ -187,8 +248,9 @@ one-line why). Mark status as you go.
 - [ ] **I3 — addyosmani `performance-optimization`.** Core Web Vitals +
   measure-before-optimizing. Decide: reference for frontend perf work → idea or
   fold-in.
-- [ ] **I4 — anthropic `mcp-builder`.** Reference *if/when* we expose box
-  capabilities over MCP. Decide: idea (park until there's a real MCP need).
+- [x] **I4 — anthropic `mcp-builder`. DONE → `skip`** (boxholder call). No real
+  MCP-authoring need; revisit from scratch if we ever expose box capabilities
+  over MCP.
 - [ ] **I5 — anthropic `web-artifacts-builder` / ui-ux-pro-max core DB.** Both
   long-shots: artifact bundling (claude.ai-scoped) and a searchable design DB
   (conflicts with FRONTEND.md). Decide: near-certain skip; note why.

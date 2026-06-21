@@ -9,6 +9,7 @@ import { parseViewUrl, resolveImageSrc } from "../../lib/view-url";
 import { bustImageSrc } from "../../lib/file-version";
 import { getApiBase } from "../../api";
 import type { SessionEntry, SessionContentBlock } from "../../api";
+import { stripChatAppTags } from "../../../../core/chat-features";
 
 /**
  * Parse a self-note block out of user-position text. Self-notes are
@@ -67,12 +68,11 @@ function entrySelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
  * Strip system-injected tags from user message text for display.
  */
 export function stripUserDisplayTags(text: string): string {
-  return text
+  return stripChatAppTags(text)
     .replace(/<typed[^>]*>/gi, "")
     .replace(/<\/typed>/gi, "")
     .replace(/<speech[^>]*>/gi, "")
     .replace(/<\/speech>/gi, "")
-    .replace(/<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\n?/gi, "")
     .replace(/<pending-schedules>[\S\s]*?<\/pending-schedules>/gi, "")
     .replace(/<schedule-fired[\S\s]*?<\/schedule-fired>/gi, "")
     .replace(/<attachments>[\S\s]*?<\/attachments>/gi, "");

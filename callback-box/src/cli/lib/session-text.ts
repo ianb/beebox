@@ -6,6 +6,8 @@
  * line cap.
  */
 
+import { stripChatAppTags } from "../../core/chat-features.js";
+
 /** User messages that are internal Claude Code plumbing, not real user input */
 const plumbingPatterns = [
   /^Tool loaded\.$/,
@@ -99,8 +101,8 @@ export function stripSpeechWrappers(text: string): string {
   out = out.replace(/<instructions\b[^>]*>[\S\s]*?<\/instructions>/g, "");
   // Drop self-closing voice-keyword marker tags
   out = out.replace(/<(?:send-message|send-close-message|cancel-message|mic-off|erase-message)\b[^>]*\/>/g, "");
-  // Drop the <chat-app .../> snapshot tag prepended to every user message
-  out = out.replace(/<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)/gi, "");
+  // Drop the <chat-app …> snapshot tag prepended to every user message
+  out = stripChatAppTags(out);
   // Unwrap outer <speech>/<typed> shells, keeping their text content
   out = out.replace(/<\/?(?:speech|typed)\b[^>]*>/g, "");
   return out;

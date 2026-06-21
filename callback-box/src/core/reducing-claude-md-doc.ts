@@ -39,6 +39,27 @@ who isn't there. CLAUDE.md is instructions for an agent, not documentation for a
 person — it doesn't need an intro, a rationale for every rule, or a polished
 narrative. State the rule and move on.
 
+## Keep the strong rules strong
+
+Not every rule is equal, and the file should show it. Most of a CLAUDE.md is
+ordinary statements the agent follows without fuss. A few are *load-bearing*: the
+agent's natural default is wrong, and getting it wrong is costly. Those must
+stand out — and they only stand out if you protect their signal.
+
+- **Emphasis is a budget, not decoration.** Every \`IMPORTANT\` / \`NEVER\` /
+  \`MUST\` you spend devalues the rest. A file where ten rules shout has no
+  loudest rule. Reserve the strong markers for the few you'd be genuinely upset
+  to see violated; leave everything else a plain statement.
+- **Concision *is* emphasis.** A load-bearing rule buried in 300 lines is weak no
+  matter how it's formatted. The surest way to make your few critical rules
+  unmissable is to cut the neutral bulk around them — every line you delete makes
+  the survivors louder. Keeping the file tight and keeping the strong rules
+  strong are the same move, not two.
+- **Mark the rule, not the paragraph.** Emphasize the few words that carry the
+  rule, not a whole block — a bolded paragraph is just noise with extra steps.
+- **Order by importance.** The rule that matters most goes first in its section,
+  not buried mid-list. Lead with what the agent must not get wrong.
+
 ## 1. Cut what the agent already knows or can see
 
 The biggest wins are usually deletions, not relocations:
@@ -75,8 +96,8 @@ needs to be. Compress aggressively:
   paragraph.
 - Use lists and short lines over prose. A bullet is scanned; a paragraph is
   waded through.
-- Reserve emphasis (\`IMPORTANT\`, \`NEVER\`, \`YOU MUST\`) for the few rules that
-  genuinely need it. If everything is emphasized, nothing is.
+- Reserve emphasis for the few rules that genuinely need it (see "Keep the
+  strong rules strong" above) — if everything is emphasized, nothing is.
 
 ## 4. Move separable detail onto a lazier surface
 
