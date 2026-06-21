@@ -11,6 +11,16 @@ const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
 // the `base` option, so all built-in URL handling (assets, HMR, proxies)
 // stays consistent. When run standalone (no VITE_BASE), base="/" and we
 // behave like the original config.
+// React Compiler — auto-memoizes components/hooks so we don't hand-roll
+// useCallback/useMemo (see the cb-frontend skill, "Performance"). On for every Vite build
+// (dev server + the production `vite build` client bundle); set REACT_COMPILER=0
+// to opt out for debugging a suspected compiler issue. target:"18" pairs with
+// the react-compiler-runtime dependency (React 19 ships the runtime; 18 needs
+// the shim). The SSR path (`cb render`) runs through tsx/esbuild, not Vite, so
+// it is deliberately uncompiled — renderToString is a single pass with no
+// re-renders, so memoization is irrelevant there.
+const REACT_COMPILER = process.env.REACT_COMPILER !== "0";
+
 const VITE_BASE = process.env.VITE_BASE || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
 
@@ -35,7 +45,13 @@ const stripBase = (incoming: string) =>
 // https://vitejs.dev/config/
 export default defineConfig({
   base: VITE_BASE,
-  plugins: [react()],
+  plugins: [
+    react(
+      REACT_COMPILER
+        ? { babel: { plugins: [["babel-plugin-react-compiler", { target: "18" }]] } }
+        : undefined,
+    ),
+  ],
   resolve: {
     // Mirror the `@shared/*` path alias from tsconfig.json so Vite
     // resolves value imports at runtime. The matching `@backend/*` alias
