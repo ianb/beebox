@@ -14,7 +14,7 @@ import { formatPosition } from "../src/frontend/src/lib/selection-position.js";
 
 ## All parts present
 
-```
+```ts
 formatPosition({
   section: "body",
   heading: { text: "Proofing the dough", id: "proofing-the-dough" },
@@ -27,7 +27,7 @@ body; heading: Proofing the dough (#proofing-the-dough); paragraph 2; ~line 42
 
 ## No heading above the selection — clause omitted
 
-```
+```ts
 formatPosition({ section: "body", heading: null, paragraph: 3, line: null })
 =>
 body; paragraph 3
@@ -35,7 +35,7 @@ body; paragraph 3
 
 ## Heading and line, no section or paragraph
 
-```
+```ts
 formatPosition({
   section: null,
   heading: { text: "Notes", id: "notes" },
@@ -48,7 +48,7 @@ heading: Notes (#notes); ~line 5
 
 ## Frontmatter selection
 
-```
+```ts
 formatPosition({ section: "frontmatter", heading: null, paragraph: null, line: null })
 =>
 frontmatter
@@ -56,7 +56,7 @@ frontmatter
 
 ## Nothing determinable yields an empty string
 
-```
+```ts
 JSON.stringify(formatPosition({ section: null, heading: null, paragraph: null, line: null }))
 =>
 ""

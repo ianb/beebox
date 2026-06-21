@@ -35,7 +35,7 @@ async function listDirs(root) {
 
 `initBox` creates the full directory tree:
 
-```
+```ts
 const tmp = await makeTmpDir();
 await initBox(tmp, { skipGit: true });
 await listDirs(tmp)
@@ -77,7 +77,7 @@ views
 
 The box marker file contains version metadata:
 
-``` continue
+```ts continue
 const marker = JSON.parse(await fs.readFile(path.join(tmp, BOX_MARKER), "utf-8"));
 marker.version
 => 1.0.0
@@ -85,7 +85,7 @@ marker.version
 
 A properly initialized directory is recognized as a valid box:
 
-``` continue
+```ts continue
 await isValidBox(tmp)
 => true
 ```
@@ -94,7 +94,7 @@ await isValidBox(tmp)
 
 An empty directory is not a valid box:
 
-```
+```ts
 const empty = await makeTmpDir();
 await isValidBox(empty)
 => false
@@ -104,7 +104,7 @@ await isValidBox(empty)
 
 `findBoxRoot` walks up from any subdirectory to find the nearest box root:
 
-```
+```ts
 const box = await makeTmpDir();
 await initBox(box, { skipGit: true });
 const found = await findBoxRoot(path.join(box, "box", "inbox"));
@@ -116,7 +116,7 @@ found === box
 
 `getBoxMetadata` reads the marker file. Running `initBox` again preserves the original created timestamp:
 
-```
+```ts
 const box2 = await makeTmpDir();
 await initBox(box2, { skipGit: true });
 const meta1 = await getBoxMetadata(box2);
@@ -124,7 +124,7 @@ meta1.version
 => 1.0.0
 ```
 
-``` continue
+```ts continue
 await initBox(box2, { skipGit: true });
 const meta2 = await getBoxMetadata(box2);
 meta2.created === meta1.created

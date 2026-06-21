@@ -9,7 +9,7 @@ import { withCallLog, printCalls } from "../src/services/call-log.js";
 
 ## Empty by default
 
-```
+```ts
 const svc = createFakeGoogleCalendar();
 (await svc.listCalendars()).length
 => 0
@@ -17,7 +17,7 @@ const svc = createFakeGoogleCalendar();
 
 ## Pre-loaded calendars
 
-```
+```ts
 const svc = createFakeGoogleCalendar({
   calendars: [
     { id: "primary", summary: "Main", primary: true, accessRole: "owner" },
@@ -30,7 +30,7 @@ const svc = createFakeGoogleCalendar({
 
 ## Pre-loaded events
 
-```
+```ts
 const svc = createFakeGoogleCalendar({
   events: [
     { id: "e1", status: "confirmed", summary: "Meeting" },
@@ -43,26 +43,26 @@ result.items[0]?.summary
 
 ## Inserting events
 
-```
+```ts
 const svc = createFakeGoogleCalendar();
 const evt = await svc.insertEvent("primary", { summary: "New Event" });
 evt.summary
 => New Event
 ```
 
-``` continue
+```ts continue
 evt.id.startsWith("evt-")
 => true
 ```
 
-``` continue
+```ts continue
 svc.events.length
 => 1
 ```
 
 ## Deleting events
 
-```
+```ts
 const svc = createFakeGoogleCalendar({
   events: [
     { id: "e1", status: "confirmed", summary: "Delete Me" },
@@ -74,14 +74,14 @@ svc.events.length
 => 1
 ```
 
-``` continue
+```ts continue
 svc.events[0]?.summary
 => Keep Me
 ```
 
 ## Call logging
 
-```
+```ts
 const svc = withCallLog(createFakeGoogleCalendar());
 await svc.insertEvent("cal1", { summary: "Logged" });
 printCalls(svc.callLog, "insertEvent")

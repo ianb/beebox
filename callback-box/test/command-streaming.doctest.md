@@ -14,7 +14,7 @@ import { executeCommandStreaming } from "../src/webapp/routes/commands.js";
 
 The `ls` command writes output lines via `ctx.writeLine()`, which become `{ type: "output" }` messages. The final message is always `{ type: "result" }`:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 
@@ -41,7 +41,7 @@ result.success
 
 Output lines were emitted before the result:
 
-``` continue
+```ts continue
 const outputLines = messages.filter(m => m.type === "output");
 outputLines.length > 0
 => true
@@ -52,18 +52,18 @@ outputLines[0].text.includes("test.task.card")
 
 The result includes structured data:
 
-``` continue
+```ts continue
 result.data.count
 => 1
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Unknown command returns error result
 
-```
+```ts
 const messages = [];
 const result = await executeCommandStreaming({
   command: "nonexistent-command",
@@ -86,7 +86,7 @@ result.error.includes("nonexistent")
 
 When a command returns `{ success: false }`, the result line carries the error:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 
@@ -105,7 +105,7 @@ result.success
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -113,7 +113,7 @@ await box.cleanup();
 
 Commands that list multiple items emit one output line per item:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 
@@ -145,6 +145,6 @@ resultLines[0].data.count
 => 3
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

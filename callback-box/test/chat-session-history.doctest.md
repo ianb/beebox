@@ -42,7 +42,7 @@ async function cleanupSessionLogs(boxRoot: string, contextDirs: string[]): Promi
 
 A legacy file with `sessionIds: [...]` reads back as entries with no `contextDir`. The migration is lazy — the file isn't rewritten until something appends.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   ".callback-box/chat-session-history.json",
@@ -68,7 +68,7 @@ JSON.stringify(await loadHistory(box.root), null, 2)
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -76,7 +76,7 @@ await box.cleanup();
 
 Once `appendHistory` runs against a v1 file, it writes the new shape. v2 files round-trip unchanged.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   ".callback-box/chat-session-history.json",
@@ -102,7 +102,7 @@ JSON.stringify(parsed, null, 2)
 }
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -110,7 +110,7 @@ await box.cleanup();
 
 A second call with the same id is a no-op.
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "abc" });
 await appendHistory(box.root, { sessionId: "abc" });
@@ -119,7 +119,7 @@ await appendHistory(box.root, { sessionId: "abc" });
 => 1
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -129,7 +129,7 @@ When a session was first added without a `contextDir` (e.g. via the
 registry's `onSessionIdAssigned` hook) and a later call supplies one,
 the existing entry is updated rather than duplicated.
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "abc" });
 await appendHistory(box.root, { sessionId: "abc", contextDir: "store/recipes" });
@@ -144,7 +144,7 @@ JSON.stringify(await loadHistoryEntries(box.root), null, 2)
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -154,7 +154,7 @@ Once a session is bound to a directory, the binding is durable — a
 later call with a different `contextDir` is ignored. Rebinding isn't
 supported in v1.
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "abc", contextDir: "store/recipes" });
 await appendHistory(box.root, { sessionId: "abc", contextDir: "store/todos" });
@@ -163,13 +163,13 @@ await getDirectoryForSession(box.root, "abc")
 => store/recipes
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## getDirectoryForSession returns null for unbound and unknown sessions
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "abc", contextDir: "store/recipes" });
 await appendHistory(box.root, { sessionId: "def" });
@@ -184,7 +184,7 @@ await getDirectoryForSession(box.root, "ghi")
 => null
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -194,7 +194,7 @@ When several sessions are associated with the same directory, the
 most-recent (last appended) wins. Sessions for other directories don't
 interleave into the result.
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "first", contextDir: "store/recipes" });
 await appendHistory(box.root, { sessionId: "other", contextDir: "store/todos" });
@@ -215,7 +215,7 @@ await getLastSessionForDirectory(box.root, "store/never")
 => null
 ```
 
-```cleanup
+```ts cleanup
 await cleanupSessionLogs(box.root, ["store/recipes", "store/todos"]);
 await box.cleanup();
 ```
@@ -225,7 +225,7 @@ await box.cleanup();
 Sessions in the history without a `contextDir` (e.g. plain web chats)
 don't accidentally match any directory query.
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "plain" });
 await appendHistory(box.root, { sessionId: "bound", contextDir: "store/recipes" });
@@ -238,7 +238,7 @@ await getLastSessionForDirectory(box.root, "store/recipes")
 => bound
 ```
 
-```cleanup
+```ts cleanup
 await cleanupSessionLogs(box.root, ["store/recipes"]);
 await box.cleanup();
 ```

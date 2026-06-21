@@ -16,7 +16,7 @@ A procedure with a single shell step runs to completion. The engine
 creates a run directory, commits at each phase boundary, and records
 results in the run card.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/greet.procedure.card", `---
 name: greet
@@ -56,7 +56,7 @@ procedure status: completed
 step status: completed
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -65,7 +65,7 @@ await box.cleanup();
 When a precheck exits with `$CHECK_SKIP`, the step is skipped — not
 failed. The procedure continues to the next step.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/maybe.procedure.card", `---
 name: maybe
@@ -116,7 +116,7 @@ skipped step: skipped = skipped
 runs step: runs = completed
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -126,7 +126,7 @@ When every step skips, the run was a no-op: the run directory is removed
 at completion and no commits are made. Provenance for no-op ticks lives in
 scheduler.jsonl, not in a dir-per-nothing.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/idle.procedure.card", `---
 name: idle
@@ -173,7 +173,7 @@ runs dir contents: ""
 commits: 2
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -182,7 +182,7 @@ await box.cleanup();
 When a precheck exits with a non-zero, non-skip code, the step fails
 and the procedure halts — later steps don't run.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/fail-early.procedure.card", `---
 name: fail-early
@@ -223,7 +223,7 @@ never.txt exists: false
 also.txt exists: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -232,7 +232,7 @@ await box.cleanup();
 Validation shells run after the step's run phase. `severity="warn"`
 lets the procedure continue; `severity="abort"` stops it.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/validate.procedure.card", `---
 name: validate
@@ -283,13 +283,13 @@ still.txt: true
 validate status: warn
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Abort validation stops the procedure
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/abort.procedure.card", `---
 name: abort
@@ -330,13 +330,13 @@ ran.txt: true
 nope.txt: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Dry run previews without executing
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/preview.procedure.card", `---
 name: preview
@@ -388,13 +388,13 @@ output dir empty: true
 mentions steps: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Step filtering with --step
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/multi.procedure.card", `---
 name: multi
@@ -434,13 +434,13 @@ a.txt: false
 b.txt: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Missing procedure returns error
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "nonexistent" });
@@ -451,7 +451,7 @@ success: false
 has error: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -462,7 +462,7 @@ plus 30 days for completed runs, 90 days for failed runs. `cb procedure gc`
 deletes run dirs past their stamp; anyone can edit the attribute to pin or
 extend a specific run.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/stamped.procedure.card", `---
 name: stamped
@@ -516,7 +516,7 @@ completed run expires after: 30d
 failed run status: failed, expires after: 90d
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -525,7 +525,7 @@ await box.cleanup();
 `run-expiry` / `failed-run-expiry` attributes on the procedure definition
 override the defaults; "never" pins every run of that procedure.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/keeper.procedure.card", `---
 name: keeper
@@ -556,13 +556,13 @@ success: true
 expires: never
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Invalid --step returns error
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/steps.procedure.card", `---
 name: steps
@@ -591,6 +591,6 @@ success: false
 mentions available: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

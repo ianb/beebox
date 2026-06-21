@@ -11,13 +11,13 @@ import * as path from "node:path";
 
 ## Basic schedule tag
 
-```
+```ts
 const tags = parseScheduleTags('<schedule in="20m" label="rice timer" alarm="1" announce="check rice">Tell Ian to check the rice</schedule>');
 tags.length
 => 1
 ```
 
-``` continue
+```ts continue
 tags[0].label
 => rice timer
 
@@ -36,7 +36,7 @@ tags[0].durationMs
 
 ## Schedule without alarm or announce
 
-```
+```ts
 const tags = parseScheduleTags('<schedule in="5m" label="break">Take a break</schedule>');
 tags[0].alarm
 => false
@@ -50,7 +50,7 @@ tags[0].durationMs
 
 ## Multiple schedule tags
 
-```
+```ts
 const text = 'Sure! <schedule in="10m" label="first">one</schedule> and <schedule in="30m" label="second">two</schedule>';
 const tags = parseScheduleTags(text);
 tags.length
@@ -65,7 +65,7 @@ tags[1].label
 
 ## Missing "in" attribute is skipped
 
-```
+```ts
 const tags = parseScheduleTags('<schedule label="bad">no duration</schedule>');
 tags.length
 => 0
@@ -73,7 +73,7 @@ tags.length
 
 ## Invalid duration is skipped
 
-```
+```ts
 const tags = parseScheduleTags('<schedule in="abc" label="bad">invalid</schedule>');
 tags.length
 => 0
@@ -81,7 +81,7 @@ tags.length
 
 ## Default label
 
-```
+```ts
 const tags = parseScheduleTags('<schedule in="1m">stuff</schedule>');
 tags[0].label
 => timer
@@ -89,7 +89,7 @@ tags[0].label
 
 ## Duration units
 
-```
+```ts
 parseScheduleTags('<schedule in="30s" label="t">x</schedule>')[0].durationMs
 => 30000
 
@@ -102,7 +102,7 @@ parseScheduleTags('<schedule in="1d" label="t">x</schedule>')[0].durationMs
 
 ## Cancel schedule tags
 
-```
+```ts
 const labels = parseCancelScheduleTags('OK I\'ll cancel it. <cancel-schedule label="rice timer" />');
 labels.length
 => 1
@@ -113,7 +113,7 @@ labels[0]
 
 ## Self-closing cancel without space before slash
 
-```
+```ts
 const labels = parseCancelScheduleTags('<cancel-schedule label="test"/>');
 labels.length
 => 1
@@ -124,7 +124,7 @@ labels[0]
 
 ## No tags returns empty
 
-```
+```ts
 parseScheduleTags("Just a normal response with no tags").length
 => 0
 
@@ -134,7 +134,7 @@ parseCancelScheduleTags("Nothing to cancel here").length
 
 ## Schedule mixed with other content
 
-```
+```ts
 const text = `<speech>I'll set a timer for you.</speech>
 
 <schedule in="15m" alarm="1" label="pasta" announce="pasta is ready">Check the pasta on the stove</schedule>
@@ -155,7 +155,7 @@ tags[0].content
 
 The `schedulesFile` option lets per-thread schedule managers use separate files:
 
-```
+```ts
 const box = await makeTmpBox();
 const fired = [];
 const manager = new ChatScheduleManager(box.root, {
@@ -167,7 +167,7 @@ schedule.label
 => test
 ```
 
-``` continue
+```ts continue
 // Wait for the schedule to fire
 await new Promise(r => setTimeout(r, 200));
 fired.length
@@ -177,14 +177,14 @@ fired[0]
 => test
 ```
 
-``` continue
+```ts continue
 // Verify it persisted to the custom path
 const filePath = path.join(box.root, ".callback-box/thread-schedules/test-thread.json");
 fs.existsSync(filePath)
 => true
 ```
 
-``` cleanup
+```ts cleanup
 manager.stopAll();
 ```
 
@@ -192,7 +192,7 @@ manager.stopAll();
 
 Schedule tags that appear alongside `<chat-response>` tags in Telegram-style output are correctly parsed from the full turn text:
 
-```
+```ts
 const text = `<chat-response>Got it, I'll remind you in 20 minutes</chat-response>
 <schedule in="20m" label="reminder">Remind about the meeting</schedule>`;
 const tags = parseScheduleTags(text);

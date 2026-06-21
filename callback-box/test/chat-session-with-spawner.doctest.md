@@ -38,7 +38,7 @@ import { once } from "node:events";
 the backend. With an override prompt and extra env the fake captures
 both:
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: testPrompt, extraEnv: { CB_TEST_FOO: "foo", CB_TEST_BAR: "bar" }, skipBootstrap: true };
@@ -61,7 +61,7 @@ run !== null && run.startOptions.resumeSessionId
 => undefined
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```
@@ -73,7 +73,7 @@ When the fake emits the init system message with a `session_id`,
 `onSessionIdAssigned` callback. Subsequent runs reuse the id as
 `resume`.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const observed = [];
@@ -102,13 +102,13 @@ observed.join(",")
 
 A new ChatSession in the same box picks up the persisted id:
 
-``` continue
+```ts continue
 const reloaded = new ChatSession(box.root, { backend, skipBootstrap: true });
 reloaded.getSessionId()
 => sess-xyz
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```
@@ -118,7 +118,7 @@ await box.cleanup();
 A session with a custom `sessionFile` writes its id to that file; a
 session pointed at a different `sessionFile` sees a blank slate.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, buildSetupOpts(backend));
@@ -132,7 +132,7 @@ JSON.parse(raw).sessionId
 Reopening with the same `sessionFile` recovers the saved id; a
 different `sessionFile` has none:
 
-``` continue
+```ts continue
 const reopen = new ChatSession(box.root, buildReopenSetupOpts(backend));
 reopen.getSessionId()
 => sess-setup-1
@@ -142,7 +142,7 @@ mainSession.getSessionId()
 => null
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```
@@ -152,7 +152,7 @@ await box.cleanup();
 A full turn with an assistant text block + result event emits
 `turn-text` on completion with the accumulated assistant text.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
@@ -177,7 +177,7 @@ turnText
 
 And the backend received a user turn (one content array per send call):
 
-``` continue
+```ts continue
 run.sent.length
 => 1
 
@@ -185,7 +185,7 @@ run.sent[0][0].type
 => text
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```
@@ -197,7 +197,7 @@ behind it, the close handler auto-drains the queue into a newly
 started run. This recovers from wedged/killed sessions without losing
 the user's in-flight messages.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
@@ -221,7 +221,7 @@ backend.runs.length
 => 2
 ```
 
-``` continue
+```ts continue
 const run2 = backend.runs[1];
 const userTurn = run2.sent[0];
 const text = userTurn[0].text;
@@ -229,7 +229,7 @@ text.includes("second") && text.includes("third")
 => true
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```
@@ -240,7 +240,7 @@ Calling `restart()` ends the current run; the close handler then
 drains any queued messages into a new run, preserving the session
 id. Unlike `stop()`, queued messages survive.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
@@ -257,14 +257,14 @@ backend.runs.length
 => 2
 ```
 
-``` continue
+```ts continue
 const run2 = backend.runs[1];
 const userTurn = run2.sent[0];
 userTurn[0].text.includes("queued after restart")
 => true
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```
@@ -275,7 +275,7 @@ await box.cleanup();
 It clears the queue before closing the run so the close handler
 doesn't surprise the caller by starting a new run.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const opts = { backend, systemPrompt: plainTestPrompt, skipBootstrap: true };
@@ -293,7 +293,7 @@ backend.runs.length
 => 1
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 

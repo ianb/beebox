@@ -17,7 +17,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## readLandmarkFeatures — read from a navigation role
 
-```
+```ts
 const navigation = { label: "Daily dump", symbol: "🎙️", "chat-app": { narration: "on", prose: "off" } };
 JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on","prose":"off"}
@@ -25,7 +25,7 @@ JSON.stringify(readLandmarkFeatures(navigation))
 
 A navigation without a `chat-app` mapping returns an empty map.
 
-```
+```ts
 JSON.stringify(readLandmarkFeatures({ label: "Plain", symbol: "📁" }))
 => {}
 ```
@@ -34,7 +34,7 @@ Unknown features and invalid values are dropped silently (defense in
 depth — the schema rejects them at parse time, but hand-edited cards
 might bypass validation).
 
-```
+```ts
 const navigation = { label: "x", "chat-app": { narration: "on", bogus: "yes", prose: "maybe" } };
 JSON.stringify(readLandmarkFeatures(navigation))
 => {"narration":"on"}
@@ -42,7 +42,7 @@ JSON.stringify(readLandmarkFeatures(navigation))
 
 ## readLandmarkFeaturesForDir — find the landmark in a directory
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/dump/Daily.landmark.card",
@@ -52,27 +52,27 @@ JSON.stringify(await readLandmarkFeaturesForDir(box.root, "store/dump"))
 => {"narration":"on"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 A directory with no landmark card returns null.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/empty/Notes.md", "no landmark here\n");
 await readLandmarkFeaturesForDir(box.root, "store/empty")
 => null
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 A landmark without `chat-app` returns null too — empty seeds and no
 landmark look the same to callers.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/plain/Plain.landmark.card",
@@ -82,6 +82,6 @@ await readLandmarkFeaturesForDir(box.root, "store/plain")
 => null
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```

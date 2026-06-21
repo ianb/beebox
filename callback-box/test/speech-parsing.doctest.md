@@ -14,13 +14,13 @@ console.warn = () => {};
 
 A simple speech tag extracts its text:
 
-```
+```ts
 const segments = parseAllSpeechTags("<speech>Hello there!</speech>");
 segments.length
 => 1
 ```
 
-``` continue
+```ts continue
 segments[0].text
 => Hello there!
 
@@ -32,7 +32,7 @@ segments[0].hasTextBefore
 
 Instructions are extracted from a nested tag and removed from the spoken text:
 
-```
+```ts
 const segments = parseAllSpeechTags(`<speech>Good morning!
 <instructions>Warm and cheerful</instructions>
 </speech>`);
@@ -45,7 +45,7 @@ segments[0].instructions
 
 ## Emotion attribute
 
-```
+```ts
 const segments = parseAllSpeechTags('<speech emotion="happy">Great news!</speech>');
 segments[0].emotion
 => happy
@@ -55,7 +55,7 @@ segments[0].emotion
 
 Valid voices are accepted:
 
-```
+```ts
 const segments = parseAllSpeechTags('<speech voice="coral">Hello</speech>');
 segments[0].voice
 => coral
@@ -63,7 +63,7 @@ segments[0].voice
 
 Invalid voices are silently ignored:
 
-```
+```ts
 const segments = parseAllSpeechTags('<speech voice="unknown">Hello</speech>');
 segments[0].voice
 => undefined
@@ -71,13 +71,13 @@ segments[0].voice
 
 ## Multiple speech segments
 
-```
+```ts
 const segments = parseAllSpeechTags("Some text\n<speech>First</speech>\nMore text\n<speech>Second</speech>");
 segments.length
 => 2
 ```
 
-``` continue
+```ts continue
 segments[0].text
 => First
 
@@ -95,7 +95,7 @@ segments[1].hasTextBefore
 
 Quick check for speech content:
 
-```
+```ts
 hasAssistantSpeech("<speech>Hello</speech>")
 => true
 
@@ -116,7 +116,7 @@ correctly. The TTS pipeline should never end up speaking the literal word
 
 ### Stray duplicate `</instructions>`
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech><instructions>Speak warmly</instructions></instructions>Hello there.</speech>"
 );
@@ -136,7 +136,7 @@ The agent sometimes misspells the instructions tag (`intructions`, missing the
 second "s"). `normalizeInstructionTags` canonicalizes it before parsing, so the
 direction is recovered (not lost) and never leaks into the spoken text.
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech><instructions>Slow and clipped</intructions></instructions>The alarm fired.</speech>"
 );
@@ -156,7 +156,7 @@ When *both* the open and close are typo'd, the whole block still normalizes —
 the instructions are extracted and the prose stays out of the spoken text
 (previously it leaked in as content).
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech name=\"Honey\" override-instructions=\"1\">What a thing to name it.\n<intructions>Quiet, dry, each word careful.</intructions></speech>"
 );
@@ -178,7 +178,7 @@ segs[0].overrideInstructions
 When the agent emits two instructions blocks inside one speech tag, keep
 only the last non-empty one and strip both from the spoken text.
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech><instructions>First note.</instructions>Hello there.<instructions>Second, more specific note.</instructions></speech>"
 );
@@ -194,7 +194,7 @@ segs[0].instructions
 
 Empty instructions blocks are ignored when picking the last one.
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech><instructions>Real note.</instructions>Body.<instructions>   </instructions></speech>"
 );
@@ -208,7 +208,7 @@ Markdoc `{% redacted %}…{% /redacted %}` spans render as hidden-until-tap in
 the chat. The spoken `text` drops them entirely; `displayText` keeps the
 markup so the rendered message still shows the blur.
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech>The answer is {% redacted %}42{% /redacted %} — try it first.</speech>"
 );
@@ -221,7 +221,7 @@ segs[0].displayText
 
 Multiple redacted spans in one speech tag are all dropped:
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech>{% redacted %}one{% /redacted %} and {% redacted %}two{% /redacted %} stay hidden.</speech>"
 );
@@ -232,7 +232,7 @@ segs[0].text
 An unclosed `{% redacted %}` hides everything through the end of the speech —
 dropping just the marker would leak the hidden content:
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech>Before. {% redacted %}secret with no close tag</speech>"
 );
@@ -242,7 +242,7 @@ segs[0].text
 
 A stray close marker is stripped rather than spoken as literal markup:
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech>Oops {% /redacted %} extra close.</speech>"
 );
@@ -253,7 +253,7 @@ segs[0].text
 A speech tag that is entirely redacted yields empty spoken text (the playback
 machine skips the TTS call for it):
 
-```
+```ts
 const segs = parseAllSpeechTags(
   "<speech>{% redacted %}all hidden{% /redacted %}</speech>"
 );
@@ -268,7 +268,7 @@ segs[0].displayText
 
 An optional `name` attribute labels the speaker of a chunk:
 
-```
+```ts
 const segs = parseAllSpeechTags('<speech name="Bob">hi, I am bob!</speech>');
 segs[0].name
 => Bob
@@ -279,7 +279,7 @@ segs[0].text
 
 No `name` attribute leaves it undefined:
 
-```
+```ts
 const segs = parseAllSpeechTags("<speech>plain</speech>");
 segs[0].name
 => undefined
@@ -294,7 +294,7 @@ each chunk with its absolute index (matching parseAllSpeechTags order):
 import { splitSpeechParts } from "../src/frontend/src/lib/speech-parsing.js";
 ```
 
-```
+```ts
 const parts = splitSpeechParts("Intro text <speech>one</speech> mid <speech name=\"Q\">two</speech>");
 parts.map(p => p.type).join(",")
 => text,speech,text,speech
@@ -303,7 +303,7 @@ parts.filter(p => p.type === "speech").map(p => p.index).join(",")
 => 0,1
 ```
 
-``` continue
+```ts continue
 const speechParts = parts.filter(p => p.type === "speech");
 speechParts[1]?.type === "speech" ? speechParts[1].segment.name : "?"
 => Q
@@ -311,7 +311,7 @@ speechParts[1]?.type === "speech" ? speechParts[1].segment.name : "?"
 
 Content with no speech is a single text part:
 
-```
+```ts
 const parts = splitSpeechParts("just prose, nothing spoken");
 parts.length
 => 1

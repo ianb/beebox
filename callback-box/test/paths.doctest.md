@@ -10,7 +10,7 @@ import { parseCardName, buildCardName, isCardFile, BOX_DIRS } from "../src/cli/l
 
 Card files follow the pattern `Name.type.card`. The name can contain dots, but the type is always the last segment before `.card`.
 
-```
+```ts
 parseCardName("Test.memo.card")
 =>
 {
@@ -21,7 +21,7 @@ parseCardName("Test.memo.card")
 
 Compound types work — the type is everything between the last dot-separated segment and `.card`:
 
-```
+```ts
 parseCardName("Meeting_Tomorrow.email-thread.card")
 =>
 {
@@ -32,7 +32,7 @@ parseCardName("Meeting_Tomorrow.email-thread.card")
 
 Returns `null` for strings that aren't valid card filenames:
 
-```
+```ts
 parseCardName("invalid.card")
 => null
 
@@ -47,7 +47,7 @@ parseCardName("only.card")
 
 `buildCardName` is the inverse of `parseCardName`:
 
-```
+```ts
 buildCardName("Test", "memo")
 => Test.memo.card
 
@@ -59,7 +59,7 @@ buildCardName("Meeting_Tomorrow", "email-thread")
 
 `isCardFile` is a simple extension check — any path ending in `.card`:
 
-```
+```ts
 isCardFile("Test.memo.card")
 => true
 
@@ -77,7 +77,7 @@ isCardFile("Test.card.bak")
 
 `BOX_DIRS` defines the standard directory layout of a callback box:
 
-```
+```ts
 BOX_DIRS.inbox
 => box/inbox
 

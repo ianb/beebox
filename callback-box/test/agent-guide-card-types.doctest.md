@@ -16,7 +16,7 @@ import { z } from "zod";
 
 ## Lists each card type, linking to its generated doc when it has instructions
 
-```
+```ts
 const withDoc: CardSchema = cardSchema("memo", { fields: { status: z.string() }, instructions: "How to memo." });
 const noDoc: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
@@ -38,7 +38,7 @@ lines.some((l) => l.includes("widget") && l.includes("docs/generated"))
 
 ## An empty schema list still renders the header (no crash)
 
-```
+```ts
 const lines = cardTypesSection([]);
 lines[0]
 => ## Card Types

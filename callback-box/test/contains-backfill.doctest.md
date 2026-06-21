@@ -14,7 +14,7 @@ const MEMO = (text: string) =>
 
 ## Missing-contains cards produce one pending job card
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/notes/A.memo.card", MEMO("alpha notes"));
 await box.write("store/notes/B.memo.card", MEMO("beta notes"));
@@ -30,7 +30,7 @@ listing.includes("contains-backfill.job.card")
 
 The job card carries the writing rule and the item refs:
 
-``` continue
+```ts continue
 const jobs = (await box.list("box/jobs")).split("\n").filter((f) => f.includes("contains-backfill.job.card"));
 const job = await box.read(jobs[0]!);
 job.includes('source="contains-backfill"')
@@ -45,14 +45,14 @@ job.includes("cb contains update")
 
 ## A pending backfill job blocks queueing another
 
-``` continue
+```ts continue
 await createContainsBackfillJob(box.root)
 => 0
 ```
 
 ## Nothing missing → nothing queued
 
-```
+```ts
 const box2 = await makeTmpBox({ git: true });
 await box2.write(
   "store/notes/Done.memo.card",
@@ -63,6 +63,6 @@ await createContainsBackfillJob(box2.root)
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box2.cleanup();
 ```

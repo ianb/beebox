@@ -9,7 +9,7 @@ import { withCallLog, printCalls } from "../src/services/call-log.js";
 
 ## Empty by default
 
-```
+```ts
 const svc = createFakeGoogleGmail();
 (await svc.listMessages({})).messages.length
 => 0
@@ -17,7 +17,7 @@ const svc = createFakeGoogleGmail();
 
 ## Listing returns id + threadId refs
 
-```
+```ts
 const svc = createFakeGoogleGmail({
   messages: [
     { id: "m1", threadId: "t1" },
@@ -32,7 +32,7 @@ JSON.stringify(result.messages.map(m => m.id))
 
 ## Fetching a message
 
-```
+```ts
 const svc = createFakeGoogleGmail({
   messages: [
     {
@@ -54,14 +54,14 @@ msg.snippet
 => Hello there
 ```
 
-``` continue
+```ts continue
 msg.payload?.headers?.[0]?.value
 => Hi
 ```
 
 ## Missing message throws
 
-```
+```ts
 const svc = createFakeGoogleGmail();
 let err = null;
 await svc.getMessage("missing").catch((e) => { err = e.message; });
@@ -71,7 +71,7 @@ err
 
 ## Attachments are keyed by messageId:attachmentId
 
-```
+```ts
 const svc = createFakeGoogleGmail({
   attachments: new Map([
     ["m1:a1", { data: "ZmlsZQ", size: 4 }],
@@ -84,7 +84,7 @@ att.size
 
 ## Listing labels
 
-```
+```ts
 const svc = createFakeGoogleGmail({
   labels: [
     { id: "INBOX", name: "INBOX", type: "system" },
@@ -101,7 +101,7 @@ Messages passed at construction predate history (no records). `addMessage`
 and `addLabelsToMessage` advance the historyId and record changes, which
 `listHistory` replays from a checkpoint:
 
-```
+```ts
 const svc = createFakeGoogleGmail({
   messages: [{ id: "m0", threadId: "t0" }],
 });
@@ -130,7 +130,7 @@ JSON.stringify(result.history[1]?.labelsAdded?.[0]?.labelIds)
 history — `listHistory` then throws NotFoundError and callers fall back to
 a full list:
 
-``` continue
+```ts continue
 svc.expireHistory();
 let err = null;
 await svc.listHistory({ startHistoryId: result.historyId }).catch((e) => { err = e.message; });
@@ -140,7 +140,7 @@ err
 
 ## Call logging
 
-```
+```ts
 const svc = withCallLog(createFakeGoogleGmail());
 await svc.listMessages({ q: "label:inbox" });
 printCalls(svc.callLog, "listMessages")
@@ -152,14 +152,14 @@ printCalls(svc.callLog, "listMessages")
 The fake assigns sequential `r-fake-N` / `m-fake-N` IDs and stores each
 draft (with the raw MIME) on `.drafts` for inspection.
 
-```
+```ts
 const svc = createFakeGoogleGmail();
 const draft = await svc.createDraft({ raw: "VG86IGFsaWNl" });
 draft.id
 => r-fake-1
 ```
 
-``` continue
+```ts continue
 draft.message.id
 => m-fake-1
 
@@ -176,7 +176,7 @@ svc.drafts[0]?.raw
 When `threadId` is passed it is preserved on the returned draft (so reply
 drafts thread onto an existing conversation).
 
-```
+```ts
 const svc = createFakeGoogleGmail();
 const draft = await svc.createDraft({ raw: "Zm9v", threadId: "t-existing" });
 draft.message.threadId

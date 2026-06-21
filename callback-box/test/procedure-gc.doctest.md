@@ -24,7 +24,7 @@ function runCard(attrs: string): string {
 
 ## Expired runs are deleted; newest, pinned, and unexpired survive
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 
 // alpha: two expired runs — keep-newest saves the second despite expiry
@@ -67,7 +67,7 @@ kept: alpha_2025-02-01T0000, beta_2025-01-01T0000, beta_2026-06-01T0000, gamma_2
 commit: GC procedure runs: removed 2 expired run dir(s)
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -78,7 +78,7 @@ has no completed-at. Once its card mtime is stale — a fresh mtime means
 it may genuinely be running — it expires at started-at plus the failed-run
 default, since crash debris is failure-like.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 
 await box.write("procedure/runs/crash_2025-01-01T0000/run.procedure-run.card",
@@ -98,7 +98,7 @@ print(`removed: ${result.data.removed.join(", ")}`);
 removed: crash_2025-01-01T0000
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -107,7 +107,7 @@ await box.cleanup();
 The same stuck-running card with a fresh mtime is treated as live work
 and left alone, even though its started-at is ancient.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 
 await box.write("procedure/runs/live_2025-01-01T0000/run.procedure-run.card",
@@ -123,13 +123,13 @@ print(`removed: ${result.data.removed.length}`);
 removed: 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Empty and missing runs dirs are fine
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await gcProcedureRuns(ctx);
@@ -138,6 +138,6 @@ print(`success: ${result.success}, removed: ${result.data.removed.length}`);
 success: true, removed: 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

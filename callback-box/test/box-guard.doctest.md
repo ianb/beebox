@@ -26,7 +26,7 @@ function guard(p) {
 
 ## A box that is its own git repo passes
 
-```
+```ts
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "cb-guard-"));
 execSync("git init -q", { cwd: root });
 guard(root)
@@ -35,7 +35,7 @@ guard(root)
 
 ## A directory nested inside another git repo is refused
 
-``` continue
+```ts continue
 const sub = path.join(root, "nested");
 await fs.mkdir(sub);
 guard(sub)
@@ -44,13 +44,13 @@ guard(sub)
 
 ## A path that isn't a git repo at all is refused
 
-``` continue
+```ts continue
 const plain = await fs.mkdtemp(path.join(os.tmpdir(), "cb-guard-plain-"));
 guard(plain)
 => AuditBoxNotGitRepoError
 ```
 
-``` continue
+```ts continue
 await fs.rm(root, { recursive: true, force: true });
 await fs.rm(plain, { recursive: true, force: true });
 ```

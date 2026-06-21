@@ -15,7 +15,7 @@ import { join } from "node:path";
 
 ## PUT creates (with parent dirs) and returns the file's identity
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "PUT",
@@ -37,7 +37,7 @@ typeof res.body.file.etag
 
 ## POST appends; the returned identity moves
 
-``` continue
+```ts continue
 const appended = await ctx.request({
   method: "POST",
   url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
@@ -55,7 +55,7 @@ appended.body.file.etag !== res.body.file.etag
 
 ## A write asserting a stale version conflicts with 412 + current state
 
-``` continue
+```ts continue
 const stale = await ctx.request({
   method: "PUT",
   url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
@@ -83,7 +83,7 @@ fresh.statusCode
 
 ## Create-only (If-None-Match: *) conflicts when the file appeared
 
-``` continue
+```ts continue
 const createOnly = await ctx.request({
   method: "PUT",
   url: "/api/files/store/playground/Playground.attach/sessions/history.jsonl",
@@ -99,7 +99,7 @@ createOnly.body.error
 
 ## Cards and escapes are rejected
 
-``` continue
+```ts continue
 (await ctx.request({ method: "PUT", url: "/api/files/store/notes/A.memo.card", payload: { content: "x" } })).statusCode
 => 403
 
@@ -112,7 +112,7 @@ createOnly.body.error
 
 ## files-commit sweeps the file's card + attach scope, nothing else
 
-``` continue
+```ts continue
 await ctx.seed("store/playground/Playground.doc.card", "---\ntitle: Playground\n---\nbody\n");
 await ctx.seed("store/notes/unrelated.md", "left dirty on purpose\n");
 const commit = await ctx.request({
@@ -139,7 +139,7 @@ status.untracked.some((p) => p.includes("Playground"))
 
 Committing again with nothing changed is a no-op:
 
-``` continue
+```ts continue
 const again = await ctx.request({
   method: "POST",
   url: "/api/files-commit",
@@ -151,7 +151,7 @@ again.body.committed
 
 ## View metadata carries gitStatus until a commit clears it
 
-``` continue
+```ts continue
 await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 await ctx.seed("views/pg.tsx", `
 export const name = "PG";
@@ -169,6 +169,6 @@ JSON.stringify(byPath["store/playground/Playground.attach/sessions/history.jsonl
 => undefined
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

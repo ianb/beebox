@@ -13,7 +13,7 @@ import { createTelegramConnector, processWebhookUpdate, extractMessage } from ".
 
 ## extractMessage — basic field extraction
 
-```
+```ts
 const update = {
   update_id: 1,
   message: {
@@ -29,14 +29,14 @@ result?.senderName
 => Alice Smith
 ```
 
-``` continue
+```ts continue
 result?.text
 => Hello!
 ```
 
 ## extractMessage — skips non-text updates
 
-```
+```ts
 const update = { update_id: 2, message: {
   message_id: 101, date: 1700000000,
   chat: { id: 42, type: "private" },
@@ -47,7 +47,7 @@ extractMessage(update)
 
 ## extractMessage — edited messages
 
-```
+```ts
 const update = {
   update_id: 3,
   edited_message: {
@@ -66,7 +66,7 @@ extractMessage(update)?.text
 
 `processWebhookUpdate()` creates a thread file, appends the message, and commits:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -88,18 +88,18 @@ threadPath
 
 The thread file contains the message:
 
-``` continue
+```ts continue
 const content = await box.read(threadPath);
 content.includes("Hi from Telegram!")
 => true
 ```
 
-``` continue
+```ts continue
 content.includes("sender: Alice")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -107,7 +107,7 @@ await box.cleanup();
 
 The full sync cycle: deletes webhook, polls for updates, re-sets webhook, checks outbound.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -143,24 +143,24 @@ result.success
 
 The missed message was pulled into a thread:
 
-``` continue
+```ts continue
 result.created.length
 => 1
 ```
 
-``` continue
+```ts continue
 result.created[0]?.includes("Bob")
 => true
 ```
 
 The webhook was set to the correct URL:
 
-``` continue
+```ts continue
 tg.webhookUrl
 => https://example.com/webhook/«*»/telegram
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -168,7 +168,7 @@ await box.cleanup();
 
 When a thread file has unsent agent messages, the connector sends them:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -195,21 +195,21 @@ result.success
 
 The agent message was sent:
 
-``` continue
+```ts continue
 tg.sent.length
 => 1
 ```
 
-``` continue
+```ts continue
 tg.sent[0]?.text
 => Hi there!
 ```
 
-``` continue
+```ts continue
 tg.sent[0]?.chatId
 => 999
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

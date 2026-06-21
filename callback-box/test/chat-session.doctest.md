@@ -14,7 +14,7 @@ import * as path from "node:path";
 
 A new ChatSession on an empty box has no session and is idle:
 
-```
+```ts
 const box = await makeTmpBox();
 const session = new ChatSession(box.root);
 print(`sessionId: ${session.getSessionId()}`);
@@ -26,7 +26,7 @@ running: false
 busy: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -34,7 +34,7 @@ await box.cleanup();
 
 Writing a session file before constructing ChatSession loads it:
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = path.join(box.root, ".callback-box");
 await fs.mkdir(dir, { recursive: true });
@@ -47,7 +47,7 @@ session.getSessionId()
 => test-abc-123
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -55,7 +55,7 @@ await box.cleanup();
 
 Invalid JSON in the session file is handled gracefully:
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = path.join(box.root, ".callback-box");
 await fs.mkdir(dir, { recursive: true });
@@ -65,7 +65,7 @@ session.getSessionId()
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -73,7 +73,7 @@ await box.cleanup();
 
 Reset deletes the session file and clears the in-memory session ID:
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = path.join(box.root, ".callback-box");
 await fs.mkdir(dir, { recursive: true });
@@ -94,7 +94,7 @@ exists
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -102,7 +102,7 @@ await box.cleanup();
 
 Reset on a session with no file doesn't throw:
 
-```
+```ts
 const box = await makeTmpBox();
 const session = new ChatSession(box.root);
 session.resetSession();
@@ -110,7 +110,7 @@ session.getSessionId()
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -118,7 +118,7 @@ await box.cleanup();
 
 With no session ID, getHistory returns empty:
 
-```
+```ts
 const box = await makeTmpBox();
 const session = new ChatSession(box.root);
 const history = await session.getHistory();
@@ -129,7 +129,7 @@ sessionId: null
 entries: 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -137,7 +137,7 @@ await box.cleanup();
 
 With a session ID but no actual log file on disk, returns empty entries:
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = path.join(box.root, ".callback-box");
 await fs.mkdir(dir, { recursive: true });
@@ -154,7 +154,7 @@ sessionId: orphan-session
 entries: 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -162,7 +162,7 @@ await box.cleanup();
 
 With no images, the helper returns a single text block unchanged:
 
-```
+```ts
 JSON.stringify(buildContentBlocks({ text: "hello world" }))
 => [{"type":"text","text":"hello world"}]
 ```
@@ -172,7 +172,7 @@ JSON.stringify(buildContentBlocks({ text: "hello world" }))
 An `[imageN]` token in the text is replaced with the matching image block,
 and the surrounding text is split into separate blocks:
 
-```
+```ts
 const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "AAAA" }];
 const blocks = buildContentBlocks({ text: "before [image1] after", images: imgs });
 JSON.stringify(blocks)
@@ -183,7 +183,7 @@ JSON.stringify(blocks)
 
 Images without a matching `[imageN]` token get appended after the text:
 
-```
+```ts
 const imgs = [{ id: 1, mimeType: "image/jpeg", dataBase64: "QQ==" }];
 const blocks = buildContentBlocks({ text: "no token here", images: imgs });
 JSON.stringify(blocks.map((b) => b.type))
@@ -195,7 +195,7 @@ JSON.stringify(blocks.map((b) => b.type))
 A `[image9]` token with no matching attachment stays as literal text
 (rather than being silently dropped):
 
-```
+```ts
 const imgs = [{ id: 1, mimeType: "image/png", dataBase64: "X" }];
 const blocks = buildContentBlocks({ text: "[image9] is orphan [image1] real", images: imgs });
 JSON.stringify(blocks)
@@ -207,7 +207,7 @@ JSON.stringify(blocks)
 Two different images resolve to different blocks at their respective
 token positions:
 
-```
+```ts
 const imgs = [
   { id: 1, mimeType: "image/png", dataBase64: "ONE" },
   { id: 2, mimeType: "image/png", dataBase64: "TWO" },

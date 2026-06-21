@@ -29,7 +29,7 @@ they used a relative or a box-root-absolute path. The moved card's own relative
 links to cards that stayed put are rewritten too, while its `attach/`-prefixed
 self references (scoped to the card) are left untouched.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Engine.doc.card",
@@ -52,7 +52,7 @@ result.success
 
 The card file and its attach directory now live under `store/archive/`:
 
-```continue
+```ts continue
 await box.list("store/archive")
 =>
 store/archive/Engine.attach
@@ -66,7 +66,7 @@ await box.read("store/archive/Engine.attach/photo.jpg")
 The moved card keeps its `attach/` self-ref and gets a recomputed relative link
 to the card that stayed behind:
 
-```continue
+```ts continue
 await box.read("store/archive/Engine.doc.card")
 =>
 ---
@@ -81,7 +81,7 @@ Related: [Priya](../../box/notes/Priya.doc.card)
 The sibling card's relative links — to the card and into its attach dir — are
 recomputed from its own location:
 
-```continue
+```ts continue
 await box.read("box/notes/Priya.doc.card")
 =>
 ---
@@ -93,7 +93,7 @@ See [Engine](../../store/archive/Engine.doc.card) and its [photo](../../store/ar
 
 The absolute links stay absolute, repointed at the new location:
 
-```continue
+```ts continue
 await box.read("box/index.doc.card")
 =>
 ---
@@ -113,7 +113,7 @@ non-built-in type to the cardworks XML loader, which can't parse frontmatter, so
 `cb mv` on a migrated box-local card failed.) Here a `bill` card with an attach
 dir and an inbound ref moves cleanly.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/bills/Water.bill.card",
@@ -133,7 +133,7 @@ result.success
 The card and its attach directory moved, and the inbound absolute ref was
 repointed:
 
-```continue
+```ts continue
 await box.list("store/archive")
 =>
 store/archive/Water.attach
@@ -153,7 +153,7 @@ Unpaid: [Water](/store/archive/Water.bill.card).
 
 Refs carried by Markdoc body tags follow the move in either style.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
 await box.write(
@@ -179,7 +179,7 @@ Rel: {% source ref="../../store/people/dana.person.card" as="y" %}b{% /source %}
 Both the singular `ref:` scalar and `refs:` list entries follow the move, each
 keeping its own style.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/a/Target.doc.card", "---\ntype: doc\ntitle: Target\n---\nbody\n");
 await box.write(
@@ -207,7 +207,7 @@ a relative ref becomes relative to the new location, an absolute (box-root) ref
 stays box-root-absolute. (No leading `./`; that was a cardworks XML-loader
 artifact, gone now that every card is frontmatter.)
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/Scan.capture-session.card", "---\nsession-id: s\n---\n");
 await box.write(
@@ -229,7 +229,7 @@ rel [a](sub/Scan.capture-session.card) abs [b](/store/sub/Scan.capture-session.c
 Moving a directory carries everything under it. References from outside the
 directory — to anything inside it — are rewritten in either style.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/session/scan.capture-session.card", "<capture-session>\n<note>s</note>\n</capture-session>\n");
 await box.write("box/session/photo.image.card", "---\ntype: image\n---\n");
@@ -259,7 +259,7 @@ A card *inside* the moved directory that links *out* of it (by a relative
 path) has that link recomputed from its new location; links to siblings that
 moved with it are unchanged.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
 await box.write("box/session/scan.capture-session.card", "<capture-session>\n<note>s</note>\n</capture-session>\n");
@@ -282,7 +282,7 @@ By [Dana](../../../box/people/dana.person.card), see [scan](scan.capture-session
 A card can be renamed within its directory; refs follow the new basename and
 the attach directory is renamed alongside.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/Old_Name.doc.card", "---\ntype: doc\ntitle: Old\n---\nbody\n");
 await box.write("box/Old_Name.attach/note.txt", "hi");
@@ -307,7 +307,7 @@ link [n](New_Name.attach/note.txt)
 
 ## Dry run makes no changes
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/A.doc.card", "---\ntype: doc\n---\nbody\n");
 await box.write("box/B.memo.card", "---\ntype: memo\nref: /box/A.doc.card\n---\nx\n");
@@ -335,7 +335,7 @@ x
 Several sources and a directory destination move each card (and its attach
 dir) under the destination.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/One.memo.card", "---\ntype: memo\n---\none\n");
 await box.write("box/inbox/Two.memo.card", "---\ntype: memo\n---\ntwo\n");
@@ -354,7 +354,7 @@ store/kept/Two.memo.card
 
 A non-card, non-directory source is rejected.
 
-```
+```ts
 const box = await makeTmpBox();
 const result = await mv(box, { from: "box/notes.txt", to: "store/notes.txt" });
 result.success
@@ -366,7 +366,7 @@ result.error
 
 Moving multiple cards to a single file destination is rejected.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/A.memo.card", "---\ntype: memo\n---\n");
 await box.write("box/B.memo.card", "---\ntype: memo\n---\n");

@@ -14,7 +14,7 @@ import { createFakeClaudeCli } from "../src/services/claude-cli.js";
 
 `GET /api/admin/box-config` returns the current box configuration. An empty box returns defaults:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({ method: "GET", url: "/api/admin/box-config" })
 =>
@@ -25,7 +25,7 @@ await ctx.inject({ method: "GET", url: "/api/admin/box-config" })
 }
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -33,7 +33,7 @@ await ctx.cleanup();
 
 `POST /api/admin/box-config` saves the allowed emails list:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({
   method: "POST",
@@ -53,13 +53,13 @@ await ctx.inject({
 
 The change persists — a subsequent GET returns the saved emails:
 
-``` continue
+```ts continue
 const res = await ctx.request({ method: "GET", url: "/api/admin/box-config" });
 JSON.stringify(res.body.allowedEmails)
 => ["alice@example.com","bob@example.com"]
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -67,7 +67,7 @@ await ctx.cleanup();
 
 Invalid emails are silently filtered out:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({
   method: "POST",
@@ -85,7 +85,7 @@ await ctx.inject({
 }
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -93,14 +93,14 @@ await ctx.cleanup();
 
 The endpoint rejects requests without `allowedEmails`:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "POST", url: "/api/admin/box-config", payload: {} });
 res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -108,7 +108,7 @@ await ctx.cleanup();
 
 Updating `allowedEmails` preserves other config fields like `publicUrl`:
 
-```
+```ts
 const ctx = await makeTestServer();
 const configDir = join(ctx.boxRoot, "config");
 await mkdir(configDir, { recursive: true });
@@ -126,12 +126,12 @@ JSON.stringify(res.body.allowedEmails)
 => ["user@example.com"]
 ```
 
-``` continue
+```ts continue
 res.body.publicUrl
 => https://example.com
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -139,7 +139,7 @@ await ctx.cleanup();
 
 When no Telegram config exists, the status endpoint reports not configured:
 
-```
+```ts
 const ctx = await makeTestServer({
   services: { telegram: createFakeTelegram({ username: "test_bot" }) },
 });
@@ -148,7 +148,7 @@ res.body.configured
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -156,7 +156,7 @@ await ctx.cleanup();
 
 When Telegram config exists and a fake service is injected, we get bot info:
 
-```
+```ts
 const tg = createFakeTelegram({ username: "my_bot", firstName: "MyBot" });
 await tg.setWebhook("https://example.com/webhook/test/telegram");
 const ctx = await makeTestServer({ services: { telegram: tg } });
@@ -169,23 +169,23 @@ res.body.configured
 => true
 ```
 
-``` continue
+```ts continue
 res.body.botUsername
 => my_bot
 ```
 
-``` continue
+```ts continue
 res.body.webhookUrl
 => https://example.com/webhook/test/telegram
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Telegram setup — saves config and validates token
 
-```
+```ts
 const tg = createFakeTelegram({ username: "new_bot", firstName: "NewBot" });
 const ctx = await makeTestServer({ services: { telegram: tg } });
 const res = await ctx.request({
@@ -197,32 +197,32 @@ res.body.success
 => true
 ```
 
-``` continue
+```ts continue
 res.body.botUsername
 => new_bot
 ```
 
 The config file is written:
 
-``` continue
+```ts continue
 const config = JSON.parse(await ctx.read("config/connectors/telegram.secret.json"));
 config.botToken
 => fake:new-token
 ```
 
-``` continue
+```ts continue
 // webhookSecret is a random hex string
 config.webhookSecret.length
 => 64
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Telegram setup — missing bot token
 
-```
+```ts
 const ctx = await makeTestServer({
   services: { telegram: createFakeTelegram({ username: "bot" }) },
 });
@@ -235,13 +235,13 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Telegram disconnect
 
-```
+```ts
 const tg = createFakeTelegram({ username: "bot" });
 await tg.setWebhook("https://example.com/webhook");
 const ctx = await makeTestServer({ services: { telegram: tg } });
@@ -256,12 +256,12 @@ res.body.success
 
 The webhook was deleted:
 
-``` continue
+```ts continue
 tg.webhookUrl
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -269,7 +269,7 @@ await ctx.cleanup();
 
 System admin routes are root-level (not under the box prefix), so we use `rootRequest`:
 
-```
+```ts
 const ctx = await makeTestServer({
   services: { claudeCli: createFakeClaudeCli({ loggedIn: true }) },
 });
@@ -278,13 +278,13 @@ res.body.loggedIn
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Claude Code auth status — not logged in
 
-```
+```ts
 const ctx = await makeTestServer({
   services: { claudeCli: createFakeClaudeCli() },
 });
@@ -293,13 +293,13 @@ res.body.loggedIn
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Claude Code login
 
-```
+```ts
 const ctx = await makeTestServer({
   services: { claudeCli: createFakeClaudeCli() },
 });
@@ -308,13 +308,13 @@ res.body.authUrl
 => https://claude.ai/oauth/authorize?fake=1
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Claude Code logout
 
-```
+```ts
 const cli = createFakeClaudeCli({ loggedIn: true });
 const ctx = await makeTestServer({ services: { claudeCli: cli } });
 await ctx.rootRequest({ method: "POST", url: "/api/admin/claude-logout" });
@@ -322,6 +322,6 @@ cli.loggedIn
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

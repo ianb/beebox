@@ -52,28 +52,28 @@ function back(index: number, paired: number | null = null, text = "", opts: Part
 
 A small PDF fits in one batch:
 
-```
+```ts
 JSON.stringify(planScanBatches(4, 8).map(p => p.globalIndices))
 => [[0,1,2,3]]
 ```
 
 A larger PDF gets split with one-page overlap so any pair straddling a seam still appears in some batch together:
 
-```
+```ts
 JSON.stringify(planScanBatches(20, 8).map(p => p.globalIndices))
 => [[0,1,2,3,4,5,6,7],[7,8,9,10,11,12,13,14],[14,15,16,17,18,19]]
 ```
 
 Exactly batch-size yields one batch:
 
-```
+```ts
 JSON.stringify(planScanBatches(8, 8).map(p => p.globalIndices))
 => [[0,1,2,3,4,5,6,7]]
 ```
 
 Empty PDF yields no batches:
 
-```
+```ts
 JSON.stringify(planScanBatches(0, 8))
 => []
 ```
@@ -82,7 +82,7 @@ JSON.stringify(planScanBatches(0, 8))
 
 When both pages in a pair name each other, the pair is finalized:
 
-```
+```ts
 const pages = new Map<number, ScanPageAnalysis[]>();
 pages.set(0, [photo(0, 1)]);
 pages.set(1, [back(1, 0, "Mom, 1985")]);
@@ -93,7 +93,7 @@ resolved.map(r => `${r.index}:${r.analysis.kind} pair=${r.pairedWith}`).join(" |
 
 When only one side names a partner, the pair does NOT survive — the partner has to reciprocate:
 
-```
+```ts
 const pages2 = new Map<number, ScanPageAnalysis[]>();
 pages2.set(0, [photo(0, 1)]);
 pages2.set(1, [back(1, null, "Mom")]);  // back didn't name page 0
@@ -106,7 +106,7 @@ resolved2.map(r => `${r.index}:pair=${r.pairedWith} conflict=${r.conflict}`).joi
 
 A page that appears in two batches with consistent claims gets the pair resolved cleanly:
 
-```
+```ts
 const pages3 = new Map<number, ScanPageAnalysis[]>();
 // Page 7 appears in batch [0..7] paired with 6, AND in batch [7..14] paired with 6 (impossible — 6 not in second batch).
 // More realistic: batch A pairs 6↔7, batch B sees 7 as singleton (since its partner 6 is in batch A only).
@@ -123,7 +123,7 @@ The analyzer that named a partner wins over the one that didn't.
 
 Photos with mutual back partners become bundles:
 
-```
+```ts
 const pages4 = new Map<number, ScanPageAnalysis[]>();
 pages4.set(0, [photo(0, 1)]);
 pages4.set(1, [back(1, 0, "Family reunion 1985")]);
@@ -142,7 +142,7 @@ back text: Family reunion 1985
 
 A text-bearing back page that nobody paired with becomes an orphan:
 
-```
+```ts
 const pages5 = new Map<number, ScanPageAnalysis[]>();
 pages5.set(0, [photo(0, null)]);
 pages5.set(1, [back(1, null, "Cousin Bill")]);
@@ -158,7 +158,7 @@ The unpartnered photo still becomes a singleton bundle (no back).
 
 ## Bundling: blank pages dropped
 
-```
+```ts
 const pages6 = new Map<number, ScanPageAnalysis[]>();
 pages6.set(0, [photo(0, null)]);
 pages6.set(1, [{ ...back(1), kind: "blank", has_text: false, text_blocks: [] }]);
@@ -171,7 +171,7 @@ const result6 = bundleResolvedPages(resolveScanPages(pages6, 2));
 
 With no context, the prompt is unchanged from the base instructions:
 
-```
+```ts
 const base = buildScanPrompt(null);
 const withContext = buildScanPrompt("Tomas, Noor, Delia are recurring people. Photos from 1965-1985.");
 print(`base contains user context: ${base.includes("boxholder")}`);
@@ -187,7 +187,7 @@ with-context still has page instructions: true
 
 Empty/whitespace context is treated as no context:
 
-```
+```ts
 const blank = buildScanPrompt("   \n\n  ");
 blank === buildScanPrompt(null)
 => true
@@ -197,7 +197,7 @@ blank === buildScanPrompt(null)
 
 A flagged photo or back surfaces in the bundle's flagReasons:
 
-```
+```ts
 const pages7 = new Map<number, ScanPageAnalysis[]>();
 pages7.set(0, [photo(0, 1)]);
 pages7.set(1, [back(1, 0, "?? hard to read", { flag_for_review: true, flag_reason: "Handwriting unclear" })]);

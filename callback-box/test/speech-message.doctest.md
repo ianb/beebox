@@ -13,7 +13,7 @@ import { buildSpeechMessage } from "../src/frontend/src/components/chat/Interact
 
 ## Plain speech, no selections
 
-```
+```ts
 buildSpeechMessage({ text: "found three items", diarized: false, selections: [], attrs: " local-time=\"14:23\"" })
 =>
 <speech local-time="14:23">found three items</speech>
@@ -21,7 +21,7 @@ buildSpeechMessage({ text: "found three items", diarized: false, selections: [],
 
 ## Diarized HQ transcription
 
-```
+```ts
 buildSpeechMessage({ text: "speaker A and speaker B", diarized: true, selections: [], attrs: " local-time=\"14:23\"" })
 =>
 <speech diarized="1" local-time="14:23">speaker A and speaker B</speech>
@@ -29,7 +29,7 @@ buildSpeechMessage({ text: "speaker A and speaker B", diarized: true, selections
 
 ## A pending selection is appended after the spoken text
 
-```
+```ts
 JSON.stringify(buildSpeechMessage({
   text: "look at this part",
   diarized: false,

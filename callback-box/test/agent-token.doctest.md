@@ -12,7 +12,7 @@ import { makeTestServer } from "./helpers/doctest-server.js";
 
 ## Token generation is idempotent and stays put
 
-```
+```ts
 const box = await makeTmpBox();
 const first = getOrCreateAgentToken(box.root);
 const second = getOrCreateAgentToken(box.root);
@@ -28,7 +28,7 @@ persisted: true
 
 Verification accepts exactly `Bearer <token>` and nothing else:
 
-``` continue
+```ts continue
 print(`good: ${verifyAgentBearer(box.root, `Bearer ${first}`)}`);
 print(`wrong token: ${verifyAgentBearer(box.root, `Bearer ${"x".repeat(64)}`)}`);
 print(`no scheme: ${verifyAgentBearer(box.root, first)}`);
@@ -40,7 +40,7 @@ no scheme: false
 missing header: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -49,7 +49,7 @@ await box.cleanup();
 Only spawners (buildScriptEnv) provision the token; a verify against a box
 with no token must fail rather than mint one an attacker could race.
 
-```
+```ts
 const box = await makeTmpBox();
 print(`verify: ${verifyAgentBearer(box.root, "Bearer " + "x".repeat(64))}`);
 const files = await box.list(".callback-box").catch(() => []);
@@ -59,13 +59,13 @@ verify: false
 token file created: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## resolveAgentToken prefers the env var
 
-```
+```ts
 process.env.CB_AGENT_TOKEN = "t".repeat(64);
 const resolved = resolveAgentToken();
 delete process.env.CB_AGENT_TOKEN;
@@ -79,7 +79,7 @@ With auth enabled, an unauthenticated loopback POST is rejected; the same
 request with the box's agent bearer gets through the wall (and then fails
 route validation — proof it reached the handler).
 
-```
+```ts
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
 const ctx = await makeTestServer();
 const anon = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: {} });
@@ -105,7 +105,7 @@ with bearer: 400 body is required
 last-audio with bearer: 504 no-client
 ```
 
-``` cleanup
+```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 await ctx.cleanup();
 ```

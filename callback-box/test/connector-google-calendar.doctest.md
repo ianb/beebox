@@ -23,7 +23,7 @@ sync. The event lands as one `.ics` file with a VTIMEZONE block (DST-aware,
 two SUBCOMPONENTs since New_York observes DST) and a DTSTART that carries
 the TZID parameter.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -52,7 +52,7 @@ result.success
 
 The sync wrote one `.ics` file:
 
-``` continue
+```ts continue
 const files = (await readdir(join(box.root, "store/calendar"))).filter((f) => f.endsWith(".ics"));
 files.length
 => 1
@@ -62,7 +62,7 @@ The file parses cleanly as iCalendar (this is the regression bar — the
 basic-vs-extended date format bug that broke every box's calendar sync
 would have thrown here):
 
-``` continue
+```ts continue
 const ics = await readFile(join(box.root, "store/calendar", files[0]), "utf-8");
 const comp = new ICAL.Component(ICAL.parse(ics));
 comp.name
@@ -72,7 +72,7 @@ comp.name
 It includes a VTIMEZONE for America/New_York with STANDARD + DAYLIGHT
 subcomponents:
 
-``` continue
+```ts continue
 const vtz = comp.getFirstSubcomponent("vtimezone");
 String(vtz?.getFirstPropertyValue("tzid"))
 => America/New_York
@@ -86,7 +86,7 @@ vtz?.getAllSubcomponents("daylight").length
 
 The VEVENT has DTSTART with the TZID parameter and the RRULE we passed in:
 
-``` continue
+```ts continue
 const vevent = comp.getFirstSubcomponent("vevent");
 String(vevent?.getFirstPropertyValue("summary"))
 => Weekly sync
@@ -103,7 +103,7 @@ String(vevent?.getFirstProperty("rrule")?.toICALString()).includes("FREQ=WEEKLY"
 Drop an unrecognized `.ics` into `store/calendar/`. The connector parses it,
 inserts it into the fake calendar, and tracks it in state.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -136,7 +136,7 @@ result.pushed?.length
 
 The fake calendar now has one event:
 
-``` continue
+```ts continue
 calendar.events.length
 => 1
 

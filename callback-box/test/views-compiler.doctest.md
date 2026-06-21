@@ -14,7 +14,7 @@ import { compileView, listViews, buildErrorModule, invalidateView } from "../src
 
 The compiler extracts name, description, dependencies, modes, and rendersCardTypes from `export const` declarations via regex:
 
-```
+```ts
 const tmp = await mkdtemp(join(tmpdir(), "views-test-"));
 const viewsDir = join(tmp, "views");
 await mkdir(viewsDir, { recursive: true });
@@ -36,7 +36,7 @@ meta.name
 => Test View
 ```
 
-``` continue
+```ts continue
 meta.slug
 => test
 
@@ -57,7 +57,7 @@ JSON.stringify(meta.modes)
 
 The compiled output is valid JavaScript with React externalized:
 
-``` continue
+```ts continue
 const { output } = await compileView(join(viewsDir, "test.tsx"));
 output.includes("window.__cbReact")
 => true
@@ -65,7 +65,7 @@ output.includes("window.__cbReact")
 
 The compiled output is a valid ES module with exports:
 
-``` continue
+```ts continue
 output.includes("as default")
 => true
 
@@ -77,7 +77,7 @@ output.includes("name")
 
 Compiling the same file twice returns cached output (same mtime):
 
-``` continue
+```ts continue
 const { output: output2 } = await compileView(join(viewsDir, "test.tsx"));
 output === output2
 => true
@@ -85,7 +85,7 @@ output === output2
 
 After invalidation, a fresh compile occurs:
 
-``` continue
+```ts continue
 invalidateView(join(viewsDir, "test.tsx"));
 const { output: output3 } = await compileView(join(viewsDir, "test.tsx"));
 output === output3
@@ -99,7 +99,7 @@ A view written with real JSX compiles differently per target. The default
 target externalizes React to bare specifiers, so a Node renderer resolves the
 real React from node_modules and shares one instance with `react-dom/server`:
 
-```
+```ts
 const tmpT = await mkdtemp(join(tmpdir(), "views-target-"));
 const viewsDirT = join(tmpT, "views");
 await mkdir(viewsDirT, { recursive: true });
@@ -121,25 +121,25 @@ browserBuild.output.includes("window.__cbReact")
 The browser build never emits a bare `react/jsx-runtime` import; the node build
 does (esbuild's automatic JSX import, left external):
 
-``` continue
+```ts continue
 /from\s*"react\/jsx-runtime"/.test(browserBuild.output)
 => false
 ```
 
-``` continue
+```ts continue
 const nodeBuild = await compileView(viewPathT, { target: "node" });
 /from\s*"react\/jsx-runtime"/.test(nodeBuild.output)
 => true
 ```
 
-``` continue
+```ts continue
 nodeBuild.output.includes("window.__cbReact")
 => false
 ```
 
 The node build carries an inline source map for stack mapping:
 
-``` continue
+```ts continue
 nodeBuild.output.includes("sourceMappingURL=data:application/json")
 => true
 ```
@@ -147,7 +147,7 @@ nodeBuild.output.includes("sourceMappingURL=data:application/json")
 The two targets are cached independently — compiling one never returns the
 other's output (no cross-contamination):
 
-``` continue
+```ts continue
 nodeBuild.output === browserBuild.output
 => false
 ```
@@ -156,7 +156,7 @@ nodeBuild.output === browserBuild.output
 
 When metadata exports are missing, sensible defaults are used:
 
-```
+```ts
 const tmp2 = await mkdtemp(join(tmpdir(), "views-test-"));
 const viewsDir2 = join(tmp2, "views");
 await mkdir(viewsDir2, { recursive: true });
@@ -173,7 +173,7 @@ meta.name
 => minimal
 ```
 
-``` continue
+```ts continue
 meta.slug
 => minimal
 
@@ -188,7 +188,7 @@ JSON.stringify(meta.dependencies)
 
 When compilation fails, `buildErrorModule` creates a valid JS module that renders the error:
 
-```
+```ts
 const errorJs = buildErrorModule("Unexpected token at line 5");
 errorJs.includes("Compile error")
 => false
@@ -204,7 +204,7 @@ errorJs.includes("export default")
 
 `listViews` scans a box's `views/` directory:
 
-```
+```ts
 const tmp3 = await mkdtemp(join(tmpdir(), "views-test-"));
 
 // No views/ directory — returns empty
@@ -213,7 +213,7 @@ empty.length
 => 0
 ```
 
-``` continue
+```ts continue
 const viewsDir3 = join(tmp3, "views");
 await mkdir(viewsDir3, { recursive: true });
 
@@ -242,7 +242,7 @@ views.length
 => 2
 ```
 
-``` continue
+```ts continue
 const names = views.map(v => v.name).sort();
 JSON.stringify(names)
 => ["Dashboard","Summary"]

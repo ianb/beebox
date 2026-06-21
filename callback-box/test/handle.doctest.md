@@ -15,7 +15,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## Resolves the procedure ref and passes items via env
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -61,13 +61,13 @@ JSON.stringify(results.map((r) => ({ category: r.category, outcome: r.outcome })
 => [{"category":"recipes","outcome":"ran"}]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Empty buckets are reported but no procedure runs
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -100,13 +100,13 @@ JSON.stringify({ called, results: results.map((r) => r.outcome) })
 => {"called":false,"results":["no-items"]}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Probable-confidence sidecar markers are not passed as items
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -139,13 +139,13 @@ JSON.stringify(seen)
 => ["box/inbox/triaged/recipes/Item.memo.card"]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Category with no procedure reports `no-procedure`
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/notes/Notes.landmark.card",
@@ -171,13 +171,13 @@ JSON.stringify(results.map((r) => ({ category: r.category, outcome: r.outcome })
 => [{"category":"notes","outcome":"no-procedure"}]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## `_unsure/` is skipped
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/triaged/_unsure/Mystery.memo.card", "<memo/>");
 
@@ -197,7 +197,7 @@ JSON.stringify({ called, buckets: results.length })
 => {"called":false,"buckets":0}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -206,7 +206,7 @@ await box.cleanup();
 The procedure engine and any handler procedures look for this exact
 name; pin it.
 
-```
+```ts
 TRIAGE_ITEMS_ENV
 => TRIAGE_ITEMS
 ```

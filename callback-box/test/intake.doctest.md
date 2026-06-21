@@ -22,7 +22,7 @@ A top-level card in `box/inbox/` gets pulled into `box/inbox/intake/`,
 then (since its filename is already safe) advanced through to
 `box/inbox/staged/`.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Note.memo.card", "<memo/>");
 
@@ -55,7 +55,7 @@ await box.list("box/inbox/staged")
 box/inbox/staged/Note.memo.card
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -64,7 +64,7 @@ await box.cleanup();
 A card with whitespace or shell-unsafe characters gets renamed; the
 renamed file then advances to `staged/`.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Voice Memo (raw).memo.card", "<memo/>");
 
@@ -89,7 +89,7 @@ JSON.stringify({
 }
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -98,7 +98,7 @@ await box.cleanup();
 Items already sitting in `intake/`, `staged/`, or `triaged/` aren't
 re-routed, and items in unrecognized subdirectories are left alone too.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Fresh.memo.card", "<memo/>");
 await box.write("box/inbox/oldbucket/Legacy.memo.card", "<memo/>");
@@ -127,7 +127,7 @@ await box.read("box/inbox/staged/Already.memo.card")
 => <memo/>
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -136,7 +136,7 @@ await box.cleanup();
 `box/inbox/CLAUDE.md`, `MAP.md`, README files, and similar agent-facing
 context don't get swept into intake. Only `*.card` files are routed.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/CLAUDE.md", "# Inbox context");
 await box.write("box/inbox/MAP.md", "# Inbox map");
@@ -154,13 +154,13 @@ await box.read("box/inbox/MAP.md")
 => # Inbox map
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Empty inbox is a no-op
 
-```
+```ts
 const box = await makeTmpBox();
 
 const result = await runIntake({ boxRoot: box.root });
@@ -169,6 +169,6 @@ JSON.stringify(result)
 => {"routed":[],"applied":[],"staged":[]}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```

@@ -63,7 +63,7 @@ async function dirtyChangesHashKeepsRev(): Promise<boolean> {
 
 ## Resolves a `file:` URL under an allowed root
 
-```
+```ts
 (await resolveExternalRef(href, { roots })) === file
 =>
 true
@@ -71,7 +71,7 @@ true
 
 ## Version markers: content hash + git rev for a committed file
 
-```
+```ts
 shape(await buildVersionMarkers(file))
 =>
 sha256:<hash> git:<rev>
@@ -79,7 +79,7 @@ sha256:<hash> git:<rev>
 
 ## An untracked file has only the content hash
 
-```
+```ts
 shape(await buildVersionMarkers(untracked))
 =>
 sha256:<hash>
@@ -87,7 +87,7 @@ sha256:<hash>
 
 ## A dirty edit changes the hash but keeps the git rev
 
-```
+```ts
 await dirtyChangesHashKeepsRev()
 =>
 true
@@ -95,7 +95,7 @@ true
 
 ## A non-`file:` URL is rejected
 
-```
+```ts
 await errName(resolveExternalRef("https://example.com/x", { roots }))
 =>
 ExternalRefError
@@ -103,7 +103,7 @@ ExternalRefError
 
 ## A path outside every allowed root is rejected
 
-```
+```ts
 await errName(resolveExternalRef(`file:${outside}`, { roots }))
 =>
 ExternalRefError
@@ -111,7 +111,7 @@ ExternalRefError
 
 ## A denylisted path (`.git/`) is rejected even under the root
 
-```
+```ts
 await errName(resolveExternalRef(`file:${path.join(root, ".git", "config")}`, { roots }))
 =>
 ExternalRefError

@@ -35,7 +35,7 @@ Body
 
 A view that renders off its `cards` prop produces HTML and exits 0:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/A.memo.card", MEMO_CARD);
 await box.write("box/inbox/B.memo.card", MEMO_CARD);
@@ -53,12 +53,12 @@ r.code
 => 0
 ```
 
-``` continue
+```ts continue
 r.stdout.includes("cards: 2")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -67,7 +67,7 @@ await box.cleanup();
 A view that throws during render exits 1 with the error and a stack that maps
 back to the `.tsx` source (not the compiled output):
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/boom.tsx", `
 export const name = "Boom";
@@ -84,19 +84,19 @@ r.code
 => 1
 ```
 
-``` continue
+```ts continue
 r.stderr.includes("View render failed")
 => true
 ```
 
 The stack names the view source file:
 
-``` continue
+```ts continue
 r.stderr.includes("views/boom.tsx")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -105,7 +105,7 @@ await box.cleanup();
 A view that throws while the module evaluates (not in the component body) gets
 the same source-mapped diagnostics — the import shares the render's error block:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/topthrow.tsx", `
 export const name = "TopThrow";
@@ -121,7 +121,7 @@ r.code
 => 1
 ```
 
-``` continue
+```ts continue
 r.stderr.includes("View render failed")
 => true
 
@@ -129,7 +129,7 @@ r.stderr.includes("views/topthrow.tsx")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -139,7 +139,7 @@ await box.cleanup();
 `adapterFetch`, …) throw a clear error if called during render — that's a view
 bug v1 surfaces rather than silently returning empty:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/early.tsx", `
 export const name = "Early";
@@ -156,30 +156,30 @@ r.code
 => 1
 ```
 
-``` continue
+```ts continue
 r.stderr.includes("readFile() was called during render")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Nonexistent view
 
-```
+```ts
 const box = await makeTmpBox();
 const r = await runViewTest(box.root, ["ghost"]);
 r.code
 => 1
 ```
 
-``` continue
+```ts continue
 r.stderr.includes("View not found: ghost")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -188,7 +188,7 @@ await box.cleanup();
 `--path` sets `params.path`; if the path isn't among the view's selected cards,
 the command warns (but still renders):
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/page.tsx", `
 export const name = "Page";
@@ -202,7 +202,7 @@ r.code
 => 0
 ```
 
-``` continue
+```ts continue
 r.stderr.includes("is not among")
 => true
 
@@ -210,7 +210,7 @@ r.stdout.includes("path: box/inbox/Nope.memo.card")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -219,7 +219,7 @@ await box.cleanup();
 When a dependency glob selects a card that fails to load, the command renders,
 reports it, and exits non-zero unless `--allow-invalid-cards`:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema\n");
 await box.write("views/list.tsx", `
@@ -234,19 +234,19 @@ r.code
 => 1
 ```
 
-``` continue
+```ts continue
 r.stderr.includes("Bad.bogus.card")
 => true
 ```
 
 With the flag it exits 0:
 
-``` continue
+```ts continue
 const ok = await runViewTest(box.root, ["list", "--allow-invalid-cards"]);
 ok.code
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

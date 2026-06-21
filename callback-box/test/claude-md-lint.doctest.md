@@ -32,7 +32,7 @@ function warningLead(relPath: string, chars: number): string {
 
 A small box CLAUDE.md (the real `test1` box is ~467 chars) draws no warning.
 
-```
+```ts
 tier(467)
 =>
 ok
@@ -40,7 +40,7 @@ ok
 
 ## Just under the soft tier stays silent
 
-```
+```ts
 tier(CLAUDE_MD_WARN_CHARS - 1)
 =>
 ok
@@ -48,7 +48,7 @@ ok
 
 ## At the soft tier — a gentle nudge
 
-```
+```ts
 tier(CLAUDE_MD_WARN_CHARS)
 =>
 soft
@@ -56,7 +56,7 @@ soft
 
 ## Still soft just below the firm tier
 
-```
+```ts
 tier(CLAUDE_MD_FIRM_CHARS - 1)
 =>
 soft
@@ -64,7 +64,7 @@ soft
 
 ## At the firm tier — firmer language
 
-```
+```ts
 tier(CLAUDE_MD_FIRM_CHARS)
 =>
 firm
@@ -75,7 +75,7 @@ firm
 The message is a lint-style `warning <path> [claude-md-size] …` line carrying
 the character count, so the agent (or boxholder) sees which file and how big.
 
-```
+```ts
 warningLead("config/CLAUDE.md", 25000)
 =>
 warning  config/CLAUDE.md  [claude-md-size] 25000 chars

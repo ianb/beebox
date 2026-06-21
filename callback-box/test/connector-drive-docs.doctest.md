@@ -55,7 +55,7 @@ function makeDoc(opts: {
 
 A new doc card produces a `.md` file inside the card's attach scope.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -99,7 +99,7 @@ JSON.stringify(await box.read("store/drive/Project_Notes.attach/Project_Notes.md
 
 The card now has status synced and the upstream revision recorded:
 
-``` continue
+```ts continue
 const card = await box.read("store/drive/Project_Notes.gdoc.card");
 card.includes("drive-id: doc-1")
 => true
@@ -115,7 +115,7 @@ An agent-written `contains:` survives the next sync's card rebuild
 (connector templates preserve agent-owned fields), and a sync that
 changes nothing else doesn't rewrite the card:
 
-``` continue
+```ts continue
 await box.write(
   "store/drive/Project_Notes.gdoc.card",
   card.replace("drive-id: doc-1", "contains: Planning notes for the project kickoff.\ndrive-id: doc-1")
@@ -134,7 +134,7 @@ resynced.includes("contains: Planning notes for the project kickoff.")
 
 Comments, footnotes, and inline objects appear as `<item>` entries.
 
-```
+```ts
 const box2 = await makeTmpBox({ git: true });
 await initBox(box2.root);
 box2.commitAll("init box");
@@ -187,7 +187,7 @@ card2.includes("type: images") && card2.includes("count: 2")
 
 When the local `.md` (inside the doc's attach scope) differs from the last-pulled content and remote hasn't changed, the new content is uploaded.
 
-```
+```ts
 const box3 = await makeTmpBox({ git: true });
 await initBox(box3.root);
 box3.commitAll("init box");
@@ -243,7 +243,7 @@ drive3.contentUpdateLog[0]?.content
 
 When both local and remote have changed, push refuses to overwrite. The upstream content is written to a `.remote.md` inside the attach scope and the card status flips to `conflict`.
 
-```
+```ts
 const box4 = await makeTmpBox({ git: true });
 await initBox(box4.root);
 box4.commitAll("init box");
@@ -315,7 +315,7 @@ card4.includes("status: conflict")
 
 While `.remote.md` exists, subsequent syncs don't push the still-unmerged local file.
 
-``` continue
+```ts continue
 // User does nothing — sync again.
 await conn4.sync();
 drive4.contentUpdateLog.length
@@ -339,7 +339,7 @@ drive4.contentUpdateLog[0]?.content
 
 If `getDocument` fails (e.g. the auth token lacks the `documents.readonly` scope), pull still succeeds — markdown is exported via the Drive API and the lossy block falls back to comment count only.
 
-```
+```ts
 const box5 = await makeTmpBox({ git: true });
 await initBox(box5.root);
 box5.commitAll("init box");

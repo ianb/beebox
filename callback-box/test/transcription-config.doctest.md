@@ -17,7 +17,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 With no box: defaults for both fields.
 
-```
+```ts
 const cfg = await loadTranscriptionConfig();
 JSON.stringify(cfg)
 => {"service":"voxtral","hqService":"whisper"}
@@ -25,13 +25,13 @@ JSON.stringify(cfg)
 
 With a box and no config file: same defaults, but read from a missing path.
 
-```
+```ts
 const box = await makeTmpBox();
 JSON.stringify(await loadTranscriptionConfig(box.root))
 => {"service":"voxtral","hqService":"whisper"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -39,20 +39,20 @@ await box.cleanup();
 
 Setting just `service` preserves `hqService` (which falls back to default).
 
-```
+```ts
 const box = await makeTmpBox();
 await updateTranscriptionConfig(box.root, { service: "deepgram" });
 JSON.stringify(await loadTranscriptionConfig(box.root))
 => {"service":"deepgram","hqService":"whisper"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 Setting just `hqService` preserves `service`.
 
-```
+```ts
 const box = await makeTmpBox();
 await updateTranscriptionConfig(box.root, { service: "voxtral" });
 await updateTranscriptionConfig(box.root, { hqService: "voxtral" });
@@ -60,7 +60,7 @@ JSON.stringify(await loadTranscriptionConfig(box.root))
 => {"service":"voxtral","hqService":"voxtral"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -69,13 +69,13 @@ await box.cleanup();
 A pre-existing config file with just `service` should still load — the
 new `hqService` field is optional and defaults to `whisper`.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("config/transcription.json", '{"service":"deepgram"}\n');
 JSON.stringify(await loadTranscriptionConfig(box.root))
 => {"service":"deepgram","hqService":"whisper"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```

@@ -40,7 +40,7 @@ export default function Broken({ cards }) {
 
 ## A mix of good and broken views fails, and names which
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/good.tsx", GOOD_VIEW);
 await box.write("views/broken.tsx", BROKEN_VIEW);
@@ -60,13 +60,13 @@ result.views.find((v) => v.slug === "broken")?.ok
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## A box with no broken views passes
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/good.tsx", GOOD_VIEW);
 
@@ -78,20 +78,20 @@ result.views.length
 => 1
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## A box with no views at all is trivially OK
 
-```
+```ts
 const box = await makeTmpBox();
 const result = await checkViews({ boxRoot: box.root, timeoutMs: 20000 });
 JSON.stringify(result)
 => {"ok":true,"views":[]}
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 </content>

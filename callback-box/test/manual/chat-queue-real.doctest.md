@@ -42,7 +42,7 @@ The flow:
 4. drainQueue calls send → second turn starts → completes
 5. Two `done` events fire; messageQueue is empty; session is idle
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createChatBackend();
 const session = new ChatSession(box.root, {
@@ -83,7 +83,7 @@ busy after both: false
 «*»
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```

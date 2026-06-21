@@ -16,12 +16,12 @@ import { joinBaseAndPath } from "../src/frontend/src/api";
 
 ## In prod (base = "/"), the helper is a no-op
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/", "/api/boxes"))
 => "/api/boxes"
 ```
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/", "/auth/me"))
 => "/auth/me"
 ```
@@ -29,40 +29,40 @@ JSON.stringify(joinBaseAndPath("/", "/auth/me"))
 A path missing its leading slash gets one (defensive — shouldn't happen but
 shouldn't break either).
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/", "api/boxes"))
 => "/api/boxes"
 ```
 
 ## Under the dev router (base = "/main/"), paths are prefixed
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/main/", "/api/boxes"))
 => "/main/api/boxes"
 ```
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/main/", "/auth/me"))
 => "/main/auth/me"
 ```
 
 ## Base without trailing slash is accepted
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/main", "/api/boxes"))
 => "/main/api/boxes"
 ```
 
 ## A worktree-named base works the same
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/feature-x/", "/api/boxes"))
 => "/feature-x/api/boxes"
 ```
 
 ## No double slash when path is already absolute
 
-```
+```ts
 JSON.stringify(joinBaseAndPath("/main/", "api/boxes"))
 => "/main/api/boxes"
 ```

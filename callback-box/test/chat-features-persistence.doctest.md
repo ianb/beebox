@@ -19,13 +19,13 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## Reading from an unknown session
 
-```
+```ts
 const box = await makeTmpBox();
 await getFeaturesForSession(box.root, "sess-1")
 => null
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -35,7 +35,7 @@ await box.cleanup();
 This matters for the agent-delta path: the agent might emit a
 `<chat-app>` mutation in its first turn, before any explicit toggle.
 
-```
+```ts
 const box = await makeTmpBox();
 await updateFeaturesForSession(box.root, {
   sessionId: "sess-1",
@@ -45,7 +45,7 @@ JSON.stringify(await getFeaturesForSession(box.root, "sess-1"))
 => {"narration":"on"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -54,7 +54,7 @@ await box.cleanup();
 Only the keys passed to `updateFeaturesForSession` change; existing
 keys not in the update are preserved.
 
-```
+```ts
 const box = await makeTmpBox();
 await updateFeaturesForSession(box.root, {
   sessionId: "sess-1",
@@ -68,7 +68,7 @@ JSON.stringify(await getFeaturesForSession(box.root, "sess-1"))
 => {"narration":"on","prose":"on"}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -77,7 +77,7 @@ await box.cleanup();
 Existing sessions added via `appendHistory` keep their `contextDir` —
 updating features doesn't disturb it, and vice versa.
 
-```
+```ts
 const box = await makeTmpBox();
 await appendHistory(box.root, { sessionId: "sess-1", contextDir: "store/recipes" });
 await updateFeaturesForSession(box.root, {
@@ -89,6 +89,6 @@ JSON.stringify(entries[0])
 => {"id":"sess-1","contextDir":"store/recipes","features":{"narration":"on"}}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```

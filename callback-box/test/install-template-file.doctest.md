@@ -34,7 +34,7 @@ async function readVersions(box) {
 
 A file that doesn't exist gets written and recorded:
 
-```
+```ts
 const box = await makeBox();
 const result = await installTemplateFile({
   boxRoot: box,
@@ -45,12 +45,12 @@ result.outcome
 => fresh
 ```
 
-``` continue
+```ts continue
 await fs.readFile(path.join(box, "config/calendar.guide.card"), "utf-8")
 => v1
 ```
 
-``` continue
+```ts continue
 const versions = await readVersions(box);
 Object.keys(versions)
 => [
@@ -62,7 +62,7 @@ Object.keys(versions)
 
 Re-running with the same template content is a no-op:
 
-```
+```ts
 const box = await makeBox();
 await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
 const result = await installTemplateFile({
@@ -78,7 +78,7 @@ result.outcome
 
 The boxholder hasn't touched the file since we installed it; a new template version pushes through cleanly:
 
-```
+```ts
 const box = await makeBox();
 await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
 const result = await installTemplateFile({
@@ -90,14 +90,14 @@ result.outcome
 => overwritten
 ```
 
-``` continue
+```ts continue
 await fs.readFile(path.join(box, "config/x.card"), "utf-8")
 => v2
 ```
 
 The recorded hash updated to v2:
 
-``` continue
+```ts continue
 const versions = await readVersions(box);
 versions["config/x.card"].sha256.length
 => 64
@@ -107,7 +107,7 @@ versions["config/x.card"].sha256.length
 
 When the local file differs from the recorded hash, we don't overwrite — we park the new template for the user to review:
 
-```
+```ts
 const box = await makeBox();
 await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
 await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
@@ -122,14 +122,14 @@ result.outcome
 
 The user's edit is preserved:
 
-``` continue
+```ts continue
 await fs.readFile(path.join(box, "config/x.card"), "utf-8")
 => user edit
 ```
 
 The new template sits in `_template-updates/` mirroring the original relpath verbatim — so the copy-back-to-accept path is obvious:
 
-``` continue
+```ts continue
 result.writtenAt
 => config/_template-updates/config/x.card
 
@@ -139,7 +139,7 @@ await fs.readFile(path.join(box, result.writtenAt), "utf-8")
 
 And the recorded hash is **not** updated (so if the user copies the parked version into place later, the next install can recognise it and overwrite cleanly):
 
-``` continue
+```ts continue
 const versions = await readVersions(box);
 const hashBefore = versions["config/x.card"].sha256;
 const result2 = await installTemplateFile({
@@ -156,7 +156,7 @@ versions2["config/x.card"].sha256 === hashBefore
 
 A box that was installed before the version tracker existed has files but no `template-versions.json` entry. If local matches the new template, we silently adopt the hash:
 
-```
+```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, "config"), { recursive: true });
 await fs.writeFile(path.join(box, "config/x.card"), "v1\n");
@@ -169,7 +169,7 @@ result.outcome
 => unchanged
 ```
 
-``` continue
+```ts continue
 const versions = await readVersions(box);
 versions["config/x.card"].sha256.length
 => 64
@@ -177,7 +177,7 @@ versions["config/x.card"].sha256.length
 
 But if local doesn't match (could be user-edited or an old template version we can't recognise), we park — the conservative call:
 
-```
+```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, "config"), { recursive: true });
 await fs.writeFile(path.join(box, "config/x.card"), "mystery content\n");
@@ -194,7 +194,7 @@ result.outcome
 
 Guide templates regenerate their `created-at` timestamps every install. With a `normalize` function we strip the volatile fields before hashing, so reinstalls don't think the user edited the file:
 
-```
+```ts
 const box = await makeBox();
 const stripTs = (s) => s.replace(/ts="[^"]*"/g, "");
 await installTemplateFile({
@@ -217,7 +217,7 @@ result.outcome
 
 `pruneStaleTemplateUpdates` deletes files in `config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone:
 
-```
+```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, "config/_template-updates"), { recursive: true });
 const oldFile = path.join(box, "config/_template-updates/old.card");
@@ -237,21 +237,21 @@ removed
 
 The recent file survives:
 
-``` continue
+```ts continue
 await fs.access(newFile).then(() => true).catch(() => false)
 => true
 ```
 
 The old file is gone:
 
-``` continue
+```ts continue
 await fs.access(oldFile).then(() => true).catch(() => false)
 => false
 ```
 
 When `_template-updates/` doesn't exist, prune is a silent no-op:
 
-```
+```ts
 const box = await makeBox();
 const removed = await pruneStaleTemplateUpdates(box);
 removed
@@ -260,7 +260,7 @@ removed
 
 Empty subdirectories are swept after files:
 
-```
+```ts
 const box = await makeBox();
 const subdir = path.join(box, "config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });
@@ -276,7 +276,7 @@ await fs.access(subdir).then(() => true).catch(() => false)
 
 A subdir that still holds a non-stale file is left in place — the sweep is best-effort and silent, so a non-empty directory is not an error:
 
-```
+```ts
 const box = await makeBox();
 const subdir = path.join(box, "config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });

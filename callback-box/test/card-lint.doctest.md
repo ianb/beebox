@@ -62,7 +62,7 @@ const ctx: LoadCardContext = {
 
 ## Frontmatter cards that satisfy their schema lint clean
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/inbox/email/thread-x.email-thread.card",
@@ -85,7 +85,7 @@ result.filesChecked
 
 ## Schema violations in frontmatter cards surface as lint errors
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/inbox/email/broken.email-thread.card",
@@ -108,7 +108,7 @@ A key the schema doesn't declare is stripped on load, so the card still loads,
 renders, and indexes. Lint surfaces it as a warning (not an error) so it gets
 cleaned off disk eventually without blocking commits.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/inbox/notes/drift.doc.card",
@@ -133,7 +133,7 @@ refs are warnings because they commonly arise from legitimate operations
 (referents being moved, archived, trashed, or hand-deleted), and treating
 each as a hard error would block commits on any box with accumulated drift.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/inbox/email/thread-x/thread.email-thread.card",
@@ -160,7 +160,7 @@ past 200 characters the writer is summarizing instead. Warning-level so the
 nudge reaches agents (the PostToolUse hook surfaces warnings) without
 blocking commits.
 
-```
+```ts
 const box = await makeTmpBox();
 const longContains = "x".repeat(220);
 await box.write(
@@ -192,7 +192,7 @@ Ref paths follow the same convention as frontmatter refs: leading `/`
 is box-root-absolute (the convention recommended by `record.tsx`'s
 instructions); bare paths are resolved relative to the source card.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Meeting.doc.card",
@@ -217,7 +217,7 @@ result.results[0]!.warnings[0]!.message
 A body Markdoc tag whose `ref` resolves to an existing target produces
 no warning, same as a resolved frontmatter ref.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/people/dana.person.card",
@@ -246,7 +246,7 @@ loader semantics the walk replaced.
 A versioned ref to an existing target lints clean — the `@1.2.3` is not treated
 as part of the filename:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
 await box.write(
@@ -264,7 +264,7 @@ result.totalWarnings
 An `attach/` ref resolving into the card's attach scope is clean; a missing one
 in the same scope warns:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Note.doc.card",
@@ -288,7 +288,7 @@ There's no XML loader fallback anymore: a `.card` with frontmatter whose
 filename type isn't a registered schema (a typo, or a box-local type the test
 ctx doesn't include) is surfaced as a non-blocking warning rather than failing.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "box/inbox/Note.unknowntype.card",
@@ -309,7 +309,7 @@ A `.card` with no frontmatter block at all is malformed (every card is
 frontmatter now). It's surfaced as a warning — visible, but non-blocking so one
 stray card doesn't brick a box's pre-commit/automation:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Broken.memo.card", "this is not a frontmatter card\n");
 const result = await lintCardsDispatch(
@@ -331,7 +331,7 @@ result.results[0]!.warnings[0]!.message
 Commentary is attach-only — it carries no target field; bare `{% source %}`
 anchors point at the containing host card.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/review/Plan.attach/Plan.commentary.card",
@@ -351,7 +351,7 @@ Commentary no longer has `defaultHref`/`defaultRef`/`targets`. A card still
 carrying one (pre-attach drift) loads fine — the key is stripped — and surfaces
 as an unknown-key warning so it gets cleaned off disk.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/review/Stale.commentary.card",
@@ -374,7 +374,7 @@ Markdoc validation runs on commentary bodies (it does not run elsewhere). A
 `{% source %}` with neither `ref` nor `href` points at the containing host card
 and is allowed.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/review/RefFree.commentary.card",
@@ -395,7 +395,7 @@ carry a `sha256:<hex>` marker (it is compared against the live file's hash). A
 well-formed card lints clean; a non-`file:` href or a malformed `version` is an
 error. Whether the href resolves on this machine is *not* checked here.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/review/Good.extfile.card",
@@ -411,7 +411,7 @@ result.totalErrors
 
 A non-`file:` href is an error:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/review/BadHref.extfile.card",
@@ -427,7 +427,7 @@ result.results[0]!.errors[0]!.message.includes("must be a file: URL")
 
 A malformed `version` (no `sha256:` marker) is an error:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/review/BadVer.extfile.card",
@@ -448,7 +448,7 @@ card-lint no longer hardcodes which types get extra validation — it calls
 (setup) errors when `mode: forbidden`; a card that trips it surfaces the hook's
 message, and a card that doesn't lints clean.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/Bad.gadget.card",

@@ -21,7 +21,7 @@ function userEntry(uuid: string, text: string): SessionEntry {
 
 ## Empty pending → server messages pass through
 
-```
+```ts
 const server = [userEntry("s1", "hello")];
 const result = reconcilePending({ serverMessages: server, pendingMessages: [] });
 print(`messages: ${result.messages.length}`);
@@ -33,7 +33,7 @@ pending: 0
 
 ## Pending message that the server has caught up to → dropped
 
-```
+```ts
 const server = [userEntry("s1", "<typed>hi there</typed>")];
 const pending = [userEntry("p1", "<typed>hi there</typed>")];
 const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
@@ -46,7 +46,7 @@ pending: 0
 
 ## Pending message not yet on the server → re-appended, kept pending
 
-```
+```ts
 const server = [userEntry("s1", "<typed>old</typed>")];
 const pending = [userEntry("p1", "<typed>new</typed>")];
 const result = reconcilePending({ serverMessages: server, pendingMessages: pending });
@@ -70,7 +70,7 @@ sticks around forever after the queued turn completes.
 This is the regression behind the "Agent is busy — your message is
 queued" indicator that never clears.
 
-```
+```ts
 const server = [userEntry(
   "s1",
   '<typed user="Ian" user-email="ian@example.com" local-time="9:00 AM">hello world</typed>',
@@ -94,7 +94,7 @@ a single send. So if the user typed the same message twice while busy,
 the resulting server entry contains the text twice. Both pending
 entries should drop.
 
-```
+```ts
 const server = [userEntry(
   "s1",
   '<typed local-time="9:00 AM">say hi</typed>\n\n<typed local-time="9:00 AM">say hi</typed>',

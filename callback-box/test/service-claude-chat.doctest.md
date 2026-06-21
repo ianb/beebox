@@ -19,7 +19,7 @@ import { createFakeChatBackend } from "../src/services/claude-chat.js";
 Every `start()` call records its options on the returned run, so
 tests can assert what would have been passed to the SDK:
 
-```
+```ts
 const backend = createFakeChatBackend();
 const run = backend.start({
   cwd: "/tmp/box",
@@ -51,7 +51,7 @@ backend.lastRun() === run
 Tests push SDK messages onto the run's `messages` iterable via the
 `emit*` helpers. Callers (like `ChatSession`) consume the iterable.
 
-```
+```ts
 const backend = createFakeChatBackend();
 const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 
@@ -92,7 +92,7 @@ received[2].type
 Each `send(content)` call appends to `run.sent` — the test asserts
 on what content blocks the caller pushed.
 
-```
+```ts
 const backend = createFakeChatBackend();
 const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 
@@ -116,7 +116,7 @@ returns. `interrupt()` is a no-op on the fake other than flipping
 `interrupted`; production tests typically just observe whether
 `ChatSession.interrupt()` reached the backend.
 
-```
+```ts
 const backend = createFakeChatBackend();
 const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 
@@ -136,7 +136,7 @@ run.closed
 => true
 ```
 
-```
+```ts
 const backend = createFakeChatBackend();
 const run = backend.start({ cwd: "/tmp", systemPrompt: "x", env: {} });
 

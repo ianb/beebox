@@ -18,7 +18,7 @@ import { createIntakeJobsForUnjobbed } from "../src/cli/commands/wakeup.js";
 When there are card files in `box/inbox/` that aren't referenced by any
 existing job, an intake job gets created:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -51,7 +51,7 @@ Running the scan again is a no-op: the YAML `- ref:` lines in the job
 created above are collected, so the same items aren't re-jobbed (this
 regressed once when ref collection only understood legacy XML `ref=""`):
 
-``` continue
+```ts continue
 await createIntakeJobsForUnjobbed(box.root)
 => 0
 ```
@@ -60,7 +60,7 @@ await createIntakeJobsForUnjobbed(box.root)
 
 If a pending job already references an inbox item, it's not double-counted:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -84,7 +84,7 @@ count
 
 Capture sessions, images, and audio cards get their own low-priority job:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -119,7 +119,7 @@ allContent.includes("snap.capture-session.card")
 Items in `box/inbox/feedback/` have their own pipeline and are not
 picked up for intake:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -136,7 +136,7 @@ count
 
 ### Returns 0 for empty inbox
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -153,7 +153,7 @@ declared `inboxPaths` are picked up, and the resulting intake job
 is tagged `source="X"` so the same wakeup's reactor (with the
 matching `sourceFilter`) processes it.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");

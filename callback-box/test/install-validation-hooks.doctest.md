@@ -23,7 +23,7 @@ async function makeBox() {
 
 ## Fresh install — writes both files
 
-```
+```ts
 const box = await makeBox();
 const changed = await installValidationHooks(box);
 changed.sort()
@@ -35,7 +35,7 @@ changed.sort()
 
 The settings file has a single PostToolUse entry with the cb path embedded:
 
-``` continue
+```ts continue
 const settings = JSON.parse(
   await fs.readFile(path.join(box, ".claude/settings.json"), "utf-8")
 );
@@ -51,7 +51,7 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 
 The pre-commit hook is executable and includes the manager marker:
 
-``` continue
+```ts continue
 const hookPath = path.join(box, ".git/hooks/pre-commit");
 const hookBody = await fs.readFile(hookPath, "utf-8");
 hookBody.includes("# callback-box validation hook (managed)")
@@ -64,7 +64,7 @@ const stat = await fs.stat(hookPath);
 
 ## Idempotent — second run changes nothing
 
-```
+```ts
 const box = await makeBox();
 await installValidationHooks(box);
 const second = await installValidationHooks(box);
@@ -76,7 +76,7 @@ second
 
 Existing user settings under unrelated top-level keys are preserved verbatim:
 
-```
+```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, ".claude"), { recursive: true });
 await fs.writeFile(
@@ -101,7 +101,7 @@ settings.model
 
 The validation hook was added alongside:
 
-``` continue
+```ts continue
 settings.hooks.PostToolUse[0].matcher
 => Edit|Write|MultiEdit
 ```
@@ -110,7 +110,7 @@ settings.hooks.PostToolUse[0].matcher
 
 A user-installed PostToolUse hook for a different matcher (or different command) stays alongside ours:
 
-```
+```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, ".claude"), { recursive: true });
 await fs.writeFile(
@@ -135,7 +135,7 @@ settings.hooks.PostToolUse.length
 
 User's entry is still there, untouched:
 
-``` continue
+```ts continue
 const userEntry = settings.hooks.PostToolUse.find((e) => e.matcher === "Bash");
 userEntry.hooks[0].command
 => /usr/bin/true
@@ -145,7 +145,7 @@ userEntry.hooks[0].command
 
 If the existing settings file references a stale cb path (the old `validate "$f"` style), `installValidationHooks` rewrites the command in place rather than duplicating the entry:
 
-```
+```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, ".claude"), { recursive: true });
 await fs.writeFile(
@@ -178,7 +178,7 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 
 If `.git/` doesn't exist (e.g. a `--skip-git` box, or a non-box directory), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
 
-```
+```ts
 const box = await fs.mkdtemp(path.join(os.tmpdir(), "cb-hooks-no-git-"));
 const changed = await installValidationHooks(box);
 changed
@@ -189,7 +189,7 @@ changed
 
 No phantom `.git/` directory was created:
 
-``` continue
+```ts continue
 await fs.access(path.join(box, ".git")).then(() => true).catch(() => false)
 => false
 ```
@@ -198,7 +198,7 @@ await fs.access(path.join(box, ".git")).then(() => true).catch(() => false)
 
 A pre-commit hook that doesn't carry our marker is the user's own and stays put:
 
-```
+```ts
 const box = await makeBox();
 const hookPath = path.join(box, ".git/hooks/pre-commit");
 await fs.writeFile(hookPath, "#!/bin/sh\necho user hook\n");
@@ -215,7 +215,7 @@ changed.includes(".git/hooks/pre-commit")
 
 The user's hook is unchanged:
 
-``` continue
+```ts continue
 await fs.readFile(hookPath, "utf-8")
 => #!/bin/sh
 echo user hook

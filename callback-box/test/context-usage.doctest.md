@@ -19,7 +19,7 @@ const turn = (inputTokens, cacheCreationInputTokens, cacheReadInputTokens) => ({
 With caching, `input_tokens` alone (5) wildly undercounts the real 41,172 the
 turn actually loaded.
 
-```
+```ts
 loadedContextTokens(turn(5, 24456, 16711))
 => 41172
 ```
@@ -29,7 +29,7 @@ loadedContextTokens(turn(5, 24456, 16711))
 The first turn is the baseline; later turns grow as tool-reads accumulate. Peak
 is the max, added is `peak − initial`.
 
-```
+```ts
 const stats = summarizeContextUsage([
   turn(5, 38534, 0),     // turn 0 — baseline 38,539
   turn(10, 0, 38539),    // turn 1 — flat (cached), 38,549
@@ -45,7 +45,7 @@ JSON.stringify(stats)
 When there's only the baseline turn, peak equals initial and added is zero — the
 report collapses this to just the baseline.
 
-```
+```ts
 JSON.stringify(summarizeContextUsage([turn(5, 24456, 16711)]))
 => {"initialTokens":41172,"peakTokens":41172,"addedTokens":0,"turnCount":1}
 ```
@@ -54,7 +54,7 @@ JSON.stringify(summarizeContextUsage([turn(5, 24456, 16711)]))
 
 An empty or unreadable session has nothing to report.
 
-```
+```ts
 summarizeContextUsage([])
 => null
 ```

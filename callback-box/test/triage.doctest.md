@@ -18,7 +18,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 A landmark with a `triage` destination becomes a category; landmarks
 without one are ignored.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -72,7 +72,7 @@ JSON.stringify(categories.map((c) => ({ name: c.name, dir: c.dir, rules: c.rules
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -82,7 +82,7 @@ The triage agent's decisions are applied verbatim for `confident` and
 `probable`. The file moves from `inbox/staged/` to
 `inbox/triaged/<category>/`.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -124,13 +124,13 @@ await box.read("box/inbox/triaged/recipes/Bread.memo.card")
 => <memo>flour, water, salt</memo>
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Probable decisions drop a review marker
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -164,7 +164,7 @@ Triage confidence: probable
 Reason: Vague ingredient mention.
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -173,7 +173,7 @@ await box.cleanup();
 A `guess`-level decision moves the file into `_unsure/` and writes a
 question card naming the candidate categories.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "store/recipes/Recipes.landmark.card",
@@ -240,19 +240,19 @@ yaml.includes("id: _other")
 => true
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Empty staged is a no-op
 
-```
+```ts
 const box = await makeTmpBox();
 const result = await runTriage({ boxRoot: box.root, decide: async () => ({ decisions: [] }) });
 JSON.stringify({ empty: result.empty, decisions: result.decisions.length })
 => {"empty":true,"decisions":0}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```

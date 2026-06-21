@@ -22,7 +22,7 @@ Test memo content
 A dependency glob selecting a card returns it as a `ViewCard`, with non-card
 matches arriving in `files` as metadata:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Test.memo.card", MEMO_CARD);
 await box.write("box/inbox/Test.attach/notes.txt", "hello");
@@ -47,7 +47,7 @@ JSON.stringify(result.skipped)
 => []
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -55,14 +55,14 @@ await box.cleanup();
 
 A view with no dependency globs loads nothing:
 
-```
+```ts
 const box = await makeTmpBox();
 const result = await loadViewCards(box.root, []);
 JSON.stringify(result)
 => {"cards":[],"files":[],"skipped":[]}
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -73,7 +73,7 @@ registered schema) is omitted from `cards` and reported in `skipped` with its
 path and the load error — so a test command can tell the author their dependency
 selected an invalid card instead of silently rendering without it:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Good.memo.card", MEMO_CARD);
 await box.write("box/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema for this type\n");
@@ -89,6 +89,6 @@ result.skipped[0].error.length > 0
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

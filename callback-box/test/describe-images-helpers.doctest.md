@@ -19,7 +19,7 @@ import {
 
 Recognizes common image extensions:
 
-```
+```ts
 isImageFile("photo.jpg")
 => true
 
@@ -41,7 +41,7 @@ isImageFile("notes.txt")
 
 ## Image card detection
 
-```
+```ts
 isImageCard("photo-001.image.card")
 => true
 
@@ -54,7 +54,7 @@ isImageCard("notes.memo.card")
 
 ## MIME type mapping
 
-```
+```ts
 getMimeType("photo.jpg")
 => image/jpeg
 
@@ -78,7 +78,7 @@ getMimeType("unknown.bmp")
 
 Finds image files that share a card's basename:
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = join(box.root, "box/inbox/capture-test");
 await mkdir(dir, { recursive: true });
@@ -93,13 +93,13 @@ result.endsWith("photo-001.jpg")
 
 Returns null when no image file exists:
 
-``` continue
+```ts continue
 const missing = await findAttachedImage(join(dir, "photo-999.image.card"));
 missing
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -107,7 +107,7 @@ await box.cleanup();
 
 Returns null for files without EXIF data (like a plain text file pretending to be an image):
 
-```
+```ts
 const box = await makeTmpBox();
 const fakePath = join(box.root, "fake.jpg");
 await writeFile(fakePath, "not-a-real-image");
@@ -117,6 +117,6 @@ exif
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

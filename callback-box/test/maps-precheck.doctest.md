@@ -14,7 +14,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 A directory that isn't a git repo is skipped:
 
-```
+```ts
 const box = await makeTmpBox();
 const brief = await precheck({ boxRoot: box.root });
 brief.needsWork
@@ -24,13 +24,13 @@ brief.skippedReason
 => not_a_repo
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 A repo with uncommitted work is skipped — we wait for tomorrow's run:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("scratch.txt", "wip");
 const brief = await precheck({ boxRoot: box.root });
@@ -38,7 +38,7 @@ brief.skippedReason
 => uncommitted_work
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -47,7 +47,7 @@ the procedure engine intentionally writes "step is running" markers
 there, and blanket-bailing would mean refresh-maps couldn't run
 inside its own procedure step.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("a/b/note.md", "x");
 await box.write("a/c.md", "y");
@@ -63,7 +63,7 @@ needsWork=true
 skipped=(none)
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -81,7 +81,7 @@ Rules that gate which directories qualify:
 - **Root is always skipped** — top-level paths are skeleton categories
   already covered in CLAUDE.md.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("inbox/foo.card", "<card/>");          // file-only dir (skipped)
 await box.write("store/notes/a.md", "a");              // store: 2 subdirs → mapped
@@ -101,13 +101,13 @@ store:create
 
 The store task lists every immediate child including the file-only ones:
 
-``` continue
+```ts continue
 const store = brief.tasks.find((t) => t.dir === "store")!;
 print(store.children.join(", "));
 => notes/, scratch/
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -115,7 +115,7 @@ await box.cleanup();
 
 After we record state at HEAD, a re-run reports nothing to do:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
@@ -141,7 +141,7 @@ needsWork=false
 tasks=0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -150,7 +150,7 @@ await box.cleanup();
 A file added directly to a container dir invalidates that container's
 MAP (its listing changes), not its parent's:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
@@ -178,7 +178,7 @@ print(summary.join("\n"));
 store added=[README.md] deleted=[]
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -187,7 +187,7 @@ await box.cleanup();
 Editing an existing file's contents doesn't change the listing, so no
 MAP needs touching:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
@@ -211,7 +211,7 @@ brief.needsWork
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -223,7 +223,7 @@ too; if it's a leaf, only the parent dirties.
 
 Leaf case — parent dirties, new dir is a leaf so it's not mapped:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
@@ -250,14 +250,14 @@ print(summary.join("\n"));
 => store:update added=[triage/]
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 Container case — new dir has its own subdir + file (≥2 children), so it
 becomes mappable:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/notes/a.md", "a");
 await box.write("store/scratch/b.md", "b");
@@ -287,7 +287,7 @@ store/projects:create
 store:update
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -298,7 +298,7 @@ Default patterns include the skeleton hide-list (`procedure/**`,
 `.attach` (card attach scopes are an implementation detail of the card
 layout):
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("a/b/x.card", "x");
 await box.write("a/c/y.card", "x");  // 2 subdirs for `a` to qualify
@@ -328,13 +328,13 @@ Notes:
 `emails/keep` is mapped because it has two subdirs; `emails/keep/sub` is
 a leaf and skipped under the container rule.
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## User-supplied .cb-maps-ignore extends the defaults
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("keep/sub/a.card", "x");
 await box.write("keep/sub2/c.card", "x");
@@ -349,7 +349,7 @@ print(dirs.join("\n"));
 keep
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -358,7 +358,7 @@ await box.cleanup();
 A directory with one visible subdir and nothing else doesn't qualify
 for a MAP — the single bullet would just restate the dirname.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("collection/only-child/a.md", "x");
 box.commitAll("seed");
@@ -371,7 +371,7 @@ print(dirs.length === 0 ? "(none)" : dirs.join("\n"));
 
 Add a sibling file and the dir qualifies:
 
-``` continue
+```ts continue
 await box.write("collection/notes.md", "y");
 box.commitAll("add sibling file");
 const brief2 = await precheck({ boxRoot: box.root });
@@ -380,7 +380,7 @@ print(dirs2.join("\n"));
 => collection
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -391,7 +391,7 @@ itself in `store`'s listing — that's the "shell dir" pattern. Under the
 container rule, `store/items` has 0 visible subdirs so it doesn't get
 its own MAP.md; the parent's MAP describes it instead.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/items/a/note.md", "a");
 await box.write("store/items/b/note.md", "b");
@@ -412,13 +412,13 @@ store/keep
 
 `store`'s listing still includes `items/` so the agent can annotate it:
 
-``` continue
+```ts continue
 const store = brief.tasks.find((t) => t.dir === "store")!;
 print(store.children.join(", "));
 => items/, keep/
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -427,7 +427,7 @@ await box.cleanup();
 `store/items/**` hides `store/items` itself too — useful when the
 collection is purely incidental and the parent shouldn't even mention it.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/items/a/note.md", "a");
 await box.write("store/items/b/note.md", "b");
@@ -450,6 +450,6 @@ store/keep
 store children: README.md, keep/
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

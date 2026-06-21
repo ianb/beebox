@@ -28,7 +28,7 @@ function check(src: string): string {
 
 ## An external anchor (href + pos + version + placement) validates
 
-```
+```ts
 check('{% source href="file:/Users/x/doc.md" pos="body; ~line 4" version="git:7ffeae4 sha256:9f3a1c2b" placement="estimated, ~50% through the message" %}\nthe selected span\n{% /source %}')
 =>
 valid
@@ -36,7 +36,7 @@ valid
 
 ## An in-box anchor (ref only) still validates — backward compatible
 
-```
+```ts
 check('{% source ref="/store/notes/Bread.doc.card" as="summary" %}\nshe went back and forth on the kitchen\n{% /source %}')
 =>
 valid
@@ -44,7 +44,7 @@ valid
 
 ## Neither ref nor href is valid — targets the containing document
 
-```
+```ts
 check('{% source pos="body" %}\nthe span, anchored to this page\n{% /source %}')
 =>
 valid
@@ -52,7 +52,7 @@ valid
 
 ## Both ref and href fails
 
-```
+```ts
 check('{% source ref="/a.card" href="file:/Users/x/doc.md" %}\nambiguous\n{% /source %}')
 =>
 source-ref-xor-href

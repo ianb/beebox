@@ -21,7 +21,7 @@ async function readFm(path: string): Promise<Record<string, unknown>> {
 
 ## A fresh card gets stamped with version/size/mtime
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/src/foo.ts", "console.log(1);\n");
 const cardPath = box.path("store/review/Foo.extfile.card");
@@ -40,7 +40,7 @@ typeof fm.size === "number" && typeof fm.mtime === "string"
 
 ## A bumped mtime with unchanged content is "unchanged" (no rewrite)
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/src/foo.ts", "console.log(1);\n");
 const cardPath = box.path("store/review/Foo.extfile.card");
@@ -60,7 +60,7 @@ after.mtime === before.mtime
 
 ## Changed content re-stamps with a new version
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/src/foo.ts", "console.log(1);\n");
 const cardPath = box.path("store/review/Foo.extfile.card");
@@ -79,7 +79,7 @@ v2 !== v1
 
 ## An unresolvable href is reported, not thrown
 
-```
+```ts
 const box = await makeTmpBox();
 const cardPath = box.path("store/review/Gone.extfile.card");
 await box.write("store/review/Gone.extfile.card", "---\ntype: extfile\nhref: file:/nonexistent/nope.ts\n---\n");

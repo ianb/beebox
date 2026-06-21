@@ -10,14 +10,14 @@ import { makeTestServer } from "./helpers/doctest-server.js";
 
 `GET /api/commands/list` returns all registered commands:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/commands/list" });
 res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 Array.isArray(res.body.commands)
 => true
 
@@ -27,7 +27,7 @@ res.body.commands.length > 0
 
 Each command has a name and description:
 
-``` continue
+```ts continue
 const cmd = res.body.commands[0];
 typeof cmd.name
 => string
@@ -36,7 +36,7 @@ typeof cmd.description
 => string
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -44,32 +44,32 @@ await ctx.cleanup();
 
 `GET /api/commands/:name` returns details for a specific command:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/commands/create" });
 res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.name
 => create
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Unknown commands return 404:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/commands/nonexistent-command" });
 res.statusCode
 => 404
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -77,7 +77,7 @@ await ctx.cleanup();
 
 Missing command name returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -88,13 +88,13 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Unknown command returns 404:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -105,6 +105,6 @@ res.statusCode
 => 404
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

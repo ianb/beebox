@@ -24,7 +24,7 @@ const MEMO = (text: string, contains?: string) =>
 
 ## Build: searchable cards index, operational kinds don't
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/Dentist.memo.card", MEMO("The dentist appointment moved to June 17.", "Dentist moved to June 17."));
 await box.write("store/notes/Budget.memo.card", MEMO("Quarterly budget review notes."));
@@ -46,7 +46,7 @@ await find(opened.db, "budget")
 
 ## Incremental refresh: edits and new cards picked up at next open
 
-``` continue
+```ts continue
 await box.write("box/inbox/Dentist.memo.card", MEMO("Now it is an orthodontist appointment on June 19."));
 await box.write("store/notes/Garden.memo.card", MEMO("Plant the tomatoes after the last frost."));
 const reopened = await openSearchIndex(box.root);
@@ -62,7 +62,7 @@ await find(reopened.db, "dentist")
 
 ## A moved card re-indexes under its new path
 
-``` continue
+```ts continue
 await rename(box.path("store/notes/Budget.memo.card"), box.path("store/notes/Budget_2026.memo.card"));
 const moved = await openSearchIndex(box.root);
 await find(moved.db, "budget")
@@ -71,7 +71,7 @@ await find(moved.db, "budget")
 
 ## Persist → restore is stable (pins oramasearch/orama#695 at our version)
 
-``` continue
+```ts continue
 const before = await find((await openSearchIndex(box.root)).db, "tomatoes");
 const after = await find((await openSearchIndex(box.root)).db, "tomatoes");
 before === after
@@ -83,7 +83,7 @@ after
 
 ## A corrupted index file rebuilds silently
 
-``` continue
+```ts continue
 await writeFile(searchIndexPath(box.root), "not a real index");
 const recovered = await openSearchIndex(box.root);
 await find(recovered.db, "tomatoes")
@@ -92,7 +92,7 @@ await find(recovered.db, "tomatoes")
 
 ## Lock contention serves the last persisted index, flagged stale
 
-``` continue
+```ts continue
 await acquireLock(searchLockPath(box.root), { purpose: "doctest" });
 const blocked = await openSearchIndex(box.root, { lockRetries: 2, lockRetryMs: 10 });
 blocked.stale
@@ -108,7 +108,7 @@ await releaseLock(searchLockPath(box.root));
 
 ## An unparseable card is skipped with a warning; everything else still works
 
-``` continue
+```ts continue
 await box.write("store/notes/Broken.memo.card", "---\ncreated: not-a-date\n---\nbroken body\n");
 const withBad = await openSearchIndex(box.root);
 withBad.warnings.length
@@ -135,7 +135,7 @@ await find(fixedAgain.db, "broken")
 
 ## Standalone .md files index as kind "markdown"; attach-scope files don't
 
-``` continue
+```ts continue
 await box.write("store/finances/Distribution_Letter.md", "# Ledger Distribution Letter\n\nEach heir receives an apportioned share.\n");
 await box.write("store/notes/Note.attach/snippet.md", "apportioned share duplicate inside attach scope");
 await box.write("docs/generated/card-memo.md", "apportioned share generated doc noise");
@@ -153,7 +153,7 @@ mdHit.hits[0].document.title
 
 ## Gdoc snapshots are watched input files: editing only the attachment re-indexes
 
-``` continue
+```ts continue
 await box.write(
   "store/drive/Notes.gdoc.card",
   "---\ndrive-id: d1\ntitle: Project Notes\nmodified: 2026-05-01\nlink: https://docs.google.com/document/d/d1/edit\nowner: o@example.com\ncontent:\n  ref: attach/Notes.md\n---\n"
@@ -172,6 +172,6 @@ await find(inputChanged.db, "lighthouse")
 =>
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

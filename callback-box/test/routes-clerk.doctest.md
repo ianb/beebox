@@ -13,7 +13,7 @@ import { makeTestServer } from "./helpers/doctest-server.js";
 Lists landmarks whose `destinations` include `commentary`. A triage-only
 landmark is not offered as a commentary destination.
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("store/reading/Reading.landmark.card", `---
 navigation:
@@ -37,7 +37,7 @@ JSON.stringify(res.body)
 => {"destinations":[{"dir":"store/reading","label":"Reading","symbol":"📖"}]}
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -48,7 +48,7 @@ empty commentary card inside its attach scope (and the frozen page beside it) �
 committed together. The response carries the chat URL that opens the webpage
 card (which renders the page plus its inline commentary) in a companion pane.
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("store/reading/Reading.landmark.card", `---
 navigation:
@@ -77,7 +77,7 @@ res.statusCode
 The captured page is a webpage card recording the original URL, with the
 readable rendering as its body:
 
-``` continue
+```ts continue
 const files = await readdir(join(ctx.boxRoot, "store/reading"));
 const cardFile = files.find((name) => name.endsWith(".webpage.card"));
 const cardContent = await ctx.read(`store/reading/${cardFile}`);
@@ -90,7 +90,7 @@ cardContent.includes("Body text.")
 
 The frozen page and the empty commentary card sit in the webpage's attach scope:
 
-``` continue
+```ts continue
 const attachDir = files.find((name) => name.endsWith(".attach"));
 const attachFiles = await readdir(join(ctx.boxRoot, "store/reading", attachDir));
 attachFiles.includes("page.frozen")
@@ -103,7 +103,7 @@ attachFiles.some((name) => name.endsWith(".commentary.card"))
 The `open` URL opens a fresh chat scoped to the destination, with the card in
 the companion pane:
 
-``` continue
+```ts continue
 res.body.open.includes("contextDir=store%2Freading")
 => true
 
@@ -113,7 +113,7 @@ res.body.open.includes("companion=view%3Astore%2Freading%2F")
 
 A `destinationDir` that isn't a real commentary destination is rejected:
 
-``` continue
+```ts continue
 const bad = await ctx.request({
   method: "POST",
   url: "/api/clerk/commentary",
@@ -130,7 +130,7 @@ bad.statusCode
 
 Omitting `destinationDir` files into the inbox:
 
-``` continue
+```ts continue
 const inboxRes = await ctx.request({
   method: "POST",
   url: "/api/clerk/commentary",
@@ -151,7 +151,7 @@ inboxFiles.some((name) => name.endsWith(".webpage.card"))
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -159,7 +159,7 @@ A frozen snapshot larger than Fastify's default 1 MB body limit must still be
 accepted — a self-contained page with inlined CSS/images routinely exceeds it,
 and a 413 here means the capture silently saves nothing:
 
-```
+```ts
 const ctx = await makeTestServer();
 const bigFrozen = `<html><body>${"a".repeat(2 * 1024 * 1024)}</body></html>`;
 const res = await ctx.request({
@@ -176,7 +176,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 const inboxFiles = await readdir(join(ctx.boxRoot, "box/inbox"));
 const attachDir = inboxFiles.find((name) => name.endsWith(".attach"));
 const attachFiles = await readdir(join(ctx.boxRoot, "box/inbox", attachDir));
@@ -184,7 +184,7 @@ attachFiles.includes("page.frozen")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -192,7 +192,7 @@ await ctx.cleanup();
 
 Outbound actions are polled; currently the list is empty and dismissing returns a stub response:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "GET",
@@ -205,7 +205,7 @@ res.body
 }
 ```
 
-``` continue
+```ts continue
 const dismiss = await ctx.request({
   method: "POST",
   url: "/api/clerk/actions/example/dismiss",
@@ -217,6 +217,6 @@ dismiss.body
 }
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

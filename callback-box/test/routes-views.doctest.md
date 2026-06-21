@@ -29,7 +29,7 @@ Test memo content
 
 An empty box returns no views:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({ method: "GET", url: "/api/views" })
 =>
@@ -37,13 +37,13 @@ await ctx.inject({ method: "GET", url: "/api/views" })
 []
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 A box with a view in `views/` returns its metadata:
 
-```
+```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 await ctx.seed("views/test.tsx", VIEW_SOURCE);
@@ -53,7 +53,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.length
 => 1
 
@@ -70,7 +70,7 @@ JSON.stringify(res.body[0].modes)
 => ["page","chat"]
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -78,7 +78,7 @@ await ctx.cleanup();
 
 The module endpoint returns compiled JavaScript (not JSON), so we use `rawRequest` to get the raw payload:
 
-```
+```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 await ctx.seed("views/test.tsx", VIEW_SOURCE);
@@ -90,18 +90,18 @@ res.statusCode
 
 The compiled output externalizes React via the window shim:
 
-``` continue
+```ts continue
 res.payload.includes("__cbReact")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 A view with a syntax error returns an error module (not a 500):
 
-```
+```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 await ctx.seed("views/broken.tsx", "export default function() { return <div");
@@ -111,7 +111,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.payload.includes("ErrorView")
 => true
 
@@ -121,12 +121,12 @@ res.payload.includes("Compile error")
 
 The error module contains the actual error message:
 
-``` continue
+```ts continue
 res.payload.includes("Expected")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -134,7 +134,7 @@ await ctx.cleanup();
 
 The cards endpoint returns cards matching a view's dependency globs:
 
-```
+```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 await ctx.seed("views/test.tsx", VIEW_SOURCE);
@@ -146,7 +146,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.cards.length
 => 1
 
@@ -167,7 +167,7 @@ Non-card files matching the globs arrive in `files` as metadata (content
 can be huge or binary, so it's fetched separately), and each card carries a
 deep metadata listing of its attach scope:
 
-``` continue
+```ts continue
 const PLAYGROUND_VIEW = `
 export const name = "Playground";
 export const description = "Session history";
@@ -203,7 +203,7 @@ typeof res2.body.files[0].mtimeMs
 Content comes from `/api/files/*`, which supports byte ranges — a view
 tails a large log instead of downloading it (suffix form `bytes=-N`):
 
-``` continue
+```ts continue
 const full = await ctx.rawRequest({ method: "GET", url: "/api/files/box/inbox/Test.attach/sessions/history.jsonl" });
 full.statusCode
 => 200
@@ -230,13 +230,13 @@ past.statusCode
 => 416
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 A view with no dependencies returns an empty card list:
 
-```
+```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 
@@ -257,19 +257,19 @@ res.body.cards.length
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Cards endpoint returns 404 for a nonexistent view:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/views/nonexistent/cards" });
 res.statusCode
 => 404
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

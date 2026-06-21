@@ -13,7 +13,7 @@ import { makeTestServer } from "./helpers/doctest-server.js";
 
 ## Registry: an audio answer resolves the request
 
-```
+```ts
 const reg = createLastAudioPending();
 const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
 reg.fulfill(requestId, {
@@ -36,7 +36,7 @@ pending left: 0
 
 ## Registry: no answer at all times out
 
-```
+```ts
 const reg = createLastAudioPending();
 const { outcome } = reg.create({ timeoutMs: 20 });
 const result = await outcome;
@@ -50,7 +50,7 @@ A tab reporting "no audio cached" doesn't settle immediately — another tab
 might still hold the recording — but once the grace window passes with no
 audio, the request resolves `none`.
 
-```
+```ts
 const reg = createLastAudioPending({ graceMs: 20 });
 const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
 print(`reported: ${reg.reportNone(requestId)}`);
@@ -63,7 +63,7 @@ status: none
 
 ## Registry: audio arriving within the grace window still wins
 
-```
+```ts
 const reg = createLastAudioPending({ graceMs: 1000 });
 const { requestId, outcome } = reg.create({ timeoutMs: 5000 });
 reg.reportNone(requestId);
@@ -75,7 +75,7 @@ result.status
 
 ## Registry: unknown and already-settled ids are refused
 
-```
+```ts
 const reg = createLastAudioPending();
 print(`unknown fulfill: ${reg.fulfill("nope", { audio: Buffer.from("x"), contentType: "audio/wav", recordedAt: null, text: null })}`);
 print(`unknown none: ${reg.reportNone("nope")}`);
@@ -97,7 +97,7 @@ winner: a
 This is also the normal multi-tab outcome — a second tab answering after
 the first tab's audio already settled the request.
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -111,13 +111,13 @@ status: 404
 error: unknown-request
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Route: a JSON answer that isn't {none:true} is rejected
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -128,7 +128,7 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -136,7 +136,7 @@ await ctx.cleanup();
 
 `timeoutMs` is clamped to a 100ms minimum, so this resolves quickly.
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -150,7 +150,7 @@ status: 504
 error: no-client
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -161,7 +161,7 @@ has no browser subscribed to the event stream). The long-poll is started,
 the "browser" answers with audio + metadata fields, and the long-poll
 response carries the bytes and the metadata headers.
 
-```
+```ts
 const ctx = await makeTestServer();
 const longPoll = ctx.rawRequest({
   method: "POST",
@@ -210,7 +210,7 @@ text: remember to water the plants
 audio: RIFFfakewavbytes
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -219,7 +219,7 @@ await ctx.cleanup();
 `audioMimeType` maps `--file` extensions to MIME types; unknown extensions
 are rejected rather than guessed:
 
-```
+```ts
 print(`wav: ${audioMimeType("/tmp/x/clip.WAV")}`);
 print(`m4a: ${audioMimeType("voice.m4a")}`);
 print(`mp3: ${audioMimeType("song.mp3")}`);
@@ -235,7 +235,7 @@ The model prompt wraps the caller's question with framing that keeps the
 answer addressed to the asker, not the recording's speaker. Context and a
 known transcript are optional labeled sections:
 
-```
+```ts
 const bare = buildAudioQuestionPrompt({ question: "What language is spoken?" });
 print(`has question: ${bare.includes("Question: What language is spoken?")}`);
 print(`frames the audio: ${bare.includes("voice message")}`);
@@ -246,7 +246,7 @@ frames the audio: true
 no transcript section: true
 ```
 
-``` continue
+```ts continue
 const full = buildAudioQuestionPrompt({
   question: "Did the transcript get the Spanish right?",
   context: "The user is practicing Spanish for a trip.",

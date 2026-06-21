@@ -20,7 +20,7 @@ function task(fields) {
 
 `task_started` becomes a `started` event with a running status and its label:
 
-```
+```ts
 const m = task({ subtype: "task_started", task_id: "t1", tool_use_id: "tool1", description: "Generate image" });
 JSON.stringify(m.task)
 => {"phase":"started","taskId":"t1","status":"running","toolUseId":"tool1","description":"Generate image"}
@@ -31,14 +31,14 @@ JSON.stringify(m.task)
 A `skip_transcript` task (ambient/housekeeping) is dropped so it never clutters
 the transcript:
 
-```
+```ts
 task({ subtype: "task_started", task_id: "t2", description: "housekeeping", skip_transcript: true })
 => null
 ```
 
 ## Adapter — progress carries elapsed time and last tool
 
-```
+```ts
 const m = task({ subtype: "task_progress", task_id: "t1", description: "Generate image", last_tool_name: "Bash", usage: { total_tokens: 10, tool_uses: 2, duration_ms: 4200 } });
 JSON.stringify(m.task)
 => {"phase":"progress","taskId":"t1","status":"running","description":"Generate image","lastToolName":"Bash","elapsedMs":4200}
@@ -49,7 +49,7 @@ JSON.stringify(m.task)
 `task_notification` is the terminal event. The status is one of
 `completed | failed | stopped`:
 
-```
+```ts
 const ok = task({ subtype: "task_notification", task_id: "t1", status: "completed", output_file: "/tmp/t1.output", summary: "done" });
 JSON.stringify(ok.task)
 => {"phase":"settled","taskId":"t1","status":"completed","summary":"done","outputFile":"/tmp/t1.output"}
@@ -63,7 +63,7 @@ bad.task?.status
 
 `task_updated` carries only the wire-safe fields that changed:
 
-```
+```ts
 const m = task({ subtype: "task_updated", task_id: "t1", patch: { status: "running", description: "still going" } });
 JSON.stringify(m.task)
 => {"phase":"updated","taskId":"t1","status":"running","description":"still going"}
@@ -74,7 +74,7 @@ JSON.stringify(m.task)
 A `started` event registers a task; `progress` merges into it; `settled`
 removes it (its permanent marker lives in the transcript):
 
-```
+```ts
 let tasks = [];
 tasks = applyTaskEvent(tasks, { phase: "started", taskId: "t1", description: "Generate image", status: "running" });
 tasks.length
@@ -94,7 +94,7 @@ tasks.length
 A `task_updated` patch carrying a terminal status drops the task from the live
 list:
 
-``` continue
+```ts continue
 let live = applyTaskEvent([], { phase: "started", taskId: "t9", status: "running" });
 live = applyTaskEvent(live, { phase: "updated", taskId: "t9", status: "failed" });
 live.length
@@ -106,7 +106,7 @@ live.length
 Ambient tasks never emit a `started` we surfaced, so a stray progress/updated
 tick for an unregistered id is a no-op (no phantom pill appears):
 
-``` continue
+```ts continue
 applyTaskEvent([], { phase: "progress", taskId: "ghost", elapsedMs: 100 }).length
 => 0
 ```

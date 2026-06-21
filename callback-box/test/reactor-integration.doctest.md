@@ -31,7 +31,7 @@ const testOverrides = {
 
 ### Single batch job processed by agent
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("box/jobs/task.job.card", `<job><description>Write a haiku</description></job>`);
 box.commitAll("Add job");
@@ -80,7 +80,7 @@ await box.cleanup();
 
 ### Multiple batch jobs in one session
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("box/jobs/task1.job.card", `<job><description>Task one</description></job>`);
 await box.write("box/jobs/task2.job.card", `<job><description>Task two</description></job>`);
@@ -124,7 +124,7 @@ await box.cleanup();
 
 ### Dry run does not invoke agent
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("box/jobs/task.job.card", `<job><description>Should not run</description></job>`);
 box.commitAll("Add job");
@@ -153,7 +153,7 @@ await box.cleanup();
 
 ### skipLowPriority skips when only low-priority jobs exist
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("box/jobs/digest.job.card", `<job priority="low"><description>Daily digest</description></job>`);
 box.commitAll("Add low-pri job");
@@ -184,7 +184,7 @@ await box.cleanup();
 
 ### Chat job uses per-job agent with session
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/conv1.card", `<thread><message role="user">Hi there</message></thread>`);
 await box.write("box/jobs/msg.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/conv1.card" /><description>Reply to user</description></chat-job>`);
@@ -228,7 +228,7 @@ await box.cleanup();
 
 ### Multiple chat jobs get separate agent invocations
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/a.card", `<thread><message>Thread A</message></thread>`);
 await box.write("store/threads/b.card", `<thread><message>Thread B</message></thread>`);
@@ -271,7 +271,7 @@ await box.cleanup();
 
 ### Lock prevents concurrent runs
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const lockFile = path.join(box.root, ".cb-reactor.lock");
 // Write a well-formed lock pointing at our own PID (treated as alive).
@@ -295,14 +295,14 @@ result.jobsProcessed
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await fs.unlink(lockFile).catch(() => {});
 await box.cleanup();
 ```
 
 ### Stale lock is cleaned up
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const lockFile = path.join(box.root, ".cb-reactor.lock");
 // Write a holder pointing at a dead PID — reactor should reclaim and run.
@@ -350,7 +350,7 @@ await box.cleanup();
 The reactor loops when jobs remain after a cycle. Here we start with
 2 jobs but the agent only finishes 1 per invocation, requiring 2 cycles.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("box/jobs/task1.job.card", `<job><description>First task</description></job>`);
 await box.write("box/jobs/task2.job.card", `<job><description>Second task</description></job>`);

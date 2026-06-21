@@ -18,7 +18,7 @@ function msg(type: ChatMessage["type"]): ChatMessage {
 
 ## Frames get monotonic seqs; framesAfter resumes from a seq
 
-```
+```ts
 const b = new TurnBuffer("t1");
 b.push(msg("system"));
 b.push(msg("assistant"));
@@ -36,7 +36,7 @@ after 3: 0
 
 ## A fresh buffer has no gap and isn't complete
 
-```
+```ts
 const b = new TurnBuffer("t2");
 b.push(msg("assistant"));
 print(`gap after 0: ${b.hasGapAfter(0)}`);
@@ -50,7 +50,7 @@ errored: null
 
 ## finish marks the turn complete
 
-```
+```ts
 const b = new TurnBuffer("t3");
 b.push(msg("result"));
 b.finish();
@@ -63,7 +63,7 @@ errored: null
 
 ## fail records a terminal error and completes
 
-```
+```ts
 const b = new TurnBuffer("t4");
 b.fail("subprocess crashed");
 print(`complete: ${b.complete}`);
@@ -78,7 +78,7 @@ errored: subprocess crashed
 The ring keeps the most recent frames. Once the head is evicted, a resume from
 before the eviction point is a gap (→ the client resyncs from history).
 
-```
+```ts
 const b = new TurnBuffer("t5");
 for (let i = 0; i < 4001; i++) b.push(msg("stream_event"));
 print(`retained: ${b.framesAfter(0).length}`);
@@ -100,7 +100,7 @@ A reader snapshots the version before draining; a push during the drain bumps it
 so the subsequent `waitForChange` returns at once rather than sleeping on a frame
 that's already buffered.
 
-```
+```ts
 const b = new TurnBuffer("t6");
 const v = b.versionSnapshot();
 b.push(msg("assistant")); // happens "during" a drain
@@ -112,7 +112,7 @@ resolved-on-change
 
 ## waitForChange resolves immediately once complete
 
-```
+```ts
 const b = new TurnBuffer("t7");
 const v = b.versionSnapshot();
 b.finish();

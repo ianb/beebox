@@ -15,7 +15,7 @@ const FROZEN = "<html><head><title>X</title></head><body><img src=\"https://exam
 
 ## A frozen page is served with the fallback script + hash-pinned CSP
 
-```
+```ts
 const ctx = await makeTestServer();
 await mkdir(join(ctx.boxRoot, "store"), { recursive: true });
 await writeFile(join(ctx.boxRoot, "store/Page.frozen"), FROZEN);
@@ -26,7 +26,7 @@ res.statusCode
 
 The CSP sandboxes but allows exactly one hashed script; `nosniff` is set:
 
-``` continue
+```ts continue
 res.headers["content-security-policy"]
 => sandbox allow-scripts; script-src '«*»'
 
@@ -37,7 +37,7 @@ res.headers["x-content-type-options"]
 The fallback script is injected before `</body>`, and the original image URL is
 left intact (hot-linked):
 
-``` continue
+```ts continue
 [
   res.payload.includes("/api/proxy-image?url="),
   res.payload.includes("cbProxied"),
@@ -47,6 +47,6 @@ left intact (hot-linked):
 => true,true,true,true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

@@ -24,7 +24,7 @@ function readHeaderField(bytes: Uint8Array, offset: number, length: number): str
 
 ## Empty input
 
-```
+```ts
 const blob = encodePcmChunksAsWav([]);
 blob.size
 => 44
@@ -37,7 +37,7 @@ The empty WAV is still valid — just header, zero data.
 
 ## Header structure
 
-```
+```ts
 const blob = encodePcmChunksAsWav([sampleChunk(100)]);
 const bytes = new Uint8Array(await blob.arrayBuffer());
 readHeaderField(bytes, 0, 4)
@@ -58,7 +58,7 @@ readHeaderField(bytes, 36, 4)
 `pcm-processor` produces 16kHz mono 16-bit PCM. The WAV header should
 match.
 
-```
+```ts
 const blob = encodePcmChunksAsWav([sampleChunk(100)]);
 const view = new DataView(await blob.arrayBuffer());
 view.getUint16(22, true)
@@ -76,7 +76,7 @@ view.getUint16(34, true)
 8000 samples = 16000 bytes; concatenating two chunks gives 32000 bytes
 of data, plus the 44-byte header → 32044 total.
 
-```
+```ts
 const chunk = sampleChunk(8000);
 const blob = encodePcmChunksAsWav([chunk, chunk]);
 blob.size

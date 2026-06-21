@@ -16,7 +16,7 @@ import { createGmailConnector } from "../src/connectors/gmail.js";
 
 ## A new outbound (no thread) gets uploaded and stamped
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -40,7 +40,7 @@ gmail.drafts.length
 
 The card is stamped with the returned draft id and URL:
 
-``` continue
+```ts continue
 const stampedPath = "box/inbox/email/draft-2026-04-28-hello/draft-001.email-outbound.card";
 const stamped = await readFile(join(box.root, stampedPath), "utf-8");
 stamped.includes("gmail-draft-id: r-fake-1")
@@ -52,7 +52,7 @@ stamped.includes("gmail-draft-url: https://mail.google.com/mail/u/0/#drafts/m-fa
 
 The MIME we uploaded has the headers and body:
 
-``` continue
+```ts continue
 const raw = gmail.drafts[0].raw;
 const decoded = Buffer.from(raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8");
 decoded.includes("To: alice@example.com")
@@ -72,7 +72,7 @@ source `email-message` card's `message-id`/`thread-id` to set
 `In-Reply-To`/`References` headers and threads the upload onto the existing
 Gmail thread.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -102,7 +102,7 @@ gmail.drafts[0].draft.message.threadId
 
 The MIME has the threading headers:
 
-``` continue
+```ts continue
 const raw = gmail.drafts[0].raw;
 const decoded = Buffer.from(raw.replaceAll("-", "+").replaceAll("_", "/"), "base64").toString("utf-8");
 decoded.includes("In-Reply-To: orig-msg-id-123")
@@ -117,7 +117,7 @@ decoded.includes("References: orig-msg-id-123")
 Agents sometimes write `<in-reply-to>` with a longer path. All three forms
 resolve to the same source card:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -151,7 +151,7 @@ If the agent writes a draft whose `in-reply-to` doesn't point to a real
 source card, we'd rather fail loud than upload it as a brand-new thread
 the user only notices is wrong after opening Gmail:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -185,7 +185,7 @@ stamped.includes("gmail-draft-id")
 An outbound card with `gmail-draft-id` set has already been uploaded — the
 connector leaves it alone:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -210,7 +210,7 @@ gmail.drafts.length
 A normal received `email-message` card under `box/inbox/email/` is left
 alone — the connector only uploads `email-outbound` cards:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");

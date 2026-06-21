@@ -18,7 +18,7 @@ import { combineQueuedInputs } from "../src/core/chat-session-state.js";
 
 ## Recognizing kinds
 
-```
+```ts
 isActivityKind("modified")
 => true
 
@@ -33,7 +33,7 @@ canonical order, dropping unrecognized kinds. A kind with a detail carries it as
 element text (XML-escaped); without one it's self-closing. Empty input renders
 `""` so the caller keeps `<chat-app>` self-closing.
 
-```
+```ts
 renderActivityChildren(["scrolled"], {})
 => <card-activity kind="scrolled"/>
 
@@ -50,7 +50,7 @@ JSON.stringify(renderActivityChildren(["bogus"], {}))
 Multiple kinds come out in canonical order regardless of arrival order, one per
 line; detail text is escaped.
 
-```
+```ts
 JSON.stringify(renderActivityChildren(["explored", "scrolled"], { explored: "a < b & c" }))
 => "<card-activity kind=\"scrolled\"/>\n<card-activity kind=\"explored\">a &lt; b &amp; c</card-activity>"
 ```
@@ -61,7 +61,7 @@ JSON.stringify(renderActivityChildren(["explored", "scrolled"], { explored: "a <
 dropping unrecognized kinds. It backs the queued-send combine so an earlier
 queued message's activity is never lost.
 
-```
+```ts
 JSON.stringify(unionActivityKinds([["scrolled"], ["modified"], undefined]))
 => ["scrolled","modified"]
 
@@ -79,7 +79,7 @@ the `<card-activity>` element text. `mergeCardStateDetails` merges detail maps
 latest-wins per kind, dropping unrecognized kinds and empty strings — so a later
 queued send's detail for a kind overrides an earlier one.
 
-```
+```ts
 JSON.stringify(mergeCardStateDetails([
   { explored: "boa" },
   { explored: "boat", modified: "x.card" },
@@ -97,7 +97,7 @@ companion-pane fields takes the **latest** `openCard` (where the user is now)
 but the **union** of `cardActivity` — a later send reporting only "modified"
 must not clobber an earlier "scrolled".
 
-```
+```ts
 const combined = combineQueuedInputs([
   { text: "first", openCard: "a.card", cardActivity: ["scrolled", "explored"], cardState: { explored: "bo" } },
   { text: "second", openCard: "b.card", cardActivity: ["modified"], cardState: { explored: "boat" } },
@@ -118,7 +118,7 @@ JSON.stringify(combined.cardState)
 When no queued send carries companion-pane state, both fields are absent (not
 empty) so the snapshot omits them.
 
-```
+```ts
 const plain = combineQueuedInputs([{ text: "a" }, { text: "b" }]);
 JSON.stringify(plain.openCard ?? null)
 => null

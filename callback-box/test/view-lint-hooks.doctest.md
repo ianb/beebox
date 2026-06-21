@@ -49,7 +49,7 @@ function runShellHook(filePath) {
 
 `isViewFile` matches a `.tsx` directly in a `views/` directory, not other tsx:
 
-```
+```ts
 [
   isViewFile("/box/views/dashboard.tsx"),
   isViewFile("views/foo.tsx"),
@@ -65,13 +65,13 @@ function runShellHook(filePath) {
 `lintViewFile` returns null for a view that compiles, and an error message for
 one that doesn't:
 
-```
+```ts
 const viewsDir = await makeViews();
 await lintViewFile(join(viewsDir, "good.tsx"))
 => null
 ```
 
-``` continue
+```ts continue
 const err = await lintViewFile(join(viewsDir, "broken.tsx"));
 typeof err === "string" && err.length > 0
 => true
@@ -82,7 +82,7 @@ typeof err === "string" && err.length > 0
 The hook agent sessions actually run surfaces a broken view's compile error as
 `additionalContext`. A clean view returns an empty result (no nudge):
 
-```
+```ts
 const viewsDir = await makeViews();
 const hook = cardValidatorHook().hooks[0];
 
@@ -95,7 +95,7 @@ brokenOut.hookSpecificOutput.additionalContext.startsWith("View compile error")
 => true
 ```
 
-``` continue
+```ts continue
 const goodOut = await hook({
   hook_event_name: "PostToolUse",
   tool_input: { file_path: join(viewsDir, "good.tsx") },
@@ -107,7 +107,7 @@ JSON.stringify(goodOut)
 
 The matcher covers MultiEdit too (not just Write|Edit):
 
-``` continue
+```ts continue
 cardValidatorHook().matcher
 => Write|Edit|MultiEdit
 ```
@@ -117,21 +117,21 @@ cardValidatorHook().matcher
 A broken view through the installed shell hook exits 2 (the nudge contract) with
 the compile error on stderr:
 
-```
+```ts
 const viewsDir = await makeViews();
 const broken = await runShellHook(join(viewsDir, "broken.tsx"));
 broken.code
 => 2
 ```
 
-``` continue
+```ts continue
 broken.stderr.includes("View compile error")
 => true
 ```
 
 A clean view exits 0:
 
-``` continue
+```ts continue
 const good = await runShellHook(join(viewsDir, "good.tsx"));
 good.code
 => 0

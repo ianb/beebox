@@ -15,7 +15,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 When a directory has a MAP.md but no CLAUDE.md, finalize writes a stub
 CLAUDE.md with the `@MAP.md` include and stamps the state file.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("inbox/MAP.md", "");
 await box.write("MAP.md", "");
@@ -39,7 +39,7 @@ print(JSON.stringify(await box.read("inbox/CLAUDE.md")));
 
 State file records both at HEAD:
 
-``` continue
+```ts continue
 const state = await loadMapState(box.root);
 const summary = Object.keys(state.maps).toSorted().map((k) =>
   `${k || "<root>"}: ${state.maps[k]!.asOf === head ? "at-head" : "stale"}`
@@ -50,7 +50,7 @@ print(summary.join("\n"));
 inbox: at-head
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -59,7 +59,7 @@ await box.cleanup();
 If CLAUDE.md already has hand-edited content, the @-include is added at
 the top without disturbing the rest.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const existing = "# Project notes\n\nSome details.\n";
 await box.write("CLAUDE.md", existing);
@@ -78,13 +78,13 @@ print(JSON.stringify(await box.read("CLAUDE.md")));
 => "@MAP.md\n# Project notes\n\nSome details.\n"
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Idempotent — doesn't duplicate the include
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("CLAUDE.md", "@MAP.md\n# Notes\n");
 await box.write("MAP.md", "");
@@ -105,7 +105,7 @@ print(`occurrences: ${matches ? matches.length : 0}`);
 occurrences: 1
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -113,7 +113,7 @@ await box.cleanup();
 
 State entries pointing to directories that no longer exist are removed.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("MAP.md", "");
 box.commitAll("seed");
@@ -143,6 +143,6 @@ print(Object.keys(state.maps).toSorted().join(","));
 
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

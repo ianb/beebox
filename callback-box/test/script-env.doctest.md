@@ -15,7 +15,7 @@ import * as path from "node:path";
 
 Full URL with slug:
 
-```
+```ts
 const r = parsePublicUrl("https://cb.example.org/test1");
 print(`serverUrl: ${r.serverUrl}`);
 print(`boxName: ${r.boxName}`);
@@ -26,7 +26,7 @@ boxName: test1
 
 Trailing slash on slug:
 
-```
+```ts
 const r = parsePublicUrl("https://cb.example.org/test1/");
 print(`serverUrl: ${r.serverUrl}`);
 print(`boxName: ${r.boxName}`);
@@ -37,7 +37,7 @@ boxName: test1
 
 No slug (server root):
 
-```
+```ts
 const r = parsePublicUrl("http://localhost:3210");
 print(`serverUrl: ${r.serverUrl}`);
 print(`boxName: ${r.boxName}`);
@@ -48,19 +48,19 @@ boxName: null
 
 Empty / missing:
 
-```
+```ts
 parsePublicUrl("").serverUrl === null
 => true
 ```
 
-```
+```ts
 parsePublicUrl(undefined).serverUrl === null
 => true
 ```
 
 Unparseable input returns nulls (no throw):
 
-```
+```ts
 const r = parsePublicUrl("not a url");
 print(`serverUrl: ${r.serverUrl}`);
 print(`boxName: ${r.boxName}`);
@@ -73,7 +73,7 @@ boxName: null
 
 With a `publicUrl` in `config/box.json`, both env vars get populated:
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box.root, "config"), { recursive: true });
 await fs.writeFile(
@@ -88,7 +88,7 @@ CB_BOX_NAME: my-box
 CB_SERVER_URL: https://cb.example.org
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -99,7 +99,7 @@ from `startServer` after listen), it takes priority over box.json. This
 lets a local dev server supply `CB_BOX_NAME` / `CB_SERVER_URL` even
 when `publicUrl` is absent from config:
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box.root, "config"), { recursive: true });
 await fs.writeFile(
@@ -116,7 +116,7 @@ CB_BOX_NAME: live-name
 CB_SERVER_URL: http://localhost:3210
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -125,7 +125,7 @@ await box.cleanup();
 A box with no `config/box.json` picks up env vars from the ambient
 registration:
 
-```
+```ts
 const box = await makeTmpBox();
 registerBoxPublicUrl(box.root, "http://localhost:3210/ephemeral-box");
 const env = await buildScriptEnv(box.root);
@@ -137,7 +137,7 @@ CB_BOX_NAME: ephemeral-box
 CB_SERVER_URL: http://localhost:3210
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -146,7 +146,7 @@ await box.cleanup();
 Without any configured URL, the env vars stay unset — a downstream
 process that needs them will fail cleanly rather than using a default:
 
-```
+```ts
 const box = await makeTmpBox();
 const saved = process.env.PUBLIC_URL;
 delete process.env.PUBLIC_URL;
@@ -159,7 +159,7 @@ CB_BOX_NAME: (unset)
 CB_SERVER_URL: (unset)
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -167,7 +167,7 @@ await box.cleanup();
 
 Caller additions override / extend the env:
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box.root, "config"), { recursive: true });
 await fs.writeFile(
@@ -187,13 +187,13 @@ CB_TRIGGERED_BY: schedule
 CUSTOM_KEY: value
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 Passing `undefined` deletes a key:
 
-```
+```ts
 const box = await makeTmpBox();
 process.env.SHOULD_VANISH = "still here";
 const env = await buildScriptEnv(box.root, { SHOULD_VANISH: undefined });
@@ -202,6 +202,6 @@ env.SHOULD_VANISH === undefined
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

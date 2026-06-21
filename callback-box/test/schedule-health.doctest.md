@@ -37,7 +37,7 @@ function evaluate({ fields = {}, state = {}, now = NOW, cardMtime = new Date("20
 
 A daily 5am cron that last ran (and succeeded) this morning:
 
-```
+```ts
 const h = evaluate({
   fields: { cron: "0 5 * * *" },
   state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "success" },
@@ -51,7 +51,7 @@ h.status
 Any consecutive failure marks the task failing; the count and the
 last-success divergence ride along:
 
-```
+```ts
 const h = evaluate({
   fields: { cron: "0 5 * * *" },
   state: {
@@ -72,7 +72,7 @@ timezone, so the doctest passes on any machine.)
 An hourly task last attempted two days ago has missed dozens of
 occurrences; pending time is measured from the earliest one:
 
-```
+```ts
 const h = evaluate({
   fields: { cron: "0 * * * *" },
   state: { lastRun: "2026-06-07T05:00:10Z", lastResult: "success", lastSuccess: "2026-06-07T05:00:10Z" },
@@ -85,7 +85,7 @@ But a task only a little past its occurrence is still within grace — an
 hourly task 40 minutes late (grace floor is 30m, half-cadence for an
 hourly task is 30m):
 
-```
+```ts
 evaluate({
   fields: { cron: "0 * * * *" },
   state: { lastRun: "2026-06-09T10:00:10Z", lastResult: "success", lastSuccess: "2026-06-09T10:00:10Z" },
@@ -103,7 +103,7 @@ evaluate({
 
 A never-attempted task measures from the card's mtime:
 
-```
+```ts
 evaluate({
   fields: { cron: "0 * * * *" },
   cardMtime: new Date("2026-06-05T00:00:00Z"),
@@ -114,7 +114,7 @@ evaluate({
 `not-before` postpones due-ness — an hourly cron with `not-before: 30m`
 that ran 35 minutes ago has an occurrence pending but well within grace:
 
-```
+```ts
 evaluate({
   fields: { cron: "0 * * * *", "not-before": "30m" },
   state: { lastRun: "2026-06-09T11:25:00Z", lastResult: "success", lastSuccess: "2026-06-09T11:25:00Z" },
@@ -124,7 +124,7 @@ evaluate({
 
 On-wakeup-only tasks have no intrinsic cadence and are never overdue:
 
-```
+```ts
 evaluate({
   fields: { "on-wakeup": true, "not-before": "5m" },
   state: { lastRun: "2026-05-01T00:00:00Z", lastResult: "success", lastSuccess: "2026-05-01T00:00:00Z" },
@@ -135,7 +135,7 @@ evaluate({
 A one-shot `at` task unserved an hour past its time is overdue; once
 attempted it never re-triggers:
 
-```
+```ts
 evaluate({ fields: { at: "2026-06-09T09:00:00Z" } }).status
 => overdue
 
@@ -152,7 +152,7 @@ Disabled and expired tasks are excluded; budget-exhausted and
 missing-connector tasks are blocked (with the reason), not overdue —
 even when occurrences have gone unserved:
 
-```
+```ts
 evaluate({ fields: { cron: "0 5 * * *", enabled: false } }).status
 => disabled
 
@@ -180,7 +180,7 @@ print(`${noConn.status}: ${noConn.reason}`);
 A failing task whose failures exhausted the budget reports as failing
 (the cause), with the blockage as the reason:
 
-```
+```ts
 const h = evaluate({
   fields: { cron: "0 5 * * *", budget: "10m/24h" },
   state: {
@@ -199,7 +199,7 @@ The summary speaks only when something is wrong, and folds overdue
 findings into a scheduler-down finding when the daemon's heartbeat is
 stale (suppressing them entirely when no daemon ever ran — dev boxes):
 
-```
+```ts
 const failing = evaluate({
   fields: { cron: "0 5 * * *" },
   state: {
@@ -244,7 +244,7 @@ summarizeScheduleHealth({
 Proactive alerts need two consecutive failures (one transient failure
 self-heals at the next occurrence); overdue and invalid alert directly:
 
-``` continue
+```ts continue
 const oneFailure = evaluate({
   fields: { cron: "0 5 * * *" },
   state: { lastRun: "2026-06-09T05:00:10Z", lastResult: "failure", lastError: "boom", consecutiveFailures: 1 },

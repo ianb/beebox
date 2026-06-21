@@ -11,7 +11,7 @@ import { createOrAppendIntakeJob } from "../src/connectors/intake-utils.js";
 
 When no matching job exists, a new `.intake.job.card` file is created under `box/jobs/`:
 
-```
+```ts
 const box = await makeTmpBox();
 const path = await createOrAppendIntakeJob({
   boxRoot: box.root,
@@ -23,7 +23,7 @@ path.startsWith("box/jobs/") && path.endsWith(".intake.job.card")
 => true
 ```
 
-``` continue
+```ts continue
 await box.read(path)
 =>
 ---
@@ -37,7 +37,7 @@ items:
 ---
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -45,7 +45,7 @@ await box.cleanup();
 
 A second call with the same `source` appends to the existing job file rather than creating a new one:
 
-```
+```ts
 const box = await makeTmpBox();
 const path1 = await createOrAppendIntakeJob({
   boxRoot: box.root,
@@ -65,7 +65,7 @@ path1 === path2
 
 The updated file contains both items with the new description:
 
-``` continue
+```ts continue
 await box.read(path2)
 =>
 ---
@@ -80,7 +80,7 @@ items:
 ---
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -88,7 +88,7 @@ await box.cleanup();
 
 Calls with different `source` values create separate job files:
 
-```
+```ts
 const box = await makeTmpBox();
 const pathA = await createOrAppendIntakeJob({
   boxRoot: box.root,
@@ -106,11 +106,11 @@ pathA !== pathB
 => true
 ```
 
-``` continue
+```ts continue
 (await box.list("box/jobs")).split("\n").filter(f => f.endsWith(".intake.job.card")).length
 => 2
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

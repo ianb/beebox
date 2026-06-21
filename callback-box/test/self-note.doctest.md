@@ -14,7 +14,7 @@ import { makeTestServer } from "./helpers/doctest-server.js";
 
 ### Full tag — ref and commit and body
 
-```
+```ts
 const note = parseSelfNote('<self-note ref="config/schedules/daily.card" commit="abc123">body text</self-note>');
 print(`ref: ${note.ref}`);
 print(`commit: ${note.commit}`);
@@ -27,7 +27,7 @@ body: body text
 
 ### No attributes
 
-```
+```ts
 const note = parseSelfNote("<self-note>just a body</self-note>");
 print(`ref: ${note.ref}`);
 print(`commit: ${note.commit}`);
@@ -40,7 +40,7 @@ body: just a body
 
 ### Only ref
 
-```
+```ts
 const note = parseSelfNote('<self-note ref="foo.card">hello</self-note>');
 print(`ref: ${note.ref}`);
 print(`commit: ${note.commit}`);
@@ -51,7 +51,7 @@ commit: null
 
 ### Multi-line body
 
-```
+```ts
 const note = parseSelfNote("<self-note>\nline one\nline two\n</self-note>");
 JSON.stringify(note.body)
 => "line one\nline two"
@@ -59,7 +59,7 @@ JSON.stringify(note.body)
 
 ### Surrounding whitespace is tolerated
 
-```
+```ts
 const note = parseSelfNote("  \n<self-note>hi</self-note>\n  ");
 note.body
 => hi
@@ -67,7 +67,7 @@ note.body
 
 ### XML-escaped attribute values decode
 
-```
+```ts
 const note = parseSelfNote('<self-note ref="a &amp; b">x</self-note>');
 note.ref
 => a & b
@@ -75,17 +75,17 @@ note.ref
 
 ### Non-self-note text returns null
 
-```
+```ts
 parseSelfNote("hello world") === null
 => true
 ```
 
-```
+```ts
 parseSelfNote("<typed>regular user message</typed>") === null
 => true
 ```
 
-```
+```ts
 parseSelfNote("<self-note>no closing tag") === null
 => true
 ```
@@ -96,7 +96,7 @@ parseSelfNote("<self-note>no closing tag") === null
 with `\n\n`, so a single user entry can contain several `<self-note>`
 blocks back-to-back. `parseSelfNotes` returns them all.
 
-```
+```ts
 const text = "<self-note>one</self-note>\n\n<self-note ref=\"x\">two</self-note>\n\n<self-note commit=\"abc\">three</self-note>";
 const notes = parseSelfNotes(text);
 print(`count: ${notes.length}`);
@@ -112,7 +112,7 @@ count: 3
 
 A single note returns a one-element array:
 
-```
+```ts
 parseSelfNotes("<self-note>hi</self-note>").length
 => 1
 ```
@@ -120,24 +120,24 @@ parseSelfNotes("<self-note>hi</self-note>").length
 Mixed content (self-note plus other text) is rejected — falls through
 to normal user rendering so the other text isn't silently hidden:
 
-```
+```ts
 parseSelfNotes("<self-note>note</self-note>\nrandom extra text") === null
 => true
 ```
 
-```
+```ts
 parseSelfNotes("hello\n<self-note>note</self-note>") === null
 => true
 ```
 
-```
+```ts
 parseSelfNotes("<self-note>a</self-note> BETWEEN <self-note>b</self-note>") === null
 => true
 ```
 
 No self-notes in the text:
 
-```
+```ts
 parseSelfNotes("just a typed message") === null
 => true
 ```
@@ -149,7 +149,7 @@ flows through `parseSessionLog` as a normal user entry — the rendering
 layer is responsible for detecting the `<self-note>` wrapper and
 styling it. The parser doesn't need to know.
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [
   JSON.stringify({
@@ -176,7 +176,7 @@ e0 text: <typed>hello</typed>
 e1 has self-note: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -186,7 +186,7 @@ A session whose only user-position entries are self-notes has zero user
 turns (self-notes are not conversational input) and no first-user
 snippet:
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [
   JSON.stringify({
@@ -205,14 +205,14 @@ userTurns: 0
 firstUserSnippet: null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 A self-note followed by a real typed message: one user turn, snippet from
 the real message.
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [
   JSON.stringify({
@@ -237,7 +237,7 @@ userTurns: 1
 firstUserSnippet: hi there
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -245,7 +245,7 @@ await box.cleanup();
 
 Missing body returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: {} });
 print(`status: ${res.statusCode}`);
@@ -255,13 +255,13 @@ status: 400
 error: body is required
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Empty-string body returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: { body: "   " } });
 print(`status: ${res.statusCode}`);
@@ -271,14 +271,14 @@ status: 400
 error: body is required
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Specifying a session that isn't live returns 404 — without a live chat
 session, any session id mismatches:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -289,11 +289,11 @@ res.statusCode
 => 404
 ```
 
-``` continue
+```ts continue
 res.body.error.includes("not live")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

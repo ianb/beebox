@@ -41,7 +41,7 @@ An entry already on disk resolves `true` immediately; an absent one runs out
 the (test-shortened) timeout and resolves `false`; one that lands mid-wait is
 picked up by the next poll.
 
-```
+```ts
 const box = await makeTmpBox();
 const sessionId = "tsync-helper";
 const logPath = await resolveSessionLogPath(box.root, sessionId);
@@ -60,7 +60,7 @@ await pending
 => true
 ```
 
-```cleanup
+```ts cleanup
 await rm(getSessionDir(box.root), { recursive: true, force: true });
 await box.cleanup();
 ```
@@ -71,7 +71,7 @@ A turn whose assistant message carries a uuid must not surface `result`/
 `done` while the transcript lacks that entry. Appending the entry releases
 the gate within a poll interval.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
@@ -105,7 +105,7 @@ doneFired
 => true
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await rm(getSessionDir(box.root), { recursive: true, force: true });
 await box.cleanup();
@@ -117,7 +117,7 @@ Turns whose messages carry no uuid (the fake backend's plain helpers, or an
 errored turn with no assistant output) skip the gate entirely — `done` fires
 promptly even though no transcript file exists at all.
 
-```
+```ts
 const box = await makeTmpBox();
 const backend = createFakeChatBackend();
 const session = new ChatSession(box.root, { backend, systemPrompt: plainTestPrompt, skipBootstrap: true });
@@ -135,7 +135,7 @@ Date.now() - t0 < 1000
 => true
 ```
 
-```cleanup
+```ts cleanup
 session.stop();
 await box.cleanup();
 ```

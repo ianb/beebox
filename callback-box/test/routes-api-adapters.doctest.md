@@ -26,7 +26,7 @@ process.env["CB_ADAPTER_BASE_REPLICATE"] = upstreamUrl;
 
 ## Missing key → clear 503 naming the secret file
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -42,7 +42,7 @@ res.body.error
 
 ## With a key: forwarded with auth injected, cookies stripped
 
-``` continue
+```ts continue
 await ctx.seed("config/connectors/replicate.secret.json", '{"apiKey": "r8_test_key"}');
 const ok = await ctx.request({
   method: "POST",
@@ -65,7 +65,7 @@ ok.body.echo.input.prompt
 
 ## Unknown adapters enumerate the valid set
 
-``` continue
+```ts continue
 const nope = await ctx.request({ method: "POST", url: "/api/adapters/nope/v1/x", payload: {} });
 nope.statusCode
 => 404
@@ -74,7 +74,7 @@ nope.body.error
 => Unknown adapter "nope" — available: replicate, mistral, anthropic, openai
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 await upstream.close();
 delete process.env["CB_ADAPTER_BASE_REPLICATE"];

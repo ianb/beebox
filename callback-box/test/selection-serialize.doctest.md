@@ -13,7 +13,7 @@ import { applySelections } from "../src/frontend/src/lib/selection-serialize.js"
 
 ## Inline replacement at the token (typed message)
 
-```
+```ts
 JSON.stringify(applySelections("Compare [selection1] with the intro", { selections: [
   { id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body; heading: Proofing (#proofing)" },
 ] }))
@@ -23,7 +23,7 @@ JSON.stringify(applySelections("Compare [selection1] with the intro", { selectio
 
 ## No token in the body — appended (spoken message)
 
-```
+```ts
 JSON.stringify(applySelections("look at what I selected", { selections: [
   { id: 1, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" },
 ] }))
@@ -33,7 +33,7 @@ JSON.stringify(applySelections("look at what I selected", { selections: [
 
 ## Mixed: one referenced inline, one orphan appended; empty position omits the attribute
 
-```
+```ts
 JSON.stringify(applySelections("see [selection1]", { selections: [
   { id: 1, ref: "/a.card", text: "alpha", position: "body" },
   { id: 2, ref: "/b.card", text: "beta", position: "" },
@@ -44,7 +44,7 @@ JSON.stringify(applySelections("see [selection1]", { selections: [
 
 ## XML-escaping of ref, position, and text
 
-```
+```ts
 JSON.stringify(applySelections("[selection1]", { selections: [
   { id: 1, ref: "/a&b.card", text: "x < y & z", position: "p\"q" },
 ] }))
@@ -54,7 +54,7 @@ JSON.stringify(applySelections("[selection1]", { selections: [
 
 ## No selections — body unchanged
 
-```
+```ts
 applySelections("hello world", { selections: [] })
 =>
 hello world
@@ -62,7 +62,7 @@ hello world
 
 ## Unknown token is left as literal text
 
-```
+```ts
 JSON.stringify(applySelections("[selection1] and [selection9]", { selections: [
   { id: 1, ref: "/a.card", text: "alpha", position: "" },
 ] }))
@@ -72,7 +72,7 @@ JSON.stringify(applySelections("[selection1] and [selection9]", { selections: [
 
 ## Voice anchor: inserted after the anchored phrase (not appended)
 
-```
+```ts
 JSON.stringify(applySelections("let me look at this part and continue", { selections: [
   { id: 1, ref: "/a.card", text: "X", position: "", anchor: "look at this part" },
 ] }))
@@ -82,7 +82,7 @@ JSON.stringify(applySelections("let me look at this part and continue", { select
 
 ## Voice anchor: case/punctuation-insensitive (survives the HQ pass)
 
-```
+```ts
 JSON.stringify(applySelections("So, what does THIS part mean?", { selections: [
   { id: 1, ref: "/a.card", text: "X", position: "", anchor: "this part" },
 ] }))
@@ -92,7 +92,7 @@ JSON.stringify(applySelections("So, what does THIS part mean?", { selections: [
 
 ## Voice anchor: empty anchor places the selection at the start
 
-```
+```ts
 JSON.stringify(applySelections("the rest of it", { selections: [
   { id: 1, ref: "/a.card", text: "X", position: "", anchor: "" },
 ] }))
@@ -102,7 +102,7 @@ JSON.stringify(applySelections("the rest of it", { selections: [
 
 ## Voice anchor: phrase not found, no timing → falls back to appending
 
-```
+```ts
 JSON.stringify(applySelections("hello world", { selections: [
   { id: 1, ref: "/a.card", text: "X", position: "", anchor: "goodbye moon" },
 ] }))
@@ -115,7 +115,7 @@ JSON.stringify(applySelections("hello world", { selections: [
 Grabbed 4 words into an 8-word utterance → ~50% through; inserted after the
 4th body word and tagged `placement`, rather than dumped at the end.
 
-```
+```ts
 JSON.stringify(applySelections("one two three four five six seven eight", { selections: [
   { id: 1, ref: "/a.card", text: "X", position: "", anchor: "no such phrase", spokenWords: 4 },
 ] }))
@@ -128,7 +128,7 @@ JSON.stringify(applySelections("one two three four five six seven eight", { sele
 `beta` anchors precisely; the second lost its anchor but was grabbed 4/5 of
 the way through, so it lands after `delta` — keeping the two in order.
 
-```
+```ts
 JSON.stringify(applySelections("alpha beta gamma delta epsilon", { selections: [
   { id: 1, ref: "/a.card", text: "A", position: "", anchor: "beta" },
   { id: 2, ref: "/b.card", text: "B", position: "", anchor: "gone", spokenWords: 4 },

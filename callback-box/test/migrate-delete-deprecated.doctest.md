@@ -13,7 +13,7 @@ import { isDeprecatedCard } from "../scripts/migrate/delete-deprecated-cards.js"
 
 ## The three deprecated types are selected
 
-```
+```ts
 [
   isDeprecatedCard("Latest_Headlines.news-item.card"),
   isDeprecatedCard("Weekly_Roundup.news-brief.card"),
@@ -24,7 +24,7 @@ import { isDeprecatedCard } from "../scripts/migrate/delete-deprecated-cards.js"
 
 ## Live card types — and lookalikes — are left alone
 
-```
+```ts
 [
   isDeprecatedCard("Note.memo.card"),
   isDeprecatedCard("Soup.recipe.card"),

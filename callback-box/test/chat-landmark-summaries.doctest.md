@@ -17,7 +17,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## Frontmatter landmark cards yield label + text symbol
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "Box.landmark.card",
@@ -35,7 +35,7 @@ JSON.stringify(summaries)
 
 ## An image `symbol: { src }` resolves to a box-relative path
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "trips/Trips.landmark.card",
@@ -52,7 +52,7 @@ JSON.stringify(summaries)
 A landmark card with no `navigation` (a pure routing target) still produces a
 tile, labeled from its filename — it isn't skipped.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "archive/Old_Mail.landmark.card",
@@ -66,7 +66,7 @@ JSON.stringify(summaries)
 
 ## A card whose frontmatter doesn't parse is skipped, not fatal
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("Good.landmark.card", "---\nnavigation:\n  label: Good\n---\n");
 await box.write("Bad.landmark.card", "not a frontmatter card at all\n");

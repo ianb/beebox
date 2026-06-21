@@ -15,7 +15,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## Reads name + first-line description from frontmatter
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "config/procedures/process-news.procedure.card",
@@ -33,7 +33,7 @@ JSON.stringify(out)
 
 ## Missing name falls back to the filename; missing description is empty
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write(
   "config/procedures/orphan.procedure.card",
@@ -47,7 +47,7 @@ JSON.stringify(out)
 
 ## A card with no readable frontmatter is indexed with a placeholder, not dropped
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("config/procedures/bad.procedure.card", "not a frontmatter card\n");
 
@@ -58,7 +58,7 @@ JSON.stringify(out)
 
 ## No procedures directory returns an empty list
 
-```
+```ts
 const box = await makeTmpBox();
 const out = await scanProcedures(box.root);
 out.length

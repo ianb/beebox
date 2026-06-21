@@ -16,14 +16,14 @@ import type { FileLoader } from "../src/core/file-summary.js";
 
 No registration needed — fallback handles everything.
 
-```
+```ts
 resetLoaderRegistry();
 const s = summarize({ path: "box/inbox/Meeting_Notes.memo.card" });
 s.title
 => Meeting Notes
 ```
 
-```
+```ts
 resetLoaderRegistry();
 const s = summarize({ path: "photo-001.jpg" });
 s.title
@@ -32,7 +32,7 @@ s.title
 
 ## type loader wins over path match
 
-```
+```ts
 resetLoaderRegistry();
 registerPathLoader<{ size: "large" }>(
   (p: string) => p.endsWith(".card"),
@@ -54,7 +54,7 @@ JSON.stringify(s.attrs)
 
 ## Path match fires when no type registered
 
-```
+```ts
 resetLoaderRegistry();
 registerPathLoader<Record<string, never>>(
   (p: string) => p.endsWith(".md"),
@@ -67,7 +67,7 @@ s.title
 
 ## type collision is last-wins with a warning
 
-```
+```ts
 resetLoaderRegistry();
 const warnings: string[] = [];
 const original = console.warn;
@@ -81,7 +81,7 @@ warnings.length
 => 1
 ```
 
-``` continue
+```ts continue
 summarize({ path: "a.memo.card", type: "memo" }).title
 => second
 ```

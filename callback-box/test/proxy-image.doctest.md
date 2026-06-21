@@ -21,7 +21,7 @@ async function guard(url) {
 
 ## Private, loopback, link-local, and mapped addresses are blocked
 
-```
+```ts
 [
   isBlockedAddress("127.0.0.1"),
   isBlockedAddress("10.0.0.5"),
@@ -38,7 +38,7 @@ async function guard(url) {
 
 ## Public addresses are allowed
 
-```
+```ts
 [
   isBlockedAddress("8.8.8.8"),
   isBlockedAddress("93.184.216.34"),
@@ -50,7 +50,7 @@ async function guard(url) {
 
 ## assertPublicHttpUrl rejects bad schemes, local hosts, literal private IPs, and junk
 
-```
+```ts
 await guard("ftp://example.com/a.png")
 => only http(s) URLs are proxied
 
@@ -69,7 +69,7 @@ await guard("not a url")
 
 ## A public literal-IP URL passes
 
-```
+```ts
 await guard("https://8.8.8.8/logo.png")
 => ok
 ```

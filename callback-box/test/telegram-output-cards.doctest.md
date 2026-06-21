@@ -17,7 +17,7 @@ import { createTelegramMessageTemplate } from "../src/schemas/telegram-message.j
 
 ## Pending cards are sent and deleted
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(
   "box/output/health-alert.telegram-message.card",
@@ -41,25 +41,25 @@ JSON.stringify(tg.sent)
 The sent card is gone; the previously-failed card is untouched (failed
 cards are never retried):
 
-``` continue
+```ts continue
 JSON.stringify(await fs.readdir(path.join(box.root, "box/output")))
 => ["already-failed.telegram-message.card"]
 ```
 
 The deletion is committed:
 
-``` continue
+```ts continue
 execSync("git log -1 --pretty=%s", { cwd: box.root, encoding: "utf-8" }).trim()
 => Telegram outbox: send 1 telegram message
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Send failures stamp the card instead of deleting it
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.seed(
   "box/output/alert.telegram-message.card",
@@ -84,7 +84,7 @@ error: "403: bot was blocked by the user"
 
 A second pass skips the failed card — nothing is sent, nothing changes:
 
-``` continue
+```ts continue
 JSON.stringify(await sendOutputCards({ boxRoot: box.root, triggeredBy: "doctest", tg }))
 => []
 
@@ -92,6 +92,6 @@ JSON.stringify(tg.sent)
 => []
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

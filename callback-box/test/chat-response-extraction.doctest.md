@@ -45,7 +45,7 @@ function makeExtractor() {
 
 A complete `<chat-response>` tag is extracted immediately:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("<chat-response>Hello!</chat-response>");
 responses.length
@@ -59,7 +59,7 @@ responses[0]
 
 Two responses in the same chunk are both extracted:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("<chat-response>On it!</chat-response>some tool use stuff<chat-response>Done, updated the file.</chat-response>");
 responses.length
@@ -76,7 +76,7 @@ responses[1]
 
 When a tag spans multiple `addText` calls, it's only extracted once complete. A second response arrives after non-response output:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("<chat-response>Looking into");
 responses.length
@@ -101,7 +101,7 @@ responses[1]
 
 Text before and after a response is preserved in `turnText` for further processing:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("Let me think about this...\n<chat-response>Here's what I found</chat-response>\nNow doing more work...");
 responses[0]
@@ -115,7 +115,7 @@ ext.turnText
 
 Whitespace-only responses are not emitted:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("<chat-response>  </chat-response><chat-response>Real response</chat-response>");
 responses.length
@@ -129,7 +129,7 @@ responses[0]
 
 Newlines within the response body are preserved:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("<chat-response>Line one\nLine two\nLine three</chat-response>");
 responses[0]
@@ -143,7 +143,7 @@ Line three
 
 A tag split mid-closing-tag is assembled correctly:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("thinking...<chat-response>Final answer</chat-resp");
 responses.length
@@ -161,7 +161,7 @@ responses[0]
 
 The typical Claude pattern is to send an immediate acknowledgment, do tool calls, then report the result. Both responses are extracted as they arrive:
 
-```
+```ts
 const { ext, responses } = makeExtractor();
 ext.addText("<chat-response>Checking that for you</chat-response>");
 responses.length

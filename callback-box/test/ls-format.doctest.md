@@ -25,7 +25,7 @@ async function lsLines(boxRoot, args) {
 
 ## Format pulls scalar frontmatter fields
 
-```
+```ts
 const box = await makeTmpBox();
 await mkdir(join(box.root, "box/inbox"), { recursive: true });
 await writeFile(join(box.root, "box/inbox/Hello.memo.card"), `---
@@ -40,13 +40,13 @@ JSON.stringify(lines)
 => ["box/inbox/Hello.memo.card\tHello World (new)"]
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Nested fields resolve; missing fields are empty
 
-```
+```ts
 const box = await makeTmpBox();
 await mkdir(join(box.root, "box/inbox"), { recursive: true });
 await writeFile(join(box.root, "box/inbox/Photo.image.card"), `---
@@ -64,13 +64,13 @@ JSON.stringify(missing)
 => ["box/inbox/Photo.image.card\t"]
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Bare `ls` (no format) lists paths only
 
-```
+```ts
 const box = await makeTmpBox();
 await mkdir(join(box.root, "box/inbox"), { recursive: true });
 await writeFile(join(box.root, "box/inbox/Hello.memo.card"), "---\ntitle: Hi\n---\n");
@@ -79,6 +79,6 @@ JSON.stringify(lines)
 => ["box/inbox/Hello.memo.card"]
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

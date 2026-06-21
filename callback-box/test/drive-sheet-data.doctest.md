@@ -10,7 +10,7 @@ import { buildSheetData, serializeSheetData, parseSheetData, sheetDataToValues, 
 
 Plain cells stay as bare values. Formula cells become `{f, v}` objects:
 
-```
+```ts
 const formula = [["Name", "Amount"], ["Alice", "100"], ["Total", "=SUM(B2:B2)"]];
 const formatted = [["Name", "Amount"], ["Alice", "100"], ["Total", "$100.00"]];
 const data = buildSheetData(formula, formatted);
@@ -24,7 +24,7 @@ JSON.stringify(data[2])
 
 ## Numeric values are preserved as numbers
 
-```
+```ts
 const formula = [["Price"], ["42.5"]];
 const formatted = [["Price"], ["$42.50"]];
 const data = buildSheetData(formula, formatted);
@@ -37,7 +37,7 @@ data[1]?.[0]
 
 ## Serialization — one row per line
 
-```
+```ts
 const data = [["A", "B"], [1, {"f": "=A2+1", "v": "2"}]];
 const json = serializeSheetData(data);
 json
@@ -49,7 +49,7 @@ json
 
 ## Round-trip: serialize then parse
 
-```
+```ts
 const original = [["Name", 100], ["", {"f": "=SUM(B1)", "v": "100"}]];
 const json = serializeSheetData(original);
 const parsed = parseSheetData(json);
@@ -59,7 +59,7 @@ JSON.stringify(parsed)
 
 ## Extract values for push — formulas become formula strings
 
-```
+```ts
 const data = [["Name", 100], ["Total", {"f": "=SUM(B1)", "v": "100"}]];
 const values = sheetDataToValues(data);
 JSON.stringify(values)
@@ -68,7 +68,7 @@ JSON.stringify(values)
 
 ## isFormulaCell helper
 
-```
+```ts
 isFormulaCell({"f": "=SUM(A1)", "v": "42"})
 => true
 

@@ -80,7 +80,7 @@ A wakeup run (untagged, unregistered) is non-chat. A conversation still
 active within the quiescence window is deferred. A session already
 settled in state is skipped.
 
-```
+```ts
 const box = await makeTmpBox();
 process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
@@ -127,7 +127,7 @@ result.registriesFound.join(",")
 State round-trips through `.callback-box/retro/state.json`, and a failed
 session stays eligible until it exhausts its attempts.
 
-``` continue
+```ts continue
 state.sessions["chat-old"] = { status: "failed", attempts: 1, at: NOW.toISOString() };
 await saveRetroState(box.root, state);
 const reloaded = await loadRetroState(box.root);
@@ -147,7 +147,7 @@ isSessionSettled(reloaded, "chat-done-before")
 The observer sees dialogue plus tool one-liners — `<typed>` wrappers
 stripped, tool results omitted.
 
-``` continue
+```ts continue
 await seedSession(box.root, { sessionId: "chat-tools", age: 4 * HOUR, entries: [
   typedEntry("Add milk to the shopping list", "2026-06-09T08:00:00Z"),
   {
@@ -176,7 +176,7 @@ Adding it now.
 The report records what was examined and every category of skip — caps
 and deferrals are named, never silent.
 
-``` continue
+```ts continue
 renderRunReport({
   runId: "2026-06-09T12-00-00",
   generatedAt: "2026-06-09T12:00:00Z",

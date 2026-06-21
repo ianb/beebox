@@ -13,7 +13,7 @@ const TEMPLATED = "---\nthread-id: t1\nsubject: Pricing\nstatus: new\n---\n";
 
 ## contains carries over from the existing card
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/email/t.email-thread.card", "---\nthread-id: t1\nsubject: Pricing\ncontains: Metricly demo offer; no action needed.\n---\n");
 const preserved = await preserveAgentFields(TEMPLATED, { existingPath: box.path("box/inbox/email/t.email-thread.card") });
@@ -26,7 +26,7 @@ preserved.includes("status: new")
 
 ## No existing card (first sync): template passes through untouched
 
-``` continue
+```ts continue
 await preserveAgentFields(TEMPLATED, { existingPath: box.path("box/inbox/email/new.email-thread.card") })
 => ---
 thread-id: t1
@@ -38,7 +38,7 @@ status: new
 
 ## The template wins when it carries its own value
 
-``` continue
+```ts continue
 const withOwn = "---\nthread-id: t1\ncontains: from-template\n---\n";
 const result = await preserveAgentFields(withOwn, { existingPath: box.path("box/inbox/email/t.email-thread.card") });
 result.includes("contains: from-template")
@@ -47,12 +47,12 @@ result.includes("contains: from-template")
 
 ## A hand-mangled existing card contributes nothing (sync never breaks)
 
-``` continue
+```ts continue
 await box.write("box/inbox/email/broken.email-thread.card", "no frontmatter here");
 await preserveAgentFields(TEMPLATED, { existingPath: box.path("box/inbox/email/broken.email-thread.card") }) === TEMPLATED
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

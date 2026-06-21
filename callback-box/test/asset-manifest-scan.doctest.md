@@ -27,7 +27,7 @@ async function fileExists(p: string): Promise<boolean> {
 
 ## findAttachScopes locates every .attach directory
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("box/inbox/scan-1.attach/photo-001.jpg", "abc");
 await box.write("box/inbox/scan-1.attach/photo-001.image.attach/photo-001.jpg", "def");
@@ -41,13 +41,13 @@ box/inbox/scan-1.attach/photo-001.image.attach
 store/old/voice.attach
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Auto-claim: new files get added to the manifest
 
-```
+```ts
 const box2 = await makeTmpBox();
 await box2.write("foo.attach/photo-001.jpg", "abc");
 await box2.write("foo.attach/photo-002.jpg", "def");
@@ -67,7 +67,7 @@ manifest count: 2
 p1 sha: ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 ```
 
-```cleanup
+```ts cleanup
 await box2.cleanup();
 ```
 
@@ -76,7 +76,7 @@ await box2.cleanup();
 A second scan of an already-claimed file should be a no-op: file ends up
 in `unchanged`, not in `claimed` or `refreshed`.
 
-```
+```ts
 const box3 = await makeTmpBox();
 await box3.write("foo.attach/photo.jpg", "abc");
 await scanAttachScope({ absPath: box3.path("foo.attach"), relPath: "foo.attach" });
@@ -93,7 +93,7 @@ unchanged: photo.jpg
 manifestUpdated: false
 ```
 
-```cleanup
+```ts cleanup
 await box3.cleanup();
 ```
 
@@ -103,7 +103,7 @@ If a file's mtime moves (touch, format, copy-restore) but content is
 identical, the scan refreshes the manifest mtime so the stat-shortcut
 keeps working — and surfaces this as `refreshed`, not an error.
 
-```
+```ts
 const box4 = await makeTmpBox();
 await box4.write("foo.attach/photo.jpg", "abc");
 await scanAttachScope({ absPath: box4.path("foo.attach"), relPath: "foo.attach" });
@@ -119,7 +119,7 @@ refreshed: photo.jpg
 errors: 0
 ```
 
-```cleanup
+```ts cleanup
 await box4.cleanup();
 ```
 
@@ -128,7 +128,7 @@ await box4.cleanup();
 If both mtime AND hash differ, that's a real out-of-band edit. Manifest
 left alone, error returned.
 
-```
+```ts
 const box5 = await makeTmpBox();
 await box5.write("foo.attach/photo.jpg", "abc");
 await scanAttachScope({ absPath: box5.path("foo.attach"), relPath: "foo.attach" });
@@ -146,13 +146,13 @@ error name: photo.jpg
 mentions cb overwrite: true
 ```
 
-```cleanup
+```ts cleanup
 await box5.cleanup();
 ```
 
 ## Missing file: manifest entry without a sibling on disk
 
-```
+```ts
 const box6 = await makeTmpBox();
 await box6.write("foo.attach/photo.jpg", "abc");
 await scanAttachScope({ absPath: box6.path("foo.attach"), relPath: "foo.attach" });
@@ -169,7 +169,7 @@ error kind: missing-file
 mentions cb rm: true
 ```
 
-```cleanup
+```ts cleanup
 await box6.cleanup();
 ```
 
@@ -179,7 +179,7 @@ await box6.cleanup();
 rename, not deletion + add. The manifest entry's original metadata
 (sha256 obviously, but also size/mtime as stored) carries over.
 
-```
+```ts
 const box7 = await makeTmpBox();
 await box7.write("foo.attach/old.jpg", "abc");
 await scanAttachScope({ absPath: box7.path("foo.attach"), relPath: "foo.attach" });
@@ -199,7 +199,7 @@ old in manifest: false
 new in manifest: true
 ```
 
-```cleanup
+```ts cleanup
 await box7.cleanup();
 ```
 
@@ -209,7 +209,7 @@ Cards (.card files) commit normally — they're text, not binaries — so
 the manifest scan ignores them. An attach dir containing only cards
 (no binaries) produces no manifest at all.
 
-```
+```ts
 const box8 = await makeTmpBox();
 await box8.write("session.attach/photo-001.image.card", "<image status='new'/>\n");
 const r = await scanAttachScope({ absPath: box8.path("session.attach"), relPath: "session.attach" });
@@ -222,7 +222,7 @@ manifestUpdated: false
 manifest file exists: false
 ```
 
-```cleanup
+```ts cleanup
 await box8.cleanup();
 ```
 
@@ -231,7 +231,7 @@ await box8.cleanup();
 `dryRun: true` returns the same classification but never touches disk.
 Used by `cb attachments verify` (read-only check) and by tests.
 
-```
+```ts
 const box9 = await makeTmpBox();
 await box9.write("foo.attach/photo.jpg", "abc");
 const r = await scanAttachScope(
@@ -247,7 +247,7 @@ manifestUpdated: false
 manifest file exists: false
 ```
 
-```cleanup
+```ts cleanup
 await box9.cleanup();
 ```
 
@@ -260,7 +260,7 @@ The classic case: email threads store attachments under
 subdir is part of the surrounding `msg-001.attach` scope, not a separate
 scope.
 
-```
+```ts
 const boxR = await makeTmpBox();
 await boxR.write("msg.attach/attachments/Outlook.png", "alpha");
 await boxR.write("msg.attach/attachments/img/inline.jpg", "beta");
@@ -275,7 +275,7 @@ errors: 0
 
 The nested `.attach/` scope is left to its own scan — not picked up here.
 
-```cleanup
+```ts cleanup
 await boxR.cleanup();
 ```
 
@@ -283,7 +283,7 @@ await boxR.cleanup();
 
 Combined "find scopes + scan each" — what the pre-commit hook calls.
 
-```
+```ts
 const box10 = await makeTmpBox();
 await box10.write("box/inbox/scan-1.attach/photo-001.jpg", "abc");
 await box10.write("box/inbox/scan-2.attach/photo-001.jpg", "def");
@@ -297,6 +297,6 @@ total claimed: 2
 errors: 0
 ```
 
-```cleanup
+```ts cleanup
 await box10.cleanup();
 ```

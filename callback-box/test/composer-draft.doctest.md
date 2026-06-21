@@ -20,7 +20,7 @@ Scopes a draft by box and session, on its own key prefix so it never collides
 with the voice-dictation draft. New chats (no server-assigned id yet) share the
 `:new` slot; a missing box slug falls back to `default`:
 
-```
+```ts
 composerDraftKey({ boxSlug: "test1", sessionId: "sess-abc" })
 => cb-composer-draft:test1:sess-abc
 
@@ -32,7 +32,7 @@ composerDraftKey({ boxSlug: undefined, sessionId: null })
 
 A well-formed draft round-trips, preserving the raw text (whitespace included):
 
-```
+```ts
 const draft = { text: "  half-written thought", updatedAt: 5 };
 JSON.stringify(parseComposerDraft(serializeComposerDraft(draft)))
 => {"text":"  half-written thought","updatedAt":5}
@@ -42,7 +42,7 @@ JSON.stringify(parseComposerDraft(serializeComposerDraft(draft)))
 blank-text, or malformed-shape values — so a corrupt entry never refills the
 composer:
 
-```
+```ts
 JSON.stringify(parseComposerDraft(null))
 => null
 
@@ -53,7 +53,7 @@ JSON.stringify(parseComposerDraft("not json"))
 => null
 ```
 
-```
+```ts
 JSON.stringify(parseComposerDraft('{"text":"   ","updatedAt":5}'))
 => null
 
@@ -69,7 +69,7 @@ JSON.stringify(parseComposerDraft('{"updatedAt":5}'))
 
 A complete, correctly-typed record parses:
 
-```
+```ts
 JSON.stringify(parseComposerDraft('{"text":"call the dentist","updatedAt":42}'))
 => {"text":"call the dentist","updatedAt":42}
 ```

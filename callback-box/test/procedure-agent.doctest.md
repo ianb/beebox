@@ -15,7 +15,7 @@ import { execSync } from "node:child_process";
 The `createAgent` option lets tests replace the real Claude Code subprocess
 with a fake agent that simulates agent behavior.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/agent-test.procedure.card", `---
 name: agent-test
@@ -84,13 +84,13 @@ model: claude-haiku-4-5-20251001
 agent wrote: processed 3 items
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Directive passed to agent context
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/directed.procedure.card", `---
 name: directed
@@ -129,7 +129,7 @@ has directive: true
 directive text: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -138,7 +138,7 @@ await box.cleanup();
 When an agent leaves uncommitted changes, the engine creates a
 fallback commit to keep git clean between steps.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("config/procedures/messy.procedure.card", `---
 name: messy
@@ -184,6 +184,6 @@ file preserved: true
 has fallback: true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

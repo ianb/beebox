@@ -11,14 +11,14 @@ import { execSync } from "node:child_process";
 
 `GET /api/status` returns overall box state including counts:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/status" });
 res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 typeof res.body.counts.inbox
 => number
 
@@ -26,7 +26,7 @@ typeof res.body.counts.questions
 => number
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -34,7 +34,7 @@ await ctx.cleanup();
 
 `GET /api/inbox` returns inbox items. An empty box returns an empty list:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({ method: "GET", url: "/api/inbox" })
 =>
@@ -42,13 +42,13 @@ await ctx.inject({ method: "GET", url: "/api/inbox" })
 «*»"items": []«*»
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 With a seeded card, it appears in the inbox:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/inbox/test.memo.card",
@@ -60,12 +60,12 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.items.length > 0
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -73,7 +73,7 @@ await ctx.cleanup();
 
 `GET /api/browse/*` lists directory contents with parsed card metadata:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/inbox/browse-test.memo.card",
@@ -95,7 +95,7 @@ await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
 }
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -105,7 +105,7 @@ await ctx.cleanup();
 for conditional GETs, and advertises `no-cache` so the browser revalidates
 every time (otherwise agent edits would stay hidden behind stale HTTP cache):
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("store/notes/hello.md", "# Hello");
 const res = await ctx.rawRequest({ method: "GET", url: "/api/files/store/notes/hello.md" });
@@ -119,7 +119,7 @@ res.payload
 => # Hello
 ```
 
-``` continue
+```ts continue
 typeof res.headers["etag"]
 => string
 
@@ -130,7 +130,7 @@ typeof res.headers["last-modified"]
 A second request that echoes the ETag back in `If-None-Match` gets a 304 with
 no body:
 
-``` continue
+```ts continue
 const etag = res.headers["etag"] as string;
 const revalidate = await ctx.rawRequest({
   method: "GET",
@@ -147,7 +147,7 @@ revalidate.payload
 After the file changes on disk, the ETag changes and the client gets a fresh
 200 even when it sends the old ETag:
 
-``` continue
+```ts continue
 await ctx.seed("store/notes/hello.md", "# Hello, world");
 const fresh = await ctx.rawRequest({
   method: "GET",
@@ -164,7 +164,7 @@ fresh.payload
 `.card` files are served as text here too — the card Source view fetches the
 verbatim file this way (card.get returns only the parsed form):
 
-``` continue
+```ts continue
 await ctx.seed("store/archive/Note.memo.card", "---\nstatus: new\n---\nBody\n");
 const card = await ctx.rawRequest({ method: "GET", url: "/api/files/store/archive/Note.memo.card" });
 card.statusCode
@@ -177,7 +177,7 @@ status: new
 Body
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -185,7 +185,7 @@ await ctx.cleanup();
 
 `DELETE /api/files/*` removes a non-card file and commits the deletion:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("store/images/delete-me.webp", "not really an image");
 ctx.commitAll("seed image");
@@ -194,25 +194,25 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 execSync("git log -1 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
 => Deleted by user: store/images/delete-me.webp
 ```
 
-``` continue
+```ts continue
 await ctx.inject({ method: "GET", url: "/api/files/store/images/delete-me.webp" })
 =>
 404
 «*»"error": "Not found"«*»
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Dirty files get preserved in their own commit before the delete commit:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("store/images/dirty-delete.webp", "version 1");
 ctx.commitAll("seed dirty image");
@@ -222,14 +222,14 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 execSync("git log -2 --pretty=%s", { cwd: ctx.boxRoot, encoding: "utf-8" }).trim()
 =>
 Deleted by user: store/images/dirty-delete.webp
 Saved before user delete: store/images/dirty-delete.webp
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -237,7 +237,7 @@ await ctx.cleanup();
 
 The debug log supports a POST/GET/DELETE cycle for client-side logging:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({
   method: "POST",
@@ -253,14 +253,14 @@ await ctx.inject({ method: "GET", url: "/api/debug-log" })
 
 Deleting clears all entries:
 
-``` continue
+```ts continue
 await ctx.inject({ method: "DELETE", url: "/api/debug-log" });
 const res = await ctx.request({ method: "GET", url: "/api/debug-log" });
 res.body.entries.length
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -268,7 +268,7 @@ await ctx.cleanup();
 
 `GET /api/activity` returns the git commit history:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/inbox/log-test.memo.card",
@@ -280,7 +280,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 Array.isArray(res.body.entries)
 => true
 
@@ -288,7 +288,7 @@ res.body.entries.length >= 1
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -296,7 +296,7 @@ await ctx.cleanup();
 
 `GET /api/questions` returns question cards with enriched prompt data:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/questions/ask.question.card",
@@ -308,7 +308,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.items.length
 => 1
 
@@ -316,25 +316,25 @@ res.body.items[0].prompt
 => What color?
 ```
 
-``` continue
+```ts continue
 Array.isArray(res.body.items[0].options)
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Empty box returns empty question list:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/questions" });
 res.body.items.length
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -342,14 +342,14 @@ await ctx.cleanup();
 
 `GET /api/context` returns context for agent decision-making:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({ method: "GET", url: "/api/context" });
 res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 typeof res.body.summary
 => string
 
@@ -360,13 +360,13 @@ typeof res.body.inboxCount
 => number
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 With a pending question, it appears in context:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed(
   "box/questions/ctx-q.question.card",
@@ -378,11 +378,11 @@ res.body.pendingQuestions.length
 => 1
 ```
 
-``` continue
+```ts continue
 res.body.pendingQuestions[0].prompt
 => Deploy now?
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

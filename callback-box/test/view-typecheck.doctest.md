@@ -51,7 +51,7 @@ export default function V({ cards }: { cards: VC[] }) {
 
 ## A stale-typed view (removed field) fails; clean passes; `as any` slips through
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("views/stale.tsx", STALE);
 await box.write("views/clean.tsx", CLEAN);
@@ -78,7 +78,7 @@ result.views.find((v) => v.slug === "noise")?.ok
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 </content>

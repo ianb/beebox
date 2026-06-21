@@ -25,7 +25,7 @@ console.warn = () => {};
 
 The closed set of recognized kinds.
 
-```
+```ts
 ACK_KINDS.map((k) => k.kind).join(",")
 => created,appended,edited,todo-added,todo-completed,no-response
 
@@ -40,21 +40,21 @@ getAckKind("nope")
 
 Self-closing form, no inner text.
 
-```
+```ts
 JSON.stringify(parseAcks("<ack kind=\"appended\" ref=\"a.card\"/>"))
 => [{"kind":"appended","ref":"a.card"}]
 ```
 
 Paired form with inner text.
 
-```
+```ts
 JSON.stringify(parseAcks("<ack kind=\"edited\" ref=\"a.md\">Reworked the intro</ack>"))
 => [{"kind":"edited","ref":"a.md","text":"Reworked the intro"}]
 ```
 
 Empty text is dropped, ref is optional.
 
-```
+```ts
 JSON.stringify(parseAcks("<ack kind=\"noted\"></ack>"))
 => []
 
@@ -69,7 +69,7 @@ JSON.stringify(parseAcks("<ack kind=\"created\"></ack>"))
 Unknown kinds are silently dropped (with a console warning the caller
 can ignore). Acks with no `kind` attribute are also dropped.
 
-```
+```ts
 JSON.stringify(parseAcks("<ack kind=\"frob\"/>"))
 => []
 
@@ -79,7 +79,7 @@ JSON.stringify(parseAcks("<ack ref=\"x.card\"/>"))
 
 Mixed valid and invalid in one response — valids survive.
 
-```
+```ts
 JSON.stringify(parseAcks(
   "prose <ack kind=\"created\" ref=\"a.card\"/> more <ack kind=\"frob\"/> end"
 ))
@@ -90,7 +90,7 @@ JSON.stringify(parseAcks(
 
 Single callout with a context label.
 
-```
+```ts
 JSON.stringify(parseCallouts(
   "<callout context=\"weather Sat\">Saturday: sunny, 72.</callout>"
 ))
@@ -99,7 +99,7 @@ JSON.stringify(parseCallouts(
 
 Multiple callouts stack in document order.
 
-```
+```ts
 const r = parseCallouts(
   "<callout context=\"a\">first</callout> middle <callout context=\"b\">second</callout>"
 );
@@ -112,7 +112,7 @@ r.map((c) => c.context).join(",")
 
 Missing context → dropped. Empty body → dropped.
 
-```
+```ts
 JSON.stringify(parseCallouts("<callout>no context</callout>"))
 => []
 
@@ -126,7 +126,7 @@ Removes `<ack>`, `<callout>`, and `<chat-app>` tags so the prose
 renderer doesn't show the raw XML. Self-closing and paired forms
 both strip.
 
-```
+```ts
 stripStructuredOutputTags("hello <ack kind=\"created\"/> world")
 => hello  world
 
@@ -144,7 +144,7 @@ The paired `<chat-app>` form with `<card-activity>` children (the
 companion-pane snapshot) strips whole, body included — otherwise the
 snapshot leaks into the displayed message.
 
-```
+```ts
 stripStructuredOutputTags("<chat-app prose=\"on\" open-card=\"x\">\n<card-activity kind=\"explored\">king -> chief</card-activity>\n</chat-app>kept")
 => kept
 ```

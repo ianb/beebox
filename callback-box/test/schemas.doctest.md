@@ -20,7 +20,7 @@ import { WebpageSchema, createWebpageTemplate } from "../src/schemas/webpage.js"
 
 The registry tracks all known card types:
 
-```
+```ts
 getCardTypes().includes("memo")
 => true
 
@@ -40,7 +40,7 @@ getCardTypes().includes("webpage")
 
 Each frontmatter schema (memo, email-thread, etc.) carries a `type`:
 
-```
+```ts
 MemoSchema.type
 => memo
 
@@ -62,7 +62,7 @@ A memo captures a piece of content, optionally with a source. The
 content lives in the markdown body; created/source/etc. are in the
 YAML frontmatter.
 
-```
+```ts
 createMemoTemplate("Test content", "test-source")
 =>
 ---
@@ -75,7 +75,7 @@ Test content
 
 Source is optional:
 
-```
+```ts
 createMemoTemplate("Just content")
 =>
 ---
@@ -88,7 +88,7 @@ Just content
 Special characters in content pass through verbatim — markdown bodies
 don't need XML-style escaping:
 
-```
+```ts
 createMemoTemplate("Test <content> & more")
 =>
 ---
@@ -102,7 +102,7 @@ Test <content> & more
 
 A select question presents options to the user:
 
-```
+```ts
 createSelectQuestionTemplate({
   memo: "Context here",
   prompt: "What do you want?",
@@ -129,7 +129,7 @@ input:
 
 Special characters in content pass through YAML verbatim:
 
-```
+```ts
 createSelectQuestionTemplate({
   memo: "Context with <special> & chars",
   prompt: "What's \"this\"?",
@@ -154,7 +154,7 @@ input:
 
 An intake job groups items for triage. It has a `status`, `priority`, and a list of item references:
 
-```
+```ts
 createIntakeJobTemplate({
   source: "capture-connector",
   description: "Triage 2 new capture sessions",
@@ -178,7 +178,7 @@ items:
 
 Supports `priority: "low"`:
 
-```
+```ts
 createIntakeJobTemplate({
   source: "capture-connector",
   description: "Triage bookmarks",
@@ -201,7 +201,7 @@ items:
 
 A calendar review job groups calendar changes (new, updated, deleted events):
 
-```
+```ts
 createCalendarReviewJobTemplate({
   source: "google-calendar",
   description: "2 calendar changes to review",
@@ -229,7 +229,7 @@ changes:
 
 Deleted events can include the original ICS content under `ics:`:
 
-```
+```ts
 const out = createCalendarReviewJobTemplate({
   source: "google-calendar",
   description: "1 deletion",
@@ -243,7 +243,7 @@ out.includes("action: deleted") && out.includes("BEGIN:VCALENDAR")
 
 Supports custom priority:
 
-```
+```ts
 const out = createCalendarReviewJobTemplate({
   source: "google-calendar",
   description: "test",
@@ -259,7 +259,7 @@ out.includes("priority: low")
 A webpage card is a captured external page: provenance in frontmatter, the
 readable rendering inline as the body.
 
-```
+```ts
 createWebpageTemplate({
   title: "Example Page",
   source: "https://example.com/article",
@@ -278,7 +278,7 @@ The readable page body.
 Optional capture metadata and the frozen-snapshot ref are included only when
 set:
 
-```
+```ts
 createWebpageTemplate({
   title: "Example Page",
   source: "https://example.com/article",

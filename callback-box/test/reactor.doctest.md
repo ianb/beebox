@@ -19,7 +19,7 @@ import * as path from "node:path";
 
 ### Includes working directory and key instructions
 
-```
+```ts
 const prompt = buildReactorSystemPrompt("/test/box");
 prompt.includes("WORKING DIRECTORY: /test/box")
 => true
@@ -38,7 +38,7 @@ prompt.includes("do not need to re-read")
 
 ### Formats job list with descriptions
 
-```
+```ts
 const prompt = buildReactorUserPrompt(
   ["box/jobs/task1.job.card", "box/jobs/task2.job.card"],
   ["### box/jobs/task1.job.card\n```xml\n<job>do thing 1</job>\n```",
@@ -59,7 +59,7 @@ prompt.includes("cb finish")
 
 ### Single job
 
-```
+```ts
 const prompt = buildReactorUserPrompt(
   ["box/jobs/only.job.card"],
   ["### box/jobs/only.job.card\n```xml\n<job>solo task</job>\n```"],
@@ -75,7 +75,7 @@ prompt.includes("solo task")
 
 ### Finds job cards and sorts by priority
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/task-a.job.card", `<job priority="low"><description>Low A</description></job>`);
@@ -101,7 +101,7 @@ await box.cleanup();
 
 ### Type filter only matches typed suffix
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/msg1.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
@@ -123,7 +123,7 @@ await box.cleanup();
 
 ### Source filter drops jobs whose root source attr does not match
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/email.intake.job.card", `<intake-job source="gmail"><description>Email triage</description></intake-job>`);
@@ -153,7 +153,7 @@ Current job cards are YAML frontmatter, not XML — discovery reads the
 only grepped XML attributes, silently dropping every frontmatter job
 from source-filtered runs):
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/y1.intake.job.card", "---\nstatus: pending\ncreated: 2026-06-09T00:00:00Z\nsource: gmail\npriority: low\ndescription: Triage 1 inbox item\nitems:\n  - ref: box/inbox/a.memo.card\n---\n");
@@ -171,7 +171,7 @@ await box.cleanup();
 
 ### Empty directory returns empty array
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await fs.mkdir(path.join(box.root, "box/jobs"), { recursive: true });
 const cards = await findJobCards(path.join(box.root, "box/jobs"));
@@ -183,7 +183,7 @@ await box.cleanup();
 
 ### Non-existent directory returns empty array
 
-```
+```ts
 const cards = await findJobCards("/tmp/nonexistent-reactor-test-dir");
 cards.length
 => 0
@@ -193,7 +193,7 @@ cards.length
 
 ### Includes XML content and priority label
 
-```
+```ts
 const desc = await buildJobDescription(
   {
     card: { file: "task.job.card", priority: "low" },
@@ -213,7 +213,7 @@ desc.includes("```xml")
 
 ### Inlines referenced files
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/threads/t1.card", `<thread><message>Hello world</message></thread>`);
 
@@ -235,7 +235,7 @@ await box.cleanup();
 
 ### Handles missing refs gracefully
 
-```
+```ts
 const desc = await buildJobDescription(
   {
     card: { file: "task.job.card", priority: "normal" },

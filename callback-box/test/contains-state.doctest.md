@@ -30,7 +30,7 @@ const MEMO = (text: string, contains?: string) =>
 
 ## The refresh records contains text and basis; fresh cards aren't stale
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/notes/Dentist.memo.card", MEMO("Appointment moved to June 17.", "Dentist moved to June 17."));
 await box.write("store/notes/Bare.memo.card", MEMO("No contains here yet."));
@@ -48,7 +48,7 @@ JSON.stringify(listMissing(state))
 
 ## Editing the body while keeping contains flags the card stale
 
-``` continue
+```ts continue
 await box.write("store/notes/Dentist.memo.card", MEMO("Appointment moved AGAIN, now July 2.", "Dentist moved to June 17."));
 await openSearchIndex(box.root);
 JSON.stringify(listStale(await loadContainsState(box.root)))
@@ -57,7 +57,7 @@ JSON.stringify(listStale(await loadContainsState(box.root)))
 
 ## The hook-time warning fires live, even before any refresh
 
-``` continue
+```ts continue
 const warning = await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.memo.card", ctx });
 warning !== null && warning.startsWith("store/notes/Dentist.memo.card: card content changed but contains: didn't")
 => true
@@ -68,7 +68,7 @@ await staleContainsWarning(box.root, { relPath: "store/notes/Bare.memo.card", ct
 
 ## Updating the contains text re-bases; the flag clears
 
-``` continue
+```ts continue
 await box.write("store/notes/Dentist.memo.card", MEMO("Appointment moved AGAIN, now July 2.", "Dentist moved to July 2."));
 await openSearchIndex(box.root);
 JSON.stringify(listStale(await loadContainsState(box.root)))
@@ -77,7 +77,7 @@ JSON.stringify(listStale(await loadContainsState(box.root)))
 
 ## Confirming unchanged text re-bases too (the cb contains update path)
 
-``` continue
+```ts continue
 await box.write("store/notes/Dentist.memo.card", MEMO("Tweaked wording, July 2 still right.", "Dentist moved to July 2."));
 await openSearchIndex(box.root);
 JSON.stringify(listStale(await loadContainsState(box.root)))
@@ -97,7 +97,7 @@ await staleContainsWarning(box.root, { relPath: "store/notes/Dentist.memo.card",
 
 ## Operational field flips (status) don't stale a body-less card's contains
 
-``` continue
+```ts continue
 await box.write(
   "box/inbox/email/t.email-thread.card",
   "---\nthread-id: t1\nstatus: new\nsubject: Pricing\nparticipants:\n  - a@x.example\ncontains: Metricly demo offer; no action needed.\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nmessages: []\n---\n"
@@ -119,7 +119,7 @@ until an explicit one exists — so described images never enter the
 backfill worklist, and a description change re-bases rather than flagging
 stale (the retrieval field moved with the content).
 
-``` continue
+```ts continue
 const IMG = (desc: string) =>
   "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: " + desc + "\n---\n";
 await box.write("store/archive/boiler.image.card", IMG("The boiler's serial-number plate (K-44210)"));
@@ -136,6 +136,6 @@ await staleContainsWarning(box.root, { relPath: "store/archive/boiler.image.card
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

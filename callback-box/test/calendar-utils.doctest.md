@@ -10,7 +10,7 @@ import { parseIcsContent, formatEvent, parseTimespan, filterByDateRange } from "
 
 Converts human-readable timespan strings into milliseconds. Supports `d` (days), `w` (weeks), `m` (months ≈ 30 days). Plain number defaults to days.
 
-```
+```ts
 parseTimespan("7d")
 => 604800000
 
@@ -40,7 +40,7 @@ END:VEVENT
 END:VCALENDAR`;
 ```
 
-```
+```ts
 const events = parseIcsContent(simpleIcs, { filename: "test.ics" });
 events.length
 => 1
@@ -68,7 +68,7 @@ END:VEVENT
 END:VCALENDAR`;
 ```
 
-```
+```ts
 const ev = parseIcsContent(allDayIcs, { filename: "holiday.ics" })[0];
 ev.allDay
 => true
@@ -91,7 +91,7 @@ END:VEVENT
 END:VCALENDAR`;
 ```
 
-```
+```ts
 parseIcsContent(cancelledIcs, { filename: "cancelled.ics" }).length
 => 0
 ```
@@ -112,7 +112,7 @@ END:VEVENT
 END:VCALENDAR`;
 ```
 
-```
+```ts
 const meta = parseIcsContent(metaIcs, { filename: "play.ics" })[0];
 meta.calendarId
 => school-cal
@@ -146,35 +146,35 @@ function makeEvent(overrides) {
 
 A standard timed event (date and time are locale-dependent):
 
-```
+```ts
 formatEvent(makeEvent({ summary: "Weekly Standup" }))
 => «*»  «*»  Weekly Standup
 ```
 
 An all-day event:
 
-```
+```ts
 formatEvent(makeEvent({ summary: "Dentist", allDay: true }))
 => «*»  all day       Dentist
 ```
 
 A transparent (free) event on an owned calendar shows `[free]`:
 
-```
+```ts
 formatEvent(makeEvent({ summary: "Lunch", opaque: false }))
 => «*»  «*»  Lunch  [free]
 ```
 
 A subscribed calendar event shows the calendar name:
 
-```
+```ts
 formatEvent(makeEvent({ summary: "School Play", calendarRole: "reader", calendarName: "GRS Calendar" }))
 => «*»  «*»  School Play  (GRS Calendar)
 ```
 
 Events with location and description show tags:
 
-```
+```ts
 formatEvent(makeEvent({ summary: "Offsite", location: "HQ", description: "Bring laptop" }))
 => «*»  «*»  Offsite  [loc, desc]
 ```
@@ -191,7 +191,7 @@ const events = [
 ];
 ```
 
-```
+```ts
 const filtered = filterByDateRange(events, {
   from: new Date("2026-03-15T00:00:00Z"),
   to: new Date("2026-03-16T00:00:00Z"),

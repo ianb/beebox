@@ -26,7 +26,7 @@ const FUSED = "---\ntitle: Foo\ndefaultRef: attach/readable.md\nsource: https://
 
 ## A fused capture commentary splits into a webpage card + attach commentary
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box, "store/reading/Foo.attach"), { recursive: true });
 await fs.writeFile(path.join(box, "store/reading/Foo.commentary.card"), FUSED);
@@ -42,7 +42,7 @@ const top = await fs.readdir(path.join(box, "store/reading"));
 
 The webpage card carries the provenance and the readable rendering as its body:
 
-``` continue
+```ts continue
 const wpText = await fs.readFile(path.join(box, "store/reading/Foo.webpage.card"), "utf8");
 [wpText.includes("source: https://example.com/foo"), wpText.includes("frozen: attach/page.frozen"), wpText.includes("The readable body with a distinctive span")].join(",")
 => true,true,true
@@ -51,7 +51,7 @@ const wpText = await fs.readFile(path.join(box, "store/reading/Foo.webpage.card"
 The attach scope now holds the frozen page and the commentary card; the
 readable doc is gone (it became the webpage body):
 
-``` continue
+```ts continue
 const attach = await fs.readdir(path.join(box, "store/reading/Foo.attach"));
 [attach.includes("page.frozen"), attach.includes("Foo.commentary.card"), attach.includes("readable.md")].join(",")
 => true,true,false
@@ -60,7 +60,7 @@ const attach = await fs.readdir(path.join(box, "store/reading/Foo.attach"));
 The migrated commentary keeps the remark but its anchor is now ref-free (it
 defaults to the containing page):
 
-``` continue
+```ts continue
 const cmText = await fs.readFile(path.join(box, "store/reading/Foo.attach/Foo.commentary.card"), "utf8");
 [cmText.includes("My remark about it."), cmText.includes("attach/readable.md")].join(",")
 => true,false
@@ -68,7 +68,7 @@ const cmText = await fs.readFile(path.join(box, "store/reading/Foo.attach/Foo.co
 
 Both migrated cards load and validate:
 
-``` continue
+```ts continue
 const ctx = await buildLoadContext(box);
 const wp = await loadCardFromText({ content: wpText, source: "store/reading/Foo.webpage.card", ctx });
 [wp.kind, wp.schema.type, wp.fields.source].join("|")
@@ -79,7 +79,7 @@ const cm = await loadCardFromText({ content: cmText, source: "store/reading/Foo.
 => frontmatter|commentary
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(box, { recursive: true, force: true });
 ```
 
@@ -89,7 +89,7 @@ The first capture template put the source URL + capture date in the body as an
 `[Original page](…) · captured …` line rather than in frontmatter. The migrator
 recovers them from there and strips that line from the remarks.
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box, "store/reading/Old.attach"), { recursive: true });
 const BODYPROV = "---\ntitle: Old\ndefaultRef: attach/readable.md\n---\n[Original page](https://old.example.com/x) · captured 2026-06-14T10:36:55.904Z\n\n{% source ref=\"attach/readable.md\" pos=\"body\" version=\"sha256:1\" %}{% quote %}a span{% /quote %}{% /source %}\n\nA remark here.\n";
@@ -105,19 +105,19 @@ const wpText = await fs.readFile(path.join(box, "store/reading/Old.webpage.card"
 
 The remarks keep the comment but drop the provenance line:
 
-``` continue
+```ts continue
 const cmText = await fs.readFile(path.join(box, "store/reading/Old.attach/Old.commentary.card"), "utf8");
 [cmText.includes("A remark here."), cmText.includes("Original page"), cmText.includes("attach/readable.md")].join(",")
 => true,false,false
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(box, { recursive: true, force: true });
 ```
 
 ## A saved-page record converges onto a webpage card
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box, "box/inbox/pages-saved"), { recursive: true });
 const REC = "---\nstatus: draft\nname: A Saved Page\ndescription: Short summary.\nsources:\n  - ref: https://example.com/saved\n    note: Example — Author\n---\n# A Saved Page\n\nPage content.\n";
@@ -133,7 +133,7 @@ const saved = await fs.readdir(path.join(box, "box/inbox/pages-saved"));
 
 The sibling frozen file moves into the new card's attach scope:
 
-``` continue
+```ts continue
 const attach = await fs.readdir(path.join(box, "box/inbox/pages-saved/Bar.attach"));
 attach.includes("page.frozen")
 => true
@@ -142,7 +142,7 @@ attach.includes("page.frozen")
 The webpage card takes the record's name as title, the http source as
 `source`, and the description as `excerpt`:
 
-``` continue
+```ts continue
 const wpText = await fs.readFile(path.join(box, "box/inbox/pages-saved/Bar.webpage.card"), "utf8");
 const ctx = await buildLoadContext(box);
 const wp = await loadCardFromText({ content: wpText, source: "box/inbox/pages-saved/Bar.webpage.card", ctx });
@@ -150,7 +150,7 @@ const wp = await loadCardFromText({ content: wpText, source: "box/inbox/pages-sa
 => webpage|A Saved Page|https://example.com/saved|Short summary.
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(box, { recursive: true, force: true });
 ```
 
@@ -159,7 +159,7 @@ await fs.rm(box, { recursive: true, force: true });
 A commentary without a `source:` (a hand-made or external-file commentary) and
 a record outside the saved-page directories are skipped:
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.mkdir(path.join(box, "store/notes"), { recursive: true });
 await fs.writeFile(path.join(box, "store/notes/Plain.commentary.card"), "---\ntitle: Plain\ndefaultHref: file:/Users/x/doc.md\n---\nremarks\n");
@@ -172,6 +172,6 @@ const files = await fs.readdir(path.join(box, "store/notes"));
 => already,already,true,true,false
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(box, { recursive: true, force: true });
 ```

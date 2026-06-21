@@ -4,7 +4,7 @@ Verify that `print()` is available as a scope-local function in doctest blocks.
 
 ## Basic print
 
-```
+```ts
 print("hello");
 print("world");
 "done"
@@ -18,7 +18,7 @@ done
 
 When the expression itself is `print(...)`, it returns undefined (excluded from output).
 
-```
+```ts
 print("line 1");
 print("line 2");
 print("line 3")
@@ -32,7 +32,7 @@ line 3
 
 Statements (`;`-terminated) can call print, and those lines appear in the next check.
 
-```
+```ts
 for (let i = 1; i <= 3; i++) {
   print(`item ${i}`);
 };
@@ -48,7 +48,7 @@ end
 
 After an assertion, the print buffer resets.
 
-```
+```ts
 print("first");
 "a"
 =>
@@ -66,7 +66,7 @@ b
 
 Print lines are plain strings; the expression result is serialized normally.
 
-```
+```ts
 print("result:");
 ({ status: "ok", count: 2 })
 =>
@@ -81,7 +81,7 @@ result:
 
 When print isn't called, behavior is unchanged from before.
 
-```
+```ts
 2 + 2
 => 4
 

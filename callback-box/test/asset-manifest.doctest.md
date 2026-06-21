@@ -25,19 +25,19 @@ async function caught<T>(fn: () => Promise<T>): Promise<Error | null> {
 
 ## Empty manifest shape
 
-```
+```ts
 JSON.stringify(emptyManifest())
 => {"files":{}}
 ```
 
 ## Manifest filename + path
 
-```
+```ts
 MANIFEST_FILENAME
 => manifest.json
 ```
 
-```
+```ts
 manifestPath("/box/inbox/foo.attach")
 => /box/inbox/foo.attach/manifest.json
 ```
@@ -46,20 +46,20 @@ manifestPath("/box/inbox/foo.attach")
 
 The SHA-256 of the three-byte string `abc` is in FIPS 180-4.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("sample.txt", "abc");
 await sha256File(box.path("sample.txt"))
 => ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## computeEntry fills size, mtime, sha256
 
-```
+```ts
 const box2 = await makeTmpBox();
 await box2.write("foo.attach/photo.jpg", "abc");
 const entry = await computeEntry(box2.path("foo.attach/photo.jpg"));
@@ -72,7 +72,7 @@ mtime is iso: true
 sha=ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 ```
 
-```cleanup
+```ts cleanup
 await box2.cleanup();
 ```
 
@@ -82,7 +82,7 @@ A fresh attach dir with no manifest reads as the empty manifest — so the
 hook can treat "never been claimed" the same as "manifest with no
 entries."
 
-```
+```ts
 const box3 = await makeTmpBox();
 await box3.write("foo.attach/.gitkeep", "");
 const m = await loadManifest(box3.path("foo.attach"));
@@ -90,13 +90,13 @@ JSON.stringify(m)
 => {"files":{}}
 ```
 
-```cleanup
+```ts cleanup
 await box3.cleanup();
 ```
 
 ## Roundtrip save then load
 
-```
+```ts
 const box4 = await makeTmpBox();
 const m = emptyManifest();
 m.files["photo-001.jpg"] = {
@@ -120,13 +120,13 @@ p1=abc123
 p2=482193
 ```
 
-```cleanup
+```ts cleanup
 await box4.cleanup();
 ```
 
 ## Save sorts entries by name for stable diffs
 
-```
+```ts
 const box5 = await makeTmpBox();
 const m = emptyManifest();
 m.files["z.jpg"] = { size: 1, mtime: "2026-05-04T00:00:00.000Z", sha256: "z" };
@@ -142,7 +142,7 @@ indexA < indexM && indexM < indexZ
 => true
 ```
 
-```cleanup
+```ts cleanup
 await box5.cleanup();
 ```
 
@@ -152,7 +152,7 @@ If somebody hand-edits the file into garbage, we'd rather error than
 silently treat the dir as un-manifested (which would let the hook
 re-claim everything, wiping legitimate state).
 
-```
+```ts
 const box6 = await makeTmpBox();
 await box6.write("foo.attach/manifest.json", JSON.stringify({ files: "not an object" }));
 const err = await caught(() => loadManifest(box6.path("foo.attach")));
@@ -160,13 +160,13 @@ err !== null && err.message.includes("malformed")
 => true
 ```
 
-```cleanup
+```ts cleanup
 await box6.cleanup();
 ```
 
 ## findEntry locates by filename
 
-```
+```ts
 const m = emptyManifest();
 m.files["photo.jpg"] = { size: 10, mtime: "2026-05-04T00:00:00.000Z", sha256: "x" };
 print(`found: ${findEntry(m, "photo.jpg") !== undefined}`);
@@ -182,7 +182,7 @@ The hook uses this to skip rehashing files that haven't changed. Hash
 isn't part of the comparison — that's the point: trust mtime+size for
 speed, fall back to rehash on mismatch.
 
-```
+```ts
 const box7 = await makeTmpBox();
 await box7.write("foo.attach/photo.jpg", "abc");
 const fileStat = await stat(box7.path("foo.attach/photo.jpg"));
@@ -202,6 +202,6 @@ mtime differs: false
 size differs: false
 ```
 
-```cleanup
+```ts cleanup
 await box7.cleanup();
 ```

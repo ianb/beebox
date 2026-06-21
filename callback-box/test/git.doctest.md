@@ -14,19 +14,19 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 ## Repository detection
 
-```
+```ts
 const box = await makeTmpBox();
 await isRepo(box.root)
 => false
 ```
 
-``` continue
+```ts continue
 await initRepo(box.root);
 await isRepo(box.root)
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -34,7 +34,7 @@ await box.cleanup();
 
 A freshly initialized repo has no commits and a clean status:
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await hasCommits(box.root)
 => true
@@ -43,7 +43,7 @@ await getCurrentBranch(box.root)
 => main
 ```
 
-``` continue
+```ts continue
 const status = await getStatus(box.root);
 status.clean
 => true
@@ -52,13 +52,13 @@ status.staged.length
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Staging and status
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("file.txt", "hello");
 const s1 = await getStatus(box.root);
@@ -76,13 +76,13 @@ staged: 1
 clean: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Stage all
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("a.txt", "a");
 await box.write("b.txt", "b");
@@ -92,13 +92,13 @@ status.staged.length
 => 2
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Commit and log
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("file.txt", "content");
 await stageAll(box.root);
@@ -114,13 +114,13 @@ entries: 2
 subject: Add file
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Commit with trailers
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("file.txt", "content");
 await stageAll(box.root);
@@ -139,13 +139,13 @@ Step: fetch
 Session: abc-123
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## getLogPaginated with multi-value trailers
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("file.txt", "v1");
 await stageAll(box.root);
@@ -159,20 +159,20 @@ entries[0].subject
 => Multi-trailer
 ```
 
-``` continue
+```ts continue
 // Pagination: offset skips entries
 const skipped = await getLogPaginated({ boxRoot: box.root, offset: 1 });
 skipped[0].subject
 => init
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## getDiff
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("file.txt", "original");
 await stageAll(box.root);
@@ -188,7 +188,7 @@ has minus: true
 has plus: true
 ```
 
-``` continue
+```ts continue
 // Staged diff
 await stageAll(box.root);
 const stagedDiff = await getDiff(box.root, true);
@@ -196,13 +196,13 @@ stagedDiff.includes("+modified")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## getCommitDiff
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("file.txt", "content");
 await stageAll(box.root);
@@ -213,26 +213,26 @@ diff.includes("+content")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## getHead
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const head = await getHead(box.root);
 head.length
 => 40
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Branches
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await getCurrentBranch(box.root)
 => main
@@ -246,13 +246,13 @@ await getCurrentBranch(box.root)
 => main
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Tags
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await createTag(box.root, "v1.0");
 // Tag exists — getHead should still work
@@ -261,20 +261,20 @@ head.length
 => 40
 ```
 
-``` continue
+```ts continue
 // Delete the tag (no error)
 await deleteTag(box.root, "v1.0");
 "deleted"
 => deleted
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Clean removes untracked files
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("tracked.txt", "keep");
 await stageAll(box.root);
@@ -292,20 +292,20 @@ untracked before: 1
 untracked after: 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Empty log on repo with no matching commits
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 const log = await getLog(box.root, 0);
 log.length
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -322,7 +322,7 @@ import { writeFile as writeFileFs } from "node:fs/promises";
 import { join as joinPath } from "node:path";
 ```
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await writeFileFs(joinPath(box.root, "small.txt"), "ok");
 // 11MB regular file — over the 10MB housekeeping limit.
@@ -342,6 +342,6 @@ status.staged.includes("big.bin")
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

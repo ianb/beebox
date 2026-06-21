@@ -23,7 +23,7 @@ import { join } from "node:path";
 
 ### Acquire creates the lock file with our metadata
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 const holder = await acquireLock(path, { triggeredBy: "manual" });
@@ -38,14 +38,14 @@ triggeredBy: manual
 file exists: true
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
 
 ### Release removes the file
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await acquireLock(path, {});
@@ -54,7 +54,7 @@ await fs.access(path).then(() => "exists").catch(() => "gone")
 => gone
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -62,7 +62,7 @@ await box.cleanup();
 
 Releasing when not held, releasing twice — both fine.
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await releaseLock(path);
@@ -73,7 +73,7 @@ await releaseLock(path);
 => ok
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -81,7 +81,7 @@ await box.cleanup();
 
 ### Acquiring a held lock throws LockHeldError
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await acquireLock(path, { who: "first" });
@@ -93,14 +93,14 @@ error type: true
 who: first
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
 
 ### Stale lock with dead PID is reclaimed
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 
@@ -120,14 +120,14 @@ holder.metadata.who
 => us
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
 
 ### Lock from a previous boot is reclaimed
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 
@@ -146,14 +146,14 @@ holder.metadata.fresh
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
 
 ### Malformed lock file is reclaimed
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await fs.writeFile(path, "not json {{{");
@@ -163,14 +163,14 @@ holder.pid === process.pid
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
 
 ### Empty lock file is reclaimed
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await fs.writeFile(path, "");
@@ -180,7 +180,7 @@ holder.pid === process.pid
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
@@ -189,7 +189,7 @@ await box.cleanup();
 
 ### Lock from a different hostname is NOT reclaimed
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 const foreignHolder = {
@@ -206,7 +206,7 @@ caught instanceof LockHeldError
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -214,7 +214,7 @@ await box.cleanup();
 
 ### Release does not touch a lock owned by a different process
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 const otherHolder = {
@@ -230,7 +230,7 @@ await fs.access(path).then(() => "still here").catch(() => "deleted")
 => still here
 ```
 
-``` cleanup
+```ts cleanup
 await fs.unlink(path);
 await box.cleanup();
 ```
@@ -239,20 +239,20 @@ await box.cleanup();
 
 ### Returns null when not held
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await inspectLock(path)
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Returns the holder when held
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await acquireLock(path, { tag: "abc" });
@@ -261,14 +261,14 @@ info.metadata.tag
 => abc
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
 
 ### Cleans up dead lock and returns null
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 await fs.writeFile(path, JSON.stringify({
@@ -288,7 +288,7 @@ result: null
 file: gone
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -296,7 +296,7 @@ await box.cleanup();
 
 ### Steals a held lock
 
-```
+```ts
 const box = await makeTmpBox();
 const path = join(box.root, "test.lock");
 const otherHolder = {
@@ -313,7 +313,7 @@ stolen.metadata.from
 => thief
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(path);
 await box.cleanup();
 ```
@@ -322,20 +322,20 @@ await box.cleanup();
 
 ### Returns empty map when directory missing
 
-```
+```ts
 const box = await makeTmpBox();
 const map = await scanLocks(join(box.root, "nope"), ".lock");
 map.size
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Returns live locks keyed by name (suffix stripped)
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = join(box.root, "locks");
 await fs.mkdir(dir, { recursive: true });
@@ -352,7 +352,7 @@ alpha: a
 beta: b
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(join(dir, "alpha.lock"));
 await releaseLock(join(dir, "beta.lock"));
 await box.cleanup();
@@ -360,7 +360,7 @@ await box.cleanup();
 
 ### Cleans up dead locks during scan
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = join(box.root, "locks");
 await fs.mkdir(dir, { recursive: true });
@@ -384,14 +384,14 @@ alive present: true
 dead file: gone
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(join(dir, "alive.lock"));
 await box.cleanup();
 ```
 
 ### Ignores files without the suffix
 
-```
+```ts
 const box = await makeTmpBox();
 const dir = join(box.root, "locks");
 await fs.mkdir(dir, { recursive: true });
@@ -403,7 +403,7 @@ map.size
 => 1
 ```
 
-``` cleanup
+```ts cleanup
 await releaseLock(join(dir, "real.lock"));
 await box.cleanup();
 ```

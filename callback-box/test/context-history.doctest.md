@@ -17,7 +17,7 @@ const run = (box, date, measurements) => ({
 
 ## A first run seeds the box and audit
 
-```
+```ts
 const h1 = appendRun({}, run("test1", "2026-06-20T00:00:00Z", [
   { auditId: "box-structure-inbox", stats: stats(41000, 41000, 1) },
 ]));
@@ -30,7 +30,7 @@ JSON.stringify(h1.test1["box-structure-inbox"])
 The earlier entry is preserved; the new one lands after it. Watching `initial`
 drop across this series is the whole point — trim, re-run, compare.
 
-``` continue
+```ts continue
 const h2 = appendRun(h1, run("test1", "2026-06-21T00:00:00Z", [
   { auditId: "box-structure-inbox", stats: stats(38000, 39000, 3) },
 ]));
@@ -40,14 +40,14 @@ h2.test1["box-structure-inbox"].map((e) => e.initial).join(" -> ")
 
 ## appendRun does not mutate the input history
 
-``` continue
+```ts continue
 h1.test1["box-structure-inbox"].length
 => 1
 ```
 
 ## Different boxes stay isolated
 
-``` continue
+```ts continue
 const h3 = appendRun(h2, run("ledger", "2026-06-21T00:00:00Z", [
   { auditId: "box-structure-inbox", stats: stats(52000, 52000, 1) },
 ]));

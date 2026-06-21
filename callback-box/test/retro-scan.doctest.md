@@ -80,7 +80,7 @@ Two chat sessions; one yields an observation, one fails (and stays
 eligible for retry). Everything lands in the ledger, walker state, and
 the run report.
 
-```
+```ts
 const box = await makeTmpBox();
 process.env["CB_CLAUDE_PROJECTS_DIR"] = box.path("claude-projects");
 
@@ -143,7 +143,7 @@ already ledgered (as happens when a resumed session re-presents old
 turns), so it's skipped as a duplicate — recurrence can't be inflated by
 one conversation.
 
-``` continue
+```ts continue
 const NOW2 = new Date("2026-06-09T13:00:00Z");
 const summary2 = await runRetroScan(box.root, {
   observer: fakeObserver({ "chat-b": [PROSE_OBSERVATION] }),
@@ -162,7 +162,7 @@ const summary2 = await runRetroScan(box.root, {
 
 ## Third run: nothing left — no report written
 
-``` continue
+```ts continue
 const summary3 = await runRetroScan(box.root, {
   observer: fakeObserver({}),
   maxSessions: 20,
@@ -172,7 +172,7 @@ const summary3 = await runRetroScan(box.root, {
 => 0 observed, report: null
 ```
 
-```cleanup
+```ts cleanup
 delete process.env["CB_CLAUDE_PROJECTS_DIR"];
 await box.cleanup();
 ```

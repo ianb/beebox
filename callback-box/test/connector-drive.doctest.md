@@ -15,7 +15,7 @@ import type { FakeSpreadsheet } from "../src/services/google-drive.js";
 
 ## Pull — creates card and JSON files from a spreadsheet
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -64,7 +64,7 @@ result.success
 
 The card file contains the spreadsheet metadata:
 
-``` continue
+```ts continue
 const card = await box.read("store/drive/Budget.sheet.card");
 card.includes("drive-id: sheet-abc123")
 => true
@@ -77,7 +77,7 @@ card.includes("title: Test Budget")
 
 When a user edits a JSON file locally, the connector pushes changes back:
 
-```
+```ts
 const box3 = await makeTmpBox({ git: true });
 await initBox(box3.root);
 box3.commitAll("init box");
@@ -143,7 +143,7 @@ drive3.updateLog[0]?.values[1]?.[1]
 
 Spreadsheets with multiple sheet tabs get separate JSON files:
 
-```
+```ts
 const box4 = await makeTmpBox({ git: true });
 await initBox(box4.root);
 box4.commitAll("init box");

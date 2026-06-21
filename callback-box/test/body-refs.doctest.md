@@ -13,7 +13,7 @@ import { extractBodyRefs } from "../src/core/body-refs.js";
 
 The ref value and a `body:<line>:<tag>.<attr>` path are returned.
 
-```
+```ts
 JSON.stringify(
   extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" as="verbatim" %}ship Friday{% /source %}'),
   null,
@@ -30,7 +30,7 @@ JSON.stringify(
 
 Only the `ref` attribute is a ref — `as` and other attributes are opaque.
 
-```
+```ts
 extractBodyRefs('{% source ref="a/b.doc.card" as="summary" %}x{% /source %}').length
 => 1
 ```
@@ -39,7 +39,7 @@ extractBodyRefs('{% source ref="a/b.doc.card" as="summary" %}x{% /source %}').le
 
 Line numbers are 1-indexed and track each tag's start line.
 
-```
+```ts
 const body = [
   "Intro paragraph.",
   "",
@@ -66,7 +66,7 @@ JSON.stringify(extractBodyRefs(body), null, 2)
 A `ref` on the outer tag is found; the inner tag without a ref contributes
 nothing.
 
-```
+```ts
 JSON.stringify(
   extractBodyRefs('{% source ref="/box/m.memo.card" as="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
   null,
@@ -86,7 +86,7 @@ JSON.stringify(
 Plain markdown (including inline markdown links, which are not Markdoc tags)
 yields nothing — link rewriting is handled elsewhere, not here.
 
-```
+```ts
 extractBodyRefs("Just prose with a [link](people/Priya.person.card) and **bold**.").length
 => 0
 
@@ -99,7 +99,7 @@ extractBodyRefs("# Heading\n\nNo tags here.").length
 
 A tag with no `ref` attribute is ignored.
 
-```
+```ts
 extractBodyRefs("{% callout type=\"note\" %}heads up{% /callout %}").length
 => 0
 ```
@@ -109,7 +109,7 @@ extractBodyRefs("{% callout type=\"note\" %}heads up{% /callout %}").length
 A body that throws on parse is treated as "no refs" rather than crashing the
 caller (validation/move would rather miss a warning than fail the card).
 
-```
+```ts
 Array.isArray(extractBodyRefs("{% source ref=unclosed"))
 => true
 ```

@@ -22,7 +22,7 @@ function render(src: string): string {
 
 A tag whose body has no newlines is inline — emits `RedactedInline`.
 
-```
+```ts
 render("The answer is {% redacted %}42{% /redacted %}.")
 =>
 <article><p>The answer is <RedactedInline>42</RedactedInline>.</p></article>
@@ -32,7 +32,7 @@ render("The answer is {% redacted %}42{% /redacted %}.")
 
 A tag with block-level body emits `RedactedBlock`.
 
-```
+```ts
 render("{% redacted %}\n\nA spoiler paragraph.\n\n{% /redacted %}")
 =>
 <article><RedactedBlock><p>A spoiler paragraph.</p></RedactedBlock></article>

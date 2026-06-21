@@ -14,7 +14,7 @@ const SELECT_QUESTION_YAML = `---\ntype: question\nstatus: pending\nprompt: Pick
 
 `POST /api/actions/answer` answers a pending question card. The card is updated and committed:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("box/inbox/test.question.card", QUESTION_YAML);
 ctx.commitAll("add question");
@@ -27,7 +27,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.success
 => true
 
@@ -37,7 +37,7 @@ res.body.message
 
 The card now has `status: answered`:
 
-``` continue
+```ts continue
 const content = await ctx.read("box/inbox/test.question.card");
 content.includes("status: answered")
 => true
@@ -46,13 +46,13 @@ content.includes("Blue")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Missing questionPath returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -63,13 +63,13 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Missing both answer and selectedId returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -80,7 +80,7 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -88,7 +88,7 @@ await ctx.cleanup();
 
 `POST /api/actions/create` creates a card from a template:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -103,7 +103,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 res.body.success
 => true
 
@@ -113,19 +113,19 @@ res.body.path
 
 The card exists on disk:
 
-``` continue
+```ts continue
 const content = await ctx.read("box/inbox/new.memo.card");
 content.includes("Hello from the API")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Missing path returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -136,13 +136,13 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 Missing template returns 400:
 
-```
+```ts
 const ctx = await makeTestServer();
 const res = await ctx.request({
   method: "POST",
@@ -153,6 +153,6 @@ res.statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

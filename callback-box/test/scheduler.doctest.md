@@ -14,7 +14,7 @@ import * as path from "node:path";
 
 ### Returns correct path
 
-```
+```ts
 const result = boxLogFile("/home/user/boxes/test");
 result.endsWith(".callback-box/scheduler.jsonl")
 => true
@@ -27,7 +27,7 @@ result.startsWith("/home/user/boxes/test/")
 
 ### Directory with .cb-box marker is a box
 
-```
+```ts
 const box = await makeTmpBox();
 // Create the .cb-box marker that isBox() looks for
 await fs.writeFile(path.join(box.root, ".cb-box"), "");
@@ -36,26 +36,26 @@ result
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Directory without marker is not a box
 
-```
+```ts
 const tmpDir = await fs.mkdtemp(path.join(await import("node:os").then(m => m.tmpdir()), "not-a-box-"));
 const result = await isBox(tmpDir);
 result
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(tmpDir, { recursive: true });
 ```
 
 ### Nonexistent directory is not a box
 
-```
+```ts
 const result = await isBox("/tmp/nonexistent-box-test-12345");
 result
 => false

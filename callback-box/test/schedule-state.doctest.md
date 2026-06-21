@@ -27,7 +27,7 @@ Removes run records older than the given window. Returns `undefined` when all re
 
 No runs returns undefined:
 
-```
+```ts
 pruneRecentRuns(undefined, { windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z") })
 => undefined
 
@@ -37,7 +37,7 @@ pruneRecentRuns([], { windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z")
 
 Recent runs within the window are kept:
 
-```
+```ts
 JSON.stringify(pruneRecentRuns(
   [{ ts: "2026-03-01T11:30:00Z", durationMs: 5000 }],
   { windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z") }
@@ -47,7 +47,7 @@ JSON.stringify(pruneRecentRuns(
 
 Old runs outside the window are removed:
 
-```
+```ts
 pruneRecentRuns(
   [{ ts: "2026-03-01T10:00:00Z", durationMs: 5000 }],
   { windowMs: 3_600_000, now: new Date("2026-03-01T12:00:00Z") }
@@ -65,7 +65,7 @@ function freshState() {
 }
 ```
 
-```
+```ts
 const state = freshState();
 recordRun(state, {
   record: { ts: "2026-03-01T12:00:00Z", durationMs: 3000 },
@@ -81,7 +81,7 @@ state.recentRuns[0].ts
 
 Old records are pruned during recording:
 
-```
+```ts
 const state2 = freshState();
 state2.recentRuns = [{ ts: "2026-03-01T10:00:00Z", durationMs: 1000 }];
 recordRun(state2, {
@@ -103,7 +103,7 @@ Failures track `consecutiveFailures` and leave `lastSuccess` untouched;
 a success resets the failure count, stamps `lastSuccess`, and clears the
 health-alert latch.
 
-```
+```ts
 const st = normalizeScriptState({});
 recordOutcome(st, {
   result: "failure", error: "boom", durationMs: 100, sleepAffected: false,
@@ -147,7 +147,7 @@ State files written before the health fields existed get a best-effort
 backfill: a last-succeeded state inherits `lastSuccess` from `lastRun`,
 a last-failed state counts as one failure.
 
-```
+```ts
 const oldSuccess = normalizeScriptState({ lastRun: "2026-03-01T06:00:00Z", lastResult: "success" });
 print(`lastSuccess: ${oldSuccess.lastSuccess}, consecutiveFailures: ${oldSuccess.consecutiveFailures}`);
 const oldFailure = normalizeScriptState({ lastRun: "2026-03-01T06:00:00Z", lastResult: "failure" });
@@ -161,7 +161,7 @@ lastSuccess: null, consecutiveFailures: 1
 
 ### Loading nonexistent state returns empty
 
-```
+```ts
 const box = await makeTmpBox();
 const state = await loadScriptState(box.root, "nonexistent");
 print(`lastRun: ${state.lastRun}`);
@@ -175,13 +175,13 @@ lastDurationMs: null
 runCount: 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Save then load round-trips
 
-```
+```ts
 const box = await makeTmpBox();
 const saved = {
   lastRun: "2025-01-15T06:00:00Z",
@@ -206,7 +206,7 @@ runCount: 3
 recentRuns: 1
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -214,7 +214,7 @@ await box.cleanup();
 
 ### Acquire and load shows running script
 
-```
+```ts
 const box = await makeTmpBox();
 await acquireScriptLock({ boxRoot: box.root, scriptName: "my-script", triggeredBy: "schedule" });
 const running = await loadRunningScripts(box.root);
@@ -228,14 +228,14 @@ has my-script: true
 triggeredBy: schedule
 ```
 
-``` cleanup
+```ts cleanup
 await releaseScriptLock({ boxRoot: box.root, scriptName: "my-script" });
 await box.cleanup();
 ```
 
 ### Release removes from running
 
-```
+```ts
 const box = await makeTmpBox();
 await acquireScriptLock({ boxRoot: box.root, scriptName: "temp", triggeredBy: "test" });
 await releaseScriptLock({ boxRoot: box.root, scriptName: "temp" });
@@ -244,13 +244,13 @@ running.size
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Lock with lock-group
 
-```
+```ts
 const box = await makeTmpBox();
 await acquireScriptLock({ boxRoot: box.root, scriptName: "grouped", triggeredBy: "schedule", lockGroup: "agents" });
 const running = await loadRunningScripts(box.root);
@@ -260,14 +260,14 @@ print(`lockGroup: ${lock.lockGroup}`);
 lockGroup: agents
 ```
 
-``` cleanup
+```ts cleanup
 await releaseScriptLock({ boxRoot: box.root, scriptName: "grouped" });
 await box.cleanup();
 ```
 
 ### Stale lock (dead PID) is cleaned up
 
-```
+```ts
 const box = await makeTmpBox();
 const stateDir = box.root + "/config/schedules/.state";
 await fs.mkdir(stateDir, { recursive: true });
@@ -282,20 +282,20 @@ running.size
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### No state directory returns empty map
 
-```
+```ts
 const box = await makeTmpBox();
 const running = await loadRunningScripts(box.root);
 running.size
 => 0
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -306,7 +306,7 @@ root status is pending or running.
 
 ### Reports recent running runs
 
-```
+```ts
 const box = await makeTmpBox();
 const runDir = box.root + "/procedure/runs/test-run_2026-05-16T1200";
 await fs.mkdir(runDir, { recursive: true });
@@ -319,7 +319,7 @@ await loadRunningProcedures(box.root)
 ]
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -329,7 +329,7 @@ A procedure that crashed mid-step leaves its run card at status="running"
 forever. To avoid blocking housekeeping on orphan corpses, cards whose
 mtime is older than one hour are treated as dead.
 
-```
+```ts
 const box = await makeTmpBox();
 const runDir = box.root + "/procedure/runs/orphan_2026-03-16T2056";
 await fs.mkdir(runDir, { recursive: true });
@@ -345,13 +345,13 @@ await loadRunningProcedures(box.root)
 => []
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Ignores terminal statuses
 
-```
+```ts
 const box = await makeTmpBox();
 for (const [name, status] of [["completed_run", "completed"], ["failed_run", "failed"]]) {
   const runDir = box.root + "/procedure/runs/" + name;
@@ -364,6 +364,6 @@ await loadRunningProcedures(box.root)
 => []
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

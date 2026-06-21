@@ -14,13 +14,13 @@ A key is derived from voice + instructions + text (joined with a NUL separator
 that can't appear in any input, so distinct triples can't collide). It is
 deterministic and contains each part:
 
-```
+```ts
 const k = cacheKey({ text: "hello", voice: "marin", instructions: "calm" });
 [k.includes("marin"), k.includes("calm"), k.includes("hello")].join(",")
 => true,true,true
 ```
 
-``` continue
+```ts continue
 cacheKey({ text: "hi", voice: "marin", instructions: "x" }) === cacheKey({ text: "hi", voice: "marin", instructions: "x" })
 => true
 ```
@@ -28,7 +28,7 @@ cacheKey({ text: "hi", voice: "marin", instructions: "x" }) === cacheKey({ text:
 Distinct inputs produce distinct keys (so a re-voiced generation is its own
 entry):
 
-```
+```ts
 const a = cacheKey({ text: "hi", voice: "marin", instructions: "calm" });
 const b = cacheKey({ text: "hi", voice: "coral", instructions: "calm" });
 a === b
@@ -37,7 +37,7 @@ a === b
 
 ## Store and retrieve
 
-```
+```ts
 const cache = new AudioCache({ maxBytes: 100 });
 cache.set("a", new ArrayBuffer(40));
 cache.count
@@ -49,7 +49,7 @@ cache.byteLength
 
 A hit returns the buffer; a miss returns undefined:
 
-``` continue
+```ts continue
 cache.get("a")?.byteLength
 => 40
 
@@ -61,7 +61,7 @@ cache.get("missing")
 
 Adding past the budget evicts the least-recently-used entry:
 
-```
+```ts
 const cache = new AudioCache({ maxBytes: 100 });
 cache.set("a", new ArrayBuffer(40));
 cache.set("b", new ArrayBuffer(40));
@@ -81,7 +81,7 @@ cache.byteLength
 Reading an entry makes it most-recently-used, so a later insertion evicts a
 different (now-oldest) entry instead:
 
-```
+```ts
 const cache = new AudioCache({ maxBytes: 100 });
 cache.set("a", new ArrayBuffer(40));
 cache.set("b", new ArrayBuffer(40));
@@ -99,7 +99,7 @@ cache.has("b")
 A single buffer larger than the whole budget is dropped rather than cached
 (caching it would immediately blow the budget):
 
-```
+```ts
 const cache = new AudioCache({ maxBytes: 100 });
 cache.set("big", new ArrayBuffer(200));
 cache.has("big")

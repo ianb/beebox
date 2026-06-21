@@ -23,7 +23,7 @@ import * as os from "node:os";
 
 Pure path computation — encodes slashes as hyphens:
 
-```
+```ts
 const result = getSessionLogPath("/home/user/mybox", "abc-123");
 const expected = path.join(os.homedir(), ".claude/projects/-home-user-mybox/abc-123.jsonl");
 result === expected
@@ -32,7 +32,7 @@ result === expected
 
 ## getSessionDir
 
-```
+```ts
 const result = getSessionDir("/tmp/test-box");
 const expected = path.join(os.homedir(), ".claude/projects/-tmp-test-box");
 result === expected
@@ -43,7 +43,7 @@ result === expected
 
 ### Empty file
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("log.jsonl", "");
 const result = await parseSessionLog({ logPath: box.path("log.jsonl") });
@@ -56,13 +56,13 @@ total: 0
 hasMore: false
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### User and assistant entries
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [
   JSON.stringify({
@@ -93,7 +93,7 @@ e1 type: assistant
 e1 text: Hi there!
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -101,7 +101,7 @@ await box.cleanup();
 
 User entries with only tool_result blocks (no real text) are skipped:
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [
   JSON.stringify({
@@ -126,7 +126,7 @@ result.entries[0].content[0].text
 => Real message
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -134,7 +134,7 @@ await box.cleanup();
 
 System and result entries are skipped:
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [
   JSON.stringify({ type: "system", uuid: "s1", message: { content: "init" } }),
@@ -152,13 +152,13 @@ result.total
 => 1
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ### Pagination
 
-```
+```ts
 const box = await makeTmpBox();
 const lines = [];
 for (let i = 0; i < 5; i++) {
@@ -182,7 +182,7 @@ hasMore: true
 first: Message 2
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -190,7 +190,7 @@ await box.cleanup();
 
 ### Text block
 
-```
+```ts
 const result = transformContent([{ type: "text", text: "hello world" }]);
 print(`type: ${result[0].type}`);
 print(`text: ${result[0].text}`);
@@ -201,7 +201,7 @@ text: hello world
 
 ### String content (legacy format)
 
-```
+```ts
 const result = transformContent("plain string");
 print(`type: ${result[0].type}`);
 print(`text: ${result[0].text}`);
@@ -212,7 +212,7 @@ text: plain string
 
 ### Tool use block
 
-```
+```ts
 const result = transformContent([{
   type: "tool_use",
   name: "Read",
@@ -232,7 +232,7 @@ inputSummary: /tmp/test.ts
 
 ### Tool result block
 
-```
+```ts
 const result = transformContent([{
   type: "tool_result",
   tool_use_id: "tool_1",
@@ -249,7 +249,7 @@ resultSummary: file contents here
 
 ### Thinking block
 
-```
+```ts
 const result = transformContent([{ type: "thinking", thinking: "Let me consider..." }]);
 print(`type: ${result[0].type}`);
 print(`text: ${result[0].text}`);
@@ -260,7 +260,7 @@ text: Let me consider...
 
 ### Redacted thinking
 
-```
+```ts
 const result = transformContent([{ type: "redacted_thinking" }]);
 print(`type: ${result[0].type}`);
 print(`text: ${result[0].text}`);
@@ -271,7 +271,7 @@ text: [redacted]
 
 ### Empty/non-array content
 
-```
+```ts
 const result = transformContent(null);
 result.length
 => 0
@@ -282,7 +282,7 @@ result.length
 User-pasted images arrive as image content blocks with a base64 source.
 They're preserved so the chat UI can render them inline.
 
-```
+```ts
 const result = transformContent([
   { type: "image", source: { type: "base64", media_type: "image/png", data: "AAAA" } }
 ]);
@@ -294,7 +294,7 @@ JSON.stringify(result[0])
 
 Image blocks using a URL source are preserved as `imageUrl`:
 
-```
+```ts
 const result = transformContent([
   { type: "image", source: { type: "url", url: "https://example.com/x.png" } }
 ]);
@@ -309,7 +309,7 @@ feeding PDF pages to the model. `parseSessionLog` treats these as
 plumbing and filters them out (the surrounding user prose, if any,
 is what carries the real message).
 
-```
+```ts
 const { writeFile } = await import("node:fs/promises");
 const { mkdtempSync } = await import("node:fs");
 const { tmpdir } = await import("node:os");
@@ -340,7 +340,7 @@ blocks: text,image
 
 ## summarizeToolInput
 
-```
+```ts
 summarizeToolInput("Read", { file_path: "/src/main.ts" })
 => /src/main.ts
 
@@ -365,7 +365,7 @@ summarizeToolInput("Write", { file_path: "/tmp/out.txt", content: "hello world" 
 
 ## summarizeToolResult
 
-```
+```ts
 summarizeToolResult("simple string")
 => simple string
 
@@ -377,7 +377,7 @@ line2
 
 Array with text objects:
 
-```
+```ts
 summarizeToolResult([{ text: "first" }, { text: "second" }])
 =>
 first
@@ -386,7 +386,7 @@ second
 
 Non-string/non-array returns empty:
 
-```
+```ts
 summarizeToolResult(42)
 =>
 ```
@@ -406,7 +406,7 @@ function resolveVoice(voice) {
 }
 ```
 
-```
+```ts
 resolveVoice("fable")
 => fable
 

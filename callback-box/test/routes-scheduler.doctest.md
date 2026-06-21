@@ -14,7 +14,7 @@ The log endpoint returns scheduler tick entries from the JSONL log file.
 
 An empty box returns no entries:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({ method: "GET", url: "/api/scheduler/log" })
 =>
@@ -22,13 +22,13 @@ await ctx.inject({ method: "GET", url: "/api/scheduler/log" })
 «*»"entries": []«*»
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 With log entries written, they're returned newest-first:
 
-```
+```ts
 const ctx = await makeTestServer();
 const logDir = join(ctx.boxRoot, ".callback-box");
 await mkdir(logDir, { recursive: true });
@@ -42,18 +42,18 @@ res.body.entries.length
 => 2
 ```
 
-``` continue
+```ts continue
 res.body.entries[0].ts
 => 2026-01-20T11:00:00Z
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 The log can be filtered by status:
 
-```
+```ts
 const ctx = await makeTestServer();
 const logDir = join(ctx.boxRoot, ".callback-box");
 await mkdir(logDir, { recursive: true });
@@ -67,12 +67,12 @@ res.body.entries.length
 => 1
 ```
 
-``` continue
+```ts continue
 res.body.entries[0].ts
 => 2026-01-20T10:00:00Z
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -82,7 +82,7 @@ The schedules endpoint lists all scheduled script cards from `config/schedules/`
 
 An empty box returns no schedules:
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.inject({ method: "GET", url: "/api/schedules" })
 =>
@@ -90,13 +90,13 @@ await ctx.inject({ method: "GET", url: "/api/schedules" })
 «*»"schedules": []«*»
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 With a scheduled script card, it returns the parsed schedule:
 
-```
+```ts
 const ctx = await makeTestServer();
 const schedulesDir = join(ctx.boxRoot, "config/schedules");
 await mkdir(schedulesDir, { recursive: true });
@@ -120,6 +120,6 @@ await ctx.inject({ method: "GET", url: "/api/schedules" })
 }
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

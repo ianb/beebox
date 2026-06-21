@@ -23,7 +23,7 @@ import {
 Two segments where the second starts with a new sentence: spaced
 correctly even if Voxtral's own `text` had no space.
 
-```
+```ts
 joinSegmentTexts([
   { text: "It went the way a lot of these things have gone." },
   { text: "Generic tools were better." },
@@ -33,7 +33,7 @@ joinSegmentTexts([
 
 Empty / whitespace-only segments are dropped; the rest still join.
 
-```
+```ts
 joinSegmentTexts([
   { text: "First sentence." },
   { text: "   " },
@@ -53,7 +53,7 @@ joinSegmentTexts([{ text: "" }, { text: "  " }])
 
 ## The bug case — sentence-end followed by a letter
 
-```
+```ts
 repairMissingSentenceSpaces("It went the way a lot of these things have gone.Generic tools were better.")
 => It went the way a lot of these things have gone. Generic tools were better.
 
@@ -66,7 +66,7 @@ repairMissingSentenceSpaces("Yes!What?Maybe.Now go.")
 
 ## Don't break decimals or ellipses
 
-```
+```ts
 repairMissingSentenceSpaces("Version 1.2 released")
 => Version 1.2 released
 
@@ -79,7 +79,7 @@ repairMissingSentenceSpaces("The price is $9.99")
 
 ## Already-spaced text is untouched
 
-```
+```ts
 repairMissingSentenceSpaces("One sentence. Another sentence.")
 => One sentence. Another sentence.
 ```
@@ -92,7 +92,7 @@ people. `findLastSpeakerLetter` scans prior session text;
 `nextSpeakerLetter` advances; `relabelDiarizedSpeakers` rewrites the
 raw `Speaker N` prefix to `Speaker (N+1)<letter>`.
 
-```
+```ts
 findLastSpeakerLetter("")
 => null
 
@@ -106,7 +106,7 @@ findLastSpeakerLetter("Speaker 10F: ok")
 => F
 ```
 
-```
+```ts
 nextSpeakerLetter(null)
 => A
 
@@ -120,7 +120,7 @@ nextSpeakerLetter("Z")
 => A
 ```
 
-```
+```ts
 relabelDiarizedSpeakers("Speaker 0: hi\nSpeaker 1: bye", "B")
 => Speaker 1B: hi
 Speaker 2B: bye

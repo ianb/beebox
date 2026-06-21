@@ -40,14 +40,14 @@ async function caught<T>(fn: () => Promise<T>): Promise<Error | null> {
 
 ## Empty ledger shape
 
-```
+```ts
 JSON.stringify(emptyLedger())
 => {"version":1,"entries":[]}
 ```
 
 ## addEntry and findEntry
 
-```
+```ts
 const l = emptyLedger();
 addEntry(l, entry("aaa"));
 addEntry(l, entry("bbb", { sessionRelDir: "box/inbox/scan-x" }));
@@ -62,27 +62,27 @@ found ccc: true
 
 ## Ledger location is per-box
 
-```
+```ts
 LEDGER_REL_PATH
 => .callback-box/uploads.json
 ```
 
 ## loadLedger returns empty when the file is absent
 
-```
+```ts
 const box = await makeTmpBox();
 const l = await loadLedger(box.root);
 JSON.stringify(l)
 => {"version":1,"entries":[]}
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Roundtrip save then load
 
-```
+```ts
 const box2 = await makeTmpBox();
 const l2 = emptyLedger();
 addEntry(l2, entry("deadbeef", { kind: "scan", sessionRelDir: "box/inbox/scan-y" }));
@@ -97,7 +97,7 @@ hash=deadbeef
 session=box/inbox/scan-y
 ```
 
-```cleanup
+```ts cleanup
 await box2.cleanup();
 ```
 
@@ -107,7 +107,7 @@ If somebody hand-edits the file into something other than the expected shape,
 we'd rather error than silently treat the box as never having uploaded
 anything (which would re-import everything).
 
-```
+```ts
 const box3 = await makeTmpBox();
 await box3.write(LEDGER_REL_PATH, JSON.stringify({ version: 999, entries: [] }));
 const err = await caught(() => loadLedger(box3.root));
@@ -115,7 +115,7 @@ err !== null && err.message.includes("not in the expected format")
 => true
 ```
 
-```cleanup
+```ts cleanup
 await box3.cleanup();
 ```
 
@@ -123,14 +123,14 @@ await box3.cleanup();
 
 The SHA-256 of the three-byte string `abc` is documented in FIPS 180-4.
 
-```
+```ts
 const box4 = await makeTmpBox();
 await box4.write("sample.txt", "abc");
 await sha256File(box4.path("sample.txt"))
 => ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
 ```
 
-```cleanup
+```ts cleanup
 await box4.cleanup();
 ```
 
@@ -139,7 +139,7 @@ await box4.cleanup();
 JPEGs from a flatbed scanner come out as `<prefix>_NNN.jpg`. We group by
 prefix so a single upload invocation produces one session per scanner run.
 
-```
+```ts
 const groups = groupScanFiles([
   "/in/Scan2026-04-29_153807_000.jpg",
   "/in/Scan2026-04-29_153807_001.jpg",
@@ -153,7 +153,7 @@ groups.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 
 ## groupScanFiles: each PDF is its own group
 
-```
+```ts
 const groups2 = groupScanFiles([
   "/in/letter.pdf",
   "/in/will.pdf",
@@ -169,7 +169,7 @@ groups2.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 Image filenames without a `_NNN.ext` tail (no underscore-digits suffix) bundle
 into one fallback group — the caller's invocation defines the batch.
 
-```
+```ts
 const groups3 = groupScanFiles([
   "/in/holiday.jpg",
   "/in/random.png",
@@ -184,7 +184,7 @@ A single image with a scanner-like name (`IMG_0042.jpg`, etc.) gets its own
 matched group, even if it's just one file. The pattern is broad on purpose:
 single-file groups still work fine downstream.
 
-```
+```ts
 const groups4 = groupScanFiles(["/in/IMG_0042.jpg", "/in/IMG_0043.jpg"]);
 groups4.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 => image-batch:IMG=2
@@ -194,7 +194,7 @@ The separator before the digit suffix can be either `_` or `-` —
 `photo-0001.jpg` clusters by the `photo` prefix the same way
 `Scan_001.jpg` clusters by `Scan`.
 
-```
+```ts
 const groups5 = groupScanFiles([
   "/in/photo-0001.jpg",
   "/in/photo-0002.jpg",
@@ -206,7 +206,7 @@ groups5.map(g => `${g.kind}:${g.label}=${g.files.length}`).join(" | ")
 
 ## groupScanFiles: rejects unsupported types
 
-```
+```ts
 const err = await caught(async () => groupScanFiles(["/in/notes.txt"]));
 err !== null && err.message.startsWith("Unsupported file type(s):")
 => true

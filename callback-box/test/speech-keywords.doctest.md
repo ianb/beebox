@@ -10,7 +10,7 @@ import { detectKeyword, appendSendKeywordTag } from "../src/frontend/src/lib/spe
 
 Several phrases trigger sending:
 
-```
+```ts
 detectKeyword("send message")?.action
 => send
 
@@ -38,7 +38,7 @@ detectKeyword("it's a message")?.action
 
 Bare "finished" does NOT trigger send — too easy to hit in normal speech. It needs "message" adjacent:
 
-```
+```ts
 detectKeyword("finished")
 => null
 
@@ -48,7 +48,7 @@ detectKeyword("I'm finished")
 
 The matched phrase is replaced with a tag in the processed transcript:
 
-```
+```ts
 detectKeyword("OK send message")?.processedTranscript
 => OK <send-message phrase="send message" />
 ```
@@ -59,7 +59,7 @@ detectKeyword("OK send message")?.processedTranscript
 should stay closed afterward (the "I'm done, take it from here" sign-off). It
 gets its own action and tag:
 
-```
+```ts
 detectKeyword("send and close")?.action
 => sendClose
 
@@ -81,7 +81,7 @@ pattern too (`finish … message`), and "send and stop the mic" satisfies the
 mic-off pattern (`stop the mic`) — but the close variant is checked first and
 wins both, so neither degrades to a plain send or a bare mute:
 
-```
+```ts
 detectKeyword("send and finish the message")?.action
 => sendClose
 
@@ -91,7 +91,7 @@ detectKeyword("send and stop the mic")?.action
 
 ## Cancel commands
 
-```
+```ts
 detectKeyword("cancel message")?.action
 => cancel
 
@@ -104,14 +104,14 @@ detectKeyword("nevermind")
 
 "Nevermind" alone doesn't match — it needs "message" or "microphone" after it:
 
-```
+```ts
 detectKeyword("nevermind the message")?.action
 => cancel
 ```
 
 ## Mic off commands
 
-```
+```ts
 detectKeyword("microphone off")?.action
 => micOff
 
@@ -124,7 +124,7 @@ detectKeyword("stop listening")?.action
 
 ## Erase commands
 
-```
+```ts
 detectKeyword("erase the message")?.action
 => erase
 
@@ -139,7 +139,7 @@ detectKeyword("start over")?.action
 
 Regular speech returns null:
 
-```
+```ts
 detectKeyword("hello world")
 => null
 
@@ -151,7 +151,7 @@ detectKeyword("the weather is nice")
 
 Narration mode replaces the realtime transcript with a high-quality pass, and that pass can normalize a trailing trigger phrase away ("…send message" becomes clean prose). The realtime pass already heard the keyword — that's what fired the send — so when the HQ text comes back without one, the tag is appended rather than lost:
 
-```
+```ts
 detectKeyword("Buy milk tomorrow.")
 => null
 
@@ -162,14 +162,14 @@ appendSendKeywordTag("Buy milk tomorrow.", { action: "send", matchedPhrase: "sen
 The close variant re-injects its own tag, so a dropped "send and close" stays a
 close sign-off in the persisted record:
 
-```
+```ts
 appendSendKeywordTag("Buy milk tomorrow.", { action: "sendClose", matchedPhrase: "send and close" })
 => Buy milk tomorrow. <send-close-message phrase="send and close" />
 ```
 
 Phrases with characters meaningful in XML are escaped, matching the tag form `detectKeyword` itself produces:
 
-```
+```ts
 appendSendKeywordTag("Ping R&D.", { action: "send", matchedPhrase: 'send "the" message' })
 => Ping R&D. <send-message phrase="send &quot;the&quot; message" />
 ```

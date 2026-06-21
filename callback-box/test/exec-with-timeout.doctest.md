@@ -25,7 +25,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 Accumulates awake time across ticks and fires `onTimeout` when the budget is
 spent:
 
-```
+```ts
 let fired = null;
 const timer = startAwakeTimeout({ timeoutMs: 60, periodMs: 10, onTimeout: (e) => { fired = e; } });
 await sleep(150);
@@ -43,7 +43,7 @@ A gap between ticks far larger than the period means the machine slept (here
 simulated by blocking the event loop so the interval can't fire). The gap is
 flagged but not counted toward the deadline:
 
-```
+```ts
 let fired = null;
 const timer = startAwakeTimeout({ timeoutMs: 5_000, periodMs: 10, sleepGapMs: 60, onTimeout: (e) => { fired = e; } });
 await sleep(40);
@@ -67,7 +67,7 @@ done
 
 `stop()` freezes the awake counter; the timer never fires afterwards:
 
-```
+```ts
 let fired = null;
 const timer = startAwakeTimeout({ timeoutMs: 30, periodMs: 10, onTimeout: (e) => { fired = e; } });
 timer.stop();
@@ -80,14 +80,14 @@ fired
 
 The default budget is 10 minutes of awake runtime:
 
-```
+```ts
 SCRIPT_TIMEOUT
 => 600000
 ```
 
 A successful command resolves with its measured timing:
 
-```
+```ts
 const timing = await execWithTimeout("true", { cwd: process.cwd(), stdio: "ignore", timeout: 5_000, env: process.env });
 print(`durationMs is a number: ${typeof timing.durationMs === "number"}`);
 print(`sleepAffected: ${timing.sleepAffected}`);
@@ -101,7 +101,7 @@ ran
 A non-zero exit rejects with `CommandFailedError`, carrying the exit code,
 output tails, and the same timing:
 
-```
+```ts
 const err = await execWithTimeout("echo oops >&2; exit 3", { cwd: process.cwd(), stdio: "ignore", timeout: 5_000, env: process.env }).catch((e) => e);
 err instanceof CommandFailedError
 => true
@@ -121,7 +121,7 @@ typeof err.timing.durationMs
 A command that outlives its awake-time budget is killed (whole process group,
 SIGKILL) and rejects with `CommandTimedOutError`:
 
-```
+```ts
 const err = await execWithTimeout("sleep 30", { cwd: process.cwd(), stdio: "ignore", timeout: 50, periodMs: 10, env: process.env }).catch((e) => e);
 err instanceof CommandTimedOutError
 => true

@@ -11,7 +11,7 @@ import { createFakeGoogleCalendar } from "../src/services/google-calendar.js";
 
 `GET /api/calendar/available` returns all calendars from the service, annotated with sync status. By default, "primary" is in the sync list:
 
-```
+```ts
 const cal = createFakeGoogleCalendar({
   calendars: [
     { id: "user@gmail.com", summary: "My Calendar", primary: true, accessRole: "owner" },
@@ -26,24 +26,24 @@ res.statusCode
 
 The primary calendar is marked as syncing (default config syncs "primary"):
 
-``` continue
+```ts continue
 res.body[0].summary
 => My Calendar
 ```
 
-``` continue
+```ts continue
 res.body[0].syncing
 => true
 ```
 
 Non-synced calendars show `syncing: false`:
 
-``` continue
+```ts continue
 res.body[1].syncing
 => false
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -51,7 +51,7 @@ await ctx.cleanup();
 
 `GET /api/calendar/config` returns the saved config. Empty box returns empty object:
 
-```
+```ts
 const cal = createFakeGoogleCalendar();
 const ctx = await makeTestServer({ services: { calendar: cal } });
 const res = await ctx.request({ method: "GET", url: "/api/calendar/config" });
@@ -59,12 +59,12 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 JSON.stringify(res.body)
 => {}
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
@@ -72,7 +72,7 @@ await ctx.cleanup();
 
 `PUT /api/calendar/config` saves which calendars to sync:
 
-```
+```ts
 const cal = createFakeGoogleCalendar();
 const ctx = await makeTestServer({ services: { calendar: cal } });
 const res = await ctx.request({
@@ -86,17 +86,17 @@ res.body.success
 
 The config persists:
 
-``` continue
+```ts continue
 const config = await ctx.request({ method: "GET", url: "/api/calendar/config" });
 JSON.stringify(config.body.calendars)
 => ["user@gmail.com","work@group.calendar.google.com"]
 ```
 
-``` continue
+```ts continue
 config.body.syncDaysBack
 => 30
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

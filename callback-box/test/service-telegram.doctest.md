@@ -11,7 +11,7 @@ import { withCallLog, printCalls } from "../src/services/call-log.js";
 
 Creating a fake requires a username. `getMe()` returns it.
 
-```
+```ts
 const tg = createFakeTelegram({ username: "test_bot" });
 const me = await tg.getMe();
 me.username
@@ -22,7 +22,7 @@ me.username
 
 `sendMessage()` appends to the `sent` outbox with auto-incrementing message IDs.
 
-```
+```ts
 const tg = createFakeTelegram({ username: "bot" });
 await tg.sendMessage(123, "hello");
 await tg.sendMessage(123, "world");
@@ -31,7 +31,7 @@ tg.sent.length
 => 3
 ```
 
-``` continue
+```ts continue
 tg.sent.map(m => `${m.chatId}: ${m.text}`).join("\n")
 =>
 123: hello
@@ -41,7 +41,7 @@ tg.sent.map(m => `${m.chatId}: ${m.text}`).join("\n")
 
 ## Message IDs auto-increment
 
-```
+```ts
 const tg = createFakeTelegram({ username: "bot" });
 const r1 = await tg.sendMessage(1, "a");
 const r2 = await tg.sendMessage(1, "b");
@@ -53,7 +53,7 @@ const r2 = await tg.sendMessage(1, "b");
 
 Pre-loaded updates are drained by `getUpdates()`.
 
-```
+```ts
 const tg = createFakeTelegram({
   username: "bot",
   updates: [
@@ -67,7 +67,7 @@ batch.length
 => 2
 ```
 
-``` continue
+```ts continue
 // Updates are drained — second call returns empty
 const empty = await tg.getUpdates();
 empty.length
@@ -78,7 +78,7 @@ empty.length
 
 Passing `offset` returns only updates with `update_id >= offset`.
 
-```
+```ts
 const tg = createFakeTelegram({
   username: "bot",
   updates: [
@@ -92,37 +92,37 @@ batch.length
 => 1
 ```
 
-``` continue
+```ts continue
 batch[0].message.text
 => new
 ```
 
 ## Webhook management
 
-```
+```ts
 const tg = createFakeTelegram({ username: "bot" });
 tg.webhookUrl
 => null
 ```
 
-``` continue
+```ts continue
 await tg.setWebhook("https://example.com/webhook", { secret_token: "abc" });
 tg.webhookUrl
 => https://example.com/webhook
 ```
 
-``` continue
+```ts continue
 tg.webhookOptions.secret_token
 => abc
 ```
 
-``` continue
+```ts continue
 const info = await tg.getWebhookInfo();
 info.url
 => https://example.com/webhook
 ```
 
-``` continue
+```ts continue
 await tg.deleteWebhook();
 tg.webhookUrl
 => null
@@ -130,7 +130,7 @@ tg.webhookUrl
 
 ## Using withCallLog to inspect interactions
 
-```
+```ts
 const tg = withCallLog(createFakeTelegram({ username: "bot" }));
 await tg.sendMessage(123, "hello");
 await tg.getMe();

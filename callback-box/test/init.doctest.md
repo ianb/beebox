@@ -43,7 +43,7 @@ async function listFiles(root, subdir) {
 
 After a fresh init, schedule files should be committed (not just on disk):
 
-```
+```ts
 const tmp = await makeTmpDir();
 await fullInit(tmp);
 
@@ -58,7 +58,7 @@ refresh-maps.scheduled-script.card
 
 The working tree is clean — everything is committed, nothing left untracked:
 
-``` continue
+```ts continue
 const status = await getStatus(tmp);
 status.clean
 => true
@@ -66,7 +66,7 @@ status.clean
 
 There's exactly one commit with the right subject:
 
-``` continue
+```ts continue
 const log = await getLog(tmp, 5);
 log.length
 => 1
@@ -75,13 +75,13 @@ log[0].subject
 => Initialize callback box
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(tmp, { recursive: true, force: true });
 ```
 
 ## Procedures and guides are also committed
 
-```
+```ts
 const tmp = await makeTmpDir();
 await fullInit(tmp);
 
@@ -94,7 +94,7 @@ refresh-maps.procedure.card
 view-card-shape.procedure.card
 ```
 
-``` continue
+```ts continue
 await listFiles(tmp, "config")
 =>
 calendar.guide.card
@@ -109,19 +109,19 @@ template-versions.json
 transcription.json
 ```
 
-``` continue
+```ts continue
 const status = await getStatus(tmp);
 status.clean
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(tmp, { recursive: true, force: true });
 ```
 
 ## Git repo is initialized
 
-```
+```ts
 const tmp = await makeTmpDir();
 await fullInit(tmp);
 
@@ -129,6 +129,6 @@ await isRepo(tmp)
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(tmp, { recursive: true, force: true });
 ```

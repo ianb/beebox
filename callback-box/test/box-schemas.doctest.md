@@ -54,7 +54,7 @@ Hello widget body.
 
 ## Loading discovers box frontmatter schemas
 
-```
+```ts
 const box = await makeTmpBox();
 await fs.writeFile(path.join(box, "config/schemas/widget.ts"), WIDGET_SCHEMA);
 
@@ -68,7 +68,7 @@ const loaded = await loadBoxSchemas(box);
 `buildLoadContext` merges box frontmatter schemas into the same map built-in cards use, so a
 `widget` card parses as the new format with its YAML fields and markdown body:
 
-``` continue
+```ts continue
 const ctx = await buildLoadContext(box);
 const card = await loadCardFromText({ content: WIDGET_CARD, source: "My.widget.card", ctx });
 [card.kind, card.schema.type, card.fields.size, card.fields.status, card.fields.body].join("|")
@@ -77,7 +77,7 @@ const card = await loadCardFromText({ content: WIDGET_CARD, source: "My.widget.c
 
 Validation rejects a malformed card — `size` must be a number:
 
-``` continue
+```ts continue
 const bad = "---\nsize: not-a-number\n---\n";
 await loadErrorName(bad, "X.widget.card", ctx)
 => CardIOError
@@ -87,12 +87,12 @@ await loadErrorName(bad, "X.widget.card", ctx)
 
 `createCardSchemaMap(boxRoot)` includes box frontmatter types alongside the built-ins:
 
-``` continue
+```ts continue
 const map = await createCardSchemaMap(box);
 map.has("widget")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await fs.rm(box, { recursive: true, force: true });
 ```

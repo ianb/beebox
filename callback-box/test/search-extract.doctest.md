@@ -28,7 +28,7 @@ async function docsFor(path: string, text: string, inputContents?: Map<string, s
 
 ## A memo becomes one document titled from its body
 
-```
+```ts
 const docs = await docsFor(
   "box/inbox/Voice_Note.memo.card",
   "---\ncreated: 2026-05-22T10:00:00Z\ncontains: Dentist moved to June 17; confirmation in this email.\n---\nThe dentist called — appointment moved to June 17.\n"
@@ -57,7 +57,7 @@ docs[0].content
 
 ## Email messages fold headers and snippet, never the body file
 
-```
+```ts
 const docs = await docsFor(
   "box/inbox/email/t.attach/msg-001.email-message.card",
   "---\nmessage-id: \"<m1@example.com>\"\nthread-id: t1\nfrom: alice@example.com\nto: bob@example.com\ndate: 2026-05-14T19:00:00Z\nsubject: Weekend plans\nsnippet: Hey, are you free Saturday...\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n"
@@ -77,7 +77,7 @@ JSON.stringify(declareInputFiles({ path: "box/inbox/email/t.attach/msg-001.email
 
 ## Email threads fold subject, participants, labels, and date-range
 
-```
+```ts
 const docs = await docsFor(
   "box/inbox/email/thread-x.email-thread.card",
   "---\nthread-id: t1\nsubject: Usage-based pricing demo\nparticipants:\n  - hello@metricly.example\ndate-range:\n  start: 2026-05-14T19:00:00Z\n  end: 2026-05-14T19:00:00Z\nlabels:\n  - promotions\nmessages:\n  - ref: attach/msg-001.email-message.card\n---\n"
@@ -96,7 +96,7 @@ promotions
 
 ## Gdocs declare their content snapshot and index it as the body
 
-```
+```ts
 const cardText = "---\ndrive-id: d1\ntitle: Project Notes\nmodified: 2026-05-01\nlink: https://docs.google.com/document/d/d1/edit\nowner: owner@example.com\ncontent:\n  ref: attach/Project_Notes.md\n---\n";
 const path = "store/drive/Project_Notes.gdoc.card";
 const card = await loadCardFromText({ content: cardText, source: path, ctx });
@@ -114,7 +114,7 @@ docs[0].content
 
 ## An image's description doubles as its contains fallback; OCR text indexes
 
-```
+```ts
 const docs = await docsFor(
   "store/archive/photo.image.card",
   "---\nstatus: analyzed\nfilename:\n  ref: attach/boiler.jpg\n  captured: 2026-05-01T10:00:00Z\n  source: camera-user\ndescription: The boiler's serial-number plate (K-44210)\ntext:\n  - source: plate\n    content: Serial K-44210 Model HX-200 240V\n---\n"
@@ -131,7 +131,7 @@ docs[0].content.includes("Model HX-200 240V")
 
 ## Long bodies split into per-section documents; the preamble stays on the card
 
-```
+```ts
 const section = "words ".repeat(Math.ceil(SECTION_SPLIT_THRESHOLD / 12));
 const bodyText = `Intro before any heading.\n\n# Mill\n${section}\n\n## Gears\n${section}\n\n# Store\n${section}\n`;
 const docs = await docsFor(
@@ -153,7 +153,7 @@ docs.every((d) => d.kind === "doc" && d.title === "The Analytical Engine")
 
 ## Short bodies with headings stay one document
 
-```
+```ts
 const split = splitMarkdownSections("Preamble.\n\n# One\nalpha\n\n# Two\nbeta\n");
 JSON.stringify(split.preamble)
 => "Preamble."
@@ -168,7 +168,7 @@ docs.length
 
 ## Sheets index their tab titles
 
-```
+```ts
 const docs = await docsFor(
   "store/drive/Budget.sheet.card",
   "---\ndrive-id: d2\ntitle: Family Budget\nmodified: 2026-05-01\nlink: https://docs.google.com/spreadsheets/d/d2/edit\nowner: o@example.com\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"

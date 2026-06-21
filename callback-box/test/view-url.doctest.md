@@ -16,7 +16,7 @@ import {
 
 Pulls a file path, viewer override, zoom flag, and other params out of a `view:` URL:
 
-```
+```ts
 JSON.stringify(parseViewUrl("view:store/docs/report.md"))
 => {"path":"store/docs/report.md","viewer":null,"params":{},"zoom":false}
 
@@ -26,7 +26,7 @@ JSON.stringify(parseViewUrl("view:store/docs/report.md?view=source&zoom"))
 
 `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):
 
-```
+```ts
 serializeViewUrl({ path: "a/b.md", viewer: "source", params: {}, zoom: true })
 => a/b.md?view=source&zoom
 ```
@@ -35,7 +35,7 @@ serializeViewUrl({ path: "a/b.md", viewer: "source", params: {}, zoom: true })
 
 Resolves `href` values from a document at `basePath`, just like a filesystem:
 
-```
+```ts
 resolveRelativePath("store/docs/tax/2023/return-status.md", "1040.pdf")
 => store/docs/tax/2023/1040.pdf
 
@@ -48,14 +48,14 @@ resolveRelativePath("store/docs/tax/2023/return-status.md", "./notes.md")
 
 Leading `/` is stripped and treated as box-root-relative:
 
-```
+```ts
 resolveRelativePath("store/docs/a.md", "/other/file.md")
 => other/file.md
 ```
 
 When `basePath` is missing, the relative path is already box-root-relative:
 
-```
+```ts
 resolveRelativePath(undefined, "notes.md")
 => notes.md
 ```
@@ -64,7 +64,7 @@ resolveRelativePath(undefined, "notes.md")
 
 Splits an href into the three cases the Markdown renderer cares about:
 
-```
+```ts
 JSON.stringify(classifyMarkdownHref("view:store/a.md"))
 => {"kind":"view","raw":"view:store/a.md"}
 
@@ -90,14 +90,14 @@ Rewrites a markdown image `src` into a URL that doesn't depend on the page URL â
 
 A leading `/` means box-root-relative:
 
-```
+```ts
 resolveImageSrc("/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
 => /test1/api/files/store/images/front.png
 ```
 
 A bare path is document-relative â€” resolved against `basePath`:
 
-```
+```ts
 resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
 => /test1/api/files/store/dossiers/images/front.png
 
@@ -107,14 +107,14 @@ resolveImageSrc("../shared/logo.png", { boxSlug: "test1", basePath: "store/dossi
 
 The legacy `api/files/<path>` form is accepted as a hint that the path is already box-root-relative:
 
-```
+```ts
 resolveImageSrc("api/files/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
 => /test1/api/files/store/images/front.png
 ```
 
 External URLs pass through untouched:
 
-```
+```ts
 resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "store/a.md" })
 => https://example.com/x.png
 

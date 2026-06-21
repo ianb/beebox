@@ -44,7 +44,7 @@ const schemas = new Map<string, CardSchema>([
 
 ## A pure-frontmatter card (no body) parses cleanly
 
-```
+```ts
 const text = "---\ntype: email-thread\nthread-id: abc123\nsubject: Re Weekend plans\nparticipants:\n  - alice@example.com\n  - bob@example.com\n---\n";
 const card = parseCardText(text, { source: "thread.email-thread.card", schemas });
 JSON.stringify(card.fields)
@@ -56,7 +56,7 @@ card.contentType === undefined
 
 ## A card with a markdown body parses both halves
 
-```
+```ts
 const text = "---\ntype: doc\ndrive-id: drv-1\ntitle: Project Notes\n---\n# Project Notes\n\nBody content goes here.\n";
 const card = parseCardText(text, { source: "x.doc.card", schemas });
 card.fields["title"]
@@ -68,7 +68,7 @@ JSON.stringify(card.fields["body"])
 
 ## Missing `type` field surfaces a clear error
 
-```
+```ts
 const tryParse = (text: string, source: string): string => {
   try { parseCardText(text, { source, schemas }); return "did not throw"; }
   catch (e) { return (e as Error).message; }
@@ -79,7 +79,7 @@ tryParse("---\nsubject: nope\n---\n", "broken.card")
 
 ## Round-trip: serialize then parse returns the same fields
 
-```
+```ts
 const fields = {
   type: "doc",
   "drive-id": "drv-42",
@@ -101,7 +101,7 @@ function tryParse2(text: string, source: string): string {
 }
 ```
 
-```
+```ts
 tryParse2("---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\n---\nunexpected body\n", "extra.email-thread.card")
 => extra.email-thread.card: schema "email-thread" declares no body, but file has body content
 ```
@@ -113,7 +113,7 @@ from the parsed fields rather than failing the parse, so a card that has drifted
 past its schema still loads and stays usable. (The unknown key is surfaced as a
 lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
 
-```
+```ts
 const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
 JSON.stringify(drifted.fields)
 => {"type":"doc","drive-id":"d1","title":"T","body":""}
@@ -122,7 +122,7 @@ JSON.stringify(drifted.fields)
 The `content-type` marker is a global field, so a card carrying it keeps it
 through the parse.
 
-```
+```ts
 const ct = parseCardText("---\ntype: email-thread\nthread-id: t1\nsubject: hi\ncontent-type: text/plain\nparticipants:\n  - a@x\n---\n", { source: "ct.email-thread.card", schemas });
 ct.fields["content-type"]
 => text/plain
@@ -141,7 +141,7 @@ const ctx: LoadCardContext = {
 
 A file whose `type:` matches a CardSchema dispatches to the frontmatter path.
 
-```
+```ts
 const text = "---\ntype: email-thread\nthread-id: t9\nsubject: hi\nparticipants:\n  - a@x\n---\n";
 const loaded = await loadCardFromText({ content: text, source: "thread.email-thread.card", ctx });
 loaded.kind
@@ -160,7 +160,7 @@ hyphenated names — `*.intake.job.card` dispatches to `intake-job`. This
 regressed once when the filename discriminator only read the last dot
 segment ("job"), making every generated job card fail validation:
 
-```
+```ts
 const registryCtx: LoadCardContext = {
   cardSchemas: await createCardSchemaMap(),
 };
@@ -181,7 +181,7 @@ loaded.kind === "frontmatter" ? loaded.schema.type : "?"
 A file that isn't a recognized frontmatter card (no `---` block, or a filename
 type with no registered schema) is rejected — there is no XML fallback.
 
-```
+```ts
 const tryLoad = async (content: string, source: string): Promise<string> => {
   try { await loadCardFromText({ content, source, ctx }); return "did not throw"; }
   catch (e) { return (e as Error).message; }

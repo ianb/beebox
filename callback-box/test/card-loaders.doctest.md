@@ -9,7 +9,7 @@ import { imageLoader } from "../src/schemas/image.js";
 
 ## Memo — title from body
 
-```
+```ts
 const m1 = {
   type: "memo",
   status: "new",
@@ -29,7 +29,7 @@ JSON.stringify(s.attrs)
 
 ## Memo — falls back to `transcription.text` when body is empty
 
-```
+```ts
 const m2 = {
   type: "memo",
   status: "processing",
@@ -43,7 +43,7 @@ memoLoader({ path: "Voice.memo.card", fields: m2 }).title
 
 ## Memo — filename fallback when neither is present
 
-```
+```ts
 const m3 = {
   type: "memo",
   status: "new",
@@ -56,7 +56,7 @@ memoLoader({ path: "box/inbox/Blank_Thought.memo.card", fields: m3 }).title
 
 ## Memo — truncates long titles
 
-```
+```ts
 const m4 = {
   type: "memo",
   status: "new",
@@ -73,7 +73,7 @@ s.title.endsWith("…")
 
 ## Memo — defaults to "new" when fields are missing
 
-```
+```ts
 const s = memoLoader({ path: "x.memo.card" });
 JSON.stringify(s.attrs)
 => {"status":"new"}
@@ -81,7 +81,7 @@ JSON.stringify(s.attrs)
 
 ## Image — title from description field
 
-```
+```ts
 const fields1 = {
   type: "image",
   status: "analyzed",
@@ -95,7 +95,7 @@ imageLoader({ path: "photo.image.card", fields: fields1 }).title
 
 ## Image — falls back to filename ref
 
-```
+```ts
 const fields2 = {
   type: "image",
   status: "new",
@@ -107,7 +107,7 @@ imageLoader({ path: "box/capture/session.image.card", fields: fields2 }).title
 
 ## Image — passes through optional attrs
 
-```
+```ts
 const fields3 = {
   type: "image",
   status: "analyzed",

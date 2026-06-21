@@ -19,7 +19,7 @@ import {
 Scopes a draft by box and session. New chats (no server-assigned id yet) share
 the `:new` slot; a missing box slug falls back to `default`:
 
-```
+```ts
 draftKey({ boxSlug: "test1", sessionId: "sess-abc" })
 => cb-chat-draft:test1:sess-abc
 
@@ -31,7 +31,7 @@ draftKey({ boxSlug: undefined, sessionId: null })
 
 A well-formed draft round-trips:
 
-```
+```ts
 const draft = { text: "buy oat milk and call the dentist", narration: true, updatedAt: 5 };
 JSON.stringify(parseDraft(serializeDraft(draft)))
 => {"text":"buy oat milk and call the dentist","narration":true,"updatedAt":5}
@@ -40,7 +40,7 @@ JSON.stringify(parseDraft(serializeDraft(draft)))
 `parseDraft` returns null for anything it can't trust — absent, empty, or
 malformed-shape values — so a corrupt entry never reaches the UI:
 
-```
+```ts
 JSON.stringify(parseDraft(null))
 => null
 
@@ -48,7 +48,7 @@ JSON.stringify(parseDraft(""))
 => null
 ```
 
-```
+```ts
 JSON.stringify(parseDraft('{"text":"   ","narration":true,"updatedAt":5}'))
 => null
 
@@ -64,7 +64,7 @@ JSON.stringify(parseDraft('{"text":"hi","narration":true,"updatedAt":"5"}'))
 
 A complete, correctly-typed record parses:
 
-```
+```ts
 JSON.stringify(parseDraft('{"text":"hi","narration":false,"updatedAt":42}'))
 => {"text":"hi","narration":false,"updatedAt":42}
 ```
@@ -74,7 +74,7 @@ JSON.stringify(parseDraft('{"text":"hi","narration":false,"updatedAt":42}'))
 Renders the elapsed-since-capture label from milliseconds (the caller owns the
 clock, so this stays deterministic). Anything under ~45s reads "just now":
 
-```
+```ts
 formatDraftAge(0)
 => just now
 
@@ -84,7 +84,7 @@ formatDraftAge(10_000)
 
 Minutes, hours, and days, with singular/plural days:
 
-```
+```ts
 formatDraftAge(60_000)
 => 1 min ago
 

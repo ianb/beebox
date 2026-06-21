@@ -40,7 +40,7 @@ runs: cb wakeup --connector notes
 
 ## No opt-in, no alert
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await seedFailingTask(box);
 box.commitAll("seed");
@@ -49,13 +49,13 @@ await checkHealthAndAlert(box.root, { now: NOW, tg: createFakeTelegram({ usernam
 => null
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
 ## Opted in: one aggregated alert, delivered immediately, then latched
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await seedFailingTask(box);
 await box.seed("config/box.json", JSON.stringify({
@@ -82,7 +82,7 @@ Run `cb health` in the box for details.
 
 The task is latched, so the next daemon cycle stays quiet:
 
-``` continue
+```ts continue
 const state = await loadScriptState(box.root, "sync-notes");
 print(`alertedFor: ${state.alertedFor}`);
 print(`again: ${await checkHealthAndAlert(box.root, { now: NOW, tg })}`);
@@ -93,7 +93,7 @@ again: null
 
 A successful run clears the latch; a relapse alerts again:
 
-``` continue
+```ts continue
 recordOutcome(state, {
   result: "success", error: null, durationMs: 100, sleepAffected: false,
   windowMs: 86_400_000, now: new Date("2026-06-09T13:00:00Z"),
@@ -116,6 +116,6 @@ tg.sent.length
 => 2
 ```
 
-``` cleanup
+```ts cleanup
 await box.cleanup();
 ```

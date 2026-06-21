@@ -39,7 +39,7 @@ async function allowRoot(ctx: { seed(p: string, c: string): Promise<void> }): Pr
 
 ## An allowed file returns a JSON envelope
 
-```
+```ts
 const ctx = await makeTestServer();
 await allowRoot(ctx);
 const res = await ctx.request({ method: "GET", url: extUrl(`file:${file}`) });
@@ -47,7 +47,7 @@ res.statusCode
 => 200
 ```
 
-``` continue
+```ts continue
 Buffer.from(res.body.contentBase64, "base64").toString() === "hello\n"
 => true
 
@@ -58,13 +58,13 @@ res.body.markers.startsWith("sha256:")
 => true
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## The box's own root is always allowed (no config needed)
 
-```
+```ts
 const ctx = await makeTestServer();
 await ctx.seed("notes/inside.md", "in-box\n");
 const url = extUrl(`file:${path.join(ctx.boxRoot, "notes", "inside.md")}`);
@@ -72,50 +72,50 @@ const url = extUrl(`file:${path.join(ctx.boxRoot, "notes", "inside.md")}`);
 => 200
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## A path outside the allowed roots is 404
 
-```
+```ts
 const ctx = await makeTestServer();
 await allowRoot(ctx);
 (await ctx.request({ method: "GET", url: extUrl(`file:${outside}`) })).statusCode
 => 404
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## A non-`file:` URL is 400
 
-```
+```ts
 const ctx = await makeTestServer();
 (await ctx.request({ method: "GET", url: extUrl("https://example.com/x") })).statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## A missing href is 400
 
-```
+```ts
 const ctx = await makeTestServer();
 (await ctx.request({ method: "GET", url: "/api/external" })).statusCode
 => 400
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```
 
 ## Not mounted in production (404)
 
-```
+```ts
 process.env.NODE_ENV = "production";
 const ctx = await makeTestServer();
 const code = (await ctx.request({ method: "GET", url: extUrl(`file:${file}`) })).statusCode;
@@ -124,6 +124,6 @@ code
 => 404
 ```
 
-``` cleanup
+```ts cleanup
 await ctx.cleanup();
 ```

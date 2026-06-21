@@ -11,7 +11,7 @@ const { normalizeWord, tokenizeInput } = TESTING_EXPORTS;
 
 Words are lowercased with diacritics and punctuation stripped:
 
-```
+```ts
 normalizeWord("Hello")
 => hello
 
@@ -26,7 +26,7 @@ normalizeWord("it's")
 
 A pattern of literal words matches those words in order:
 
-```
+```ts
 const p = KeywordPattern.compile("hello world");
 p.match("hello world")?.capturedTextTrimmed
 => hello world
@@ -40,7 +40,7 @@ p.match("goodbye world")
 Patterns match common English plural forms automatically — no need to write
 `message(s)?`:
 
-```
+```ts
 const p = KeywordPattern.compile("send message");
 p.match("send message")?.capturedTextTrimmed
 => send message
@@ -51,13 +51,13 @@ p.match("send messages")?.capturedTextTrimmed
 
 `+es` and `y → ies` plurals are also handled, in either direction:
 
-```
+```ts
 const p = KeywordPattern.compile("close (the)? box");
 p.match("close the boxes")?.capturedTextTrimmed
 => close the boxes
 ```
 
-``` continue
+```ts continue
 const q = KeywordPattern.compile("parties");
 q.match("the party started")?.capturedTextTrimmed
 => party
@@ -67,7 +67,7 @@ q.match("the party started")?.capturedTextTrimmed
 
 `(a | b)` matches either word:
 
-```
+```ts
 const p = KeywordPattern.compile("(send | deliver) message");
 p.match("send message")?.capturedTextTrimmed
 => send message
@@ -83,7 +83,7 @@ p.match("post message")
 
 `word?` or `(a | b)?` makes a word optional:
 
-```
+```ts
 const p = KeywordPattern.compile("send (the)? message");
 p.match("send the message")?.capturedTextTrimmed
 => send the message
@@ -96,7 +96,7 @@ p.match("send message")?.capturedTextTrimmed
 
 Parenthesized groups can contain multi-word alternatives:
 
-```
+```ts
 const p = KeywordPattern.compile("(good morning | hello)");
 p.match("good morning")?.capturedTextTrimmed
 => good morning
@@ -109,7 +109,7 @@ p.match("hello")?.capturedTextTrimmed
 
 Patterns with multiple lines act as OR between whole phrases:
 
-```
+```ts
 const p = KeywordPattern.compile(`
   send message
   message done
@@ -125,14 +125,14 @@ p.match("message done")?.capturedTextTrimmed
 
 Matches can appear anywhere in the input. The match tracks leading and remaining words:
 
-```
+```ts
 const p = KeywordPattern.compile("hello");
 const m = p.match("well hello there");
 m?.capturedTextTrimmed
 => hello
 ```
 
-``` continue
+```ts continue
 m?.replace("[GREETING]")
 => well [GREETING]there
 ```
@@ -141,7 +141,7 @@ m?.replace("[GREETING]")
 
 Punctuation doesn't prevent matching:
 
-```
+```ts
 const p = KeywordPattern.compile("hello world");
 p.match("hello, world!")?.capturedTextTrimmed
 => hello, world!
@@ -149,7 +149,7 @@ p.match("hello, world!")?.capturedTextTrimmed
 
 ## Empty input
 
-```
+```ts
 const p = KeywordPattern.compile("hello");
 p.match("")
 => undefined

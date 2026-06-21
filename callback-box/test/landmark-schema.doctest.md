@@ -24,7 +24,7 @@ import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 Landmark is a built-in frontmatter card type:
 
-```
+```ts
 getCardTypes().includes("landmark")
 => true
 
@@ -37,7 +37,7 @@ LandmarkSchema.type
 `parseLandmarkFields` reads a landmark file's frontmatter into a typed
 object:
 
-```
+```ts
 const fields = parseLandmarkFields(`---
 navigation:
   label: Recipes
@@ -79,7 +79,7 @@ JSON.stringify(fields, null, 2)
 `createLandmarkTemplate` produces a starter card with a `navigation`
 role holding the label and a text symbol:
 
-```
+```ts
 createLandmarkTemplate({ label: "Recipes", symbol: "🍳" })
 =>
 ---
@@ -91,7 +91,7 @@ navigation:
 
 An image symbol becomes a `{ src }` mapping:
 
-```
+```ts
 createLandmarkTemplate({ label: "Character", symbolSrc: "images/portrait.webp" })
 =>
 ---
@@ -107,7 +107,7 @@ navigation:
 A `navigation` with two `links` resolves to a flat list. `label` is the
 per-landmark label; `ref` is normalized to a box-relative path.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 await box.write("store/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
@@ -141,7 +141,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -149,7 +149,7 @@ await box.cleanup();
 
 A link to a file that doesn't exist still appears, with `exists: false`:
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 
@@ -179,7 +179,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, exists: l.exists })), null, 2)
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -188,7 +188,7 @@ await box.cleanup();
 Without a template, `expand` emits one bare link per match, sorted
 alphabetically by default.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/Apple.recipe.card", "---\ntitle: Apple\n---\n");
 await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
@@ -207,7 +207,7 @@ store/recipes/Bread.recipe.card
 store/recipes/Carrot.recipe.card
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -218,7 +218,7 @@ card's path relative to the landmark's directory; any other `${field}`
 reads that field from the matched card's frontmatter (replacing the old
 XPath-over-XML evaluation).
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Crusty Bread\n---\n");
 await box.write("store/recipes/Pasta.recipe.card", "---\ntitle: Cacio e Pepe\n---\n");
@@ -246,7 +246,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -255,7 +255,7 @@ await box.cleanup();
 A card appearing in both a hand-listed link and an `expand` result shows
 once — hand-listed links come first and keep their label.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 await box.write("store/recipes/Pasta.recipe.card", "---\ntitle: Pasta\n---\n");
@@ -284,7 +284,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -292,7 +292,7 @@ await box.cleanup();
 
 `order: modified-desc` sorts matches by mtime, newest first.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/A.recipe.card", "---\ntitle: A\n---\n");
 // Backdate A so B is newer.
@@ -313,7 +313,7 @@ store/recipes/B.recipe.card
 store/recipes/A.recipe.card
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -322,7 +322,7 @@ await box.cleanup();
 A link may point outside its own directory; the resolved ref is
 normalized to box-relative.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 await box.write("docs/About.doc.card", "---\ntitle: About\n---\n");
@@ -355,7 +355,7 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label, exists: l.exists 
 ]
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -364,7 +364,7 @@ await box.cleanup();
 `findDestination` locates the destination advertising a given kind among
 a landmark's `destinations`.
 
-```
+```ts
 const fields = parseLandmarkFields(`---
 navigation:
   label: Reading
@@ -387,7 +387,7 @@ findDestination(fields.destinations, "commentary") === dest
 
 A landmark without a matching destination returns null:
 
-```continue
+```ts continue
 const navOnly = parseLandmarkFields("---\nnavigation:\n  label: Just a bookmark\n---\n");
 findDestination(navOnly.destinations, "triage")
 => null

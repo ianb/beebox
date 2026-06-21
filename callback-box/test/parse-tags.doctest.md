@@ -14,13 +14,13 @@ console.warn = () => {};
 
 A single tag with content:
 
-```
+```ts
 const tags = parseTags('<greeting>Hello world</greeting>');
 tags.length
 => 1
 ```
 
-``` continue
+```ts continue
 tags[0].type
 => greeting
 
@@ -32,7 +32,7 @@ tags[0].content
 
 Attributes are extracted as key-value pairs:
 
-```
+```ts
 const tags = parseTags('<task status="open" priority="high">Do thing</task>');
 tags[0].attrs.status
 => open
@@ -43,7 +43,7 @@ tags[0].attrs.priority
 
 ## Self-closing tags
 
-```
+```ts
 const tags = parseTags('<item ref="test.card" />');
 tags[0].type
 => item
@@ -59,13 +59,13 @@ tags[0].content
 
 Inner tags appear as subTags:
 
-```
+```ts
 const tags = parseTags('<outer><inner>nested</inner></outer>');
 tags[0].type
 => outer
 ```
 
-``` continue
+```ts continue
 tags[0].subTags[0].type
 => inner
 
@@ -77,7 +77,7 @@ tags[0].subTags[0].content
 
 Only specified tags are parsed — others are ignored:
 
-```
+```ts
 const tags = parseTags('<speech>Hello <b>world</b></speech>', ["speech"]);
 tags.length
 => 1
@@ -88,7 +88,7 @@ tags[0].type
 
 ## Text between tags becomes comments
 
-```
+```ts
 const tags = parseTags('Some text <tag>inside</tag> more text');
 tags.filter(t => t.type === "comment").length > 0
 => true
@@ -98,7 +98,7 @@ tags.filter(t => t.type === "comment").length > 0
 
 Backticks wrapping the input are removed (common in LLM output):
 
-```
+```ts
 const tags = parseTags('`<tag>content</tag>`');
 tags[0].type
 => tag
@@ -109,7 +109,7 @@ tags[0].content
 
 ## Empty input
 
-```
+```ts
 parseTags("").length
 => 0
 
@@ -124,7 +124,7 @@ skipped without being pushed on the stack — so its CLOSER must be skipped
 the same way, not reported as "Unexpected closing tag". The documented
 paired ack form (`<ack kind="…">note</ack>`) hits exactly this.
 
-```
+```ts
 let warned = 0;
 const origWarn = console.warn;
 console.warn = () => { warned += 1; };
@@ -141,7 +141,7 @@ tags.filter(t => t.type === "speech").length
 An unmatched closer of an ALLOWED tag still warns — that's real
 malformation worth surfacing:
 
-```
+```ts
 let warned2 = 0;
 const origWarn2 = console.warn;
 console.warn = () => { warned2 += 1; };

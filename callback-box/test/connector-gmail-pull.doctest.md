@@ -59,7 +59,7 @@ No date filter anywhere — a configured query or label set is used as-is, and
 the bare default is plain `label:inbox` (history incrementality bounds the
 sync cost instead of an `after:` floor):
 
-```
+```ts
 buildGmailQuery({ query: "from:boss is:starred" })
 => from:boss is:starred
 
@@ -76,7 +76,7 @@ A labels config means explicit routing — everything carrying the label flows
 in on the first sync, even messages received years ago (there is no date
 filter to exclude them).
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"] }));
@@ -104,7 +104,7 @@ JSON.stringify((await readState(box.root)).seenGmailIds)
 The second sync goes through the history API: no full re-list, no message
 re-fetch.
 
-``` continue
+```ts continue
 gmail.callLog.length = 0;
 const second = await connector.sync();
 second.created.length
@@ -123,7 +123,7 @@ printCalls(gmail.callLog, "listHistory")
 New labeled mail arrives — picked up via history, fetching only the one new
 message:
 
-``` continue
+```ts continue
 await gmail.addMessage(makeGmailMessage({ id: "m2", subject: "Fresh mail", labelIds: ["Label_7"] }));
 const third = await connector.sync();
 third.created.length
@@ -142,7 +142,7 @@ The labeling-as-routing case: a message that never matched (no `callback`
 label) gets the label later. The history API surfaces the labelsAdded change
 — received date is irrelevant.
 
-``` continue
+```ts continue
 await gmail.addMessage(makeGmailMessage({ id: "m3", subject: "Unrelated", labelIds: ["INBOX"] }));
 const fourth = await connector.sync();
 // Not labeled callback — history change filtered out, nothing imported
@@ -164,7 +164,7 @@ Gmail only retains history for a limited time. When the stored checkpoint
 404s, the connector re-lists the full query; seen-id dedup keeps the fallback
 from re-importing (note: zero getMessage calls for the three seen messages).
 
-``` continue
+```ts continue
 await gmail.expireHistory();
 await gmail.addMessage(makeGmailMessage({ id: "m4", subject: "Arrived during gap", labelIds: ["Label_7"] }));
 gmail.callLog.length = 0;
@@ -186,7 +186,7 @@ user's entire inbox as cards. Instead it records every current match as seen
 and imports nothing — only mail arriving (or moved to inbox) afterwards flows
 in.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 box.commitAll("init box");
@@ -209,7 +209,7 @@ JSON.stringify((await readState(box.root)).seenGmailIds)
 From then on, new inbox mail and re-inboxed old mail both flow in via
 history:
 
-``` continue
+```ts continue
 await gmail.addMessage(makeGmailMessage({ id: "new1", subject: "Just arrived", labelIds: ["INBOX"] }));
 const second = await connector.sync();
 second.created.length
@@ -232,7 +232,7 @@ Boxes synced before `seenGmailIds` existed have Message-ID headers in
 `seenMessageIds`. Those are checked after fetch; on a hit the Gmail id is
 recorded so the next sync skips the fetch entirely.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await initBox(box.root);
 await box.seed("config/connectors/gmail.json", JSON.stringify({ labels: ["callback"] }));

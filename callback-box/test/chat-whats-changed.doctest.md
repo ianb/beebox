@@ -21,7 +21,7 @@ import { summarizeWhatsChanged } from "../src/core/chat-whats-changed.js";
 `recordTurnMarker` writes one file per session; `loadTurnMarker` reads it back,
 returning `null` for an absent or malformed marker.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 recordTurnMarker(box.root, { sessionId: "sess-1", head: "deadbeef", time: "2026-06-14T00:00:00Z" });
 JSON.stringify(loadTurnMarker(box.root, "sess-1"))
@@ -31,7 +31,7 @@ loadTurnMarker(box.root, "never-recorded") === null
 => true
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -40,7 +40,7 @@ await box.cleanup();
 After recording the marker, a later commit shows up as "since your last reply",
 an earlier commit does not, and an untracked file shows in the working tree.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/Trip.memo.card", "first");
 box.commitAll("add trip card");
@@ -71,7 +71,7 @@ report.includes("Untracked: store/Notes.memo.card")
 Scoping to a card path narrows every section to that path: the Trip card's
 commit stays, the out-of-scope Notes file drops out.
 
-```continue
+```ts continue
 const scoped = await summarizeWhatsChanged(box.root, { sessionId: "sess-1", card: "store/Trip.memo.card" });
 scoped.includes("Scope: store/Trip.memo.card")
 => true
@@ -83,7 +83,7 @@ scoped.includes("Notes")
 => false
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
 
@@ -92,7 +92,7 @@ await box.cleanup();
 With no marker yet, the report falls back to the last few commits, labeled as
 such, rather than claiming a precise delta.
 
-```
+```ts
 const box = await makeTmpBox({ git: true });
 await box.write("store/Trip.memo.card", "first");
 box.commitAll("add trip card");
@@ -105,6 +105,6 @@ report.includes("add trip card")
 => true
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```

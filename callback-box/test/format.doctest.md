@@ -6,7 +6,7 @@
 import { stripAnsi } from "../src/cli/lib/format.js";
 ```
 
-```
+```ts
 stripAnsi("\u001B[32m✓ done\u001B[39m")
 => ✓ done
 

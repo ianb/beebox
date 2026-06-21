@@ -28,7 +28,7 @@ Renders a moment in the given IANA timezone with the named weekday, the zone
 abbreviation, and a phase-of-day label — the three things models misderive
 from a UTC ISO timestamp.
 
-```
+```ts
 formatLocalTime(new Date("2026-06-09T19:32:00Z"), { timezone: "America/Chicago" })
 => Tuesday 2026-06-09 14:32 CDT (afternoon)
 
@@ -42,7 +42,7 @@ formatLocalTime(new Date("2026-06-09T11:00:00Z"), { timezone: "America/Chicago" 
 The local date can differ from the UTC date — late evening in Chicago is
 already the next day in UTC. The weekday and date follow the local zone.
 
-```
+```ts
 formatLocalTime(new Date("2026-06-10T03:30:00Z"), { timezone: "America/Chicago" })
 => Tuesday 2026-06-09 22:30 CDT (late night)
 ```
@@ -52,7 +52,7 @@ warning) rather than failing — a bad config value must not break sends.
 The output shape is the same; we just can't assert the zone-dependent
 values here.
 
-```
+```ts
 formatLocalTime(new Date("2026-06-09T19:32:00Z"), { timezone: "Not/AZone" })
 => «*» 2026-«*» («*»)
 ```
@@ -61,7 +61,7 @@ formatLocalTime(new Date("2026-06-09T19:32:00Z"), { timezone: "Not/AZone" })
 
 Coarse human durations for the `last-activity` attribute.
 
-```
+```ts
 describeElapsed(30_000)
 => moments
 
@@ -103,7 +103,7 @@ const now = new Date("2026-06-09T10:00:00Z");
 const tz = { timezone: "UTC", now };
 ```
 
-```
+```ts
 summarizeEvents([
   ev("Dentist", "2026-06-09T16:00:00Z", "2026-06-09T17:00:00Z"),
   ev("Standup", "2026-06-10T09:00:00Z", "2026-06-10T09:30:00Z"),
@@ -119,7 +119,7 @@ summarizeEvents([
 Cancelled events are skipped; an empty (or all-cancelled) list summarizes
 to null.
 
-```
+```ts
 summarizeEvents([
   { ...ev("Old Mtg", "2026-06-09T12:00:00Z", "2026-06-09T13:00:00Z"), status: "CANCELLED" },
 ], tz)
@@ -132,7 +132,7 @@ summarizeEvents([], tz)
 Output is capped at four events with an overflow count, so a packed day
 doesn't balloon the snapshot.
 
-```
+```ts
 const six = ["A", "B", "C", "D", "E", "F"].map((s, i) =>
   ev(s, `2026-06-09T1${i}:00:00Z`, `2026-06-09T1${i}:30:00Z`));
 summarizeEvents(six, tz)
@@ -147,7 +147,7 @@ send computes only the local time, and a session-start send on a
 pristine box (no prior activity, no calendar) degrades to the same —
 the extras are omitted, never empty strings.
 
-```
+```ts
 const box = await makeTmpBox();
 await box.write("config/box.json", JSON.stringify({ timezone: "UTC" }));
 const sendNow = new Date("2026-06-09T10:00:00Z");
@@ -162,7 +162,7 @@ JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart
 With a most-active pointer (written whenever any chat session on the box
 sees activity) and a synced calendar, the session-start extras appear.
 
-```continue
+```ts continue
 await box.write(".callback-box/chat-session-id.json", JSON.stringify({
   sessionId: "prev-session",
   savedAt: "2026-06-06T10:00:00Z",
@@ -188,7 +188,7 @@ JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart
 Events outside the 24-hour horizon don't surface — the attribute is
 about imminent commitments, not the whole calendar.
 
-```continue
+```ts continue
 await box.write("store/calendar/later.ics", `BEGIN:VCALENDAR
 BEGIN:VEVENT
 UID:later-1
@@ -206,7 +206,7 @@ END:VCALENDAR`);
 The `health` extra speaks only when a scheduled task is unhealthy —
 a healthy box (like everything above) omits it entirely.
 
-```continue
+```ts continue
 await box.write("config/schedules/sync-notes.scheduled-script.card", `---
 cron: "0 * * * *"
 runs: cb wakeup --connector notes
@@ -228,6 +228,6 @@ await box.write("config/schedules/.state/sync-notes.json", JSON.stringify({
 => undefined
 ```
 
-```cleanup
+```ts cleanup
 await box.cleanup();
 ```
