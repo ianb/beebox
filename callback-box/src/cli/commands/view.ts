@@ -28,12 +28,13 @@ import * as path from "node:path";
 import { promises as fs } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
 import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../lib/paths.js";
-import { compileView } from "../../webapp/views/compiler.js";
+import { compileView, listViews } from "../../webapp/views/compiler.js";
 import { loadViewCards } from "../../core/view-cards.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import type { ViewProps } from "../../types/views.js";
@@ -192,6 +193,120 @@ async function renderView(options: RenderViewOptions): Promise<number> {
   }
 }
 
+/** Per-view outcome from `cb view check`. */
+export interface ViewCheckResult {
+  slug: string;
+  ok: boolean;
+  /** True when the render was killed by the timeout (a hang), not a thrown error. */
+  timedOut?: boolean;
+  /** Failure detail (render error or timeout note); absent when `ok`. */
+  error?: string;
+}
+
+const DEFAULT_VIEW_CHECK_TIMEOUT_MS = 30_000;
+
+/**
+ * Render one view in a killable child process (`cb view test <slug>`) with a
+ * hard timeout. A child is the only way to interrupt a pathological view whose
+ * render body loops synchronously — an in-process timeout can't fire while the
+ * event loop is blocked. SIGKILL guarantees the hang dies. Never rejects:
+ * spawn/exit failures resolve to `ok: false` so one bad view can't abort the
+ * sweep.
+ */
+function checkOneView(args: {
+  boxRoot: string;
+  slug: string;
+  timeoutMs: number;
+}): Promise<ViewCheckResult> {
+  const { boxRoot, slug, timeoutMs } = args;
+  const cbBin = path.join(PACKAGE_ROOT, "bin", "cb");
+  return new Promise((resolve) => {
+    const child = spawn(cbBin, ["view", "test", slug], {
+      cwd: boxRoot,
+      timeout: timeoutMs,
+      killSignal: "SIGKILL",
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", (e) => {
+      resolve({ slug, ok: false, error: `could not run cb view test: ${e.message}` });
+    });
+    child.on("close", (code, signal) => {
+      if (code === 0) {
+        resolve({ slug, ok: true });
+        return;
+      }
+      const timedOut = signal === "SIGKILL";
+      const error = timedOut
+        ? `render timed out after ${String(timeoutMs)}ms`
+        : stderr.trim() || `cb view test exited with code ${String(code ?? "null")}`;
+      resolve({ slug, ok: false, ...(timedOut ? { timedOut: true } : {}), error });
+    });
+  });
+}
+
+/**
+ * Render every view in the box and report which fail. The whole-box gate (a
+ * migration's `validate.shells` check) and the broken-view detector. Sequential
+ * by design: each child may self-heal the CLI bundle on first run, and a
+ * migration check is not a hot path — so we avoid racing rebuilds and resource
+ * spikes rather than parallelize.
+ *
+ * v1 renders each view with default params (no `params.path`). A card-bound view
+ * that only breaks for a specific `params.path` is not yet exercised — the
+ * `params.path` sampling policy is a tracked follow-up (see the agent-applied
+ * migrations plan, Open q4).
+ */
+export async function checkViews(args: {
+  boxRoot: string;
+  timeoutMs: number;
+}): Promise<{ ok: boolean; views: ViewCheckResult[] }> {
+  const { boxRoot, timeoutMs } = args;
+  const metas = await listViews(boxRoot);
+  const views: ViewCheckResult[] = [];
+  for (const meta of metas) {
+    views.push(await checkOneView({ boxRoot, slug: meta.slug, timeoutMs }));
+  }
+  return { ok: views.every((v) => v.ok), views };
+}
+
+const viewCheckCommand = new Command("check")
+  .description("Render every view in the box; exit non-zero if any fails")
+  .option("--json", "Emit machine-readable JSON ({ ok, views: [{ slug, ok, error? }] })")
+  .option(
+    "--timeout <ms>",
+    "Per-view render timeout in milliseconds",
+    String(DEFAULT_VIEW_CHECK_TIMEOUT_MS)
+  )
+  .action(async (options: { json?: boolean; timeout?: string }) => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const parsed = Number(options.timeout);
+      const timeoutMs = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_VIEW_CHECK_TIMEOUT_MS;
+      const { ok, views } = await checkViews({ boxRoot, timeoutMs });
+
+      if (options.json === true) {
+        process.stdout.write(JSON.stringify({ ok, views }) + "\n");
+      } else {
+        for (const v of views) {
+          if (v.ok) {
+            process.stdout.write(`✓ ${v.slug}\n`);
+          } else {
+            process.stderr.write(`✗ ${v.slug}: ${v.error ?? "failed"}\n`);
+          }
+        }
+        const failing = views.filter((v) => !v.ok).length;
+        process.stdout.write(`${String(views.length)} view(s), ${String(failing)} failing\n`);
+      }
+      process.exitCode = ok ? 0 : 1;
+    } catch (error) {
+      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
 const viewTestCommand = new Command("test")
   .description("Render a view in Node and print its output (or the error)")
   .argument("<slug>", "View slug (the views/<slug>.tsx basename)")
@@ -226,4 +341,5 @@ const viewTestCommand = new Command("test")
 
 export const viewCommand = new Command("view")
   .description("Work with agent-authored views")
-  .addCommand(viewTestCommand);
+  .addCommand(viewTestCommand)
+  .addCommand(viewCheckCommand);
