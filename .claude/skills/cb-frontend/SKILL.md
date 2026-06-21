@@ -133,6 +133,24 @@ Animation should explain a change, not decorate. When you reach for it:
 A spinner that could be a skeleton, a card that pulses for no reason, a
 500ms page fade — those read as "generated," not "designed." Skip them.
 
+## Performance — measure before you optimize
+
+callback-box is an internal app, not a public site chasing Lighthouse scores —
+don't pre-optimize. The two web-applicable habits that *do* matter here:
+
+- **Reserve space for images** so the layout doesn't jump as they load
+  (Cumulative Layout Shift). When you know an image's dimensions, pass them / set
+  an aspect-ratio; `loading="lazy"` anything below the fold. (Heads-up: the
+  `<Image>` primitive only fully reserves space for `size="thumb"` today — the
+  larger sizes are `max-w`/`max-h` only, so they still shift.)
+- **Don't memoize on reflex.** `React.memo`/`useMemo` everywhere is as bad as
+  nowhere — noise and bugs for no measured gain. Reach for them only when
+  profiling proves a hot path; the cheaper, more common win is *not* passing a
+  fresh `{}`/`[]` literal as a prop each render (hoist it, or `useMemo` that).
+
+If something is actually slow, that's a **cb-debug** job — establish a baseline
+measurement and bisect; logs lie about performance.
+
 ## Verify in a real browser before you're done
 
 Built UI is unverified until you've *looked* at it. Use the `browse` skill
