@@ -29,7 +29,7 @@ Every step has three optional phases: **precheck**, **run**, **validate**. All u
 
 - `<shell>` — a bash command, executed in the box root
 - `<agent>` — Claude Code invocation with inline prompt
-- `<instruction>` — natural language evaluated by a model (pass/fail)
+- `<instruction>` — natural-language success criterion. Human-readable intent only — **not** machine-evaluated yet (see [Instructions](#instructions)); the real pass/fail check goes in a `shell`.
 - `<why>` — explanation of purpose for humans, fixing agents, and review models
 
 **Text dedenting:** All text content is automatically dedented, so prompts can be indented naturally within the XML.

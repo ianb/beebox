@@ -71,17 +71,19 @@ steps:
             Agent prompt goes here. The engine prepends context
             (date, procedure name, step ID, working directory).
     validate:
-      severity: review
+      severity: abort   # the only severity that actually gates (see below)
       shells:
         - |
-          # Exit 0 = pass, non-zero = fail
+          # Exit 0 = pass, non-zero = fail. This is what gates the step.
           remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
           echo "Remaining: $remaining"
           [ "$remaining" -eq 0 ]
       instructions:
         - |
-          Natural language description of what success looks like.
-          A model evaluates the git diff against this instruction.
+          Natural-language description of what success looks like.
+          NOTE: instructions are human-readable intent only — not yet
+          machine-evaluated (see Validation Severity). Put the real
+          pass/fail check in shells.
       whys:
         - Why this validation matters
 ---
@@ -133,9 +135,23 @@ The agent sees this as a \`<precheck>\` block in its system prompt. Use this to 
 
 ### Validation Severity
 
-- \`severity="warn"\` — Log the failure and continue
-- \`severity="review"\` — A model evaluates the git diff against the \`<instruction>\`. If it fails, the agent gets one retry attempt.
-- \`severity="abort"\` — Stop the procedure immediately
+- \`severity="warn"\` — Log the failure and continue.
+- \`severity="abort"\` — A failing \`shells\` check fails the step (and, for a procedure-kind migration, blocks the migration). **This is the only severity that actually gates.**
+- \`severity="review"\` — *Intended* to re-run the agent with the failure context, but **not implemented yet** — it currently downgrades to \`warn\` (logs and continues). Use \`abort\` when you need a hard gate.
+
+**Only \`shells\` gates.** A failing \`agents\` invocation does not fail the step (it's logged), and \`instructions\` are not yet machine-evaluated. So "the agent must have actually done the work" has to be encoded as a \`shells\` check — never assume the agent finishing means the step succeeded.
+
+### Checklists (opt-in thoroughness)
+
+When a step has the agent work through several items and you want an auditable trail, use a **checklist** — a convention, not an engine feature:
+
+- Have the agent maintain a working file (e.g. \`config/migration-runs/<name>.checklist.md\`) of markdown checkboxes (\`- [ ]\`), flipping to \`- [x]\` only when an item is genuinely done, with a one-line grounded note (cite the file changed).
+- Gate it in \`validate.shells\` with a completeness check so the step can't pass with unfinished items:
+  \`\`\`bash
+  f="config/migration-runs/my.checklist.md"
+  test -f "$f" && grep -q '\\[x\\]' "$f" && ! grep -q '\\[ \\]' "$f"
+  \`\`\`
+- This also gives safe partial failure: an agent that runs out of \`max-turns\` leaves \`[ ]\` boxes, the gate blocks completion, and re-running resumes. The checklist forces decomposition and records the path; the **objective** \`shells\` check (does the thing actually work) is still what proves correctness.
 
 ### Why Entries
 

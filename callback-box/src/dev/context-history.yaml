@@ -1,0 +1,33 @@
+# Context-size history — auto-appended by `knowledge-audit run`.
+# box basename → audit id → entries (oldest first). See lib/context-history.ts.
+test1:
+  procedure-what-gates:
+    - date: 2026-06-21T20:24:58.778Z
+      boxCommit: 3c7f1cdc08517757669a1a78e15fd6cd6b891667
+      repoCommit: 2d536e446cb3d7189fafcf133826257329113f6a
+      initial: 41291
+      peak: 42017
+      added: 726
+      turns: 4
+    - date: 2026-06-21T20:26:27.564Z
+      boxCommit: 8845f8f3aaf00b4ec8f70d765ede57d3ac2d3f42
+      repoCommit: 2d536e446cb3d7189fafcf133826257329113f6a
+      initial: 41290
+      peak: 42030
+      added: 740
+      turns: 4
+  procedure-checklist-discipline:
+    - date: 2026-06-21T20:24:58.778Z
+      boxCommit: 3c7f1cdc08517757669a1a78e15fd6cd6b891667
+      repoCommit: 2d536e446cb3d7189fafcf133826257329113f6a
+      initial: 41241
+      peak: 41241
+      added: 0
+      turns: 2
+    - date: 2026-06-21T20:26:27.564Z
+      boxCommit: 8845f8f3aaf00b4ec8f70d765ede57d3ac2d3f42
+      repoCommit: 2d536e446cb3d7189fafcf133826257329113f6a
+      initial: 41240
+      peak: 41240
+      added: 0
+      turns: 2
