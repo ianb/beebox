@@ -6,8 +6,8 @@ the pill/composer behavior. Not run by `pnpm test` (this dir is excluded);
 run it by hand (or drive it with `bin/browse`) when touching the feature.
 
 The pure pieces *are* covered automatically — see
-`test/selection-position.doctest.md` (`formatPosition`) and
-`test/markdoc-headings.doctest.md` (heading ids / `data-line`). The DOM-walk
+`test/frontend/lib/selection-position.doctest.md` (`formatPosition`) and
+`test/shared/markdoc-headings.doctest.md` (heading ids / `data-line`). The DOM-walk
 (`extractSelection`) was validated against the real rendered DOM via
 `bin/browse eval` (see commit notes); the steps below re-confirm it
 end-to-end through the actual UI.

@@ -2,7 +2,7 @@
 
 **Status:** implemented, as the overlay decomposition described in the note below
 (`src/frontend/src/machines/composerMachine.ts`, wired in `InteractiveChat-voice.ts`, doctested
-in `test/composer-machine.doctest.md`). Audience: us. The companion doc `composer-states.md`
+in `test/frontend/composer-machine.doctest.md`). Audience: us. The companion doc `composer-states.md`
 enumerates the rendered states with screenshots; this doc records the design of the machine
 behind them, and keeps the five-state child-invoke version as the target end-state.
 

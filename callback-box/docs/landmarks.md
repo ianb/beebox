@@ -145,7 +145,7 @@ Eventually Browse can surface "the landmark for this directory" as a header crum
 | Landmarks page | `src/frontend/src/pages/LandmarksPage.tsx` |
 | Route + nav entry | `src/frontend/src/components/AppNav.tsx` + router |
 | API endpoint | tRPC procedure under `src/webapp/trpc/routers/` (lists landmark cards + resolves expands server-side) |
-| Doctest coverage | `test/landmark-schema.doctest.md` (schema validation, expand semantics, dedup, order) |
+| Doctest coverage | `test/core/landmark/landmark-schema.doctest.md` (schema validation, expand semantics, dedup, order) |
 
 The expand evaluator runs server-side at fetch time so the wire response is a fully-resolved list of links (no client-side glob or field lookup).
 

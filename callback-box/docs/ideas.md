@@ -970,7 +970,7 @@ Implemented as the `{% redacted %}…{% /redacted %}` Markdoc tag (see
 Inline/block split mirrors `quote` / `source`. Rendering: blurred text behind an
 animated SVG-turbulence noise overlay (Threads-style fuzz), click/tap or Enter/Space
 to reveal. Stays blurred under SSR / no-JS — safe for print. Agent-authored only.
-Parser test: `test/markdoc-redacted.doctest.md`.
+Parser test: `test/shared/markdoc-redacted.doctest.md`.
 
 ## Demo readiness
 

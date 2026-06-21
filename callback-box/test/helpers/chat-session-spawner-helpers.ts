@@ -1,5 +1,5 @@
 /**
- * Helpers for `test/chat-session-with-spawner.doctest.md`. Kept out of the
+ * Helpers for `test/core/chat-session-with-spawner.doctest.md`. Kept out of the
  * doctest itself because the doctest loader has trouble with top-level
  * function declarations that return inline object literals.
  */

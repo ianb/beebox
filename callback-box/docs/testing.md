@@ -83,40 +83,40 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 
 | File | Tests |
 |------|-------|
-| `test/box.doctest.md` | `initBox()`, directory structure, `isValidBox()`, `findBoxRoot()`, metadata |
-| `test/schemas.doctest.md` | Schema registry, card templates (memo, question, intake-job, calendar-review-job) |
-| `test/intake-utils.doctest.md` | `createOrAppendIntakeJob()` — create, append, multi-source |
-| `test/calendar-utils.doctest.md` | ICS parsing, event formatting, timespan parsing, date filtering |
-| `test/chat-response-extraction.doctest.md` | `<chat-response>` streaming extraction, chunking, multiline |
-| `test/chat-utils.doctest.md` | Chat utilities |
-| `test/scheduled-script.doctest.md` | `isDue()`, `isDueForWakeup()`, `isWithinBudget()`, template generation |
-| `test/schedule-state.doctest.md` | `pruneRecentRuns()`, `recordRun()` |
-| `test/format.doctest.md` | `stripAnsi()` |
-| `test/dedent.doctest.md` | `dedent()` |
+| `test/core/box.doctest.md` | `initBox()`, directory structure, `isValidBox()`, `findBoxRoot()`, metadata |
+| `test/schemas/schemas.doctest.md` | Schema registry, card templates (memo, question, intake-job, calendar-review-job) |
+| `test/connectors/intake-utils.doctest.md` | `createOrAppendIntakeJob()` — create, append, multi-source |
+| `test/connectors/calendar-utils.doctest.md` | ICS parsing, event formatting, timespan parsing, date filtering |
+| `test/core/chat-response-extraction.doctest.md` | `<chat-response>` streaming extraction, chunking, multiline |
+| `test/connectors/chat-utils.doctest.md` | Chat utilities |
+| `test/schemas/scheduled-script.doctest.md` | `isDue()`, `isDueForWakeup()`, `isWithinBudget()`, template generation |
+| `test/core/schedule-state.doctest.md` | `pruneRecentRuns()`, `recordRun()` |
+| `test/cli/lib/format.doctest.md` | `stripAnsi()` |
+| `test/core/procedure/dedent.doctest.md` | `dedent()` |
 | `test/serialize.doctest.md` | Value serialization |
-| `test/paths.doctest.md` | Card name parsing |
-| `test/routes-scheduler.doctest.md` | Scheduler log and schedules listing API |
-| `test/routes-admin.doctest.md` | Box config admin API |
-| `test/routes-api.doctest.md` | Core data API (status, inbox, cards, browse, debug-log, activity) |
-| `test/routes-commands.doctest.md` | Command listing, details, sync execution, error cases |
-| `test/routes-history.doctest.md` | Git commit log, diffs, session log |
-| `test/routes-actions.doctest.md` | Answer question, create card, validation |
-| `test/routes-clerk.doctest.md` | Clerk extension API (memo, save-to-brief, save-page, tabs, actions) |
-| `test/parse-tags.doctest.md` | XML-like tag parsing (frontend) |
-| `test/patmatch.doctest.md` | Keyword pattern matching (frontend) |
-| `test/speech-parsing.doctest.md` | Speech tag extraction for TTS (frontend) |
-| `test/speech-keywords.doctest.md` | Voice command keyword detection (frontend) |
+| `test/cli/lib/paths.doctest.md` | Card name parsing |
+| `test/webapp/routes/routes-scheduler.doctest.md` | Scheduler log and schedules listing API |
+| `test/webapp/routes/routes-admin.doctest.md` | Box config admin API |
+| `test/webapp/routes/routes-api.doctest.md` | Core data API (status, inbox, cards, browse, debug-log, activity) |
+| `test/webapp/routes/routes-commands.doctest.md` | Command listing, details, sync execution, error cases |
+| `test/webapp/routes/routes-history.doctest.md` | Git commit log, diffs, session log |
+| `test/webapp/routes/routes-actions.doctest.md` | Answer question, create card, validation |
+| `test/webapp/routes/routes-clerk.doctest.md` | Clerk extension API (memo, save-to-brief, save-page, tabs, actions) |
+| `test/frontend/lib/parse-tags.doctest.md` | XML-like tag parsing (frontend) |
+| `test/frontend/lib/patmatch.doctest.md` | Keyword pattern matching (frontend) |
+| `test/frontend/lib/speech-parsing.doctest.md` | Speech tag extraction for TTS (frontend) |
+| `test/frontend/lib/speech-keywords.doctest.md` | Voice command keyword detection (frontend) |
 | `test/print.doctest.md` | `print()` function in doctests (meta-test) |
-| `test/procedure-engine.doctest.md` | Procedure engine: shell steps, precheck skip/fail, validation, agent mock, fallback commits |
-| `test/git.doctest.md` | Git command helpers (init, commit, log, diff, status, branches, tags) |
-| `test/time.doctest.md` | Stubbable time utilities (CB_TIME env, stubs.yaml, caching) |
-| `test/routes-calendar.doctest.md` | Calendar config routes (list available, get/save config) |
-| `test/service-call-log.doctest.md` | Generic `withCallLog()` wrapper for recording method calls |
-| `test/service-telegram.doctest.md` | Telegram service fake (outbox, webhook, polling) |
-| `test/service-google-calendar.doctest.md` | Google Calendar service fake (calendars, events) |
-| `test/service-openai-audio.doctest.md` | OpenAI audio service fake (transcription, TTS) |
+| `test/core/procedure/procedure-engine.doctest.md` | Procedure engine: shell steps, precheck skip/fail, validation, agent mock, fallback commits |
+| `test/cli/lib/git.doctest.md` | Git command helpers (init, commit, log, diff, status, branches, tags) |
+| `test/cli/lib/time.doctest.md` | Stubbable time utilities (CB_TIME env, stubs.yaml, caching) |
+| `test/webapp/routes/routes-calendar.doctest.md` | Calendar config routes (list available, get/save config) |
+| `test/services/service-call-log.doctest.md` | Generic `withCallLog()` wrapper for recording method calls |
+| `test/services/service-telegram.doctest.md` | Telegram service fake (outbox, webhook, polling) |
+| `test/services/service-google-calendar.doctest.md` | Google Calendar service fake (calendars, events) |
+| `test/services/service-openai-audio.doctest.md` | OpenAI audio service fake (transcription, TTS) |
 | `test/service-imap.doctest.md` | IMAP service fake (connect, search, fetch) |
-| `test/connector-telegram.doctest.md` | Telegram connector: extractMessage, webhook processing, full sync, outbound send |
+| `test/connectors/connector-telegram.doctest.md` | Telegram connector: extractMessage, webhook processing, full sync, outbound send |
 
 ## Testing with Service Fakes
 

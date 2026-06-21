@@ -22,7 +22,7 @@ box-authored TSX; an agent following a checklist can, gated by a machine check
 ## Status (partially implemented)
 
 Landed on this branch and verified deterministically (full suite green):
-- **Track 1** — `cb view check` (`src/cli/commands/view.ts`, `test/view-check.doctest.md`):
+- **Track 1** — `cb view check` (`src/cli/commands/view.ts`, `test/cli/commands/view-check.doctest.md`):
   whole-box render gate; per-view killable child + timeout.
 - **Track 2 (convention)** — the checklist convention is realized by the
   `view-card-shape` procedure's embedded `[ ]`/`[x]` checklist (Track 4). The

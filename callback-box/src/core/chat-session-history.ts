@@ -225,7 +225,7 @@ export async function getLastSessionForDirectory(
   // Testing caveat: this means tests that exercise this helper can't just
   // call appendHistory — they must also seed an empty JSONL at the path
   // resolveSessionLogPath() produces, or every entry looks like a ghost and
-  // the helper returns null. See test/chat-session-history.doctest.md's
+  // the helper returns null. See test/core/chat-session-history.doctest.md's
   // seedSessionLog/cleanupSessionLogs helpers.
   for (let i = entries.length - 1; i >= 0; i -= 1) {
     const entry = entries[i];
