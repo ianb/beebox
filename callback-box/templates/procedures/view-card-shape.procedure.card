@@ -22,13 +22,15 @@ steps:
           # safely; tagName/attrs/element are ViewCard-specific enough.
           if ! cb view check >/dev/null 2>&1; then
             echo "Views fail to render — running the fix step."
+          elif ! cb view typecheck >/dev/null 2>&1; then
+            echo "Views have type errors against ViewProps — running the fix step."
           elif grep -rEl '\.(tagName|attrs|element)\b' views/ 2>/dev/null | grep -q .; then
             echo "Views still reference removed ViewCard fields — running the fix step."
           else
             exit $CHECK_SKIP
           fi
       whys:
-        - All views render AND none reference removed ViewCard fields.
+        - All views render, type-check, AND none reference removed ViewCard fields.
     run:
       agents:
         - prompt: |-
@@ -63,10 +65,11 @@ steps:
                   found where the data now lives in `frontmatter`/`body`, and
                   rewrote the view to read it there — PORTING the feature, not
                   deleting it.
-            - [ ] Updated any local `ViewCard`/`ViewCardChild` type a view
-                  declares so it matches the new shape (path, type, frontmatter,
-                  body, attachments).
-            - [ ] `cb view check` passes with zero failing views.
+            - [ ] Removed any local `ViewCard`/`ViewCardChild` type re-declaration
+                  and `as any` cast on card data, so the view is typed against the
+                  real ViewProps — this is what lets `cb view typecheck` catch a
+                  future field change instead of it failing silently.
+            - [ ] `cb view check` AND `cb view typecheck` both pass.
 
             You control how you work the list — fix views in any order, and loop
             back to an earlier item if a later `cb view check` reveals more. When
@@ -76,6 +79,7 @@ steps:
     validate:
       shells:
         - cb view check
+        - cb view typecheck
         - |-
           # Completeness gate: the checklist must exist, have at least one
           # checked box, and have no unchecked boxes left.
@@ -83,7 +87,7 @@ steps:
           test -f "$f" && grep -q '\[x\]' "$f" && ! grep -q '\[ \]' "$f"
       severity: abort
       instructions:
-        - Every view renders (cb view check is green) and the checklist is fully worked.
+        - Every view renders, type-checks against ViewProps, and the checklist is fully worked.
       whys:
-        - The migration is only complete when all views render and every checklist item is done.
+        - The migration is only complete when all views render, type-check, and every checklist item is done.
 ---
