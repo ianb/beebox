@@ -84,6 +84,86 @@ If a migration fails, the manifest is **not** updated for the failing entry and 
 
 Migrations are written for cards that already exist on disk; you almost never need to think about schema-level migrations (the schema files in `src/schemas/` evolve freely as long as old data still parses, or has a migrator to bring it forward).
 
+## Writing an agent-applied (procedure) migration
+
+Some changes can't be a deterministic script: the thing to transform is
+arbitrary box-authored code or prose that needs *judgment* to rewrite (the first
+case was `view-card-shape` — box-local `.tsx` views that had to be ported to a
+new `ViewCard` interface). For those, a migration runs a **procedure** that
+drives an agent through a checklist, gated by a machine check.
+
+**Default to a script.** Reach for agent-applied only when no deterministic
+transform exists. A script is faster, free, and exactly repeatable; an agent
+migration costs money/turns and is only as trustworthy as its gate. If 80% of
+the change is mechanical, do that 80% as a script migration and let the agent
+handle only the residual.
+
+### The shape
+
+- A procedure definition shipped as a template
+  (`templates/procedures/<name>.procedure.card`), one step with three phases:
+  - **`precheck`** — decide whether there's anything to do (idempotency).
+  - **`run.agents`** — the agent, handed an embedded checklist.
+  - **`validate`** — the machine gate (`shells` + `severity: abort`).
+- Registered in `src/core/migrations.ts` as `{ name, procedure: "<name>" }`
+  (the other kind is `{ name, script }`). `cb migrate` dispatches it to
+  `cb procedure run <name>` and records the manifest entry only on a clean
+  `completed`. See `view-card-shape.procedure.card` as the worked example.
+
+### Non-negotiables (each one is a scar from the first migration)
+
+1. **Gate on a machine check, never the agent's word.** `validate.shells` with
+   `severity: abort` is the only thing the engine actually enforces — model
+   judgment (`validate.instructions`) and `severity: review` retry are
+   unimplemented (they pass/warn-and-continue). `cb migrate` **refuses** to run a
+   procedure migration with no `validate.shells`+`abort` step, because an agent
+   that does nothing still "completes" a step otherwise.
+
+2. **A render/run check misses *silent* breakage.** The headline lesson: a
+   renamed field (`card.tagName` → `card.type`) can compile (esbuild strips
+   types) and render without throwing — it just silently does the wrong thing
+   (`hearth`'s map matched nothing and showed empty). So gate on more than
+   "it runs": add a **static check** against the real interface (`cb view
+   typecheck`) and a **textual precheck** for the old shape. Layer the gates;
+   each catches what the others miss.
+
+3. **Make "done" machine-checkable, not self-reported.** The agent works a
+   `[ ]`/`[x]` checklist file; the gate greps that no `[ ]` remain (completeness)
+   *and* runs the objective check. Agent honesty + the committed checklist + the
+   per-migration diff (human review) cover whether a *checked* box is truthful —
+   that residual can't be machine-closed, so don't pretend it is.
+
+4. **Idempotent precheck.** Skip the step when the box is already done (e.g.
+   `cb view check` green *and* `cb view typecheck` green *and* no textual old-shape
+   refs). This is what makes a box sweep safe — clean boxes skip with no agent
+   run, and a re-run after a failure resumes instead of redoing.
+
+5. **Tolerate pre-existing, unrelated breakage.** A migration about *views* must
+   not fail because a *card* a view depends on is invalid (it happened:
+   `ledger-shrink-test` had a bill card missing `vendor`). Use the escape hatch
+   (`cb view check --allow-invalid-cards`) so the gate judges *your* concern, not
+   someone else's. Pre-existing problems are for `cb validate`, not this.
+
+6. **Budget the turns, and let failure be safe.** A multi-item migration eats
+   turns (set `max-turns` on the agent — the default 20 wasn't enough for a box
+   with a heavy view). When it does run out, it must fail *cleanly*: partial work
+   committed, gate blocks `completed`, manifest not advanced — so **re-running
+   resumes** from the committed progress. Design for "fails and resumes," not
+   "must finish in one shot."
+
+7. **Watch where it writes.** The runner ran a per-view render in a temp dir
+   under the read-only `/opt/callback` on prod and hit `EACCES`. Anything an
+   agent-migration tool writes at runtime must use a writable location (an
+   OS-temp dir, not the package tree).
+
+### Test it the way the others were tested
+
+Verify deterministically first (the gate command on a real broken box, the
+procedure parses + passes `cb migrate`'s gate guard, `cb migrate --status` lists
+it). Then run it for real on one box and watch the agent — every fix above came
+from a real run surfacing a gap, not from review. Sweep the rest only after one
+works end-to-end.
+
 ## The migrators
 
 In the canonical order (same order they run via `cb migrate --apply`):
