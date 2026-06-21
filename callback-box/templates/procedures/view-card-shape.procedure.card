@@ -20,7 +20,7 @@ steps:
           # renders without throwing but is wrong, so `cb view check` alone
           # would skip it. `.children`/`.text` are too common in React to grep
           # safely; tagName/attrs/element are ViewCard-specific enough.
-          if ! cb view check >/dev/null 2>&1; then
+          if ! cb view check --allow-invalid-cards >/dev/null 2>&1; then
             echo "Views fail to render — running the fix step."
           elif ! cb view typecheck >/dev/null 2>&1; then
             echo "Views have type errors against ViewProps — running the fix step."
@@ -51,7 +51,7 @@ steps:
             `- [x]` ONLY when that item is genuinely done, appending a one-line
             note of what you changed and where (cite the file):
 
-            - [ ] Ran `cb view check --json` AND `grep -rnE
+            - [ ] Ran `cb view check --allow-invalid-cards --json` AND `grep -rnE
                   '\.(tagName|attrs|children|text|element)\b|card\.status' views/`
                   to find both views that fail to render AND views that still
                   reference removed fields. NOTE: a view can use `card.tagName`
@@ -69,11 +69,15 @@ steps:
                   and `as any` cast on card data, so the view is typed against the
                   real ViewProps — this is what lets `cb view typecheck` catch a
                   future field change instead of it failing silently.
-            - [ ] `cb view check` AND `cb view typecheck` both pass.
+            - [ ] `cb view check --allow-invalid-cards` AND `cb view typecheck`
+                  both pass. (`--allow-invalid-cards`: a dependency card that
+                  fails to load is a separate data problem, not your concern —
+                  don't try to fix cards, only views.)
 
             You control how you work the list — fix views in any order, and loop
-            back to an earlier item if a later `cb view check` reveals more. When
-            `cb view check` is green and every box is checked, you are done. Do
+            back if a later check reveals more. When `cb view check
+            --allow-invalid-cards` and `cb view typecheck` pass and every box is
+            checked, you are done. Do
             NOT check a box you did not actually complete; do NOT satisfy a check
             by deleting functionality.
           # Boxes can have several views, and a heavy one (e.g. a sandbox view
@@ -83,7 +87,10 @@ steps:
           max-turns: 60
     validate:
       shells:
-        - cb view check
+        # --allow-invalid-cards: this migration fixes VIEWS; a pre-existing
+        # invalid card a view depends on is a separate data problem (surfaced by
+        # cb validate), not a reason to block the view migration.
+        - cb view check --allow-invalid-cards
         - cb view typecheck
         - |-
           # Completeness gate: the checklist must exist, have at least one
