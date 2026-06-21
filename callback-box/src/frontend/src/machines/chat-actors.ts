@@ -18,6 +18,7 @@ import {
   type ChatImageAttachment,
 } from "../api";
 import { trpcClient } from "../lib/trpc";
+import { buildStreamEntry } from "../lib/stream-entry";
 import type { ChatMessage } from "../../../core/chat-session-messages.js";
 import type { ActivityKind, CardStateDetails } from "../../../core/chat-card-activity";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES, logFsm, type ChatEvent, type SessionInput } from "./chat-types";
@@ -364,14 +365,7 @@ export function rollupStreamToEntry(
   streamTools: SessionContentBlock[],
 ): SessionEntry | null {
   if (!streamText && streamTools.length === 0) return null;
-  const content: SessionContentBlock[] = [...streamTools];
-  if (streamText) content.push({ type: "text", text: streamText });
-  return {
-    uuid: `assistant-stream-${Date.now()}`,
-    type: "assistant",
-    timestamp: new Date().toISOString(),
-    content,
-  };
+  return buildStreamEntry({ uuid: `assistant-stream-${Date.now()}`, streamText, streamTools });
 }
 
 /**

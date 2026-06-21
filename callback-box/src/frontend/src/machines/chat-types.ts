@@ -91,6 +91,14 @@ export interface ChatContext {
   processBusy: boolean;
   /** Total number of entries in the full session log. */
   totalEntries: number;
+  /**
+   * Stable id for the turn currently streaming (or most recently finalized),
+   * set when a turn starts and held until the next send. Keys the live
+   * assistant bubble so the streamed and finalized render share one DOM node —
+   * finalize becomes an in-place update, not a remount/flash. Null before the
+   * first turn of the session.
+   */
+  liveTurnId: string | null;
 }
 
 export interface ChatMachineInput {

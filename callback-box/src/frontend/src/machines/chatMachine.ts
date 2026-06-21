@@ -70,6 +70,7 @@ export const chatMachine = setup({
     processRunning: false,
     processBusy: false,
     totalEntries: 0,
+    liveTurnId: null,
   }),
   on: {
     // Global handler: directly set messages from any state (used by server-push updates)
@@ -84,10 +85,7 @@ export const chatMachine = setup({
           pending: context.pendingMessages.length,
           msgs: context.messages.length,
         }),
-        assign({
-          streamText: "",
-          streamTools: [],
-        }),
+        assign({ streamText: "", streamTools: [] }),
       ],
     },
     // Global handler: another user sent a message (via SSE broadcast)
@@ -165,6 +163,7 @@ export const chatMachine = setup({
               interrupting: false,
               streamText: "",
               streamTools: [],
+              liveTurnId: event.messageId, // keys the live bubble across finalize
               messages: [
                 ...context.messages,
                 {

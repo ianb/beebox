@@ -3,6 +3,8 @@
  */
 
 import { useMemo } from "react";
+import { Grid } from "ldrs/react";
+import "ldrs/react/Grid.css";
 import { Pre } from "./ui/Pre";
 import type { SessionEntry } from "../api";
 import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../lib/speech-parsing";
@@ -70,6 +72,7 @@ export function AssistantMessage({
   onReplaySpeech,
   onZoomView,
   proseEnabled,
+  isStreaming,
 }: {
   entries: SessionEntry[];
   debugView?: boolean;
@@ -87,6 +90,8 @@ export function AssistantMessage({
   onZoomView?: OnZoomView;
   /** When false, untagged prose hides; only callouts and acks render. Default true. */
   proseEnabled?: boolean;
+  /** This group is the live, still-streaming turn — show a cursor/working state. */
+  isStreaming?: boolean;
 }) {
   const grouped = groupIntoParts(entries);
   const allText = entries.flatMap((e) =>
@@ -155,6 +160,18 @@ export function AssistantMessage({
         )
       ) : null}
       {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
+      {isStreaming ? (
+        allText.trim() === "" ? (
+          // Before the first token: the "agent is working" throbber. Once text
+          // arrives this branch swaps to the inline caret below, so the block
+          // throbber only ever sits in the empty state (no finalize shift).
+          <div className="flex items-center gap-2 py-1"><Grid size={20} color="#D4845A" speed={1.5} /></div>
+        ) : (
+          // Inline caret in the text flow — its removal at finalize is a repaint,
+          // not a reflow, so the streamed bubble settles into the final one.
+          <span className="inline-block w-1.5 h-4 ml-0.5 align-text-bottom rounded-sm bg-warm-400 animate-pulse" aria-hidden="true" />
+        )
+      ) : null}
     </div>
   );
 }

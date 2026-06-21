@@ -11,9 +11,10 @@ import { type ReactNode } from "react";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { MessageErrorBoundary } from "./MessageErrorBoundary";
-import { UserMessage, AssistantMessage, AssistantSpeechText, CompactionMessage, InterruptedMessage, SelfNoteMessage, ToolList, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
+import { UserMessage, AssistantMessage, CompactionMessage, InterruptedMessage, SelfNoteMessage, UserMessageText, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
 import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/structured-output-parsing";
 import type { SessionContentBlock } from "../../api";
+import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 
 /**
@@ -70,24 +71,6 @@ function PendingHqMessage({ text }: { text: string }) {
 }
 
 /**
- * Streaming content being built up during a turn. `chunkOnParagraphs` only
- * ever exposes text up to a paragraph break or a closed `</speech>` tag, so
- * any speech tag inside `visible` is complete — we can run it through the same
- * speech-aware renderer the finalized message uses, giving spoken chunks their
- * styling and speaker name as they stream in. The now-playing highlight stays
- * off here (`activeIndex={null}`); it only applies once the turn is finalized.
- */
-function StreamingMessage({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
-  const visible = chunkOnParagraphs(text);
-  if (!visible) return null;
-  return (
-    <div className="pr-4 sm:pr-24 pl-3 sm:pl-6 py-2">
-      <AssistantSpeechText text={visible} indexOffset={0} activeIndex={null} onZoomView={onZoomView} />
-    </div>
-  );
-}
-
-/**
  * The agent-working throbber. Shown both below the live streaming text/tools
  * (during an active SSE turn) and on its own when a reloaded page learns the
  * agent is mid-turn but has no live stream attached — so the indicator looks
@@ -105,9 +88,8 @@ function StreamingThrobber({ caption }: { caption?: string }) {
 }
 
 export type DataItem =
-  | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[] }
+  | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[]; streaming?: boolean }
   | { kind: "marker"; marker: ModelMarker }
-  | { kind: "stream" }
   | { kind: "processing" }
   | { kind: "pendingHq"; text: string };
 
@@ -121,7 +103,6 @@ function assistantGroupText(group: MessageGroup): string {
 export function dataItemKey(d: DataItem): string {
   switch (d.kind) {
     case "marker": return `marker-${d.marker.id}`;
-    case "stream": return "stream";
     case "processing": return "processing";
     case "pendingHq": return "pendingHq";
     case "group": return d.group.entries[0].uuid;
@@ -149,11 +130,14 @@ export function buildDataItems(opts: {
   groups: MessageGroup[];
   modelMarkers: ModelMarker[];
   streamingShown: boolean;
+  streamText: string;
+  streamTools: SessionContentBlock[];
+  liveTurnId: string | null;
   processingShown: boolean;
   pendingHqDraft: string | null;
   debugView: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView } = opts;
+  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -184,8 +168,18 @@ export function buildDataItems(opts: {
     }
   }
   if (pendingHqDraft !== null) items.push({ kind: "pendingHq", text: pendingHqDraft });
-  if (streamingShown) items.push({ kind: "stream" });
-  else if (processingShown) items.push({ kind: "processing" });
+  if (streamingShown) {
+    // The live turn renders as a *provisional* assistant group through the same
+    // GroupItem/AssistantMessage path as the finalized turn, keyed by liveTurnId
+    // so finalize is an in-place update (no remount/flash). chunkOnParagraphs
+    // trims to the last safe boundary so half-typed structured tags don't leak.
+    const entry = buildStreamEntry({
+      uuid: `live-${liveTurnId ?? "tail"}`,
+      streamText: chunkOnParagraphs(streamText),
+      streamTools,
+    });
+    items.push({ kind: "group", group: { type: "assistant", entries: [entry] }, groupIndex: groups.length, streaming: true });
+  } else if (processingShown) items.push({ kind: "processing" });
   return items;
 }
 
@@ -208,11 +202,12 @@ export interface RenderItemContext {
  * assistant), wrapped in an error boundary keyed by group identity.
  */
 function GroupItem({
-  group, groupIndex, acks, ctx,
+  group, groupIndex, acks, streaming, ctx,
 }: {
   group: MessageGroup;
   groupIndex: number;
   acks?: AckIndication[];
+  streaming?: boolean;
   ctx: RenderItemContext;
 }) {
   const { debugView, currentUserEmail, speechPlayback, lastAssistantGroupIndex, onZoomView, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, proseEnabled } = ctx;
@@ -256,6 +251,7 @@ function GroupItem({
           onReplaySpeech={handleReplaySpeech}
           onZoomView={onZoomView}
           proseEnabled={proseEnabled}
+          isStreaming={streaming}
         />
       </div>
     );
@@ -277,27 +273,11 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
       </div>
     );
   }
-  if (item.kind === "stream") {
-    const { streamText, onZoomView } = ctx;
-    return (
-      <MessageErrorBoundary label="stream">
-        <div className="py-0.5">
-          <StreamingMessage text={streamText} onZoomView={onZoomView} />
-          {ctx.streamTools.length > 0 ? (
-            <div className="pl-3 sm:pl-6 pr-4 sm:pr-24 pb-2">
-              <ToolList blocks={ctx.streamTools} />
-            </div>
-          ) : null}
-          <StreamingThrobber />
-        </div>
-      </MessageErrorBoundary>
-    );
-  }
   if (item.kind === "processing") {
     return <StreamingThrobber caption="Agent is processing…" />;
   }
   if (item.kind === "pendingHq") {
     return <PendingHqMessage text={item.text} />;
   }
-  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} ctx={ctx} />;
+  return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} streaming={item.streaming} ctx={ctx} />;
 }

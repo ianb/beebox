@@ -73,7 +73,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 export function MessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled, pendingHqDraft,
+  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -94,6 +94,7 @@ export function MessageList({
   onLoadOlder: () => void;
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
+  liveTurnId: string | null;
   proseEnabled: boolean;
   pendingHqDraft: string | null;
 }) {
@@ -112,8 +113,8 @@ export function MessageList({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView }),
-    [groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView],
   );
 
   const { scrollerRef, contentRef, isPinned, hasUnseenContent, scrollToBottom, captureForPrepend } = useStickToBottom();
@@ -137,7 +138,20 @@ export function MessageList({
     [messages, streamText, boxSlug],
   );
 
-  const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
+  // Find the newest assistant group in the rendered data (the live tail —
+  // either the streaming provisional group or the most recent finalized turn).
+  // Keying it by liveTurnId makes the streamed→finalized swap an in-place
+  // update; speech highlighting matches against its groupIndex.
+  let liveTailIndex = -1;
+  let lastAssistantGroupIndex = -1;
+  for (let i = data.length - 1; i >= 0; i--) {
+    const d = data[i];
+    if (d && d.kind === "group" && d.group.type === "assistant") {
+      liveTailIndex = i;
+      lastAssistantGroupIndex = d.groupIndex;
+      break;
+    }
+  }
 
   const renderCtx = useMemo<RenderItemContext>(() => ({
     streamText,
@@ -180,9 +194,12 @@ export function MessageList({
             earlierCount={earlierCount}
             onLoadOlder={handleLoadOlder}
           />
-          {data.map((item) => (
-            <div key={dataItemKey(item)}>{renderDataItem(item, renderCtx)}</div>
-          ))}
+          {data.map((item, i) => {
+            // The live tail (streaming or just-finalized) keeps one key across
+            // the transition so React reconciles it in place — no remount/flash.
+            const key = liveTurnId && i === liveTailIndex ? `live-${liveTurnId}` : dataItemKey(item);
+            return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
+          })}
         </div>
       </div>
       {!isPinned ? (

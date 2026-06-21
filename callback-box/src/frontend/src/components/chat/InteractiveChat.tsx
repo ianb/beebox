@@ -79,7 +79,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
-  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries } = snapshot.context;
+  const { messages, pendingMessages, streamText, streamTools, error, sessionId, processRunning, processBusy, totalEntries, liveTurnId } = snapshot.context;
   const effectiveContextDir = useEffectiveContextDir({ sessionId, contextDir });
   const isStreaming = snapshot.matches("streaming") || snapshot.matches("refreshing");
   const isLoading = snapshot.matches("loading");
@@ -236,7 +236,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       currentUserEmail={currentUser ? currentUser.email : undefined}
       modelMarkers={model.modelMarkers}
       loadingOlder={loadingOlder}
-      scrollToBottomTrigger={scrollToBottomTrigger}
+      scrollToBottomTrigger={scrollToBottomTrigger} liveTurnId={liveTurnId}
       snapshot={snapshot}
       input={input}
       setInput={setInput}
