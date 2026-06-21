@@ -76,6 +76,11 @@ steps:
             `cb view check` is green and every box is checked, you are done. Do
             NOT check a box you did not actually complete; do NOT satisfy a check
             by deleting functionality.
+          # Boxes can have several views, and a heavy one (e.g. a sandbox view
+          # with many removed-field refs) eats turns; the default 20 isn't
+          # enough. If this still runs out, the run fails cleanly (gate blocks
+          # completion) and re-running resumes from the committed partial work.
+          max-turns: 60
     validate:
       shells:
         - cb view check
