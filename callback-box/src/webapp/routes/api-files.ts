@@ -96,9 +96,12 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
     async (request, reply) => {
       const reqPath = request.params["*"] || "";
 
-      // Security: resolve and ensure within boxRoot
+      // Security: resolve and ensure within boxRoot. Compare against `root +
+      // sep` (not a bare prefix) so a sibling dir like `<box>-secrets` can't
+      // satisfy the check.
       const resolved = path.resolve(path.join(boxRoot, reqPath));
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      const root = path.resolve(boxRoot);
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         return reply.status(403).send({ error: "Access denied" });
       }
 
@@ -213,8 +216,9 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
     async (request, reply) => {
       const reqPath = request.params["*"] || "";
       const resolved = path.resolve(path.join(boxRoot, reqPath));
+      const root = path.resolve(boxRoot);
 
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         return reply.status(403).send({ error: "Access denied" });
       }
 

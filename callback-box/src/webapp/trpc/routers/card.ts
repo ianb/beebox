@@ -4,16 +4,9 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
-import { parseCardText } from "../../../core/card-io.js";
+import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { parse as parseYaml } from "yaml";
-
-function typeFromFilename(source: string): string | undefined {
-  const base = source.split("/").pop();
-  if (base === undefined) return undefined;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match ? match[1] : undefined;
-}
 
 export interface FrontmatterCardResponse {
   path: string;
@@ -81,10 +74,12 @@ export const cardRouter = router({
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). Ensure the resolved path
       // stays inside the box before any read — `path.join` collapses `..`, so a
-      // crafted `../../etc/...` would otherwise escape boxRoot. Mirrors the
-      // `/api/files` boundary guard (routes/api-files.ts); card.get had none.
+      // crafted `../../etc/...` would otherwise escape boxRoot. Compare against
+      // `root + sep` (not a bare prefix) so a sibling dir like `<box>-secrets`
+      // can't satisfy the check. Mirrors the `/api/files` boundary guard.
       const resolved = path.resolve(fullPath);
-      if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
+      const root = path.resolve(ctx.boxRoot);
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
       }
 

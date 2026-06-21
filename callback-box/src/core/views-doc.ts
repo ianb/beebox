@@ -88,7 +88,7 @@ export default function Sandbox({ cards, params }) {
 }
 \`\`\`
 
-The built-in renderers (Source, Card Tree, ...) stay available through the
+The built-in renderers (Card, Source) stay available through the
 renderer toggle. One view per type: if several views claim the same card
 type, the first by slug order wins. Without \`rendersCardTypes\`, custom
 types fall back to the generic built-ins.
@@ -151,7 +151,7 @@ To show a file to the user, use a \`view:\` link with the file path:
 
 The system automatically picks the right viewer based on file type:
 - \`.md\` files render as formatted Markdown
-- \`.card\` files use the card viewer (card-type-specific renderers if available, generic tree view otherwise)
+- \`.card\` files use the card viewer (a card-type-specific renderer if one is registered, otherwise the markdown card view)
 - Directories show a listing of subdirectories and cards
 - Other files show as raw text
 
@@ -160,9 +160,9 @@ To open as a companion panel alongside chat, add \`?zoom\`:
 [Meeting Notes](view:store/notes/meeting.md?zoom)
 \`\`\`
 
-To force a specific viewer, use \`?view=\`:
+To force a specific viewer, use \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view):
 \`\`\`
-[Raw XML](view:store/archive/Pasta.recipe.card?view=raw)
+[Raw source](view:store/archive/Pasta.recipe.card?view=Source)
 \`\`\`
 
 Directory paths work too:
