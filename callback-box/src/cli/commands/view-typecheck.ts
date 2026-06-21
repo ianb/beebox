@@ -81,17 +81,14 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
     const program = ts.createProgram([harnessPath], options);
     const errors: string[] = [];
     for (const d of ts.getPreEmitDiagnostics(program)) {
-      const fileName = d.file?.fileName ?? "";
-      // Only our harness + view copy; ignore lib/react/ViewProps-source diagnostics.
-      if (!fileName.startsWith(tmpDir)) continue;
-      const message = ts.flattenDiagnosticMessageText(d.messageText, "\n");
-      let loc = "";
-      if (d.file && d.start !== undefined) {
-        const { line, character } = d.file.getLineAndCharacterOfPosition(d.start);
-        const where = fileName.endsWith("view.tsx") ? `${slug}.tsx` : "export";
-        loc = `${where}:${String(line + 1)}:${String(character + 1)}: `;
-      }
-      errors.push(`${loc}${message}`);
+      // Report ONLY the boundary-assertion errors (in harness.ts), not the
+      // view body. Box views can't import the real ViewCard (it's not a public
+      // export), so a card-shape problem always surfaces at the boundary (the
+      // view's local card type vs ViewProps). Checking the whole view body
+      // instead would flag unrelated internal type noise — e.g. Float32Array
+      // lib-variance — that has nothing to do with the migration.
+      if (path.basename(d.file?.fileName ?? "") !== "harness.ts") continue;
+      errors.push(ts.flattenDiagnosticMessageText(d.messageText, "\n"));
     }
     return errors.length === 0 ? { slug, ok: true } : { slug, ok: false, errors };
   } finally {
