@@ -232,11 +232,13 @@ function checkOneView(args: {
   boxRoot: string;
   slug: string;
   timeoutMs: number;
+  allowInvalidCards: boolean;
 }): Promise<ViewCheckResult> {
-  const { boxRoot, slug, timeoutMs } = args;
+  const { boxRoot, slug, timeoutMs, allowInvalidCards } = args;
   const cbBin = path.join(PACKAGE_ROOT, "bin", "cb");
+  const testArgs = ["view", "test", slug, ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
   return new Promise((resolve) => {
-    const child = spawn(cbBin, ["view", "test", slug], {
+    const child = spawn(cbBin, testArgs, {
       cwd: boxRoot,
       timeout: timeoutMs,
       killSignal: "SIGKILL",
@@ -277,12 +279,14 @@ function checkOneView(args: {
 export async function checkViews(args: {
   boxRoot: string;
   timeoutMs: number;
+  allowInvalidCards?: boolean;
 }): Promise<{ ok: boolean; views: ViewCheckResult[] }> {
   const { boxRoot, timeoutMs } = args;
+  const allowInvalidCards = args.allowInvalidCards ?? false;
   const metas = await listViews(boxRoot);
   const views: ViewCheckResult[] = [];
   for (const meta of metas) {
-    views.push(await checkOneView({ boxRoot, slug: meta.slug, timeoutMs }));
+    views.push(await checkOneView({ boxRoot, slug: meta.slug, timeoutMs, allowInvalidCards }));
   }
   return { ok: views.every((v) => v.ok), views };
 }
@@ -323,12 +327,13 @@ const viewCheckCommand = new Command("check")
     "Per-view render timeout in milliseconds",
     String(DEFAULT_VIEW_CHECK_TIMEOUT_MS)
   )
-  .action(async (options: { json?: boolean; timeout?: string }) => {
+  .option("--allow-invalid-cards", "Treat a view as OK if it renders but a dependency card fails to load")
+  .action(async (options: { json?: boolean; timeout?: string; allowInvalidCards?: boolean }) => {
     try {
       const boxRoot = await requireBoxRoot();
       const parsed = Number(options.timeout);
       const timeoutMs = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_VIEW_CHECK_TIMEOUT_MS;
-      const { ok, views } = await checkViews({ boxRoot, timeoutMs });
+      const { ok, views } = await checkViews({ boxRoot, timeoutMs, allowInvalidCards: options.allowInvalidCards === true });
 
       if (options.json === true) {
         process.stdout.write(JSON.stringify({ ok, views }) + "\n");
