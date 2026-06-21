@@ -26,6 +26,9 @@
  *    #4141 is the cautionary tale).
  *  - `behavior: "instant"` while following; smooth scrolling janks per chunk
  *    and isn't cancelable on Safari. The button passes "smooth" on click.
+ *
+ * Testing: after changing this, run the manual procedure in
+ * docs/chat-scroll-testing.md (bin/browse; layout behavior can't be doctested).
  */
 
 import { useRef, useState, useCallback, useEffect } from "react";
