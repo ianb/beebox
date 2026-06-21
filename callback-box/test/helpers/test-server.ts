@@ -14,7 +14,8 @@
  *   }
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
@@ -46,17 +47,50 @@ console.log = (...args: unknown[]) => {
   _origLog(...args);
 };
 
+// A fully-initialized box (directories + git repo + initial commit) is
+// expensive to stamp out: `initBox` plus two `git` subprocess spawns. Route
+// doctests boot a server many times per file, and those serialized git spawns
+// are exactly what blocks long enough under heavy machine load to trip tap's
+// per-file timeout. So build the box ONCE per test process and clone it per
+// boot with `fs.cp` (pure libuv, no fork) — each file pays the git cost once
+// instead of N times. The clone is a real, independent repo: a freshly-init'd
+// git tree is relocatable, and the box marker / migration manifest hold only
+// timestamps, no absolute paths.
+let templatePromise: Promise<string> | null = null;
+let templateDir: string | null = null;
+function getTemplateBox(): Promise<string> {
+  if (templatePromise === null) {
+    templatePromise = (async () => {
+      const dir = await mkdtemp(join(tmpdir(), "cb-route-tmpl-"));
+      await initBox(dir);
+      execSync("git add -A && git commit --allow-empty -m init -q", { cwd: dir, stdio: "pipe" });
+      templateDir = dir;
+      return dir;
+    })();
+  }
+  return templatePromise;
+}
+
+// The template outlives every server it seeds, so tear it down on process exit
+// rather than per-test. Sync removal — async has no chance to run in an exit
+// handler.
+process.on("exit", () => {
+  if (templateDir !== null) {
+    try {
+      rmSync(templateDir, { recursive: true, force: true });
+    } catch (_e) {
+      // best-effort; the OS reaps the temp dir anyway
+    }
+  }
+});
+
 export async function createTestServer(opts?: TestServerOptions): Promise<TestServerContext> {
+  const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "cb-route-test-"));
 
-  // Initialize box with git
-  await initBox(tmpDir);
-
-  // Create an initial commit so the box has history (matches makeTmpBox behavior)
-  execSync("git add -A && git commit --allow-empty -m init -q", {
-    cwd: tmpDir,
-    stdio: "pipe",
-  });
+  // Clone the prebuilt box (dirs + git repo + initial commit) into the fresh
+  // dir — no per-boot git subprocess. See getTemplateBox above.
+  await cp(template, tmpDir, { recursive: true });
 
   // Create server pointing at this temp box
   const server = await createServer({

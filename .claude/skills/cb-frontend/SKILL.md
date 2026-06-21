@@ -143,10 +143,26 @@ don't pre-optimize. The two web-applicable habits that *do* matter here:
   an aspect-ratio; `loading="lazy"` anything below the fold. (Heads-up: the
   `<Image>` primitive only fully reserves space for `size="thumb"` today — the
   larger sizes are `max-w`/`max-h` only, so they still shift.)
-- **Don't memoize on reflex.** `React.memo`/`useMemo` everywhere is as bad as
-  nowhere — noise and bugs for no measured gain. Reach for them only when
-  profiling proves a hot path; the cheaper, more common win is *not* passing a
-  fresh `{}`/`[]` literal as a prop each render (hoist it, or `useMemo` that).
+- **The React Compiler does memoization for us — don't hand-roll it.** The
+  compiler is enabled in `vite.config.ts` and auto-memoizes components and hooks,
+  more correctly and consistently than reflexive `useCallback`/`useMemo` ever
+  did. So **don't reach for `useCallback`/`useMemo`/`React.memo` for render
+  performance** — write the plain function/value and let the compiler stabilize
+  it. Existing manual memoization is preserved by the compiler
+  (`react-hooks/preserve-manual-memoization`) and harmless; it's being removed
+  opportunistically, not urgently. The job now is to keep code
+  **compiler-compatible** (pure render, no prop/state/context mutation, no
+  setState-in-render, refs only in effects/handlers) — the `react-hooks/*` lint
+  enforces this; an `exhaustive-deps` array is still the source of truth for
+  effects.
+- **The compiler only sees React's render graph.** The rare case where you still
+  hand-stabilize an identity is a value handed to something *outside* it — a
+  third-party imperative API that diffs by reference (e.g. react-virtuoso's
+  `context`/`itemContent`), a ref callback whose churn would re-attach DOM
+  listeners, or an event listener you add/remove by identity. Reach for
+  `useCallback`/`useMemo` there with a one-line comment saying which non-React
+  consumer needs it; everywhere else, trust the compiler. SSR (`cb render`) runs
+  uncompiled through tsx — fine, `renderToString` has no re-renders to optimize.
 
 If something is actually slow, that's a **cb-debug** job — establish a baseline
 measurement and bisect; logs lie about performance.

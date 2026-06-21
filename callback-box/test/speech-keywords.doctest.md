@@ -20,6 +20,9 @@ detectKeyword("sent message")?.action
 detectKeyword("said message")?.action
 => send
 
+detectKeyword("same message")?.action
+=> send
+
 detectKeyword("deliver the message")?.action
 => send
 
