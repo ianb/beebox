@@ -4,24 +4,20 @@ How to create a new box and deploy it to box.example.com.
 
 ## Prerequisites
 
-- SSH key loaded in agent: `ssh-add` (needed for GitHub access on the server via agent forwarding)
-- GitHub repo created (private, under `ianb/` — convention is `box-<name>`)
+- SSH key loaded in the agent: `ssh-add -l` (agent forwarding gives the server GitHub access)
 
-## Steps
-
-### 1. Create the GitHub repo
-
-Go to GitHub and create a new private repo. Convention: `ianb/box-<name>`.
-
-### 2. Initialize locally
+## 1. Create the repo and init locally
 
 ```bash
+gh repo create ianb/box-<name> --private     # convention: ianb/box-<name>
 cb init ~/src/boxes/<name>
 ```
 
-This creates the full box directory structure, installs default procedures/guides/schedules, generates agent docs, and makes an initial git commit. It also creates a seed `briefing.briefing.card` — fill this in with the box's purpose and key people.
+`cb init` builds the full box structure, installs default
+procedures/guides/schedules, generates agent docs, and makes the initial
+commit — including a seed `briefing.briefing.card` (you fill it in at step 4).
 
-### 3. Push to GitHub
+## 2. Push to GitHub
 
 ```bash
 cd ~/src/boxes/<name>
@@ -29,113 +25,68 @@ git remote add origin git@github.com:ianb/box-<name>.git
 git push -u origin main
 ```
 
-### 4. Deploy to server
+## 3. Deploy
+
+From the monorepo's `callback-box/`:
 
 ```bash
-cd ~/src/callback/callback-box
-./deploy/add-box.sh ianb/box-<name> <name>
+./deploy/add-box.sh ianb/box-<name> <name> --allow <user@email> --secrets-from personal
 ```
 
-The second argument overrides the directory name on the server (otherwise it uses the repo name, e.g. `box-<name>`). You almost always want to pass this so the URL is clean.
+The second positional is the slug/directory on the server (pass it so the URL
+is clean). **One command does the whole provision:** clone the repo, run
+`cb init`, write access config, seed connector secrets, fix ownership, register
+with the manifest, restart serve + scheduler, and run a health check. Live at
+`https://box.example.com/<name>/`.
 
-This clones the repo on the server, registers it with the scheduler, rebuilds the systemd service to include the new box, and restarts services.
+**Access (`--allow`, repeatable):**
+- The **owner always has access to every box** — you never list them. `--allow`
+  grants *additional* users. It writes `config/box.json` as
+  `{"allowedEmails": [...]}`, **for a new box only** — it never clobbers an
+  existing config, so change access on a live box by editing `box.json` directly.
+- Empty/missing `allowedEmails` ⇒ any authenticated user can access. (Note: the
+  box.json schema has no `publicUrl` field — the URL is derived from the slug.)
 
-The box is now live at `https://box.example.com/<name>/`.
+**Secrets (`--secrets-from <box>`):**
+- Copies every `config/connectors/*.secret.json` from a reference box. Without a
+  key, transcription/connectors emit a health *warning* ("API key not
+  configured") but the box still runs. The shared Mistral (Voxtral) key lives on
+  every box, so `--secrets-from personal` is a fine default.
+- Per-box secrets are the real mechanism. (`getMistralApiKey` also falls back to
+  a `CALLBACK_MISTRAL_API_KEY` env var, but that isn't set on the server — don't
+  rely on it.)
 
-### 5. Fix file ownership
+## 4. Fill in the briefing card
 
-The deploy script clones as root and runs `chown -R callback:callback` on the box. However, if `cb init` is run again later (e.g., after a code update that adds new directories), it runs as the `callback` user but the code itself runs from `/opt/callback/` which is root-owned. New directories created by `cb init` (like `people/`) will be owned by root if the init happens during deploy rather than from the callback user.
+The seed `briefing.briefing.card` from `cb init` has placeholder content. Fill in
+the box's purpose, key people (inline or referencing `people/` cards), and the
+critical context the agent should always have. Then `cb wakeup` (or wait for the
+scheduler) compiles it into the agent docs.
 
-After deploying or running `cb init` on the server, verify ownership:
-
-```bash
-./deploy/ssh-server.sh "ls -la /home/callback/boxes/<name>/"
-# If anything is root-owned:
-./deploy/ssh-server.sh "chown -R callback:callback /home/callback/boxes/<name>/"
-```
-
-### 6. Configure access
-
-Edit `config/box.json` to restrict who can access the box:
-
-```bash
-./deploy/ssh-server.sh
-vi /home/callback/boxes/<name>/config/box.json
-```
-
-```json
-{
-  "publicUrl": "https://box.example.com/<name>",
-  "allowedEmails": ["ian@ianbicking.org"]
-}
-```
-
-If `allowedEmails` is empty or missing, any authenticated user can access.
-
-Optional: opt the box into proactive scheduled-task health alerts (see
-`cb health`) by adding the Telegram chat to notify — without this the
-box still surfaces problems via `cb health` and at session start, but
-nothing pings you:
-
-```json
-{
-  "healthAlerts": { "telegramChat": "<chat-id>" }
-}
-```
-
-### 7. Copy connector secrets
-
-**This is easy to forget.** New boxes have no API keys — features like transcription will fail silently with "API key not configured." Secrets are per-box, stored in `config/connectors/`.
-
-Copy secrets from an existing box:
-
-```bash
-./deploy/ssh-server.sh
-# See what secrets exist on other boxes
-ls /home/callback/boxes/*/config/connectors/*.secret.json
-
-# Copy what you need
-cp /home/callback/boxes/hearth/config/connectors/mistral.secret.json \
-   /home/callback/boxes/<name>/config/connectors/
-chown callback:callback /home/callback/boxes/<name>/config/connectors/*.secret.json
-chmod 600 /home/callback/boxes/<name>/config/connectors/*.secret.json
-```
-
-Common secrets:
-- `mistral.secret.json` — `{"apiKey":"..."}` — needed for Voxtral transcription
-- `telegram.secret.json` — `{"botToken":"...","webhookSecret":"..."}` — needed for Telegram connector
-- Google connector tokens are per-box in `google.secret.json`
-
-Alternatively, set the `CALLBACK_MISTRAL_API_KEY` env var in `/home/callback/.env` to provide a server-wide default (but connector-specific secrets like Telegram must still be per-box).
-
-### 8. Fill in the briefing card
-
-The seed briefing card from `cb init` has placeholder content. Fill in:
-- `<purpose>` — what this box is for
-- `<key-people>` — who's involved (inline or referencing person cards in `people/`)
-- `<agent-needs-to-know>` — critical context the agent should always have
-
-Then run `cb wakeup` (or wait for the scheduler) to compile the briefing into agent docs.
+Other optional `config/box.json` keys (edit by hand): `timezone`,
+`googleServices` (`{ "calendar": true, ... }`), and proactive health alerts —
+`{ "healthAlerts": { "telegramChat": "<chat-id>" } }` (without it, `cb health`
+and the session-start snapshot still surface problems; nothing just pings you).
 
 ## Updating a deployed box
 
-Push changes to GitHub, then:
+Push to GitHub, then re-run the deploy (idempotent — it pulls latest, re-inits,
+and restarts, leaving access config and secrets untouched):
 
 ```bash
 ./deploy/add-box.sh ianb/box-<name> <name>
 ```
-
-If the box already exists on the server, it pulls the latest instead of cloning.
 
 ## Troubleshooting
 
 ### SSH agent forwarding fails
 
-The `add-box.sh` script uses `-A` for SSH agent forwarding. If the clone fails with "Permission denied (publickey)":
+`add-box.sh` uses `-A` for agent forwarding. If the clone fails with "Permission
+denied (publickey)":
 
-1. Make sure your key is loaded: `ssh-add -l` (should show at least one key)
-2. If empty, run `ssh-add`
-3. To auto-load keys on macOS login, add to `~/.ssh/config`:
+1. Confirm a key is loaded: `ssh-add -l`
+2. If empty: `ssh-add`
+3. Auto-load on macOS login — add to `~/.ssh/config`:
    ```
    Host *
      AddKeysToAgent yes
@@ -144,15 +95,28 @@ The `add-box.sh` script uses `-A` for SSH agent forwarding. If the clone fails w
 
 ### Box exists but isn't served
 
-`cb serve` with no path arguments serves every box in the manifest (`cb boxes list`), and the systemd unit should be the argless form: `ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210`. If a box is in the manifest but not served, check whether the unit still hard-codes explicit box paths (the pre-manifest form from `migrate-to-callback-user.sh` — this bit the workshop add, 2026-06-12). Fix by removing the path list from `ExecStart`, then `systemctl daemon-reload && systemctl restart callback-serve`. The startup log line `Serving N box(es) from manifest:` confirms the mode.
+`cb serve` with no path arguments serves every box in the manifest
+(`cb boxes list`); the systemd unit should be the argless form:
+`ExecStart=/usr/local/bin/cb serve --host 0.0.0.0 --port 3210`. If a box is in
+the manifest but not served, check whether the unit still hard-codes explicit box
+paths (the pre-manifest form from `migrate-to-callback-user.sh` — this bit the
+workshop add, 2026-06-12). Fix by removing the path list from `ExecStart`, then
+`systemctl daemon-reload && systemctl restart callback-serve`. The startup log
+line `Serving N box(es) from manifest:` confirms the mode.
 
 ### File-watcher errors (ENOSPC) in the serve log
 
-Each served box gets a recursive file watcher, and large trees (e.g. a busy box's `procedure/runs/`) can exhaust `fs.inotify.max_user_watches` — watchers then silently fail for everything initialized after the limit. The server pins a higher limit in `/etc/sysctl.d/90-callback-inotify.conf` (524288, set 2026-06-12). If ENOSPC reappears, raise it again — and consider excluding high-churn directories from the box watcher in code.
+Each served box gets a recursive file watcher, and large trees (e.g. a busy box's
+`procedure/runs/`) can exhaust `fs.inotify.max_user_watches` — watchers then
+silently fail for everything initialized after the limit. The server pins a
+higher limit in `/etc/sysctl.d/90-callback-inotify.conf` (524288, set
+2026-06-12). If ENOSPC reappears, raise it again — and consider excluding
+high-churn directories from the box watcher in code.
 
-### "API key not configured" errors
+### "API key not configured" warnings
 
-The box is missing a secret file. See step 7 above. Check which secrets exist:
+The box is missing a connector secret. Seed it with `--secrets-from <box>` on a
+re-deploy, or copy by hand. Check what's present:
 
 ```bash
 ./deploy/ssh-server.sh "ls /home/callback/boxes/<name>/config/connectors/"
@@ -160,4 +124,10 @@ The box is missing a secret file. See step 7 above. Check which secrets exist:
 
 ### Permission denied writing to box directories
 
-Files or directories owned by root instead of `callback`. See step 5 above.
+Files owned by `root` instead of `callback`. `add-box.sh` re-chowns at the end,
+so this only bites if `cb init` was run standalone on the server (the code runs
+from root-owned `/opt/callback/`). Fix:
+
+```bash
+./deploy/ssh-server.sh "chown -R callback:callback /home/callback/boxes/<name>/"
+```
