@@ -19,6 +19,7 @@ import { BoxActionsTile } from "./components/BoxSelectionTiles";
 import { fetchBoxes } from "./lib/boxes";
 import { useDevWorktreeKeepalive } from "./hooks/useDevWorktreeKeepalive";
 import { useBoxIdentityMeta } from "./hooks/useBoxIdentityMeta";
+import { useVisualViewportHeight } from "./hooks/useVisualViewportHeight";
 
 import { href } from "./lib/routing";
 
@@ -35,6 +36,7 @@ enableDebugLogCapture();
  */
 export function AppLayout() {
   useDevWorktreeKeepalive();
+  useVisualViewportHeight();
   const [showDebugLog, setShowDebugLog] = useState(false);
   const sourceView = useSourceView();
   const { boxSlug } = useParams({ strict: false });
@@ -59,7 +61,7 @@ export function AppLayout() {
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
 
   return (
-    <Column className="h-screen h-[100dvh]">
+    <Column className="h-app">
       <AppNav
         onToggleDebugLog={() => { clearErrorCount(); setShowDebugLog((v) => !v); }}
         onToggleSourceView={handleToggleSourceView}

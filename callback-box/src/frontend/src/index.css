@@ -7,11 +7,18 @@ body {
   @apply bg-warm-50 text-warm-900;
 }
 
+/* App-shell height tracks the visual viewport (the `--app-height` variable is
+   set by useVisualViewportHeight), so the composer stays above the iOS
+   on-screen keyboard. Falls back to 100dvh where the variable is unset. */
+.h-app {
+  height: var(--app-height, 100dvh);
+}
+
 /* "Clipped reads as clipped" — fade the bottom edge of an overflowing scroll
    box so a hidden bottom is visible without restyling the scrollbar. An
    earlier version of this used `::-webkit-scrollbar` rules; on macOS
    Chromium, any webkit-scrollbar rule anywhere in the document disables
-   overlay scrollbars page-wide and the Virtuoso chat scroller picks up a
+   overlay scrollbars page-wide and the chat scroller picks up a
    permanent bar as collateral damage. The mask-image approach is scoped
    per-element and has no global side effect: when content fits, the fade
    lands on empty padding and is invisible; when it overflows, the last
@@ -103,6 +110,7 @@ body {
      containers build from these. */
   .h-screen,
   .h-\[100dvh\],
+  .h-app,
   .h-full {
     height: auto !important;
   }
