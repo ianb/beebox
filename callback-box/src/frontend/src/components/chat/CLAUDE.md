@@ -5,7 +5,7 @@
 The message list is **not virtualized** — it renders the loaded window
 (`HISTORY_TAIL`, plus 40/page via "load older") in normal DOM order.
 Virtualization (react-virtuoso) was removed deliberately; don't reintroduce it
-without revisiting `docs/plans/chat-scroll-redesign.md`.
+without revisiting `docs/implemented-plans/chat-scroll-redesign.md`.
 
 A single in-repo controller, `useStickToBottom` (`InteractiveChat-scroll.ts`),
 owns all scroll behavior: follow-the-bottom while streaming, disengage on a

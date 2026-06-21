@@ -12,6 +12,15 @@ state, and establishes a deterministic harness (extending the existing
 `/fakestream` stub, driven via `bin/browse`) that turns each defect into a
 measurable pass/fail so the redesign is decided by evidence, not argument.
 
+> **Status — shipped 2026-06-21.** Tracks 1–4 are implemented and verified on
+> desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
+> de-virtualized list + single `useStickToBottom` controller
+> (`InteractiveChat-scroll.ts`), scroll-to-bottom button, real-turn finalize
+> (no flash), and hold-position-when-content-loads-above. Track 5 (mobile
+> Safari) landed `visualViewport` keyboard handling + `overscroll-behavior`, but
+> **fling-safety is deferred and the mobile path is unverified on a real iOS
+> device** — that's the one outstanding item.
+
 > **Revision note.** This plan was reviewed by a cross-model pass (codex) plus an
 > independent cold codex session given only the symptoms. Both independently
 > concluded "drop virtualization + one controller." Their findings corrected three
