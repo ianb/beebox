@@ -18,12 +18,28 @@ import { requireBoxRoot } from "../lib/paths.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,
+  isProcedureMigration,
   type Migration,
   type ManifestEntry,
 } from "../../core/migrations.js";
+import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
+const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
+
+/** A procedure used as a migration lacks the required machine-checkable gate. */
+class ProcedureGateError extends Error {
+  constructor(procedure: string) {
+    super(
+      `procedure migration "${procedure}" has no step with validate.shells + severity:abort. ` +
+        "An agent migration must be machine-verified (validate.instructions is a no-op and an " +
+        "agent that does nothing still 'completes' the step), so cb migrate refuses to run a " +
+        "gateless procedure. See docs/plans/agent-applied-migrations.md.",
+    );
+    this.name = "ProcedureGateError";
+  }
+}
 
 class ManifestReadError extends Error {
   readonly manifestPath: string;
@@ -78,6 +94,35 @@ function runScript(args: { script: string; boxRoot: string }): Promise<number> {
       ["tsx", scriptPath, args.boxRoot, "--apply"],
       { cwd: CALLBACK_BOX_ROOT, stdio: "inherit" }
     );
+    child.on("error", reject);
+    child.on("close", (code) => resolve(code ?? 1));
+  });
+}
+
+/**
+ * A procedure used as a migration must end in a hard, machine-checkable gate: a
+ * step with `validate.shells` and `severity: abort`. Without it the engine marks
+ * the run completed even if the agent did nothing real, so cb migrate would
+ * record a false "applied". Refuse instead. Throws ProcedureGateError.
+ */
+async function assertProcedureHasGate(args: { procedure: string; boxRoot: string }): Promise<void> {
+  const defPath = path.join(args.boxRoot, "config/procedures", `${args.procedure}.procedure.card`);
+  const content = await fs.readFile(defPath, "utf-8");
+  const def = parseProcedureDefinition(content);
+  const hasGate =
+    def?.steps.some(
+      (s) => s.validate?.severity === "abort" && (s.validate.shells?.length ?? 0) > 0,
+    ) ?? false;
+  if (!hasGate) throw new ProcedureGateError(args.procedure);
+}
+
+/** Run an agent-applied (procedure) migration by delegating to `cb procedure run`. */
+function runProcedure(args: { procedure: string; boxRoot: string }): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(CB_BIN, ["procedure", "run", args.procedure], {
+      cwd: args.boxRoot,
+      stdio: "inherit",
+    });
     child.on("error", reject);
     child.on("close", (code) => resolve(code ?? 1));
   });
@@ -160,8 +205,20 @@ export const migrateCommand = new Command("migrate")
     // printed above and surfaced by `cb validate` for manual cleanup.
     const softFailures: string[] = [];
     for (const m of pending) {
-      console.log(`=== ${m.name} (${m.script}) ===`);
-      const code = await runScript({ script: m.script, boxRoot });
+      let code: number;
+      if (isProcedureMigration(m)) {
+        console.log(`=== ${m.name} (procedure: ${m.procedure}) ===`);
+        try {
+          await assertProcedureHasGate({ procedure: m.procedure, boxRoot });
+        } catch (e) {
+          console.error(`\n${(e as Error).message}`);
+          process.exit(1);
+        }
+        code = await runProcedure({ procedure: m.procedure, boxRoot });
+      } else {
+        console.log(`=== ${m.name} (${m.script}) ===`);
+        code = await runScript({ script: m.script, boxRoot });
+      }
       if (code !== 0 && code !== 2) {
         console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
         process.exit(code);
