@@ -31,13 +31,13 @@ const result = await loadViewCards(box.root, ["box/**/*.card", "box/**/*.txt"]);
 result.cards.length
 => 1
 
-result.cards[0].tagName
+result.cards[0].type
 => memo
 
 result.cards[0].path
 => box/inbox/Test.memo.card
 
-result.cards[0].status
+result.cards[0].frontmatter.status
 => new
 
 result.files.map((f) => f.path).join(", ")
