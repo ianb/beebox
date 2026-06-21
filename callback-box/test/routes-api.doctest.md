@@ -89,7 +89,7 @@ await ctx.inject({ method: "GET", url: "/api/browse/box/inbox" })
     {
       "relativePath": "box/inbox/browse-test.memo.card",
       «*»
-      "tagName": "memo"«*»
+      "type": "memo"«*»
     }
   ]
 }
@@ -159,6 +159,22 @@ fresh.statusCode
 
 fresh.payload
 => # Hello, world
+```
+
+`.card` files are served as text here too — the card Source view fetches the
+verbatim file this way (card.get returns only the parsed form):
+
+``` continue
+await ctx.seed("store/archive/Note.memo.card", "---\nstatus: new\n---\nBody\n");
+const card = await ctx.rawRequest({ method: "GET", url: "/api/files/store/archive/Note.memo.card" });
+card.statusCode
+=> 200
+
+card.payload
+=> ---
+status: new
+---
+Body
 ```
 
 ``` cleanup

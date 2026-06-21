@@ -245,9 +245,21 @@ one-line why). Mark status as you go.
   Decide: adopt as a safety hook (we commit a lot via agents) vs skip.
 - [ ] **I2 — mattpocock `decision-mapping`.** Defer multi-session decisions in an
   explicit fog-of-war markdown. Decide: idea vs skip.
-- [ ] **I3 — addyosmani `performance-optimization`.** Core Web Vitals +
-  measure-before-optimizing. Decide: reference for frontend perf work → idea or
-  fold-in.
+- [x] **I3 — addyosmani `performance-optimization`. DONE → `fold-in`
+  (cb-frontend) + one finding.** Most of it was already covered or N/A: the
+  measure-first/profile-then-fix **methodology already lives in cb-debug**
+  (Phase 4 "measure first, fix second"); the backend anti-patterns (N+1, indexes,
+  connection pools) are **N/A** for a filesystem-card backend; CWV budgets /
+  Lighthouse CI / hero-image art-direction are **overkill** for an internal tool.
+  Folded the narrow web-applicable bits into cb-frontend as a tight "Performance
+  — measure before you optimize" section: **reserve image space to avoid CLS** +
+  lazy-load offscreen, and **don't memoize on reflex** (the skill's own red flag
+  — memoize only when profiling proves it; the common real win is not passing a
+  fresh `{}`/`[]` literal as a prop), cross-linking cb-debug for "is it actually
+  slow." **Finding surfaced (cb-codehealth candidate):** the `<Image>` primitive
+  only reserves both dimensions for `size="thumb"` (`w-16 h-16`); `sm/md/chat/lg`
+  are `max-w`/`max-h` only, so images shift the layout as they load — a real CLS
+  source worth fixing in the primitive (accept intrinsic dims / aspect-ratio).
 - [x] **I4 — anthropic `mcp-builder`. DONE → `skip`** (boxholder call). No real
   MCP-authoring need; revisit from scratch if we ever expose box capabilities
   over MCP.

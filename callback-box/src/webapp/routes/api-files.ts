@@ -61,6 +61,7 @@ const MIME_TYPES: Record<string, string> = {
   ".pdf": "application/pdf",
   ".json": "application/json",
   ".md": "text/markdown",
+  ".card": "text/markdown",
   ".txt": "text/plain",
   ".csv": "text/csv",
   ".html": "text/html",
@@ -95,15 +96,20 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
     async (request, reply) => {
       const reqPath = request.params["*"] || "";
 
-      // Security: resolve and ensure within boxRoot
+      // Security: resolve and ensure within boxRoot. Compare against `root +
+      // sep` (not a bare prefix) so a sibling dir like `<box>-secrets` can't
+      // satisfy the check.
       const resolved = path.resolve(path.join(boxRoot, reqPath));
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      const root = path.resolve(boxRoot);
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         return reply.status(403).send({ error: "Access denied" });
       }
 
-      // Don't serve .card files or dotfiles through this endpoint
-      if (resolved.endsWith(".card") || path.basename(resolved).startsWith(".")) {
-        return reply.status(403).send({ error: "Use card API for card files" });
+      // Don't serve dotfiles through this endpoint. Cards (.card) are plain
+      // text and served like any other file — the Source view fetches them
+      // here; card.get is for the parsed/validated form.
+      if (path.basename(resolved).startsWith(".")) {
+        return reply.status(403).send({ error: "Access denied" });
       }
 
       try {
@@ -210,8 +216,9 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
     async (request, reply) => {
       const reqPath = request.params["*"] || "";
       const resolved = path.resolve(path.join(boxRoot, reqPath));
+      const root = path.resolve(boxRoot);
 
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         return reply.status(403).send({ error: "Access denied" });
       }
 

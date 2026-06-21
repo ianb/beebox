@@ -150,13 +150,13 @@ res.statusCode
 res.body.cards.length
 => 1
 
-res.body.cards[0].tagName
+res.body.cards[0].type
 => memo
 
 res.body.cards[0].path
 => box/inbox/Test.memo.card
 
-res.body.cards[0].status
+res.body.cards[0].frontmatter.status
 => new
 
 JSON.stringify(res.body.files)

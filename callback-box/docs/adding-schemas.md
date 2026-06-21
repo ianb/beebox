@@ -193,7 +193,7 @@ export const BOX_DIRS = {
 If the card needs an icon or a custom list-component in the file browser, register it in `src/frontend/src/file-types/builtins.tsx`:
 
 ```ts
-registerFileType({ tagName: "my-thing" }, { icon: CardIcon });
+registerFileType({ type: "my-thing" }, { icon: CardIcon });
 ```
 
 ## Mutating an Existing Frontmatter Card

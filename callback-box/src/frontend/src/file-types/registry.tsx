@@ -1,10 +1,10 @@
 /**
- * Frontend FileType registry — maps a file (by tagName or path pattern) to
+ * Frontend FileType registry — maps a file (by card type or path pattern) to
  * its presentation bits: icon (required) and an optional ListComponent that
  * renders a custom middle-slot for the list/peek entry.
  *
- * Dispatch rule mirrors the server loader registry: tagName exact match wins,
- * then the first path-pattern match, then the generic fallback.
+ * Dispatch rule mirrors the server loader registry: card-type exact match
+ * wins, then the first path-pattern match, then the generic fallback.
  */
 
 import type { FileSummary } from "../../../core/file-summary";
@@ -25,9 +25,9 @@ export interface FileTypeUI<T = unknown> {
   ListComponent?: React.ComponentType<ListProps<T>>;
 }
 
-interface TagReg {
-  kind: "tagName";
-  tagName: string;
+interface TypeReg {
+  kind: "type";
+  type: string;
   ui: FileTypeUI<unknown>;
 }
 
@@ -37,23 +37,23 @@ interface PathReg {
   ui: FileTypeUI<unknown>;
 }
 
-type Reg = TagReg | PathReg;
+type Reg = TypeReg | PathReg;
 
 const registrations: Reg[] = [];
 
 export function registerFileType<T>(
-  key: { tagName: string } | { match: (path: string) => boolean },
+  key: { type: string } | { match: (path: string) => boolean },
   ui: FileTypeUI<T>,
 ): void {
-  if ("tagName" in key) {
-    const existing = registrations.find(r => r.kind === "tagName" && r.tagName === key.tagName);
+  if ("type" in key) {
+    const existing = registrations.find(r => r.kind === "type" && r.type === key.type);
     if (existing) {
-      console.warn(`FileType collision for tagName "${key.tagName}": overriding`);
+      console.warn(`FileType collision for type "${key.type}": overriding`);
       registrations.splice(registrations.indexOf(existing), 1);
     }
     registrations.push({
-      kind: "tagName",
-      tagName: key.tagName,
+      kind: "type",
+      type: key.type,
       ui: ui as FileTypeUI<unknown>,
     });
   } else {
@@ -74,11 +74,11 @@ export const fallbackFileTypeUI: FileTypeUI<unknown> = {
 };
 
 export function resolveFileTypeUI(summary: FileSummary<unknown>): FileTypeUI<unknown> {
-  if (summary.tagName) {
-    const tagMatch = registrations.find(
-      r => r.kind === "tagName" && r.tagName === summary.tagName,
+  if (summary.type) {
+    const typeMatch = registrations.find(
+      r => r.kind === "type" && r.type === summary.type,
     );
-    if (tagMatch) return tagMatch.ui;
+    if (typeMatch) return typeMatch.ui;
   }
   const pathMatches = registrations.filter(
     r => r.kind === "match" && r.match(summary.path),

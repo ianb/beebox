@@ -4,7 +4,7 @@
  *
  * Fixed frame: [icon] [middle slot] [peek button]. The middle slot is
  * either the default (title + optional path) or a custom ListComponent
- * registered via registerFileType for the file's tagName / path.
+ * registered via registerFileType for the file's type / path.
  *
  * Expanded state ("peek") replaces the list row in place: same component,
  * same location, now rendering the full file viewer + controls to escalate

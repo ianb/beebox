@@ -5,23 +5,18 @@
  * The highest-priority renderer is shown by default; the user can toggle between them.
  */
 
-import type { ElementNode } from "../api";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 /** Data for rendering a file */
 export interface FileData {
   path: string;
-  /** "frontmatter" for Phase 2 YAML+markdown cards, "xml" for legacy XML cards. */
-  kind?: "frontmatter" | "xml";
-  tagName?: string;
-  attrs?: Record<string, string>;
-  element?: ElementNode;
-  xml?: string;
-  version?: string;
-  status?: string;
-  /** Frontmatter fields for `kind === "frontmatter"` cards (body field excluded). */
+  /** Set for YAML frontmatter + markdown cards; absent for non-card files. */
+  kind?: "frontmatter";
+  /** Card type (from the filename). */
+  type?: string;
+  /** Frontmatter fields for cards (body field excluded). */
   frontmatter?: Record<string, unknown>;
-  /** Markdown body for `kind === "frontmatter"` cards. */
+  /** Markdown body for cards. */
   body?: string;
   /** Raw text content for non-card files (markdown, plaintext, json, etc.) */
   content?: string;
@@ -51,15 +46,15 @@ export interface FileRenderer {
 
 interface RendererMatch {
   fileMatch?: (path: string, data: FileData) => boolean;
-  tagName?: string;
+  type?: string;
   renderer: FileRenderer;
 }
 
 const renderers: RendererMatch[] = [];
 
 /** Register a renderer for a specific card type */
-export function registerCardRenderer(tagName: string, renderer: FileRenderer) {
-  renderers.push({ tagName, renderer });
+export function registerCardRenderer(type: string, renderer: FileRenderer) {
+  renderers.push({ type, renderer });
 }
 
 /** Register a renderer for files matching a predicate */
@@ -74,7 +69,7 @@ export function registerFileRenderer(
 export function getRenderers(filePath: string, data: FileData): FileRenderer[] {
   return renderers
     .filter(r => {
-      if (r.tagName) return data.tagName === r.tagName;
+      if (r.type) return data.type === r.type;
       if (r.fileMatch) return r.fileMatch(filePath, data);
       return false;
     })

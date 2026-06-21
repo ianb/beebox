@@ -5,6 +5,7 @@
  */
 
 import { dependenciesAndParamsSection } from "./views-doc-files.js";
+import { examplesSection } from "./views-doc-examples.js";
 
 const introSection = `# Views: Agent-Generated React Components
 
@@ -36,8 +37,8 @@ export const modes = ["page", "chat"];
 export default function EstateOverview({ cards, navigate, boxSlug, params }) {
   const viewPath = params.path || "/";
   // Use viewPath to scope what the view shows
-  const records = cards.filter(c => c.tagName === "record");
-  const memos = cards.filter(c => c.tagName === "memo");
+  const records = cards.filter(c => c.type === "record");
+  const memos = cards.filter(c => c.type === "memo");
 
   return (
     <div>
@@ -46,8 +47,8 @@ export default function EstateOverview({ cards, navigate, boxSlug, params }) {
       <ul>
         {records.map(card => (
           <li key={card.path}>
-            <strong>{card.attrs.title || card.path}</strong>
-            {card.status && <span> — {card.status}</span>}
+            <strong>{card.frontmatter?.title || card.path}</strong>
+            {card.frontmatter?.status && <span> — {String(card.frontmatter.status)}</span>}
           </li>
         ))}
       </ul>
@@ -88,7 +89,7 @@ export default function Sandbox({ cards, params }) {
 }
 \`\`\`
 
-The built-in renderers (Source, Card Tree, ...) stay available through the
+The built-in renderers (Card, Source) stay available through the
 renderer toggle. One view per type: if several views claim the same card
 type, the first by slug order wins. Without \`rendersCardTypes\`, custom
 types fall back to the generic built-ins.
@@ -114,21 +115,24 @@ The default export receives a \`ViewProps\` object:
 
 ### ViewCard Structure
 
-Each card in the \`cards\` array has:
+Cards are YAML frontmatter + a markdown body. Each card in the \`cards\` array has:
 
 \`\`\`typescript
 {
-  path: string;        // Relative path (e.g., "store/archive/Foo.record.card")
-  tagName: string;     // Root element name (e.g., "record", "memo")
-  attrs: Record<string, string>;  // All attributes on the root element
-  text?: string;       // Text content of the root element (if leaf node)
-  status?: string;     // Shortcut for attrs.status
-  children?: ViewCardChild[];     // Child elements (recursive)
+  path: string;        // Box-relative path (e.g., "store/archive/Foo.record.card")
+  type: string;        // Card type, from the filename Foo.<type>.card (e.g., "record", "memo")
+  frontmatter?: Record<string, unknown>;  // Parsed YAML frontmatter (body and type excluded)
+  body?: string;       // Markdown body
   attachments?: ViewFile[];       // Deep listing of the card's attach scope
 }
 \`\`\`
 
-Child elements have the same shape: \`{ tagName, attrs, text?, children? }\`.
+Read a card's fields from \`frontmatter\` (e.g. \`card.frontmatter?.title\`, the
+status from \`card.frontmatter?.status\`) and its prose from \`body\`. \`type\` is
+the card type — filter a mixed \`cards\` array with
+\`cards.filter(c => c.type === "memo")\`. \`frontmatter\` values are whatever the
+card's schema declares (strings, numbers, arrays, nested objects), so they are
+typed \`unknown\` — narrow before use.
 
 \`attachments\` is how a view discovers what lives next to a card — every file
 in the card's attach scope, recursively, as \`{path, size, mtimeMs}\` with
@@ -148,7 +152,7 @@ To show a file to the user, use a \`view:\` link with the file path:
 
 The system automatically picks the right viewer based on file type:
 - \`.md\` files render as formatted Markdown
-- \`.card\` files use the card viewer (card-type-specific renderers if available, generic tree view otherwise)
+- \`.card\` files use the card viewer (a card-type-specific renderer if one is registered, otherwise the markdown card view)
 - Directories show a listing of subdirectories and cards
 - Other files show as raw text
 
@@ -157,9 +161,9 @@ To open as a companion panel alongside chat, add \`?zoom\`:
 [Meeting Notes](view:store/notes/meeting.md?zoom)
 \`\`\`
 
-To force a specific viewer, use \`?view=\`:
+To force a specific viewer, use \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view):
 \`\`\`
-[Raw XML](view:store/archive/Pasta.recipe.card?view=raw)
+[Raw source](view:store/archive/Pasta.recipe.card?view=Source)
 \`\`\`
 
 Directory paths work too:
@@ -240,82 +244,6 @@ function NearestNeighbors({ reportActivity }) {
 \`\`\`
 
 For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`cb chat whats-changed --card <path>\` for the exact, git-grounded change set — \`<card-activity> detail\` is the cheap live hint, not the source of truth.`;
-
-const examplesSection = `## Examples
-
-### Simple Card List
-
-\`\`\`tsx
-export const name = "Todo List";
-export const description = "Active todos";
-export const dependencies = ["store/todos/**/*.card"];
-export const modes = ["page", "chat"];
-
-export default function TodoList({ cards }) {
-  const todos = cards.filter(c => c.tagName === "todo-list");
-  return (
-    <div>
-      <h2>Todos</h2>
-      {todos.map(card => (
-        <div key={card.path} style={{ marginBottom: "1rem" }}>
-          <h3>{card.attrs.title}</h3>
-          {card.children?.filter(c => c.tagName === "item").map((item, i) => (
-            <div key={i} style={{ padding: "0.25rem 0", color: item.attrs.status === "done" ? "#999" : "#000" }}>
-              {item.attrs.status === "done" ? "\\u2713" : "\\u25cb"} {item.text}
-            </div>
-          ))}
-        </div>
-      ))}
-    </div>
-  );
-}
-\`\`\`
-
-### Filtered Dashboard
-
-\`\`\`tsx
-export const name = "Inbox Dashboard";
-export const description = "Overview of pending inbox items";
-export const dependencies = ["box/inbox/**/*.card"];
-export const modes = ["page"];
-
-export default function InboxDashboard({ cards }) {
-  const [filter, setFilter] = useState("");
-
-  const filtered = cards.filter(c =>
-    !filter || c.tagName.includes(filter) || c.path.includes(filter)
-  );
-
-  const byType = {};
-  for (const card of filtered) {
-    byType[card.tagName] = (byType[card.tagName] || 0) + 1;
-  }
-
-  return (
-    <div>
-      <h2>Inbox ({filtered.length} items)</h2>
-      <input
-        placeholder="Filter..."
-        value={filter}
-        onChange={e => setFilter(e.target.value)}
-        style={{ padding: "0.5rem", marginBottom: "1rem", width: "100%" }}
-      />
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        {Object.entries(byType).map(([type, count]) => (
-          <div key={type} style={{ padding: "0.5rem 1rem", background: "#f0f0f0", borderRadius: "0.5rem" }}>
-            <strong>{type}</strong>: {count}
-          </div>
-        ))}
-      </div>
-      <ul>
-        {filtered.map(card => (
-          <li key={card.path}>{card.path} ({card.tagName})</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-\`\`\``;
 
 const testingSection = `## Testing a View
 

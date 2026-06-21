@@ -3,7 +3,7 @@
  *
  * Split out of `api.ts`. Owns `GET /api/browse/*` — a one-level listing of a
  * box directory that folds `<basename>.attach/` directories into their owning
- * cards and loads each card so the frontend can render status + tag name.
+ * cards and loads each card so the frontend can render its status.
  */
 
 import type { FastifyInstance } from "fastify";
@@ -16,7 +16,6 @@ interface BrowseCard {
   relativePath: string;
   name: string;
   type: string;
-  tagName: string;
   status?: string | undefined;
   hasAttachments?: boolean;
 }
@@ -103,9 +102,6 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
           relativePath,
           name: parsed.name,
           type: parsed.type,
-          // The filename type is the discriminator; a card that won't parse is
-          // marked unknown.
-          tagName: fm === null ? "unknown" : parsed.type,
           ...(status !== undefined && { status }),
           hasAttachments,
         });
