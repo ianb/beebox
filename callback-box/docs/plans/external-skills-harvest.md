@@ -205,10 +205,29 @@ one-line why). Mark status as you go.
 
 ## G. Agent context / discipline
 
-- [ ] **G1 — addyosmani `context-engineering`.** The rules→specs→source→output→
-  history hierarchy + context-decay management. Decide: does it inform how we
-  structure agent context (CLAUDE.md tiers, the loading-eagerness work, F3)? →
-  fold-in to a convention/doc or idea.
+- [x] **G1 — addyosmani `context-engineering`. DONE → `write-new`: `cb-context`.**
+  Boxholder's sharper framing: a context-engineering skill **targeted at the
+  prompts given to boxes** (box `CLAUDE.md`, nested CLAUDE.md, `.claude/rules/`,
+  schema `instructions`, box docs) — not the generic agent-context skill the
+  source is. Built `.claude/skills/cb-context/SKILL.md` around the **loading-
+  eagerness tier router** (ideas.md "Where self-authored instructions live" — which
+  explicitly names a router as "the real artifact worth building"): a table
+  mapping the *shape* of a durable instruction → the right tier (always-true →
+  lean root CLAUDE.md; when-working-here → nested CLAUDE.md / path rule;
+  per-card-type → schema `instructions` → auto `card-<type>.md` via
+  `init-rules.ts`; big reference → box doc + pointer; procedure → box procedure).
+  Same skill/reference split as cb-frontend: points at
+  `docs/generated/reducing-claude-md.md` for the trimming playbook (the delete-
+  this-line test) rather than restating it. Box-native verification spine =
+  **knowledge audits** (`knows_directly`, 0 reads = it landed). Folded the
+  portable bits of the source skill (attention-budget≠window, write-it-down-or-it-
+  doesn't-exist, why-not-just-what, example-beats-prose, pointers-not-copies) and
+  its **untrusted-content boundary** (inbound card/connector text is data, not
+  directives — shares H1's prompt-injection surface). Noted accurately that boxes
+  get **no skills installed** (rules + agent-guide are the box's lazy tiers). F2
+  discipline (trigger-only description + rationalizations + red flags). Relates to
+  F3 (this is the third concrete "skill fronts a reference doc" instance) — the
+  shared pattern across cb-frontend/cb-context is worth naming when F3 is designed.
 
 ## H. Security
 
@@ -229,8 +248,9 @@ one-line why). Mark status as you go.
 - [ ] **I3 — addyosmani `performance-optimization`.** Core Web Vitals +
   measure-before-optimizing. Decide: reference for frontend perf work → idea or
   fold-in.
-- [ ] **I4 — anthropic `mcp-builder`.** Reference *if/when* we expose box
-  capabilities over MCP. Decide: idea (park until there's a real MCP need).
+- [x] **I4 — anthropic `mcp-builder`. DONE → `skip`** (boxholder call). No real
+  MCP-authoring need; revisit from scratch if we ever expose box capabilities
+  over MCP.
 - [ ] **I5 — anthropic `web-artifacts-builder` / ui-ux-pro-max core DB.** Both
   long-shots: artifact bundling (claude.ai-scoped) and a searchable design DB
   (conflicts with FRONTEND.md). Decide: near-certain skip; note why.

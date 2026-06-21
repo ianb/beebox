@@ -92,6 +92,66 @@ output === output3
 => true
 ```
 
+## Compile targets
+
+A view written with real JSX compiles differently per target. The default
+"browser" target externalizes React to the `window.__cbReact` shim; the "node"
+target externalizes React to bare specifiers, so a Node renderer resolves the
+real React from node_modules and shares one instance with `react-dom/server`:
+
+```
+const tmpT = await mkdtemp(join(tmpdir(), "views-target-"));
+const viewsDirT = join(tmpT, "views");
+await mkdir(viewsDirT, { recursive: true });
+await writeFile(join(viewsDirT, "jsx.tsx"), `
+export const name = "JSX View";
+export const dependencies = [];
+export const modes = ["page"];
+export default function JsxView() {
+  return <div>hello</div>;
+}
+`);
+const viewPathT = join(viewsDirT, "jsx.tsx");
+
+const browserBuild = await compileView(viewPathT, { target: "browser" });
+browserBuild.output.includes("window.__cbReact")
+=> true
+```
+
+The browser build never emits a bare `react/jsx-runtime` import; the node build
+does (esbuild's automatic JSX import, left external):
+
+``` continue
+/from\s*"react\/jsx-runtime"/.test(browserBuild.output)
+=> false
+```
+
+``` continue
+const nodeBuild = await compileView(viewPathT, { target: "node" });
+/from\s*"react\/jsx-runtime"/.test(nodeBuild.output)
+=> true
+```
+
+``` continue
+nodeBuild.output.includes("window.__cbReact")
+=> false
+```
+
+The node build carries an inline source map for stack mapping:
+
+``` continue
+nodeBuild.output.includes("sourceMappingURL=data:application/json")
+=> true
+```
+
+The two targets are cached independently — compiling one never returns the
+other's output (no cross-contamination):
+
+``` continue
+nodeBuild.output === browserBuild.output
+=> false
+```
+
 ## Missing metadata defaults
 
 When metadata exports are missing, sensible defaults are used:

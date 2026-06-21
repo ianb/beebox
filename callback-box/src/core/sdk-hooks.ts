@@ -16,6 +16,8 @@ import { lint as markdownlint } from "markdownlint/promise";
 import { noViewLabelLinks, noBrokenInternalLinks } from "./markdown-lint-rules.js";
 import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
+import { isViewFile } from "../cli/lib/paths.js";
+import { lintViewFile } from "../webapp/views/compiler.js";
 
 const MARKDOWN_CONFIG = { default: false, MD009: true, MD037: true, MD038: true, MD047: true };
 const CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks];
@@ -41,13 +43,25 @@ function extractFilePath(toolInput: unknown): string | null {
  */
 export function cardValidatorHook(): HookCallbackMatcher {
   return {
-    matcher: "Write|Edit",
+    matcher: "Write|Edit|MultiEdit",
     hooks: [
       async (input): Promise<HookJSONOutput> => {
         if (input.hook_event_name !== "PostToolUse") return {};
         const post = input as PostToolUseHookInput;
         const filePath = extractFilePath(post.tool_input);
         if (filePath === null) return {};
+
+        // Agent-authored view: compile-check it (syntax/JSX/imports).
+        if (isViewFile(filePath)) {
+          const err = await lintViewFile(filePath);
+          if (err === null) return {};
+          return {
+            hookSpecificOutput: {
+              hookEventName: "PostToolUse",
+              additionalContext: `View compile error for ${filePath}:\n${err}`,
+            },
+          };
+        }
 
         // Tricks dir layout enforcement.
         if (/tricks\/scripts\/[^/]+\.ts$/.test(filePath)) {

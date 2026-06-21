@@ -11,7 +11,8 @@ import { formatLintResults, type LintSummary } from "../../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
-import { requireBoxRoot, isCardFile, isMarkdownFile } from "../lib/paths.js";
+import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
+import { lintViewFile } from "../../webapp/views/compiler.js";
 import { listBoxCardFiles } from "../../core/list-cards.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
@@ -172,6 +173,17 @@ async function runHookMode(): Promise<never> {
     const warning = await lintClaudeMdFile(boxRoot, fp);
     if (warning !== null) {
       process.stderr.write(`${warning}\n`);
+      process.exit(2);
+    }
+    process.exit(0);
+  }
+  // Agent-authored view: compile-check it (syntax/JSX/imports). Like cards,
+  // a compile failure exits 2 so the agent sees the nudge; no box root needed
+  // (compileView takes the absolute path).
+  if (isViewFile(fp)) {
+    const err = await lintViewFile(fp);
+    if (err !== null) {
+      process.stderr.write(`View compile error for ${fp}:\n${err}\n`);
       process.exit(2);
     }
     process.exit(0);

@@ -5,6 +5,7 @@
  */
 
 import { dependenciesAndParamsSection } from "./views-doc-files.js";
+import { examplesSection } from "./views-doc-examples.js";
 
 const introSection = `# Views: Agent-Generated React Components
 
@@ -244,85 +245,40 @@ function NearestNeighbors({ reportActivity }) {
 
 For a tab or filter, call it in the handler instead: \`onClick={() => { setTab(t); reportActivity("explored", "tab: " + t); }}\`. The agent can always run \`cb chat whats-changed --card <path>\` for the exact, git-grounded change set — \`<card-activity> detail\` is the cheap live hint, not the source of truth.`;
 
-const examplesSection = `## Examples
+const testingSection = `## Testing a View
 
-### Simple Card List
+After writing or changing a view, render-test it from the command line instead
+of only checking it in the browser:
 
-\`\`\`tsx
-export const name = "Todo List";
-export const description = "Active todos";
-export const dependencies = ["store/todos/**/*.card"];
-export const modes = ["page", "chat"];
-
-export default function TodoList({ cards }) {
-  const todos = cards.filter(c => c.type === "todo-list");
-  return (
-    <div>
-      <h2>Todos</h2>
-      {todos.map(card => {
-        // List fields live in frontmatter (typed unknown — narrow before use).
-        const items = Array.isArray(card.frontmatter?.items) ? card.frontmatter.items : [];
-        return (
-          <div key={card.path} style={{ marginBottom: "1rem" }}>
-            <h3>{String(card.frontmatter?.title ?? card.path)}</h3>
-            {items.map((item, i) => (
-              <div key={i} style={{ padding: "0.25rem 0", color: item.status === "done" ? "#999" : "#000" }}>
-                {item.status === "done" ? "\\u2713" : "\\u25cb"} {item.text}
-              </div>
-            ))}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
+\`\`\`
+cb view test <slug>
 \`\`\`
 
-### Filtered Dashboard
+This compiles the view in Node, loads the **real cards** your \`dependencies\`
+globs select (the same data the running app passes), renders the component once,
+and prints the resulting HTML. On success it exits 0 and prints the output — so
+you can confirm the view shows the right thing, not just that it didn't crash.
+On failure it exits non-zero and prints the error with a stack mapped back to
+your \`.tsx\` source lines.
 
-\`\`\`tsx
-export const name = "Inbox Dashboard";
-export const description = "Overview of pending inbox items";
-export const dependencies = ["box/inbox/**/*.card"];
-export const modes = ["page"];
+- \`--path <card-path>\` sets \`params.path\` for a card-bound view (e.g. one with
+  \`rendersCardTypes\`), exactly as the card page would. It does not filter
+  \`cards\` — your view still receives every card the globs select and filters
+  itself. If the path isn't among them, the command warns (your globs don't
+  cover that card).
+- \`--raw\` keeps \`<script>\`/\`<style>\` in the output (stripped by default).
+- If a dependency glob selects a card that fails to validate, the command
+  reports it and exits non-zero (pass \`--allow-invalid-cards\` to ignore).
 
-export default function InboxDashboard({ cards }) {
-  const [filter, setFilter] = useState("");
-
-  const filtered = cards.filter(c =>
-    !filter || c.type.includes(filter) || c.path.includes(filter)
-  );
-
-  const byType = {};
-  for (const card of filtered) {
-    byType[card.type] = (byType[card.type] || 0) + 1;
-  }
-
-  return (
-    <div>
-      <h2>Inbox ({filtered.length} items)</h2>
-      <input
-        placeholder="Filter..."
-        value={filter}
-        onChange={e => setFilter(e.target.value)}
-        style={{ padding: "0.5rem", marginBottom: "1rem", width: "100%" }}
-      />
-      <div style={{ display: "flex", gap: "1rem", marginBottom: "1rem" }}>
-        {Object.entries(byType).map(([type, count]) => (
-          <div key={type} style={{ padding: "0.5rem 1rem", background: "#f0f0f0", borderRadius: "0.5rem" }}>
-            <strong>{type}</strong>: {count}
-          </div>
-        ))}
-      </div>
-      <ul>
-        {filtered.map(card => (
-          <li key={card.path}>{card.path} ({card.type})</li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-\`\`\``;
+**What it covers (and doesn't).** This is a *synchronous* render: it runs the
+component body once. It catches the common bugs — syntax/JSX errors,
+\`undefined.map()\`, bad prop access, type mistakes. It does **not** run
+\`useEffect\`, post-mount state, or the async helpers (\`readFile\`, \`writeFile\`,
+\`adapterFetch\`, …) — those run only in effects/handlers in the real app. Calling
+an async helper directly in the render body is a bug, and the test throws to tell
+you so (\`fileUrl\` is synchronous and fine to call in render). Editing a view also
+triggers a quick compile-check automatically, the same way cards are validated on
+save.`;
 
 const stylingAndErrorsSection = `## Styling
 
@@ -346,6 +302,7 @@ export function generateViewsDoc(): string {
       companionViewsSection,
       reportingActivitySection,
       examplesSection,
+      testingSection,
       stylingAndErrorsSection,
     ].join("\n\n") + "\n"
   );

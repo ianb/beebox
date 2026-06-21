@@ -32,3 +32,12 @@ timeout: 300
 # cursor-control sequences even when piped, which render as garbage.
 reporter: tap
 color: false
+# Don't collect or gate on coverage by default. tap's unconfigured default is to
+# enforce 100% line/branch/function coverage, but this repo sets no thresholds
+# and many long-standing files sit well below 100% — so `tap` exited non-zero on
+# the coverage gate even when all 2231 tests passed, and printed a ~40-line
+# coverage table on every run (noise, per the monorepo's "noisy output is a bug"
+# rule). Coverage has never actually gated here (the pre-commit hook runs
+# typecheck + lint, not `tap`). Disable it by default so a green suite exits 0
+# and stays quiet; run `tap --coverage` ad hoc when you want a coverage report.
+disable-coverage: true

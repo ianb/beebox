@@ -20,8 +20,6 @@
     "@parcel/markdown-ansi",
     "ansi-to-html",
     "@tanstack/react-virtual",
-    "cheerio",
-    "agent-doctest",
-    "react"
+    "agent-doctest"
   ]
 }

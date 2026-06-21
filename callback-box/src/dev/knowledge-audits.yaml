@@ -2499,6 +2499,41 @@ tests:
     correct_contains_any: ["attachments", "fileUrl"]
     tags: [views, attachments]
 
+  # === Views: render-test command (cb view test) ===
+  #
+  # Indirect knowledge, like the other view-authoring audits: the command lives
+  # in docs/generated/views.md (Testing a View), the cb-commands.md reference, and
+  # the views/CLAUDE.md stub — not the always-loaded guide (appropriate altitude
+  # for a view-authoring tool). The agent reads the views guide and names the
+  # command. The failure mode is telling the user to open it in a browser or
+  # asking them whether it works.
+  #
+  # Status (2026-06-20): 1/1 passes — agent reads docs/generated/views.md (1 read,
+  # 0 searches) and names `cb view test <slug>` as the verification step. NOTE on
+  # prompt shape: a *cold* "how do I test a view" prompt fails — the agent answers
+  # from training (0 reads) and misses the post-training command, even proposing a
+  # puppeteer trick. An *authoring* framing that asks for a written plan and says
+  # "check the box's own view docs first" reliably triggers the guide read and a
+  # prose mention. (An authoring prompt that lets the agent act instead of plan
+  # also works but the agent render-tests via a Bash call and leaves an empty
+  # response, which the text-only contains-check can't see.)
+
+  - id: views-render-test-command
+    prompt: >
+      I want a view in views/ that lists every memo card. Check the box's own
+      view docs first, then give me a written step-by-step plan for building
+      it and verifying it renders correctly — I'll review the plan before you
+      build anything.
+    expected_level: knows_about
+    watch_for: >
+      Reads the views guide (per the views/ stub's "read before creating
+      views"), then names `cb view test <slug>` as how it verifies the view
+      renders — not "open it in the browser", "visit the page", or "ask the
+      user".
+    should_read: ["docs/generated/views.md"]
+    correct_contains: ["cb view test"]
+    tags: [views]
+
   # === Retrospective (docs/implemented-plans/box-retrospectives.md) ===
 
   - id: retro-report-location

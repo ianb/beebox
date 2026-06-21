@@ -10,6 +10,8 @@
  * rather than failing the whole render.
  */
 
+import { stripChatAppTags } from "../../../core/chat-features";
+
 export interface AckKindDescriptor {
   /** Stable identifier used as the `kind` attribute value. */
   readonly kind: string;
@@ -134,10 +136,9 @@ export function parseCallouts(content: string): CalloutData[] {
  * The structured-output renderers handle these tags separately.
  */
 export function stripStructuredOutputTags(content: string): string {
-  return content
+  return stripChatAppTags(content)
     .replace(/<ack\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/ack\s*>)/gi, "")
-    .replace(/<callout\b[^>]*?>[\S\s]*?<\/callout\s*>/gi, "")
-    .replace(/<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\n?/gi, "");
+    .replace(/<callout\b[^>]*?>[\S\s]*?<\/callout\s*>/gi, "");
 }
 
 /**
