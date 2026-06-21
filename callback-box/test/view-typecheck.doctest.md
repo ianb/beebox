@@ -37,6 +37,16 @@ const ANYCAST = HEAD + `export default function V({ cards }: { cards: any[] }) {
   return <ul>{cards.map((c) => <li key={c.path}>{c.tagName}</li>)}</ul>;
 }
 `;
+
+// An internal type error unrelated to ViewCard (the Float32Array-lib-noise
+// class) must NOT be flagged — typecheck scopes to the ViewProps boundary, not
+// the whole view body.
+const NOISE = HEAD + `type VC = { path: string; type: string };
+export default function V({ cards }: { cards: VC[] }) {
+  const n: number = "not a number";
+  return <ul>{cards.map((c) => <li key={c.path}>{c.type}{n}</li>)}</ul>;
+}
+`;
 ```
 
 ## A stale-typed view (removed field) fails; clean passes; `as any` slips through
@@ -46,6 +56,7 @@ const box = await makeTmpBox();
 await box.write("views/stale.tsx", STALE);
 await box.write("views/clean.tsx", CLEAN);
 await box.write("views/anycast.tsx", ANYCAST);
+await box.write("views/noise.tsx", NOISE);
 
 const result = await typecheckViews(box.root);
 result.ok
@@ -61,6 +72,9 @@ result.views.find((v) => v.slug === "clean")?.ok
 => true
 
 result.views.find((v) => v.slug === "anycast")?.ok
+=> true
+
+result.views.find((v) => v.slug === "noise")?.ok
 => true
 ```
 
