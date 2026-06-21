@@ -17,7 +17,6 @@ export interface BrowseCard {
   relativePath: string;
   name: string;
   type: string;
-  tagName: string;
   status?: string | undefined;
   title?: string | undefined;
   /** True if this card has a `<basename>.attach/` directory (i.e. attachments). */
@@ -146,7 +145,7 @@ export const statusRouter = router({
           const fm = await loadCardFrontmatter(fullPath);
           if (fm === null) {
             // Card failed to parse — still list it (as unknown) so the UI shows it.
-            cards.push({ relativePath, name: parsed.name, type: parsed.type, tagName: "unknown", hasAttachments });
+            cards.push({ relativePath, name: parsed.name, type: parsed.type, hasAttachments });
             continue;
           }
           const str = (key: string): string | undefined =>
@@ -155,8 +154,6 @@ export const statusRouter = router({
             relativePath,
             name: parsed.name,
             type: parsed.type,
-            // The filename type is the discriminator (the old XML root tag).
-            tagName: parsed.type,
             ...(str("status") !== undefined && { status: str("status") }),
             ...(str("title") !== undefined && { title: str("title") }),
             hasAttachments,

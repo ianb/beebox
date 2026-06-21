@@ -25,7 +25,6 @@ export interface CardInfo {
   relativePath: string;
   name: string;
   type: string;
-  tagName: string;
   status?: string | undefined;
   /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
   subdir?: string | undefined;
@@ -93,7 +92,6 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
         relativePath: path.relative(boxRoot, fullPath),
         name: parsed.name,
         type: parsed.type,
-        tagName: loaded.schema.type,
         status: typeof loaded.fields["status"] === "string" ? loaded.fields["status"] : undefined,
         subdir,
       });
@@ -104,7 +102,6 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
         relativePath: path.relative(boxRoot, fullPath),
         name: parsed.name,
         type: parsed.type,
-        tagName: "unknown",
         status: undefined,
         subdir,
       });

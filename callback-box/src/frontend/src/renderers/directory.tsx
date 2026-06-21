@@ -8,9 +8,7 @@
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
-import { CardTreeView } from "../components/CardTreeView";
 import { Accordion } from "../components/ui/Accordion";
-import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
 import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
@@ -73,22 +71,17 @@ function CardAccordionBody({
 
   const fileData: FileData = {
     path: card.path,
-    tagName: card.tagName,
-    element: card.element,
-    xml: card.xml,
-    version: card.version,
-    status: card.status,
+    kind: card.kind,
+    type: card.type,
+    frontmatter: card.frontmatter,
+    body: card.body,
   };
 
+  // A frontmatter card always matches at least the Source/Card renderers.
   const renderers = getRenderers(cardPath, fileData);
-  if (renderers.length > 0) {
-    const Renderer = renderers[0].Component;
-    return <Renderer data={fileData} onNavigate={onNavigate} />;
-  }
-  if (card.element) {
-    return <CardTreeView element={card.element} path={card.path} version={card.version} onNavigate={onNavigate} />;
-  }
-  return <Pre size="xs">{card.xml}</Pre>;
+  if (renderers.length === 0) return null;
+  const Renderer = renderers[0].Component;
+  return <Renderer data={fileData} onNavigate={onNavigate} />;
 }
 
 function DirectoryRenderer({ data, onNavigate }: RendererProps) {

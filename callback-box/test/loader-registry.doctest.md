@@ -1,10 +1,10 @@
 # Loader Registry
 
-Produces `FileSummary` values for files, dispatched by tagName or path pattern.
+Produces `FileSummary` values for files, dispatched by card type or path pattern.
 
 ```ts setup
 import {
-  registerTagLoader,
+  registerTypeLoader,
   registerPathLoader,
   resetLoaderRegistry,
   summarize,
@@ -30,7 +30,7 @@ s.title
 => photo 001
 ```
 
-## tagName loader wins over path match
+## type loader wins over path match
 
 ```
 resetLoaderRegistry();
@@ -38,9 +38,9 @@ registerPathLoader<{ size: "large" }>(
   (p: string) => p.endsWith(".card"),
   (raw) => ({ path: raw.path, title: "path-matched", attrs: { size: "large" } }),
 );
-registerTagLoader<{ status: string }>("memo", (raw) => ({
+registerTypeLoader<{ status: string }>("memo", (raw) => ({
   path: raw.path,
-  tagName: "memo",
+  type: "memo",
   title: "tag-matched",
   attrs: { status: String(raw.fields === undefined ? "unknown" : raw.fields["status"] ?? "unknown") },
 }));
@@ -52,7 +52,7 @@ JSON.stringify(s.attrs)
 => {"status":"new"}
 ```
 
-## Path match fires when no tagName registered
+## Path match fires when no type registered
 
 ```
 resetLoaderRegistry();
@@ -65,7 +65,7 @@ s.title
 => md:store/notes/todo.md
 ```
 
-## tagName collision is last-wins with a warning
+## type collision is last-wins with a warning
 
 ```
 resetLoaderRegistry();
@@ -74,8 +74,8 @@ const original = console.warn;
 console.warn = (msg: string) => { warnings.push(msg); };
 const first: FileLoader<Record<string, never>> = (raw) => ({ path: raw.path, title: "first", attrs: {} });
 const second: FileLoader<Record<string, never>> = (raw) => ({ path: raw.path, title: "second", attrs: {} });
-registerTagLoader("memo", first);
-registerTagLoader("memo", second);
+registerTypeLoader("memo", first);
+registerTypeLoader("memo", second);
 console.warn = original;
 warnings.length
 => 1

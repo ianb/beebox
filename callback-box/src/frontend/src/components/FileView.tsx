@@ -156,12 +156,7 @@ function useFileData(path: string): LoadResult {
         data: {
           path: card.path,
           kind: card.kind,
-          tagName: card.tagName,
-          attrs: card.element ? card.element.attrs : undefined,
-          element: card.element,
-          xml: card.xml,
-          version: card.version,
-          status: card.status,
+          type: card.type,
           frontmatter: card.frontmatter,
           body: card.body,
         },
@@ -241,7 +236,7 @@ function ChatHeader({
   );
 }
 
-/** Page-mode header: path as title, metadata (tagName/status/version), renderer toggle. */
+/** Page-mode header: path as title, metadata (type/status), renderer toggle. */
 function PageHeader({
   data, renderers, active, onSelect,
 }: {
@@ -250,15 +245,15 @@ function PageHeader({
   active: FileRenderer;
   onSelect: (name: string) => void;
 }) {
+  const status = typeof data.frontmatter?.status === "string" ? data.frontmatter.status : null;
   return (
     <div className="p-4 pb-0">
       <div className="flex items-center justify-between mb-2 gap-4">
         <div className="min-w-0 flex-1">
           <h1 className="text-lg font-bold text-warm-900 truncate" title={data.path}>{data.path}</h1>
           <div className="flex items-center gap-2 mt-1">
-            {data.tagName ? <span className="text-sm text-warm-600">Type: {data.tagName}</span> : null}
-            {data.status ? <StatusBadge status={data.status} /> : null}
-            {data.version ? <span className="text-sm text-warm-500">v{data.version}</span> : null}
+            {data.type ? <span className="text-sm text-warm-600">Type: {data.type}</span> : null}
+            {status ? <StatusBadge status={status} /> : null}
           </div>
         </div>
         <RendererToggle renderers={renderers} active={active} onSelect={onSelect} />
@@ -292,7 +287,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
 
   // A box view exporting `rendersCardTypes` becomes this card type's
   // default renderer; the built-ins stay available through the toggle.
-  const binding = useCardViewBinding(data?.tagName);
+  const binding = useCardViewBinding(data?.type);
   const renderers: FileRenderer[] = useMemo(() => {
     const base = data ? getRenderers(path, data) : [];
     if (binding === null || !data) return base;

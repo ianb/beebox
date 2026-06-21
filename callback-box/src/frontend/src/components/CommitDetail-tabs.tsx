@@ -3,11 +3,10 @@
  */
 
 import { getApiBase } from "../api";
-import { CardTreeView } from "./CardTreeView";
 import { Image } from "./ui/Image";
 import { Pre } from "./ui/Pre";
 import type { DiffFile } from "./CommitDetail-diff";
-import { extractNewFileContent, parseXmlToElementNode } from "./CommitDetail-diff";
+import { extractNewFileContent } from "./CommitDetail-diff";
 
 // --- Binary file rendering ---
 
@@ -98,9 +97,7 @@ export function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }
   return (
     <div className="divide-y divide-warm-300">
       {files.map((file, fi) => {
-        const isCard = file.path.endsWith(".card");
         const content = !file.binary && file.hunks.some((h) => h.trim()) ? extractNewFileContent(file.hunks) : null;
-        const cardElement = isCard && content ? parseXmlToElementNode(content) : null;
 
         return (
           <div key={fi}>
@@ -109,8 +106,6 @@ export function NewFilesTab({ files, hash }: { files: DiffFile[]; hash: string }
             </div>
             {file.binary ? (
               <BinaryFilePreview file={file} hash={hash} />
-            ) : cardElement ? (
-              <CardTreeView element={cardElement} />
             ) : content ? (
               <div className="px-3 py-1">
                 <Pre size="xs">

@@ -113,7 +113,7 @@ export const memoLoader: FileLoader<MemoAttrs> = (raw) => {
   const fallback = titleFromFilename(raw.path);
   const fields = (raw as { fields?: Partial<MemoFields> }).fields;
   if (fields === undefined) {
-    return { path: raw.path, tagName: "memo", title: fallback, attrs: { status: "new" } };
+    return { path: raw.path, type: "memo", title: fallback, attrs: { status: "new" } };
   }
   let title = "";
   if (typeof fields.body === "string" && fields.body.trim() !== "") {
@@ -125,7 +125,7 @@ export const memoLoader: FileLoader<MemoAttrs> = (raw) => {
   title = truncateTitle(title, 80);
   return {
     path: raw.path,
-    tagName: "memo",
+    type: "memo",
     title,
     attrs: { status: fields.status ?? "new" },
   };

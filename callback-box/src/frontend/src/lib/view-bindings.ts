@@ -50,20 +50,20 @@ function fetchBindings(): Promise<Map<string, CardViewBinding>> {
 }
 
 /** The custom view bound to a card type, or null (also null while loading). */
-export function useCardViewBinding(tagName: string | undefined): CardViewBinding | null {
+export function useCardViewBinding(type: string | undefined): CardViewBinding | null {
   const [binding, setBinding] = useState<CardViewBinding | null>(null);
   useEffect(() => {
-    if (tagName === undefined) {
+    if (type === undefined) {
       setBinding(null);
       return;
     }
     let cancelled = false;
     void fetchBindings().then((map) => {
-      if (!cancelled) setBinding(map.get(tagName) ?? null);
+      if (!cancelled) setBinding(map.get(type) ?? null);
     });
     return () => {
       cancelled = true;
     };
-  }, [tagName]);
+  }, [type]);
   return binding;
 }

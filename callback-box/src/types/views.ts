@@ -64,14 +64,11 @@ export interface ViewProps {
 
 export interface ViewCard {
   path: string;
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: ViewCardChild[];
-  status?: string;
-  /** Frontmatter fields for Phase-2 cards (body excluded). */
+  /** Card type, from the filename (`Foo.<type>.card`). */
+  type: string;
+  /** Frontmatter fields (body and type excluded). */
   frontmatter?: Record<string, unknown>;
-  /** Markdown body for Phase-2 cards. */
+  /** Markdown body. */
   body?: string;
   /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
   attachments?: ViewFile[];
@@ -93,13 +90,6 @@ export interface ViewFile {
    * "untracked" (git has never seen it). Absent = committed and clean.
    */
   gitStatus?: "dirty" | "untracked";
-}
-
-export interface ViewCardChild {
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: ViewCardChild[];
 }
 
 export type ViewMode = "page" | "chat";

@@ -1,9 +1,7 @@
 /**
  * CommitDetail diff parsing — pure helpers for turning a unified git diff
- * into structured DiffFile records, plus XML/card content extraction.
+ * into structured DiffFile records, plus new-file content extraction.
  */
-
-import type { ElementNode } from "./CardTreeView";
 
 export interface DiffFile {
   path: string;
@@ -114,52 +112,3 @@ export function extractNewFileContent(hunks: string[]): string {
     .join("\n");
 }
 
-function dedent(s: string): string {
-  const lines = s.split("\n");
-  const nonEmptyLines = lines.filter((l) => l.trim().length > 0);
-  if (nonEmptyLines.length === 0) return s.trim();
-  const indent = Math.min(
-    ...nonEmptyLines.map((l) => l.match(/^(\s*)/)![0].length)
-  );
-  return lines.map((l) => l.slice(indent)).join("\n").trim();
-}
-
-function domToElementNode(el: Element): ElementNode {
-  const attrs: Record<string, string> = {};
-  for (const attr of Array.from(el.attributes)) {
-    attrs[attr.name] = attr.value;
-  }
-
-  const children: ElementNode[] = [];
-  let text = "";
-
-  for (const child of Array.from(el.childNodes)) {
-    if (child.nodeType === Node.ELEMENT_NODE) {
-      children.push(domToElementNode(child as Element));
-    } else if (child.nodeType === Node.TEXT_NODE || child.nodeType === Node.CDATA_SECTION_NODE) {
-      const t = child.textContent;
-      if (t) text += t;
-    }
-  }
-
-  const dedented = dedent(text);
-
-  return {
-    tagName: el.tagName,
-    attrs,
-    ...(dedented ? { text: dedented } : {}),
-    ...(children.length > 0 ? { children } : {}),
-  };
-}
-
-export function parseXmlToElementNode(xml: string): ElementNode | null {
-  try {
-    const doc = new DOMParser().parseFromString(xml, "text/xml");
-    const error = doc.querySelector("parsererror");
-    if (error) return null;
-    return domToElementNode(doc.documentElement);
-  } catch (_e) {
-    // Unparseable XML — caller treats null as "not renderable".
-    return null;
-  }
-}

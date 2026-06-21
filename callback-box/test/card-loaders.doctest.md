@@ -20,7 +20,7 @@ const s = memoLoader({ path: "box/inbox/Groceries.memo.card", fields: m1 });
 s.title
 => Pick up milk on the way home.
 
-s.tagName
+s.type
 => memo
 
 JSON.stringify(s.attrs)

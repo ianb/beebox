@@ -113,12 +113,10 @@ function frontmatterViewCard(relPath: string, fields: Record<string, unknown>): 
   const type = fields["type"];
   const viewCard: ViewCard = {
     path: relPath,
-    tagName: typeof type === "string" ? type : "",
-    attrs: {},
+    type: typeof type === "string" ? type : "",
     frontmatter,
   };
   if (body !== undefined) viewCard.body = body;
-  if (typeof frontmatter["status"] === "string") viewCard.status = frontmatter["status"];
   return viewCard;
 }
 

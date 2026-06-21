@@ -13,8 +13,8 @@
 export interface FileSummary<T = unknown> {
   /** Box-relative path to the file */
   path: string;
-  /** Root element tag for cards; undefined for non-card files */
-  tagName?: string;
+  /** Card type (from the filename); undefined for non-card files */
+  type?: string;
   /** Always-present human-readable title. Loader computes; fallback is filename */
   title: string;
   /** The card's agent-written contains: sentence, when present. */

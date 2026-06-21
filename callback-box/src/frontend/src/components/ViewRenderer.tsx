@@ -16,22 +16,14 @@ import { useViewFileHelpers, type ViewFile, type ViewFileHelpers } from "../hook
 /** View card data from the API */
 interface ViewCard {
   path: string;
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: ViewCardChild[];
-  status?: string;
+  /** Card type, from the filename (`Foo.<type>.card`). */
+  type: string;
+  /** Frontmatter fields (body and type excluded). */
+  frontmatter?: Record<string, unknown>;
+  /** Markdown body. */
+  body?: string;
   /** Files in this card's attach scope (deep), box-relative, with size/mtime. */
   attachments?: ViewFile[];
-}
-
-
-
-interface ViewCardChild {
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: ViewCardChild[];
 }
 
 /** Props passed to every view component */

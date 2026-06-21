@@ -4,38 +4,14 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
-import { parseCardText } from "../../../core/card-io.js";
+import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { parse as parseYaml } from "yaml";
-
-/**
- * JSON-safe element node for the frontend's legacy XML tree view. Cards are all
- * frontmatter now, so `card.get` never populates `element` — it stays in the
- * response type only as the (always-undefined) field the frontend renderers
- * type against.
- */
-export interface JsonElement {
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: JsonElement[];
-}
-
-function typeFromFilename(source: string): string | undefined {
-  const base = source.split("/").pop();
-  if (base === undefined) return undefined;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match ? match[1] : undefined;
-}
 
 export interface FrontmatterCardResponse {
   path: string;
   kind: "frontmatter";
-  tagName: string;
-  status: string | undefined;
-  version: string | undefined;
-  xml: string;
-  element: JsonElement | undefined;
+  type: string;
   frontmatter: Record<string, unknown> | undefined;
   body: string | undefined;
   validationError: string | undefined;
@@ -51,7 +27,6 @@ function loadFrontmatterCard(input: {
   let frontmatter: Record<string, unknown> | undefined;
   let body: string | undefined;
   let validationError: string | undefined;
-  let status: string | undefined;
 
   try {
     const parsed = parseCardText(raw, { source, schemas: cardSchemas, type });
@@ -65,8 +40,6 @@ function loadFrontmatterCard(input: {
     }
     delete fields["type"];
     frontmatter = fields;
-    const statusField = fields["status"];
-    if (typeof statusField === "string") status = statusField;
   } catch (e) {
     validationError = (e as Error).message;
     // Still surface what we can — split the file and parse YAML loosely.
@@ -76,8 +49,6 @@ function loadFrontmatterCard(input: {
       const fm = parseYaml(split.frontmatterText);
       if (fm !== null && typeof fm === "object" && !Array.isArray(fm)) {
         frontmatter = fm as Record<string, unknown>;
-        const statusField = (fm as Record<string, unknown>)["status"];
-        if (typeof statusField === "string") status = statusField;
       }
     } catch (_e) {
       // YAML itself is malformed — leave frontmatter undefined.
@@ -87,11 +58,7 @@ function loadFrontmatterCard(input: {
   return {
     path: source,
     kind: "frontmatter",
-    tagName: type,
-    status,
-    version: undefined,
-    xml: raw,
-    element: undefined,
+    type,
     frontmatter,
     body,
     validationError,
@@ -107,10 +74,12 @@ export const cardRouter = router({
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). Ensure the resolved path
       // stays inside the box before any read — `path.join` collapses `..`, so a
-      // crafted `../../etc/...` would otherwise escape boxRoot. Mirrors the
-      // `/api/files` boundary guard (routes/api-files.ts); card.get had none.
+      // crafted `../../etc/...` would otherwise escape boxRoot. Compare against
+      // `root + sep` (not a bare prefix) so a sibling dir like `<box>-secrets`
+      // can't satisfy the check. Mirrors the `/api/files` boundary guard.
       const resolved = path.resolve(fullPath);
-      if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
+      const root = path.resolve(ctx.boxRoot);
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         throw new TRPCError({ code: "BAD_REQUEST", message: "Invalid card path" });
       }
 
@@ -141,11 +110,7 @@ export const cardRouter = router({
       return {
         path: input.path,
         kind: "frontmatter" as const,
-        tagName: fileType ?? "",
-        status: undefined as string | undefined,
-        version: undefined as string | undefined,
-        xml: raw,
-        element: undefined as JsonElement | undefined,
+        type: fileType ?? "",
         frontmatter: undefined as Record<string, unknown> | undefined,
         body: split.hasFrontmatter ? split.body : raw,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",

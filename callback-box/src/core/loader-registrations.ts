@@ -5,7 +5,7 @@
  * loaders would hook in here too once that's supported.
  */
 
-import { registerTagLoader } from "./loader-registry.js";
+import { registerTypeLoader } from "./loader-registry.js";
 import { memoLoader } from "../schemas/memo.js";
 import { imageLoader } from "../schemas/image.js";
 
@@ -17,6 +17,6 @@ let registered = false;
 export function registerBuiltinLoaders(): void {
   if (registered) return;
   registered = true;
-  registerTagLoader("memo", memoLoader);
-  registerTagLoader("image", imageLoader);
+  registerTypeLoader("memo", memoLoader);
+  registerTypeLoader("image", imageLoader);
 }

@@ -22,33 +22,33 @@ export function registerBuiltinFileTypes(): void {
   if (registered) return;
   registered = true;
 
-  registerFileType({ tagName: "memo" }, { icon: DocumentIcon });
-  registerFileType<ImageAttrs>({ tagName: "image" }, {
+  registerFileType({ type: "memo" }, { icon: DocumentIcon });
+  registerFileType<ImageAttrs>({ type: "image" }, {
     icon: ImageIcon,
     ListComponent: ImageCardListEntry,
   });
-  registerFileType({ tagName: "audio" }, { icon: AudioIcon });
-  registerFileType({ tagName: "question" }, { icon: QuestionIcon });
-  registerFileType({ tagName: "email-message" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "email-thread" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "recipe" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "record" }, { icon: CardIcon });
-  registerFileType({ tagName: "sheet" }, { icon: CardIcon });
-  registerFileType({ tagName: "doc" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "gdoc" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "procedure" }, { icon: JobIcon });
-  registerFileType({ tagName: "procedure-run" }, { icon: JobIcon });
-  registerFileType({ tagName: "chat-job" }, { icon: JobIcon });
-  registerFileType({ tagName: "intake-job" }, { icon: JobIcon });
-  registerFileType({ tagName: "calendar-review-job" }, { icon: JobIcon });
-  registerFileType({ tagName: "question-followup-job" }, { icon: JobIcon });
-  registerFileType({ tagName: "todo-list" }, { icon: CardIcon });
-  registerFileType({ tagName: "briefing" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "person" }, { icon: CardIcon });
-  registerFileType({ tagName: "feedback" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "guide" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "file" }, { icon: DocumentIcon });
-  registerFileType({ tagName: "telegram-message" }, { icon: DocumentIcon });
+  registerFileType({ type: "audio" }, { icon: AudioIcon });
+  registerFileType({ type: "question" }, { icon: QuestionIcon });
+  registerFileType({ type: "email-message" }, { icon: DocumentIcon });
+  registerFileType({ type: "email-thread" }, { icon: DocumentIcon });
+  registerFileType({ type: "recipe" }, { icon: DocumentIcon });
+  registerFileType({ type: "record" }, { icon: CardIcon });
+  registerFileType({ type: "sheet" }, { icon: CardIcon });
+  registerFileType({ type: "doc" }, { icon: DocumentIcon });
+  registerFileType({ type: "gdoc" }, { icon: DocumentIcon });
+  registerFileType({ type: "procedure" }, { icon: JobIcon });
+  registerFileType({ type: "procedure-run" }, { icon: JobIcon });
+  registerFileType({ type: "chat-job" }, { icon: JobIcon });
+  registerFileType({ type: "intake-job" }, { icon: JobIcon });
+  registerFileType({ type: "calendar-review-job" }, { icon: JobIcon });
+  registerFileType({ type: "question-followup-job" }, { icon: JobIcon });
+  registerFileType({ type: "todo-list" }, { icon: CardIcon });
+  registerFileType({ type: "briefing" }, { icon: DocumentIcon });
+  registerFileType({ type: "person" }, { icon: CardIcon });
+  registerFileType({ type: "feedback" }, { icon: DocumentIcon });
+  registerFileType({ type: "guide" }, { icon: DocumentIcon });
+  registerFileType({ type: "file" }, { icon: DocumentIcon });
+  registerFileType({ type: "telegram-message" }, { icon: DocumentIcon });
 
   registerFileType({ match: (p: string) => p.endsWith(".md") }, { icon: DocumentIcon });
   registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") }, { icon: ImageIcon });

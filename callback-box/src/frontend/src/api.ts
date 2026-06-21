@@ -51,22 +51,11 @@ export interface CardInfo {
   relativePath: string;
   name: string;
   type: string;
-  tagName: string;
   status?: string;
   prompt?: string;
   options?: string[];
   /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
   subdir?: string;
-}
-
-/**
- * Element node structure from parsed XML.
- */
-export interface ElementNode {
-  tagName: string;
-  attrs: Record<string, string>;
-  text?: string;
-  children?: ElementNode[];
 }
 
 export interface CommandResult {
