@@ -153,8 +153,10 @@ async function renderView(options: RenderViewOptions): Promise<number> {
   const tmpDir = path.join(PACKAGE_ROOT, "node_modules", ".cache", "cb-view-test");
   await fs.mkdir(tmpDir, { recursive: true });
   const tmpFile = path.join(tmpDir, `view-${randomUUID()}.mjs`);
-  await fs.writeFile(tmpFile, output, "utf-8");
   try {
+    // Inside the try so a partial write (e.g. disk full) is still cleaned up by
+    // the finally; fs.rm(force) is a no-op if the file was never created.
+    await fs.writeFile(tmpFile, output, "utf-8");
     process.setSourceMapsEnabled(true);
 
     // Import (module evaluation) and render share one diagnostic block so a
