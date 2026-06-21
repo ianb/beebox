@@ -19,6 +19,34 @@ the old shape (`card.tagName`, `card.attrs`, `card.children`, `card.text`,
 box-authored TSX; an agent following a checklist can, gated by a machine check
 (`cb view check`).
 
+## Status (partially implemented)
+
+Landed on this branch and verified deterministically (full suite green):
+- **Track 1** — `cb view check` (`src/cli/commands/view.ts`, `test/view-check.doctest.md`):
+  whole-box render gate; per-view killable child + timeout.
+- **Track 2 (convention)** — the checklist convention is realized by the
+  `view-card-shape` procedure's embedded `[ ]`/`[x]` checklist (Track 4). The
+  general `docs/procedure-implementation.md` write-up + knowledge audit are not
+  yet written.
+- **Track 3A/3B** — `Migration` discriminated union + `cb migrate` procedure
+  dispatch + the "require a `validate.shells`+`abort` gate" guard
+  (`src/core/migrations.ts`, `src/cli/commands/migrate.ts`).
+- **Track 4** — the `view-card-shape` procedure migration
+  (`templates/procedures/view-card-shape.procedure.card`, registered in
+  `MIGRATIONS`). `cb view check` flags the real `test1/views/todos.tsx` with the
+  exact `card.attrs` error; the procedure parses, passes the gate guard, and
+  appears in `cb migrate --status`.
+
+Outstanding (not yet done):
+- **The live agent run** — actually executing `cb procedure run view-card-shape`
+  so an agent rewrites a broken view to green. The mechanism is verified; the
+  agent *executing* it is not.
+- **Checklist deletion** — the checklist file currently persists (committed)
+  rather than being deleted post-step; deletion needs procedure-engine support.
+- **`cb view check` `params.path` sampling** (Open q4) and faster isolation
+  (Open q5) — v1 renders default params, spawn-per-view.
+- **Knowledge audit** for the checklist discipline (Track 2).
+
 ## Stated preferences this plan trades against
 
 - `callback-box/CLAUDE.md:118` (Behavioral Notes) — *"Read before writing. Don't
