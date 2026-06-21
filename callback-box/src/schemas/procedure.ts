@@ -75,12 +75,14 @@ Don't modify a procedure card while a run is active. The engine reads the defini
 
 Each entry in \`steps\` has optional phases: \`precheck\` (should this step run?), \`run\` (the main action), \`validate\` (did it work?). Each phase groups its actions by kind:
 
-- \`shells:\` — a list of bash commands run in the box root.
+- \`shells:\` — a list of bash commands run in the box root. **The only kind that
+  actually gates** a \`validate\` (with \`severity: abort\`).
 - \`agents:\` — a list of \`{ prompt, model?, max-turns? }\` Claude Code invocations.
-- \`instructions:\` — a list of natural-language pass/fail judgments evaluated by a model.
+- \`instructions:\` — *intended* as model-judged pass/fail, but **not implemented
+  yet** (logged, pass-by-default). Don't gate on it; put real checks in \`shells:\`.
 - \`whys:\` — a list of explanations (for humans, fixing agents, and review models).
 
-Use YAML block scalars (\`|\`) for multi-line shell scripts and agent prompts so indentation is preserved. \`precheck.pass-output: true\` passes precheck stdout into the run phase; \`validate.severity\` is one of warn/review/abort.
+Use YAML block scalars (\`|\`) for multi-line shell scripts and agent prompts so indentation is preserved. \`precheck.pass-output: true\` passes precheck stdout into the run phase. \`validate.severity\` is warn/review/abort — but \`review\`'s auto-retry is **not implemented** (it downgrades to warn), so \`abort\` is the only severity that gates.
 
 Optional \`run-expiry\` / \`failed-run-expiry\` override how long this procedure's finished run dirs are kept before \`cb procedure gc\` deletes them (defaults: 30d completed, 90d failed). Value is a duration ("60d", "12w") or "never".`,
 });

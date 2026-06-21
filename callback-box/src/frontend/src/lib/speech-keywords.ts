@@ -1,7 +1,7 @@
 import { KeywordPattern, type InputMatch } from "./patmatch";
 
 const sendPattern = KeywordPattern.compile(`
-  (send | sent | deliver | finished | finish | said) (a | the | an)? message
+  (send | sent | same | deliver | finished | finish | said) (a | the | an)? message
   it's (a | the | an)? message
   message (done | finished)
   send now

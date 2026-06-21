@@ -7,18 +7,39 @@
  * the `name` is the manifest key and reordering would change which
  * migrations a box thinks it has applied.
  *
- * Each migration is a script under `scripts/` invoked with the box root
- * and `--apply`. Scripts are expected to be idempotent (safe to re-run
- * if for some reason the manifest is wrong) and noisy about possible
- * data loss (see scripts/migrate/_warnings.ts and the author guide
- * in docs/migrations.md § "Writing a new migration").
+ * A migration is one of two kinds:
+ *   - script:    a deterministic migrator under `scripts/` invoked with the box
+ *                root and `--apply`. Idempotent, noisy about data loss (see
+ *                scripts/migrate/_warnings.ts, docs/migrations.md).
+ *   - procedure: an agent-applied migration — runs a procedure definition (which
+ *                typically drives an agent through a checklist and gates on a
+ *                `validate.shells` check). See docs/plans/agent-applied-migrations.md.
+ * The two are distinguished by which field is present (`script` vs `procedure`),
+ * so existing entries need no `kind` field.
  */
 
-export interface Migration {
+interface BaseMigration {
   /** Stable key recorded in the box's migrations.jsonl. */
   readonly name: string;
+}
+
+/** A deterministic migrator script. */
+export interface ScriptMigration extends BaseMigration {
   /** Path to the migrator script, relative to the callback-box repo root. */
   readonly script: string;
+}
+
+/** An agent-applied migration that runs a procedure definition. */
+export interface ProcedureMigration extends BaseMigration {
+  /** Procedure definition name (resolved from config/procedures/). */
+  readonly procedure: string;
+}
+
+export type Migration = ScriptMigration | ProcedureMigration;
+
+/** Discriminate by the present field — no `kind` tag needed. */
+export function isProcedureMigration(m: Migration): m is ProcedureMigration {
+  return "procedure" in m;
 }
 
 export const MIGRATIONS: ReadonlyArray<Migration> = [
@@ -52,6 +73,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "capture-session",   script: "scripts/migrate/capture-session.ts" },
   { name: "delete-deprecated-cards", script: "scripts/migrate/delete-deprecated-cards.ts" },
   { name: "bill",              script: "scripts/migrate/bill.ts" },
+  // First agent-applied (procedure-kind) migration: rewrite box-local views to
+  // the post-cleanup ViewCard shape. See docs/plans/agent-applied-migrations.md.
+  { name: "view-card-shape",   procedure: "view-card-shape" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

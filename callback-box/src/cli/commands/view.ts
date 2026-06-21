@@ -25,16 +25,20 @@
 
 import { Command } from "commander";
 import * as path from "node:path";
+import * as os from "node:os";
 import { promises as fs } from "node:fs";
 import { pathToFileURL } from "node:url";
+import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
+import { spawn } from "node:child_process";
 import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../lib/paths.js";
-import { compileView } from "../../webapp/views/compiler.js";
+import { compileView, listViews } from "../../webapp/views/compiler.js";
 import { loadViewCards } from "../../core/view-cards.js";
+import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import type { ViewProps } from "../../types/views.js";
 
@@ -145,17 +149,29 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     }
   }
 
-  // Write the compiled module to a temp file under the package's node_modules
-  // cache: bare `react`/`react/jsx-runtime` imports resolve to the same
-  // node_modules React this process uses (single instance — hooks work, no
-  // dispatcher mismatch), and it's a gitignored, writable location, so a file
-  // leaked by an interrupted run never lands in the tracked tree.
-  const tmpDir = path.join(PACKAGE_ROOT, "node_modules", ".cache", "cb-view-test");
+  // The compiled module imports `react`/`react/jsx-runtime` as bare specifiers
+  // and must resolve them to the SAME instance the host react-dom/server uses
+  // (single instance — hooks work, no dispatcher mismatch). Node resolves bare
+  // imports by walking up `node_modules`, so the temp file needs a node_modules
+  // with react next to it. We use an OS-temp dir (writable everywhere — on prod
+  // /opt/callback is read-only to the box user, so the old node_modules/.cache
+  // location failed with EACCES) and symlink in the package's node_modules;
+  // Node dedupes by realpath, so react resolves to the one host copy.
+  // The node_modules that actually contains react — hoisted to the workspace
+  // root in dev, /opt/callback/node_modules on prod — resolved at runtime so the
+  // symlink points at the real copy regardless of layout.
+  const reactNodeModules = path.dirname(
+    path.dirname(
+      createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
+    ),
+  );
+  const tmpDir = path.join(os.tmpdir(), `cb-view-${randomUUID()}`);
   await fs.mkdir(tmpDir, { recursive: true });
-  const tmpFile = path.join(tmpDir, `view-${randomUUID()}.mjs`);
+  const tmpFile = path.join(tmpDir, "view.mjs");
   try {
-    // Inside the try so a partial write (e.g. disk full) is still cleaned up by
-    // the finally; fs.rm(force) is a no-op if the file was never created.
+    // Inside the try so a partial setup (e.g. disk full) is still cleaned up by
+    // the finally; fs.rm(recursive, force) is a no-op if nothing was created.
+    await fs.symlink(reactNodeModules, path.join(tmpDir, "node_modules"), "dir");
     await fs.writeFile(tmpFile, output, "utf-8");
     process.setSourceMapsEnabled(true);
 
@@ -188,9 +204,156 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     }
     return 0;
   } finally {
-    await fs.rm(tmpFile, { force: true });
+    await fs.rm(tmpDir, { recursive: true, force: true });
   }
 }
+
+/** Per-view outcome from `cb view check`. */
+export interface ViewCheckResult {
+  slug: string;
+  ok: boolean;
+  /** True when the render was killed by the timeout (a hang), not a thrown error. */
+  timedOut?: boolean;
+  /** Failure detail (render error or timeout note); absent when `ok`. */
+  error?: string;
+}
+
+const DEFAULT_VIEW_CHECK_TIMEOUT_MS = 30_000;
+
+/**
+ * Render one view in a killable child process (`cb view test <slug>`) with a
+ * hard timeout. A child is the only way to interrupt a pathological view whose
+ * render body loops synchronously — an in-process timeout can't fire while the
+ * event loop is blocked. SIGKILL guarantees the hang dies. Never rejects:
+ * spawn/exit failures resolve to `ok: false` so one bad view can't abort the
+ * sweep.
+ */
+function checkOneView(args: {
+  boxRoot: string;
+  slug: string;
+  timeoutMs: number;
+  allowInvalidCards: boolean;
+}): Promise<ViewCheckResult> {
+  const { boxRoot, slug, timeoutMs, allowInvalidCards } = args;
+  const cbBin = path.join(PACKAGE_ROOT, "bin", "cb");
+  const testArgs = ["view", "test", slug, ...(allowInvalidCards ? ["--allow-invalid-cards"] : [])];
+  return new Promise((resolve) => {
+    const child = spawn(cbBin, testArgs, {
+      cwd: boxRoot,
+      timeout: timeoutMs,
+      killSignal: "SIGKILL",
+    });
+    let stderr = "";
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    child.on("error", (e) => {
+      resolve({ slug, ok: false, error: `could not run cb view test: ${e.message}` });
+    });
+    child.on("close", (code, signal) => {
+      if (code === 0) {
+        resolve({ slug, ok: true });
+        return;
+      }
+      const timedOut = signal === "SIGKILL";
+      const error = timedOut
+        ? `render timed out after ${String(timeoutMs)}ms`
+        : stderr.trim() || `cb view test exited with code ${String(code ?? "null")}`;
+      resolve({ slug, ok: false, ...(timedOut ? { timedOut: true } : {}), error });
+    });
+  });
+}
+
+/**
+ * Render every view in the box and report which fail. The whole-box gate (a
+ * migration's `validate.shells` check) and the broken-view detector. Sequential
+ * by design: each child may self-heal the CLI bundle on first run, and a
+ * migration check is not a hot path — so we avoid racing rebuilds and resource
+ * spikes rather than parallelize.
+ *
+ * v1 renders each view with default params (no `params.path`). A card-bound view
+ * that only breaks for a specific `params.path` is not yet exercised — the
+ * `params.path` sampling policy is a tracked follow-up (see the agent-applied
+ * migrations plan, Open q4).
+ */
+export async function checkViews(args: {
+  boxRoot: string;
+  timeoutMs: number;
+  allowInvalidCards?: boolean;
+}): Promise<{ ok: boolean; views: ViewCheckResult[] }> {
+  const { boxRoot, timeoutMs } = args;
+  const allowInvalidCards = args.allowInvalidCards ?? false;
+  const metas = await listViews(boxRoot);
+  const views: ViewCheckResult[] = [];
+  for (const meta of metas) {
+    views.push(await checkOneView({ boxRoot, slug: meta.slug, timeoutMs, allowInvalidCards }));
+  }
+  return { ok: views.every((v) => v.ok), views };
+}
+
+const viewTypecheckCommand = new Command("typecheck")
+  .description("Type-check every view against the real ViewProps; exit non-zero on type errors")
+  .option("--json", "Emit machine-readable JSON ({ ok, views: [{ slug, ok, errors? }] })")
+  .action(async (options: { json?: boolean }) => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const { ok, views } = await typecheckViews(boxRoot);
+      if (options.json === true) {
+        process.stdout.write(JSON.stringify({ ok, views }) + "\n");
+      } else {
+        for (const v of views) {
+          if (v.ok) {
+            process.stdout.write(`✓ ${v.slug}\n`);
+          } else {
+            process.stderr.write(`✗ ${v.slug}\n`);
+            for (const e of v.errors ?? []) process.stderr.write(`    ${e}\n`);
+          }
+        }
+        const failing = views.filter((v) => !v.ok).length;
+        process.stdout.write(`${String(views.length)} view(s), ${String(failing)} with type errors\n`);
+      }
+      process.exitCode = ok ? 0 : 1;
+    } catch (error) {
+      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
+const viewCheckCommand = new Command("check")
+  .description("Render every view in the box; exit non-zero if any fails")
+  .option("--json", "Emit machine-readable JSON ({ ok, views: [{ slug, ok, error? }] })")
+  .option(
+    "--timeout <ms>",
+    "Per-view render timeout in milliseconds",
+    String(DEFAULT_VIEW_CHECK_TIMEOUT_MS)
+  )
+  .option("--allow-invalid-cards", "Treat a view as OK if it renders but a dependency card fails to load")
+  .action(async (options: { json?: boolean; timeout?: string; allowInvalidCards?: boolean }) => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const parsed = Number(options.timeout);
+      const timeoutMs = Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_VIEW_CHECK_TIMEOUT_MS;
+      const { ok, views } = await checkViews({ boxRoot, timeoutMs, allowInvalidCards: options.allowInvalidCards === true });
+
+      if (options.json === true) {
+        process.stdout.write(JSON.stringify({ ok, views }) + "\n");
+      } else {
+        for (const v of views) {
+          if (v.ok) {
+            process.stdout.write(`✓ ${v.slug}\n`);
+          } else {
+            process.stderr.write(`✗ ${v.slug}: ${v.error ?? "failed"}\n`);
+          }
+        }
+        const failing = views.filter((v) => !v.ok).length;
+        process.stdout.write(`${String(views.length)} view(s), ${String(failing)} failing\n`);
+      }
+      process.exitCode = ok ? 0 : 1;
+    } catch (error) {
+      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  });
 
 const viewTestCommand = new Command("test")
   .description("Render a view in Node and print its output (or the error)")
@@ -226,4 +389,6 @@ const viewTestCommand = new Command("test")
 
 export const viewCommand = new Command("view")
   .description("Work with agent-authored views")
-  .addCommand(viewTestCommand);
+  .addCommand(viewTestCommand)
+  .addCommand(viewCheckCommand)
+  .addCommand(viewTypecheckCommand);

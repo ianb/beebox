@@ -91,6 +91,7 @@ process-captures.procedure.card
 process-pages.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card
+view-card-shape.procedure.card
 ```
 
 ``` continue
