@@ -14,13 +14,21 @@ steps:
     precheck:
       shells:
         - |-
-          # Idempotent: if every view already renders, there is nothing to fix.
-          if cb view check; then
+          # Run the fix step if any view fails to render, OR if any view still
+          # references a removed ViewCard field. The textual check catches
+          # SILENT breakage: a view that reads `card.tagName` (now undefined)
+          # renders without throwing but is wrong, so `cb view check` alone
+          # would skip it. `.children`/`.text` are too common in React to grep
+          # safely; tagName/attrs/element are ViewCard-specific enough.
+          if ! cb view check >/dev/null 2>&1; then
+            echo "Views fail to render — running the fix step."
+          elif grep -rEl '\.(tagName|attrs|element)\b' views/ 2>/dev/null | grep -q .; then
+            echo "Views still reference removed ViewCard fields — running the fix step."
+          else
             exit $CHECK_SKIP
           fi
-          echo "Broken views found — running the fix step."
       whys:
-        - All views already render against the new ViewCard shape.
+        - All views render AND none reference removed ViewCard fields.
     run:
       agents:
         - prompt: |-
@@ -41,7 +49,13 @@ steps:
             `- [x]` ONLY when that item is genuinely done, appending a one-line
             note of what you changed and where (cite the file):
 
-            - [ ] Ran `cb view check --json` and listed every failing view.
+            - [ ] Ran `cb view check --json` AND `grep -rnE
+                  '\.(tagName|attrs|children|text|element)\b|card\.status' views/`
+                  to find both views that fail to render AND views that still
+                  reference removed fields. NOTE: a view can use `card.tagName`
+                  (now undefined) and still render without throwing — it is
+                  silently wrong. Fix those too, not just the ones cb view check
+                  flags.
             - [ ] Replaced every `card.tagName` with `card.type`.
             - [ ] Replaced every `card.status` with `card.frontmatter?.status`.
             - [ ] For each use of a removed field (`card.attrs`, `card.children`,
