@@ -1,0 +1,75 @@
+---
+name: view-card-shape
+description: |-
+  Update box-local custom views (views/*.tsx) to the current ViewCard shape after
+  the card-shape cleanup. The ViewCard a view receives changed: `tagName` became
+  `type`, and `attrs`, `text`, `children`, `element`, and the top-level `status`
+  were removed — card data now lives in `frontmatter` (parsed YAML fields) and
+  `body` (markdown). An agent rewrites each broken view to read the new shape;
+  the step is gated by `cb view check` (every view must render) plus a checklist
+  the agent must fully work. Run by `cb migrate` as a procedure-kind migration.
+steps:
+  - id: fix-views
+    description: Rewrite every broken view to the new ViewCard interface
+    precheck:
+      shells:
+        - |-
+          # Idempotent: if every view already renders, there is nothing to fix.
+          if cb view check; then
+            exit $CHECK_SKIP
+          fi
+          echo "Broken views found — running the fix step."
+      whys:
+        - All views already render against the new ViewCard shape.
+    run:
+      agents:
+        - prompt: |-
+            Migrate this box's custom views (views/*.tsx) to the current ViewCard
+            interface. The ViewCard a view receives CHANGED:
+              - `card.tagName`  → `card.type`
+              - `card.status`   → `card.frontmatter?.status`
+              - `card.attrs`, `card.text`, `card.children`, `card.element` were
+                REMOVED. Card data now lives in `card.frontmatter` (parsed YAML
+                fields, minus the body) and `card.body` (the markdown body). The
+                old XML element-tree (children/text/attrs of nested elements) is
+                gone — the equivalent data is in the card's frontmatter; read an
+                actual card of that type to see where each field now lives.
+
+            Maintain a checklist file at
+            `config/migration-runs/view-card-shape.checklist.md`. Create it with
+            exactly these items as markdown checkboxes, and change `- [ ]` to
+            `- [x]` ONLY when that item is genuinely done, appending a one-line
+            note of what you changed and where (cite the file):
+
+            - [ ] Ran `cb view check --json` and listed every failing view.
+            - [ ] Replaced every `card.tagName` with `card.type`.
+            - [ ] Replaced every `card.status` with `card.frontmatter?.status`.
+            - [ ] For each use of a removed field (`card.attrs`, `card.children`,
+                  `card.text`, `card.element`): read a real card of that type,
+                  found where the data now lives in `frontmatter`/`body`, and
+                  rewrote the view to read it there — PORTING the feature, not
+                  deleting it.
+            - [ ] Updated any local `ViewCard`/`ViewCardChild` type a view
+                  declares so it matches the new shape (path, type, frontmatter,
+                  body, attachments).
+            - [ ] `cb view check` passes with zero failing views.
+
+            You control how you work the list — fix views in any order, and loop
+            back to an earlier item if a later `cb view check` reveals more. When
+            `cb view check` is green and every box is checked, you are done. Do
+            NOT check a box you did not actually complete; do NOT satisfy a check
+            by deleting functionality.
+    validate:
+      shells:
+        - cb view check
+        - |-
+          # Completeness gate: the checklist must exist, have at least one
+          # checked box, and have no unchecked boxes left.
+          f="config/migration-runs/view-card-shape.checklist.md"
+          test -f "$f" && grep -q '\[x\]' "$f" && ! grep -q '\[ \]' "$f"
+      severity: abort
+      instructions:
+        - Every view renders (cb view check is green) and the checklist is fully worked.
+      whys:
+        - The migration is only complete when all views render and every checklist item is done.
+---

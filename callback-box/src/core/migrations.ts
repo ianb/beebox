@@ -73,6 +73,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "capture-session",   script: "scripts/migrate/capture-session.ts" },
   { name: "delete-deprecated-cards", script: "scripts/migrate/delete-deprecated-cards.ts" },
   { name: "bill",              script: "scripts/migrate/bill.ts" },
+  // First agent-applied (procedure-kind) migration: rewrite box-local views to
+  // the post-cleanup ViewCard shape. See docs/plans/agent-applied-migrations.md.
+  { name: "view-card-shape",   procedure: "view-card-shape" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
