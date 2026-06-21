@@ -508,8 +508,11 @@ const s = document.querySelector('[data-testid="chat-scroller"]');
 ({ fromBottom: s.scrollHeight - s.scrollTop - s.clientHeight, scrollHeight: s.scrollHeight });
 ```
 
-**Driving the scroll regressions via `bin/browse`.** The defects this redesign
-fixed are reproducible as `bin/browse eval` recipes against `/fakestream`:
+**Driving the scroll regressions via `bin/browse`.** The full step-by-step
+procedure (setup, all six scenarios with expected outputs, and the real-device
+checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
+defects this redesign fixed are reproducible as `bin/browse eval` recipes
+against `/fakestream`:
 
 - **Follow while pinned:** send `/fakestream`, sample `fromBottom` repeatedly —
   it must stay `<= ~2` while `scrollHeight` grows.
