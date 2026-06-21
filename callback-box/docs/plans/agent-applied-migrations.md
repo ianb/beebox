@@ -37,10 +37,19 @@ Landed on this branch and verified deterministically (full suite green):
   exact `card.attrs` error; the procedure parses, passes the gate guard, and
   appears in `cb migrate --status`.
 
+Also landed since:
+- **Silent-breakage detection** — the precheck now also triggers when a view
+  textually references a removed field (not just when it throws), and a prod-only
+  EACCES in the renderer's temp dir was fixed. Both found by the live runs.
+- **The live agent run is done** — verified end-to-end on test1 (`todos.tsx`) and
+  prod `hearth` (`roadtrip-map.tsx`, which was *silently* broken on
+  `c.tagName` and is now `c.type`). The agent, gate, and idempotency all work.
+
 Outstanding (not yet done):
-- **The live agent run** — actually executing `cb procedure run view-card-shape`
-  so an agent rewrites a broken view to green. The mechanism is verified; the
-  agent *executing* it is not.
+- **Track 5 — `cb view typecheck`** — the proper static gate for silent
+  breakage (see below). The textual precheck is a heuristic stopgap; a real
+  `tsc` pass is the fix. Requires the migration to also make views use real
+  `ViewProps` annotations (drop local types + `as any`) so it has teeth.
 - **Checklist deletion** — the checklist file currently persists (committed)
   rather than being deleted post-step; deletion needs procedure-engine support.
 - **`cb view check` `params.path` sampling** (Open q4) and faster isolation
@@ -306,6 +315,44 @@ Ordered by dependency, then surface size.
     is enforced by agent honesty + human diff review, not a machine gate (v1).
 - **First chunk.** The codemod migrator + the procedure definition + checklist
   template + the two registry entries. Depends on Tracks 1–3.
+
+### Track 5 — `cb view typecheck`: a static gate (the real fix for silent breakage)
+
+- **What.** Type-check each box view against the real `ViewProps`/`ViewCard`,
+  so a removed/renamed field is caught *statically* — not only when it throws
+  (`cb view test`) or by textual grep (the precheck heuristic).
+- **Why.** The prod run on `hearth` proved the gap: `roadtrip-map.tsx` read
+  `c.tagName` (now undefined) — it compiled (esbuild strips types,
+  `compiler.ts:182` lintViewFile is "compile only, no type-check"), rendered
+  without throwing (`c.tagName === "trip"` is just `false`), so every existing
+  layer passed it green while the view silently showed nothing. Only a real
+  `tsc` pass against the actual interface catches that class.
+- **Direction.**
+  - In-process TypeScript API (`typescript` is available on the box; **move it
+    from devDependencies to dependencies** to make the runtime reliance
+    explicit — `esbuild` already is, for the same reason).
+  - Per view: a tmp dir with a `node_modules` symlink to react's node_modules
+    (same resolution trick the renderer uses — box views resolve nothing from
+    the box dir), a copy of the view, and a generated harness
+    (`const _: ComponentType<ViewProps> = ViewDefault;`). `ts.createProgram` →
+    report diagnostics in the view + the assignment. Lenient config
+    (`strict:false`, `skipLibCheck`) to avoid noise; the property-existence and
+    export-assignability errors still fire.
+  - **Teeth depend on annotation.** It catches views typed against the real
+    `ViewProps`/`ViewCard` (then `c.tagName` errors) and views whose stale
+    *local* type declares a removed field as required (the boundary assertion
+    fails). It does NOT catch `(c as any)` casts or fully-unannotated views —
+    `tsc` can't see through `any`. So Track 4's checklist must also have the
+    agent **drop local `ViewCard` re-declarations and `as any` casts, typing the
+    component as the real `ViewProps`**, so this gate has something to bite on
+    going forward.
+  - Surface it as `cb view typecheck` and fold it into the migration's
+    `validate.shells` (alongside `cb view check`) so the gate is static, not
+    just render-based.
+- **First chunk.** `typecheckViews()` (TS-API harness) + `cb view typecheck`
+  CLI + a doctest: a view annotated `cards: ViewCard[]` (real) using `c.tagName`
+  fails; a clean view passes; an `as any` view passes (documented limitation).
+  Then move `typescript` to deps and add the gate to Track 4's procedure.
 
 ## Subplans
 
