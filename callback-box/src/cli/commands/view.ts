@@ -38,6 +38,7 @@ import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../lib/paths.js";
 import { compileView, listViews } from "../../webapp/views/compiler.js";
 import { loadViewCards } from "../../core/view-cards.js";
+import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import type { ViewProps } from "../../types/views.js";
 
@@ -286,6 +287,34 @@ export async function checkViews(args: {
   return { ok: views.every((v) => v.ok), views };
 }
 
+const viewTypecheckCommand = new Command("typecheck")
+  .description("Type-check every view against the real ViewProps; exit non-zero on type errors")
+  .option("--json", "Emit machine-readable JSON ({ ok, views: [{ slug, ok, errors? }] })")
+  .action(async (options: { json?: boolean }) => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const { ok, views } = await typecheckViews(boxRoot);
+      if (options.json === true) {
+        process.stdout.write(JSON.stringify({ ok, views }) + "\n");
+      } else {
+        for (const v of views) {
+          if (v.ok) {
+            process.stdout.write(`✓ ${v.slug}\n`);
+          } else {
+            process.stderr.write(`✗ ${v.slug}\n`);
+            for (const e of v.errors ?? []) process.stderr.write(`    ${e}\n`);
+          }
+        }
+        const failing = views.filter((v) => !v.ok).length;
+        process.stdout.write(`${String(views.length)} view(s), ${String(failing)} with type errors\n`);
+      }
+      process.exitCode = ok ? 0 : 1;
+    } catch (error) {
+      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.exitCode = 1;
+    }
+  });
+
 const viewCheckCommand = new Command("check")
   .description("Render every view in the box; exit non-zero if any fails")
   .option("--json", "Emit machine-readable JSON ({ ok, views: [{ slug, ok, error? }] })")
@@ -356,4 +385,5 @@ const viewTestCommand = new Command("test")
 export const viewCommand = new Command("view")
   .description("Work with agent-authored views")
   .addCommand(viewTestCommand)
-  .addCommand(viewCheckCommand);
+  .addCommand(viewCheckCommand)
+  .addCommand(viewTypecheckCommand);
