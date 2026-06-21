@@ -162,5 +162,5 @@ steps:
           If a dirty MAP.md is silently missed, state stamping will move
           the asOf forward and future precheck runs won't notice the
           stale listing.
-      severity: review
+      severity: abort
 ---

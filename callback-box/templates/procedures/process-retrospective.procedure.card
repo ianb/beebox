@@ -189,5 +189,5 @@ steps:
         - |-
           An unfinalized report means observations were ledgered but never
           became beliefs — the loop silently stops learning.
-      severity: review
+      severity: abort
 ---
