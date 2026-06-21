@@ -47,6 +47,21 @@ const USER_INTENT_WINDOW_MS = 250;
 
 const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home", "End", " "]);
 
+// The topmost child still (partly) visible in the scroller, with its offset
+// from the viewport top — the anchor used to hold a detached view steady when
+// content above it changes size.
+function topVisibleChild(scroller: HTMLDivElement | null, content: HTMLDivElement | null): { el: Element; top: number } | null {
+  if (!scroller || !content) return null;
+  const scTop = scroller.getBoundingClientRect().top;
+  for (let i = 0; i < content.children.length; i++) {
+    const child = content.children[i];
+    if (!child) break;
+    const r = child.getBoundingClientRect();
+    if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
+  }
+  return null;
+}
+
 export interface StickToBottom {
   /** Attach to the scroll container (the `overflow-y:auto` element). */
   scrollerRef: (el: HTMLDivElement | null) => void;
@@ -84,6 +99,11 @@ export function useStickToBottom(): StickToBottom {
   // When set, the next content growth is a prepend (older messages loaded
   // above); holds the pre-prepend (scrollHeight - scrollTop) gap to preserve.
   const prependGapRef = useRef<number | null>(null);
+  // While detached, the topmost still-visible child and its offset from the
+  // viewport top, so content resizing *above* the viewport (a late-loading
+  // image / embed / card) can be compensated instead of shoving the view down.
+  const anchorRef = useRef<{ el: Element; top: number } | null>(null);
+  const anchorTimerRef = useRef<number | null>(null);
   const observersRef = useRef<{ content: ResizeObserver | null; scroller: ResizeObserver | null }>({
     content: null,
     scroller: null,
@@ -135,6 +155,15 @@ export function useStickToBottom(): StickToBottom {
     if (SCROLL_KEYS.has(e.key)) lastUserIntentAtRef.current = performance.now();
   }, []);
 
+  // Refresh the anchor (only meaningful while detached) shortly after the
+  // user pauses scrolling, so a resize that lands while they read is corrected.
+  const scheduleAnchorCapture = useCallback(() => {
+    if (anchorTimerRef.current !== null) window.clearTimeout(anchorTimerRef.current);
+    anchorTimerRef.current = window.setTimeout(() => {
+      anchorRef.current = pinnedRef.current ? null : topVisibleChild(scrollerElRef.current, contentElRef.current);
+    }, 80);
+  }, []);
+
   const handleScroll = useCallback(() => {
     const el = scrollerElRef.current;
     if (!el) return;
@@ -149,12 +178,15 @@ export function useStickToBottom(): StickToBottom {
     const recentIntent = performance.now() - lastUserIntentAtRef.current < USER_INTENT_WINDOW_MS;
     if (scrolledUp && recentIntent) {
       setPinned(false);
+      anchorRef.current = topVisibleChild(el, contentElRef.current);
     } else if (fromBottom <= NEAR_BOTTOM_PX) {
       setPinned(true);
       setUnseen(false);
+      anchorRef.current = null;
     }
+    if (!pinnedRef.current) scheduleAnchorCapture();
     lastScrollTopRef.current = top;
-  }, [setPinned, setUnseen]);
+  }, [setPinned, setUnseen, scheduleAnchorCapture]);
 
   // Both ResizeObservers funnel here. `source` distinguishes a content-height
   // change (may be new content worth flagging) from a scroller-box change
@@ -180,9 +212,20 @@ export function useStickToBottom(): StickToBottom {
       writeToBottom("instant");
       return;
     }
-    // Detached: the browser holds scrollTop, so bottom growth and chrome
-    // resizes leave the view stable on their own. Just flag genuinely new
-    // content so the button can signal it.
+    // Detached: if content *above* the captured anchor changed size (a
+    // late-loading image/embed/card), the anchor has moved on screen — shift
+    // scrollTop to put it back, so the user's reading position holds steady.
+    // Safari has no native scroll anchoring, so we do this ourselves.
+    const anchor = anchorRef.current;
+    if (anchor && anchor.el.isConnected) {
+      const newTop = anchor.el.getBoundingClientRect().top - el.getBoundingClientRect().top;
+      const delta = newTop - anchor.top;
+      if (Math.abs(delta) > 1) {
+        writeTop(el.scrollTop + delta, "instant");
+        return; // existing content reflowed, not new — don't flag as unseen
+      }
+    }
+    // Growth below the anchor (or no anchor): genuinely new content arriving.
     if (source === "content" && grew) setUnseen(true);
   }, [writeTop, writeToBottom, setUnseen]);
 
@@ -224,6 +267,7 @@ export function useStickToBottom(): StickToBottom {
     return () => {
       if (observers.content) observers.content.disconnect();
       if (observers.scroller) observers.scroller.disconnect();
+      if (anchorTimerRef.current !== null) window.clearTimeout(anchorTimerRef.current);
     };
   }, []);
 
