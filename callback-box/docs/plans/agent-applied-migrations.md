@@ -45,11 +45,19 @@ Also landed since:
   prod `hearth` (`roadtrip-map.tsx`, which was *silently* broken on
   `c.tagName` and is now `c.type`). The agent, gate, and idempotency all work.
 
+Also landed:
+- **Track 5 — `cb view typecheck`** — the static gate (in-process TS API,
+  harness asserting `ComponentType<ViewProps>`). Folded into the migration's
+  precheck + `validate.shells`; the checklist now drops local types + `as any`
+  so it has teeth. `typescript` moved to dependencies. Verified in dev (doctest:
+  flags a stale-typed view, passes clean, slips `as any`) and live on prod
+  `hearth`. Remaining nuance: it can't see through `as any` — the render +
+  textual gates backstop those.
+
 Outstanding (not yet done):
-- **Track 5 — `cb view typecheck`** — the proper static gate for silent
-  breakage (see below). The textual precheck is a heuristic stopgap; a real
-  `tsc` pass is the fix. Requires the migration to also make views use real
-  `ViewProps` annotations (drop local types + `as any`) so it has teeth.
+- Nothing tracked. Possible future polish: engine support to delete the
+  checklist file post-step (it persists, committed), and richer `params.path`
+  sampling in `cb view check`.
 - **Checklist deletion** — the checklist file currently persists (committed)
   rather than being deleted post-step; deletion needs procedure-engine support.
 - **`cb view check` `params.path` sampling** (Open q4) and faster isolation
