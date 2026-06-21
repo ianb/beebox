@@ -86,13 +86,51 @@ Attributes:
 
 ### Instructions
 
-`<instruction>` is evaluated by a model against the git diff. Used in `<validate>` to check whether a step achieved its goal.
+`instructions:` is **intended** to be evaluated by a model against the git diff,
+but is **not implemented yet** — the engine logs the instruction and treats it as
+pass-by-default (`engine-phase.ts`, "instruction checks pass by default" TODO).
+Until it's built, do **not** rely on `instructions` to gate anything: put the
+real check in `shells:`. Leave `instructions` as human-readable intent only.
 
 ### Validation Severity
 
-- `severity="warn"` — log and continue
-- `severity="review"` — evaluate with model, attempt one fix if failed
-- `severity="abort"` — stop the procedure
+- `severity="warn"` — log and continue.
+- `severity="abort"` — a failing `shells:` check fails the step (and, for a
+  `kind: "procedure"` migration, blocks the migration). **This is the only
+  severity that actually gates.**
+- `severity="review"` — *intended* to re-invoke the agent with the failure
+  context, but **not implemented**: it currently downgrades the failure to a
+  warning and continues (`engine-phase.ts` TODO). Treat it as `warn` until built;
+  for a hard gate use `abort`.
+
+A step is marked `failed` only when a `validate` `shells` check fails **and**
+`severity` is `abort`. A failing agent invocation does **not** itself fail the
+step (it's logged) — so if you need "the agent must have actually done the work,"
+encode that as a `shells` check, don't assume the agent succeeding means the step
+did.
+
+### Checklists (opt-in thoroughness)
+
+For a step where you want the agent to work methodically through several items
+and leave an auditable trail, use a **checklist** — a convention, not a separate
+engine feature:
+
+- Embed the items in the agent prompt as markdown checkboxes (`- [ ]`), and tell
+  the agent to maintain a working copy (e.g.
+  `config/migration-runs/<name>.checklist.md`), flipping `- [ ]` → `- [x]` only
+  when an item is genuinely done, with a one-line grounded note (cite the file).
+- Gate completion in `validate.shells` with a completeness check —
+  `test -f "$f" && grep -q '\[x\]' "$f" && ! grep -q '\[ \]' "$f"` — so the step
+  can't pass with unfinished items. This *also* gives you safe partial failure:
+  an agent that runs out of `max-turns` leaves `[ ]` boxes, the gate blocks
+  `completed`, and re-running resumes.
+- The checklist forces decomposition and records the agent's path; the **objective**
+  `shells` check (does the thing actually work) is still what proves correctness.
+  Completeness + objective check together; agent honesty + the committed checklist
+  + diff review backstop "is a checked box truthful."
+
+The agent controls traversal — it can reorder and loop back. The working file is
+the agent's externalized reasoning, not an engine-tracked state machine.
 
 ## Execution Model
 
