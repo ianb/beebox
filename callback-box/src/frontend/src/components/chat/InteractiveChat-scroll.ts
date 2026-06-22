@@ -182,7 +182,13 @@ export function useStickToBottom(): StickToBottom {
     if (scrolledUp && recentIntent) {
       setPinned(false);
       anchorRef.current = topVisibleChild(el, contentElRef.current);
-    } else if (fromBottom <= NEAR_BOTTOM_PX) {
+    } else if (!scrolledUp && fromBottom <= NEAR_BOTTOM_PX) {
+      // Re-engage only on a genuine downward (or stationary) scroll that lands
+      // near the bottom. A browser *clamp* — when content shrinks below the
+      // user's position (e.g. a turn finalizing shorter than its streamed form)
+      // — fires a scroll event that DECREASES scrollTop (scrolledUp) to the new
+      // bottom; that must NOT re-pin, or the next growth (a late image/embed)
+      // would follow and yank a scrolled-up reader to the bottom.
       setPinned(true);
       setUnseen(false);
       anchorRef.current = null;

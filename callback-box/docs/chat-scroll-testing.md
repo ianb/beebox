@@ -92,6 +92,21 @@ bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scrolle
 # expect {shift:0}
 ```
 
+### 5b. A finalize/content shrink must not re-pin a scrolled-up reader
+When a turn finalizes shorter than its streamed form (or any content shrinks
+below the reader's position), the browser *clamps* `scrollTop` to the new
+bottom. That clamp must NOT re-engage following — otherwise the next growth (a
+late image/embed) yanks the reader down. Detach to *near* the bottom, shrink the
+last item, then grow it:
+```bash
+# detached near bottom (fb ~150), button present:
+bin/browse eval '(()=>{const s=document.querySelector("[data-testid=chat-scroller]");s.dispatchEvent(new WheelEvent("wheel",{deltaY:-150,bubbles:true}));s.scrollTop=s.scrollHeight-s.clientHeight-150;return "up";})()'
+# shrink the last item 300px (forces a clamp), then assert the button stays:
+bin/browse eval '(()=>{const c=document.querySelector("[data-testid=chat-scroller] .max-w-5xl").lastElementChild;c.style.height=(c.getBoundingClientRect().height-300)+"px";c.style.overflow="hidden";return "shrank";})()'
+# button must STILL be present (not re-pinned); then grow +400 and fromBottom must NOT be ~0
+bin/browse eval '(()=>{const b=document.querySelector("button[aria-label=\"Scroll to latest messages\"]");return "btn="+!!b;})()'   # expect btn=true
+```
+
 ### 6. Real-turn finalize (no flash)
 Send a real message and watch the streamed bubble become the finalized message
 with no flash/jump. A per-frame recorder helps, but note its `flashed` flag goes
