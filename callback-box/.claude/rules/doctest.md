@@ -5,11 +5,12 @@ paths:
 
 `.doctest.md` files are executable test documents. A Node.js loader transforms them into tap tests at runtime.
 
+- **Every code block declares `ts`** (`ts setup`, `ts`, `ts continue`, `ts cleanup`) so the doc browser highlights it. The runner ignores the language token — it keys only on the `setup`/`continue`/`cleanup` directive — but write the `ts` anyway for consistent rendering.
 - ` ```ts setup ` blocks run at module scope (imports, helpers)
-- Regular ` ``` ` blocks contain examples: `expression` then `=> expected`
+- Regular ` ```ts ` blocks contain examples: `expression` then `=> expected`
 - Multiple examples per block OK — separate with blank lines. **Examples in a block share scope** (variables persist)
-- ` ``` continue ` blocks append to the previous block's scope — use for prose between code sections that share variables
-- ` ``` cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. **It tears down the test it follows** — examples in later (non-`continue`) blocks run *after* the cleanup, so a tmp box created in one block is already deleted by the time the next block runs. Keep everything that uses the resource in the same block (or chained `continue` blocks) and put the cleanup at the section's end.
+- ` ```ts continue ` blocks append to the previous block's scope — use for prose between code sections that share variables
+- ` ```ts cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. **It tears down the test it follows** — examples in later (non-`continue`) blocks run *after* the cleanup, so a tmp box created in one block is already deleted by the time the next block runs. Keep everything that uses the resource in the same block (or chained `continue` blocks) and put the cleanup at the section's end.
 - Multi-line template literals work in example blocks (blank lines, `=>`-looking lines, and `;` line-endings inside the literal are treated as string content). The tracker doesn't understand backticks inside regex literals or `${}` interpolations — avoid those spanning lines.
 - `=> value` starts the expected result on the same line; continues on subsequent lines until a blank line or end of block. `=>` alone starts expected on the next line. Both forms work the same way — **a blank line always separates examples**
 - No `=>` means "just run" — use for setup statements within a block
