@@ -31,3 +31,20 @@ controller depends on:
 `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
 behavior can't be doctested), and verify on a real iOS device for
 keyboard/momentum/rubber-band, which headless Chromium can't emulate.
+
+## Streaming → finalize
+
+The live (still-streaming) assistant turn and its finalized form render through
+**one component (`AssistantMessage`) under one stable key** — the streamed turn
+is a *provisional* assistant group (built by `buildStreamEntry`, appended in
+`buildDataItems`) keyed by `liveTurnId` (chat-machine context, set on send), and
+`MessageList` keys the newest assistant group by that same `liveTurnId`. So
+finalize is an in-place props update, not a remount.
+
+**Invariant: don't render the streaming turn as a separate bubble/component and
+swap in the finalized one** — that remount is the "shudder" this design removed
+(`docs/implemented-plans/chat-stream-finalize-unify.md`). `liveTurnId` is held
+across finalize until the next send; the previous turn re-keys to its uuid only
+then (a one-time, send-masked remount — the deliberate trade-off). Because both
+states go through `AssistantMessage`, the now-playing speech highlight works
+during streaming too.

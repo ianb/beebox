@@ -297,6 +297,54 @@ tests:
     watch_for: "Describes <procedure ref='...'> in job cards and reactor trampolining"
     correct_contains: ["procedure"]
     tags: [procedures, jobs]
+
+  # === Procedure gating & checklists ===
+  #
+  # These guard the two failure modes the agent-applied (procedure) migration
+  # work surfaced: trusting unimplemented gates (severity:review / model-judged
+  # instructions), and not knowing the checklist+completeness-grep convention
+  # that keeps a multi-item step honest and resumable.
+  #
+  # Status (2026-06-21): both pass. The agent nails the substance from
+  # always-on context — it cites the procedure schema's own instructions
+  # ("the only kind that actually gates", from src/schemas/procedure.ts via the
+  # generated card-procedure.md) and describes the checklist/grep/resume
+  # mechanism directly. No forced doc read: an earlier should_read on
+  # procedures.md was the wrong expectation (the agent answers a better way),
+  # so it was dropped.
+
+  - id: procedure-what-gates
+    prompt: >
+      I'm writing the validate phase of a procedure step. I want the step to
+      HARD-FAIL (and, if it's a migration, block the migration) unless the work
+      is actually done. Of these, which one actually enforces that today: the
+      agent reporting success, a `severity: review` retry, a model-judged
+      `instructions:` entry, or a `shells:` check with `severity: abort`?
+    expected_level: knows_about
+    watch_for: >
+      Must say a `shells` check with `severity: abort` is the only thing that
+      gates. Must flag that `severity: review` and model-judged `instructions`
+      are NOT implemented (they log / downgrade to warn) and that a failing
+      agent invocation does not fail the step. The dangerous failure is
+      confidently claiming review or instructions will enforce completion.
+    correct_contains: ["shells", "abort"]
+    tags: [procedures, migration]
+
+  - id: procedure-checklist-discipline
+    prompt: >
+      A procedure step has an agent fix many things in one run. How would you
+      (a) keep it from claiming "done" with items left unfinished, and (b) let
+      it resume where it left off if it runs out of turns — without adding a new
+      engine feature?
+    expected_level: knows_directly
+    watch_for: >
+      Describes the checklist convention: a working markdown file of
+      `- [ ]`/`- [x]` items the agent maintains, gated by a validate `shells`
+      completeness check that fails while any `[ ]` remains. Should note this
+      doubles as resume (leftover `[ ]` blocks completion, re-run continues) and
+      that an objective shells check still proves the work, not the checkboxes.
+    correct_contains_any: ["checklist", "[ ]", "checkbox", "[x]"]
+    tags: [procedures, migration]
     notes: >
       Agent knows this directly from the agent guide and procedures doc
       loaded in context. No need to require file reads.

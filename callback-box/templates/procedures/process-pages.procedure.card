@@ -270,5 +270,5 @@ steps:
         - |-
           Unprocessed pages will sit in inbox forever. The agent must
           make a decision (or ask) for every item.
-      severity: review
+      severity: abort
 ---

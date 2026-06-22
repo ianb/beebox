@@ -7,7 +7,7 @@
  * rendering and data-array assembly live in InteractiveChat-message-items.tsx.
  */
 
-import { useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
@@ -21,6 +21,38 @@ import {
   type RenderItemContext,
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
+
+interface LiveTurnState { turnId: string | null; uuid: string | null }
+
+/**
+ * The uuid of the group that should carry the live-turn key, given the previous
+ * render's state. While streaming it's the provisional group's synthetic uuid;
+ * at the moment streaming ends we bind to the *finalized* group's real uuid (the
+ * last non-marker item, when it's an assistant) and hold it until the next turn.
+ *
+ * Binding to a specific group — not "whichever assistant is newest" — is what
+ * stops a background/queued turn that appends later from stealing the key (which
+ * would remount the real turn and mis-key the new one). A no-response turn
+ * finalizes to no assistant group, so nothing stays live (the provisional simply
+ * unmounts). Pure: the caller commits the result via set-state-during-render.
+ */
+function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveTurnId: string | null; streamingShown: boolean }): string | null {
+  const { prev, data, liveTurnId, streamingShown } = opts;
+  const provisionalUuid = liveTurnId ? `live-${liveTurnId}` : null;
+  if (streamingShown) return provisionalUuid;
+  if (prev.turnId !== liveTurnId) return null;
+  // First non-streaming render after the turn streamed: bind to the finalized
+  // group (skip trailing markers; null if the turn produced no assistant group).
+  if (provisionalUuid && prev.uuid === provisionalUuid) {
+    for (let i = data.length - 1; i >= 0; i--) {
+      const d = data[i];
+      if (!d || d.kind === "marker") continue;
+      return d.kind === "group" && d.group.type === "assistant" ? d.group.entries[0].uuid : null;
+    }
+    return null;
+  }
+  return prev.uuid;
+}
 
 function LoadOlderHeader({ hasOlder, loadingOlder, earlierCount, onLoadOlder }: {
   hasOlder: boolean;
@@ -73,7 +105,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
 export function MessageList({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
-  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, proseEnabled, pendingHqDraft,
+  totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -94,6 +126,7 @@ export function MessageList({
   onLoadOlder: () => void;
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
+  liveTurnId: string | null;
   proseEnabled: boolean;
   pendingHqDraft: string | null;
 }) {
@@ -112,8 +145,8 @@ export function MessageList({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView }),
-    [groups, modelMarkers, streamingShown, processingShown, pendingHqDraft, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView],
   );
 
   const { scrollerRef, contentRef, isPinned, hasUnseenContent, scrollToBottom, captureForPrepend } = useStickToBottom();
@@ -137,7 +170,27 @@ export function MessageList({
     [messages, streamText, boxSlug],
   );
 
-  const lastAssistantGroupIndex = groups.findLastIndex((g) => g.type === "assistant");
+  // Which group carries the live-turn key (bound to a specific group across
+  // renders — see nextLiveTargetUuid). The streamed and finalized form of that
+  // group share `live-${liveTurnId}` so React reconciles them in place. Tracked
+  // via set-state-during-render (same pattern the prepend anchor used) so the
+  // value is correct in this render with no one-frame lag.
+  const [liveState, setLiveState] = useState<LiveTurnState>({ turnId: null, uuid: null });
+  const liveTargetUuid = nextLiveTargetUuid({ prev: liveState, data, liveTurnId, streamingShown });
+  if (liveState.turnId !== liveTurnId || liveState.uuid !== liveTargetUuid) {
+    setLiveState({ turnId: liveTurnId, uuid: liveTargetUuid });
+  }
+  const liveKey = liveTurnId ? `live-${liveTurnId}` : null;
+
+  // Newest assistant group's index, for the now-playing speech-highlight match.
+  let lastAssistantGroupIndex = -1;
+  for (let i = data.length - 1; i >= 0; i--) {
+    const d = data[i];
+    if (d && d.kind === "group" && d.group.type === "assistant") {
+      lastAssistantGroupIndex = d.groupIndex;
+      break;
+    }
+  }
 
   const renderCtx = useMemo<RenderItemContext>(() => ({
     streamText,
@@ -180,9 +233,13 @@ export function MessageList({
             earlierCount={earlierCount}
             onLoadOlder={handleLoadOlder}
           />
-          {data.map((item) => (
-            <div key={dataItemKey(item)}>{renderDataItem(item, renderCtx)}</div>
-          ))}
+          {data.map((item) => {
+            // The live turn's group keeps one key across the streamed→finalized
+            // transition so React reconciles it in place — no remount/flash.
+            const natural = dataItemKey(item);
+            const key = liveKey && liveTargetUuid && natural === liveTargetUuid ? liveKey : natural;
+            return <div key={key}>{renderDataItem(item, renderCtx)}</div>;
+          })}
         </div>
       </div>
       {!isPinned ? (

@@ -26,8 +26,11 @@ Landed on this branch and verified deterministically (full suite green):
   whole-box render gate; per-view killable child + timeout.
 - **Track 2 (convention)** — the checklist convention is realized by the
   `view-card-shape` procedure's embedded `[ ]`/`[x]` checklist (Track 4). The
-  general `docs/procedure-implementation.md` write-up + knowledge audit are not
-  yet written.
+  general write-up landed in `docs/procedure-implementation.md` ("Checklists"
+  section) and the agent-facing generated guide; two knowledge audits
+  (`procedure-what-gates`, `procedure-checklist-discipline`) verify recall and
+  pass against test1. Authoring guidance for the whole class lives in
+  `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
 - **Track 3A/3B** — `Migration` discriminated union + `cb migrate` procedure
   dispatch + the "require a `validate.shells`+`abort` gate" guard
   (`src/core/migrations.ts`, `src/cli/commands/migrate.ts`).

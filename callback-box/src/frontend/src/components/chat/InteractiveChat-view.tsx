@@ -56,6 +56,7 @@ interface ChatBodyProps {
   modelMarkers: ModelMarker[];
   loadingOlder: boolean;
   scrollToBottomTrigger: number;
+  liveTurnId: string | null;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
@@ -117,7 +118,7 @@ function HeaderRegion(props: ChatBodyProps) {
 function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
-    processBusy, debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger,
+    processBusy, debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -143,6 +144,7 @@ function MessageListRegion(props: ChatBodyProps) {
       onLoadOlder={handleLoadOlder}
       loadingOlder={loadingOlder}
       scrollToBottomTrigger={scrollToBottomTrigger}
+      liveTurnId={liveTurnId}
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHqDraft={pendingHqDraft}
     />
