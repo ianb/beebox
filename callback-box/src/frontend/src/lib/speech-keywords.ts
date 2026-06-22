@@ -16,6 +16,7 @@ const sendPattern = KeywordPattern.compile(`
 const sendClosePattern = KeywordPattern.compile(`
   send and (close | stop | finish | done | sign off)
   send and close (the)? (mic | microphone | message)
+  set a closed (the)? (mic | microphone | message)
   over and out
 `);
 

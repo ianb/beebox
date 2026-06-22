@@ -69,6 +69,9 @@ detectKeyword("send and stop")?.action
 detectKeyword("send and close the mic")?.action
 => sendClose
 
+detectKeyword("set a closed message")?.action
+=> sendClose
+
 detectKeyword("over and out")?.action
 => sendClose
 
