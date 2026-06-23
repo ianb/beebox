@@ -52,13 +52,23 @@ class FigureRuntimeUnsupportedError extends Error {
   }
 }
 
-/** Lazily load the runtime library a sketch is handed as `lib`. */
+/**
+ * Lazily load the runtime library a sketch is handed as `lib`. Each `import()`
+ * becomes its own Vite chunk, loaded only when a figure of that runtime first
+ * renders. p5 hands over its default-exported constructor; three and d3 hand
+ * over their module namespace (`new lib.Scene()`, `lib.select(mount)`).
+ */
 async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   if (runtime === "p5js") {
     const mod = await import("p5");
     return mod.default;
   }
-  // three/d3 land with their harness chunks (plan Track 3b/c).
+  if (runtime === "three") {
+    return import("three");
+  }
+  if (runtime === "d3") {
+    return import("d3");
+  }
   throw new FigureRuntimeUnsupportedError(runtime);
 }
 
