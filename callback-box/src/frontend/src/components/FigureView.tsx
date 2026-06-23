@@ -14,7 +14,9 @@ import { getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { useViewFileHelpers } from "../hooks/useViewFileHelpers";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { coerceFigureParams, parseDeclaredParams } from "../lib/figure-params";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
+import { Markdown } from "./Markdown";
 import { Pre } from "./ui/Pre";
 import type { RendererProps } from "../renderers/index";
 import {
@@ -37,12 +39,19 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function FigureView({ data }: RendererProps) {
+export function FigureView({ data, onNavigate, params, mode }: RendererProps) {
   const apiBase = getApiBase();
   const frontmatter = useMemo(() => data.frontmatter ?? {}, [data.frontmatter]);
   const runtime = parseRuntime(frontmatter.runtime);
   const entry = typeof frontmatter.entry === "string" ? frontmatter.entry : "";
   const entryPath = entry === "" ? "" : resolveRelativePath(data.path, entry);
+
+  // Coerce embed query params against the card's declared `params` contract.
+  // Recomputed each render (pure + cheap); a param change reshapes `figure` and
+  // remounts the sketch via the FigureMount key below.
+  const declared = parseDeclaredParams(frontmatter.params);
+  const figureParams = coerceFigureParams(declared, params ?? {});
+  const paramsKey = JSON.stringify(figureParams);
 
   const [mod, setMod] = useState<FigureModule | null>(null);
   const [loading, setLoading] = useState(true);
@@ -86,12 +95,15 @@ export function FigureView({ data }: RendererProps) {
   });
 
   const fileHelpers = useViewFileHelpers(apiBase);
-  const figure: FigureContext = useMemo(() => ({
-    params: {},
+  // Built inline (not memoized): FigureMount reads it via a ref and remounts on
+  // `paramsKey`, so a fresh object identity each render is harmless — and it
+  // avoids a stale-deps disable.
+  const figure: FigureContext = {
+    params: figureParams,
     data: isRecord(frontmatter.data) ? frontmatter.data : {},
     meta: frontmatter,
     file: fileHelpers,
-  }), [frontmatter, fileHelpers]);
+  };
 
   if (runtime === null) {
     return <FigureError message={`Unknown figure runtime: ${String(frontmatter.runtime)}`} />;
@@ -107,11 +119,29 @@ export function FigureView({ data }: RendererProps) {
     return <FigureError message="Figure source has no default-exported sketch" />;
   }
 
-  return (
+  const figureEl = (
     <ViewErrorBoundary onRetry={loadModule}>
-      <FigureMount runtime={runtime} sketch={sketch} figure={figure} onError={setError} />
+      <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} />
     </ViewErrorBoundary>
   );
+
+  // Embedded (chat/companion): just the interactive — minimal chrome. On the
+  // full page, show the card's description below it. (FileView's page header
+  // already offers the Source toggle.)
+  if (mode === "page") {
+    const description = typeof data.body === "string" ? data.body : "";
+    return (
+      <div className="p-4">
+        {figureEl}
+        {description.trim() !== "" ? (
+          <div className="mt-3 max-w-2xl text-warm-700">
+            <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>{description}</Markdown>
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+  return figureEl;
 }
 
 function FigureError({ message }: { message: string }) {

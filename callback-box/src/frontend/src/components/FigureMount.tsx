@@ -22,8 +22,8 @@ export type FigureTeardown = (() => void) | void;
 
 /** Context handed to every figure sketch. */
 export interface FigureContext {
-  /** Coerced embed query params. Empty until the embed path threads them. */
-  params: Record<string, string>;
+  /** Embed query params, coerced to each param's declared type. */
+  params: Record<string, string | number | boolean>;
   /** The card's free-form `data` field. */
   data: Record<string, unknown>;
   /** The card's validated frontmatter. */

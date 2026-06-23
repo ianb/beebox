@@ -141,6 +141,7 @@ function makeChatMarkdownComponents(
           mode="chat"
           rendererName={target.viewer}
           onNavigate={onNavigate}
+          params={target.params}
           {...(onZoomView
             ? { onOpenInPanel: () => onZoomView({ target: { ...target, zoom: false }, label: panelLabel }) }
             : {})}

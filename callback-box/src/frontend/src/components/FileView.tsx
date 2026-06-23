@@ -73,6 +73,11 @@ interface FileViewProps {
    * card into the companion pane. Absent where no companion pane exists.
    */
   onOpenInPanel?: () => void;
+  /**
+   * Optional. Embed query params from a `view:` link, forwarded to the active
+   * renderer's `params`. Set on the chat-embed path; absent elsewhere.
+   */
+  params?: Record<string, string>;
 }
 
 /* ---------- path classification ---------- */
@@ -264,7 +269,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -321,7 +326,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
 
-  const rendered = <active.Component data={data} onNavigate={onNavigate} />;
+  const rendered = <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} />;
   const body = onAddSelection === undefined
     ? rendered
     : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;
