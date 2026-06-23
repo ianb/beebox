@@ -61,7 +61,7 @@ it.
 ## The source (\`entry\`)
 
 The \`entry\` module is authored in the runtime's own style (not React) and
-**default-exports \`(lib, mount, figure) => teardown\`**:
+**default-exports \`(lib, { mount, figure }) => teardown\`**:
 
 - \`lib\` — the runtime library (\`p5\` / \`three\` / \`d3\`), provided by the
   harness. **Do not import it** — it arrives as this argument.
@@ -73,9 +73,12 @@ The \`entry\` module is authored in the runtime's own style (not React) and
   that hold resources: p5 needs \`instance.remove()\`, three needs animation-
   frame cancellation + disposal, D3 needs listener/DOM cleanup.
 
+(The mount element and \`figure\` context travel together in the second
+argument because positional params are capped at two.)
+
 \`\`\`ts
 // attach/sketch.ts  (p5js)
-export default function (p5, mount, figure) {
+export default function (p5, { mount, figure }) {
   const instance = new p5((p) => {
     p.setup = () => p.createCanvas(figure.params.size ?? 300, 300);
     p.draw = () => { /* read figure.params / figure.data */ };

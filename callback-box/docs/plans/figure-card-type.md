@@ -172,15 +172,17 @@ export const FigureSchema = cardSchema("figure", {
 ```
 
 **Authoring contract (committed).** The author writes runtime-native code. The
-`entry` module **default-exports `(lib, mount, figure) => teardown`** — it
-receives the runtime library, a mount element, and the `figure` context, and
-**returns a teardown function** (or `void`) that the harness runs on
-unmount/param-change. The sketch **does not import the library** (it arrives as
-`lib`); the compile step externalizes `p5`/`three`/`d3` as a backstop (Track 2).
+`entry` module **default-exports `(lib, { mount, figure }) => teardown`** — it
+receives the runtime library and, in a second object argument, the mount element
+and the `figure` context, and **returns a teardown function** (or `void`) that
+the harness runs on unmount/param-change. (Mount + context share one object arg
+because the codebase caps positional params at two.) The sketch **does not
+import the library** (it arrives as `lib`); the compile step externalizes
+`p5`/`three`/`d3` as a backstop (Track 2).
 
 ```ts
 // attach/sketch.ts  (p5)
-export default function (p5, mount, figure) {
+export default function (p5, { mount, figure }) {
   const instance = new p5((p) => {
     p.setup = () => p.createCanvas(figure.params.size ?? 300, 300);
     p.draw  = () => { /* reads figure.params / figure.data */ };
@@ -196,7 +198,7 @@ the reused file-helper bundle.
 **Vocabulary lock-ins.** Type **`figure`**; runtime field **`runtime`** =
 **`p5js`|`three`|`d3`**; required source **`entry`**; open config **`data`**;
 contract field **`params`**; injected context **`figure`** with **`.params`/
-`.data`/`.meta`/`.file`**; entry **default-exports `(lib, mount, figure) =>
+`.data`/`.meta`/`.file`**; entry **default-exports `(lib, { mount, figure }) =>
 teardown`**.
 
 **First chunk.** `src/schemas/figure.ts` + register in `registry.ts`;
@@ -236,11 +238,11 @@ attempt → 400.
 - **Error handling is the renderer's job, not a React boundary.** Codex confirmed
   `ViewErrorBoundary` only catches React render errors; a native sketch mounts in
   an async effect/draw loop. The harness wraps the lib `import()`, the
-  `default(lib, mount, figure)` call, and (where feasible) the first frame in
+  `default(lib, { mount, figure })` call, and (where feasible) the first frame in
   `try/catch` and surfaces failures through renderer state. A class boundary wraps
   the whole thing as a backstop only.
 - Per-runtime harness (app code): lazy-`import()` the lib (code-split chunk),
-  create a mount `<div>`, call `default(lib, mount, figure)`, store the returned
+  create a mount `<div>`, call `default(lib, { mount, figure })`, store the returned
   teardown, and run it on unmount/param-change. **Teardown is required**: p5
   `.remove()`, three `cancelAnimationFrame`+`dispose()`, d3 listener/SVG cleanup.
   React StrictMode double-invokes effects in dev — the harness must be
@@ -282,7 +284,7 @@ is explicit.)
 ### Track 6 — Instructions, templates, docs, knowledge audits
 
 `instructions` documents: body = description; code = `entry` attachment; the
-`(lib, mount, figure) => teardown` contract (with the per-runtime teardown each
+`(lib, { mount, figure }) => teardown` contract (with the per-runtime teardown each
 runtime needs); what `figure.params/data/meta/file` carry; the runtimes; the
 embed syntax with query params. One starter template per runtime (card +
 `attach/sketch.ts`). Auto-published `docs/generated/card-figure.md`. Knowledge
@@ -367,7 +369,7 @@ Three agent-facing concepts → three `knows_directly` audits in
 
 - `figure-card-where-code-lives` — *"Authoring a figure card: where does the code
   go and what does it export?"* → `attach/` `.ts` via `entry`, default-exports
-  `(lib, mount, figure) => teardown`. `correct_contains:["attach","entry"]`.
+  `(lib, { mount, figure }) => teardown`. `correct_contains:["attach","entry"]`.
 - `figure-card-runtimes` — *"What can a figure card run?"* → p5js/three/d3 via
   `runtime`.
 - `figure-card-embed-params` — *"How do you embed a figure and pass a parameter?"*

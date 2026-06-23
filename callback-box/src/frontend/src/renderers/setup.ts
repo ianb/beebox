@@ -11,6 +11,7 @@ import "./extfile";
 import "./image";
 import "./pdf";
 import "./recipe";
+import "./figure";
 import "./sheet";
 import "./markdown";
 import "./json";

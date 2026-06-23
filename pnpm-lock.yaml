@@ -310,6 +310,9 @@ importers:
       ldrs:
         specifier: ^1.1.9
         version: 1.1.9
+      p5:
+        specifier: ^2.3.0
+        version: 2.3.0
       react:
         specifier: ^18.3.1
         version: 18.3.1
@@ -695,6 +698,9 @@ packages:
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
     engines: {node: '>=12'}
+
+  '@davepagurek/bezier-path@0.0.7':
+    resolution: {integrity: sha512-CVlnCOrV1iy4Z12T756i9l4G6kF7r8uhlnb+xqDemAMmWQB+8Q0b+8VEqIiUfywgZDSiDr18Rm7pZlnA69rE8Q==}
 
   '@dependents/detective-less@5.0.3':
     resolution: {integrity: sha512-v6oD9Ukp+N7V4n6p5I/+mM5fIohSfkrDSGlFm5w/pYmchvbk+sMIHsLxrFJ5Lnujewj1BzWL0K84d88lwZAMQA==}
@@ -1625,6 +1631,9 @@ packages:
   '@istanbuljs/schema@0.1.6':
     resolution: {integrity: sha512-+Sg6GCR/wy1oSmQDFq4LQDAhm3ETKnorxN+y5nbLULOR3P0c14f2Wurzj3/xqPXtasLFfHd5iRFQ7AJt4KH2cw==}
     engines: {node: '>=8'}
+
+  '@japont/unicode-range@1.0.0':
+    resolution: {integrity: sha512-BckHvA2XdjRBVAWe2uceNuRf78lBeI28kyWEbfr/Q2pE17POkwuZ6WWY/UMv8FL9iBxhW4xfDoNLM9UVZaTeUQ==}
 
   '@jridgewell/gen-mapping@0.3.13':
     resolution: {integrity: sha512-2kkt/7niJ6MgEPxF0bYdQ6etZaA+fQvDcLKckhy1yIQOzaoKjBBjSj63/aLVjYE3qhRt5dvM+uUyfCg6UKCBbA==}
@@ -3490,6 +3499,9 @@ packages:
   colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
 
+  colorjs.io@0.6.1:
+    resolution: {integrity: sha512-8lyR2wHzuIykCpqHKgluGsqQi5iDm3/a2IgP2GBZrasn2sBRkE4NOGsglZxWLs/jZQoNkmA/KM/8NV16rLUdBg==}
+
   commander@12.1.0:
     resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
     engines: {node: '>=18'}
@@ -4564,6 +4576,9 @@ packages:
   get-tsconfig@4.14.0:
     resolution: {integrity: sha512-yTb+8DXzDREzgvYmh6s9vHsSVCHeC0G3PI5bEXNBHtmshPnO+S5O7qgLEOn0I5QvMy6kpZN8K1NKGyilLb93wA==}
 
+  gifenc@1.0.3:
+    resolution: {integrity: sha512-xdr6AdrfGBcfzncONUOlXMBuc5wJDtOueE3c5rdG0oNgtINLD+f2iFZltrBRZYzACRbKr+mSVU/x98zv2u3jmw==}
+
   giget@3.2.0:
     resolution: {integrity: sha512-GvHTWcykIR/fP8cj8dMpuMMkvaeJfPvYnhq0oW+chSeIr+ldX21ifU2Ms6KBoyKZQZmVaUAAhQ2EZ68KJF8a7A==}
     hasBin: true
@@ -4731,6 +4746,12 @@ packages:
     resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
     engines: {node: '>=18'}
     hasBin: true
+
+  i18next-browser-languagedetector@4.3.1:
+    resolution: {integrity: sha512-KIToAzf8zwWvacgnRwJp63ase26o24AuNUlfNVJ5YZAFmdGhsJpmFClxXPuk9rv1FMI4lnc8zLSqgZPEZMrW4g==}
+
+  i18next@19.9.2:
+    resolution: {integrity: sha512-0i6cuo6ER6usEOtKajUUDj92zlG+KArFia0857xxiEHAQcUwh/RtOQocui1LPJwunSYT574Pk64aNva1kwtxZg==}
 
   ical.js@2.2.1:
     resolution: {integrity: sha512-yK/UlPbEs316igb/tjRgbFA8ZV75rCsBJp/hWOatpyaPNlgw0dGDmU+FoicOcwX4xXkeXOkYiOmCqNPFpNPkQg==}
@@ -5255,6 +5276,9 @@ packages:
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
     engines: {node: '>= 0.8.0'}
+
+  libtess@1.2.2:
+    resolution: {integrity: sha512-Nps8HPeVVcsmJxUvFLKVJcCgcz+1ajPTXDVAVPs6+giOQP4AHV31uZFFkh+CKow/bkB7GbZWKmwmit7myaqDSw==}
 
   lie@3.3.0:
     resolution: {integrity: sha512-UaiMJzeWRlEujzAuw5LokY1L5ecNQYZKfmyZ9L7wDHb/p5etKaxXhohBcrw0EYby+G/NA52vRSN4N39dxHAIwQ==}
@@ -5856,6 +5880,9 @@ packages:
   ohash@2.0.11:
     resolution: {integrity: sha512-RdR9FQrFwNBNXAr4GixM8YaRZRJ5PUWbKYbE5eOsrwAjJW0q2REGcf79oYPsLyskQCZG1PLN+S/K1V00joZAoQ==}
 
+  omggif@1.0.10:
+    resolution: {integrity: sha512-LMJTtvgc/nugXj0Vcrrs68Mn2D1r0zf630VNtqtpI1FEO7e+O9FP4gqs9AcnBaSEeoHIPm28u6qgPR0oyEpGSw==}
+
   on-exit-leak-free@2.1.2:
     resolution: {integrity: sha512-0eJJY6hXLGf1udHwfNftBqH+g73EU4B504nZeKpz1sYRKafAghwxEJunB2O7rDZkL4PGfsMVnTXZ2EjibbqcsA==}
     engines: {node: '>=14.0.0'}
@@ -5936,6 +5963,9 @@ packages:
     resolution: {integrity: sha512-312Id396EbJdvRONlngUx0NydfrIQ5lsYu0znKVUzVvArzEIt08V1qhtyESbGVd1FGX7UKtiFp5uwKZdM8wIuQ==}
     engines: {node: '>=8'}
 
+  p5@2.3.0:
+    resolution: {integrity: sha512-akBaN7KbLo5Y6fQ6xJ3w5KKVSfkHGLmqxkJZ7IwZkKw7QlEuVFlLuFTkx9/5o8AAyuJttzucXh7aWk2natRNMA==}
+
   package-json-from-dist@1.0.1:
     resolution: {integrity: sha512-UEZIS3/by4OC8vL3P2dTXRETpebLI2NiI5vIrjaD/5UtrkFX/tNbwjTSRAGC/+7CAo2pIcBaRgWmcBBHcsaCIw==}
 
@@ -5950,6 +5980,9 @@ packages:
 
   pako@1.0.11:
     resolution: {integrity: sha512-4hLB8Py4zZce5s4yd9XzopqwVv/yGNhV1Bl8NTmCq1763HeK2+EwVTv+leGeL13Dnh2wfbqowVPXCIO0z4taYw==}
+
+  pako@2.1.0:
+    resolution: {integrity: sha512-w+eufiZ1WuJYgPXbV/PO3NCMEc3xqylkKHzp8bxp1uW4qaSNQUkwmLLEc3kKsfz8lpV1F8Ht3U1Cm+9Srog2ug==}
 
   parent-module@1.0.1:
     resolution: {integrity: sha512-GQ2EWRpQV8/o+Aw8YqtfZZPfNRWZYkbidE9k5rpl/hC3vtHHBfGm2Ifi6qWV+coDGkrUKZAxE3Lot5kcsRlh+g==}
@@ -7725,6 +7758,8 @@ snapshots:
     dependencies:
       '@jridgewell/trace-mapping': 0.3.9
 
+  '@davepagurek/bezier-path@0.0.7': {}
+
   '@dependents/detective-less@5.0.3':
     dependencies:
       gonzales-pe: 4.3.0
@@ -8344,6 +8379,8 @@ snapshots:
       isexe: 4.0.0
 
   '@istanbuljs/schema@0.1.6': {}
+
+  '@japont/unicode-range@1.0.0': {}
 
   '@jridgewell/gen-mapping@0.3.13':
     dependencies:
@@ -10409,6 +10446,8 @@ snapshots:
 
   colorette@2.0.20: {}
 
+  colorjs.io@0.6.1: {}
+
   commander@12.1.0: {}
 
   commander@13.1.0: {}
@@ -11830,6 +11869,8 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
+  gifenc@1.0.3: {}
+
   giget@3.2.0: {}
 
   github-from-package@0.0.0: {}
@@ -11996,6 +12037,14 @@ snapshots:
   human-signals@8.0.1: {}
 
   husky@9.1.7: {}
+
+  i18next-browser-languagedetector@4.3.1:
+    dependencies:
+      '@babel/runtime': 7.29.2
+
+  i18next@19.9.2:
+    dependencies:
+      '@babel/runtime': 7.29.2
 
   ical.js@2.2.1: {}
 
@@ -12516,6 +12565,8 @@ snapshots:
     dependencies:
       prelude-ls: 1.2.1
       type-check: 0.4.0
+
+  libtess@1.2.2: {}
 
   lie@3.3.0:
     dependencies:
@@ -13233,6 +13284,8 @@ snapshots:
 
   ohash@2.0.11: {}
 
+  omggif@1.0.10: {}
+
   on-exit-leak-free@2.1.2: {}
 
   on-finished@2.4.1:
@@ -13365,6 +13418,22 @@ snapshots:
       '@types/retry': 0.12.0
       retry: 0.13.1
 
+  p5@2.3.0:
+    dependencies:
+      '@davepagurek/bezier-path': 0.0.7
+      '@japont/unicode-range': 1.0.0
+      acorn: 8.16.0
+      acorn-walk: 8.3.5
+      colorjs.io: 0.6.1
+      escodegen: 2.1.0
+      gifenc: 1.0.3
+      i18next: 19.9.2
+      i18next-browser-languagedetector: 4.3.1
+      libtess: 1.2.2
+      omggif: 1.0.10
+      pako: 2.1.0
+      zod: 4.4.3
+
   package-json-from-dist@1.0.1: {}
 
   package-json@10.0.1:
@@ -13397,6 +13466,8 @@ snapshots:
       - supports-color
 
   pako@1.0.11: {}
+
+  pako@2.1.0: {}
 
   parent-module@1.0.1:
     dependencies:

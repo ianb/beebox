@@ -25,6 +25,7 @@
     "fraction.js": "^5.3.4",
     "highlight.js": "^11.11.1",
     "ldrs": "^1.1.9",
+    "p5": "^2.3.0",
     "react": "^18.3.1",
     "react-compiler-runtime": "1.0.0",
     "react-dom": "^18.3.1",
