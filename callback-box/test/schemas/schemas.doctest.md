@@ -14,6 +14,7 @@ import {
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../../src/schemas/calendar-review-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
+import { FigureSchema } from "../../src/schemas/figure.js";
 ```
 
 ## Schema Registry
@@ -34,6 +35,9 @@ getCardTypes().includes("calendar-review-job")
 => true
 
 getCardTypes().includes("webpage")
+=> true
+
+getCardTypes().includes("figure")
 => true
 
 ```
@@ -296,4 +300,60 @@ siteName: Example
 frozen: attach/page.frozen
 ---
 Body.
+```
+
+## Figure
+
+A figure card is an embeddable interactive graphic. Its body describes the
+figure; the runnable source lives in the attach scope, pointed to by `entry`.
+
+```ts
+FigureSchema.type
+=> figure
+```
+
+The frontmatter validates a runtime plus the required `entry` source pointer:
+
+```ts
+FigureSchema.frontmatterSchema.safeParse({
+  type: "figure",
+  runtime: "p5js",
+  entry: "attach/sketch.ts",
+}).success
+=> true
+```
+
+`entry` is required — a figure with no source pointer fails validation:
+
+```ts
+FigureSchema.frontmatterSchema.safeParse({
+  type: "figure",
+  runtime: "p5js",
+}).success
+=> false
+```
+
+`runtime` must be one of the supported runtimes:
+
+```ts
+FigureSchema.frontmatterSchema.safeParse({
+  type: "figure",
+  runtime: "vega",
+  entry: "attach/sketch.ts",
+}).success
+=> false
+```
+
+Optional `params` (declared embed parameters) and `data` (free-form author
+config) validate when present:
+
+```ts
+FigureSchema.frontmatterSchema.safeParse({
+  type: "figure",
+  runtime: "d3",
+  entry: "attach/chart.ts",
+  params: [{ name: "molecule", type: "string", default: "H2O2" }],
+  data: { palette: ["#fff", "#000"] },
+}).success
+=> true
 ```
