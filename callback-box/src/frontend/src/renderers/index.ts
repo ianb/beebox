@@ -39,7 +39,7 @@ export interface RendererProps {
    */
   params?: Record<string, string>;
   /** The surface this renderer is shown in, so it can adapt its own chrome. */
-  mode?: "page" | "chat" | "companion";
+  mode?: "page" | "chat" | "companion" | "embed";
 }
 
 /** A renderer that can display a file */

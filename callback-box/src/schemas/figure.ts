@@ -89,12 +89,15 @@ export default function (p5, { mount, figure }) {
 
 ## Embedding
 
-Embed a figure inline with a \`view:\` link, passing parameters in the query
-string:
+Embed a figure inline in a card or document body with the **image/embed
+syntax** — \`![caption](view:…figure.card)\` — passing parameters in the query
+string. It renders frameless (just the figure) in place. A plain
+\`[label](view:…)\` link stays a navigable link, not an embed.
 
-    [caffeine](view:store/figures/Molecule.figure.card?molecule=H2O2)
+    ![caffeine](view:store/figures/Molecule.figure.card?molecule=H2O2)
 
-The sketch reads those values from \`figure.params\`.`,
+The sketch reads those values from \`figure.params\`; the caption (alt text)
+shows beneath the figure.`,
 });
 
 export interface FigureFields {

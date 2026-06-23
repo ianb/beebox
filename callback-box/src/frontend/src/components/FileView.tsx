@@ -41,7 +41,7 @@ import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
 import { StatusBadge } from "./ui/StatusBadge";
 
-export type FileViewMode = "page" | "chat" | "companion";
+export type FileViewMode = "page" | "chat" | "companion" | "embed";
 
 interface FileViewProps {
   path: string;
@@ -330,6 +330,12 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
   const body = onAddSelection === undefined
     ? rendered
     : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;
+
+  if (mode === "embed") {
+    // Frameless: just the renderer output, no header/toggle/border. For figures
+    // and other media embedded inline in a card body via `![](view:…)`.
+    return body;
+  }
 
   if (mode === "chat") {
     return (

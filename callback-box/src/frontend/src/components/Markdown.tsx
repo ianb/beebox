@@ -53,7 +53,7 @@ import type { ReactNode } from "react";
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM SSR; default-member access is the runtime-correct form for this CJS module
 const { transform, renderers } = Markdoc;
 
-interface LinkContext {
+export interface LinkContext {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   basePath: string | undefined;
   boxSlug: string | undefined;
@@ -143,7 +143,7 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
   };
 }
 
-function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
+export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
   return function Img({ src, alt, title }) {
     const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
     return (

@@ -10,7 +10,10 @@
  * view:/relative links resolve the same way as for `.md` files.
  */
 
+import { useMemo } from "react";
+import { useParams } from "@tanstack/react-router";
 import { Markdown } from "./Markdown";
+import { makeFigureEmbedComponents } from "./FigureEmbed";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/quote-extract";
 import type { RendererProps } from "../renderers";
 import type { ReactNode } from "react";
@@ -150,6 +153,12 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
   const frontmatter = data.frontmatter;
   const body = data.body;
   const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
+  const { boxSlug } = useParams({ strict: false });
+  // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
+  const components = useMemo(
+    () => makeFigureEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    [onNavigate, data.path, boxSlug],
+  );
 
   return (
     <div className="p-4 max-w-3xl">
@@ -163,7 +172,7 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
 
       {body !== undefined && body.trim() !== "" ? (
         <div data-card-section="body">
-          <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
+          <Markdown prose="block" onNavigate={onNavigate} basePath={data.path} components={components}>
             {body}
           </Markdown>
         </div>
