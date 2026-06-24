@@ -42,7 +42,8 @@ Rule of thumb: if guidance is about *one card type in isolation*, it's a
 card-rule; if it spans cards or is a sequenced procedure, it's the skill; if it's
 data, it's a field. **The card-rules can't bootstrap authoring** (they only load
 once a card of that type already exists — `init-rules.ts:102`), so the skill is
-the primary entry point and must be reliably invokable (Track 1).
+the primary entry point and must be reliably invokable — **confirmed: box-level
+`.claude/skills/` are auto-discovered by the box agent (Track 1, verified).**
 
 > **Review gate:** the boxholder reviews the authored skill(s) and their prompts
 > before they ship. Skill/prompt text lands for review, not auto-merged.
@@ -103,10 +104,21 @@ the primary entry point and must be reliably invokable (Track 1).
   (`card-lint.ts` ~135-169). **Reuse/extend** — the new progress→map node-id check lives here, not
   in the self-contained `validate` hook.
 
+- **Box-level skills ARE discovered (Track 1, verified empirically).** The box agent runs via
+  `@anthropic-ai/claude-agent-sdk` `^0.2.128` with `cwd = boxRoot` and the default
+  `settingSources: ["user","project"]` and **no explicit `skills` option** (`agent-run.ts:55-86`).
+  A throwaway `<box>/.claude/skills/cw-probe/SKILL.md` was listed by the agent when run via
+  `cb prompt` (the exact box environment) — so a project-level skill dropped into the box is
+  discovered and invocable with **no SDK-option change**. (The old 0.1.x discovery bug is moot at
+  0.2.128.) **Decision: A1.**
+
 Net-new:
 
-- **Box skills-provisioning** — boxes get `.claude/rules/` + `.claude/settings.json`, **no
-  `.claude/skills/`**. The authoring skill has no install path yet (Track 1).
+- **Box skills-provisioning (`generateSkills`)** — boxes get `.claude/rules/` +
+  `.claude/settings.json` but no `.claude/skills/` yet, so a `cb init` step must *install* the
+  courseware skill into the box (mirroring `generateRules`, `init-rules.ts:65`). Lands with the
+  skill itself (Track 5) so the mechanism is built against a real, reviewed payload rather than an
+  empty conveyor.
 - **The progress→concept-map node-id lint** — a new box-aware check in `card-lint.ts`.
 
 ## Prior art (external)
@@ -299,15 +311,15 @@ ratings changed (with the evidence), and what to pick up next.
 
 ### Track order
 
-1. **Skill-home probe** — verify box `.claude/skills/` discovery → A1 (box skill via a new
-   `generateSkills` mirroring `generateRules`) vs A2 (always-on rule + CLAUDE.md pointer). Codex #7
-   confirms this is load-bearing: until resolved, the core process isn't reliably invoked.
+1. **Skill-home — DONE (A1).** Verified empirically that box `.claude/skills/` are auto-discovered
+   (above). No SDK change. The `generateSkills` install step lands with the skill in Track 5.
 2. **`concept-map`** — schema + `validate` + rule (incl. the edge rubric) + template.
 3. **`unit`** — schema + rule + template.
 4. **`approach`** + **`progress`** — schemas + rules + templates; **plus the progress→map node-id
    box-aware lint in `card-lint.ts`** and the session-log convention.
-5. **`build-unit` skill** + the honesty protocol, authored in the Track-1 home; pointers wired into
-   each card-rule. **Boxholder reviews before ship.**
+5. **`build-unit` skill** + the honesty protocol — authored as a box skill (A1), plus the
+   **`generateSkills` install step** in `cb init` that writes it into `<box>/.claude/skills/`;
+   pointers wired into each card-rule. **Boxholder reviews the skill/prompts before ship.**
 
 ## Subplans
 
@@ -368,8 +380,8 @@ ratings changed (with the evidence), and what to pick up next.
 
 ## Open design questions
 
-- **Skill home (Track 1): A1 box-skill vs A2 always-on rule.** *Lean:* A1 if box skills are
-  auto-discovered; verify first.
+- ~~**Skill home (Track 1): A1 vs A2.**~~ **Resolved: A1** — box skills are auto-discovered
+  (verified). `generateSkills` install step lands with Track 5.
 - **`approach` as a dedicated type vs a `doc` card.** *Lean (chosen):* dedicated type — its card-rule
   carries "keep the reasoning in," which a `doc` wouldn't. Collapse to `doc` only if the light
   structure (`emphasis`/`modalities`/`decisions`) proves unused.
@@ -399,14 +411,15 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
 
 ## Implementation order
 
-1. **Skill-home probe** → A1/A2.
+1. **Skill-home probe** → ✅ done, A1 (box skills auto-discovered, verified). `generateSkills`
+   install step folded into step 5.
 2. **`concept-map`** — read `lint-format.ts` + the `commentary.tsx`/`extfile.tsx` validate hooks;
    schema + `validate` + rule (with the edge rubric) + template + parse/validate doctests.
 3. **`unit`** — schema + rule + template + parse doctest.
 4. **`approach`** + **`progress`** — schemas + rules + templates + parse doctests; the
    progress→map node-id check in `card-lint.ts` + its lint doctest; session-log convention.
-5. **`build-unit` skill** + honesty protocol — authored in the Track-1 home; pointers wired in.
-   **Boxholder review before merge.**
+5. **`build-unit` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
+   install step in `cb init`; pointers wired in. **Boxholder review before merge.**
 6. **Knowledge audits** — written, run, recorded.
 
 One/few commits per item on the worktree branch. Completes when all land; ships only on the
