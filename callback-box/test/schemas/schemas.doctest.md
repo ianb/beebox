@@ -18,6 +18,7 @@ import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../s
 import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
 import { CourseSchema, createCourseTemplate } from "../../src/schemas/course.js";
 import { ExpositionPlanSchema, createExpositionPlanTemplate } from "../../src/schemas/exposition-plan.js";
+import { LessonPlanSchema, createLessonPlanTemplate } from "../../src/schemas/lesson-plan.js";
 import { ProgressSchema, createProgressTemplate } from "../../src/schemas/progress.js";
 import { extractRefs } from "../../src/cards/index.js";
 import { parseCardText } from "../../src/core/card-io.js";
@@ -54,6 +55,9 @@ getCardTypes().includes("course")
 => true
 
 getCardTypes().includes("exposition-plan")
+=> true
+
+getCardTypes().includes("lesson-plan")
 => true
 
 getCardTypes().includes("progress")
@@ -526,6 +530,7 @@ CourseSchema.frontmatterSchema.safeParse({
   "success-criteria": ["Can predict whether a reaction fizzes and explain why"],
   "concept-map": { ref: "attach/Acids.concept-map.card" },
   "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
+  "lesson-plan": { ref: "attach/Acids.lesson-plan.card" },
   material: "attach/material",
   progress: { ref: "/people/learner/Acids.progress.card" },
 }).success
@@ -543,11 +548,13 @@ const parsed = CourseSchema.frontmatterSchema.parse({
   type: "course",
   "concept-map": { ref: "attach/Acids.concept-map.card" },
   "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
+  "lesson-plan": { ref: "attach/Acids.lesson-plan.card" },
 });
 extractRefs(parsed).map((r) => r.ref).sort()
 => [
   "attach/Acids.concept-map.card",
-  "attach/Acids.exposition-plan.card"
+  "attach/Acids.exposition-plan.card",
+  "attach/Acids.lesson-plan.card"
 ]
 ```
 
@@ -559,6 +566,76 @@ const schemas = await createCardSchemaMap();
 const parsed = parseCardText(text, { source: "Acids.course.card", schemas });
 parsed.schema.type
 => course
+```
+
+## Lesson-Plan
+
+A lesson-plan card is the ordered delivery flow: a sequence of segments, each
+tagged `interactive` (live in chat) or `material` (uses a pre-made card).
+
+```ts
+LessonPlanSchema.type
+=> lesson-plan
+```
+
+A plan whose segments carry a `do` and a `mode` parses; everything but the body
+is optional, so a bare lesson-plan still loads:
+
+```ts
+LessonPlanSchema.frontmatterSchema.safeParse({
+  type: "lesson-plan",
+  segments: [
+    { do: "Elicit their model of what's moving in a reaction", mode: "interactive", concepts: ["proton-transfer"] },
+    { do: "Walk the proton-transfer figure", mode: "material", status: "ready", material: { ref: "material/Proton_Transfer.figure.card" } },
+  ],
+}).success
+=> true
+
+LessonPlanSchema.frontmatterSchema.safeParse({ type: "lesson-plan" }).success
+=> true
+```
+
+`mode` is a required closed enum — a segment with no `mode`, or an out-of-set
+`mode`, fails to parse:
+
+```ts
+LessonPlanSchema.frontmatterSchema.safeParse({
+  type: "lesson-plan",
+  segments: [{ do: "Some activity" }],
+}).success
+=> false
+
+LessonPlanSchema.frontmatterSchema.safeParse({
+  type: "lesson-plan",
+  segments: [{ do: "Some activity", mode: "lecture" }],
+}).success
+=> false
+```
+
+A material segment's `material.ref` is extracted as a cross-card edge, so
+card-lint checks it resolves:
+
+```ts
+const parsed = LessonPlanSchema.frontmatterSchema.parse({
+  type: "lesson-plan",
+  segments: [
+    { do: "Read the recap", mode: "material", status: "ready", material: { ref: "material/Recap.doc.card" } },
+  ],
+});
+extractRefs(parsed).map((r) => r.ref)
+=> [
+  "material/Recap.doc.card"
+]
+```
+
+The template scaffolds a lesson-plan that parses against the registry:
+
+```ts
+const text = createLessonPlanTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.lesson-plan.card", schemas });
+parsed.schema.type
+=> lesson-plan
 ```
 
 ## Exposition-Plan

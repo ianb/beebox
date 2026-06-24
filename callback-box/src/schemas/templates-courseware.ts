@@ -9,6 +9,7 @@ import { z } from "zod";
 import { createConceptMapTemplate } from "./concept-map.js";
 import { createCourseTemplate } from "./course.js";
 import { createExpositionPlanTemplate } from "./exposition-plan.js";
+import { createLessonPlanTemplate } from "./lesson-plan.js";
 import { createProgressTemplate } from "./progress.js";
 import { registerTemplate } from "./templates-registry.js";
 
@@ -39,6 +40,15 @@ registerTemplate({
   defaultForTypes: ["exposition-plan"],
   argsSchema: titleArgs,
   generate: (args) => createExpositionPlanTemplate({ title: args.title }),
+});
+
+registerTemplate({
+  name: "lesson-plan",
+  description: "An ordered delivery flow (segments tagged interactive vs material, tied to the concept-map)",
+  cardTypes: ["lesson-plan"],
+  defaultForTypes: ["lesson-plan"],
+  argsSchema: titleArgs,
+  generate: (args) => createLessonPlanTemplate({ title: args.title }),
 });
 
 registerTemplate({
