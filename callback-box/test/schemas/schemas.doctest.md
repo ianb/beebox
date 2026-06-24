@@ -15,6 +15,11 @@ import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../../src/schemas/calendar-review-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
+import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
+import { CourseSchema, createCourseTemplate } from "../../src/schemas/course.js";
+import { ExpositionPlanSchema, createExpositionPlanTemplate } from "../../src/schemas/exposition-plan.js";
+import { ProgressSchema, createProgressTemplate } from "../../src/schemas/progress.js";
+import { extractRefs } from "../../src/cards/index.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
 ```
@@ -40,6 +45,18 @@ getCardTypes().includes("webpage")
 => true
 
 getCardTypes().includes("figure")
+=> true
+
+getCardTypes().includes("concept-map")
+=> true
+
+getCardTypes().includes("course")
+=> true
+
+getCardTypes().includes("exposition-plan")
+=> true
+
+getCardTypes().includes("progress")
 => true
 
 ```
@@ -395,4 +412,254 @@ Each runtime has a runnable starter sketch that exports the
 const sketch = figureStarterSketch("p5js");
 sketch.includes("export default function") && sketch.includes("instance.remove()")
 => true
+```
+
+## Concept-Map
+
+A concept-map card is a module-scale knowledge graph: concepts are in-card nodes
+(each with an `id`, `name`, and `kind`), related by typed edges that reference
+other nodes by `id`.
+
+```ts
+ConceptMapSchema.type
+=> concept-map
+```
+
+A valid map — unique node ids, each node typed, each edge carrying a `kind` —
+parses:
+
+```ts
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [
+    { id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "complements" }] },
+    { id: "b", name: "B", kind: "fact" },
+  ],
+}).success
+=> true
+```
+
+Each node requires a `kind` (one of the four KC types) — a node without one
+fails:
+
+```ts
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [{ id: "a", name: "A" }],
+}).success
+=> false
+```
+
+Every edge must carry a `kind` from the closed set — no unlabeled edge, and no
+"other":
+
+```ts
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b" }] }, { id: "b", name: "B", kind: "fact" }],
+}).success
+=> false
+
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "related-to" }] }, { id: "b", name: "B", kind: "fact" }],
+}).success
+=> false
+```
+
+The `validate` hook checks intra-card graph integrity. A dangling edge (a `to`
+that names no node) and a duplicate id are both errors; a `complements` cycle is
+deliberately **not** an error (spirals are valid), and a clean map reports
+nothing:
+
+```ts
+const v = ConceptMapSchema.validate;
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "ghost", kind: "prerequisite" }] }] } }) : []).length
+=> 1
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "fact" }, { id: "a", name: "B", kind: "fact" }] } }) : []).length
+=> 1
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "complements" }] }, { id: "b", name: "B", kind: "concept", related: [{ to: "a", kind: "complements" }] }] } }) : []).length
+=> 0
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "prerequisite" }] }, { id: "b", name: "B", kind: "fact" }] } }) : []).length
+=> 0
+```
+
+The dangling-edge error names the offending node id:
+
+```ts
+const issues = ConceptMapSchema.validate ? ConceptMapSchema.validate({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "ghost", kind: "prerequisite" }] }] } }) : [];
+issues[0].message.includes("unknown node id")
+=> true
+```
+
+The template scaffolds a valid starter map that parses against the registry:
+
+```ts
+const text = createConceptMapTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.concept-map.card", schemas });
+parsed.schema.type
+=> concept-map
+```
+
+## Course
+
+A course card is the manifest that binds a learning experience's components by
+reference.
+
+```ts
+CourseSchema.type
+=> course
+```
+
+A course with goals, success-criteria, and component refs parses; everything but
+the body is optional, so a bare course still loads too:
+
+```ts
+CourseSchema.frontmatterSchema.safeParse({
+  type: "course",
+  goals: ["Understand acids and bases"],
+  "success-criteria": ["Can predict whether a reaction fizzes and explain why"],
+  "concept-map": { ref: "attach/Acids.concept-map.card" },
+  "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
+  material: "attach/material",
+  progress: { ref: "/people/learner/Acids.progress.card" },
+}).success
+=> true
+
+CourseSchema.frontmatterSchema.safeParse({ type: "course" }).success
+=> true
+```
+
+Component refs are extracted as cross-card edges, so card-lint checks they
+resolve:
+
+```ts
+const parsed = CourseSchema.frontmatterSchema.parse({
+  type: "course",
+  "concept-map": { ref: "attach/Acids.concept-map.card" },
+  "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
+});
+extractRefs(parsed).map((r) => r.ref).sort()
+=> [
+  "attach/Acids.concept-map.card",
+  "attach/Acids.exposition-plan.card"
+]
+```
+
+The template scaffolds a course that parses against the registry:
+
+```ts
+const text = createCourseTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.course.card", schemas });
+parsed.schema.type
+=> course
+```
+
+## Exposition-Plan
+
+An exposition-plan card is a worked process for presenting a subject: the learner
+translation first, then rated approaches, then the compiled rules.
+
+```ts
+ExpositionPlanSchema.type
+=> exposition-plan
+```
+
+A plan with a `learner-translation`, rated `approaches`, and `rules` parses;
+everything but the body is optional:
+
+```ts
+ExpositionPlanSchema.frontmatterSchema.safeParse({
+  type: "exposition-plan",
+  "learner-translation": ["Reasons out loud; lead with their phenomena"],
+  approaches: [{ approach: "socratic dialog", rating: "primary", why: "Surfaces their model" }],
+  rules: ["Open each concept from a familiar phenomenon"],
+}).success
+=> true
+
+ExpositionPlanSchema.frontmatterSchema.safeParse({ type: "exposition-plan" }).success
+=> true
+```
+
+Each `approach` must carry an `approach` and a `rating` (the rating is what makes
+the consideration honest) — an approach without a rating fails:
+
+```ts
+ExpositionPlanSchema.frontmatterSchema.safeParse({
+  type: "exposition-plan",
+  approaches: [{ approach: "plain prose" }],
+}).success
+=> false
+```
+
+The template scaffolds a plan that parses against the registry:
+
+```ts
+const text = createExpositionPlanTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.exposition-plan.card", schemas });
+parsed.schema.type
+=> exposition-plan
+```
+
+## Progress
+
+A progress card is a per-learner, evidence-backed record of understanding. Each
+entry is a qualitative status for one concept-map node.
+
+```ts
+ProgressSchema.type
+=> progress
+```
+
+An entry with a `status`, a `basis`, and at least one `evidence` item parses:
+
+```ts
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  course: { ref: "../Acids.course.card" },
+  entries: [
+    { node: "electron-transfer", status: "partial", basis: "observed", evidence: ["Said acids 'give away' something but couldn't say what"] },
+  ],
+}).success
+=> true
+```
+
+The evidence contract is enforced — a status with no `evidence`, an empty
+`evidence` array, or no `basis` all fail to parse (no anonymous rating):
+
+```ts
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", status: "solid", basis: "observed" }],
+}).success
+=> false
+
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", status: "solid", basis: "observed", evidence: [] }],
+}).success
+=> false
+
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", status: "solid", evidence: ["heard them explain it"] }],
+}).success
+=> false
+```
+
+The template scaffolds a progress card (with a valid example entry) that parses:
+
+```ts
+const text = createProgressTemplate({ title: "Acids — learner" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.progress.card", schemas });
+parsed.schema.type
+=> progress
 ```

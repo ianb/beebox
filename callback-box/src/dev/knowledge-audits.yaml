@@ -2806,3 +2806,93 @@ tests:
       [label](view:…) link stays a navigable link, not an inline embed.
     correct_contains: ["view:"]
     tags: [figure, cards, embedding]
+
+  # === Courseware (course / concept-map / exposition-plan / progress + build-course skill) ===
+  #
+  # Status (2026-06-24): All 6 pass against the worktree box. The agent reaches
+  # for build-course / probing first, names the course's parts, picks the right
+  # closed-set edge (commonly-confused-with), affirms cycles are valid spirals,
+  # recalls the progress evidence contract, and the exposition-plan's keep-the-
+  # reasoning-in rule. One initial false-negative on -concept-map-edges: the
+  # agent answered correctly by grepping the docs rather than reading the named
+  # should_read file, so the should_read was dropped (the closed-set answer is
+  # the real assertion). Run with `--filter courseware`.
+
+  - id: courseware-build-a-course
+    prompt: >
+      Someone asks you to teach them how chemical reactions work. How do you go
+      about building a course for them?
+    expected_level: knows_about
+    watch_for: >
+      Reaches for the build-course skill / understands the learner FIRST
+      (a phenomenon-anchored, Piagetian probe) rather than writing a course cold.
+    correct_contains_any: ["probe", "build-course"]
+    tags: [courseware]
+    notes: >
+      Building a course starts by understanding the learner, not by generating
+      content. The failure mode is producing a polished course cold.
+
+  - id: courseware-course-composition
+    prompt: "What does a course card hold? What are its parts?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-course.md"]
+    watch_for: >
+      Names the concept-map and exposition-plan (embedded), the material/ subdir,
+      and that progress is tracked separately.
+    correct_contains: ["concept-map", "exposition-plan"]
+    tags: [courseware]
+
+  - id: courseware-concept-map-edges
+    prompt: >
+      In a concept-map, two ideas that learners frequently mix up with each
+      other — which edge type connects them?
+    expected_level: knows_about
+    watch_for: "Picks commonly-confused-with from the closed edge set."
+    correct_contains: ["commonly-confused-with"]
+    tags: [courseware]
+    # No should_read: consulting the concept-map docs by grep is as valid as
+    # reading the file — the assertion is naming the right closed-set edge.
+    notes: >
+      Tests the edge-type rubric. Edges carry a required kind from a closed set
+      (no 'other'); the right one for confusable ideas is commonly-confused-with.
+
+  - id: courseware-concept-map-cycles
+    prompt: >
+      Can a concept-map have two concepts that each depend on the other — a
+      cycle? Or is that an error to fix?
+    expected_level: knows_about
+    should_read: ["docs/generated/card-concept-map.md"]
+    watch_for: >
+      Says cycles are valid/intended (spirals), often via complements edges —
+      NOT an error to fix.
+    correct_contains_any: ["complements", "spiral", "intended", "not an error", "valid"]
+    tags: [courseware]
+    notes: >
+      The graph is deliberately loose; a complements cycle is an honest spiral,
+      not a modeling error. Failure mode: insisting the graph be acyclic.
+
+  - id: courseware-progress-evidence
+    prompt: >
+      I'm recording that a learner has 'solid' understanding of a concept. What
+      does that progress entry need to include?
+    expected_level: knows_about
+    should_read: ["docs/generated/card-progress.md"]
+    watch_for: >
+      Says every status needs evidence (what the learner said/did) plus a basis —
+      there is no anonymous rating.
+    correct_contains: ["evidence"]
+    correct_contains_any: ["basis", "observed"]
+    tags: [courseware]
+    notes: >
+      The evidence contract is schema-enforced: status + basis + >=1 evidence
+      item. Failure mode: recording a status with no grounding.
+
+  - id: courseware-exposition-plan
+    prompt: "What is an exposition-plan card for, and what should it always keep?"
+    expected_level: knows_about
+    should_read: ["docs/generated/card-exposition-plan.md"]
+    watch_for: >
+      It's the plan for how to PRESENT the material; it keeps the reasoning /
+      rationale in so later adaptation stays coherent.
+    correct_contains_any: ["rationale", "reasoning"]
+    tags: [courseware]

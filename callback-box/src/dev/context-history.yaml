@@ -55,3 +55,58 @@ test1:
       peak: 42922
       added: 1637
       turns: 3
+  courseware-build-a-course:
+    - date: 2026-06-24T05:32:02.635Z
+      boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41709
+      peak: 43851
+      added: 2142
+      turns: 4
+  courseware-course-composition:
+    - date: 2026-06-24T05:32:02.635Z
+      boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41566
+      peak: 42908
+      added: 1342
+      turns: 3
+  courseware-concept-map-edges:
+    - date: 2026-06-24T05:32:02.635Z
+      boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41584
+      peak: 42045
+      added: 461
+      turns: 3
+    - date: 2026-06-24T05:33:29.133Z
+      boxCommit: 376e80b0e6695dbf8c3adaf2ddcf02e1da991cde
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41584
+      peak: 43323
+      added: 1739
+      turns: 3
+  courseware-concept-map-cycles:
+    - date: 2026-06-24T05:32:02.635Z
+      boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41587
+      peak: 43324
+      added: 1737
+      turns: 3
+  courseware-progress-evidence:
+    - date: 2026-06-24T05:32:02.635Z
+      boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41586
+      peak: 42932
+      added: 1346
+      turns: 3
+  courseware-exposition-plan:
+    - date: 2026-06-24T05:32:02.635Z
+      boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
+      repoCommit: f2f85ce75601847020bc60c2a0e394bbbd9f88c6
+      initial: 41572
+      peak: 42805
+      added: 1233
+      turns: 3

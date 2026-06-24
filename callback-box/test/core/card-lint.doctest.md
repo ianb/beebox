@@ -16,6 +16,7 @@ import { lintCardsDispatch } from "../../src/core/card-lint.js";
 import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
+import { ProgressSchema } from "../../src/schemas/progress.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -56,6 +57,7 @@ const ctx: LoadCardContext = {
     ["commentary", CommentarySchema],
     ["extfile", ExtfileSchema],
     ["gadget", gadgetSchema],
+    ["progress", ProgressSchema],
   ]),
 };
 ```
@@ -470,4 +472,39 @@ result.results[0]!.errors[0]!.message
 
 result.results[1]!.errors.length
 => 0
+```
+
+## Progress cards: entries must name real concept-map nodes
+
+A progress card's `entries` reference concept-map nodes by `id`. This is checked
+box-aware (progress → its `course` → the course's embedded `concept-map`): a
+`node` that the map doesn't define is a **warning** (a stale node id, not a hard
+error). A valid node id is silent.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/Acids.course.card",
+  "---\nconcept-map: { ref: attach/Map.concept-map.card }\n---\nCourse.\n",
+);
+await box.write(
+  "store/Acids.attach/Map.concept-map.card",
+  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
+);
+await box.write(
+  "store/Learner.progress.card",
+  "---\ncourse: { ref: Acids.course.card }\nentries:\n  - node: acids\n    status: partial\n    basis: observed\n    evidence: [heard them explain it]\n  - node: ghost\n    status: solid\n    basis: observed\n    evidence: [refers to a node the map lacks]\n---\nProgress.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Learner.progress.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message.includes("ghost")
+=> true
 ```
