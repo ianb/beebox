@@ -79,37 +79,51 @@ a non-conventional `material/README.md`. The concept-map says *what to learn*, t
 ```typescript
 // src/schemas/lesson-plan.ts
 const SegmentMode = z.enum(["interactive", "material"]); // live chat vs uses a material card
+const SegmentStatus = z.enum(["planned", "ready"]);      // a material segment: outlined vs its card exists
 const Segment = z.object({
-  do: z.string(),                                  // what happens in this segment
+  do: z.string(),                                  // the activity (terse — the WHY lives in the exposition-plan)
   mode: SegmentMode,                               // required — forces the live-vs-material call
+  status: SegmentStatus.optional(),               // material segment: 'ready' (card exists) or 'planned' (deferred)
   concepts: z.array(z.string()).optional(),        // concept-map node id(s) this advances (lint-checked)
-  material: z.object({ ref: z.string() }).optional(), // material segment → the card it uses (ref, lint-checked)
+  material: z.object({ ref: z.string() }).optional(), // material segment → the card it uses (ref)
   note: z.string().optional(),                     // e.g. interactive framing even on a material segment
 });
 const lessonPlanFields = {
-  course: z.object({ ref: z.string() }).optional(), // back-ref so the node-id lint reaches the concept-map (as progress does)
   segments: z.array(Segment).optional(),
   body: body(z.string()),                          // framing / rationale; living
 };
 ```
 
-`mode` is a required closed enum (the segment must commit to live-vs-material — the same
-"no vague middle" discipline as the concept-map edges), but a `material` segment may still carry an
-interactive `note`, so "both" is expressible without a third mode. `concepts` are concept-map node
-ids (intra-card, like `progress.entries[].node`); `material` is a file ref to a `doc`/`figure` card.
-No `validate` hook is needed on the schema itself — the node-id check is box-aware (below), and Zod
-covers the rest.
+`mode` is a required closed enum (the segment commits to live-vs-material), but a `material` segment
+may still carry an interactive `note`, so "both" is expressible without a third mode.
+
+`status` makes deferral **visible** (Codex #1): a `material` segment either has a `material` ref
+(`ready`) or is marked `planned` (its card is outlined, not built yet). The box-aware lint warns on a
+`material` segment that is *neither* — so "incomplete material" is never silent. "Complete build" is
+therefore *not* "lesson-plan exists + no README"; it's "every material segment is `ready` or
+explicitly `planned`."
+
+The lesson-plan carries **no** course/concept-map back-ref. It's co-located with the concept-map in
+the course attach scope, so the lint finds the concept-map as the **sibling `*.concept-map.card`** —
+avoiding the optional back-ref that silently no-ops when absent (Codex #2: `lint-progress-nodes.ts:39`
+returns `[]` on a missing `course` ref). `concepts` are concept-map node ids checked there. No
+`validate` hook on the schema; Zod + the box-aware lint cover it.
 
 **Card-rule (`instructions`).** What it conveys: the lesson-plan is the *ordered flow*, **distinct
-from the exposition-plan** (which is the presentation *rules*); each segment is `interactive`
-(happens in chat) or `material` (uses a `doc`/`figure` card in `material/`); most early-course
-segments are interactive — author a material card only where a figure or written recap genuinely
-earns it; keep it sparse and fit-to-the-course (not a padded sweep); neutral pronouns. Auto-published
-to `.claude/rules/card-lesson-plan.md` by `generateRules`.
+from the exposition-plan** — the exposition-plan decides *why* an approach is used (the rated
+approaches + rationale); the lesson-plan just *sequences* it (what to do, in order). The one real
+per-segment choice is **`interactive` vs `material`**, with guidance: pick `interactive` when the
+learning is in the back-and-forth (eliciting the learner's model, predict-and-explain, dialog); pick
+`material` when a pre-made artifact carries it better than live talk (a figure to manipulate, a
+written recap to re-read). Most early-course segments are interactive — author a material card only
+where it earns it; the rest stay `planned`. `do` is terse (it's the activity, not the rationale —
+that lives in the exposition-plan). Keep it sparse and fit-to-the-course; neutral pronouns.
+Auto-published to `.claude/rules/card-lesson-plan.md` by `generateRules`.
 
 **Vocabulary lock-ins:** type name `lesson-plan`; segment fields `do` / `mode`
-(`interactive` | `material`) / `concepts` / `material` / `note`; the course's `lesson-plan`
-component ref.
+(`interactive` | `material`) / `status` (`planned` | `ready`) / `concepts` / `material` / `note`; the
+course's `lesson-plan` component ref. The lesson-plan↔concept-map link is **sibling-by-convention**,
+not a ref.
 
 **First implementation chunk.** `src/schemas/lesson-plan.ts` (schema + instructions + template) +
 registry entry + `templates-courseware.ts` entry + the `"lesson-plan"` field on `course.ts` + a
@@ -125,15 +139,28 @@ template parses). No open questions inside this chunk.
 concept-map silently mis-links the flow to the map — the exact rot `lint-progress-nodes.ts` was
 written to prevent for progress. Rebuilding it per-type duplicates the course→map→node-id walk.
 
-**Direction.** Factor the resolution (card's `course` ref → course's `concept-map` ref → node-id
-set) out of `lint-progress-nodes.ts:34-52` into a shared `lintCourseNodeRefs({ path, fields, boxRoot,
-extractNodes })`, where `extractNodes` is the per-type id extractor (`progress`: `entries[].node`;
-`lesson-plan`: `segments[].concepts[]`). `card-lint.ts:171` keeps its `if (type === "progress")`
-branch and gains an `if (type === "lesson-plan")` one, each passing its extractor. Warning-level
-(not blocking), like the progress check.
+**Direction.** Codex #3 is right that this is more than an `extractNodes` swap: the two types resolve
+the concept-map *differently* and need *locatable* warnings. Factor a shared
+`checkNodeRefs({ nodeIds, refs })` where `refs` is `Array<{ id, path }>` (path like
+`segments[2].concepts[0]` / `entries[3].node`, so warnings are locatable — Codex #3), plus two
+per-type adapters:
+- **progress** — resolve the concept-map via its `course` ref (existing `lint-progress-nodes.ts:41-51`,
+  unchanged); extract `entries[].node` with paths.
+- **lesson-plan** — resolve the concept-map as the **sibling `*.concept-map.card`** in the card's own
+  directory (co-located in the course attach; no ref to be silently absent — Codex #2); extract
+  `segments[].concepts[]` with paths.
 
-**First implementation chunk.** Extract the shared helper, port progress onto it (its doctest in
-`test/core/card-lint.doctest.md` must stay green), add the lesson-plan branch + a doctest case.
+`card-lint.ts:171` keeps `if (type === "progress")` and gains `if (type === "lesson-plan")`, each
+calling its adapter; both warning-level. The lesson-plan branch **also** emits the **deferral warning**
+(Codex #1): a `material` segment with no `material.ref` and no `status: planned` → warning
+`segments[N]: material segment with no material card; mark it 'planned' or add the card`. (This is
+self-contained on the segment's fields, but lives in `card-lint` because it's a *warning*, not a
+`validate`-hook error.)
+
+**First implementation chunk.** Extract `checkNodeRefs` + the progress adapter, port progress onto it
+(its doctest in `test/core/card-lint.doctest.md:477` must stay green — the regression anchor), then
+add the lesson-plan adapter + the deferral warning + doctest cases (a bad segment node id → warning
+naming the path; a material segment neither `ready` nor `planned` → warning; a valid plan → silent).
 
 ### Skill + material-convention fix + regenerate + fix the example
 
@@ -144,23 +171,25 @@ box's generated files; fix the committed Acids_Bases example.
 must ship to boxes; and the example in the main box currently shows the wrong convention.
 
 **Direction.**
-- **Build order — lesson-plan and material come together, and last, after the other cards.** The
-  current step sequence (`box-skills-content.ts`: concept-map → progress → exposition-plan →
-  "produce material") gets a reworked tail: the concept-map (structure), exposition-plan (rules),
-  and progress (where the learner is) are all settled *first*, then a single step builds the
-  **lesson-plan and its material together** — they co-develop because the flow *references* the
-  material, and you can't sensibly sequence material you haven't decided to make. So the step is "Plan
-  the flow and build its material," positioned after exposition-plan + progress, just before *adapt*.
-- **Incomplete-by-design is the expected end state, not a failure.** A build does **not** fully
-  author the material. It produces the lesson-plan (the spine) and authors only the few material
-  cards that genuinely earn it now (e.g. the one reused proton-transfer figure); the rest are
-  *named/outlined as segments in the lesson-plan* and authored later, during teaching. The skill
-  must say this plainly so the agent doesn't either (a) dump a wall of half-baked material to "finish"
-  the stage, or (b) feel the course is broken because material is sparse. A mostly-interactive,
-  mostly-deferred-material course is a *complete* build.
+- **Build order — lesson-plan and material come last, after the other cards, as a draft→author→revise
+  loop (not one pass).** The concept-map (structure) and exposition-plan (rules) settle *first*;
+  progress *informs* the plan when there's a real learner but is **not required** — a `generic`
+  course has no probe/progress, and the lesson-plan must still build (Codex #5). Then the tail step:
+  (1) **draft the lesson-plan** (the segment sequence, each `interactive` or `material`), (2) **author
+  only the material cards a segment actually references** and that earn being pre-made now (e.g. the
+  one reused proton-transfer figure), (3) **revise the lesson-plan** so those segments are `ready`
+  with real refs and the rest are explicitly `planned`. The three-step loop — not "build flow and
+  material together in one pass" — is what keeps half-built material from hiding (Codex #5).
+- **Incomplete is the expected end state, but it must be VISIBLE, not silent (Codex #1).** A build
+  does **not** fully author the material; most segments stay `interactive` or `material`+`planned`,
+  authored later during teaching. That's a *complete* build — but every deferred material segment is
+  marked `status: planned` (the lint warns otherwise), so "outlined, not yet built" is a stated fact,
+  not a gap that reads as done. The skill must say this so the agent neither (a) dumps a wall of
+  half-baked material to "finish," nor (b) leaves material segments silently ref-less.
 - Material is `doc`/`figure` cards in `material/`, **never a `README.md`**; the lesson-plan references
-  them. Cross-reference the exposition-plan (rules) vs lesson-plan (flow) so the agent doesn't
-  conflate them.
+  them. The card-rule draws the line: the **exposition-plan** decides *why* an approach is used; the
+  **lesson-plan** sequences it (interactive vs material) — so the agent doesn't conflate them or push
+  rationale into the lesson-plan's `do`.
 - Regenerate: after the schema/skill edits, `cb init <box>` re-runs `generateRules` (new
   `card-lesson-plan.md`) and `generateSkills` (updated `build-course`).
 - Fix the example: in the **main box** (`~/src/boxes/test1/store/courses/Acids_Bases.*`), replace
@@ -181,17 +210,19 @@ not have its own vocabulary/research to settle.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Segment `mode` missing/invalid | Will add (parse doctest) | Yes — required closed enum, parse error | Clear (parse error) |
-| `segments[].concepts` id not in the course's concept-map | Will add (card-lint doctest) | **Yes — generalized box-aware lint** | Clear (warning naming the id) |
-| `material.ref` points at a missing/renamed card | Covered by existing ref-walk doctests | Yes — generic broken-ref warning | Clear (warning) |
-| Material segment with no `material` ref (forgot the card) | No | Partial — card-rule says material segments cite a card | Silent (a `material` segment that references nothing) |
-| Agent still writes a `material/README.md` | No (prose) | Partial — skill + card-rule say "cards, not README" | Silent (non-conventional file; not a card, so not lint-seen) |
+| `segments[].concepts` id not in the concept-map | Will add (card-lint doctest) | **Yes — box-aware lint via the sibling concept-map** | Clear (warning naming the path, e.g. `segments[2].concepts[0]`) |
+| `material.ref` → missing/renamed card | Existing ref-walk doctests | Yes — generic broken-ref warning | Clear (warning) |
+| **`material` segment, no `ref`, not `planned`** | Will add (card-lint doctest) | **Yes — deferral warning (Codex #1)** | **Clear (warning: mark `planned` or add the card)** |
+| Agent still writes a `material/README.md` | No (prose) | Partial — skill + card-rule say "cards, not README" | Visible-not-lint-flagged (stray non-card file; guidance-mitigated) |
+| Sibling `*.concept-map.card` absent (nothing to check against) | n/a | Yes — node check no-ops; the course's missing `concept-map` ref warns via the generic walk | Clear (the missing component warns at the course) |
 | Half-built lesson-plan (no segments) | Will add (parse doctest) | Yes — all optional, lenient parse | Clear (loads) |
-| Lint can't resolve course→concept-map (missing refs) | Reuses progress-lint behavior | Yes — stays silent; the generic ref walk reports the missing link | Clear (the broken ref warns elsewhere) |
 
-> **Critical gap:** none. The one genuinely silent risk — a `material`-mode segment that names no
-> material card — is mild (it reads as "material here, TBD") and is better handled by the card-rule
-> than by blocking; flagged in Open Questions rather than enforced, to avoid forcing a ref before the
-> material card exists.
+> **Critical gap:** none. The previously-silent risk — a `material` segment naming no card — is now a
+> **visible lint warning** unless the segment is explicitly `status: planned` (Codex #1), so "outlined,
+> not built yet" is stated rather than hidden. The one residual soft spot is a stray
+> `material/README.md`: a non-card file the lint doesn't see, mitigated by the skill + card-rule (and
+> plain in the dir listing). Accepted as a documented risk rather than adding a "no non-card files in
+> `material/`" lint.
 
 ## Agent-flow / user-flow edge cases
 
@@ -230,14 +261,23 @@ not have its own vocabulary/research to settle.
   lesson-plan is a reference the agent reads when planning/teaching, not a standing ruleset.
   Rationale: it's a sequence, not rules; no auto-load needed.
 
+## Resolved by the Codex pass (no longer open)
+
+- **Node-id lint: `course` back-ref vs sibling `concept-map`? → sibling (Codex #2/#3).** A `course`
+  back-ref would be a *second* edge to keep in sync with the manifest's own component refs, and the
+  progress lint's "no `course` ref → silent no-op" (`lint-progress-nodes.ts:39`) showed how a missing
+  back-ref silently disables the check. The lesson-plan lives in the course's attach scope alongside
+  `*.concept-map.card`, so the lint resolves the map by **sibling glob**, no back-ref to drift. The
+  generalized helper `checkNodeRefs({ nodeIds, refs })` takes the resolved node-id set either way, so
+  progress (via its existing `course` ref) and lesson-plan (via sibling) share one core; see the lint
+  track's Direction.
+- **Enforce a `material` segment has a ref? → yes, as a `status`-gated warning (Codex #1).** Not a hard
+  block (a segment can be drafted before its card exists), but no longer silent: a `material` segment
+  with no `ref` warns *unless* it's explicitly `status: planned`. That makes "deferred" a stated fact
+  rather than an invisible gap — see the schema track's `status` field and the Failure-modes table.
+
 ## Open design questions
 
-- **Does the lesson-plan carry a `course` back-ref, or a direct `concept-map` ref, for the node-id
-  lint?** *Lean:* a `course` back-ref, uniform with `progress`, so the generalized lint takes one
-  shape (card → `course` → `concept-map`). The lesson-plan lives in the course's attach scope, so the
-  ref is `../<Course>.course.card`.
-- **Enforce that a `material`-mode segment has a `material` ref?** *Lean:* no — a segment can be
-  planned as "material here" before the card exists; the card-rule nudges, lint doesn't block.
 - **Author the reused figure now, or only outline it?** *Lean:* author the one genuinely-reused
   material card (the proton-transfer `figure`) so the example is real, outline the rest in the
   lesson-plan; full material authoring is the teaching phase.
@@ -262,8 +302,10 @@ status recorded, before the plan completes.
 ## Implementation order
 
 1. **`lesson-plan` schema** + course `lesson-plan` field + registry + template + schema doctest.
-2. **Generalize the node-id lint** (extract shared helper, port progress, add lesson-plan branch +
-   doctest). Depends on (1) for the field names.
+2. **Generalize the node-id lint** — extract `checkNodeRefs({ nodeIds, refs })`, port the progress
+   adapter (resolves the map via its `course` ref) onto it, add the lesson-plan adapter (resolves the
+   map via the sibling `*.concept-map.card`) + the `material`/`status` deferral warning + doctest.
+   Depends on (1) for the field names.
 3. **Skill + material-convention** edits; `cb init` the worktree box; re-run a build to verify a
    lesson-plan + no README. Depends on (1).
 4. **Knowledge audits** — write + run + record. Depends on (1)-(3) being in the box.
@@ -277,9 +319,11 @@ boxholder's signal.
 
 - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
   (valid plan; segment missing `mode` fails; template parses); the generalized node-id lint doctest
-  (a `lesson-plan` segment concept-id not in the map → warning; a valid one → silent) **plus** the
-  ported progress lint doctest staying green (the regression anchor for the extraction). No test for
-  the skill prose — the knowledge audits are its check.
+  (a `lesson-plan` segment concept-id not in the sibling map → warning; a valid one → silent; **a
+  `material` segment with no `ref` and not `status: planned` → deferral warning; the same with
+  `status: planned` → silent**) **plus** the ported progress lint doctest staying green (the
+  regression anchor for the extraction). No test for the skill prose — the knowledge audits are its
+  check.
 - **Knowledge-audit entries** — the three above land run.
 - **Migration** — net-new card type + one new optional course field; no existing data shape changes.
   The only "migration" is the Acids_Bases example fix (chunk 5), done by the agent. `cb init`
