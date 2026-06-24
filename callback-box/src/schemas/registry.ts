@@ -46,6 +46,7 @@ import { WebpageSchema } from "./webpage.js";
 import { ExtfileSchema } from "./extfile.js";
 import { LandmarkSchema } from "./landmark.js";
 import { FigureSchema } from "./figure.js";
+import { ConceptMapSchema } from "./concept-map.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
 /**
@@ -68,6 +69,7 @@ export const cardSchemas: CardSchema[] = [
   CommentarySchema,
   WebpageSchema,
   FigureSchema,
+  ConceptMapSchema,
   ExtfileSchema,
   SheetSchema,
   FileSchema,

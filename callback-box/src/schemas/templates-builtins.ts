@@ -24,6 +24,7 @@ import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
 import { createDocTemplate } from "./doc.js";
 import { createFigureTemplate, figureStarterSketch, FigureRuntime } from "./figure.js";
+import { createConceptMapTemplate } from "./concept-map.js";
 import { registerTemplate } from "./templates-registry.js";
 
 registerTemplate({
@@ -262,4 +263,19 @@ registerTemplate({
     return createFigureTemplate(opts);
   },
   attachments: (args) => [{ relPath: "sketch.ts", content: figureStarterSketch(args.runtime) }],
+});
+
+registerTemplate({
+  name: "concept-map",
+  description: "A module-scale knowledge graph (concepts as in-card nodes with typed edges)",
+  cardTypes: ["concept-map"],
+  defaultForTypes: ["concept-map"],
+  argsSchema: z.object({
+    title: z.string().optional().describe("Display title"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createConceptMapTemplate>[0] = {};
+    if (args.title) opts.title = args.title;
+    return createConceptMapTemplate(opts);
+  },
 });

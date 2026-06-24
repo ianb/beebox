@@ -15,6 +15,7 @@ import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../../src/schemas/calendar-review-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
+import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
 ```
@@ -40,6 +41,9 @@ getCardTypes().includes("webpage")
 => true
 
 getCardTypes().includes("figure")
+=> true
+
+getCardTypes().includes("concept-map")
 => true
 
 ```
@@ -395,4 +399,96 @@ Each runtime has a runnable starter sketch that exports the
 const sketch = figureStarterSketch("p5js");
 sketch.includes("export default function") && sketch.includes("instance.remove()")
 => true
+```
+
+## Concept-Map
+
+A concept-map card is a module-scale knowledge graph: concepts are in-card nodes
+(each with an `id`, `name`, and `kind`), related by typed edges that reference
+other nodes by `id`.
+
+```ts
+ConceptMapSchema.type
+=> concept-map
+```
+
+A valid map — unique node ids, each node typed, each edge carrying a `kind` —
+parses:
+
+```ts
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [
+    { id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "complements" }] },
+    { id: "b", name: "B", kind: "fact" },
+  ],
+}).success
+=> true
+```
+
+Each node requires a `kind` (one of the four KC types) — a node without one
+fails:
+
+```ts
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [{ id: "a", name: "A" }],
+}).success
+=> false
+```
+
+Every edge must carry a `kind` from the closed set — no unlabeled edge, and no
+"other":
+
+```ts
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b" }] }, { id: "b", name: "B", kind: "fact" }],
+}).success
+=> false
+
+ConceptMapSchema.frontmatterSchema.safeParse({
+  type: "concept-map",
+  concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "related-to" }] }, { id: "b", name: "B", kind: "fact" }],
+}).success
+=> false
+```
+
+The `validate` hook checks intra-card graph integrity. A dangling edge (a `to`
+that names no node) and a duplicate id are both errors; a `complements` cycle is
+deliberately **not** an error (spirals are valid), and a clean map reports
+nothing:
+
+```ts
+const v = ConceptMapSchema.validate;
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "ghost", kind: "prerequisite" }] }] } }) : []).length
+=> 1
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "fact" }, { id: "a", name: "B", kind: "fact" }] } }) : []).length
+=> 1
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "complements" }] }, { id: "b", name: "B", kind: "concept", related: [{ to: "a", kind: "complements" }] }] } }) : []).length
+=> 0
+
+(v ? v({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "b", kind: "prerequisite" }] }, { id: "b", name: "B", kind: "fact" }] } }) : []).length
+=> 0
+```
+
+The dangling-edge error names the offending node id:
+
+```ts
+const issues = ConceptMapSchema.validate ? ConceptMapSchema.validate({ fields: { concepts: [{ id: "a", name: "A", kind: "concept", related: [{ to: "ghost", kind: "prerequisite" }] }] } }) : [];
+issues[0].message.includes("unknown node id")
+=> true
+```
+
+The template scaffolds a valid starter map that parses against the registry:
+
+```ts
+const text = createConceptMapTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.concept-map.card", schemas });
+parsed.schema.type
+=> concept-map
 ```
