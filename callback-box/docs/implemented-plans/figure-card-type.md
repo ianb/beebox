@@ -1,5 +1,16 @@
 # Figure card type
 
+> **Status: implemented (2026-06).** This is the frozen design record; the
+> feature shipped as described. The `figure` schema lives in
+> `src/schemas/figure.ts`, the compile route in `src/webapp/routes/figure.ts`,
+> the renderer + mount harness in `src/frontend/src/components/FigureView.tsx`
+> and `FigureMount.tsx`, inline `![](view:…)` embedding in
+> `FigureEmbed.tsx`, and the scaffold template in `src/schemas/figure.ts` +
+> `templates-builtins.ts`. One deviation from the draft below: the authoring
+> contract is `(lib, { mount, figure }) => teardown` (mount + context in one
+> object arg) rather than three positional params, to satisfy the max-params
+> rule.
+
 A new `figure` card type for small, embeddable, parameterized interactives —
 p5.js sketches, three.js scenes, D3/SVG graphics — the kind of thing you embed in
 a document *to demonstrate one thing*. A figure card's body is a prose
