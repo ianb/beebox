@@ -161,16 +161,11 @@ export function AssistantMessage({
       ) : null}
       {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
       {isStreaming ? (
-        allText.trim() === "" ? (
-          // Before the first token: the "agent is working" throbber. Once text
-          // arrives this branch swaps to the inline caret below, so the block
-          // throbber only ever sits in the empty state (no finalize shift).
-          <div className="flex items-center gap-2 py-1"><Grid size={20} color="#D4845A" speed={1.5} /></div>
-        ) : (
-          // Inline caret in the text flow — its removal at finalize is a repaint,
-          // not a reflow, so the streamed bubble settles into the final one.
-          <span className="inline-block w-1.5 h-4 ml-0.5 align-text-bottom rounded-sm bg-warm-400 animate-pulse" aria-hidden="true" />
-        )
+        // The "agent is working" progress animation, shown below the streamed
+        // content for the whole turn (matches the pre-unification throbber).
+        <div className="flex flex-col items-center gap-2 my-6">
+          <Grid size={40} color="#D4845A" speed={1.5} />
+        </div>
       ) : null}
     </div>
   );
