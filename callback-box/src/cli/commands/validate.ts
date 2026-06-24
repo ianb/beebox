@@ -20,6 +20,7 @@ import { lintCardsDispatch } from "../../core/card-lint.js";
 import { isClaudeMdFile, lintClaudeMdFile, lintAllClaudeMd } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
+import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 
 const execFileP = promisify(execFile);
@@ -194,6 +195,7 @@ async function runHookMode(): Promise<never> {
   const boxRoot = await requireBoxRoot();
   const ctx = await buildLoadContext(boxRoot);
   const summary = await lintCardsDispatch([fp], { boxRoot, ctx });
+  await refreshDerivedRules(boxRoot, fp);
   const stale = await staleContainsWarning(boxRoot, {
     relPath: path.relative(boxRoot, fp),
     ctx,

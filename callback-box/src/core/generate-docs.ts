@@ -44,6 +44,7 @@ import {
   compilePersonalities,
 } from "./generate-docs-compile.js";
 import type { ProcedureSummary } from "./generate-docs-compile.js";
+import { compileExpositionRules } from "./compile-exposition-rules.js";
 import { ensureClaudeMdIncludes } from "./generate-docs-claude-md.js";
 
 export type { ProcedureSummary, GuideSummary } from "./generate-docs-compile.js";
@@ -422,6 +423,9 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot, debug);
+
+  // Compile each course's exposition-plan `rules` into a path-loaded box rule.
+  await compileExpositionRules(boxRoot);
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
