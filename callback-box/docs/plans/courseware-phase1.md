@@ -1,8 +1,8 @@
-# Courseware Phase 1 — the learning unit: cards, rules, and the authoring skill
+# Courseware Phase 1 — the course: cards, rules, and the authoring skill
 
 This plan introduces a "courseware" card family centered on one container — a
-**learning unit** — that an agent builds *with* a learner through a
-pedagogically-grounded process. A unit binds a few components: a **concept-map**
+**course** — that an agent builds *with* a learner through a
+pedagogically-grounded process. A course binds a few components: a **concept-map**
 (the knowledge graph), an **approach** (the teaching plan, with its reasoning
 kept in), **material** (presentational content, in a subdirectory), and —
 tracked separately per learner — **progress** (an *evidence-backed* qualitative
@@ -25,7 +25,7 @@ The whole design is organized across the three surfaces the work lives on. Being
 explicit about which knowledge goes where is the spine of this plan:
 
 - **Cards** hold *structure and state* — the graph, the approach-with-rationale,
-  the progress record, the unit manifest. Durable data, schema-validated.
+  the progress record, the course manifest. Durable data, schema-validated.
 - **Card rules/docs** — each schema's `instructions`, auto-published by
   `generateRules` to `.claude/rules/card-<type>.md` (`init-rules.ts:99-114`),
   loaded *automatically* when the agent reads or edits a card of that type. These
@@ -132,7 +132,7 @@ What's kept from the research (subset compatible with a qualitative, learner-cen
 - **Bloom's revised taxonomy** — optional per-node `depth`; guidance, not enforced.
 - **Spiral curriculum** (Bruner) — concepts bootstrapped together → the `complements` edge +
   permitted cycles. *Why we rejected a strict DAG.* https://helpfulprofessor.com/spiral-curriculum/
-- **Backward design / UbD** — name the destination first. The unit's `success-criteria` is the
+- **Backward design / UbD** — name the destination first. The course's `success-criteria` is the
   destination; it's defined early and used to **focus the goals and prune the graph**, then to
   judge advancement. Personalized, prose — *not* ABCD measurable objectives.
 - **Observable success criteria ≠ measurable-objective bureaucracy** (Codex #2) — "explain why
@@ -145,7 +145,7 @@ What's kept from the research (subset compatible with a qualitative, learner-cen
   learner evidence, against LLM over-crediting & sycophancy (Codex #1, and the documented
   sycophancy/answer-leak failure modes in LLM tutors). Drives the progress evidence contract.
 - **Living learning contract** (Knowles) — goals emerge through dialogue, stay renegotiable →
-  living rationale in `approach` + unit body.
+  living rationale in `approach` + course body.
 - **Khanmigo's lessons** — retrieve-don't-invent answer keys; privately enumerate the learner's
   likely solution paths; stay Socratic. Answer keys live *with material*; the minimal honesty
   protocol (below) brings the "don't leak / don't fabricate / don't sycophantically rate"
@@ -156,7 +156,7 @@ What's kept from the research (subset compatible with a qualitative, learner-cen
 (but we keep *casual, personalized* success criteria — Codex #2 distinguishes these); a strict
 prerequisite **DAG** (falsifies real spirals); numeric mastery **and any forgetting/decay model**
 (rustiness is a 30-year starting condition, not on-timescale — the probe reads present state); a
-global cross-unit concept graph; an "other"/freeform edge type (edges must commit to a clear
+global cross-course concept graph; an "other"/freeform edge type (edges must commit to a clear
 `kind`).
 
 **Library search:** only Zod and Claude Code's `.claude/` conventions are in play; nothing
@@ -170,24 +170,24 @@ discovery (Track 1).
 Four new types. Lightweight and prose-first, with a *small* set of required fields that each
 close a named failure mode.
 
-**1. `unit`** — the manifest/container. (Provisional name.)
+**1. `course`** — the manifest/container. (Provisional name.)
 
 ```typescript
 const ComponentRef = z.object({ ref: z.string() });
-const unitFields = {
+const courseFields = {
   goals: z.array(z.string()).optional(),            // the learner's deeper "why"; refined through probing
   "success-criteria": z.array(z.string()).optional(), // casual, personalized "what success looks like";
                                                       // set EARLY — focuses the goals and prunes the graph,
                                                       // then judges advancement (backward design)
   "concept-map": ComponentRef.optional(),           // → attach/<…>.concept-map.card
   approach: ComponentRef.optional(),                // → attach/<…>.approach.card
-  material: z.string().optional(),                  // subdirectory under the unit's attach scope
+  material: z.string().optional(),                  // subdirectory under the course's attach scope
   progress: ComponentRef.optional(),                // optional — progress may live here OR in a separate tree
   body: body(z.string()),                           // framing narrative + rationale; living
 };
 ```
 
-**2. `concept-map`** — the knowledge graph, embedded under the unit.
+**2. `concept-map`** — the knowledge graph, embedded under the course.
 
 ```typescript
 const ConceptKind = z.enum(["fact", "concept", "procedure", "principle"]);              // KC type — a strong hint
@@ -211,7 +211,7 @@ const conceptMapFields = { concepts: z.array(ConceptNode), body: body(z.string()
 ```
 
 **3. `approach`** — the pedagogical plan with the *reasoning kept in*. A single-file card embedded
-as `<Unit>.attach/<Name>.approach.card`. Kept as a dedicated type (not a `doc`) so its card-rule
+as `<Course>.attach/<Name>.approach.card`. Kept as a dedicated type (not a `doc`) so its card-rule
 can carry the "keep the reasoning in" discipline.
 
 ```typescript
@@ -241,7 +241,7 @@ const ProgressEntry = z.object({
   misconception: z.string().optional(),   // an active misconception to address, if any
 });
 const progressFields = {
-  unit: ComponentRef.optional(),          // the unit this tracks (often a cross-tree ref)
+  course: ComponentRef.optional(),          // the course this tracks (often a cross-tree ref)
   learner: z.string().optional(),
   entries: z.array(ProgressEntry).optional(),  // seeded by the probe; evolving
   body: body(z.string()),                 // running summary; the session log lives in <basename>.attach/
@@ -249,18 +249,18 @@ const progressFields = {
 ```
 
 **Material is not a new card type** — existing presentational cards (`doc`, `webpage`, `image`, …)
-in the unit's `attach/material/` subdirectory, with answer keys alongside.
+in the course's `attach/material/` subdirectory, with answer keys alongside.
 
 **Vocabulary lock-ins:** the four type names; node `id`/`kind`/`depth`/`related`/`misconceptions`;
 edge `to`/`kind` (the five-value closed set, **required**); progress `status`
-(`unfamiliar|partial|working|solid`), **required `basis` + `evidence`**; unit `success-criteria`;
+(`unfamiliar|partial|working|solid`), **required `basis` + `evidence`**; course `success-criteria`;
 `approach.decisions[].rationale`.
 
 ### The card rules/docs (each schema's `instructions`)
 
 Written in the `landmark.ts:124-163` voice. What each must convey:
 
-- **`unit`** — a container; components are embedded attached cards (concept-map, approach) + a
+- **`course`** — a container; components are embedded attached cards (concept-map, approach) + a
   `material/` subdir; progress may live here or separately; `success-criteria` is set early and is
   the lens for what belongs in the graph; reuse existing components by ref, don't duplicate.
 - **`concept-map`** — in-card nodes; node-id edges (not file refs); `kind` is a strong hint to how
@@ -273,14 +273,14 @@ Written in the `landmark.ts:124-163` voice. What each must convey:
   metacognitive reflection among modalities; it's living — adapt in place, don't overwrite the why.
 - **`progress`** — **no status without evidence**: every entry cites the learner's actual
   words/work and the probe used, with `basis` and (ideally) a `next-probe`; status is qualitative
-  and judged **against the unit's `success-criteria`** (understanding the mechanism with fuzzy
+  and judged **against the course's `success-criteria`** (understanding the mechanism with fuzzy
   terminology can be "solid" when names aren't the goal); it's a **present-state record, not a decay
   model**; append narrative to the session-log attachment, not the card body; **don't
   sycophantically upgrade a rating** when the learner sounds confident — rate the evidence.
 
 ### The skill (the cross-card process)
 
-**`build-unit`** (provisional) — the boxholder's authoring/teaching flow. Not a rigid pipeline;
+**`build-course`** (provisional) — the boxholder's authoring/teaching flow. Not a rigid pipeline;
 probing comes early and the rest follows. **Lands for boxholder review before shipping.**
 
 1. **Probe — interactively, by default.** Open-ended, anchored in a concrete familiar phenomenon,
@@ -314,10 +314,10 @@ ratings changed (with the evidence), and what to pick up next.
 1. **Skill-home — DONE (A1).** Verified empirically that box `.claude/skills/` are auto-discovered
    (above). No SDK change. The `generateSkills` install step lands with the skill in Track 5.
 2. **`concept-map`** — schema + `validate` + rule (incl. the edge rubric) + template.
-3. **`unit`** — schema + rule + template.
+3. **`course`** — schema + rule + template.
 4. **`approach`** + **`progress`** — schemas + rules + templates; **plus the progress→map node-id
    box-aware lint in `card-lint.ts`** and the session-log convention.
-5. **`build-unit` skill** + the honesty protocol — authored as a box skill (A1), plus the
+5. **`build-course` skill** + the honesty protocol — authored as a box skill (A1), plus the
    **`generateSkills` install step** in `cb init` that writes it into `<box>/.claude/skills/`;
    pointers wired into each card-rule. **Boxholder reviews the skill/prompts before ship.**
 
@@ -333,10 +333,10 @@ ratings changed (with the evidence), and what to pick up next.
 | Edge with no/invalid `kind` | Will add (parse doctest) | Yes — `kind` required enum, parse fails | Clear (parse error) |
 | `complements` cycle | n/a — not a failure | Intentional | n/a (valid) |
 | **Progress status with no evidence / no basis** | Will add (parse doctest) | **Yes — `evidence`+`basis` required**, parse fails | Clear (parse error) — the core guard |
-| `progress.entries[].node` → id not in the unit's map | Will add (lint doctest) | **Yes — new box-aware lint in `card-lint.ts`** (Codex #4: not "tolerable") | Clear (warning) |
-| `unit` references a component card that isn't there | Will add | Ref lint **warning** only; `cb validate` won't block (`validate.ts:364`) | Clear but non-blocking — see below |
+| `progress.entries[].node` → id not in the course's map | Will add (lint doctest) | **Yes — new box-aware lint in `card-lint.ts`** (Codex #4: not "tolerable") | Clear (warning) |
+| `course` references a component card that isn't there | Will add | Ref lint **warning** only; `cb validate` won't block (`validate.ts:364`) | Clear but non-blocking — see below |
 | Embedded concept-map/approach not bulk-validated | n/a — **not a gap** (`list-cards.ts:12` globs into `.attach`) | Yes — first-class | Clear |
-| Half-built unit/approach (optional fields empty) | Will add | Yes — lenient parse | Clear (loads) |
+| Half-built course/approach (optional fields empty) | Will add | Yes — lenient parse | Clear (loads) |
 | Agent fabricates evidence/misconceptions, or sycophantically rates "solid" | No (not mechanically detectable) | Partial — required `evidence`+`basis` raise the cost; the honesty protocol + progress rule | Silent (honesty risk, much reduced) |
 
 > **No critical gaps.** The two earlier worries are resolved: embedded-card validation is not a gap
@@ -344,8 +344,8 @@ ratings changed (with the evidence), and what to pick up next.
 > silent risk — *fabricated* evidence — can't be closed by a schema; the evidence contract makes
 > honesty the low-friction path and makes a bare assertion impossible to record.
 >
-> **Acceptable non-block:** a new unit can be "complete" with a dangling component ref (warning, not
-> error). If that proves too loose, add a courseware-specific completeness check that a unit's
+> **Acceptable non-block:** a new course can be "complete" with a dangling component ref (warning, not
+> error). If that proves too loose, add a courseware-specific completeness check that a course's
 > `concept-map`/`approach` resolve before it's considered ready (Codex #6) — deferred.
 
 ## Agent-flow / user-flow edge cases
@@ -353,9 +353,9 @@ ratings changed (with the evidence), and what to pick up next.
 - **Wrong field/shape** — edge as a bare string; misconception under `related`; status/`basis`
   outside the enum; an edge missing `kind`. **ADDRESSED** — Zod rejects at parse; rules give
   examples + the edge rubric.
-- **Stale ref** — intra-graph edges are node ids (travel inside the card) → N/A; unit→component and
-  progress→unit are refs → warned; progress→node is the new box-aware lint.
-- **Two agents on one unit/progress** — last-write parse-mutate-reserialize, same as all cards.
+- **Stale ref** — intra-graph edges are node ids (travel inside the card) → N/A; course→component and
+  progress→course are refs → warned; progress→node is the new box-aware lint.
+- **Two agents on one course/progress** — last-write parse-mutate-reserialize, same as all cards.
   **DEFERRED.**
 - **Hand-edit drift** — unknown key stripped + warned; `validate` catches a dangling edge id; a
   hand-added evidence-less progress entry fails to parse.
@@ -371,9 +371,9 @@ ratings changed (with the evidence), and what to pick up next.
   material. Phase 1 *builds*, *probes*, and seeds evidence-backed progress, and carries the
   *minimal* honesty protocol + session-log format; repeated-session delivery is next.
 - **Rich material/activity authoring as new card types** — material is existing presentational cards.
-- **Multi-unit courses / a shared cross-unit learner profile** — the "mental model of the world" goal
-  spans units (Phase 3); Phase 1 captures the unit slice and notes the factor-out.
-- **A `BOX_DIRS.courses` directory** — dropped (Codex "what I'd cut" + boxholder agree): units can
+- **Multiple courses / a shared cross-course learner profile** — the "mental model of the world" goal
+  spans courses (Phase 3); Phase 1 captures the course slice and notes the factor-out.
+- **A `BOX_DIRS.courses` directory** — dropped (Codex "what I'd cut" + boxholder agree): courses can
   live in any tree via refs; add a storage dir only when navigation needs one.
 - **Numeric mastery, forgetting/decay, spaced review** — rejected for the direction.
 - **A custom frontend renderer** — default frontmatter-card view for now.
@@ -385,8 +385,9 @@ ratings changed (with the evidence), and what to pick up next.
 - **`approach` as a dedicated type vs a `doc` card.** *Lean (chosen):* dedicated type — its card-rule
   carries "keep the reasoning in," which a `doc` wouldn't. Collapse to `doc` only if the light
   structure (`emphasis`/`modalities`/`decisions`) proves unused.
-- **Naming.** `unit` and `approach` provisional. *Lean:* keep unless a clearly better term surfaces.
-- **`success-criteria`: unit-level only, or also per-node?** *Lean:* unit-level in Phase 1 (the
+- **Naming.** Container is **`course`** (settled). `approach` still provisional. *Lean:* keep
+  `approach` unless a clearly better term surfaces.
+- **`success-criteria`: course-level only, or also per-node?** *Lean:* course-level in Phase 1 (the
   focusing lens); add per-node only if advancement decisions need finer grain.
 
 ## Knowledge audits
@@ -394,7 +395,7 @@ ratings changed (with the evidence), and what to pick up next.
 New agent-facing concepts → at least one `knows_directly` audit each in
 `callback-box/src/dev/knowledge-audits.yaml`:
 
-- **Unit composition** — a `unit` binds an embedded concept-map + approach + a `material/` subdir;
+- **Course composition** — a `course` binds an embedded concept-map + approach + a `material/` subdir;
   progress is a *separate*, evidence-backed card.
 - **concept-map** — in-card nodes, node-id edges, **`kind` required from the closed five**, cycles
   intended; `kind` is a hint not the whole story.
@@ -403,7 +404,7 @@ New agent-facing concepts → at least one `knows_directly` audit each in
 - **approach** — keep the reasoning in; adaptation reads rationale.
 - **progress evidence contract** — **no status without evidence + basis**; rate the evidence, not the
   learner's confidence; present-state not decay; judged against `success-criteria`.
-- **The authoring flow** — building a unit means following the courseware process (probe-first,
+- **The authoring flow** — building a course means following the courseware process (probe-first,
   phenomenon-anchored), not writing cards cold.
 
 Land **run**: `pnpm knowledge-audit run --box <abs-path-to-test-box> --filter courseware` before the
@@ -415,10 +416,10 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
    install step folded into step 5.
 2. **`concept-map`** — read `lint-format.ts` + the `commentary.tsx`/`extfile.tsx` validate hooks;
    schema + `validate` + rule (with the edge rubric) + template + parse/validate doctests.
-3. **`unit`** — schema + rule + template + parse doctest.
+3. **`course`** — schema + rule + template + parse doctest.
 4. **`approach`** + **`progress`** — schemas + rules + templates + parse doctests; the
    progress→map node-id check in `card-lint.ts` + its lint doctest; session-log convention.
-5. **`build-unit` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
+5. **`build-course` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
    install step in `cb init`; pointers wired in. **Boxholder review before merge.**
 6. **Knowledge audits** — written, run, recorded.
 
@@ -432,9 +433,9 @@ boxholder's explicit signal.
     `evidence`/`basis` fails**; **an edge without `kind` fails**; other optional fields let half-built
     cards load.
   - `concept-map` `validate` doctest — dangling/duplicate node id → `LintIssue`; cycle → none.
-  - `card-lint` doctest — a `progress` entry whose `node` isn't in the unit's map → warning; a valid
+  - `card-lint` doctest — a `progress` entry whose `node` isn't in the course's map → warning; a valid
     one → silent.
-  - Embedded-card doctest — a concept-map inside a unit's `.attach/` is bulk-validated (confirms the
+  - Embedded-card doctest — a concept-map inside a course's `.attach/` is bulk-validated (confirms the
     `list-cards.ts` behavior we rely on).
   - No tests for skill prose — the knowledge audits are its verification.
 - **Knowledge-audit entries** — the six above land run.
@@ -443,12 +444,12 @@ boxholder's explicit signal.
 
 ## Named future phases
 
-- **Phase 2 — the tutoring runner.** Repeated teaching sessions over a unit's material: Socratic
+- **Phase 2 — the tutoring runner.** Repeated teaching sessions over a course's material: Socratic
   delivery, answer keys retrieved-not-leaked, follow the learner's actual work, retrieval practice,
   worked-examples + fading, immediate feedback, update progress + the session log each sitting.
-- **Phase 3 — shared learner profile.** Factor the cross-unit "who the learner is and what mental
-  model they're building" out of units into a profile each unit reads from and feeds.
+- **Phase 3 — shared learner profile.** Factor the cross-course "who the learner is and what mental
+  model they're building" out of courses into a profile each course reads from and feeds.
 - **Phase 4 — gentle review & richer material.** Conversation-native re-checks tied to nodes; more
   material modalities; learner affect/frustration handling; metacognitive reflection prompts. No
   numeric engine.
-- **Later, if ever — multi-unit courses.**
+- **Later, if ever — multi-course programs.**
