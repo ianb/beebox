@@ -19,6 +19,7 @@ import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerClerkRoutes } from "./routes/clerk.js";
 import { registerViewRoutes } from "./routes/views.js";
+import { registerFigureRoutes } from "./routes/figure.js";
 import { registerBoxAdminRoutes } from "./routes/admin.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { appRouter } from "./trpc/router.js";
@@ -164,6 +165,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
   await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
+  registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
 
   // Serve static frontend files within this prefix
   if (frontendExists) {

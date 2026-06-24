@@ -2765,3 +2765,44 @@ tests:
       card. Must not credit the extension with the anchoring.
     correct_contains_any: ["chat agent", "the agent", "box's agent", "assistant"]
     tags: [commentary]
+
+  # === Figure cards ===
+  #
+  # Status (2026-06-24): All 3 pass at knows_directly. The agent answers from
+  # the generated card-figure.md (linked in the agent guide) without searching.
+
+  - id: figure-card-where-code-lives
+    prompt: >
+      You're authoring a figure card for an interactive graphic. Where does the
+      runnable code go, and what does that file export?
+    expected_level: knows_directly
+    watch_for: >
+      The code is a .ts file in the card's attach scope, pointed to by the
+      `entry` frontmatter field (e.g. attach/sketch.ts); the card body is a
+      prose description, not the code. The entry module default-exports
+      (lib, { mount, figure }) => teardown. Must not say the code lives in the
+      card body, nor describe it as a React view.
+    correct_contains: ["attach", "entry"]
+    tags: [figure, cards]
+
+  - id: figure-card-runtimes
+    prompt: >
+      What kinds of interactive can a figure card run, and how is the kind
+      chosen?
+    expected_level: knows_directly
+    watch_for: >
+      p5.js, three.js, and D3 — selected by the `runtime` frontmatter field
+      (p5js | three | d3). Must not invent unsupported runtimes as if built in.
+    correct_contains_any: ["p5", "three", "d3"]
+    tags: [figure, cards]
+
+  - id: figure-card-embed-params
+    prompt: >
+      How do you embed a figure inline in a document and pass it a parameter?
+    expected_level: knows_directly
+    watch_for: >
+      Use the image/embed syntax ![caption](view:…figure.card?name=value); the
+      query-string params reach the sketch as figure.params. A plain
+      [label](view:…) link stays a navigable link, not an inline embed.
+    correct_contains: ["view:"]
+    tags: [figure, cards, embedding]

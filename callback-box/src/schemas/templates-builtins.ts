@@ -23,6 +23,7 @@ import { createTodoListTemplate } from "./todo-list.js";
 import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
 import { createDocTemplate } from "./doc.js";
+import { createFigureTemplate, figureStarterSketch, FigureRuntime } from "./figure.js";
 import { registerTemplate } from "./templates-registry.js";
 
 registerTemplate({
@@ -244,4 +245,21 @@ registerTemplate({
     if (args.role) opts.role = args.role;
     return createPersonTemplate(opts);
   },
+});
+
+registerTemplate({
+  name: "figure",
+  description: "An embeddable interactive figure (p5.js / three.js / D3); scaffolds a runnable starter sketch",
+  cardTypes: ["figure"],
+  defaultForTypes: ["figure"],
+  argsSchema: z.object({
+    runtime: FigureRuntime.describe("Runtime: p5js | three | d3"),
+    title: z.string().optional().describe("Display title"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createFigureTemplate>[0] = { runtime: args.runtime };
+    if (args.title) opts.title = args.title;
+    return createFigureTemplate(opts);
+  },
+  attachments: (args) => [{ relPath: "sketch.ts", content: figureStarterSketch(args.runtime) }],
 });

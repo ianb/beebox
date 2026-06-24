@@ -115,17 +115,23 @@ function extractMeta(source: string, { slug, mtime }: { slug: string; mtime: str
  */
 export async function compileView(
   viewPath: string,
-  opts?: { target?: ViewCompileTarget }
+  opts?: { target?: ViewCompileTarget; external?: string[] }
 ): Promise<{ output: string; meta: ViewMeta }> {
   const target = opts?.target ?? "browser";
+  // Extra bare specifiers to leave unbundled. Figure sketches receive their
+  // runtime library (p5/three/d3) as an argument from the harness; marking
+  // those external means a stray `import p5` fails loudly at load instead of
+  // esbuild trying (and failing) to resolve it from the attach dir.
+  const extraExternal = opts?.external ?? [];
   const stat = await fs.stat(viewPath);
   const mtime = stat.mtimeMs;
   const slug = slugFromFilename(viewPath);
 
   // Key the cache by target too: the browser and node builds of the same file
   // produce incompatible output (window shim vs bare imports), so sharing one
-  // slot would let one target's compile poison the other's.
-  const cacheKey = `${target}:${viewPath}`;
+  // slot would let one target's compile poison the other's. Externals go in the
+  // key as well, so the same file compiled with and without them never collides.
+  const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.mtime === mtime) {
     return { output: cached.output, meta: cached.meta };
@@ -139,8 +145,8 @@ export async function compileView(
   // throw maps to the real source line. Browser target: the window-shim plugin.
   const reactConfig: Pick<esbuild.BuildOptions, "plugins" | "external" | "sourcemap"> =
     target === "node"
-      ? { external: ["react", "react/jsx-runtime", "react/jsx-dev-runtime"], sourcemap: "inline" }
-      : { plugins: [reactExternalPlugin] };
+      ? { external: ["react", "react/jsx-runtime", "react/jsx-dev-runtime", ...extraExternal], sourcemap: "inline" }
+      : { plugins: [reactExternalPlugin], external: extraExternal };
   const sourcefile = target === "node" ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
 
   const result = await esbuild.build({
