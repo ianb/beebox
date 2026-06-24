@@ -102,6 +102,10 @@ A concept-map is a **module-scale knowledge graph**: one card holds the whole gr
 
 The graph is **loose, and cycles are intended.** Two concepts that only make sense together — that a learner bootstraps at the same time — are an honest \`complements\` cycle, not an error to fix. Don't contort the graph to avoid a cycle.
 
+## Scope — fit, not completeness
+
+A node should be something you'll actually *teach* toward the course's success-criteria, not everything that could be said about the topic. Don't node-ify background the learner already has — assume it in a sentence. **Tune how far back the map starts to what you know about the learner:** with a real read on their edge (a probe, or a specific \`audience\`), start near it; with little to go on (a generic course, no probe), starting more completely from the foundations is the right fallback. Completeness is for low information, not the default.
+
 ## Frontmatter
 
 \`\`\`yaml

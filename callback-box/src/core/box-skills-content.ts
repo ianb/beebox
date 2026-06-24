@@ -53,7 +53,9 @@ Find out — and write down — what would count as *understanding this, for thi
 
 ### 3. Build the concept-map
 
-Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it). On each node, note the **common** misconceptions for that concept — what learners *typically* get wrong, so the teaching can preempt them (the *specific* misconceptions this learner showed go in the \`progress\` card, not the map). Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular. (See the concept-map card-rule for the node fields and the edge-type rubric.)
+Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it). On each node, note the **common** misconceptions for that concept — what learners *typically* get wrong, so the teaching can preempt them (the *specific* misconceptions this learner showed go in the \`progress\` card, not the map). Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular.
+
+**Tune how far back the map starts to what you actually know about the learner.** If you have a real read on where they are (you probed them, or the course's \`audience\` names a specific person), start near their *edge*: assume what they already have — say it in a sentence rather than making it a node — and node-ify only what you'll actually teach toward the \`success-criteria\`. If you *don't* have enough to judge (a \`generic\` course, or no probe), starting more completely from the foundations is the right move — you can't assume what they know. **Completeness is the low-information fallback, not the default.** (See the concept-map card-rule for the node fields and the edge-type rubric.)
 
 ### 4. Seed progress — grounded in what you saw
 
