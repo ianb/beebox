@@ -51,7 +51,7 @@ Find out — and write down — what would count as *understanding this, for thi
 
 ### 3. Build the concept-map
 
-Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it). Record the misconceptions you actually observed. Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular. (See the concept-map card-rule for the node fields and the edge-type rubric.)
+Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it). On each node, note the **common** misconceptions for that concept — what learners *typically* get wrong, so the teaching can preempt them (the *specific* misconceptions this learner showed go in the \`progress\` card, not the map). Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular. (See the concept-map card-rule for the node fields and the edge-type rubric.)
 
 ### 4. Seed progress — grounded in what you saw
 

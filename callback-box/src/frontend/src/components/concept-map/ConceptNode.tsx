@@ -42,7 +42,7 @@ export function ConceptNode({ data, selected }: NodeProps) {
           <Badge
             tone="warning"
             size="sm"
-            title={`${String(misCount)} known misconception${misCount === 1 ? "" : "s"} — click for detail`}
+            title={`${String(misCount)} common misconception${misCount === 1 ? "" : "s"} — click for detail`}
           >
             <span className="inline-flex items-center gap-0.5">
               <WarningIcon />

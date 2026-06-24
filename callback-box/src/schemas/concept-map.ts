@@ -111,13 +111,15 @@ concepts:
     kind: concept               # fact | concept | procedure | principle  (see "kind", below)
     gloss: A quantity with magnitude and direction.   # optional one-liner
     depth: understand           # optional target Bloom level
-    misconceptions:             # optional — only ones you've actually observed in a learner
+    misconceptions:             # optional — the COMMON misconceptions about this concept
       - Thinking a vector is just its length, ignoring direction
     related:                    # optional edges to other nodes IN THIS card
       - { to: matrices, kind: complements }
 \`\`\`
 
 Each concept needs an \`id\`, a \`name\`, and a \`kind\`; everything else is optional. A node \`id\` must be unique in the card, and every edge \`to\` must name a real node \`id\` — both are checked.
+
+\`misconceptions\` are the **common, known** wrong models for this concept — what learners *typically* get wrong — so the teaching can preempt them. They describe the *subject*, not any one learner, and are reusable across courses. (Which misconceptions a **specific** learner actually holds is per-learner state — that goes in the \`progress\` card, not here.)
 
 ## \`kind\` — a strong hint to *how* to teach the node
 

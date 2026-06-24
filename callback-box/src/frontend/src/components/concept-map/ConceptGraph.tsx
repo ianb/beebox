@@ -131,7 +131,7 @@ function Legend() {
             <WarningIcon />n
           </span>
         </Badge>
-        <Text size="xs" tone="muted">known misconceptions</Text>
+        <Text size="xs" tone="muted">common misconceptions</Text>
       </div>
     </Card>
   );
