@@ -10,14 +10,26 @@
  * view:/relative links resolve the same way as for `.md` files.
  */
 
-import { useMemo } from "react";
+import { createContext, useContext, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Markdown } from "./Markdown";
 import { makeFigureEmbedComponents } from "./FigureEmbed";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/quote-extract";
+import { resolveRelativePath } from "../lib/view-url";
 import type { RendererProps } from "../renderers";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
+
+/**
+ * Navigation context for the frontmatter tree, so deeply-nested `{ ref: … }`
+ * values can resolve relative paths and navigate without threading
+ * `onNavigate`/`basePath` through every recursive `ValueView`/`FieldsTable`.
+ */
+interface FieldsNavCtx {
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  basePath: string | undefined;
+}
+const FieldsNavContext = createContext<FieldsNavCtx | null>(null);
 
 type Scalar = string | number | boolean | null;
 
@@ -29,6 +41,44 @@ function formatScalar(v: Scalar): string {
   if (v === null) return "—";
   if (typeof v === "boolean") return v ? "true" : "false";
   return String(v);
+}
+
+/** A frontmatter reference: a single-key `{ ref: <path> }` object. */
+function isRef(value: unknown): value is { ref: string } {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) return false;
+  if (Object.keys(value).length !== 1 || !("ref" in value)) return false;
+  return typeof value.ref === "string";
+}
+
+/**
+ * Render a `{ ref: … }` value as a link to the target card. The ref path is
+ * resolved against the host card's path (same rule as markdown links), so
+ * `../Foo.course.card` lands on the sibling card.
+ */
+function RefLink({ refPath }: { refPath: string }): ReactNode {
+  const nav = useContext(FieldsNavContext);
+  if (nav === null) {
+    return <span className="whitespace-pre-wrap break-words">{refPath}</span>;
+  }
+  const handleClick = (): void => {
+    const noFrag = refPath.split("#")[0] ?? refPath;
+    const target: ViewTarget = {
+      path: resolveRelativePath(nav.basePath, noFrag),
+      viewer: null,
+      params: {},
+      zoom: false,
+    };
+    nav.onNavigate(target, { label: refPath });
+  };
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      className="text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer break-words text-left"
+    >
+      {refPath}
+    </button>
+  );
 }
 
 /**
@@ -47,15 +97,17 @@ function ValueView({ value }: { value: unknown }): ReactNode {
     const allScalar = value.every(isScalar);
     if (allScalar) {
       return (
-        <ul className="list-disc list-inside space-y-0.5">
+        <ul className="list-disc list-outside ml-5 space-y-0.5 marker:text-warm-400">
           {value.map((item, i) => (
             <li key={i}>{formatScalar(item as Scalar)}</li>
           ))}
         </ul>
       );
     }
+    // Items carry sub-objects/lists, so they're tall — rule a hairline between
+    // them (in the marker colour) to keep adjacent entries from blurring together.
     return (
-      <ol className="list-decimal list-outside ml-5 space-y-2 marker:text-warm-400">
+      <ol className="list-decimal list-outside ml-5 marker:text-warm-400 divide-y divide-warm-400 [&>li]:py-2 [&>li:first-child]:pt-0 [&>li:last-child]:pb-0">
         {value.map((item, i) => (
           <li key={i}>
             <ValueView value={item} />
@@ -63,6 +115,9 @@ function ValueView({ value }: { value: unknown }): ReactNode {
         ))}
       </ol>
     );
+  }
+  if (isRef(value)) {
+    return <RefLink refPath={value.ref} />;
   }
   if (value !== null && typeof value === "object") {
     return <FieldsTable fields={value as Record<string, unknown>} />;
@@ -89,7 +144,7 @@ function FieldsTable({ fields }: { fields: Record<string, unknown> }) {
 function FieldRow({ name, value }: { name: string; value: unknown }) {
   return (
     <>
-      <dt className="text-warm-500 text-right whitespace-nowrap">{name}</dt>
+      <dt className="text-warm-500 text-right whitespace-nowrap">{name}:</dt>
       <dd className="min-w-0">
         <ValueView value={value} />
       </dd>
@@ -154,6 +209,7 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
   const body = data.body;
   const speakers = body === undefined ? [] : extractQuoteSpeakers(body);
   const { boxSlug } = useParams({ strict: false });
+  const navCtx = useMemo<FieldsNavCtx>(() => ({ onNavigate, basePath: data.path }), [onNavigate, data.path]);
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
   const components = useMemo(
     () => makeFigureEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
@@ -164,7 +220,9 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
     <div className="p-4 max-w-3xl">
       {frontmatter !== undefined && Object.keys(frontmatter).length > 0 ? (
         <div className="mb-4 pb-3 border-b border-warm-200" data-card-section="frontmatter">
-          <FieldsTable fields={frontmatter} />
+          <FieldsNavContext.Provider value={navCtx}>
+            <FieldsTable fields={frontmatter} />
+          </FieldsNavContext.Provider>
         </div>
       ) : null}
 
