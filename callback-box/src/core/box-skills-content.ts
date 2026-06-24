@@ -57,7 +57,7 @@ Lay out the concepts between where the learner is and where they want to be, and
 
 ### 4. Seed progress — grounded in what you saw
 
-Write a \`progress\` card from what the probe surfaced. Each entry records what the learner actually said or did (the \`evidence\`) and how you read it (\`observed\` / \`inferred\` / \`self-report\`), so the record reflects your real understanding of where they are rather than a guess. This is the honest starting picture, and you update it as you learn more.
+Write a **sparse** \`progress\` card from what the probe surfaced — an entry only for the nodes you actually have signal on, **not a sweep of the whole map** (an unlisted node means "not assessed yet"). Each entry records what the learner actually said or did (the \`evidence\`) and how you read it (\`observed\` / \`inferred\` / \`self-report\`), so the record reflects your real understanding rather than a guess. A handful of real entries beats a wall of "not directly probed" filler. Update it as you learn more.
 
 ### 5. Plan the exposition
 

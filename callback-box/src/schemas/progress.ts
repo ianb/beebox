@@ -54,6 +54,10 @@ export const ProgressSchema: CardSchema = cardSchema("progress", {
 
 A progress card is a per-learner, **evidence-backed** record of what a learner understands. It is tracked **separately** from a course's content — its own card, which may live in the course's attach scope or in its own tree (it points back at the course by \`ref\`). Each entry is a qualitative status for one **concept-map node** (named by the node's \`id\`).
 
+## Keep it sparse — record only what you have signal on
+
+It is a **sparse overlay on the concept-map, not a mirror of it.** Add an entry only for a node you actually have signal on — something you observed, or a genuine inference worth keeping. **A node with no entry simply means "not assessed yet"** — that's the default, and it's fine. **Do not enumerate the whole map** or manufacture "not directly probed; inferred from…" entries; that's tedious noise, not knowledge. A handful of real entries beats a full sweep of filler.
+
 ## No status without evidence
 
 Every entry must cite the learner's actual words/work and how the rating was reached:
