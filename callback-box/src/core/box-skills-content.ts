@@ -18,14 +18,15 @@ description: Build or revise a learning experience (a course) WITH a learner —
 
 A **course** is a learning experience you build *with* a learner on one bounded topic. You don't write it cold and hand it over — you probe, design, and adapt, keeping your reasoning in the cards so later changes stay coherent.
 
-This skill orchestrates four card types. Each has its own card-rule with the field details — read the rule when you open a card of that type:
+This skill orchestrates five card types. Each has its own card-rule with the field details — read the rule when you open a card of that type:
 
 - \`course\` — the manifest that binds everything.
 - \`concept-map\` — the knowledge graph (concepts as nodes, typed edges).
 - \`exposition-plan\` — the plan for how to *present* the material, with the reasoning kept in.
+- \`lesson-plan\` — the ordered delivery flow: segments tagged *interactive* (live in chat) or *material* (a pre-made card).
 - \`progress\` — a separate, per-learner, evidence-backed record of what the learner understands.
 
-The actual teaching material (docs, figures, etc.) lives in the course's \`material/\` subdirectory.
+The actual teaching material lives as \`doc\`/\`figure\` cards in the course's \`material/\` subdirectory (never a stray \`README.md\`).
 
 Write all of these cards with **neutral pronouns** (they/them) for the learner, whoever they are.
 
@@ -71,9 +72,19 @@ Work out how to *present* this material — in the \`exposition-plan\` card, in 
 
 (See the exposition-plan card-rule for the field details.)
 
-### 6. Produce the material
+### 6. Plan the delivery flow — and build the material it leans on
 
-Author the material under \`material/\` following the exposition-plan's rules and rated approaches. Keep answer keys with the material, grounded in cited sources (see *Teaching well*). The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 7) the *why* travels with the work — you don't undo a good decision by accident.
+Now lay out *what actually happens, in order*, in the **lesson-plan** card: a sequence of segments, each either **interactive** (it plays out live in chat — eliciting their model, predict-and-explain, dialog) or **material** (a pre-made card carries it — a figure to manipulate, a doc to re-read). Each segment names the concept-map node(s) it advances. This is **distinct from the exposition-plan**: the exposition-plan decided *how and why* to present; the lesson-plan just *sequences* it. Most early segments are interactive — reach for a material card only where a made artifact genuinely beats live talk.
+
+Don't author all the material up front, and don't do it in one pass — work the loop:
+
+1. **Draft** the lesson-plan: the whole segment sequence, each tagged interactive or material.
+2. **Author** only the material a segment actually leans on *and* that earns being made now (the one figure you'll reuse, a recap worth re-reading) — as **\`doc\`/\`figure\` cards under \`material/\`**, *never* a \`material/README.md\`. Follow the exposition-plan's rules and rated approaches. Keep answer keys beside the material, grounded in cited sources (see *Teaching well*).
+3. **Revise** the lesson-plan: mark each segment whose card now exists \`status: ready\` and ref it; mark the rest \`status: planned\`.
+
+A \`material\` segment must end up either \`ready\` (its card exists) or \`planned\` (outlined, built later during teaching) — the lint warns otherwise, so deferral is honest, not hidden. **A mostly-interactive, mostly-\`planned\` course is a *complete* plan**; you are not expected to pre-build everything. The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 7) the *why* travels with the work.
+
+(If there's a real learner, their progress informs which segments to make concrete first; for a \`generic\` course there's no progress yet, and that's fine — draft for the model learner.)
 
 ### 7. Adapt as you go
 
