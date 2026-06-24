@@ -433,7 +433,9 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
    a regression doctest, and verified end-to-end — `cb init` installs it and the box agent
    discovers + reads it ("first step: probe the learner"). **⚠ Prose pending boxholder review
    before merge to main.**
-6. **Knowledge audits** — written, run, recorded.
+6. **Knowledge audits** → ✅ done: 6 courseware audits in `knowledge-audits.yaml` (authoring flow,
+   course composition, edge rubric, cycles-are-spirals, progress evidence contract, exposition-plan),
+   **run** against the worktree box — all 6 pass — with the dated status recorded.
 7. **Trial & tune (post-6).** Build several real courses with the skill, observe what the agent
    actually does, and critique/adjust the card `instructions` (card-rules) and the skill prose
    against the outcomes. Phase 1 isn't "done" until the instructions have been tuned against real
