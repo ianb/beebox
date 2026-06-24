@@ -12,6 +12,7 @@ import "./image";
 import "./pdf";
 import "./recipe";
 import "./figure";
+import "./concept-map";
 import "./sheet";
 import "./markdown";
 import "./json";

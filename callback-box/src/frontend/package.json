@@ -21,8 +21,10 @@
     "@trpc/client": "^11.11.0",
     "@trpc/react-query": "^11.11.0",
     "@xstate/react": "^6.1.0",
+    "@xyflow/react": "^12.11.0",
     "ansi-to-html": "^0.7.2",
     "d3": "^7.9.0",
+    "dagre": "^0.8.5",
     "fraction.js": "^5.3.4",
     "highlight.js": "^11.11.1",
     "ldrs": "^1.1.9",
@@ -39,6 +41,7 @@
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/d3": "^7.4.3",
+    "@types/dagre": "^0.7.54",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
     "@types/three": "^0.184.1",
