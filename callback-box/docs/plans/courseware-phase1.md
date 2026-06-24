@@ -20,6 +20,42 @@ This revision folds in a cross-model (Codex) review (see
 the one guard against an LLM confidently authoring a beautiful course it never
 checked against the learner.
 
+## Implementation status (2026-06-24)
+
+Phase 1 is **built and on `main`**. Tracks 1–6 are implemented (the four card
+types, the box-aware progress→map lint, the `build-course` skill + box-skill
+provisioning, and run knowledge audits — see the per-track ✅ markers below),
+plus two things added during the build:
+
+- **A `concept-map` renderer** (`src/frontend/src/components/concept-map/`) — intro
+  prose then an interactive React-Flow + dagre graph (kind-tinted nodes, typed
+  edges, click-to-detail, full-screen, legend).
+- **Exposition-rule compilation** (`compile-exposition-rules.ts`) — each course's
+  exposition-plan `rules` compile to a path-loaded `.claude/rules/exposition-<course>.md`,
+  run in `generateDocs` *and* the `cb validate` PostToolUse hook (guides now refresh
+  on edit the same way).
+
+**The design evolved during Track 7 (trial & tune)** — the sections below describe
+the original design; where they differ from what shipped:
+
+- **`exposition-plan` was reframed** from emphasis/modalities/decisions to a worked
+  process: `learner-translation` → *rated* `approaches` (break the prose default;
+  purpose, not variety) → compiled `rules`. (The Tracks section below still shows the
+  old shape — superseded by `exposition-plan.ts`.)
+- **`concept-map` misconceptions** are *common/domain* (to preempt), not the learner's
+  observed ones; the map is **scoped to fit, edge-anchored to the learner's edge** —
+  completeness is the low-information fallback.
+- **`progress` is sparse** — entries only for nodes with real signal; absent = "not
+  assessed yet" (no full-map sweep).
+- **`course` gained `audience`** (generic vs a specific person); all cards use neutral
+  pronouns.
+
+A from-scratch regeneration validated these (16→8 nodes, edge-anchored start, sparse
+5-entry progress, rated approaches with explicit `avoid`s, auto-compiled rule).
+
+**Still ahead:** Phase 2 (the tutoring runner) and beyond (see *Named future phases*),
+and more Track-7 tuning against real courses.
+
 ## Division of labor: cards vs card-rules vs skills
 
 The whole design is organized across the three surfaces the work lives on. Being
