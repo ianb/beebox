@@ -16,6 +16,8 @@ import { createCalendarReviewJobTemplate } from "../../src/schemas/calendar-revi
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
+import { CourseSchema, createCourseTemplate } from "../../src/schemas/course.js";
+import { extractRefs } from "../../src/cards/index.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
 ```
@@ -44,6 +46,9 @@ getCardTypes().includes("figure")
 => true
 
 getCardTypes().includes("concept-map")
+=> true
+
+getCardTypes().includes("course")
 => true
 
 ```
@@ -491,4 +496,59 @@ const schemas = await createCardSchemaMap();
 const parsed = parseCardText(text, { source: "Acids.concept-map.card", schemas });
 parsed.schema.type
 => concept-map
+```
+
+## Course
+
+A course card is the manifest that binds a learning experience's components by
+reference.
+
+```ts
+CourseSchema.type
+=> course
+```
+
+A course with goals, success-criteria, and component refs parses; everything but
+the body is optional, so a bare course still loads too:
+
+```ts
+CourseSchema.frontmatterSchema.safeParse({
+  type: "course",
+  goals: ["Understand acids and bases"],
+  "success-criteria": ["Can predict whether a reaction fizzes and explain why"],
+  "concept-map": { ref: "attach/Acids.concept-map.card" },
+  "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
+  material: "attach/material",
+  progress: { ref: "/people/learner/Acids.progress.card" },
+}).success
+=> true
+
+CourseSchema.frontmatterSchema.safeParse({ type: "course" }).success
+=> true
+```
+
+Component refs are extracted as cross-card edges, so card-lint checks they
+resolve:
+
+```ts
+const parsed = CourseSchema.frontmatterSchema.parse({
+  type: "course",
+  "concept-map": { ref: "attach/Acids.concept-map.card" },
+  "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
+});
+extractRefs(parsed).map((r) => r.ref).sort()
+=> [
+  "attach/Acids.concept-map.card",
+  "attach/Acids.exposition-plan.card"
+]
+```
+
+The template scaffolds a course that parses against the registry:
+
+```ts
+const text = createCourseTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.course.card", schemas });
+parsed.schema.type
+=> course
 ```

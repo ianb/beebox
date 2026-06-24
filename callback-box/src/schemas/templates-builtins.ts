@@ -25,6 +25,7 @@ import { createPersonTemplate } from "./person.js";
 import { createDocTemplate } from "./doc.js";
 import { createFigureTemplate, figureStarterSketch, FigureRuntime } from "./figure.js";
 import { createConceptMapTemplate } from "./concept-map.js";
+import { createCourseTemplate } from "./course.js";
 import { registerTemplate } from "./templates-registry.js";
 
 registerTemplate({
@@ -277,5 +278,20 @@ registerTemplate({
     const opts: Parameters<typeof createConceptMapTemplate>[0] = {};
     if (args.title) opts.title = args.title;
     return createConceptMapTemplate(opts);
+  },
+});
+
+registerTemplate({
+  name: "course",
+  description: "A learning-experience manifest (binds a concept-map, exposition-plan, material, and progress)",
+  cardTypes: ["course"],
+  defaultForTypes: ["course"],
+  argsSchema: z.object({
+    title: z.string().optional().describe("Display title"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createCourseTemplate>[0] = {};
+    if (args.title) opts.title = args.title;
+    return createCourseTemplate(opts);
   },
 });

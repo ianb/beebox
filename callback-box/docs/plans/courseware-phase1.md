@@ -420,9 +420,10 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
 
 1. **Skill-home probe** → ✅ done, A1 (box skills auto-discovered, verified). `generateSkills`
    install step folded into step 5.
-2. **`concept-map`** — read `lint-format.ts` + the `commentary.tsx`/`extfile.tsx` validate hooks;
-   schema + `validate` + rule (with the edge rubric) + template + parse/validate doctests.
-3. **`course`** — schema + rule + template + parse doctest.
+2. **`concept-map`** → ✅ done (commit 3591e13d): schema + `validate` (unique ids; edges resolve;
+   cycles OK) + edge-rubric rule + template + parse/validate doctests + `cb validate` smoke.
+3. **`course`** → ✅ done: manifest schema (goals, success-criteria, component refs, material dir) +
+   rule + template + parse/ref doctests.
 4. **`exposition-plan`** + **`progress`** — schemas + rules + templates + parse doctests; the
    progress→map node-id check in `card-lint.ts` + its lint doctest; session-log convention.
 5. **`build-course` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
