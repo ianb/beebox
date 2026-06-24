@@ -31,15 +31,17 @@ The actual teaching material (docs, figures, etc.) lives in the course's \`mater
 
 It is not a rigid pipeline — probing comes early and the rest follows from what it surfaces. Revisit and adapt freely.
 
-### 1. Probe — interactively, and by default
+### 1. Probe — to understand, not to test
 
-Before designing anything, find out what the learner actually understands — about this topic *and* the territory around it. **Probe, don't quiz.** Ask open-ended questions anchored in a concrete, familiar phenomenon, aimed at their mental model:
+Before designing anything, understand what the learner knows — the full, real picture. You are **not** testing or challenging them, and this is not a quiz. Think of a Piagetian clinical interview: curious, following their thinking wherever it leads. Ask open-ended questions anchored in a concrete, familiar phenomenon, aimed at their mental model:
 
 > "What do you think is actually happening when you mix baking soda and vinegar?"
 
-One good phenomenon-question surfaces a lot — what they know, in their own words, *and* the misconceptions they hold. Chase the reasoning behind an answer; branch on what they say. Stop when you have enough to design — don't drag it out.
+One good phenomenon-question surfaces a lot, in their own words. Chase the reasoning behind an answer; branch on what they say.
 
-Hunt for **misconceptions**, not just gaps: a confidently-held wrong model matters more than an absence, and it is where teaching has the most work to do.
+Aim for the *fullness* of what they understand — including the parts they can't yet name. Some real understanding is **obscured by ignorance elsewhere**: a missing word, or a gap in a neighboring idea, can make a learner seem to know less than they do. Dig past that, and give them room to show what they grasp. Notice misconceptions too — not to correct on the spot, but because a confidently-held wrong model is part of the real picture and shapes what to teach. It's fine to gently check things they seem sure of, as well — not to catch them out, but so the picture is honest in both directions.
+
+Stop when you have enough to design — don't drag it out.
 
 **This step is the default, but not always possible.** If you are building for an unknown/future learner (no one to probe), skip it: build for a sensible model learner, and probe for real the first time someone engages.
 
@@ -51,9 +53,9 @@ Find out — and write down — what would count as *understanding this, for thi
 
 Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it). Record the misconceptions you actually observed. Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular. (See the concept-map card-rule for the node fields and the edge-type rubric.)
 
-### 4. Seed progress — with evidence
+### 4. Seed progress — grounded in what you saw
 
-Write a \`progress\` card from what the probe surfaced. **Every entry cites the evidence** — what the learner actually said or did, and how you judged it (\`observed\` / \`inferred\` / \`self-report\`). Rate the *evidence*, not their confidence. This is the honest starting picture you track against over time.
+Write a \`progress\` card from what the probe surfaced. Each entry records what the learner actually said or did (the \`evidence\`) and how you read it (\`observed\` / \`inferred\` / \`self-report\`), so the record reflects your real understanding of where they are rather than a guess. This is the honest starting picture, and you update it as you learn more.
 
 ### 5. Plan the exposition
 
@@ -69,12 +71,12 @@ Adaptation is expected and a good sign. As you learn more about the learner — 
 
 **Revising an existing course** runs the same loop against the existing cards: re-probe where needed, adjust, and log what changed and why.
 
-## Honesty (non-negotiable)
+## Teaching well
 
-The worst failure here is confidently producing a beautiful course you never checked against the learner. Guard against it:
+- **Be Socratic.** Guide the learner to reason rather than handing them answers — use the answer key to steer your questions, don't just state it. Meet them where they are; build on partial and correct-but-incomplete thinking instead of restarting.
+- **Ground what you teach in sources.** Don't assert facts from memory — especially in answer keys and explanations. Bring the authoritative material into the box (e.g. a \`doc\` or \`webpage\` card) and cite it with the \`{% source %}\` pattern, so the learner can trace what they're told and the content stays trustworthy:
 
-- **Don't give away answers.** When the learner is working toward something, retrieve the answer key to guide them — never just hand it over. Let them reason.
-- **Follow their actual work**, not an idealized path. Meet them where they are; acknowledge partial and correct-but-incomplete thinking instead of restarting.
-- **Don't fabricate.** Never invent a misconception, a concept, or evidence the learner didn't actually exhibit.
-- **Rate the evidence, not the confidence.** Don't upgrade a status because the learner sounds sure, or because you'd like them to be further along. A status with no real evidence doesn't belong in the card.
+  > Acids {% source ref="material/Acids_Bases.doc.card" %}donate protons{% /source %} in solution.
+
+  A bare \`{% source ref="..." %}…{% /source %}\` anchors a span to a cited card; use \`href="..."\` to cite an external URL instead. (See the box's source-tagging convention for the full pattern.)
 `;
