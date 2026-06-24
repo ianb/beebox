@@ -428,9 +428,16 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
    doctests (incl. the enforced evidence contract); the progress→map node-id check as a dedicated
    box-aware module (`lint-progress-nodes.ts`) invoked by `card-lint.ts`, with a regression doctest
    + `cb validate` smoke; session-log convention documented in the progress card-rule.
-5. **`build-course` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
-   install step in `cb init`; pointers wired in. **Boxholder review before merge.**
+5. **`build-course` skill** + honesty protocol → ✅ drafted & installed: the skill content
+   (`box-skills-content.ts`), the `generateSkills` install step in `cb init` (`box-skills.ts`),
+   a regression doctest, and verified end-to-end — `cb init` installs it and the box agent
+   discovers + reads it ("first step: probe the learner"). **⚠ Prose pending boxholder review
+   before merge to main.**
 6. **Knowledge audits** — written, run, recorded.
+7. **Trial & tune (post-6).** Build several real courses with the skill, observe what the agent
+   actually does, and critique/adjust the card `instructions` (card-rules) and the skill prose
+   against the outcomes. Phase 1 isn't "done" until the instructions have been tuned against real
+   use — the cards and skill are the hypothesis; the courses are the test.
 
 One/few commits per item on the worktree branch. Completes when all land; ships only on the
 boxholder's explicit signal.

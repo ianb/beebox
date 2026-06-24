@@ -12,6 +12,7 @@ import { resolve } from "node:path";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installRootLandmark, symlinkClaudeMemory } from "../../core/box.js";
 import { stageAll, commit } from "../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
+import { generateSkills } from "../../core/box-skills.js";
 import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
@@ -110,6 +111,12 @@ export const initCommand = new Command("init")
       const generated = await generateRules(resolve(targetPath));
       if (generated.length > 0) {
         console.log(`\nGenerated ${generated.length} card rules in .claude/rules/`);
+      }
+
+      // Install managed box skills (e.g. build-course)
+      const skills = await generateSkills(resolve(targetPath));
+      if (skills.length > 0) {
+        console.log(`Installed ${skills.length} skill(s) in .claude/skills/: ${skills.join(", ")}`);
       }
 
       // Set or clear the docid-debug marker
