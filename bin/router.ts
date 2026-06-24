@@ -34,6 +34,8 @@ import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
+import Markdoc from "@markdoc/markdoc";
+import hljs from "highlight.js";
 
 type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
@@ -65,6 +67,31 @@ const BROWSE_DIR = path.join(STATE_DIR, "browse");
 const ROUTER_PID_FILE = path.join(STATE_DIR, "router.pid");
 
 const AGENT_BROWSER_BIN = path.join(REPO_ROOT, "node_modules", "agent-browser", "bin", "agent-browser.js");
+
+// The /dev/ space: a place the *dev-repo agent* (Claude Code, not a box) builds
+// things for you to view in the browser — HTML visualizations, rendered
+// Markdown reports, data displays. Served from the tracked dev/ directory
+// (committed, unlike the gitignored scratch/), so these views are kept.
+const DEV_ROOT = path.join(REPO_ROOT, "dev");
+const DEV_CONTENT_TYPES: Record<string, string> = {
+  ".html": "text/html; charset=utf-8",
+  ".htm": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".mjs": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".csv": "text/csv; charset=utf-8",
+  ".txt": "text/plain; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".gif": "image/gif",
+  ".webp": "image/webp",
+  ".ico": "image/x-icon",
+  ".woff2": "font/woff2",
+  ".pdf": "application/pdf",
+};
 
 function browseDirsFor(name: string): { base: string; socketDir: string; profileDir: string } {
   const base = path.join(BROWSE_DIR, name);
@@ -737,8 +764,9 @@ async function renderIndex(): Promise<string> {
       ? `<span class="badge failed">failed · <a href="/${escapeHtml(w.name)}/">see error</a></span>`
       : w.running && w.entry?.lastActivity
         ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
-        : `<span class="badge cold">cold (will lazy-start on click)</span>`;
-    const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">dashboard ↗</a>`;
+        : `<span class="badge cold" title="will lazy-start on first request">cold</span>`;
+    const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">agent-browser ↗</a>`;
+    const devLink = `<a href="/${escapeHtml(w.name)}/dev/" class="dash" title="agent-built visualizations &amp; markdown doc browser for ${escapeHtml(w.name)} (served from disk, no start)">dev ↗</a>`;
     const stopForm = w.running
       ? `<form method="POST" action="/__router/stop/${escapeHtml(w.name)}" class="stopForm">
            <button type="submit" title="Tell the router to stop ${escapeHtml(w.name)} now">stop</button>
@@ -747,8 +775,9 @@ async function renderIndex(): Promise<string> {
     return `
       <li>
         <a href="/${escapeHtml(w.name)}/" class="name">${escapeHtml(w.name)}</a>
-        ${status}
+        <span class="statuscell">${status}</span>
         ${dashLink}
+        ${devLink}
         ${stopForm}
       </li>`;
   }).join("");
@@ -758,7 +787,7 @@ async function renderIndex(): Promise<string> {
 <head>
 <meta charset="utf-8">
 <title>callback-mono dev router</title>
-<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
 <style>
   body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2em auto; padding: 0 1em; color: #222; }
   h1 { font-size: 1.2em; margin-bottom: 0.2em; }
@@ -767,6 +796,7 @@ async function renderIndex(): Promise<string> {
   li { display: flex; align-items: center; gap: 0.6em; padding: 0.5em 0; border-bottom: 1px solid #eee; }
   a.name { font-weight: 600; text-decoration: none; color: #2255aa; font-family: ui-monospace, Menlo, monospace; min-width: 12em; }
   a.name:hover { text-decoration: underline; }
+  .statuscell { flex: 0 0 11em; }
   .badge { font-size: 0.75em; padding: 0.15em 0.5em; border-radius: 4px; }
   .badge.running { background: #d8f0d8; color: #2a6b2a; }
   .badge.cold    { background: #ececec; color: #666; }
@@ -786,7 +816,7 @@ async function renderIndex(): Promise<string> {
 </head>
 <body>
 <h1>callback-mono dev router</h1>
-<p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s.</p>
+<p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
 <ul>${rows}</ul>
 
 <div class="help">
@@ -876,6 +906,405 @@ ${fastifySection}
 </body>
 </html>
 `;
+}
+
+// --- /<worktree>/dev/ space: agent-built views + manifest + doc browser ------
+//
+// Per-worktree, just like the box apps: /<name>/dev/ serves <name>'s checkout —
+// its tracked dev/ directory (artifacts) and a markdown doc browser over its
+// own .md files. Served straight from disk, so it never cold-starts the
+// worktree's vite/fastify (you can read docs from a cold worktree).
+
+function worktreeRoot(name: string): string {
+  return name === "main" ? MAIN_ROOT : path.join(WORKTREES_ROOT, name);
+}
+
+function renderDevShell(title: string, breadcrumbs: string, body: string, extraCss = ""): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(title)} · /dev</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,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">
+<style>
+  body { font: 15px/1.6 system-ui, sans-serif; max-width: 860px; margin: 0 auto; padding: 1.4em 1.2em 5em; color: #222; }
+  nav.crumbs { font: 13px ui-monospace, Menlo, monospace; color: #888; margin-bottom: 1.6em; padding-bottom: 0.7em; border-bottom: 1px solid #eee; }
+  nav.crumbs a { color: #2255aa; text-decoration: none; }
+  nav.crumbs a:hover { text-decoration: underline; }
+  h1 { font-size: 1.5em; } h2 { font-size: 1.2em; margin-top: 1.6em; } h3 { font-size: 1.05em; }
+  a { color: #2255aa; }
+  code { background: #f3f3f3; padding: 0.1em 0.35em; border-radius: 3px; font-size: 0.9em; }
+  pre { background: #f7f7f7; padding: 0.9em 1em; border-radius: 6px; overflow-x: auto; line-height: 1.4; }
+  pre code { background: none; padding: 0; }
+  .hljs-comment, .hljs-quote { color: #6a737d; font-style: italic; }
+  .hljs-keyword, .hljs-selector-tag, .hljs-built_in, .hljs-literal { color: #d73a49; }
+  .hljs-type, .hljs-title.class_, .hljs-class .hljs-title { color: #6f42c1; }
+  .hljs-string, .hljs-regexp, .hljs-attribute, .hljs-attr, .hljs-template-tag, .hljs-addition { color: #032f62; }
+  .hljs-number, .hljs-meta { color: #005cc5; }
+  .hljs-title, .hljs-title.function_, .hljs-section, .hljs-name { color: #6f42c1; }
+  .hljs-variable, .hljs-property, .hljs-params { color: #24292e; }
+  .hljs-symbol, .hljs-bullet, .hljs-deletion { color: #e36209; }
+  .hljs-emphasis { font-style: italic; } .hljs-strong { font-weight: 700; }
+  table { border-collapse: collapse; margin: 1em 0; font-size: 0.93em; }
+  th, td { border: 1px solid #ddd; padding: 0.4em 0.7em; text-align: left; vertical-align: top; }
+  th { background: #f4f4f4; }
+  blockquote { margin: 1em 0; padding: 0.3em 1em; border-left: 4px solid #d0deef; background: #f7faff; color: #444; }
+  ul.dir { list-style: none; padding: 0; font: 14px ui-monospace, Menlo, monospace; }
+  ul.dir li { padding: 0.35em 0; border-bottom: 1px solid #f0f0f0; display: flex; gap: 0.8em; }
+  ul.dir a { text-decoration: none; min-width: 22em; }
+  ul.dir a:hover { text-decoration: underline; }
+  ul.dir .size { color: #999; }
+  .cards { list-style: none; padding: 0; }
+  .cards li { padding: 0.9em 1em; margin: 0.6em 0; border: 1px solid #e3e3e3; border-radius: 8px; background: #fbfbfb; }
+  .cards a.title { font-weight: 600; font-size: 1.05em; text-decoration: none; }
+  .cards .desc { color: #666; font-size: 0.9em; margin-top: 0.2em; }
+  .empty { color: #888; font-style: italic; }
+${extraCss}</style>
+</head>
+<body>
+<nav class="crumbs">${breadcrumbs}</nav>
+${body}
+</body>
+</html>`;
+}
+
+// Build "<base> / sub / file.md" breadcrumbs (base like "/main/dev"); every
+// segment but the last links.
+function devBreadcrumbs(base: string, rel: string): string {
+  const parts = rel.split("/").filter(Boolean);
+  const crumbs = [`<a href="/">router</a>`, `<a href="${base}/">${escapeHtml(base.replace(/^\//, ""))}</a>`];
+  let acc = base;
+  parts.forEach((part, i) => {
+    acc += `/${part}`;
+    crumbs.push(i === parts.length - 1 ? escapeHtml(part) : `<a href="${acc}/">${escapeHtml(part)}</a>`);
+  });
+  return crumbs.join(" / ");
+}
+
+function formatSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function unescapeHtml(s: string): string {
+  return s
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&amp;/g, "&");
+}
+
+// Markdoc emits code fences as `<pre data-language="ts">escaped code</pre>`, or a
+// plain `<pre>` when the fence has no language token. Re-run each block through
+// highlight.js (already a dep) so code gets syntax colors. Un-tagged blocks
+// default to `defaultLang` (ts — the language we write nearly everywhere, and
+// what the doctests are even when their continue/cleanup fences omit it).
+function highlightCodeBlocks(html: string, defaultLang: string): string {
+  return html.replace(/<pre(?: data-language="([^"]*)")?>([\s\S]*?)<\/pre>/g, (_m, lang: string | undefined, body: string) => {
+    const code = unescapeHtml(body);
+    let language = lang && hljs.getLanguage(lang) ? lang : "";
+    if (!language && defaultLang && hljs.getLanguage(defaultLang)) language = defaultLang;
+    let inner: string;
+    try {
+      inner = language ? hljs.highlight(code, { language }).value : escapeHtml(code);
+    } catch {
+      inner = escapeHtml(code);
+    }
+    const cls = language ? ` class="language-${escapeHtml(language)}"` : "";
+    return `<pre class="hljs"><code${cls}>${inner}</code></pre>`;
+  });
+}
+
+function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
+  return highlightCodeBlocks(Markdoc.renderers.html(Markdoc.transform(Markdoc.parse(src))), defaultLang);
+}
+
+/**
+ * The /dev/ manifest landing: the curated list of what you can view here —
+ * built-in tools (the markdown doc browser) plus whatever artifacts the agent
+ * has dropped in the tracked dev/ directory.
+ */
+async function renderDevManifest(name: string, base: string, devRoot: string): Promise<string> {
+  const builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
+    + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`;
+
+  let artifactsHtml: string;
+  try {
+    const dirents = (await fs.readdir(devRoot, { withFileTypes: true }))
+      .filter((d) => !d.name.startsWith(".") && d.name !== "README.md")
+      .sort((a, b) =>
+        a.isDirectory() === b.isDirectory() ? a.name.localeCompare(b.name) : a.isDirectory() ? -1 : 1,
+      );
+    if (dirents.length) {
+      const rows = await Promise.all(dirents.map(async (d) => {
+        const isDir = d.isDirectory();
+        const href = `${base}/${encodeURIComponent(d.name)}${isDir ? "/" : ""}`;
+        let size = "";
+        if (!isDir) {
+          try { size = formatSize((await fs.stat(path.join(devRoot, d.name))).size); } catch { /* skip */ }
+        }
+        return `<li><a href="${href}">${escapeHtml(d.name)}${isDir ? "/" : ""}</a><span class="size">${size}</span></li>`;
+      }));
+      artifactsHtml = `<ul class="dir">${rows.join("")}</ul>`;
+    } else {
+      artifactsHtml = `<p class="empty">No artifacts yet — the agent drops <code>.html</code> / <code>.md</code> / data files in <code>${escapeHtml(name)}/dev/</code> and they appear here.</p>`;
+    }
+  } catch {
+    artifactsHtml = `<p class="empty">No <code>dev/</code> directory in <code>${escapeHtml(name)}</code> yet.</p>`;
+  }
+
+  const body = `<h1>${escapeHtml(name)} — /dev</h1>
+<p class="sub" style="color:#666;margin-top:0">Visualizations &amp; views the agent built for you, from <code>${escapeHtml(name)}</code>'s tracked <code>dev/</code> directory.</p>
+<h2>Built-in tools</h2>
+<ul class="cards">${builtinHtml}</ul>
+<h2>Artifacts in <code>dev/</code></h2>
+${artifactsHtml}`;
+  return renderDevShell(`${name} · dev`, devBreadcrumbs(base, ""), body);
+}
+
+// --- markdown doc browser (/dev/docs) ---------------------------------------
+
+async function listRepoMarkdown(repoRoot: string): Promise<string[]> {
+  try {
+    const { stdout } = await execa("git", ["ls-files", "*.md", "**/*.md"], { cwd: repoRoot });
+    return Array.from(new Set(stdout.split("\n").filter(Boolean))).sort();
+  } catch {
+    return [];
+  }
+}
+
+// Last-commit unix time per .md file (one history walk; first occurrence wins,
+// since `git log` is newest-first). Filesystem mtime is useless in a worktree —
+// every file shares the clone time — so we use git for "recently edited".
+async function mdLastModified(repoRoot: string): Promise<Map<string, number>> {
+  const times = new Map<string, number>();
+  try {
+    const { stdout } = await execa("git", ["log", "--format=%ct", "--name-only", "--", "*.md", "**/*.md"], { cwd: repoRoot });
+    let cur = 0;
+    for (const line of stdout.split("\n")) {
+      if (line === "") continue;
+      if (/^\d+$/.test(line)) { cur = Number(line); continue; }
+      if (!times.has(line)) times.set(line, cur);
+    }
+  } catch { /* leave empty */ }
+  return times;
+}
+
+// A top-level area with more than this many .md files is split into a second
+// level (e.g. callback-box/ → callback-box/docs, callback-box/test, …). Smaller
+// areas stay flat — the flatness is nice when it fits.
+const DOC_TWO_LEVEL_THRESHOLD = 60;
+
+function docHref(base: string, f: string, sort: string): string {
+  const q = sort === "recent" ? "?sort=recent" : "";
+  return `${base}/docs/${f.split("/").map(encodeURIComponent).join("/")}${q}`;
+}
+
+function docGroupKey(f: string, bigTops: Set<string>): string {
+  const parts = f.split("/");
+  if (parts.length === 1) return "(root)";
+  if (bigTops.has(parts[0]) && parts.length >= 3) return `${parts[0]}/${parts[1]}`;
+  return parts[0];
+}
+
+/**
+ * The doc-browser sidebar. Two views, toggled by `sort`:
+ *  - "path" (default): <details> groups by area; big areas go two levels deep.
+ *  - "recent": one flat list, most-recently-committed first, dated.
+ * The group/list item for the current file is marked active and expanded.
+ */
+function renderDocSidebar(base: string, files: string[], currentRel: string, sort: string, times: Map<string, number>): string {
+  const indexHref = (s: string) => `${base}/docs/${s === "recent" ? "?sort=recent" : ""}`;
+  const curHref = (s: string) => (currentRel ? docHref(base, currentRel, s) : indexHref(s));
+  const toggle = `<div class="docsort">`
+    + `<a class="${sort !== "recent" ? "on" : ""}" href="${curHref("path")}">by path</a> · `
+    + `<a class="${sort === "recent" ? "on" : ""}" href="${curHref("recent")}">recently edited</a></div>`;
+
+  let listHtml: string;
+  if (sort === "recent") {
+    const sorted = [...files].sort((a, b) => (times.get(b) ?? 0) - (times.get(a) ?? 0));
+    listHtml = `<ul class="flat">${sorted.map((f) => {
+      const active = f === currentRel ? ' class="active"' : "";
+      const t = times.get(f);
+      const date = t ? new Date(t * 1000).toISOString().slice(0, 10) : "";
+      return `<li${active}><a href="${docHref(base, f, "recent")}" title="${escapeHtml(f)}">${escapeHtml(f)}</a><span class="date">${date}</span></li>`;
+    }).join("")}</ul>`;
+  } else {
+    const counts = new Map<string, number>();
+    for (const f of files) {
+      const top = f.includes("/") ? f.slice(0, f.indexOf("/")) : "(root)";
+      counts.set(top, (counts.get(top) ?? 0) + 1);
+    }
+    const bigTops = new Set([...counts].filter(([, n]) => n > DOC_TWO_LEVEL_THRESHOLD).map(([k]) => k));
+    const groups = new Map<string, string[]>();
+    for (const f of files) {
+      const key = docGroupKey(f, bigTops);
+      (groups.get(key) ?? groups.set(key, []).get(key)!).push(f);
+    }
+    listHtml = Array.from(groups.entries()).map(([group, gfiles]) => {
+      const hasCurrent = gfiles.includes(currentRel);
+      const items = gfiles.map((f) => {
+        const label = f.startsWith(`${group}/`) ? f.slice(group.length + 1) : f;
+        const active = f === currentRel ? ' class="active"' : "";
+        return `<li${active}><a href="${docHref(base, f, "path")}">${escapeHtml(label)}</a></li>`;
+      }).join("");
+      return `<details${hasCurrent ? " open" : ""}><summary>${escapeHtml(group)} <span class="n">${gfiles.length}</span></summary><ul>${items}</ul></details>`;
+    }).join("");
+  }
+  return `<aside class="docnav"><div class="docnav-head">${files.length} markdown files</div>${toggle}${listHtml}</aside>`;
+}
+
+const DOC_BROWSER_CSS = `
+  body { max-width: none; padding: 0; }
+  nav.crumbs { padding: 0.7em 1.2em; margin: 0; }
+  .docwrap { display: flex; align-items: flex-start; gap: 0; }
+  aside.docnav { flex: 0 0 20em; position: sticky; top: 0; max-height: 100vh; overflow-y: auto; border-right: 1px solid #eee; padding: 0.5em 0.8em 3em; font: 13px ui-monospace, Menlo, monospace; }
+  .docnav-head { color: #888; font-size: 0.85em; margin: 0.4em 0 0.4em; }
+  .docsort { font-size: 0.85em; margin: 0 0 0.9em; }
+  .docsort a { text-decoration: none; color: #999; }
+  .docsort a.on { color: #222; font-weight: 700; }
+  aside.docnav details { margin-bottom: 0.3em; }
+  aside.docnav summary { cursor: pointer; color: #444; padding: 0.2em 0; }
+  aside.docnav summary .n { color: #aaa; font-size: 0.85em; }
+  aside.docnav ul { list-style: none; padding: 0 0 0.4em 0.9em; margin: 0.2em 0; }
+  aside.docnav li { padding: 0.12em 0; }
+  aside.docnav li a { text-decoration: none; color: #2255aa; }
+  aside.docnav li.active a { font-weight: 700; color: #a2380a; }
+  aside.docnav ul.flat { padding-left: 0; }
+  aside.docnav ul.flat li { display: flex; justify-content: space-between; gap: 0.6em; align-items: baseline; }
+  aside.docnav ul.flat li a { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  aside.docnav ul.flat .date { color: #aaa; font-size: 0.8em; white-space: nowrap; }
+  main.doccontent { flex: 1 1 auto; min-width: 0; max-width: 820px; padding: 0.5em 2em 5em; }
+  main.doccontent .placeholder { color: #888; margin-top: 3em; }
+`;
+
+async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort: string, res: http.ServerResponse): Promise<void> {
+  // rel is the part after "/docs", e.g. "" | "/" | "/callback-box/CLAUDE.md"
+  const fileRel = rel.replace(/^\//, "");
+  const files = await listRepoMarkdown(repoRoot);
+  const times = sort === "recent" ? await mdLastModified(repoRoot) : new Map<string, number>();
+
+  let contentHtml: string;
+  let title = "doc browser";
+  if (fileRel) {
+    const resolved = path.resolve(repoRoot, fileRel);
+    if (!resolved.startsWith(repoRoot + path.sep) || !resolved.endsWith(".md")) {
+      res.writeHead(403, { "content-type": "text/plain" });
+      res.end("forbidden\n");
+      return;
+    }
+    try {
+      const src = await fs.readFile(resolved, "utf8");
+      contentHtml = `<p style="color:#888;font:12px ui-monospace,monospace;margin-top:0">${escapeHtml(fileRel)}</p>${renderMarkdownToHtml(src)}`;
+      title = path.basename(resolved);
+    } catch {
+      res.writeHead(404, { "content-type": "text/plain" });
+      res.end(`not found: ${fileRel}\n`);
+      return;
+    }
+  } else {
+    contentHtml = `<div class="placeholder"><h1>Markdown doc browser</h1><p>${files.length} <code>.md</code> files. Pick one from the left.</p></div>`;
+  }
+
+  const body = `<div class="docwrap">${renderDocSidebar(base, files, fileRel, sort, times)}<main class="doccontent">${contentHtml}</main></div>`;
+  res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+  res.end(renderDevShell(title, devBreadcrumbs(base, fileRel ? `docs/${fileRel}` : "docs"), body, DOC_BROWSER_CSS));
+}
+
+// --- static artifacts from the worktree's tracked dev/ directory -------------
+
+async function serveDevArtifact(base: string, devRoot: string, rel: string, pathOnly: string, res: http.ServerResponse): Promise<void> {
+  const resolved = path.resolve(devRoot, `.${rel || "/"}`);
+  if (resolved !== devRoot && !resolved.startsWith(devRoot + path.sep)) {
+    res.writeHead(403, { "content-type": "text/plain" });
+    res.end("forbidden\n");
+    return;
+  }
+  let stat;
+  try {
+    stat = await fs.stat(resolved);
+  } catch {
+    res.writeHead(404, { "content-type": "text/plain" });
+    res.end(`not found in dev/: ${rel}\n`);
+    return;
+  }
+  if (stat.isDirectory()) {
+    if (!pathOnly.endsWith("/")) {
+      res.writeHead(301, { location: `${base}${rel}/` });
+      res.end();
+      return;
+    }
+    const dirents = (await fs.readdir(resolved, { withFileTypes: true }))
+      .filter((d) => !d.name.startsWith("."))
+      .sort((a, b) =>
+        a.isDirectory() === b.isDirectory() ? a.name.localeCompare(b.name) : a.isDirectory() ? -1 : 1,
+      );
+    const dirBase = `${base}${rel}`.replace(/\/$/, "");
+    const rows = await Promise.all(dirents.map(async (d) => {
+      const isDir = d.isDirectory();
+      const href = `${dirBase}/${encodeURIComponent(d.name)}${isDir ? "/" : ""}`;
+      let size = "";
+      if (!isDir) {
+        try { size = formatSize((await fs.stat(path.join(resolved, d.name))).size); } catch { /* skip */ }
+      }
+      return `<li><a href="${href}">${escapeHtml(d.name)}${isDir ? "/" : ""}</a><span class="size">${size}</span></li>`;
+    }));
+    const heading = escapeHtml(rel || "/");
+    const inner = dirents.length
+      ? `<h1>${heading}</h1><ul class="dir">${rows.join("")}</ul>`
+      : `<h1>${heading}</h1><p class="empty">empty</p>`;
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(renderDevShell(rel || "dev", devBreadcrumbs(base, rel.replace(/\/$/, "")), inner));
+    return;
+  }
+  const ext = path.extname(resolved).toLowerCase();
+  if (ext === ".md") {
+    const src = await fs.readFile(resolved, "utf8");
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(renderDevShell(path.basename(resolved), devBreadcrumbs(base, rel), renderMarkdownToHtml(src)));
+    return;
+  }
+  const buf = await fs.readFile(resolved);
+  res.writeHead(200, {
+    "content-type": DEV_CONTENT_TYPES[ext] ?? "application/octet-stream",
+    "cache-control": "no-store",
+  });
+  res.end(buf);
+}
+
+/** Dispatch everything under /<name>/dev/. `rest` is the URL after /<name>. */
+async function serveDev(name: string, rest: string, res: http.ServerResponse): Promise<void> {
+  // The /dev/ space is live working material — never let the browser cache it.
+  // Set here so every response below (manifest, doc browser, .md, dir index,
+  // static artifacts) inherits it; nothing overrides cache-control to anything
+  // weaker. Edits show on reload with no server restart.
+  res.setHeader("Cache-Control", "no-store, max-age=0");
+  const base = `/${name}/dev`;
+  const repoRoot = worktreeRoot(name);
+  const devRoot = path.join(repoRoot, "dev");
+  const pathOnly = rest.split("?")[0];
+  const rel = decodeURIComponent(pathOnly.slice("/dev".length)); // "" | "/" | "/docs/..." | "/foo.html"
+
+  if (rel === "" || rel === "/") {
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(await renderDevManifest(name, base, devRoot));
+    return;
+  }
+  if (rel === "/docs") {
+    res.writeHead(301, { location: `${base}/docs/` });
+    res.end();
+    return;
+  }
+  if (rel === "/docs/" || rel.startsWith("/docs/")) {
+    const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
+    const sort = new URLSearchParams(query).get("sort") === "recent" ? "recent" : "path";
+    await serveDocBrowser(base, repoRoot, rel.slice("/docs".length), sort, res);
+    return;
+  }
+  await serveDevArtifact(base, devRoot, rel, pathOnly, res);
 }
 
 const server = http.createServer(async (req, res) => {
@@ -1024,6 +1453,13 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // Bare /dev → the main checkout's dev space (it's per-worktree; default main).
+  if (url.split("?")[0] === "/dev" || url.split("?")[0] === "/dev/") {
+    res.writeHead(301, { location: "/main/dev/" });
+    res.end();
+    return;
+  }
+
   const name = parseWorktreeName(url);
   if (!name) {
     res.writeHead(404, { "content-type": "text/plain" });
@@ -1034,6 +1470,19 @@ const server = http.createServer(async (req, res) => {
   if (url === `/${name}`) {
     res.writeHead(301, { location: `/${name}/` });
     res.end();
+    return;
+  }
+
+  // /<name>/dev/... — the worktree's dev space (artifacts + doc browser),
+  // served straight from disk so it never cold-starts the worktree.
+  const afterName = url.slice(`/${name}`.length);
+  if (afterName.split("?")[0] === "/dev") {
+    res.writeHead(301, { location: `/${name}/dev/` });
+    res.end();
+    return;
+  }
+  if (afterName.startsWith("/dev/")) {
+    await serveDev(name, afterName, res);
     return;
   }
 

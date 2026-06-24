@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>How the practices accreted</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
+<style>
+  body { font:16px/1.6 system-ui,sans-serif; color:#222; margin:0; background:#fbfbfc; }
+  .wrap { max-width: 1060px; margin:0 auto; padding:2em 1.3em 5em; }
+  .topnav { font:13px ui-monospace,Menlo,monospace; color:#999; margin-bottom:1.4em; }
+  .topnav a { color:#2255aa; text-decoration:none; } .topnav a:hover{text-decoration:underline;}
+  h1 { font-size:1.9em; margin:0 0 .2em; }
+  .lede { color:#555; font-size:1.06em; max-width:70ch; margin:.2em 0 .3em; }
+  .lede b { color:#222; }
+  .legend { display:flex; gap:1.3em; flex-wrap:wrap; font-size:.83em; color:#777; margin:.7em 0 .2em; }
+  .legend .sw { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:.35em; vertical-align:middle; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family: system-ui, -apple-system, "Segoe UI", sans-serif; }
+  .foot { color:#888; font-size:.86em; margin-top:1em; max-width:70ch; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="skills.html">Skills</a> · <a href="skill-tree.html">Skill tree</a> · <b>Meta-practices</b> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
+<h1>How the practices accreted</h1>
+<p class="lede">Not what got built — <b>how they learned to build it</b>. <b>Time runs top to bottom</b>; each dot on the spine is a development practice landing in the repo. <b>The spacing is the shape</b>: where practices cluster it's a burst of method-building; the long quiet stretch in the middle is heads-down shipping with no new process. Colored by the kind of practice.</p>
+<div class="legend" id="legend"></div>
+<svg id="chart" viewBox="0 0 1040 680" role="img" aria-label="Timeline of development practices accreting"></svg>
+<p class="foot">Dates are first-commit (some predate the May monorepo merge; original commit dates survive in history). The agent-native practices — <b>knowledge audits</b>, the <b>no-disable guardrail</b>, <b>cross-model review</b>, <b>skills</b>, the <b>self-improvement meta-instruction</b> — are quality inventions specific to developing <em>with</em> agents.</p>
+</div>
+<script>
+const CATS = {
+  gates: {c:"#2f6fb0", label:"Automated gates"},        // sapphire
+  know:  {c:"#bd8410", label:"Agent-knowledge QA"},      // topaz / deep amber
+  docs:  {c:"#1f9488", label:"Docs as a system"},        // emerald-teal
+  infra: {c:"#6a5bc4", label:"Workflow infrastructure"}, // amethyst
+  craft: {c:"#c1504e", label:"Cross-model & craft"},     // garnet
+};
+const P = [
+  {d:"2026-02-01", cat:"gates", t:"validation plugin in-repo",        desc:"card-schema validation runs from the repo, on demand"},
+  {d:"2026-02-14", cat:"gates", t:"vibe-check preset",                desc:"ESLint + knip + oxlint + husky as one shared, versioned preset"},
+  {d:"2026-02-21", cat:"gates", t:"scenario testing",                desc:"scripted end-to-end runs of a whole box"},
+  {d:"2026-02-26", cat:"know",  t:"knowledge audits",                desc:"prove a box agent recalls a convention from loaded context"},
+  {d:"2026-03-02", cat:"docs",  t:"stack-decisions doc",             desc:"a written record of which tools/approaches won, and why"},
+  {d:"2026-03-03", cat:"docs",  t:"doctest framework",               desc:"markdown files that run as tests — docs that can't go stale"},
+  {d:"2026-03-03", cat:"docs",  t:"service-layer pattern",           desc:"external deps injected behind a typed service seam"},
+  {d:"2026-03-04", cat:"docs",  t:"documentation-graph tool",        desc:"finds orphaned and undescribed docs automatically"},
+  {d:"2026-03-06", cat:"know",  t:"self-improvement meta-instruction", desc:"the agent told to refine its own CLAUDE.md as it learns"},
+  {d:"2026-05-21", cat:"docs",  t:"glossary / shared vocabulary",    desc:"one canonical name per concept, shared across the repo"},
+  {d:"2026-05-23", cat:"gates", t:"validation hooks",                desc:"warn on write, block on commit — enforcement, not advice"},
+  {d:"2026-05-26", cat:"infra", t:"agent-browser · bin/browse",      desc:"drive a real browser from the agent to verify UI"},
+  {d:"2026-05-26", cat:"infra", t:"worktrees + dev router",          desc:"parallel isolated sessions, each lazily served"},
+  {d:"2026-05-26", cat:"infra", t:"skills system",                   desc:"encode a repeatable workflow as an invokable discipline"},
+  {d:"2026-05-30", cat:"gates", t:"eslint suppression ratchet",      desc:"count disabled rules; the number may only go down"},
+  {d:"2026-05-31", cat:"gates", t:"no-disable guardrail",            desc:"block weakening a lint rule just to make code pass"},
+  {d:"2026-06-04", cat:"craft", t:"codex cross-model review",        desc:"a different model family attacks the plan or the diff"},
+  {d:"2026-06-20", cat:"craft", t:"cb-* craft skills",               desc:"debug / frontend / codehealth disciplines, written down"},
+  {d:"2026-06-21", cat:"craft", t:"agent-applied migrations",        desc:"agents run structured, checklisted data migrations"},
+];
+
+// legend
+const leg = document.getElementById("legend");
+for (const k in CATS) leg.insertAdjacentHTML("beforeend",
+  `<span><span class="sw" style="background:${CATS[k].c}"></span>${CATS[k].label}</span>`);
+
+const NS="http://www.w3.org/2000/svg", svg=document.getElementById("chart");
+const mk=(t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
+const spineX=132, padT=46, padB=48, ROW=58, barH=34, SPAN=620, padR=72;
+const t0=new Date("2026-01-26").getTime(), t1=new Date("2026-06-28").getTime();
+const dateY = ds => padT + (new Date(ds).getTime()-t0)/(t1-t0)*SPAN;
+const MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const fmtDate = ds => `${MONTHS[+ds.slice(5,7)-1]} ${+ds.slice(8,10)}`;
+
+// place each practice at its true date (the spine dot); fan labels downward so
+// they don't overlap, keeping date order — clusters stay tight, the gap stays a gap
+let prev=-Infinity;
+const items = P.map(p=>{ const dy=dateY(p.d); const ly=Math.max(dy, prev+ROW); prev=ly; return {...p, dy, ly}; });
+const H = Math.ceil(items[items.length-1].ly + ROW/2 + padB);
+
+// Measure real rendered text widths (proportional font) so pills fit snugly and
+// the right padding always holds, whatever the labels say.
+const measure=(s,sz,wt)=>{ const t=mk("text",{x:-9999,y:-9999,"font-size":sz,"font-weight":wt||400}); t.textContent=s; svg.append(t); const w=t.getComputedTextLength(); t.remove(); return w; };
+const pillX = spineX + 26, PADX = 26, DATEGAP = 16;
+let maxRight = spineX + 320;
+for (const it of items) {
+  it.dateStr = fmtDate(it.d);
+  it.pillW = measure(it.t, 12.5, 700) + PADX*2;
+  maxRight = Math.max(maxRight, pillX + it.pillW + DATEGAP + measure(it.dateStr, 11, 400), pillX + PADX + measure(it.desc, 11.5, 400));
+}
+const W = Math.ceil(maxRight + padR);
+svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+// the heads-down plateau band (Mar 6 → May 21) — a quiet stretch with no new process
+const by0=dateY("2026-03-07"), by1=dateY("2026-05-20");
+svg.append(mk("rect",{x:0,y:by0,width:W,height:by1-by0,fill:"#000","fill-opacity":0.022}));
+svg.append(mk("text",{x:W-16,y:(by0+by1)/2-6,"text-anchor":"end","font-size":"12",fill:"#bbb","font-style":"italic"},"heads-down —"));
+svg.append(mk("text",{x:W-16,y:(by0+by1)/2+10,"text-anchor":"end","font-size":"12",fill:"#bbb","font-style":"italic"},"shipping, no new process"));
+
+// the time spine + month ticks (labels to its left)
+svg.append(mk("line",{x1:spineX,y1:padT-12,x2:spineX,y2:H-padB+10,stroke:"#dcdcdc","stroke-width":2}));
+[["2026-02-01","Feb"],["2026-03-01","Mar"],["2026-04-01","Apr"],["2026-05-01","May"],["2026-06-01","Jun"]].forEach(([m,lab])=>{
+  const y=dateY(m);
+  svg.append(mk("line",{x1:spineX-6,y1:y,x2:spineX,y2:y,stroke:"#ccc"}));
+  svg.append(mk("text",{x:spineX-12,y:y+4,"text-anchor":"end","font-size":"11",fill:"#aaa"}, lab));
+});
+// today marker at the bottom of the spine
+svg.append(mk("circle",{cx:spineX,cy:dateY("2026-06-28"),r:3,fill:"#bbb"}));
+svg.append(mk("text",{x:spineX-12,y:dateY("2026-06-28")+4,"text-anchor":"end","font-size":"10",fill:"#bbb"},"today"));
+
+// burst callouts (left of spine)
+svg.append(mk("text",{x:spineX-12,y:dateY("2026-02-08")+4,"text-anchor":"end","font-size":"10.5",fill:"#888","font-weight":700},"first gates"));
+
+// practices
+items.forEach(it=>{
+  const col = CATS[it.cat].c;
+  // leader from the true-date dot to the (possibly fanned) label
+  svg.append(mk("path",{d:`M${spineX} ${it.dy} C ${pillX-8} ${it.dy} ${pillX-10} ${it.ly} ${pillX} ${it.ly}`,fill:"none",stroke:col,"stroke-width":1.5,"stroke-opacity":0.5}));
+  // dot on the spine = the moment it landed
+  svg.append(mk("circle",{cx:spineX,cy:it.dy,r:5,fill:col,stroke:"#fbfbfc","stroke-width":1.5}));
+  // title pill (deep jeweled fill, white text) — width measured to fit
+  svg.append(mk("rect",{x:pillX,y:it.ly-barH/2,width:it.pillW,height:barH,rx:12,fill:col}));
+  svg.append(mk("text",{x:pillX+PADX,y:it.ly+4,"font-size":"12.5",fill:"#fff","font-weight":700}, it.t));
+  // date after the pill
+  svg.append(mk("text",{x:pillX+it.pillW+DATEGAP,y:it.ly+4,"font-size":"11",fill:"#aaa"}, it.dateStr));
+  // one-line description below the pill (clear gap beneath it)
+  svg.append(mk("text",{x:pillX+PADX,y:it.ly+barH/2+15,"font-size":"11.5",fill:"#777"}, it.desc));
+});
+</script>
+</body>
+</html>

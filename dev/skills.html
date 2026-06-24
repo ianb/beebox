@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The skills, profiled</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
+<style>
+  body { font:16px/1.6 system-ui,sans-serif; color:#222; margin:0; }
+  .wrap { max-width: 880px; margin:0 auto; padding:2em 1.3em 6em; }
+  .topnav { font:13px ui-monospace,Menlo,monospace; color:#999; margin-bottom:1.6em; }
+  .topnav a { color:#2255aa; text-decoration:none; } .topnav a:hover{text-decoration:underline;}
+  h1 { font-size:1.9em; margin:0 0 .2em; }
+  .lede { color:#555; font-size:1.08em; max-width:64ch; margin:.2em 0 .4em; }
+  .note { color:#888; font-size:.86em; max-width:64ch; }
+  .card { border:1px solid #e6e6e6; border-radius:12px; padding:1.2em 1.4em 1.4em; margin:1.4em 0; background:#fcfcfc; }
+  .chead { display:flex; align-items:baseline; gap:.6em; flex-wrap:wrap; }
+  .chead .nm { font:700 1.15em ui-monospace,Menlo,monospace; color:#1a1a1a; }
+  .tag { font-size:.68em; padding:.1em .5em; border-radius:4px; letter-spacing:.02em; text-transform:uppercase; }
+  .tag.discipline { background:#fdece2; color:#a2380a; }
+  .tag.wrapper { background:#e6eefb; color:#2255aa; }
+  .tag.meta { background:#eee9f7; color:#6f42c1; }
+  .born { color:#aaa; font:11px ui-monospace,monospace; margin-left:auto; }
+  .purpose { color:#444; margin:.5em 0 .2em; }
+  .lenbar { display:flex; align-items:center; gap:.6em; margin:.5em 0 .8em; font:11px ui-monospace,monospace; color:#999; }
+  .lenbar .track { flex:1; height:7px; background:#f0f0f0; border-radius:4px; max-width:320px; }
+  .lenbar .fill { height:7px; border-radius:4px; background:#cbd6ea; }
+  .lenbar .fill.big { background:#a2380a; opacity:.55; }
+  h4 { margin:1em 0 .15em; font-size:.78em; text-transform:uppercase; letter-spacing:.04em; color:#999; }
+  .summary { margin:.1em 0; }
+  .bends { margin:.1em 0; }
+  .law { margin:.9em 0 .2em; padding:.5em .9em; border-left:3px solid #d9b48f; background:#fbf6f1; font-style:italic; color:#5a3a1a; }
+  .triggers { font:12px ui-monospace,monospace; color:#999; margin-top:.5em; }
+  code { background:#f0f0f0; padding:.06em .3em; border-radius:3px; font-size:.86em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="viz-skill-rhythm.html">Skill rhythm</a> · <a href="viz-skill-pairs.html">Skill pairs</a> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a> · <b>Skills profiled</b></nav>
+<h1>The skills, profiled</h1>
+<p class="lede">Most of these aren't tools — they're <b>behavioral disciplines</b>. Each one exists to bend the agent away from a default instinct that would otherwise produce worse work. Roughly, <b>the longer the skill, the more default behavior it's fighting</b>: a wrapper that just teaches a CLI is short; a discipline that has to out-argue the agent's shortcuts runs long and ends in an excuse→reality table.</p>
+<p class="note">Sorted by length (words). <span class="tag discipline">discipline</span> bends how the agent works · <span class="tag wrapper">wrapper</span> teaches a tool/flow · <span class="tag meta">meta</span> builds skills. Born date is the first commit.</p>
+<div id="cards"></div>
+</div>
+<script>
+const MAXW = 5205;
+const SKILLS = [
+  {
+    name:"skill-creator", kind:"meta", words:5205, lines:485, born:"2026-06-20", multifile:true,
+    purpose:"Create, edit, and measure skills — including eval harnesses and triggering-accuracy benchmarks.",
+    triggers:'"create a skill", "optimize this skill", "run evals", "benchmark a skill"',
+    summary:"The vendored anthropics/skills meta-skill — the only multi-file skill here (scripts + 18 reference files). A toolkit for authoring a SKILL.md, then measuring whether its description actually triggers and whether it improves outcomes.",
+    bends:"Less a behavior-bender than a process + tooling: instead of free-handing a SKILL.md, it gives a structured authoring loop and an evaluation rig (variance analysis on triggering). Vendored wholesale and not yet used here — the one skill that's borrowed infrastructure rather than grown from local pain.",
+    law:null,
+  },
+  {
+    name:"cb-plan", kind:"discipline", words:3030, lines:439, born:"2026-05-29",
+    purpose:"A plan-writing template for non-trivial work. Reviewing is just filling the template honestly.",
+    triggers:'"write a plan", "make a plan for X", "let\'s plan", "review this plan"',
+    summary:"A fixed template written to docs/plans/<topic>.md with mandatory sections — what-already-exists, prior-art (web search by default), a failure-modes table, agent/user edge cases, NOT-in-scope, knowledge audits, rollout. The blank sections are the failure modes you haven't thought about yet.",
+    bends:"Default Claude, told to \"plan,\" writes prose and then starts coding. This forbids that: every claim about existing code needs a file:line + verbatim quote (no \"we already do X\"); web-search for prior art is the default, not the exception; the absence of a NOT-in-scope section is itself the scope gate; no numeric confidence scores; and — the big one — a plan ships complete, end-to-end, never \"ship slice 1 and see.\" It even catalogs the shortcuts you'll be tempted to take and calls each a way of hollowing out the plan.",
+    law:"\"A plan is a complete unit of work — designed end-to-end before implementation starts, shipped end-to-end when it finishes.\"",
+  },
+  {
+    name:"cb-frontend", kind:"discipline", words:1774, lines:201, born:"2026-06-20",
+    purpose:"The behavioral half of frontend work (the catalog lives in FRONTEND.md).",
+    triggers:'"add a page/component", "build this UI", "make this responsive", "this looks off"',
+    summary:"Habits the component catalog can't enforce: compose from primitives, use the semantic palette, ship loading/empty/error states, keep it accessible, let the React Compiler do memoization, and verify in a real browser before calling it done.",
+    bends:"This is aimed squarely at the \"AI aesthetic\" — the default LLM frontend output. It blocks inline Tailwind (a primitive owns the look), raw colors like bg-red-500 (use the semantic role), purple/gradient/rounded-2xl soup, hand-rolled useCallback/useMemo (the compiler does it better), <div onClick> instead of a real <button>, and the classic skipped empty/error/loading states. And \"it renders\" is not \"it's verified\" — open bin/browse and Tab through it first.",
+    law:"\"Consistency reads as 'designed,' novelty reads as 'generated.' Match the existing rhythm.\"",
+  },
+  {
+    name:"cb-debug", kind:"discipline", words:1710, lines:176, born:"2026-06-20",
+    purpose:"A discipline for hard bugs — flaky, cross-component, slow, or fixes that didn't hold.",
+    triggers:'"why is X broken", "this is flaky", "I tried X and it still fails", "this is slow"',
+    summary:"Six phases built around one feedback loop: build a tight, red-capable repro first; reproduce + minimise; generate 3–5 ranked falsifiable hypotheses; instrument one variable at a time; fix at a correct seam with a regression test; clean up and post-mortem.",
+    bends:"The default move on a bug is read code → form a theory → try a fix (\"I see the problem, let me fix it\"). The Iron Law forbids it: no fix until you can paste a command that goes red on this exact symptom. It demands multiple ranked hypotheses (a single hypothesis anchors on the first plausible idea), one change at a time, and a hard circuit-breaker — three failed fixes means the architecture is wrong, not that you need a fourth patch. It also pushes the move agents under-reach for: web-search the library/platform quirk, because someone already hit it.",
+    law:"\"No fix without a red-capable feedback loop first. A symptom patch you can't prove is a guess, and guesses create new bugs.\"",
+  },
+  {
+    name:"cb-context", kind:"discipline", words:1650, lines:159, born:"2026-06-20",
+    purpose:"Engineering what a *box* agent knows — which surface a durable instruction belongs on.",
+    triggers:'"where should this instruction go", "the agent ignores this rule", "trim this CLAUDE.md"',
+    summary:"A router: given a durable piece of guidance, place it on the right tier by how eagerly it should load — root CLAUDE.md (every turn) → nested CLAUDE.md → .claude/rules glob → schema instructions → a doc → a procedure. Keep the always-on tier lean; verify the agent absorbed it with a knowledge audit.",
+    bends:"The default instinct is \"put it in CLAUDE.md so it's always there.\" This inverts that: always-loaded ≠ always-followed — past a few thousand tokens models start dropping rules, so a bloated always-on file makes the agent obey you less. Default suspicion toward the root file; route most guidance one tier lazier. When a written rule still gets ignored, don't say it louder — bulletproof it (name the excuse, rebut it) or elevate it to a Law. And \"I added the rule\" ≠ \"the agent knows it\": prove it with an audit that answers correctly with 0 reads.",
+    law:"\"Attention budget, not context window: a focused root file outperforms a big one.\"",
+  },
+  {
+    name:"finish", kind:"wrapper", words:1543, lines:240, born:"2026-05-26",
+    purpose:"Land a worktree's work into main — close-out or mid-stream checkpoint.",
+    triggers:'"finish", "wrap this up", "ship it", "merge this back", "checkpoint this"',
+    summary:"Nine ordered steps: confirm worktree state, commit stragglers, pull main in, run the full suite, reconcile planning docs, resolve any feedback item, fast-forward merge, report honestly. Merging to main auto-deploys, so the bar is high.",
+    bends:"The default merge would rationalize a red test away — \"those were failing before,\" \"unrelated file,\" \"probably flaky.\" The cardinal rule closes every one of those exits: any failure anywhere = stop and fix or escalate. It also enforces honesty in the report (distinguish \"tests pass\" from \"verified working in the app\"), moves implemented plans out of docs/plans/, and respects the plan-completes-then-ships boundary — it only runs when the human asks.",
+    law:"\"If pnpm test reports ANY failure — anywhere, for any reason — you do not proceed.\"",
+  },
+  {
+    name:"codex", kind:"wrapper", words:1521, lines:189, born:"2026-06-04",
+    purpose:"An independent, cross-model review from OpenAI's codex CLI, read-only on the real repo.",
+    triggers:'"codex review", "codex challenge", "second opinion from codex"',
+    summary:"Runs Codex as an adversarial reviewer in three modes (plan / review / challenge). Its highest-value move: spot-check a plan's file:line citations and \"we already do X / free reuse / validation catches it\" claims against actual source — and report back verbatim.",
+    bends:"A self-review shares the author's blind spots — a same-model pass can't catch what it didn't think of. This brings a different model family in, makes it verify rather than opine, presents its words verbatim (summarizing averages the different voice back into your own), and forces a recommendation that names a specific finding. It costs real money, so it never runs unprompted.",
+    law:"\"Different model family → different blind spots. Codex is not authoritative — it's a different set of blind spots, not fewer.\"",
+  },
+  {
+    name:"cb-codehealth", kind:"discipline", words:1357, lines:143, born:"2026-06-20",
+    purpose:"A deliberate codebase-health pass aimed at deep modules — not every-refactor cleanup.",
+    triggers:'"codebase health", "this feels crufty/tangled", "is this architecture okay"',
+    summary:"Run the tooling first (knip for dead code, madge for cycles, oxlint for smells), then explore for friction, report candidates in the deep-module vocabulary, and route the chosen one through cb-plan + a worktree. Code is a liability, not an asset.",
+    bends:"Default refactoring is opportunistic \"while I'm here\" churn and extracting helpers for testability. This reframes the whole exercise: insists on a precise vocabulary (module / interface / depth / seam / leverage / locality — not component/service/API), warns that extracting a pure function for testability is often a *shallow* anti-move that loses locality, applies a deletion test (does removing it concentrate complexity or just move it?), invokes Hyrum's Law (green tests ≠ safe), and refuses to free-hand the change — it goes through cb-plan and a separate worktree.",
+    law:"\"The real test of depth: investigation at depth isn't necessary to use it.\"",
+  },
+  {
+    name:"launch-worktree-session", kind:"wrapper", words:1065, lines:157, born:"2026-05-27",
+    purpose:"Spin off a separate Claude session in a fresh worktree, seeded with a briefing.",
+    triggers:'"spin this off", "do this in another worktree", "kick off X separately"',
+    summary:"Opens a new worktree session whose seed is a *briefing of shared understanding* — what we discussed, ruled out, and the constraints — explicitly not a plan or a task list. Closes by inviting the new agent to read the code and propose its own approach first.",
+    bends:"The default \"delegate this\" hands off a task list (\"implement X: 1, 2, 3\"). This insists the handoff be understanding, not instructions — so the new agent forms its own plan rather than executing a brittle one. It also waits for the human's explicit \"spin this off\" cue instead of volunteering, because many ideas are for discussing, not forking.",
+    law:"\"Understanding first, plan second, work third.\"",
+  },
+  {
+    name:"browse", kind:"wrapper", words:1023, lines:140, born:"2026-05-26",
+    purpose:"Drive a real browser via bin/browse (the worktree-aware agent-browser wrapper).",
+    triggers:'"open the page", "snapshot the a11y tree", "screenshot it", "check responsive"',
+    summary:"Mostly tool knowledge: the core loop (open → snapshot -i → act on @e refs → re-snapshot, because refs go stale on any page change), per-worktree isolated Chrome daemons, self-describing screenshots, and the fact that it almost never needs the dev router.",
+    bends:"The least behavioral of the set — but it still carries one habit beyond \"how to use the CLI\": when a screenshot shows an error state (\"Failed to load,\" broken UI), report the URL from the sidecar instead of dismissing it as out of scope. And never call agent-browser directly; the wrapper exists for a reason.",
+    law:null,
+  },
+];
+
+const cards = document.getElementById("cards");
+const el = (t,c,h)=>{const e=document.createElement(t);if(c)e.className=c;if(h!=null)e.innerHTML=h;return e;};
+for (const s of SKILLS){
+  const c = el("div","card");
+  const pct = Math.round(s.words/MAXW*100);
+  c.append(el("div","chead",
+    `<span class="nm">${s.name}</span>`
+    + `<span class="tag ${s.kind}">${s.kind}</span>`
+    + (s.multifile?`<span class="tag meta">multi-file</span>`:``)
+    + `<span class="born">born ${s.born}</span>`));
+  c.append(el("div","purpose", s.purpose));
+  c.append(el("div","lenbar",
+    `<div class="track"><div class="fill ${s.words>2500?'big':''}" style="width:${pct}%"></div></div>`
+    + `<span>${s.words.toLocaleString()} words · ${s.lines} lines</span>`));
+  c.append(el("h4",null,"What it is"));
+  c.append(el("div","summary", s.summary));
+  c.append(el("h4",null,"How it bends the agent away from default"));
+  c.append(el("div","bends", s.bends));
+  if (s.law) c.append(el("div","law", s.law));
+  c.append(el("div","triggers", "triggers: " + s.triggers));
+  cards.append(c);
+}
+</script>
+</body>
+</html>

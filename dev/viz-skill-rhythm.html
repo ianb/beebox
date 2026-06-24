@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill rhythm</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
+<style>
+  body { font: 15px/1.6 system-ui, sans-serif; color:#222; margin:0; }
+  .wrap { max-width: 960px; margin: 0 auto; padding: 2em 1.3em 5em; }
+  .topnav { font: 13px ui-monospace,Menlo,monospace; color:#999; margin-bottom:1.8em; }
+  .topnav a { color:#2255aa; text-decoration:none; } .topnav a:hover{text-decoration:underline;}
+  h1 { font-size:1.7em; margin:0 0 .2em; }
+  .sub { color:#777; margin:.2em 0 1.6em; max-width:60ch; }
+  figcaption, small { color:#888; font-size:.85em; }
+  svg text { font: 11px system-ui; fill:#777; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <b>Skill rhythm</b> · <a href="viz-skill-pairs.html">Skill pairs</a> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
+<h1>Skill rhythm</h1>
+<p class="sub">Every time a skill fired, as a dot on a timeline — one lane per skill. You can see the cadence: <code>cb-plan</code>'s steady drumbeat, <code>codex</code> ramping through June, the <code>finish</code> bursts, and the brand-new craft cohort that's been <em>born but not yet used</em> (hollow markers).</p>
+<svg id="chart" viewBox="0 0 960 560" width="100%" role="img" aria-label="Timeline of skill invocations"></svg>
+<p><small>Hollow ◦ = skill created (first commit), no invocations yet. Solid ● = one invocation. Range: 2026-05-26 → 2026-06-21.</small></p>
+</div>
+<script>
+const EVENTS = `agent-browser 2026-05-26
+browse 2026-05-27
+browse 2026-06-01
+browse 2026-06-02
+browse 2026-06-09
+cb-plan 2026-05-30
+cb-plan 2026-05-30
+cb-plan 2026-06-04
+cb-plan 2026-06-08
+cb-plan 2026-06-09
+cb-plan 2026-06-09
+cb-plan 2026-06-11
+cb-plan 2026-06-12
+cb-plan 2026-06-13
+cb-plan 2026-06-14
+cb-plan 2026-06-17
+cb-plan 2026-06-18
+cb-plan 2026-06-18
+cb-plan 2026-06-18
+cb-plan 2026-06-18
+cb-plan 2026-06-20
+cb-plan 2026-06-21
+cb-plan 2026-06-21
+cb-plan 2026-06-21
+claude-api 2026-06-12
+claude-api 2026-06-12
+codex 2026-06-08
+codex 2026-06-09
+codex 2026-06-14
+codex 2026-06-17
+codex 2026-06-18
+codex 2026-06-19
+codex 2026-06-20
+codex 2026-06-20
+codex 2026-06-21
+codex 2026-06-21
+deep-research 2026-05-29
+finish 2026-05-31
+finish 2026-06-05
+finish 2026-06-05
+finish 2026-06-09
+finish 2026-06-09
+finish 2026-06-09
+finish 2026-06-09
+finish 2026-06-13
+launch-worktree-session 2026-06-01
+launch-worktree-session 2026-06-01
+launch-worktree-session 2026-06-05
+launch-worktree-session 2026-06-08
+launch-worktree-session 2026-06-09
+launch-worktree-session 2026-06-20
+launch-worktree-session 2026-06-20
+launch-worktree-session 2026-06-21
+update-config 2026-06-09`.trim().split("\n").map(l=>{const i=l.lastIndexOf(" ");return [l.slice(0,i), l.slice(i+1)];});
+
+// born-but-unused (the craft cohort) — hollow marker at birth, no dots
+const BORN = [
+  ["cb-debug","2026-06-20"], ["cb-codehealth","2026-06-20"],
+  ["cb-context","2026-06-20"], ["cb-frontend","2026-06-20"], ["skill-creator","2026-06-20"],
+];
+
+const counts = {}; for(const [s] of EVENTS) counts[s]=(counts[s]||0)+1;
+// lane order: busiest first, then the born-unused cohort
+const used = [...new Set(EVENTS.map(e=>e[0]))].sort((a,b)=>counts[b]-counts[a]);
+const cold = BORN.map(b=>b[0]);
+const lanes = [...used, ...cold];
+
+const day = d => Math.round((new Date(d)-new Date("2026-05-26"))/864e5);
+const maxDay = day("2026-06-21");
+const NS="http://www.w3.org/2000/svg", svg=document.getElementById("chart");
+const W=960,H=560,padL=170,padR=30,padT=40,padB=28;
+const laneH=(H-padT-padB)/lanes.length;
+const x=d=>padL+day(d)/maxDay*(W-padL-padR);
+const yOf={}; lanes.forEach((s,i)=>yOf[s]=padT+i*laneH+laneH/2);
+const mk=(t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
+
+// week gridlines + labels
+for(let d=0; d<=maxDay; d+=7){
+  const ds=new Date(new Date("2026-05-26").getTime()+d*864e5).toISOString().slice(5,10);
+  svg.append(mk("line",{x1:padL+d/maxDay*(W-padL-padR),x2:padL+d/maxDay*(W-padL-padR),y1:padT-8,y2:H-padB,stroke:"#f0f0f0"}));
+  svg.append(mk("text",{x:padL+d/maxDay*(W-padL-padR),y:padT-12,"text-anchor":"middle"},ds));
+}
+// lanes
+lanes.forEach((s)=>{
+  const y=yOf[s], isCold=cold.includes(s);
+  svg.append(mk("line",{x1:padL,x2:W-padR,y1:y,y2:y,stroke:"#fafafa"}));
+  const label=mk("text",{x:padL-10,y:y+3,"text-anchor":"end","font-weight":600,fill:isCold?"#bbb":"#333","font-family":"ui-monospace,monospace","font-size":"12"}, s + (isCold?"  (0)":"  ("+counts[s]+")"));
+  svg.append(label);
+});
+// born markers (hollow)
+for(const [s,d] of BORN) svg.append(mk("circle",{cx:x(d),cy:yOf[s],r:5,fill:"#fff",stroke:"#c98a18","stroke-width":1.5}));
+// invocation dots (jitter same-day vertically)
+const seen={};
+for(const [s,d] of EVENTS){
+  const key=s+d; seen[key]=(seen[key]||0)+1;
+  const jit=((seen[key]-1)%4-1.5)*5;
+  const col = s==="cb-plan"?"#c98a18": s==="codex"?"#2255aa": s==="finish"?"#2a8a4a":"#888";
+  svg.append(mk("circle",{cx:x(d),cy:yOf[s]+jit,r:4,fill:col,"fill-opacity":.82}));
+}
+</script>
+</body>
+</html>
