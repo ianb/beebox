@@ -1,5 +1,11 @@
 # Courseware: the `lesson-plan` card
 
+> **Status: implemented** (2026-06-24). The schema lives in
+> `src/schemas/lesson-plan.ts`, the generalized node-id + deferral lint in
+> `src/core/lint-node-refs.ts`, the skill flow in `src/core/box-skills-content.ts`,
+> and the audits in `src/dev/knowledge-audits.yaml`. This doc is the frozen design
+> record; the present-tense reference is the card-rules those schemas generate.
+
 Adds a `lesson-plan` card type to the courseware family — the **delivery-flow**
 layer a course is currently missing: an ordered sequence of segments, each
 either *interactive* (happens live in chat) or *material* (uses a pre-made
