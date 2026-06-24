@@ -27,6 +27,8 @@ This skill orchestrates four card types. Each has its own card-rule with the fie
 
 The actual teaching material (docs, figures, etc.) lives in the course's \`material/\` subdirectory.
 
+Write all of these cards with **neutral pronouns** (they/them) for the learner, whoever they are.
+
 ## The process
 
 It is not a rigid pipeline — probing comes early and the rest follows from what it surfaces. Revisit and adapt freely.
@@ -59,11 +61,17 @@ Write a \`progress\` card from what the probe surfaced. Each entry records what 
 
 ### 5. Plan the exposition
 
-Step back: given the scope and the learner's deeper goals, how should this be *presented*? Set the \`emphasis\` (e.g. principles over terminology, if a mental model is the goal). Choose modalities that fit — dialog, worked examples with fading, manipulatives/figures, transfer prompts, a reflection step — each with a reason.
+Work out how to *present* this material — in the \`exposition-plan\` card, in this order:
 
-### 6. Write the plan, with the reasoning in
+1. **Translate the learner into style first.** Turn what you know about them — and whether this is a \`generic\` course or for a specific person (set the course's \`audience\`) — into concrete implications for *how* to present. This guides the ratings below.
+2. **Enumerate and rate approaches.** List the candidate ways to present, and rate each for *this* material and learner. **You over-reach for plain prose — deliberately consider non-textual options** (dialog, a figure/manipulable, a diagram, contrasting cases, an analogy) and say why each does or doesn't fit. But never use a technique just because it exists; each must earn its place, and **mostly-textual is a fine answer if it genuinely fits** — variety is not the goal.
+3. **Distill into \`rules\`.** Write a short list of concrete, standalone rules you can follow later without re-reading — they're compiled into a box rule that auto-loads while you work in this course.
 
-Record the exposition-plan's decisions *with their rationale*, and produce the material under \`material/\` in the chosen modalities. Keep answer keys with the material. The point of writing the reasoning down is that when you adapt later (step 7), the *why* travels with the plan, so you don't undo a good decision by accident.
+(See the exposition-plan card-rule for the field details.)
+
+### 6. Produce the material
+
+Author the material under \`material/\` following the exposition-plan's rules and rated approaches. Keep answer keys with the material, grounded in cited sources (see *Teaching well*). The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 7) the *why* travels with the work — you don't undo a good decision by accident.
 
 ### 7. Adapt as you go
 

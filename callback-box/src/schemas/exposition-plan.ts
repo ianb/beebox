@@ -1,14 +1,17 @@
 /**
- * Exposition-plan card schema — the plan for how to *present* a subject.
+ * Exposition-plan card schema — a worked process for how to *present* a subject,
+ * producing a compiled set of rules.
  *
- * Plans all aspects of the exposition, reasoned from the goals, what's known
- * about the learner/audience, and the available ways a thing can be presented
- * (modalities), with the *reasoning kept in* so later adaptation stays coherent.
- * It is the PLAN, not the rendered exposition — that lives in a course's
- * `material/`. A single-file card, usually embedded in a course's attach scope.
+ * It is NOT a fixed lesson script. It guides the agent to (1) translate what's
+ * known about the learner into concrete style implications, (2) enumerate and
+ * *rate* candidate ways to present — deliberately breaking the default reach for
+ * plain prose — and (3) distill the result into concrete `rules` that guide
+ * later material-authoring and teaching without re-deriving. Those `rules` are
+ * compiled to a path-loaded box rule (see `compileExpositionRules`) so they're
+ * in context while working in the course.
  *
- * General beyond courseware: any deliberate presentation (slides, a blog post)
- * could use it.
+ * A single-file card, usually embedded in a course's attach scope. General
+ * beyond courseware — any deliberate presentation could use it.
  *
  * See docs/plans/courseware-phase1.md.
  */
@@ -17,22 +20,17 @@ import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
-/** A chosen way to present (manipulatives, dialogs, worked examples, …) + why. */
-const Modality = z.object({
-  name: z.string(),
-  why: z.string().optional(),
-});
-
-/** A pedagogical decision with its rationale, so adaptation respects the why. */
-const Decision = z.object({
-  decision: z.string(),
-  rationale: z.string(),
+/** One candidate way to present, with an honest rating of its fit here. */
+const Approach = z.object({
+  approach: z.string(),       // dialog, worked example, figure/manipulative, diagram, analogy, plain prose, …
+  rating: z.string(),         // honest fit + whether you'll use it ("primary", "some", "considered — rejected: too abstract here")
+  why: z.string().optional(), // why it does or doesn't serve THIS material and THIS learner
 });
 
 const expositionPlanFields = {
-  emphasis: z.array(z.string()).optional(),
-  modalities: z.array(Modality).optional(),
-  decisions: z.array(Decision).optional(),
+  "learner-translation": z.array(z.string()).optional(),
+  approaches: z.array(Approach).optional(),
+  rules: z.array(z.string()).optional(),
   body: body(z.string()),
 };
 
@@ -40,41 +38,60 @@ export const ExpositionPlanSchema: CardSchema = cardSchema("exposition-plan", {
   fields: expositionPlanFields,
   instructions: `# Exposition-Plan Cards
 
-An exposition-plan is the plan for how to **present** a subject — *all* aspects of the exposition, reasoned from the goals, what's known about the learner/audience, and the available ways a thing can be presented (modalities). It is the **plan**, not the rendered exposition (that lives in a course's \`material/\`). Usually a single-file card embedded in a course's \`<basename>.attach/\` scope. (General beyond courseware — slides, a blog post, etc.)
+An exposition-plan is a **worked process** for how to *present* a subject, and it ends in a concrete set of **rules**. It is **not** a fixed lesson script — don't pre-decide a move-by-move sequence. Its job is to produce *good, deliberate* presentation choices for *this* material and *this* learner, and to leave behind rules you can follow later without re-reasoning.
 
-**Keep the reasoning in.** Each decision carries its rationale, so when the plan is adapted later the *why* travels with it. Adapt the plan in place; don't overwrite the reasoning.
+Write the card in this order — each step feeds the next:
 
-## Frontmatter
+## 1. \`learner-translation\` (do this FIRST)
+
+Translate what's known about the learner (from the probe / progress, and whether the course is \`generic\` or for a specific person — see the course's \`audience\`) into **concrete implications for presentation style**. Not "they're rusty" but "they reason out loud and trust their own intuitions, so lead with their phenomena and let terminology stay loose." This grounds the ratings that follow.
+
+## 2. \`approaches\` — enumerate and **rate** them
+
+List the candidate ways to present this material, and rate each honestly for *this* material and *this* learner:
 
 \`\`\`yaml
-emphasis:                       # the weighting that follows from the learner's goal
-  - Principles over terminology — the mechanism matters, the names don't
-modalities:                     # the chosen ways to present, each with a why
-  - { name: dialog, why: Draws out the learner's own model and misconceptions }
-  - { name: worked example + fading, why: Builds the procedure, then removes scaffolds }
-decisions:                      # decisions WITH rationale (so adaptation stays coherent)
-  - { decision: Open with the baking-soda phenomenon, rationale: Concrete and familiar; surfaces priors }
+approaches:
+  - { approach: socratic dialog, rating: primary, why: Draws out and reshapes the learner's own model }
+  - { approach: a worked figure/manipulative, rating: some, why: Good for the one procedural step; overkill elsewhere }
+  - { approach: plain textual exposition, rating: "considered — sparingly", why: Fine for framing, but not the spine here }
 \`\`\`
 
-Consider transfer prompts and a metacognitive-reflection step among the modalities. Everything except the body is optional.
+**Why rate, not just list:** you (like anyone) reach for the familiar — and your familiar default is **textual exposition**. Force yourself off it by genuinely considering non-textual options (dialog, a figure or manipulable, a diagram, contrasting cases, an analogy) and saying why each does or doesn't fit.
+
+**But never use a technique just because it exists.** Each one must earn its place for this subject and learner. Different domains and learners call for different techniques. **If mostly-textual is genuinely the right answer here, say so** — variety is not the goal, fit is.
+
+## 3. \`rules\` — the compiled output
+
+Distill the above into a short list of **concrete, standalone rules** that will guide you later — while you're authoring material or mid-conversation, focused on other things — *without* re-reading this whole card:
+
+\`\`\`yaml
+rules:
+  - Open each concept from a phenomenon the learner already has; pull the idea out of it.
+  - Use dialog to surface the learner's model before correcting it; never lead with a definition.
+  - Reserve prose for framing and transitions, not for carrying a mechanism.
+\`\`\`
+
+These \`rules\` are **compiled to a box rule that auto-loads while you work in this course**, so write them to stand on their own. Keep the *reasoning* behind them here (and in the body); the rules themselves should be terse and actionable.
 
 ## Body
 
-The plan narrative and its reasoning — living, adapted in place.`,
+The reasoning narrative — why this shape, and how it should adapt. Living. **Use neutral pronouns (they/them) for the learner** regardless of who they are.`,
 });
 
 /**
- * Starter exposition-plan for \`cb create\`: an emphasis placeholder and a
- * framing body. The agent fills in modalities and decisions as the plan forms.
+ * Starter exposition-plan for \`cb create\`: prompts for the learner-translation
+ * first, then approaches and rules. The agent fills these in.
  */
 export function createExpositionPlanTemplate(options: { title?: string | undefined }): string {
   const fields: Record<string, unknown> = {
-    emphasis: ["What to weight for this learner — e.g. principles over terminology."],
+    "learner-translation": ["What's known about the learner → concrete implications for how to present."],
+    rules: ["The concrete expositional rules to follow later — filled in once approaches are rated."],
   };
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
   const yamlText = stringifyYaml(fields);
-  const bodyText = "The plan for presenting this subject, and the reasoning behind it. Keep the reasoning in.\n";
+  const bodyText = "The reasoning behind the presentation choices, and how it should adapt. Use neutral pronouns for the learner.\n";
   return `---\n${yamlText}---\n${bodyText}`;
 }

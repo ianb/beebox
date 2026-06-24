@@ -19,6 +19,7 @@ import { z } from "zod";
 const ComponentRef = z.object({ ref: z.string() });
 
 const courseFields = {
+  audience: z.string().optional(),
   goals: z.array(z.string()).optional(),
   "success-criteria": z.array(z.string()).optional(),
   "concept-map": ComponentRef.optional(),
@@ -44,6 +45,7 @@ The structured components (concept-map, exposition-plan) live as attached cards 
 ## Frontmatter
 
 \`\`\`yaml
+audience: a specific person — rusty on chemistry, wants a mental model   # OR: generic
 goals:                          # the learner's deeper "why"; refined through probing
   - Build a working mental model of how acids and bases behave
 success-criteria:               # casual, personalized "what success looks like"; set EARLY
@@ -55,6 +57,8 @@ progress: { ref: /people/learner/Acids.progress.card }   # optional; may live el
 \`\`\`
 
 \`success-criteria\` is set **early** and is the lens for what belongs in the graph and the goals (backward design); it then judges advancement. Everything except the body is optional, so a half-built course still loads.
+
+\`audience\` records whether this is a **generic** course (built for a model learner, reusable) or **custom** for a specific person — set it so you (and anyone reading) know which. Write the card with **neutral pronouns** (they/them) for the learner, whoever they are.
 
 ## Body
 

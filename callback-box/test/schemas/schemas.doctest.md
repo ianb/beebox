@@ -563,23 +563,23 @@ parsed.schema.type
 
 ## Exposition-Plan
 
-An exposition-plan card is the plan for presenting a subject — modalities and
-decisions, with the reasoning kept in.
+An exposition-plan card is a worked process for presenting a subject: the learner
+translation first, then rated approaches, then the compiled rules.
 
 ```ts
 ExpositionPlanSchema.type
 => exposition-plan
 ```
 
-A plan with emphasis, modalities (each with a `why`), and decisions (each with a
-`rationale`) parses; everything but the body is optional:
+A plan with a `learner-translation`, rated `approaches`, and `rules` parses;
+everything but the body is optional:
 
 ```ts
 ExpositionPlanSchema.frontmatterSchema.safeParse({
   type: "exposition-plan",
-  emphasis: ["Principles over terminology"],
-  modalities: [{ name: "dialog", why: "Draws out the learner's model" }],
-  decisions: [{ decision: "Open with the baking-soda phenomenon", rationale: "Concrete and familiar" }],
+  "learner-translation": ["Reasons out loud; lead with their phenomena"],
+  approaches: [{ approach: "socratic dialog", rating: "primary", why: "Surfaces their model" }],
+  rules: ["Open each concept from a familiar phenomenon"],
 }).success
 => true
 
@@ -587,13 +587,13 @@ ExpositionPlanSchema.frontmatterSchema.safeParse({ type: "exposition-plan" }).su
 => true
 ```
 
-A decision must carry its `rationale` — the "keep the reasoning in" rule, so a
-decision without one fails:
+Each `approach` must carry an `approach` and a `rating` (the rating is what makes
+the consideration honest) — an approach without a rating fails:
 
 ```ts
 ExpositionPlanSchema.frontmatterSchema.safeParse({
   type: "exposition-plan",
-  decisions: [{ decision: "Open with the phenomenon" }],
+  approaches: [{ approach: "plain prose" }],
 }).success
 => false
 ```
