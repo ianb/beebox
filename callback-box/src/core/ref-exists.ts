@@ -50,7 +50,7 @@ function refPathComponent(ref: string): string {
 }
 
 /** Resolve a ref to the absolute filesystem path it points at. */
-function resolveRefToPath(input: RefExistsInput): string {
+export function resolveRefToPath(input: RefExistsInput): string {
   const refPath = refPathComponent(input.ref);
   if (refPath.startsWith("/")) return input.boxRoot + refPath;
   if (isAttachRef(refPath)) {

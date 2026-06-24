@@ -33,6 +33,7 @@ import { parse as parseYaml } from "yaml";
 import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
 import { resolveRefExists } from "./ref-exists.js";
+import { lintProgressNodeRefs } from "./lint-progress-nodes.js";
 
 export interface LintDispatchOptions {
   /**
@@ -164,6 +165,12 @@ async function lintFrontmatterCard(input: {
   const containsWarning = lintContainsLength(parsed.fields);
   if (containsWarning !== null) warnings.push(containsWarning);
   warnings.push(...unknownKeyWarnings({ content, schema: parsed.schema }));
+  // The one type-specific box-aware check: a progress card's entries name
+  // concept-map node ids, which can't be verified self-contained (the map is in
+  // another card) nor by the generic ref walk (a node id isn't a file ref).
+  if (type === "progress") {
+    warnings.push(...(await lintProgressNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  }
   // Type-specific, self-contained validation (rules Zod can't express) lives on
   // the schema as its `validate` hook — see the commentary/extfile schema
   // modules. The generic ref-existence walk above stays here because it needs

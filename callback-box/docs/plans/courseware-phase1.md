@@ -424,8 +424,10 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
    cycles OK) + edge-rubric rule + template + parse/validate doctests + `cb validate` smoke.
 3. **`course`** → ✅ done: manifest schema (goals, success-criteria, component refs, material dir) +
    rule + template + parse/ref doctests.
-4. **`exposition-plan`** + **`progress`** — schemas + rules + templates + parse doctests; the
-   progress→map node-id check in `card-lint.ts` + its lint doctest; session-log convention.
+4. **`exposition-plan`** + **`progress`** → ✅ done: both schemas + rules + templates + parse
+   doctests (incl. the enforced evidence contract); the progress→map node-id check as a dedicated
+   box-aware module (`lint-progress-nodes.ts`) invoked by `card-lint.ts`, with a regression doctest
+   + `cb validate` smoke; session-log convention documented in the progress card-rule.
 5. **`build-course` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
    install step in `cb init`; pointers wired in. **Boxholder review before merge.**
 6. **Knowledge audits** — written, run, recorded.
