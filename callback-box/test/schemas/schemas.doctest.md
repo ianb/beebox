@@ -17,6 +17,8 @@ import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.
 import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
 import { CourseSchema, createCourseTemplate } from "../../src/schemas/course.js";
+import { ExpositionPlanSchema, createExpositionPlanTemplate } from "../../src/schemas/exposition-plan.js";
+import { ProgressSchema, createProgressTemplate } from "../../src/schemas/progress.js";
 import { extractRefs } from "../../src/cards/index.js";
 import { parseCardText } from "../../src/core/card-io.js";
 import { createCardSchemaMap } from "../../src/schemas/registry.js";
@@ -49,6 +51,12 @@ getCardTypes().includes("concept-map")
 => true
 
 getCardTypes().includes("course")
+=> true
+
+getCardTypes().includes("exposition-plan")
+=> true
+
+getCardTypes().includes("progress")
 => true
 
 ```
@@ -551,4 +559,107 @@ const schemas = await createCardSchemaMap();
 const parsed = parseCardText(text, { source: "Acids.course.card", schemas });
 parsed.schema.type
 => course
+```
+
+## Exposition-Plan
+
+An exposition-plan card is the plan for presenting a subject — modalities and
+decisions, with the reasoning kept in.
+
+```ts
+ExpositionPlanSchema.type
+=> exposition-plan
+```
+
+A plan with emphasis, modalities (each with a `why`), and decisions (each with a
+`rationale`) parses; everything but the body is optional:
+
+```ts
+ExpositionPlanSchema.frontmatterSchema.safeParse({
+  type: "exposition-plan",
+  emphasis: ["Principles over terminology"],
+  modalities: [{ name: "dialog", why: "Draws out the learner's model" }],
+  decisions: [{ decision: "Open with the baking-soda phenomenon", rationale: "Concrete and familiar" }],
+}).success
+=> true
+
+ExpositionPlanSchema.frontmatterSchema.safeParse({ type: "exposition-plan" }).success
+=> true
+```
+
+A decision must carry its `rationale` — the "keep the reasoning in" rule, so a
+decision without one fails:
+
+```ts
+ExpositionPlanSchema.frontmatterSchema.safeParse({
+  type: "exposition-plan",
+  decisions: [{ decision: "Open with the phenomenon" }],
+}).success
+=> false
+```
+
+The template scaffolds a plan that parses against the registry:
+
+```ts
+const text = createExpositionPlanTemplate({ title: "Acids and Bases" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.exposition-plan.card", schemas });
+parsed.schema.type
+=> exposition-plan
+```
+
+## Progress
+
+A progress card is a per-learner, evidence-backed record of understanding. Each
+entry is a qualitative status for one concept-map node.
+
+```ts
+ProgressSchema.type
+=> progress
+```
+
+An entry with a `status`, a `basis`, and at least one `evidence` item parses:
+
+```ts
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  course: { ref: "../Acids.course.card" },
+  entries: [
+    { node: "electron-transfer", status: "partial", basis: "observed", evidence: ["Said acids 'give away' something but couldn't say what"] },
+  ],
+}).success
+=> true
+```
+
+The evidence contract is enforced — a status with no `evidence`, an empty
+`evidence` array, or no `basis` all fail to parse (no anonymous rating):
+
+```ts
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", status: "solid", basis: "observed" }],
+}).success
+=> false
+
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", status: "solid", basis: "observed", evidence: [] }],
+}).success
+=> false
+
+ProgressSchema.frontmatterSchema.safeParse({
+  type: "progress",
+  entries: [{ node: "n", status: "solid", evidence: ["heard them explain it"] }],
+}).success
+=> false
+```
+
+The template scaffolds a progress card (with a valid example entry) that parses:
+
+```ts
+const text = createProgressTemplate({ title: "Acids — learner" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "Acids.progress.card", schemas });
+parsed.schema.type
+=> progress
 ```
