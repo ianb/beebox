@@ -22,7 +22,7 @@ export function ConceptMapView({ data, onNavigate }: RendererProps) {
   const body = data.body ?? "";
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-5 p-4 sm:p-6">
       {body.trim() !== "" ? (
         <Markdown prose="block" onNavigate={onNavigate} basePath={data.path}>
           {body}
