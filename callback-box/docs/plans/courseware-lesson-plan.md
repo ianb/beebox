@@ -144,10 +144,23 @@ box's generated files; fix the committed Acids_Bases example.
 must ship to boxes; and the example in the main box currently shows the wrong convention.
 
 **Direction.**
-- Skill step rename/rework: a step that builds the **lesson-plan** (the flow), and a material step
-  that says *material is `doc`/`figure` cards in `material/`, authored as you teach — never a
-  `README.md`; outline the rest in the lesson-plan*. Cross-reference the exposition-plan (rules) vs
-  lesson-plan (flow) so the agent doesn't conflate them.
+- **Build order — lesson-plan and material come together, and last, after the other cards.** The
+  current step sequence (`box-skills-content.ts`: concept-map → progress → exposition-plan →
+  "produce material") gets a reworked tail: the concept-map (structure), exposition-plan (rules),
+  and progress (where the learner is) are all settled *first*, then a single step builds the
+  **lesson-plan and its material together** — they co-develop because the flow *references* the
+  material, and you can't sensibly sequence material you haven't decided to make. So the step is "Plan
+  the flow and build its material," positioned after exposition-plan + progress, just before *adapt*.
+- **Incomplete-by-design is the expected end state, not a failure.** A build does **not** fully
+  author the material. It produces the lesson-plan (the spine) and authors only the few material
+  cards that genuinely earn it now (e.g. the one reused proton-transfer figure); the rest are
+  *named/outlined as segments in the lesson-plan* and authored later, during teaching. The skill
+  must say this plainly so the agent doesn't either (a) dump a wall of half-baked material to "finish"
+  the stage, or (b) feel the course is broken because material is sparse. A mostly-interactive,
+  mostly-deferred-material course is a *complete* build.
+- Material is `doc`/`figure` cards in `material/`, **never a `README.md`**; the lesson-plan references
+  them. Cross-reference the exposition-plan (rules) vs lesson-plan (flow) so the agent doesn't
+  conflate them.
 - Regenerate: after the schema/skill edits, `cb init <box>` re-runs `generateRules` (new
   `card-lesson-plan.md`) and `generateSkills` (updated `build-course`).
 - Fix the example: in the **main box** (`~/src/boxes/test1/store/courses/Acids_Bases.*`), replace
