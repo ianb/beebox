@@ -1,0 +1,15 @@
+# `dev/` — agent-built views
+
+Things the **dev-repo agent** (Claude Code, not a box) builds for you to look at
+in the browser: HTML visualizations, rendered Markdown reports, data displays.
+
+View them via the dev router at **`http://localhost:3210/dev/`** — a manifest
+page that lists the built-in tools plus whatever is in this directory.
+
+- This directory **is tracked in git** (unlike the gitignored `scratch/`), so
+  views kept here are committed and shared.
+- Drop a `.html` file here and it's served as-is (inline JS/SVG/canvas work).
+  Drop a `.md` file and the router renders it to HTML (via Markdoc — tables,
+  code, lists all work).
+- Built-in tool, not a file here: the **markdown doc browser** at
+  `/dev/docs/` — read every `.md` in the repository, grouped by area.

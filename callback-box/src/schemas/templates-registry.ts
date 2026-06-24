@@ -19,6 +19,13 @@ export interface TemplateDefinition<T extends ZodRawShape = ZodRawShape> {
   argsSchema: ZodObject<T>;
   /** Function to generate card content */
   generate: (args: z.infer<ZodObject<T>>) => string;
+  /**
+   * Optional starter files written into the new card's attach scope. Each
+   * `relPath` is relative to `<basename>.attach/` (e.g. "sketch.ts"). Used by
+   * card types whose body points at a runnable attachment (figures), so a
+   * single `cb create` scaffolds a working card + its source.
+   */
+  attachments?: (args: z.infer<ZodObject<T>>) => Array<{ relPath: string; content: string }>;
   /** Card types this template can create (e.g., "memo", "question") */
   cardTypes: string[];
   /** If set, this template is the default when creating cards of these types */

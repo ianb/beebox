@@ -1,0 +1,128 @@
+/**
+ * Per-runtime mount harness for figure sketches.
+ *
+ * A figure's compiled module default-exports a `(lib, mount, figure) =>
+ * teardown` factory. This component lazily imports the runtime library (p5 for
+ * now; three/d3 land with their own harness chunks), hands it to the factory
+ * along with a mount element and the figure context, and runs the returned
+ * teardown on unmount. The lazy import keeps each runtime in its own Vite chunk
+ * and off the SSR path (p5 touches `window` at import time).
+ */
+
+import { useEffect, useRef } from "react";
+import type { ViewFileHelpers } from "../hooks/useViewFileHelpers";
+
+export type FigureRuntime = "p5js" | "three" | "d3";
+
+/**
+ * Optional cleanup returned by a sketch — required for runtimes that hold
+ * resources (p5 `.remove()`, three RAF + disposal, d3 listeners).
+ */
+export type FigureTeardown = (() => void) | void;
+
+/** Context handed to every figure sketch. */
+export interface FigureContext {
+  /** Embed query params, coerced to each param's declared type. */
+  params: Record<string, string | number | boolean>;
+  /** The card's free-form `data` field. */
+  data: Record<string, unknown>;
+  /** The card's validated frontmatter. */
+  meta: Record<string, unknown>;
+  /** Box file helpers (read/url/write/…), reused from the views system. */
+  file: ViewFileHelpers;
+}
+
+/**
+ * The default export of a figure's compiled entry module. The library is the
+ * prominent first argument (sketches think "p5 + where to draw"); the mount
+ * element and figure context travel together in a second object argument (the
+ * codebase caps positional params at two).
+ */
+export type FigureSketch = (
+  lib: unknown,
+  ctx: { mount: HTMLElement; figure: FigureContext },
+) => FigureTeardown;
+
+class FigureRuntimeUnsupportedError extends Error {
+  readonly runtime: string;
+  constructor(runtime: string) {
+    super(`Figure runtime "${runtime}" is not supported yet`);
+    this.name = "FigureRuntimeUnsupportedError";
+    this.runtime = runtime;
+  }
+}
+
+/**
+ * Lazily load the runtime library a sketch is handed as `lib`. Each `import()`
+ * becomes its own Vite chunk, loaded only when a figure of that runtime first
+ * renders. p5 hands over its default-exported constructor; three and d3 hand
+ * over their module namespace (`new lib.Scene()`, `lib.select(mount)`).
+ */
+async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
+  if (runtime === "p5js") {
+    const mod = await import("p5");
+    return mod.default;
+  }
+  if (runtime === "three") {
+    return import("three");
+  }
+  if (runtime === "d3") {
+    return import("d3");
+  }
+  throw new FigureRuntimeUnsupportedError(runtime);
+}
+
+interface FigureMountProps {
+  runtime: FigureRuntime;
+  sketch: FigureSketch;
+  figure: FigureContext;
+  onError: (message: string) => void;
+}
+
+export function FigureMount({ runtime, sketch, figure, onError }: FigureMountProps) {
+  const mountRef = useRef<HTMLDivElement | null>(null);
+  // Hold the latest figure context in a ref so the mount effect can read it at
+  // mount time without taking it as a dependency — rebuilding the context object
+  // each render must not remount the sketch. (Embed-param changes will remount
+  // deliberately, via Track 4.) The ref is updated in an effect, never during
+  // render.
+  const figureRef = useRef(figure);
+  useEffect(() => {
+    figureRef.current = figure;
+  }, [figure]);
+
+  useEffect(() => {
+    const el = mountRef.current;
+    if (el === null) return;
+    let teardown: FigureTeardown;
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const lib = await loadRuntimeLib(runtime);
+        if (cancelled) return;
+        teardown = sketch(lib, { mount: el, figure: figureRef.current });
+      } catch (e) {
+        if (!cancelled) onError(e instanceof Error ? e.message : String(e));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      if (typeof teardown === "function") {
+        try {
+          teardown();
+        } catch (e) {
+          // A failing teardown must not crash the unmount; log so a resource
+          // leak is visible rather than silent.
+          console.error("figure teardown failed", e);
+        }
+      }
+      // Clear anything the sketch appended so a remount (including StrictMode's
+      // dev double-invoke) starts from a clean element.
+      el.replaceChildren();
+    };
+  }, [runtime, sketch, onError]);
+
+  return <div ref={mountRef} className="w-full" />;
+}

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill tree</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
+<style>
+  body { margin:0; background:radial-gradient(1200px 700px at 50% 0%, #232838 0%, #161922 60%, #0f1118 100%); color:#dfe4ee; font:15px/1.5 system-ui,sans-serif; }
+  .wrap { max-width: 980px; margin:0 auto; padding:1.6em 1.2em 5em; }
+  .topnav { font:13px ui-monospace,Menlo,monospace; color:#7b8398; margin-bottom:1em; }
+  .topnav a { color:#7aa6ff; text-decoration:none; } .topnav a:hover{text-decoration:underline;}
+  h1 { font-size:1.7em; margin:.2em 0 .1em; letter-spacing:.01em; }
+  .lede { color:#aab2c6; max-width:66ch; margin:.2em 0 1em; }
+  .legend { display:flex; gap:1.4em; flex-wrap:wrap; font-size:.8em; color:#9aa3b8; margin:.4em 0 1.2em; }
+  .legend b { color:#dfe4ee; }
+  .sw { display:inline-block; width:11px; height:11px; border-radius:3px; vertical-align:middle; margin-right:.3em; }
+  svg { width:100%; height:auto; display:block; }
+  svg text { font-family: system-ui, sans-serif; }
+  .nm { font:600 13px ui-monospace,Menlo,monospace; }
+  .tagline { font-size:11px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="skills.html">Skills profiled</a> · <b>Skill tree</b> · <a href="viz-skill-rhythm.html">Rhythm</a> · <a href="viz-skill-pairs.html">Pairs</a> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
+<h1>🌳 The skill tree</h1>
+<p class="lede">The skills as a talent tree. They build on each other along the arc of a task — fork a session, plan it, have a rival model attack the plan, build, verify, ship. <b>Level = times invoked.</b> The dim, padlocked nodes are <b>born but never unlocked</b> — the craft branch you haven't leveled into yet. The glowing gold path is the ritual that actually carries the work: <b>cb-plan → codex</b>. The <b>⚙ line</b> under each node is the skill's <b>equipment</b> — the real CLI tools it wields (e.g. <code>launch-worktree-session</code> drives a launcher script, <code>claude --worktree</code>, and <code>bin/worktrees</code>; <code>browse</code> is all <code>bin/browse</code>).</p>
+<div class="legend">
+  <span><span class="sw" style="background:#e0a82e"></span><b>Plan &amp; rigor</b></span>
+  <span><span class="sw" style="background:#3fb6a8"></span><b>Build / craft</b></span>
+  <span><span class="sw" style="background:#6699e8"></span><b>Workflow</b></span>
+  <span><span class="sw" style="background:#a07be0"></span><b>Box-side</b></span>
+  <span>🔒 born, never invoked</span>
+  <span>brighter = higher level (more uses)</span>
+</div>
+<svg id="tree" viewBox="0 0 960 760" role="img" aria-label="Skill tree"></svg>
+</div>
+<script>
+const BR = { plan:"#e0a82e", build:"#3fb6a8", flow:"#6699e8", box:"#a07be0", meta:"#9aa0b4" };
+// x,y,icon,branch,uses(0=locked),tagline
+const N = {
+  "launch-worktree-session": {x:480,y:80, icon:"🌱", br:"flow", uses:7, tag:"Fork a focused session"},
+  "cb-plan":      {x:480,y:215, icon:"📐", br:"plan", uses:18, tag:"Design the whole change first"},
+  "codex":        {x:250,y:330, icon:"⚔️", br:"plan", uses:10, tag:"Summon a rival model to attack it"},
+  "cb-codehealth":{x:700,y:315, icon:"🩺", br:"build", uses:0, tag:"Heal cruft into deep modules"},
+  "cb-frontend":  {x:560,y:430, icon:"🎨", br:"build", uses:0, tag:"UI with taste, not the AI look"},
+  "cb-debug":     {x:770,y:445, icon:"🐛", br:"build", uses:0, tag:"No fix without a red loop"},
+  "browse":       {x:360,y:470, icon:"🔭", br:"flow", uses:4, tag:"See it in a real browser"},
+  "finish":       {x:480,y:610, icon:"🚢", br:"flow", uses:8, tag:"Land it in main — green or stop"},
+  "cb-context":   {x:140,y:205, icon:"📖", br:"box", uses:0, tag:"Teach the box agent what to know"},
+  "skill-creator":{x:150,y:600, icon:"🔧", br:"meta", uses:0, tag:"Forge new skills"},
+};
+// the CLI tools / surfaces each skill wields to do its work (its "equipment")
+const TOOLS = {
+  "launch-worktree-session":["launch-worktree-session", "claude --worktree", "bin/worktrees", "WorktreeCreate hook"],
+  "cb-plan":["docs/plans/", "pnpm knowledge-audit"],
+  "codex":["codex CLI (OpenAI)", "codex exec -s read-only"],
+  "cb-codehealth":["pnpm lint:knip", "lint:circular", "lint:oxlint"],
+  "cb-frontend":["bin/browse", "FRONTEND.md", "React Compiler"],
+  "cb-debug":["cb scenario run", "bin/browse", "pnpm knowledge-audit", "curl"],
+  "browse":["bin/browse", "(wraps agent-browser)"],
+  "finish":["pnpm test", "git merge", "feedback-review collect.ts"],
+  "cb-context":["pnpm knowledge-audit", "init-rules.ts"],
+  "skill-creator":["eval / benchmark scripts"],
+};
+
+// [from, to, hot?]
+const E = [
+  ["launch-worktree-session","cb-plan"],
+  ["cb-plan","codex", true],
+  ["cb-plan","cb-codehealth"],
+  ["cb-plan","cb-frontend"],
+  ["cb-codehealth","cb-debug"],
+  ["cb-frontend","cb-debug"],
+  ["cb-frontend","browse"],
+  ["codex","finish"],
+  ["browse","finish"],
+  ["cb-frontend","finish"],
+  ["cb-debug","finish"],
+];
+const NS="http://www.w3.org/2000/svg", svg=document.getElementById("tree");
+const mk=(t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
+// glow filter
+const defs=mk("defs");
+defs.innerHTML=`<filter id="glow" x="-60%" y="-60%" width="220%" height="220%">
+  <feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>`;
+svg.append(defs);
+const hex=(cx,cy,r)=>{let p="";for(let i=0;i<6;i++){const a=Math.PI/180*(60*i-30);p+=(cx+r*Math.cos(a))+","+(cy+r*Math.sin(a))+" ";}return p.trim();};
+
+// edges first (under nodes)
+for(const [a,b,hot] of E){
+  const A=N[a],B=N[b];
+  const locked = A.uses===0 || B.uses===0;
+  svg.append(mk("line",{x1:A.x,y1:A.y,x2:B.x,y2:B.y,
+    stroke: hot?"#e0a82e": locked?"#3a4254":"#5b6880",
+    "stroke-width": hot?5:2.5, "stroke-opacity": hot?.95:locked?.5:.7,
+    "stroke-linecap":"round", filter: hot?"url(#glow)":""}));
+}
+// nodes
+for(const [name,d] of Object.entries(N)){
+  const locked = d.uses===0, col=BR[d.br], r=40;
+  const g=mk("g",{});
+  const tools=TOOLS[name]||[];
+  g.append(mk("title",{},`${name} — ${d.tag}${locked?"  (born, never invoked)":"  · level "+d.uses}\nwields: ${tools.join(", ")}`));
+  // outer glow ring for high-level nodes
+  if(!locked) g.append(mk("polygon",{points:hex(d.x,d.y,r+4),fill:"none",stroke:col,"stroke-opacity":Math.min(.15+d.uses/24,.7),"stroke-width":3,filter:"url(#glow)"}));
+  g.append(mk("polygon",{points:hex(d.x,d.y,r),
+    fill: locked?"#20242f":"#262c3a",
+    stroke: locked?"#3a4150":col, "stroke-width": locked?2:3, "stroke-opacity": locked?.7:1,
+    "fill-opacity": locked?.7:1}));
+  // icon
+  const ic=mk("text",{x:d.x,y:d.y+2,"text-anchor":"middle","font-size":locked?"22":"26","dominant-baseline":"middle","fill-opacity":locked?.45:1}, d.icon);
+  g.append(ic);
+  // lock badge
+  if(locked) g.append(mk("text",{x:d.x+r-12,y:d.y-r+20,"text-anchor":"middle","font-size":"15"},"🔒"));
+  // level badge
+  else {
+    g.append(mk("circle",{cx:d.x+r-10,cy:d.y-r+12,r:12,fill:col}));
+    g.append(mk("text",{x:d.x+r-10,y:d.y-r+12,"text-anchor":"middle","dominant-baseline":"central","font-size":"11","font-weight":700,fill:"#12151c"}, d.uses));
+  }
+  // name + tagline below
+  g.append(mk("text",{x:d.x,y:d.y+r+18,"text-anchor":"middle","font-size":"13","font-weight":600,
+    fill: locked?"#7c849a":"#eef1f7","font-family":"ui-monospace,Menlo,monospace"}, name));
+  g.append(mk("text",{x:d.x,y:d.y+r+34,"text-anchor":"middle","font-size":"11",fill: locked?"#69708a":"#aab2c6"}, d.tag));
+  // "wields" — the CLI tools that do the work (short; full list in tooltip)
+  if(tools.length){
+    const shown = tools.slice(0,2).join(" · ") + (tools.length>2?" +"+(tools.length-2):"");
+    g.append(mk("text",{x:d.x,y:d.y+r+49,"text-anchor":"middle","font-size":"9.5",
+      fill: locked?"#586079":"#7e879e","font-family":"ui-monospace,Menlo,monospace"}, "⚙ "+shown));
+  }
+  svg.append(g);
+}
+// branch label for the lonely box-side node
+svg.append(mk("text",{x:140,y:300,"text-anchor":"middle","font-size":"11",fill:"#8a7ab0","font-style":"italic"},"(a different realm:"));
+svg.append(mk("text",{x:140,y:314,"text-anchor":"middle","font-size":"11",fill:"#8a7ab0","font-style":"italic"},"the box's mind, not ours)"));
+</script>
+</body>
+</html>

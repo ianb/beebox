@@ -32,6 +32,14 @@ export interface RendererProps {
    * whether to push a new URL, swap a sidebar pane, open a zoomed view, etc.
    */
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /**
+   * Embed query params from a `view:` link (e.g. `?molecule=H2O2`). Threaded
+   * on the chat-embed path; absent on other surfaces for now. Renderers that
+   * don't take parameters ignore it.
+   */
+  params?: Record<string, string>;
+  /** The surface this renderer is shown in, so it can adapt its own chrome. */
+  mode?: "page" | "chat" | "companion" | "embed";
 }
 
 /** A renderer that can display a file */

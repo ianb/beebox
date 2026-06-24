@@ -1,0 +1,297 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The shape of this repo's agent knowledge</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
+<style>
+  :root { --ink:#222; --mut:#777; --line:#e6e6e6; --accent:#2255aa; --warm:#a2380a; }
+  * { box-sizing: border-box; }
+  body { font: 16px/1.65 system-ui, sans-serif; color: var(--ink); margin: 0; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 2.5em 1.3em 6em; }
+  header.hero { padding: 1em 0 1.5em; border-bottom: 1px solid var(--line); margin-bottom: 2.5em; }
+  h1 { font-size: 2em; line-height: 1.15; margin: 0 0 0.2em; }
+  .lede { font-size: 1.15em; color: #444; margin: 0.3em 0 0; }
+  .meta { color: var(--mut); font-size: 0.85em; margin-top: 1em; }
+  h2 { font-size: 1.35em; margin: 2.6em 0 0.2em; }
+  h2 .num { color: #bbb; font-weight: 400; margin-right: 0.4em; }
+  .sub { color: var(--mut); margin: 0.1em 0 1.2em; }
+  p { margin: 0.7em 0; }
+  .card { border: 1px solid var(--line); border-radius: 10px; padding: 1.1em 1.3em; margin: 1.2em 0; background: #fcfcfc; }
+  code { background: #f0f0f0; padding: 0.08em 0.35em; border-radius: 3px; font-size: 0.88em; }
+  blockquote { margin: 1.4em 0; padding: 0.5em 1.2em; border-left: 4px solid #d0deef; background: #f7faff; color: #333; font-size: 1.02em; }
+  .key { display: flex; gap: 1.2em; flex-wrap: wrap; font-size: 0.82em; color: var(--mut); margin: 0.4em 0 1em; }
+  .key span::before { content: "■ "; }
+  .k-model::before { color: #2255aa; } .k-slash::before { color: #2a8a4a; } .k-prose::before { color: #c98a18; }
+  /* bar rows */
+  .usage-svg text { font: 11px ui-monospace, Menlo, monospace; }
+  /* pipeline */
+  .pipe { display: flex; align-items: stretch; gap: 0; overflow-x: auto; margin: 1.4em 0 .6em; padding-bottom: 0.5em; }
+  .stage { flex: 1 1 0; min-width: 134px; min-height: 132px; display: flex; flex-direction: column; border: 1px solid var(--line); border-top: 3px solid var(--c, #cbd6ea); border-radius: 10px; padding: 0.8em 0.85em 0.9em; margin-right: 28px; position: relative; background: #fff; }
+  .stage:last-child { margin-right: 0; }
+  .stage:not(:last-child)::after { content: "→"; position: absolute; right: -20px; top: 50%; transform: translateY(-50%); color: #cdd2da; font-size: 1.25em; }
+  .stage .step { font-size: 0.68em; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mut); font-weight: 700; }
+  .stage .skill { font: 600 13px ui-monospace, Menlo, monospace; color: var(--accent); margin: 0.35em 0 0.1em; line-height: 1.25; }
+  .stage .skills { margin: 0.35em 0 0.1em; display: flex; flex-direction: column; gap: 0.12em; }
+  .stage .skills span { font: 600 11.5px ui-monospace, Menlo, monospace; color: #8a93a6; }
+  .stage .stat { font-size: 0.72em; color: #667; margin-top: auto; padding-top: 0.6em; }
+  .stage.cold { background: #fafbfd; } .stage.cold .skill { color: #9aa1b0; }
+  /* era timeline */
+  .eras .era { display: grid; grid-template-columns: 7em 1fr; gap: 0.8em; padding: 0.5em 0; border-top: 1px solid var(--line); align-items: baseline; }
+  .eras .era:first-child { border-top: 0; }
+  .eras .when { font: 600 12px ui-monospace, monospace; color: var(--mut); }
+  .eras .theme { font-weight: 600; }
+  .eras .members { color: #555; font: 12px ui-monospace, monospace; }
+  .e1 { color: #2a8a4a; } .e2 { color: #2255aa; } .e3 { color: #c98a18; }
+  figure { margin: 1.2em 0; }
+  figcaption { font-size: 0.82em; color: var(--mut); margin-top: 0.4em; }
+  svg text { font: 11px system-ui, sans-serif; fill: var(--mut); }
+  .docrow { display: grid; grid-template-columns: 18em 1fr 3em; gap: 0.6em; align-items: center; font-size: 0.9em; padding: 0.15em 0; }
+  .docrow .dn { font: 12px ui-monospace, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .docrow .dbar { height: 10px; background: #6f42c1; border-radius: 2px; }
+  .docrow .dv { color: #888; font-size: 0.8em; }
+  .foot { margin-top: 3em; padding-top: 1em; border-top: 1px solid var(--line); color: var(--mut); font-size: 0.85em; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<nav style="font:13px ui-monospace,Menlo,monospace;color:#999;margin-bottom:1.5em">
+  <b>Narrative</b> · <a href="skills.html" style="color:#2255aa;text-decoration:none">Skills profiled</a> · <a href="viz-skill-rhythm.html" style="color:#2255aa;text-decoration:none">Skill rhythm</a> · <a href="viz-skill-pairs.html" style="color:#2255aa;text-decoration:none">Skill pairs</a> · <a href="viz-claude-constellation.html" style="color:#2255aa;text-decoration:none">CLAUDE.md tree</a>
+</nav>
+
+<header class="hero">
+  <h1>The shape of this repo's agent&nbsp;knowledge</h1>
+  <p class="lede">Skills, docs, and the always-on laws — what exists, how it got here, and how it's actually been used. Read from the repo's git history and ~114 Claude&nbsp;Code session logs.</p>
+  <p class="meta">callback-mono · generated from a session mining pass · numbers are real, baked in at authoring time</p>
+</header>
+
+<section>
+  <h2><span class="num">1</span>A factory line for shipping worktrees</h2>
+  <p class="sub">The skills aren't a list — they're the lifecycle of one unit of work. The usage numbers say which stations are industrialized and which are still being built.</p>
+  <div class="pipe" id="pipe"></div>
+  <p><small>n× = the model fired it · np = times asked for in prose · ns = times typed as <code>/slash</code></small></p>
+</section>
+
+<section>
+  <h2><span class="num">2</span>Who drives each skill</h2>
+  <p class="sub">Three different signals, and they disagree by an order of magnitude. <code>cb-plan</code> is never typed as a slash command — but it's asked for in prose 81×, then the model fires it. <code>finish</code> is the opposite: a typed reflex, 104 times across 70 sessions.</p>
+  <div class="key">
+    <span class="k-model">model-invoked (Skill tool)</span>
+    <span class="k-slash">human /slash</span>
+    <span class="k-prose">human prose mention</span>
+  </div>
+  <svg class="usage-svg" id="usage" width="100%" role="img" aria-label="Usage by signal, per skill"></svg>
+  <p><small>Prose counts shown only for distinctively-named skills; common-word names (finish, browse, codex) are too noisy to trust in prose and are omitted there.</small></p>
+</section>
+
+<section>
+  <h2><span class="num">3</span>Three eras of growing trust</h2>
+  <p class="sub">Cluster the skills by birth date and a progression appears: first automate the mechanics, then make the agent plan &amp; review, then teach it craft.</p>
+  <div class="eras" id="eras"></div>
+</section>
+
+<section>
+  <h2><span class="num">4</span>The laws: an always-on file, gardened for five months</h2>
+  <p class="sub"><code>callback-box/CLAUDE.md</code> is the oldest file here (born 2026-01-30) and the most-tended — 51 commits. You can't invoke it, so its story is told in edits, not usage. Left alone, a CLAUDE.md bloats; this one was caught at 218 lines, halved in a single day, and held at a healthy weight ever since.</p>
+  <figure>
+    <svg id="traj" viewBox="0 0 880 280" width="100%" role="img" aria-label="Line count of callback-box/CLAUDE.md over its 51 commits"></svg>
+    <figcaption>Each point is one commit (oldest → newest). The cliff is March 3 — “Condense CLAUDE.md” (−100) the same day the first nested CLAUDE.md files were born: the knowledge didn't vanish, it budded down into the code tree. After that it self-corrects within a tight band — the dips are “review pass: compact” gardening commits.</figcaption>
+  </figure>
+  <blockquote>The compression and the constellation are the same event: distribute knowledge down to where it's used, and prune the center on a schedule.</blockquote>
+</section>
+
+<section>
+  <h2><span class="num">5</span>The constellation forms a hierarchy</h2>
+  <p class="sub">While the elder was disciplined, CLAUDE.md kept budding where code earned its own directory — then a whole new <em>layer</em> appeared at the monorepo merge.</p>
+  <figure>
+    <svg id="births" viewBox="0 0 880 360" width="100%" role="img" aria-label="When each CLAUDE.md file was born"></svg>
+    <figcaption>Root = how the workspace runs · per-project = what each project is · nested = how each subsystem works. The root CLAUDE.md (2026-05-26) is a new altitude, born at the merge; the newest nested file (chat) was born the day this was written.</figcaption>
+  </figure>
+</section>
+
+<section>
+  <h2><span class="num">6</span>Living docs vs. the dead tail</h2>
+  <p class="sub">Of 333 tracked <code>.md</code>, only 176 distinct names were ever opened by an agent. A small core carries the weight; a long tail is never consulted.</p>
+  <div id="docs"></div>
+  <p class="sub" style="margin-top:1em">~Half of all docs are never read in any session — onboarding, connector-setup, finished plans, vision pieces. A triage list, not a delete list.</p>
+</section>
+
+<section>
+  <h2><span class="num">7</span>A skill is a pain felt three times, then written down</h2>
+  <p>The origin of each skill is recoverable from the chat that produced its commit. <code>cb-debug</code> exists because of one recurring frustration, captured the moment it was added:</p>
+  <blockquote>“agents under-reach for web search on library/platform quirks — we hit three this session (canvas.toBlob lossy-only, macOS timers counting sleep, ESM/CJS imports) … add it to cb-debug before committing.”</blockquote>
+</section>
+
+<p class="foot">Data mined from <code>git</code> history and <code>~/.claude/projects/**/*.jsonl</code> session logs. This page is a static first cut with numbers baked in; the next step is to regenerate it from a live mining pass so it stays current.</p>
+
+</div>
+
+<script>
+// ---- data (mined this session) ----
+const PIPELINE = [
+  {step:"spin off", skill:"launch-worktree-session", stat:"7× · 69 prose", c:"#6699e8"},
+  {step:"plan", skill:"cb-plan", stat:"18× · 81 prose", c:"#e0a82e"},
+  {step:"review", skill:"codex", stat:"10× · 3 /slash", c:"#e0a82e"},
+  {step:"build", skills:["cb-debug","cb-frontend","cb-codehealth","cb-context"], stat:"new — 0 uses yet", cold:true, c:"#3fb6a8"},
+  {step:"verify", skill:"browse", stat:"4×", c:"#6699e8"},
+  {step:"ship", skill:"finish", stat:"104 /slash · 70 sessions", c:"#6699e8"},
+];
+// model, slash, prose (prose null = too noisy to trust)
+const USAGE = [
+  {name:"cb-plan", model:18, slash:0, prose:81},
+  {name:"finish", model:8, slash:104, prose:null},
+  {name:"codex", model:10, slash:3, prose:null},
+  {name:"launch-worktree", model:7, slash:0, prose:69},
+  {name:"browse", model:4, slash:0, prose:null},
+  {name:"cb-codehealth", model:0, slash:0, prose:10},
+  {name:"cb-debug", model:0, slash:0, prose:7},
+  {name:"cb-frontend", model:0, slash:0, prose:4},
+  {name:"cb-context", model:0, slash:0, prose:4},
+  {name:"skill-creator", model:0, slash:0, prose:7},
+];
+const ERAS = [
+  {cls:"e1", when:"late May", theme:"Orchestration", members:"finish · launch-worktree-session · browse", note:"make worktrees safe & routine"},
+  {cls:"e2", when:"early June", theme:"Rigor", members:"cb-plan · codex", note:"plan deeply, review across models"},
+  {cls:"e3", when:"mid June", theme:"Craft", members:"cb-debug · cb-frontend · cb-codehealth · cb-context · skill-creator", note:"encode build-phase judgment"},
+];
+// callback-box/CLAUDE.md line count per commit, oldest→newest
+const TRAJ = [217,219,220,222,222,209,209,218,118,122,141,145,114,116,118,119,121,127,130,131,132,133,134,135,121,122,121,122,123,136,141,141,141,141,141,141,141,146,146,146,146,146,146,146,146,146,144,144,145,144];
+const TRAJ_NOTES = [
+  {i:8, label:"Mar 3 — “Condense” (−100)"},
+  {i:12, label:"Mar 6 — rewrite (low: 114)"},
+  {i:24, label:"May 5 — “compact” gardening"},
+];
+const BIRTHS = [
+  {date:"2026-01-30", path:"callback-box/CLAUDE.md", tier:"project"},
+  {date:"2026-02-01", path:"callback-box/THINKING_CLAUDE.md", tier:"dead"},
+  {date:"2026-02-07", path:"callback-clerk/CLAUDE.md", tier:"project"},
+  {date:"2026-03-03", path:"src/connectors · src/services · src/core/reactor", tier:"nested"},
+  {date:"2026-03-04", path:"callback-box/deploy", tier:"nested"},
+  {date:"2026-03-11", path:"docs/architecture", tier:"nested"},
+  {date:"2026-03-15", path:"src/dev", tier:"nested"},
+  {date:"2026-04-16", path:"personal-vibe-check/CLAUDE.md", tier:"project"},
+  {date:"2026-05-26", path:"ROOT CLAUDE.md  +  feedback-review", tier:"root"},
+  {date:"2026-06-21", path:"src/.../components/chat", tier:"nested"},
+];
+const DOCS = [
+  {name:"callback-box/docs/ideas.md", reads:58},
+  {name:"callback-box/docs/cards-as-markdown.md", reads:33},
+  {name:"callback-box/docs/box-commentary-surface.md", reads:28},
+  {name:"callback-box/CLAUDE.md (read deliberately)", reads:15},
+  {name:"callback-box/docs/testing.md", reads:12},
+  {name:"callback-box/docs/stack-decisions.md", reads:10},
+  {name:"callback-box/docs/narration-mode-design.md", reads:10},
+];
+
+// ---- render ----
+const el = (t, c, h) => { const e=document.createElement(t); if(c)e.className=c; if(h!=null)e.innerHTML=h; return e; };
+
+// pipeline
+const pipe = document.getElementById("pipe");
+for (const s of PIPELINE) {
+  const skillHtml = s.skills
+    ? `<div class="skills">${s.skills.map(x=>`<span>${x}</span>`).join("")}</div>`
+    : `<div class="skill">${s.skill}</div>`;
+  const st = el("div","stage"+(s.cold?" cold":""),
+    `<div class="step">${s.step}</div>${skillHtml}<div class="stat">${s.stat}</div>`);
+  st.style.setProperty("--c", s.c);
+  pipe.append(st);
+}
+
+// usage chart — SVG grouped bars on a shared scale; zeros omitted to cut clutter
+(function(){
+  const svg = document.getElementById("usage");
+  const NSV="http://www.w3.org/2000/svg";
+  const mk=(t,a,txt)=>{const e=document.createElementNS(NSV,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
+  const MAX = Math.max(...USAGE.flatMap(u=>[u.model,u.slash,u.prose||0]));     // 104
+  const sorted = [...USAGE].sort((a,b)=>(b.model+b.slash+(b.prose||0))-(a.model+a.slash+(a.prose||0)));
+  const W=820, padL=140, padR=48, top=8, rowH=42, barH=9, gap=3.5;
+  const H = top + sorted.length*rowH + 6;
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  const sx = v => v/MAX*(W-padL-padR);
+  const COL = {model:"#2255aa", slash:"#2a8a4a", prose:"#c98a18"};
+  const SIG = ["model","slash","prose"];           // fixed vertical slots → readable by position+color
+  sorted.forEach((u,i)=>{
+    const y0 = top + i*rowH;
+    svg.append(mk("text",{x:padL-10,y:y0+rowH/2,"text-anchor":"end","dominant-baseline":"middle","font-weight":700,fill:"#333"}, u.name));
+    svg.append(mk("line",{x1:padL,y1:y0+5,x2:padL,y2:y0+rowH-7,stroke:"#e8e8e8"}));
+    SIG.forEach((sig,j)=>{
+      const v = u[sig];
+      if (v==null || v===0) return;                // omit empty signals entirely
+      const by = y0 + 5 + j*(barH+gap);
+      svg.append(mk("rect",{x:padL,y:by,width:Math.max(sx(v),1),height:barH,rx:2,fill:COL[sig]}));
+      svg.append(mk("text",{x:padL+sx(v)+5,y:by+barH-1,"font-size":"10",fill:"#666"}, v));
+    });
+  });
+})();
+
+// eras
+const eras = document.getElementById("eras");
+for (const e of ERAS) {
+  eras.append(el("div","era",
+    `<div class="when ${e.cls}">${e.when}</div><div><div class="theme ${e.cls}">${e.theme}</div><div class="members">${e.members}</div><div class="sub" style="margin:.2em 0 0">${e.note}</div></div>`));
+}
+
+// trajectory line chart
+(function(){
+  const svg = document.getElementById("traj");
+  const W=880,H=280, padL=40,padR=20,padT=20,padB=30;
+  const n=TRAJ.length, maxY=Math.max(...TRAJ), minY=Math.min(...TRAJ);
+  const x = i => padL + i*(W-padL-padR)/(n-1);
+  const y = v => padT + (maxY-v)*(H-padT-padB)/(maxY-minY);
+  const NS="http://www.w3.org/2000/svg";
+  const mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  // gridlines
+  [120,160,200].forEach(v=>{ if(v<=maxY&&v>=minY){ svg.append(mk("line",{x1:padL,x2:W-padR,y1:y(v),y2:y(v),stroke:"#eee"})); const t=mk("text",{x:padL-6,y:y(v)+3,"text-anchor":"end"});t.textContent=v;svg.append(t);} });
+  // area + line
+  let d="M"+x(0)+","+y(TRAJ[0]); for(let i=1;i<n;i++) d+=" L"+x(i)+","+y(TRAJ[i]);
+  svg.append(mk("path",{d, fill:"none", stroke:"#2255aa","stroke-width":2}));
+  // points
+  for(let i=0;i<n;i++) svg.append(mk("circle",{cx:x(i),cy:y(TRAJ[i]),r:2.2,fill:"#2255aa"}));
+  // annotations
+  for(const a of TRAJ_NOTES){
+    svg.append(mk("line",{x1:x(a.i),x2:x(a.i),y1:y(TRAJ[a.i]),y2:padT+4,stroke:"#a2380a","stroke-dasharray":"3 3"}));
+    const t=mk("text",{x:Math.min(x(a.i),W-180),y:padT-4,fill:"#a2380a","font-weight":600}); t.textContent=a.label; svg.append(t);
+  }
+  // endpoints labels
+  const lab=(i,anchor)=>{const t=mk("text",{x:x(i),y:y(TRAJ[i])-7,"text-anchor":anchor,fill:"#444","font-weight":600});t.textContent=TRAJ[i]+" lines";svg.append(t);};
+  lab(0,"start"); lab(n-1,"end");
+})();
+
+// births timeline
+(function(){
+  const svg=document.getElementById("births");
+  const W=880,H=360,padL=90,padT=24,padB=20, rowH=(H-padT-padB)/BIRTHS.length;
+  const t0=new Date(BIRTHS[0].date).getTime(), t1=new Date(BIRTHS[BIRTHS.length-1].date).getTime();
+  const NS="http://www.w3.org/2000/svg";
+  const mk=(t,a)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;};
+  const x=ds=> padL + (new Date(ds).getTime()-t0)/(t1-t0)*(W-padL-220);
+  const color={project:"#2255aa",nested:"#2a8a4a",root:"#a2380a",dead:"#bbb"};
+  // month ticks
+  ["2026-02-01","2026-03-01","2026-04-01","2026-05-01","2026-06-01"].forEach(m=>{
+    svg.append(mk("line",{x1:x(m),x2:x(m),y1:padT-6,y2:H-padB,stroke:"#f0f0f0"}));
+    const t=mk("text",{x:x(m),y:padT-10,"text-anchor":"middle"});t.textContent=m.slice(0,7);svg.append(t);
+  });
+  BIRTHS.forEach((b,i)=>{
+    const cy=padT+i*rowH+rowH/2;
+    svg.append(mk("circle",{cx:x(b.date),cy,r:5,fill:color[b.tier]}));
+    const dt=mk("text",{x:padL-8,y:cy+3,"text-anchor":"end","font-weight":600});dt.textContent=b.date.slice(5);svg.append(dt);
+    const lab=mk("text",{x:x(b.date)+10,y:cy+3,fill:"#333"});lab.textContent=b.path+(b.tier==="root"?"  ← new layer":b.tier==="dead"?"  (never tended)":"");svg.append(lab);
+  });
+})();
+
+// docs bars
+const docs=document.getElementById("docs");
+const maxD=Math.max(...DOCS.map(d=>d.reads));
+for(const d of DOCS){
+  const r=el("div","docrow");
+  r.append(el("div","dn", d.name));
+  const wrap=el("div"); const b=el("div","dbar"); b.style.width=Math.round(d.reads/maxD*100)+"%"; wrap.append(b); r.append(wrap);
+  r.append(el("div","dv", d.reads));
+  docs.append(r);
+}
+</script>
+</body>
+</html>

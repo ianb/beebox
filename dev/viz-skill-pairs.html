@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Skill pairs</title>
+<link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
+<style>
+  body { font:15px/1.6 system-ui,sans-serif; color:#222; margin:0; }
+  .wrap { max-width: 820px; margin:0 auto; padding:2em 1.3em 5em; }
+  .topnav { font:13px ui-monospace,Menlo,monospace; color:#999; margin-bottom:1.8em; }
+  .topnav a { color:#2255aa; text-decoration:none; } .topnav a:hover{text-decoration:underline;}
+  h1 { font-size:1.7em; margin:0 0 .2em; }
+  .sub { color:#777; margin:.2em 0 1.2em; max-width:62ch; }
+  small { color:#888; font-size:.85em; }
+  svg text { font:12px ui-monospace,Menlo,monospace; }
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav class="topnav"><a href="agent-knowledge.html">Narrative</a> · <a href="viz-skill-rhythm.html">Skill rhythm</a> · <b>Skill pairs</b> · <a href="viz-claude-constellation.html">CLAUDE.md tree</a></nav>
+<h1>Skill pairs — the rituals</h1>
+<p class="sub">Which skills show up <em>together</em> in the same session. Node size = total invocations; edge thickness = sessions where both fired. One pairing dominates everything: <b>cb-plan → codex</b> (8 sessions) — plan the work, then have another model attack the plan. That two-skill ritual is the spine of how non-trivial work gets done here.</p>
+<svg id="net" viewBox="0 0 760 620" width="100%" role="img" aria-label="Skill co-occurrence network"></svg>
+<p><small>Solo skills (deep-research, agent-browser) never co-occurred and float unconnected. Edges with weight ≥1 shown.</small></p>
+</div>
+<script>
+const NODES = {
+  "cb-plan":18, "codex":10, "finish":8, "launch-worktree-session":7,
+  "browse":4, "claude-api":2, "update-config":1, "deep-research":1, "agent-browser":1,
+};
+const EDGES = [
+  ["cb-plan","codex",8], ["cb-plan","finish",4], ["cb-plan","launch-worktree-session",2],
+  ["cb-plan","claude-api",1], ["cb-plan","update-config",1],
+  ["codex","finish",1], ["codex","launch-worktree-session",2], ["codex","browse",1],
+  ["finish","launch-worktree-session",2], ["finish","update-config",1],
+  ["launch-worktree-session","update-config",1], ["launch-worktree-session","browse",1],
+];
+const NS="http://www.w3.org/2000/svg", svg=document.getElementById("net");
+const mk=(t,a,txt)=>{const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);if(txt!=null)e.textContent=txt;return e;};
+const names=Object.keys(NODES), cx=380, cy=315, R=215;
+const pos={}; names.forEach((n,i)=>{const a=-Math.PI/2+i/names.length*2*Math.PI; pos[n]=[cx+R*Math.cos(a), cy+R*Math.sin(a)];});
+const rOf=n=>8+Math.sqrt(NODES[n])*5;
+// edges
+for(const [a,b,w] of EDGES){
+  const hot = (a==="cb-plan"&&b==="codex")||(a==="codex"&&b==="cb-plan");
+  svg.append(mk("line",{x1:pos[a][0],y1:pos[a][1],x2:pos[b][0],y2:pos[b][1],
+    stroke:hot?"#a2380a":"#9ab", "stroke-width":w*1.6, "stroke-opacity":hot?.9:.5,"stroke-linecap":"round"}));
+}
+// nodes
+for(const n of names){
+  const [px,py]=pos[n], r=rOf(n);
+  const hot = n==="cb-plan"||n==="codex";
+  svg.append(mk("circle",{cx:px,cy:py,r,fill:hot?"#a2380a":"#2255aa","fill-opacity":hot?.92:.78}));
+  // label outside the ring
+  const a=Math.atan2(py-cy,px-cx), lx=px+(r+8)*Math.cos(a), ly=py+(r+8)*Math.sin(a);
+  const anchor = Math.cos(a)>0.3?"start":Math.cos(a)<-0.3?"end":"middle";
+  svg.append(mk("text",{x:lx,y:ly+4,"text-anchor":anchor,fill:"#333","font-weight":hot?700:500},n));
+}
+// center annotation
+svg.append(mk("text",{x:cx,y:cy-6,"text-anchor":"middle",fill:"#a2380a","font-weight":700,"font-size":"13"},"plan → review"));
+svg.append(mk("text",{x:cx,y:cy+12,"text-anchor":"middle",fill:"#a2380a","font-size":"11"},"cb-plan ↔ codex · 8 sessions"));
+</script>
+</body>
+</html>
