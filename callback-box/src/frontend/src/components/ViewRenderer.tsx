@@ -160,6 +160,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: Vi
 
 
   // Subscribe to the box event stream for live updates
+  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event === "file-change") {
@@ -180,6 +181,16 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: Vi
         }
       }
     }, [slug, loadModule, loadCards, mod]),
+    // Resync on a *re*connect: file-change events are transient and not replayed,
+    // so a card edited while the socket was dropped would otherwise leave the
+    // view stale. Skip the initial connect — the mount effect already loads.
+    onConnect: useCallback(() => {
+      if (!connectedOnceRef.current) {
+        connectedOnceRef.current = true;
+        return;
+      }
+      loadCards();
+    }, [loadCards]),
   });
 
   const fileHelpers = useViewFileHelpers(apiBase);
