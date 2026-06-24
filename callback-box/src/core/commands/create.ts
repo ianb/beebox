@@ -154,6 +154,25 @@ async function executeCreate(
   const relativePath = path.relative(ctx.boxRoot, fullPath);
   ctx.writeLine(`Created: ${relativePath}`);
 
+  // Template-provided starter files, written into the card's attach scope
+  // (`<basename>.attach/<relPath>`). Used by card types whose body points at a
+  // runnable attachment (figures), so one `cb create` scaffolds card + source.
+  const templateAttachments = template.attachments?.(parseResult.data) ?? [];
+  const scaffoldedPaths: string[] = [];
+  if (templateAttachments.length > 0) {
+    const cardDir = path.dirname(fullPath);
+    const cardBasename = path.basename(fullPath, ".card");
+    const attachScope = path.join(cardDir, `${cardBasename.split(".").slice(0, -1).join(".")}.attach`);
+    for (const att of templateAttachments) {
+      const attPath = path.join(attachScope, att.relPath);
+      await fs.mkdir(path.dirname(attPath), { recursive: true });
+      await fs.writeFile(attPath, att.content);
+      const rel = path.relative(ctx.boxRoot, attPath);
+      scaffoldedPaths.push(rel);
+      ctx.writeLine(`Scaffolded: ${rel}`);
+    }
+  }
+
   // Handle attachment if provided
   let attachmentPath: string | undefined;
   if (createArgs.attachment) {
@@ -180,7 +199,7 @@ async function executeCreate(
 
   // Optionally commit
   if (createArgs.commit) {
-    const filesToStage = [relativePath];
+    const filesToStage = [relativePath, ...scaffoldedPaths];
     if (attachmentPath) {
       filesToStage.push(path.relative(ctx.boxRoot, attachmentPath));
     }

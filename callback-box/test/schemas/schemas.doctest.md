@@ -14,7 +14,9 @@ import {
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { createCalendarReviewJobTemplate } from "../../src/schemas/calendar-review-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
-import { FigureSchema } from "../../src/schemas/figure.js";
+import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
+import { parseCardText } from "../../src/core/card-io.js";
+import { createCardSchemaMap } from "../../src/schemas/registry.js";
 ```
 
 ## Schema Registry
@@ -355,5 +357,42 @@ FigureSchema.frontmatterSchema.safeParse({
   params: [{ name: "molecule", type: "string", default: "H2O2" }],
   data: { palette: ["#fff", "#000"] },
 }).success
+=> true
+```
+
+The figure template scaffolds a valid card pointing at `attach/sketch.ts`, with
+a `size` param declared so it's parameterizable out of the box:
+
+```ts
+createFigureTemplate({ runtime: "p5js", title: "Spinner" })
+=>
+---
+runtime: p5js
+entry: attach/sketch.ts
+params:
+  - name: size
+    type: number
+    default: 300
+title: Spinner
+---
+A p5.js sketch figure. Describe what it demonstrates here; the runnable code lives in `attach/sketch.ts`.
+```
+
+The generated card validates against the schema:
+
+```ts
+const text = createFigureTemplate({ runtime: "three" });
+const schemas = await createCardSchemaMap();
+const parsed = parseCardText(text, { source: "X.figure.card", schemas });
+parsed.fields.runtime
+=> three
+```
+
+Each runtime has a runnable starter sketch that exports the
+`(lib, { mount, figure })` factory and returns a teardown:
+
+```ts
+const sketch = figureStarterSketch("p5js");
+sketch.includes("export default function") && sketch.includes("instance.remove()")
 => true
 ```

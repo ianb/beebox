@@ -12,6 +12,7 @@
  */
 
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const FigureRuntime = z.enum(["p5js", "three", "d3"]);
@@ -114,4 +115,141 @@ export interface FigureFields {
   width?: number;
   height?: number;
   body: string;
+}
+
+/**
+ * Runnable starter sketches per runtime. Each one is a complete, working
+ * `entry` module: it default-exports `(lib, { mount, figure }) => teardown`,
+ * reads `figure.params.size`, and cleans up on teardown. Scaffolded into
+ * `attach/sketch.ts` by the figure template so a freshly created figure renders
+ * immediately and is ready to edit.
+ */
+const FIGURE_STARTERS: Record<FigureRuntimeType, string> = {
+  p5js: `// p5.js figure. The harness provides p5 as \`lib\` (do not import it) and a
+// mount element; read parameters from figure.params.
+export default function (p5, { mount, figure }) {
+  const instance = new p5((p) => {
+    let angle = 0;
+    const size = Number(figure.params.size) || 300;
+    p.setup = () => {
+      p.createCanvas(size, size);
+    };
+    p.draw = () => {
+      p.background(28);
+      p.translate(p.width / 2, p.height / 2);
+      p.rotate(angle);
+      angle += 0.02;
+      p.noStroke();
+      p.fill(120, 200, 255);
+      p.rectMode(p.CENTER);
+      p.rect(0, 0, size * 0.4, size * 0.4);
+    };
+  }, mount);
+  return () => instance.remove();
+}
+`,
+  three: `// three.js figure. The harness provides the three namespace as \`lib\`; mount a
+// WebGL canvas into \`mount\` and return a teardown that cancels the animation
+// frame and disposes GPU resources.
+export default function (THREE, { mount, figure }) {
+  const size = Number(figure.params.size) || 300;
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
+  camera.position.z = 2.5;
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(size, size);
+  mount.appendChild(renderer.domElement);
+
+  const geometry = new THREE.BoxGeometry(1, 1, 1);
+  const material = new THREE.MeshNormalMaterial();
+  const cube = new THREE.Mesh(geometry, material);
+  scene.add(cube);
+
+  let raf = 0;
+  const loop = () => {
+    cube.rotation.x += 0.01;
+    cube.rotation.y += 0.013;
+    renderer.render(scene, camera);
+    raf = requestAnimationFrame(loop);
+  };
+  loop();
+
+  return () => {
+    cancelAnimationFrame(raf);
+    geometry.dispose();
+    material.dispose();
+    renderer.dispose();
+    renderer.domElement.remove();
+  };
+}
+`,
+  d3: `// D3 figure. The harness provides the d3 namespace as \`lib\`; append an <svg>
+// to \`mount\` and return a teardown that removes it.
+export default function (d3, { mount, figure }) {
+  const size = Number(figure.params.size) || 300;
+  const data = [4, 8, 15, 16, 23, 42];
+
+  const svg = d3
+    .select(mount)
+    .append("svg")
+    .attr("width", size)
+    .attr("height", size);
+
+  const x = d3
+    .scaleBand()
+    .domain(data.map((_, i) => String(i)))
+    .range([0, size])
+    .padding(0.1);
+  const y = d3
+    .scaleLinear()
+    .domain([0, d3.max(data) ?? 0])
+    .range([size, 0]);
+
+  svg
+    .selectAll("rect")
+    .data(data)
+    .join("rect")
+    .attr("x", (_, i) => x(String(i)) ?? 0)
+    .attr("y", (d) => y(d))
+    .attr("width", x.bandwidth())
+    .attr("height", (d) => size - y(d))
+    .attr("fill", "#4ea3ff");
+
+  return () => {
+    svg.remove();
+  };
+}
+`,
+};
+
+/** The runnable starter sketch source for a runtime (for the \`entry\` file). */
+export function figureStarterSketch(runtime: FigureRuntimeType): string {
+  return FIGURE_STARTERS[runtime];
+}
+
+const RUNTIME_LABEL: Record<FigureRuntimeType, string> = {
+  p5js: "p5.js sketch",
+  three: "three.js scene",
+  d3: "D3/SVG graphic",
+};
+
+/**
+ * Generate a starter figure card. The body is a short description; the runnable
+ * code is scaffolded separately into the attach scope (see
+ * {@link figureStarterSketch}). A `size` param is declared so the starter is
+ * parameterizable out of the box.
+ */
+export function createFigureTemplate(input: { runtime: FigureRuntimeType; title?: string }): string {
+  const fields: Record<string, unknown> = {
+    runtime: input.runtime,
+    entry: "attach/sketch.ts",
+    params: [{ name: "size", type: "number", default: 300 }],
+  };
+  if (input.title !== undefined && input.title !== "") {
+    fields["title"] = input.title;
+  }
+  const yamlText = stringifyYaml(fields);
+  const description = `A ${RUNTIME_LABEL[input.runtime]} figure. Describe what it demonstrates here; the runnable code lives in \`attach/sketch.ts\`.\n`;
+  return `---\n${yamlText}---\n${description}`;
 }
