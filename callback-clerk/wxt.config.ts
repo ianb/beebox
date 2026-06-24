@@ -34,8 +34,13 @@ export default defineConfig({
     // Host access is granted per-origin when the user enables a box —
     // never broadly at install time.
     optional_host_permissions: ["http://*/*", "https://*/*"],
+    // Shares the callback-box "box" mark (frontend public/icons/icon-512.png),
+    // resized to the Chrome extension sizes — clerk is the box's browser
+    // companion, so it carries the same icon rather than a placeholder square.
     icons: {
-      "16": "/icon-128.png",
+      "16": "/icon-16.png",
+      "32": "/icon-32.png",
+      "48": "/icon-48.png",
       "128": "/icon-128.png",
     },
   },
