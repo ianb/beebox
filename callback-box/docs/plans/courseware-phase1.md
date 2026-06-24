@@ -3,8 +3,9 @@
 This plan introduces a "courseware" card family centered on one container — a
 **course** — that an agent builds *with* a learner through a
 pedagogically-grounded process. A course binds a few components: a **concept-map**
-(the knowledge graph), an **approach** (the teaching plan, with its reasoning
-kept in), **material** (presentational content, in a subdirectory), and —
+(the knowledge graph), an **exposition-plan** (the plan for *presenting* the material —
+reasoned from the goals, the learner, and the available ways to present — with the why kept
+in), **material** (presentational content, in a subdirectory), and —
 tracked separately per learner — **progress** (an *evidence-backed* qualitative
 record of what the learner understands, with a session log).
 
@@ -24,7 +25,7 @@ checked against the learner.
 The whole design is organized across the three surfaces the work lives on. Being
 explicit about which knowledge goes where is the spine of this plan:
 
-- **Cards** hold *structure and state* — the graph, the approach-with-rationale,
+- **Cards** hold *structure and state* — the graph, the exposition-plan-with-rationale,
   the progress record, the course manifest. Durable data, schema-validated.
 - **Card rules/docs** — each schema's `instructions`, auto-published by
   `generateRules` to `.claude/rules/card-<type>.md` (`init-rules.ts:99-114`),
@@ -91,7 +92,7 @@ the primary entry point and must be reliably invokable — **confirmed: box-leve
   `attach/…` (`attach-path.ts`). Cards inside an attach scope are first-class: `cb validate --all`
   globs `**/*.card` with **no `.attach` ignore** (`list-cards.ts:12`, `validate.ts:245`), and
   search includes them (`search/walk.ts`); asset-manifest scanning skips `.card` files on purpose
-  (`asset-manifest-scan.ts:90`). **So embedded concept-map/approach cards are bulk-validated,
+  (`asset-manifest-scan.ts:90`). **So embedded concept-map/exposition-plan cards are bulk-validated,
   indexed, and rendered like any card** — the earlier "must-ensure gap" was unfounded (Codex
   finding #5, verified). A standalone card with no attachments is simply a single file.
 - **`instructions` → box rule** — `generateRules(boxRoot)` writes path-globbed
@@ -145,7 +146,7 @@ What's kept from the research (subset compatible with a qualitative, learner-cen
   learner evidence, against LLM over-crediting & sycophancy (Codex #1, and the documented
   sycophancy/answer-leak failure modes in LLM tutors). Drives the progress evidence contract.
 - **Living learning contract** (Knowles) — goals emerge through dialogue, stay renegotiable →
-  living rationale in `approach` + course body.
+  living rationale in `exposition-plan` + course body.
 - **Khanmigo's lessons** — retrieve-don't-invent answer keys; privately enumerate the learner's
   likely solution paths; stay Socratic. Answer keys live *with material*; the minimal honesty
   protocol (below) brings the "don't leak / don't fabricate / don't sycophantically rate"
@@ -180,7 +181,7 @@ const courseFields = {
                                                       // set EARLY — focuses the goals and prunes the graph,
                                                       // then judges advancement (backward design)
   "concept-map": ComponentRef.optional(),           // → attach/<…>.concept-map.card
-  approach: ComponentRef.optional(),                // → attach/<…>.approach.card
+  "exposition-plan": ComponentRef.optional(),                // → attach/<…>.exposition-plan.card
   material: z.string().optional(),                  // subdirectory under the course's attach scope
   progress: ComponentRef.optional(),                // optional — progress may live here OR in a separate tree
   body: body(z.string()),                           // framing narrative + rationale; living
@@ -210,14 +211,17 @@ const conceptMapFields = { concepts: z.array(ConceptNode), body: body(z.string()
 // validate(): unique ids; every related.to resolves to a node id. Cycles are NOT errors.
 ```
 
-**3. `approach`** — the pedagogical plan with the *reasoning kept in*. A single-file card embedded
-as `<Course>.attach/<Name>.approach.card`. Kept as a dedicated type (not a `doc`) so its card-rule
-can carry the "keep the reasoning in" discipline.
+**3. `exposition-plan`** — the plan for how to *present* the material: all aspects of the exposition,
+reasoned from the goals, what's known about the learner/audience, and the available ways a thing can be
+presented (modalities), with the *reasoning kept in*. It is the **plan**, not the rendered exposition —
+that lives in `material/`. A single-file card embedded as `<Course>.attach/<Name>.exposition-plan.card`.
+Kept as a dedicated type (not a `doc`) so its card-rule can carry the "keep the reasoning in" discipline.
+(General beyond courseware — any deliberate presentation, e.g. slides, a blog post — could use it.)
 
 ```typescript
 const Modality = z.object({ name: z.string(), why: z.string().optional() });   // manipulatives, dialogs, worked-examples+fading, transfer prompts, reflection…
 const Decision = z.object({ decision: z.string(), rationale: z.string() });     // so adaptation respects WHY
-const approachFields = {
+const expositionPlanFields = {
   emphasis: z.array(z.string()).optional(),   // weighting from the learner's goal, e.g. "principles over terminology"
   modalities: z.array(Modality).optional(),   // chosen formats + why
   decisions: z.array(Decision).optional(),    // decisions + rationale (load-bearing)
@@ -254,13 +258,13 @@ in the course's `attach/material/` subdirectory, with answer keys alongside.
 **Vocabulary lock-ins:** the four type names; node `id`/`kind`/`depth`/`related`/`misconceptions`;
 edge `to`/`kind` (the five-value closed set, **required**); progress `status`
 (`unfamiliar|partial|working|solid`), **required `basis` + `evidence`**; course `success-criteria`;
-`approach.decisions[].rationale`.
+`exposition-plan.decisions[].rationale`.
 
 ### The card rules/docs (each schema's `instructions`)
 
 Written in the `landmark.ts:124-163` voice. What each must convey:
 
-- **`course`** — a container; components are embedded attached cards (concept-map, approach) + a
+- **`course`** — a container; components are embedded attached cards (concept-map, exposition-plan) + a
   `material/` subdir; progress may live here or separately; `success-criteria` is set early and is
   the lens for what belongs in the graph; reuse existing components by ref, don't duplicate.
 - **`concept-map`** — in-card nodes; node-id edges (not file refs); `kind` is a strong hint to how
@@ -268,9 +272,11 @@ Written in the `landmark.ts:124-163` voice. What each must convey:
   whole story**; **cycles are intended** (spirals); surface only observed misconceptions. **Carries
   the edge-type rubric verbatim** (the five `kind`s + when to use each); every edge must pick one —
   there is no "other."
-- **`approach`** — **keep the reasoning in**: each decision carries its rationale so adaptation stays
-  coherent; `emphasis` records the learner's goal-weighting; consider transfer prompts and
-  metacognitive reflection among modalities; it's living — adapt in place, don't overwrite the why.
+- **`exposition-plan`** — plan *all* aspects of how the material is presented, reasoning from the goals,
+  what's known about the learner, and the available ways to present (modalities); it's the **plan**, not
+  the rendered output (`material/`). **Keep the reasoning in**: each decision carries its rationale so
+  adaptation stays coherent; `emphasis` records the learner's goal-weighting; consider transfer prompts
+  and metacognitive reflection among modalities; it's living — adapt in place, don't overwrite the why.
 - **`progress`** — **no status without evidence**: every entry cites the learner's actual
   words/work and the probe used, with `basis` and (ideally) a `next-probe`; status is qualitative
   and judged **against the course's `success-criteria`** (understanding the mechanism with fuzzy
@@ -294,10 +300,10 @@ probing comes early and the rest follows. **Lands for boxholder review before sh
    misconceptions; let genuine spirals be `complements` cycles.
 4. **Seed & track progress — with evidence.** Each rating cites what the learner actually said/did
    and the probe; set `basis` and a `next-probe`. Update over time.
-5. **Step back to the approach** — given scope + the learner's deeper goals (now emerged): set
+5. **Step back to the exposition-plan** — given scope + the learner's deeper goals (now emerged): set
    `emphasis` (e.g. principles over terminology); choose modalities (manipulatives, dialogs,
    worked-examples + fading, transfer prompts, reflection).
-6. **Write the plan, reasoning included** — populate `approach.decisions` (decision + rationale) and
+6. **Write the plan, reasoning included** — populate `exposition-plan.decisions` (decision + rationale) and
    body; produce material under `material/`, answer keys alongside.
 7. **Adapt as you go** — expected and good; reads the recorded rationale and extends it.
 
@@ -315,7 +321,7 @@ ratings changed (with the evidence), and what to pick up next.
    (above). No SDK change. The `generateSkills` install step lands with the skill in Track 5.
 2. **`concept-map`** — schema + `validate` + rule (incl. the edge rubric) + template.
 3. **`course`** — schema + rule + template.
-4. **`approach`** + **`progress`** — schemas + rules + templates; **plus the progress→map node-id
+4. **`exposition-plan`** + **`progress`** — schemas + rules + templates; **plus the progress→map node-id
    box-aware lint in `card-lint.ts`** and the session-log convention.
 5. **`build-course` skill** + the honesty protocol — authored as a box skill (A1), plus the
    **`generateSkills` install step** in `cb init` that writes it into `<box>/.claude/skills/`;
@@ -335,8 +341,8 @@ ratings changed (with the evidence), and what to pick up next.
 | **Progress status with no evidence / no basis** | Will add (parse doctest) | **Yes — `evidence`+`basis` required**, parse fails | Clear (parse error) — the core guard |
 | `progress.entries[].node` → id not in the course's map | Will add (lint doctest) | **Yes — new box-aware lint in `card-lint.ts`** (Codex #4: not "tolerable") | Clear (warning) |
 | `course` references a component card that isn't there | Will add | Ref lint **warning** only; `cb validate` won't block (`validate.ts:364`) | Clear but non-blocking — see below |
-| Embedded concept-map/approach not bulk-validated | n/a — **not a gap** (`list-cards.ts:12` globs into `.attach`) | Yes — first-class | Clear |
-| Half-built course/approach (optional fields empty) | Will add | Yes — lenient parse | Clear (loads) |
+| Embedded concept-map/exposition-plan not bulk-validated | n/a — **not a gap** (`list-cards.ts:12` globs into `.attach`) | Yes — first-class | Clear |
+| Half-built course/exposition-plan (optional fields empty) | Will add | Yes — lenient parse | Clear (loads) |
 | Agent fabricates evidence/misconceptions, or sycophantically rates "solid" | No (not mechanically detectable) | Partial — required `evidence`+`basis` raise the cost; the honesty protocol + progress rule | Silent (honesty risk, much reduced) |
 
 > **No critical gaps.** The two earlier worries are resolved: embedded-card validation is not a gap
@@ -346,7 +352,7 @@ ratings changed (with the evidence), and what to pick up next.
 >
 > **Acceptable non-block:** a new course can be "complete" with a dangling component ref (warning, not
 > error). If that proves too loose, add a courseware-specific completeness check that a course's
-> `concept-map`/`approach` resolve before it's considered ready (Codex #6) — deferred.
+> `concept-map`/`exposition-plan` resolve before it's considered ready (Codex #6) — deferred.
 
 ## Agent-flow / user-flow edge cases
 
@@ -382,11 +388,11 @@ ratings changed (with the evidence), and what to pick up next.
 
 - ~~**Skill home (Track 1): A1 vs A2.**~~ **Resolved: A1** — box skills are auto-discovered
   (verified). `generateSkills` install step lands with Track 5.
-- **`approach` as a dedicated type vs a `doc` card.** *Lean (chosen):* dedicated type — its card-rule
+- **`exposition-plan` as a dedicated type vs a `doc` card.** *Lean (chosen):* dedicated type — its card-rule
   carries "keep the reasoning in," which a `doc` wouldn't. Collapse to `doc` only if the light
   structure (`emphasis`/`modalities`/`decisions`) proves unused.
-- **Naming.** Container is **`course`** (settled). `approach` still provisional. *Lean:* keep
-  `approach` unless a clearly better term surfaces.
+- **Naming.** Settled: container **`course`**, presentation-plan card **`exposition-plan`**. (Other
+  card names — `concept-map`, `progress` — also settled.)
 - **`success-criteria`: course-level only, or also per-node?** *Lean:* course-level in Phase 1 (the
   focusing lens); add per-node only if advancement decisions need finer grain.
 
@@ -395,13 +401,13 @@ ratings changed (with the evidence), and what to pick up next.
 New agent-facing concepts → at least one `knows_directly` audit each in
 `callback-box/src/dev/knowledge-audits.yaml`:
 
-- **Course composition** — a `course` binds an embedded concept-map + approach + a `material/` subdir;
+- **Course composition** — a `course` binds an embedded concept-map + exposition-plan + a `material/` subdir;
   progress is a *separate*, evidence-backed card.
 - **concept-map** — in-card nodes, node-id edges, **`kind` required from the closed five**, cycles
   intended; `kind` is a hint not the whole story.
 - **Edge rubric** — can the agent pick `prerequisite` vs `commonly-confused-with` vs `applied-in`
   correctly from a described pair?
-- **approach** — keep the reasoning in; adaptation reads rationale.
+- **exposition-plan** — keep the reasoning in; adaptation reads rationale.
 - **progress evidence contract** — **no status without evidence + basis**; rate the evidence, not the
   learner's confidence; present-state not decay; judged against `success-criteria`.
 - **The authoring flow** — building a course means following the courseware process (probe-first,
@@ -417,7 +423,7 @@ plan completes (`--box` absolute or omitted). No skip-with-rationale.
 2. **`concept-map`** — read `lint-format.ts` + the `commentary.tsx`/`extfile.tsx` validate hooks;
    schema + `validate` + rule (with the edge rubric) + template + parse/validate doctests.
 3. **`course`** — schema + rule + template + parse doctest.
-4. **`approach`** + **`progress`** — schemas + rules + templates + parse doctests; the
+4. **`exposition-plan`** + **`progress`** — schemas + rules + templates + parse doctests; the
    progress→map node-id check in `card-lint.ts` + its lint doctest; session-log convention.
 5. **`build-course` skill** + honesty protocol — authored as a box skill (A1) + the `generateSkills`
    install step in `cb init`; pointers wired in. **Boxholder review before merge.**
