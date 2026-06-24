@@ -31,3 +31,27 @@ test1:
       peak: 41240
       added: 0
       turns: 2
+  figure-card-where-code-lives:
+    - date: 2026-06-24T03:03:06.228Z
+      boxCommit: bcd07ad67a229b2dcbace65fe3f1e2aa27beb544
+      repoCommit: a1b7e3ad379886a5b31cd0812ae6451359d50242
+      initial: 41301
+      peak: 42923
+      added: 1622
+      turns: 3
+  figure-card-runtimes:
+    - date: 2026-06-24T03:03:06.228Z
+      boxCommit: bcd07ad67a229b2dcbace65fe3f1e2aa27beb544
+      repoCommit: a1b7e3ad379886a5b31cd0812ae6451359d50242
+      initial: 41288
+      peak: 42922
+      added: 1634
+      turns: 3
+  figure-card-embed-params:
+    - date: 2026-06-24T03:03:06.228Z
+      boxCommit: bcd07ad67a229b2dcbace65fe3f1e2aa27beb544
+      repoCommit: a1b7e3ad379886a5b31cd0812ae6451359d50242
+      initial: 41285
+      peak: 42922
+      added: 1637
+      turns: 3
