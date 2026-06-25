@@ -183,3 +183,11 @@ test1:
       peak: 45090
       added: 3427
       turns: 4
+  courseware-run-a-course:
+    - date: 2026-06-25T02:23:58.281Z
+      boxCommit: 785d25f44e1d70ccbc4838b99ef37191071d179f
+      repoCommit: bd48fd310fe46d130089c86a9bd6d989f4beadec
+      initial: 41776
+      peak: 46754
+      added: 4978
+      turns: 8

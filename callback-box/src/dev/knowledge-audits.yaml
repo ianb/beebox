@@ -2809,13 +2809,15 @@ tests:
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #
-  # Status (2026-06-24): All 9 pass against the worktree box. The agent reaches
+  # Status (2026-06-24): All 10 pass against the worktree box. The agent reaches
   # for build-course / probing first, names the course's parts, picks the right
   # closed-set edge (commonly-confused-with), affirms cycles are valid spirals,
   # recalls the progress evidence contract and the exposition-plan's keep-the-
   # reasoning-in rule, names the lesson-plan as the ordered interactive/material
   # flow, puts material in doc/figure cards under material/ (not a README), and
-  # distinguishes lesson-plan (ordered what-to-do) from exposition-plan (how/why).
+  # distinguishes lesson-plan (ordered what-to-do) from exposition-plan (how/why),
+  # and explains that a built course is *run* as a tutoring chat reached from a
+  # landmark that scopes the session to the course's attach dir.
   # Two false-negatives (-concept-map-edges, -lesson-plan): the agent answered
   # correctly from recall rather than reading the named should_read file, so the
   # should_read was dropped in both (the content match is the real assertion).
@@ -2949,3 +2951,21 @@ tests:
       The one confusion worth auditing. exposition-plan = rules/rationale;
       lesson-plan = ordered flow. Failure mode: putting rationale in the
       lesson-plan, or treating the two as the same thing.
+
+  - id: courseware-run-a-course
+    prompt: >
+      A course has already been built in the box. How does someone actually run
+      it — start a tutoring session where the agent teaches it?
+    expected_level: knows_about
+    watch_for: >
+      A course is run as a chat SCOPED to its attach directory, reached from a
+      landmark (a chat destination); the scoped CLAUDE.md (which @-includes the
+      runner instructions) and the path-globbed exposition rules auto-load, and
+      the agent follows the lesson-plan and updates progress.
+    correct_contains_any: ["landmark", "tutoring", "chat scoped", "attach"]
+    tags: [courseware]
+    notes: >
+      The run side, distinct from build-course. Entry = a landmark chat
+      destination that scopes the chat to the course attach dir, where a thin
+      CLAUDE.md (@course-runner.md) and the exposition rules auto-load. Failure
+      mode: thinking a built course just sits there with no way to conduct it.
