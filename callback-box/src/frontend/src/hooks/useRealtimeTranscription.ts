@@ -349,15 +349,28 @@ export function useRealtimeTranscription(
 
   // Cross-tab mic mutex: while a recording session is active, claim the mic
   // (yielding it in any other same-origin tab that holds it) and yield it back
-  // if another tab later claims. Eviction cancels the segment; the
-  // unconsumed-transcript path preserves whatever was said into the composer.
+  // if another tab later claims. Eviction ends the segment the same way an OS
+  // mic-grab does — STOP, not CANCEL — so the captured transcript survives into
+  // the composer via onUnconsumedTranscript instead of vanishing. During
+  // `connecting` there's nothing captured yet and STOP isn't handled, so cancel
+  // to tear down cleanly. The callback fires whenever another tab claims, long
+  // after this effect ran, so it must read the live state from a ref.
   const active = state !== "idle";
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
   useEffect(() => {
     if (!active) return;
     return claimMicAcrossTabs(() => {
-      cancel();
+      const current = stateRef.current;
+      if (current === "recording" || current === "reconnecting") {
+        send({ type: "STOP" });
+      } else {
+        send({ type: "CANCEL" });
+      }
     });
-  }, [active, cancel]);
+  }, [active, send]);
 
   const dismissError = useCallback(() => {
     send({ type: "DISMISS_ERROR" });
