@@ -24,6 +24,7 @@ const courseFields = {
   "success-criteria": z.array(z.string()).optional(),
   "concept-map": ComponentRef.optional(),
   "exposition-plan": ComponentRef.optional(),
+  "lesson-plan": ComponentRef.optional(),
   material: z.string().optional(),
   progress: ComponentRef.optional(),
   body: body(z.string()),
@@ -37,10 +38,11 @@ A course is the **manifest** for one learning experience on a bounded topic. It 
 
 - an embedded **concept-map** (the knowledge graph) — \`{ ref: attach/<name>.concept-map.card }\`
 - an embedded **exposition-plan** (how to present the material) — \`{ ref: attach/<name>.exposition-plan.card }\`
+- an embedded **lesson-plan** (the ordered delivery flow — segments, live or material-backed) — \`{ ref: attach/<name>.lesson-plan.card }\`
 - **material** — a subdirectory of presentational cards (a path, e.g. \`attach/material\`), answer keys alongside
 - **progress** — a per-learner record, tracked *separately*; it may live in the course's attach scope or in its own tree (referenced by \`ref\`)
 
-The structured components (concept-map, exposition-plan) live as attached cards in the course's \`<basename>.attach/\` scope, so they move and validate with the course. Reuse an existing component by \`ref\` rather than duplicating it.
+The structured components (concept-map, exposition-plan, lesson-plan) live as attached cards in the course's \`<basename>.attach/\` scope, so they move and validate with the course. Reuse an existing component by \`ref\` rather than duplicating it.
 
 ## Frontmatter
 
@@ -52,6 +54,7 @@ success-criteria:               # casual, personalized "what success looks like"
   - Can predict whether a reaction fizzes and explain why, without naming every ion
 concept-map: { ref: attach/Acids.concept-map.card }
 exposition-plan: { ref: attach/Acids.exposition-plan.card }
+lesson-plan: { ref: attach/Acids.lesson-plan.card }
 material: attach/material        # a subdirectory of presentational cards (+ answer keys)
 progress: { ref: /people/learner/Acids.progress.card }   # optional; may live elsewhere
 \`\`\`

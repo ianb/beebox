@@ -18,14 +18,15 @@ description: Build or revise a learning experience (a course) WITH a learner —
 
 A **course** is a learning experience you build *with* a learner on one bounded topic. You don't write it cold and hand it over — you probe, design, and adapt, keeping your reasoning in the cards so later changes stay coherent.
 
-This skill orchestrates four card types. Each has its own card-rule with the field details — read the rule when you open a card of that type:
+This skill orchestrates five card types. Each has its own card-rule with the field details — read the rule when you open a card of that type:
 
 - \`course\` — the manifest that binds everything.
 - \`concept-map\` — the knowledge graph (concepts as nodes, typed edges).
 - \`exposition-plan\` — the plan for how to *present* the material, with the reasoning kept in.
+- \`lesson-plan\` — the ordered delivery flow: segments tagged *interactive* (live in chat) or *material* (a pre-made card).
 - \`progress\` — a separate, per-learner, evidence-backed record of what the learner understands.
 
-The actual teaching material (docs, figures, etc.) lives in the course's \`material/\` subdirectory.
+The actual teaching material lives as \`doc\`/\`figure\` cards in the course's \`material/\` subdirectory (never a stray \`README.md\`). Once built, a course is *run* as a tutoring chat scoped to its attach directory — reached from a \`landmark\` (step 7).
 
 Write all of these cards with **neutral pronouns** (they/them) for the learner, whoever they are.
 
@@ -71,11 +72,53 @@ Work out how to *present* this material — in the \`exposition-plan\` card, in 
 
 (See the exposition-plan card-rule for the field details.)
 
-### 6. Produce the material
+### 6. Plan the delivery flow — and build the material it leans on
 
-Author the material under \`material/\` following the exposition-plan's rules and rated approaches. Keep answer keys with the material, grounded in cited sources (see *Teaching well*). The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 7) the *why* travels with the work — you don't undo a good decision by accident.
+Now lay out *what actually happens, in order*, in the **lesson-plan** card: a sequence of segments, each either **interactive** (it plays out live in chat — eliciting their model, predict-and-explain, dialog) or **material** (a pre-made card carries it — a figure to manipulate, a doc to re-read). Each segment names the concept-map node(s) it advances. This is **distinct from the exposition-plan**: the exposition-plan decided *how and why* to present; the lesson-plan just *sequences* it. Most early segments are interactive — reach for a material card only where a made artifact genuinely beats live talk.
 
-### 7. Adapt as you go
+Don't author all the material up front, and don't do it in one pass — work the loop:
+
+1. **Draft** the lesson-plan: the whole segment sequence, each tagged interactive or material.
+2. **Author** only the material a segment actually leans on *and* that earns being made now (the one figure you'll reuse, a recap worth re-reading) — as **\`doc\`/\`figure\` cards under \`material/\`**, *never* a \`material/README.md\`. Follow the exposition-plan's rules and rated approaches. Keep answer keys beside the material, grounded in cited sources (see *Teaching well*).
+3. **Revise** the lesson-plan: mark each segment whose card now exists \`status: ready\` and ref it; mark the rest \`status: planned\`.
+
+A \`material\` segment must end up either \`ready\` (its card exists) or \`planned\` (outlined, built later during teaching) — the lint warns otherwise, so deferral is honest, not hidden. **A mostly-interactive, mostly-\`planned\` course is a *complete* plan**; you are not expected to pre-build everything. The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 8) the *why* travels with the work.
+
+(If there's a real learner, their progress informs which segments to make concrete first; for a \`generic\` course there's no progress yet, and that's fine — draft for the model learner.)
+
+### 7. Make it runnable — a landmark and a scoped CLAUDE.md
+
+A built course still needs an **entry point** so it can be *taught*. A tutoring session is just a chat **scoped to the course's attach directory** (the folder holding all the components): opening it there makes the exposition rules and a course-local \`CLAUDE.md\` auto-load. Create three files in that attach scope:
+
+1. A **landmark card** (\`<Course>.landmark.card\`) with a \`navigation\` role — this is what turns the course into a **chat destination** on the Landmarks page. Give it a short \`label\` (the course name), a \`symbol\`, and \`links\` to the course guide (\`../<Course>.course.card\`) and the lesson-plan. (See the landmark card-rule for the fields.)
+2. A thin, **editable \`CLAUDE.md\`** — a line or two naming the course and pointing at \`../<Course>.course.card\` (the guide), then \`@course-runner.md\` to include the generic runner instructions. Keep it minimal so you (or a later session) can amend it with course-specific notes; the boilerplate lives in the included file.
+3. The **\`course-runner.md\`** it includes — the same for every course, so write it verbatim:
+
+\`\`\`markdown
+# Running a course
+
+A chat opened here is a **tutoring session** — you teach this course, one-on-one with
+the learner. (Building or revising one is the \`build-course\` skill; this is the *run*
+side, where the course already exists.)
+
+- The **course guide** is the \`*.course.card\` in the parent directory — read it first.
+- Follow the **\`*.lesson-plan.card\`** here, in order: each segment is \`interactive\`
+  (conduct it live, in chat) or \`material\` (open the card it refs under \`material/\`).
+- Read the **\`*.progress.card\`** before starting, and **update it with evidence** as
+  you go — every status needs what the learner actually said or did (no anonymous
+  ratings).
+- The **exposition rules** auto-load (a path rule scoped to this directory) — they're
+  *how* to present. Follow them.
+
+Probe first if there's no progress yet (a new learner — the \`build-course\` skill's
+probe step is the guide). Work dialog-first, be Socratic, steer with answer keys
+rather than reading them out, and amend the course cards when the plan needs to
+change. Material (figures, recaps, sources) lives in \`material/\`.
+\`\`\`
+
+Opening a chat from the landmark scopes it to this directory, so the \`CLAUDE.md\` and the path-globbed exposition rules load automatically — the runner reads the course guide, follows the lesson-plan, and updates progress. You're not teaching in *this* build session; you're setting up so a future tutoring chat can.
+
+### 8. Adapt as you go
 
 Adaptation is expected and a good sign. As you learn more about the learner — or their goal shifts — amend the graph, re-plan the exposition, and update progress (with new evidence). Read the recorded rationale and extend it; don't silently overwrite it.
 

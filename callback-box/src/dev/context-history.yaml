@@ -63,6 +63,13 @@ test1:
       peak: 43851
       added: 2142
       turns: 4
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41796
+      peak: 45111
+      added: 3315
+      turns: 4
   courseware-course-composition:
     - date: 2026-06-24T05:32:02.635Z
       boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
@@ -70,6 +77,13 @@ test1:
       initial: 41566
       peak: 42908
       added: 1342
+      turns: 3
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41645
+      peak: 43207
+      added: 1562
       turns: 3
   courseware-concept-map-edges:
     - date: 2026-06-24T05:32:02.635Z
@@ -86,6 +100,13 @@ test1:
       peak: 43323
       added: 1739
       turns: 3
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41663
+      peak: 41919
+      added: 256
+      turns: 3
   courseware-concept-map-cycles:
     - date: 2026-06-24T05:32:02.635Z
       boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
@@ -93,6 +114,13 @@ test1:
       initial: 41587
       peak: 43324
       added: 1737
+      turns: 3
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41666
+      peak: 43696
+      added: 2030
       turns: 3
   courseware-progress-evidence:
     - date: 2026-06-24T05:32:02.635Z
@@ -102,6 +130,13 @@ test1:
       peak: 42932
       added: 1346
       turns: 3
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41665
+      peak: 43207
+      added: 1542
+      turns: 3
   courseware-exposition-plan:
     - date: 2026-06-24T05:32:02.635Z
       boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
@@ -110,3 +145,49 @@ test1:
       peak: 42805
       added: 1233
       turns: 3
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41651
+      peak: 43404
+      added: 1753
+      turns: 3
+  courseware-lesson-plan:
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41675
+      peak: 41675
+      added: 0
+      turns: 1
+    - date: 2026-06-24T22:15:03.986Z
+      boxCommit: 30eced3085eefe1266f272cc2f01db989c188ad8
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41698
+      peak: 41698
+      added: 0
+      turns: 1
+  courseware-material-convention:
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41669
+      peak: 48105
+      added: 6436
+      turns: 6
+  courseware-lesson-vs-exposition:
+    - date: 2026-06-24T22:14:09.285Z
+      boxCommit: 29170367a7d8a1cb17088fb8d2e1d4e4d0699db2
+      repoCommit: ae2a4c23650b70f61374243a67a5c9ee20b02087
+      initial: 41663
+      peak: 45090
+      added: 3427
+      turns: 4
+  courseware-run-a-course:
+    - date: 2026-06-25T02:23:58.281Z
+      boxCommit: 785d25f44e1d70ccbc4838b99ef37191071d179f
+      repoCommit: bd48fd310fe46d130089c86a9bd6d989f4beadec
+      initial: 41776
+      peak: 46754
+      added: 4978
+      turns: 8

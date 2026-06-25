@@ -17,6 +17,7 @@ import type { LoadCardContext } from "../../src/core/card-io.js";
 import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
 import { ProgressSchema } from "../../src/schemas/progress.js";
+import { LessonPlanSchema } from "../../src/schemas/lesson-plan.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -58,6 +59,7 @@ const ctx: LoadCardContext = {
     ["extfile", ExtfileSchema],
     ["gadget", gadgetSchema],
     ["progress", ProgressSchema],
+    ["lesson-plan", LessonPlanSchema],
   ]),
 };
 ```
@@ -507,4 +509,81 @@ result.totalWarnings
 
 result.results[0]!.warnings[0]!.message.includes("ghost")
 => true
+```
+
+## Lesson-plans: segments must name real concept-map nodes, and defer visibly
+
+A lesson-plan's `segments[].concepts[]` reference concept-map nodes by `id`. The
+lesson-plan is co-located with the map in the course attach scope, so the check
+resolves the **sibling `*.concept-map.card`** (no course back-ref). A `concepts`
+id the map doesn't define is a **warning** naming the segment that holds it:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/Acids.attach/Acids.concept-map.card",
+  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
+);
+await box.write(
+  "store/Acids.attach/Acids.lesson-plan.card",
+  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Name a node the map lacks\n    mode: interactive\n    concepts: [ghost]\n---\nFlow.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message.includes("segments[1].concepts[0]")
+=> true
+
+result.results[0]!.warnings[0]!.message.includes("ghost")
+=> true
+```
+
+A `material` segment that has neither a `material` ref nor `status: planned` is a
+**deferral warning** — "incomplete material" is stated, never silent:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/Acids.attach/Acids.concept-map.card",
+  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n---\nMap.\n",
+);
+await box.write(
+  "store/Acids.attach/Acids.lesson-plan.card",
+  "---\nsegments:\n  - do: Hand them a doc\n    mode: material\n---\nFlow.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message.includes("no material card")
+=> true
+```
+
+A valid plan — every `concepts` id real, every material segment either `ready`
+with a resolvable ref or explicitly `planned` — is silent:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/Acids.attach/Acids.concept-map.card",
+  "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
+);
+await box.write("store/Acids.attach/Recap.doc.card", "---\ntitle: Recap\n---\nRecap.\n");
+await box.write(
+  "store/Acids.attach/Acids.lesson-plan.card",
+  "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    status: ready\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    status: planned\n---\nFlow.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 0
 ```

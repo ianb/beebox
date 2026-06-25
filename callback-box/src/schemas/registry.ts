@@ -49,6 +49,7 @@ import { FigureSchema } from "./figure.js";
 import { ConceptMapSchema } from "./concept-map.js";
 import { CourseSchema } from "./course.js";
 import { ExpositionPlanSchema } from "./exposition-plan.js";
+import { LessonPlanSchema } from "./lesson-plan.js";
 import { ProgressSchema } from "./progress.js";
 import { registerTemplate, type TemplateDefinition } from "./templates.js";
 
@@ -75,6 +76,7 @@ export const cardSchemas: CardSchema[] = [
   ConceptMapSchema,
   CourseSchema,
   ExpositionPlanSchema,
+  LessonPlanSchema,
   ProgressSchema,
   ExtfileSchema,
   SheetSchema,
