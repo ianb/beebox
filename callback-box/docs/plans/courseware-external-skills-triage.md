@@ -17,6 +17,42 @@ DAGs, 6–20 chapters, dozens of microsims). Ours is *module* scale (concept-map
 the recurring move is **steal the method, drop the MkDocs/iframe stack and the
 whole-course-completeness assumptions.**
 
+## Decisions from the talk-through (2026-06-25)
+
+Resolved with the boxholder, and the agreed pieces are **implemented**
+(commit `70bbe1e1`):
+
+- **Graph *construction* method → adopted.** The construction rules (entity
+  names not questions, no orphans, avoid degenerate chains, real-relation edges,
+  indegree = importance, granularity) are now in the concept-map card-rule and
+  the build-course skill, plus an **orphan-node lint** (warning). The human
+  review checkpoint became an **agent self-review** step — the learner co-creates
+  the course and can't validate the graph, so the rules double as the agent's
+  checklist.
+- **Graph *visualization* → out.** Not a goal; viz is human-debugging only.
+  Dropped the vis-network / 4th-runtime question entirely.
+- **Bloom → used more fully, as instruction.** The six `depth` labels are defined
+  in the concept-map rule; the (kind, depth) pair now steers approach choice in
+  the exposition-plan. No schema/mechanism change.
+- **Source-verification → adopted (light).** Claim-classification
+  (verified / directional / qualitative / unsupported) + "never fabricate to fill
+  a gap" folded into the skill's *Teaching well*.
+- **Figure QA → adopted, bound to generation.** A render/clip check is now part
+  of authoring a figure (not a separate audit pass). No 3-cycle Vision loop.
+- **Figure examples → shipped** as `figure-examples.md` beside the build-course
+  skill (loaded on demand), incl. a categorization-sort practice pattern.
+- **Concept-map second lint (a) → done** (orphan node). **Lesson-plan
+  prerequisite-order lint (b) → skipped** (too rigid for a dialog-first flow).
+- **Quiz / structured assessment → out.** Live chat beats a quiz; progress stays
+  evidence-from-dialog. (Misconception-aware *distractor* thinking already lives
+  on concept nodes.)
+- **Text-to-image → parked.** Revisit later; the Gemini path (`gen-image.ts`)
+  already exists, so the strongest case (annotated-illustration backgrounds) is
+  cheap to try when a real need appears.
+
+The sections below are the original triage, kept as the record of what was
+weighed.
+
 ## Skip — no applicability (triaged from the skill description)
 
 | Skill | Why skip |

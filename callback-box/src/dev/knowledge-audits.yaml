@@ -2809,7 +2809,7 @@ tests:
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #
-  # Status (2026-06-24): All 10 pass against the worktree box. The agent reaches
+  # Status (2026-06-25): All 12 pass against the worktree box. The agent reaches
   # for build-course / probing first, names the course's parts, picks the right
   # closed-set edge (commonly-confused-with), affirms cycles are valid spirals,
   # recalls the progress evidence contract and the exposition-plan's keep-the-
@@ -2817,7 +2817,9 @@ tests:
   # flow, puts material in doc/figure cards under material/ (not a README), and
   # distinguishes lesson-plan (ordered what-to-do) from exposition-plan (how/why),
   # and explains that a built course is *run* as a tutoring chat reached from a
-  # landmark that scopes the session to the course's attach dir.
+  # landmark that scopes the session to the course's attach dir. It also names
+  # the concept-map construction rules (entity names, no orphans, no degenerate
+  # chain) and how a node's (kind, depth) pair steers the teaching approach.
   # Two false-negatives (-concept-map-edges, -lesson-plan): the agent answered
   # correctly from recall rather than reading the named should_read file, so the
   # should_read was dropped in both (the content match is the real assertion).
@@ -2951,6 +2953,38 @@ tests:
       The one confusion worth auditing. exposition-plan = rules/rationale;
       lesson-plan = ordered flow. Failure mode: putting rationale in the
       lesson-plan, or treating the two as the same thing.
+
+  - id: courseware-good-concept-map
+    prompt: >
+      What makes a concept-map well-built, beyond the edges resolving? Name a
+      couple of shape or naming problems to avoid.
+    expected_level: knows_about
+    watch_for: >
+      Names entity (not question) labels, no orphan nodes, avoiding a degenerate
+      straight-line chain (real graphs branch), edges as real relations,
+      right granularity, scoped to fit. Any two or three is a pass.
+    correct_contains_any: ["orphan", "question", "linear", "chain", "branch", "granular"]
+    tags: [courseware]
+    notes: >
+      The construction rules in the concept-map card-rule. The orphan lint
+      catches one class; the rest is authoring discipline + agent self-review.
+
+  - id: courseware-bloom-steers-teaching
+    prompt: >
+      A concept-map node has a `kind` and an optional Bloom `depth`. How do those
+      two together affect how you'd teach it?
+    expected_level: knows_about
+    watch_for: >
+      The (kind, depth) pair is the first cut at approach: e.g. a fact at
+      remember → spaced retrieval; a principle at analyze → contrasting cases;
+      an "understand" target is not served by a passive read. Depth + kind feed
+      the exposition-plan's approach choice.
+    correct_contains_any: ["depth", "Bloom", "retrieval", "contrasting", "approach"]
+    tags: [courseware]
+    notes: >
+      Bloom is used as instruction, not mechanism: the labels are defined in the
+      concept-map rule and referenced in the exposition-plan to differentiate
+      approaches by level.
 
   - id: courseware-run-a-course
     prompt: >
