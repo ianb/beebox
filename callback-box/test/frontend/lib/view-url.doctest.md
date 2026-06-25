@@ -24,6 +24,13 @@ JSON.stringify(parseViewUrl("view:store/docs/report.md?view=source&zoom"))
 => {"path":"store/docs/report.md","viewer":"source","params":{},"zoom":true}
 ```
 
+A leading `/` is stripped — `ViewTarget.path` is box-root-relative, and consumers compare it for exact equality against the file watcher's relative paths (which have no leading slash). Card refs are conventionally written `/store/…`, so the slash is normalized away here:
+
+```ts
+JSON.stringify(parseViewUrl("view:/store/archive/Foo.memo.card"))
+=> {"path":"store/archive/Foo.memo.card","viewer":null,"params":{},"zoom":false}
+```
+
 `serializeViewUrl` is the round-trip inverse (without the `view:` prefix):
 
 ```ts

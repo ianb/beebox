@@ -36,7 +36,15 @@ export function parseViewUrl(raw: string): ViewTarget {
   const value = raw.startsWith("view:") ? raw.slice(5) : raw;
 
   const qIndex = value.indexOf("?");
-  const path = qIndex !== -1 ? value.slice(0, qIndex) : value;
+  const rawPath = qIndex !== -1 ? value.slice(0, qIndex) : value;
+  // ViewTarget.path is, by contract, box-root-relative — and consumers compare
+  // it for exact equality against the file watcher's `path.relative(boxRoot, …)`
+  // output (no leading slash). Card refs are conventionally written with a
+  // leading slash (`view:/store/archive/Foo.card`), so strip it here at the
+  // parse boundary, mirroring resolveRelativePath. Without this, a leading-slash
+  // path loads on mount (card.get tolerates it via path.join) but never matches
+  // a `file-change` event, so the companion pane silently stops live-updating.
+  const path = rawPath.replace(/^\/+/, "");
 
   const params: Record<string, string> = {};
   let viewer: string | null = null;
