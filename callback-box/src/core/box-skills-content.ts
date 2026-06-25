@@ -54,9 +54,11 @@ Find out — and write down — what would count as *understanding this, for thi
 
 ### 3. Build the concept-map
 
-Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it). On each node, note the **common** misconceptions for that concept — what learners *typically* get wrong, so the teaching can preempt them (the *specific* misconceptions this learner showed go in the \`progress\` card, not the map). Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular.
+Lay out the concepts between where the learner is and where they want to be, and draw the typed edges between them. Assign each node its KC \`kind\` (it steers *how* you teach it), and — where the intended level isn't obvious — a target Bloom \`depth\`; together they tell you how to teach it later. On each node, note the **common** misconceptions for that concept — what learners *typically* get wrong, so the teaching can preempt them (the *specific* misconceptions this learner showed go in the \`progress\` card, not the map). Let genuine spirals be \`complements\` cycles — don't force a clean line where the subject is genuinely circular.
 
 **Tune how far back the map starts to what you actually know about the learner.** If you have a real read on where they are (you probed them, or the course's \`audience\` names a specific person), start near their *edge*: assume what they already have — say it in a sentence rather than making it a node — and node-ify only what you'll actually teach toward the \`success-criteria\`. If you *don't* have enough to judge (a \`generic\` course, or no probe), starting more completely from the foundations is the right move — you can't assume what they know. **Completeness is the low-information fallback, not the default.** (See the concept-map card-rule for the node fields and the edge-type rubric.)
+
+**Then review the map before you build on it.** Read it back against the card-rule's shape rules — no orphan nodes, no degenerate straight-line chain, every edge a real relation, names that are entities not questions, scoped to fit. A course is usually built automatically (the learner can't validate the graph), so this self-review is the quality gate the map gets; the orphan lint catches one class, but the rest is your read.
 
 ### 4. Seed progress — grounded in what you saw
 
@@ -79,7 +81,7 @@ Now lay out *what actually happens, in order*, in the **lesson-plan** card: a se
 Don't author all the material up front, and don't do it in one pass — work the loop:
 
 1. **Draft** the lesson-plan: the whole segment sequence, each tagged interactive or material.
-2. **Author** only the material a segment actually leans on *and* that earns being made now (the one figure you'll reuse, a recap worth re-reading) — as **\`doc\`/\`figure\` cards under \`material/\`**, *never* a \`material/README.md\`. Follow the exposition-plan's rules and rated approaches. Keep answer keys beside the material, grounded in cited sources (see *Teaching well*).
+2. **Author** only the material a segment actually leans on *and* that earns being made now (the one figure you'll reuse, a recap worth re-reading) — as **\`doc\`/\`figure\` cards under \`material/\`**, *never* a \`material/README.md\`. Follow the exposition-plan's rules and rated approaches. Keep answer keys beside the material, grounded in cited sources (see *Teaching well*). When you build a \`figure\`, **verify it actually renders** — open it and screenshot it, confirm the controls are visible and nothing is clipped (a figure that doesn't render is worse than prose). For worked figure patterns in TypeScript, see \`figure-examples.md\` in this skill folder.
 3. **Revise** the lesson-plan: mark each segment whose card now exists \`status: ready\` and ref it; mark the rest \`status: planned\`.
 
 A \`material\` segment must end up either \`ready\` (its card exists) or \`planned\` (outlined, built later during teaching) — the lint warns otherwise, so deferral is honest, not hidden. **A mostly-interactive, mostly-\`planned\` course is a *complete* plan**; you are not expected to pre-build everything. The reasoning stays in the exposition-plan and the cards' bodies, so when you adapt later (step 8) the *why* travels with the work.
@@ -132,4 +134,109 @@ Adaptation is expected and a good sign. As you learn more about the learner — 
   > Acids {% source ref="material/Acids_Bases.doc.card" %}donate protons{% /source %} in solution.
 
   A bare \`{% source ref="..." %}…{% /source %}\` anchors a span to a cited card; use \`href="..."\` to cite an external URL instead. (See the box's source-tagging convention for the full pattern.)
+- **Classify a claim before you lean on it.** Is it solidly *verified* by the source (cite it), *directional* (the effect holds but the exact figure varies — say so), or only *qualitative*? Cite at the strength the source supports. If a claim is *unsupported*, leave it out or name the uncertainty — **missing or fuzzy data is a fine thing to state plainly; never fabricate to fill a gap or to make two sides look balanced.**
+`;
+
+/**
+ * Supplementary worked-figure examples, installed beside the build-course skill
+ * as \`figure-examples.md\` and referenced from the material step. Kept out of the
+ * main skill so it stays lean; the agent loads this on demand when authoring a
+ * \`figure\`. The example sketch code deliberately uses no template literals (so it
+ * survives this enclosing template literal) — author real figures however you like.
+ */
+export const FIGURE_EXAMPLES = `# Figure examples
+
+Worked patterns for \`figure\` cards. A figure's runnable code is a \`.ts\` module in
+the card's attach scope (\`entry: attach/sketch.ts\`) that **default-exports
+\`(lib, { mount, figure }) => teardown\`**: \`lib\` is the runtime (p5/three/d3),
+injected by the harness — *never import it*; \`mount\` is the DOM element; \`figure\`
+carries \`{ params, data, meta, file }\` (coerced embed params, the card's \`data\`,
+validated frontmatter \`meta\`, file helpers). Return a teardown for p5/three.
+
+Always **verify a figure renders** (open + screenshot, controls visible, nothing
+clipped) before calling it done.
+
+## 1. Minimal interactive (p5) — the contract
+
+\`\`\`ts
+// attach/sketch.ts — click to toggle. Shows the required shape: instance-mode p5,
+// size read from figure.meta, a teardown that removes the instance.
+export default function (p5, { mount, figure }) {
+  const instance = new p5((p) => {
+    const W = Number(figure.meta.width) || 360;
+    let on = false;
+    p.setup = () => p.createCanvas(W, 200);
+    p.mousePressed = () => { on = !on; };
+    p.draw = () => {
+      p.background(28);
+      p.fill(on ? p.color(120, 200, 120) : p.color(90));
+      p.circle(W / 2, 100, 80);
+    };
+  }, mount);
+  return () => instance.remove();
+}
+\`\`\`
+
+## 2. Categorization sort (p5, data-driven)
+
+A reusable *practice* pattern for a \`concept\` node (recognize instances → Bloom
+*apply*): the learner sorts each item into its category. Author the items and
+categories in the figure card's \`data\` field, read here as \`figure.data\` — so the
+content is editable without touching code.
+
+\`\`\`yaml
+# in the figure card frontmatter
+data:
+  items:
+    - { text: "vinegar", category: "acid" }
+    - { text: "baking soda", category: "base" }
+  categories: ["acid", "base"]
+\`\`\`
+
+\`\`\`ts
+// attach/sketch.ts — click the bucket you think each item belongs in.
+export default function (p5, { mount, figure }) {
+  const items = figure.data.items;       // [{ text, category }]
+  const cats = figure.data.categories;   // ["acid", "base", ...]
+  let i = 0, score = 0, feedback = "";
+  const instance = new p5((p) => {
+    const W = Number(figure.meta.width) || 420;
+    const buttons = () => cats.map((c, k) => ({ c, x: 20 + k * 130, y: 150, w: 120, h: 36 }));
+    p.setup = () => p.createCanvas(W, 220);
+    p.mousePressed = () => {
+      if (i >= items.length) return;
+      for (const b of buttons()) {
+        const hit = p.mouseX > b.x && p.mouseX < b.x + b.w && p.mouseY > b.y && p.mouseY < b.y + b.h;
+        if (hit) {
+          const right = b.c === items[i].category;
+          if (right) score++;
+          feedback = right ? "Yes" : "Not quite; it's " + items[i].category;
+          i++;
+        }
+      }
+    };
+    p.draw = () => {
+      p.background(28);
+      p.fill(235); p.textAlign(p.CENTER, p.CENTER); p.textSize(18);
+      p.text(i < items.length ? items[i].text : "Done: " + score + "/" + items.length, W / 2, 70);
+      for (const b of buttons()) {
+        p.fill(60, 70, 90); p.rect(b.x, b.y, b.w, b.h, 6);
+        p.fill(230); p.textSize(13); p.text(b.c, b.x + b.w / 2, b.y + b.h / 2);
+      }
+      p.fill(150); p.textSize(12); p.text(feedback, W / 2, 110);
+    };
+  }, mount);
+  return () => instance.remove();
+}
+\`\`\`
+
+This is *practice*, not assessment — it feeds the learner's understanding in the
+moment; it does **not** write a \`progress\` status (that comes from real dialog).
+
+## Other runtimes
+
+\`three\` (3D scenes) and \`d3\` (data-driven SVG, including node-link graphs via
+\`d3-force\`) use the same export shape; pick the runtime that fits the content
+(\`runtime: three\` / \`runtime: d3\` in the card). See the figure card-rule for the
+full field reference.
 `;

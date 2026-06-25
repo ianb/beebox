@@ -10,17 +10,25 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { BUILD_COURSE_SKILL } from "./box-skills-content.js";
+import { BUILD_COURSE_SKILL, FIGURE_EXAMPLES } from "./box-skills-content.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */
   name: string;
   /** Full SKILL.md content (frontmatter + body). */
   content: string;
+  /** Supplementary files written beside SKILL.md, loaded on demand by the agent. */
+  files?: { name: string; content: string }[];
 }
 
 /** The skills cb installs into every box. */
-const boxSkills: BoxSkill[] = [{ name: "build-course", content: BUILD_COURSE_SKILL }];
+const boxSkills: BoxSkill[] = [
+  {
+    name: "build-course",
+    content: BUILD_COURSE_SKILL,
+    files: [{ name: "figure-examples.md", content: FIGURE_EXAMPLES }],
+  },
+];
 
 /**
  * Write each managed box skill to `<box>/.claude/skills/<name>/SKILL.md`
@@ -34,6 +42,9 @@ export async function generateSkills(boxRoot: string): Promise<string[]> {
     const dir = join(boxRoot, ".claude", "skills", skill.name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skill.content);
+    for (const file of skill.files ?? []) {
+      await writeFile(join(dir, file.name), file.content);
+    }
     written.push(skill.name);
   }
   return written;
