@@ -90,6 +90,40 @@ function conceptMapErrors(fields: Record<string, unknown>): LintIssue[] {
   return errors;
 }
 
+/**
+ * Self-contained SHAPE warnings (advisory, not errors): an orphan node — one
+ * with no edge in or out — is usually a modeling smell (it doesn't belong, or a
+ * real relation went unstated). Returned as warnings so they surface without
+ * blocking; card-lint.ts dispatches this for `concept-map` cards. A map of 0–1
+ * nodes can't have edges, so it's never flagged. Re-parsing yields typed data;
+ * a shape failure is already reported by the main frontmatter parse, so skip.
+ */
+export function conceptMapShapeWarnings(fields: Record<string, unknown>): LintIssue[] {
+  const parsed = z.array(ConceptNode).safeParse(fields["concepts"]);
+  if (!parsed.success) return [];
+  const nodes = parsed.data;
+  if (nodes.length <= 1) return [];
+
+  const connected = new Set<string>();
+  for (const node of nodes) {
+    for (const edge of node.related ?? []) {
+      connected.add(node.id); // has an outgoing edge
+      connected.add(edge.to); // target has an incoming edge
+    }
+  }
+  const warnings: LintIssue[] = [];
+  for (const node of nodes) {
+    if (!connected.has(node.id)) {
+      warnings.push({
+        type: "reference",
+        severity: "warning",
+        message: `concept "${node.id}" is an orphan — no edge in or out; connect it or remove it`,
+      });
+    }
+  }
+  return warnings;
+}
+
 export const ConceptMapSchema: CardSchema = cardSchema("concept-map", {
   validate: ({ fields }) => conceptMapErrors(fields),
   fields: {
@@ -105,6 +139,19 @@ The graph is **loose, and cycles are intended.** Two concepts that only make sen
 ## Scope — fit, not completeness
 
 A node should be something you'll actually *teach* toward the course's success-criteria, not everything that could be said about the topic. Don't node-ify background the learner already has — assume it in a sentence. **Tune how far back the map starts to what you know about the learner:** with a real read on their edge (a probe, or a specific \`audience\`), start near it; with little to go on (a generic course, no probe), starting more completely from the foundations is the right fallback. Completeness is for low information, not the default.
+
+## Building the map — naming and shape
+
+Scope decides *what's in*; these rules keep what's in actually teachable:
+
+- **Name nodes as entities, not questions.** "Proton Transfer," never "What is proton transfer." Each \`name\` is a noun-phrase a learner could be heard saying, clear and specific.
+- **Right granularity — one teachable unit per node.** Not a whole topic, not a trivia-sized sub-fact. If you'd teach two things in the same breath, they're one node; if a "node" needs its own little arc, split it.
+- **No orphans.** Every node should connect to the rest by at least one edge. A concept floating with no edges almost always means it doesn't belong, or that a real relationship went unstated. (The lint warns on orphans.)
+- **Edges are real relations, not decoration.** Draw an edge only where the relationship genuinely holds, and commit it to a \`kind\` (below). Don't wire nodes together just to look connected.
+- **Avoid a degenerate straight line.** If the map is just A→B→C→D, each node depending only on the one before, you've under-modeled it — real subjects branch and reconverge. A spine is fine; a single unbranched chain usually means missing structure.
+- **The most depended-on node is load-bearing.** The concept several others build on is the one to get right and introduce early — let the graph's shape show you where the weight sits.
+
+Because a course is usually built automatically (the learner can't review the graph), **read the finished map back against these rules before building anything on it** — that self-check is the quality gate.
 
 ## Frontmatter
 
@@ -133,6 +180,19 @@ Not the whole story, but a strong steer:
 - **concept** — a category you recognize instances of → varied examples + non-examples.
 - **procedure** — a condition→action you execute → worked examples, then faded practice.
 - **principle** — a deep model that explains *why* and transfers → self-explanation, contrasting cases.
+
+## \`depth\` — the target Bloom level (optional)
+
+\`depth\` names *how deeply* the learner should hold a node — a target, not a test. The six Bloom levels:
+
+- **remember** — recall the fact or term.
+- **understand** — explain it in their own words; grasp the mechanism.
+- **apply** — use it in a new but similar situation.
+- **analyze** — break it down, compare, see how the parts relate.
+- **evaluate** — judge, critique, choose between options.
+- **create** — combine it into something new.
+
+\`depth\` works *with* \`kind\` to steer teaching: a \`fact\` at **remember** wants spaced retrieval; a \`principle\` at **analyze** wants contrasting cases and self-explanation; an **understand** target is rarely served by a passive read. The exposition-plan turns the (kind, depth) pair into concrete approaches — so set \`depth\` where the intended level isn't obvious.
 
 ## Edges — pick one \`kind\` from the closed set (no "other")
 

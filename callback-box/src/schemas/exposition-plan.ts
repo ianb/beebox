@@ -57,6 +57,8 @@ approaches:
   - { approach: plain textual exposition, rating: "considered — sparingly", why: Fine for framing, but not the spine here }
 \`\`\`
 
+**Let the concept's \`kind\` and target \`depth\` steer the first cut.** A node aimed at *understand* needs an approach that builds the model (dialog, contrasting cases), not a passive read; an *apply* node wants practice or a manipulable; a *remember* fact wants retrieval; an *analyze* principle wants contrasting cases and self-explanation. The (kind, depth) pair from the concept-map is your starting hypothesis for what fits — then rate against *this* learner.
+
 **Why rate, not just list:** you (like anyone) reach for the familiar — and your familiar default is **textual exposition**. Force yourself off it by genuinely considering non-textual options (dialog, a figure or manipulable, a diagram, contrasting cases, an analogy) and saying why each does or doesn't fit.
 
 **But never use a technique just because it exists.** Each one must earn its place for this subject and learner. Different domains and learners call for different techniques. **If mostly-textual is genuinely the right answer here, say so** — variety is not the goal, fit is.

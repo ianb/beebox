@@ -46,9 +46,20 @@ intent). The **runnable code does not live in the body** — it lives in a
 \`.ts\` file inside the card's attach scope, and the \`entry\` field points to
 it.
 
+## Making a good figure usable
+
+Whatever a figure is for, these make it usable and clear:
+
+- **One clear focus.** Show one thing; resist cramming. Clarity beats completeness.
+- **Signal the affordances.** What's interactive should *look* interactive — a draggable part, a slider, a button should read as such (visible handles, hover cues), not blend into the scene.
+- **Tell the viewer what to do.** A short on-figure instruction ("drag the H⁺ to the base", "click a category") removes the guesswork; don't rely on the viewer discovering the interaction.
+- **Key what isn't self-evident.** If colours, symbols, or marks carry meaning, include a small legend; if it responds to the keyboard, name the keys.
+- **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped at the figure's declared size. Match the box's quiet visual style — no decorative noise.
+- **Verify it renders before you call it done.** Open it and screenshot it: confirm it renders, the controls and instructions are visible, and nothing is clipped.
+
 ## Frontmatter
 
-- \`runtime:\` — one of \`p5js\`, \`three\`, \`d3\`. Selects the mount harness.
+- \`runtime:\` — one of \`p5js\`, \`three\`, \`d3\`. Selects the mount harness. (p5js for canvas sketches & animation, three for 3D scenes, d3 for data-driven SVG — including node-link graphs.)
 - \`entry:\` — **required.** Path to the source, e.g. \`attach/sketch.ts\`
   (resolved in the card's \`<basename>.attach/\` scope, like any \`attach/\`
   ref).

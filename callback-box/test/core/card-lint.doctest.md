@@ -18,6 +18,7 @@ import { CommentarySchema } from "../../src/schemas/commentary.js";
 import { ExtfileSchema } from "../../src/schemas/extfile.js";
 import { ProgressSchema } from "../../src/schemas/progress.js";
 import { LessonPlanSchema } from "../../src/schemas/lesson-plan.js";
+import { ConceptMapSchema } from "../../src/schemas/concept-map.js";
 
 const threadSchema: CardSchema = cardSchema("email-thread", {
   fields: {
@@ -60,6 +61,7 @@ const ctx: LoadCardContext = {
     ["gadget", gadgetSchema],
     ["progress", ProgressSchema],
     ["lesson-plan", LessonPlanSchema],
+    ["concept-map", ConceptMapSchema],
   ]),
 };
 ```
@@ -582,6 +584,52 @@ await box.write(
 );
 const result = await lintCardsDispatch(
   [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalWarnings
+=> 0
+```
+
+## Concept-maps: an orphan node (no edge in or out) warns
+
+A concept-map node with no edges — nothing it depends on, nothing depending on it
+— is a modeling smell, surfaced as a **warning** naming the node. A map where
+every node connects is silent; a 0–1 node map is never flagged (edges aren't
+possible).
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/Bonds.concept-map.card",
+  "---\nconcepts:\n  - id: ionic\n    name: Ionic Bonds\n    kind: concept\n  - id: covalent\n    name: Covalent Bonds\n    kind: concept\n    related:\n      - { to: ionic, kind: contrasts-with }\n  - id: trivia\n    name: A Floating Aside\n    kind: fact\n---\nMap.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Bonds.concept-map.card")],
+  { boxRoot: box.root, ctx },
+);
+result.totalErrors
+=> 0
+
+result.totalWarnings
+=> 1
+
+result.results[0]!.warnings[0]!.message.includes("trivia")
+=> true
+
+result.results[0]!.warnings[0]!.message.includes("orphan")
+=> true
+```
+
+A fully connected map warns about nothing:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "store/Bonds2.concept-map.card",
+  "---\nconcepts:\n  - id: ionic\n    name: Ionic Bonds\n    kind: concept\n  - id: covalent\n    name: Covalent Bonds\n    kind: concept\n    related:\n      - { to: ionic, kind: contrasts-with }\n---\nMap.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("store/Bonds2.concept-map.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalWarnings

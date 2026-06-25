@@ -4,9 +4,10 @@
  * Sidebar with directory listing + card detail panel.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate } from "@tanstack/react-router";
 import { getApiBase } from "../api";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { href } from "../lib/routing";
 import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
 import { Sidebar } from "../components/Sidebar";
@@ -68,6 +69,36 @@ interface ContextMenuState {
   path: string;
 }
 
+/**
+ * Keep the browse directory listing live: refetch when a file directly inside
+ * `dirPath` changes (a card's title/status edit, or an add/remove), and resync
+ * on a *re*connect since transient file-change events aren't replayed. Without
+ * this the sidebar stayed stale until a full reload — only the open detail
+ * panel (FileView) self-updated. The initial connect is skipped (the query
+ * already loads on mount).
+ */
+function useBrowseListLiveRefresh(dirPath: string): void {
+  const utils = trpc.useUtils();
+  const connectedOnceRef = useRef(false);
+  useBusSubscription({
+    onEvent: useCallback((event: RealtimeEvent) => {
+      if (event.event !== "file-change") return;
+      const changed = (event.data as { path?: string }).path;
+      if (typeof changed !== "string") return;
+      const parent = changed.includes("/") ? changed.slice(0, changed.lastIndexOf("/")) : "";
+      if (parent !== dirPath) return;
+      utils.status.browse.invalidate({ path: dirPath });
+    }, [dirPath, utils]),
+    onConnect: useCallback(() => {
+      if (!connectedOnceRef.current) {
+        connectedOnceRef.current = true;
+        return;
+      }
+      utils.status.browse.invalidate({ path: dirPath });
+    }, [dirPath, utils]),
+  });
+}
+
 export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
@@ -94,6 +125,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
   const initialFile = pathIsFile ? currentPath : null;
 
   const { data, isLoading: loading } = trpc.status.browse.useQuery({ path: dirPath });
+  useBrowseListLiveRefresh(dirPath);
   const [selectedFilePath, setSelectedFilePath] = useState<string | null>(initialFile);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);

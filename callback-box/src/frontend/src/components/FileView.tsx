@@ -21,7 +21,7 @@
  *                     with renderer toggle.
  */
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useRef } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { trpc } from "../lib/trpc";
@@ -137,19 +137,35 @@ function useFileData(path: string): LoadResult {
     },
   });
 
-  // Live reload via SSE — invalidate appropriate cache on file-change events
+  // Live reload via the box event stream. Resync this file's data on a matching
+  // `file-change`, and also on a *re*connect: file-change events are transient
+  // and not replayed, so a change that landed while the socket was dropped would
+  // otherwise leave the view stale until a manual reload.
   const utils = trpc.useUtils();
+  const resync = useCallback(() => {
+    if (isCard) {
+      utils.card.get.invalidate({ path });
+    } else if (fetchText) {
+      textQuery.refetch();
+    }
+  }, [path, isCard, fetchText, utils, textQuery]);
+  // Skip the very first connect — the queries already load on mount, so a resync
+  // there is a redundant refetch (and FileView is mounted many-at-once in chat).
+  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event !== "file-change") return;
       const d = event.data as { path?: string };
       if (d.path !== path) return;
-      if (isCard) {
-        utils.card.get.invalidate({ path });
-      } else if (fetchText) {
-        textQuery.refetch();
+      resync();
+    }, [path, resync]),
+    onConnect: useCallback(() => {
+      if (!connectedOnceRef.current) {
+        connectedOnceRef.current = true;
+        return;
       }
-    }, [path, isCard, fetchText, utils, textQuery]),
+      resync();
+    }, [resync]),
   });
 
   return useMemo<LoadResult>(() => {
