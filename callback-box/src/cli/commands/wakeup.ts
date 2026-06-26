@@ -59,7 +59,7 @@ async function runHousekeeping(boxRoot: string): Promise<void> {
   const swept = await cleanupOldTmpUploads(boxRoot, (msg) => console.log(msg));
   const rootLandmarkRefilled = await installRootLandmark(boxRoot);
   if (rootLandmarkRefilled) {
-    console.log("  Refilled Box.landmark.card (root landmark was missing)");
+    console.log("  Refilled Box.landmark.card (root landmark was missing or inert)");
   }
   if (swept === 0 && !rootLandmarkRefilled) {
     console.log("  Nothing to clean up");
