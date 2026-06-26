@@ -46,7 +46,8 @@ every comment is traceable back to its story.
     `frozen` (webpage + commentary) were bare-string refs not under a `ref` key;
     normalized to `<field>: { ref: … }`, which makes `walkForRefs` + `cb mv`
     rewriting work automatically. Migrator `scripts/migrate/normalize-ref-keys.ts`
-    added — **run it against each box** to migrate existing cards.
+    added and **registered in `src/core/migrations.ts`**, so `cb migrate --apply`
+    picks it up per box (manifest-tracked) — no manual per-box invocation.
     (`question-ref` left as-is: its ref already lives under a `ref` key, so it's
     compliant; `template-ref` is a `${…}` substitution pattern, not a card ref.)
   - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its

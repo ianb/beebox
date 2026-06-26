@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable import/no-namespace, security/detect-non-literal-fs-filename */
+/* eslint-disable security/detect-non-literal-fs-filename */
 /**
  * Normalize card references onto a `ref` key.
  *
@@ -16,14 +16,16 @@
  * so the rewrite is robust to formatting. Idempotent: a value already nested
  * as `{ ref: … }` (or a card with neither field) is left untouched.
  *
- * Usage:
+ * Registered in src/core/migrations.ts, so `cb migrate --apply` runs it
+ * against any box that hasn't yet recorded it. Also runnable directly:
  *   pnpm exec tsx scripts/migrate/normalize-ref-keys.ts <boxRoot>           # dry-run
  *   pnpm exec tsx scripts/migrate/normalize-ref-keys.ts <boxRoot> --apply
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
+import { readFile, writeFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { runMigration } from "./_harness.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -93,72 +95,21 @@ export function rewriteCardText(fileName: string, raw: string): string | null {
   return `---\n${yamlText}---\n${tail}`;
 }
 
-async function findCardFiles(root: string): Promise<string[]> {
-  const out: string[] = [];
-  async function walk(dir: string): Promise<void> {
-    let entries;
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
-      throw e;
-    }
-    for (const entry of entries) {
-      if (entry.name === ".git" || entry.name === "node_modules") continue;
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        await walk(full);
-      } else if (entry.isFile() && entry.name.endsWith(".card")) {
-        out.push(full);
-      }
-    }
-  }
-  await walk(root);
-  return out;
-}
-
-async function main(): Promise<void> {
-  const args = process.argv.slice(2);
-  const apply = args.includes("--apply");
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const boxRoot = positional[0];
-  if (boxRoot === undefined) {
-    console.error("Usage: normalize-ref-keys <boxRoot> [--apply]");
-    process.exit(1);
-  }
-  const absRoot = path.resolve(boxRoot);
-  const cardFiles = await findCardFiles(absRoot);
-
-  const toRewrite: string[] = [];
-  for (const file of cardFiles) {
-    const raw = await fs.readFile(file, "utf8");
-    const rewritten = rewriteCardText(path.basename(file), raw);
-    if (rewritten !== null) {
-      toRewrite.push(file);
-      if (apply) await fs.writeFile(file, rewritten);
-    }
-  }
-
-  console.log(`Found ${String(cardFiles.length)} .card files under ${absRoot}`);
-  console.log(`  ${String(toRewrite.length)} need ref-key normalization`);
-  for (const f of toRewrite.slice(0, 20)) {
-    console.log("  " + path.relative(absRoot, f));
-  }
-  if (toRewrite.length > 20) {
-    console.log(`  ... and ${String(toRewrite.length - 20)} more`);
-  }
-  if (!apply) {
-    console.log("\nDry run. Run with --apply to write changes.");
-  } else {
-    console.log(`\nRewrote ${String(toRewrite.length)} files.`);
-  }
-}
-
-// CLI entry — only when run directly, not when imported by a test.
+// CLI entry — only when run directly (e.g. spawned by `cb migrate`), not when
+// imported by a test. Uses the shared harness for arg parsing / walk / counts.
 if (process.argv[1] !== undefined && import.meta.url === `file://${process.argv[1]}`) {
-  main().catch((e) => {
-    console.error(e);
-    process.exit(1);
+  await runMigration({
+    description:
+      "Normalize card refs onto a `ref` key: landmark procedure-ref → procedure.ref; webpage/commentary frozen string → frozen.ref.",
+    match: (name) => {
+      const type = cardType(name);
+      return type === "landmark" || type === "webpage" || type === "commentary";
+    },
+    convert: async (file, { apply }) => {
+      const rewritten = rewriteCardText(basename(file), await readFile(file, "utf8"));
+      if (rewritten === null) return "already";
+      if (apply) await writeFile(file, rewritten);
+      return "converted";
+    },
   });
 }
