@@ -19,6 +19,7 @@ import {
 } from "../machines/realtimeTranscriptionMachine";
 import { detectKeyword, type KeywordResult } from "../lib/speech-keywords";
 import { stillListening, recordingStart } from "../lib/earcons";
+import { claimMicAcrossTabs } from "../lib/mic-tab-lock";
 
 const STILL_LISTENING_DELAY_MS = 10000;
 
@@ -345,6 +346,31 @@ export function useRealtimeTranscription(
     keywordSpotting.reset();
     send({ type: "CANCEL" });
   }, [send, keywordSpotting]);
+
+  // Cross-tab mic mutex: while a recording session is active, claim the mic
+  // (yielding it in any other same-origin tab that holds it) and yield it back
+  // if another tab later claims. Eviction ends the segment the same way an OS
+  // mic-grab does — STOP, not CANCEL — so the captured transcript survives into
+  // the composer via onUnconsumedTranscript instead of vanishing. During
+  // `connecting` there's nothing captured yet and STOP isn't handled, so cancel
+  // to tear down cleanly. The callback fires whenever another tab claims, long
+  // after this effect ran, so it must read the live state from a ref.
+  const active = state !== "idle";
+  const stateRef = useRef(state);
+  useEffect(() => {
+    stateRef.current = state;
+  });
+  useEffect(() => {
+    if (!active) return;
+    return claimMicAcrossTabs(() => {
+      const current = stateRef.current;
+      if (current === "recording" || current === "reconnecting") {
+        send({ type: "STOP" });
+      } else {
+        send({ type: "CANCEL" });
+      }
+    });
+  }, [active, send]);
 
   const dismissError = useCallback(() => {
     send({ type: "DISMISS_ERROR" });

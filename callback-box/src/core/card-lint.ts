@@ -34,6 +34,7 @@ import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io
 import { extractBodyRefs } from "./body-refs.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
+import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
 
 export interface LintDispatchOptions {
   /**
@@ -173,6 +174,8 @@ async function lintFrontmatterCard(input: {
     warnings.push(...(await lintProgressNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
   } else if (type === "lesson-plan") {
     warnings.push(...(await lintLessonPlanNodeRefs({ path, fields: parsed.fields, boxRoot: options.boxRoot })));
+  } else if (type === "concept-map") {
+    warnings.push(...conceptMapShapeWarnings(parsed.fields));
   }
   // Type-specific, self-contained validation (rules Zod can't express) lives on
   // the schema as its `validate` hook — see the commentary/extfile schema
