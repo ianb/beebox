@@ -523,7 +523,6 @@ All claimed functionality for interactive data visualizations with parameterized
 ### Mark todo items with multi-state status tracking  
 ❌ INACCURATE
 
-IAN: this might require some design work, but is a valid issue
 
 > As a user, I want to mark individual todo items with multiple states (pending, done, cancelled, or deferred), so that I can track items that are complete, blocked, or intentionally paused.
 
@@ -702,7 +701,6 @@ All four claimed files exist and implement the described functionality. card-lin
 ### Manage card attachments and assets  
 ❌ INACCURATE
 
-IAN: while manual management of the files isn't a priority, it seems like there's some issues with incomplete implementations...?
 
 > As an operator, I want to attach binary files (images, PDFs, media) to cards in scoped `.attach/` directories and track them in a manifest with SHA-256 hashes, so that attachments are versioned and deduplicable.
 
@@ -738,7 +736,6 @@ The file src/core/frontmatter-field.ts exports two functions that implement the 
 ### Edit card frontmatter fields by dotted path  
 ❌ INACCURATE
 
-IAN: I don't remember this feature or an part of this feature. Like writing YAML frontmatter didn't seem to be part of anything I can remember.
 
 > As a box user, I want to look up and modify specific nested fields in a card's YAML frontmatter using dotted notation, so that I can update complex metadata like EXIF data without manually editing the file.
 
@@ -801,7 +798,6 @@ Both claimed files exist and implement the full capability: SHA-256 hashing in a
 ### Auto-discover and claim binary assets into manifests  
 ❌ INACCURATE
 
-IAN: yes, seems just incomplete implementation
 
 > As a user, I want binary files in `.attach/` directories to be automatically discovered and tracked with SHA-256 hashes, so that assets are properly managed without manual intervention.
 
@@ -949,7 +945,6 @@ All four claimed files exist and implement the described functionality. Card ref
 ### Import external content as cards  
 ❌ INACCURATE
 
-IAN: This actually seems like a big and unsurprisingly unfinished feature, doing analysis of PDF files. This is probably a whole task on its own, maybe involving docling(?)
 
 > As an agent, I want to ingest images, PDFs, and other external content, extract metadata via ML analysis, and create card records with the extracted data, so that external sources are captured as indexed, searchable cards.
 
@@ -990,7 +985,6 @@ Both claimed files exist and accurately implement the described functionality. v
 ### Execute multi-step procedures as cards  
 ❌ INACCURATE
 
-IAN: yes, seems like incomplete implementation
 
 > As an agent, I want to create and update procedure-run cards that track the status, output, and completion of multi-step workflows, so that users can monitor and resume long-running automations.
 
@@ -1690,7 +1684,6 @@ Both claimed files exist at specified paths and implement automatic question gen
 ### Retrospective analysis mining chat sessions for implicit learning  
 ❌ INACCURATE
 
-IAN: yes, this is a missing feature. We need the analysis to end with integration.
 
 > As a box curator, I want the system to automatically analyze my past chat conversations to discover what I've taught the agent about my preferences and personality, so that these patterns can be integrated into the agent's personality and guide cards.
 
@@ -2913,7 +2906,6 @@ Files: `src/connectors/drive-handler-docs.ts`
 ### Read collaborative comments from Google Docs  
 ❌ INACCURATE
 
-IAN: sounds like it should go in a sidecar attachment
 
 > As a user, I want the system to fetch and surface comments from collaborative Google Docs as part of the lossy feature detection, so I can see what feedback others have left.
 
@@ -3175,7 +3167,6 @@ The listSpreadsheets() method is fully implemented in /Users/ianbicking/src/call
 ### Read collaborative comments from Drive files  
 ❌ INACCURATE
 
-IAN: like previously mentioned, we should preserve these in a sidecar
 
 > As an agent, I want to read comments and annotations on Drive files, so that I can incorporate collaborator feedback and context.
 
@@ -3290,7 +3281,6 @@ Feature is fully implemented: drive-handler-docs.ts detects equations, footnotes
 ### Read collaborative comments from Google Docs and Sheets  
 ❌ INACCURATE
 
-IAN: As mentioned, this should be added
 
 > As a user, I want to read comments and annotations from collaborators on Google Docs and Sheets, so that I can track feedback and collaborative input.
 
@@ -3789,7 +3779,6 @@ Verified that `src/webapp/trpc/routers/files.ts` implements the `summarize` tRPC
 ### Update Google Drive folder mount configuration  
 ❌ INACCURATE
 
-IAN: sounds like this is very incomplete, yes
 
 > As a user, I want to configure which Google Drive folders are mounted to which local box paths, so that I can choose what content to automatically sync.
 
@@ -3945,7 +3934,6 @@ All implementation details match the user story perfectly. Files exist at claime
 ### Configure Google Drive folder syncing  
 ❌ INACCURATE
 
-IAN: similarly incomplete. I haven't experimented with google drive mounting at all.
 
 > As a box owner, I want to specify which Google Drive folders to sync and where they should be mounted in my box, so that I can bring Drive files into my local filesystem.
 
@@ -4205,7 +4193,6 @@ Files: `src/webapp/routes/api-files.ts`, `src/webapp/trpc/routers/card.ts`
 ### Dynamically switch LLM model for a chat session mid-conversation  
 ❌ INACCURATE
 
-IAN: Could be tested, yes. Probably not an automated test, as an accurate needs to actually invoke claude and do operations.
 
 > As a user, I want to change which LLM model my current chat session uses without losing conversation context, so that I can switch between models for different types of reasoning mid-conversation.
 
@@ -5737,7 +5724,6 @@ Files: `src/schemas/todo-list.ts`, `src/core/commands/create.ts`
 ### Define and execute multi-step procedures with tracking  
 ❌ INACCURATE
 
-IAN: yes, should be implemented
 
 > As a box user, I want to define procedure cards with multi-phase workflows (precheck/run/validate) and execute them with automatic progress tracking, so that complex multi-step operations can be recorded and debugged.
 

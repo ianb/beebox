@@ -36,8 +36,10 @@ every comment is traceable back to its story.
   full-wakeup path (one job file per source instead of per batch) — flagged as a
   possible trade-off. [69] (model-switch) is **deferred** — it needs a live
   Claude invocation to test, not an automated test.
-- **Catalog:** 413 → **400 stories**; remaining `IAN:` lines (14) = the open
-  bucket-D features still to build + [69].
+- **Catalog:** 413 → **400 stories**; all `IAN:` annotations cleared — the
+  unbuilt bucket-D features are now parked as the backlog in `docs/ideas.md`
+  ("User-story audit — remaining feature backlog"), so the catalog reads as a
+  clean reference doc.
 - **Bucket D — partially done:**
   - **D7 (calendar remote-conflict) — built.** `EventFileEntry` now stores the
     remote `updated` timestamp; on a local edit, if the remote also changed since
@@ -56,7 +58,8 @@ every comment is traceable back to its story.
     parked as entries in `docs/ideas.md`.
   - **Remaining (unstarted):** D1 questions overhaul, D2 todo multi-state, D3
     frontmatter write, D5 procedure validation, D6 retrospective integration, D10
-    asset-manifest completion. Tracked by the surviving `IAN:` lines.
+    asset-manifest completion, plus deferred [69] model-switch verification — all
+    parked in `docs/ideas.md` ("User-story audit — remaining feature backlog").
 
 ## Summary
 

@@ -1398,3 +1398,71 @@ Scope notes: schema field for the sidecar ref, handler changes in both
 `drive-handler-docs.ts` and `drive-handler-sheets.ts`, and the asset/attach
 plumbing for the sidecar file. Pairs naturally with any future "show upstream
 collaboration state" UI, but the sidecar alone is the useful core.
+
+## User-story audit — remaining feature backlog
+
+From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
+The removals, doc fixes, small fixes, and the calendar-conflict (D7) +
+ref-normalization (D11) features all landed; these larger features were scoped
+but not built. Parked here as the durable backlog (the audit plan doc and the
+catalog's old `IAN:` annotations are transient).
+
+### Questions, end-to-end (D1)
+
+The concrete answer-resolution bug is fixed (the form sent a synthesized letter
+that the backend stored verbatim; it now sends the option label and
+`src/core/commands/answer.ts` resolves the real id). But the maintainer flagged
+the questions flow as generally under-baked ("probably a bunch of bugs; a feature
+I want but haven't implemented well"). A focused pass — using the user-story
+method on just the questions subsystem — would cover: confirm-type (yes/no)
+questions rendering as a textarea instead of radios (`QuestionForm.tsx` falls
+back to text when there's no `options` array); how triage creates questions and
+the option-id scheme; and the answer schema round-trip. Medium.
+
+### Todo multi-state controls (D2)
+
+`src/frontend/src/components/TodoListView.tsx` only toggles `pending`↔`done`, but
+the schema and backend already support `cancelled` and `deferred` — users can't
+reach those states except by hand-editing the card. Replace the binary toggle
+with a 4-state control (dropdown / context menu). Medium; mostly a UI change.
+
+### Frontmatter dotted-path write (D3)
+
+`src/core/frontmatter-field.ts` only has `lookupField()` (read). A `setField()`
+(write-by-dotted-path) would round it out — but the maintainer didn't recall
+intending a write API, so **confirm it's wanted before building**; otherwise this
+is just a catalog over-claim to drop. Medium, or trivial-doc.
+
+### Procedure validation completion (D5)
+
+`src/core/procedure/engine-phase.ts` stubs instruction-based validation (always
+passes) and downgrades `severity: review` auto-retry to a warning; resuming a run
+from a failed step isn't supported. Build: (1) model-evaluated instruction
+validation against the git diff + box state, (2) `review`-severity auto-retry
+with failure context, (3) resumable runs from the failed step. Large; its own
+plan.
+
+### Retrospective integration (D6)
+
+`src/core/retro/` scans chat sessions and discovers observations, but integration
+is a manual procedure template and the report writes "_Pending integration._".
+Build `src/core/retro/integrate.ts` to auto-apply low-stakes observations to
+personality/guide cards and raise question cards for high-stakes ones, then
+finalize the report and retire the manual procedure. Maintainer: "analysis must
+end with integration." Large.
+
+### Asset-manifest completion (D10)
+
+The pre-commit verify hook landed (bucket C). What remains from the original
+scope: actual content **deduplication** (claimed but never implemented), an
+explicit **attach API/UI** to attach a file to a card, and dropping the
+misleading "versioning" language in `docs/asset-manifests.md` (only current
+state is tracked, no history). Decide the real scope before building. Medium.
+
+### Deferred: model-switch verification (audit [69])
+
+Mid-conversation model switching (`src/webapp/routes/chat-session-routes.ts`) has
+no test coverage and recent "model-picker desync" fixes suggest it was flaky.
+It's worth exercising, but a meaningful test needs a real Claude invocation
+(drive a session, switch models, confirm context survives) rather than a mock —
+so it's a manual verification task, not an automated one. Not started.
