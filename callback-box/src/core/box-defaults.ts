@@ -145,9 +145,10 @@ export async function installPersonality(boxRoot: string): Promise<boolean> {
  * because a file is technically present. A landmark with a real role is left
  * untouched (the user owns its label, symbol, links, etc.).
  *
- * @returns Whether a template was installed or a broken one repaired
+ * @returns The box-relative path of the landmark created or repaired (so the
+ *   caller can commit it), or null if a real landmark was already present.
  */
-export async function installRootLandmark(boxRoot: string): Promise<boolean> {
+export async function installRootLandmark(boxRoot: string): Promise<string | null> {
   let entries: string[];
   try {
     entries = await fs.readdir(boxRoot);
@@ -155,7 +156,7 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
     // Can't list the box root — skip installing the root landmark rather
     // than fail, but log: an unreadable box root is unexpected here.
     console.warn(`Could not read box root ${boxRoot} for landmark check:`, e);
-    return false;
+    return null;
   }
   const templateContent = createLandmarkTemplate({ label: "Box", symbol: "📦" });
   const existing = entries.find((name) => name.endsWith(".landmark.card"));
@@ -166,12 +167,12 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
       hasRole = fields !== null && (fields.navigation !== undefined || (fields.destinations?.length ?? 0) > 0);
     } catch (e) {
       console.warn(`Could not read root landmark ${existing} in ${boxRoot}:`, e);
-      return false;
+      return null;
     }
-    if (hasRole) return false; // a real landmark — leave the user's content alone
+    if (hasRole) return null; // a real landmark — leave the user's content alone
     // Inert/unparseable — repair in place, preserving the existing filename.
     await fs.writeFile(path.join(boxRoot, existing), templateContent);
-    return true;
+    return existing;
   }
 
   const result = await installTemplateFile({
@@ -179,7 +180,7 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
     relPath: "Box.landmark.card",
     templateContent,
   });
-  return result.outcome === "fresh";
+  return result.outcome === "fresh" ? "Box.landmark.card" : null;
 }
 
 /**

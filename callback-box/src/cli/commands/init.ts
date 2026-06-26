@@ -87,7 +87,9 @@ export const initCommand = new Command("init")
       // "chat scoped to the box root." Magical — refilled on wakeup
       // if the user deletes it.
       const rootLandmarkInstalled = await installRootLandmark(resolve(targetPath));
-      if (rootLandmarkInstalled) {
+      if (rootLandmarkInstalled !== null) {
+        // Fresh init commits everything below; a re-init refill is left for the
+        // next wakeup to commit (see runHousekeeping).
         console.log("\nInstalled Box.landmark.card (edit to customize the root landmark)");
       }
 

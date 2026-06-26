@@ -19,7 +19,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
-import { getStatus, pushToRemote } from "../lib/git.js";
+import { getStatus, pushToRemote, stageFiles, commitPaths } from "../lib/git.js";
 import { cleanupOldTmpUploads } from "../../core/housekeeping.js";
 import { installRootLandmark } from "../../core/box.js";
 import { getBoxTime } from "../lib/time.js";
@@ -57,11 +57,26 @@ async function reportUncommittedChanges(boxRoot: string): Promise<void> {
 async function runHousekeeping(boxRoot: string): Promise<void> {
   console.log("[Housekeeping]");
   const swept = await cleanupOldTmpUploads(boxRoot, (msg) => console.log(msg));
-  const rootLandmarkRefilled = await installRootLandmark(boxRoot);
-  if (rootLandmarkRefilled) {
-    console.log("  Refilled Box.landmark.card (root landmark was missing or inert)");
+  const rootLandmarkPath = await installRootLandmark(boxRoot);
+  if (rootLandmarkPath !== null) {
+    // Persist the refill so it survives, propagates to clones, and doesn't
+    // linger as an uncommitted change (the missing-on-server boxes came from
+    // exactly this gap — a refilled but never-committed working file).
+    try {
+      await stageFiles(boxRoot, [rootLandmarkPath]);
+      await commitPaths(boxRoot, {
+        paths: [rootLandmarkPath],
+        message: "Refill root landmark (was missing or inert)",
+        trailers: { "Created-By": "housekeeping" },
+      });
+      console.log(`  Refilled + committed ${rootLandmarkPath} (root landmark was missing or inert)`);
+    } catch (e) {
+      // Best-effort: a commit failure shouldn't abort the wakeup. The file is
+      // on disk; the next wakeup retries the commit.
+      console.warn(`  Refilled ${rootLandmarkPath} but could not commit it:`, e);
+    }
   }
-  if (swept === 0 && !rootLandmarkRefilled) {
+  if (swept === 0 && rootLandmarkPath === null) {
     console.log("  Nothing to clean up");
   }
   console.log("");
