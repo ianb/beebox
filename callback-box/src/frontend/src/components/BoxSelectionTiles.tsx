@@ -1,7 +1,7 @@
 /**
- * Appearance-heavy helpers for the root box-selection pages (BoxRedirect and
- * ShareRedirect). Anchor-as-button styling lives here so the pages themselves
- * can stay on UI primitives only.
+ * Appearance-heavy helpers for the root box-selection page (BoxRedirect).
+ * Anchor-as-button styling lives here so the page itself can stay on UI
+ * primitives only.
  */
 
 import { Link } from "@tanstack/react-router";
@@ -52,20 +52,5 @@ export function BoxActionsTile({ box }: { box: Box }) {
         </Link>
       </div>
     </div>
-  );
-}
-
-/**
- * Simpler tile for ShareRedirect — just the box name as a destination.
- * Uses a raw `<a>` (not TanStack Link) to preserve the query string exactly.
- */
-export function BoxShareTile({ box, search }: { box: Box; search: string }) {
-  return (
-    <a
-      href={withBase(`/${box.slug}/share${search}`)}
-      className="block bg-white rounded-lg shadow-sm border border-warm-300 px-6 py-4 hover:border-accent hover:shadow transition-all"
-    >
-      <span className="text-lg font-medium text-primary">{box.name}</span>
-    </a>
   );
 }

@@ -19,7 +19,6 @@ import {
   type GoogleCalendarEvent,
 } from "./google-calendar-ics.js";
 import {
-  parseEventStart,
   formatEventDate,
   describeChanges,
   type SyncNote,
@@ -53,18 +52,9 @@ async function handleCancelledEvent(
   const oldName = getFilename(existingEntry);
   const filePath = path.join(calDir, oldName);
   try {
-    // Capture ICS content before deleting for calendar-review job
-    let icsContent: string | undefined;
-    try {
-      icsContent = await fs.readFile(filePath, "utf-8");
-    } catch (_e) {
-      // File already gone — icsContent stays undefined; capture is best-effort for the review job, the unlink below handles the real deletion.
-    }
     await fs.unlink(filePath);
     acc.deleted.push(path.relative(boxRoot, filePath));
-    const note: SyncNote = { action: "cancelled", summary: event.summary || oldName };
-    if (icsContent) note.icsContent = icsContent;
-    acc.notes.push(note);
+    acc.notes.push({ action: "cancelled", summary: event.summary || oldName });
   } catch (err: unknown) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
   }
@@ -94,11 +84,11 @@ async function tryPushLocalEdit(
   ctx: {
     calendar: GoogleCalendarService; icsOpts: IcsOpts; filePath: string; relPath: string;
     filename: string; localContent: string; existingEntry: string | { calendarId: string };
-    eventStart: Date | undefined; state: CalendarState; acc: SyncAccumulator;
+    state: CalendarState; acc: SyncAccumulator;
   },
 ): Promise<boolean> {
   const { calendar, icsOpts, filePath, relPath, filename, localContent,
-          existingEntry, eventStart, state, acc } = ctx;
+          existingEntry, state, acc } = ctx;
   const localEvent = icsToGoogleEvent(localContent);
   if (!localEvent) return false;
 
@@ -116,15 +106,16 @@ async function tryPushLocalEdit(
   // Patch succeeded — rewrite file from Google's response to normalize
   const patchedIcs = eventToIcs(patchResult, icsOpts);
   await fs.writeFile(filePath, patchedIcs);
-  state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs) };
+  state.eventFiles[event.id] = {
+    filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs),
+    remoteUpdated: patchResult.updated,
+  };
   acc.updated.push(relPath);
-  const note: SyncNote = {
+  acc.notes.push({
     action: "pushed",
     summary: `${localEvent.summary || filename} (local edit pushed)`,
     ref: relPath,
-  };
-  if (eventStart) note.eventStart = eventStart;
-  acc.notes.push(note);
+  });
   return true;
 }
 
@@ -134,37 +125,31 @@ function recordUpsertNote(
   ctx: {
     isExisting: boolean; localContent: string | undefined; icsContent: string;
     filename: string; relPath: string; calendarId: string; icsOpts: IcsOpts;
-    eventStart: Date | undefined; acc: SyncAccumulator;
+    acc: SyncAccumulator;
   },
 ): void {
   const { isExisting, localContent, icsContent, filename, relPath,
-          calendarId, icsOpts, eventStart, acc } = ctx;
+          calendarId, icsOpts, acc } = ctx;
   if (isExisting) {
     if (localContent) {
       const changes = describeChanges(localContent, icsContent);
       if (changes.length === 0) return; // no visible changes — just a metadata refresh
-      const note: SyncNote = {
+      acc.notes.push({
         action: "updated", summary: event.summary || filename, detail: changes.join(", "), ref: relPath,
-      };
-      if (eventStart) note.eventStart = eventStart;
-      acc.notes.push(note);
+      });
     } else {
-      const note: SyncNote = { action: "updated", summary: event.summary || filename, ref: relPath };
-      if (eventStart) note.eventStart = eventStart;
-      acc.notes.push(note);
+      acc.notes.push({ action: "updated", summary: event.summary || filename, ref: relPath });
     }
     return;
   }
 
   const dateStr = formatEventDate(event);
   const calLabel = icsOpts.calendarName && calendarId !== "primary" ? `, ${icsOpts.calendarName}` : "";
-  const note: SyncNote = {
+  acc.notes.push({
     action: "new",
     summary: `${event.summary || "(no title)"}${dateStr ? ` (${dateStr}${calLabel})` : ""}`,
     ref: relPath,
-  };
-  if (eventStart) note.eventStart = eventStart;
-  acc.notes.push(note);
+  });
 }
 
 /** Reconcile a single non-cancelled, in-window event into the local store. */
@@ -182,7 +167,6 @@ async function reconcileEvent(
   await unlinkRenamed({ boxRoot, calDir, oldName, filename, acc });
 
   const relPath = path.relative(boxRoot, filePath);
-  const eventStart = parseEventStart(event);
 
   if (existingEntry) {
     const storedHash = typeof existingEntry === "string" ? undefined : existingEntry.contentHash;
@@ -193,27 +177,52 @@ async function reconcileEvent(
       // File missing — localContent stays undefined and we proceed to write the fresh ICS; the read is only for local-edit detection, not required.
     }
 
+    let remoteConflict = false;
     if (localContent && storedHash && contentHash(localContent) !== storedHash) {
-      const handled = await tryPushLocalEdit(event, {
-        calendar, icsOpts, filePath, relPath, filename, localContent,
-        existingEntry, eventStart, state, acc,
-      });
-      if (handled) return;
+      const storedRemoteUpdated = typeof existingEntry === "string" ? undefined : existingEntry.remoteUpdated;
+      const remoteChanged = storedRemoteUpdated !== undefined && event.updated !== undefined
+        && event.updated !== storedRemoteUpdated;
+      if (remoteChanged) {
+        // Conflict: the event changed both locally and remotely since the last
+        // pull. Remote wins — discard the local edit and fall through to the
+        // normal write path, which overwrites the local file with Google's ICS.
+        remoteConflict = true;
+        console.warn(
+          `  Local edit to ${filename} discarded — event also changed remotely (remote wins)`,
+        );
+        acc.notes.push({
+          action: "updated",
+          summary: event.summary || filename,
+          detail: "local edit discarded — event also changed remotely (remote wins)",
+          ref: relPath,
+        });
+      } else {
+        const handled = await tryPushLocalEdit(event, {
+          calendar, icsOpts, filePath, relPath, filename, localContent,
+          existingEntry, state, acc,
+        });
+        if (handled) return;
+      }
     }
 
-    recordUpsertNote(event, {
-      isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, eventStart, acc,
-    });
+    if (!remoteConflict) {
+      recordUpsertNote(event, {
+        isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, acc,
+      });
+    }
   } else {
     recordUpsertNote(event, {
-      isExisting: false, localContent: undefined, icsContent, filename, relPath, calendarId, icsOpts, eventStart, acc,
+      isExisting: false, localContent: undefined, icsContent, filename, relPath, calendarId, icsOpts, acc,
     });
   }
 
   await fs.writeFile(filePath, icsContent);
   if (existingEntry) acc.updated.push(relPath);
   else acc.created.push(relPath);
-  state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent) };
+  state.eventFiles[event.id] = {
+    filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent),
+    remoteUpdated: event.updated,
+  };
 }
 
 export async function syncCalendar(opts: {

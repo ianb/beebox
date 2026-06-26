@@ -1,6 +1,6 @@
 # Calendar Integration
 
-**Status: Implemented (pull-only).** Google Calendar → `.ics` files in `store/calendar/`. Local-edits-pushed-back is not implemented; that's the major piece of the original "bidirectional" goal still outstanding.
+**Status: Implemented (bidirectional).** Google Calendar ↔ `.ics` files in `store/calendar/`. Pull is the well-exercised path; local edits, locally-created events, and `X-CB-DELETE` markers are pushed back to Google during sync. Caveats: scheduled auto-sync is disabled by default, and the push path is largely untested.
 
 ## Overview
 
@@ -59,7 +59,7 @@ class GoogleCalendarConnector implements Connector {
 }
 ```
 
-`produces` is `["calendar-event"]`; there is no `handles` array, since local edits aren't currently pushed back. The connector is one-way.
+`produces` is `["calendar-event"]`. Local edits and locally-created `.ics` files are pushed back to Google during sync, so the connector is bidirectional — pull is the primary, well-tested path; the push path is implemented but largely untested.
 
 ## Auth
 
@@ -74,7 +74,7 @@ Google Calendar requires OAuth2 (unlike Gmail, which accepts app passwords). Aut
 
 ## Known limitations
 
-- **One-way only.** Local `.ics` edits are not detected or pushed back to Google. Bidirectional sync was in the original design but not built; the slug-vs-UID filename choice was made partly with bidirectional in mind, but the change-detection layer doesn't exist yet.
+- **Push path is untested.** Local `.ics` edits and locally-created events are detected (content hash) and pushed back to Google, but this push path is largely untested and scheduled auto-sync is disabled by default. Remote-vs-local conflict detection (a remote change since the last pull) is not yet tracked — on a failed push the remote version wins.
 - **Slug collisions.** Two events with the same slug currently get a numeric suffix; revisit if it becomes noisy.
 - **Recurring event edits.** Editing a single occurrence of a recurring series in Google Calendar (creating an `EXDATE` or override) is fetched, but the local representation is whatever Google returns in the series — no separate per-occurrence file.
 

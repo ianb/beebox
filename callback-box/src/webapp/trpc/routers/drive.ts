@@ -5,7 +5,6 @@ import { getGoogleAuth } from "../../../connectors/google-auth.js";
 import { isGoogleServiceAllowed } from "../../box-config.js";
 import { loadDriveConfig, saveDriveConfig } from "../../../connectors/drive-config.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
-import { extractDriveFileId } from "../../../connectors/drive-types.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
 import { createGoogleDriveService } from "../../../services/google-drive.js";
 import type { GoogleDriveService } from "../../../services/google-drive.js";
@@ -43,40 +42,6 @@ export const driveRouter = router({
     const service = await getDriveService(ctx.boxRoot, ctx.services.drive);
     return service.listSpreadsheets();
   }),
-
-  inspect: publicProcedure
-    .input(z.object({ urlOrId: z.string() }))
-    .query(async ({ input, ctx }) => {
-      const fileId = extractDriveFileId(input.urlOrId);
-      if (!fileId) {
-        throw new TRPCError({
-          code: "BAD_REQUEST",
-          message: "Could not extract file ID from input",
-        });
-      }
-
-      const service = await getDriveService(ctx.boxRoot, ctx.services.drive);
-      const file = await service.getFile(fileId);
-
-      let tabs: Array<{ title: string; gid: number }> = [];
-      if (file.mimeType === "application/vnd.google-apps.spreadsheet") {
-        const ss = await service.getSpreadsheet(fileId);
-        tabs = ss.sheets.map((s) => ({
-          title: s.properties.title,
-          gid: s.properties.sheetId,
-        }));
-      }
-
-      return {
-        id: file.id,
-        name: file.name,
-        mimeType: file.mimeType,
-        modifiedTime: file.modifiedTime,
-        owner: file.owners?.[0]?.emailAddress ?? "unknown",
-        link: file.webViewLink,
-        tabs,
-      };
-    }),
 
   updateConfig: publicProcedure
     .input(

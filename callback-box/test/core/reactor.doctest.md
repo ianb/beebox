@@ -128,7 +128,7 @@ const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
 await box.write("box/jobs/email.intake.job.card", `<intake-job source="gmail"><description>Email triage</description></intake-job>`);
 await box.write("box/jobs/chat.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
-await box.write("box/jobs/cal.calendar-review.job.card", `<calendar-review-job source="google-calendar"><description>Calendar review</description></calendar-review-job>`);
+await box.write("box/jobs/rss.intake.job.card", `<intake-job source="rss"><description>RSS triage</description></intake-job>`);
 
 const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))

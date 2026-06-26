@@ -79,6 +79,20 @@ svc.events[0]?.summary
 => Keep Me
 ```
 
+Deleting the same event twice is idempotent — the second delete is a no-op
+(the real service maps the API's 404/410 to success; the fake just leaves the
+event set unchanged):
+
+```ts
+const svc = createFakeGoogleCalendar({
+  events: [{ id: "e1", status: "confirmed", summary: "Delete Me" }],
+});
+await svc.deleteEvent("primary", "e1");
+await svc.deleteEvent("primary", "e1");
+svc.events.length
+=> 0
+```
+
 ## Call logging
 
 ```ts

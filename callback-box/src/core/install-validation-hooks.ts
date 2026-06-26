@@ -44,16 +44,11 @@ const PRE_COMMIT_MARKER = "# callback-box validation hook (managed)";
 function preCommitBody(cbBin: string): string {
   return `#!/usr/bin/env bash
 ${PRE_COMMIT_MARKER}
-# Block commits that include cards failing schema validation.
+# Block commits that include cards failing schema validation, and verify the
+# attachment/asset manifest is intact (read-only scan, no auto-claim).
 # Regenerate via \`cb init\` if you delete this file.
 
 set -e
-
-# Run only when there are staged card files.
-staged_cards=$(git diff --cached --name-only --diff-filter=ACMR | grep '\\.card$' || true)
-if [ -z "$staged_cards" ]; then
-  exit 0
-fi
 
 CB=${JSON.stringify(cbBin)}
 if [ ! -x "$CB" ]; then
@@ -65,7 +60,14 @@ if [ ! -x "$CB" ]; then
   fi
 fi
 
-"$CB" validate --staged
+# Validate staged cards only when there are any.
+staged_cards=$(git diff --cached --name-only --diff-filter=ACMR | grep '\\.card$' || true)
+if [ -n "$staged_cards" ]; then
+  "$CB" validate --staged
+fi
+
+# Verify the asset manifest on every commit (read-only; fails on error).
+"$CB" attachments verify
 `;
 }
 

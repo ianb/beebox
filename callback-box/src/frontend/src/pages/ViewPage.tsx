@@ -14,7 +14,11 @@ import { FileView } from "../components/FileView";
 import { ViewRenderer } from "../components/ViewRenderer";
 import { Text } from "../components/ui/Text";
 
-const FILE_EXTENSIONS = new Set([".md", ".card", ".txt", ".json", ".xml", ".html", ".csv", ".tsv", ".yaml", ".yml"]);
+const FILE_EXTENSIONS = new Set([
+  ".md", ".card", ".txt", ".json", ".xml", ".html", ".csv", ".tsv", ".yaml", ".yml",
+  ".pdf",
+  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp",
+]);
 
 function looksLikeFilePath(value: string): boolean {
   if (value.includes("/")) return true;

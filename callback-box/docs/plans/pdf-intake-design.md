@@ -23,30 +23,43 @@ Docling produces:
 - Rendered markdown (the human/agent-readable view).
 - Page images and extracted figures (saved into the attach scope).
 
-The `.pdf.card` embeds the markdown directly in `<text>`, references the JSON via `<docling ref>`, and lists metadata (pages, title, author) as attrs. The original PDF, the JSON, the page renders, and the figure files are all assets — committed via manifest, not git.
+The `.pdf.card` puts the rendered markdown in the card body, references the JSON via a `docling.ref` field, and lists metadata (pages, title, author) in frontmatter. The original PDF, the JSON, the page renders, and the figure files are all assets — committed via manifest, not git.
 
 One PDF → one card. Splitting a multi-document PDF into separate cards (a scan batch containing five distinct letters, say) is a future thing; for now the card represents the whole PDF and downstream agents handle subdivision if needed.
 
 ## Card shape
 
-```xml
-<pdf status="analyzed">
-<filename ref="attach/Tax_Return_2025.pdf" captured="2026-05-04T10:23:00Z" source="disk" original-name="tax-return.pdf" mime-type="application/pdf" size="2483920" />
-<docling ref="attach/docling.json.gz" />
-<metadata pages="14" title="Form 1040" author="" />
-<description></description>
-<text>... rendered markdown, including figure refs like ![](attach/figure-001.avif) ...</text>
-</pdf>
+Cards are YAML frontmatter + a markdown body (the rendered text is the body). Refs into the attach scope use the `field.ref:` nesting, mirroring `.image.card`'s `filename.ref:`:
+
+```markdown
+---
+status: analyzed
+filename:
+  ref: attach/Tax_Return_2025.pdf
+  captured: 2026-05-04T10:23:00Z
+  source: disk
+  original-name: tax-return.pdf
+  mime-type: application/pdf
+  size: 2483920
+docling:
+  ref: attach/docling.json.gz
+metadata:
+  pages: 14
+  title: Form 1040
+  author: ""
+description: ""
+---
+... rendered markdown body, including figure refs like ![](attach/figure-001.avif) ...
 ```
 
-`.pdf.card` is a **superset** of `.file.card`: it carries all the same upload-provenance attrs (captured, source, original-name, mime-type, size) plus the docling-derived bits. When the intake router sees `application/pdf`, it routes to the PDF path; everything else stays in `.file.card`.
+`.pdf.card` is a **superset** of `.file.card`: it carries all the same upload-provenance fields (captured, source, original-name, mime-type, size) plus the docling-derived bits. When the intake router sees `application/pdf`, it routes to the PDF path; everything else stays in `.file.card`.
 
 Status lifecycle (paralleling image cards):
 - `new` — created without successful extraction (docling failed, or skipped). Holds the asset reference and any error info; agent can decide what to do.
 - `analyzed` — extraction succeeded; `<text>` is populated.
 - `invalid` — agent marked the card as unusable (corrupt, junk, etc.).
 
-`<description>` is intentionally empty at intake. Agents fill it later when reading the card, the same way image cards get descriptions during downstream processing.
+`description` is intentionally empty at intake. Agents fill it later when reading the card, the same way image cards get descriptions during downstream processing.
 
 ## Attach scope contents
 
@@ -119,7 +132,7 @@ Other knobs land here over time. Keeping the surface narrow until real boxes ask
 7. Write the `.pdf.card` with `status="analyzed"`, embedded markdown, metadata, and the asset references.
 8. Claim all the new assets in the manifest.
 
-On docling failure: write a `status="new"` card with the original PDF as the only asset and an `<error>` child carrying the failure message. The boxholder/agent can decide whether to retry, accept the file as opaque, or mark it `invalid`.
+On docling failure: write a `status: new` card with the original PDF as the only asset and an `error:` field carrying the failure message. The boxholder/agent can decide whether to retry, accept the file as opaque, or mark it `invalid`.
 
 ### `cb pdf reanalyze <card>`
 
@@ -148,9 +161,9 @@ The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AV
 
 | Case | Behavior |
 |---|---|
-| Docling crashes mid-run | Card lands as `status="new"` with `<error>` child. Original PDF is preserved as asset. |
+| Docling crashes mid-run | Card lands as `status: new` with an `error:` field. Original PDF is preserved as asset. |
 | PDF is encrypted / requires password | Same as above. Agent can prompt the boxholder for the password and retry. |
-| Docling produces empty markdown | Card lands as `status="analyzed"` with empty `<text>`. Agent treats this as "no readable content." |
+| Docling produces empty markdown | Card lands as `status: analyzed` with an empty body. Agent treats this as "no readable content." |
 | AVIF encoder unavailable | Fall back to PNG for figures and page renders. Logged once per run. |
 | `uvx` not installed | Intake refuses with a clear error pointing at the deploy step. |
 | Asset manifest write fails | Card creation rolled back; PDF removed from attach scope. (Standard cb-write semantics.) |
@@ -158,7 +171,7 @@ The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AV
 ## Future review points
 
 - **Multi-document PDFs.** A single PDF containing several distinct documents (a scan batch with five letters, a combined billing statement + envelope, ...) becomes one card today. Worth revisiting once we see real volume — probably as a downstream agent action ("split this PDF into N cards") rather than at intake time.
-- **Tables as structured data.** Markdown tables are inline in `<text>`. If we ever want to query table contents (e.g. "extract every dollar amount across all utility bills"), we'd promote tables to addressable children of the card — `<table>` elements, or sibling cards in the attach scope.
+- **Tables as structured data.** Markdown tables are inline in the card body. If we ever want to query table contents (e.g. "extract every dollar amount across all utility bills"), we'd promote tables to addressable structure — a `tables:` frontmatter field, or sibling cards in the attach scope.
 - **Image classification at intake.** Currently off. If figure type ever becomes load-bearing for routing (e.g. "diagrams go here, photos go there"), turning on docling's picture classifier is cheap.
 - **VLM captioning vs `cb describe-images`.** Today we extract figures and rely on the existing image-description pipeline. If docling's VLM ever matches Gemini Flash quality at lower latency / cost, the consolidation might flip the other way.
 - **Other formats.** Docling supports docx, xlsx, pptx, html, asciidoc, markdown. Most of those don't need extraction at intake (they're already structured), but a `.docx` could plausibly route through the same code path with the same `.pdf.card`-shaped output. Defer until the demand is real.

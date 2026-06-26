@@ -13,7 +13,7 @@
  *
  * Lossy detection: walks the Docs API structure to count features that
  * don't survive markdown export (comments, footnotes, embedded images,
- * drawings, equations, unresolved suggestions, complex tables). Surfaces
+ * equations, unresolved suggestions, complex tables). Surfaces
  * the counts in the card's `<lossy>` block.
  */
 
@@ -47,7 +47,6 @@ interface LossyCounts {
   comments: number;
   footnotes: number;
   images: number;
-  drawings: number;
   equations: number;
   suggestions: number;
   tables: number;
@@ -58,7 +57,6 @@ function emptyLossy(): LossyCounts {
     comments: 0,
     footnotes: 0,
     images: 0,
-    drawings: 0,
     equations: 0,
     suggestions: 0,
     tables: 0,
@@ -73,10 +71,9 @@ function emptyLossy(): LossyCounts {
 function tallyLossyFromDocument(doc: DocumentStructure): LossyCounts {
   const counts = emptyLossy();
 
-  // Inline objects are images and drawings. Drawings have an
-  // `embeddedDrawingProperties` field on their inline object metadata; we
-  // don't pull that here, so just count everything as `images` for now.
-  // (Splitting images vs drawings would need a second pass over inlineObjects.)
+  // Inline objects are embedded images/drawings; markdown export drops them.
+  // We don't distinguish the two (the images-vs-drawings split wasn't useful),
+  // so count every inline object as an image.
   if (doc.inlineObjects) {
     counts.images = Object.keys(doc.inlineObjects).length;
   }
@@ -87,7 +84,9 @@ function tallyLossyFromDocument(doc: DocumentStructure): LossyCounts {
 
   const seenSuggestions = new Set<string>();
   for (const block of doc.body?.content ?? []) {
-    if (block.table !== undefined) {
+    // Only count tables whose structure can't survive a markdown table:
+    // nested tables or multi-paragraph cells. Plain grids round-trip fine.
+    if (block.table !== undefined && isComplexTable(block.table)) {
       counts.tables += 1;
     }
     if (!block.paragraph) continue;
@@ -95,6 +94,10 @@ function tallyLossyFromDocument(doc: DocumentStructure): LossyCounts {
       if (el.equation !== undefined) counts.equations += 1;
       const run = el.textRun;
       if (run) {
+        // Suggestion ranges only appear in the document body while a suggestion
+        // is pending; accepting or rejecting one removes it. So every suggestion
+        // id we see here is unresolved — there's no separate "resolved" flag on
+        // the Docs API body to filter by.
         for (const id of run.suggestedInsertionIds ?? []) seenSuggestions.add(id);
         for (const id of run.suggestedDeletionIds ?? []) seenSuggestions.add(id);
       }
@@ -103,6 +106,39 @@ function tallyLossyFromDocument(doc: DocumentStructure): LossyCounts {
   counts.suggestions = seenSuggestions.size;
 
   return counts;
+}
+
+/**
+ * A table is "complex" — and therefore lossy through markdown export — when a
+ * cell contains a nested table or more than one paragraph. The Docs API types
+ * `table` as `unknown` (the service deliberately doesn't model the full nested
+ * structure), so narrow it here at the parse boundary.
+ */
+function isComplexTable(table: unknown): boolean {
+  for (const row of arrayProp(table, "tableRows")) {
+    for (const cell of arrayProp(row, "tableCells")) {
+      let paragraphs = 0;
+      for (const el of arrayProp(cell, "content")) {
+        if (hasProp(el, "table")) return true; // nested table
+        if (hasProp(el, "paragraph")) paragraphs += 1;
+      }
+      if (paragraphs > 1) return true; // multi-paragraph cell
+    }
+  }
+  return false;
+}
+
+/** Read an array-valued property off an untyped Docs API node, or `[]`. */
+function arrayProp(node: unknown, key: string): unknown[] {
+  if (typeof node !== "object" || node === null) return [];
+  const value: unknown = Reflect.get(node, key);
+  return Array.isArray(value) ? value : [];
+}
+
+/** Whether an untyped Docs API node defines a (non-undefined) property. */
+function hasProp(node: unknown, key: string): boolean {
+  if (typeof node !== "object" || node === null) return false;
+  return Reflect.get(node, key) !== undefined;
 }
 
 function lossyToTemplateItems(

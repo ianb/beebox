@@ -17,6 +17,7 @@ import {
   type BoxScheduleHealth,
 } from "../../core/schedule-health-box.js";
 import type { TaskHealth } from "../../core/schedule-health.js";
+import { loadRunningScripts, type ScriptLock } from "../../core/schedule-state.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",
@@ -52,15 +53,23 @@ function describeRuns(task: TaskHealth, now: Date): string {
   return `${attempt}, ${success}`;
 }
 
-function printHealth(health: BoxScheduleHealth, { now, all }: { now: Date; all: boolean }): void {
+function printHealth(
+  health: BoxScheduleHealth,
+  { now, all, running }: { now: Date; all: boolean; running: Map<string, ScriptLock> },
+): void {
   const tasks = all ? health.tasks : health.tasks.filter((t) => t.status !== "disabled");
   if (tasks.length === 0) {
     console.log("No scheduled tasks.");
   }
   for (const task of tasks) {
-    const detail = [describeRuns(task, now), ...(task.reason ? [task.reason] : [])].join("; ");
+    const lock = running.get(task.name);
+    const detail = [
+      ...(lock ? [`running (PID ${lock.pid}, since ${formatDurationShort(now.getTime() - new Date(lock.startedAt).getTime())} ago)`] : []),
+      describeRuns(task, now),
+      ...(task.reason ? [task.reason] : []),
+    ].join("; ");
     console.log(
-      `  ${STATUS_GLYPHS[task.status]} ${task.name.padEnd(22)} ${describeStatus(task).padEnd(14)} ${detail}`
+      `  ${lock ? "▶" : STATUS_GLYPHS[task.status]} ${task.name.padEnd(22)} ${describeStatus(task).padEnd(14)} ${detail}`
     );
     if (isUnhealthy(task) && task.lastError) {
       console.log(`      error: ${task.lastError.split("\n")[0]}`);
@@ -68,6 +77,13 @@ function printHealth(health: BoxScheduleHealth, { now, all }: { now: Date; all: 
   }
   const hidden = health.tasks.length - tasks.length;
   if (hidden > 0) console.log(`  (${hidden} disabled — show with --all)`);
+
+  // Running scripts with no matching task card (e.g. ad-hoc / renamed scripts).
+  const taskNames = new Set(health.tasks.map((t) => t.name));
+  for (const [scriptName, lock] of running) {
+    if (taskNames.has(scriptName)) continue;
+    console.log(`  ▶ ${scriptName.padEnd(22)} ${"running".padEnd(14)} PID ${lock.pid}, triggered by ${lock.triggeredBy}`);
+  }
 
   const { scheduler } = health;
   if (scheduler.status === "running") {
@@ -88,11 +104,13 @@ export const healthCommand = new Command("health")
     const boxRoot = options.box ?? (await requireBoxRoot());
     const now = getBoxTime(boxRoot);
     const health = await loadScheduleHealth(boxRoot, now);
+    const running = await loadRunningScripts(boxRoot);
 
     if (options.json) {
-      console.log(JSON.stringify(health, null, 2));
+      const runningJson = [...running].map(([name, lock]) => ({ name, ...lock }));
+      console.log(JSON.stringify({ ...health, running: runningJson }, null, 2));
     } else {
-      printHealth(health, { now, all: options.all === true });
+      printHealth(health, { now, all: options.all === true, running });
     }
 
     if (health.tasks.some(isUnhealthy) || health.scheduler.status === "stale") {

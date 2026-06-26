@@ -3,11 +3,16 @@
  * sync toggle. Updates the box's calendar config via tRPC.
  */
 
+import { useEffect, useState } from "react";
 import { trpc, type RouterOutput } from "../../lib/trpc";
-import { CheckboxField } from "../ui/fields";
+import { CheckboxField, NumberField } from "../ui/fields";
+import { Row } from "../ui/Row";
 import { GoogleConnectLink } from "./GoogleConnectLink";
 
 type AvailableCalendar = RouterOutput["calendar"]["available"][number];
+
+const DEFAULT_DAYS_BACK = 30;
+const DEFAULT_DAYS_FORWARD = 90;
 
 export function CalendarSection() {
   const calendarsQuery = trpc.calendar.available.useQuery();
@@ -18,6 +23,26 @@ export function CalendarSection() {
   const calendars = calendarsQuery.data;
   const config = configQuery.data;
   const error = calendarsQuery.error?.message ?? configQuery.error?.message ?? null;
+
+  const [daysBack, setDaysBack] = useState<number | null>(null);
+  const [daysForward, setDaysForward] = useState<number | null>(null);
+
+  // Prefill the sync-window inputs once the config loads.
+  useEffect(() => {
+    if (!config) return;
+    setDaysBack(config.syncDaysBack ?? DEFAULT_DAYS_BACK);
+    setDaysForward(config.syncDaysForward ?? DEFAULT_DAYS_FORWARD);
+  }, [config]);
+
+  const saveSyncWindow = async (next: { syncDaysBack?: number; syncDaysForward?: number }) => {
+    if (!config) return;
+    try {
+      await updateMutation.mutateAsync({ ...config, ...next });
+      utils.calendar.invalidate();
+    } catch (_e) {
+      // error surfaced to the user via the mutation's error state
+    }
+  };
 
   const toggleCalendar = async (cal: AvailableCalendar) => {
     if (!config) return;
@@ -110,6 +135,31 @@ export function CalendarSection() {
           </div>
         ))}
       </div>
+
+      <h3 className="text-sm font-semibold text-warm-800 mt-6 mb-1">Sync window</h3>
+      <p className="text-sm text-warm-700 mb-3">
+        How many days of events to pull, relative to today.
+      </p>
+      <Row gap="md">
+        <NumberField
+          label="Days back"
+          value={daysBack}
+          onChange={setDaysBack}
+          onBlur={() => daysBack !== null && saveSyncWindow({ syncDaysBack: daysBack })}
+          min={0}
+          disabled={updateMutation.isPending}
+          className="w-32"
+        />
+        <NumberField
+          label="Days forward"
+          value={daysForward}
+          onChange={setDaysForward}
+          onBlur={() => daysForward !== null && saveSyncWindow({ syncDaysForward: daysForward })}
+          min={0}
+          disabled={updateMutation.isPending}
+          className="w-32"
+        />
+      </Row>
     </div>
   );
 }

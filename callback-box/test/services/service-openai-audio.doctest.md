@@ -1,37 +1,9 @@
 # OpenAI Audio service
 
-Fake OpenAI Audio records transcription and TTS calls, returning placeholder responses.
+Fake OpenAI Audio records TTS calls, returning placeholder responses.
 
 ```ts setup
 import { createFakeOpenAIAudio } from "../../src/services/openai-audio.js";
-```
-
-## Transcription returns configured text
-
-```ts
-const svc = createFakeOpenAIAudio({ transcriptionText: "Hello world" });
-const result = await svc.transcribe(Buffer.from("audio data"));
-result.text
-=> Hello world
-```
-
-```ts continue
-result.language
-=> en
-```
-
-## Transcription records calls
-
-```ts
-const svc = createFakeOpenAIAudio();
-await svc.transcribe(Buffer.from("data"), { filename: "test.webm", prompt: "English" });
-svc.transcriptions.length
-=> 1
-```
-
-```ts continue
-svc.transcriptions[0]?.filename
-=> test.webm
 ```
 
 ## TTS returns audio buffer

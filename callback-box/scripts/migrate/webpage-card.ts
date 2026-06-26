@@ -137,7 +137,7 @@ async function convertCommentary(absPath: string): Promise<ConvertOutcome> {
       title: fm["title"],
       source,
       captured,
-      frozen: frozenExists ? "attach/page.frozen" : undefined,
+      frozen: frozenExists ? { ref: "attach/page.frozen" } : undefined,
     },
     readable,
   );
@@ -173,7 +173,7 @@ async function convertRecord(absPath: string): Promise<ConvertOutcome> {
       title: name,
       source: url,
       excerpt: fm["description"],
-      frozen: frozenExists ? "attach/page.frozen" : undefined,
+      frozen: frozenExists ? { ref: "attach/page.frozen" } : undefined,
     },
     body,
   );

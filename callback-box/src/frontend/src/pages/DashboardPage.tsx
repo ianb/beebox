@@ -2,7 +2,6 @@
  * Dashboard page — single scrollable overview of the box.
  */
 
-import { useState } from "react";
 import { useBusSubscription } from "../hooks/useBusSubscription";
 import { trpc } from "../lib/trpc";
 import { HeaderStrip } from "../components/dashboard/HeaderStrip";
@@ -11,13 +10,10 @@ import { ScheduleOverview } from "../components/dashboard/ScheduleOverview";
 import { RecentActivity } from "../components/dashboard/RecentActivity";
 import { SystemInfo } from "../components/dashboard/SystemInfo";
 import { HealthWarnings } from "../components/dashboard/HealthWarnings";
-import { ActionModal, type ActionType } from "../components/dashboard/ActionModal";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 
 export function DashboardPage() {
-  const [activeAction, setActiveAction] = useState<ActionType>(null);
-
   const utils = trpc.useUtils();
   const statusQuery = trpc.status.status.useQuery();
   const healthQuery = trpc.health.check.useQuery();
@@ -60,7 +56,6 @@ export function DashboardPage() {
       <HeaderStrip
         status={status}
         connected={connected}
-        onAction={setActiveAction}
       />
 
       <Column overflow="auto" className="flex-1">
@@ -89,12 +84,6 @@ export function DashboardPage() {
       </Column>
 
       <SystemInfo status={status} />
-
-      <ActionModal
-        action={activeAction}
-        onClose={() => setActiveAction(null)}
-        onComplete={invalidateAll}
-      />
     </Column>
   );
 }

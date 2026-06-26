@@ -29,7 +29,8 @@ navigation:
 destinations:
   - for: [triage]
     rules: Anything describing how to cook a dish.
-    procedure-ref: archive-recipe.procedure.card
+    procedure:
+      ref: archive-recipe.procedure.card
 ---
 `,
 );

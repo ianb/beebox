@@ -12,7 +12,6 @@ import {
   getDefaultTemplate,
 } from "../../src/schemas/index.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
-import { createCalendarReviewJobTemplate } from "../../src/schemas/calendar-review-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
 import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
@@ -37,9 +36,6 @@ getCardTypes().includes("question")
 => true
 
 getCardTypes().includes("intake-job")
-=> true
-
-getCardTypes().includes("calendar-review-job")
 => true
 
 getCardTypes().includes("webpage")
@@ -224,63 +220,6 @@ items:
 ---
 ```
 
-## Calendar Review Job
-
-A calendar review job groups calendar changes (new, updated, deleted events):
-
-```ts
-createCalendarReviewJobTemplate({
-  source: "google-calendar",
-  description: "2 calendar changes to review",
-  changes: [
-    { action: "new", ref: "store/calendar/2026-02-25_abc.ics", summary: "Dentist appointment" },
-    { action: "updated", ref: "store/calendar/2026-02-22_def.ics", summary: "Standup — time changed" },
-  ],
-})
-=>
----
-status: pending
-created: «*»
-source: google-calendar
-priority: normal
-description: 2 calendar changes to review
-changes:
-  - action: new
-    summary: Dentist appointment
-    ref: store/calendar/2026-02-25_abc.ics
-  - action: updated
-    summary: Standup — time changed
-    ref: store/calendar/2026-02-22_def.ics
----
-```
-
-Deleted events can include the original ICS content under `ics:`:
-
-```ts
-const out = createCalendarReviewJobTemplate({
-  source: "google-calendar",
-  description: "1 deletion",
-  changes: [
-    { action: "deleted", summary: "Cancelled meeting", icsContent: "BEGIN:VCALENDAR\nBEGIN:VEVENT\nSUMMARY:Cancelled\nEND:VEVENT\nEND:VCALENDAR" },
-  ],
-});
-out.includes("action: deleted") && out.includes("BEGIN:VCALENDAR")
-=> true
-```
-
-Supports custom priority:
-
-```ts
-const out = createCalendarReviewJobTemplate({
-  source: "google-calendar",
-  description: "test",
-  changes: [{ action: "new", summary: "test" }],
-  priority: "low",
-});
-out.includes("priority: low")
-=> true
-```
-
 ## Webpage
 
 A webpage card is a captured external page: provenance in frontmatter, the
@@ -320,7 +259,8 @@ title: Example Page
 source: https://example.com/article
 captured: 2026-06-15T12:00:00Z
 siteName: Example
-frozen: attach/page.frozen
+frozen:
+  ref: attach/page.frozen
 ---
 Body.
 ```

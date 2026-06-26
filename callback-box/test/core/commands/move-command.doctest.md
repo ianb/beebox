@@ -200,6 +200,31 @@ refs:
 body
 ```
 
+## Nested frontmatter `ref:` (under a non-`ref` key) rewritten
+
+A card reference is always stored under a key named exactly `ref`, even when
+nested under another field (e.g. a landmark destination's
+`procedure:\n  ref: …`). The move rewrites it the same as a top-level `ref:`.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/archive.procedure.card", "---\nsteps: []\n---\nbody\n");
+await box.write(
+  "store/recipes/Recipes.landmark.card",
+  "---\ndestinations:\n  - for: [triage]\n    procedure:\n      ref: archive.procedure.card\n---\n",
+);
+
+await mv(box, { from: "store/recipes/archive.procedure.card", to: "store/handlers/archive.procedure.card" });
+await box.read("store/recipes/Recipes.landmark.card")
+=>
+---
+destinations:
+  - for: [triage]
+    procedure:
+      ref: ../handlers/archive.procedure.card
+---
+```
+
 ## Single card move: `ref=` strings in referrers rewritten (relative + absolute)
 
 Moving a card rewrites references to it in other cards via substring rewrite —

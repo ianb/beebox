@@ -17,8 +17,7 @@ import { HistoryPage } from "./pages/HistoryPage";
 import { CapturePage } from "./pages/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
-import { SharePage } from "./pages/SharePage";
-import { AppLayout, BoxRedirect, ShareRedirect, BrowsePageWrapper } from "./app-shell";
+import { AppLayout, BoxRedirect, BrowsePageWrapper } from "./app-shell";
 import { CardViewPage } from "./pages/card/CardViewPage";
 import { ViewPage } from "./pages/ViewPage";
 import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
@@ -38,20 +37,6 @@ const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/",
   component: BoxRedirect,
-});
-
-const shareRedirectRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/share",
-  component: ShareRedirect,
-});
-
-// --- Box-scoped standalone routes (no nav) ---
-
-const shareRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/$boxSlug/share",
-  component: SharePage,
 });
 
 // --- Box layout (nav wrapper) ---
@@ -196,8 +181,6 @@ const boxCatchAllRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  shareRedirectRoute,
-  shareRoute,
   boxLayoutRoute.addChildren([
     dashboardRoute,
     chatRoute,

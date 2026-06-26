@@ -14,7 +14,7 @@ import { type Connector } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
-import { createNewIntakeJob } from "../../connectors/intake-utils.js";
+import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
@@ -343,7 +343,7 @@ async function createBatchedIntakeJobs(
   const INTAKE_BATCH_SIZE = 10;
   for (let i = 0; i < items.length; i += INTAKE_BATCH_SIZE) {
     const batch = items.slice(i, i + INTAKE_BATCH_SIZE);
-    const jobPath = await createNewIntakeJob({
+    const jobPath = await createOrAppendIntakeJob({
       boxRoot,
       source: opts.source,
       items: batch,

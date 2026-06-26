@@ -76,6 +76,9 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // First agent-applied (procedure-kind) migration: rewrite box-local views to
   // the post-cleanup ViewCard shape. See docs/plans/agent-applied-migrations.md.
   { name: "view-card-shape",   procedure: "view-card-shape" },
+  // Normalize bare-string card refs onto a `ref` key (landmark procedure-ref,
+  // webpage/commentary frozen). See the user-story audit (D11).
+  { name: "normalize-ref-keys", script: "scripts/migrate/normalize-ref-keys.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

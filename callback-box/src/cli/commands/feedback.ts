@@ -148,8 +148,8 @@ export const feedbackCommand = new Command("feedback")
 
       process.stdout.write(`Feedback recorded: ${relPath}\n`);
     } catch (error) {
-      // Silent failure — feedback is best-effort and shouldn't block work
+      // Best-effort: feedback shouldn't block work. Note the failure on stderr
+      // but exit zero so the agent's task isn't interrupted.
       process.stderr.write(`cb feedback: ${(error as Error).message}\n`);
-      process.exit(1);
     }
   });

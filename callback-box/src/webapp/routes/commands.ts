@@ -113,46 +113,6 @@ export async function registerCommandRoutes(
     }
   );
 
-  // POST /api/commands/execute - Execute a command with streaming output
-  server.post<{ Body: ExecuteBody }>(
-    "/api/commands/execute",
-    async (request, reply) => {
-      const { command, args } = request.body ?? {};
-
-      if (!command) {
-        return reply.status(400).send({ error: "command is required" });
-      }
-
-      const cmd = getCommand(command);
-      if (!cmd) {
-        return reply.status(404).send({ error: `Unknown command: ${command}` });
-      }
-
-      // Set up SSE-style streaming response
-      reply.raw.setHeader("Content-Type", "text/event-stream");
-      reply.raw.setHeader("Cache-Control", "no-cache");
-      reply.raw.setHeader("Connection", "keep-alive");
-
-      const resultLine = await executeCommandStreaming({
-        command,
-        args: args ?? {},
-        boxRoot,
-        emit: (line) => reply.raw.write(`data: ${JSON.stringify(line)}\n\n`),
-      });
-
-      if (resultLine.type === "result") {
-        eventBus.emit("command-complete", {
-          command,
-          success: resultLine.success ?? false,
-          timestamp: new Date().toISOString(),
-        });
-      }
-
-      reply.raw.end();
-      return reply;
-    }
-  );
-
   // POST /api/commands/execute-sync - Execute a command synchronously (for simpler clients)
   server.post<{ Body: ExecuteBody }>(
     "/api/commands/execute-sync",

@@ -23,7 +23,6 @@ const LossyType = z.enum([
   "comments",
   "footnotes",
   "images",
-  "drawings",
   "equations",
   "suggestions",
   "tables",
@@ -78,7 +77,7 @@ resolved version.
 ## Lossy content
 The \`lossy:\` field enumerates features in the upstream Doc that don't
 survive markdown export (comments, footnotes, embedded images,
-drawings, equations, suggestions, complex tables). When present,
+equations, suggestions, complex tables). When present,
 pushing local edits will replace those features with the markdown
 body — destroying them. If \`lossy\` is non-empty and a push is
 intended, surface the loss to the user before committing.

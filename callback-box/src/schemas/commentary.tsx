@@ -67,10 +67,11 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
     title: z.string().optional(),
     // Captured-web-page metadata (set by the clerk capture flow): the original
     // page URL, the capture date (YYYY-MM-DD), and an in-box ref to the frozen
-    // snapshot. Rendered as a header; all optional.
+    // snapshot. Rendered as a header; all optional. `frozen` is a card ref —
+    // stored under a `ref` key like every other card reference.
     source: z.string().optional(),
     captured: z.string().optional(),
-    frozen: z.string().optional(),
+    frozen: z.object({ ref: z.string() }).optional(),
     body: body(z.string()),
   },
   instructions: `# Commentary Cards

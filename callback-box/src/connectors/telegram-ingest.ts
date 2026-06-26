@@ -1,11 +1,13 @@
 /**
  * Ingest a single Telegram update into a chat-thread file: ensure the thread
- * and person entries exist, then append the message. Pure filesystem effect —
- * no git, no jobs (callers handle staging/commits).
+ * and person entries exist, then append the message. Filesystem effect plus a
+ * `git add` of any new/refreshed person card (so it gets committed in the
+ * caller's batch) — thread commits and job creation stay with the caller.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { stageFiles } from "../cli/lib/git.js";
 import {
   safeFilename,
   ensureThreadFile,
@@ -53,7 +55,7 @@ export async function processUpdateToThread(opts: {
     // chat-thread location (threads live at varying depths).
     if (personSlug) personRef = `/people/${personSlug}.person.card`;
 
-    personFile = await updatePersonEntry({
+    const person = await updatePersonEntry({
       boxRoot,
       connector: "telegram",
       connectorId: msg.from.id,
@@ -61,6 +63,10 @@ export async function processUpdateToThread(opts: {
       ...(msg.from.last_name != null ? { lastName: msg.from.last_name } : {}),
       ...(msg.from.username != null ? { username: msg.from.username } : {}),
     });
+    personFile = person.metadataPath;
+    // Stage the seeded/refreshed person card so the caller's commit picks it
+    // up; the metadata json is surfaced via personFile and staged by callers.
+    if (person.cardPath) await stageFiles(boxRoot, [person.cardPath]);
   }
 
   // Ensure thread file exists (with description and initial participant)

@@ -237,12 +237,33 @@ export async function createChatJob(options: {
   return path.relative(boxRoot, jobPath);
 }
 
+export interface UpdatePersonResult {
+  /**
+   * Relative path to the `people/<slug>.person.card`, returned when the card
+   * was created or refreshed (so the caller can stage it). `null` when the
+   * card already existed and wasn't touched.
+   */
+  cardPath: string | null;
+  /**
+   * Relative path to the connector metadata json
+   * (`people/<slug>/<connector>.json`), returned when it was written.
+   * `null` when the on-disk metadata already matched.
+   */
+  metadataPath: string | null;
+}
+
 /**
  * Update or create a person's contact file in the people directory.
  *
  * Also ensures a minimal `people/<slug>.person.card` exists so refs from
  * chat-thread and similar can resolve. Without that, every newly-seen
  * Telegram correspondent triggers a broken-reference at validate time.
+ *
+ * With `force: true`, an existing person card has its connector-derived
+ * identity (`name`) refreshed in place — agent-owned fields (status, contact,
+ * role, called, contains, body, …) are preserved untouched. Username and
+ * numeric ids have no field in the person-card schema; they live in the
+ * sibling `<connector>.json` metadata, which is always kept current.
  */
 export async function updatePersonEntry(options: {
   boxRoot: string;
@@ -251,11 +272,12 @@ export async function updatePersonEntry(options: {
   firstName: string;
   lastName?: string;
   username?: string;
-}): Promise<string | null> {
-  const { boxRoot, connector, firstName, lastName, username } = options;
+  force?: boolean;
+}): Promise<UpdatePersonResult> {
+  const { boxRoot, connector, firstName, lastName, username, force } = options;
   const displayName = [firstName, lastName].filter(Boolean).join(" ");
   const slug = safeFilename(displayName);
-  if (!slug) return null;
+  if (!slug) return { cardPath: null, metadataPath: null };
 
   const personDir = path.join(boxRoot, "people", slug);
   const filePath = path.join(personDir, `${connector}.json`);
@@ -263,15 +285,25 @@ export async function updatePersonEntry(options: {
 
   // Seed a minimal person card if none exists. The connector knows the
   // display name and not much else; the boxholder is expected to enrich
-  // the card later. Doesn't overwrite existing cards.
+  // the card later. An existing card is left alone unless `force` is set,
+  // in which case its `name` is refreshed without clobbering agent fields.
+  let cardChanged = false;
+  let cardExists = true;
   try {
     await fs.access(personCardPath);
   } catch (_e) {
-    // access() throws when no person card exists yet — that's the signal to
-    // seed a minimal one. The error carries no actionable detail.
+    // access() throws when no person card exists yet — the signal to seed a
+    // minimal one. The error carries no actionable detail.
+    cardExists = false;
+  }
+  if (!cardExists) {
     const cardYaml = `status: active\nname: ${displayName}\n`;
     await fs.writeFile(personCardPath, `---\n${cardYaml}---\n`);
+    cardChanged = true;
+  } else if (force) {
+    cardChanged = await refreshPersonCardName(personCardPath, displayName);
   }
+  const cardPath = cardChanged ? path.relative(boxRoot, personCardPath) : null;
 
   const data: Record<string, string | number> = {
     [`${connector}Id`]: options.connectorId,
@@ -284,7 +316,7 @@ export async function updatePersonEntry(options: {
     const existing = await fs.readFile(filePath, "utf-8");
     const parsed = JSON.parse(existing);
     if (JSON.stringify(parsed) === JSON.stringify(data)) {
-      return null;
+      return { cardPath, metadataPath: null };
     }
   } catch (_e) {
     // File doesn't exist (or is unparseable) — fall through to write it.
@@ -292,5 +324,25 @@ export async function updatePersonEntry(options: {
 
   await fs.mkdir(personDir, { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(data, null, 2) + "\n");
-  return path.relative(boxRoot, filePath);
+  return { cardPath, metadataPath: path.relative(boxRoot, filePath) };
+}
+
+/**
+ * Refresh the `name` field of an existing person card from the connector's
+ * current display name, preserving every other (agent-owned) field and the
+ * markdown body. Returns whether the card actually changed.
+ */
+async function refreshPersonCardName(cardPath: string, name: string): Promise<boolean> {
+  const content = await fs.readFile(cardPath, "utf-8");
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return false;
+  const parsed = parseYaml(split.frontmatterText) as unknown;
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return false;
+  }
+  const fields: Record<string, unknown> = { ...parsed };
+  if (fields["name"] === name) return false;
+  fields["name"] = name;
+  await fs.writeFile(cardPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
+  return true;
 }

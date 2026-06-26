@@ -44,7 +44,7 @@ The webpage card carries the provenance and the readable rendering as its body:
 
 ```ts continue
 const wpText = await fs.readFile(path.join(box, "store/reading/Foo.webpage.card"), "utf8");
-[wpText.includes("source: https://example.com/foo"), wpText.includes("frozen: attach/page.frozen"), wpText.includes("The readable body with a distinctive span")].join(",")
+[wpText.includes("source: https://example.com/foo"), wpText.includes("frozen:\n  ref: attach/page.frozen"), wpText.includes("The readable body with a distinctive span")].join(",")
 => true,true,true
 ```
 

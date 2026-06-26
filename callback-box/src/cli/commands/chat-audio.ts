@@ -251,6 +251,7 @@ interface RetranscribeOptions {
   file?: string;
   timeout?: string;
   diarize?: boolean;
+  timestamps?: boolean;
 }
 
 export const retranscribeCommand = new Command("retranscribe")
@@ -259,6 +260,7 @@ export const retranscribeCommand = new Command("retranscribe")
   .option("--diarize", "Label speakers in the output (uses Voxtral — the only HQ service with diarization)")
   .option("--file <path>", "Transcribe this audio file instead of fetching the last voice message")
   .option("--timeout <seconds>", "How long to wait for a browser tab to answer (default 10)")
+  .option("--timestamps", "Request word-level timing and write it to a `<audio>.words.json` sidecar (voxtral/whisper/deepgram only)")
   .action(async (options: RetranscribeOptions) => {
     const label = "cb chat retranscribe";
     let service: HqTranscriptionService | undefined;
@@ -280,6 +282,10 @@ export const retranscribeCommand = new Command("retranscribe")
 
     let audio: Buffer;
     let filename: string;
+    // Where the audio lives on disk; the word-timestamp sidecar is written
+    // alongside it. For a fetched last-message there's no source file, so we
+    // anchor the sidecar in the cwd under the synthesized filename.
+    let audioPath: string;
     let recordedAt: string | null = null;
     let realtimeTranscript: string | null = null;
     if (options.file !== undefined) {
@@ -292,6 +298,7 @@ export const retranscribeCommand = new Command("retranscribe")
         process.exit(1);
       }
       filename = path.basename(filePath);
+      audioPath = filePath;
     } else {
       const fetched = await fetchLastAudio({
         commandLabel: label,
@@ -299,6 +306,7 @@ export const retranscribeCommand = new Command("retranscribe")
       });
       audio = fetched.audio;
       filename = `last-message.${audioExtension(fetched.contentType)}`;
+      audioPath = path.resolve(filename);
       recordedAt = fetched.recordedAt;
       realtimeTranscript = fetched.text;
     }
@@ -306,15 +314,34 @@ export const retranscribeCommand = new Command("retranscribe")
     const boxRoot = await findBoxRoot(process.cwd());
     try {
       const result = await transcribeAudioHq(
-        { audioBuffer: audio, filename, ...(boxRoot !== null ? { boxRoot } : {}) },
+        {
+          audioBuffer: audio,
+          filename,
+          ...(boxRoot !== null ? { boxRoot } : {}),
+          ...(options.timestamps === true ? { options: { wordTimestamps: true } } : {}),
+        },
         { service },
       );
       console.log(result.text.trim());
+
+      // When asked, write word-level timing to a sidecar next to the audio
+      // rather than inlining it into the transcript body.
+      let sidecarPath: string | null = null;
+      if (options.timestamps === true) {
+        if ("words" in result && result.words.length > 0) {
+          sidecarPath = `${audioPath}.words.json`;
+          await fs.writeFile(sidecarPath, JSON.stringify(result.words, null, 2) + "\n");
+        } else {
+          console.error(`${label}: --timestamps requested but service ${service ?? "(box default)"} returned no word timing`);
+        }
+      }
+
       // Footer: what produced this, and the realtime transcript it replaces
       // so the caller can see what the live pass got wrong.
       console.log("--");
       console.log(`service: ${service ?? "(box default)"}`);
       if (result.diarized === true) console.log("diarized: true");
+      if (sidecarPath !== null) console.log(`word-timestamps: ${sidecarPath}`);
       if (recordedAt !== null) console.log(`recorded-at: ${recordedAt}`);
       if (realtimeTranscript !== null) console.log(`realtime-transcript: ${realtimeTranscript}`);
     } catch (e) {

@@ -37,11 +37,6 @@ import {
 } from "./calendar-config.js";
 import { stageFiles, commit, getStatus } from "../cli/lib/git.js";
 import {
-  createCalendarReviewJobTemplate,
-  type CalendarChangeInput,
-} from "../schemas/calendar-review-job.js";
-import { getBoxTimeISO } from "../cli/lib/time.js";
-import {
   buildNarrativeCommitMessage,
   type SyncNote,
 } from "./google-calendar-notes.js";
@@ -213,75 +208,9 @@ class GoogleCalendarConnector implements Connector {
       }
     }
 
-    // Create calendar-review job if there are reviewable changes
-    const jobs: string[] = [];
-    const reviewableNotes = allNotes.filter(
-      (n) => n.action === "new" || n.action === "updated" || n.action === "cancelled" || n.action === "deleted"
-    );
-    if (reviewableNotes.length > 0 && !isFullResync) {
-      const jobPath = await this.createCalendarReviewJob(reviewableNotes);
-      if (jobPath) jobs.push(jobPath);
-    }
-
     const result: SyncResult = { success: true, created, updated };
     if (pushed.length > 0) result.pushed = pushed;
-    if (jobs.length > 0) result.jobs = jobs;
     return result;
-  }
-
-  /**
-   * Create a calendar-review job from sync notes.
-   * Priority heuristic: if any event starts today or tomorrow, normal; otherwise low.
-   */
-  private async createCalendarReviewJob(notes: SyncNote[]): Promise<string | null> {
-    const now = new Date();
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 2);
-    tomorrow.setHours(0, 0, 0, 0);
-
-    const hasUrgent = notes.some((n) => {
-      if (!n.eventStart) return false;
-      return n.eventStart <= tomorrow;
-    });
-    const priority = hasUrgent ? "normal" : "low";
-
-    const changes: CalendarChangeInput[] = notes.map((n) => {
-      const action = n.action === "cancelled" ? "deleted" : n.action;
-      const change: CalendarChangeInput = {
-        action: action as "new" | "updated" | "deleted",
-        summary: n.summary + (n.detail ? ` — ${n.detail}` : ""),
-      };
-      if (n.ref) change.ref = n.ref;
-      if (n.icsContent) change.icsContent = n.icsContent;
-      return change;
-    });
-
-    const jobsDir = path.join(this.boxRoot, "box/jobs");
-    await fs.mkdir(jobsDir, { recursive: true });
-
-    const timestamp = getBoxTimeISO(this.boxRoot)
-      .replace(/[.:]/g, "-")
-      .slice(0, 19);
-    const jobFilename = `${timestamp}.calendar-review.job.card`;
-    const jobPath = path.join(jobsDir, jobFilename);
-    const jobRelPath = path.relative(this.boxRoot, jobPath);
-
-    const content = createCalendarReviewJobTemplate({
-      created: getBoxTimeISO(this.boxRoot),
-      source: "google-calendar",
-      description: `${changes.length} calendar change${changes.length === 1 ? "" : "s"} to review`,
-      changes,
-      priority,
-    });
-    await fs.writeFile(jobPath, content);
-
-    await stageFiles(this.boxRoot, [jobRelPath]);
-    await commit(this.boxRoot, {
-      message: "Create calendar-review job",
-      trailers: { "Created-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
-    });
-
-    return jobRelPath;
   }
 
   /**
