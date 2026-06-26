@@ -29,9 +29,14 @@ export function CommentaryView({ data, onNavigate }: RendererProps) {
   const captured = frontmatter["captured"];
   const frozen = frontmatter["frozen"];
   const sourceUrl = typeof source === "string" && source !== "" ? source : null;
+  // `frozen` is a card ref stored as `{ ref: <path> }`; pull the path off it.
+  const frozenPath =
+    typeof frozen === "object" && frozen !== null && "ref" in frozen && typeof frozen.ref === "string"
+      ? frozen.ref
+      : null;
   const frozenUrl =
-    typeof frozen === "string" && frozen !== ""
-      ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozen)}`
+    frozenPath !== null && frozenPath !== ""
+      ? `${getApiBase()}/files/${resolveRelativePath(data.path, frozenPath)}`
       : null;
   const capturedAt = typeof captured === "string" && captured !== "" ? captured : null;
 

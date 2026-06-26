@@ -2591,7 +2591,6 @@ The claimed file exists at the correct path and implements exactly what the user
 ### Detect and resolve concurrent calendar event edits  
 ❌ INACCURATE
 
-IAN: sounds like remote change conflicts are not implemented and should be
 
 > As a user, I want concurrent edits to calendar events to be detected via content hash, so that local changes are pushed back to Google rather than silently overwritten by incoming changes.
 
@@ -5269,7 +5268,6 @@ The claimed file exists at the exact path specified. The implementation fully ma
 ### Move and rename cards with reference updates  
 ❌ INACCURATE
 
-IAN: Oh... it should be updating any ref attribtues? procedure-ref isn't good, because all refs should be in a key that is "ref" exactly, like procedure: {ref: card location} - so if in fact there is a ref without the "ref" name then that needs fixing too.
 
 > As a user, I want to move or rename a card and automatically update all internal references (card links, landmarks, procedures), so that reorganization doesn't break the structure.
 

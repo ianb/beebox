@@ -26,7 +26,8 @@ navigation:
 destinations:
   - for: [triage]
     rules: Cooking instructions.
-    procedure-ref: archive.procedure.card
+    procedure:
+      ref: archive.procedure.card
 ---
 `,
 );
@@ -77,7 +78,8 @@ navigation:
   symbol: 🍳
 destinations:
   - for: [triage]
-    procedure-ref: archive.procedure.card
+    procedure:
+      ref: archive.procedure.card
 ---
 `,
 );
@@ -116,7 +118,8 @@ navigation:
   symbol: 🍳
 destinations:
   - for: [triage]
-    procedure-ref: archive.procedure.card
+    procedure:
+      ref: archive.procedure.card
 ---
 `,
 );

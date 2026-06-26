@@ -259,7 +259,8 @@ title: Example Page
 source: https://example.com/article
 captured: 2026-06-15T12:00:00Z
 siteName: Example
-frozen: attach/page.frozen
+frozen:
+  ref: attach/page.frozen
 ---
 Body.
 ```

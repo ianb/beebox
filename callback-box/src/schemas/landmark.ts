@@ -17,7 +17,8 @@
  *   destinations:                    # filing targets
  *     - for: [triage]
  *       rules: "Recipes — anything describing how to cook a dish."
- *       procedure-ref: archive-recipe.procedure.card
+ *       procedure:
+ *         ref: archive-recipe.procedure.card
  *   ---
  *
  * At least one role should be present; a landmark with neither is inert.
@@ -94,13 +95,14 @@ export type LandmarkNavigationData = z.infer<typeof LandmarkNavigation>;
 /**
  * Filing-target role: marks the landmark's directory as a destination for
  * one or more *kinds* of content. `for` lists the kinds (e.g. `triage`,
- * `commentary`). `rules`/`procedure-ref` are only meaningful when `for`
- * includes `triage`.
+ * `commentary`). `rules`/`procedure` are only meaningful when `for`
+ * includes `triage`. `procedure` is a card ref — `{ ref: <path> }` — to the
+ * handler procedure run at the handle stage.
  */
 export const LandmarkDestination = z.object({
   for: z.array(z.string()),
   rules: z.string().optional(),
-  "procedure-ref": z.string().optional(),
+  procedure: z.object({ ref: z.string() }).optional(),
 });
 export type LandmarkDestinationData = z.infer<typeof LandmarkDestination>;
 
@@ -144,7 +146,7 @@ navigation:
     prose: "off"
 \`\`\`
 
-In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings substituted per match: \`\${path}\` is the matched card's path, any other \`\${field}\` reads that field from the matched card's frontmatter. When omitted, \`template-ref\` defaults to \`\${path}\`.
+In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings substituted per match: \`\${path}\` is the matched card's path, any other \`\${field}\` reads that field from the matched card's frontmatter. When omitted, \`template-ref\` defaults to \`\${path}\`. (\`template-ref\` is a \`\${…}\` substitution *pattern*, not a card ref — it is not stored under a \`ref\` key.)
 
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and link to it.
 
@@ -154,8 +156,9 @@ In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings 
 destinations:
   - for: [triage]           # kinds: triage (inbox→triage routing target) and/or commentary
     rules: "Recipes — anything describing how to cook a dish."  # read by the triage agent
-    procedure-ref: archive-recipe.procedure.card                # handler run at the handle stage
-  - for: [commentary]       # a commentary-only spot needs neither rules nor procedure-ref
+    procedure:                # handler run at the handle stage; a card ref ({ ref: <path> })
+      ref: archive-recipe.procedure.card
+  - for: [commentary]       # a commentary-only spot needs neither rules nor procedure
 \`\`\`
 
 A pure routing target (an archive humans don't browse) can have only \`destinations\`; a pure bookmark can have only \`navigation\`.

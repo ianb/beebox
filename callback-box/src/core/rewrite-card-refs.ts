@@ -156,8 +156,11 @@ function unquote(value: string): { inner: string; quote: string } {
 
 /**
  * Rewrite refs inside the frontmatter block (between the leading `---` and the
- * next `---`). Only the `ref:` and `refs:` keys carry refs, matching the
- * frontmatter ref convention. Returns the text with that region rewritten.
+ * next `---`). It rewrites any `ref:` scalar or `refs:` list at *any* nesting,
+ * not just at the top level — a card reference is always stored under a key
+ * named exactly `ref` (or `refs`), so a nested `procedure:\n  ref: <path>`,
+ * `frozen:\n  ref: <path>`, etc. are rewritten the same as a top-level
+ * `ref:`. Returns the text with that region rewritten.
  */
 function rewriteFrontmatter(text: string, wrap: RefTransform): string {
   if (!text.startsWith("---\n")) return text;

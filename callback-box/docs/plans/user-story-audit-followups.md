@@ -36,11 +36,26 @@ every comment is traceable back to its story.
   full-wakeup path (one job file per source instead of per batch) — flagged as a
   possible trade-off. [69] (model-switch) is **deferred** — it needs a live
   Claude invocation to test, not an automated test.
-- **Catalog:** 413 → **400 stories**; remaining `IAN:` lines = the 15 bucket-D
-  features + [69], the only open work.
-- **Bucket D — not started.** Tracked by the surviving `IAN:` lines; the larger
-  ones (D4 PDF, D7 calendar conflicts, D8 Docs comments→sidecar, D9 Drive
-  mounting, D11 ref-normalization) each warrant their own plan.
+- **Catalog:** 413 → **400 stories**; remaining `IAN:` lines (14) = the open
+  bucket-D features still to build + [69].
+- **Bucket D — partially done:**
+  - **D7 (calendar remote-conflict) — built.** `EventFileEntry` now stores the
+    remote `updated` timestamp; on a local edit, if the remote also changed since
+    last pull, remote wins (local edit discarded + warning), else push as before.
+  - **D11 (ref-attribute normalization) — built.** `procedure-ref` (landmark) and
+    `frozen` (webpage + commentary) were bare-string refs not under a `ref` key;
+    normalized to `<field>: { ref: … }`, which makes `walkForRefs` + `cb mv`
+    rewriting work automatically. Migrator `scripts/migrate/normalize-ref-keys.ts`
+    added — **run it against each box** to migrate existing cards.
+    (`question-ref` left as-is: its ref already lives under a `ref` key, so it's
+    compliant; `template-ref` is a `${…}` substitution pattern, not a card ref.)
+  - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
+    card-shape examples refreshed to YAML; build deferred.
+  - **D8 (Docs/Sheets comments → sidecar)** and **D9 (Drive mounting/browsing)** —
+    parked as entries in `docs/ideas.md`.
+  - **Remaining (unstarted):** D1 questions overhaul, D2 todo multi-state, D3
+    frontmatter write, D5 procedure validation, D6 retrospective integration, D10
+    asset-manifest completion. Tracked by the surviving `IAN:` lines.
 
 ## Summary
 

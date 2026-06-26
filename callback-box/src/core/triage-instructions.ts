@@ -96,7 +96,7 @@ export async function compileTriageInstructions(
       name: deriveCategoryName(normalizedDir),
       dir: normalizedDir,
       rules: triageDest.rules?.trim() ?? "",
-      procedureRef: triageDest["procedure-ref"] ?? null,
+      procedureRef: triageDest.procedure?.ref ?? null,
     });
   }
 

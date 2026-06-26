@@ -106,7 +106,10 @@ async function tryPushLocalEdit(
   // Patch succeeded — rewrite file from Google's response to normalize
   const patchedIcs = eventToIcs(patchResult, icsOpts);
   await fs.writeFile(filePath, patchedIcs);
-  state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs) };
+  state.eventFiles[event.id] = {
+    filename, calendarId: icsOpts.calendarId, contentHash: contentHash(patchedIcs),
+    remoteUpdated: patchResult.updated,
+  };
   acc.updated.push(relPath);
   acc.notes.push({
     action: "pushed",
@@ -174,17 +177,39 @@ async function reconcileEvent(
       // File missing — localContent stays undefined and we proceed to write the fresh ICS; the read is only for local-edit detection, not required.
     }
 
+    let remoteConflict = false;
     if (localContent && storedHash && contentHash(localContent) !== storedHash) {
-      const handled = await tryPushLocalEdit(event, {
-        calendar, icsOpts, filePath, relPath, filename, localContent,
-        existingEntry, state, acc,
-      });
-      if (handled) return;
+      const storedRemoteUpdated = typeof existingEntry === "string" ? undefined : existingEntry.remoteUpdated;
+      const remoteChanged = storedRemoteUpdated !== undefined && event.updated !== undefined
+        && event.updated !== storedRemoteUpdated;
+      if (remoteChanged) {
+        // Conflict: the event changed both locally and remotely since the last
+        // pull. Remote wins — discard the local edit and fall through to the
+        // normal write path, which overwrites the local file with Google's ICS.
+        remoteConflict = true;
+        console.warn(
+          `  Local edit to ${filename} discarded — event also changed remotely (remote wins)`,
+        );
+        acc.notes.push({
+          action: "updated",
+          summary: event.summary || filename,
+          detail: "local edit discarded — event also changed remotely (remote wins)",
+          ref: relPath,
+        });
+      } else {
+        const handled = await tryPushLocalEdit(event, {
+          calendar, icsOpts, filePath, relPath, filename, localContent,
+          existingEntry, state, acc,
+        });
+        if (handled) return;
+      }
     }
 
-    recordUpsertNote(event, {
-      isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, acc,
-    });
+    if (!remoteConflict) {
+      recordUpsertNote(event, {
+        isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, acc,
+      });
+    }
   } else {
     recordUpsertNote(event, {
       isExisting: false, localContent: undefined, icsContent, filename, relPath, calendarId, icsOpts, acc,
@@ -194,7 +219,10 @@ async function reconcileEvent(
   await fs.writeFile(filePath, icsContent);
   if (existingEntry) acc.updated.push(relPath);
   else acc.created.push(relPath);
-  state.eventFiles[event.id] = { filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent) };
+  state.eventFiles[event.id] = {
+    filename, calendarId: icsOpts.calendarId, contentHash: contentHash(icsContent),
+    remoteUpdated: event.updated,
+  };
 }
 
 export async function syncCalendar(opts: {

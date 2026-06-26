@@ -28,8 +28,9 @@ export const WebpageSchema: CardSchema = cardSchema("webpage", {
     siteName: z.string().optional(),
     byline: z.string().optional(),
     excerpt: z.string().optional(),
-    // In-box ref to the frozen, self-contained snapshot (attach/page.frozen).
-    frozen: z.string().optional(),
+    // In-box ref to the frozen, self-contained snapshot (attach/page.frozen),
+    // stored under a `ref` key like every other card reference.
+    frozen: z.object({ ref: z.string() }).optional(),
     // The readable markdown rendering of the page. The card IS the document.
     body: body(z.string()),
   },
@@ -82,7 +83,7 @@ export interface WebpageFields {
   siteName?: string;
   byline?: string;
   excerpt?: string;
-  frozen?: string;
+  frozen?: { ref: string };
   body: string;
 }
 
@@ -113,7 +114,7 @@ export function createWebpageTemplate(options: {
     fields["excerpt"] = options.excerpt;
   }
   if (options.frozenRef !== undefined && options.frozenRef !== "") {
-    fields["frozen"] = options.frozenRef;
+    fields["frozen"] = { ref: options.frozenRef };
   }
   const yamlText = stringifyYaml(fields);
   const bodyText = options.content;
