@@ -20,7 +20,7 @@ export function driveSection(): string[] {
     "- **Find:** Look for `.gdoc.card` files. The card sits next to a sibling markdown file with the same basename (e.g., `Notes.doc.card` + `Notes.md`).",
     "- **Read:** Open the `.md` file. The card itself only carries metadata.",
     "- **Edit:** Edit the `.md` file and commit. Next sync pushes to Google Docs (markdown is converted to Doc format on the server).",
-    "- **Lossy content:** A `<lossy>` block in the card lists features in the upstream Doc that don't survive markdown export (comments, footnotes, embedded images, drawings, equations, suggestions, complex tables). When present, pushing local edits will destroy them. Surface the loss to the user before encouraging a push.",
+    "- **Lossy content:** A `<lossy>` block in the card lists features in the upstream Doc that don't survive markdown export (comments, footnotes, embedded images, equations, suggestions, complex tables). When present, pushing local edits will destroy them. Surface the loss to the user before encouraging a push.",
     "- **Conflicts:** If both local and remote changed since the last sync, the card status flips to `conflict` and the upstream content is written to `<basename>.remote.md`. Resolve by merging the two files, deleting `.remote.md`, and committing.",
     "- **Move:** Move the `.gdoc.card` and its `.md` together. The `drive-id` in the card maintains the link.",
     "",

@@ -16,7 +16,6 @@ export {
   RecordSchema,
   RecipeSchema,
   IntakeJobSchema,
-  CalendarReviewJobSchema,
   QuestionFollowupJobSchema,
   GuideSchema,
   ScheduledScriptSchema,
@@ -39,7 +38,6 @@ export type { CaptureSession, CaptureSessionStatus } from "./capture-session.js"
 export type { RecordFields, RecordStatus } from "./record.js";
 export type { RecipeFields } from "./recipe.js";
 export type { IntakeJobFields } from "./intake-job.js";
-export type { CalendarReviewJobFields } from "./calendar-review-job.js";
 export type { QuestionFollowupJobFields } from "./question-followup-job.js";
 export type { Guide } from "./guide.js";
 export type { ScheduledScriptFields, ParsedScheduledScript, ScheduleCheckContext } from "./scheduled-script.js";
@@ -66,7 +64,6 @@ export { createCaptureSessionTemplate } from "./capture-session.js";
 export { createRecordTemplate } from "./record.js";
 export { createRecipeTemplate } from "./recipe.js";
 export { createIntakeJobTemplate } from "./intake-job.js";
-export { createCalendarReviewJobTemplate } from "./calendar-review-job.js";
 export { createQuestionFollowupJobTemplate } from "./question-followup-job.js";
 export { createTelegramMessageTemplate } from "./telegram-message.js";
 export { createChatThreadTemplate, createMessageEntry } from "./chat-thread.js";

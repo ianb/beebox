@@ -15,18 +15,6 @@ export interface SyncNote {
   summary: string;
   detail?: string;
   ref?: string;
-  /** Full ICS content for deleted events (embedded in calendar-review job) */
-  icsContent?: string;
-  /** Event start date for priority heuristic */
-  eventStart?: Date;
-}
-
-/** Parse event start as a Date (for priority heuristic) */
-export function parseEventStart(event: GoogleCalendarEvent): Date | undefined {
-  const dateTime = event.start?.dateTime;
-  const dateOnly = event.start?.date;
-  if (!dateTime && !dateOnly) return undefined;
-  return dateTime ? new Date(dateTime) : new Date(dateOnly + "T00:00:00");
 }
 
 /** Format an event date for commit messages: "Thu Feb 20" or "Thu Feb 20 3:00 PM" */

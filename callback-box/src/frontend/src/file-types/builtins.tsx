@@ -40,7 +40,6 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "procedure-run" }, { icon: JobIcon });
   registerFileType({ type: "chat-job" }, { icon: JobIcon });
   registerFileType({ type: "intake-job" }, { icon: JobIcon });
-  registerFileType({ type: "calendar-review-job" }, { icon: JobIcon });
   registerFileType({ type: "question-followup-job" }, { icon: JobIcon });
   registerFileType({ type: "todo-list" }, { icon: CardIcon });
   registerFileType({ type: "briefing" }, { icon: DocumentIcon });

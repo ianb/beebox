@@ -38,12 +38,10 @@ export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormP
 
     setError(null);
 
-    // For select questions, find the option ID
-    const selectedId = hasOptions
-      ? String.fromCodePoint(97 + (question.options?.indexOf(selectedOption) ?? 0))
-      : undefined;
-
-    answerMutation.mutate({ questionPath: question.relativePath, answer, selectedId });
+    // Send the chosen option's label as the answer; the backend resolves it to
+    // the real option id (the frontend only has labels, not ids). Passing a
+    // synthesized letter here would be stored verbatim instead of resolving.
+    answerMutation.mutate({ questionPath: question.relativePath, answer });
   };
 
   return (

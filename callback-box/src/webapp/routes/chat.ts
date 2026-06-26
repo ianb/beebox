@@ -34,7 +34,7 @@ import {
 } from "../../core/chat-schedules.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
 import type { ChatRoutesContext } from "./chat-context.js";
-import { registerChatSendRoutes } from "./chat-send-routes.js";
+import { registerChatSendRoutes, loadProcessedMessageIds } from "./chat-send-routes.js";
 import { registerChatSessionRoutes } from "./chat-session-routes.js";
 import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
@@ -194,8 +194,9 @@ export async function registerChatRoutes(
     scheduleManager,
     wireSession,
     // Track recently processed message IDs to prevent duplicate sends on retry.
-    // Map of messageId → timestamp. Pruned periodically by /send.
-    processedMessageIds: new Map<string, number>(),
+    // Map of messageId → timestamp. Hydrated from disk so a restart between a
+    // send and its retry still dedupes; pruned/persisted by /send.
+    processedMessageIds: loadProcessedMessageIds(boxRoot),
   };
 
   registerChatSendRoutes(ctx);

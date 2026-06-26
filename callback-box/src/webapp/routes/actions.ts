@@ -22,10 +22,6 @@ interface AnswerBody {
   selectedId?: string;
 }
 
-interface WakeupBody {
-  dryRun?: boolean;
-}
-
 interface CreateBody {
   path: string;
   template: string;
@@ -52,76 +48,8 @@ function audioExtensionFor(mimetype: string): string {
   return ".webm";
 }
 
-/**
- * Handle POST /api/actions/wakeup - Trigger processing.
- */
-async function handleWakeup(args: {
-  request: FastifyRequest<{ Body: WakeupBody }>;
-  reply: FastifyReply;
-  boxRoot: string;
-  eventBus: EventBus;
-}): Promise<unknown> {
-  const { request, reply, boxRoot, eventBus } = args;
-  const dryRun = request.body?.dryRun ?? false;
-
-  // Broadcast that wakeup is starting
-  eventBus.emit("wakeup-start", {
-    timestamp: new Date().toISOString(),
-    dryRun,
-  });
-
-  // Collect log messages to return
-  const logs: string[] = [];
-  const ctx: CommandContext = {
-    boxRoot,
-    write: (msg: string) => {
-      logs.push(msg);
-      console.log(msg);
-    },
-    writeLine: (msg: string) => {
-      logs.push(msg);
-      console.log(msg);
-    },
-  };
-
-  try {
-    const result = await runCommand({ name: "connector-sync", args: { dryRun }, ctx });
-
-    // Broadcast completion
-    eventBus.emit("wakeup-complete", {
-      timestamp: new Date().toISOString(),
-      success: result.success,
-      phases: (result.data as { phases?: unknown })?.phases,
-    });
-
-    if (!result.success) {
-      return reply.status(500).send({
-        success: false,
-        error: result.error,
-        phases: (result.data as { phases?: unknown })?.phases,
-        logs,
-      });
-    }
-
-    return {
-      success: true,
-      message: dryRun ? "Wakeup completed (dry run)" : "Wakeup completed",
-      phases: (result.data as { phases?: unknown })?.phases,
-      logs,
-    };
-  } catch (error) {
-    eventBus.emit("wakeup-error", {
-      timestamp: new Date().toISOString(),
-      error: (error as Error).message,
-    });
-
-    return reply.status(500).send({
-      success: false,
-      error: (error as Error).message,
-      logs,
-    });
-  }
-}
+// Note: POST /api/actions/wakeup was removed. The box agent runs the wakeup
+// cycle (scheduler / `cb wakeup`); the web UI no longer triggers it directly.
 
 /**
  * Handle POST /api/actions/answer - Answer a question.
@@ -342,11 +270,6 @@ export async function registerActionRoutes(
   options: RegisterActionRoutesOptions
 ): Promise<void> {
   const { server, boxRoot, eventBus } = options;
-
-  // POST /api/actions/wakeup - Trigger processing
-  server.post<{ Body: WakeupBody }>("/api/actions/wakeup", async (request, reply) =>
-    handleWakeup({ request, reply, boxRoot, eventBus })
-  );
 
   // POST /api/actions/answer - Answer a question
   server.post<{ Body: AnswerBody }>("/api/actions/answer", async (request, reply) =>

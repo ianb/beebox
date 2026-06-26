@@ -45,8 +45,10 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
   const { server, boxRoot, eventBus } = options;
 
   const guard = (reqPath: string): { resolved: string } | { error: string; status: number } => {
+    const root = path.resolve(boxRoot);
     const resolved = path.resolve(path.join(boxRoot, reqPath));
-    if (!resolved.startsWith(path.resolve(boxRoot))) {
+    // Reject escapes, including sibling dirs a bare startsWith would allow.
+    if (resolved !== root && !resolved.startsWith(root + path.sep)) {
       return { error: "Access denied", status: 403 };
     }
     if (reqPath === "") {

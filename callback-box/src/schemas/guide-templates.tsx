@@ -67,7 +67,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
     reactions: [],
   },
   calendar: {
-    jobTypes: "calendar-review-job",
+    jobTypes: "",
     appliesTo: "Use when reviewing calendar event changes, or when creating/editing/deleting calendar events",
     actions: [
       {

@@ -27,7 +27,6 @@ import { EmailThreadSchema } from "./email-thread.js";
 import { EmailMessageSchema } from "./email-message.js";
 import { EmailOutboundSchema } from "./email-outbound.js";
 import { IntakeJobSchema } from "./intake-job.js";
-import { CalendarReviewJobSchema } from "./calendar-review-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
@@ -90,7 +89,6 @@ export const cardSchemas: CardSchema[] = [
   TelegramMessageSchema,
   FeedbackSchema,
   IntakeJobSchema,
-  CalendarReviewJobSchema,
   ChatJobSchema,
   QuestionFollowupJobSchema,
   PersonalitySchema,
@@ -330,7 +328,6 @@ export { EmailThreadSchema } from "./email-thread.js";
 export { EmailMessageSchema } from "./email-message.js";
 export { EmailOutboundSchema } from "./email-outbound.js";
 export { IntakeJobSchema } from "./intake-job.js";
-export { CalendarReviewJobSchema } from "./calendar-review-job.js";
 export { GuideSchema } from "./guide.js";
 export { ScheduledScriptSchema } from "./scheduled-script.js";
 export { TelegramMessageSchema } from "./telegram-message.js";

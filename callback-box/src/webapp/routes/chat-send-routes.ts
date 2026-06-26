@@ -9,6 +9,8 @@
  */
 
 import { randomUUID } from "node:crypto";
+import * as fs from "node:fs";
+import * as path from "node:path";
 import { type ChatMessage, type ChatSession } from "../../core/chat-session.js";
 import { getMostActive } from "../../core/chat-session-history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
@@ -143,6 +145,41 @@ function pruneMessageIds(processedMessageIds: Map<string, number>): void {
   }
 }
 
+function dedupStatePath(boxRoot: string): string {
+  return path.join(boxRoot, ".callback-box", "message-dedup.json");
+}
+
+/**
+ * Hydrate the message-dedup map from disk so a server restart between a
+ * successful send and the client's retry still suppresses the duplicate.
+ * Expired entries (older than the TTL) are dropped on load.
+ */
+export function loadProcessedMessageIds(boxRoot: string): Map<string, number> {
+  const map = new Map<string, number>();
+  try {
+    const obj = JSON.parse(fs.readFileSync(dedupStatePath(boxRoot), "utf-8")) as Record<string, number>;
+    const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
+    for (const [id, ts] of Object.entries(obj)) {
+      if (typeof ts === "number" && ts >= cutoff) map.set(id, ts);
+    }
+  } catch (_e) {
+    // No prior dedup file (fresh box / first run) — start empty.
+  }
+  return map;
+}
+
+function persistProcessedMessageIds(boxRoot: string, processedMessageIds: Map<string, number>): void {
+  try {
+    const obj: Record<string, number> = {};
+    for (const [id, ts] of processedMessageIds) obj[id] = ts;
+    const file = dedupStatePath(boxRoot);
+    fs.mkdirSync(path.dirname(file), { recursive: true });
+    fs.writeFileSync(file, JSON.stringify(obj));
+  } catch (e) {
+    console.error("[chat] failed to persist message-dedup state:", e);
+  }
+}
+
 export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
 
@@ -183,6 +220,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
         return reply.send({ deduplicated: true });
       }
       processedMessageIds.set(messageId, Date.now());
+      persistProcessedMessageIds(boxRoot, processedMessageIds);
     }
 
     // Broadcast the user message to other clients via the event bus.

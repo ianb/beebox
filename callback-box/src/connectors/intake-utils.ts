@@ -75,36 +75,6 @@ export async function createOrAppendIntakeJob(
 }
 
 /**
- * Create a new intake job (never appends to existing).
- * Used for batched job creation where each batch needs its own job file.
- */
-export async function createNewIntakeJob(
-  opts: IntakeJobOptions
-): Promise<string> {
-  const jobsDir = path.join(opts.boxRoot, "box/jobs");
-  await fs.mkdir(jobsDir, { recursive: true });
-
-  const timestamp = getBoxTimeISO(opts.boxRoot)
-    .replace(/[.:]/g, "-")
-    .slice(0, 19);
-  const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
-  const suffix = String(Math.random()).slice(2, 6);
-  const jobFilename = `${timestamp}-${safeSource}-${suffix}.intake.job.card`;
-  const jobPath = path.join(jobsDir, jobFilename);
-
-  const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {
-    created: getBoxTimeISO(opts.boxRoot),
-    source: opts.source,
-    description: opts.description,
-    items: opts.items,
-  };
-  if (opts.priority) templateOpts.priority = opts.priority;
-  const content = createIntakeJobTemplate(templateOpts);
-  await fs.writeFile(jobPath, content);
-  return path.relative(opts.boxRoot, jobPath);
-}
-
-/**
  * Find an existing pending intake job card with a matching source.
  */
 async function findExistingIntakeJob(

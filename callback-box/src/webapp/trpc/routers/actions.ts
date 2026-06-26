@@ -3,59 +3,10 @@ import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { runCommand, type CommandContext } from "../../../core/commands/index.js";
 
+// Note: a `wakeup`/connector-sync trigger procedure was removed — the box agent
+// runs the wakeup cycle (via the scheduler / `cb wakeup`); the web UI no longer
+// exposes a bare command trigger.
 export const actionsRouter = router({
-  wakeup: publicProcedure
-    .input(z.object({ dryRun: z.boolean().default(false) }))
-    .mutation(async ({ input, ctx }) => {
-      ctx.eventBus.emit("wakeup-start", {
-        timestamp: new Date().toISOString(),
-        dryRun: input.dryRun,
-      });
-
-      const logs: string[] = [];
-      const cmdCtx: CommandContext = {
-        boxRoot: ctx.boxRoot,
-        write: (msg: string) => { logs.push(msg); console.log(msg); },
-        writeLine: (msg: string) => { logs.push(msg); console.log(msg); },
-      };
-
-      try {
-        const result = await runCommand({ name: "connector-sync", args: { dryRun: input.dryRun }, ctx: cmdCtx });
-
-        ctx.eventBus.emit("wakeup-complete", {
-          timestamp: new Date().toISOString(),
-          success: result.success,
-          phases: (result.data as { phases?: unknown })?.phases,
-        });
-
-        if (!result.success) {
-          throw new TRPCError({
-            code: "INTERNAL_SERVER_ERROR",
-            message: result.error ?? "Wakeup failed",
-          });
-        }
-
-        return {
-          success: true,
-          message: input.dryRun ? "Wakeup completed (dry run)" : "Wakeup completed",
-          phases: (result.data as { phases?: unknown })?.phases,
-          logs,
-        };
-      } catch (error) {
-        if (error instanceof TRPCError) {
-          throw new TRPCError({ code: error.code, message: error.message, cause: error.cause });
-        }
-        ctx.eventBus.emit("wakeup-error", {
-          timestamp: new Date().toISOString(),
-          error: (error as Error).message,
-        });
-        throw new TRPCError({
-          code: "INTERNAL_SERVER_ERROR",
-          message: (error as Error).message,
-        });
-      }
-    }),
-
   answer: publicProcedure
     .input(
       z.object({

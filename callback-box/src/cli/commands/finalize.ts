@@ -9,7 +9,10 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
+import { createGmailConnector } from "../../connectors/gmail.js";
+import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
+import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const finalizeCommand = new Command("finalize")
@@ -21,7 +24,10 @@ export const finalizeCommand = new Command("finalize")
     console.log("[Finalize: running outbound connectors]");
 
     // Initialize connectors
+    createGmailConnector(boxRoot);
+    createGoogleCalendarConnector(boxRoot);
     createTelegramConnector(boxRoot);
+    createGoogleDriveConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

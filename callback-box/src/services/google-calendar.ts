@@ -134,8 +134,11 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
           `calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
         );
       } catch (err) {
-        // 410 Gone means already deleted — not an error
-        if ((err as HTTPError).response?.status === 410) return;
+        // Already-deleted is success (idempotent double-delete): the API
+        // returns 404 Not Found for an event that no longer exists, and 410
+        // Gone for one cancelled within the sync window. Treat both as deleted.
+        const status = (err as HTTPError).response?.status;
+        if (status === 404 || status === 410) return;
         throw err;
       }
     },

@@ -163,20 +163,12 @@ export async function processLocalDeletes(
     }
 
     console.log(`  Deleting ${filename}: ${reason}`);
-    // Capture ICS content before deleting for calendar-review job
-    let icsContent: string | undefined;
-    try {
-      icsContent = await fs.readFile(filePath, "utf-8");
-    } catch (_e) {
-      // File already gone — icsContent stays undefined; capture is best-effort for the review job, the deleteEvent/unlink below handle the real deletion.
-    }
     const success = await deleteEventViaApi(calendar, { calendarId, googleEventId });
     if (success) {
       await fs.unlink(filePath);
       delete state.eventFiles[googleEventId];
       deleted.push(path.relative(boxRoot, filePath));
       const deleteNote: SyncNote = { action: "deleted", summary, detail: reason };
-      if (icsContent) deleteNote.icsContent = icsContent;
       if (ref) deleteNote.ref = ref;
       notes.push(deleteNote);
     } else {

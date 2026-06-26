@@ -40,9 +40,11 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       // Resolve the target directory
       const targetDir = reqPath ? path.join(boxRoot, reqPath) : boxRoot;
 
-      // Security: ensure we stay within boxRoot
+      // Security: ensure we stay within boxRoot (reject sibling dirs like
+      // `${boxRoot}-secrets` that a bare startsWith would let through).
+      const root = path.resolve(boxRoot);
       const resolved = path.resolve(targetDir);
-      if (!resolved.startsWith(path.resolve(boxRoot))) {
+      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
         return { path: reqPath, dirs: [], cards: [] };
       }
 

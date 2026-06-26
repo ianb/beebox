@@ -16,6 +16,20 @@ interface RegisterViewRoutesOptions {
   boxRoot: string;
 }
 
+/**
+ * Resolve a view slug to its `.tsx` path, rejecting anything that would escape
+ * the box's `views/` directory (path separators, `..`, absolute paths). Returns
+ * null for an invalid slug.
+ */
+function resolveViewPath(boxRoot: string, slug: string): string | null {
+  if (!slug || /[/\\]/.test(slug) || slug.includes("..")) return null;
+  const viewsDir = path.resolve(boxRoot, "views");
+  const viewPath = path.resolve(viewsDir, `${slug}.tsx`);
+  if (viewPath !== path.join(viewsDir, `${slug}.tsx`)) return null;
+  if (!viewPath.startsWith(viewsDir + path.sep)) return null;
+  return viewPath;
+}
+
 export async function registerViewRoutes(options: RegisterViewRoutesOptions): Promise<void> {
   const { server, boxRoot } = options;
 
@@ -29,7 +43,13 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
     "/api/views/:slug/module.js",
     async (request, reply) => {
       const { slug } = request.params;
-      const viewPath = path.join(boxRoot, "views", `${slug}.tsx`);
+      const viewPath = resolveViewPath(boxRoot, slug);
+      if (!viewPath) {
+        return reply
+          .header("Content-Type", "application/javascript")
+          .header("Cache-Control", "no-cache")
+          .send(buildErrorModule("Invalid view name"));
+      }
 
       try {
         const { output } = await compileView(viewPath);
@@ -52,7 +72,10 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
     "/api/views/:slug/cards",
     async (request, reply) => {
       const { slug } = request.params;
-      const viewPath = path.join(boxRoot, "views", `${slug}.tsx`);
+      const viewPath = resolveViewPath(boxRoot, slug);
+      if (!viewPath) {
+        return reply.status(404).send({ error: "View not found" });
+      }
 
       let dependencies: string[];
       try {

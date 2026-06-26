@@ -138,7 +138,8 @@ schedulerCommand
 schedulerCommand
   .command("install")
   .description("Install launchd plist for auto-start")
-  .action(async () => {
+  .option("--auto-load", "Run `launchctl load` after writing the plist")
+  .action(async (options: { autoLoad?: boolean }) => {
     // Find the cb binary — process.argv[1] may be a .ts file when run via tsx,
     // so use `which cb` to get the actual installed binary path
     let cbPath: string;
@@ -187,8 +188,27 @@ schedulerCommand
     await fs.writeFile(PLIST_PATH, plist);
     console.log(`Wrote ${PLIST_PATH}`);
     console.log();
+
+    if (options.autoLoad) {
+      try {
+        execSync(`launchctl load ${PLIST_PATH} 2>&1`);
+        console.log("Loaded launchd service — the scheduler is now running.");
+        console.log();
+        console.log("To stop it:");
+        console.log(`  launchctl unload ${PLIST_PATH}`);
+        return;
+      } catch (e) {
+        // Auto-load failed (e.g. already loaded, or launchctl unavailable).
+        // Fall through to print the manual instructions below.
+        console.warn(`Auto-load failed: ${(e as Error).message}`);
+        console.warn("Falling back to manual instructions.");
+        console.log();
+      }
+    }
+
     console.log("To start the scheduler:");
     console.log(`  launchctl load ${PLIST_PATH}`);
+    console.log("  (or re-run with --auto-load to do this automatically)");
     console.log();
     console.log("To stop it:");
     console.log(`  launchctl unload ${PLIST_PATH}`);
