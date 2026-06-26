@@ -11,8 +11,13 @@
 //      under the monorepo (MAIN_ROOT) or ~/src/callback-worktrees, and
 //      `agent-browser` whose binary is under one of those node_modules. Never
 //      a blanket `pkill vite` / `pkill agent-browser`.
-//   2. Active sessions. An agent-browser owned by a worktree with a live
-//      `claude` session is left alone — killing it would sabotage active work.
+//   2. Active sessions + current-daemon. An agent-browser is left alone only
+//      when its worktree has a live `claude` session AND it's the daemon the
+//      worktree's socket dir currently vouches for (its pid is in a `*.pid`
+//      file). Killing the in-use daemon would sabotage active work; but the
+//      superseded orphans (idle daemons that stopped serving yet never exit —
+//      see below) are reaped even in an active worktree, which is the whole
+//      reason they otherwise pile up.
 //
 // Why parentage works for vite/fastify but not agent-browser: vite/fastify are
 // only ever spawned by the router, so a project vite/fastify whose parent is
@@ -21,11 +26,15 @@
 // (detached:true changes the process group, not the parent), so they show a
 // live ppid and are skipped. agent-browser daemons, by contrast, detach all the
 // way to PID 1 even while their owning session is alive, so they can't be told
-// apart by parentage — they're gated on the active-session check instead.
+// apart by parentage — they're gated on the active-session + socket-dir pidfile
+// check instead. (The upstream daemon also never exits on idle: it stops
+// serving its socket but lingers at PID 1, so a fresh one spawns on next use
+// and the dead ones accumulate — the pidfile check is what reaps them.)
 //
 // Used by bin/router.ts (startup sweep, aggressive:false) and by
 // `bin/worktrees panic` (run directly as a CLI, aggressive:true).
 
+import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -35,6 +44,12 @@ import { execa } from "execa";
 // scoping stays identical. WORKTREES_ROOT is fixed by convention.
 const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-mono");
 const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
+
+// Per-worktree agent-browser socket dirs, mirroring `bin/browse`
+// (`${HOME}/.cache/callback-mono/browse/<worktree>/socket`). Each dir's
+// `*.pid` files (default.pid, dashboard.pid, <session>.pid) name the only
+// agent-browser processes that are actually live for that worktree.
+const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "callback-mono", "browse");
 
 const KILL_GRACE_MS = 2000;
 
@@ -69,6 +84,38 @@ function worktreeForPath(p: string): string | null {
   }
   if (p === MAIN_ROOT || p.startsWith(MAIN_ROOT + path.sep)) return "main";
   return null;
+}
+
+/**
+ * The agent-browser pids a worktree's socket dir currently vouches for — read
+ * from its `*.pid` files (the live daemon `default.pid`, the `dashboard.pid`,
+ * and any per-session `<name>.pid`). Any *other* agent-browser process for that
+ * worktree is a superseded orphan: the upstream daemon stops serving its socket
+ * on idle/supersession but never exits — it reparents to PID 1 and sleeps
+ * forever — so a fresh daemon is spawned on next use and the old one lingers,
+ * one per generation. Missing dir / unreadable pidfile → empty set (nothing
+ * vouched for, so every agent-browser there is reapable).
+ */
+async function currentDaemonPids(worktree: string): Promise<Set<number>> {
+  const sockDir = path.join(BROWSE_CACHE_ROOT, worktree, "socket");
+  const live = new Set<number>();
+  let entries: string[];
+  try {
+    entries = await fs.readdir(sockDir);
+  } catch {
+    return live;
+  }
+  await Promise.all(
+    entries
+      .filter((f) => f.endsWith(".pid"))
+      .map(async (f) => {
+        try {
+          const pid = Number((await fs.readFile(path.join(sockDir, f), "utf8")).trim());
+          if (Number.isFinite(pid) && pid > 0) live.add(pid);
+        } catch { /* unreadable pidfile — ignore */ }
+      }),
+  );
+  return live;
 }
 
 async function psRows(): Promise<PsRow[]> {
@@ -191,12 +238,17 @@ function sleep(ms: number): Promise<void> {
  * Reclaim orphaned project processes.
  *
  * - `aggressive: false` (router startup sweep): kill vite/fastify only when
- *   orphaned to PID 1 (a live router's children are spared); kill
- *   agent-browsers whose worktree has no active session.
+ *   orphaned to PID 1 (a live router's children are spared).
  * - `aggressive: true` (panic): kill all project vite/fastify regardless of
- *   parentage (the router is being nuked anyway, which orphans them). Active
- *   sessions' agent-browsers are STILL spared — the hard rule is never to kill
- *   a process owned by an active worktree session.
+ *   parentage (the router is being nuked anyway, which orphans them).
+ *
+ * agent-browser daemons are reaped the same way in both modes: spared only when
+ * their worktree has an active session AND their pid is the one its socket dir
+ * currently vouches for (a `*.pid` entry). A worktree with no live session has
+ * all its daemons reaped; a live worktree keeps its current daemon + dashboard
+ * but sheds superseded orphans (which never exit on their own). The hard rule —
+ * never kill a daemon an active session is actually using — is preserved, just
+ * sharpened from "any daemon of an active worktree" to "the current one."
  */
 export async function reclaimOrphans(opts: {
   aggressive: boolean;
@@ -204,23 +256,39 @@ export async function reclaimOrphans(opts: {
 }): Promise<ReclaimResult> {
   const log = opts.log ?? (() => {});
   const [procs, active] = await Promise.all([discoverProjectProcs(), activeSessionWorktrees()]);
+
+  // For each worktree that has agent-browser procs, the pids its socket dir
+  // currently vouches for. An agent-browser is live only if its worktree has an
+  // active session AND it's pidfile-referenced; everything else — a whole
+  // worktree that's done, or a superseded orphan in an active one — is reaped.
+  const abWorktrees = new Set(procs.filter((p) => p.kind === "agent-browser").map((p) => p.worktree));
+  const currentByWt = new Map<string, Set<number>>();
+  await Promise.all([...abWorktrees].map(async (wt) => { currentByWt.set(wt, await currentDaemonPids(wt)); }));
+
   const killed: ProjectProc[] = [];
   const spared: ProjectProc[] = [];
 
   for (const p of procs) {
     let doKill: boolean;
+    let abReason = "";
     if (p.kind === "agent-browser") {
-      doKill = !active.has(p.worktree);
+      if (!active.has(p.worktree)) {
+        doKill = true; abReason = "no active session";
+      } else if (!(currentByWt.get(p.worktree)?.has(p.pid) ?? false)) {
+        doKill = true; abReason = "superseded orphan";
+      } else {
+        doKill = false;
+      }
     } else {
       doKill = opts.aggressive || p.ppid === 1;
     }
     if (!doKill) {
       spared.push(p);
-      log(`spare ${p.kind} pid ${p.pid} (${p.worktree}${p.kind === "agent-browser" ? ", active session" : `, ppid ${p.ppid}`})`);
+      log(`spare ${p.kind} pid ${p.pid} (${p.worktree}${p.kind === "agent-browser" ? ", current daemon" : `, ppid ${p.ppid}`})`);
       continue;
     }
     killed.push(p);
-    log(`reclaim ${p.kind} pid ${p.pid} (${p.worktree}, ppid ${p.ppid})`);
+    log(`reclaim ${p.kind} pid ${p.pid} (${p.worktree}, ${p.kind === "agent-browser" ? abReason : `ppid ${p.ppid}`})`);
     signal(p.pid, "SIGTERM");
   }
 
