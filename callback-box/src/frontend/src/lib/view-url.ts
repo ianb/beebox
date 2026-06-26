@@ -7,6 +7,10 @@
  * The path is always a file path relative to the box root.
  */
 
+// Relative (not the `@shared` alias) so this lib resolves under the doctest
+// runner's Node resolution too — view-url is unit-doctested outside the bundler.
+import { boxRelativePath } from "../../../shared/box-path.js";
+
 export interface ViewTarget {
   /** File path relative to box root */
   path: string;
@@ -37,14 +41,13 @@ export function parseViewUrl(raw: string): ViewTarget {
 
   const qIndex = value.indexOf("?");
   const rawPath = qIndex !== -1 ? value.slice(0, qIndex) : value;
-  // ViewTarget.path is, by contract, box-root-relative — and consumers compare
-  // it for exact equality against the file watcher's `path.relative(boxRoot, …)`
-  // output (no leading slash). Card refs are conventionally written with a
-  // leading slash (`view:/store/archive/Foo.card`), so strip it here at the
-  // parse boundary, mirroring resolveRelativePath. Without this, a leading-slash
-  // path loads on mount (card.get tolerates it via path.join) but never matches
-  // a `file-change` event, so the companion pane silently stops live-updating.
-  const path = rawPath.replace(/^\/+/, "");
+  // ViewTarget.path is, by contract, the canonical box-root-relative form, and
+  // consumers compare it for exact equality against `file-change` events. Card
+  // refs are conventionally written with a leading slash (`view:/store/Foo.card`),
+  // so normalize at this parse boundary. Without it a leading-slash path loads on
+  // mount (card.get tolerates it) but never matches a `file-change` event, so the
+  // companion pane silently stops live-updating. See src/shared/box-path.ts.
+  const path = boxRelativePath(rawPath);
 
   const params: Record<string, string> = {};
   let viewer: string | null = null;
@@ -91,7 +94,7 @@ export function serializeViewUrl(target: ViewTarget): string {
  * base's directory.
  */
 export function resolveRelativePath(basePath: string | undefined, relative: string): string {
-  if (relative.startsWith("/")) return relative.replace(/^\/+/, "");
+  if (relative.startsWith("/")) return boxRelativePath(relative);
 
   if ((relative === "attach" || relative.startsWith("attach/")) && basePath) {
     const baseName = basePath.includes("/") ? basePath.slice(basePath.lastIndexOf("/") + 1) : basePath;
@@ -173,7 +176,7 @@ export function resolveImageSrc(
     ? "api/files/"
     : null;
   const path = apiFilesPrefix
-    ? src.slice(apiFilesPrefix.length).replace(/^\/+/, "")
+    ? boxRelativePath(src.slice(apiFilesPrefix.length))
     : resolveRelativePath(basePath, src);
   return apiFileUrl(boxSlug ?? "", path);
 }

@@ -6,6 +6,7 @@ import { getSystemState } from "../../../core/state.js";
 import { generateContext } from "../../context.js";
 import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../cli/lib/paths.js";
+import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../cli/lib/git.js";
 
 export interface BrowseDir {
@@ -73,14 +74,18 @@ export const statusRouter = router({
   browse: publicProcedure
     .input(z.object({ path: z.string().default("") }))
     .query(async ({ input, ctx }) => {
-      const targetDir = input.path
-        ? path.join(ctx.boxRoot, input.path)
+      // Accept either ref form but normalize to the canonical box-relative path,
+      // so the echoed `path` matches the form everything else uses (the listing's
+      // `relativePath`s, file-change events). See src/shared/box-path.ts.
+      const relPath = boxRelativePath(input.path);
+      const targetDir = relPath
+        ? path.join(ctx.boxRoot, relPath)
         : ctx.boxRoot;
 
       // Security: ensure we stay within boxRoot
       const resolved = path.resolve(targetDir);
       if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
-        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
+        return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
@@ -90,7 +95,7 @@ export const statusRouter = router({
         if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
           console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
         }
-        return { path: input.path, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
+        return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
       }
 
       const dirs: BrowseDir[] = [];
@@ -168,6 +173,6 @@ export const statusRouter = router({
       dirs.sort((a, b) => a.name.localeCompare(b.name));
       cards.sort((a, b) => a.name.localeCompare(b.name));
       files.sort((a, b) => a.name.localeCompare(b.name));
-      return { path: input.path, dirs, cards, files };
+      return { path: relPath, dirs, cards, files };
     }),
 });
