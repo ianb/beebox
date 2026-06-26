@@ -6,9 +6,9 @@ _Auto-generated from the source code by a multi-agent workflow. Stories were dis
 
 ## Summary
 
-- **404 user stories** discovered
-- **319 code-verified accurate** (79%)
-- **85 flagged** — verifier could not confirm the code implements the story as described (shown ❌ with the actual behavior in the note)
+- **400 user stories** discovered
+- **321 code-verified accurate** (80%)
+- **79 flagged** — verifier could not confirm the code implements the story as described (shown ❌ with the actual behavior in the note)
 - **9 frontend stories browser-verified** in the live app (7 confirmed)
 
 **How to read a verdict.** The verifier was deliberately adversarial (told to refute when unsure), so some ❌ are conservative false negatives (a moved file, a hair-split on wording) rather than genuinely absent features. Treat ❌ as "needs a human glance," not "definitely broken." Browser badges (🖥️) reflect what actually rendered in the running app and override the code verdict where present.
@@ -20,13 +20,13 @@ Legend: ✅ code-verified · ❌ code says inaccurate · ⚠️ unverified · �
 | Frontend / UI | 42 | 39 | 3 |
 | Cards | 19 | 14 | 5 |
 | Agent & Chat core | 74 | 61 | 13 |
-| Connectors (Gmail / Calendar / Drive) | 68 | 52 | 16 |
+| Connectors (Gmail / Calendar / Drive) | 66 | 54 | 12 |
 | Services (Google / Telegram / Audio) | 29 | 19 | 10 |
-| Web server & API | 68 | 52 | 16 |
+| Web server & API | 67 | 52 | 15 |
 | CLI | 89 | 71 | 18 |
-| Scenario / Dev | 9 | 8 | 1 |
+| Scenario / Dev | 8 | 8 | 0 |
 | Libraries & schemas | 6 | 3 | 3 |
-| **Total** | **404** | **319** | **85** |
+| **Total** | **400** | **321** | **79** |
 
 ## Frontend / UI
 
@@ -131,8 +131,6 @@ The user story "View and filter agent activity history" is fully and accurately 
 ### Answer pending questions to guide agent decisions  
 ❌ INACCURATE · 🖥️❌ browser-failed
 
-IAN: this seems like a bug. Questions probably have a bunch of bugs that could be identified with user stories! And it's a feature I want, but haven't implemented well.
-
 > As a user, I want to view pending questions and answer them with text or multiple-choice options, so that I can provide guidance to agents in their decision-making processes.
 
 Files: `src/frontend/src/pages/QuestionsPage.tsx`, `src/frontend/src/components/QuestionForm.tsx`
@@ -234,8 +232,6 @@ The story is fully and accurately implemented. The LandmarksPage component (src/
 
 ### View files in full-page mode with appropriate renderer  
 ❌ INACCURATE
-
-IAN: we can't view .xls files, but probably it's true that .pdf and maybe others should be in there.
 
 > As a user, I want to open markdown, images, sheets, and PDFs in full-screen mode, so that I can focus on viewing content.
 
@@ -841,8 +837,6 @@ User story is fully accurate. Both files exist with complete, tested implementat
 
 ### Binary asset integrity verification  
 ❌ INACCURATE
-
-IAN: yes, also should be implemented
 
 > As a box administrator, I want binary attachments in `.attach/` directories tracked with SHA-256 hashes and verified on scan, so that I can detect if files have been corrupted, accidentally modified, or are missing.
 
@@ -2129,16 +2123,11 @@ The story implementation is complete and accurate. File `/Users/ianbicking/src/c
 
 </details>
 
-### Review calendar changes before sync  
-❌ INACCURATE
+### See calendar changes in the sync commit  
 
-IAN: I don't understand the review job or what's going on here.
+> As a box user, I want calendar changes (added, updated, deleted, and cancelled events) summarized in the narrative sync commit message, so that I can see exactly what changed by reading the commit history. There is no separate review-job card or approval gate — reporting happens through the commit.
 
-> As a box user, I want to review changes to my calendar before they are recorded in the box, so that I can catch unexpected events or conflicts before they are imported.
-
-Files: `src/connectors/google-calendar.ts`, `src/schemas/calendar-review-job.ts`
-
-**Verifier (flagged):** File path error: claimed `.ts`, actual `.tsx`. More critically, the code records calendar changes first (git commit in google-calendar.ts lines 187-214), then creates a review job (lines 216-224). The review job is retrospective only — the story requires reviewing BEFORE recording/importing, but the code records first then creates an informational review job. No mechanism exists to reject changes or prevent import based on review. The implementation is post-hoc review, not pre-import gating as the story describes.
+Files: `src/connectors/google-calendar.ts`
 
 ### Compose email replies with conversation threading  
 ✅ verified
@@ -2256,8 +2245,6 @@ The code fully implements the story. Users can configure `config/connectors/gmai
 ### Detect lossy content when syncing Google Docs  
 ❌ INACCURATE
 
-IAN: images vs drawings means nothing to me, doesn't seem interesting. Is that all?
-
 > As a box user, I want to be warned about features that don't survive markdown export (comments, equations, images, drawings), so that I know what content might be lost or altered in the conversion.
 
 Files: `src/connectors/drive-handler-docs.ts`, `src/services/google-drive.ts`
@@ -2266,8 +2253,6 @@ Files: `src/connectors/drive-handler-docs.ts`, `src/services/google-drive.ts`
 
 ### Create and maintain person.card entries from Telegram participants  
 ❌ INACCURATE
-
-IAN: it seems like we don't want a person clobbered, but we should edit the person card if edits are needed (for Telegram-specific metadata)
 
 > As a box user, I want person.card files to be automatically created and updated for Telegram message senders, so that I can track and reference chat participants across the system.
 
@@ -2304,17 +2289,6 @@ Files: `src/connectors/google-calendar-push.ts`
 The story is accurately implemented. In src/connectors/google-calendar-push.ts, the `pushAndCleanOrphans()` function (1) iterates through untracked .ics files in the calendar directory, (2) attempts to parse each with icsToGoogleEvent(), (3) deletes files that fail parsing (return null) via fs.unlink() on line 63, and (4) returns the deleted files. This function is invoked during the sync cycle in GoogleCalendarConnector.sync() at line 178 of google-calendar.ts. The implementation matches the user story exactly: malformed/unparseable .ics files are automatically deleted during calendar sync.
 
 </details>
-
-### Create calendar-review job cards for user approval  
-❌ INACCURATE
-
-IAN: I'm not even sure we want to review calendar changes? Reporting seems enough, and a calendar-review job card doesn't seem reasonable for that purpose. Maybe logging alone is enough.
-
-> As a box user, I want a calendar-review job card created whenever calendar events are added, updated, deleted, or cancelled, so that I can approve or reject changes before they're processed by the box.
-
-Files: `src/connectors/google-calendar.ts`
-
-**Verifier (flagged):** The calendar-review job IS created for new/updated/deleted/cancelled events, but it's created AFTER all changes have been synced, pushed to Google Calendar, and committed to git (google-calendar.ts lines 160-214 before line 216-224 job creation). The job supports review and optional action creation, but NOT approval/rejection before processing. The story claims users can "approve or reject changes before they're processed" - this is not supported. The actual workflow is post-processing informational review, as evidenced by the schema instructions in calendar-review-job.tsx lines 29-57 which direct users to review, optionally create questions, and finish - with no rejection mechanism.
 
 ### Preserve agent-maintained fields when syncing external documents  
 ✅ verified
@@ -2510,32 +2484,8 @@ File exists, implementation is complete and correct. The story accurately descri
 
 </details>
 
-### Calendar changes auto-generate prioritized review jobs  
-❌ INACCURATE
-
-IAN: do we have priorities? When did we get those?
-
-> As a user, I want calendar-review jobs to be automatically marked as high-priority when events start within 2 days, so that imminent changes get timely user attention.
-
-Files: `src/connectors/google-calendar.ts`
-
-**Verifier (flagged):** The user story claims calendar-review jobs should be marked as "high-priority" when events start within 2 days, but the actual implementation marks them as "normal" priority (vs. "low" for non-imminent events).
-
-ACTUAL IMPLEMENTATION:
-- File exists: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/google-calendar.ts ✓
-- Calendar-review jobs ARE auto-created on calendar changes ✓
-- The "within 2 days" logic IS implemented correctly (lines 237-246) ✓
-- DISCREPANCY: Priority levels are "normal" | "low", NOT "high" | "low"
-  - Line 246 in google-calendar.ts: `const priority = hasUrgent ? "normal" : "low";`
-  - Line 25 in calendar-review-job.tsx schema: `priority: z.enum(["normal", "low"]).default("normal")`
-  - There is NO "high" priority option available for calendar-review jobs
-
-The feature is ~95% implemented but uses the wrong priority level. Events within 2 days get "normal" priority, not "high" priority as claimed in the story.
-
 ### Messaging connectors auto-create person cards with structured contact data  
 ❌ INACCURATE
-
-IAN: sounds like the commit flow should be fixed, yes.
 
 > As a messaging connector, I want to automatically create minimal person.card files for new correspondents and store connector-specific metadata (username, ID), so that users have a canonical place to enrich contact info.
 
@@ -2558,8 +2508,6 @@ The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories
 
 ### Google Docs export as editable markdown with lossy feature detection  
 ❌ INACCURATE
-
-IAN: drawings vs images don't matter really. We should ideally block or require some force if there are upstream changes.
 
 > As an agent, I want to edit Google Docs as local markdown files and see warnings about non-markdown features (comments, images, tables, equations), so that I understand what will be lost when pushing edits back.
 
@@ -2622,15 +2570,10 @@ The implementation is production-ready, well-tested, and fully matches the user 
 </details>
 
 ### Mark calendar events for deletion with X-CB-DELETE markers  
-❌ INACCURATE
 
-IAN: No review is necessary.
-
-> As a user, I want to mark calendar events for deletion using X-CB-DELETE markers in .ics files, so that deletions are explicit, recoverable through git history, and can be reviewed before syncing.
+> As a user, I want to mark calendar events for deletion using X-CB-DELETE markers in .ics files, so that deletions are explicit and recoverable through git history. Marked events are deleted immediately during sync, and each deletion is recorded in the narrative sync commit message — there is no separate review job.
 
 Files: `src/connectors/google-calendar-push.ts`, `src/connectors/google-calendar-notes.ts`
-
-**Verifier (flagged):** The user story claims deletions "can be reviewed before syncing," but the actual implementation processes X-CB-DELETE markers and immediately deletes events during sync with no pre-deletion approval gate. The calendar-review job is created after deletion occurs (post-deletion notification, not pre-deletion approval). Deletions ARE explicit, marked with X-CB-DELETE, and recoverable via git history (captured in delete notes), but the review is informational, not preventative.
 
 ### Extract email text with plain-text preference and HTML fallback  
 ✅ verified
@@ -2726,8 +2669,6 @@ User story is accurately implemented. Both required files exist: google-calendar
 
 ### Batch intake jobs by source connector  
 ❌ INACCURATE
-
-IAN: I guess could be fixed, though I don't understand the exact issue
 
 > As a user, I want intake jobs from the same source to append to an existing pending job rather than create duplicates, so that related items process together.
 
@@ -2963,8 +2904,6 @@ The user story accurately describes the implemented functionality in drive-handl
 
 ### Surface lossy Google Docs features during export  
 ❌ INACCURATE
-
-IAN: yes, seems fixable
 
 > As a user, I want the system to detect and report features that won't survive markdown export (comments, footnotes, embedded images, equations, suggestions, complex tables), so I'm aware of potential content loss before pushing edits.
 
@@ -3399,8 +3338,6 @@ Files: `src/services/google-drive.ts`
 ### Idempotent calendar event deletion without retry errors  
 ❌ INACCURATE
 
-IAN: sounds like some improvement is called for
-
 > As a user, I want calendar event deletion to be idempotent and not fail when an event is already deleted, so that I can safely retry deletion without error handling.
 
 Files: `src/services/google-calendar.ts`
@@ -3477,8 +3414,6 @@ The implementation exactly matches the story's claims about skipping spawn/initi
 
 ### Configure calendar sync scope and frequency  
 ❌ INACCURATE
-
-IAN: yes, sounds like this could be added.
 
 > As a box operator, I want to select which calendars to sync and set the time window, so that I can control what calendar data gets pulled into my box.
 
@@ -3581,17 +3516,6 @@ Files: `src/webapp/trpc/routers/todos.ts`
 The API endpoint at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/todos.ts line 46-91 implements the updateItem mutation that accepts all four statuses (pending, done, cancelled, deferred) as specified in the story. The input validation (line 50) uses z.enum(["pending", "done", "cancelled", "deferred"]), matching TodoItemStatusType from the schema (src/schemas/todo-list.ts line 13-14). Completion tracking is implemented via the completed timestamp field (lines 31-35). The implementation persists changes to the todo-list file and commits them via git. All story requirements are satisfied.
 
 </details>
-
-### Execute commands and run wakeup cycles  
-❌ INACCURATE
-
-IAN: users can't do this, this is agent managed
-
-> As a user, I want to list available commands, execute them with streaming output, and trigger the wakeup cycle (connector sync, inbox processing) from the web interface, so that I can run workflows and synchronize external services without using the CLI.
-
-Files: `src/webapp/trpc/routers/commands.ts`, `src/webapp/trpc/routers/actions.ts`, `src/webapp/routes/commands.ts`
-
-**Verifier (flagged):** The story claims users can "trigger the wakeup cycle (connector sync, inbox processing)" from the web interface. However, the actual implementation has a dedicated wakeup action that ONLY runs "connector-sync" command, not the full wakeup cycle. The complete wakeup cycle (which includes inbox processing via the reactor) exists as a CLI command (src/cli/commands/wakeup.ts) but is not fully exposed through the web interface's dedicated wakeup feature. The dedicated wakeup endpoints (src/webapp/trpc/routers/actions.ts line 23 and src/webapp/routes/actions.ts line 88) both call runCommand with name "connector-sync" only. While users can technically run the full "wakeup" command through generic command execution, the story's claim about a dedicated wakeup feature for the full cycle is not accurate.
 
 ### View activity history and filter by metadata  
 ✅ verified
@@ -4251,8 +4175,6 @@ The user story is fully and accurately implemented. The health.ts router properl
 ### Durable event subscriptions with resumption guarantee  
 ❌ INACCURATE
 
-IAN: sounds like a tweak to fix, yes
-
 > As a frontend subscriber, I want to receive events on WebSocket and resume from my last seen event ID after a disconnect, so I never miss important state changes.
 
 Files: `src/webapp/trpc/routers/events.ts`
@@ -4274,8 +4196,6 @@ Implementation verified: Git LFS pointer resolution is fully implemented in /Use
 
 ### Strict box-boundary enforcement for all file access  
 ❌ INACCURATE
-
-IAN: I haven't been strict on this, and the file access checks aren't very strict either. Not sure it's very important right now, we just don't have many security guarantees, and they probably should be implemented in the container.
 
 > As a security-conscious operator, I want all file access APIs to validate paths against the box root before any read/write, so a path-traversal bug cannot expose files outside the box.
 
@@ -4379,8 +4299,6 @@ All integration points are properly implemented: landmark reading → feature me
 
 ### Deduplicate retried messages to prevent duplicates  
 ❌ INACCURATE
-
-IAN: seems like it should be fixed, yes.
 
 > As a user, I want the chat system to deduplicate messages by messageId so that network timeouts and client retries don't result in duplicate messages in the agent transcript.
 
@@ -4866,8 +4784,6 @@ Files: `src/cli/commands/reactor.ts`
 ### Run outbound connectors to push changes  
 ❌ INACCURATE
 
-IAN: oh yeah, that's not good.
-
 > As a box operator, I want to run the post-processing phase that flushes outbound cards (e.g., queued Telegram messages) through their destination connectors, so that box-authored content reaches external services without waiting for the next full wakeup cycle.
 
 Files: `src/cli/commands/finalize.ts`
@@ -5250,8 +5166,6 @@ User story is fully accurate. The unified manifest feature is completely impleme
 ### Verify binary asset integrity and track manifests  
 ❌ INACCURATE
 
-IAN: yes, important to fix
-
 > As a maintainer, I want to verify all binary attachments are tracked in manifests and scan for corruption, so that asset integrity is guaranteed and gitignore patterns are applied consistently.
 
 Files: `src/cli/commands/attachments.ts`
@@ -5260,8 +5174,6 @@ Files: `src/cli/commands/attachments.ts`
 
 ### Record CLI friction for design feedback  
 ❌ INACCURATE
-
-IAN: yes, an error code seems wrong
 
 > As an agent, I want to file observations about confusing command options or unclear error messages without interrupting my task, so that UX pain points are captured for future improvement.
 
@@ -5334,8 +5246,6 @@ The user story is completely accurate. The claimed file exists and fully impleme
 
 ### Run outbound connectors for delivery  
 ❌ INACCURATE
-
-IAN: also seems like an issue, so to be fixed
 
 > As a system, I want to run outbound connector syncs to flush cards waiting to be pushed (e.g., Telegram messages in output/), so that the box can send data to external services after processing.
 
@@ -5532,8 +5442,6 @@ The hook correctly implements exit code 2 for errors/warnings (lines 177, 188, 2
 ### Manage scheduler daemon lifecycle with launchd and detailed logging  
 ❌ INACCURATE
 
-IAN: not a big deal, so long as the user is given instructions. But if it can run that command, that would be cool too.
-
 > As a box operator, I want to install/unload a launchd background scheduler, check its status, filter logs by box/script/errors, and inspect detailed execution history, so that recurring tasks run reliably at system startup without manual oversight.
 
 Files: `src/cli/commands/scheduler.ts`
@@ -5568,8 +5476,6 @@ The user story accurately describes the implemented functionality. All claimed f
 
 ### Track scheduled task health with failure patterns and daemon status  
 ❌ INACCURATE
-
-IAN: oh, I guess we could add to that.
 
 > As a box operator, I want to inspect scheduled task health showing failures with consecutive-failure counts, overdue tasks with pending duration, blocking locks, and scheduler daemon liveness, so that I can proactively detect and respond to automation degradation.
 
@@ -5628,8 +5534,6 @@ Files: `src/cli/commands/render.ts`
 
 ### Re-transcribe voice messages with high-quality audio models on demand  
 ❌ INACCURATE
-
-IAN: I think word-level timestamps usually aren't called for, but could be an option here. Those would probably need to be written to a second file somewhere.
 
 > As a user, I want to run `cb chat retranscribe` to re-run a voice message through Whisper's high-quality pass with word-level timestamps and optional diarization, so that I can correct transcription errors when the realtime pass was inaccurate.
 
@@ -5768,17 +5672,6 @@ Files: `src/dev/doc-graph-html.ts`, `src/dev/doc-graph-html-data.ts`, `src/dev/d
 All four claimed files exist and implement the story as described. The system generates an interactive HTML page (docs/doc-graph.html) that visualizes: (1) documentation layered in 5 concentric rings based on link distance from root, with names like "Always in the room" and "Out in the field"; (2) 8 topic pillars (Cards, Connectors, Reactor, Procedures, Frontend, Testing, Boxes, Deploy) each with entry doc, supporting materials, code dirs, and per-pillar colors; (3) curator's sections for additional docs, and health checks for orphans/broken links. The rendering is a narrative-focused HTML showcase explicitly designed for agent onboarding. Files: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/dev/{doc-graph-html.ts, doc-graph-html-data.ts, doc-graph-html-render.ts, doc-graph-html-css.ts}
 
 </details>
-
-### Resume scenario tests from checkpoints  
-❌ INACCURATE
-
-IAN: resuming a test that's part way through doesn't seem useful or important at all
-
-> As a box developer, I want to resume multi-step scenario tests from checkpoint steps, so that I can recover from test failures without re-running all previous steps.
-
-Files: `src/scenario/runner.ts`, `src/scenario/types.ts`, `src/cli/commands/scenario.ts`
-
-**Verifier (flagged):** The checkpoint infrastructure is incomplete. The code creates checkpoint tags (runner.ts:195-201) and accepts `--from checkpoint` CLI flags (scenario.ts:26), but when resuming, it fails to restore the checkpoint state. It creates a test branch from main (line 238), skips prior steps (lines 298-301), but never checks out the checkpoint tag before continuing. Result: resumed tests run from clean main state without the file changes/state created by skipped steps, making checkpoint-based recovery non-functional. The scenario should call checkoutBranch(boxRoot, 'scenario/...' + checkpoint) after line 289, before the step execution loop (line 295).
 
 ### Track context usage across knowledge audits  
 ✅ verified

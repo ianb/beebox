@@ -19,21 +19,28 @@ every comment is traceable back to its story.
 
 ## Implementation status (2026-06-26)
 
-- **Bucket A — done except A4.** A1–A3, A5–A8 landed: bookmark/share, web-UI
+- **Bucket A — done (incl. A4).** A1–A3, A5–A8 removed bookmark/share, web-UI
   command buttons, voice/text memos, the dead `transcribe()` method, the
   `@version`/`#fragment` ref parsing, the dead Drive `inspect` endpoint, and
-  `cb prompt` are removed; the corresponding stories were deleted from the
-  catalog (413→404 stories). Typecheck + ESLint + affected doctests green.
-  **A4 (calendar-review job removal) is HELD** pending the maintainer decision
-  below — IAN's comments there are exploratory ("not even sure we want this"),
-  and the removal touches 9 files of live calendar-sync behavior. Its stories
-  ([29], [34], [35], [38]) and their `IAN:` notes are left intact.
-- **Bucket B — done.** All 44 doc corrections applied to `user-stories.md`
-  (wrong citations fixed, over-claims softened, agent-vs-user reframes), item
-  [47] reframed to TTS-only, and `docs/calendar.md` updated ([46]). Each
-  resolved item's `IAN:` line was cleared; the 43 remaining `IAN:` lines are
-  exactly the held set (C ∪ D ∪ calendar) and remain as the tracking signal.
-- **Buckets C, D, A4 — not started.** Tracked by the surviving `IAN:` lines.
+  `cb prompt`. **A4** (maintainer chose: remove, keep a log/summary) removed the
+  calendar-review job card + schema + review-only `SyncNote` plumbing; the
+  narrative sync commit message is the change log. Stories [34],[35] deleted;
+  [29] reframed to "changes in the sync commit"; [38] kept (X-CB-DELETE) minus
+  the review-job mention.
+- **Bucket B — done.** 44 doc corrections + item [47] reframed to TTS-only +
+  `docs/calendar.md` updated ([46]).
+- **Bucket C — done.** All small fixes applied (see C section). Notable: [67]
+  needed no change (tRPC `wsLink` already resumes via `tracked()`); [58] was the
+  web wakeup trigger — removed (agent-managed now), story deleted; [92] resume
+  is a maintainer WONTFIX, story deleted. [40]'s batching change also affects the
+  full-wakeup path (one job file per source instead of per batch) — flagged as a
+  possible trade-off. [69] (model-switch) is **deferred** — it needs a live
+  Claude invocation to test, not an automated test.
+- **Catalog:** 413 → **400 stories**; remaining `IAN:` lines = the 15 bucket-D
+  features + [69], the only open work.
+- **Bucket D — not started.** Tracked by the surviving `IAN:` lines; the larger
+  ones (D4 PDF, D7 calendar conflicts, D8 Docs comments→sidecar, D9 Drive
+  mounting, D11 ref-normalization) each warrant their own plan.
 
 ## Summary
 
