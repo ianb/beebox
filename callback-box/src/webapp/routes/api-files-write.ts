@@ -130,8 +130,10 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
     if (reqPath === "" || message === "") {
       return reply.status(400).send({ error: 'Body must be {"path": "...", "message": "..."}' });
     }
+    const root = path.resolve(boxRoot);
     const guardResolved = path.resolve(path.join(boxRoot, reqPath));
-    if (!guardResolved.startsWith(path.resolve(boxRoot))) {
+    // Reject escapes, including sibling dirs a bare startsWith would allow.
+    if (guardResolved !== root && !guardResolved.startsWith(root + path.sep)) {
       return reply.status(403).send({ error: "Access denied" });
     }
 
