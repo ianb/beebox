@@ -16,6 +16,7 @@ import { createHash } from "node:crypto";
 import { commitPaths, pathsHaveChanges, stageFiles } from "../../cli/lib/git.js";
 import type { EventBus } from "../../core/event-bus.js";
 import { fileEtag } from "../file-etag.js";
+import { boxRelativePath } from "../../shared/box-path.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -94,7 +95,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
     "/api/files/*",
     { exposeHeadRoute: true },
     async (request, reply) => {
-      const reqPath = request.params["*"] || "";
+      const reqPath = boxRelativePath(request.params["*"] || "");
 
       // Security: resolve and ensure within boxRoot. Compare against `root +
       // sep` (not a bare prefix) so a sibling dir like `<box>-secrets` can't
@@ -214,7 +215,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
   server.delete<{ Params: { "*": string } }>(
     "/api/files/*",
     async (request, reply) => {
-      const reqPath = request.params["*"] || "";
+      const reqPath = boxRelativePath(request.params["*"] || "");
       const resolved = path.resolve(path.join(boxRoot, reqPath));
       const root = path.resolve(boxRoot);
 

@@ -31,6 +31,7 @@ import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 import type { ActivityKind } from "../../../core/chat-card-activity";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
+import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
 import { SelectionCapture } from "./SelectionCapture";
 import type { AddSelectionInput } from "../lib/selection-position";
@@ -156,7 +157,10 @@ function useFileData(path: string): LoadResult {
     onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event !== "file-change") return;
       const d = event.data as { path?: string };
-      if (d.path !== path) return;
+      // Tolerant compare: normalize both sides so a stray leading slash on this
+      // view's path can't silently drop the event (the original refresh bug).
+      if (typeof d.path !== "string") return;
+      if (boxRelativePath(d.path) !== boxRelativePath(path)) return;
       resync();
     }, [path, resync]),
     onConnect: useCallback(() => {

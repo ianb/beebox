@@ -20,6 +20,7 @@ import * as path from "node:path";
 import type { EventBus } from "../../core/event-bus.js";
 import { fileEtag } from "../file-etag.js";
 import { stageFiles, commitPaths, pathsHaveChanges } from "../../cli/lib/git.js";
+import { boxRelativePath } from "../../shared/box-path.js";
 import {
   attachDirFor,
   attachDirOwnerBasename,
@@ -72,7 +73,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       },
       reply: { status: (code: number) => { send: (body: unknown) => unknown } }
     ) => {
-      const reqPath = request.params["*"] || "";
+      const reqPath = boxRelativePath(request.params["*"] || "");
       const guarded = guard(reqPath);
       if ("error" in guarded) {
         return reply.status(guarded.status).send({ error: guarded.error });
@@ -124,7 +125,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
 
   // POST /api/files-commit — commit the file's card + attach scope, nothing else
   server.post<{ Body: CommitBody }>("/api/files-commit", async (request, reply) => {
-    const reqPath = typeof request.body?.path === "string" ? request.body.path : "";
+    const reqPath = boxRelativePath(typeof request.body?.path === "string" ? request.body.path : "");
     const message = typeof request.body?.message === "string" ? request.body.message.trim() : "";
     if (reqPath === "" || message === "") {
       return reply.status(400).send({ error: 'Body must be {"path": "...", "message": "..."}' });

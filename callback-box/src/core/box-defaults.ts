@@ -16,7 +16,7 @@ import { createInitialGuideTemplate } from "../schemas/guide.js";
 import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 import { createBriefingTemplate } from "../schemas/briefing.js";
-import { createLandmarkTemplate } from "../schemas/landmark.js";
+import { createLandmarkTemplate, parseLandmarkFields } from "../schemas/landmark.js";
 import { installTemplateFile, type InstallResult } from "./install-template-file.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 
@@ -135,15 +135,20 @@ export async function installPersonality(boxRoot: string): Promise<boolean> {
 }
 
 /**
- * Install a default landmark card in the box root if no landmark card
- * exists there. The root landmark is "magical" — it always exists on
- * the Landmarks page so chats can be bound to the box root. The user
- * can rename or edit the file freely; we only refill when the box
- * root has no `*.landmark.card` at all.
+ * Ensure the box root has a usable landmark card. The root landmark is
+ * "magical" — it always needs to exist on the Landmarks page so chats can be
+ * bound to the box root. We install one when the root has no `*.landmark.card`
+ * at all, AND repair one that exists but is *inert* — carries no real role
+ * (navigation / destinations), e.g. an un-migrated XML-body card or one whose
+ * roles were stripped. An inert root landmark otherwise sits on the Landmarks
+ * page with no symbol and a filename-fallback label, and never self-heals
+ * because a file is technically present. A landmark with a real role is left
+ * untouched (the user owns its label, symbol, links, etc.).
  *
- * @returns Whether a new template was installed
+ * @returns The box-relative path of the landmark created or repaired (so the
+ *   caller can commit it), or null if a real landmark was already present.
  */
-export async function installRootLandmark(boxRoot: string): Promise<boolean> {
+export async function installRootLandmark(boxRoot: string): Promise<string | null> {
   let entries: string[];
   try {
     entries = await fs.readdir(boxRoot);
@@ -151,15 +156,31 @@ export async function installRootLandmark(boxRoot: string): Promise<boolean> {
     // Can't list the box root — skip installing the root landmark rather
     // than fail, but log: an unreadable box root is unexpected here.
     console.warn(`Could not read box root ${boxRoot} for landmark check:`, e);
-    return false;
+    return null;
   }
-  if (entries.some((name) => name.endsWith(".landmark.card"))) return false;
+  const templateContent = createLandmarkTemplate({ label: "Box", symbol: "📦" });
+  const existing = entries.find((name) => name.endsWith(".landmark.card"));
+  if (existing !== undefined) {
+    let hasRole: boolean;
+    try {
+      const fields = parseLandmarkFields(await fs.readFile(path.join(boxRoot, existing), "utf-8"));
+      hasRole = fields !== null && (fields.navigation !== undefined || (fields.destinations?.length ?? 0) > 0);
+    } catch (e) {
+      console.warn(`Could not read root landmark ${existing} in ${boxRoot}:`, e);
+      return null;
+    }
+    if (hasRole) return null; // a real landmark — leave the user's content alone
+    // Inert/unparseable — repair in place, preserving the existing filename.
+    await fs.writeFile(path.join(boxRoot, existing), templateContent);
+    return existing;
+  }
+
   const result = await installTemplateFile({
     boxRoot,
     relPath: "Box.landmark.card",
-    templateContent: createLandmarkTemplate({ label: "Box", symbol: "📦" }),
+    templateContent,
   });
-  return result.outcome === "fresh";
+  return result.outcome === "fresh" ? "Box.landmark.card" : null;
 }
 
 /**

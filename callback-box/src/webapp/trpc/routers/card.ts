@@ -6,6 +6,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { boxRelativePath } from "../../../shared/box-path.js";
 import { parse as parseYaml } from "yaml";
 
 export interface FrontmatterCardResponse {
@@ -69,7 +70,11 @@ export const cardRouter = router({
   get: publicProcedure
     .input(z.object({ path: z.string().min(1) }))
     .query(async ({ input, ctx }) => {
-      const fullPath = path.join(ctx.boxRoot, input.path);
+      // Accept either ref form (a leading-slash ref or the canonical box-relative
+      // path) but normalize to canonical so the security check, the read, and the
+      // returned `path` are all consistent. See src/shared/box-path.ts.
+      const relPath = boxRelativePath(input.path);
+      const fullPath = path.join(ctx.boxRoot, relPath);
 
       // Security: `input.path` arrives from the client (and now from the chat
       // `?card=` deep-link a card-page click writes). Ensure the resolved path
@@ -89,26 +94,26 @@ export const cardRouter = router({
       } catch (e) {
         const msg = (e as Error).message;
         if (msg.includes("ENOENT") || msg.includes("no such file")) {
-          throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${input.path}` });
+          throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
         }
         throw new TRPCError({ code: "BAD_REQUEST", message: msg });
       }
 
       const split = splitCardContent(raw);
-      const fileType = typeFromFilename(input.path);
+      const fileType = typeFromFilename(relPath);
       if (split.hasFrontmatter && fileType !== undefined) {
         // loadFrontmatterCard is robust to an unregistered/invalid schema: it
         // surfaces what it can (loose YAML + body) with a validationError, so a
         // box-local-typed or drifted card still renders.
         const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
-        return loadFrontmatterCard({ raw, source: input.path, type: fileType, cardSchemas });
+        return loadFrontmatterCard({ raw, source: relPath, type: fileType, cardSchemas });
       }
 
       // Not a typed frontmatter card. Every real `.card` is frontmatter now, so
       // this is a malformed or partially-written file — surface its raw text
       // rather than failing, so the viewer can still show something.
       return {
-        path: input.path,
+        path: relPath,
         kind: "frontmatter" as const,
         type: fileType ?? "",
         frontmatter: undefined as Record<string, unknown> | undefined,
