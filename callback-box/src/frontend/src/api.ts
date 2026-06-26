@@ -3,7 +3,7 @@
  *
  * Most endpoints have been migrated to tRPC (see lib/trpc.ts).
  * This file retains only functions that use patterns tRPC can't handle:
- * - SSE streaming (chat, command execution)
+ * - SSE streaming (chat)
  * - File uploads (voice memos, file uploads)
  * - getApiBase() for SSE/WebSocket URL construction
  * - Legacy type exports still referenced by components
@@ -13,7 +13,7 @@
  */
 
 import { RequestError } from "./lib/errors";
-import { getApiBase, NoResponseBodyError } from "./api-core";
+import { getApiBase } from "./api-core";
 
 export {
   getApiBase,
@@ -56,12 +56,6 @@ export interface CardInfo {
   options?: string[];
   /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
   subdir?: string;
-}
-
-export interface CommandResult {
-  success: boolean;
-  data?: unknown;
-  error?: string;
 }
 
 export interface HistoryCommit {
@@ -117,63 +111,3 @@ export async function uploadFile(
   return response.json();
 }
 
-// --- SSE streaming (can't use tRPC) ---
-
-/**
- * Execute a command with streaming output.
- */
-export interface ExecuteCommandParams {
-  command: string;
-  args: Record<string, unknown>;
-  onOutput?: (text: string) => void;
-}
-
-export async function executeCommand(
-  params: ExecuteCommandParams
-): Promise<CommandResult> {
-  const { command, args, onOutput } = params;
-  const response = await fetch(`${getApiBase()}/commands/execute`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ command, args }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new RequestError(error.error || "Command execution failed");
-  }
-
-  // Parse SSE stream
-  const reader = response.body?.getReader();
-  if (!reader) throw new NoResponseBodyError();
-
-  const decoder = new TextDecoder();
-  let result: CommandResult = { success: false, error: "No result received" };
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-
-    const text = decoder.decode(value);
-    const lines = text.split("\n");
-
-    for (const line of lines) {
-      if (line.startsWith("data: ")) {
-        const data = JSON.parse(line.slice(6));
-        if (data.type === "output" && data.text) {
-          onOutput?.(data.text);
-        } else if (data.type === "result") {
-          result = {
-            success: data.success,
-            data: data.data,
-            error: data.error,
-          };
-        }
-      }
-    }
-  }
-
-  return result;
-}

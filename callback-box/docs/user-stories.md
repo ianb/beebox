@@ -6,10 +6,10 @@ _Auto-generated from the source code by a multi-agent workflow. Stories were dis
 
 ## Summary
 
-- **413 user stories** discovered
-- **319 code-verified accurate** (77%)
-- **94 flagged** — verifier could not confirm the code implements the story as described (shown ❌ with the actual behavior in the note)
-- **12 frontend stories browser-verified** in the live app (9 confirmed)
+- **404 user stories** discovered
+- **319 code-verified accurate** (79%)
+- **85 flagged** — verifier could not confirm the code implements the story as described (shown ❌ with the actual behavior in the note)
+- **9 frontend stories browser-verified** in the live app (7 confirmed)
 
 **How to read a verdict.** The verifier was deliberately adversarial (told to refute when unsure), so some ❌ are conservative false negatives (a moved file, a hair-split on wording) rather than genuinely absent features. Treat ❌ as "needs a human glance," not "definitely broken." Browser badges (🖥️) reflect what actually rendered in the running app and override the code verdict where present.
 
@@ -17,16 +17,16 @@ Legend: ✅ code-verified · ❌ code says inaccurate · ⚠️ unverified · �
 
 | Area | Stories | Accurate | Flagged |
 |------|--------:|---------:|--------:|
-| Frontend / UI | 47 | 39 | 8 |
+| Frontend / UI | 42 | 39 | 3 |
 | Cards | 19 | 14 | 5 |
-| Agent & Chat core | 75 | 61 | 14 |
+| Agent & Chat core | 74 | 61 | 13 |
 | Connectors (Gmail / Calendar / Drive) | 68 | 52 | 16 |
 | Services (Google / Telegram / Audio) | 29 | 19 | 10 |
-| Web server & API | 70 | 52 | 18 |
-| CLI | 90 | 71 | 19 |
+| Web server & API | 68 | 52 | 16 |
+| CLI | 89 | 71 | 18 |
 | Scenario / Dev | 9 | 8 | 1 |
 | Libraries & schemas | 6 | 3 | 3 |
-| **Total** | **413** | **319** | **94** |
+| **Total** | **404** | **319** | **85** |
 
 ## Frontend / UI
 
@@ -131,6 +131,8 @@ The user story "View and filter agent activity history" is fully and accurately 
 ### Answer pending questions to guide agent decisions  
 ❌ INACCURATE · 🖥️❌ browser-failed
 
+IAN: this seems like a bug. Questions probably have a bunch of bugs that could be identified with user stories! And it's a feature I want, but haven't implemented well.
+
 > As a user, I want to view pending questions and answer them with text or multiple-choice options, so that I can provide guidance to agents in their decision-making processes.
 
 Files: `src/frontend/src/pages/QuestionsPage.tsx`, `src/frontend/src/components/QuestionForm.tsx`
@@ -138,17 +140,6 @@ Files: `src/frontend/src/pages/QuestionsPage.tsx`, `src/frontend/src/components/
 **Verifier (flagged):** The implementation allows users to view and answer pending questions with both text and multiple-choice options (story requirements are functionally met), but there is a backend bug in answer data storage: when users answer select-type (multiple-choice) questions via the web UI, the selectedId is stored as a letter (a, b, c) instead of the actual option ID. This occurs because QuestionForm sends both answer (label) and selectedId (letter), but the answer command only resolves the letter to a real ID when selectedId is undefined (answer.ts line 163). With selectedId present, the resolution is skipped and the letter is stored directly in the card's answer.selected field, violating the schema requirement that selected should be the option id. Evidence: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/QuestionForm.tsx lines 42-46 compute and send selectedId as letter; /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/commands/answer.ts lines 154-172 show resolveAnswer only calls ID resolution when !args.selectedId.
 
 **Browser check:** Route /questions loads successfully and displays pending questions with a functional form interface. The visual UI and basic form submission work as described. However, there is an implementation bug: confirm-type questions (yes/no) are being rendered as freetext textareas instead of multiple-choice radio buttons, causing submission validation to fail. The component supports multiple-choice rendering (RadioGroup) but the backend doesn't provide options for confirm questions without explicit options arrays, so the form falls back to text input. This prevents the described functionality (answering with text OR multiple-choice) from working correctly for confirm-type questions.
-
-### Share web links and notes via share target  
-❌ INACCURATE · 🖥️❌ browser-failed
-
-> As a user, I want to receive shared links from my browser, optionally add voice or text notes, and save them as bookmark cards to my inbox, so that I can capture web content for processing.
-
-Files: `src/frontend/src/pages/SharePage.tsx`, `src/frontend/src/pages/useShareNote.ts`
-
-**Verifier (flagged):** The claimed files SharePage.tsx and useShareNote.ts exist and attempt to implement the feature, including PWA share target routing, voice note recording with transcription, and text note capture. However, the implementation is incomplete and would fail at runtime. When users try to save a bookmark, the create command would fail because there is no CardSchema or template defined for the "bookmark" card type. Evidence: (1) src/schemas/registry.ts lists all registered schemas - bookmark is absent; (2) src/schemas/templates-builtins.ts and templates-registry.ts show all registered templates - none have `defaultForTypes: ["bookmark"]`; (3) src/core/commands/create.ts lines 93-107 show that missing templates return error "No default template for card type 'bookmark'"; (4) src/frontend/src/pages/share-save.ts line 47-59 would throw "Command did not report success" when the create command fails.
-
-**Browser check:** Route loaded: http://localhost:3210/user-stories/test1/share. Frontend UI renders correctly with all expected elements (title, URL link, note textarea, voice button, save button). User can add text notes and attempt voice input. However, saving fails with "Error: Command did not report success" because the bookmark card schema is not registered in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/schemas/registry.ts. The frontend implementation is complete, but the end-to-end story requirement (save as bookmark cards to inbox) fails at the backend.
 
 ### Filter activity history by multiple dimensions  
 ✅ verified
@@ -244,6 +235,8 @@ The story is fully and accurately implemented. The LandmarksPage component (src/
 ### View files in full-page mode with appropriate renderer  
 ❌ INACCURATE
 
+IAN: we can't view .xls files, but probably it's true that .pdf and maybe others should be in there.
+
 > As a user, I want to open markdown, images, sheets, and PDFs in full-screen mode, so that I can focus on viewing content.
 
 Files: `src/frontend/src/pages/ViewPage.tsx`
@@ -262,17 +255,6 @@ Files: `src/frontend/src/components/dashboard/ScheduleOverview.tsx`
 The user story is accurately implemented. All three capabilities exist: (1) EnableToggle component in ScheduleOverview.tsx with trpc.scheduler.setEnabled mutation, (2) TriggerButton component with trpc.scheduler.trigger mutation, (3) Full integration in DashboardPage.tsx. Backend mutations in src/webapp/trpc/routers/scheduler.ts (lines 96-134 for setEnabled, 136-158 for trigger) provide proper validation and execution. File: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/dashboard/ScheduleOverview.tsx (lines 53-70, 72-96).
 
 </details>
-
-### Execute box CLI commands from the web UI  
-❌ INACCURATE · 🖥️ browser-confirmed
-
-> As a user, I want to run commands like `cb wakeup`, `cb sync`, and `cb create` from the web UI with streaming output, so that I don't need to open a terminal.
-
-Files: `src/frontend/src/components/CommandRunner.tsx`, `src/frontend/src/components/dashboard/ActionModal.tsx`, `src/frontend/src/components/dashboard/HeaderStrip.tsx`
-
-**Verifier (flagged):** The story claims users can run `cb sync` from the web UI, but the implementation has a critical flaw: ActionModal.tsx (line 36) tries to execute command="sync", but the backend has no such registered command. The only registered sync-like command is "connector-sync". When users click the "sync" button in HeaderStrip.tsx, they will get an error "Unknown command: sync" from the backend at /api/commands/execute. The wakeup and create commands work properly with streaming output, but the sync command is broken. Implementation files: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/commands/connector-sync.ts (registers "connector-sync", not "sync"), ActionModal.tsx line 36 (attempts to run non-existent "sync" command), registered commands list in command-runner.ts registry.
-
-**Browser check:** Verified the FRONTEND user story "Execute box CLI commands from the web UI" by driving the real running app at route http://localhost:3210/user-stories/test1 (dashboard). The feature is fully implemented and rendering correctly: dashboard displays wakeup/sync/create-memo buttons, each button opens a modal with CommandRunner component showing streaming command output. Backend errors encountered (permission denied, unknown command) are unrelated to the UI/frontend implementation.
 
 ### View box health status and warnings  
 ✅ verified
@@ -312,26 +294,6 @@ Files: `src/frontend/src/pages/card/CardViewPage.tsx`, `src/frontend/src/pages/c
 All claimed files exist and are properly integrated. OpenChatControl provides both resume-recent and new-session affordances via two buttons, calling chat.openForCard tRPC to resolve the landmark directory and fetch the most-recent session. The card is passed through ChatPage to InteractiveChat and displayed in the companion pane. Implementation exactly matches the story requirements: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/card/CardViewPage.tsx (renders OpenChatControl), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/card/components/OpenChatControl.tsx (implements chat/new buttons), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/chat.ts (openForCard procedure)
 
 </details>
-
-### Run box commands with streaming output  
-❌ INACCURATE
-
-> As a user, I want to execute box commands (wakeup, sync) from the web UI and see their streaming terminal output displayed in real-time, so that I can monitor long-running operations without opening the CLI.
-
-Files: `src/frontend/src/components/CommandRunner.tsx`, `src/frontend/src/components/dashboard/ActionModal.tsx`
-
-**Verifier (flagged):** The story claims users can run "wakeup, sync" commands with streaming output from the web UI. While wakeup works and the streaming infrastructure is fully implemented, the "sync" command cannot be executed. The UI tries to run command="sync" (ActionModal.tsx line 36, HeaderStrip.tsx line 99), but the backend only registers this command as "connector-sync" (src/core/commands/connector-sync.ts line 96). When clicked, users will receive error: "Unknown command: sync". The command name mismatch prevents the claimed sync functionality from working despite complete streaming infrastructure being in place.
-
-### Create quick voice or text memos from web UI  
-❌ INACCURATE · 🖥️ browser-confirmed
-
-> As a user, I want to create memos with optional voice recording directly from the web interface, so that I can quickly capture thoughts without navigating to the file system.
-
-Files: `src/frontend/src/components/NewMemo.tsx`, `src/frontend/src/components/NewMemo-VoiceRecorder.tsx`, `src/frontend/src/components/dashboard/ActionModal.tsx`
-
-**Verifier (flagged):** The code includes NewMemo and voice recording components properly integrated into the web UI, but implementation has two critical bugs: (1) Content field not passed correctly to template args—would cause validation failures for text memos; (2) Code tries to create "voice-memo" card type which is not registered in schema registry—would fail with "no schema registered for type voice-memo". Evidence: NewMemo.tsx lines 64-67 (incorrect cardType usage), create.ts lines 111-121 (template args validation), card-io.ts line 122 (schema lookup error), memo.ts cardSchema registration showing only "memo" type exists, not "voice-memo".
-
-**Browser check:** Route: /dashboard. Verified: (1) Dashboard loads with + Memo button present. (2) Modal opens showing "New Memo" form with text input (Memo content) and Voice Recording section with Record button. (3) Voice recording attempted on Record click, showing recorder UI with timer and stop control. (4) UI displays helper text "You can type text and/or record voice." matching story requirements. (5) Source files NewMemo.tsx, NewMemo-VoiceRecorder.tsx, and ActionModal.tsx all present and properly implement memo creation with optional voice recording capability. Feature is fully rendered and functional in the live app.
 
 ### Configure which Google Calendars to sync  
 ✅ verified
@@ -397,15 +359,6 @@ Files: `src/frontend/src/components/admin/TelegramSection.tsx`
 All claimed functionality is implemented and verified. Frontend component (TelegramSection.tsx) exists at the claimed path and allows users to paste a bot token to connect and disconnect existing bots. Backend endpoints in src/webapp/routes/admin.ts properly handle /api/admin/telegram-status (GET), /api/admin/telegram-setup (POST), and /api/admin/telegram-disconnect (POST) with full Telegram API validation. Message receiving is implemented via webhook at src/webapp/routes/telegram.ts which processes incoming updates and ingests them into chat threads. Message responding is fully implemented via sendTelegramMessage() in src/core/telegram-send.ts that sends agent responses back to Telegram. Integration tests in test/webapp/routes/routes-admin.doctest.md confirm all endpoints work correctly. No discrepancies found - the implementation precisely matches the user story description.
 
 </details>
-
-### Record voice notes while saving web links  
-❌ INACCURATE
-
-> As a user, I want to record a voice memo while saving a web link to my inbox, so that I can capture my thoughts about the link without typing.
-
-Files: `src/frontend/src/pages/SharePage.tsx`, `src/frontend/src/pages/useShareNote.ts`
-
-**Verifier (flagged):** The voice recording UI and infrastructure exist and work properly. However, the bookmark card schema (bookmark.tsx) that the save operation depends on was deleted in commit 4478792d. The frontend code tries to create .bookmark.card files but will fail because no bookmark template is registered. The feature cannot work end-to-end as claimed.
 
 ### Scale recipe ingredient quantities dynamically  
 ✅ verified
@@ -487,7 +440,7 @@ The user story is accurately implemented. The CalendarSection.tsx component prov
 
 </details>
 
-**Browser check:** Route /settings loaded at http://localhost:3210/user-stories/test1/settings. CalendarSection component exists and is properly implemented, but displays error state "Google auth not configured. Run: cb google-auth" instead of rendering the calendar sync toggles. The feature code is present but not visible/testable in the live app due to missing Google authentication configuration. Calendar list with individual sync toggles is not rendered.
+**Browser check:** Route /settings loaded at http://localhost:3210/user-stories/test1/settings. CalendarSection component exists and is properly implemented, but displays error state "Google auth not configured. Run: cb google-auth" instead of rendering the calendar sync toggles. The feature code is present but not visible/testable in the live app due to missing Google authentication configuration. Calendar list with individual sync toggles is not rendered. This browser failure is expected when Google auth is not configured (the component is auth-gated) and is not a bug in the toggle feature itself.
 
 ### Answer questions with dynamic form types  
 ✅ verified (medium) · 🖥️ browser-confirmed
@@ -573,6 +526,8 @@ All claimed functionality for interactive data visualizations with parameterized
 
 ### Mark todo items with multi-state status tracking  
 ❌ INACCURATE
+
+IAN: this might require some design work, but is a valid issue
 
 > As a user, I want to mark individual todo items with multiple states (pending, done, cancelled, or deferred), so that I can track items that are complete, blocked, or intentionally paused.
 
@@ -751,6 +706,8 @@ All four claimed files exist and implement the described functionality. card-lin
 ### Manage card attachments and assets  
 ❌ INACCURATE
 
+IAN: while manual management of the files isn't a priority, it seems like there's some issues with incomplete implementations...?
+
 > As an operator, I want to attach binary files (images, PDFs, media) to cards in scoped `.attach/` directories and track them in a manifest with SHA-256 hashes, so that attachments are versioned and deduplicable.
 
 Files: `src/core/asset-manifest.ts`, `src/core/asset-manifest-scan.ts`
@@ -784,6 +741,8 @@ The file src/core/frontmatter-field.ts exports two functions that implement the 
 
 ### Edit card frontmatter fields by dotted path  
 ❌ INACCURATE
+
+IAN: I don't remember this feature or an part of this feature. Like writing YAML frontmatter didn't seem to be part of anything I can remember.
 
 > As a box user, I want to look up and modify specific nested fields in a card's YAML frontmatter using dotted notation, so that I can update complex metadata like EXIF data without manually editing the file.
 
@@ -846,6 +805,8 @@ Both claimed files exist and implement the full capability: SHA-256 hashing in a
 ### Auto-discover and claim binary assets into manifests  
 ❌ INACCURATE
 
+IAN: yes, seems just incomplete implementation
+
 > As a user, I want binary files in `.attach/` directories to be automatically discovered and tracked with SHA-256 hashes, so that assets are properly managed without manual intervention.
 
 Files: `src/core/asset-manifest-scan.ts`, `src/cli/commands/attachments.ts`
@@ -880,6 +841,8 @@ User story is fully accurate. Both files exist with complete, tested implementat
 
 ### Binary asset integrity verification  
 ❌ INACCURATE
+
+IAN: yes, also should be implemented
 
 > As a box administrator, I want binary attachments in `.attach/` directories tracked with SHA-256 hashes and verified on scan, so that I can detect if files have been corrupted, accidentally modified, or are missing.
 
@@ -931,7 +894,7 @@ The user story accurately describes the implemented functionality. The rename de
 
 > As a data explorer, I want to access deeply nested frontmatter fields using dotted path syntax (e.g., `exif.camera`), so that I can extract and filter on structured metadata without hand-parsing card internals.
 
-Files: `src/core/frontmatter-field.ts`, `src/core/list-cards.ts`
+Files: `src/core/frontmatter-field.ts`
 
 **Verifier (flagged):** The story's description is accurate and implemented correctly: dotted-path queries for nested frontmatter fields (e.g., exif.camera) work as described with passing tests. However, file attribution is incorrect. Only frontmatter-field.ts implements this feature—it exports lookupField() (lines 19-28) for dotted-path traversal and loadCardFrontmatter() (lines 35-52) for parsing. The list-cards.ts file is incorrectly claimed; it merely lists .card files via glob and has zero connection to the field-query feature (no imports from frontmatter-field, no field lookup logic). While both files are used together in some commands (like `cb ls`), they serve entirely separate concerns. The official documented user story lists only frontmatter-field.ts.
 
@@ -992,6 +955,8 @@ All four claimed files exist and implement the described functionality. Card ref
 ### Import external content as cards  
 ❌ INACCURATE
 
+IAN: This actually seems like a big and unsurprisingly unfinished feature, doing analysis of PDF files. This is probably a whole task on its own, maybe involving docling(?)
+
 > As an agent, I want to ingest images, PDFs, and other external content, extract metadata via ML analysis, and create card records with the extracted data, so that external sources are captured as indexed, searchable cards.
 
 Files: `src/core/commands/describe-images-card.ts`, `src/core/commands/scan-import-cards.ts`
@@ -1030,6 +995,8 @@ Both claimed files exist and accurately implement the described functionality. v
 
 ### Execute multi-step procedures as cards  
 ❌ INACCURATE
+
+IAN: yes, seems like incomplete implementation
 
 > As an agent, I want to create and update procedure-run cards that track the status, output, and completion of multi-step workflows, so that users can monitor and resume long-running automations.
 
@@ -1102,7 +1069,7 @@ All story claims verified. The core files exist and implement exactly what's des
 ### Transcribe and analyze audio messages  
 ❌ INACCURATE
 
-> As a user, I want to transcribe voice memos and ask Claude questions about their content (tone, pronunciation, language identification), so that I can understand voice messages without listening to them.
+> As a user, I want to transcribe voice memos and ask a multimodal model (Gemini) questions about their content (tone, pronunciation, language identification), so that I can understand voice messages without listening to them.
 
 Files: `src/core/audio-question.ts`, `src/services/openai-audio.ts`
 
@@ -1150,7 +1117,7 @@ All story requirements are implemented and working. Verified: (1) /src/core/box-
 ### Install and Update Box-Local Guides with Template Tracking  
 ❌ INACCURATE
 
-> As a box author, I want to install and update box-local schema documentation and authoring guides that have smart update behavior: fresh boxes get the canonical file, unmodified copies get refreshed automatically, and edited versions get parked under config/_template-updates/ for manual merging, so that I can evolve guides without clobbering user customizations.
+> As a box author, I want to install and update the box-local schemas guide, which has smart update behavior: fresh boxes get the canonical file, unmodified copies get refreshed automatically, and edited versions get parked under config/_template-updates/ for manual merging, so that I can evolve guides without clobbering user customizations.
 
 Files: `src/core/box-templates.ts`, `src/core/install-template-file.ts`
 
@@ -1174,7 +1141,7 @@ All story claims verified in /Users/ianbicking/src/callback-worktrees/user-stori
 
 > As a box user, I want to list cards with custom format templates that extract and display frontmatter fields, so that I can generate formatted reports or inventories of card metadata.
 
-Files: `src/core/commands/ls.ts`, `src/core/frontmatter-field.ts`, `src/cli/commands/create.ts`
+Files: `src/core/commands/ls.ts`, `src/core/frontmatter-field.ts`, `src/cli/commands/ls.ts`
 
 **Verifier (flagged):** The listing and formatting capability described IS correctly implemented in src/core/commands/ls.ts (core implementation) and src/core/frontmatter-field.ts (field extraction utilities). However, src/cli/commands/create.ts is incorrect — it handles card creation from templates, not listing/formatting existing cards. The correct CLI wrapper is src/cli/commands/ls.ts, which properly invokes the core ls command. The create.ts file is unrelated to this user story.
 
@@ -1233,7 +1200,7 @@ Story verified: Agents can emit <chat-app> tags to toggle narration mode (on/off
 ### Manage concurrent multi-thread chat sessions with auto-rotation  
 ❌ INACCURATE
 
-> As a chat connector, I want to manage multiple active chat threads in the same box, switching between them and auto-rotating stale sessions, so that the box can handle simultaneous conversations.
+> As a chat connector, I want to manage multiple active chat threads in the same box, switching between them and auto-rotating stale sessions, so that the box can handle multiple conversations, one active at a time with rotation between them.
 
 Files: `src/core/chat-reactor-sessions.ts`, `src/core/chat-session-pool.ts`
 
@@ -1296,7 +1263,7 @@ File exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-bo
 
 > As an agent, I want to specify different voices, delivery instructions, and speaker labels for individual `<speech>` segments, so that I can role-play, quote others, or emphasize tone within a single response.
 
-Files: `src/core/chat-voice-doc.ts`, `src/core/chat-session-messages.ts`
+Files: `src/core/chat-voice-doc.ts`, `src/frontend/src/lib/speech-parsing.ts`, `src/frontend/src/lib/tts-client.ts`, `src/frontend/src/components/chat/SpeechChunk.tsx`, `src/frontend/src/machines/speechPlaybackMachine.ts`, `src/webapp/routes/chat-audio-routes.ts`
 
 **Verifier (flagged):** The speech segment customization feature (voice, instructions, speaker labels) IS fully implemented and functional. However, one of the two claimed files (chat-session-messages.ts) is NOT part of this implementation. This file handles message wire shapes and is never involved in parsing or processing speech segment attributes. Git commit history confirms 3b83814b and e8943ddc (the core implementation commits) never touched chat-session-messages.ts. The feature actually lives in speech-parsing.ts (frontend), tts-client.ts, SpeechChunk.tsx, speechPlaybackMachine.ts, and chat-audio-routes.ts (backend). Chat-voice-doc.ts is correctly claimed as part of the documentation generation.
 
@@ -1416,7 +1383,7 @@ The code accurately implements support for mid-turn resume via: TurnBuffer with 
 ### Enforce agent commit discipline with retry nudge  
 ❌ INACCURATE
 
-> As a box orchestrator, I want to automatically detect uncommitted agent changes and nudge the same session to commit, falling back to a tagged commit if the agent resists, so that work is never left in limbo.
+> As a box orchestrator, I want to automatically detect uncommitted agent changes and nudge the same session to commit, falling back to a commit marked with a `Fallback` trailer if the agent resists, so that work is never left in limbo.
 
 Files: `src/core/agent-commit.ts`, `src/core/agent-types.ts`
 
@@ -1531,7 +1498,7 @@ Both claimed files exist and contain the complete, correct implementation. agent
 
 > As a Telegram/Slack/iMessage integration, I want to maintain per-thread SDK session IDs that survive across multiple message batches, rotating to fresh sessions on expiry or message limits, so that multi-turn conversations maintain context without recreating the agent each time.
 
-Files: `src/core/chat-reactor-sessions.ts`, `src/core/chat-thread-session.ts`
+Files: `src/core/chat-session-pool.ts`, `src/core/chat-thread-session.ts`
 
 **Verifier (flagged):** The claimed files do NOT work together as described. chat-reactor-sessions.ts (src/core/reactor/chat-jobs.ts) is for INTERNAL reactor job processing, while chat-thread-session.ts actually pairs with chat-session-pool.ts for EXTERNAL integrations like Telegram. The story claims these files enable "Telegram/Slack/iMessage integration" with "per-thread SDK session IDs that survive across multiple message batches, rotating to fresh sessions on expiry or message limits." However, the actual implementation for external integrations is ChatSessionPool + ChatThreadSession, where ChatSessionPool (the critical file implementing session rotation and persistence) is NOT listed in the claimed files. Evidence: (1) chat-reactor-sessions.ts uses .callback-box/chat-sessions.json and is only used by reactor/chat-jobs.ts for internal box processing; (2) ChatThreadSession uses chat-session-pool.ts (src/core/chat-session-pool.ts), which manages session persistence to .callback-box/chat-thread-sessions.json; (3) Telegram webhook route explicitly imports ChatSessionPool and states "routes it to a persistent per-thread Claude session via ChatSessionPool"; (4) chat-reactor-sessions.ts contains zero references to ChatThreadSession; (5) chat-thread-session.ts contains zero references to chat-reactor-sessions.ts or any of its functions.
 
@@ -1547,15 +1514,6 @@ Files: `src/core/install-template-file.ts`, `src/core/box.ts`
 The auto-prune functionality is fully implemented and correctly integrated. Evidence: (1) pruneStaleTemplateUpdates() function in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/install-template-file.ts (lines 198-245) deletes files older than STALE_TEMPLATE_UPDATE_MS (30 days = line 188). (2) The function is called from syncTemplatesFromSource() in generate-docs.ts (line 256), which is invoked from generateDocs() (line 406) during automatic startup of chat sessions and reactor engine. (3) Implementation correctly compares file mtimeMs to 30-day threshold, unlinks stale files, and cleans empty directories. The story's claim is accurate and properly implemented.
 
 </details>
-
-### Reference version and anchor syntax handling  
-❌ INACCURATE
-
-> As a documentation author, I want to reference specific versions of cards using `@version` syntax (e.g., `MyCard.memo.card@1.2.3`) and jump to anchors using `#fragment`, so that I can maintain links to historical versions and specific sections of cards as they evolve.
-
-Files: `src/core/ref-exists.ts`
-
-**Verifier (flagged):** The file ref-exists.ts exists and handles @version/@fragment syntax, but only by stripping it for basic path resolution. The actual features claimed in the story—retrieving historical versions of cards via @version syntax and navigating to anchor fragments—are not implemented. Version and fragment suffixes are parsed and removed to prevent them from breaking ref resolution, but no code exists to actually fetch past versions from Git or navigate to specific sections within cards.
 
 ### Smart reference rewriting on card moves  
 ✅ verified
@@ -1630,7 +1588,7 @@ Users cannot easily discover narration mode through normal UI patterns. While th
 ### Create reminders and scheduled callbacks through chat  
 ❌ INACCURATE
 
-> As a user chatting with the agent, I want the agent to create timed schedules that fire messages back into the chat session at specified intervals, so that I can set reminders, recurring checks, or time-based prompts without leaving chat.
+> As a user chatting with the agent, I want the agent to create timed schedules that fire messages back into the chat session after a specified delay, so that I can set one-time reminders or time-based prompts without leaving chat.
 
 Files: `src/core/chat-schedules.ts`
 
@@ -1718,7 +1676,7 @@ VERIFIED: The user story is completely accurate and fully implemented. The claim
 
 > As a chat user with unreliable network, I want my chat messages to resume mid-turn after a connection drops, so that I don't lose streamed output from agent responses and can reconnect seamlessly.
 
-Files: `src/core/chat-turn-buffer.ts`, `src/core/chat-turn-marker.ts`
+Files: `src/core/chat-turn-buffer.ts`
 
 **Verifier (flagged):** User story claims chat-turn-buffer.ts AND chat-turn-marker.ts implement "Resumable chat streaming with per-turn buffers". While chat-turn-buffer.ts correctly implements this feature (per-turn frame buffer, seq-based resumption, bounded ring, reconnect window), chat-turn-marker.ts is unrelated—it tracks git HEAD state for the "whats changed" command, not streaming resumption. The files exist and the buffer implementation is sound, but the story incorrectly associates chat-turn-marker.ts with this feature.
 
@@ -1737,6 +1695,8 @@ Both claimed files exist at specified paths and implement automatic question gen
 
 ### Retrospective analysis mining chat sessions for implicit learning  
 ❌ INACCURATE
+
+IAN: yes, this is a missing feature. We need the analysis to end with integration.
 
 > As a box curator, I want the system to automatically analyze my past chat conversations to discover what I've taught the agent about my preferences and personality, so that these patterns can be integrated into the agent's personality and guide cards.
 
@@ -2172,6 +2132,8 @@ The story implementation is complete and accurate. File `/Users/ianbicking/src/c
 ### Review calendar changes before sync  
 ❌ INACCURATE
 
+IAN: I don't understand the review job or what's going on here.
+
 > As a box user, I want to review changes to my calendar before they are recorded in the box, so that I can catch unexpected events or conflicts before they are imported.
 
 Files: `src/connectors/google-calendar.ts`, `src/schemas/calendar-review-job.ts`
@@ -2259,7 +2221,7 @@ Both claimed files exist and fully implement the described functionality. sendOu
 ### Detect lossy format conversion in Google Docs sync  
 ❌ INACCURATE
 
-> As a box user, I want to know when Google Docs contain features (comments, equations, embedded images) that don't survive markdown export, so that I can manually preserve or merge important formatting.
+> As a box user, I want to know when Google Docs contain features (comments, equations, embedded images) that don't survive markdown export, so that I'm warned before that content is lost on export.
 
 Files: `src/connectors/drive-handler-docs.ts`, `src/schemas/gdoc.ts`
 
@@ -2294,6 +2256,8 @@ The code fully implements the story. Users can configure `config/connectors/gmai
 ### Detect lossy content when syncing Google Docs  
 ❌ INACCURATE
 
+IAN: images vs drawings means nothing to me, doesn't seem interesting. Is that all?
+
 > As a box user, I want to be warned about features that don't survive markdown export (comments, equations, images, drawings), so that I know what content might be lost or altered in the conversion.
 
 Files: `src/connectors/drive-handler-docs.ts`, `src/services/google-drive.ts`
@@ -2302,6 +2266,8 @@ Files: `src/connectors/drive-handler-docs.ts`, `src/services/google-drive.ts`
 
 ### Create and maintain person.card entries from Telegram participants  
 ❌ INACCURATE
+
+IAN: it seems like we don't want a person clobbered, but we should edit the person card if edits are needed (for Telegram-specific metadata)
 
 > As a box user, I want person.card files to be automatically created and updated for Telegram message senders, so that I can track and reference chat participants across the system.
 
@@ -2312,7 +2278,7 @@ Files: `src/connectors/telegram-ingest.ts`, `src/connectors/chat-utils.ts`
 ### Detect and prevent calendar sync conflicts from remote modifications  
 ❌ INACCURATE
 
-> As a box user, I want the calendar connector to detect when my Google Calendar has been modified remotely since the last sync and prevent overwriting those changes, so that my Calendar data isn't lost during sync.
+> As a box user, I want the calendar connector to detect when my Google Calendar has been modified remotely since the last sync and, when a local edit can't be pushed back, let the remote version win, so that the calendar converges without silent data loss.
 
 Files: `src/connectors/google-calendar.ts`, `src/connectors/google-calendar-sync.ts`
 
@@ -2341,6 +2307,8 @@ The story is accurately implemented. In src/connectors/google-calendar-push.ts, 
 
 ### Create calendar-review job cards for user approval  
 ❌ INACCURATE
+
+IAN: I'm not even sure we want to review calendar changes? Reporting seems enough, and a calendar-review job card doesn't seem reasonable for that purpose. Maybe logging alone is enough.
 
 > As a box user, I want a calendar-review job card created whenever calendar events are added, updated, deleted, or cancelled, so that I can approve or reject changes before they're processed by the box.
 
@@ -2545,6 +2513,8 @@ File exists, implementation is complete and correct. The story accurately descri
 ### Calendar changes auto-generate prioritized review jobs  
 ❌ INACCURATE
 
+IAN: do we have priorities? When did we get those?
+
 > As a user, I want calendar-review jobs to be automatically marked as high-priority when events start within 2 days, so that imminent changes get timely user attention.
 
 Files: `src/connectors/google-calendar.ts`
@@ -2564,6 +2534,8 @@ The feature is ~95% implemented but uses the wrong priority level. Events within
 
 ### Messaging connectors auto-create person cards with structured contact data  
 ❌ INACCURATE
+
+IAN: sounds like the commit flow should be fixed, yes.
 
 > As a messaging connector, I want to automatically create minimal person.card files for new correspondents and store connector-specific metadata (username, ID), so that users have a canonical place to enrich contact info.
 
@@ -2586,6 +2558,8 @@ The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories
 
 ### Google Docs export as editable markdown with lossy feature detection  
 ❌ INACCURATE
+
+IAN: drawings vs images don't matter really. We should ideally block or require some force if there are upstream changes.
 
 > As an agent, I want to edit Google Docs as local markdown files and see warnings about non-markdown features (comments, images, tables, equations), so that I understand what will be lost when pushing edits back.
 
@@ -2650,6 +2624,8 @@ The implementation is production-ready, well-tested, and fully matches the user 
 ### Mark calendar events for deletion with X-CB-DELETE markers  
 ❌ INACCURATE
 
+IAN: No review is necessary.
+
 > As a user, I want to mark calendar events for deletion using X-CB-DELETE markers in .ics files, so that deletions are explicit, recoverable through git history, and can be reviewed before syncing.
 
 Files: `src/connectors/google-calendar-push.ts`, `src/connectors/google-calendar-notes.ts`
@@ -2671,6 +2647,8 @@ The claimed file exists at the correct path and implements exactly what the user
 
 ### Detect and resolve concurrent calendar event edits  
 ❌ INACCURATE
+
+IAN: sounds like remote change conflicts are not implemented and should be
 
 > As a user, I want concurrent edits to calendar events to be detected via content hash, so that local changes are pushed back to Google rather than silently overwritten by incoming changes.
 
@@ -2749,6 +2727,8 @@ User story is accurately implemented. Both required files exist: google-calendar
 ### Batch intake jobs by source connector  
 ❌ INACCURATE
 
+IAN: I guess could be fixed, though I don't understand the exact issue
+
 > As a user, I want intake jobs from the same source to append to an existing pending job rather than create duplicates, so that related items process together.
 
 Files: `src/connectors/intake-utils.ts`
@@ -2758,7 +2738,7 @@ Files: `src/connectors/intake-utils.ts`
 ### Request callback reminders from Telegram chat messages  
 ❌ INACCURATE
 
-> As a user, I want to specify callback-in durations in chat seen entries, so that callback reminders are automatically scheduled for follow-ups.
+> As an agent, I want to specify callback-in durations in chat seen entries, so that callback reminders are automatically scheduled for follow-ups.
 
 Files: `src/connectors/telegram-outbound.ts`
 
@@ -2936,7 +2916,7 @@ The user story is accurately implemented in the claimed file. The feature valida
 ### Skip Gmail inbox backlog on first sync  
 ❌ INACCURATE
 
-> As a user setting up Gmail for the first time, I want the option to skip importing the entire inbox backlog on initial sync, so that I only capture new incoming messages going forward.
+> As a user setting up Gmail for the first time, I want the entire inbox backlog to be skipped automatically on initial sync, so that I only capture new incoming messages going forward.
 
 Files: `src/connectors/gmail-pull.ts`
 
@@ -2984,6 +2964,8 @@ The user story accurately describes the implemented functionality in drive-handl
 ### Surface lossy Google Docs features during export  
 ❌ INACCURATE
 
+IAN: yes, seems fixable
+
 > As a user, I want the system to detect and report features that won't survive markdown export (comments, footnotes, embedded images, equations, suggestions, complex tables), so I'm aware of potential content loss before pushing edits.
 
 Files: `src/connectors/drive-handler-docs.ts`
@@ -2992,6 +2974,8 @@ Files: `src/connectors/drive-handler-docs.ts`
 
 ### Read collaborative comments from Google Docs  
 ❌ INACCURATE
+
+IAN: sounds like it should go in a sidecar attachment
 
 > As a user, I want the system to fetch and surface comments from collaborative Google Docs as part of the lossy feature detection, so I can see what feedback others have left.
 
@@ -3045,16 +3029,18 @@ The user story accurately describes an implemented feature. The telegram.ts conn
 
 > As a box user, I want to authorize the system to access my Google account, so that connectors can sync my calendar, email, and Drive files.
 
-Files: `src/services/google-auth.ts`, `src/connectors/google-auth.ts`
+Files: `src/cli/commands/google-auth.ts`, `src/services/google-auth.ts`, `src/connectors/google-auth.ts`
 
 **Verifier (flagged):** The user story claims files src/services/google-auth.ts and src/connectors/google-auth.ts implement "authorize the system to access my Google account". These files actually contain token management and persistence (loadGoogleTokens, saveGoogleTokens, getAccessToken) but NOT the OAuth authorization flow. The actual OAuth flow (generateAuthUrl, user consent, code exchange) is implemented in src/cli/commands/google-auth.ts (lines 61-146), which was not claimed. The connectors do sync calendar/email/drive after authorization, but the authorization capability itself is not in the claimed files.
 
 ### Sync calendar events bidirectionally with Google Calendar  
 ❌ INACCURATE
 
-> As a box user, I want my calendar events to sync with Google Calendar automatically, so that I can manage my schedule locally and have changes push back to Google.
+> As a box user, I want my calendar events to sync with Google Calendar, so that I can manage my schedule locally and have changes push back to Google.
 
 Files: `src/services/google-calendar.ts`, `src/connectors/google-calendar.ts`, `src/connectors/google-calendar-sync.ts`, `src/connectors/google-calendar-push.ts`
+
+Note: bidirectional sync is implemented, but scheduled auto-sync is disabled by default and the push path is largely untested (see `docs/calendar.md`).
 
 **Verifier (flagged):** The code DOES implement bidirectional syncing (pull + push local edits + push new files + delete), but the story claim is materially inaccurate: (1) The official documentation in docs/calendar.md explicitly states it's "pull-only" and local-edits-pushed-back is "not implemented," contradicting the actual code in google-calendar-sync.ts (tryPushLocalEdit, line 92-129) and google-calendar-push.ts. (2) "Automatically" is misleading—the scheduled sync is disabled by default (enabled: false in src/core/box-defaults.ts line 217). (3) Tests exist for pushing new files but NOT for pushing local edits despite the code supporting it. The connector's sync() method (src/connectors/google-calendar.ts lines 172-183) does call processLocalDeletes() and pushAndCleanOrphans(), but this is a batch operation during sync, not real-time.
 
@@ -3110,10 +3096,10 @@ All four claimed files exist and implement the described functionality. The code
 
 </details>
 
-### Transcribe audio and generate speech via OpenAI  
+### Generate speech from text via OpenAI  
 ❌ INACCURATE
 
-> As a box user, I want to transcribe voice memos to text and generate speech from text responses, so that I can use voice interaction with the system.
+> As a box user, I want the system to generate speech from text responses, so that I can hear the agent's replies as audio.
 
 Files: `src/services/openai-audio.ts`
 
@@ -3251,6 +3237,8 @@ The listSpreadsheets() method is fully implemented in /Users/ianbicking/src/call
 ### Read collaborative comments from Drive files  
 ❌ INACCURATE
 
+IAN: like previously mentioned, we should preserve these in a sidecar
+
 > As an agent, I want to read comments and annotations on Drive files, so that I can incorporate collaborator feedback and context.
 
 Files: `src/services/google-drive.ts`
@@ -3286,7 +3274,7 @@ Both claimed files exist and contain the exact mechanism described. ALLOWED_EXTE
 ### Create and push local calendar events to Google Calendar  
 ❌ INACCURATE
 
-> As a user, I want to create calendar events locally in .ics files and push them to Google Calendar, so that I can work offline and synchronize when I'm ready.
+> As a box user, I want calendar events written locally as .ics files (by the agent or by hand — there is no dedicated creation UI) pushed to Google Calendar, so that box-created events reach my calendar.
 
 Files: `src/services/google-calendar.ts`, `src/connectors/google-calendar-push.ts`
 
@@ -3329,7 +3317,7 @@ User story is fully implemented and tested. Both claimed files exist and correct
 ### Secure Telegram webhooks with secret tokens  
 ❌ INACCURATE
 
-> As a bot admin, I want to set Telegram webhook secret tokens and restrict which update types are delivered, so that my bot endpoint is protected from unauthorized requests.
+> As a bot admin, I want to set Telegram webhook secret tokens (the delivered update types are a fixed `message`/`edited_message` set by design), so that my bot endpoint is protected from unauthorized requests.
 
 Files: `src/services/telegram.ts`
 
@@ -3363,6 +3351,8 @@ Feature is fully implemented: drive-handler-docs.ts detects equations, footnotes
 
 ### Read collaborative comments from Google Docs and Sheets  
 ❌ INACCURATE
+
+IAN: As mentioned, this should be added
 
 > As a user, I want to read comments and annotations from collaborators on Google Docs and Sheets, so that I can track feedback and collaborative input.
 
@@ -3409,6 +3399,8 @@ Files: `src/services/google-drive.ts`
 ### Idempotent calendar event deletion without retry errors  
 ❌ INACCURATE
 
+IAN: sounds like some improvement is called for
+
 > As a user, I want calendar event deletion to be idempotent and not fail when an event is already deleted, so that I can safely retry deletion without error handling.
 
 Files: `src/services/google-calendar.ts`
@@ -3418,7 +3410,7 @@ Files: `src/services/google-calendar.ts`
 ### Filter Telegram webhook update types to reduce noise  
 ❌ INACCURATE
 
-> As a user, I want to configure which Telegram update types my webhook receives, so that I reduce noise and only process the events that matter to me.
+> As a system, I want the Telegram webhook to receive a fixed set of update types (`message`/`edited_message`, hardcoded by design), so that noise from other update types is filtered out.
 
 Files: `src/services/telegram.ts`
 
@@ -3443,7 +3435,7 @@ The existing code achieves basic filtering (rejecting callback_queries, inline_q
 ### Customize text-to-speech voice instructions for tone and pacing  
 ❌ INACCURATE
 
-> As a user, I want to customize voice instructions for text-to-speech responses (tone, pacing, delivery style), so that audio responses match my preferred speaking manner.
+> As a user, I want text-to-speech voice instructions (tone, pacing, delivery style) to be controllable through the agent editing config/personality files and per-message `<instructions>` tags (there is no dedicated UI), so that audio responses match my preferred speaking manner.
 
 Files: `src/services/openai-audio.ts`
 
@@ -3486,6 +3478,8 @@ The implementation exactly matches the story's claims about skipping spawn/initi
 ### Configure calendar sync scope and frequency  
 ❌ INACCURATE
 
+IAN: yes, sounds like this could be added.
+
 > As a box operator, I want to select which calendars to sync and set the time window, so that I can control what calendar data gets pulled into my box.
 
 Files: `src/webapp/trpc/routers/calendar.ts`, `src/connectors/calendar-config.ts`
@@ -3495,7 +3489,7 @@ Files: `src/webapp/trpc/routers/calendar.ts`, `src/connectors/calendar-config.ts
 ### List and inspect Drive files for sync configuration  
 ❌ INACCURATE
 
-> As a box operator, I want to browse my Drive files and configure which spreadsheets/documents to sync, so that I can control what content is pulled into my box.
+> As a box operator, I want to review my Drive files and configure which spreadsheets/documents to sync (today the web view is read-only; sync targets are configured via the `cb drive` CLI), so that I can control what content is pulled into my box.
 
 Files: `src/webapp/trpc/routers/drive.ts`, `src/connectors/drive-config.ts`
 
@@ -3517,7 +3511,7 @@ All story claims are accurately implemented. src/webapp/auth.ts provides secure 
 ### Send messages to Claude Agent with attachments  
 ❌ INACCURATE
 
-> As a user, I want to send text messages with optional file and image attachments to Claude Agent and see the response stream in real-time, so that I can have contextual conversations with the agent.
+> As a user, I want to send text messages with optional file and image attachments (images inline; other files uploaded separately and referenced by path) to Claude Agent and see the response stream in real-time, so that I can have contextual conversations with the agent.
 
 Files: `src/webapp/routes/chat-send-routes.ts`, `src/webapp/routes/chat-helpers.ts`, `src/webapp/routes/chat-uploads.ts`
 
@@ -3591,6 +3585,8 @@ The API endpoint at /Users/ianbicking/src/callback-worktrees/user-stories/callba
 ### Execute commands and run wakeup cycles  
 ❌ INACCURATE
 
+IAN: users can't do this, this is agent managed
+
 > As a user, I want to list available commands, execute them with streaming output, and trigger the wakeup cycle (connector sync, inbox processing) from the web interface, so that I can run workflows and synchronize external services without using the CLI.
 
 Files: `src/webapp/trpc/routers/commands.ts`, `src/webapp/trpc/routers/actions.ts`, `src/webapp/routes/commands.ts`
@@ -3626,7 +3622,7 @@ The user story is completely and accurately implemented. All three aspects are c
 ### Diarize audio with per-session speaker labels  
 ❌ INACCURATE
 
-> As a box user, I want to transcribe multi-speaker audio with automatic speaker diarization and per-session letter labels, so that the agent can distinguish different speakers across multiple voice recordings.
+> As a box user, I want to transcribe multi-speaker audio with opt-in speaker diarization (via the `voxtral-diarized` HQ service) and per-session letter labels, so that the agent can distinguish different speakers across multiple voice recordings.
 
 Files: `src/webapp/routes/chat-audio-routes.ts`, `src/services/openai-audio.ts`, `src/core/transcription-voxtral.ts`
 
@@ -3687,7 +3683,7 @@ Both claimed files (src/webapp/routes/admin.ts and src/webapp/trpc/routers/admin
 ### Manage box-wide configuration settings  
 ❌ INACCURATE
 
-> As a box owner, I want to configure allowed email addresses, enable/disable Google services, and set the public URL, so that I can control access and integration scope for my box.
+> As a box owner, I want to configure allowed email addresses and enable/disable Google services (the public URL is set by the deployment and is read-only here), so that I can control access and integration scope for my box.
 
 Files: `src/webapp/routes/admin.ts`
 
@@ -3761,7 +3757,7 @@ All story requirements are implemented:
 ### Change the active language model for a chat session  
 ❌ INACCURATE
 
-> As a user, I want to switch the language model for my current chat session without restarting it, so that I can adapt to different tasks without losing context.
+> As a user, I want to switch the language model for my current chat session, so that I can adapt to different tasks without losing context (the subprocess restarts, but conversation context is preserved).
 
 Files: `src/webapp/routes/chat-session-routes.ts`
 
@@ -3811,7 +3807,7 @@ The capability is fully implemented in src/webapp/routes/chat-send-routes.ts (PO
 
 > As a user, I want to see the scheduler log with filtering by event type and script execution status, so that I can understand what scheduled tasks have run and their outcomes.
 
-Files: `src/webapp/routes/scheduler.ts`, `src/webapp/routes/history.ts`
+Files: `src/webapp/routes/scheduler.ts`
 
 **Verifier (flagged):** The story is inaccurate on two critical points: (1) history.ts is NOT involved in scheduler execution history - it only handles Git commit history, session logs, and file blobs. The file contains zero scheduler-related code. Verified: /src/webapp/routes/history.ts has endpoints for /api/history (commits), /api/history/diff/:hash, /api/history/session/:sessionId, and /api/history/blob/:hash/* - all Git/session related, none scheduler-related. (2) There is no complete user-facing feature. While the API in scheduler.ts DOES support event and status filters (verified in lines 34-84 with eventFilter and statusFilter logic), the frontend never exposes the status filter. The ScheduleOverview component only shows recent ticks without filtering UI, and DashboardPage hardcodes event: "tick" when calling trpc.scheduler.log.useQuery(). No dedicated scheduler execution history page exists with filtering controls.
 
@@ -3867,17 +3863,10 @@ Verified that `src/webapp/trpc/routers/files.ts` implements the `summarize` tRPC
 
 </details>
 
-### Query and inspect Google Drive files and spreadsheets  
-❌ INACCURATE
-
-> As a user, I want to list available spreadsheets on Drive and inspect file details (name, type, owner, tabs), so that I can configure which files to sync into my box.
-
-Files: `src/webapp/trpc/routers/drive.ts`
-
-**Verifier (flagged):** The story claims the code enables users to "list available spreadsheets... and inspect file details... so that I can configure which files to sync." While listing works (drive.available endpoint, integrated in UI), the story is materially inaccurate in two ways: (1) The inspect endpoint exists in src/webapp/trpc/routers/drive.ts (lines 47-79) but is NEVER called by any frontend code - it's dead code. (2) The updateConfig mutation (lines 81-96) only configures FOLDERS (driveFolderId), not individual files. Individual file mounting happens via CLI (cb drive add), not the web API. The DriveSection.tsx component (lines 1-79) explicitly documents this: "Mounting itself is done via CLI; this view is read-only." It only calls drive.config and drive.available, never inspect or updateConfig.
-
 ### Update Google Drive folder mount configuration  
 ❌ INACCURATE
+
+IAN: sounds like this is very incomplete, yes
 
 > As a user, I want to configure which Google Drive folders are mounted to which local box paths, so that I can choose what content to automatically sync.
 
@@ -4033,6 +4022,8 @@ All implementation details match the user story perfectly. Files exist at claime
 ### Configure Google Drive folder syncing  
 ❌ INACCURATE
 
+IAN: similarly incomplete. I haven't experimented with google drive mounting at all.
+
 > As a box owner, I want to specify which Google Drive folders to sync and where they should be mounted in my box, so that I can bring Drive files into my local filesystem.
 
 Files: `src/webapp/trpc/routers/drive.ts`
@@ -4107,7 +4098,7 @@ Both claimed files exist and implement exactly the functionality described in th
 ### Web page capture with frozen HTML snapshots  
 ❌ INACCURATE
 
-> As a user of the browser extension, I want to capture entire web pages as self-contained HTML that renders without external resources, so I can archive pages offline even if the original site becomes unavailable or blocks hot-linking.
+> As a user of the browser extension, I want to capture entire web pages as frozen HTML snapshots — images are intentionally kept as hot-linked URL references rather than embedded, to limit snapshot size — so I can archive a page's text and structure.
 
 Files: `src/webapp/routes/clerk.ts`, `src/webapp/routes/api-files.ts`
 
@@ -4260,6 +4251,8 @@ The user story is fully and accurately implemented. The health.ts router properl
 ### Durable event subscriptions with resumption guarantee  
 ❌ INACCURATE
 
+IAN: sounds like a tweak to fix, yes
+
 > As a frontend subscriber, I want to receive events on WebSocket and resume from my last seen event ID after a disconnect, so I never miss important state changes.
 
 Files: `src/webapp/trpc/routers/events.ts`
@@ -4282,6 +4275,8 @@ Implementation verified: Git LFS pointer resolution is fully implemented in /Use
 ### Strict box-boundary enforcement for all file access  
 ❌ INACCURATE
 
+IAN: I haven't been strict on this, and the file access checks aren't very strict either. Not sure it's very important right now, we just don't have many security guarantees, and they probably should be implemented in the container.
+
 > As a security-conscious operator, I want all file access APIs to validate paths against the box root before any read/write, so a path-traversal bug cannot expose files outside the box.
 
 Files: `src/webapp/routes/api-files.ts`, `src/webapp/trpc/routers/card.ts`
@@ -4290,6 +4285,8 @@ Files: `src/webapp/routes/api-files.ts`, `src/webapp/trpc/routers/card.ts`
 
 ### Dynamically switch LLM model for a chat session mid-conversation  
 ❌ INACCURATE
+
+IAN: Could be tested, yes. Probably not an automated test, as an accurate needs to actually invoke claude and do operations.
 
 > As a user, I want to change which LLM model my current chat session uses without losing conversation context, so that I can switch between models for different types of reasoning mid-conversation.
 
@@ -4383,6 +4380,8 @@ All integration points are properly implemented: landmark reading → feature me
 ### Deduplicate retried messages to prevent duplicates  
 ❌ INACCURATE
 
+IAN: seems like it should be fixed, yes.
+
 > As a user, I want the chat system to deduplicate messages by messageId so that network timeouts and client retries don't result in duplicate messages in the agent transcript.
 
 Files: `src/webapp/routes/chat-send-routes.ts`
@@ -4415,19 +4414,10 @@ User story is completely accurate. The message queueing feature is fully impleme
 
 </details>
 
-### No new user stories identified  
-❌ INACCURATE
-
-> After comprehensive analysis of 65+ TypeScript files across src/webapp routes, tRPC routers, authentication, views compilation, and server management, all implemented capabilities map to the 180+ documented stories in the existing list. The codebase implements these stories with sophisticated engineering patterns (resumable buffers, lock-group scheduling, SSRF-protected proxying, multi-tab coordination) but no additional user-facing capabilities were found that represent distinct new stories.
-
-Files: `src/webapp/routes/admin.ts`, `src/webapp/routes/clerk.ts`, `src/webapp/routes/chat-send-routes.ts`, `src/webapp/trpc/routers/health.ts`, `src/webapp/trpc/routers/events.ts`, `src/webapp/views/compiler.ts`
-
-**Verifier (flagged):** The user story's title and conclusion are misleading. While the technical analysis scope (65+ files, documented patterns) is accurate, the story misrepresents the findings: (1) "180+ documented stories in the existing list" refers to a file auto-generated TODAY as part of this analysis, not a pre-existing list; (2) the file actually contains 226 stories with 49 inaccurate/incomplete implementations - these represent real implementation gaps that should be acknowledged; (3) claiming "no new user-facing capabilities" ignores the 49 documented capabilities that are broken or missing implementations. The story should say "Analysis found all implemented capabilities are documented, but also identified 49 capabilities with bugs or incomplete implementations."
-
 ### Configure and switch between multiple speech-to-text providers  
 ❌ INACCURATE
 
-> As a user, I want to choose between multiple transcription service providers (Voxtral, Deepgram, Whisper, OpenAI Realtime) and independently configure a high-quality service for re-transcription, so that I can optimize for quality/speed/cost tradeoffs in different situations.
+> As a user, I want to choose between multiple transcription service providers (Voxtral, Deepgram, and OpenAI Realtime for realtime; Whisper only for high-quality batch re-transcription) and independently configure a high-quality service for re-transcription, so that I can optimize for quality/speed/cost tradeoffs in different situations.
 
 Files: `src/webapp/trpc/routers/transcription.ts`, `src/webapp/routes/chat-audio-routes.ts`
 
@@ -4604,7 +4594,7 @@ The story is accurately implemented. /Users/ianbicking/src/callback-worktrees/us
 ### Mine chat sessions for teaching moments  
 ❌ INACCURATE
 
-> As a box operator, I want to run `cb retro scan` to analyze recent chat sessions and extract what the boxholder implicitly taught the agent, so that personality and guide cards get updated with learned preferences and corrections.
+> As an agent, I want to run `cb retro scan` to analyze recent chat sessions and extract what the boxholder implicitly taught the agent, so that a later integration step can update personality and guide cards with learned preferences and corrections.
 
 Files: `src/cli/commands/retro.ts`, `src/cli/index.ts`
 
@@ -4655,7 +4645,7 @@ All claimed functionality exists and is correctly implemented. Verified: (1) cb 
 ### Manage Google Drive file mounts and sync  
 ❌ INACCURATE
 
-> As a box operator, I want to run `cb drive add <url> <path>` and `cb drive sync` to mount Google Sheets/Docs in the box and keep them synchronized as markdown, so that collaborative documents stay in sync with the box workflow.
+> As a box operator, I want to run `cb drive add <url> <path>` and `cb drive sync` to mount Google Sheets/Docs in the box and keep them synchronized (Docs as markdown, Sheets as JSON), so that collaborative documents stay in sync with the box workflow.
 
 Files: `src/cli/commands/drive.ts`, `src/cli/index.ts`
 
@@ -4796,7 +4786,7 @@ All files exist and are properly implemented. Verified: (1) src/cli/commands/ren
 ### Record observations about CLI usability  
 ❌ INACCURATE
 
-> As a box agent, I want to silently record observations about confusing CLI options, unclear error messages, or odd file placement conventions, so that the boxholder can review feedback without interrupting my current task.
+> As an agent, I want to record observations about confusing CLI options, unclear error messages, or odd file placement conventions without making a big deal of it (a brief confirmation is fine; it is not hidden from the user), so that the boxholder can review feedback without interrupting my current task.
 
 Files: `src/cli/commands/feedback.ts`
 
@@ -4867,7 +4857,7 @@ Implementation verified in src/cli/commands/upload.ts and src/core/commands/uplo
 ### Process pending jobs with flexible sync and polling  
 ❌ INACCURATE
 
-> As a box operator, I want to process pending jobs with options to run connector sync first, poll on an interval, filter by job type or source, and cap cycles per run, so that I can orchestrate box data processing with fine-grained control.
+> As a box operator, I want to process pending jobs with options to run connector sync first, poll on an interval, filter by job type, and cap cycles per run (source filtering exists internally but is intentionally not exposed as a CLI flag), so that I can orchestrate box data processing with fine-grained control.
 
 Files: `src/cli/commands/reactor.ts`
 
@@ -4875,6 +4865,8 @@ Files: `src/cli/commands/reactor.ts`
 
 ### Run outbound connectors to push changes  
 ❌ INACCURATE
+
+IAN: oh yeah, that's not good.
 
 > As a box operator, I want to run the post-processing phase that flushes outbound cards (e.g., queued Telegram messages) through their destination connectors, so that box-authored content reaches external services without waiting for the next full wakeup cycle.
 
@@ -4937,7 +4929,7 @@ All three files exist and implement the described capability. src/cli/commands/c
 ### Check scheduled task health status  
 ❌ INACCURATE
 
-> As a box operator, I want to view the health status of all scheduled scripts (showing which are failing, overdue, blocked, disabled, or ok), so that I can identify and debug problematic scheduled tasks.
+> As a box operator, I want to view the health status of all scheduled scripts (showing which are failing, overdue, blocked, invalid, disabled, or ok), so that I can identify and debug problematic scheduled tasks.
 
 Files: `src/cli/commands/health.ts`
 
@@ -5104,15 +5096,6 @@ The user story is fully and accurately implemented. The trick.ts file correctly 
 
 </details>
 
-### Interactively prompt the agent in-context  
-❌ INACCURATE
-
-> As a developer, I want to run Claude Code interactively within the box environment with the same context and rules the agent normally sees, so that I can test agent behavior and debug issues live.
-
-Files: `src/cli/commands/prompt.ts`
-
-**Verifier (flagged):** The user story claims an "interactive" interface to prompt agents, but the actual implementation is a one-shot CLI command runner (cb prompt <text>) that explicitly avoids launching a full interactive session. The documented user story in docs/user-stories.md states the opposite: "ask the agent questions or give instructions without launching a full interactive session." The implementation works correctly for its actual purpose but does not match the stated requirements regarding interactivity.
-
 ### Full-text search cards with filters and index rebuild  
 ✅ verified
 
@@ -5181,7 +5164,7 @@ The claimed file exists and is fully implemented. The `cb health` command provid
 ### Install daemon auto-start on macOS  
 ❌ INACCURATE
 
-> As a box administrator, I want to install a launchd plist so the scheduler daemon starts automatically at login, so that scheduled tasks run without manual intervention.
+> As a box administrator, I want to install a launchd plist so the scheduler daemon starts at login, so that scheduled tasks run automatically (installing writes the plist; a one-time `launchctl load` activates it).
 
 Files: `src/cli/commands/scheduler.ts`
 
@@ -5216,7 +5199,7 @@ User story is accurate. File exists at claimed path with complete, working imple
 ### Re-transcribe voice messages with high-quality service  
 ❌ INACCURATE
 
-> As a user, I want to re-run a voice recording through high-quality transcription (Whisper/Voxtral) when realtime transcription was imperfect, so that the commit reflects accurate text.
+> As an agent, I want to re-run a voice recording through high-quality transcription (Whisper/Voxtral) when realtime transcription was imperfect, so that I can apply a more accurate transcript (the command prints the result to stdout for the agent to use).
 
 Files: `src/cli/commands/chat-audio.ts`
 
@@ -5267,6 +5250,8 @@ User story is fully accurate. The unified manifest feature is completely impleme
 ### Verify binary asset integrity and track manifests  
 ❌ INACCURATE
 
+IAN: yes, important to fix
+
 > As a maintainer, I want to verify all binary attachments are tracked in manifests and scan for corruption, so that asset integrity is guaranteed and gitignore patterns are applied consistently.
 
 Files: `src/cli/commands/attachments.ts`
@@ -5275,6 +5260,8 @@ Files: `src/cli/commands/attachments.ts`
 
 ### Record CLI friction for design feedback  
 ❌ INACCURATE
+
+IAN: yes, an error code seems wrong
 
 > As an agent, I want to file observations about confusing command options or unclear error messages without interrupting my task, so that UX pain points are captured for future improvement.
 
@@ -5285,7 +5272,7 @@ Files: `src/cli/commands/feedback.ts`
 ### Keep external file pointers synchronized  
 ❌ INACCURATE
 
-> As a user, I want to maintain cards that point to live external files and automatically sync their version/size/mtime metadata, so that the box knows when the external file has changed.
+> As a user, I want to maintain cards that point to live external files and sync their version/size/mtime metadata on demand via `cb extfile sync`, so that the box knows when the external file has changed.
 
 Files: `src/cli/commands/extfile.ts`
 
@@ -5348,6 +5335,8 @@ The user story is completely accurate. The claimed file exists and fully impleme
 ### Run outbound connectors for delivery  
 ❌ INACCURATE
 
+IAN: also seems like an issue, so to be fixed
+
 > As a system, I want to run outbound connector syncs to flush cards waiting to be pushed (e.g., Telegram messages in output/), so that the box can send data to external services after processing.
 
 Files: `src/cli/commands/finalize.ts`
@@ -5369,6 +5358,8 @@ The claimed file exists at the exact path specified. The implementation fully ma
 
 ### Move and rename cards with reference updates  
 ❌ INACCURATE
+
+IAN: Oh... it should be updating any ref attribtues? procedure-ref isn't good, because all refs should be in a key that is "ref" exactly, like procedure: {ref: card location} - so if in fact there is a ref without the "ref" name then that needs fixing too.
 
 > As a user, I want to move or rename a card and automatically update all internal references (card links, landmarks, procedures), so that reorganization doesn't break the structure.
 
@@ -5519,7 +5510,7 @@ The user story is accurately implemented. The claimed file exists and all descri
 ### Validate cards with PostToolUse hook integration for real-time author feedback  
 ❌ INACCURATE
 
-> As a box operator, I want to validate cards/markdown/attachments in multiple scopes with a PostToolUse hook that gives real-time feedback during authoring (exit code 2 for warnings, integration with Edit/Write), so that invalid commits are caught early without blocking the agent.
+> As a box operator, I want to validate cards — their links to other cards, integrity, and attachments — plus view files with a PostToolUse hook that gives real-time feedback during authoring (exit code 2 for warnings, integration with Edit/Write), so that invalid commits are caught early without blocking the agent. (General markdown linting is a separate process.)
 
 Files: `src/cli/commands/validate.ts`
 
@@ -5540,6 +5531,8 @@ The hook correctly implements exit code 2 for errors/warnings (lines 177, 188, 2
 
 ### Manage scheduler daemon lifecycle with launchd and detailed logging  
 ❌ INACCURATE
+
+IAN: not a big deal, so long as the user is given instructions. But if it can run that command, that would be cool too.
 
 > As a box operator, I want to install/unload a launchd background scheduler, check its status, filter logs by box/script/errors, and inspect detailed execution history, so that recurring tasks run reliably at system startup without manual oversight.
 
@@ -5575,6 +5568,8 @@ The user story accurately describes the implemented functionality. All claimed f
 
 ### Track scheduled task health with failure patterns and daemon status  
 ❌ INACCURATE
+
+IAN: oh, I guess we could add to that.
 
 > As a box operator, I want to inspect scheduled task health showing failures with consecutive-failure counts, overdue tasks with pending duration, blocking locks, and scheduler daemon liveness, so that I can proactively detect and respond to automation degradation.
 
@@ -5625,7 +5620,7 @@ User story is fully accurate. Claimed file src/cli/commands/usage.ts exists with
 ### Render views to static HTML with scenario override and machine state control  
 ❌ INACCURATE
 
-> As a view author, I want to render agent-authored views to static HTML via SSR with scenario/machine state override and CSS selector extraction, so that I can test page layouts and debug without a running server.
+> As a view author, I want to render app pages to static HTML via SSR with scenario/machine-state override and CSS selector extraction (`cb render`; agent-authored views render separately via `cb view test`), so that I can test page layouts and debug without a running server.
 
 Files: `src/cli/commands/render.ts`
 
@@ -5633,6 +5628,8 @@ Files: `src/cli/commands/render.ts`
 
 ### Re-transcribe voice messages with high-quality audio models on demand  
 ❌ INACCURATE
+
+IAN: I think word-level timestamps usually aren't called for, but could be an option here. Those would probably need to be written to a second file somewhere.
 
 > As a user, I want to run `cb chat retranscribe` to re-run a voice message through Whisper's high-quality pass with word-level timestamps and optional diarization, so that I can correct transcription errors when the realtime pass was inaccurate.
 
@@ -5775,6 +5772,8 @@ All four claimed files exist and implement the story as described. The system ge
 ### Resume scenario tests from checkpoints  
 ❌ INACCURATE
 
+IAN: resuming a test that's part way through doesn't seem useful or important at all
+
 > As a box developer, I want to resume multi-step scenario tests from checkpoint steps, so that I can recover from test failures without re-running all previous steps.
 
 Files: `src/scenario/runner.ts`, `src/scenario/types.ts`, `src/cli/commands/scenario.ts`
@@ -5838,7 +5837,7 @@ Schema, resolution logic, and frontend integration all present and tested. Files
 ### Create nested task lists with status tracking  
 ❌ INACCURATE
 
-> As a box user, I want to create nested todo lists with items having status (pending/done/cancelled/deferred), completion dates, and notes, so that I can track personal action items across my box.
+> As a box user, I want to create nested todo lists with items having status (pending/done/cancelled/deferred), completion dates, and notes, so that I can track personal action items across my box. (The create template seeds a flat skeleton; nested items, completion dates, and notes are added by editing the card — by design.)
 
 Files: `src/schemas/todo-list.ts`, `src/core/commands/create.ts`
 
@@ -5846,6 +5845,8 @@ Files: `src/schemas/todo-list.ts`, `src/core/commands/create.ts`
 
 ### Define and execute multi-step procedures with tracking  
 ❌ INACCURATE
+
+IAN: yes, should be implemented
 
 > As a box user, I want to define procedure cards with multi-phase workflows (precheck/run/validate) and execute them with automatic progress tracking, so that complex multi-step operations can be recorded and debugged.
 
@@ -5858,7 +5859,7 @@ Files: `src/schemas/procedure.ts`, `src/schemas/procedure-run.ts`, `src/core/com
 
 > As a course author, I want to create concept-map cards as self-contained knowledge graphs with semantic relationships between concepts, so that I can model and validate the structure of course topics.
 
-Files: `src/schemas/concept-map.ts`, `src/core/card-lint.ts`, `src/frontend/src/renderers/concept-map-renderer.tsx`
+Files: `src/schemas/concept-map.ts`, `src/core/card-lint.ts`, `src/frontend/src/renderers/concept-map.tsx`
 
 **Verifier (flagged):** File name discrepancy: The claimed file `src/frontend/src/renderers/concept-map-renderer.tsx` does not exist. The actual file is `src/frontend/src/renderers/concept-map.tsx`. Both other claimed files exist and are correctly implemented. The story's capability description is accurate — concept-map cards fully support self-contained knowledge graphs with semantic relationships, validation, and rendering. However, the file naming in the claim is factually incorrect.
 

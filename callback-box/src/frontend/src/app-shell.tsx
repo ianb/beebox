@@ -26,7 +26,7 @@ import { href } from "./lib/routing";
 interface KnownBox { slug: string; name: string; }
 
 // Re-exported for the route tree
-export { BoxRedirect, ShareRedirect } from "./pages/BoxSelection";
+export { BoxRedirect } from "./pages/BoxSelection";
 
 // Start capturing console errors immediately so we never miss early failures
 enableDebugLogCapture();

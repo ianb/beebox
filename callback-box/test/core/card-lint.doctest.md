@@ -241,34 +241,11 @@ result.totalWarnings
 => 0
 ```
 
-## Ref existence honors `@version` stripping and `attach/` scope
+## Ref existence honors `attach/` scope
 
-The broken-ref walk resolves refs the same way the cards do: a version-like
-`@x.y.z` suffix is stripped before the file is located (so a versioned ref to
-an existing card is not reported broken), and an `attach/`-prefixed ref resolves
-into the referring card's `<basename>.attach/` scope. These mirror the cardworks
-loader semantics the walk replaced.
-
-A versioned ref to an existing target lints clean — the `@1.2.3` is not treated
-as part of the filename:
-
-```ts
-const box = await makeTmpBox();
-await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n---\n");
-await box.write(
-  "box/notes/Ver.doc.card",
-  "---\ntype: doc\ntitle: V\n---\nSee {% source ref=\"/box/people/dana.person.card@1.2.3\" as=\"x\" %}{% /source %}\n",
-);
-const result = await lintCardsDispatch(
-  [box.path("box/notes/Ver.doc.card")],
-  { boxRoot: box.root, ctx },
-);
-result.totalWarnings
-=> 0
-```
-
-An `attach/` ref resolving into the card's attach scope is clean; a missing one
-in the same scope warns:
+The broken-ref walk resolves an `attach/`-prefixed ref into the referring
+card's `<basename>.attach/` scope. An `attach/` ref resolving into the card's
+attach scope is clean; a missing one in the same scope warns:
 
 ```ts
 const box = await makeTmpBox();

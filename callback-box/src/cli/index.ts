@@ -34,7 +34,6 @@ import {
   healthCommand,
   trickCommand,
   finalizeCommand,
-  promptCommand,
   sessionCommand,
   schedulerCommand,
   describeImagesCommand,
@@ -94,7 +93,6 @@ program.addCommand(scheduledCommand);
 program.addCommand(healthCommand);
 program.addCommand(trickCommand);
 program.addCommand(finalizeCommand);
-program.addCommand(promptCommand);
 program.addCommand(sessionCommand);
 program.addCommand(schedulerCommand);
 program.addCommand(describeImagesCommand);

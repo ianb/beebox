@@ -27,7 +27,6 @@ export { scheduledCommand } from "./scheduled.js";
 export { healthCommand } from "./health.js";
 export { trickCommand } from "./trick.js";
 export { finalizeCommand } from "./finalize.js";
-export { promptCommand } from "./prompt.js";
 export { sessionCommand } from "./session.js";
 export { schedulerCommand } from "./scheduler.js";
 export { describeImagesCommand } from "./describe-images.js";

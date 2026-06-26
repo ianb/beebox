@@ -58,7 +58,7 @@ export {
   createFakeGoogleGmail,
 } from "./google-gmail.js";
 
-export type { OpenAIAudioService, TranscriptionResult, TTSResult } from "./openai-audio.js";
+export type { OpenAIAudioService, TTSResult } from "./openai-audio.js";
 export {
   createOpenAIAudioService,
   createFakeOpenAIAudio,

@@ -1,5 +1,5 @@
 /**
- * OpenAI Audio service — typed interface for Whisper transcription and TTS.
+ * OpenAI Audio service — typed interface for text-to-speech.
  *
  * Real implementation calls the OpenAI REST API.
  * Fake records calls and returns placeholder responses.
@@ -8,12 +8,6 @@
 import ky from "ky";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface TranscriptionResult {
-  text: string;
-  duration: number;
-  language: string;
-}
 
 export interface TTSResult {
   /** Audio data as a Buffer or ReadableStream */
@@ -24,12 +18,6 @@ export interface TTSResult {
 // ─── Service interface ───────────────────────────────────────────────────────
 
 export interface OpenAIAudioService {
-  transcribe(audio: Buffer, opts?: {
-    filename?: string;
-    contentType?: string;
-    prompt?: string;
-  }): Promise<TranscriptionResult>;
-
   textToSpeech(text: string, opts?: {
     voice?: string;
     instructions?: string;
@@ -47,37 +35,6 @@ export function createOpenAIAudioService(apiKey: string): OpenAIAudioService {
   });
 
   return {
-    async transcribe(audio, opts) {
-      const boundary = `----formdata-${Date.now()}`;
-      const filename = opts?.filename ?? "audio.webm";
-      const contentType = opts?.contentType ?? "audio/webm";
-
-      const parts: Buffer[] = [];
-      const addField = (name: string, value: string) => {
-        parts.push(Buffer.from(`--${boundary}\r\nContent-Disposition: form-data; name="${name}"\r\n\r\n${value}\r\n`));
-      };
-
-      // File field
-      parts.push(Buffer.from(
-        `--${boundary}\r\nContent-Disposition: form-data; name="file"; filename="${filename}"\r\nContent-Type: ${contentType}\r\n\r\n`,
-      ));
-      parts.push(audio);
-      parts.push(Buffer.from("\r\n"));
-
-      addField("model", "whisper-1");
-      addField("response_format", "verbose_json");
-      if (opts?.prompt) addField("prompt", opts.prompt);
-
-      parts.push(Buffer.from(`--${boundary}--\r\n`));
-
-      const data = await api.post("audio/transcriptions", {
-        body: Buffer.concat(parts),
-        headers: { "Content-Type": `multipart/form-data; boundary=${boundary}` },
-      }).json<{ text: string; duration: number; language: string }>();
-
-      return { text: data.text, duration: data.duration, language: data.language };
-    },
-
     async textToSpeech(text, opts) {
       const res = await api.post("audio/speech", {
         json: {
@@ -97,36 +54,14 @@ export function createOpenAIAudioService(apiKey: string): OpenAIAudioService {
 
 // ─── Fake implementation ─────────────────────────────────────────────────────
 
-export interface FakeOpenAIAudioOptions {
-  /** Text to return from transcribe(). Default: "transcribed text" */
-  transcriptionText?: string;
-}
-
 export interface FakeOpenAIAudioService extends OpenAIAudioService {
-  /** Transcription calls recorded */
-  transcriptions: Array<{ filename?: string; prompt?: string }>;
   /** TTS calls recorded */
   speeches: Array<{ text: string; voice?: string; instructions?: string }>;
 }
 
-export function createFakeOpenAIAudio(
-  opts?: FakeOpenAIAudioOptions,
-): FakeOpenAIAudioService {
+export function createFakeOpenAIAudio(): FakeOpenAIAudioService {
   const fake: FakeOpenAIAudioService = {
-    transcriptions: [],
     speeches: [],
-
-    async transcribe(_audio, callOpts) {
-      const entry: { filename?: string; prompt?: string } = {};
-      if (callOpts?.filename) entry.filename = callOpts.filename;
-      if (callOpts?.prompt) entry.prompt = callOpts.prompt;
-      fake.transcriptions.push(entry);
-      return {
-        text: opts?.transcriptionText ?? "transcribed text",
-        duration: 1.5,
-        language: "en",
-      };
-    },
 
     async textToSpeech(text, callOpts) {
       const entry: { text: string; voice?: string; instructions?: string } = { text };

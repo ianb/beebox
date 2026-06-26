@@ -1,12 +1,11 @@
 /**
- * Settings page with calendar configuration and sharing tips.
+ * Settings page with calendar and Drive configuration.
  */
 
 import { useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
 import { CalendarSection } from "../components/settings/CalendarSection";
 import { DriveSection } from "../components/settings/DriveSection";
-import { ShareShortcutSection } from "../components/settings/ShareShortcutSection";
 import { Column } from "../components/ui/Column";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
@@ -27,8 +26,6 @@ export function SettingsPage() {
         <CalendarSection />
 
         <DriveSection />
-
-        <ShareShortcutSection />
       </Stack>
     </Column>
   );

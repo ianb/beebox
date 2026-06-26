@@ -7,11 +7,7 @@
  * dispatcher already extracts the refs itself (`extractRefs` over frontmatter,
  * `extractBodyRefs` over the Markdoc body); this only answers "does it exist".
  *
- * Mirrors cardworks' ref semantics (refs/parse-ref.ts + refs/resolve.ts) so the
- * broken-ref warnings match what the XML loader produced:
- *  - a `#fragment` suffix is ignored for existence
- *  - an `@version`-like suffix (`@1.2.3`, `@v2`) is stripped before resolving
- *    (a bare `@` mid-filename is left alone)
+ * Ref semantics:
  *  - box-root-absolute refs (`/box/…`) resolve against the box root
  *  - `attach/<rest>` (and bare `attach`) resolve into the referring card's
  *    `<basename>.attach/` scope
@@ -23,7 +19,7 @@ import { dirname, resolve } from "node:path";
 import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
 
 interface RefExistsInput {
-  /** The raw ref string as written in the card (may carry `@version`/`#fragment`). */
+  /** The raw ref string as written in the card. */
   ref: string;
   /** Absolute path of the card the ref was written in. */
   fromPath: string;
@@ -31,27 +27,9 @@ interface RefExistsInput {
   boxRoot: string;
 }
 
-/**
- * Strip the `@version` and `#fragment` suffixes, returning the bare path
- * component — the same split cardworks' parseRef performs. The version is only
- * stripped when it looks version-like (`@1.x`, `@v2`), so an `@` inside a
- * filename isn't mistaken for a version delimiter.
- */
-function refPathComponent(ref: string): string {
-  let remaining = ref;
-  const hashIndex = remaining.indexOf("#");
-  if (hashIndex !== -1) remaining = remaining.slice(0, hashIndex);
-  const atIndex = remaining.lastIndexOf("@");
-  if (atIndex !== -1) {
-    const afterAt = remaining.slice(atIndex + 1);
-    if (/^v?\d/.test(afterAt)) remaining = remaining.slice(0, atIndex);
-  }
-  return remaining;
-}
-
 /** Resolve a ref to the absolute filesystem path it points at. */
 export function resolveRefToPath(input: RefExistsInput): string {
-  const refPath = refPathComponent(input.ref);
+  const refPath = input.ref;
   if (refPath.startsWith("/")) return input.boxRoot + refPath;
   if (isAttachRef(refPath)) {
     const attachResolved = resolveAttachRef(input.fromPath, refPath);

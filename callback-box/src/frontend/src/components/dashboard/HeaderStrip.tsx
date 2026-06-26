@@ -4,14 +4,12 @@
 
 import { useState, useRef, useEffect } from "react";
 import type { RouterOutput } from "../../lib/trpc";
-import { Button } from "../ui/Button";
 
 type StatusResponse = RouterOutput["status"]["status"];
 
 interface HeaderStripProps {
   status: StatusResponse | null;
   connected: boolean;
-  onAction: (action: "wakeup" | "sync" | "create-memo") => void;
 }
 
 function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
@@ -45,7 +43,7 @@ function GitStatusPopover({ git }: { git: StatusResponse["git"] }) {
   );
 }
 
-export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
+export function HeaderStrip({ status, connected }: HeaderStripProps) {
   const [showGit, setShowGit] = useState(false);
   const gitRef = useRef<HTMLDivElement>(null);
   const boxRoot = status?.boxRoot;
@@ -87,18 +85,6 @@ export function HeaderStrip({ status, connected, onAction }: HeaderStripProps) {
             {showGit ? <GitStatusPopover git={status.git} /> : null}
           </div>
         ) : null}
-      </div>
-
-      <div className="flex items-center gap-1.5 sm:gap-2">
-        <Button intent="success" size="sm" onClick={() => onAction("create-memo")}>
-          + Memo
-        </Button>
-        <Button intent="secondary" size="sm" onClick={() => onAction("wakeup")}>
-          <span className="font-mono">wakeup</span>
-        </Button>
-        <Button intent="secondary" size="sm" onClick={() => onAction("sync")}>
-          <span className="font-mono">sync</span>
-        </Button>
       </div>
     </div>
   );

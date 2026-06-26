@@ -17,6 +17,24 @@ Four buckets, matching the maintainer's framing:
 Item numbers (`[n]`) refer to the order in `user-stories.md`; they're kept so
 every comment is traceable back to its story.
 
+## Implementation status (2026-06-26)
+
+- **Bucket A — done except A4.** A1–A3, A5–A8 landed: bookmark/share, web-UI
+  command buttons, voice/text memos, the dead `transcribe()` method, the
+  `@version`/`#fragment` ref parsing, the dead Drive `inspect` endpoint, and
+  `cb prompt` are removed; the corresponding stories were deleted from the
+  catalog (413→404 stories). Typecheck + ESLint + affected doctests green.
+  **A4 (calendar-review job removal) is HELD** pending the maintainer decision
+  below — IAN's comments there are exploratory ("not even sure we want this"),
+  and the removal touches 9 files of live calendar-sync behavior. Its stories
+  ([29], [34], [35], [38]) and their `IAN:` notes are left intact.
+- **Bucket B — done.** All 44 doc corrections applied to `user-stories.md`
+  (wrong citations fixed, over-claims softened, agent-vs-user reframes), item
+  [47] reframed to TTS-only, and `docs/calendar.md` updated ([46]). Each
+  resolved item's `IAN:` line was cleared; the 43 remaining `IAN:` lines are
+  exactly the held set (C ∪ D ∪ calendar) and remain as the tracking signal.
+- **Buckets C, D, A4 — not started.** Tracked by the surviving `IAN:` lines.
+
 ## Summary
 
 | Bucket | Count | Items |
