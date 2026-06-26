@@ -1,6 +1,6 @@
 ---
 name: cb-migration
-description: Use the moment you change a card type's on-disk shape while existing boxes hold the old form — renaming or removing a card field, changing a card's `type`/format/extension, splitting/merging fields, or moving data between cards. Reach for it as you start the change, before you think "migration." NOT for a net-new schema or a purely additive change where old cards still load correctly.
+description: Use when you change a card type's on-disk shape that existing boxes already hold — renaming or removing a card field, changing a card's `type`/format/extension, splitting/merging fields, or moving data between cards. Such changes need a data migration even when they only edit a schema. NOT for a net-new schema or a purely additive change where old cards still load correctly.
 allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 ---
 
