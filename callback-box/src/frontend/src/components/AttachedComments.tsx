@@ -57,7 +57,7 @@ export function AttachedComments({
 
   return (
     <div className="mb-4" {...cbSource("card", cardPath)}>
-      <Accordion title={title} defaultOpen>
+      <Accordion title={title}>
         {isLoading ? (
           <Text as="div" size="sm" tone="subtle" italic aria-busy>Loading comments…</Text>
         ) : error !== null ? (
