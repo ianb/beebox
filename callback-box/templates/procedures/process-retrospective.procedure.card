@@ -173,9 +173,11 @@ steps:
 
             STEP 4 - ROUTE BY SINK:
             - personality: tone, traits, boxholder relationships, unresolved,
-              experiments only. After ANY trait/tone change, REWRITE the body
+              experiments only. Whenever you change the TEXT of a tone/trait
+              entry — add one, reword one, or remove one — REWRITE the body
               paragraph to reflect the updated whole (the body is what job agents
-              see).
+              see). A confidence-only bump with no wording change needs no body
+              edit.
             - guide: rules, reactions, experiments of the specific guide card the
               observation points at — sinkRef when given, else the obvious guide
               from the candidates listed in the precheck. Follow that guide's own
