@@ -268,7 +268,7 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 7 * * 1",
     notBefore: "3d",
     onWakeup: false,
-    enabled: false,
+    enabled: true,
     lockGroup: "retro",
     runs: "cb procedure run process-retrospective",
     source: "Weekly Monday-morning sweep; enable per box once trialed",
