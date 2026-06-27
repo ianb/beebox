@@ -6,11 +6,15 @@
  * linted.
  */
 
+import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { promisify } from "node:util";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { customLinkRules, linkRuleConfig } from "../../core/markdown-lint-rules.js";
+
+const execFileP = promisify(execFile);
 
 const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
 const SKIP_FILES = new Set(["CLAUDE.md"]);
@@ -39,6 +43,23 @@ export function isLintableMarkdown(filePath: string): boolean {
   const parts = filePath.split(path.sep);
   if (parts.some((p) => SKIP_DIRS.has(p))) return false;
   return !SKIP_FILES.has(parts[parts.length - 1]!);
+}
+
+/**
+ * Absolute paths of git-staged markdown files worth linting (same skip set as
+ * the box scan). Mirrors `listStagedCards`, so `cb validate --staged` covers a
+ * staged dossier edit the way it already covers staged cards.
+ */
+export async function listStagedMarkdown(boxRoot: string): Promise<string[]> {
+  const { stdout } = await execFileP(
+    "git",
+    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
+  );
+  return stdout
+    .split("\n")
+    .filter((rel) => rel !== "" && isLintableMarkdown(rel))
+    .map((rel) => path.join(boxRoot, rel));
 }
 
 export async function findMarkdownFiles(dir: string): Promise<string[]> {

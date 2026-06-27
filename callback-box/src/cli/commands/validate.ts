@@ -9,6 +9,7 @@ import { Command } from "commander";
 import { formatLintResults, type LintSummary } from "../../cards/index.js";
 import {
   findMarkdownFiles,
+  listStagedMarkdown,
   lintMarkdownFiles,
   formatMarkdownResults,
   isLintableMarkdown,
@@ -179,16 +180,16 @@ async function collectResults(
   return collectExplicitResults(args);
 }
 
-/** Validate the union of git-staged cards and any explicit card paths given. */
+/** Validate the union of git-staged cards/markdown and any explicit paths given. */
 async function collectStagedResults({ boxRoot, ctx, resolved, json }: CollectArgs): Promise<ValidationResults> {
-  const staged = await listStagedCards(boxRoot);
-  const explicit = resolved.filter(isCardFile);
-  const all = [...staged, ...explicit];
-  if (all.length === 0 && !json) {
-    console.log("No staged cards to validate.");
+  const cards = [...(await listStagedCards(boxRoot)), ...resolved.filter(isCardFile)];
+  const mdFiles = [...(await listStagedMarkdown(boxRoot)), ...resolved.filter(isMarkdownFile)];
+  if (cards.length === 0 && mdFiles.length === 0 && !json) {
+    console.log("No staged cards or markdown to validate.");
   }
-  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { boxRoot, ctx }) : null;
-  return { cardSummary, mdSummary: null, attachErrors: [], claudeMdWarnings: [] };
+  const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
+  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }
 
 /** Validate every card, markdown file, and attach layout in the box. */
