@@ -3,27 +3,18 @@
  * shells), validation, git-clean enforcement, and result recording.
  */
 
-import * as path from "node:path";
-import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
-import { stageAll, commit, getHead } from "../../cli/lib/git.js";
+import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
-import { runShell } from "./shell.js";
 import type { CommandContext } from "../command-runner.js";
 import {
-  MODEL_MAP,
   type AgentFactory,
   type ParsedStep,
   type ParsedProcedure,
   type StepUpdate,
 } from "./engine-types.js";
 import { updateStepInRunCard } from "./engine-run-card.js";
-import {
-  executePhaseShells,
-  executeValidation,
-  ensureGitClean,
-  buildContextBlock,
-  getStepLineRange,
-} from "./engine-phase.js";
+import { executePhaseShells } from "./engine-phase.js";
+import { runAndValidate, type ValidateOutcome } from "./engine-run-phase.js";
 
 /**
  * Parameters for executeStep
@@ -54,7 +45,7 @@ export interface ExecuteStepParams {
 export async function executeStep(
   params: ExecuteStepParams
 ): Promise<"completed" | "skipped" | "failed"> {
-  const { ctx, boxRoot, step, procedure, runCardPath } = params;
+  const { ctx, step, runCardPath } = params;
 
   ctx.writeLine(fmt.phase(`Step: ${step.id}`));
   ctx.writeLine(fmt.dim(step.description));
@@ -85,36 +76,11 @@ export async function executeStep(
     return "completed";
   }
 
-  // Baseline ref captured before the run phase — the start of the step's diff
-  // range, so instruction validation judges the whole step (every commit the
-  // agent made), not just the last one.
-  const baseline = await getHead(boxRoot);
-
-  const { sessionId } = await runRunAgents({ ...params, precheckOutput: precheck.output });
-  const { runStdout } = await runRunShells(params);
-
-  // Ensure git is clean after run phase
-  const gitRef = await ensureGitClean({
-    boxRoot,
-    stepId: step.id,
-    procedureName: procedure.name,
-    ...(sessionId && { sessionId }),
+  // ── Run + validate (with severity:review auto-retry) ──
+  const { gitRef, sessionId, runStdout, validateResult, reviewExhausted } = await runAndValidate({
+    ...params,
+    precheckOutput: precheck.output,
   });
-
-  // ── Validate ──
-  let validateResult: { status: string; stdout?: string; review?: string } | undefined;
-  if (step.validate) {
-    ctx.writeLine(fmt.dim("  Validating..."));
-    validateResult = await executeValidation({
-      ctx,
-      boxRoot,
-      step,
-      procedureName: procedure.name,
-      baseline,
-      gitRef,
-      ...(params.createAgent && { createAgent: params.createAgent }),
-    });
-  }
 
   // ── Record results ──
   return recordStepResults({
@@ -123,6 +89,7 @@ export async function executeStep(
     sessionId,
     runStdout,
     validateResult,
+    reviewExhausted,
   });
 }
 
@@ -213,93 +180,6 @@ async function recordNoRunPhase(params: ExecuteStepParams): Promise<void> {
 }
 
 /**
- * Execute the run phase's agents. Split from the run shells (see
- * {@link runRunShells}) so the review-retry loop can re-invoke agents without
- * repeating side-effecting shell commands.
- */
-async function runRunAgents(
-  params: ExecuteStepParams & { precheckOutput: string | undefined }
-): Promise<{ sessionId: string | undefined }> {
-  const { ctx, boxRoot, step, procedure, procedureCardPath, runCardPath, relProcedurePath } =
-    params;
-  const relRunCardPath = path.relative(boxRoot, runCardPath);
-  const run = step.run!;
-
-  let sessionId: string | undefined;
-
-  for (const agentDef of run.agents) {
-    ctx.writeLine(fmt.dim(`  Running agent${agentDef.model ? ` (${agentDef.model})` : ""}...`));
-
-    const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
-    const contextBlock = buildContextBlock({
-      runCardPath: relRunCardPath,
-      stepId: step.id,
-      procedurePath: relProcedurePath,
-      ...(stepLineRange && { stepLineRange }),
-      ...(params.precheckOutput && { precheckOutput: params.precheckOutput }),
-      ...(params.directive && { directive: params.directive }),
-    });
-
-    const systemPrompt = contextBlock + "\n\n" + agentDef.prompt;
-
-    const agentFactory = params.createAgent ?? realCreateAgent;
-    const agent = agentFactory({
-      name: `procedure-${procedure.name}-${step.id}`,
-      onOutput: (text) => ctx.write(text),
-    });
-
-    const invokeOpts: AgentInvokeOptions = {
-      boxRoot,
-      systemPrompt,
-      prompt: `Execute the ${step.id} step of the ${procedure.name} procedure. Follow the instructions in your system prompt.`,
-      maxTurns: agentDef.maxTurns ?? 20,
-    };
-    if (agentDef.model) {
-      invokeOpts.model = MODEL_MAP[agentDef.model] ?? agentDef.model;
-    }
-
-    const agentResult = await agent.invoke(invokeOpts);
-
-    sessionId = agent.sessionId ?? undefined;
-
-    if (!agentResult.success) {
-      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));
-    }
-  }
-
-  return { sessionId };
-}
-
-/**
- * Execute the run phase's shell commands. Run exactly once per step (never on a
- * review-retry — see {@link runRunAgents}).
- */
-async function runRunShells(
-  params: ExecuteStepParams
-): Promise<{ runStdout: string | undefined }> {
-  const { ctx, boxRoot, step } = params;
-  const run = step.run!;
-  let runStdout: string | undefined;
-
-  for (const script of run.shells) {
-    ctx.writeLine(fmt.dim("  Running shell command..."));
-    const result = await runShell(boxRoot, script);
-    runStdout = result.stdout;
-
-    if (result.exitCode !== 0 && !result.skipped) {
-      ctx.writeLine(fmt.fail(`Shell command failed (exit ${result.exitCode})`));
-      if (result.stderr) {
-        ctx.writeLine(fmt.dim(`  ${result.stderr}`));
-      }
-    } else if (result.stdout) {
-      ctx.writeLine(fmt.dim(`  ${result.stdout}`));
-    }
-  }
-
-  return { runStdout };
-}
-
-/**
  * Parameters for recordStepResults
  */
 interface RecordStepResultsParams {
@@ -307,7 +187,9 @@ interface RecordStepResultsParams {
   gitRef: string;
   sessionId: string | undefined;
   runStdout: string | undefined;
-  validateResult: { status: string; stdout?: string; review?: string } | undefined;
+  validateResult: ValidateOutcome | undefined;
+  /** A `severity: review` failure that couldn't be healed — fails the step. */
+  reviewExhausted: boolean;
 }
 
 /**
@@ -316,14 +198,15 @@ interface RecordStepResultsParams {
 async function recordStepResults(
   args: RecordStepResultsParams
 ): Promise<"completed" | "failed"> {
-  const { params, gitRef, sessionId, runStdout, validateResult } = args;
+  const { params, gitRef, sessionId, runStdout, validateResult, reviewExhausted } = args;
   const { ctx, boxRoot, step, procedure, runCardPath } = params;
 
+  // A step fails when an `abort` validation failed, or when a `review` failure
+  // exhausted its retries (the auto-retry in runAndValidate makes review gate).
+  const validationGated =
+    validateResult?.status === "fail" && step.validate?.severity === "abort";
   const stepUpdate: StepUpdate = {
-    status:
-      validateResult?.status === "fail" && step.validate?.severity === "abort"
-        ? "failed"
-        : "completed",
+    status: validationGated || reviewExhausted ? "failed" : "completed",
     completedAt: new Date().toISOString(),
   };
 

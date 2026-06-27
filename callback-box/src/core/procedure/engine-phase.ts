@@ -77,8 +77,9 @@ function failStatus(severity: string): "warn" | "fail" {
  *
  * Two kinds of check, both gated by `severity`: `shells:` (objective exit code)
  * and `instructions:` (model-judged against the step's git diff). A failing
- * shell check short-circuits the model call. `severity: review` still downgrades
- * to `warn` here — the auto-retry that makes it gate lives in `executeStep`.
+ * shell check short-circuits the model call. A failing `review` check returns
+ * `fail` here; the auto-retry that tries to heal it (and the terminal gate when
+ * it can't) lives in `runAndValidate` (engine-run-phase.ts).
  */
 export async function executeValidation(
   params: ExecuteValidationParams
@@ -135,12 +136,6 @@ export async function executeValidation(
     } else {
       ctx.writeLine(fmt.ok(`Instruction check passed: ${verdict.review}`));
     }
-  }
-
-  // severity="review" auto-retry is implemented in executeStep; here it still
-  // downgrades to warn so a review failure that reaches this point doesn't gate.
-  if (status === "fail" && severity === "review") {
-    status = "warn";
   }
 
   const result: { status: string; stdout?: string; review?: string } = { status };
