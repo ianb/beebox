@@ -42,7 +42,7 @@ export interface ParsedStep {
   description: string;
   precheck?: ParsedPhase & { passOutput?: boolean };
   run?: ParsedPhase;
-  validate?: { phase: ParsedPhase; severity: string };
+  validate?: { phase: ParsedPhase; severity: string; model?: string };
 }
 
 export interface ParsedProcedure {

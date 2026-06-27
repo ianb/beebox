@@ -76,6 +76,7 @@ function toParsedStep(step: ProcedureStepDef): ParsedStep {
     result.validate = {
       phase: toPhase(step.validate),
       severity: step.validate.severity ?? "warn",
+      ...(step.validate.model !== undefined && { model: step.validate.model }),
     };
   }
   return result;

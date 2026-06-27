@@ -45,6 +45,8 @@ export const ProcedureRun = z.object(phaseFields);
 export const ProcedureValidate = z.object({
   ...phaseFields,
   severity: z.enum(["warn", "review", "abort"]).optional(),
+  /** Model tier for `instructions:` evaluation (default: sonnet). */
+  model: z.enum(["haiku", "sonnet", "opus"]).optional(),
 });
 
 /** One step. */

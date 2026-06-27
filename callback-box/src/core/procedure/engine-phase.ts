@@ -7,10 +7,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getStatus, stageAll, commit, getHead } from "../../cli/lib/git.js";
+import { getRangeDiff } from "../../cli/lib/git-range.js";
 import { fmt } from "../../cli/lib/format.js";
 import { runShell, CHECK_SKIP_CODE } from "./shell.js";
+import { evaluateInstructions } from "./engine-validate-model.js";
 import type { CommandContext } from "../command-runner.js";
-import type { ParsedPhase, ParsedStep } from "./engine-types.js";
+import type { ParsedPhase, ParsedStep, AgentFactory } from "./engine-types.js";
 
 export interface PhaseShellResult {
   exitCode: number;
@@ -56,20 +58,37 @@ export interface ExecuteValidationParams {
   ctx: CommandContext;
   boxRoot: string;
   step: ParsedStep;
+  procedureName: string;
+  /** Git ref captured before the run phase — start of the step's diff range. */
+  baseline?: string;
+  /** Git ref after the run phase (post-ensureGitClean) — end of the range. */
+  gitRef?: string;
+  /** Agent factory override for the instruction-validation judge. */
+  createAgent?: AgentFactory;
+}
+
+/** Map a failing check to a status given the phase severity. */
+function failStatus(severity: string): "warn" | "fail" {
+  return severity === "warn" ? "warn" : "fail";
 }
 
 /**
  * Execute validation phase.
+ *
+ * Two kinds of check, both gated by `severity`: `shells:` (objective exit code)
+ * and `instructions:` (model-judged against the step's git diff). A failing
+ * shell check short-circuits the model call. `severity: review` still downgrades
+ * to `warn` here — the auto-retry that makes it gate lives in `executeStep`.
  */
 export async function executeValidation(
   params: ExecuteValidationParams
 ): Promise<{ status: string; stdout?: string; review?: string }> {
-  const { ctx, boxRoot, step } = params;
+  const { ctx, boxRoot, step, procedureName } = params;
   const validate = step.validate!;
   const { phase, severity } = validate;
   let status = "pass";
   let stdout = "";
-  const review: string | undefined = undefined;
+  let review: string | undefined = undefined;
 
   // Run shell checks
   if (phase.shells.length > 0) {
@@ -77,7 +96,7 @@ export async function executeValidation(
     stdout = shellResult.stdout;
 
     if (shellResult.exitCode !== 0) {
-      status = severity === "warn" ? "warn" : "fail";
+      status = failStatus(severity);
       ctx.writeLine(
         severity === "warn"
           ? fmt.warn(`  Validation warning: ${stdout || shellResult.stderr}`)
@@ -88,26 +107,39 @@ export async function executeValidation(
     }
   }
 
-  // Run instruction checks (model evaluation)
+  // Run instruction checks (model evaluation against the step's diff). Skipped
+  // when a shell check already hard-failed — no point paying for a verdict.
   if (phase.instructions.length > 0 && status !== "fail") {
-    // For now, instruction validation is logged but not evaluated by a model.
-    // The model review feature will be added when needed.
-    const whyText = phase.whys.join("\n");
-    ctx.writeLine(
-      fmt.dim(`  Instruction check: ${phase.instructions[0]?.slice(0, 80)}...`)
-    );
-    if (whyText) {
-      ctx.writeLine(fmt.dim(`  Why: ${whyText.slice(0, 80)}...`));
+    const diff =
+      params.baseline && params.gitRef
+        ? await getRangeDiff(boxRoot, { range: `${params.baseline}..${params.gitRef}` })
+        : "";
+    const verdict = await evaluateInstructions({
+      boxRoot,
+      instructions: phase.instructions,
+      whys: phase.whys,
+      diff,
+      name: `procedure-${procedureName}-validate`,
+      ...(validate.model && { model: validate.model }),
+      ...(params.createAgent && { createAgent: params.createAgent }),
+    });
+    review = verdict.review;
+
+    if (!verdict.passed) {
+      status = failStatus(severity);
+      ctx.writeLine(
+        severity === "warn"
+          ? fmt.warn(`  Instruction check warning: ${verdict.review}`)
+          : fmt.fail(`  Instruction check failed: ${verdict.review}`)
+      );
+    } else {
+      ctx.writeLine(fmt.ok(`Instruction check passed: ${verdict.review}`));
     }
-    // TODO: Invoke review model with instruction + git diff + why
-    // For now, instruction checks pass by default
   }
 
-  // Handle severity="review" failure with retry
+  // severity="review" auto-retry is implemented in executeStep; here it still
+  // downgrades to warn so a review failure that reaches this point doesn't gate.
   if (status === "fail" && severity === "review") {
-    ctx.writeLine(fmt.warn("  Validation failed with severity=review — would retry agent"));
-    // TODO: Re-invoke agent with failure context and <why>
-    // For now, downgrade to warn and continue
     status = "warn";
   }
 

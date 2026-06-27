@@ -5,7 +5,7 @@
 
 import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
-import { stageAll, commit } from "../../cli/lib/git.js";
+import { stageAll, commit, getHead } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { runShell } from "./shell.js";
 import type { CommandContext } from "../command-runner.js";
@@ -85,6 +85,11 @@ export async function executeStep(
     return "completed";
   }
 
+  // Baseline ref captured before the run phase — the start of the step's diff
+  // range, so instruction validation judges the whole step (every commit the
+  // agent made), not just the last one.
+  const baseline = await getHead(boxRoot);
+
   const runOutput = await runRunPhase({ ...params, precheckOutput: precheck.output });
 
   // Ensure git is clean after run phase
@@ -99,7 +104,15 @@ export async function executeStep(
   let validateResult: { status: string; stdout?: string; review?: string } | undefined;
   if (step.validate) {
     ctx.writeLine(fmt.dim("  Validating..."));
-    validateResult = await executeValidation({ ctx, boxRoot, step });
+    validateResult = await executeValidation({
+      ctx,
+      boxRoot,
+      step,
+      procedureName: procedure.name,
+      baseline,
+      gitRef,
+      ...(params.createAgent && { createAgent: params.createAgent }),
+    });
   }
 
   // ── Record results ──

@@ -61,3 +61,24 @@ export async function getDiffStat(
     return "";
   }
 }
+
+/**
+ * Full `git diff <range>` patch (not `--stat`), optionally scoped to `paths`.
+ * `range` is a single ref or a `<base>..<head>` range. Used by the procedure
+ * engine to hand a step's complete change to the instruction-validation judge —
+ * a range (`baseline..finalRef`) so a multi-commit step is captured whole, not
+ * just its last commit. Returns "" when there are no changes or the range can't
+ * be resolved.
+ */
+export async function getRangeDiff(
+  boxRoot: string,
+  { range, paths }: { range: string; paths?: string[] },
+): Promise<string> {
+  const args = [range];
+  if (paths && paths.length > 0) args.push("--", ...paths);
+  try {
+    return (await simpleGit(boxRoot).diff(args)).trim();
+  } catch (_e) {
+    return "";
+  }
+}
