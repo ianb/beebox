@@ -12,6 +12,7 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { SheetTable, type CellValue } from "../components/SheetTable";
+import { AttachedComments } from "../components/AttachedComments";
 import { resolveRelativePath } from "../lib/view-url";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
@@ -130,6 +131,8 @@ function SheetView({ data }: RendererProps) {
       ) : (
         <SheetTable rows={currentRows} />
       )}
+
+      <AttachedComments cardPath={data.path} frontmatter={data.frontmatter} />
     </Stack>
   );
 }
