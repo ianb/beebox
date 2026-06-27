@@ -33,12 +33,16 @@
     "postcss": "^8",
     "tailwindcss": "^3",
     "tap": "^21",
+    "tsx": "^4.21.0",
     "typescript": "^5.7.0",
     "wxt": "^0.20.26"
   },
   "tap": {
     "plugin": [
       "!@tapjs/node-serialize"
+    ],
+    "node-arg": [
+      "--import=tsx"
     ],
     "coverage-report": [
       "none"
