@@ -333,10 +333,11 @@ No purely-infrastructural concept here is exempt — both gaps are author-facing
     fails; **regression pins** that `shells`+`abort` (`procedure-engine.doctest.md:290`)
     and `warn` (`:230`) are unchanged (Chunk C).
   - These live in `test/core/procedure/` alongside the existing engine doctests.
-  - Baseline confirmed before starting: `procedure-engine.doctest.md` 12/12 pass.
-    (Repo-wide `pnpm test` has 66 pre-existing failures from a missing
-    `src/schemas/guide.ts` import in `box-defaults.ts` — unrelated to this plan; the
-    procedure path doesn't import it. Flag separately to the boxholder.)
+  - Baseline confirmed clean after merging `main`: full `pnpm test` is 2409/2409
+    green (`procedure-engine.doctest.md` 12/12). An earlier 66-failure cluster came
+    from the tap mock-loader not resolving `.js`→`.tsx` for the `guide` schema; fixed
+    upstream by `cd06ed81` ("add tsx loader so tap resolves .js→.ts imports"), pulled
+    in via the merge — unrelated to this plan.
 - **Knowledge audits.** Updated + new entries land and are **run** in Chunk D (not
   deferred).
 - **Migration.** No data-shape migration: run-card `review` already exists; new schema
