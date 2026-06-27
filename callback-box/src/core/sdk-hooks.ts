@@ -10,6 +10,7 @@ import type {
   HookCallbackMatcher,
   HookJSONOutput,
   PostToolUseHookInput,
+  PreToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
 import { formatLintResults } from "../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
@@ -99,6 +100,56 @@ export function cardValidatorHook(): HookCallbackMatcher {
         }
 
         return {};
+      },
+    ],
+  };
+}
+
+/** Best-effort extraction of the shell `command` from a Bash tool input. */
+function extractCommand(toolInput: unknown): string | null {
+  if (toolInput === null || typeof toolInput !== "object") return null;
+  const cmd = (toolInput as { command?: unknown }).command;
+  return typeof cmd === "string" ? cmd : null;
+}
+
+/**
+ * True for a `git mv` that moves box content (a `store/` path or a `.card`).
+ * Plain command-string match — a nudge tolerates false negatives on exotic
+ * invocations, and requiring a store/.card token avoids false positives.
+ */
+function isGitMvOnBoxContent(command: string): boolean {
+  if (!/\bgit\s+mv\b/.test(command)) return false;
+  return /(^|\s|\/)store\//.test(command) || /\.card\b/.test(command);
+}
+
+const GIT_MV_NUDGE =
+  "You're using `git mv` on box content. `git mv` relocates files but does NOT " +
+  "rewrite inbound references, so links/refs pointing at the moved content will " +
+  "dangle. Prefer `cb mv` — it moves the files AND rewrites every reference, " +
+  "including inline links in `.md` dossiers. Use plain `git mv` only if you " +
+  "intentionally want to move without updating references.";
+
+/**
+ * PreToolUse hook for Bash: when the agent reaches for `git mv` on box content,
+ * suggest `cb mv` instead (which rewrites inbound references). Advisory only —
+ * it injects context, never blocks, since `git mv` is occasionally what's
+ * wanted (a move where references should NOT follow).
+ */
+export function gitMvNudgeHook(): HookCallbackMatcher {
+  return {
+    matcher: "Bash",
+    hooks: [
+      async (input): Promise<HookJSONOutput> => {
+        if (input.hook_event_name !== "PreToolUse") return {};
+        const pre = input as PreToolUseHookInput;
+        const command = extractCommand(pre.tool_input);
+        if (command === null || !isGitMvOnBoxContent(command)) return {};
+        return {
+          hookSpecificOutput: {
+            hookEventName: "PreToolUse",
+            additionalContext: GIT_MV_NUDGE,
+          },
+        };
       },
     ],
   };

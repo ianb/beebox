@@ -24,7 +24,7 @@ import {
   type SDKUserMessage,
   type WarmQuery,
 } from "@anthropic-ai/claude-agent-sdk";
-import { cardValidatorHook } from "../core/sdk-hooks.js";
+import { cardValidatorHook, gitMvNudgeHook } from "../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 import { createAsyncIterableQueue } from "./claude-chat-queue.js";
 
@@ -145,7 +145,7 @@ function buildQueryOptions(opts: ChatBackendStartOptions): Options {
   if (opts.model !== undefined) {
     queryOptions.model = opts.model;
   }
-  queryOptions.hooks = { PostToolUse: [cardValidatorHook()] };
+  queryOptions.hooks = { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] };
   if (opts.includePartialMessages === true) {
     queryOptions.includePartialMessages = true;
   }
