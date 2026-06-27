@@ -2,17 +2,28 @@
  * TodoListView — card renderer for todo-list cards.
  *
  * Reads the card's frontmatter (`name`, `details`, nested `items`) into a
- * render tree, draws each item with a tri-state round checkbox
- * (pending/done/deferred), and toggles status via the todos.updateItem
- * mutation.
+ * render tree and draws each item as a row with two controls:
  *
- * Lives in components/ because the bespoke round-checkbox look is
- * appearance-heavy.
+ * - a round checkbox for the fast pending↔done toggle (the common action),
+ * - a `⋯` menu exposing all four statuses (pending/done/cancelled/deferred)
+ *   so the rarer cancelled/deferred states are reachable from the UI.
+ *
+ * Both go through the todos.updateItem mutation. Lives in components/
+ * because the bespoke round-checkbox + status look is appearance-heavy.
  */
 
+import { Dropdown, MenuItem } from "./ui/Dropdown";
 import { cbSource, cbSourceItem } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
 import type { RendererProps } from "../renderers";
+import type { TodoItemStatusType } from "../../../schemas/todo-list";
+
+const STATUS_OPTIONS: ReadonlyArray<{ value: TodoItemStatusType; label: string }> = [
+  { value: "pending", label: "Pending" },
+  { value: "done", label: "Done" },
+  { value: "cancelled", label: "Cancelled" },
+  { value: "deferred", label: "Deferred" },
+];
 
 interface TodoItemInfo {
   name: string;
@@ -93,41 +104,67 @@ interface TodoItemProps {
   onToggle: (itemName: string, newStatus: string) => void;
 }
 
+/** Round-checkbox appearance for each status (box classes + inner mark). */
+function statusBox(status: string): { boxClass: string; mark: JSX.Element | null } {
+  switch (status) {
+    case "done":
+      return {
+        boxClass: "bg-primary border-primary text-white",
+        mark: (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M2 6l3 3 5-5" />
+          </svg>
+        ),
+      };
+    case "cancelled":
+      return {
+        boxClass: "border-warm-400 bg-warm-100 text-warm-500",
+        mark: (
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 3l6 6M9 3l-6 6" />
+          </svg>
+        ),
+      };
+    case "deferred":
+      return { boxClass: "border-warm-300 bg-warm-100", mark: null };
+    default:
+      return { boxClass: "border-warm-400 hover:border-primary", mark: null };
+  }
+}
+
+/** Name-text appearance + a trailing status label for the non-binary states. */
+function statusText(status: string): { textClass: string; label: string | null } {
+  switch (status) {
+    case "done":
+      return { textClass: "line-through text-warm-500", label: null };
+    case "cancelled":
+      return { textClass: "line-through text-warm-400", label: "cancelled" };
+    case "deferred":
+      return { textClass: "text-warm-500 italic", label: "deferred" };
+    default:
+      return { textClass: "text-warm-900", label: null };
+  }
+}
+
 function TodoItem({ item, onToggle }: TodoItemProps) {
-  const isDone = item.status === "done" || item.status === "cancelled";
+  const { boxClass, mark } = statusBox(item.status);
+  const { textClass, label } = statusText(item.status);
+  const isDone = item.status === "done";
 
   return (
     <div className="py-1" {...cbSourceItem(`item: ${item.name}`)}>
       <div className="flex items-start gap-2">
         <button
           onClick={() => onToggle(item.name, isDone ? "pending" : "done")}
-          className={`mt-0.5 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
-            isDone
-              ? "bg-primary border-primary text-white"
-              : item.status === "deferred"
-                ? "border-warm-300 bg-warm-100"
-                : "border-warm-400 hover:border-primary"
-          }`}
+          className={`mt-0.5 w-5 h-5 rounded border-2 flex-shrink-0 flex items-center justify-center transition-colors ${boxClass}`}
           title={isDone ? "Mark pending" : "Mark done"}
         >
-          {isDone ? (
-            <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M2 6l3 3 5-5" />
-            </svg>
-          ) : null}
+          {mark}
         </button>
         <div className="flex-1 min-w-0">
-          <span className={`text-sm ${
-            isDone
-              ? "line-through text-warm-500"
-              : item.status === "deferred"
-                ? "text-warm-500 italic"
-                : "text-warm-900"
-          }`}>
-            {item.name}
-          </span>
-          {item.status === "deferred" ? (
-            <span className="ml-2 text-xs text-warm-400">deferred</span>
+          <span className={`text-sm ${textClass}`}>{item.name}</span>
+          {label !== null ? (
+            <span className="ml-2 text-xs text-warm-400">{label}</span>
           ) : null}
           {item.details ? (
             <p className="text-xs text-warm-600 mt-0.5">{item.details}</p>
@@ -144,6 +181,40 @@ function TodoItem({ item, onToggle }: TodoItemProps) {
             </div>
           ) : null}
         </div>
+        <Dropdown
+          align="right"
+          width="w-40"
+          dense
+          className="flex-shrink-0"
+          trigger={({ toggle, open, ariaProps }) => (
+            <button
+              type="button"
+              onClick={toggle}
+              {...ariaProps}
+              aria-label="Change status"
+              title="Change status"
+              className={`mt-0.5 p-1 rounded text-warm-400 hover:text-warm-700 hover:bg-warm-100 transition-colors ${
+                open ? "bg-warm-100 text-warm-700" : ""
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                <circle cx="3" cy="8" r="1.4" />
+                <circle cx="8" cy="8" r="1.4" />
+                <circle cx="13" cy="8" r="1.4" />
+              </svg>
+            </button>
+          )}
+        >
+          {STATUS_OPTIONS.map((option) => (
+            <MenuItem
+              key={option.value}
+              active={item.status === option.value}
+              onClick={() => onToggle(item.name, option.value)}
+            >
+              {option.label}
+            </MenuItem>
+          ))}
+        </Dropdown>
       </div>
     </div>
   );
