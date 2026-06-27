@@ -167,6 +167,9 @@ tests:
     correct_contains: ["cb mv"]
     tags: [cli]
 
+  # Status (2026-06-27): both pass against test1 — knows_directly, 0 files read /
+  # 0 searches, answered straight from the agent guide's cb-mv + box-root-link
+  # convention (behavior.ts). Landed with the markdown link-validation fix.
   - id: move-store-content-uses-cb-mv
     prompt: "How do you move or rename content under store/ (a card, a directory, or a markdown dossier)?"
     expected_level: knows_directly
