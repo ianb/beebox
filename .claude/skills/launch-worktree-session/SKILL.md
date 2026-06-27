@@ -99,8 +99,9 @@ briefing.
 
 ## Script details
 
-The command is `launch-worktree-session` (lives at
-`~/.local/bin/launch-worktree-session`, on PATH).
+The command is `launch-worktree-session` (tracked at
+`bin/launch-worktree-session` in the monorepo, symlinked onto PATH from
+`~/.local/bin/launch-worktree-session` — edit the tracked copy).
 
 Signature:
 
