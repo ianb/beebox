@@ -19,6 +19,7 @@ import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
 import { stageFiles, commit } from "../lib/git.js";
+import { attachDirFor } from "../../shared/attach-path.js";
 import { loadTransientState, saveTransientState } from "../../connectors/transient-state.js";
 
 // Ensure handlers are registered
@@ -154,8 +155,9 @@ driveCommand
     // Delegate first-time creation to the handler's pull(): it knows
     // how to write the card and the type-specific local files (JSON tabs
     // for sheets, sibling .md for docs). Empty state means "fresh sync".
-    const cardBasename = path.basename(cardPath, `.${handler.cardType}.card`);
-    const localDir = path.join(path.dirname(cardPath), cardBasename);
+    // localDir must match the connector's attach scope (`<basename>.attach/`)
+    // so the card's `attach/` refs resolve to the files written here.
+    const localDir = attachDirFor(cardPath);
     await fs.mkdir(path.dirname(cardPath), { recursive: true });
 
     const fileState = emptyFileState();
