@@ -167,6 +167,20 @@ tests:
     correct_contains: ["cb mv"]
     tags: [cli]
 
+  - id: move-store-content-uses-cb-mv
+    prompt: "How do you move or rename content under store/ (a card, a directory, or a markdown dossier)?"
+    expected_level: knows_directly
+    watch_for: "Names cb mv and that it rewrites inbound references (incl. .md links); warns against raw git mv leaving links dangling"
+    correct_contains: ["cb mv"]
+    tags: [cli, links]
+
+  - id: internal-links-resolve-to-box-root
+    prompt: "A markdown link in a card or dossier is [x](/store/foo/bar.jpg). What does the leading slash mean?"
+    expected_level: knows_directly
+    watch_for: "Box root, not the OS filesystem root; the target must be an existing file/dir in the box"
+    correct_contains: ["box root"]
+    tags: [links]
+
   - id: validate-card
     prompt: "How do you validate a card after editing it?"
     expected_level: knows_directly
