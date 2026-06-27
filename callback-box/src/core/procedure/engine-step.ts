@@ -90,14 +90,15 @@ export async function executeStep(
   // agent made), not just the last one.
   const baseline = await getHead(boxRoot);
 
-  const runOutput = await runRunPhase({ ...params, precheckOutput: precheck.output });
+  const { sessionId } = await runRunAgents({ ...params, precheckOutput: precheck.output });
+  const { runStdout } = await runRunShells(params);
 
   // Ensure git is clean after run phase
   const gitRef = await ensureGitClean({
     boxRoot,
     stepId: step.id,
     procedureName: procedure.name,
-    ...(runOutput.sessionId && { sessionId: runOutput.sessionId }),
+    ...(sessionId && { sessionId }),
   });
 
   // ── Validate ──
@@ -119,8 +120,8 @@ export async function executeStep(
   return recordStepResults({
     params,
     gitRef,
-    sessionId: runOutput.sessionId,
-    runStdout: runOutput.runStdout,
+    sessionId,
+    runStdout,
     validateResult,
   });
 }
@@ -212,20 +213,20 @@ async function recordNoRunPhase(params: ExecuteStepParams): Promise<void> {
 }
 
 /**
- * Execute the run phase's agents and shell commands.
+ * Execute the run phase's agents. Split from the run shells (see
+ * {@link runRunShells}) so the review-retry loop can re-invoke agents without
+ * repeating side-effecting shell commands.
  */
-async function runRunPhase(
+async function runRunAgents(
   params: ExecuteStepParams & { precheckOutput: string | undefined }
-): Promise<{ sessionId: string | undefined; runStdout: string | undefined }> {
+): Promise<{ sessionId: string | undefined }> {
   const { ctx, boxRoot, step, procedure, procedureCardPath, runCardPath, relProcedurePath } =
     params;
   const relRunCardPath = path.relative(boxRoot, runCardPath);
   const run = step.run!;
 
   let sessionId: string | undefined;
-  let runStdout: string | undefined;
 
-  // Execute agents
   for (const agentDef of run.agents) {
     ctx.writeLine(fmt.dim(`  Running agent${agentDef.model ? ` (${agentDef.model})` : ""}...`));
 
@@ -266,7 +267,20 @@ async function runRunPhase(
     }
   }
 
-  // Execute shell commands in run phase
+  return { sessionId };
+}
+
+/**
+ * Execute the run phase's shell commands. Run exactly once per step (never on a
+ * review-retry — see {@link runRunAgents}).
+ */
+async function runRunShells(
+  params: ExecuteStepParams
+): Promise<{ runStdout: string | undefined }> {
+  const { ctx, boxRoot, step } = params;
+  const run = step.run!;
+  let runStdout: string | undefined;
+
   for (const script of run.shells) {
     ctx.writeLine(fmt.dim("  Running shell command..."));
     const result = await runShell(boxRoot, script);
@@ -282,7 +296,7 @@ async function runRunPhase(
     }
   }
 
-  return { sessionId, runStdout };
+  return { runStdout };
 }
 
 /**

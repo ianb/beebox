@@ -187,3 +187,62 @@ has fallback: true
 ```ts cleanup
 await box.cleanup();
 ```
+
+## Agent then shell in one run phase (split is order-preserving)
+
+A run phase with both an `agents:` and a `shells:` entry runs the agent first,
+then the shell — the order the engine guarantees after `runRunPhase` was split
+into `runRunAgents` + `runRunShells`.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/mixed.procedure.card", `---
+name: mixed
+description: Agent and shell in one run phase
+steps:
+  - id: both
+    description: Agent writes, then a shell appends
+    run:
+      agents:
+        - prompt: Write the base file.
+      shells:
+        - |
+          echo "shell-ran" > box/output/shell.txt
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add mixed procedure");
+
+let agentRan;
+const createAgent = (opts) => createFakeAgent({
+  name: opts.name,
+  act: async () => {
+    agentRan = true;
+    await box.write("box/output/agent.txt", "agent-ran");
+    box.commitAll("Agent: base file");
+    return { success: true };
+  },
+});
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({
+  ctx,
+  procedureNameOrPath: "mixed",
+  options: { createAgent },
+});
+print(`success: ${result.success}`);
+print(`agent ran: ${agentRan}`);
+
+const files = await box.list("box/output");
+print(`agent.txt: ${files.includes("agent.txt")}`);
+print(`shell.txt: ${files.includes("shell.txt")}`);
+=>
+success: true
+agent ran: true
+agent.txt: true
+shell.txt: true
+```
+
+```ts cleanup
+await box.cleanup();
+```
