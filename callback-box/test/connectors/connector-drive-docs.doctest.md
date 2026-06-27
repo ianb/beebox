@@ -4,6 +4,7 @@ Tests for the `drive-handler-docs` handler using fake services.
 
 ```ts setup
 import { join } from "node:path";
+import { execSync } from "node:child_process";
 import { readFile, access, unlink, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box.js";
@@ -12,6 +13,7 @@ import {
   type FakeDocument,
 } from "../../src/services/google-drive.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive.js";
+import { docsHandler } from "../../src/connectors/drive-handler-docs.js";
 import { createGdocTemplate } from "../../src/schemas/gdoc.js";
 
 // Several assertions exercise conflict/error paths that log to console.
@@ -132,7 +134,8 @@ resynced.includes("contains: Planning notes for the project kickoff.")
 
 ## Pull — lossy content surfaces in the card
 
-Comments, footnotes, and inline objects appear as `<item>` entries.
+Footnotes and inline objects appear as `lossy` entries. Comments are NOT
+counted as lossy — they're captured in the sidecar instead (see below).
 
 ```ts
 const box2 = await makeTmpBox({ git: true });
@@ -173,14 +176,28 @@ box2.commitAll("add reviewed doc");
 await createGoogleDriveConnector(box2.root, drive2).sync();
 
 const card2 = await box2.read("store/drive/Reviewed_Doc.gdoc.card");
-card2.includes("type: comments") && card2.includes("count: 3")
-=> true
+card2.includes("type: comments")
+=> false
 
 card2.includes("type: footnotes") && card2.includes("count: 1")
 => true
 
 card2.includes("type: images") && card2.includes("count: 2")
 => true
+```
+
+The comments are written to a sidecar and referenced from the card:
+
+```ts continue
+card2.includes("comments:") && card2.includes("ref: attach/Reviewed_Doc.comments.json")
+=> true
+
+const sidecar2 = JSON.parse(await box2.read("store/drive/Reviewed_Doc.attach/Reviewed_Doc.comments.json"));
+sidecar2.length
+=> 3
+
+sidecar2[0]?.content
+=> comment 0
 ```
 
 ## Push — local markdown edit pushes to Drive
@@ -337,7 +354,7 @@ drive4.contentUpdateLog[0]?.content
 
 ## Graceful degradation when Docs API is unavailable
 
-If `getDocument` fails (e.g. the auth token lacks the `documents.readonly` scope), pull still succeeds — markdown is exported via the Drive API and the lossy block falls back to comment count only.
+If `getDocument` fails (e.g. the auth token lacks the `documents.readonly` scope), pull still succeeds — markdown is exported via the Drive API and the lossy block is empty (no Docs API structure to tally), but comments still come through the Drive API and are captured in the sidecar.
 
 ```ts
 const box5 = await makeTmpBox({ git: true });
@@ -392,10 +409,153 @@ const card5 = await box5.read("store/drive/Degraded.gdoc.card");
 card5.includes("title: Degraded")
 => true
 
-// Lossy block contains comments (Drive API) but NOT images (Docs API).
-card5.includes("type: comments") && card5.includes("count: 2")
-=> true
-
+// Comments (Drive API) still captured in the sidecar; images (Docs API) absent.
 card5.includes("type: images")
 => false
+
+card5.includes("ref: attach/Degraded.comments.json")
+=> true
+
+JSON.parse(await box5.read("store/drive/Degraded.attach/Degraded.comments.json")).length
+=> 2
+```
+
+## Comments sidecar — full thread preserved, and removed when comments clear
+
+The sidecar holds the raw comment objects verbatim: author, timestamps,
+resolved status, anchored text, and replies — everything an agent needs to
+read the feedback.
+
+```ts
+const box6 = await makeTmpBox({ git: true });
+await initBox(box6.root);
+box6.commitAll("init box");
+
+const richDoc: FakeDocument = {
+  structure: {
+    documentId: "doc-6",
+    title: "Feedback",
+    revisionId: "rev-1",
+    body: { content: [] },
+  },
+  exports: new Map([["text/markdown", "Body.\n"]]),
+  comments: [
+    {
+      id: "c-1",
+      content: "These numbers look off — should be Q2.",
+      author: { displayName: "Jane Doe", emailAddress: "jane@example.com" },
+      resolved: true,
+      createdTime: "2026-06-20T10:00:00Z",
+      modifiedTime: "2026-06-21T09:00:00Z",
+      quotedFileContent: { mimeType: "text/html", value: "the Q3 numbers" },
+      replies: [
+        {
+          id: "r-1",
+          content: "Fixed, thanks.",
+          author: { displayName: "John" },
+          createdTime: "2026-06-21T09:00:00Z",
+        },
+      ],
+    },
+  ],
+};
+
+const drive6 = createFakeGoogleDrive({
+  files: [{
+    id: "doc-6",
+    name: "Feedback",
+    mimeType: "application/vnd.google-apps.document",
+    modifiedTime: "2026-04-26T10:00:00Z",
+    owners: [{ emailAddress: "test@example.com" }],
+    webViewLink: "https://docs.google.com/document/d/doc-6/edit",
+  }],
+  documents: new Map([["doc-6", richDoc]]),
+});
+
+await box6.seed("store/drive/Feedback.gdoc.card", createGdocTemplate({
+  driveId: "doc-6",
+  title: "Feedback",
+  modified: "2026-04-26T10:00:00Z",
+  revision: "rev-1",
+  link: "https://docs.google.com/document/d/doc-6/edit",
+  owner: "test@example.com",
+  contentFile: "Feedback.md",
+  status: "new",
+}));
+box6.commitAll("add feedback doc");
+
+const conn6 = createGoogleDriveConnector(box6.root, drive6);
+await conn6.sync();
+
+const sidecar6 = JSON.parse(await box6.read("store/drive/Feedback.attach/Feedback.comments.json"));
+sidecar6[0]?.author?.displayName
+=> Jane Doe
+
+sidecar6[0]?.resolved
+=> true
+
+sidecar6[0]?.quotedFileContent?.value
+=> the Q3 numbers
+
+sidecar6[0]?.replies?.[0]?.content
+=> Fixed, thanks.
+```
+
+When the upstream comments are all removed, the next sync deletes the
+sidecar and drops the `comments:` ref from the card:
+
+```ts continue
+richDoc.comments = [];
+// Bump modifiedTime so the doc re-pulls (otherwise nothing changed upstream).
+const f6 = drive6.files.find((f) => f.id === "doc-6");
+if (f6) f6.modifiedTime = "2026-04-26T12:00:00Z";
+
+await conn6.sync();
+
+await access(join(box6.root, "store/drive/Feedback.attach/Feedback.comments.json")).then(() => "exists", () => "gone")
+=> gone
+
+(await box6.read("store/drive/Feedback.gdoc.card")).includes("comments:")
+=> false
+
+// The sidecar deletion was staged and committed — no stray deletion left
+// dangling in the working tree.
+execSync("git status --porcelain", { cwd: box6.root, encoding: "utf-8" }).trim()
+=>
+```
+
+## Inspect — comments reported separately from lossy
+
+The `inspect()` preview (used by `cb drive inspect`) reports the comment
+count under `details.comments`, not bucketed into the lossy tally.
+
+```ts
+const drive7 = createFakeGoogleDrive({
+  files: [{
+    id: "doc-7",
+    name: "Previewed",
+    mimeType: "application/vnd.google-apps.document",
+    modifiedTime: "2026-04-26T10:00:00Z",
+    owners: [{ emailAddress: "test@example.com" }],
+    webViewLink: "https://docs.google.com/document/d/doc-7/edit",
+  }],
+  documents: new Map([["doc-7", makeDoc({
+    id: "doc-7",
+    title: "Previewed",
+    markdown: "Body.\n",
+    footnotes: 1,
+    comments: 4,
+  })]]),
+});
+
+const file7 = await drive7.getFile("doc-7");
+const info7 = await docsHandler.inspect(file7, drive7);
+info7.details.comments
+=> 4
+
+(info7.details.lossy as Record<string, number>).comments
+=> 0
+
+(info7.details.lossy as Record<string, number>).footnotes
+=> 1
 ```

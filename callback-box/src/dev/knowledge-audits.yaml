@@ -1323,8 +1323,8 @@ tests:
   - id: drive-docs-lossy
     prompt: "If a Google Doc has comments and footnotes, what happens to them when I sync?"
     expected_level: knows_about
-    watch_for: "Mentions the <lossy> block and that comments/footnotes don't survive markdown export. Should warn the user that pushing local edits will destroy them."
-    correct_contains_any: ["lossy", "don't survive", "destroy", "lost"]
+    watch_for: "Distinguishes the two: comments are captured into a {basename}.comments.json sidecar in the attach scope (readable context, but not written back upstream on a push), while footnotes are listed in the lossy block and DON'T survive markdown export — pushing local edits destroys them. Should not claim comments are merely counted or lost."
+    correct_contains_any: ["sidecar", "comments.json", "comments.ref", "lossy"]
     tags: [drive, docs, lossy]
 
   # === Email Outbound (drafts) ===

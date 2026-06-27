@@ -30,6 +30,7 @@ export const SheetSchema: CardSchema = cardSchema("sheet", {
     link: z.string(),
     owner: z.string(),
     sheets: z.array(SheetTab),
+    comments: z.object({ ref: z.string() }).optional(),
   },
   instructions: `# Sheet Cards
 
@@ -60,6 +61,15 @@ modify the card frontmatter — it is managed by the connector — with one
 exception: \`contains:\` is agent-owned and survives sync; set it freely
 (\`cb contains update\`).
 
+## Comments
+Collaborative feedback from the upstream spreadsheet is captured as a
+sidecar inside the attach scope (\`{basename}.comments.json\`), referenced
+by the \`comments.ref:\` field when present. It holds the full comment
+thread: content, author, timestamps, resolved status, the anchored text,
+and replies. This is read-only context regenerated on each pull — editing
+or pushing tab data does NOT write comments back upstream. Read it to
+understand reviewer feedback; don't expect changes to round-trip.
+
 ## Moving spreadsheets
 Moving the card moves its attach scope (with the tab data inside)
 atomically — the \`drive-id\` field maintains the link to Google Drive.`,
@@ -74,6 +84,7 @@ export interface SheetFields {
   link: string;
   owner: string;
   sheets: Array<{ ref: string; title: string; gid: string }>;
+  comments?: { ref: string };
 }
 
 export function createSheetTemplate(options: {
@@ -83,6 +94,7 @@ export function createSheetTemplate(options: {
   link: string;
   owner: string;
   sheets: Array<{ ref: string; title: string; gid: string }>;
+  commentsFile?: string | undefined;
   status?: "synced" | "error" | "new";
 }): string {
   const fields: Record<string, unknown> = {
@@ -94,5 +106,8 @@ export function createSheetTemplate(options: {
     owner: options.owner,
     sheets: options.sheets,
   };
+  if (options.commentsFile !== undefined) {
+    fields["comments"] = { ref: `attach/${options.commentsFile}` };
+  }
   return `---\n${stringifyYaml(fields)}---\n`;
 }

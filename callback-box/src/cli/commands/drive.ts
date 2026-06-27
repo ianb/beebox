@@ -100,6 +100,12 @@ driveCommand
         }
       }
 
+      if (typeof info.details["comments"] === "number" && info.details["comments"] > 0) {
+        console.log(
+          `\nComments: ${info.details["comments"]} (captured to a read-only sidecar on sync)`,
+        );
+      }
+
       if (info.details["revisionId"]) {
         console.log(`\nRevision: ${info.details["revisionId"] as string}`);
       }
