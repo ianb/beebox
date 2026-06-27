@@ -30,7 +30,7 @@ The applicable principle docs and the specific principles each finding traces to
 - **Agent invocation with structured output** — `src/core/agent.ts:122-136` `invokeStructured<T>(schema, opts)` already exists and returns a Zod-validated `data`. The instruction-validation verdict is exactly this shape. **Reuse**; do not build a new model client.
 - **Fakeable agent factory, already threaded** — `ProcedureOptions.createAgent` (`engine-types.ts:28`) → `runSteps` (`engine.ts:113`) → `executeStep` (`engine-step.ts:46`) → `runRunPhase` (`engine-step.ts:231`). The seam reaches the run phase but **not** `executeValidation` today — that's the wiring gap to close. **Reuse** the seam; extend its reach.
 - **The fake agent** — `test/helpers/fake-agent.ts:103-107`: `invokeStructured` deliberately throws *"extend the fake when a structured-output test arrives."* That arrival is now. **Extend** it.
-- **Git diff helpers** — `src/cli/lib/git.ts:406` `getCommitDiff(boxRoot, hash)` (diff of a single commit vs its parent, with initial-commit fallback) and `:295` `getDiff`. The step's committed work is already captured as `gitRef` (`engine-step.ts:91-96`, `recordStepResults` stores it). **Reuse** `getCommitDiff(boxRoot, gitRef)` as the diff handed to the model.
+- **Git diff helpers** — `src/cli/lib/git.ts:406` `getCommitDiff(boxRoot, hash)` (diff of a **single** commit vs its parent) and `:295` `getDiff`. **Caveat that drives Track 1's design:** `gitRef` is *not* a reliable "whole step diff." `ensureGitClean` returns `getHead(boxRoot)` when the tree is already clean (`engine-phase.ts:165-166`), so when an agent makes **multiple** commits, `gitRef` is only the *last* one and `getCommitDiff(gitRef)` shows only that commit. So we **do not** reuse `getCommitDiff(gitRef)` as-is; Track 1 captures a baseline ref before the run phase and diffs `baseline..finalRef` (see Track 1 Direction). The helpers are reused at the range level (`getDiff` / a range diff), not the single-commit level.
 - **Run-card `review` field** — `RunStepValidate` (`schemas/procedure-run.ts:28-32`) already has an optional `review: z.string()`, plumbed through `StepUpdate.validate.review` (`engine-types.ts:64`) and `applyStepUpdate` (`engine-run-card.ts:166`) but never written. **Reuse** it to persist the model's verdict reasoning.
 - **Cost-control knobs** — `AgentInvokeOptions.maxTurns` (`agent-types.ts:24`) and `maxBudgetUsd` (`:30`, *"Hard cost ceiling… SDK stops with `error_max_budget_usd`"*). The engine sets `maxTurns` (`engine-step.ts:241`) but never `maxBudgetUsd`. **Reuse** for retry safety.
 - **Per-step run state for resume** — `RunStep.status` (`pending|running|completed|skipped|failed`) and `run.git-ref` per step (`schemas/procedure-run.ts:35-43`); `--step` filtering already exists (`engine.ts:98-100`). The state resume needs is largely already recorded. **Reuse**; the new code is the entry point that re-enters mid-run.
@@ -71,9 +71,17 @@ and does not. The schema doc admits it (`procedure.ts:81-82`).
 - New function `evaluateInstructions(params): Promise<{ passed: boolean; review: string }>`
   that builds the prompt and calls `agent.invokeStructured(InstructionVerdict, …)`.
   Context assembled (bounded, per "don't add features beyond what's required"):
-  the instruction(s), `getCommitDiff(boxRoot, gitRef)`, and the `whys:`. **Not** the
-  whole box state — the diff is the change under judgment; broader box state is a
-  deferred knob (see NOT in scope).
+  the instruction(s), the **step diff**, and the `whys:`. **Not** the whole box
+  state — the diff is the change under judgment; broader box state is a deferred
+  knob (see NOT in scope).
+- **Step diff = `baseline..finalRef`, not a single commit.** `executeStep` captures
+  a baseline ref (`getHead(boxRoot)`) *before* the run phase and passes it down; the
+  diff handed to the model is the range from baseline to the post-`ensureGitClean`
+  `gitRef`. This is the load-bearing fix: `getCommitDiff(gitRef)` alone shows only
+  the last commit, so a multi-commit agent step would be judged on the wrong bytes
+  (see "What already exists"). The baseline is captured once in `executeStep` and
+  reused for the retry loop (Track 2), so each retry attempt re-derives the range
+  against the same pre-step baseline.
 - Wire the `createAgent` factory through to validation. `executeValidation` gains
   params: `createAgent?`, `procedureName`, `gitRef`, (and `directive?` if we decide
   the directive is relevant context — lean: yes, it shaped the work being judged).
@@ -93,8 +101,10 @@ stays `review` (already in schema). New optional schema field `validate.model`.
 
 **First implementation chunk.** `engine-validate-model.ts` with `InstructionVerdict`
 + `evaluateInstructions`, plus extending `test/helpers/fake-agent.ts` to support
-`invokeStructured` (scripted verdict). No open questions inside this chunk: the
-schema, the context inputs, the model seam, and the fake all have decided shapes.
+`invokeStructured` (scripted verdict). Also threads the baseline-ref capture into
+`executeStep` and the range-diff into `executeValidation` (the load-bearing input).
+No open questions inside this chunk: the schema, the context inputs (range diff), the
+model seam, and the fake all have decided shapes.
 
 ### Track 2 — `severity: review` auto-retry
 
@@ -106,48 +116,80 @@ bounded retry count. If it still fails after retries, the step **fails** (gates)
 (`engine-phase.ts:107-111`) — it never gates, contradicting its stated intent
 (`procedure.ts:85`, guide `:140`).
 
+**Three structural facts this track must respect** (surfaced by the Codex review;
+each was an under-design in an earlier draft):
+
+1. **`runRunPhase` runs agents *then* `run.shells` in one pass** (`engine-step.ts:215-270`).
+   Re-calling it wholesale would **repeat side-effecting run shells** on every retry.
+2. **The agent object is constructed fresh per call inside `runRunPhase`**
+   (`engine-step.ts:231-232`) and a multi-agent run phase overwrites the single
+   `sessionId` (`:212`, `:249`). "Resume the same session" is therefore *not* free —
+   it only works by reconstructing with `{ sessionId, resume: true }` (`agent.ts:70-78`)
+   against a *known single* session.
+3. **Terminal step-fail is computed in `recordStepResults`**, gated solely on
+   `validateResult.status === "fail" && severity === "abort"` (`engine-step.ts:295-301`).
+   A `review` terminal-fail needs an **explicit** status path there, not just a shared
+   verdict→severity branch.
+
 **Direction.**
-- **Location: `executeStep`, not `executeValidation`.** Retry means re-running the
-  *run phase* (the agent), which lives in `runRunPhase` (`engine-step.ts:204-273`),
-  one level above validation. Restructure `executeStep` (`:82-103`) so run→validate
-  becomes a bounded loop:
+- **Prerequisite chunk — decompose `runRunPhase`.** Before any retry loop, split it
+  into `runRunAgents` (the re-runnable part) and `runRunShells` (run **once**, never
+  on retry). Without this split, fact (1) makes retry unsafe. This is a small,
+  behavior-preserving refactor that lands and is tested on its own (see Implementation
+  order, Chunk C0).
+- **Review-retry is valid only for a single-agent run phase.** Per fact (2), retry
+  reconstructs the agent with `{ sessionId, resume: true }` and re-invokes
+  `runRunAgents`. A run phase with **0 or >1** `agents:` under `severity: review` is a
+  misauthored procedure: hard-fail with a clear message rather than guess which
+  session to resume. (This also subsumes the old "no-agent edge.") A future track can
+  lift the single-agent restriction with per-agent session storage — NOT in scope.
+- **Location: `executeStep`, not `executeValidation`.** Restructure `executeStep`
+  (`:82-103`) so the run-agents→validate portion becomes a bounded loop, with run
+  shells run once before the loop and `ensureGitClean`/validate inside it:
   ```
+  baseline = getHead(boxRoot)        # captured for Track 1's range diff
+  runRunShells once                  # never retried (fact 1)
   attempt = 0
   loop:
-    runRunPhase (attempt 0 = normal; attempt>0 = with <validation-failure> context)
-    ensureGitClean → gitRef
-    validateResult = executeValidation(...)
+    runRunAgents (attempt 0 = normal; attempt>0 = resume session + <validation-failure>)
+    gitRef = ensureGitClean(...)
+    validateResult = executeValidation({ ..., baseline, gitRef })
     if validateResult.status != "fail": break
     if severity != "review": break          # abort/warn keep today's behavior
-    if attempt >= MAX_REVIEW_RETRIES: break  # exhausted → terminal fail
+    if not exactly-one-agent: break(terminal-fail, "review needs one agent")
+    if attempt >= MAX_REVIEW_RETRIES: break  # exhausted
     attempt++
+  reviewExhausted = (validateResult.status == "fail" && severity == "review")
   ```
+- **Terminal status path (fact 3).** `recordStepResults` gains a parameter — e.g.
+  `reviewExhausted` (and the no/multi-agent-review hard-fail) — so its status
+  computation becomes `failed` for an exhausted/unretryable `review` as well as for
+  `abort`. The `abort` and `warn` branches are left byte-for-byte unchanged.
 - **Retry cap.** Constant `MAX_REVIEW_RETRIES = 1` (2 total attempts) as the default,
   overridable via an optional `validate.max-retries` field. Lean: ship the constant;
   add the field only if a concrete procedure needs it (NOT in scope by default).
-- **Failure-context threading.** Retry re-invokes the same agent prompt plus a new
-  `<validation-failure>` block (failed check output / verdict reasoning + the `whys:`),
-  added to `buildContextBlock` (`engine-phase.ts:213`) via a new optional param. The
-  agent resumes the same session (`createAgent` already supports resume,
-  `agent.ts:70-78`) so it has its prior context — lean: **resume**, don't cold-start.
-- **Cost safety.** Each attempt keeps its `maxTurns` (default 20). Set a
-  `maxBudgetUsd` ceiling on retry invocations so a runaway loop is SDK-capped, not
-  just turn-capped. Total attempts are hard-bounded by `MAX_REVIEW_RETRIES`.
+- **Failure-context threading.** The retry re-invoke adds a `<validation-failure>`
+  block (failed check output / verdict reasoning + the `whys:`) to `buildContextBlock`
+  (`engine-phase.ts:213`) via a new optional param, on a **resumed** session so the
+  agent keeps its prior context.
+- **Cost safety (concrete, per Finding 6).** Each attempt keeps `maxTurns` (default
+  20) *and* sets an explicit `maxBudgetUsd` ceiling (`agent-types.ts:26`, forwarded at
+  `agent-run.ts:66`). Default value: a fixed constant `REVIEW_RETRY_BUDGET_USD` (lean
+  ~$2 per attempt — settle the number during the chunk); total spend is bounded by
+  that × `(MAX_REVIEW_RETRIES + 1)`. Not a new schema field.
 - **Terminal semantics (behavior change).** After exhausting retries, a `review`
   failure sets step status `failed` and halts the procedure — same as `abort`. This is
   the feature: `review` becomes "gate, but try to self-heal first." Today's
   `review→warn→continue` goes away. **Docs must change with it.**
-- **No-agent edge.** `severity: review` on a run phase with no `agents:` has nothing
-  to re-invoke. Decision: treat as a hard fail with a clear message (can't retry what
-  isn't an agent) rather than silently warn — surfaces a misauthored procedure.
 
-**Vocabulary lock-ins.** Context block tag `<validation-failure>`. Constant
-`MAX_REVIEW_RETRIES`. Optional field `validate.max-retries` (only if built).
+**Vocabulary lock-ins.** Context block tag `<validation-failure>`. Constants
+`MAX_REVIEW_RETRIES`, `REVIEW_RETRY_BUDGET_USD`. Optional field `validate.max-retries`
+(only if built). Function split `runRunAgents` / `runRunShells`.
 
-**First implementation chunk.** Restructure `executeStep` run→validate into the
-bounded loop with `MAX_REVIEW_RETRIES`, the `<validation-failure>` context block, and
-the agent-resume retry — gated so non-`review` severities and zero-failure runs are
-behaviorally identical to today. Depends on Track 1 (shared verdict→severity path).
+**First implementation chunk.** The `runRunPhase` decomposition (Chunk C0) — a
+behavior-preserving refactor with its own regression test — lands first, because the
+retry loop is unsafe without it. No open questions inside it: the split boundary
+(agents vs shells) is mechanical.
 
 ### Track 3 — Resumable runs (recommended: separate follow-up plan)
 
@@ -207,13 +249,23 @@ respects severity** (an `abort`/`review` instruction whose model call failed mus
 silently pass), and log the error. Decided: model-unavailable ⇒ treat as a failing
 check (fail-closed), reasoning recorded as the error.
 
+**Critical gap (resolved in-plan):** *the model judges the wrong diff.* An earlier
+draft handed the model `getCommitDiff(boxRoot, gitRef)`; because `gitRef` is only the
+last commit of a possibly-multi-commit agent step (`engine-phase.ts:165-166`), the
+judge would silently see a partial diff and pass/fail on the wrong bytes — invisible,
+no test, no handling. Resolved by capturing a pre-run baseline and judging
+`baseline..finalRef` (Track 1 Direction, "What already exists"). This was the Codex
+review's single most important finding.
+
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | Model returns schema-invalid / null verdict | New (Track 1) | New: fail-closed + log (above) | Clear (logged + recorded in `review`) |
-| Model call exceeds budget/turns | New (Track 2) | `maxBudgetUsd`/`maxTurns` → `success:false`, mapped to failing check | Clear |
-| `getCommitDiff(gitRef)` empty (shell-only step committed nothing meaningful, or bad ref) | New (Track 1) | `getCommitDiff` already falls back to `""` (`git.ts:421-428`); model judges on empty diff → likely fail; document that instruction checks need an agent step producing a diff | Clear-ish (empty diff is a weak signal; flagged) |
-| `review` retry never converges | New (Track 2) | `MAX_REVIEW_RETRIES` hard cap → terminal fail | Clear (logged "gave up after N") |
-| `review` on a run phase with no `agents:` | New (Track 2) | Hard fail with explanatory message | Clear |
+| Model call exceeds budget/turns | New (Track 2) | `maxBudgetUsd` (`REVIEW_RETRY_BUDGET_USD`)/`maxTurns` → `success:false`, mapped to failing check | Clear |
+| **Model judges the wrong bytes** — multi-commit agent step, `gitRef` = last commit only | New (Track 1) | New: `baseline..finalRef` range diff (Track 1 Direction) instead of `getCommitDiff(gitRef)` | Clear once fixed; **was the silent-wrong default** |
+| Step diff empty (shell-only step, or genuinely no change) | New (Track 1) | Range diff is `""`; model judges on empty diff → likely fail; document that instruction checks need a run phase that produces a diff | Clear-ish (empty diff is a weak signal; flagged) |
+| `review` retry never converges | New (Track 2) | `MAX_REVIEW_RETRIES` hard cap → terminal fail via `reviewExhausted` path in `recordStepResults` | Clear (logged "gave up after N") |
+| `review` on a run phase with 0 or >1 `agents:` | New (Track 2) | Terminal hard fail with explanatory message (can't pick a session to resume) | Clear |
+| Retry re-runs side-effecting run shells | New (Track 2, Chunk C0) | `runRunShells` split out and run **once** before the loop | Clear (was the footgun Finding 3 caught) |
 | Retry agent makes things worse / drifts | New (Track 2) | Bounded attempts; each re-validated; terminal fail if still bad | Clear |
 | Existing `shells:`+`abort` path regresses | Existing doctests (`procedure-engine.doctest.md:290-335`) + new guard tests | Keep code path; tests pin it | Clear |
 | `warn` severity behavior changes | Existing doctest (`:230-288`) | Untouched branch; test pins it | Clear |
@@ -229,11 +281,18 @@ check (fail-closed), reasoning recorded as the error.
   possibly-changed definition is the real stale-ref case; handled by the drift-refusal
   in Track 3's design, formally deferred to the resume plan.
 - **Two agents touching the same card** — *ADDRESSED.* Procedures run serially under
-  the engine; the retry resumes the *same* agent session, not a concurrent one. No new
-  concurrency introduced.
-- **Hand-edit drift** — *ADDRESSED.* `validate.model` / `max-retries` are optional and
-  Zod-validated on load (`cb validate`); a bad value is a clear card-validation error,
-  not a silent runtime surprise.
+  the engine; review-retry is restricted to a single-agent run phase and resumes that
+  one session, not a concurrent one. No new concurrency introduced.
+- **Hand-edit drift** — *PARTIALLY ADDRESSED (honest scope).* A new field with a
+  **wrong-typed value** (`validate.model: 7`) does become a clear `cb validate` error
+  once the field is added to `ProcedureValidate` (`procedure.ts:44-48`) and mapped in
+  `loadProcedureDefinition` (`engine-parse.ts:75-78`). But Zod `.object()` **strips
+  unknown keys**, so a **misspelled field** (`validate.modle: opus`, `max-reties: 3`)
+  is silently dropped, not flagged — the author's intent is lost with no error. This is
+  inherent to the schema's strip-unknowns posture (shared by every card type), not
+  unique to this plan; we accept it rather than add strict-mode validation here (NOT in
+  scope). Flagged so it isn't mistaken for fully handled. (Finding 5 from the Codex
+  review.)
 - **Fabricated free-form value** — *ADDRESSED by design stance.* The model judges the
   *git diff* (real, committed bytes), not the agent's self-report. The
   `<validation-failure>` retry context is engine-authored, not agent-authored. Honesty
@@ -259,6 +318,12 @@ check (fail-closed), reasoning recorded as the error.
   the per-step override only when a real procedure needs a different cap. Avoids a knob
   with no caller.
 - **Parallel/streaming model validation** — validation is serial and quiet by design.
+- **Multi-agent review-retry** — review-retry requires exactly one run agent (single
+  resumable session). Per-agent session storage to retry a multi-agent run phase is a
+  future track. A 0/>1-agent `review` phase terminal-fails with a clear message.
+- **Strict-mode schema validation for misspelled fields** — Zod strips unknown keys, so
+  a misspelled `validate.*` field is silently dropped (see Hand-edit drift). Adding
+  strict/`.strict()` validation is a box-wide schema decision, not this plan's to make.
 - **Retrying `abort` or `warn` severities** — only `review` retries; `abort` gates
   immediately and `warn` continues, both unchanged.
 - **Changing `shells:`+`abort` semantics** — explicitly preserved; it's the one path
@@ -273,9 +338,12 @@ check (fail-closed), reasoning recorded as the error.
    Bundling delays the higher-value coupled pair.
 2. **Default review model tier.** Lean **sonnet** (judgment task; haiku may under-judge,
    opus is overkill for a diff verdict). Overridable via `validate.model`.
-3. **Retry: resume session vs cold-start.** Lean **resume** — the agent keeps its prior
-   context and the `<validation-failure>` block is a focused nudge. Cold-start loses why
-   it did what it did. (Risk: a stuck agent stays stuck; the bounded cap covers that.)
+3. **Retry: resume session vs cold-start.** *Settled by the Codex review.* Resume —
+   reconstruct the run agent with `{ sessionId, resume: true }` — but only for a
+   single-agent run phase (a 0/>1-agent `review` phase terminal-fails; resuming needs
+   one known session, `engine-step.ts:212`/`:249`). Cold-start loses why the agent did
+   what it did; the bounded cap covers the stuck-agent risk. Per-agent session storage
+   to lift the single-agent restriction is a future track (NOT in scope).
 4. **Fail-closed on model-unavailable for `warn` severity.** A `warn` instruction whose
    model call fails: warn (continue) or fail-closed-to-warn? Lean: a failed model call
    under `warn` still just warns (it's non-gating by definition); fail-closed matters
@@ -307,20 +375,26 @@ No purely-infrastructural concept here is exempt — both gaps are author-facing
 1. **Chunk A (Track 1 core).** `engine-validate-model.ts` (`InstructionVerdict` +
    `evaluateInstructions`); extend `fake-agent.ts` `invokeStructured`. Unit-level
    doctest of `evaluateInstructions` with a scripted fake verdict. No engine wiring yet.
-2. **Chunk B (Track 1 wiring).** Thread `createAgent`/`gitRef`/`procedureName` into
+2. **Chunk B (Track 1 wiring).** Capture the pre-run **baseline ref** in `executeStep`;
+   thread `createAgent`/`baseline`+`gitRef` (range diff)/`procedureName` into
    `executeValidation`; replace the `:92-104` stub; map verdict→severity; persist
    `review`. Doctests: instruction pass, instruction fail under each severity,
-   model-unavailable fail-closed.
-3. **Chunk C (Track 2).** Restructure `executeStep` run→validate into the bounded retry
-   loop; `<validation-failure>` context block; `maxBudgetUsd`; terminal-fail semantics;
-   no-agent edge. Doctests: review retries-then-passes, retries-then-terminal-fails,
-   no-agent review fails, `abort`/`warn` unchanged. Depends on B.
-4. **Chunk D (docs + audits).** Update `procedure.ts:81-85`, `procedure-implementation.md`
+   model-unavailable fail-closed, **multi-commit step → range diff (not last-commit)**.
+3. **Chunk C0 (Track 2 prerequisite — refactor).** Split `runRunPhase` into
+   `runRunAgents` + `runRunShells`, behavior-preserving. Regression test: an existing
+   agent+shell run-phase doctest still produces identical commits/output. No retry yet.
+4. **Chunk C (Track 2).** Restructure `executeStep`: run shells once (`runRunShells`),
+   then the bounded run-agents→validate retry loop; `<validation-failure>` context
+   block; resumed single-agent session; `REVIEW_RETRY_BUDGET_USD`; `reviewExhausted`
+   terminal-fail path in `recordStepResults`. Doctests: review retries-then-passes,
+   retries-then-terminal-fails, 0/>1-agent review terminal-fails, run shells run **once
+   across retries**, `abort`/`warn` unchanged. Depends on C0 and B.
+5. **Chunk D (docs + audits).** Update `procedure.ts:81-85`, `procedure-implementation.md`
    (also still XML-example stale — `:39-67` — fix opportunistically), the guide
    generator `generate-docs-procedure-guide.ts:74-142`, and any glossary text. Update +
    add knowledge-audit entries and **run** them. Depends on B+C (docs describe shipped
    behavior).
-5. **(Follow-up plan)** Track 3 resume — `procedure-resume.md`.
+6. **(Follow-up plan)** Track 3 resume — `procedure-resume.md`.
 
 ## Rollout shape
 
@@ -329,9 +403,12 @@ No purely-infrastructural concept here is exempt — both gaps are author-facing
   - `evaluateInstructions`: verdict pass / fail / null-verdict-fail-closed (Chunk A).
   - Instruction validation end-to-end via `startProcedure` + fake structured agent:
     pass continues; fail under `warn`/`review`/`abort` behaves per severity (Chunk B).
-  - Review retry: retries-then-passes; exhausts-then-terminal-fails; no-agent review
-    fails; **regression pins** that `shells`+`abort` (`procedure-engine.doctest.md:290`)
-    and `warn` (`:230`) are unchanged (Chunk C).
+  - `runRunPhase` decomposition: an agent+shell run-phase produces identical
+    commits/output after the `runRunAgents`/`runRunShells` split (Chunk C0).
+  - Review retry: retries-then-passes; exhausts-then-terminal-fails; 0/>1-agent review
+    terminal-fails; run shells run once across retries; **regression pins** that
+    `shells`+`abort` (`procedure-engine.doctest.md:290`) and `warn` (`:230`) are
+    unchanged (Chunk C).
   - These live in `test/core/procedure/` alongside the existing engine doctests.
   - Baseline confirmed clean after merging `main`: full `pnpm test` is 2409/2409
     green (`procedure-engine.doctest.md` 12/12). An earlier 66-failure cluster came
