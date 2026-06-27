@@ -3,14 +3,17 @@
  */
 
 import { execFile } from "node:child_process";
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { Command } from "commander";
 import { formatLintResults, type LintSummary } from "../../cards/index.js";
-import { lint as markdownlint } from "markdownlint/promise";
-import type { LintError } from "markdownlint";
-import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
+import {
+  findMarkdownFiles,
+  lintMarkdownFiles,
+  formatMarkdownResults,
+  isLintableMarkdown,
+  type MarkdownLintSummary,
+} from "./validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { listBoxCardFiles } from "../../core/list-cards.js";
@@ -71,74 +74,6 @@ async function readHookFilePath(): Promise<string | undefined> {
   }
 }
 
-const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
-const SKIP_FILES = new Set(["CLAUDE.md"]);
-
-// Opt-in validity rules only — style rules are not enforced.
-const MARKDOWN_CONFIG = {
-  default: false,
-  MD009: true, // trailing spaces
-  MD037: true, // spaces inside emphasis markers
-  MD038: true, // spaces inside code span elements
-  MD047: true, // files should end with a single newline
-};
-
-const CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks];
-
-async function findMarkdownFiles(dir: string): Promise<string[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
-  if (entries === null) return [];
-  const results: string[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) {
-        const sub = await findMarkdownFiles(path.join(dir, entry.name));
-        results.push(...sub);
-      }
-    } else if (entry.isFile() && entry.name.endsWith(".md") && !SKIP_FILES.has(entry.name)) {
-      results.push(path.join(dir, entry.name));
-    }
-  }
-  return results.toSorted();
-}
-
-interface MarkdownLintSummary {
-  filesChecked: number;
-  filesWithErrors: number;
-  totalErrors: number;
-  errors: Record<string, LintError[]>;
-}
-
-async function lintMarkdownFiles(files: string[]): Promise<MarkdownLintSummary> {
-  const results = await markdownlint({ files, config: MARKDOWN_CONFIG, customRules: CUSTOM_RULES });
-  let filesWithErrors = 0;
-  let totalErrors = 0;
-  const errors: Record<string, LintError[]> = {};
-  for (const file of files) {
-    const fileErrors = results[file] ?? [];
-    if (fileErrors.length > 0) {
-      filesWithErrors++;
-      totalErrors += fileErrors.length;
-      errors[file] = fileErrors;
-    }
-  }
-  return { filesChecked: files.length, filesWithErrors, totalErrors, errors };
-}
-
-function formatMarkdownResults(summary: MarkdownLintSummary, { colors }: { colors: boolean }): string {
-  const lines: string[] = [];
-  const ESC = "";
-  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
-  for (const [file, fileErrors] of Object.entries(summary.errors)) {
-    for (const e of fileErrors) {
-      const rule = e.ruleNames[0] ?? "unknown";
-      const detail = e.errorDetail ? ` (${e.errorDetail})` : "";
-      lines.push(`${red("error")}  ${file}:${e.lineNumber}  [${rule}] ${e.ruleDescription}${detail}`);
-    }
-  }
-  return lines.join("\n");
-}
-
 function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors: boolean }): string {
   if (errors.length === 0) return "";
   const ESC = "";
@@ -185,6 +120,18 @@ async function runHookMode(): Promise<never> {
     const err = await lintViewFile(fp);
     if (err !== null) {
       process.stderr.write(`View compile error for ${fp}:\n${err}\n`);
+      process.exit(2);
+    }
+    process.exit(0);
+  }
+  // Agent/human-authored markdown: lint its links (CB001/CB002) so a hand-edit
+  // that breaks a link gets the same write-time nudge cards do. CLAUDE.md is
+  // handled above; .claude/ rule docs are excluded by isLintableMarkdown.
+  if (isLintableMarkdown(fp)) {
+    const boxRoot = await requireBoxRoot();
+    const summary = await lintMarkdownFiles([fp], { boxRoot });
+    if (summary.totalErrors > 0) {
+      process.stderr.write(`${formatMarkdownResults(summary, { colors: false })}\n`);
       process.exit(2);
     }
     process.exit(0);
@@ -249,7 +196,7 @@ async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<Validat
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p));
   const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
   const mdFiles = await findMarkdownFiles(boxRoot);
-  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles) : null;
+  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
   return { cardSummary, mdSummary, attachErrors, claudeMdWarnings };
@@ -265,7 +212,7 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
     process.exit(1);
   }
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
-  const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths) : null;
+  const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths, { boxRoot }) : null;
   return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }
 

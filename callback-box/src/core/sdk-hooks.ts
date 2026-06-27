@@ -13,14 +13,15 @@ import type {
 } from "@anthropic-ai/claude-agent-sdk";
 import { formatLintResults } from "../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
-import { noViewLabelLinks, noBrokenInternalLinks } from "./markdown-lint-rules.js";
+import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
 import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
-import { isViewFile } from "../cli/lib/paths.js";
+import { isViewFile, findBoxRoot } from "../cli/lib/paths.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
 
-const MARKDOWN_CONFIG = { default: false, MD009: true, MD037: true, MD038: true, MD047: true };
-const CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks];
+function markdownConfig(boxRoot: string): Record<string, unknown> {
+  return { default: false, MD009: true, MD037: true, MD038: true, MD047: true, ...linkRuleConfig(boxRoot) };
+}
 
 /** Best-effort extraction of `file_path` from a Write/Edit tool input. */
 function extractFilePath(toolInput: unknown): string | null {
@@ -87,7 +88,7 @@ export function cardValidatorHook(): HookCallbackMatcher {
 
         const basename = filePath.split("/").pop() ?? "";
         if (filePath.endsWith(".md") && basename !== "CLAUDE.md" && !filePath.includes("/.claude/")) {
-          const additional = await runMarkdownLint(filePath);
+          const additional = await runMarkdownLint(filePath, { startDir: post.cwd });
           if (additional === null) return {};
           return {
             hookSpecificOutput: {
@@ -103,9 +104,14 @@ export function cardValidatorHook(): HookCallbackMatcher {
   };
 }
 
-async function runMarkdownLint(filePath: string): Promise<string | null> {
+async function runMarkdownLint(filePath: string, { startDir }: { startDir: string }): Promise<string | null> {
+  // CB002 needs the box root, and the SDK cwd can be a landmark subdirectory in
+  // chat sessions — so resolve the real root by walking up, never trust cwd. If
+  // we can't find a box, skip link validation rather than mis-resolve.
+  const boxRoot = await findBoxRoot(startDir);
+  if (boxRoot === null) return null;
   try {
-    const results = await markdownlint({ files: [filePath], config: MARKDOWN_CONFIG, customRules: CUSTOM_RULES });
+    const results = await markdownlint({ files: [filePath], config: markdownConfig(boxRoot), customRules: customLinkRules });
     const errors = results[filePath] ?? [];
     if (errors.length === 0) return null;
     const lines = errors.map(

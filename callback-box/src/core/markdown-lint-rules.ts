@@ -14,7 +14,7 @@ const VIEW_LABEL_RE = /\[view:[^\]]*](?!\()/g;
 // Matches inline links: [text](url) — captures the url part.
 const INLINE_LINK_RE = /\[[^\]]*]\(([^)]+)\)/g;
 
-export const noViewLabelLinks: Rule = {
+const noViewLabelLinks: Rule = {
   names: ["CB001", "no-view-label-links"],
   description: "view: belongs in the URL, not the link label — use [label](view:path) not [view:path]",
   tags: ["links"],
@@ -111,6 +111,24 @@ export const noBrokenInternalLinks: Rule = {
     }
   },
 };
+
+/** CB001 + CB002 — the box's custom markdown link rules, registered together. */
+export const customLinkRules: Rule[] = [noViewLabelLinks, noBrokenInternalLinks];
+
+/**
+ * markdownlint config fragment that enables CB001/CB002 **by name** (not by the
+ * `links` tag, which would also pull in built-in link rules) and supplies the
+ * box root CB002 requires. Spread into a larger config:
+ *
+ *   { default: false, MD009: true, ...linkRuleConfig(boxRoot) }   // validity + links
+ *   { default: false, ...linkRuleConfig(boxRoot) }                // links only
+ */
+export function linkRuleConfig(boxRoot: string): Record<string, unknown> {
+  return {
+    "no-view-label-links": true,
+    "no-broken-internal-links": { boxRoot },
+  };
+}
 
 function isRelativePath(url: string): boolean {
   if (url.startsWith("#")) return false;
