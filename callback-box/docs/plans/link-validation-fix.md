@@ -618,3 +618,34 @@ folded in above:
 - **Citations corrected** — `rewrite-card-refs.ts` is at `src/core/` (not
   `src/core/commands/`); the inline-markdown-link anticipation is at
   `move-operations.ts:8` / `rewrite-card-refs.ts:17`, not `:151-155`.
+
+## Implementation notes (as built)
+
+Landed across 8 commits on `worktree-fix-link-validation` (Tracks A→B→C→D→E→G,
+then guide+audits, then sizing). Deviations and findings worth recording:
+
+- **New module `cli/commands/validate-markdown.ts`.** `validate.ts` hit its
+  300-line limit, and Tracks C/D needed a shared home for markdown linting. Holds
+  `lintMarkdownFiles`, `boxWideLinkWarnings`, `isLintableMarkdown`,
+  `listStagedMarkdown`, `formatMarkdownResults`.
+- **Box-markdown discovery consolidated in `core/list-cards.ts`
+  (`listBoxMarkdownFiles`).** Track E needed `core/move-operations.ts` to
+  enumerate `.md`, and `core` must not import from `cli`. One glob-based source of
+  truth now serves validate (cli) and move (core); replaced the earlier fs-walk.
+- **Generated/ephemeral dirs skipped** (`docs/generated/`, `.callback-box/`).
+  Surfaced during Track D: `docs/generated/` (gitignored, regenerated) is full of
+  placeholder example links and flooded the warning with 22 false positives on
+  test1. The box scan skips it; staged collection never sees it (gitignored ⇒
+  unstageable).
+- **Known false-positive class: links inside inline-code spans.** The rule is
+  regex-based (`parser: "none"`), so `` `[text](url)` `` in authored prose (a spec
+  doc, a how-to) is flagged like a real link. Bounded by warn-only posture;
+  fixing it needs markdown-aware parsing (deferred).
+- **Track F sizing (read-only, no scripted repair per boxholder):**
+  `cb validate --links` on `hearth-test` → **207 broken links / 33 files**.
+  ~123 from the four `ashfield/` moves (porthaven 43, island 38, stonebridge 28, valley
+  14 — dossiers pointing at pre-move `/store/.../notebook/<X>/images/...`); the
+  rest pre-existing breakage in `greenhollow/` and `convent/` dossiers (NOT from
+  the ashfield moves — bigger than the briefing assumed) plus example-link false
+  positives in a spec doc. Left to warn-and-adopt.
+- **Knowledge audits:** both pass against test1 (`knows_directly`, 0 reads).
