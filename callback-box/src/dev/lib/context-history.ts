@@ -67,21 +67,27 @@ const HISTORY_HEADER =
   "# box basename → audit id → entries (oldest first). See lib/context-history.ts.\n";
 
 /**
- * Load the history file (empty if absent), append this run's measurements, and
- * write it back. A missing file is the normal first-run case; any other read
- * error is real and propagates.
+ * Load the history file, returning an empty history when it doesn't exist yet
+ * (the normal first-run case). Any other read error is real and propagates.
+ */
+export async function loadHistory(historyPath: string): Promise<ContextHistory> {
+  try {
+    const text = await fs.readFile(historyPath, "utf-8");
+    return (YAML.parse(text) as ContextHistory | null) ?? {};
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    return {};
+  }
+}
+
+/**
+ * Load the history, append this run's measurements, and write it back.
  */
 export async function recordRun(
   options: AppendRunOptions & { historyPath: string },
 ): Promise<void> {
   const { historyPath, ...run } = options;
-  let history: ContextHistory = {};
-  try {
-    const text = await fs.readFile(historyPath, "utf-8");
-    history = (YAML.parse(text) as ContextHistory | null) ?? {};
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-  }
+  const history = await loadHistory(historyPath);
   const next = appendRun(history, run);
   await fs.writeFile(historyPath, HISTORY_HEADER + YAML.stringify(next), "utf-8");
 }

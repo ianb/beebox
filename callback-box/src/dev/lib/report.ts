@@ -4,15 +4,22 @@
  */
 
 import type { TestResult } from "./test-runner.js";
+import type { ContextHistoryEntry } from "./context-history.js";
 
 export interface ReportOptions {
   boxRoot: string;
   results: TestResult[];
   timestamp?: string;
+  /**
+   * Prior history for this box (audit id → entries, oldest first), loaded
+   * before this run was appended. Drives the run-over-run baseline deltas.
+   */
+  priorHistory?: Record<string, ContextHistoryEntry[]>;
 }
 
 export function generateReport(options: ReportOptions): string {
   const { boxRoot, results } = options;
+  const priorHistory = options.priorHistory ?? {};
   const timestamp = options.timestamp ?? new Date().toISOString();
   const lines: string[] = [];
 
@@ -22,8 +29,15 @@ export function generateReport(options: ReportOptions): string {
   lines.push(`Tests run: ${results.length}`);
   lines.push("");
 
+  const summary = renderContextSummary(results, priorHistory);
+  if (summary.length > 0) {
+    lines.push(...summary);
+    lines.push("---");
+    lines.push("");
+  }
+
   for (const result of results) {
-    lines.push(formatTestResult(result));
+    lines.push(formatTestResult(result, lastBaseline(priorHistory[result.test.id])));
     lines.push("---");
     lines.push("");
   }
@@ -31,12 +45,73 @@ export function generateReport(options: ReportOptions): string {
   return lines.join("\n");
 }
 
-function formatTestResult(result: TestResult): string {
+/** Most recent prior baseline for an audit, or undefined on its first run. */
+function lastBaseline(entries: ContextHistoryEntry[] | undefined): number | undefined {
+  return entries && entries.length > 0 ? entries[entries.length - 1]!.initial : undefined;
+}
+
+/** Rounded thousands delta between a current and prior baseline. */
+function deltaK(current: number, prior: number): number {
+  return Math.round((current - prior) / 1000);
+}
+
+/**
+ * Trailing clause comparing a baseline to the prior run's, e.g. "; -3k from
+ * last run". Empty when there's no prior run; "~same" when the change rounds
+ * below 1k (sub-1k drift is noise at this report's 1k resolution).
+ */
+export function formatBaselineDelta(current: number, prior: number | undefined): string {
+  if (prior === undefined) return "";
+  const k = deltaK(current, prior);
+  if (k === 0) return "; ~same as last run";
+  return `; ${k > 0 ? "+" : "-"}${Math.abs(k)}k from last run`;
+}
+
+/** Δ-column cell for the summary table: "—" first run, "~0" sub-1k, else signed. */
+function formatDeltaCell(current: number, prior: number | undefined): string {
+  if (prior === undefined) return "—";
+  const k = deltaK(current, prior);
+  if (k === 0) return "~0";
+  return `${k > 0 ? "+" : "-"}${Math.abs(k)}k`;
+}
+
+/**
+ * Aggregate baseline table opening the report: every audit's always-on
+ * baseline, sorted high→low, with the run-over-run delta. The lowest baseline
+ * is the cleanest estimate of the pure always-on tier (a 0-read audit pays only
+ * the baseline), so it's called out. Empty when no result measured context.
+ */
+export function renderContextSummary(
+  results: TestResult[],
+  priorHistory: Record<string, ContextHistoryEntry[]>,
+): string[] {
+  const rows = results
+    .filter((r) => r.behavior.context !== null)
+    .map((r) => ({
+      id: r.test.id,
+      initial: r.behavior.context!.initialTokens,
+      prior: lastBaseline(priorHistory[r.test.id]),
+    }));
+  if (rows.length === 0) return [];
+  rows.sort((a, b) => b.initial - a.initial);
+
+  const lines: string[] = ["## Context baselines", "", "| Audit | Initial | Δ last run |", "|---|--:|--:|"];
+  for (const row of rows) {
+    lines.push(`| ${row.id} | ${tokensToK(row.initial)} | ${formatDeltaCell(row.initial, row.prior)} |`);
+  }
+  const lowest = rows[rows.length - 1]!;
+  lines.push("");
+  lines.push(`Lowest baseline ≈ pure always-on tier: ${tokensToK(lowest.initial)} (\`${lowest.id}\`).`);
+  lines.push("");
+  return lines;
+}
+
+function formatTestResult(result: TestResult, priorInitial: number | undefined): string {
   const { test, behavior, checks } = result;
   const lines: string[] = [];
 
   lines.push(...formatTestHeader(test));
-  lines.push(...formatAgentBehavior(behavior));
+  lines.push(...formatAgentBehavior(behavior, priorInitial));
   lines.push(...formatResponse(behavior));
 
   const checkLines = formatCheckLines(checks);
@@ -69,7 +144,7 @@ function formatTestHeader(test: Test): string[] {
   return lines;
 }
 
-function formatAgentBehavior(behavior: Behavior): string[] {
+function formatAgentBehavior(behavior: Behavior, priorInitial: number | undefined): string[] {
   const lines: string[] = [];
   lines.push("**Agent behavior:**");
   lines.push(`- Files read: ${behavior.filesRead.length === 0 ? "(none)" : behavior.filesRead.join(", ")}`);
@@ -78,7 +153,7 @@ function formatAgentBehavior(behavior: Behavior): string[] {
     lines.push(`- Bash: ${behavior.bashCommands.join("; ")}`);
   }
   lines.push(`- Response length: ${behavior.responseLength} words`);
-  const contextLine = formatContextLine(behavior.context);
+  const contextLine = formatContextLine(behavior.context, priorInitial);
   if (contextLine) lines.push(contextLine);
   lines.push("");
   return lines;
@@ -94,14 +169,15 @@ function tokensToK(n: number): string {
  * rounding reads cleaner than exact counts. Collapses to just the baseline
  * when the context never grew (single-turn / 0-read answers).
  */
-function formatContextLine(context: Behavior["context"]): string | null {
+function formatContextLine(context: Behavior["context"], priorInitial: number | undefined): string | null {
   if (!context) return null;
   const { initialTokens, peakTokens, addedTokens, turnCount } = context;
   const turns = `${turnCount} turn${turnCount === 1 ? "" : "s"}`;
+  const delta = formatBaselineDelta(initialTokens, priorInitial);
   if (addedTokens === 0) {
-    return `- Context: ${tokensToK(initialTokens)} initial (${turns})`;
+    return `- Context: ${tokensToK(initialTokens)} initial (${turns}${delta})`;
   }
-  return `- Context: ${tokensToK(initialTokens)} initial → ${tokensToK(peakTokens)} peak (+${tokensToK(addedTokens)} over ${turns})`;
+  return `- Context: ${tokensToK(initialTokens)} initial → ${tokensToK(peakTokens)} peak (+${tokensToK(addedTokens)} over ${turns}${delta})`;
 }
 
 function formatResponse(behavior: Behavior): string[] {

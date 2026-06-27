@@ -16,7 +16,7 @@ import { execSync } from "node:child_process";
 import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { assertStandaloneBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { generateReport } from "./lib/report.js";
-import { recordRun, type RunMeasurement } from "./lib/context-history.js";
+import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-history.js";
 import { generateDocs } from "../core/generate-docs.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 
@@ -138,8 +138,14 @@ program
       console.log(`\n${status} ${test.id} — ${result.behavior.filesRead.length} files read, ${result.behavior.searches.length} searches${ctxNote}`);
     }
 
-    // Generate and write report
-    const report = generateReport({ boxRoot: resolvedBox, results });
+    // Generate and write report. Load the history *before* this run is
+    // appended below, so the report's deltas compare against the prior run.
+    const priorHistory = await loadHistory(HISTORY_PATH);
+    const report = generateReport({
+      boxRoot: resolvedBox,
+      results,
+      priorHistory: priorHistory[path.basename(resolvedBox)] ?? {},
+    });
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
     const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `audit-report-${timestamp}.md`);
 
