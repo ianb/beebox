@@ -268,6 +268,15 @@ const DEFAULT_SCHEDULES: DefaultSchedule[] = [
     cron: "0 7 * * 1",
     notBefore: "3d",
     onWakeup: false,
+    // Ships ENABLED for ALL boxes, deliberately. generateDocs() re-syncs
+    // templates on every reactor cycle and chat-session start, so this flips
+    // retro on for every box (overwriting unmodified disabled cards, installing
+    // it fresh-and-enabled where absent). It's a weekly no-op on boxes with no
+    // qualifying chat sessions — both the scan and integrate prechecks hit
+    // CHECK_SKIP and invoke no agent — and only edits belief cards (a reviewable
+    // Retro-Run commit) when there's real signal. medium is the inferred
+    // ceiling; user-stated beliefs, speaking-voice, and the briefing body are
+    // never direct-edited.
     enabled: true,
     lockGroup: "retro",
     runs: "cb procedure run process-retrospective",
