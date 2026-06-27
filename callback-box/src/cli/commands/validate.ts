@@ -8,7 +8,6 @@ import { promisify } from "node:util";
 import { Command } from "commander";
 import { formatLintResults, type LintSummary } from "../../cards/index.js";
 import {
-  findMarkdownFiles,
   listStagedMarkdown,
   lintMarkdownFiles,
   boxWideLinkWarnings,
@@ -18,7 +17,7 @@ import {
 } from "./validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
-import { listBoxCardFiles } from "../../core/list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFiles } from "../../core/list-cards.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
@@ -197,7 +196,7 @@ async function collectStagedResults({ boxRoot, ctx, resolved, json }: CollectArg
 async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p));
   const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
-  const mdFiles = await findMarkdownFiles(boxRoot);
+  const mdFiles = await listBoxMarkdownFiles(boxRoot);
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
