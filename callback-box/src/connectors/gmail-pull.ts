@@ -26,6 +26,18 @@ export interface GmailPullConfig {
   query?: string;
   /** Filter to specific labels — joined as label:foo OR label:bar if no query */
   labels?: string[];
+  /**
+   * Garbage-collect pending inbox threads whose triggering label was removed
+   * upstream (see gmail-gc.ts). Default true. Set false to keep the historical
+   * one-way behavior where withdrawn mail lingers in the box forever.
+   */
+  gc?: boolean;
+  /**
+   * Minimum hours between reconciliation passes (default 24). 0 runs GC on
+   * every sync — cheap for label/query modes, a full inbox list for the bare
+   * default.
+   */
+  gcIntervalHours?: number;
 }
 
 export interface PullCandidates {
@@ -50,7 +62,7 @@ export function buildGmailQuery(config: GmailPullConfig): string {
 }
 
 /** List every message id matching the query, paginating through results. */
-async function listAllMatching(
+export async function listAllMatching(
   service: GoogleGmailService,
   query: string,
 ): Promise<GmailMessageRef[]> {

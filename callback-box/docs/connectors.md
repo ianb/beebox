@@ -42,7 +42,8 @@ Telegram also has a webhook route (`routes/telegram.ts`) for real-time message d
 Each connector reads its config from `config/connectors/`:
 - `telegram.secret.json` — `{ botToken, webhookSecret }`
 - `google-calendar.json` — `{ calendars, syncDaysBack, syncDaysForward }`
-- `gmail.json` — `{ query }` or `{ labels }` (auth is the shared Google OAuth tokens; no per-connector secret). Persistent dedup ids live in `gmail-state.json` (committed), the history-API checkpoint in `gmail.state.json` (gitignored).
+- `gmail.json` — `{ query }` or `{ labels }`, plus optional `{ gc, gcIntervalHours }` (auth is the shared Google OAuth tokens; no per-connector secret). Persistent dedup ids live in `gmail-state.json` (committed), the history-API checkpoint + last-GC timestamp in `gmail.state.json` (gitignored).
+  - **Garbage collection** (`gmail-gc.ts`): when a thread loses its triggering label upstream, a reconciliation pass withdraws the *still-pending* card (one that's still in `box/inbox/email/` — a thread an agent has moved out is left alone) to `store/trash/`. Runs at most every `gcIntervalHours` (default 24; `0` = every sync); set `gc: false` to disable. Seen ids are kept, so re-applying a label after GC does not auto-reimport.
 
 Transient state (last sync offsets, mappings) goes in `config/connectors/<name>.state.json` or `<name>-state.json`.
 

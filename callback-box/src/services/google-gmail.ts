@@ -8,6 +8,7 @@
 import ky, { HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 import { NotFoundError } from "../lib/errors.js";
+import { messageMatchesQuery } from "./gmail-query-match.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -265,6 +266,13 @@ export interface FakeGoogleGmailService extends GoogleGmailService {
   addMessage(msg: GmailMessage): void;
   /** Add labels to an existing message and record a labelsAdded entry. */
   addLabelsToMessage(change: { id: string; labelIds: string[] }): void;
+  /**
+   * Remove labels from an existing message (e.g. the user archives it or drops
+   * a routing label). No history record is modeled — reconciliation diffs the
+   * full match set rather than consuming a labelsRemoved signal — but the
+   * checkpoint advances like a real mutation.
+   */
+  removeLabelsFromMessage(change: { id: string; labelIds: string[] }): void;
   /** Invalidate all stored checkpoints — listHistory will throw NotFoundError. */
   expireHistory(): void;
 }
@@ -309,6 +317,16 @@ export function createFakeGoogleGmail(
       });
     },
 
+    removeLabelsFromMessage(change) {
+      const msg = fake.messages.find((m) => m.id === change.id);
+      if (!msg) throw new NotFoundError(change.id, "Message");
+      const remove = new Set(change.labelIds);
+      msg.labelIds = (msg.labelIds ?? []).filter((id) => !remove.has(id));
+      // No labelsRemoved record is modeled; advance the checkpoint anyway so a
+      // following sync sees a moved historyId like a real mutation.
+      historyId += 1;
+    },
+
     expireHistory() {
       historyId += 1;
       oldestValidHistoryId = historyId;
@@ -331,9 +349,11 @@ export function createFakeGoogleGmail(
       };
     },
 
-    async listMessages(_opts) {
+    async listMessages(listOpts) {
       return {
-        messages: fake.messages.map((m) => ({ id: m.id, threadId: m.threadId })),
+        messages: fake.messages
+          .filter((m) => messageMatchesQuery({ msg: m, query: listOpts.q, labels: fake.labels }))
+          .map((m) => ({ id: m.id, threadId: m.threadId })),
       };
     },
 
