@@ -19,7 +19,13 @@
  */
 
 import { randomUUID } from "node:crypto";
-import type { Agent, AgentInvokeOptions, AgentResult } from "../../src/core/agent.js";
+import type { z } from "zod";
+import type {
+  Agent,
+  AgentInvokeOptions,
+  AgentResult,
+  StructuredAgentResult,
+} from "../../src/core/agent.js";
 
 export interface FakeAgentInvocation {
   /** System prompt — present on first invoke, null on resume. */
@@ -32,6 +38,16 @@ export interface FakeAgentInvocation {
   options: AgentInvokeOptions;
   /** Result returned by the act function. */
   result: AgentResult;
+}
+
+/** Thrown when invokeStructured is called on a fake created without `structuredResult`. */
+export class FakeAgentStructuredUnsupportedError extends Error {
+  constructor() {
+    super(
+      "FakeAgent.invokeStructured needs createFakeAgent({ structuredResult }) — pass a scripted verdict provider for structured-output tests.",
+    );
+    this.name = "FakeAgentStructuredUnsupportedError";
+  }
 }
 
 export interface FakeAgent extends Agent {
@@ -60,6 +76,18 @@ export interface FakeAgentOptions {
     prompt: string;
     invocation: number;
   }) => Promise<Partial<AgentResult>>;
+  /**
+   * Called when invokeStructured() is hit — returns the scripted verdict
+   * `data` (validated against the caller's schema). Return `null` to simulate
+   * a model failure / unparseable output (StructuredAgentResult.data === null).
+   * `invocation` is shared with `act` (0-indexed across all invokes).
+   */
+  structuredResult?: (ctx: {
+    boxRoot: string;
+    systemPrompt: string | null;
+    prompt: string;
+    invocation: number;
+  }) => unknown;
 }
 
 export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
@@ -100,10 +128,48 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       return result;
     },
 
-    invokeStructured(): Promise<never> {
-      throw new Error(
-        "FakeAgent.invokeStructured is not implemented — use createFakeAgent({ act }) for free-form agents only, or extend the fake when a structured-output test arrives.",
-      );
+    async invokeStructured<T>(
+      schema: z.ZodType<T>,
+      opts: AgentInvokeOptions,
+    ): Promise<StructuredAgentResult<T>> {
+      if (!options.structuredResult) {
+        throw new FakeAgentStructuredUnsupportedError();
+      }
+      const invocationIndex = invocations.length;
+      const resumed = invocationIndex > 0;
+
+      const raw = await options.structuredResult({
+        boxRoot: opts.boxRoot,
+        systemPrompt: opts.systemPrompt ?? null,
+        prompt: opts.prompt,
+        invocation: invocationIndex,
+      });
+
+      // null models a failed/unparseable verdict; otherwise validate against
+      // the caller's schema exactly as the real invokeStructured does.
+      const parsed = raw === null ? null : schema.safeParse(raw);
+      const data: T | null = parsed === null ? null : parsed.success ? parsed.data : null;
+      const success = data !== null;
+
+      const result: StructuredAgentResult<T> = {
+        success,
+        output: "",
+        exitCode: success ? 0 : 1,
+        sessionId,
+        data,
+        ...(parsed !== null && !parsed.success && { error: parsed.error.message }),
+        ...(raw === null && { error: "fake structured failure" }),
+      };
+
+      invocations.push({
+        systemPrompt: resumed ? null : (opts.systemPrompt ?? null),
+        prompt: opts.prompt,
+        resumed,
+        options: opts,
+        result,
+      });
+
+      return result;
     },
 
     printLog(): string {
