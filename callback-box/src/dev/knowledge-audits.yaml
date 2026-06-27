@@ -287,12 +287,34 @@ tests:
     should_read: ["docs/generated/procedures.md"]
     tags: [procedures, extension]
     notes: >
-      Agent consistently guesses plausible procedure XML without reading docs.
+      Agent consistently guesses plausible procedure YAML without reading docs.
       The procedure format uses custom conventions (precheck/run/validate phases,
-      shell/agent/instruction primitives, CHECK_SKIP) but is close enough to
-      common XML patterns that the model guesses confidently. Open question:
-      would the guessed XML actually validate? A scenario test would answer
+      shells/agents/instructions primitives, CHECK_SKIP) but is close enough to
+      common patterns that the model guesses confidently. Open question:
+      would the guessed YAML actually validate? A scenario test would answer
       this better than a knowledge audit.
+
+  - id: procedure-instructions-gate
+    prompt: "In a procedure's validate phase, do `instructions:` actually gate the step, or are they just human-readable notes?"
+    expected_level: knows_directly
+    watch_for: "Says instructions are not implemented / pass-by-default (the pre-2026-06 behavior)"
+    tags: [procedures]
+    notes: >
+      instructions: are model-judged against the step's git diff and gate by
+      severity like a shells: check (engine-validate-model.ts). The old guidance
+      said they were unimplemented/pass-by-default — this audit guards against the
+      agent recalling that stale claim after the D5 validation-completion work.
+
+  - id: procedure-review-severity
+    prompt: "What does `severity: review` do when a procedure step's validation fails?"
+    expected_level: knows_directly
+    watch_for: "Says review just downgrades to warn / is not implemented (the pre-2026-06 behavior)"
+    tags: [procedures]
+    notes: >
+      review re-invokes the single run agent with the failure context to self-heal,
+      up to a retry cap, then fails the step if it still doesn't pass
+      (runAndValidate, engine-run-phase.ts). Previously it downgraded to warn; this
+      audit guards against the agent recalling that stale behavior.
 
   - id: procedure-vs-procedurerun
     prompt: "Explain the relationship between a procedure card and a procedure-run card."

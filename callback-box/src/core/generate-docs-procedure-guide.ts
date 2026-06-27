@@ -71,19 +71,18 @@ steps:
             Agent prompt goes here. The engine prepends context
             (date, procedure name, step ID, working directory).
     validate:
-      severity: abort   # the only severity that actually gates (see below)
+      severity: abort   # warn | abort | review (see Validation Severity)
       shells:
         - |
-          # Exit 0 = pass, non-zero = fail. This is what gates the step.
+          # Exit 0 = pass, non-zero = fail (objective gate).
           remaining=$(ls box/inbox/*.card 2>/dev/null | wc -l)
           echo "Remaining: $remaining"
           [ "$remaining" -eq 0 ]
       instructions:
         - |
-          Natural-language description of what success looks like.
-          NOTE: instructions are human-readable intent only — not yet
-          machine-evaluated (see Validation Severity). Put the real
-          pass/fail check in shells.
+          Natural-language success criterion, model-judged against the
+          step's git diff. Gates by severity like a shells check. Use for
+          judgment a shell can't make; keep objective checks in shells.
       whys:
         - Why this validation matters
 ---
@@ -120,6 +119,18 @@ agents:
 - The engine injects a context block with the date, run card path, step ID, and procedure source location.
 - Use a YAML block scalar (\`|\`) for the prompt so indentation is preserved.
 
+### Instruction Checks (model-judged)
+
+\`instructions:\` in a \`validate\` phase are natural-language success criteria that a
+review model judges against the **step's git diff** (the whole step — every commit
+the run made — not just the last one), with the step's \`whys:\` as context. The
+verdict gates by \`severity\` exactly like a \`shells:\` check. \`validate.model\`
+(haiku/sonnet/opus, default sonnet) picks the judge tier. If the model can't return
+a verdict, the check fails closed (a check you think gates never silently passes).
+
+Use \`instructions:\` for judgment a shell can't cheaply make ("the summary actually
+reflects the source"); keep objective, deterministic checks in \`shells:\`.
+
 ### Passing Precheck Data to Agents
 
 Add \`pass-output: true\` to a precheck to include its stdout in the agent's context:
@@ -135,11 +146,13 @@ The agent sees this as a \`<precheck>\` block in its system prompt. Use this to 
 
 ### Validation Severity
 
-- \`severity="warn"\` — Log the failure and continue.
-- \`severity="abort"\` — A failing \`shells\` check fails the step (and, for a procedure-kind migration, blocks the migration). **This is the only severity that actually gates.**
-- \`severity="review"\` — *Intended* to re-run the agent with the failure context, but **not implemented yet** — it currently downgrades to \`warn\` (logs and continues). Use \`abort\` when you need a hard gate.
+Applies to both \`shells:\` and \`instructions:\` failures:
 
-**Only \`shells\` gates.** A failing \`agents\` invocation does not fail the step (it's logged), and \`instructions\` are not yet machine-evaluated. So "the agent must have actually done the work" has to be encoded as a \`shells\` check — never assume the agent finishing means the step succeeded.
+- \`severity="warn"\` — Log the failure and continue.
+- \`severity="abort"\` — Fail the step (and, for a procedure-kind migration, block the migration). Hard gate, no retry.
+- \`severity="review"\` — Self-heal: re-invoke the run agent with a \`<validation-failure>\` context block (the failure detail + the step's \`whys:\`) and re-validate, up to the engine's retry cap; if it still fails, the step fails. Requires **exactly one** run agent (the session to resume) — a review phase with zero or multiple agents fails terminally instead.
+
+**A failing \`agents\` invocation does not by itself fail the step** (it's logged). "The agent must have actually done the work" has to be proven by a \`shells\` check or an \`instructions\` verdict — never assume the agent finishing means the step succeeded.
 
 ### Checklists (opt-in thoroughness)
 

@@ -77,14 +77,17 @@ Don't modify a procedure card while a run is active. The engine reads the defini
 
 Each entry in \`steps\` has optional phases: \`precheck\` (should this step run?), \`run\` (the main action), \`validate\` (did it work?). Each phase groups its actions by kind:
 
-- \`shells:\` — a list of bash commands run in the box root. **The only kind that
-  actually gates** a \`validate\` (with \`severity: abort\`).
+- \`shells:\` — a list of bash commands run in the box root. Gates a \`validate\`
+  on a non-zero exit (objective check).
 - \`agents:\` — a list of \`{ prompt, model?, max-turns? }\` Claude Code invocations.
-- \`instructions:\` — *intended* as model-judged pass/fail, but **not implemented
-  yet** (logged, pass-by-default). Don't gate on it; put real checks in \`shells:\`.
-- \`whys:\` — a list of explanations (for humans, fixing agents, and review models).
+- \`instructions:\` — a list of natural-language success criteria, **model-judged**
+  in a \`validate\` phase against the step's git diff. A failing verdict gates by
+  the phase \`severity\` exactly like a failing \`shells:\` check. Put objective,
+  cheap checks in \`shells:\`; use \`instructions:\` for judgment a shell can't make.
+- \`whys:\` — a list of explanations (for humans, fixing agents, and review models);
+  also handed to the instruction judge and to a \`review\` retry as context.
 
-Use YAML block scalars (\`|\`) for multi-line shell scripts and agent prompts so indentation is preserved. \`precheck.pass-output: true\` passes precheck stdout into the run phase. \`validate.severity\` is warn/review/abort — but \`review\`'s auto-retry is **not implemented** (it downgrades to warn), so \`abort\` is the only severity that gates.
+Use YAML block scalars (\`|\`) for multi-line shell scripts and agent prompts so indentation is preserved. \`precheck.pass-output: true\` passes precheck stdout into the run phase. \`validate.severity\` is warn (log, continue) / abort (fail the step) / review (re-invoke the run agent with the failure context to self-heal, then fail the step if it still doesn't pass — needs exactly one run agent). \`validate.model\` (haiku/sonnet/opus, default sonnet) picks the judge tier for \`instructions:\`.
 
 Optional \`run-expiry\` / \`failed-run-expiry\` override how long this procedure's finished run dirs are kept before \`cb procedure gc\` deletes them (defaults: 30d completed, 90d failed). Value is a duration ("60d", "12w") or "never".`,
 });

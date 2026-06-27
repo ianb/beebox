@@ -29,7 +29,7 @@ Every step has three optional phases: **precheck**, **run**, **validate**. All u
 
 - `<shell>` — a bash command, executed in the box root
 - `<agent>` — Claude Code invocation with inline prompt
-- `<instruction>` — natural-language success criterion. Human-readable intent only — **not** machine-evaluated yet (see [Instructions](#instructions)); the real pass/fail check goes in a `shell`.
+- `<instruction>` — natural-language success criterion, **model-judged** against the step's git diff in a `validate` phase (see [Instructions](#instructions)); gates by severity like a `shell` check.
 - `<why>` — explanation of purpose for humans, fixing agents, and review models
 
 **Text dedenting:** All text content is automatically dedented, so prompts can be indented naturally within the XML.
@@ -86,28 +86,38 @@ Attributes:
 
 ### Instructions
 
-`instructions:` is **intended** to be evaluated by a model against the git diff,
-but is **not implemented yet** — the engine logs the instruction and treats it as
-pass-by-default (`engine-phase.ts`, "instruction checks pass by default" TODO).
-Until it's built, do **not** rely on `instructions` to gate anything: put the
-real check in `shells:`. Leave `instructions` as human-readable intent only.
+`instructions:` in a `validate` phase are model-judged. The engine assembles the
+instruction(s), the step's git diff (the whole step — every commit the run made,
+captured as a `baseline..finalRef` range, not just the last commit), and the
+step's `whys:`, and asks a review model (`validate.model`, default sonnet) for a
+structured pass/fail verdict. A failing verdict gates by `severity` exactly like a
+failing `shells:` check; the reasoning is recorded in the run card's `validate.review`.
+If the model can't return a verdict, the check **fails closed**. Implementation:
+`evaluateInstructions` in `engine-validate-model.ts`.
+
+Use `instructions:` for judgment a shell can't cheaply make; keep objective,
+deterministic checks in `shells:`.
 
 ### Validation Severity
 
-- `severity="warn"` — log and continue.
-- `severity="abort"` — a failing `shells:` check fails the step (and, for a
-  `kind: "procedure"` migration, blocks the migration). **This is the only
-  severity that actually gates.**
-- `severity="review"` — *intended* to re-invoke the agent with the failure
-  context, but **not implemented**: it currently downgrades the failure to a
-  warning and continues (`engine-phase.ts` TODO). Treat it as `warn` until built;
-  for a hard gate use `abort`.
+Applies to both `shells:` and `instructions:` failures:
 
-A step is marked `failed` only when a `validate` `shells` check fails **and**
-`severity` is `abort`. A failing agent invocation does **not** itself fail the
-step (it's logged) — so if you need "the agent must have actually done the work,"
-encode that as a `shells` check, don't assume the agent succeeding means the step
-did.
+- `severity="warn"` — log and continue.
+- `severity="abort"` — fail the step (and, for a `kind: "procedure"` migration,
+  block the migration). Hard gate, no retry.
+- `severity="review"` — self-heal: re-invoke the run agent with a
+  `<validation-failure>` context block (the failure detail + the step's `whys:`)
+  and re-validate, up to the engine's retry cap (`MAX_REVIEW_RETRIES`); if it
+  still fails, the step fails. Requires **exactly one** run agent (the session to
+  resume) — a review phase with zero or multiple agents fails terminally. Retry
+  invocations carry a `maxBudgetUsd` ceiling. Implementation: `runAndValidate` in
+  `engine-run-phase.ts`.
+
+A step is marked `failed` when a `validate` check fails and `severity` is `abort`,
+or when a `review` failure exhausts its retries. A failing agent invocation does
+**not** itself fail the step (it's logged) — so if you need "the agent must have
+actually done the work," prove it with a `shells:` check or an `instructions:`
+verdict; don't assume the agent succeeding means the step did.
 
 ### Checklists (opt-in thoroughness)
 
