@@ -9,6 +9,7 @@ import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import {
   listStagedMarkdown,
   lintMarkdownFiles,
+  boxWideLinkWarnings,
   isLintableMarkdown,
 } from "../../../src/cli/commands/validate-markdown.js";
 import { execSync } from "node:child_process";
@@ -62,4 +63,46 @@ isLintableMarkdown("store/x/.claude/rules/foo.md")
 
 isLintableMarkdown("store/notes.txt")
 => false
+```
+
+`boxWideLinkWarnings` is the warn-only commit-time scan: it finds a broken link
+in any box file (even one that isn't staged — the move-collateral case) and
+returns advisory text, or null when the box is link-clean.
+
+```ts
+const box3 = await makeTmpBox();
+await mkdir(join(box3.root, "store"), { recursive: true });
+await writeFile(join(box3.root, "store/note.md"), "![gone](/store/gone.png)\n");
+const warn = await boxWideLinkWarnings(box3.root);
+await box3.cleanup();
+[warn?.includes("Broken link: /store/gone.png"), warn?.includes("not blocking the commit")]
+=>
+[
+  true,
+  true
+]
+```
+
+```ts
+const box4 = await makeTmpBox();
+await mkdir(join(box4.root, "store/img"), { recursive: true });
+await writeFile(join(box4.root, "store/img/a.png"), "x");
+await writeFile(join(box4.root, "store/ok.md"), "![a](/store/img/a.png)\n");
+const clean = await boxWideLinkWarnings(box4.root);
+await box4.cleanup();
+clean
+=> null
+```
+
+Generated docs (`docs/generated/`, regenerated and full of placeholder example
+links) are skipped, so they never flood the warning:
+
+```ts
+const box5 = await makeTmpBox();
+await mkdir(join(box5.root, "docs/generated"), { recursive: true });
+await writeFile(join(box5.root, "docs/generated/card-x.md"), "![ex](attach/photo.jpg)\n[text](url)\n");
+const genWarn = await boxWideLinkWarnings(box5.root);
+await box5.cleanup();
+genWarn
+=> null
 ```

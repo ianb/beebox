@@ -11,6 +11,7 @@ import {
   findMarkdownFiles,
   listStagedMarkdown,
   lintMarkdownFiles,
+  boxWideLinkWarnings,
   formatMarkdownResults,
   isLintableMarkdown,
   type MarkdownLintSummary,
@@ -278,16 +279,24 @@ export const validateCommand = new Command("validate")
   .option("--all", "Validate all files in the box (default when no path given)")
   .option("--staged", "Validate the cards currently staged in git")
   .option("--hook", "Hook mode: read Claude Code PostToolUse JSON payload from stdin, validate the touched card. Errors go to stderr with exit code 2 so the agent sees feedback; non-card paths exit 0 silently.")
+  .option("--links", "Warn-only box-wide broken-link scan (link rules only). Always exits 0 — used by the pre-commit hook to surface dangling links in unstaged referrers without blocking the commit.")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
       targetPaths: string[],
-      options: { all?: boolean; staged?: boolean; hook?: boolean; json?: boolean; committed?: boolean }
+      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; json?: boolean; committed?: boolean }
     ) => {
       try {
         if (options.hook) {
           await runHookMode();
+        }
+
+        if (options.links) {
+          const linkBoxRoot = await requireBoxRoot();
+          const warnings = await boxWideLinkWarnings(linkBoxRoot);
+          if (warnings !== null) process.stderr.write(`${warnings}\n`);
+          process.exit(0);
         }
 
         const boxRoot = await requireBoxRoot();

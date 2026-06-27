@@ -60,11 +60,16 @@ if [ ! -x "$CB" ]; then
   fi
 fi
 
-# Validate staged cards only when there are any.
-staged_cards=$(git diff --cached --name-only --diff-filter=ACMR | grep '\\.card$' || true)
-if [ -n "$staged_cards" ]; then
+# Validate staged cards/markdown only when there are any (blocks on errors).
+staged=$(git diff --cached --name-only --diff-filter=ACMR | grep -E '\\.(card|md)$' || true)
+if [ -n "$staged" ]; then
   "$CB" validate --staged
 fi
+
+# Box-wide broken-link scan: a move can break links in files that aren't
+# staged (the referrers), which --staged never sees. Warn-only (always exits
+# 0) so it never blocks — it surfaces dangling links to fix with cb mv.
+"$CB" validate --links || true
 
 # Verify the asset manifest on every commit (read-only; fails on error).
 "$CB" attachments verify
