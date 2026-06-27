@@ -230,3 +230,19 @@ test1:
       peak: 41623
       added: 0
       turns: 1
+  procedure-instructions-gate:
+    - date: 2026-06-27T17:31:49.109Z
+      boxCommit: 9df1ee213bfc90a09a101a3ef10f26ba7b3037da
+      repoCommit: 592bf9f376aa04573545793679c3bdaeef77f21d
+      initial: 41620
+      peak: 42332
+      added: 712
+      turns: 4
+  procedure-review-severity:
+    - date: 2026-06-27T17:32:12.820Z
+      boxCommit: 05636ac8ee3cb9ae45071d576a475bea4bf02081
+      repoCommit: 592bf9f376aa04573545793679c3bdaeef77f21d
+      initial: 41601
+      peak: 42616
+      added: 1015
+      turns: 4

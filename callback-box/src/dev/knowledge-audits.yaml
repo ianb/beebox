@@ -304,6 +304,8 @@ tests:
       severity like a shells: check (engine-validate-model.ts). The old guidance
       said they were unimplemented/pass-by-default — this audit guards against the
       agent recalling that stale claim after the D5 validation-completion work.
+      Status 2026-06-27: PASS (knows_directly, 0 files read) — agent answered
+      "genuinely gate, model-judged against the diff, subject to severity".
 
   - id: procedure-review-severity
     prompt: "What does `severity: review` do when a procedure step's validation fails?"
@@ -315,6 +317,9 @@ tests:
       up to a retry cap, then fails the step if it still doesn't pass
       (runAndValidate, engine-run-phase.ts). Previously it downgraded to warn; this
       audit guards against the agent recalling that stale behavior.
+      Status 2026-06-27: PASS (knows_directly, 0 files read) — agent answered
+      "re-invoke the run agent with failure context to self-heal, then fail if it
+      still doesn't pass; needs exactly one run agent".
 
   - id: procedure-vs-procedurerun
     prompt: "Explain the relationship between a procedure card and a procedure-run card."
