@@ -340,11 +340,11 @@ support `cancelled` and `deferred`. Replace the binary control with a
 4-state control (dropdown / context menu). IAN: "valid issue, may need design."
 **Medium.**
 
-### D3. Frontmatter dotted-path *write* — item [11]
-Only `lookupField()` (read) exists. If write-by-dotted-path is wanted, add
-`setField()` to `src/core/frontmatter-field.ts`. IAN doesn't recall intending
-this — **confirm it's wanted before building**; otherwise this is a DOC fix
-(story over-claims). **Medium / or trivial-doc.**
+### D3. Frontmatter dotted-path *write* — item [11] — RESOLVED (won't build)
+Only `lookupField()` (read) exists, by design. IAN confirmed no write API was
+intended; resolved as the doc fix — the over-claiming user story now describes
+the read-only capability. No `setField()`: there's no caller, and card mutations
+go through parse-mutate-reserialize. Dropped.
 
 ### D4. PDF / document analysis — item [15]
 PDFs are filed verbatim with no ML analysis

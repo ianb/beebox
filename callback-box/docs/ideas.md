@@ -1469,13 +1469,6 @@ the schema and backend already support `cancelled` and `deferred` — users can'
 reach those states except by hand-editing the card. Replace the binary toggle
 with a 4-state control (dropdown / context menu). Medium; mostly a UI change.
 
-### Frontmatter dotted-path write (D3)
-
-`src/core/frontmatter-field.ts` only has `lookupField()` (read). A `setField()`
-(write-by-dotted-path) would round it out — but the maintainer didn't recall
-intending a write API, so **confirm it's wanted before building**; otherwise this
-is just a catalog over-claim to drop. Medium, or trivial-doc.
-
 ### Procedure validation completion (D5)
 
 `src/core/procedure/engine-phase.ts` stubs instruction-based validation (always

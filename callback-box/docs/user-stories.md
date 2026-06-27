@@ -733,15 +733,15 @@ The file src/core/frontmatter-field.ts exports two functions that implement the 
 
 </details>
 
-### Edit card frontmatter fields by dotted path  
-❌ INACCURATE
+### Look up card frontmatter fields by dotted path  
+✅ verified (read-only by design)
 
 
-> As a box user, I want to look up and modify specific nested fields in a card's YAML frontmatter using dotted notation, so that I can update complex metadata like EXIF data without manually editing the file.
+> As a box user, I want to look up specific nested fields in a card's YAML frontmatter using dotted notation, so that I can surface complex metadata like EXIF data in listings and landmark navigation.
 
-Files: `src/core/frontmatter-field.ts`, `src/core/card-io.ts`, `src/cards/schema.ts`
+Files: `src/core/frontmatter-field.ts`
 
-**Verifier (flagged):** The code implements ONLY field lookup via dotted path, not field modification. The `lookupField()` function in src/core/frontmatter-field.ts reads scalar values from nested YAML frontmatter (used by landmarks and the `cb ls --format` command), but there is no corresponding function to WRITE/MODIFY nested fields using dotted notation. The story claims users can "look up AND modify" - only the lookup part exists. To modify fields, callers must parse the entire card, mutate the fields object, and serialize back, without dotted-path helper support for writes.
+**Note:** Read-only by design. `lookupField()` reads scalar values from nested YAML frontmatter via dotted paths (used by landmarks and `cb ls --format`). A symmetric *write* helper (`setField()`) was considered (audit item D3) and dropped — there's no caller for it, and card mutations go through parse-mutate-reserialize with the `yaml` library, which preserves the rest of the frontmatter. The earlier story over-claimed "look up AND modify"; it now describes the implemented read capability.
 
 ### Define custom card types in box-local schemas  
 ✅ verified
