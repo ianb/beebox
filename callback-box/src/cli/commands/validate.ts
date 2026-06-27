@@ -3,17 +3,21 @@
  */
 
 import { execFile } from "node:child_process";
-import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { Command } from "commander";
 import { formatLintResults, type LintSummary } from "../../cards/index.js";
-import { lint as markdownlint } from "markdownlint/promise";
-import type { LintError } from "markdownlint";
-import { noViewLabelLinks, noBrokenInternalLinks } from "../../core/markdown-lint-rules.js";
+import {
+  listStagedMarkdown,
+  lintMarkdownFiles,
+  boxWideLinkWarnings,
+  formatMarkdownResults,
+  isLintableMarkdown,
+  type MarkdownLintSummary,
+} from "./validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
-import { listBoxCardFiles } from "../../core/list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFiles } from "../../core/list-cards.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
@@ -71,74 +75,6 @@ async function readHookFilePath(): Promise<string | undefined> {
   }
 }
 
-const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude"]);
-const SKIP_FILES = new Set(["CLAUDE.md"]);
-
-// Opt-in validity rules only — style rules are not enforced.
-const MARKDOWN_CONFIG = {
-  default: false,
-  MD009: true, // trailing spaces
-  MD037: true, // spaces inside emphasis markers
-  MD038: true, // spaces inside code span elements
-  MD047: true, // files should end with a single newline
-};
-
-const CUSTOM_RULES = [noViewLabelLinks, noBrokenInternalLinks];
-
-async function findMarkdownFiles(dir: string): Promise<string[]> {
-  const entries = await fs.readdir(dir, { withFileTypes: true }).catch(() => null);
-  if (entries === null) return [];
-  const results: string[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory()) {
-      if (!SKIP_DIRS.has(entry.name)) {
-        const sub = await findMarkdownFiles(path.join(dir, entry.name));
-        results.push(...sub);
-      }
-    } else if (entry.isFile() && entry.name.endsWith(".md") && !SKIP_FILES.has(entry.name)) {
-      results.push(path.join(dir, entry.name));
-    }
-  }
-  return results.toSorted();
-}
-
-interface MarkdownLintSummary {
-  filesChecked: number;
-  filesWithErrors: number;
-  totalErrors: number;
-  errors: Record<string, LintError[]>;
-}
-
-async function lintMarkdownFiles(files: string[]): Promise<MarkdownLintSummary> {
-  const results = await markdownlint({ files, config: MARKDOWN_CONFIG, customRules: CUSTOM_RULES });
-  let filesWithErrors = 0;
-  let totalErrors = 0;
-  const errors: Record<string, LintError[]> = {};
-  for (const file of files) {
-    const fileErrors = results[file] ?? [];
-    if (fileErrors.length > 0) {
-      filesWithErrors++;
-      totalErrors += fileErrors.length;
-      errors[file] = fileErrors;
-    }
-  }
-  return { filesChecked: files.length, filesWithErrors, totalErrors, errors };
-}
-
-function formatMarkdownResults(summary: MarkdownLintSummary, { colors }: { colors: boolean }): string {
-  const lines: string[] = [];
-  const ESC = "";
-  const red = colors ? (s: string) => `${ESC}[31m${s}${ESC}[0m` : (s: string) => s;
-  for (const [file, fileErrors] of Object.entries(summary.errors)) {
-    for (const e of fileErrors) {
-      const rule = e.ruleNames[0] ?? "unknown";
-      const detail = e.errorDetail ? ` (${e.errorDetail})` : "";
-      lines.push(`${red("error")}  ${file}:${e.lineNumber}  [${rule}] ${e.ruleDescription}${detail}`);
-    }
-  }
-  return lines.join("\n");
-}
-
 function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors: boolean }): string {
   if (errors.length === 0) return "";
   const ESC = "";
@@ -189,6 +125,18 @@ async function runHookMode(): Promise<never> {
     }
     process.exit(0);
   }
+  // Agent/human-authored markdown: lint its links (CB001/CB002) so a hand-edit
+  // that breaks a link gets the same write-time nudge cards do. CLAUDE.md is
+  // handled above; .claude/ rule docs are excluded by isLintableMarkdown.
+  if (isLintableMarkdown(fp)) {
+    const boxRoot = await requireBoxRoot();
+    const summary = await lintMarkdownFiles([fp], { boxRoot });
+    if (summary.totalErrors > 0) {
+      process.stderr.write(`${formatMarkdownResults(summary, { colors: false })}\n`);
+      process.exit(2);
+    }
+    process.exit(0);
+  }
   if (!isCardFile(fp)) {
     process.exit(0);
   }
@@ -232,24 +180,24 @@ async function collectResults(
   return collectExplicitResults(args);
 }
 
-/** Validate the union of git-staged cards and any explicit card paths given. */
+/** Validate the union of git-staged cards/markdown and any explicit paths given. */
 async function collectStagedResults({ boxRoot, ctx, resolved, json }: CollectArgs): Promise<ValidationResults> {
-  const staged = await listStagedCards(boxRoot);
-  const explicit = resolved.filter(isCardFile);
-  const all = [...staged, ...explicit];
-  if (all.length === 0 && !json) {
-    console.log("No staged cards to validate.");
+  const cards = [...(await listStagedCards(boxRoot)), ...resolved.filter(isCardFile)];
+  const mdFiles = [...(await listStagedMarkdown(boxRoot)), ...resolved.filter(isMarkdownFile)];
+  if (cards.length === 0 && mdFiles.length === 0 && !json) {
+    console.log("No staged cards or markdown to validate.");
   }
-  const cardSummary = all.length > 0 ? await lintCardsDispatch(all, { boxRoot, ctx }) : null;
-  return { cardSummary, mdSummary: null, attachErrors: [], claudeMdWarnings: [] };
+  const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
+  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }
 
 /** Validate every card, markdown file, and attach layout in the box. */
 async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p));
   const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
-  const mdFiles = await findMarkdownFiles(boxRoot);
-  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles) : null;
+  const mdFiles = await listBoxMarkdownFiles(boxRoot);
+  const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
   return { cardSummary, mdSummary, attachErrors, claudeMdWarnings };
@@ -265,7 +213,7 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
     process.exit(1);
   }
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
-  const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths) : null;
+  const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths, { boxRoot }) : null;
   return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
 }
 
@@ -330,16 +278,24 @@ export const validateCommand = new Command("validate")
   .option("--all", "Validate all files in the box (default when no path given)")
   .option("--staged", "Validate the cards currently staged in git")
   .option("--hook", "Hook mode: read Claude Code PostToolUse JSON payload from stdin, validate the touched card. Errors go to stderr with exit code 2 so the agent sees feedback; non-card paths exit 0 silently.")
+  .option("--links", "Warn-only box-wide broken-link scan (link rules only). Always exits 0 — used by the pre-commit hook to surface dangling links in unstaged referrers without blocking the commit.")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
       targetPaths: string[],
-      options: { all?: boolean; staged?: boolean; hook?: boolean; json?: boolean; committed?: boolean }
+      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; json?: boolean; committed?: boolean }
     ) => {
       try {
         if (options.hook) {
           await runHookMode();
+        }
+
+        if (options.links) {
+          const linkBoxRoot = await requireBoxRoot();
+          const warnings = await boxWideLinkWarnings(linkBoxRoot);
+          if (warnings !== null) process.stderr.write(`${warnings}\n`);
+          process.exit(0);
         }
 
         const boxRoot = await requireBoxRoot();

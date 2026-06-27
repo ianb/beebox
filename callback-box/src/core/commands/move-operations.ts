@@ -5,17 +5,18 @@
  * Beyond what cardworks' built-in move handles (card file + same-basename
  * siblings, including the `<basename>.attach/` directory, plus cross-card
  * refs that point at the moved card), these run a resolution-based ref
- * rewrite (rewrite-card-refs.ts) over every other card. That covers what
- * cardworks misses: refs written relative to the referring card, refs into
- * the moved attach scope, body Markdoc tag refs, inline markdown links, and
- * Phase-2 frontmatter cards cardworks can't parse.
+ * rewrite (rewrite-card-refs.ts) over every other card *and plain `.md`
+ * dossier*. That covers what cardworks misses: refs written relative to the
+ * referring file, refs into the moved attach scope, body Markdoc tag refs,
+ * inline markdown links (including in non-card dossiers), and Phase-2
+ * frontmatter cards cardworks can't parse.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { CommandContext } from "../command-runner.js";
 import { attachDirFor } from "../../shared/attach-path.js";
-import { listBoxCardFiles } from "../list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFiles } from "../list-cards.js";
 import {
   rewriteReferrerRefs,
   rewriteMovedCardRefs,
@@ -150,7 +151,7 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
 /**
  * Perform the actual file relocation for a single card: rename the `.card`
  * file and its sibling `<basename>.attach/` directory. Every card is
- * frontmatter, so the substring ref-rewrite pass (rewriteOtherCards) handles
+ * frontmatter, so the substring ref-rewrite pass (rewriteOtherReferrers) handles
  * all referrer updates — there's nothing to re-serialize.
  */
 async function relocateCardFiles({
@@ -167,15 +168,17 @@ async function relocateCardFiles({
 }
 
 /**
- * Rewrite refs in every *other* card that points at the moved card or into
- * its attach directory. Resolution-based (see rewrite-card-refs.ts), so refs
- * written relative to the referring card are caught — not just box-root
- * paths — and refs sitting in body Markdoc tags, inline markdown links, and
- * frontmatter alike. cardworks already re-serialized card-to-card refs in
- * XML referrers; this pass is idempotent over those and additionally covers
- * attach-scope refs and every Phase-2 card cardworks can't parse.
+ * Rewrite refs in every *other* referrer — card or plain `.md` dossier — that
+ * points at the moved card or into its attach directory. Resolution-based (see
+ * rewrite-card-refs.ts), so refs written relative to the referring file are
+ * caught — not just box-root paths — and refs sitting in body Markdoc tags,
+ * inline markdown links, and frontmatter alike. Markdown dossiers (e.g. a
+ * notebook character sheet that embeds `/store/.../images/...`) are included
+ * because a `cb mv` that didn't rewrite their links is exactly how those links
+ * went stale; the rewrite touches only inline links since plain `.md` has no
+ * frontmatter to re-serialize.
  */
-async function rewriteOtherCards({
+async function rewriteOtherReferrers({
   ctx,
   destPath,
   newAttachAbsDir,
@@ -191,28 +194,31 @@ async function rewriteOtherCards({
 }> {
   const extraStaged: string[] = [];
   const extraUpdated: Array<{ path: string; refsUpdated: number }> = [];
-  const allCards = await listBoxCardFiles(ctx.boxRoot);
-  for (const cardPath of allCards) {
-    // Skip the moved card (handled separately) and cards that just moved into
+  const referrers = [
+    ...(await listBoxCardFiles(ctx.boxRoot)),
+    ...(await listBoxMarkdownFiles(ctx.boxRoot)),
+  ];
+  for (const referrerPath of referrers) {
+    // Skip the moved card (handled separately) and files that just moved into
     // the new attach scope (their internal refs travelled with them intact).
-    if (cardPath === destPath) continue;
-    if (cardPath.startsWith(newAttachAbsDir + path.sep)) continue;
+    if (referrerPath === destPath) continue;
+    if (referrerPath.startsWith(newAttachAbsDir + path.sep)) continue;
     try {
-      const original = await fs.readFile(cardPath, "utf-8");
+      const original = await fs.readFile(referrerPath, "utf-8");
       const { text: updated, count } = rewriteReferrerRefs({
         boxRoot: ctx.boxRoot,
-        cardAbsPath: cardPath,
+        cardAbsPath: referrerPath,
         text: original,
         remap,
       });
       if (count === 0 || updated === original) continue;
-      await fs.writeFile(cardPath, updated);
-      const relPath = path.relative(ctx.boxRoot, cardPath);
+      await fs.writeFile(referrerPath, updated);
+      const relPath = path.relative(ctx.boxRoot, referrerPath);
       extraUpdated.push({ path: relPath, refsUpdated: count });
       extraStaged.push(relPath);
       ctx.writeLine(`  Updated ${count} ref${count > 1 ? "s" : ""} in ${relPath}`);
     } catch (e) {
-      console.warn(`Skipping card that can't be read during ref rewrite: ${cardPath}:`, e);
+      console.warn(`Skipping file that can't be read during ref rewrite: ${referrerPath}:`, e);
     }
   }
   return { extraStaged, extraUpdated };
@@ -312,7 +318,7 @@ export async function moveOne(params: MoveOneParams): Promise<MoveOneResult> {
     return null;
   };
 
-  const { extraStaged, extraUpdated } = await rewriteOtherCards({
+  const { extraStaged, extraUpdated } = await rewriteOtherReferrers({
     ctx,
     destPath,
     newAttachAbsDir,

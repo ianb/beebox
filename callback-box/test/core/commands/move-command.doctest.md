@@ -402,3 +402,37 @@ result.success
 result.error
 => Moving multiple cards requires a directory destination
 ```
+
+## Plain `.md` dossier links are rewritten too
+
+A non-card markdown dossier (e.g. a notebook character sheet) that embeds a
+box-root-absolute link to a card is rewritten when that card moves — the case
+that broke before `cb mv` covered `.md` files. Only inline links change; the
+dossier has no frontmatter to re-serialize.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/old/Pic.doc.card", "---\ntype: doc\ntitle: Pic\n---\nx\n");
+await box.write(
+  "store/dossiers/saoirse.md",
+  "# Saoirse\n\n![face](/store/old/Pic.doc.card)\n",
+);
+
+const result = await mv(box, { from: "store/old/Pic.doc.card", to: "store/new/Pic.doc.card" });
+result.success
+=> true
+```
+
+```ts continue
+const saoirse = await box.read("store/dossiers/saoirse.md");
+[saoirse.includes("![face](/store/new/Pic.doc.card)"), saoirse.includes("/store/old/")]
+=>
+[
+  true,
+  false
+]
+```
+
+```ts continue
+await box.cleanup();
+```

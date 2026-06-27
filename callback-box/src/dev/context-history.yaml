@@ -207,3 +207,19 @@ test1:
       peak: 44565
       added: 2890
       turns: 3
+  move-store-content-uses-cb-mv:
+    - date: 2026-06-27T11:23:12.864Z
+      boxCommit: 2f6fed59dd31aaa18d71211dba194ea4762e508a
+      repoCommit: 5fa3a50997fa4a021aa51e88ba7aa8febc236dd1
+      initial: 41614
+      peak: 41614
+      added: 0
+      turns: 1
+  internal-links-resolve-to-box-root:
+    - date: 2026-06-27T11:23:12.864Z
+      boxCommit: 2f6fed59dd31aaa18d71211dba194ea4762e508a
+      repoCommit: 5fa3a50997fa4a021aa51e88ba7aa8febc236dd1
+      initial: 41623
+      peak: 41623
+      added: 0
+      turns: 1

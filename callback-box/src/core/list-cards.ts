@@ -17,3 +17,27 @@ export async function listBoxCardFiles(boxRoot: string): Promise<string[]> {
     ignore: CARD_GLOB_IGNORE,
   });
 }
+
+// Authored markdown only: skip dependency/VCS dirs, the box's generated agent
+// docs (`docs/generated/`, regenerated and full of placeholder example links),
+// and CLAUDE.md (instructions, not linkable content).
+const MARKDOWN_GLOB_IGNORE = [
+  "**/node_modules/**",
+  "**/.git/**",
+  "**/.pnpm/**",
+  "**/.claude/**",
+  "**/.callback-box/**",
+  "docs/generated/**",
+  "**/CLAUDE.md",
+];
+
+/** List the authored `.md` files in a box, absolute paths, sorted. */
+export async function listBoxMarkdownFiles(boxRoot: string): Promise<string[]> {
+  const files = await glob("**/*.md", {
+    cwd: boxRoot,
+    nodir: true,
+    absolute: true,
+    ignore: MARKDOWN_GLOB_IGNORE,
+  });
+  return files.toSorted();
+}

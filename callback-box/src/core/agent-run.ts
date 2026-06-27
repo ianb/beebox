@@ -10,7 +10,7 @@
 import { fmt } from "../cli/lib/format.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
-import { cardValidatorHook } from "./sdk-hooks.js";
+import { cardValidatorHook, gitMvNudgeHook } from "./sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "./sdk-binary-path.js";
 import { startPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./agent-stream.js";
@@ -72,7 +72,7 @@ function buildQueryOptions(
     ...(options.additionalDirectories && options.additionalDirectories.length > 0 && {
       additionalDirectories: options.additionalDirectories,
     }),
-    hooks: { PostToolUse: [cardValidatorHook()] },
+    hooks: { PreToolUse: [gitMvNudgeHook()], PostToolUse: [cardValidatorHook()] },
     // settingSources defaults to ["user", "project"] which auto-loads
     // CLAUDE.md, .claude/settings.json, .claude/rules/, etc.
     ...(appendedSystem !== "" && {
