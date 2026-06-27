@@ -36,13 +36,43 @@ export const noViewLabelLinks: Rule = {
   },
 };
 
+/**
+ * Thrown when `no-broken-internal-links` is enabled without a `boxRoot` in its
+ * config. This is a caller (programming) error: the markdownlint config must
+ * supply it, so we fail loud rather than silently skip — a rule that pretends to
+ * check while not checking is worse than one that errors.
+ */
+class MissingBoxRootError extends Error {
+  constructor() {
+    super("no-broken-internal-links requires a boxRoot in its config — the caller must supply { boxRoot } when enabling the rule");
+    this.name = "MissingBoxRootError";
+  }
+}
+
+/**
+ * Read the required `boxRoot` from the rule's markdownlint config. Callers enable
+ * the rule with `{ "no-broken-internal-links": { boxRoot } }`, which markdownlint
+ * passes through as `params.config`. boxRoot is mandatory: without it we cannot
+ * resolve box-root-absolute (`/store/...`) links, and resolving them against the
+ * OS filesystem root would false-positive every valid link.
+ */
+function readBoxRoot(config: Parameters<Rule["function"]>[0]["config"]): string {
+  // markdownlint types `config` as `boolean | any`; narrow at this parse boundary.
+  const cfg = (config ?? {}) as { boxRoot?: unknown };
+  if (typeof cfg.boxRoot !== "string" || cfg.boxRoot === "") {
+    throw new MissingBoxRootError();
+  }
+  return cfg.boxRoot;
+}
+
 export const noBrokenInternalLinks: Rule = {
   names: ["CB002", "no-broken-internal-links"],
-  description: "Relative links must point to existing files",
+  description: "Internal links (relative, or box-root absolute) must point to an existing file or directory inside the box",
   tags: ["links"],
   parser: "none",
   asynchronous: true,
   function: async (params: Parameters<Rule["function"]>[0], onError: RuleOnError): Promise<void> => {
+    const root = path.resolve(readBoxRoot(params.config));
     const fileDir = path.dirname(params.name);
 
     for (let i = 0; i < params.lines.length; i++) {
@@ -52,9 +82,23 @@ export const noBrokenInternalLinks: Rule = {
       while (match !== null) {
         const url = match[1]!.trim();
         if (isRelativePath(url)) {
-          const filePath = path.resolve(fileDir, url.split("#")[0]!);
-          const exists = await fileExists(filePath);
-          if (!exists) {
+          const target = url.split("#")[0]!;
+          // Leading "/" means box root, not OS root — resolve against boxRoot.
+          // Anything else is relative to the file's own directory.
+          const resolved = target.startsWith("/")
+            ? path.join(root, target)
+            : path.resolve(fileDir, target);
+          // A genuine out-of-box reference uses a different syntax; an internal
+          // link that escapes the box (via `..`) is an error even if the target
+          // happens to exist on disk.
+          const inside = resolved === root || resolved.startsWith(root + path.sep);
+          if (!inside) {
+            onError({
+              lineNumber: i + 1,
+              detail: `Link points outside the box: ${url}`,
+              range: [match.index + 1, match[0].length],
+            });
+          } else if (!(await fileExists(resolved))) {
             onError({
               lineNumber: i + 1,
               detail: `Broken link: ${url}`,
