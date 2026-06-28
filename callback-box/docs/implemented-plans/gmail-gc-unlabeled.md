@@ -1,7 +1,8 @@
 # Plan: Garbage-collect unlabeled Gmail messages
 
-Status: **settled** (2026-06-27) — building. Decisions: trash to `store/trash/`;
+Status: **implemented** (2026-06-27). Decisions: trash to `store/trash/`;
 `gc` defaults on for all modes; keep seen ids (no auto-reimport on relabel).
+Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 
 ## Problem
 
