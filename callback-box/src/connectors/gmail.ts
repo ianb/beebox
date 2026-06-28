@@ -54,6 +54,7 @@ import {
 import { buildGmailCommitMessage, type ThreadNote } from "./gmail-commit.js";
 import { writeThreadCards } from "./gmail-threads.js";
 import { listCandidates, type GmailPullConfig } from "./gmail-pull.js";
+import { reconcileOrphans } from "./gmail-gc.js";
 
 interface GmailState {
   /**
@@ -69,6 +70,8 @@ interface GmailState {
 interface GmailTransientState {
   /** History API checkpoint from the last successful sync. */
   historyId?: string;
+  /** ISO timestamp of the last orphan-reconciliation (GC) pass. */
+  lastReconcileAt?: string;
 }
 
 class GmailConnector implements Connector {
@@ -212,12 +215,37 @@ class GmailConnector implements Connector {
     });
   }
 
-  private async saveCheckpoint(historyId: string | undefined): Promise<void> {
+  private async saveTransient(data: GmailTransientState): Promise<void> {
     await saveTransientState({
       boxRoot: this.boxRoot,
       connectorName: "gmail",
-      data: historyId ? { historyId } : {},
+      data,
     });
+  }
+
+  /**
+   * Run orphan reconciliation if enabled and the cadence has elapsed. Returns
+   * the new lastReconcileAt to persist (unchanged when skipped). A GC failure
+   * is logged and swallowed — the import already succeeded, and the next
+   * interval retries.
+   */
+  private async maybeReconcile(opts: {
+    service: GoogleGmailService;
+    config: GmailPullConfig;
+    lastReconcileAt: string | undefined;
+  }): Promise<string | undefined> {
+    const { service, config, lastReconcileAt } = opts;
+    if (config.gc === false) return lastReconcileAt;
+    const intervalMs = (config.gcIntervalHours ?? 24) * 3_600_000;
+    const last = lastReconcileAt ? Date.parse(lastReconcileAt) : 0;
+    if (Date.now() - last < intervalMs) return lastReconcileAt;
+    try {
+      await reconcileOrphans({ boxRoot: this.boxRoot, service, config });
+      return new Date().toISOString();
+    } catch (err) {
+      console.warn("Gmail GC: reconciliation failed, will retry next interval:", err);
+      return lastReconcileAt;
+    }
   }
 
   async sync(): Promise<SyncResult> {
@@ -252,6 +280,7 @@ class GmailConnector implements Connector {
     let updated: string[] = [];
     const threadNotes: ThreadNote[] = [];
     let checkpoint = transient.historyId;
+    let baselineRan = false;
 
     try {
       const labelMap = await this.loadLabelMap(service);
@@ -267,6 +296,7 @@ class GmailConnector implements Connector {
         // First sync of the bare-inbox default: record the current inbox as
         // seen without importing — only mail arriving (or labeled) from now
         // on flows into the box, instead of the user's whole inbox backlog.
+        baselineRan = true;
         for (const ref of candidates.refs) seenGmailIds.add(ref.id);
         if (candidates.refs.length > 0) {
           console.warn(
@@ -307,12 +337,27 @@ class GmailConnector implements Connector {
       };
     }
 
-    await this.saveCheckpoint(checkpoint);
     await this.saveState({ ...state, seenGmailIds: [...seenGmailIds] });
 
     if (created.length > 0 || updated.length > 0) {
       await this.commitPulled({ created, updated, threadNotes });
     }
+
+    // Reconcile pending threads against Gmail (GC of upstream-unlabeled mail).
+    // Skip right after a baseline sync — it just full-listed and imported
+    // nothing, so there is nothing to orphan.
+    const lastReconcileAt = baselineRan
+      ? transient.lastReconcileAt
+      : await this.maybeReconcile({
+          service,
+          config,
+          lastReconcileAt: transient.lastReconcileAt,
+        });
+
+    const newTransient: GmailTransientState = {};
+    if (checkpoint) newTransient.historyId = checkpoint;
+    if (lastReconcileAt) newTransient.lastReconcileAt = lastReconcileAt;
+    await this.saveTransient(newTransient);
 
     // Upload any agent-authored draft cards that haven't been uploaded yet.
     // Stamps each card with gmail-draft-id and gmail-draft-url and commits

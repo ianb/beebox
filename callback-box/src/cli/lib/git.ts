@@ -27,6 +27,7 @@ export {
   TOUCHPOINT_TRAILER_KEYS,
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
+export { isNothingToCommitError } from "./git-internal.js";
 export {
   getLogPaginated,
   getTrailerFacets,

@@ -15,18 +15,33 @@ const svc = createFakeGoogleGmail();
 => 0
 ```
 
-## Listing returns id + threadId refs
+## Listing returns id + threadId refs, honoring `label:` queries
+
+The fake evaluates the `label:` subset of Gmail search syntax (a single term,
+`label:a OR label:b`, or the bare `label:inbox`); messages lacking the label are
+excluded. Queries with no `label:` term can't be evaluated from the fake's view,
+so they match everything.
 
 ```ts
 const svc = createFakeGoogleGmail({
+  labels: [{ id: "Label_7", name: "callback", type: "user" }],
   messages: [
-    { id: "m1", threadId: "t1" },
-    { id: "m2", threadId: "t1" },
-    { id: "m3", threadId: "t2" },
+    { id: "m1", threadId: "t1", labelIds: ["INBOX"] },
+    { id: "m2", threadId: "t1", labelIds: ["INBOX", "Label_7"] },
+    { id: "m3", threadId: "t2", labelIds: ["Label_7"] },
   ],
 });
-const result = await svc.listMessages({ q: "label:inbox" });
-JSON.stringify(result.messages.map(m => m.id))
+const inbox = await svc.listMessages({ q: "label:inbox" });
+JSON.stringify(inbox.messages.map(m => m.id))
+=> ["m1","m2"]
+
+const labeled = await svc.listMessages({ q: "label:callback" });
+JSON.stringify(labeled.messages.map(m => m.id))
+=> ["m2","m3"]
+
+// No label: term — can't evaluate, so everything matches.
+const all = await svc.listMessages({ q: "from:boss" });
+JSON.stringify(all.messages.map(m => m.id))
 => ["m1","m2","m3"]
 ```
 

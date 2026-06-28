@@ -27,11 +27,24 @@ export interface SpreadsheetMetadata {
   sheets: Array<{ properties: SheetProperties }>;
 }
 
+export interface DriveCommentReply {
+  id: string;
+  content: string;
+  author?: { displayName?: string; emailAddress?: string };
+  createdTime?: string;
+  modifiedTime?: string;
+}
+
 export interface DriveComment {
   id: string;
   content: string;
   author?: { displayName?: string; emailAddress?: string };
   resolved?: boolean;
+  createdTime?: string;
+  modifiedTime?: string;
+  /** The document text the comment is anchored to, if any. */
+  quotedFileContent?: { mimeType?: string; value: string };
+  replies?: DriveCommentReply[];
 }
 
 /**

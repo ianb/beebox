@@ -7,8 +7,9 @@ mailbox never re-fetches message bodies. Steady-state syncs use the Gmail
 history API from a checkpoint stored in transient state; the full query
 listing only runs on the first sync or when the checkpoint expires.
 
-Note: the fake's `listMessages` ignores the query string (it returns every
-message), so full-list scenarios below only seed messages that would match.
+Note: the fake's `listMessages` evaluates only the `label:` subset of the query
+(see the service doctest), so full-list scenarios below seed messages carrying
+the matching label.
 
 ```ts setup
 import { join } from "node:path";

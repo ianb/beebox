@@ -45,6 +45,7 @@ export const GdocSchema: CardSchema = cardSchema("gdoc", {
     link: z.string(),
     owner: z.string(),
     content: z.object({ ref: z.string() }),
+    comments: z.object({ ref: z.string() }).optional(),
     lossy: z.array(LossyItem).optional(),
   },
   instructions: `# Gdoc Cards
@@ -74,13 +75,24 @@ version is written next to the local \`.md\` as \`{basename}.remote.md\`
 the \`.remote.md\`, and committing — the next sync will push the
 resolved version.
 
+## Comments
+Collaborative feedback from the upstream Doc is captured as a sidecar
+inside the attach scope (\`{basename}.comments.json\`), referenced by the
+\`comments.ref:\` field when present. It holds the full comment thread:
+content, author, timestamps, resolved status, the anchored text, and
+replies. This is read-only context regenerated on each pull — editing or
+pushing the \`.md\` does NOT write comments back upstream (a push may even
+orphan the upstream anchors). Read it to understand reviewer feedback;
+don't expect changes to round-trip.
+
 ## Lossy content
 The \`lossy:\` field enumerates features in the upstream Doc that don't
-survive markdown export (comments, footnotes, embedded images,
-equations, suggestions, complex tables). When present,
-pushing local edits will replace those features with the markdown
-body — destroying them. If \`lossy\` is non-empty and a push is
-intended, surface the loss to the user before committing.
+survive markdown export (footnotes, embedded images, equations,
+suggestions, complex tables). When present, pushing local edits will
+replace those features with the markdown body — destroying them. If
+\`lossy\` is non-empty and a push is intended, surface the loss to the
+user before committing. (Comments are handled separately via
+\`comments.ref:\` above, not counted here.)
 
 ## Moving docs
 Moving the card moves its attach scope (and the \`.md\` inside)
@@ -97,6 +109,7 @@ export interface GdocFields {
   link: string;
   owner: string;
   content: { ref: string };
+  comments?: { ref: string };
   lossy?: Array<{ type: GdocLossyType; count: number }>;
 }
 
@@ -108,6 +121,7 @@ export function createGdocTemplate(options: {
   link: string;
   owner: string;
   contentFile: string;
+  commentsFile?: string | undefined;
   lossy?: Array<{ type: GdocLossyType; count: number }>;
   status?: "synced" | "error" | "new" | "conflict";
 }): string {
@@ -120,6 +134,9 @@ export function createGdocTemplate(options: {
     owner: options.owner,
     content: { ref: `attach/${options.contentFile}` },
   };
+  if (options.commentsFile !== undefined) {
+    fields["comments"] = { ref: `attach/${options.commentsFile}` };
+  }
   if (options.revision !== undefined && options.revision !== "") {
     fields["revision"] = options.revision;
   }

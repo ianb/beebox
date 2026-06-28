@@ -205,3 +205,77 @@ files
   "Summary.json"
 ]
 ```
+
+## Comments — captured as a sidecar in the attach scope
+
+A spreadsheet with comments gets a `{basename}.comments.json` sidecar
+(written into the card's `.attach/` scope) and a `comments.ref:` field on
+the card. The fake serves comments off a registered document keyed by the
+same file id.
+
+```ts
+const box5 = await makeTmpBox({ git: true });
+await initBox(box5.root);
+box5.commitAll("init box");
+
+const sheets5 = new Map([["Sheet1", [["Name"], ["Alice"]]]]);
+const ss5 = {
+  metadata: {
+    spreadsheetId: "sheet-comm",
+    properties: { title: "Reviewed" },
+    sheets: [{ properties: { sheetId: 0, title: "Sheet1" } }],
+  },
+  sheets: sheets5,
+};
+
+const drive5 = createFakeGoogleDrive({
+  files: [{
+    id: "sheet-comm",
+    name: "Reviewed",
+    mimeType: "application/vnd.google-apps.spreadsheet",
+    modifiedTime: "2026-03-29T10:00:00Z",
+    owners: [{ emailAddress: "test@example.com" }],
+    webViewLink: "https://docs.google.com/spreadsheets/d/sheet-comm/edit",
+  }],
+  spreadsheets: new Map([["sheet-comm", ss5]]),
+  documents: new Map([["sheet-comm", {
+    structure: { documentId: "sheet-comm", title: "Reviewed", revisionId: "rev-1", body: { content: [] } },
+    exports: new Map(),
+    comments: [
+      {
+        id: "c-1",
+        content: "Should this be Bob?",
+        author: { displayName: "Reviewer" },
+        resolved: false,
+        createdTime: "2026-03-28T08:00:00Z",
+      },
+    ],
+  }]]),
+});
+
+const { createSheetTemplate: tpl5 } = await import("../../src/schemas/sheet.js");
+await box5.seed("store/drive/Reviewed.sheet.card", tpl5({
+  driveId: "sheet-comm",
+  title: "Reviewed",
+  modified: "2026-03-29T10:00:00Z",
+  link: "https://docs.google.com/spreadsheets/d/sheet-comm/edit",
+  owner: "test@example.com",
+  sheets: [{ ref: "attach/Sheet1.json", title: "Sheet1", gid: "0" }],
+}));
+box5.commitAll("add reviewed sheet");
+
+const result5 = await createGoogleDriveConnector(box5.root, drive5).sync();
+result5.success
+=> true
+
+const card5 = await box5.read("store/drive/Reviewed.sheet.card");
+card5.includes("ref: attach/Reviewed.comments.json")
+=> true
+
+const sidecar5 = JSON.parse(await box5.read("store/drive/Reviewed.attach/Reviewed.comments.json"));
+sidecar5[0]?.content
+=> Should this be Bob?
+
+sidecar5[0]?.author?.displayName
+=> Reviewer
+```
