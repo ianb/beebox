@@ -81,21 +81,34 @@ function escapeXmlText(s: string): string {
  * Render the per-turn activity as `<card-activity>` child elements of
  * `<chat-app>` — one per kind in canonical order, with the optional detail as
  * element text (kinds without a detail are self-closing). Returns `""` when
- * there's no activity, so the caller keeps `<chat-app>` self-closing.
+ * nothing survives, so the caller keeps `<chat-app>` self-closing.
  *
  * Children rather than attributes (which is what this replaced): a detail is
  * free-form and can be long or multi-line, which an XML attribute can't carry
  * cleanly, and the set of kinds grows without an ever-widening attribute.
+ *
+ * Two kinds are suppressed when they'd tell the agent nothing it can't already
+ * see, so they don't waste a line of context as bare noise:
+ *  - `scrolled` with no detail — "they scrolled" without *where* is contentless
+ *    (the frontend attaches no scroll position today, so this is every scroll).
+ *  - `navigated` whose target equals `openCard` — its detail is latest-wins,
+ *    i.e. the card currently open, so it merely restates the `open-card`
+ *    attribute the snapshot already carries.
  */
-export function renderActivityChildren(kinds: Iterable<string>, details: CardStateDetails): string {
+export function renderActivityChildren(
+  { kinds, details, openCard }: { kinds: Iterable<string>; details: CardStateDetails; openCard?: string },
+): string {
   const present = new Set(kinds);
   const lines: string[] = [];
   for (const kind of ACTIVITY_KINDS) {
     if (!present.has(kind)) continue;
     const detail = details[kind];
+    const hasDetail = typeof detail === "string" && detail !== "";
+    if (kind === "scrolled" && !hasDetail) continue;
+    if (kind === "navigated" && (!hasDetail || detail === openCard)) continue;
     lines.push(
-      typeof detail === "string" && detail !== ""
-        ? `<card-activity kind="${kind}">${escapeXmlText(detail)}</card-activity>`
+      hasDetail
+        ? `<card-activity kind="${kind}">${escapeXmlText(detail!)}</card-activity>`
         : `<card-activity kind="${kind}"/>`,
     );
   }

@@ -146,7 +146,11 @@ export async function composeTurnContent(
   const openCard = rawInput.openCard !== undefined && rawInput.openCard !== ""
     ? rawInput.openCard
     : undefined;
-  const activityChildren = renderActivityChildren(rawInput.cardActivity ?? [], rawInput.cardState ?? {});
+  const activityChildren = renderActivityChildren({
+    kinds: rawInput.cardActivity ?? [],
+    details: rawInput.cardState ?? {},
+    ...(openCard !== undefined ? { openCard } : {}),
+  });
   const snapshot = await composeSendSnapshot(boxRoot, {
     features: features.snapshot(),
     sessionStart,

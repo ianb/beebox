@@ -33,26 +33,51 @@ canonical order, dropping unrecognized kinds. A kind with a detail carries it as
 element text (XML-escaped); without one it's self-closing. Empty input renders
 `""` so the caller keeps `<chat-app>` self-closing.
 
+Two kinds are suppressed as redundant noise: a detail-less `scrolled` (it has no
+*where*), and a `navigated` whose target is the card already named by `openCard`.
+
 ```ts
-renderActivityChildren(["scrolled"], {})
-=> <card-activity kind="scrolled"/>
-
-renderActivityChildren(["explored"], { explored: "boat-water+road -> boats" })
-=> <card-activity kind="explored">boat-water+road -> boats</card-activity>
-
-JSON.stringify(renderActivityChildren([], {}))
+// scrolled carries no detail today, so it's dropped rather than emitted bare
+JSON.stringify(renderActivityChildren({ kinds: ["scrolled"], details: {} }))
 => ""
 
-JSON.stringify(renderActivityChildren(["bogus"], {}))
+renderActivityChildren({ kinds: ["explored"], details: { explored: "boat-water+road -> boats" } })
+=> <card-activity kind="explored">boat-water+road -> boats</card-activity>
+
+JSON.stringify(renderActivityChildren({ kinds: [], details: {} }))
+=> ""
+
+JSON.stringify(renderActivityChildren({ kinds: ["bogus"], details: {} }))
 => ""
 ```
 
-Multiple kinds come out in canonical order regardless of arrival order, one per
-line; detail text is escaped.
+`navigated` is dropped when it just restates the open card, and kept when it
+points somewhere else.
 
 ```ts
-JSON.stringify(renderActivityChildren(["explored", "scrolled"], { explored: "a < b & c" }))
-=> "<card-activity kind=\"scrolled\"/>\n<card-activity kind=\"explored\">a &lt; b &amp; c</card-activity>"
+// redundant with the open-card attribute → suppressed
+JSON.stringify(renderActivityChildren({
+  kinds: ["navigated"],
+  details: { navigated: "store/a.card" },
+  openCard: "store/a.card",
+}))
+=> ""
+
+renderActivityChildren({
+  kinds: ["navigated"],
+  details: { navigated: "store/b.card" },
+  openCard: "store/a.card",
+})
+=> <card-activity kind="navigated">store/b.card</card-activity>
+```
+
+Multiple kinds come out in canonical order regardless of arrival order, one per
+line; detail text is escaped. The detail-less `scrolled` here is suppressed,
+leaving only the useful `explored`.
+
+```ts
+JSON.stringify(renderActivityChildren({ kinds: ["explored", "scrolled"], details: { explored: "a < b & c" } }))
+=> "<card-activity kind=\"explored\">a &lt; b &amp; c</card-activity>"
 ```
 
 ## Unioning across queued sends
