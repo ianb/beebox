@@ -6,7 +6,7 @@
  * callbacks, holding no chat-machine state of their own.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams } from "@tanstack/react-router";
 import { CloseButton } from "../ui/CloseButton";
 import { ExternalIconLink } from "../ui/ExternalIconLink";
@@ -216,6 +216,20 @@ export function CompanionViewPanel({
     if (mounted.has(activePath)) return;
     setMounted((prev) => new Set(prev).add(activePath));
   }, [activePath, mounted]);
+  // Last reported scroll position per card path, quantized to the nearest tenth
+  // (0.0–1.0). A scroll only reports when it crosses into a new tenth, so the
+  // agent sees "they read to ~0.6" instead of either nothing or an event storm.
+  const lastScrollTenthRef = useRef<Map<string, number>>(new Map());
+  const reportScroll = useCallback(
+    (path: string, el: HTMLElement) => {
+      const max = el.scrollHeight - el.clientHeight;
+      const tenth = max > 0 ? Math.round((el.scrollTop / max) * 10) / 10 : 0;
+      if (lastScrollTenthRef.current.get(path) === tenth) return;
+      lastScrollTenthRef.current.set(path, tenth);
+      reportActivity("scrolled", tenth.toFixed(1));
+    },
+    [reportActivity],
+  );
   const active = tabs.find((t) => t.target.path === activePath);
   if (!active) return null;
   const browseHref = withBase(`/${boxSlug}/browse/${active.target.path}`);
@@ -284,10 +298,10 @@ export function CompanionViewPanel({
               role="tabpanel"
               aria-hidden={!isActive}
               className={cn("absolute inset-0 overflow-auto", !isActive && "hidden")}
-              // Scrolling the active card is passive consumption. `report` is an
-              // idempotent Set.add, so firing per scroll event is cheap and
-              // collapses to one "scrolled" kind; only the visible tab scrolls.
-              onScroll={isActive ? () => reportActivity("scrolled") : undefined}
+              // Scrolling the active card reports a quantized read position
+              // (nearest tenth); reportScroll de-dupes so a scroll only fires
+              // when it crosses a tenth. Only the visible tab scrolls.
+              onScroll={isActive ? (e) => reportScroll(tab.target.path, e.currentTarget) : undefined}
             >
               <FileView
                 path={tab.target.path}
