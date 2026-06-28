@@ -12,9 +12,15 @@
  * manual merge.
  *
  * Lossy detection: walks the Docs API structure to count features that
- * don't survive markdown export (comments, footnotes, embedded images,
- * equations, unresolved suggestions, complex tables). Surfaces
- * the counts in the card's `<lossy>` block.
+ * don't survive markdown export (footnotes, embedded images, equations,
+ * unresolved suggestions, complex tables). Surfaces the counts in the
+ * card's `<lossy>` block.
+ *
+ * Comments are handled separately: fetched from the Drive comments API and
+ * written as a read-only `<basename>.comments.json` sidecar in the attach
+ * scope (referenced by the card's `comments.ref`), so collaborative feedback
+ * is preserved as readable context. They are not counted as lossy and are
+ * not pushed back upstream. See `drive-comments-sidecar.ts`.
  */
 
 import * as crypto from "node:crypto";
@@ -35,6 +41,7 @@ import type {
 import { createGdocTemplate } from "../schemas/gdoc.js";
 import type { GdocLossyType } from "../schemas/gdoc.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
+import { reconcileCommentsSidecar } from "./drive-comments-sidecar.js";
 
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
@@ -183,15 +190,16 @@ const docsHandler: DriveTypeHandler = {
       service.getDocument(file.id),
       service.listComments(file.id),
     ]);
+    // Comments aren't lossy — they're captured to a sidecar on sync. Report
+    // the count separately so the preview can mention it accurately.
     const lossy = tallyLossyFromDocument(doc);
-    lossy.comments = comments.length;
 
     return {
       title: doc.title,
       mimeType: file.mimeType,
       owner: file.owners?.[0]?.emailAddress ?? "unknown",
       modifiedTime: file.modifiedTime,
-      details: { revisionId: doc.revisionId, lossy },
+      details: { revisionId: doc.revisionId, lossy, comments: comments.length },
     };
   },
 
@@ -217,8 +225,9 @@ const docsHandler: DriveTypeHandler = {
       service.exportFile(file.id, MARKDOWN_MIME),
     ]);
 
+    // Comments are captured as a read-only sidecar (see below), not counted
+    // as lossy — so don't add them to the lossy tally.
     const lossy = doc ? tallyLossyFromDocument(doc) : emptyLossy();
-    lossy.comments = comments.length;
 
     const newHash = contentHash(markdown);
     const storedHash = state.contentHashes[mdRelPath];
@@ -250,6 +259,17 @@ const docsHandler: DriveTypeHandler = {
       }
       // Else: local edit (push handles it) or nothing changed.
     }
+
+    // Capture collaborative feedback as a read-only sidecar in the attach
+    // scope. Regenerated every pull, never pushed back.
+    const sidecar = await reconcileCommentsSidecar({
+      localDir,
+      basename: cardBasename,
+      comments,
+      boxRoot,
+    });
+    written.push(...sidecar.written);
+    if (sidecar.changed) changed = true;
 
     // Update remote-tracking state. modifiedTime is always available;
     // revisionId only when `getDocument` succeeded.
@@ -283,6 +303,7 @@ const docsHandler: DriveTypeHandler = {
       link,
       owner,
       contentFile: mdRelPath,
+      commentsFile: sidecar.commentsFile,
       lossy: lossyToTemplateItems(lossy),
       status: hasRemoteFile ? "conflict" : "synced",
     });

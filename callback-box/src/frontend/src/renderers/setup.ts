@@ -15,6 +15,7 @@ import "./figure";
 import "./concept-map";
 import "./sheet";
 import "./markdown";
+import "./comments";
 import "./json";
 import "./plaintext";
 import "./binary";

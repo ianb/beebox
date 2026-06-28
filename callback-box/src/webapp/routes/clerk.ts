@@ -14,7 +14,7 @@ import { createCommentaryTemplate } from "../../schemas/commentary.js";
 import { attachmentPath } from "../../shared/attach-path.js";
 import { listDestinations } from "../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../connectors/chat-utils.js";
-import { stageFiles, commit } from "../../cli/lib/git.js";
+import { stageFiles, commit, isNothingToCommitError } from "../../cli/lib/git.js";
 
 const commentarySchema = z.object({
   url: z.string().url(),
@@ -191,12 +191,22 @@ async function writeWebpageCard(opts: {
 
 async function gitCommit(boxRoot: string, { relPaths, message }: { relPaths: string[]; message: string }): Promise<void> {
   await stageFiles(boxRoot, relPaths);
-  await commit(boxRoot, {
-    message,
-    trailers: {
-      "Created-By": "clerk-api",
-    },
-  });
+  try {
+    await commit(boxRoot, {
+      message,
+      trailers: {
+        "Created-By": "clerk-api",
+      },
+    });
+  } catch (err) {
+    // The box's own auto-commit (`git add -A` in wakeup/scheduler) often sweeps
+    // these freshly-written cards into a commit before our explicit commit runs,
+    // leaving nothing staged. git then exits non-zero with "nothing to commit" —
+    // but the cards ARE written and committed, so that's success, not a 500.
+    // Re-throw anything else.
+    if (isNothingToCommitError(err)) return;
+    throw err;
+  }
 }
 
 function applyExtensionCors(request: { headers: Record<string, string | string[] | undefined> }, reply: FastifyReply): void {

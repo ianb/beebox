@@ -25,6 +25,7 @@ import { registerDriveHandler } from "./drive-types.js";
 import type { GoogleDriveService, DriveFile } from "../services/google-drive.js";
 import { createSheetTemplate } from "../schemas/sheet.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
+import { reconcileCommentsSidecar } from "./drive-comments-sidecar.js";
 
 function contentHash(content: string): string {
   return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
@@ -35,7 +36,10 @@ const sheetsHandler: DriveTypeHandler = {
   cardType: "sheet",
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
-    const spreadsheet = await service.getSpreadsheet(file.id);
+    const [spreadsheet, comments] = await Promise.all([
+      service.getSpreadsheet(file.id),
+      service.listComments(file.id),
+    ]);
     const tabs = spreadsheet.sheets.map((s) => ({
       title: s.properties.title,
       gid: s.properties.sheetId,
@@ -46,13 +50,16 @@ const sheetsHandler: DriveTypeHandler = {
       mimeType: file.mimeType,
       owner: file.owners?.[0]?.emailAddress ?? "unknown",
       modifiedTime: file.modifiedTime,
-      details: { tabs },
+      details: { tabs, comments: comments.length },
     };
   },
 
   async pull(opts): Promise<PullResult> {
     const { file, localDir, cardPath, boxRoot, service, state } = opts;
-    const spreadsheet = await service.getSpreadsheet(file.id);
+    const [spreadsheet, comments] = await Promise.all([
+      service.getSpreadsheet(file.id),
+      service.listComments(file.id),
+    ]);
     const written: string[] = [];
     let changed = false;
 
@@ -150,6 +157,18 @@ const sheetsHandler: DriveTypeHandler = {
     state.extra["tabGids"] = tabGids;
     state.lastModified = file.modifiedTime;
 
+    // Capture collaborative feedback as a read-only sidecar in the attach
+    // scope. Regenerated every pull, never pushed back.
+    const cardBasename = path.basename(cardPath, ".sheet.card");
+    const sidecar = await reconcileCommentsSidecar({
+      localDir,
+      basename: cardBasename,
+      comments,
+      boxRoot,
+    });
+    written.push(...sidecar.written);
+    if (sidecar.changed) changed = true;
+
     // Write/update card
     const owner = file.owners?.[0]?.emailAddress ?? "unknown";
     const link = file.webViewLink ?? `https://docs.google.com/spreadsheets/d/${file.id}/edit`;
@@ -160,6 +179,7 @@ const sheetsHandler: DriveTypeHandler = {
       link,
       owner,
       sheets: sheetRefs,
+      commentsFile: sidecar.commentsFile,
     });
 
     let existingCard = "";

@@ -7,7 +7,7 @@ import {
   initRepo, isRepo, getStatus, stageFiles, stageAll,
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
   getCurrentBranch, hasCommits, createBranch, checkoutBranch,
-  createTag, deleteTag, getHead, clean,
+  createTag, deleteTag, getHead, clean, isNothingToCommitError,
 } from "../../../src/cli/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
@@ -344,4 +344,20 @@ status.staged.includes("big.bin")
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## isNothingToCommitError recognizes git's empty-commit message
+
+When the box's own auto-commit (`git add -A`) wins the race, an explicit
+`commit` exits non-zero with git's "nothing to commit" text — the same output
+that leaked from the clerk 500. The detector recognizes it so callers can treat
+it as success (the content IS committed) rather than an error, and leaves real
+git failures alone.
+
+```ts
+isNothingToCommitError(new Error("On branch main\nnothing to commit, working tree clean\n"))
+=> true
+
+isNothingToCommitError(new Error("fatal: not a git repository (or any of the parent directories): .git"))
+=> false
 ```

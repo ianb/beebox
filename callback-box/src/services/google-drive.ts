@@ -251,7 +251,10 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
       let pageToken: string | undefined;
       do {
         const searchParams: Record<string, string> = {
-          fields: "nextPageToken,comments(id,content,author(displayName,emailAddress),resolved)",
+          fields:
+            "nextPageToken,comments(id,content,author(displayName,emailAddress),resolved," +
+            "createdTime,modifiedTime,quotedFileContent(mimeType,value)," +
+            "replies(id,content,author(displayName,emailAddress),createdTime,modifiedTime))",
           pageSize: "100",
         };
         if (pageToken) searchParams["pageToken"] = pageToken;

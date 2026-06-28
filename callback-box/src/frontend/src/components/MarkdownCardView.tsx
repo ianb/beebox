@@ -13,6 +13,7 @@
 import { createContext, useContext, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Markdown } from "./Markdown";
+import { AttachedComments } from "./AttachedComments";
 import { makeFigureEmbedComponents } from "./FigureEmbed";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/quote-extract";
 import { resolveRelativePath } from "../lib/view-url";
@@ -227,6 +228,8 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
       ) : null}
 
       <QuoteSpeakersLine speakers={speakers} onNavigate={onNavigate} />
+
+      <AttachedComments cardPath={data.path} frontmatter={frontmatter} />
 
       {body !== undefined && body.trim() !== "" ? (
         <div data-card-section="body">

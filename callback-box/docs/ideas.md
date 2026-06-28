@@ -1420,28 +1420,6 @@ Maintainer hasn't experimented with Drive mounting at all, so this is explorator
 Resolve the dead `inspect` endpoint as part of whichever path is taken (wire it
 up or delete it).
 
-## Google Docs/Sheets comments → sidecar attachment
-
-Surfaced by the user-story audit (D8). `listComments()`
-(`src/services/google-drive.ts`) already fetches full comment objects (id,
-content, author, resolved status), but the Docs handler keeps only the *count*
-as a lossy warning (`drive-handler-docs.ts` stores `{ type: "comments", count }`)
-and the Sheets handler never fetches comments at all. So collaborative feedback
-is fetched and thrown away — the boxholder sees "3 comments will be lost" but not
-what they say or who left them.
-
-Idea: write a sidecar attachment next to the exported markdown/JSON — e.g.
-`<doc>.comments.json` (or a formatted `.comments.md`) holding the full comment
-objects with content, author, timestamp, resolved status, and a link back to the
-upstream doc for the threaded view. Reference it from the gdoc/sheet card so
-agents can read the feedback. Wire Sheets to fetch comments too. The lossy
-"comments" warning then points at the sidecar instead of being a dead-end count.
-
-Scope notes: schema field for the sidecar ref, handler changes in both
-`drive-handler-docs.ts` and `drive-handler-sheets.ts`, and the asset/attach
-plumbing for the sidecar file. Pairs naturally with any future "show upstream
-collaboration state" UI, but the sidecar alone is the useful core.
-
 ## User-story audit — remaining feature backlog
 
 From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
