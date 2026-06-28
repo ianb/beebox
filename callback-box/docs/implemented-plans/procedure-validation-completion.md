@@ -1,5 +1,18 @@
 # Procedure validation completion (D5)
 
+> **Status: IMPLEMENTED (2026-06-27).** Tracks 1 (model-evaluated instruction
+> validation) and 2 (`severity: review` auto-retry) — this plan's scope — shipped.
+> Implementation: `engine-validate-model.ts` (`evaluateInstructions`),
+> `engine-run-phase.ts` (`runAndValidate` + the run-phase split), wired through
+> `engine-phase.ts`/`engine-step.ts`; the `validate.model` schema field in
+> `schemas/procedure.ts`. Present-tense reference docs live in
+> `docs/procedure-implementation.md` and the generated procedure guide. Two
+> `knows_directly` knowledge audits (`procedure-instructions-gate`,
+> `procedure-review-severity`) were run and pass. **Track 3 (resumable runs)** was
+> always scoped as a separate follow-up plan and remains unbuilt — see the Tracks
+> section. This document is kept as the frozen design record (incl. the Codex review
+> findings folded in).
+
 The procedure engine's `validate` phase has three documented gaps: model-evaluated
 `instructions:` are a no-op (pass-by-default), `severity: review` auto-retry is
 unimplemented (downgrades to `warn`), and a failed run can't be resumed from the
