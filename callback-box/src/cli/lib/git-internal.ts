@@ -44,6 +44,20 @@ export function isIndexLockError(err: unknown): boolean {
   return message.includes("index.lock");
 }
 
+/**
+ * Check if a git commit failed only because nothing was staged. A box runs its
+ * own auto-commit machinery (`git add -A` in wakeup/scheduler), so an explicit
+ * write-then-commit can lose the race: the just-written files are already
+ * committed by the time our `commit` runs, and git exits non-zero with
+ * "nothing to commit". That outcome is benign — the content IS committed, just
+ * not by us — so callers that only care about the content landing can treat it
+ * as success rather than an error.
+ */
+export function isNothingToCommitError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return message.includes("nothing to commit");
+}
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
