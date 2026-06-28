@@ -14,7 +14,7 @@ import { createCommentaryTemplate } from "../../schemas/commentary.js";
 import { attachmentPath } from "../../shared/attach-path.js";
 import { listDestinations } from "../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../connectors/chat-utils.js";
-import { stageFiles, commit, isNothingToCommitError } from "../../cli/lib/git.js";
+import { stageFiles, commitPaths, pathsHaveChanges, isNothingToCommitError } from "../../cli/lib/git.js";
 
 const commentarySchema = z.object({
   url: z.string().url(),
@@ -190,20 +190,25 @@ async function writeWebpageCard(opts: {
 }
 
 async function gitCommit(boxRoot: string, { relPaths, message }: { relPaths: string[]; message: string }): Promise<void> {
+  // Fast path: the box's auto-sweep (`git add -A` in wakeup/scheduler) may have
+  // already committed these freshly-written cards. Nothing to do — and not an
+  // error. Mirrors the api-files web-writer pattern.
+  if (!(await pathsHaveChanges(boxRoot, relPaths))) return;
   await stageFiles(boxRoot, relPaths);
   try {
-    await commit(boxRoot, {
+    // commitPaths scopes the commit to exactly our paths (a single
+    // `git commit -- <paths>` invocation), so a concurrent sweep can't entangle
+    // unrelated staged changes under the clerk-api attribution, and there's no
+    // add→commit gap for it to slip into.
+    await commitPaths(boxRoot, {
+      paths: relPaths,
       message,
-      trailers: {
-        "Created-By": "clerk-api",
-      },
+      trailers: { "Created-By": "clerk-api" },
     });
   } catch (err) {
-    // The box's own auto-commit (`git add -A` in wakeup/scheduler) often sweeps
-    // these freshly-written cards into a commit before our explicit commit runs,
-    // leaving nothing staged. git then exits non-zero with "nothing to commit" —
-    // but the cards ARE written and committed, so that's success, not a 500.
-    // Re-throw anything else.
+    // Residual race: the sweep can still commit our paths in the window between
+    // the pathsHaveChanges check and commitPaths. "nothing to commit" means the
+    // cards landed anyway — success, not a 500. Re-throw anything else.
     if (isNothingToCommitError(err)) return;
     throw err;
   }
