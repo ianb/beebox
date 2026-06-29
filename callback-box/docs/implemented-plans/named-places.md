@@ -6,7 +6,9 @@
 > `src/cli/commands/location.ts` (`mark` + place resolution in `get`), and the
 > "Named places" section of `src/core/agent-guide/location.ts`. Codex-reviewed at
 > plan and diff stages. The `aliases`-standardization sweep (rename
-> `person.called → aliases` + migration) remains a deliberately separate, unwritten plan.
+> `person.called → aliases` + a shared named-entity fragment + a card migration)
+> was done separately afterward — see `src/schemas/named-entity-fields.ts` and
+> `scripts/migrate/person-aliases.ts`.
 
 Let the boxholder define named places ("Home", "Office") as cards with a
 center coordinate and a radius, then have `cb location get` report *which named
