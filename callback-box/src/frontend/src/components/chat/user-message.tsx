@@ -328,7 +328,10 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoom
 
   return (
     <div className="flex justify-end pl-12 sm:pl-24 py-1">
-      <div className="relative">
+      {/* min-w-0 lets this flex item shrink below its content's intrinsic
+          width, so break-words can wrap a long unbreakable string (e.g. a URL)
+          instead of the bubble overflowing the row. */}
+      <div className="relative min-w-0">
         <AckBadgeCluster acks={acks} onZoomView={onZoomView} />
         <div
           className={"rounded-l-2xl bg-info text-white px-3 sm:px-4 py-2 min-w-[80px] sm:min-w-[120px] break-words" + pendingClass}
