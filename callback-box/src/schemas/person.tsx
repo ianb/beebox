@@ -11,6 +11,7 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { namedEntityFields } from "./named-entity-fields.js";
 
 export const PersonStatus = z.enum(["active", "inactive", "archived"]);
 export type PersonStatusType = z.infer<typeof PersonStatus>;
@@ -18,8 +19,7 @@ export type PersonStatusType = z.infer<typeof PersonStatus>;
 export const PersonSchema: CardSchema = cardSchema("person", {
   fields: {
     status: PersonStatus.default("active"),
-    name: z.string(),
-    called: z.array(z.string()).optional(),
+    ...namedEntityFields,
     role: z.string().optional(),
     contact: z.string().optional(),
     body: body(z.string()),
@@ -34,7 +34,7 @@ person's name with underscores.
 
 **Frontmatter:**
 - \`name:\` — Full name. Required.
-- \`called:\` — Array of aliases / nicknames. Include if the boxholder
+- \`aliases:\` — Array of aliases / nicknames. Include if the boxholder
   uses these names (e.g., ["Dad", "Papa"]).
 - \`role:\` — Relationship or function (e.g., "Ledger subject —
   boxholder's father", "Financial advisor").
@@ -57,7 +57,7 @@ export interface PersonFields {
   type: "person";
   status: PersonStatusType;
   name: string;
-  called?: string[];
+  aliases?: string[];
   role?: string;
   contact?: string;
   body: string;
@@ -65,15 +65,15 @@ export interface PersonFields {
 
 export function createPersonTemplate(options: {
   name: string;
-  called?: string;
+  aliases?: string;
   role?: string;
 }): string {
   const fields: Record<string, unknown> = {
     status: "active",
     name: options.name,
   };
-  if (options.called !== undefined && options.called !== "") {
-    fields["called"] = [options.called];
+  if (options.aliases !== undefined && options.aliases !== "") {
+    fields["aliases"] = [options.aliases];
   }
   if (options.role !== undefined && options.role !== "") {
     fields["role"] = options.role;

@@ -15,6 +15,7 @@
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { namedEntityFields } from "./named-entity-fields.js";
 
 export const PlaceStatus = z.enum(["active", "inactive", "archived"]);
 export type PlaceStatusType = z.infer<typeof PlaceStatus>;
@@ -39,8 +40,7 @@ export const PlaceSchema: CardSchema = cardSchema("place", {
   },
   fields: {
     status: PlaceStatus.default("active"),
-    name: z.string(),
-    aliases: z.array(z.string()).optional(),
+    ...namedEntityFields,
     address: z.string().optional(),
     lat: z.number().min(-90).max(90).optional(),
     lng: z.number().min(-180).max(180).optional(),

@@ -235,14 +235,14 @@ registerTemplate({
   defaultForTypes: ["person"],
   argsSchema: z.object({
     name: z.string().describe("Full name of the person"),
-    called: z.string().optional().describe("Alias or nickname"),
+    aliases: z.string().optional().describe("Alias or nickname"),
     role: z.string().optional().describe("Relationship or function"),
   }),
   generate: (args) => {
     const opts: Parameters<typeof createPersonTemplate>[0] = {
       name: args.name,
     };
-    if (args.called) opts.called = args.called;
+    if (args.aliases) opts.aliases = args.aliases;
     if (args.role) opts.role = args.role;
     return createPersonTemplate(opts);
   },
