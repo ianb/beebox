@@ -59,6 +59,7 @@ import {
   handleCommand,
   extfileCommand,
   locationCommand,
+  pushCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -120,6 +121,7 @@ program.addCommand(triageCommand);
 program.addCommand(handleCommand);
 program.addCommand(extfileCommand);
 program.addCommand(locationCommand);
+program.addCommand(pushCommand);
 
 // ============================================
 // Inspection commands

@@ -49,6 +49,7 @@
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/chokidar": "^1.7.5",
     "@types/node": "^22.0.0",
+    "@types/web-push": "^3.6.4",
     "@types/xml2js": "^0.4.14",
     "agent-doctest": "workspace:*",
     "axe-core": "^4.11.4",
@@ -103,6 +104,7 @@
     "simple-git": "^3.32.3",
     "turndown": "^7.2.2",
     "typescript": "^5.7.0",
+    "web-push": "^3.6.7",
     "xml2js": "^0.6.2",
     "yaml": "^2.7.0",
     "zod": "^4.4.3"
