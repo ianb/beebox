@@ -13,6 +13,7 @@ import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
+import { createPushConnector } from "../../connectors/push.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const finalizeCommand = new Command("finalize")
@@ -28,6 +29,7 @@ export const finalizeCommand = new Command("finalize")
     createGoogleCalendarConnector(boxRoot);
     createTelegramConnector(boxRoot);
     createGoogleDriveConnector(boxRoot);
+    createPushConnector(boxRoot);
 
     const connectors = getAllConnectors();
 

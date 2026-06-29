@@ -31,6 +31,7 @@ import { IntakeJobSchema } from "./intake-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
+import { WebPushSchema } from "./web-push.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
 import { PersonalitySchema } from "./personality.js";
@@ -90,6 +91,7 @@ export const cardSchemas: CardSchema[] = [
   MemoSchema,
   TodoListSchema,
   TelegramMessageSchema,
+  WebPushSchema,
   FeedbackSchema,
   IntakeJobSchema,
   ChatJobSchema,
@@ -452,6 +454,7 @@ export { IntakeJobSchema } from "./intake-job.js";
 export { GuideSchema } from "./guide.js";
 export { ScheduledScriptSchema } from "./scheduled-script.js";
 export { TelegramMessageSchema } from "./telegram-message.js";
+export { WebPushSchema } from "./web-push.js";
 export { ChatThreadSchema } from "./chat-thread.js";
 export { ChatJobSchema } from "./chat-job.js";
 export { PersonalitySchema } from "./personality.js";
