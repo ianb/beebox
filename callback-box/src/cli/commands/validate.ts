@@ -15,7 +15,7 @@ import {
   isLintableMarkdown,
   type MarkdownLintSummary,
 } from "./validate-markdown.js";
-import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
+import { requireBoxRoot, findBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { lintViewRefs, collectViewRefWarnings } from "../../core/view-refs.js";
@@ -127,9 +127,10 @@ async function runHookMode(): Promise<never> {
       process.stderr.write(`View compile error for ${fp}:\n${err}\n`);
       process.exit(2);
     }
-    // Then the same broken-`cardRef` nudge cards get: warning-style, exit 2 so
-    // the agent sees a ref it just broke (the pre-commit gate stays compile-only).
-    const viewRefWarnings = await lintViewRefs(fp, await requireBoxRoot());
+    // Same broken-`cardRef` nudge cards get (exit 2). Skip when outside a box —
+    // refs need a box root to resolve, and the compile check already stands.
+    const refBoxRoot = await findBoxRoot(process.cwd());
+    const viewRefWarnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
     if (viewRefWarnings.length > 0) {
       process.stderr.write(`${viewRefWarnings.join("\n")}\n`);
       process.exit(2);
