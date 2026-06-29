@@ -156,4 +156,27 @@ You can also use custom query parameters for filtering, sorting, etc. — they a
 
 React is provided automatically. **Do NOT import React** — the build system handles it. If you do write \`import React from "react"\`, it will still work (the compiler intercepts it), but it's unnecessary.
 
-You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.`;
+You can use all standard React hooks: \`useState\`, \`useEffect\`, \`useMemo\`, \`useCallback\`, \`useRef\`, etc.
+
+## Card-aware widgets
+
+To point at another card from a view — a link, or an embedded card — import the widgets from \`callback-box/view-widgets\` instead of hand-rolling an \`<a>\`. They open the card **in whatever surface the view is shown in** (the chat companion pane, browse, or a full page); you don't pick a navigation target.
+
+\`\`\`tsx
+import { CardLink, CardRef } from "callback-box/view-widgets";
+\`\`\`
+
+**\`<CardLink cardRef="…">\`** — a lightly-styled inline link. Clicking opens the card in the current surface. The link text falls back to the card's title when you omit children:
+
+\`\`\`tsx
+<CardLink cardRef="/store/notes/Plan.memo.card">the plan</CardLink>
+<CardLink cardRef="/store/notes/Plan.memo.card" />
+\`\`\`
+
+**\`<CardRef cardRef="…">\`** — a styled reference chip with two controls: **Open** (same as CardLink) and **Expand** (renders the card inline, in place). Use it when a card is worth showing, not just linking:
+
+\`\`\`tsx
+<CardRef cardRef="/store/recipes/Pasta.recipe.card" />
+\`\`\`
+
+The reference attribute is \`cardRef\`, **not** \`ref\` (React reserves \`ref\` on components). Write box-absolute refs (\`/store/…\`). A \`cardRef\` is tracked like any card ref, so \`cb validate\` flags a broken one and \`cb mv\` rewrites it when the target moves.`;
