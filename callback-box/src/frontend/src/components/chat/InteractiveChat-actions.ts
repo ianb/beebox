@@ -12,6 +12,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, restartChatSubprocess, type SessionEntry, type ChatImageAttachment } from "../../api";
 import { extractImageFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio-context";
+import { refreshLocationIfStale } from "../../lib/location-share";
 import { href } from "../../lib/routing";
 import { localTime, newMessageId } from "./InteractiveChat-helpers";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
@@ -63,6 +64,8 @@ export function useChatActions(opts: ChatActionsOpts) {
   // card state (open card + activity since last reply) onto every user turn.
   const doSendWithImages = useCallback(
     (wrapped: string, images: ChatImageAttachment[]) => {
+      // Best-effort: refresh a stale shared-location fix in the background (no-op unless opted in).
+      void refreshLocationIfStale(boxSlug);
       const messageId = newMessageId();
       const cardFields = captureCardSend();
       if (images.length > 0) {
@@ -71,7 +74,7 @@ export function useChatActions(opts: ChatActionsOpts) {
         send({ type: "SEND", message: wrapped, messageId, ...cardFields });
       }
     },
-    [send, captureCardSend]
+    [send, captureCardSend, boxSlug]
   );
 
   const handleSend = useCallback(() => {

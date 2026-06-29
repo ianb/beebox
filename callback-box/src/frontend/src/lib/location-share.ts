@@ -98,8 +98,19 @@ export function loadLocationShareState(boxSlug: string | undefined): LocationSha
   return parseLocationShareState(localStorage.getItem(locationShareKey(boxSlug)));
 }
 
+/**
+ * Persist sharing state — best-effort. localStorage can throw (quota, a
+ * private-mode SecurityError); persistence is only a cross-reload convenience,
+ * so a failure is logged, not propagated. Crucially this means a `setItem`
+ * throw after a successful capture can't be mistaken for an enable failure and
+ * flip the UI to "off" while a consented fix sits in the backend.
+ */
 export function saveLocationShareState(boxSlug: string | undefined, state: LocationShareState): void {
-  localStorage.setItem(locationShareKey(boxSlug), serializeLocationShareState(state));
+  try {
+    localStorage.setItem(locationShareKey(boxSlug), serializeLocationShareState(state));
+  } catch (e) {
+    console.warn(`[location-share] could not persist sharing state: ${e instanceof Error ? e.message : String(e)}`);
+  }
 }
 
 /** Geolocation is usable only in a secure context with the API present. */
@@ -122,7 +133,11 @@ export function captureCurrentPosition(): Promise<Coordinates> {
   });
 }
 
-/** Capture + post a fix, then persist lastCapturedAt. Throws on capture/post failure. */
+/**
+ * Capture + post a fix, then persist lastCapturedAt (best-effort). Throws only
+ * on capture or post failure — a successful mutate is authoritative (the
+ * backend now holds a consented fix), so persistence never gates "enabled".
+ */
 export async function captureAndStore(boxSlug: string | undefined, now: number): Promise<void> {
   const coords = await captureCurrentPosition();
   await trpcClient.location.capture.mutate(coords);

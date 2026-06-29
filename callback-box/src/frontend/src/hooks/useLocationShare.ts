@@ -43,19 +43,30 @@ export function useLocationShare(boxSlug: string | undefined): LocationShareCont
   useEffect(() => {
     if (!available || !enabled || !("permissions" in navigator)) return;
     let cancelled = false;
+    let status: PermissionStatus | null = null;
+    const disable = () => {
+      saveLocationShareState(boxSlug, { enabled: false, lastCapturedAt: null });
+      setEnabled(false);
+    };
+    const reconcile = () => {
+      if (!cancelled && status?.state === "denied") disable();
+    };
     navigator.permissions
       .query({ name: "geolocation" })
-      .then((status) => {
-        if (!cancelled && status.state === "denied") {
-          saveLocationShareState(boxSlug, { enabled: false, lastCapturedAt: null });
-          setEnabled(false);
-        }
+      .then((s) => {
+        if (cancelled) return;
+        status = s;
+        // Catch both a revoke that happened while the tab was closed (initial
+        // state) and a live revoke while the tab stays open (onchange).
+        reconcile();
+        status.addEventListener("change", reconcile);
       })
       .catch(() => {
         // Permissions API unavailable/blocked — leave the persisted state as-is.
       });
     return () => {
       cancelled = true;
+      status?.removeEventListener("change", reconcile);
     };
   }, [available, enabled, boxSlug]);
 
