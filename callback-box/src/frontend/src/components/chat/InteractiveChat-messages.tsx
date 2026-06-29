@@ -7,7 +7,7 @@
  * rendering and data-array assembly live in InteractiveChat-message-items.tsx.
  */
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
@@ -102,7 +102,7 @@ function ScrollToBottomButton({ emphasized, onClick }: { emphasized: boolean; on
   );
 }
 
-export function MessageList({
+function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
@@ -248,3 +248,9 @@ export function MessageList({
     </div>
   );
 }
+
+// Memoized so a composer keystroke (which re-renders the InteractiveChat root
+// to update `input`) doesn't reconcile the entire loaded message history. All
+// props are referentially stable across a keystroke; the list re-renders only
+// when its actual inputs change (new messages, streaming, speech state, …).
+export const MessageList = memo(MessageListInner);

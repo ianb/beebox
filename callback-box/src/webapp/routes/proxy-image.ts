@@ -1,15 +1,18 @@
 /**
- * Image proxy for frozen page snapshots.
+ * Image proxy for external images that block hot-linking.
  *
- * Frozen captures hot-link images to their original URLs (see the clerk
- * extension's freeze-page.ts). When an origin blocks hot-linking, the frozen
- * page's fallback script (injected by api-files.ts) retries through this
- * endpoint, which fetches the image server-side (no Referer restriction) and
+ * Two callers retry through this endpoint when a direct image load fails:
+ *   - Frozen page snapshots hot-link images to their original URLs (see the
+ *     clerk extension's freeze-page.ts); the injected fallback script (in
+ *     api-files.ts) swaps a broken <img> to this route.
+ *   - Live markdown images (the frontend `Image` component's proxyFallbackSrc,
+ *     built by view-url's `externalImageProxyUrl`) do the same in React.
+ * Either way this fetches the image server-side (no Referer restriction) and
  * streams it back.
  *
- * The frozen page is sandboxed (opaque origin), so its image requests can't
- * carry the box session cookie — this route is therefore unauthenticated. That
- * makes SSRF the real risk: a captured page could carry an <img> pointing at an
+ * The route is unauthenticated: frozen pages are sandboxed (opaque origin) so
+ * their requests can't carry the box session cookie anyway, and it's only a
+ * public image proxy. That makes SSRF the real risk: a page could carry an <img> pointing at an
  * internal address. Guards: http(s) only; the resolved host must be a public IP
  * (private / loopback / link-local / unique-local / CGNAT / multicast are
  * refused); redirects are followed manually and each hop re-validated; the

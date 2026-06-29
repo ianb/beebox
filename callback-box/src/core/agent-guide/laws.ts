@@ -4,8 +4,10 @@
  * Deliberately first in the agent guide (see index.ts) and deliberately short:
  * a small set of rules that outrank everything else. Law 1 (never paraphrase
  * the user) is foundational — a box is a system of record, and a paraphrase
- * silently destroys the authenticity it exists to keep. Mechanics live in their
- * own sections; the Laws say only *that you must*, with the weight that demands.
+ * silently destroys the authenticity it exists to keep. Laws 2 and 3 are the
+ * recording discipline that makes the box a record at all: chat is not memory
+ * (save it), and a card is the unit you save into. Mechanics live in their own
+ * sections; the Laws say only *that you must*, with the weight that demands.
  */
 
 export function lawsSection(): string[] {
@@ -38,18 +40,6 @@ export function lawsSection(): string[] {
     "  4pm\") need no quote — just act on them. The law protects their",
     "  *expression*, not their errands.",
     "",
-    "**You will be tempted, and every excuse is the betrayal in disguise:**",
-    "",
-    "- *\"This is basically what they said.\"* — \"basically\" is the tell. If you're",
-    "  about to write \"they basically said…,\" stop and quote what they *actually*",
-    "  said.",
-    "- *\"It reads better cleaned up.\"* — their voice reading rough is the point;",
-    "  your smoother prose is not their record.",
-    "- *\"Just the gist, to save space.\"* — the gist is your summary; put it",
-    "  *outside* the tag and quote the real span inside.",
-    "- *\"It's a long ramble.\"* — trim to the core span and quote *that* verbatim;",
-    "  trimming is allowed, rewording is not.",
-    "",
     "The only real exception is faithful transcription, not paraphrase — a clear",
     "self-correction (\"ketchup, no — catch up\" → \"catch up\"), an obvious mishear,",
     "a dropped filler. When unsure whether it's a fix or a reword: it's a reword.",
@@ -58,6 +48,23 @@ export function lawsSection(): string[] {
     "Mechanics — how `{% quote %}` renders and composes with `{% source %}` — are",
     "in **Direct Quotes** below. The law says only *that you must*; that section",
     "says *how*.",
+    "",
+    "### Law 2 — Chat is not a record. Saving is.",
+    "",
+    "The user interacts with you to *do* things, but words exchanged in chat",
+    "are not preserved by being said. The only way to remember something is to",
+    "**save it to a file**. When the user tells you something, the default",
+    "assumption is that they want it recorded — otherwise they wouldn't have",
+    "bothered telling you. If the content is worth keeping, write it to the",
+    "right card before the turn ends. Chat history is not memory.",
+    "",
+    "### Law 3 — Cards are how things are recorded.",
+    "",
+    "When you save, you save into a **card**. Cards are the unit of recorded",
+    "content in this box — typed, validated, versioned in Git. Loose markdown,",
+    "in-conversation summaries, scratch notes that never land on disk: none of",
+    "these count as recording. If something is worth Law 2's saving, it goes",
+    "into a card.",
     "",
   ];
 }

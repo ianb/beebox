@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useReducer, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 
@@ -13,6 +13,14 @@ const SIZE_CLASSES = {
 export type ImageSize = keyof typeof SIZE_CLASSES;
 export type ImageRotation = 0 | 90 | 180 | 270;
 
+// URLs that have already failed to load this session. Module-scoped, NOT
+// component state, on purpose: markdown re-renders its whole tree on every
+// keystroke, which can remount an <img> and wipe per-component state. Keying
+// the failure here means a remounted Image whose `src` is already known broken
+// goes straight to the proxy fallback (or the placeholder once that failed too)
+// instead of re-running the error sequence and re-fetching the dead URL.
+const failedImageUrls = new Set<string>();
+
 interface BaseImageProps {
   src: string;
   alt: string;
@@ -22,6 +30,13 @@ interface BaseImageProps {
   rotation?: ImageRotation;
   bordered?: boolean;
   title?: string;
+  /**
+   * Optional alternate URL to retry once if `src` fails to load (e.g. an
+   * `/api/proxy-image` URL for an external image whose origin blocks
+   * hot-linking). If the fallback also fails, the broken-image placeholder is
+   * shown. Omit for in-box images, which have no proxy.
+   */
+  proxyFallbackSrc?: string;
   /**
    * Outer-layout classes (margin, padding, flex item, sizing, position),
    * applied to whichever element ends up being outermost (figure when
@@ -206,6 +221,7 @@ export function Image(props: ImageProps) {
     rotation = 0,
     bordered = false,
     title,
+    proxyFallbackSrc,
     className,
   } = props;
   const lightbox = props.lightbox === true;
@@ -213,8 +229,21 @@ export function Image(props: ImageProps) {
 
   const lightboxCtx = useLightbox();
   const imgRef = useRef<HTMLImageElement>(null);
-  const [errorSrc, setErrorSrc] = useState<string | null>(null);
-  const errored = errorSrc === src;
+  // Two-stage load: try `src`, then `proxyFallbackSrc` once, then placeholder.
+  // Failures live in the module-level `failedImageUrls` set (keyed by URL) so a
+  // remount doesn't replay the sequence; `bumpAfterError` only forces a
+  // re-render after we record a fresh failure (the set isn't reactive itself).
+  const [, bumpAfterError] = useReducer((n: number) => n + 1, 0);
+  const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
+  const primaryFailed = failedImageUrls.has(src);
+  const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(fallbackSrc);
+  const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
+  const displaySrc = usingFallback && fallbackSrc !== undefined ? fallbackSrc : src;
+  const errored = primaryFailed && (fallbackSrc === undefined || fallbackFailed);
+  const handleError = () => {
+    failedImageUrls.add(displaySrc);
+    bumpAfterError();
+  };
 
   const rotationStyle: CSSProperties | undefined =
     rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
@@ -242,14 +271,14 @@ export function Image(props: ImageProps) {
     <ErrorPlaceholder alt={alt} size={size} bordered={bordered} extraClass={imgExtra} />
   ) : (
     <ImgElement
-      src={src}
+      src={displaySrc}
       alt={alt}
       size={size}
       bordered={bordered}
       rotationStyle={rotationStyle}
       title={effectiveTitle}
       onActivate={activate}
-      onError={() => setErrorSrc(src)}
+      onError={handleError}
       lightbox={lightbox}
       lightboxCaption={lightboxCaption}
       imgRef={imgRef}

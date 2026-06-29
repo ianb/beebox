@@ -113,7 +113,7 @@ export async function registerApiRoutes(
 
   // /api/files/* — serve and delete raw box files (images, audio, etc.)
   registerApiFilesRoutes({ server, boxRoot, eventBus });
-  // /api/proxy-image — SSRF-guarded fetch for frozen-page hot-link fallback
+  // /api/proxy-image — SSRF-guarded fetch for hot-link fallback (frozen pages + markdown images)
   registerProxyImageRoutes({ server });
   registerApiFilesWriteRoutes({ server, boxRoot, eventBus });
   registerApiAdapterRoutes({ server, boxRoot });
