@@ -3047,3 +3047,24 @@ tests:
       destination that scopes the chat to the course attach dir, where a thin
       CLAUDE.md (@course-runner.md) and the exposition rules auto-load. Failure
       mode: thinking a built course just sits there with no way to conduct it.
+
+  # === User Location ===
+
+  - id: user-location-read
+    prompt: >
+      In the middle of a conversation you realize it would help to know where
+      the user currently is. How do you find out their location?
+    expected_level: knows_directly
+    watch_for: >
+      Names `cb location get` directly; knows it returns "unknown" until the
+      boxholder shares location from the web UI, and that the agent should
+      report unknown rather than guess/fabricate a location.
+    correct_contains: ["cb location get"]
+    tags: [location]
+    notes: >
+      Status (2026-06-29): passes knows_directly (0 files read, 0 searches) —
+      the agent recalls `cb location get` straight from the agent guide's
+      "User location" section.
+      The agent should know about `cb location get` from the agent guide's
+      "User location" section. Failure modes: fabricating a location, assuming
+      it's always available, or not knowing the command exists.
