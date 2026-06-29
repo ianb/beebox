@@ -1,13 +1,17 @@
 # Proactive schedule-health alerts
 
 `checkHealthAndAlert` is run by the scheduler daemon after each box's
-tick. It needs explicit opt-in (`healthAlerts.telegramChat` in
-config/box.json), writes one aggregated telegram-message card per batch
-of newly-unhealthy tasks, flushes it immediately, and latches each task
-so the same unhealthy episode never alerts twice. A successful run
-clears the latch (via `recordOutcome`), re-arming alerts for a relapse.
+tick. It needs a reachable channel (`healthAlerts.telegramChat` and/or a
+subscribed push device), fans out one aggregated alert per batch of
+newly-unhealthy tasks via notifyBoxholder, flushes it immediately, and
+latches each task so the same unhealthy episode never alerts twice. A
+successful run clears the latch (via `recordOutcome`), re-arming alerts
+for a relapse.
 
 ```ts setup
+import * as os from "node:os";
+import * as path from "node:path";
+import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { checkHealthAndAlert } from "../../src/core/schedule-health-alert.js";
@@ -16,6 +20,11 @@ import {
   saveScriptState,
   recordOutcome,
 } from "../../src/core/schedule-state.js";
+
+// Isolate the server-level push store so the push channel is deterministically
+// absent (telegram-only) in this test.
+const pushStoreDir = path.join(os.tmpdir(), `cb-push-health-${process.pid}-${Date.now()}`);
+process.env.CALLBACK_PUSH_STORE_DIR = pushStoreDir;
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 
@@ -74,7 +83,7 @@ tg.sent[0].chatId
 => 777
 
 tg.sent[0].text
-=> ⚠️ Scheduled-task health «*»:
+=> ⚠️ Scheduled-task health «*»
 - sync-notes: failing ×4 (last success 2d ago) — ENETUNREACH
 «blankline»
 Run `cb health` in the box for details.
@@ -118,4 +127,5 @@ tg.sent.length
 
 ```ts cleanup
 await box.cleanup();
+await fs.rm(pushStoreDir, { recursive: true, force: true });
 ```

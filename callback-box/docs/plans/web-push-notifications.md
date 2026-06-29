@@ -432,18 +432,17 @@ around an Apple limitation.
 
 ## Knowledge audits
 
-The agent-facing concept this introduces is "to reach the boxholder, call
-`notifyBoxholder` (it writes the durable per-channel cards — `web-push` +
-`telegram-message` — that `cb finalize` delivers) rather than hand-writing a
-telegram card." That is a convention an agent editing alert-trigger code could
-forget. **Default: one `knows_directly` audit** in `src/dev/knowledge-audits.yaml`
-— *"How does box code proactively notify the boxholder across channels?"* → expects
-`notifyBoxholder` writing per-channel output cards, not a hand-rolled telegram card.
-Land it **run** (`pnpm knowledge-audit run --box <abs-path-test-box> --filter <id>`;
-per memory, `--box` must be an absolute path outside the monorepo) with the status
-comment recorded before the plan completes. The SW/VAPID/subscription-store
-plumbing is infrastructural — no agent recalls it — so no audit there
-(skip-with-rationale).
+**Decision at implementation (2026-06-29): skip, with rationale.** The plan
+originally proposed a `knows_directly` audit for "how does box code notify the
+boxholder across channels → `notifyBoxholder`". But `knowledge-audits.yaml` tests
+what a **box agent** recalls from the agent guide, whereas `notifyBoxholder` is
+**callback-box dev-repo internal** — box agents never call it. The only
+agent-facing slice is "to send the boxholder a push, write a `.web-push.card` in
+`box/output/`", and that is covered on-demand by the schema's `instructions`
+(injected when an agent handles such a card), not a CLAUDE.md convention an agent
+must recall cold. So there is no well-aimed `knows_directly` audit here — the
+concept is either dev-facing (notifyBoxholder, the connector, the store) or
+on-demand schema instructions. Skip-with-rationale per this section's allowance.
 
 ## Implementation order
 

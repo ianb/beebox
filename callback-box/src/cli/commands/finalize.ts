@@ -14,6 +14,7 @@ import { createGoogleCalendarConnector } from "../../connectors/google-calendar.
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { createPushConnector } from "../../connectors/push.js";
+import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const finalizeCommand = new Command("finalize")
@@ -23,6 +24,17 @@ export const finalizeCommand = new Command("finalize")
     const boxRoot = await requireBoxRoot();
 
     console.log("[Finalize: running outbound connectors]");
+
+    // Notify the boxholder about newly-pending questions before the connectors
+    // run, so the cards it writes get delivered in this same finalize pass.
+    if (!options.connector || options.connector === "push") {
+      try {
+        const result = await checkPendingQuestionsAndNotify(boxRoot, { now: new Date() });
+        if (result) console.log(`  Question alert: ${result.notified.length} new question(s)`);
+      } catch (err) {
+        console.error(`  Question alert failed: ${(err as Error).message}`);
+      }
+    }
 
     // Initialize connectors
     createGmailConnector(boxRoot);

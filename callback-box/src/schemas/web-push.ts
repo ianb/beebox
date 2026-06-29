@@ -73,8 +73,8 @@ export function createWebPushTemplate(options: {
   title: string;
   body: string;
   url: string;
-  severity?: WebPushSeverityValue;
-  tag?: string;
+  severity?: WebPushSeverityValue | undefined;
+  tag?: string | undefined;
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
