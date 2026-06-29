@@ -13,6 +13,7 @@ import {
   parseAcks,
   parseCallouts,
   stripStructuredOutputTags,
+  isNoResponseOnly,
 } from "../../../src/frontend/src/lib/structured-output-parsing.js";
 
 // Several assertions feed deliberately malformed tags to exercise the
@@ -84,6 +85,31 @@ JSON.stringify(parseAcks(
   "prose <ack kind=\"created\" ref=\"a.card\"/> more <ack kind=\"frob\"/> end"
 ))
 => [{"kind":"created","ref":"a.card"}]
+```
+
+## Bare `<no-response/>` alias
+
+The agent sometimes writes the bare `<no-response/>` shorthand instead of the
+canonical `<ack kind="no-response"/>`. It's normalized everywhere — parsed as a
+no-response ack, stripped from prose, and recognized by `isNoResponseOnly` —
+so it never leaks into the render.
+
+```ts
+JSON.stringify(parseAcks("<no-response/>"))
+=> [{"kind":"no-response"}]
+
+stripStructuredOutputTags("ok<no-response/>")
+=> ok
+
+isNoResponseOnly("<no-response/>")
+=> true
+```
+
+The paired form (`<no-response></no-response>`) normalizes the same way.
+
+```ts
+isNoResponseOnly("<no-response></no-response>")
+=> true
 ```
 
 ## parseCallouts

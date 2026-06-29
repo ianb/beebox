@@ -76,6 +76,18 @@ function parseAttrs(raw: string): Map<string, string> {
 }
 
 /**
+ * The agent sometimes writes the bare `<no-response/>` shorthand instead of the
+ * canonical `<ack kind="no-response"/>`. Normalize it (self-closing or paired)
+ * so parse / strip / no-response detection treat the two identically, rather
+ * than leaking the raw tag into the prose render.
+ */
+const NO_RESPONSE_ALIAS_RE = /<no-response\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/no-response\s*>)/gi;
+
+function normalizeAckAliases(content: string): string {
+  return content.replace(NO_RESPONSE_ALIAS_RE, "<ack kind=\"no-response\"/>");
+}
+
+/**
  * Parse `<ack kind="…" ref="…">text</ack>` and self-closing variants
  * out of the given content. Unknown kinds emit a console warning and
  * are dropped.
@@ -83,6 +95,7 @@ function parseAttrs(raw: string): Map<string, string> {
 export function parseAcks(content: string): AckIndication[] {
   const out: AckIndication[] = [];
   const re = /<ack\b([^>]*?)(?:\/\s*>|>([\S\s]*?)<\/ack\s*>)/gi;
+  content = normalizeAckAliases(content);
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
     const attrs = parseAttrs(m[1] ?? "");
@@ -136,7 +149,7 @@ export function parseCallouts(content: string): CalloutData[] {
  * The structured-output renderers handle these tags separately.
  */
 export function stripStructuredOutputTags(content: string): string {
-  return stripChatAppTags(content)
+  return stripChatAppTags(normalizeAckAliases(content))
     .replace(/<ack\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/ack\s*>)/gi, "")
     .replace(/<callout\b[^>]*?>[\S\s]*?<\/callout\s*>/gi, "");
 }
