@@ -1,5 +1,11 @@
 # Web Push notifications
 
+> **Status (2026-06-29): implemented** on `worktree-web-push`, Tracks A–E. All
+> doctests + the full suite pass; the Admin "Enable notifications" UI is
+> browser-verified on desktop. Remaining before ship: generate the prod VAPID
+> keys (ops step, `deploy/README.md`) and the real-desktop + iOS Home-Screen
+> end-to-end with the boxholder. Not yet merged to main.
+
 Add W3C Web Push so the box can reach the boxholder on phone (incl. iOS) and
 desktop without Telegram. Standard Push API + Service Worker + Notification API
 + VAPID — one codebase covers Chrome/Firefox/Edge/Android and desktop Safari;
