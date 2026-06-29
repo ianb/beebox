@@ -6,7 +6,8 @@
  * are loaded dynamically at runtime.
  */
 
-import { readdir } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
@@ -50,7 +51,7 @@ import { CourseSchema } from "./course.js";
 import { ExpositionPlanSchema } from "./exposition-plan.js";
 import { LessonPlanSchema } from "./lesson-plan.js";
 import { ProgressSchema } from "./progress.js";
-import { registerTemplate, type TemplateDefinition } from "./templates.js";
+import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } from "./templates.js";
 
 /**
  * Markdown-frontmatter card schemas. Loaded into a Map<type, CardSchema> by
@@ -180,16 +181,41 @@ export interface BoxSchemas {
 }
 
 /**
- * Per-boxRoot cache. loadBoxSchemas is called from ~24 sites (every place
- * that builds a card-schema map); without this, each would re-readdir and
- * re-import. Node already permanently caches the dynamic `import()` by URL,
- * so a process never sees on-disk schema edits anyway — caching the readdir
- * + branch result alongside it changes nothing observable and avoids the
- * repeated I/O. `cb` commands are fresh processes, so edits are picked up on
- * the next invocation; long-lived dev servers already required a restart to
- * see schema changes (the import cache), and still do.
+ * Per-file load bookkeeping, keyed by absolute path within a boxRoot's record
+ * map. The `hash` lets a rebuild detect that an existing file changed (and so
+ * must be re-imported under a fresh `?v=` URL — Node permanently caches
+ * `import()` by URL); `card`/`template` are the last *good* load, reused both
+ * for unchanged files (no re-import) and as keep-last-good when a re-import
+ * fails (a broken mid-edit save never blanks a working type).
+ */
+interface SchemaFileRecord {
+  hash: string;
+  card: CardSchema;
+  template: TemplateDefinition | undefined;
+}
+
+/**
+ * Two-layer state:
+ * - `boxSchemaCache`: the assembled snapshot the ~24 callers read. Dropped by
+ *   `invalidateBoxSchemas` (e.g. on a watcher event); rebuilt on next call.
+ * - `boxFileRecords`: persistent per-file bookkeeping that survives
+ *   invalidation. Clearing it would make every edited file look never-seen and
+ *   re-import the bare (stale) URL — so invalidation MUST NOT touch it.
+ * - `inFlightRebuild`: single-flight, so N concurrent callers after an
+ *   invalidation share one rebuild instead of racing N imports.
  */
 const boxSchemaCache = new Map<string, BoxSchemas>();
+const boxFileRecords = new Map<string, Map<string, SchemaFileRecord>>();
+const inFlightRebuild = new Map<string, Promise<BoxSchemas>>();
+
+/**
+ * Drop a box's assembled schema snapshot so the next `loadBoxSchemas` rebuilds
+ * it from disk. Deliberately preserves `boxFileRecords` (the hash/last-good
+ * state the cache-bust relies on). Call this when `config/schemas/` changes.
+ */
+export function invalidateBoxSchemas(boxRoot: string): void {
+  boxSchemaCache.delete(boxRoot);
+}
 
 /**
  * Load box-local schemas from config/schemas/*.ts.
@@ -203,12 +229,21 @@ export async function loadBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const cached = boxSchemaCache.get(boxRoot);
   if (cached) return cached;
 
-  const result = await loadBoxSchemasUncached(boxRoot);
-  boxSchemaCache.set(boxRoot, result);
-  return result;
+  const pending = inFlightRebuild.get(boxRoot);
+  if (pending) return pending;
+
+  const promise = rebuildBoxSchemas(boxRoot);
+  inFlightRebuild.set(boxRoot, promise);
+  try {
+    const result = await promise;
+    boxSchemaCache.set(boxRoot, result);
+    return result;
+  } finally {
+    inFlightRebuild.delete(boxRoot);
+  }
 }
 
-async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
+async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const empty: BoxSchemas = { cardSchemas: [] };
   const schemasDir = join(boxRoot, "config/schemas");
   let files: string[];
@@ -218,13 +253,15 @@ async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Could not read box schemas dir ${schemasDir}, skipping box-local schemas:`, e);
     }
+    boxFileRecords.delete(boxRoot);
     return empty;
   }
 
   const tsFiles = files.filter(f => f.endsWith(".ts") && !f.startsWith("."));
-  if (tsFiles.length === 0) return empty;
-
-  const loadedCard: CardSchema[] = [];
+  if (tsFiles.length === 0) {
+    boxFileRecords.delete(boxRoot);
+    return empty;
+  }
 
   // Ensure package.json with "type": "module" so .ts files load as ESM,
   // and register resolve hooks so bare specifiers (callback-box/cards, zod,
@@ -232,28 +269,85 @@ async function loadBoxSchemasUncached(boxRoot: string): Promise<BoxSchemas> {
   await ensureEsmPackageJson(schemasDir);
   ensureResolveHooks();
 
+  const records = boxFileRecords.get(boxRoot) ?? new Map<string, SchemaFileRecord>();
+  const seen = new Set<string>();
+  const loadedCard: CardSchema[] = [];
+
+  // Replace this box's template set wholesale: drop its prior registrations
+  // (so removed/renamed templates actually disappear and any shadowed built-in
+  // is restored), then re-register the current set below.
+  unregisterBoxTemplates(boxRoot);
+
   for (const file of tsFiles) {
-    try {
-      const filePath = join(schemasDir, file);
-      const mod = await import(pathToFileURL(filePath).href);
-      const def: unknown = mod.default;
-
-      if (isCardSchema(def)) {
-        loadedCard.push(def);
-      } else {
-        console.warn(`Warning: ${file} does not export a default cardSchema(), skipping`);
-        continue;
-      }
-
-      if (mod.template) {
-        registerTemplate(mod.template as TemplateDefinition);
-      }
-    } catch (err) {
-      console.warn(`Warning: failed to load box schema ${file}: ${(err as Error).message}`);
-    }
+    const filePath = join(schemasDir, file);
+    seen.add(filePath);
+    const card = await loadOneSchemaFile({ filePath, file, boxRoot, records });
+    if (card) loadedCard.push(card);
   }
 
+  // Files that vanished since the last rebuild drop their type (and bookkeeping).
+  for (const key of [...records.keys()]) {
+    if (!seen.has(key)) records.delete(key);
+  }
+  boxFileRecords.set(boxRoot, records);
+
   return { cardSchemas: loadedCard };
+}
+
+interface LoadOneOptions {
+  filePath: string;
+  file: string;
+  boxRoot: string;
+  records: Map<string, SchemaFileRecord>;
+}
+
+/**
+ * Load (or reuse) a single box schema file, maintaining its `SchemaFileRecord`.
+ * Returns the CardSchema to include, or undefined to contribute nothing. Any
+ * per-file failure (unreadable, throwing import, or no valid default export)
+ * falls back to the file's last-good card when one exists — keep-last-good — so
+ * an incomplete save never regresses a working type to "unknown".
+ */
+async function loadOneSchemaFile({ filePath, file, boxRoot, records }: LoadOneOptions): Promise<CardSchema | undefined> {
+  const prior = records.get(filePath);
+
+  let source: string;
+  try {
+    source = await readFile(filePath, "utf8");
+  } catch (err) {
+    if (prior) return reuse(prior, boxRoot);
+    console.warn(`Warning: failed to read box schema ${file}: ${(err as Error).message}`);
+    return undefined;
+  }
+
+  const hash = createHash("sha256").update(source).digest("hex").slice(0, 16);
+  if (prior && prior.hash === hash) return reuse(prior, boxRoot);
+
+  try {
+    // Cache-bust by content hash: Node permanently caches `import()` by URL, so
+    // an edited file needs a fresh URL to be re-read. Identical content yields
+    // the same hash → same URL → the existing module is reused (no leak).
+    const mod = await import(pathToFileURL(filePath).href + `?v=${hash}`);
+    const def: unknown = mod.default;
+    if (!isCardSchema(def)) {
+      console.warn(`Warning: ${file} does not export a default cardSchema(), skipping`);
+      return prior ? reuse(prior, boxRoot) : undefined;
+    }
+    const template = mod.template as TemplateDefinition | undefined;
+    if (template) registerBoxTemplate(template, boxRoot);
+    records.set(filePath, { hash, card: def, template });
+    return def;
+  } catch (err) {
+    console.warn(`Warning: failed to load box schema ${file}: ${(err as Error).message}`);
+    // Keep `prior` (its old hash) so a later fixed save is detected and retried.
+    return prior ? reuse(prior, boxRoot) : undefined;
+  }
+}
+
+/** Re-include a file's last-good load, re-registering its template for this box. */
+function reuse(record: SchemaFileRecord, boxRoot: string): CardSchema {
+  if (record.template) registerBoxTemplate(record.template, boxRoot);
+  return record.card;
 }
 
 function isCardSchema(def: unknown): def is CardSchema {

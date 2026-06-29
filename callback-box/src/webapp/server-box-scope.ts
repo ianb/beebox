@@ -29,6 +29,7 @@ import { verifyAgentBearer } from "../core/agent-token.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box-file-watcher.js";
+import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
@@ -100,9 +101,14 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   }
 
   // Real-time updates run over the tRPC WebSocket (events.subscribe), which
-  // starts the box file watcher itself. Close it on shutdown.
+  // starts the box file watcher itself. The schema watcher, by contrast, must
+  // run whether or not a UI is connected (a headless server still serves cards
+  // that need up-to-date box schemas), so start it here at registration. Close
+  // both on shutdown.
+  ensureSchemaWatcher(box.boxRoot);
   instance.addHook("onClose", async () => {
     await closeBoxWatcher(box.boxRoot);
+    await closeSchemaWatcher(box.boxRoot);
   });
 
   // Mount tRPC router alongside REST routes. `useWSS` adds a WebSocket

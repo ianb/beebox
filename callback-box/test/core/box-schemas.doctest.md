@@ -9,7 +9,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { initBox } from "../../src/core/box.js";
-import { loadBoxSchemas, createCardSchemaMap } from "../../src/schemas/registry.js";
+import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas/registry.js";
+import { getTemplate } from "../../src/schemas/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { loadCardFromText } from "../../src/core/card-io.js";
 
@@ -49,6 +50,40 @@ const WIDGET_CARD = `---
 size: 3
 ---
 Hello widget body.
+`;
+
+// Same widget type, with an extra "color" field — used to prove an edit is
+// picked up after invalidation.
+const WIDGET_SCHEMA_V2 = WIDGET_SCHEMA.replace(
+  "size: z.number(),",
+  "size: z.number(), color: z.string().optional(),",
+);
+
+// A syntactically broken schema (truncated mid-call) — used to prove
+// keep-last-good: a bad save must not blank a working type.
+const WIDGET_SCHEMA_BROKEN = `import { cardSchema } from "callback-box/cards";
+export default cardSchema(`;
+
+// A box-local schema that also exports a `template` (for `cb create`), plus a
+// variant without one — used to prove owner-scoped template (de)registration.
+const TRIP_WITH_TEMPLATE = `import { cardSchema } from "callback-box/cards";
+import { z } from "zod";
+
+export const template = {
+  name: "trip-template",
+  description: "A trip",
+  argsSchema: z.object({ dest: z.string() }),
+  generate: (args) => "---\\ndest: " + args.dest + "\\n---\\n",
+  cardTypes: ["trip"],
+};
+
+export default cardSchema("trip", { fields: { dest: z.string() } });
+`;
+
+const TRIP_NO_TEMPLATE = `import { cardSchema } from "callback-box/cards";
+import { z } from "zod";
+
+export default cardSchema("trip", { fields: { dest: z.string() } });
 `;
 ```
 
@@ -95,4 +130,92 @@ map.has("widget")
 
 ```ts cleanup
 await fs.rm(box, { recursive: true, force: true });
+```
+
+## Edits hot-reload after invalidation (content-hash cache-bust)
+
+A long-lived server caches the assembled schema set (and Node permanently caches
+`import()` by URL), so an on-disk edit is invisible until `invalidateBoxSchemas`
+drops the cache. The next load content-hash-busts the changed file and sees it.
+
+```ts
+const rbox = await makeTmpBox();
+const wpath = path.join(rbox, "config/schemas/widget.ts");
+await fs.writeFile(wpath, WIDGET_SCHEMA);
+const v1 = await loadBoxSchemas(rbox);
+"color" in v1.cardSchemas[0].frontmatterSchema.shape
+=> false
+
+await fs.writeFile(wpath, WIDGET_SCHEMA_V2);
+
+// Without invalidation: the cached set is returned — edit not yet visible.
+const stale = await loadBoxSchemas(rbox);
+"color" in stale.cardSchemas[0].frontmatterSchema.shape
+=> false
+
+// After invalidation: the changed file is re-imported, edit visible.
+invalidateBoxSchemas(rbox);
+const fresh = await loadBoxSchemas(rbox);
+"color" in fresh.cardSchemas[0].frontmatterSchema.shape
+=> true
+```
+
+## Keep-last-good: a broken save doesn't blank a working type
+
+If a re-import fails (an incomplete mid-edit save), the loader keeps the file's
+last good schema rather than dropping the type. A real deletion does drop it.
+
+```ts continue
+await fs.writeFile(wpath, WIDGET_SCHEMA_BROKEN);
+invalidateBoxSchemas(rbox);
+const kept = await loadBoxSchemas(rbox);
+kept.cardSchemas.map(s => s.type).join(",")
+=> widget
+
+await fs.rm(wpath);
+invalidateBoxSchemas(rbox);
+const dropped = await loadBoxSchemas(rbox);
+dropped.cardSchemas.length
+=> 0
+```
+
+```ts cleanup
+await fs.rm(rbox, { recursive: true, force: true });
+```
+
+## Templates are owner-scoped across boxes
+
+The template registry is process-global, but registrations are tagged by box.
+Two boxes can register the same-named template; one box dropping its copy on
+reload must not remove the other's, and only when the last owner drops it does
+the name disappear.
+
+```ts
+const boxA = await makeTmpBox();
+const boxB = await makeTmpBox();
+await fs.writeFile(path.join(boxA, "config/schemas/trip.ts"), TRIP_WITH_TEMPLATE);
+await fs.writeFile(path.join(boxB, "config/schemas/trip.ts"), TRIP_WITH_TEMPLATE);
+await loadBoxSchemas(boxA);
+await loadBoxSchemas(boxB);
+getTemplate("trip-template") !== undefined
+=> true
+
+// boxA drops its template (reload without it); boxB still owns it.
+await fs.writeFile(path.join(boxA, "config/schemas/trip.ts"), TRIP_NO_TEMPLATE);
+invalidateBoxSchemas(boxA);
+await loadBoxSchemas(boxA);
+getTemplate("trip-template") !== undefined
+=> true
+
+// boxB drops it too — now the name is gone.
+await fs.writeFile(path.join(boxB, "config/schemas/trip.ts"), TRIP_NO_TEMPLATE);
+invalidateBoxSchemas(boxB);
+await loadBoxSchemas(boxB);
+getTemplate("trip-template") === undefined
+=> true
+```
+
+```ts cleanup
+await fs.rm(boxA, { recursive: true, force: true });
+await fs.rm(boxB, { recursive: true, force: true });
 ```

@@ -33,38 +33,89 @@ export interface TemplateDefinition<T extends ZodRawShape = ZodRawShape> {
 }
 
 /**
- * Template registry mapping names to definitions.
+ * Owner sentinel for the process's built-in templates. A box owner is always
+ * its absolute boxRoot, so this can never collide with one.
  */
-const templateRegistry = new Map<string, TemplateDefinition>();
+const BUILTIN_OWNER = "builtin";
+
+interface Registration {
+  owner: string;
+  def: TemplateDefinition;
+}
 
 /**
- * Register a template.
+ * Template registry mapping each name to an owner-stack. The *effective*
+ * definition for a name is the last registration; this lets a box-local
+ * template shadow a built-in of the same name and, when that box reloads and
+ * its registrations are dropped, restores the shadowed built-in instead of
+ * losing the name entirely. The server hosts many boxes in one process, so
+ * ownership (not a blind `set`/`delete` by name) is what keeps one box's
+ * reload from clobbering another box's same-named template.
+ */
+const registrations = new Map<string, Registration[]>();
+
+function register(def: TemplateDefinition, owner: string): void {
+  const list = registrations.get(def.name) ?? [];
+  // Re-registering under the same owner replaces that owner's prior entry and
+  // moves it to the top (idempotent edit), leaving other owners' entries intact.
+  const next = list.filter((r) => r.owner !== owner);
+  next.push({ owner, def });
+  registrations.set(def.name, next);
+}
+
+function effective(list: Registration[]): TemplateDefinition {
+  return list[list.length - 1]!.def;
+}
+
+/**
+ * Register a built-in template (process-global, never dropped by box reloads).
  */
 export function registerTemplate<T extends ZodRawShape>(
   definition: TemplateDefinition<T>
 ): void {
-  templateRegistry.set(definition.name, definition as unknown as TemplateDefinition);
+  register(definition as unknown as TemplateDefinition, BUILTIN_OWNER);
+}
+
+/**
+ * Register a box-local template owned by `owner` (its boxRoot). Replaceable as
+ * a set via `unregisterBoxTemplates(owner)` on reload.
+ */
+export function registerBoxTemplate(definition: TemplateDefinition, owner: string): void {
+  register(definition, owner);
+}
+
+/**
+ * Drop every template registered by `owner` (a box reload), restoring any
+ * built-in or other-box template a dropped one had shadowed.
+ */
+export function unregisterBoxTemplates(owner: string): void {
+  for (const [name, list] of registrations) {
+    const next = list.filter((r) => r.owner !== owner);
+    if (next.length === 0) registrations.delete(name);
+    else registrations.set(name, next);
+  }
 }
 
 /**
  * Get a template by name.
  */
 export function getTemplate(name: string): TemplateDefinition | undefined {
-  return templateRegistry.get(name);
+  const list = registrations.get(name);
+  return list ? effective(list) : undefined;
 }
 
 /**
  * Get all registered template names.
  */
 export function getTemplateNames(): string[] {
-  return Array.from(templateRegistry.keys());
+  return Array.from(registrations.keys());
 }
 
 /**
  * Get all template definitions.
  */
 export function getAllTemplates(): TemplateDefinition[] {
-  return Array.from(templateRegistry.values());
+  return Array.from(registrations.values()).map(effective);
 }
 
 /**
