@@ -39,7 +39,21 @@ function splitCard(raw: string): { fm: string; body: string } | null {
   return { fm: m[1] === undefined ? "" : m[1], body: m[2] === undefined ? "" : m[2] };
 }
 
-/** Rewrite one person card's text, or null if nothing changed. Exported for tests. */
+/** Coerce a frontmatter value to a string array: arrays pass through; a bare
+ * scalar becomes a single-element array; absent/empty becomes `[]`. */
+function toStringArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map((v) => String(v));
+  if (value === undefined || value === null || value === "") return [];
+  return [String(value)];
+}
+
+/**
+ * Rewrite one person card's text, or null if nothing changed. Returns null for
+ * a card with no `called` key (already migrated) and, like the other migrators,
+ * for a malformed card (no frontmatter / unparseable YAML) — such a card is
+ * independently broken and surfaced by `cb validate`/load, not this rename.
+ * Exported for tests.
+ */
 export function rewriteCardText(fileName: string, raw: string): string | null {
   if (!fileName.endsWith(".person.card")) return null;
   const split = splitCard(raw);
@@ -53,11 +67,17 @@ export function rewriteCardText(fileName: string, raw: string): string | null {
   if (!isRecord(parsed)) return null;
   if (!("called" in parsed)) return null; // idempotent: nothing to rename
 
-  // Rename `called` → `aliases`, preserving the array value. If `aliases`
-  // already exists, keep it and just drop the stale `called`.
-  const value = parsed["called"];
+  // Rename `called` → `aliases`, normalizing to a string array (the schema
+  // requires an array, so a scalar `called: Dad` must become `aliases: [Dad]`).
+  // If `aliases` already exists, merge rather than drop `called` — dedupe,
+  // existing aliases first.
+  const calledItems = toStringArray(parsed["called"]);
   delete parsed["called"];
-  if (!("aliases" in parsed)) parsed["aliases"] = value;
+  const merged = "aliases" in parsed ? toStringArray(parsed["aliases"]) : [];
+  for (const item of calledItems) {
+    if (!merged.includes(item)) merged.push(item);
+  }
+  parsed["aliases"] = merged;
   const yamlText = stringifyYaml(parsed);
   return `---\n${yamlText}---\n${split.body}`;
 }
