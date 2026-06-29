@@ -9,7 +9,7 @@ import { useParams } from "@tanstack/react-router";
 import { Markdown, type MarkdownComponentOverrides } from "../Markdown";
 import { Image } from "../ui/Image";
 import { FileView } from "../FileView";
-import { parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { externalImageProxyUrl, parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { useBustedImageSrc } from "../../lib/file-version";
 import { getApiBase } from "../../api";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
@@ -23,6 +23,8 @@ export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
  */
 function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
   const bustedSrc = useBustedImageSrc(src);
+  const { boxSlug } = useParams({ strict: false });
+  const proxyFallbackSrc = externalImageProxyUrl(src, boxSlug);
   return (
     <Image
       src={bustedSrc}
@@ -30,6 +32,7 @@ function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
       size="chat"
       lightbox
       className="block mx-auto my-2"
+      {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
     />
   );
 }
@@ -37,6 +40,8 @@ function ChatInlineImage({ src, alt }: { src: string; alt: string }) {
 function ChatImage({ src, alt }: { src: string; alt: string }) {
   const hasCaption = alt.trim() !== "";
   const bustedSrc = useBustedImageSrc(src);
+  const { boxSlug } = useParams({ strict: false });
+  const proxyFallbackSrc = externalImageProxyUrl(src, boxSlug);
   return (
     <Image
       src={bustedSrc}
@@ -45,6 +50,7 @@ function ChatImage({ src, alt }: { src: string; alt: string }) {
       lightbox
       caption={hasCaption ? alt : undefined}
       className="mx-auto"
+      {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
     />
   );
 }

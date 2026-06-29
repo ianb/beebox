@@ -9,6 +9,7 @@ import {
   resolveRelativePath,
   classifyMarkdownHref,
   resolveImageSrc,
+  externalImageProxyUrl,
 } from "../../../src/frontend/src/lib/view-url.js";
 ```
 
@@ -127,4 +128,30 @@ resolveImageSrc("https://example.com/x.png", { boxSlug: "test1", basePath: "stor
 
 resolveImageSrc("data:image/png;base64,AAAA", { boxSlug: "test1", basePath: "store/a.md" })
 => data:image/png;base64,AAAA
+```
+
+## externalImageProxyUrl
+
+External http(s) images get a box `/api/proxy-image` fallback URL (the original is URL-encoded into `?url=`). Under the Node test runner Vite's `BASE_URL` is unset, so the base prefix is empty.
+
+```ts
+externalImageProxyUrl("https://example.com/x.png", "test1")
+=> /test1/api/proxy-image?url=https%3A%2F%2Fexample.com%2Fx.png
+```
+
+Protocol-relative URLs are assumed https (the proxy needs an absolute scheme):
+
+```ts
+externalImageProxyUrl("//cdn.example.com/y.jpg", "test1")
+=> /test1/api/proxy-image?url=https%3A%2F%2Fcdn.example.com%2Fy.jpg
+```
+
+In-box and data URLs have no proxy — they return undefined:
+
+```ts
+externalImageProxyUrl("/test1/api/files/store/a.png", "test1")
+=> undefined
+
+externalImageProxyUrl("data:image/png;base64,AAAA", "test1")
+=> undefined
 ```
