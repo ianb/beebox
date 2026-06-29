@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useReducer, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 
@@ -12,6 +12,14 @@ const SIZE_CLASSES = {
 
 export type ImageSize = keyof typeof SIZE_CLASSES;
 export type ImageRotation = 0 | 90 | 180 | 270;
+
+// URLs that have already failed to load this session. Module-scoped, NOT
+// component state, on purpose: markdown re-renders its whole tree on every
+// keystroke, which can remount an <img> and wipe per-component state. Keying
+// the failure here means a remounted Image whose `src` is already known broken
+// goes straight to the proxy fallback (or the placeholder once that failed too)
+// instead of re-running the error sequence and re-fetching the dead URL.
+const failedImageUrls = new Set<string>();
 
 interface BaseImageProps {
   src: string;
@@ -222,19 +230,19 @@ export function Image(props: ImageProps) {
   const lightboxCtx = useLightbox();
   const imgRef = useRef<HTMLImageElement>(null);
   // Two-stage load: try `src`, then `proxyFallbackSrc` once, then placeholder.
-  // Each failure is keyed by the URL that failed so a new `src`/fallback prop
-  // (e.g. a re-rendered image) clears the stale failure and retries.
-  const [failedPrimary, setFailedPrimary] = useState<string | null>(null);
-  const [failedFallback, setFailedFallback] = useState<string | null>(null);
-  const primaryFailed = failedPrimary === src;
-  const canFallback = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src;
-  const fallbackFailed = canFallback && failedFallback === proxyFallbackSrc;
-  const usingFallback = primaryFailed && canFallback && !fallbackFailed;
-  const displaySrc = usingFallback && proxyFallbackSrc !== undefined ? proxyFallbackSrc : src;
-  const errored = primaryFailed && (!canFallback || fallbackFailed);
+  // Failures live in the module-level `failedImageUrls` set (keyed by URL) so a
+  // remount doesn't replay the sequence; `bumpAfterError` only forces a
+  // re-render after we record a fresh failure (the set isn't reactive itself).
+  const [, bumpAfterError] = useReducer((n: number) => n + 1, 0);
+  const fallbackSrc = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src ? proxyFallbackSrc : undefined;
+  const primaryFailed = failedImageUrls.has(src);
+  const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(fallbackSrc);
+  const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
+  const displaySrc = usingFallback && fallbackSrc !== undefined ? fallbackSrc : src;
+  const errored = primaryFailed && (fallbackSrc === undefined || fallbackFailed);
   const handleError = () => {
-    if (displaySrc === src) setFailedPrimary(src);
-    else setFailedFallback(displaySrc);
+    failedImageUrls.add(displaySrc);
+    bumpAfterError();
   };
 
   const rotationStyle: CSSProperties | undefined =
