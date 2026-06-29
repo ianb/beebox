@@ -1,5 +1,13 @@
 # Named Places (`place` cards + `cb location mark`)
 
+> **Status: implemented (2026-06-29).** Frozen design record. Code:
+> `src/schemas/place.tsx` (+ `registry.ts`, `templates-builtins.ts`, `BOX_DIRS`),
+> `src/core/geo.ts`, `src/core/place-mark.ts`, `src/core/place-cards.ts`,
+> `src/cli/commands/location.ts` (`mark` + place resolution in `get`), and the
+> "Named places" section of `src/core/agent-guide/location.ts`. Codex-reviewed at
+> plan and diff stages. The `aliases`-standardization sweep (rename
+> `person.called → aliases` + migration) remains a deliberately separate, unwritten plan.
+
 Let the boxholder define named places ("Home", "Office") as cards with a
 center coordinate and a radius, then have `cb location get` report *which named
 place* the current live location falls in. This is the semantic layer over the
