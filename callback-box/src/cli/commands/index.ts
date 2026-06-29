@@ -26,6 +26,7 @@ export { scenarioCommand } from "./scenario.js";
 export { tickCommand } from "./tick.js";
 export { scheduledCommand } from "./scheduled.js";
 export { healthCommand } from "./health.js";
+export { activityCommand } from "./activity.js";
 export { trickCommand } from "./trick.js";
 export { finalizeCommand } from "./finalize.js";
 export { sessionCommand } from "./session.js";

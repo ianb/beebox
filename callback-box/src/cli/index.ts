@@ -33,6 +33,7 @@ import {
   tickCommand,
   scheduledCommand,
   healthCommand,
+  activityCommand,
   trickCommand,
   finalizeCommand,
   sessionCommand,
@@ -93,6 +94,7 @@ program.addCommand(scenarioCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
 program.addCommand(healthCommand);
+program.addCommand(activityCommand);
 program.addCommand(trickCommand);
 program.addCommand(finalizeCommand);
 program.addCommand(sessionCommand);

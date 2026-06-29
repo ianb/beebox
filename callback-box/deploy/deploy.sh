@@ -184,6 +184,13 @@ HISTEOF
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
+  # Best-effort: give an active chat turn / running script a bounded chance to
+  # finish before we restart, so a deploy doesn't kill active work. cb-wait-quiet
+  # polls `cb activity` (installed by setup-server.sh); skip gracefully on
+  # servers that predate it.
+  echo "Waiting for boxes to be at rest (best-effort)..."
+  ssh "root@$SERVER_IP" 'test -x /usr/local/bin/cb-wait-quiet && /usr/local/bin/cb-wait-quiet || echo "  (cb-wait-quiet not installed; re-run setup-server.sh to enable)"'
+
   echo "Restarting services..."
   ssh "root@$SERVER_IP" 'systemctl restart callback-serve callback-scheduler && echo "Services restarted"'
 
