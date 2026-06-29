@@ -14,7 +14,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { Document, parseDocument } from "yaml";
 import { splitCardContent } from "../cards/index.js";
 import { toRelativePath } from "../cli/lib/paths.js";
 import { loadLocation, type StoredLocation } from "./location-store.js";
@@ -50,23 +50,28 @@ export function applyMark(
   { fix, expand }: { fix: { lat: number; lng: number; accuracy: number }; expand: boolean },
 ): AppliedMark {
   const split = splitCardContent(cardText);
-  const parsed: unknown = split.frontmatterText === "" ? {} : parseYaml(split.frontmatterText);
-  const frontmatter: Record<string, unknown> =
-    parsed !== null && typeof parsed === "object" ? { ...(parsed as Record<string, unknown>) } : {};
+  // Mutate the YAML Document node tree, not a plain JS round-trip: this leaves
+  // every untouched key — including comments, anchors, and the original scalar
+  // spelling — exactly as written, only rewriting lat/lng/radius.
+  const doc: Document = split.frontmatterText.trim() === "" ? new Document({}) : parseDocument(split.frontmatterText);
 
-  const name = typeof frontmatter["name"] === "string" ? frontmatter["name"] : "(unnamed place)";
-  const existingLat = asNumber(frontmatter["lat"]);
-  const existingLng = asNumber(frontmatter["lng"]);
-  const existingRadius = asNumber(frontmatter["radius"]);
+  const nameValue = doc.get("name");
+  const name = typeof nameValue === "string" ? nameValue : "(unnamed place)";
+  const existingLat = asNumber(doc.get("lat"));
+  const existingLng = asNumber(doc.get("lng"));
+  const existingRadius = asNumber(doc.get("radius"));
   const hasCoords = existingLat !== null && existingLng !== null;
 
-  const reserialize = (): string => `---\n${stringifyYaml(frontmatter)}---\n${split.body}`;
+  const reserialize = (): string => {
+    const fm = String(doc);
+    return `---\n${fm.endsWith("\n") ? fm : `${fm}\n`}---\n${split.body}`;
+  };
 
   if (!hasCoords) {
     const radius = Math.max(Math.round(fix.accuracy), MIN_PLACE_RADIUS_M);
-    frontmatter["lat"] = fix.lat;
-    frontmatter["lng"] = fix.lng;
-    frontmatter["radius"] = radius;
+    doc.set("lat", fix.lat);
+    doc.set("lng", fix.lng);
+    doc.set("radius", radius);
     return { text: reserialize(), outcome: "set", name, lat: fix.lat, lng: fix.lng, radius, distance: null };
   }
 
@@ -82,8 +87,10 @@ export function applyMark(
     return { text: null, outcome: "outside", name, lat: existingLat, lng: existingLng, radius, distance };
   }
 
-  const grown = Math.round(distance);
-  frontmatter["radius"] = grown;
+  // ceil, not round: the grown radius must actually contain the fix (matching
+  // is distance <= radius), so rounding 120.4 down to 120 would still miss.
+  const grown = Math.ceil(distance);
+  doc.set("radius", grown);
   return { text: reserialize(), outcome: "expanded", name, lat: existingLat, lng: existingLng, radius: grown, distance };
 }
 
@@ -122,6 +129,16 @@ export async function markPlace(opts: {
       return { ok: false, error: `No such place card: ${cardPath}. Author it first, then mark it.` };
     }
     throw e;
+  }
+
+  // The lexical gate above catches `..`, but readFile/writeFile follow symlinks
+  // — a box-local card symlinked outside the box would receive raw coordinates
+  // outside the privacy boundary. Re-check the *real* path. realpath both sides
+  // so a symlinked box root (e.g. macOS /tmp → /private/tmp) isn't a false miss.
+  const realBox = await fs.realpath(boxRoot);
+  const realCard = await fs.realpath(abs);
+  if (toRelativePath(realBox, realCard) === null) {
+    return { ok: false, error: `Refusing to mark a card that resolves outside the box: ${cardPath}` };
   }
 
   const fix: StoredLocation | null = await loadLocation(boxRoot);

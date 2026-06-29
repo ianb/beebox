@@ -1,17 +1,19 @@
 /**
  * Load the box's place cards as match circles for location resolution.
  *
- * Globs every `*.place.card` (with the standard box ignores), parses each card's
- * frontmatter, and returns the active ones that carry a full coordinate. A
- * coordless/half-set draft or an archived/inactive place is skipped; a single
- * unparseable card is logged and skipped so it can't break a read.
+ * Globs every `*.place.card` (with the standard box ignores) and loads each
+ * through `parseCardText`, so the place schema's constraints (coordinate ranges,
+ * status enum) apply — a card with a typo'd `lat: 999` or bad status is skipped,
+ * not matched. Returns the active ones carrying a full coordinate; a
+ * coordless/half-set draft, an archived/inactive place, or a single
+ * invalid/unparseable card is logged and skipped so it can't break a read.
  */
 
 import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import { glob } from "glob";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parseCardText } from "./card-io.js";
+import { createCardSchemaMap } from "../schemas/registry.js";
 import { DEFAULT_PLACE_RADIUS_M, type PlaceCircle } from "./geo.js";
 
 function num(value: unknown): number | null {
@@ -25,14 +27,12 @@ export async function loadPlaces(boxRoot: string): Promise<PlaceCircle[]> {
     ignore: ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"],
   });
 
+  const schemas = await createCardSchemaMap();
   const places: PlaceCircle[] = [];
   for (const rel of matches) {
     try {
       const text = await readFile(path.join(boxRoot, rel), "utf-8");
-      const split = splitCardContent(text);
-      const parsed: unknown = split.frontmatterText === "" ? {} : parseYaml(split.frontmatterText);
-      if (parsed === null || typeof parsed !== "object") continue;
-      const fields = parsed as Record<string, unknown>;
+      const { fields } = parseCardText(text, { source: rel, schemas });
 
       const status = typeof fields["status"] === "string" ? fields["status"] : "active";
       if (status === "archived" || status === "inactive") continue;

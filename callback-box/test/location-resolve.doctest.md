@@ -50,6 +50,21 @@ places[0].radius
 await box.cleanup();
 ```
 
+## A typo'd out-of-range coordinate is skipped (schema-enforced)
+
+```ts
+const box = await makeTmpBox();
+await box.write("places/Good.place.card", place("Good", "lat: 1\nlng: 2\nradius: 50\n"));
+await box.write("places/Bad.place.card", place("Bad", "lat: 999\nlng: 2\nradius: 50\n"));
+const places = await loadPlaces(box.root);
+JSON.stringify(places.map((p) => p.name))
+=> ["Good"]
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## One unparseable place card is skipped; the others still load
 
 ```ts

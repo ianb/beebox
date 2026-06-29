@@ -67,10 +67,13 @@ Direction, not open questions:
   `PersonSchema` imported at `:40` and listed at `:87`. **Reuse** — import + add
   `PlaceSchema`.
 - **Card mutate path.** `src/cards/frontmatter.ts:41` `splitCardContent` (splits
-  frontmatter from body) + `yaml` `parse`/`stringify`. **Reuse** — `mark` splits
-  the card, parses the frontmatter to a raw mapping, mutates `lat`/`lng`/`radius`,
-  and recombines with the original body byte-for-byte (the CLAUDE.md
-  parse-mutate-reserialize contract). **Not** `parseCardText`/`serializeCardText`
+  frontmatter from body) + `yaml` `parseDocument` (a node tree). **Reuse** —
+  `mark` splits the card, mutates `lat`/`lng`/`radius` on the frontmatter
+  Document node, and recombines with the original body byte-for-byte. Editing the
+  node tree (not a plain `parse`→`stringify` round-trip) leaves untouched keys —
+  including their comments and original scalar spelling — exactly as written
+  (the CLAUDE.md parse-mutate-reserialize contract, faithful form). **Not**
+  `parseCardText`/`serializeCardText`
   (`src/core/card-io.ts:108`/`:247`): that path validates through the schema and
   re-emits only the parsed fields, **stripping** any unknown/drifted frontmatter
   key (lenient parse, `src/cards/schema.ts:206`) — wrong for a key-preserving edit.
@@ -217,13 +220,14 @@ Ordered by dependency: schema → geo util → mark → get-resolve → guide.
     marker past `LOCATION_STALE_MS`, 1h) in its confirmation, so the agent can
     judge whether the fix is current enough for this place. (Reuses
     `locationAge`/`describeElapsed`.)
-  - **Mutate via raw YAML, not the schema serializer.** `parseCardText` strips
-    unknown frontmatter keys (lenient, `src/cards/schema.ts:206`) and
-    `serializeCardText` re-emits only the parsed fields (`card-io.ts:255`) — so a
-    parse→serialize round-trip would silently drop any drifted/unknown frontmatter.
-    Instead, `splitCardContent` (`src/cards/frontmatter.ts:41`) → `yaml.parse` the
-    frontmatter mapping → set `lat`/`lng`/`radius` on the raw object → `yaml.stringify`
-    → recombine with the original body and any other keys verbatim (the CLAUDE.md
+  - **Mutate the frontmatter Document node, not the schema serializer.**
+    `parseCardText` strips unknown frontmatter keys (lenient, `src/cards/schema.ts:206`)
+    and `serializeCardText` re-emits only the parsed fields (`card-io.ts:255`) — so a
+    parse→serialize round-trip would silently drop drifted/unknown frontmatter.
+    Instead, `splitCardContent` (`src/cards/frontmatter.ts:41`) → `yaml.parseDocument`
+    the frontmatter → `doc.set` `lat`/`lng`/`radius` → `String(doc)` → recombine
+    with the original body. Editing the node tree preserves every untouched key,
+    its comments, and its original scalar spelling verbatim (the CLAUDE.md
     parse-mutate-reserialize contract).
   - Radius logic:
     - **No existing coords/radius:** set center = fix, `radius = max(round(fix.accuracy), MIN_RADIUS)`

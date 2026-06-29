@@ -6,8 +6,11 @@ grows with `--expand`. The raw-YAML mutate preserves the body and any other
 frontmatter keys.
 
 ```ts setup
+import { symlink, mkdir } from "node:fs/promises";
 import { applyMark, markPlace } from "../src/core/place-mark.js";
 import { saveLocation } from "../src/core/location-store.js";
+import { loadPlaces } from "../src/core/place-cards.js";
+import { matchPlace } from "../src/core/geo.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const FIX = { lat: 45.5231, lng: -122.6765, accuracy: 18 };
@@ -26,6 +29,14 @@ out.text.includes("favorite: true") && out.text.includes("My home — important 
 => true
 
 out.text.includes("lat: 45.5231") && out.text.includes("lng: -122.6765") && /radius: \d+/.test(out.text)
+=> true
+```
+
+## A frontmatter comment on an untouched key survives the mutate
+
+```ts
+const commented = "---\nname: Home  # the main house\nstatus: active\n---\nbody\n";
+applyMark(commented, { fix: FIX, expand: false }).text.includes("# the main house")
 => true
 ```
 
@@ -85,8 +96,36 @@ JSON.stringify({ changed: res2.changed, expanded: res2.message.startsWith("Expan
 => {"changed":true,"expanded":true}
 ```
 
+The grown radius actually contains the fix (ceil, not round), so `get` now matches it:
+
+```ts continue
+const places = await loadPlaces(box.root);
+const m = matchPlace({ lat: 45.5360, lng: -122.6765 }, places);
+m ? m.name : null
+=> Home
+```
+
 ```ts cleanup
 await box.cleanup();
+```
+
+## A symlink resolving outside the box is refused (privacy boundary)
+
+```ts
+const box = await makeTmpBox();
+const external = await makeTmpBox();
+await external.write("target.place.card", CARD);
+await saveLocation(box.root, stored(FIX, "2026-06-29T12:00:00.000Z"));
+await mkdir(box.path("places"), { recursive: true });
+await symlink(external.path("target.place.card"), box.path("places/Evil.place.card"));
+const res = await markPlace({ boxRoot: box.root, cardPath: "places/Evil.place.card", expand: false, now: new Date() });
+JSON.stringify({ ok: res.ok, outside: res.ok ? "" : res.error.includes("outside the box") })
+=> {"ok":false,"outside":true}
+```
+
+```ts cleanup
+await box.cleanup();
+await external.cleanup();
 ```
 
 ## No current fix → clear error
