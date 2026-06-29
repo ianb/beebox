@@ -12,6 +12,7 @@ import { SelectionPanel } from "../ChatSelections";
 import { type SelectionItem } from "../../lib/selection-serialize";
 import { SessionListButton } from "../SessionListButton";
 import { RecentFilesButton } from "../RecentFilesButton";
+import { LandmarkLinksButton } from "../LandmarkLinksButton";
 import { getTTSClient } from "../../lib/tts-client";
 import { alarm } from "../../lib/earcons";
 import { SchedulePill, NarrationStatusBadge, MuteButton, NewSessionButton, ChatContextLink } from "./InteractiveChat-controls";
@@ -45,6 +46,13 @@ export function ChatHeader(props: {
       <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={onToggleNarration} />
       <div className="flex-1" />
       <MuteButton muted={muted} onToggle={onToggleMute} />
+      <LandmarkLinksButton
+        contextDir={effectiveContextDir}
+        onPanel={(link) => onZoomView({
+          target: { path: link.ref, viewer: null, params: {}, zoom: false },
+          label: link.label ?? link.title,
+        })}
+      />
       <RecentFilesButton
         entries={messages}
         onPanel={(summary) => onZoomView({
