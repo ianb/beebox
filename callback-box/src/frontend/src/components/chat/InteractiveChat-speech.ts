@@ -44,9 +44,10 @@ export function useSpeechDispatch(opts: {
   const composerSnapshotRef = useRef(composerSnapshot);
   useEffect(() => { composerSnapshotRef.current = composerSnapshot; });
 
-  const speechPlayback = useSpeechPlayback({
-    onComplete: () => { composerSend({ type: "SPEECH_DONE" }); },
-  });
+  // Stable identity so useSpeechPlayback's machine-input memo doesn't recompute
+  // every render (it keys on onComplete).
+  const handleSpeechComplete = useCallback(() => { composerSend({ type: "SPEECH_DONE" }); }, [composerSend]);
+  const speechPlayback = useSpeechPlayback({ onComplete: handleSpeechComplete });
 
   const dispatch = useCallback((segments: ReturnType<typeof parseAllSpeechTags>, baseIndex: number) => {
     if (segments.length === 0) return;

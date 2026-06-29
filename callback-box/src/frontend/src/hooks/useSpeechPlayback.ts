@@ -104,5 +104,12 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
     playedMessagesRef.current.add(messageId);
   }, []);
 
-  return { isPlaying, playingMessageId, playingSegmentIndex, remainingCount, playSegments, skip, replay, stop, markAsPlayed };
+  // Stable object identity so consumers (and anything memoized on it, e.g. the
+  // chat message list) don't re-render on unrelated parent renders. The inner
+  // callbacks are already useCallback-stable; the scalars change only on actual
+  // playback transitions.
+  return useMemo(
+    () => ({ isPlaying, playingMessageId, playingSegmentIndex, remainingCount, playSegments, skip, replay, stop, markAsPlayed }),
+    [isPlaying, playingMessageId, playingSegmentIndex, remainingCount, playSegments, skip, replay, stop, markAsPlayed],
+  );
 }
