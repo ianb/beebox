@@ -274,6 +274,19 @@ Three *distinct* things, not two — conflating them was an error:
   its own restart. Exotic; document rather than wire the scheduler into invalidation.
 - **Cross-process leak bound** rests on the daily recycle; if the recycle is disabled,
   the cache-bust leak reverts to ~1 MB/month — still small, but note it.
+- **Template *lookup* is process-global** (Codex diff-review #3): this change owner-scopes
+  template *registration* (a box reload no longer clobbers another box's same-named
+  template, and dropped box templates restore the shadowed built-in), but
+  `getTemplate`/`getAllTemplates` still resolve globally with no `boxRoot`. Pre-existing,
+  and mostly moot because the heavy consumers (`cb create`, `cb init`) are fresh
+  single-box processes that only ever load one box's templates. It would only bite a
+  long-lived multi-box server/scheduler doing a by-name template lookup when two boxes
+  define the *same* template name. Fixing it means threading `boxRoot` through the lookup
+  API and all callers — a separate change, deferred.
+- **Watcher uses `awaitWriteFinish`, not "mark dirty immediately"** (Codex diff-review #4):
+  a deliberate choice — it never reads a half-written file, the ~150ms extra staleness is
+  negligible for a human/agent edit loop, and the loader's `dirtyEpoch` makes any
+  rebuild/event overlap correct regardless. Kept as-is.
 
 ## Touch list
 

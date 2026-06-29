@@ -98,6 +98,13 @@ export function unregisterBoxTemplates(owner: string): void {
 
 /**
  * Get a template by name.
+ *
+ * Note: lookup is process-global (no boxRoot). Registration is owner-scoped, so
+ * a box reload won't clobber another box's templates, but if two hosted boxes
+ * define the same template name the globally-effective (last-registered) one
+ * wins. In practice the heavy consumers (`cb create`, `cb init`) are fresh
+ * single-box processes, so this only matters to a long-lived multi-box server —
+ * a separate boxRoot-threading change if it ever does.
  */
 export function getTemplate(name: string): TemplateDefinition | undefined {
   const list = registrations.get(name);
