@@ -1,5 +1,14 @@
 # User Location (`cb location get`)
 
+> **Status: implemented (2026-06-29).** Frozen design record. The code lives in
+> `src/core/location-store.ts`, `src/core/location-format.ts`,
+> `src/cli/commands/location.ts`, `src/webapp/trpc/routers/location.ts`,
+> `src/frontend/src/lib/location-share.ts`, `src/frontend/src/hooks/useLocationShare.ts`,
+> and `src/frontend/src/components/chat/ShareLocationMenuItem.tsx`; the agent
+> guide section is `src/core/agent-guide/location.ts`. Codex-reviewed at both
+> plan and diff stages. The frontend browser-permission flow is pending manual
+> verification in a real browser.
+
 Let the web frontend capture the boxholder's geographic location (with
 explicit consent) and expose it to the box agent on demand via a new
 `cb location get` command. Location is fundamentally different from the
