@@ -48,6 +48,7 @@ Body content as plain markdown.
 
 - `.claude/settings.json` — PostToolUse hook that runs `cb validate --hook` after Edit/Write/MultiEdit. On a card path with errors it exits 2 with the error on stderr so Claude Code surfaces it to the agent (warning, not blocking).
 - `.git/hooks/pre-commit` — runs `cb validate --staged`, blocks commits that include cards failing validation.
+- `.git/hooks/post-commit` — fires `cb validate --urls --urls-since HEAD~1` in the background (non-blocking) to HEAD-check *external* http(s) URLs the first time they appear. Warning-only, never gates; verdict cache is gitignored at `.callback-box/url-checks.json`. The synchronous lint above never touches the network — only this pass does. See `docs/implemented-plans/external-url-validation.md`.
 
 See `src/core/install-validation-hooks.ts`. The hook commands embed the absolute path to the installing `bin/cb` so they don't depend on the user's PATH. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
 
