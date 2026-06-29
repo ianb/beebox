@@ -16,10 +16,11 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { CommandContext } from "../command-runner.js";
 import { attachDirFor } from "../../shared/attach-path.js";
-import { listBoxCardFiles, listBoxMarkdownFiles } from "../list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../list-cards.js";
 import {
   rewriteReferrerRefs,
   rewriteMovedCardRefs,
+  rewriteViewRefs,
   type Remap,
 } from "../rewrite-card-refs.js";
 import { movePhase2CardFiles } from "./move-phase2.js";
@@ -132,6 +133,22 @@ export async function moveDir(params: MoveDirParams): Promise<MoveDirResult> {
     }
   }
 
+  // Box-authored views that point into the moved directory via `cardRef="…"`.
+  for (const viewPath of await listBoxViewFiles(ctx.boxRoot)) {
+    try {
+      const content = await fs.readFile(viewPath, "utf-8");
+      const result = rewriteViewRefs({ boxRoot: ctx.boxRoot, viewAbsPath: viewPath, text: content, remap });
+      if (result.count === 0 || result.text === content) continue;
+      await fs.writeFile(viewPath, result.text);
+      const relPath = path.relative(ctx.boxRoot, viewPath);
+      updatedCards.push({ path: relPath, refsUpdated: result.count });
+      filesToStage.push(relPath);
+      ctx.writeLine(`  Updated ${result.count} ref${result.count > 1 ? "s" : ""} in ${relPath}`);
+    } catch (e) {
+      console.warn(`Skipping view that can't be read during ref rewrite: ${viewPath}:`, e);
+    }
+  }
+
   // Clean up empty parent of source directory
   await removeEmptyAncestors(path.dirname(sourcePath), ctx.boxRoot);
 
@@ -197,6 +214,7 @@ async function rewriteOtherReferrers({
   const referrers = [
     ...(await listBoxCardFiles(ctx.boxRoot)),
     ...(await listBoxMarkdownFiles(ctx.boxRoot)),
+    ...(await listBoxViewFiles(ctx.boxRoot)),
   ];
   for (const referrerPath of referrers) {
     // Skip the moved card (handled separately) and files that just moved into
@@ -205,12 +223,21 @@ async function rewriteOtherReferrers({
     if (referrerPath.startsWith(newAttachAbsDir + path.sep)) continue;
     try {
       const original = await fs.readFile(referrerPath, "utf-8");
-      const { text: updated, count } = rewriteReferrerRefs({
-        boxRoot: ctx.boxRoot,
-        cardAbsPath: referrerPath,
-        text: original,
-        remap,
-      });
+      // Views carry refs only in `cardRef="…"` widget attributes; cards/markdown
+      // carry them in frontmatter, markdown links, and body `ref=` tags.
+      const { text: updated, count } = referrerPath.endsWith(".tsx")
+        ? rewriteViewRefs({
+            boxRoot: ctx.boxRoot,
+            viewAbsPath: referrerPath,
+            text: original,
+            remap,
+          })
+        : rewriteReferrerRefs({
+            boxRoot: ctx.boxRoot,
+            cardAbsPath: referrerPath,
+            text: original,
+            remap,
+          });
       if (count === 0 || updated === original) continue;
       await fs.writeFile(referrerPath, updated);
       const relPath = path.relative(ctx.boxRoot, referrerPath);

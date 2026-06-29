@@ -17,7 +17,8 @@ import {
 } from "./validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
-import { listBoxCardFiles, listBoxMarkdownFiles } from "../../core/list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
+import { lintViewRefs, collectViewRefWarnings } from "../../core/view-refs.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
@@ -91,6 +92,8 @@ interface ValidationResults {
   attachErrors: AttachLintError[];
   /** Soft, non-blocking size warnings for oversized CLAUDE.md files. */
   claudeMdWarnings: string[];
+  /** Broken `cardRef="…"` refs in box-authored views (warning-only). */
+  viewWarnings: string[];
 }
 
 /**
@@ -122,6 +125,13 @@ async function runHookMode(): Promise<never> {
     const err = await lintViewFile(fp);
     if (err !== null) {
       process.stderr.write(`View compile error for ${fp}:\n${err}\n`);
+      process.exit(2);
+    }
+    // Then the same broken-`cardRef` nudge cards get: warning-style, exit 2 so
+    // the agent sees a ref it just broke (the pre-commit gate stays compile-only).
+    const viewRefWarnings = await lintViewRefs(fp, await requireBoxRoot());
+    if (viewRefWarnings.length > 0) {
+      process.stderr.write(`${viewRefWarnings.join("\n")}\n`);
       process.exit(2);
     }
     process.exit(0);
@@ -223,10 +233,11 @@ async function collectStagedResults({ boxRoot, ctx, resolved, json }: CollectArg
   }
   const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
+  const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
 }
 
-/** Validate every card, markdown file, and attach layout in the box. */
+/** Validate every card, markdown file, view, and attach layout in the box. */
 async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p));
   const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
@@ -234,7 +245,8 @@ async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<Validat
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
-  return { cardSummary, mdSummary, attachErrors, claudeMdWarnings };
+  const viewWarnings = await collectViewRefWarnings(await listBoxViewFiles(boxRoot), boxRoot);
+  return { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings };
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
@@ -248,11 +260,12 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
   }
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths, { boxRoot }) : null;
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
+  const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
 }
 
 /** Print human-readable card/markdown/attach results to stdout. */
-function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings }: ValidationResults): void {
+function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings }: ValidationResults): void {
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors: true });
     if (output) console.log(output);
@@ -276,6 +289,9 @@ function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnin
   }
   if (claudeMdWarnings.length > 0) {
     console.log(`\n${claudeMdWarnings.join("\n")}`);
+  }
+  if (viewWarnings.length > 0) {
+    console.log(`\n${viewWarnings.join("\n")}`);
   }
 }
 
@@ -349,7 +365,7 @@ export const validateCommand = new Command("validate")
         const results = await collectResults(options, { boxRoot, ctx, resolved, json });
 
         if (json) {
-          const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings };
+          const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings, views: results.viewWarnings };
           console.log(JSON.stringify(payload, null, 2));
         } else {
           printTextResults(results);
