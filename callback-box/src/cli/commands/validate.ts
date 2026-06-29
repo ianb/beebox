@@ -25,6 +25,7 @@ import { isClaudeMdFile, lintClaudeMdFile, lintAllClaudeMd } from "../../core/cl
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
+import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external-url-check.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 
 const execFileP = promisify(execFile);
@@ -160,6 +161,39 @@ async function runHookMode(): Promise<never> {
   process.exit(0);
 }
 
+/**
+ * Pick the URL-check scope from the options. `--since <ref>` (used by the
+ * post-commit trigger) wins; then `--all` (full box sweep); then `--staged`;
+ * otherwise the default working-tree-vs-HEAD diff.
+ */
+function urlCheckMode(options: { all?: boolean; staged?: boolean; urlsSince?: string }): UrlCheckMode {
+  if (typeof options.urlsSince === "string") return { kind: "since", ref: options.urlsSince };
+  if (options.all) return { kind: "all" };
+  if (options.staged) return { kind: "staged" };
+  return { kind: "working" };
+}
+
+/**
+ * The external-URL pass (`cb validate --urls`). Network-dependent and therefore
+ * fully separate from the sync card/markdown lint: it never runs in the
+ * PostToolUse / pre-commit hooks. Warning-style — exits 1 only on a hard-broken
+ * URL when invoked directly, which is safe because nothing in the commit path
+ * calls it. Always exits the process.
+ */
+async function runUrlCheck(
+  options: { all?: boolean; staged?: boolean; urlsSince?: string; json?: boolean }
+): Promise<never> {
+  const boxRoot = await requireBoxRoot();
+  const report = await checkExternalUrls(boxRoot, { mode: urlCheckMode(options), now: new Date().toISOString() });
+  if (options.json === true) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    const text = formatUrlReport(report, { colors: true });
+    console.log(text ?? `Checked ${String(report.checked)} external URL(s); none broken.`);
+  }
+  process.exit(report.broken.length > 0 ? 1 : 0);
+}
+
 interface CollectArgs {
   boxRoot: string;
   ctx: LoadCardContext;
@@ -279,16 +313,22 @@ export const validateCommand = new Command("validate")
   .option("--staged", "Validate the cards currently staged in git")
   .option("--hook", "Hook mode: read Claude Code PostToolUse JSON payload from stdin, validate the touched card. Errors go to stderr with exit code 2 so the agent sees feedback; non-card paths exit 0 silently.")
   .option("--links", "Warn-only box-wide broken-link scan (link rules only). Always exits 0 — used by the pre-commit hook to surface dangling links in unstaged referrers without blocking the commit.")
+  .option("--urls", "Check EXTERNAL http(s) URLs that are new since the base version (HEAD by default). Network pass — never run in the sync hooks. Pair with --all (full box sweep), --staged, or --urls-since <ref>.")
+  .option("--urls-since <ref>", "With --urls: treat URLs absent at <ref> as new (used by the non-blocking post-commit trigger, e.g. --urls-since HEAD~1).")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
       targetPaths: string[],
-      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; json?: boolean; committed?: boolean }
+      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; urls?: boolean; urlsSince?: string; json?: boolean; committed?: boolean }
     ) => {
       try {
         if (options.hook) {
           await runHookMode();
+        }
+
+        if (options.urls || typeof options.urlsSince === "string") {
+          await runUrlCheck(options);
         }
 
         if (options.links) {
