@@ -53,6 +53,9 @@ export const BOX_DIRS = {
   // People
   people: "people",
 
+  // Places
+  places: "places",
+
   // Configuration
   config: "config",
   connectors: "config/connectors",

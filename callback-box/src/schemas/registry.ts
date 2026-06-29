@@ -38,6 +38,7 @@ import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { TodoListSchema } from "./todo-list.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
+import { PlaceSchema } from "./place.js";
 import { SheetSchema } from "./sheet.js";
 import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
@@ -85,6 +86,7 @@ export const cardSchemas: CardSchema[] = [
   AudioSchema,
   RecordSchema,
   PersonSchema,
+  PlaceSchema,
   MemoSchema,
   TodoListSchema,
   TelegramMessageSchema,
@@ -457,6 +459,7 @@ export { QuestionFollowupJobSchema } from "./question-followup-job.js";
 export { TodoListSchema } from "./todo-list.js";
 export { BriefingSchema } from "./briefing.js";
 export { PersonSchema } from "./person.js";
+export { PlaceSchema } from "./place.js";
 export { SheetSchema } from "./sheet.js";
 export { DocSchema } from "./doc.js";
 export { GdocSchema } from "./gdoc.js";

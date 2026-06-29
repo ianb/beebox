@@ -21,10 +21,14 @@ export function locationAge(location: StoredLocation, now: Date): LocationAge {
   return { ageMs, stale: ageMs > LOCATION_STALE_MS };
 }
 
-/** e.g. `45.5231,-122.6765 (±20m, captured 4 minutes ago, web) [stale]`. */
-export function formatLocationLine(location: StoredLocation, now: Date): string {
+/**
+ * e.g. `45.5231,-122.6765 (±20m, captured 4 minutes ago, web) [stale]`, or with
+ * a matched place name prepended: `Home — 45.5231,-122.6765 (…)`.
+ */
+export function formatLocationLine(location: StoredLocation, { now, place }: { now: Date; place?: string }): string {
   const { ageMs, stale } = locationAge(location, now);
   const coords = `${location.lat},${location.lng}`;
   const meta = `±${Math.round(location.accuracy)}m, captured ${describeElapsed(ageMs)} ago, ${location.source}`;
-  return `${coords} (${meta})${stale ? " [stale]" : ""}`;
+  const prefix = place !== undefined ? `${place} — ` : "";
+  return `${prefix}${coords} (${meta})${stale ? " [stale]" : ""}`;
 }

@@ -26,6 +26,7 @@ A box is a directory marked by a `.cb-box` file. It's a git repository (`cb init
 ├── store/                   long-term state — archives, integrated content
 ├── config/                  configuration — connectors, guides, schemas
 ├── people/                  person cards
+├── places/                  place cards (named locations)
 ├── docs/                    box-specific docs (optional, agent-authored)
 ├── procedure/               procedure runs (created on first run)
 ├── tricks/                  agent-authored scripts (optional)
@@ -131,6 +132,7 @@ Generated and managed by callback-box itself; not hand-edited. Most contents are
 | Path | Purpose |
 |------|---------|
 | `people/` | Person cards — referenced from briefings, useful for relationship-aware processing. |
+| `places/` | Place cards — named locations (Home, Office) the box recognizes; `cb location get` names the place the boxholder is in, `cb location mark` stamps a place's coordinates. |
 | `tricks/scripts/` | Agent-authored scripts. The agent can write small helpers here. |
 | `tricks/lib/` | Shared helpers used by `tricks/scripts/`. |
 | `views/` | Custom view definitions (rendering customization). |

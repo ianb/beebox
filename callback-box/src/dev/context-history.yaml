@@ -254,3 +254,11 @@ test1:
       peak: 42597
       added: 0
       turns: 1
+  place-record:
+    - date: 2026-06-29T14:36:28.597Z
+      boxCommit: 2a632a020810e9cc0fcad14214af49f779832b79
+      repoCommit: 4d337f39b4d5a3203709519fc8adb32a08b1a922
+      initial: 42971
+      peak: 42971
+      added: 0
+      turns: 2

@@ -3068,3 +3068,21 @@ tests:
       The agent should know about `cb location get` from the agent guide's
       "User location" section. Failure modes: fabricating a location, assuming
       it's always available, or not knowing the command exists.
+
+  - id: place-record
+    prompt: >
+      The boxholder says "remember this as my office." How do you record this
+      place so the box recognizes it later?
+    expected_level: knows_directly
+    watch_for: >
+      Authors a place card (places/<Name>.place.card) first, then runs
+      `cb location mark <path>` to stamp the current location — rather than
+      hand-typing coordinates or only writing a card with no coordinates.
+    correct_contains: ["cb location mark"]
+    tags: [location]
+    notes: >
+      Status (2026-06-29): passes knows_directly (0 files read, 0 searches) —
+      the agent recalls the card-first + `cb location mark` flow from the guide.
+      The card-first/mark-second workflow from the agent guide's "Named places"
+      subsection. Failure modes: hand-typing lat/lng, forgetting the mark step,
+      or not knowing place cards exist.
