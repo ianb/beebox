@@ -182,6 +182,26 @@ export function resolveImageSrc(
 }
 
 /**
+ * If `src` is an external image URL (http(s) or protocol-relative), return the
+ * box's `/api/proxy-image` URL that re-fetches it server-side; otherwise
+ * undefined. Used as an on-error fallback for markdown images: the browser
+ * hot-links the origin first, and only routes through the proxy (which sends a
+ * matching Referer and no box cookie, defeating naive hot-link blockers) if the
+ * direct load fails. Mirrors the frozen-page fallback in `proxy-image.ts`.
+ *
+ * Box-relative paths return undefined — they're served directly and the proxy
+ * (which requires an absolute http(s) target) would only reject them.
+ */
+export function externalImageProxyUrl(src: string, boxSlug: string | undefined): string | undefined {
+  // Protocol-relative `//host/x.png` resolves against the page protocol in the
+  // browser; the proxy needs an absolute scheme, so assume https.
+  const absolute = src.startsWith("//") ? `https:${src}` : src;
+  if (!/^https?:\/\//i.test(absolute)) return undefined;
+  const base = viteBase().replace(/\/$/, "");
+  return `${base}/${boxSlug ?? ""}/api/proxy-image?url=${encodeURIComponent(absolute)}`;
+}
+
+/**
  * Build a URL for an in-box file served by the backend's `/api/files/<path>`
  * route, prefixed with Vite's BASE_URL so it works under the dev router's
  * `/<worktree>/` path prefix and in prod (where BASE_URL is `/`).

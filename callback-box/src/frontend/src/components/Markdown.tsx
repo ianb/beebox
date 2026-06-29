@@ -34,6 +34,7 @@ import { RedactedInline, RedactedBlock } from "./Redacted";
 import { Image } from "./ui/Image";
 import {
   classifyMarkdownHref,
+  externalImageProxyUrl,
   parseViewUrl,
   resolveImageSrc,
   resolveRelativePath,
@@ -146,6 +147,7 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
 export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
   return function Img({ src, alt, title }) {
     const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
+    const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
     return (
       <Image
         src={resolved}
@@ -153,6 +155,7 @@ export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; a
         size="chat"
         lightbox
         className="block mx-auto my-2"
+        {...(proxyFallbackSrc !== undefined ? { proxyFallbackSrc } : {})}
         {...(title !== undefined ? { title } : {})}
       />
     );

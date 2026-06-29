@@ -23,6 +23,13 @@ interface BaseImageProps {
   bordered?: boolean;
   title?: string;
   /**
+   * Optional alternate URL to retry once if `src` fails to load (e.g. an
+   * `/api/proxy-image` URL for an external image whose origin blocks
+   * hot-linking). If the fallback also fails, the broken-image placeholder is
+   * shown. Omit for in-box images, which have no proxy.
+   */
+  proxyFallbackSrc?: string;
+  /**
    * Outer-layout classes (margin, padding, flex item, sizing, position),
    * applied to whichever element ends up being outermost (figure when
    * `caption` is set, the overlay wrapper when `overlay` is set, otherwise
@@ -206,6 +213,7 @@ export function Image(props: ImageProps) {
     rotation = 0,
     bordered = false,
     title,
+    proxyFallbackSrc,
     className,
   } = props;
   const lightbox = props.lightbox === true;
@@ -213,8 +221,21 @@ export function Image(props: ImageProps) {
 
   const lightboxCtx = useLightbox();
   const imgRef = useRef<HTMLImageElement>(null);
-  const [errorSrc, setErrorSrc] = useState<string | null>(null);
-  const errored = errorSrc === src;
+  // Two-stage load: try `src`, then `proxyFallbackSrc` once, then placeholder.
+  // Each failure is keyed by the URL that failed so a new `src`/fallback prop
+  // (e.g. a re-rendered image) clears the stale failure and retries.
+  const [failedPrimary, setFailedPrimary] = useState<string | null>(null);
+  const [failedFallback, setFailedFallback] = useState<string | null>(null);
+  const primaryFailed = failedPrimary === src;
+  const canFallback = proxyFallbackSrc !== undefined && proxyFallbackSrc !== src;
+  const fallbackFailed = canFallback && failedFallback === proxyFallbackSrc;
+  const usingFallback = primaryFailed && canFallback && !fallbackFailed;
+  const displaySrc = usingFallback && proxyFallbackSrc !== undefined ? proxyFallbackSrc : src;
+  const errored = primaryFailed && (!canFallback || fallbackFailed);
+  const handleError = () => {
+    if (displaySrc === src) setFailedPrimary(src);
+    else setFailedFallback(displaySrc);
+  };
 
   const rotationStyle: CSSProperties | undefined =
     rotation !== 0 ? { transform: `rotate(${rotation}deg)` } : undefined;
@@ -242,14 +263,14 @@ export function Image(props: ImageProps) {
     <ErrorPlaceholder alt={alt} size={size} bordered={bordered} extraClass={imgExtra} />
   ) : (
     <ImgElement
-      src={src}
+      src={displaySrc}
       alt={alt}
       size={size}
       bordered={bordered}
       rotationStyle={rotationStyle}
       title={effectiveTitle}
       onActivate={activate}
-      onError={() => setErrorSrc(src)}
+      onError={handleError}
       lightbox={lightbox}
       lightboxCaption={lightboxCaption}
       imgRef={imgRef}
