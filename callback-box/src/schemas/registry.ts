@@ -207,6 +207,14 @@ interface SchemaFileRecord {
 const boxSchemaCache = new Map<string, BoxSchemas>();
 const boxFileRecords = new Map<string, Map<string, SchemaFileRecord>>();
 const inFlightRebuild = new Map<string, Promise<BoxSchemas>>();
+/**
+ * Bumped on every invalidation. A rebuild captures the epoch before it starts
+ * and only caches its result if the epoch is unchanged when it finishes —
+ * otherwise an edit that landed mid-rebuild would be lost (the rebuild would
+ * cache a snapshot predating it, and with no later event hot-reload stays
+ * stale). On a mismatch the rebuild simply runs again.
+ */
+const dirtyEpoch = new Map<string, number>();
 
 /**
  * Drop a box's assembled schema snapshot so the next `loadBoxSchemas` rebuilds
@@ -215,6 +223,7 @@ const inFlightRebuild = new Map<string, Promise<BoxSchemas>>();
  */
 export function invalidateBoxSchemas(boxRoot: string): void {
   boxSchemaCache.delete(boxRoot);
+  dirtyEpoch.set(boxRoot, (dirtyEpoch.get(boxRoot) ?? 0) + 1);
 }
 
 /**
@@ -232,19 +241,40 @@ export async function loadBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const pending = inFlightRebuild.get(boxRoot);
   if (pending) return pending;
 
-  const promise = rebuildBoxSchemas(boxRoot);
+  const promise = rebuildUntilStable(boxRoot);
   inFlightRebuild.set(boxRoot, promise);
   try {
-    const result = await promise;
-    boxSchemaCache.set(boxRoot, result);
-    return result;
+    return await promise;
   } finally {
     inFlightRebuild.delete(boxRoot);
   }
 }
 
+/**
+ * Rebuild, re-running if an invalidation landed mid-rebuild (see `dirtyEpoch`).
+ * The epoch check and the cache write are synchronous (no await between them),
+ * so an invalidation can't interleave to leave a stale snapshot cached.
+ */
+async function rebuildUntilStable(boxRoot: string): Promise<BoxSchemas> {
+  for (;;) {
+    const epoch = dirtyEpoch.get(boxRoot) ?? 0;
+    const result = await rebuildBoxSchemas(boxRoot);
+    if ((dirtyEpoch.get(boxRoot) ?? 0) === epoch) {
+      boxSchemaCache.set(boxRoot, result);
+      return result;
+    }
+  }
+}
+
 async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const empty: BoxSchemas = { cardSchemas: [] };
+
+  // Drop this box's prior template registrations up front; the file scan below
+  // re-registers whatever still exists. Doing it here (not after the scan) means
+  // a removed last schema / deleted dir also drops the box's templates, not just
+  // its card types.
+  unregisterBoxTemplates(boxRoot);
+
   const schemasDir = join(boxRoot, "config/schemas");
   let files: string[];
   try {
@@ -272,11 +302,6 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const records = boxFileRecords.get(boxRoot) ?? new Map<string, SchemaFileRecord>();
   const seen = new Set<string>();
   const loadedCard: CardSchema[] = [];
-
-  // Replace this box's template set wholesale: drop its prior registrations
-  // (so removed/renamed templates actually disappear and any shadowed built-in
-  // is restored), then re-register the current set below.
-  unregisterBoxTemplates(boxRoot);
 
   for (const file of tsFiles) {
     const filePath = join(schemasDir, file);

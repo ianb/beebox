@@ -215,6 +215,23 @@ getTemplate("trip-template") === undefined
 => true
 ```
 
+Deleting a box's last schema file (so the dir scan is empty) must drop its
+templates too, not just its card types:
+
+```ts continue
+await fs.writeFile(path.join(boxA, "config/schemas/trip.ts"), TRIP_WITH_TEMPLATE);
+invalidateBoxSchemas(boxA);
+await loadBoxSchemas(boxA);
+getTemplate("trip-template") !== undefined
+=> true
+
+await fs.rm(path.join(boxA, "config/schemas/trip.ts"));
+invalidateBoxSchemas(boxA);
+const after = await loadBoxSchemas(boxA);
+[after.cardSchemas.length, getTemplate("trip-template") === undefined].join("|")
+=> 0|true
+```
+
 ```ts cleanup
 await fs.rm(boxA, { recursive: true, force: true });
 await fs.rm(boxB, { recursive: true, force: true });
