@@ -60,5 +60,25 @@ await build({
   logLevel: "warning",
 });
 
+// Also build the public view-widgets layer (the `callback-box/view-widgets`
+// export) to dist/view-widgets/index.js. Box-authored views import this
+// specifier for <CardLink>/<CardRef>; `cb view test` resolves it via the
+// package `exports` map (the temp-dir node_modules/callback-box symlink in
+// src/cli/commands/view.ts), and wraps the rendered view in the bundle's
+// NodeViewHostProvider. React (incl. react/jsx-runtime) stays external so it
+// shares the one instance react-dom/server uses, exactly like the compiled view.
+await build({
+  entryPoints: [join(root, "src/frontend/src/components/view-widgets/node-entry.tsx")],
+  outfile: join(distDir, "view-widgets", "index.js"),
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+  jsx: "automatic",
+  packages: "external",
+  sourcemap: true,
+  logLevel: "warning",
+});
+
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);
