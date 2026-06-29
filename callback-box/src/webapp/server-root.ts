@@ -12,6 +12,7 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { loadBoxConfig } from "./box-config.js";
+import { transferEndpoint } from "../core/push-subscriptions.js";
 import type { BoxSpec } from "./server-types.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
@@ -98,6 +99,27 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
     } catch (_e) {
       return { error: "No deploy info available" };
     }
+  });
+
+  // Web Push key rotation (pushsubscriptionchange). Root-level and box-agnostic:
+  // the service worker controls the whole origin, and a subscription's endpoint
+  // is server-wide, so we just transfer the old endpoint's box opt-ins to the
+  // rotated one. Best-effort — the next page visit re-subscribes regardless.
+  server.post("/api/push/resubscribe", async (request, reply) => {
+    const body = request.body as {
+      oldEndpoint?: string | null;
+      subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
+    } | undefined;
+    const sub = body?.subscription;
+    if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
+      return reply.status(400).send({ error: "missing subscription" });
+    }
+    await transferEndpoint({
+      oldEndpoint: body?.oldEndpoint ?? null,
+      subscription: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } },
+      now: new Date(),
+    });
+    return { ok: true };
   });
 
   // Root-level box list endpoint (filtered by user access when auth enabled)

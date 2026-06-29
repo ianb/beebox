@@ -17,6 +17,7 @@ import { landmarksRouter } from "./routers/landmarks.js";
 import { chatRouter } from "./routers/chat.js";
 import { eventsRouter } from "./routers/events.js";
 import { locationRouter } from "./routers/location.js";
+import { pushRouter } from "./routers/push.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -37,6 +38,7 @@ export const appRouter = router({
   chat: chatRouter,
   events: eventsRouter,
   location: locationRouter,
+  push: pushRouter,
 });
 
 export type AppRouter = typeof appRouter;

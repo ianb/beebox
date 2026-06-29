@@ -134,12 +134,35 @@ CB_PUBLIC_URL=https://box.example.com
 # Google tokens — centralized file shared across all boxes (chmod 600)
 CB_GOOGLE_TOKENS_FILE=/home/callback/.google-tokens.json
 
+# Web Push (optional — enables browser/PWA push notifications)
+# Generate once with: npx web-push generate-vapid-keys
+CB_VAPID_PUBLIC_KEY=...
+CB_VAPID_PRIVATE_KEY=...
+# VAPID contact (optional — defaults to PUBLIC_URL). A mailto: or https: URI.
+CB_VAPID_SUBJECT=mailto:you@example.com
+
 # Optional
 THINKING_OPENAI_API_KEY=sk-...
 CALLBACK_MISTRAL_API_KEY=...
 ```
 
 After editing `.env`, restart services: `systemctl restart callback-serve callback-scheduler`
+
+### Web Push (VAPID) keys
+
+Push notifications need a single server-wide VAPID keypair (not per-box). The setup
+script does **not** seed these — add them as an explicit step:
+
+1. Generate once: `npx web-push generate-vapid-keys`
+2. Add `CB_VAPID_PUBLIC_KEY` and `CB_VAPID_PRIVATE_KEY` to `/home/callback/.env`
+   (private key stays server-only; it's excluded from the deploy rsync).
+3. Restart **both** services so the server (serves the public key) and the
+   scheduler/finalize (sends pushes) pick them up:
+   `systemctl restart callback-serve callback-scheduler`
+
+Subscriptions are stored server-side at `~/.local/share/cb/push-subscriptions.json`
+(gitignored, never committed). Boxholders enable push per-device from a box's Admin
+page; on iOS the app must first be added to the Home Screen.
 
 ## Authentication (Google OAuth)
 
