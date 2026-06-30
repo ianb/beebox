@@ -32,6 +32,8 @@ import { makeBriefingComponents } from "./BriefingTags";
 import { makeRecipeComponents } from "./RecipeTags";
 import { RedactedInline, RedactedBlock } from "./Redacted";
 import { Image } from "./ui/Image";
+import { VideoEmbed } from "./ui/VideoEmbed";
+import { detectVideoEmbed } from "../lib/video-url";
 import {
   classifyMarkdownHref,
   externalImageProxyUrl,
@@ -146,6 +148,13 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
 
 export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
   return function Img({ src, alt, title }) {
+    // A markdown image pointed at a recognized video URL renders an embedded
+    // player instead. ID extraction can still fail on a YouTube-looking URL —
+    // `detectVideoEmbed` returns null there and we fall through to the image.
+    const video = typeof src === "string" ? detectVideoEmbed(src) : null;
+    if (video !== null) {
+      return <VideoEmbed embedUrl={video.embedUrl} title={alt ?? ""} className="mx-auto" />;
+    }
     const resolved = typeof src === "string" ? resolveImageSrc(src, { boxSlug: ctx.boxSlug, basePath: ctx.basePath }) : "";
     const proxyFallbackSrc = externalImageProxyUrl(resolved, ctx.boxSlug);
     return (
