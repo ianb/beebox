@@ -4,11 +4,13 @@
  * The CSP header's `report-uri`/`report-to` directives point browsers here. A
  * report has no box context (it's a document-level header), so this route is
  * registered on the root server, unauthenticated — browsers POST CSP reports
- * without credentials, and the body carries no secrets. Reports are appended to
- * a single app-global log (there is no server-level state dir in this codebase,
- * so it lives under the primary box's `.callback-box/`); the violation-digest
- * tooling reads it back. Mirrors the append+rolling-truncate shape of
- * `api-debug-log.ts`, deliberately without a cross-process lock.
+ * without credentials, and the body carries no secrets. Reports are appended as
+ * JSONL (one JSON object per line: `ts`, `directive`, `blocked`, `doc`) to a
+ * single app-global log (there is no server-level state dir in this codebase, so
+ * it lives under the primary box's `.callback-box/`); the violation-digest
+ * tooling reads it back incrementally via a cursor. Mirrors the append+rolling-
+ * truncate shape of `api-debug-log.ts`, deliberately without a cross-process
+ * lock; the rolling truncate cuts on a newline boundary so JSONL stays valid.
  */
 
 import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
@@ -17,6 +19,15 @@ import type { FastifyInstance } from "fastify";
 
 const CSP_REPORT_LOG = "csp-reports.log";
 const MAX_LOG_FILE_BYTES = 200_000;
+
+/**
+ * Absolute path of the CSP report log under a box. The sink writes here and the
+ * digest tool (`src/dev/csp-digest.ts`) reads from the same place — keep both
+ * going through this helper so they never drift.
+ */
+export function cspReportLogPath(boxRoot: string): string {
+  return path.join(boxRoot, ".callback-box", CSP_REPORT_LOG);
+}
 
 /**
  * The two wire shapes a browser may send: the legacy `application/csp-report`
@@ -69,7 +80,7 @@ function normalizeReports(body: unknown): NormalizedReport[] {
 }
 
 export function registerCspReportRoute({ server, logDir }: { server: FastifyInstance; logDir: string }): void {
-  const logFile = path.join(logDir, ".callback-box", CSP_REPORT_LOG);
+  const logFile = cspReportLogPath(logDir);
 
   // Neither CSP report content-type is handled by Fastify's default JSON parser;
   // register a tolerant string parser that JSON-decodes the body and never
@@ -109,7 +120,7 @@ export function registerCspReportRoute({ server, logDir }: { server: FastifyInst
     if (reports.length > 0) {
       const ts = new Date().toISOString();
       const lines = reports.map(
-        (r) => `${ts} [csp] directive=${r.directive} blocked=${r.blockedUri} doc=${r.documentUri}\n`,
+        (r) => `${JSON.stringify({ ts, directive: r.directive, blocked: r.blockedUri, doc: r.documentUri })}\n`,
       );
       await appendLines(lines);
     }

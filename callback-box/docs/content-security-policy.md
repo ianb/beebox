@@ -24,10 +24,12 @@ step (below).
   (`src/webapp/routes/api-csp-report.ts`), a root-level, unauthenticated route
   (browsers send reports without credentials). It accepts both
   `application/csp-report` and `application/reports+json`, normalizes them, and
-  appends to `<primary-box>/.callback-box/csp-reports.log` (there is no
-  server-level state dir, so reports — which are app-global — land under the
-  primary box). The report path carries the worktree base prefix in dev so the
-  router→Vite→backend proxy resolves it.
+  appends them as **JSONL** (one `{ts, directive, blocked, doc}` object per line)
+  to `<primary-box>/.callback-box/csp-reports.log` (there is no server-level state
+  dir, so reports — which are app-global — land under the primary box). The log
+  rolling-truncates on a newline boundary so JSONL stays valid. The report path
+  carries the worktree base prefix in dev so the router→Vite→backend proxy
+  resolves it.
 
 ## The directive set (why each entry is here)
 
@@ -60,14 +62,18 @@ CSP entry — only things the browser contacts directly.
 
 ## Reviewing violations + hardening
 
-`pnpm csp-digest <path-to-csp-reports.log>` (`src/dev/csp-digest.ts`) dedupes the
-log and prints a digest: each directive+origin that fired, with counts and a
-first/last-seen window, or "safe to harden" when clean. A scheduled routine runs
-this over the prod log on a cadence and surfaces the result; it **proposes** the
-Report-Only → enforcing flip when clean but never flips the policy itself — a
-human confirms. The routine is a runbook: see
-`docs/scheduled/csp-violation-review.md` (the scheduled task just points at it).
-To harden manually: once the digest is clean across real traffic, change the prod
-header name from `Content-Security-Policy-Report-Only` to
-`Content-Security-Policy` in `registerCspReportingHeaders`, keeping
-`script-src 'self'`.
+`pnpm csp-digest` (`src/dev/csp-digest.ts`) dedupes the log and prints a digest:
+each directive+origin that fired, with counts and a first/last-seen window, or
+"safe to harden" when clean. By default it runs **incrementally** against the
+local primary box (`~/src/boxes/test1`): it reports only entries newer than the
+last run — tracked by a timestamp cursor written beside the log in the git-ignored
+`.callback-box/csp-digest-cursor.json` — and advances the cursor. `--all` ignores
+the cursor and digests the whole log (use it to judge a harden); `--json` emits
+the digest for an agent to analyze; a positional `<logPath>` digests an explicit
+file. A local scheduled routine runs the incremental digest on a cadence,
+analyzes whatever is new, and reports; it **proposes** the Report-Only →
+enforcing flip when clean but never flips the policy itself — a human confirms.
+The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
+manually: once `--all` is clean across real traffic, change the prod header name
+from `Content-Security-Policy-Report-Only` to `Content-Security-Policy` in
+`registerCspReportingHeaders`, keeping `script-src 'self'`.

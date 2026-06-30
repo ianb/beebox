@@ -1,61 +1,66 @@
 # Scheduled routine: CSP violation review
 
-A recurring routine that reviews production Content-Security-Policy violations
-and decides whether the policy is safe to harden. The webapp ships its CSP as
-**Report-Only** (it reports violations but blocks nothing — see
-`docs/content-security-policy.md`); this routine accumulates confidence over real
-traffic and proposes the flip to enforcing once the reports are clean.
+A recurring **local** routine that reviews Content-Security-Policy violations as
+they accrue during development and decides whether the policy is safe to harden.
+The webapp ships its CSP as **Report-Only** (it reports violations but blocks
+nothing — see `docs/content-security-policy.md`); this routine watches real
+local traffic, surfaces anything new, and proposes the flip to enforcing once
+the reports are clean.
 
 **The scheduled task prompt can be one line:** *"Follow the instructions in
 `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
 below.
 
+## Where this runs
+
+This is a **local** routine — it reads the CSP log the local dev server writes,
+not prod. The `/api/csp-report` sink appends violations (as JSONL) to the primary
+box at `~/src/boxes/test1/.callback-box/csp-reports.log` as you exercise the app
+locally. The routine must therefore run **on the machine where that box lives**
+(e.g. a local `/schedule` task), not in a cloud environment that doesn't have the
+box. There is no SSH or HTTPS log-fetch step — it reads the file directly.
+
 ## Cadence
 
-Weekly is appropriate — violations accumulate slowly and the Report-Only window
-is measured in weeks. Suggested cron: `0 14 * * 1` (Mondays 14:00). Run it as a
-fresh-session-per-fire routine; it needs no prior conversation context.
-
-## Prerequisite: prod log access
-
-Reports are written by the `/api/csp-report` sink to the **primary box** on the
-prod server at `/home/callback/boxes/<box>/.callback-box/csp-reports.log`. The
-routine reaches it by SSH (the same access the deploy uses):
-`ssh root@$(cat callback-box/deploy/server-ip)`. If the routine's environment
-cannot SSH to prod, stop and ask the boxholder — the alternative is a diagnostic
-GET endpoint to fetch the log over HTTPS, which is not built yet.
+Daily is reasonable for local review while the Report-Only window is open; the
+digest is incremental, so each run only surfaces what's new since the last one.
+Run it as a fresh-session-per-fire routine; it needs no prior conversation
+context.
 
 ## Steps
 
-Run from the `callback-mono` repo root.
+Run from the `callback-box/` directory.
 
-1. **Pull the prod report log** (the sink writes it under whichever box is
-   primary, so glob across boxes):
+1. **Digest the new violations since the last run:**
    ```bash
-   ssh root@$(cat callback-box/deploy/server-ip) \
-     "cat /home/callback/boxes/*/.callback-box/csp-reports.log 2>/dev/null" \
-     > /tmp/csp-prod.log
+   pnpm csp-digest
    ```
-   Empty output means no reports yet — that is a *clean* result, not an error.
+   This reads the local primary box's log, prints only entries newer than the
+   last run, and advances a timestamp cursor (in the git-ignored
+   `.callback-box/csp-digest-cursor.json`) so the next run resumes after them. No
+   output / "No new CSP violations" means nothing new since last time — a *clean*
+   result, not an error. (Add `--json` if you want the digest structured for
+   analysis; `--box <path>` to point at a different box.)
 
-2. **Digest it:**
+2. **Analyze what's new.** The incremental digest is the delta. For the harden
+   decision you need the whole-log picture, so when the delta is clean (or you're
+   about to recommend hardening) also run:
    ```bash
-   cd callback-box && pnpm csp-digest /tmp/csp-prod.log
+   pnpm csp-digest --all
    ```
-   The digest dedupes by directive+origin with counts and a first/last-seen
-   window, and prints either a violation list or "Safe to harden."
+   which digests the entire log without touching the cursor.
 
-3. **Act on the digest** — and keep the report short (a digest + a
-   recommendation, not a wall of text):
+3. **Act on the digest** — keep the report short (a digest + a recommendation,
+   not a wall of text):
 
-   - **Clean** (no violations across meaningful real traffic — chat with images,
-     dictation/realtime voice, a p5 figure, a logged-in Google avatar):
-     **propose hardening.** In `callback-box/src/webapp/server-root.ts`
-     `registerCspReportingHeaders`, the flip is changing the header name from
-     `Content-Security-Policy-Report-Only` to `Content-Security-Policy` (keep
-     `script-src 'self'`). **Propose only — do not edit or deploy without the
-     boxholder's confirmation.** This routine arranges the context; a human makes
-     the call.
+   - **Clean** (no violations in `--all` across meaningful real traffic — chat
+     with images, dictation/realtime voice, a p5 figure, a logged-in Google
+     avatar): **propose hardening.** In
+     `callback-box/src/webapp/server-root.ts` `registerCspReportingHeaders`, the
+     flip is changing the header name from `Content-Security-Policy-Report-Only`
+     to `Content-Security-Policy` (keep `script-src 'self'`). **Propose only — do
+     not edit or deploy without the boxholder's confirmation.** This routine
+     arranges the context; a human makes the call.
 
    - **Violations present:** list each (`directive ← blocked-origin`, with
      counts). For each, judge:
@@ -69,6 +74,16 @@ Run from the `callback-mono` repo root.
      (Strands shaders, JS filter shaders, HarfBuzz 3D-text) would report a
      `script-src` violation. The right fix is to iframe-isolate that figure, not
      to add `'unsafe-eval'` app-wide. See `docs/content-security-policy.md`.
+
+4. **Report to the boxholder.** On a scheduled run there's no interactive human
+   in the loop, so deliver the result: email the boxholder a short note via the
+   Gmail tool — the digest summary and your recommendation (propose-harden / list
+   of new violations + suggested edits / flag for investigation), not a wall of
+   text. For now report on **every** run so the boxholder can see the routine is
+   working end-to-end; once it's trusted this can switch to quiet-when-clean
+   (skip the email when the delta is clean). The "propose only — don't edit or
+   deploy without confirmation" rule still holds: the report proposes, the human
+   decides.
 
 ## Background
 

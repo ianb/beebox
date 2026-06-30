@@ -87,6 +87,20 @@ reportsApi.statusCode
 => 204
 
 const log = await readFile(join(dir, ".callback-box", "csp-reports.log"), "utf-8");
-log.includes("directive=frame-src blocked=https://evil.test") && log.includes("directive=img-src blocked=http://x.test/a.png")
-=> true
+const lines = log.trim().split("\n").map((l) => JSON.parse(l));
+lines.length
+=> 2
+```
+
+The sink writes JSONL — one JSON object per line (`ts`, `directive`, `blocked`, `doc`) — so the digest can read it back incrementally:
+
+```ts continue
+`${lines[0].directive} ${lines[0].blocked}`
+=> frame-src https://evil.test
+
+`${lines[1].directive} ${lines[1].blocked}`
+=> img-src http://x.test/a.png
+
+typeof lines[0].ts
+=> string
 ```
