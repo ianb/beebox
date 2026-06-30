@@ -62,10 +62,12 @@ CSP entry — only things the browser contacts directly.
 
 `pnpm csp-digest <path-to-csp-reports.log>` (`src/dev/csp-digest.ts`) dedupes the
 log and prints a digest: each directive+origin that fired, with counts and a
-first/last-seen window, or "safe to harden" when clean. The scheduled review
-routine runs this over the dev and prod logs and surfaces the result; it
-**proposes** the Report-Only → enforcing flip when clean but never flips the
-policy itself — a human confirms. To harden: once the digest is clean across real
-traffic, change the prod header name from `Content-Security-Policy-Report-Only`
-to `Content-Security-Policy` in `registerCspReportingHeaders`, keeping
+first/last-seen window, or "safe to harden" when clean. A scheduled routine runs
+this over the prod log on a cadence and surfaces the result; it **proposes** the
+Report-Only → enforcing flip when clean but never flips the policy itself — a
+human confirms. The routine is a runbook: see
+`docs/scheduled/csp-violation-review.md` (the scheduled task just points at it).
+To harden manually: once the digest is clean across real traffic, change the prod
+header name from `Content-Security-Policy-Report-Only` to
+`Content-Security-Policy` in `registerCspReportingHeaders`, keeping
 `script-src 'self'`.
