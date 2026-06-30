@@ -43,7 +43,7 @@ export function ChatHeader(props: {
     <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
       <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
       <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
-      <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={onToggleNarration} />
+      <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onToggle={onToggleNarration} />
       <div className="flex-1" />
       <MuteButton muted={muted} onToggle={onToggleMute} />
       <LandmarkLinksButton
