@@ -1572,13 +1572,28 @@ belief instead of adding near-duplicates, and the weekly schedule
 once a few manual runs are reviewed. Maintainer: "analysis must end with
 integration" — it does.
 
-### Asset-manifest completion (D10)
+### Asset-manifest completion (D10) — DONE (descoped)
 
-The pre-commit verify hook landed (bucket C). What remains from the original
-scope: actual content **deduplication** (claimed but never implemented), an
-explicit **attach API/UI** to attach a file to a card, and dropping the
-misleading "versioning" language in `docs/asset-manifests.md` (only current
-state is tracked, no history). Decide the real scope before building. Medium.
+The pre-commit verify hook had already landed (bucket C). The remaining
+"completion" scope was re-examined and mostly **dropped as over-claim**:
+
+- **Content deduplication — dropped.** Never built, and not wanted. Assets
+  are already gitignored / out of the object database; the per-asset sha256
+  is in the manifest if dedup is ever genuinely needed later. Building it
+  now would solve a problem nobody has.
+- **Attach-a-file-to-a-card API + UI — deliberately not built.** Files
+  reach attach scopes through the paths that matter (scan-import, chat
+  uploads, email connectors, agents dropping files), and the pre-commit
+  hook auto-claims all of it. A web affordance to hand-staple a file to a
+  card is *manual attachment management*, which the boxholder explicitly
+  doesn't want; the rare one-off is covered by `cb attachments add`.
+- **Docs corrected.** `docs/asset-manifests.md` had a stale
+  "Not yet implemented" status and a Commands section describing
+  manifest-aware `cb overwrite`/`cb mv`/`cb rm` that don't exist as
+  written (the real command is `cb attachments overwrite`; moves/renames
+  are auto-reconciled by the scan; there is no manifest-aware delete). All
+  corrected to match what shipped. (There was no actual "versioning"
+  language to remove — the doc's history framing is correctly about git.)
 
 ### Deferred: model-switch verification (audit [69])
 

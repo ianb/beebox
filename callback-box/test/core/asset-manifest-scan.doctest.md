@@ -138,12 +138,12 @@ const r = await scanAttachScope({ absPath: box5.path("foo.attach"), relPath: "fo
 print(`error count: ${r.errors.length}`);
 print(`error kind: ${r.errors[0].kind}`);
 print(`error name: ${r.errors[0].name}`);
-print(`mentions cb overwrite: ${r.errors[0].message.includes("cb overwrite")}`)
+print(`mentions cb attachments overwrite: ${r.errors[0].message.includes("cb attachments overwrite")}`)
 =>
 error count: 1
 error kind: hash-mismatch
 error name: photo.jpg
-mentions cb overwrite: true
+mentions cb attachments overwrite: true
 ```
 
 ```ts cleanup
@@ -156,17 +156,17 @@ await box5.cleanup();
 const box6 = await makeTmpBox();
 await box6.write("foo.attach/photo.jpg", "abc");
 await scanAttachScope({ absPath: box6.path("foo.attach"), relPath: "foo.attach" });
-// Remove the file directly (bypass cb rm).
+// Remove the file directly (leaving the manifest entry orphaned).
 const { unlink } = await import("node:fs/promises");
 await unlink(box6.path("foo.attach/photo.jpg"));
 const r = await scanAttachScope({ absPath: box6.path("foo.attach"), relPath: "foo.attach" });
 print(`error count: ${r.errors.length}`);
 print(`error kind: ${r.errors[0].kind}`);
-print(`mentions cb rm: ${r.errors[0].message.includes("cb rm")}`)
+print(`names manifest.json: ${r.errors[0].message.includes("manifest.json")}`)
 =>
 error count: 1
 error kind: missing-file
-mentions cb rm: true
+names manifest.json: true
 ```
 
 ```ts cleanup
