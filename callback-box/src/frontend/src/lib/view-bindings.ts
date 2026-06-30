@@ -11,7 +11,7 @@
  * slug order wins (deterministic; the views listing is directory order).
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { getApiBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
@@ -68,19 +68,25 @@ function invalidateBindings(): void {
 /** The custom view bound to a card type, or null (also null while loading). */
 export function useCardViewBinding(type: string | undefined): CardViewBinding | null {
   const [binding, setBinding] = useState<CardViewBinding | null>(null);
+  // Monotonic request id so only the latest load() applies its result: an
+  // earlier `/api/views` response that resolves out of order (rapid view edits)
+  // can't clobber a newer binding, and `mounted` blocks a set after unmount.
+  const reqRef = useRef(0);
+  const mountedRef = useRef(true);
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   const load = useCallback(() => {
     if (type === undefined) {
       setBinding(null);
       return;
     }
-    let cancelled = false;
+    const req = (reqRef.current += 1);
     void fetchBindings().then((map) => {
-      if (!cancelled) setBinding(map.get(type) ?? null);
+      if (mountedRef.current && req === reqRef.current) setBinding(map.get(type) ?? null);
     });
-    return () => {
-      cancelled = true;
-    };
   }, [type]);
 
   useEffect(() => load(), [load]);
@@ -88,12 +94,23 @@ export function useCardViewBinding(type: string | undefined): CardViewBinding | 
   // A view edit can change which view renders a card type (a new, removed, or
   // renamed `rendersCardTypes`) without changing any card — the module-level
   // cache would otherwise hide that until a full page reload. Drop the cache and
-  // re-resolve on any view-source change.
+  // re-resolve on any view-source change, and on reconnect: file-change events
+  // are transient and not replayed, so an edit during a dropped socket would
+  // otherwise leave the binding stale (same resync the sibling views do).
+  const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
       if (event.event !== "file-change") return;
       const data = event.data as { path?: string };
       if (typeof data.path !== "string" || !/^views\/.+\.tsx$/.test(data.path)) return;
+      invalidateBindings();
+      load();
+    }, [load]),
+    onConnect: useCallback(() => {
+      if (!connectedOnceRef.current) {
+        connectedOnceRef.current = true;
+        return;
+      }
       invalidateBindings();
       load();
     }, [load]),

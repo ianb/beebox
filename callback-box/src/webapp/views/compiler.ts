@@ -281,17 +281,30 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
       const { meta } = await compileView(viewPath);
       metas.push(meta);
     } catch (_e) {
+      // The view doesn't compile, but its metadata is regex-extracted from
+      // source (no compile needed), so still surface `rendersCardTypes`: a
+      // transient compile error mid-edit shouldn't make a bound card silently
+      // abandon its custom renderer, which is what renders the inline compile
+      // error (via the route's buildErrorModule). Description flags the failure
+      // for the listing UI; reading source can itself fail (e.g. deleted between
+      // glob and read), so fall back to a slug-only meta there.
       const slug = slugFromFilename(file);
       const stat = await fs.stat(viewPath);
-      metas.push({
-        name: slug,
-        slug,
-        description: "Failed to compile",
-        dependencies: [],
-        modes: ["page"],
-        rendersCardTypes: [],
-        lastModified: stat.mtime.toISOString(),
-      });
+      try {
+        const source = await fs.readFile(viewPath, "utf-8");
+        const partial = extractMeta(source, { slug, mtime: stat.mtime.toISOString() });
+        metas.push({ ...partial, description: "Failed to compile" });
+      } catch (_readErr) {
+        metas.push({
+          name: slug,
+          slug,
+          description: "Failed to compile",
+          dependencies: [],
+          modes: ["page"],
+          rendersCardTypes: [],
+          lastModified: stat.mtime.toISOString(),
+        });
+      }
     }
   }
 

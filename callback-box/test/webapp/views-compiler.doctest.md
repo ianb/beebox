@@ -280,3 +280,24 @@ const names = views.map(v => v.name).sort();
 JSON.stringify(names)
 => ["Dashboard","Summary"]
 ```
+
+A view that fails to compile still reports its regex-extracted `rendersCardTypes`
+(and name), flagged `description: "Failed to compile"` — so a card bound to a
+view with a transient compile error keeps its custom renderer (which shows the
+inline compile error) instead of silently falling back to the built-in renderer.
+
+```ts continue
+await writeFile(join(viewsDir3, "broken.tsx"), `
+export const name = "Broken View";
+export const rendersCardTypes = ["broken-type"];
+export default function Broken() {
+  const x = ;
+  return null;
+}
+`);
+
+const withBroken = await listViews(tmp3);
+const broken = withBroken.find(v => v.slug === "broken");
+JSON.stringify([broken.name, broken.rendersCardTypes, broken.description])
+=> ["Broken View",["broken-type"],"Failed to compile"]
+```
