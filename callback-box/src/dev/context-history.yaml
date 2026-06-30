@@ -262,3 +262,34 @@ test1:
       peak: 42971
       added: 0
       turns: 2
+  view-link-another-card:
+    - date: 2026-06-29T22:24:32.371Z
+      boxCommit: 79a6b4cec45b32f763d3fe5c13c734b2bbe1c540
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47730
+      peak: 58404
+      added: 10674
+      turns: 3
+  view-embed-card-inline:
+    - date: 2026-06-29T22:24:55.743Z
+      boxCommit: 76e3c3545a8925e74f3817cd5990ac577d0eb16b
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47671
+      peak: 58363
+      added: 10692
+      turns: 3
+  view-ref-tracked:
+    - date: 2026-06-29T22:26:06.179Z
+      boxCommit: fe162d3e2cc987a7e13262fdc2f56e459ab2f8ce
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47672
+      peak: 48996
+      added: 1324
+      turns: 5
+    - date: 2026-06-29T22:27:15.346Z
+      boxCommit: 592fa827c7c961650bf845eae04ea314846111d2
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47663
+      peak: 48302
+      added: 639
+      turns: 4

@@ -277,6 +277,10 @@ Each view must export:
 
 React is provided automatically — do not import it.
 
+To link or embed another card, import \`CardLink\`/\`CardRef\` from
+\`callback-box/view-widgets\` (point at cards with \`cardRef="/store/…"\`, not a
+hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
+
 After writing or changing a view, render-test it: \`cb view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
 

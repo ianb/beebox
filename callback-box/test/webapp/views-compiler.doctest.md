@@ -92,6 +92,39 @@ output === output3
 => true
 ```
 
+## jsx-runtime shim translates the automatic runtime
+
+A view written with real JSX compiles against the `react/jsx-runtime` shim. The
+shim must translate `jsx`/`jsxs` (children carried *inside* props, `key` a
+separate arg) into `createElement` (children as rest args) — otherwise a
+static-children array reaches `createElement` as a single array child and React
+emits a spurious "unique key" dev warning for every multi-child view. The fix
+spreads the children array, so the compiled shim carries the `Array.isArray`
+translation rather than a naive `jsx = React.createElement` alias.
+
+```ts
+const jtmp = await mkdtemp(join(tmpdir(), "views-jsx-"));
+const jviews = join(jtmp, "views");
+await mkdir(jviews, { recursive: true });
+await writeFile(join(jviews, "multi.tsx"), `
+export const name = "Multi";
+export const modes = ["page"];
+export default function Multi() {
+  return <div><span>a</span><span>b</span></div>;
+}
+`);
+const { output: jsxOut } = await compileView(join(jviews, "multi.tsx"));
+jsxOut.includes("Array.isArray(children)")
+=> true
+```
+
+The naive alias that dropped `key` and passed array children whole is gone:
+
+```ts continue
+jsxOut.includes("jsx = React.createElement")
+=> false
+```
+
 ## Compile targets
 
 A view written with real JSX compiles differently per target. The default

@@ -275,6 +275,35 @@ export function rewriteReferrerRefs(params: {
 }
 
 /**
+ * Rewrite `cardRef="…"` attributes in a box-authored view (`.tsx`) that point at
+ * moved targets. Views aren't cards, so only the widget attribute is touched —
+ * not frontmatter/markdown/`ref=` forms (a bare `ref=` in JSX is a React DOM
+ * ref, not a card ref). Resolution-gated via `remap`, like the card rewriters.
+ */
+export function rewriteViewRefs(params: {
+  boxRoot: string;
+  viewAbsPath: string;
+  text: string;
+  remap: Remap;
+}): { text: string; count: number } {
+  const transform = transformForReferrer({
+    boxRoot: params.boxRoot,
+    cardAbsPath: params.viewAbsPath,
+    remap: params.remap,
+  });
+  let count = 0;
+  const text = params.text.replace(
+    /(\bcardRef=)(["'])([^"']*)\2/g,
+    (_m: string, ...g: string[]) => {
+      const out = transform(g[2]!);
+      if (out !== g[2]!) count += 1;
+      return g[0]! + g[1]! + out + g[1]!;
+    },
+  );
+  return { text, count };
+}
+
+/**
  * Rewrite a moved card's own outgoing relative refs so they still resolve from
  * its new location.
  */

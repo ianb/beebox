@@ -2745,6 +2745,64 @@ tests:
     correct_contains: ["adapterFetch"]
     tags: [views, adapters]
 
+  # === Views: card-aware widgets (CardLink / CardRef) ===
+  #
+  # Indirect knowledge, like the other view-authoring audits: the widgets are
+  # documented in docs/generated/views.md ("Card-aware widgets") and named in the
+  # views/CLAUDE.md stub, not the always-loaded guide (authoring a view is not a
+  # frequent task — appropriate altitude). The authoring framing ("check the
+  # box's own view docs first") reliably triggers the guide read, mirroring
+  # views-render-test-command.
+  #
+  # Status (2026-06-29): 3/3 pass. view-link-another-card and
+  # view-embed-card-inline read docs/generated/views.md (1 read, 0 searches) and
+  # name CardLink/CardRef + callback-box/view-widgets. view-ref-tracked passes on
+  # content (the agent confirms cb mv rewrites cardRefs); it carries no
+  # should_read because a yes/no prompt lets the agent confirm from views.md OR
+  # the source, and in this monorepo-adjacent test box it reached the source.
+
+  - id: view-link-another-card
+    prompt: >
+      I'm writing a view in views/ that lists related cards. Check the box's
+      own view docs first, then tell me: how do I render a link to another
+      card that opens correctly whether the view is shown in chat, browse, or
+      a full page — without hand-rolling an anchor and a URL?
+    expected_level: knows_about
+    watch_for: >
+      Reads the views guide, then names <CardLink> from callback-box/view-widgets
+      with a cardRef="…" attribute — not a hand-built <a href> or a guessed URL
+      scheme.
+    should_read: ["docs/generated/views.md"]
+    correct_contains_any: ["CardLink", "view-widgets"]
+    tags: [views, cards]
+
+  - id: view-embed-card-inline
+    prompt: >
+      In a box view, I want to show another card's contents expanded in place,
+      with a control to open it fully too. Check the view docs and tell me what
+      to use.
+    expected_level: knows_about
+    watch_for: >
+      Names <CardRef> (callback-box/view-widgets) with its follow + expand-inline
+      controls — not a manual fetch/render of the card.
+    should_read: ["docs/generated/views.md"]
+    correct_contains: ["CardRef"]
+    correct_contains_any: ["expand", "inline", "follow"]
+    tags: [views, cards]
+
+  - id: view-ref-tracked
+    prompt: >
+      If a view links a card with cardRef="/store/Foo.memo.card" and that card
+      is later moved with cb mv, does the view's link silently break?
+    expected_level: knows_about
+    watch_for: >
+      Says no — a cardRef in a view is tracked like any card ref, so cb mv
+      rewrites it on the move and cb validate flags a broken one. (No
+      should_read: it's a yes/no correctness check, and the agent may confirm
+      the guarantee from views.md or the source — either is fine.)
+    correct_contains_any: ["rewrites", "tracked", "cb mv", "validate"]
+    tags: [views, cards]
+
   # === Web-page capture + commentary (clerk) ===
   #
   # Conventions from docs/plans/webpage-card-and-commentary.md. The landmark

@@ -61,7 +61,13 @@ export function ViewPage() {
           onNavigate={handleNavigate}
         />
       ) : (
-        <ViewRenderer slug={parsed.slug} mode="page" params={parsed.params} />
+        <ViewRenderer
+          slug={parsed.slug}
+          mode="page"
+          params={parsed.params}
+          onNavigate={handleNavigate}
+          renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={handleNavigate} />}
+        />
       )}
     </div>
   );
