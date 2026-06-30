@@ -97,12 +97,12 @@ real violation data); flipping to enforcing is a gated follow-up.
   contentSecurityPolicy: {...} }`. Recorded so Open question 1 is decided against
   real capabilities, not assumptions. https://github.com/fastify/fastify-helmet
 - **`script-src 'self'` covers the dynamic-`import()` view/figure *mechanism***
-  (same-origin compiled modules, no `blob:`/eval for our own code) — **but p5.js
-  itself requires `'unsafe-eval'`**: `node_modules/p5/lib/p5.esm.js` uses `new
-  Function` + `WebAssembly` (verified, 4 matches), and `new Function` needs full
-  `'unsafe-eval'`, not the narrower `'wasm-unsafe-eval'`. So an enforced prod
-  `script-src` that keeps figures working is `'self' 'unsafe-eval'`. This is a
-  decided trade-off, not a "Report-Only will reveal it" unknown.
+  and our own code. The bundled figure runtimes are mostly clean: classic
+  `three.module.js` and `d3` have no eval/WASM; `p5` 2.3.0 has 4 eval/WASM sites
+  but all inside opt-in features (Strands JS shaders, JS filter shaders, HarfBuzz
+  3D-text), none at module load. So strict `'self'` works unless a specific
+  figure uses those advanced p5 APIs — which Report-Only surfaces per-figure,
+  rather than us pre-loosening the whole policy.
   https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src
 
 ## Tracks / scope
@@ -168,28 +168,32 @@ directive set, not an afterthought.
 - `frame-ancestors 'self'`: the app should not itself be embeddable cross-origin
   (the frozen sandbox is the only intentional framing, and it's same-origin).
 
-**Prod adds:**
+**Prod adds (strict):**
 ```
-script-src  'self' 'unsafe-eval';
+script-src  'self';
 style-src   'self' 'unsafe-inline';
 ```
-- `script-src 'self'`: our own code is fine — all dynamic-`import()` targets are
-  same-origin compiled modules (`src/frontend/src/components/ViewRenderer.tsx:191`,
+- `script-src 'self'`: all dynamic-`import()` targets are same-origin compiled
+  modules (`src/frontend/src/components/ViewRenderer.tsx:191`,
   `src/frontend/src/components/FigureView.tsx:73`); no inline script in
   `index.html` (only `<script type="module" src="/src/main.tsx">`, rewritten to
   a hashed asset by `vite build`).
-- **`'unsafe-eval'` is REQUIRED (verified, not speculative):** p5.js figures
-  import `p5` directly (`src/frontend/src/components/FigureMount.tsx:63`
-  `await import("p5")`), and the installed `p5` build uses `new Function` and
-  `WebAssembly` internally (`node_modules/p5/lib/p5.esm.js`, 4 matches). `new
-  Function` is NOT covered by the narrower `'wasm-unsafe-eval'` — it needs full
-  `'unsafe-eval'`. So an enforced prod `script-src` that keeps p5 figures working
-  must include `'unsafe-eval'`. This is the central strictness trade-off; see
-  Open question 5 (it intersects the "bias toward strict" preference) and the
-  NOT-in-scope figure-isolation item. Note `'self' 'unsafe-eval'` still blocks
-  injected inline `<script>`/handlers (no `'unsafe-inline'`) and foreign-origin
-  script tags — `'unsafe-eval'` only re-permits `eval`/`new Function`/WASM, so
-  this is a partial, deliberate relaxation, not a no-op policy.
+- **Figure runtimes are mostly clean; p5's `eval`/WASM is opt-in and lazy.**
+  `FigureMount.tsx:63-70` imports `p5`/`three`/`d3` on demand. Verified:
+  `import("three")` resolves to the classic `three.module.js` (0 eval/WASM — the
+  WebGPU builds have it but aren't imported); `d3` is clean. `p5` 2.3.0 contains
+  `new Function`/`WebAssembly` at exactly 4 sites
+  (`node_modules/p5/lib/p5.esm.js:61836,62351,120146,134111`), but **all four are
+  inside opt-in feature methods, not module top-level**: the "Strands"
+  JS-shader-hook system, `loadFilterShader` with JS (not GLSL), and HarfBuzz
+  text-shaping for 3D text (`textToModel`). A normal 2D/3D sketch never triggers
+  them. So strict `script-src 'self'` works for the vast majority of figures;
+  only a figure using those specific advanced APIs would be blocked. **Report-Only
+  reveals which real figures (if any) hit them** — the right per-figure response
+  is to iframe-isolate *that* figure (Open question 5), not to weaken the
+  app-wide policy. (`new Function` needs `'unsafe-eval'`; HarfBuzz WASM needs
+  `'wasm-unsafe-eval'` — noted so the routine can map a report to the right
+  narrow token if isolation is declined for a given figure.)
 - `style-src 'unsafe-inline'`: React inline `style={{…}}` props +
   `SourceViewOverlay.tsx:96` injected `<style>`. Lower-risk than script
   inlining; a nonce/hash pass to remove it is NOT in scope.
@@ -219,9 +223,9 @@ mistakes early.
   noisy-output rule).
 - Doctest `test/lib/csp.doctest.md`: assert both modes contain `report-uri
   /api/csp-report`, `frame-src 'self' https://www.youtube-nocookie.com`, and the
-  Deepgram/OpenAI `connect-src` entries; assert prod `script-src` is `'self'
-  'unsafe-eval'` and NOT `'unsafe-inline'`; assert dev `script-src` additionally
-  contains `'unsafe-inline'`. This encodes the done-when (and pins the report
+  Deepgram/OpenAI `connect-src` entries; assert prod `script-src` is exactly
+  `'self'` (no `'unsafe-eval'`/`'unsafe-inline'`); assert dev `script-src`
+  additionally contains `'unsafe-inline' 'unsafe-eval'`. This encodes the done-when (and pins the report
   directive so it can't be silently dropped — codex's top finding).
 
 ### Chunk 2 — wire prod (Report-Only) via the onSend hook
@@ -250,30 +254,28 @@ part of this plan's shipped unit — see Rollout shape.
 ## Subplans
 
 None. No sub-question here needs its own design step — the directive set is
-fully determined by the verified inventory. The one strictness trade-off (p5
-requiring `'unsafe-eval'`) is a settled decision, not an open research question
-(see Open question 5 for the strict-isolation alternative, deferred).
+fully determined by the verified inventory. The figure-runtime strictness
+question is resolved by shipping strict `script-src 'self'` and letting
+Report-Only identify the rare advanced-p5 figure that needs isolation (Open
+question 5).
 
 ## Failure modes
 
-**Resolved (was a critical gap):** an enforced `script-src 'self'` *would* break
-p5.js figures — verified, not hypothetical: `FigureMount.tsx:63` imports `p5`,
-and `node_modules/p5/lib/p5.esm.js` uses `new Function` + `WebAssembly`. The plan
-resolves this in the directive set by including `'unsafe-eval'` in prod
-`script-src` (a deliberate, scoped relaxation — still blocks inline + foreign
-scripts). The remaining *unverified* risk is whether `'unsafe-eval'` is
-*sufficient* (vs. some path also needing `'wasm-unsafe-eval'` or a same-origin
-worker), and whether box-authored views trip anything else. *Mitigation:* the
-plan ships Report-Only (cannot break anything), and promotion to enforcing is
-gated on exercising a p5 figure + a three/d3 figure + a sandbox view under
-Report-Only and confirming the only `script-src` reports are the expected
-`'unsafe-eval'` ones (already permitted), with `'wasm-unsafe-eval'` added only if
-a report demands it.
+**Bounded (was framed as a critical gap):** an enforced `script-src 'self'`
+breaks only the narrow set of figures using p5's opt-in eval/WASM features
+(Strands shaders, JS filter shaders, HarfBuzz 3D-text — verified the only sites
+in `p5.esm.js`; `three`-classic and `d3` are clean). A basic 2D/3D figure, a
+sandbox view, and all app code run fine under `'self'`. *Mitigation:* the plan
+ships Report-Only (cannot break anything); the Chunk 4 routine reads real reports
+and, per figure that trips it, the response is iframe-isolation (Open question 5)
+or — if isolation is declined for that figure — a scoped `'unsafe-eval'` /
+`'wasm-unsafe-eval'`, never an app-wide loosening. A broken figure would
+otherwise be a silent blank pane; the report makes it visible.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| p5 figure needs more than `'unsafe-eval'` (e.g. `'wasm-unsafe-eval'`) → blocked when enforced | No (gate: exercise a p5 figure under report-only) | Report-Only won't block; promotion gated on report review | Reported via /api/csp-report (once report directives wired) |
-| Box-authored view does something even `'self' 'unsafe-eval'` forbids | No | Report-Only + gate | Reported, not silent |
+| A figure uses p5 Strands/filter-shader/3D-text → `script-src 'self'` blocks its `new Function`/WASM | No (gate: exercise such a figure under report-only) | Report-Only won't block; routine surfaces it; isolate or scope-exempt that figure | Reported via /api/csp-report |
+| Box-authored view does something `script-src 'self'` forbids | No | Report-Only + routine | Reported, not silent |
 | A real image origin is non-HTTPS (`http:`) and `img-src https:` blocks it | Partial (csp.doctest asserts directives) | `img-src` allows `https:` only; broken img shows the existing `Image` error placeholder | Clear (placeholder + report) |
 | FROZEN_CSP accidentally overwritten by the app hook | Yes (add: route doctest asserts frozen response still carries `sandbox` CSP) | Hook yields when a CSP header is already present | Clear (test fails loudly) |
 | A new external API added later (e.g. a new STT provider) without updating `connect-src` | No (inherent) | Report-Only in dev surfaces it during development | Reported |
@@ -315,13 +317,13 @@ a report demands it.
   without our nonce; not worth fighting. Dev stays relaxed Report-Only.
 - **Promoting to enforcing in this plan's shipped unit.** Gated on real
   Report-Only data (see Rollout). Intentionally a follow-up.
-- **Iframe-isolating figures to drop `'unsafe-eval'` from the app `script-src`**
-  (Open question 5). The strictest end-state runs p5/three/d3 figure modules
-  inside a sandboxed same-origin iframe with its own looser CSP, letting the
-  top-level app keep `script-src 'self'` (no eval). That's a real refactor of the
-  inline-`import()` figure mount (`FigureMount.tsx`/`FigureView.tsx`) and belongs
-  in its own plan. Deferred — but it's the recommended path to reclaim full
-  script strictness, not a permanent write-off.
+- **Iframe-isolating advanced-p5 figures** (Open question 5). The app ships
+  strict `script-src 'self'`; if Report-Only shows a real figure using p5
+  Strands/filter-shaders/3D-text (which need `eval`/WASM), the fix is to run
+  *that* figure's module inside a sandboxed same-origin iframe with its own looser
+  CSP — a refactor of the inline-`import()` figure mount
+  (`FigureMount.tsx`/`FigureView.tsx`) that belongs in its own plan. Deferred and
+  only triggered on demand — most figures need nothing here.
 
 ## Open design questions
 
@@ -345,12 +347,14 @@ a report demands it.
    with the required `Reporting-Endpoints` companion header for `report-to` (now
    folded into the directive set above), so the report sink actually receives
    violations rather than just lighting up the console.
-5. **`'unsafe-eval'` in prod `script-src` vs iframe-isolating figures.** The
-   verified p5 requirement forces a choice: (a) accept `script-src 'self'
-   'unsafe-eval'` app-wide now (this plan's lean — pragmatic, still blocks inline
-   + foreign scripts), or (b) isolate figures in a sandboxed iframe so the app
-   keeps `script-src 'self'` (stricter, but a separate refactor — see NOT in
-   scope). Given the boxholder's bias toward strict, (b) is the eventual target;
+5. **Handling a figure that trips strict `script-src 'self'`.** *Decided toward
+   strict:* ship `'self'` (no eval); p5's eval/WASM is opt-in (Strands/filter
+   shaders, 3D-text) and most figures never hit it. If Report-Only flags a real
+   advanced-p5 figure, the response is to iframe-isolate that figure (see NOT in
+   scope), falling back to a scoped `'unsafe-eval'`/`'wasm-unsafe-eval'` only if
+   isolation is declined — never an app-wide loosening. Matches the bias toward
+   strict at near-zero up-front cost. Was previously framed as needing app-wide
+   `'unsafe-eval'`; corrected after confirming the eval paths are lazy.
    (a) is the shippable now. **This is the main decision I want the boxholder's
    call on.**
 
@@ -394,12 +398,12 @@ and acts. Rather than rely on a human remembering to `curl` the log, schedule it
   never edits the policy itself. This keeps the irreversible-ish prod hardening a
   reviewed decision, not a silent cron side effect.
 - **The hardening ratchet.** Once a directive class has been clean for the
-  window, that class can be promoted. The natural ratchet order (loosest-value
-  first, so each step is low-risk): flip the *enforcing* header on with the
-  already-correct directives, keeping `script-src 'self' 'unsafe-eval'`; then, if
-  Open question 5 is resolved toward figure-isolation, tighten `script-src` to
-  drop `'unsafe-eval'`; then revisit `img-src https:`. Each ratchet step is its
-  own small reviewed commit informed by the routine's digest.
+  window, that class can be promoted. The natural ratchet order (low-risk first):
+  flip the *enforcing* header on with the full strict directive set (including
+  `script-src 'self'`); if a real advanced-p5 figure surfaces, isolate it (Open
+  question 5) rather than stall the flip; then, as a later step, revisit
+  tightening `img-src https:` toward proxy-only. Each ratchet step is its own
+  small reviewed commit informed by the routine's digest.
 - **Open sub-question:** where the digest lands — a box question card, a feedback
   item, or a chat ping to the boxholder. *Lean: a box question card* so it shows
   up in the normal review surface with the proposed diff attached. Settle when
@@ -424,9 +428,11 @@ rather than a one-time manual gate that gets forgotten.
   across real traffic (chat with images, dictation/realtime voice, a p5 figure, a
   sandbox view, a logged-in avatar) with **zero** unexpected violations — flip the
   prod header name from `Content-Security-Policy-Report-Only` to
-  `Content-Security-Policy` (adding `'wasm-unsafe-eval'` to `script-src` only if a
-  figure reported needing it beyond `'unsafe-eval'`). One small reviewed commit,
-  proposed by the routine, confirmed by a human/agent.
+  `Content-Security-Policy`, keeping `script-src 'self'`. If a real advanced-p5
+  figure reported a `script-src` violation, isolate that figure first (Open
+  question 5) rather than loosen the policy. One small reviewed commit, proposed
+  by the routine, confirmed by a human/agent (the decided "propose, human
+  confirms" mode).
 - **No data migration** — this changes no on-disk shape.
 - **Docs:** add a short present-tense reference note (e.g.
   `docs/content-security-policy.md`) describing the policy, the dev/prod split,
