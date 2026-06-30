@@ -20,12 +20,18 @@ export interface VideoEmbedInfo {
  *   youtu.be/ID                     (id is the first path segment)
  *   youtube.com/embed/ID            (id follows /embed/)
  *   youtube.com/shorts/ID           (id follows /shorts/)
+ *   youtube.com/live/ID             (id follows /live/)
+ * `music.` and `m.` host prefixes and the nocookie domain are all accepted.
  * Returns null if the host looks like YouTube but no plausible id is present,
  * so the caller can fall back to normal image/link rendering.
  */
 function youtubeId(url: URL): string | null {
   const host = url.hostname.replace(/^www\./, "").toLowerCase();
-  const isYoutube = host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com";
+  const isYoutube =
+    host === "youtube.com" ||
+    host === "m.youtube.com" ||
+    host === "music.youtube.com" ||
+    host === "youtube-nocookie.com";
   const isShort = host === "youtu.be";
   if (!isYoutube && !isShort) return null;
 
@@ -36,7 +42,7 @@ function youtubeId(url: URL): string | null {
     id = url.searchParams.get("v");
   } else {
     const segments = url.pathname.split("/").filter(Boolean);
-    if (segments[0] === "embed" || segments[0] === "shorts") {
+    if (segments[0] === "embed" || segments[0] === "shorts" || segments[0] === "live") {
       id = segments[1] ?? null;
     }
   }

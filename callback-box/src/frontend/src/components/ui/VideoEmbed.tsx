@@ -23,7 +23,7 @@ export function VideoEmbed({ embedUrl, title, className }: VideoEmbedProps) {
           title={title}
           loading="lazy"
           className="absolute inset-0 h-full w-full border-0"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allow="autoplay; encrypted-media; picture-in-picture"
           allowFullScreen
         />
       </div>

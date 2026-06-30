@@ -31,6 +31,16 @@ JSON.stringify(detectVideoEmbed("https://m.youtube.com/watch?v=dQw4w9WgXcQ&t=42s
 => {"provider":"youtube","embedUrl":"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"}
 ```
 
+The `/live/` path and the `music.` subdomain are also recognized:
+
+```ts
+JSON.stringify(detectVideoEmbed("https://www.youtube.com/live/dQw4w9WgXcQ"))
+=> {"provider":"youtube","embedUrl":"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"}
+
+JSON.stringify(detectVideoEmbed("https://music.youtube.com/watch?v=dQw4w9WgXcQ"))
+=> {"provider":"youtube","embedUrl":"https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ"}
+```
+
 ## Fallback to image rendering
 
 A YouTube-looking URL with no extractable (or malformed) id returns `null`, so the caller renders the normal image/link instead of a broken embed:
