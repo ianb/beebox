@@ -83,7 +83,7 @@ export function DashboardPage() {
         </Stack>
       </Column>
 
-      <SystemInfo status={status} />
+      <SystemInfo status={status} version={healthQuery.data?.version ?? null} />
     </Column>
   );
 }
