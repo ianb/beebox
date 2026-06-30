@@ -8,6 +8,8 @@ import { useCallback, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Markdown, type MarkdownComponentOverrides } from "../Markdown";
 import { Image } from "../ui/Image";
+import { VideoEmbed } from "../ui/VideoEmbed";
+import { detectVideoEmbed } from "../../lib/video-url";
 import { FileView } from "../FileView";
 import { externalImageProxyUrl, parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { useBustedImageSrc } from "../../lib/file-version";
@@ -119,6 +121,12 @@ function makeChatMarkdownComponents(
   { boxSlug, onZoomView }: { boxSlug: string | undefined; onZoomView?: OnZoomView },
 ): MarkdownComponentOverrides {
   function ChatImg({ src, alt }: { src?: string; alt?: string }) {
+    // A video URL renders an embed, mirroring the default `makeImg` path —
+    // chat overrides `Img`, so the detection has to live here too.
+    const video = src ? detectVideoEmbed(src) : null;
+    if (video !== null) {
+      return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
+    }
     const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
     return <ChatInlineImage src={resolved} alt={alt || ""} />;
   }
