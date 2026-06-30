@@ -1540,16 +1540,19 @@ checkbox (the common action) with a `⋯` menu exposing all four statuses
 (pending/done/cancelled/deferred), so the rarer cancelled/deferred states are
 reachable from the UI.
 
-### Procedure validation completion (D5) — mostly DONE
+### Procedure validation completion (D5) — DONE
 
-Two of the three landed. `src/core/procedure/engine-phase.ts` now does
-**model-judged instruction validation** against the step's git diff (no longer a
-pass-by-default stub), and `engine-step.ts` / `engine-run-phase.ts` implement
-**`severity: review` auto-retry** — a bounded self-heal that re-invokes the agent
-with the failure context (cost-ceiling guarded) and gates the step when it can't
-heal. **Remaining:** resumable runs from a failed step — re-entering a procedure
-at the failed step rather than re-running the whole thing; not implemented. Small
-remainder, no longer "its own plan."
+All three landed. `src/core/procedure/engine-phase.ts` does **model-judged
+instruction validation** against the step's git diff (no longer a pass-by-default
+stub), and `engine-step.ts` / `engine-run-phase.ts` implement **`severity: review`
+auto-retry** — a bounded self-heal that re-invokes the agent with the failure
+context (cost-ceiling guarded) and gates the step when it can't heal. The final
+piece, **resumable runs from a failed step**, now ships as `cb procedure resume
+[run-dir]` (`resumeProcedure` in `engine.ts`): it re-enters the existing run dir
+at the first not-`completed`/`skipped` step — the failed one — re-running it and
+everything after while leaving earlier completed/skipped steps untouched. Run
+orchestration (`runSteps`/`finalizeRun`) is shared with `startProcedure` via
+`engine-orchestrate.ts`. See `docs/procedure-implementation.md`.
 
 ### Retrospective integration (D6) — DONE (procedure, not code)
 

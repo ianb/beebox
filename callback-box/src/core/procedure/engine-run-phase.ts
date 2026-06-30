@@ -12,10 +12,10 @@ import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
 import { getHead } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
-import { runShell } from "./shell.js";
 import { MODEL_MAP, type ParsedStep } from "./engine-types.js";
 import type { ExecuteStepParams } from "./engine-step.js";
 import {
+  executePhaseShells,
   executeValidation,
   ensureGitClean,
   buildContextBlock,
@@ -35,6 +35,13 @@ export interface ValidateOutcome {
   review?: string;
 }
 
+/** A non-zero exit from a run-phase shell — gates the step like an abort. */
+export interface RunShellFailure {
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+}
+
 /** Result of running (and validating) a step's run phase. */
 export interface RunAndValidateResult {
   gitRef: string;
@@ -43,6 +50,8 @@ export interface RunAndValidateResult {
   validateResult: ValidateOutcome | undefined;
   /** True when a `severity: review` failure couldn't be healed and must gate. */
   reviewExhausted: boolean;
+  /** Set when a run-phase shell exited non-zero — the step fails objectively. */
+  runFailure?: RunShellFailure;
 }
 
 type RunPhaseParams = ExecuteStepParams & {
@@ -130,29 +139,38 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
 
 /**
  * Execute the run phase's shell commands. Run exactly once per step (never on a
- * review-retry).
+ * review-retry). Shells run in order and short-circuit on the first non-zero
+ * exit, which surfaces as a `runFailure` that fails the step (an exit of
+ * `$CHECK_SKIP` is not a failure — the step's work simply opted out).
  */
-async function runRunShells(params: ExecuteStepParams): Promise<{ runStdout: string | undefined }> {
+async function runRunShells(
+  params: ExecuteStepParams
+): Promise<{ runStdout: string | undefined; runFailure: RunShellFailure | undefined }> {
   const { ctx, boxRoot, step } = params;
   const run = step.run!;
-  let runStdout: string | undefined;
-
-  for (const script of run.shells) {
-    ctx.writeLine(fmt.dim("  Running shell command..."));
-    const result = await runShell(boxRoot, script);
-    runStdout = result.stdout;
-
-    if (result.exitCode !== 0 && !result.skipped) {
-      ctx.writeLine(fmt.fail(`Shell command failed (exit ${result.exitCode})`));
-      if (result.stderr) {
-        ctx.writeLine(fmt.dim(`  ${result.stderr}`));
-      }
-    } else if (result.stdout) {
-      ctx.writeLine(fmt.dim(`  ${result.stdout}`));
-    }
+  if (run.shells.length === 0) {
+    return { runStdout: undefined, runFailure: undefined };
   }
 
-  return { runStdout };
+  ctx.writeLine(fmt.dim("  Running shell command..."));
+  const result = await executePhaseShells(boxRoot, run);
+  const runStdout = result.stdout || undefined;
+
+  if (result.exitCode !== 0 && !result.skipped) {
+    ctx.writeLine(fmt.fail(`Shell command failed (exit ${result.exitCode})`));
+    if (result.stderr) {
+      ctx.writeLine(fmt.dim(`  ${result.stderr}`));
+    }
+    return {
+      runStdout,
+      runFailure: { exitCode: result.exitCode, stdout: result.stdout, stderr: result.stderr },
+    };
+  }
+
+  if (result.stdout) {
+    ctx.writeLine(fmt.dim(`  ${result.stdout}`));
+  }
+  return { runStdout, runFailure: undefined };
 }
 
 /**
@@ -192,13 +210,19 @@ export async function runAndValidate(
   const baseline = await getHead(boxRoot);
 
   let { sessionId } = await runRunAgents({ ...params });
-  const { runStdout } = await runRunShells(params);
+  const { runStdout, runFailure } = await runRunShells(params);
   let gitRef = await ensureGitClean({
     boxRoot,
     stepId: step.id,
     procedureName: procedure.name,
     ...(sessionId && { sessionId }),
   });
+
+  // A run shell exited non-zero — the step failed objectively. Commit whatever
+  // partial work happened (above) for provenance, then gate without validating.
+  if (runFailure) {
+    return { gitRef, sessionId, runStdout, validateResult: undefined, reviewExhausted: false, runFailure };
+  }
 
   if (!step.validate) {
     return { gitRef, sessionId, runStdout, validateResult: undefined, reviewExhausted: false };

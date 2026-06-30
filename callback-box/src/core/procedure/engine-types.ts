@@ -22,6 +22,8 @@ export interface ProcedureOptions {
   force?: boolean;
   /** Run only this step (by id), skip all others */
   step?: string;
+  /** Run this step (by id) and every step after it — used by resume */
+  fromStep?: string;
   /** Runtime directive string passed to procedure agents */
   directive?: string;
   /** Override the agent factory (default: createAgent from agent.ts) */
