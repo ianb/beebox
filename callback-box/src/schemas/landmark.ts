@@ -60,9 +60,15 @@ export type LandmarkLinkData = z.infer<typeof LandmarkLink>;
  * landmark dir); any other `${field}` reads that field from the matched
  * card's frontmatter (dotted paths allowed, e.g. `${exif.camera}`).
  * When omitted, `template-ref` defaults to `${path}`.
+ *
+ * `group` is the title of a collapsible submenu. When present, this
+ * expand's matches stay grouped under that title (collapsed shows the
+ * title + a child count) instead of flattening into the landmark's flat
+ * link list. When omitted, results flatten inline as before.
  */
 export const LandmarkExpand = z.object({
   query: z.string(),
+  group: z.string().optional(),
   order: LandmarkOrder.optional(),
   "template-ref": z.string().optional(),
   "template-label": z.string().optional(),
@@ -141,12 +147,16 @@ navigation:
   expand:                   # optional templated fan-out
     - query: "*.recipe.card"  # glob, like cb ls
       order: modified-desc    # alphabetical (default) | modified-desc | modified-asc
+    - query: "**/*.image.card"
+      group: Images           # optional: render matches as a collapsible submenu titled "Images"
   chat-app:                 # optional chat-feature seed for chats opened here
     narration: "on"
     prose: "off"
 \`\`\`
 
 In an \`expand\`, \`template-ref\` / \`template-label\` are placeholder strings substituted per match: \`\${path}\` is the matched card's path, any other \`\${field}\` reads that field from the matched card's frontmatter. When omitted, \`template-ref\` defaults to \`\${path}\`. (\`template-ref\` is a \`\${…}\` substitution *pattern*, not a card ref — it is not stored under a \`ref\` key.)
+
+Add \`group: <title>\` to an \`expand\` to keep its matches grouped as a **collapsible submenu** instead of flattening them into the flat link list. Collapsed, the group shows its title and a child count; expanded, it reveals the matched links. Use this for "all the X" globs (e.g. \`group: Images\` over \`**/*.image.card\`) that would otherwise flood the flat list. An expand without \`group\` flattens inline as before. Group children dedup within the group only — they are independent of the flat list and of other groups.
 
 **Don't add a description or purpose field.** A bookmark seen many times shouldn't carry a paragraph explaining itself. If a landmark genuinely needs prose, write a doc card and link to it.
 

@@ -29,6 +29,36 @@ export interface ResolvedLink {
   exists: boolean;
 }
 
+/**
+ * A named `expand` rendered as a collapsible submenu. `count` is the total
+ * number of matches; `children` may be capped (see GROUP_CHILD_CAP), in
+ * which case `count > children.length` and the surface notes the overflow.
+ */
+export interface ResolvedGroup {
+  /** Submenu title (the expand's `group`). */
+  label: string;
+  /** Resolved child links, capped at GROUP_CHILD_CAP. */
+  children: ResolvedLink[];
+  /** Total match count (may exceed `children.length` when capped). */
+  count: number;
+}
+
+/** Flat links plus named groups for one landmark's navigation role. */
+export interface ResolvedNavigation {
+  /** Static links + unnamed expands, deduped, in source order. */
+  links: ResolvedLink[];
+  /** Named expands, each kept as a collapsible group. */
+  groups: ResolvedGroup[];
+}
+
+/**
+ * Max child links resolved + shipped per group. The count stays exact; a
+ * group with more matches renders its first GROUP_CHILD_CAP children and a
+ * "+N more" affordance. Keeps a huge glob from ballooning the wire payload
+ * (the `list` endpoint resolves every landmark in the box).
+ */
+export const GROUP_CHILD_CAP = 50;
+
 export interface ResolveOptions {
   /** Absolute path to the landmark card's directory. */
   landmarkDir: string;
@@ -39,28 +69,53 @@ export interface ResolveOptions {
 const PLACEHOLDER_RE = /\${([^}]+)}/g;
 
 /**
- * Resolve a landmark's navigation links. Hand-listed links come first,
- * then expanded links; duplicates by ref are dropped (first wins). A
- * landmark without a `navigation` role resolves to no links.
+ * Resolve a landmark's navigation into a flat link list plus named groups.
+ *
+ * Flat list: hand-listed links come first, then *unnamed* expands;
+ * duplicates by ref are dropped (first wins). Each expand carrying a
+ * `group` instead becomes a collapsible group, deduped within itself and
+ * independent of the flat list. A landmark without a `navigation` role
+ * resolves to no links and no groups.
  */
 export async function resolveLandmark(
   navigation: LandmarkNavigationData | undefined,
   options: ResolveOptions,
-): Promise<ResolvedLink[]> {
-  const out: ResolvedLink[] = [];
+): Promise<ResolvedNavigation> {
+  const links: ResolvedLink[] = [];
+  const groups: ResolvedGroup[] = [];
   const seen = new Set<string>();
-  if (navigation === undefined) return out;
+  if (navigation === undefined) return { links, groups };
 
   for (const link of navigation.links ?? []) {
     if (link.ref === "") continue;
     const resolved = await buildLink({ rawRef: link.ref, label: link.label ?? null, options });
-    addUnique(resolved, { out, seen });
+    addUnique(resolved, { out: links, seen });
   }
   for (const expand of navigation.expand ?? []) {
+    if (expand.group !== undefined && expand.group !== "") {
+      groups.push(await resolveGroup(expand, options));
+      continue;
+    }
     const expanded = await resolveExpand(expand, options);
-    for (const link of expanded) addUnique(link, { out, seen });
+    for (const link of expanded.links) addUnique(link, { out: links, seen });
   }
-  return out;
+  return { links, groups };
+}
+
+/**
+ * Resolve a named expand into a group: dedup its children within the group
+ * only, cap the resolved children at GROUP_CHILD_CAP, but keep `count`
+ * exact (the full match total before capping).
+ */
+async function resolveGroup(
+  expand: LandmarkExpandData,
+  options: ResolveOptions,
+): Promise<ResolvedGroup> {
+  const { links, total } = await resolveExpand(expand, { ...options, limit: GROUP_CHILD_CAP });
+  const children: ResolvedLink[] = [];
+  const seen = new Set<string>();
+  for (const link of links) addUnique(link, { out: children, seen });
+  return { label: expand.group ?? "", children, count: total };
 }
 
 interface DedupAccumulator {
@@ -74,20 +129,28 @@ function addUnique(link: ResolvedLink, acc: DedupAccumulator): void {
   acc.out.push(link);
 }
 
+interface ExpandResult {
+  /** Resolved links, capped at `limit` when one is given. */
+  links: ResolvedLink[];
+  /** Total match count, before any `limit` cap. */
+  total: number;
+}
+
 async function resolveExpand(
   expand: LandmarkExpandData,
-  options: ResolveOptions,
-): Promise<ResolvedLink[]> {
-  if (expand.query === "") return [];
+  options: ResolveOptions & { limit?: number },
+): Promise<ExpandResult> {
+  if (expand.query === "") return { links: [], total: 0 };
   const order = parseOrder(expand.order);
   const matchesRel = await runQuery(expand.query, options.landmarkDir);
   const sorted = await sortMatches(matchesRel, { order, cwd: options.landmarkDir });
+  const capped = options.limit === undefined ? sorted : sorted.slice(0, options.limit);
 
   const refTpl = expand["template-ref"] ?? "${path}";
   const labelTpl = expand["template-label"] ?? "";
 
   const out: ResolvedLink[] = [];
-  for (const matchRel of sorted) {
+  for (const matchRel of capped) {
     let frontmatter: Record<string, unknown> | null = null;
     if (needsLookup(refTpl) || needsLookup(labelTpl)) {
       frontmatter = await loadCardFrontmatter(path.join(options.landmarkDir, matchRel));
@@ -101,7 +164,7 @@ async function resolveExpand(
       options,
     }));
   }
-  return out;
+  return { links: out, total: sorted.length };
 }
 
 /** True if the template references any field beyond the special `${path}`. */
