@@ -76,6 +76,18 @@ Shell scripts have three outcomes:
 
 The `$CHECK_SKIP` environment variable is set by the engine.
 
+A failing shell fails its step in every phase — including the **run** phase: a
+non-zero run shell fails the step (it does not silently complete) and halts the
+procedure, with the exit code and both output streams recorded on the run card's
+`run.stdout` so `cb procedure status` shows why. Multiple `shells:` entries in a
+phase run in order and short-circuit on the first failure.
+
+Scripts run under **`set -euo pipefail`** (`shell.ts`): `-e` exits on the first
+failing command, `-u` turns a reference to an unset variable (usually a typo'd
+name) into a hard error instead of a silent empty expansion, and `pipefail` fails
+a pipeline when any stage fails rather than only its last. Use `${VAR:-default}`
+for genuinely optional variables.
+
 ### Agent Invocations
 
 `<agent>` invokes Claude Code with the text as the prompt. The engine prepends a context block with working directory, date, procedure name, and step ID.

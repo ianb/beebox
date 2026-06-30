@@ -334,6 +334,205 @@ nope.txt: false
 await box.cleanup();
 ```
 
+## A failing run shell fails the step
+
+A non-zero exit from a run-phase shell fails the step (it does not silently
+"complete") and halts the procedure. The failure detail — exit code plus both
+output streams — is recorded on the step's run record so `cb procedure status`
+shows why.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/runfail.procedure.card", `---
+name: runfail
+description: Run shell exits non-zero
+steps:
+  - id: work
+    description: Run shell fails
+    run:
+      shells:
+        - |
+          echo "doing work"
+          echo "boom" >&2
+          exit 3
+  - id: after
+    description: Should not run
+    run:
+      shells:
+        - |
+          echo "nope" > box/output/nope.txt
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add runfail procedure");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "runfail" });
+print(`success: ${result.success}`);
+print(`error: ${result.error}`);
+
+// The later step never ran.
+const files = await box.list("box/output");
+print(`nope.txt: ${files.includes("nope.txt")}`);
+
+// Run card: step failed, with the failure detail captured.
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find(f => f.includes("runfail_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`step status: ${run.steps[0].status}`);
+print(`procedure status: ${run.status}`);
+print(`records exit code: ${run.steps[0].run.stdout.includes("exit 3")}`);
+print(`records stderr: ${run.steps[0].run.stdout.includes("boom")}`);
+=>
+success: false
+error: Procedure runfail failed at step: work
+nope.txt: false
+step status: failed
+procedure status: failed
+records exit code: true
+records stderr: true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Strict shell mode catches unset variables (nounset)
+
+Shells run under `set -euo pipefail`. `-u` turns a reference to an unset
+variable (often a typo'd name) into a hard error instead of a silent empty
+expansion — surfaced as a clear `unbound variable` message.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/nounset.procedure.card", `---
+name: nounset
+description: Typo'd variable name
+steps:
+  - id: typo
+    description: References an unset variable
+    run:
+      shells:
+        - |
+          echo "count is $COUNNT"
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add nounset procedure");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "nounset" });
+print(`success: ${result.success}`);
+
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find(f => f.includes("nounset_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`step status: ${run.steps[0].status}`);
+print(`mentions unbound: ${run.steps[0].run.stdout.toLowerCase().includes("unbound variable")}`);
+=>
+success: false
+step status: failed
+mentions unbound: true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Strict shell mode catches mid-pipe failures (pipefail)
+
+`pipefail` makes a pipeline fail when any stage fails, not just the last —
+so `false | cat` fails the step instead of masking the error behind `cat`'s
+success. Combined with `-e`, the script stops at the failing pipe.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/pipe.procedure.card", `---
+name: pipe
+description: Failing command mid-pipe
+steps:
+  - id: piped
+    description: A failing stage in a pipeline
+    run:
+      shells:
+        - |
+          false | cat
+          echo "reached" > box/output/reached.txt
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add pipe procedure");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "pipe" });
+print(`success: ${result.success}`);
+
+// The script stopped at the failing pipe — the later command never ran.
+const files = await box.list("box/output");
+print(`reached.txt: ${files.includes("reached.txt")}`);
+
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find(f => f.includes("pipe_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`step status: ${run.steps[0].status}`);
+=>
+success: false
+reached.txt: false
+step status: failed
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Precheck failure records its output
+
+When a precheck exits non-zero, the step fails and the precheck's stdout is
+captured on the run card so the reason is inspectable after the fact.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("config/procedures/precheck-err.procedure.card", `---
+name: precheck-err
+description: Precheck fails with a message
+steps:
+  - id: gated
+    description: Precheck reports why it failed
+    precheck:
+      shells:
+        - |
+          echo "missing prerequisite: config not found"
+          exit 1
+    run:
+      shells:
+        - |
+          echo "ran" > box/output/ran.txt
+---
+`);
+await box.write("box/output/.gitkeep", "");
+box.commitAll("Add precheck-err procedure");
+
+const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
+const result = await startProcedure({ ctx, procedureNameOrPath: "precheck-err" });
+print(`success: ${result.success}`);
+
+const runs = await box.list("procedure/runs");
+const runDir = runs.split("\n").find(f => f.includes("precheck-err_"));
+const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
+print(`step status: ${run.steps[0].status}`);
+print(`precheck status: ${run.steps[0].precheck.status}`);
+print(`records reason: ${run.steps[0].precheck.stdout.includes("missing prerequisite")}`);
+=>
+success: false
+step status: failed
+precheck status: fail
+records reason: true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Dry run previews without executing
 
 ```ts

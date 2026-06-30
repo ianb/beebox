@@ -14,7 +14,7 @@ import {
 } from "./engine-types.js";
 import { updateStepInRunCard } from "./engine-run-card.js";
 import { executePhaseShells } from "./engine-phase.js";
-import { runAndValidate, type ValidateOutcome } from "./engine-run-phase.js";
+import { runAndValidate, type ValidateOutcome, type RunShellFailure } from "./engine-run-phase.js";
 
 /**
  * Parameters for executeStep
@@ -77,10 +77,11 @@ export async function executeStep(
   }
 
   // ── Run + validate (with severity:review auto-retry) ──
-  const { gitRef, sessionId, runStdout, validateResult, reviewExhausted } = await runAndValidate({
-    ...params,
-    precheckOutput: precheck.output,
-  });
+  const { gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure } =
+    await runAndValidate({
+      ...params,
+      precheckOutput: precheck.output,
+    });
 
   // ── Record results ──
   return recordStepResults({
@@ -90,6 +91,7 @@ export async function executeStep(
     runStdout,
     validateResult,
     reviewExhausted,
+    runFailure,
   });
 }
 
@@ -190,6 +192,8 @@ interface RecordStepResultsParams {
   validateResult: ValidateOutcome | undefined;
   /** A `severity: review` failure that couldn't be healed — fails the step. */
   reviewExhausted: boolean;
+  /** A non-zero exit from a run-phase shell — fails the step objectively. */
+  runFailure: RunShellFailure | undefined;
 }
 
 /**
@@ -198,15 +202,16 @@ interface RecordStepResultsParams {
 async function recordStepResults(
   args: RecordStepResultsParams
 ): Promise<"completed" | "failed"> {
-  const { params, gitRef, sessionId, runStdout, validateResult, reviewExhausted } = args;
+  const { params, gitRef, sessionId, runStdout, validateResult, reviewExhausted, runFailure } = args;
   const { ctx, boxRoot, step, procedure, runCardPath } = params;
 
-  // A step fails when an `abort` validation failed, or when a `review` failure
-  // exhausted its retries (the auto-retry in runAndValidate makes review gate).
+  // A step fails when a run shell exited non-zero, when an `abort` validation
+  // failed, or when a `review` failure exhausted its retries (the auto-retry in
+  // runAndValidate makes review gate).
   const validationGated =
     validateResult?.status === "fail" && step.validate?.severity === "abort";
   const stepUpdate: StepUpdate = {
-    status: validationGated || reviewExhausted ? "failed" : "completed",
+    status: runFailure !== undefined || validationGated || reviewExhausted ? "failed" : "completed",
     completedAt: new Date().toISOString(),
   };
 
@@ -220,6 +225,12 @@ async function recordStepResults(
   }
   if (runStdout) {
     runResult.stdout = runStdout;
+  }
+  if (runFailure) {
+    // Capture the failure detail (exit code + both streams) in the run card so
+    // `cb procedure status` and later inspection show why the step failed.
+    const detail = [runFailure.stdout, runFailure.stderr].filter(Boolean).join("\n");
+    runResult.stdout = `Shell command failed (exit ${runFailure.exitCode})${detail ? `:\n${detail}` : ""}`;
   }
   stepUpdate.run = runResult;
 
@@ -236,14 +247,15 @@ async function recordStepResults(
     stepUpdate.validate = valUpdate;
   }
 
+  const succeeded = stepUpdate.status !== "failed";
+
   await updateStepInRunCard({ runCardPath, stepId: step.id, update: stepUpdate });
   await stageAll(boxRoot);
   await commit(boxRoot, {
-    message: `[procedure] Complete step: ${step.id}`,
+    message: `[procedure] ${succeeded ? "Complete" : "Failed"} step: ${step.id}`,
     trailers: { Procedure: procedure.name, Step: step.id },
   });
 
-  const succeeded = stepUpdate.status !== "failed";
   if (succeeded) {
     ctx.writeLine(fmt.ok(`Step completed: ${step.id}`));
   } else {
