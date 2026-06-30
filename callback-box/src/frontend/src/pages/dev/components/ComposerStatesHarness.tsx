@@ -184,7 +184,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       {/* Faux header strip so narration badge / mute icon read in context. */}
       <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
-        <NarrationStatusBadge enabled={spec.badge} hqInFlight={false} onTurnOff={noop} />
+        <NarrationStatusBadge enabled={spec.badge} hqInFlight={false} onToggle={noop} />
         <div className="flex-1" />
         <MuteButton muted={spec.muted} onToggle={noop} />
       </header>

@@ -101,21 +101,38 @@ export function NarrationMicIcon({ className }: { className?: string }) {
 }
 
 /**
- * Header chip that signals narration mode is active. Shows a "transcribing…"
- * sub-label while the HQ pass is in flight after a send-message checkpoint,
- * so the user can see the agent isn't ignoring them — it's waiting on the
- * round-trip to the HQ transcription service.
+ * Header toggle for narration mode. Always visible:
+ *
+ * - **off:** a dim outline pill, the whole pill clickable to turn narration on.
+ * - **on:** a filled pill that shows a "transcribing…" sub-label while the HQ
+ *   pass is in flight after a send-message checkpoint (so the user can see the
+ *   agent isn't ignoring them — it's waiting on the round-trip to the HQ
+ *   transcription service), plus an "✕" affordance to turn narration back off.
  */
 export function NarrationStatusBadge({
   enabled,
   hqInFlight,
-  onTurnOff,
+  onToggle,
 }: {
   enabled: boolean;
   hqInFlight: boolean;
-  onTurnOff: () => void;
+  onToggle: () => void;
 }) {
-  if (!enabled) return null;
+  if (!enabled) {
+    return (
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label="Turn on narration mode"
+        aria-pressed={false}
+        title="Turn on narration mode"
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full border border-white/40 text-white/70 text-xs font-medium hover:bg-white/10 hover:text-white focus:outline-none focus-visible:ring-1 focus-visible:ring-white"
+      >
+        <span aria-hidden>🎙️</span>
+        <span>narration</span>
+      </button>
+    );
+  }
   return (
     <span
       className="inline-flex items-center gap-1 pl-2 pr-1 py-0.5 rounded-full bg-white/20 text-white text-xs font-medium"
@@ -126,8 +143,9 @@ export function NarrationStatusBadge({
       {hqInFlight ? <span className="opacity-80">· transcribing…</span> : null}
       <button
         type="button"
-        onClick={onTurnOff}
+        onClick={onToggle}
         aria-label="Turn off narration mode"
+        aria-pressed
         title="Turn off narration"
         className="ml-0.5 inline-flex items-center justify-center w-4 h-4 rounded-full hover:bg-white/20 focus:outline-none focus-visible:ring-1 focus-visible:ring-white"
       >
