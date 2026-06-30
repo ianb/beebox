@@ -22,6 +22,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import { composerDraftKey, parseComposerDraft, serializeComposerDraft } from "../lib/composer-draft.js";
+import type { InputStore } from "../components/chat/input-store";
 
 const PERSIST_DEBOUNCE_MS = 400;
 // Drafts older than this are dropped instead of restored: a week-old unsent
@@ -31,10 +32,9 @@ const MAX_RESTORE_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 export function useComposerDraft(opts: {
   boxSlug: string | undefined;
   sessionId: string | null;
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
+  inputStore: InputStore;
 }): void {
-  const { boxSlug, sessionId, input, setInput } = opts;
+  const { boxSlug, sessionId, inputStore } = opts;
   const key = composerDraftKey({ boxSlug, sessionId });
   const timerRef = useRef<number | null>(null);
 
@@ -57,18 +57,18 @@ export function useComposerDraft(opts: {
       window.localStorage.removeItem(key);
       return;
     }
-    // Functional update so this can't clobber text typed before the effect ran,
-    // and so `input` stays out of the deps (no re-run per keystroke).
-    setInput((current) => (current === "" ? draft.text : current));
-  }, [key, setInput]);
+    // Functional update so this can't clobber text typed before the effect ran.
+    inputStore.set((current) => (current === "" ? draft.text : current));
+  }, [key, inputStore]);
 
-  // Persist on change. The first guard keeps a fresh, still-empty mount (before
-  // the restore effect has read) from deleting a saved draft — only purge once
-  // the composer has actually held content this session.
+  // Persist the current text (debounced). The hadContentRef guard keeps a fresh,
+  // still-empty mount (before the restore effect has read) from deleting a saved
+  // draft — only purge once the composer has actually held content this session.
   const hadContentRef = useRef(false);
-  useEffect(() => {
+  const persist = useCallback(() => {
     cancelPending();
-    if (input.trim() === "") {
+    const value = inputStore.get();
+    if (value.trim() === "") {
       if (hadContentRef.current && typeof window !== "undefined") {
         window.localStorage.removeItem(key);
       }
@@ -77,21 +77,34 @@ export function useComposerDraft(opts: {
     hadContentRef.current = true;
     timerRef.current = window.setTimeout(() => {
       timerRef.current = null;
-      window.localStorage.setItem(key, serializeComposerDraft({ text: input, updatedAt: Date.now() }));
+      window.localStorage.setItem(key, serializeComposerDraft({ text: inputStore.get(), updatedAt: Date.now() }));
     }, PERSIST_DEBOUNCE_MS);
-    return cancelPending;
-  }, [input, key, cancelPending]);
+  }, [inputStore, key, cancelPending]);
+
+  // Persist on every composer change by subscribing to the store directly — no
+  // React state, so a keystroke never re-renders this hook's owner. The initial
+  // persist() catches a just-restored draft (set before this subscription ran)
+  // and re-saves text under a newly-assigned session key.
+  useEffect(() => {
+    const unsubscribe = inputStore.subscribe(persist);
+    persist();
+    return () => {
+      unsubscribe();
+      cancelPending();
+    };
+  }, [inputStore, persist, cancelPending]);
 
   // Flush synchronously when the tab hides (the sleep / app-switch moment),
   // closing the debounce gap so text typed in the last few hundred ms survives.
   useEffect(() => {
     function onHide(): void {
       if (document.visibilityState !== "hidden") return;
-      if (input.trim() === "") return;
+      const value = inputStore.get();
+      if (value.trim() === "") return;
       cancelPending();
-      window.localStorage.setItem(key, serializeComposerDraft({ text: input, updatedAt: Date.now() }));
+      window.localStorage.setItem(key, serializeComposerDraft({ text: value, updatedAt: Date.now() }));
     }
     document.addEventListener("visibilitychange", onHide);
     return () => document.removeEventListener("visibilitychange", onHide);
-  }, [input, key, cancelPending]);
+  }, [inputStore, key, cancelPending]);
 }

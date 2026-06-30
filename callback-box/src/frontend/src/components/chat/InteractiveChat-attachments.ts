@@ -10,6 +10,7 @@ import { useState, useRef, useCallback } from "react";
 import { processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
+import type { InputStore } from "./input-store";
 
 /**
  * Insert a token string (`[imageN]` / `[fileN] `) at the textarea cursor, or
@@ -48,11 +49,10 @@ export function insertTokensAtCursor(tokens: string, opts: {
 }
 
 export function useChatAttachments(opts: {
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
+  inputStore: InputStore;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
 }) {
-  const { input, setInput, textareaRef } = opts;
+  const { inputStore, textareaRef } = opts;
   const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
   // Number of pasted/dropped images still being downscaled + base64-encoded.
   // Drives a placeholder tile so cmd-V → thumbnail isn't a silent dead beat.
@@ -94,8 +94,8 @@ export function useChatAttachments(opts: {
     if (newItems.length === 0) return;
     setAttachments((prev) => [...prev, ...newItems]);
     const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
-    insertTokensAtCursor(tokens, { input, setInput, textareaRef, alwaysFocus: false });
-  }, [input, setInput, textareaRef]);
+    insertTokensAtCursor(tokens, { input: inputStore.get(), setInput: inputStore.set, textareaRef, alwaysFocus: false });
+  }, [inputStore, textareaRef]);
 
   const removeAttachment = useCallback((id: number) => {
     setAttachments((prev) => {
@@ -107,14 +107,14 @@ export function useChatAttachments(opts: {
     });
     // Strip any `[imageN]` tokens for this id from the input (plus up to one
     // leading/trailing whitespace char so we don't leave stray gaps).
-    setInput((prev) =>
+    inputStore.set((prev) =>
       prev
         .replace(/\s?\[image(\d+)]\s?/g, (match, n: string) =>
           parseInt(n, 10) === id ? " " : match
         )
         .replace(/ {2,}/g, " ")
     );
-  }, [setInput]);
+  }, [inputStore]);
 
   const addFileUploads = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -145,8 +145,8 @@ export function useChatAttachments(opts: {
     // focus is on the menu button, not the composer. The helper pads a
     // trailing space so the user can keep typing after the token.
     const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
-    insertTokensAtCursor(tokens, { input, setInput, textareaRef, alwaysFocus: true });
-  }, [input, setInput, textareaRef]);
+    insertTokensAtCursor(tokens, { input: inputStore.get(), setInput: inputStore.set, textareaRef, alwaysFocus: true });
+  }, [inputStore, textareaRef]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -157,14 +157,14 @@ export function useChatAttachments(opts: {
 
   const removeFileAttachment = useCallback((id: number) => {
     setFileAttachments((prev) => prev.filter((f) => f.id !== id));
-    setInput((prev) =>
+    inputStore.set((prev) =>
       prev
         .replace(/\s?\[file(\d+)]\s?/g, (match, n: string) =>
           parseInt(n, 10) === id ? " " : match
         )
         .replace(/ {2,}/g, " ")
     );
-  }, [setInput]);
+  }, [inputStore]);
 
   const handleAttachFiles = useCallback(() => {
     const el = fileInputRef.current;

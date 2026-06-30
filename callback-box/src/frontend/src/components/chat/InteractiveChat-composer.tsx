@@ -11,6 +11,7 @@ import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 
 export interface TranscriptionHandle {
@@ -135,7 +136,7 @@ function DesktopComposerRow({
  * On mobile: [capture] [camera] [spacer] [stop] [keyboard] [voice] — textarea appears below when typing.
  */
 export function ChatInputArea({
-  textareaRef, input, setInput, isTranscribing, transcription,
+  textareaRef, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
   isStreaming, onInterrupt, onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
@@ -143,8 +144,6 @@ export function ChatInputArea({
   onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
   handleKeyDown: (e: React.KeyboardEvent) => void;
@@ -170,6 +169,10 @@ export function ChatInputArea({
   onAttachFiles: () => void;
   narrationEnabled: boolean;
 }) {
+  // Subscribing read of the composer text — this is the component a keystroke
+  // re-renders (and its small button-bar subtree), not the chat at large.
+  const input = useInputValue();
+  const setInput = useInputStore().set;
   return (
     <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="relative flex items-center gap-2">

@@ -18,6 +18,7 @@ import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments
 import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
+import type { InputStore } from "./input-store";
 import type { ChatEvent } from "../../machines/chat-types";
 
 interface ChatActionsOpts {
@@ -29,8 +30,7 @@ interface ChatActionsOpts {
   totalEntries: number;
   loadingOlder: boolean;
   setLoadingOlder: React.Dispatch<React.SetStateAction<boolean>>;
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
+  inputStore: InputStore;
   attachments: AttachmentItem[];
   fileAttachments: FileAttachmentItem[];
   selections: SelectionItem[];
@@ -53,7 +53,7 @@ interface ChatActionsOpts {
 export function useChatActions(opts: ChatActionsOpts) {
   const {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    input, setInput, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
+    inputStore, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr, captureCardSend,
   } = opts;
@@ -75,7 +75,7 @@ export function useChatActions(opts: ChatActionsOpts) {
   );
 
   const handleSend = useCallback(() => {
-    const text = input.trim();
+    const text = inputStore.get().trim();
     if (!text && attachments.length === 0 && fileAttachments.length === 0 && selections.length === 0) return;
     onSend();
     unlockAudioContext();
@@ -103,13 +103,13 @@ export function useChatActions(opts: ChatActionsOpts) {
 
     resetAttachments();
     resetSelections();
-    setInput("");
+    inputStore.set("");
     doSendWithImages(wrapped, images);
     setScrollToBottomTrigger((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [input, attachments, fileAttachments, selections, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setInput, setScrollToBottomTrigger, setTypingMode]);
+  }, [inputStore, attachments, fileAttachments, selections, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const images = extractImageFiles(e.clipboardData);
@@ -191,14 +191,14 @@ export function useChatActions(opts: ChatActionsOpts) {
         if (ta) {
           const { selectionStart, selectionEnd, value } = ta;
           const newValue = value.slice(0, selectionStart) + "\n" + value.slice(selectionEnd);
-          setInput(newValue);
+          inputStore.set(newValue);
           requestAnimationFrame(() => {
             ta.selectionStart = ta.selectionEnd = selectionStart + 1;
           });
         }
       }
     },
-    [handleSend, isTranscribing, textareaRef, setInput]
+    [handleSend, isTranscribing, textareaRef, inputStore]
   );
 
   useTextareaFocus({ isTranscribing, typingMode, textareaRef, transcriptTick });

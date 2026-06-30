@@ -28,6 +28,7 @@ import { ChatInputArea, type TranscriptionHandle } from "../../../components/cha
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
 import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout";
 import { NarrationStatusBadge, MuteButton } from "../../../components/chat/InteractiveChat-controls";
+import { InputStoreProvider, type InputStore } from "../../../components/chat/input-store";
 
 // --- Axes ---
 
@@ -129,6 +130,9 @@ function noop() {}
 function StateBlock({ spec }: { spec: Spec }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Static store for the gallery: the value never changes (set is a no-op,
+  // nothing ever subscribes), it just feeds the fabricated `input` text in.
+  const inputStore: InputStore = { get: () => spec.input, set: noop, subscribe: () => noop };
   const transcription: TranscriptionHandle = {
     state: spec.isTranscribing ? "recording" : "idle",
     transcript: spec.transcript,
@@ -140,8 +144,6 @@ function StateBlock({ spec }: { spec: Spec }) {
     <ChatInputArea
       hideMobile={spec.typingMode}
       textareaRef={textareaRef}
-      input={spec.input}
-      setInput={noop}
       isTranscribing={spec.isTranscribing}
       transcription={transcription}
       handleKeyDown={noop}
@@ -166,8 +168,6 @@ function StateBlock({ spec }: { spec: Spec }) {
   );
   const mobileRow = (
     <MobileTextareaRow
-      input={spec.input}
-      setInput={noop}
       isTranscribing={spec.isTranscribing}
       transcription={transcription}
       handleSend={noop}
@@ -180,6 +180,7 @@ function StateBlock({ spec }: { spec: Spec }) {
     />
   );
   return (
+    <InputStoreProvider value={inputStore}>
     <div className="w-full max-w-5xl mx-auto">
       {/* Faux header strip so narration badge / mute icon read in context. */}
       <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
@@ -208,6 +209,7 @@ function StateBlock({ spec }: { spec: Spec }) {
         mobileRow={mobileRow}
       />
     </div>
+    </InputStoreProvider>
   );
 }
 
