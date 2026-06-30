@@ -11,8 +11,9 @@
  * slug order wins (deterministic; the views listing is directory order).
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { getApiBase } from "../api";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
 export interface CardViewBinding {
   slug: string;
@@ -49,10 +50,26 @@ function fetchBindings(): Promise<Map<string, CardViewBinding>> {
   return bindingsPromise;
 }
 
+/**
+ * Drop the memoized bindings so the next fetch re-reads `/api/views`. Coalesced
+ * across the many FileViews mounted at once (chat embeds whole conversations):
+ * the first call in a tick clears the cache, the rest no-op until the microtask
+ * resets the guard, so a single view edit triggers one refetch — not one per
+ * mounted card, each clobbering the previous in-flight fetch.
+ */
+let invalidating = false;
+function invalidateBindings(): void {
+  if (invalidating) return;
+  invalidating = true;
+  bindingsPromise = null;
+  queueMicrotask(() => { invalidating = false; });
+}
+
 /** The custom view bound to a card type, or null (also null while loading). */
 export function useCardViewBinding(type: string | undefined): CardViewBinding | null {
   const [binding, setBinding] = useState<CardViewBinding | null>(null);
-  useEffect(() => {
+
+  const load = useCallback(() => {
     if (type === undefined) {
       setBinding(null);
       return;
@@ -65,5 +82,22 @@ export function useCardViewBinding(type: string | undefined): CardViewBinding | 
       cancelled = true;
     };
   }, [type]);
+
+  useEffect(() => load(), [load]);
+
+  // A view edit can change which view renders a card type (a new, removed, or
+  // renamed `rendersCardTypes`) without changing any card — the module-level
+  // cache would otherwise hide that until a full page reload. Drop the cache and
+  // re-resolve on any view-source change.
+  useBusSubscription({
+    onEvent: useCallback((event: RealtimeEvent) => {
+      if (event.event !== "file-change") return;
+      const data = event.data as { path?: string };
+      if (typeof data.path !== "string" || !/^views\/.+\.tsx$/.test(data.path)) return;
+      invalidateBindings();
+      load();
+    }, [load]),
+  });
+
   return binding;
 }

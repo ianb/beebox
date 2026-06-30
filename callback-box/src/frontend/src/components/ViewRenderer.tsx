@@ -178,6 +178,10 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
   // timestamp. Was `useRef(Date.now())` but the react-hooks/purity rule
   // (rightly) flags Date.now() in render.
   const versionRef = useRef(0);
+  // Bumped on every module (re)load so ViewErrorBoundary can release a latched
+  // error — a runtime-throwing view that the box then fixes recovers on its own
+  // reload instead of staying stuck until a manual Retry.
+  const [reloadSeq, setReloadSeq] = useState(0);
 
   const apiBase = getApiBase();
 
@@ -189,6 +193,10 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
       ) as ViewModule;
       setMod(imported);
       setError(null);
+      // Bump *after* the new module is in so the boundary's reset and the
+      // fixed component land in the same render — bumping before the await
+      // would reset against the still-broken module and immediately re-throw.
+      setReloadSeq((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -303,7 +311,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
 
   return (
     <div className={containerClass}>
-      <ViewErrorBoundary onRetry={loadModule}>
+      <ViewErrorBoundary onRetry={loadModule} resetKey={reloadSeq}>
         <ViewHostProvider value={viewHost}>
           <Component
             cards={cards}
