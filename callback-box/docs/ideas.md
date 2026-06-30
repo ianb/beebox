@@ -1533,21 +1533,23 @@ questions rendering as a textarea instead of radios (`QuestionForm.tsx` falls
 back to text when there's no `options` array); how triage creates questions and
 the option-id scheme; and the answer schema round-trip. Medium.
 
-### Todo multi-state controls (D2)
+### Todo multi-state controls (D2) — DONE
 
-`src/frontend/src/components/TodoListView.tsx` only toggles `pending`↔`done`, but
-the schema and backend already support `cancelled` and `deferred` — users can't
-reach those states except by hand-editing the card. Replace the binary toggle
-with a 4-state control (dropdown / context menu). Medium; mostly a UI change.
+`src/frontend/src/components/TodoListView.tsx` now pairs a round pending↔done
+checkbox (the common action) with a `⋯` menu exposing all four statuses
+(pending/done/cancelled/deferred), so the rarer cancelled/deferred states are
+reachable from the UI.
 
-### Procedure validation completion (D5)
+### Procedure validation completion (D5) — mostly DONE
 
-`src/core/procedure/engine-phase.ts` stubs instruction-based validation (always
-passes) and downgrades `severity: review` auto-retry to a warning; resuming a run
-from a failed step isn't supported. Build: (1) model-evaluated instruction
-validation against the git diff + box state, (2) `review`-severity auto-retry
-with failure context, (3) resumable runs from the failed step. Large; its own
-plan.
+Two of the three landed. `src/core/procedure/engine-phase.ts` now does
+**model-judged instruction validation** against the step's git diff (no longer a
+pass-by-default stub), and `engine-step.ts` / `engine-run-phase.ts` implement
+**`severity: review` auto-retry** — a bounded self-heal that re-invokes the agent
+with the failure context (cost-ceiling guarded) and gates the step when it can't
+heal. **Remaining:** resumable runs from a failed step — re-entering a procedure
+at the failed step rather than re-running the whole thing; not implemented. Small
+remainder, no longer "its own plan."
 
 ### Retrospective integration (D6) — DONE (procedure, not code)
 
