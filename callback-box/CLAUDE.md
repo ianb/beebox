@@ -133,6 +133,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Box layout reference | `docs/box-layout.md` |
 | Landmarks (navigation surface) | `docs/landmarks.md` |
 | Client debug log | `docs/client-debug-log.md` |
+| Content-Security-Policy | `docs/content-security-policy.md` |
 | Periodic maintenance | `docs/maintenance.md` |
 | Knowledge audits | `docs/knowledge-audits.md` |
 | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
