@@ -5,11 +5,8 @@
  */
 
 import { registerCommand } from "../command-runner.js";
-import {
-  startProcedure,
-  listProcedures,
-  procedureStatus,
-} from "../procedure/engine.js";
+import { startProcedure, resumeProcedure } from "../procedure/engine.js";
+import { listProcedures, procedureStatus } from "../procedure/engine-query.js";
 import { gcProcedureRuns } from "../procedure/gc.js";
 import type { ProcedureOptions } from "../procedure/engine.js";
 
@@ -67,6 +64,33 @@ registerCommand({
     }
 
     return startProcedure({ ctx, procedureNameOrPath: name, options });
+  },
+});
+
+registerCommand({
+  name: "procedure-resume",
+  description: "Resume a failed procedure run from its first incomplete step",
+  args: [
+    {
+      name: "runDir",
+      type: "string",
+      required: false,
+      description: "Run directory to resume (defaults to the latest run)",
+    },
+    {
+      name: "directive",
+      type: "string",
+      required: false,
+      description: "Directive string passed to procedure agents (defaults to the run's original)",
+    },
+  ],
+  execute: async (ctx, args) => {
+    const options: ProcedureOptions = {};
+    if (args["directive"]) {
+      options.directive = args["directive"] as string;
+    }
+    const runDir = args["runDir"] as string | undefined;
+    return resumeProcedure({ ctx, options, ...(runDir && { runDir }) });
   },
 });
 

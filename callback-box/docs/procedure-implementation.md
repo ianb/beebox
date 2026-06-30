@@ -167,10 +167,19 @@ The engine enforces **git-clean between steps**. Agent steps produce two commits
 
 ```
 cb procedure run <name>       # Start a new run
+cb procedure resume [run-dir] # Resume a failed run from its first incomplete step (defaults to latest)
 cb procedure status           # Show current run status
 cb procedure list             # List available definitions
 cb procedure gc               # Delete expired run directories
 ```
+
+**Resume** re-runs a failed (or interrupted) run from its first not-yet-completed
+step, reusing the existing run dir/card rather than starting over. The resume
+point is the first step whose recorded status is neither `completed` nor
+`skipped` — i.e. the failed step (execution halts there, so everything after is
+still `pending`). Earlier completed/skipped steps are not re-run. The run's
+original directive carries over unless `--directive` overrides it. Resuming an
+already-completed run is a no-op.
 
 ## Git History
 
