@@ -146,9 +146,12 @@ echo "Writing deploy info..."
 DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 CALLBACK_BOX_HASH=""
 CALLBACK_BOX_SUBJECT=""
-if [[ -d "$MONO_DIR/callback-box/.git" ]]; then
-  CALLBACK_BOX_HASH=$(cd "$MONO_DIR/callback-box" && git rev-parse --short HEAD)
-  CALLBACK_BOX_SUBJECT=$(cd "$MONO_DIR/callback-box" && git log -1 --format=%s)
+# Since the monorepo merge there's no per-project callback-box/.git — the repo
+# is at $MONO_DIR. Read the deployed commit from the monorepo HEAD. (Kept the
+# `commits["callback-box"]` key below for the health endpoint's shape.)
+if [[ -d "$MONO_DIR/.git" ]]; then
+  CALLBACK_BOX_HASH=$(cd "$MONO_DIR" && git rev-parse --short HEAD)
+  CALLBACK_BOX_SUBJECT=$(cd "$MONO_DIR" && git log -1 --format=%s)
 fi
 DEPLOY_INFO=$(DEPLOYED_AT="$DEPLOYED_AT" \
   CALLBACK_BOX_HASH="$CALLBACK_BOX_HASH" CALLBACK_BOX_SUBJECT="$CALLBACK_BOX_SUBJECT" \
@@ -184,6 +187,13 @@ HISTEOF
 
 # Restart services
 if [[ "$SKIP_RESTART" != true ]]; then
+  # Best-effort: give an active chat turn / running script a bounded chance to
+  # finish before we restart, so a deploy doesn't kill active work. cb-wait-quiet
+  # polls `cb activity` (installed by setup-server.sh); skip gracefully on
+  # servers that predate it.
+  echo "Waiting for boxes to be at rest (best-effort)..."
+  ssh "root@$SERVER_IP" 'test -x /usr/local/bin/cb-wait-quiet && /usr/local/bin/cb-wait-quiet || echo "  (cb-wait-quiet not installed; re-run setup-server.sh to enable)"'
+
   echo "Restarting services..."
   ssh "root@$SERVER_IP" 'systemctl restart callback-serve callback-scheduler && echo "Services restarted"'
 

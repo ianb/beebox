@@ -154,9 +154,11 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    // Ensure agent docs are up to date (fast mtime-cached no-op if nothing changed)
+    // Ensure agent docs are up to date (fast mtime-cached no-op if unchanged).
+    // Best-effort: a regen/commit failure here (e.g. a git-permission hiccup in
+    // the template-sync commit) must not 500 the chat — log and proceed on-disk.
     if (this.options.skipBootstrap !== true) {
-      await generateDocs(this.boxRoot);
+      await generateDocs(this.boxRoot).catch((e: unknown) => log("start", `generateDocs failed (continuing): ${e}`));
     }
 
     log("start", "Starting SDK chat run");

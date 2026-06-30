@@ -36,6 +36,7 @@ export function directoryLayoutSection(): string[] {
     "| `store/todos/` | Active todo lists — human action items |",
     "| `store/trash/` | Soft-deleted items |",
     "| `people/` | Person cards — key people referenced from briefings |",
+    "| `places/` | Place cards — named locations the box recognizes (Home, Office) |",
     "| `config/` | Box configuration |",
     "",
   ];

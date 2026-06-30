@@ -22,6 +22,7 @@ import { createScheduledScriptTemplate } from "./scheduled-script.js";
 import { createTodoListTemplate } from "./todo-list.js";
 import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
+import { createPlaceTemplate } from "./place.js";
 import { createDocTemplate } from "./doc.js";
 import { createFigureTemplate, figureStarterSketch, FigureRuntime } from "./figure.js";
 import { registerTemplate } from "./templates-registry.js";
@@ -234,16 +235,36 @@ registerTemplate({
   defaultForTypes: ["person"],
   argsSchema: z.object({
     name: z.string().describe("Full name of the person"),
-    called: z.string().optional().describe("Alias or nickname"),
+    aliases: z.string().optional().describe("Alias or nickname"),
     role: z.string().optional().describe("Relationship or function"),
   }),
   generate: (args) => {
     const opts: Parameters<typeof createPersonTemplate>[0] = {
       name: args.name,
     };
-    if (args.called) opts.called = args.called;
+    if (args.aliases) opts.aliases = args.aliases;
     if (args.role) opts.role = args.role;
     return createPersonTemplate(opts);
+  },
+});
+
+registerTemplate({
+  name: "place",
+  description: "A place card — a named location the box can recognize (Home, Office)",
+  cardTypes: ["place"],
+  defaultForTypes: ["place"],
+  argsSchema: z.object({
+    name: z.string().describe("Name of the place"),
+    aliases: z.string().optional().describe("Another name for the place"),
+    address: z.string().optional().describe("Human-readable address (street, city)"),
+  }),
+  generate: (args) => {
+    const opts: Parameters<typeof createPlaceTemplate>[0] = {
+      name: args.name,
+    };
+    if (args.aliases) opts.aliases = args.aliases;
+    if (args.address) opts.address = args.address;
+    return createPlaceTemplate(opts);
   },
 });
 

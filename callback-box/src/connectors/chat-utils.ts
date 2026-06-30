@@ -261,7 +261,7 @@ export interface UpdatePersonResult {
  *
  * With `force: true`, an existing person card has its connector-derived
  * identity (`name`) refreshed in place — agent-owned fields (status, contact,
- * role, called, contains, body, …) are preserved untouched. Username and
+ * role, aliases, contains, body, …) are preserved untouched. Username and
  * numeric ids have no field in the person-card schema; they live in the
  * sibling `<connector>.json` metadata, which is always kept current.
  */

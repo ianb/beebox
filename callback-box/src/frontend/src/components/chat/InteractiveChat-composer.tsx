@@ -8,6 +8,7 @@
 
 import TextareaAutosize from "react-textarea-autosize";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
+import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
@@ -207,6 +208,7 @@ export function ChatInputArea({
         >
           <MenuItem onClick={() => {}} disabled>Camera (coming soon)</MenuItem>
           <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
+          <ShareLocationMenuItem />
         </Dropdown>
 
         <DesktopComposerRow

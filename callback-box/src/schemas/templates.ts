@@ -20,6 +20,8 @@ import "./templates-courseware.js";
 export {
   type TemplateDefinition,
   registerTemplate,
+  registerBoxTemplate,
+  unregisterBoxTemplates,
   getTemplate,
   getTemplateNames,
   getAllTemplates,

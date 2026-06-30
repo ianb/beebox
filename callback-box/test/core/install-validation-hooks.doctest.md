@@ -4,8 +4,9 @@
 
 - `.claude/settings.json` — a `PostToolUse` entry that runs `cb validate --hook` after Edit/Write/MultiEdit on `.card` files (warns the agent, doesn't block)
 - `.git/hooks/pre-commit` — runs `cb validate --staged` and blocks the commit if any staged card fails validation
+- `.git/hooks/post-commit` — a marker-delimited managed block that fires `cb validate --urls --urls-since HEAD~1` in the background (non-blocking external-URL check)
 
-Both writes are idempotent and merge-aware. The settings file preserves unrelated keys and unrelated `PostToolUse` entries. A foreign pre-commit hook (one we didn't write) is left alone with a warning.
+Both writes are idempotent and merge-aware. The settings file preserves unrelated keys and unrelated `PostToolUse` entries. A foreign pre-commit hook (one we didn't write) is left alone with a warning. The post-commit block is spliced into whatever already exists there (e.g. a git-lfs hook), preserving it.
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -29,6 +30,7 @@ const changed = await installValidationHooks(box);
 changed.sort()
 => [
   ".claude/settings.json",
+  ".git/hooks/post-commit",
   ".git/hooks/pre-commit"
 ]
 ```
@@ -219,5 +221,56 @@ The user's hook is unchanged:
 await fs.readFile(hookPath, "utf-8")
 => #!/bin/sh
 echo user hook
+```
+
+## Post-commit — managed block, fresh file
+
+With no existing post-commit hook, one is created with our marker block and the
+non-blocking `--urls-since HEAD~1` command, and it's executable:
+
+```ts
+const box = await makeBox();
+await installValidationHooks(box);
+const body = await fs.readFile(path.join(box, ".git/hooks/post-commit"), "utf-8");
+[
+  body.includes("# >>> callback-box url-check (managed) >>>"),
+  body.includes("validate --urls --urls-since HEAD~1"),
+  (await fs.stat(path.join(box, ".git/hooks/post-commit"))).mode & 0o111 ? true : false,
+]
+=> [
+  true,
+  true,
+  true
+]
+```
+
+## Post-commit — coexists with a foreign hook (git-lfs)
+
+A pre-existing post-commit (e.g. git-lfs) is preserved verbatim; our block is
+appended after it. A second install is idempotent — the foreign hook stays and
+nothing changes:
+
+```ts
+const box = await makeBox();
+const postPath = path.join(box, ".git/hooks/post-commit");
+const lfs = "#!/bin/sh\ngit lfs post-commit \"$@\"\n";
+await fs.writeFile(postPath, lfs);
+
+await installValidationHooks(box);
+const merged = await fs.readFile(postPath, "utf-8");
+[merged.startsWith(lfs), merged.includes("callback-box url-check (managed)")]
+=> [
+  true,
+  true
+]
+```
+
+```ts continue
+const again = await installValidationHooks(box);
+[again.includes(".git/hooks/post-commit"), (await fs.readFile(postPath, "utf-8")) === merged]
+=> [
+  false,
+  true
+]
 ```
 

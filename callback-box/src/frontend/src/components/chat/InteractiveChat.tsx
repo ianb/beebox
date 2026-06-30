@@ -17,6 +17,7 @@ import { chatMachine } from "../../machines/chatMachine.js";
 import { groupMessages } from "../ChatMessages";
 import { serializeViewUrl } from "../../lib/view-url";
 import { clearLastMessageAudio } from "../../lib/last-audio-cache";
+import { refreshLocationIfStale } from "../../lib/location-share";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
@@ -124,9 +125,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       // Any send moves "the last message" past the cached voice recording.
       // A voice send re-caches its own audio right after (see runKeywordSend).
       clearLastMessageAudio();
+      void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
       send({ type: "SEND", message: wrapped, messageId: newMessageId(), ...cardSend.capture() });
     },
-    [send, cardSend]
+    [send, cardSend, boxSlug]
   );
 
   const zoomedViewAttr = useCallback(() => {
@@ -138,8 +140,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const timePassedAttr = useCallback(() => {
     if (messages.length === 0) return "";
     const last = messages[messages.length - 1];
-    const elapsed = Date.now() - new Date(last.timestamp).getTime();
-    const formatted = formatTimePassed(elapsed);
+    const formatted = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
     return formatted ? ` time-passed="${formatted}"` : "";
   }, [messages]);
 

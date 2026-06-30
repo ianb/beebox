@@ -5,7 +5,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot, findBoxRoot } from "../lib/paths.js";
 import {
   runCommand,
   createCliContext,
@@ -14,6 +14,7 @@ import {
   getAllTemplates,
   describeTemplateArgs,
 } from "../../schemas/index.js";
+import { loadBoxSchemas } from "../../schemas/registry.js";
 
 interface CreateOptions {
   template?: string;
@@ -39,6 +40,13 @@ export const createCommand = new Command("create")
     // Commander passes variadic args as second param, options as third
     const kvArgs = (rest[0] ?? []) as string[];
     const options = (rest[1] ?? {}) as CreateOptions;
+
+    // Box-local templates register as a side effect of loading the box's
+    // schemas. --list-templates / --describe-template run before the box is
+    // otherwise resolved, so load it best-effort here; otherwise they'd show
+    // only built-in templates and miss the box's own.
+    const templateBoxRoot = await findBoxRoot(process.cwd());
+    if (templateBoxRoot) await loadBoxSchemas(templateBoxRoot);
 
     // Handle --list-templates
     if (options.listTemplates) {

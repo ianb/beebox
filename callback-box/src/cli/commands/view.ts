@@ -165,13 +165,21 @@ async function renderView(options: RenderViewOptions): Promise<number> {
       createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
     ),
   );
+  // The view module sits one level below tmpDir so module resolution walks two
+  // node_modules: the inner one resolves `callback-box/view-widgets` (a symlink
+  // to the package root → its `exports` map → dist/view-widgets/index.js), and
+  // the outer one resolves bare `react`/`react/jsx-runtime`/`tailwind-merge` to
+  // the one host copy (dedup by realpath). The inner can't go in the outer
+  // node_modules because that's a symlink into the shared workspace tree.
   const tmpDir = path.join(os.tmpdir(), `cb-view-${randomUUID()}`);
-  await fs.mkdir(tmpDir, { recursive: true });
-  const tmpFile = path.join(tmpDir, "view.mjs");
+  const innerDir = path.join(tmpDir, "view");
+  await fs.mkdir(path.join(innerDir, "node_modules"), { recursive: true });
+  const tmpFile = path.join(innerDir, "view.mjs");
   try {
     // Inside the try so a partial setup (e.g. disk full) is still cleaned up by
     // the finally; fs.rm(recursive, force) is a no-op if nothing was created.
     await fs.symlink(reactNodeModules, path.join(tmpDir, "node_modules"), "dir");
+    await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "callback-box"), "dir");
     await fs.writeFile(tmpFile, output, "utf-8");
     process.setSourceMapsEnabled(true);
 
@@ -182,7 +190,14 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     try {
       const mod = (await import(pathToFileURL(tmpFile).href)) as LoadedViewModule;
       const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
-      html = renderToString(createElement(mod.default, props));
+      // Wrap in the node view host so the card widgets (<CardLink>/<CardRef>)
+      // resolve their context. NodeViewHostProvider comes from the same
+      // dist/view-widgets bundle the view's widgets do (view.ts self-references
+      // the package's exports map), so the ViewHostContext identity matches.
+      const { NodeViewHostProvider } = await import("callback-box/view-widgets");
+      html = renderToString(
+        createElement(NodeViewHostProvider, null, createElement(mod.default, props)),
+      );
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
       process.stderr.write(`View render failed: ${err.name}: ${err.message}\n`);

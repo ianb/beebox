@@ -33,6 +33,7 @@ import {
   tickCommand,
   scheduledCommand,
   healthCommand,
+  activityCommand,
   trickCommand,
   finalizeCommand,
   sessionCommand,
@@ -57,6 +58,7 @@ import {
   triageCommand,
   handleCommand,
   extfileCommand,
+  locationCommand,
 } from "./commands/index.js";
 
 const program = new Command();
@@ -93,6 +95,7 @@ program.addCommand(scenarioCommand);
 program.addCommand(tickCommand);
 program.addCommand(scheduledCommand);
 program.addCommand(healthCommand);
+program.addCommand(activityCommand);
 program.addCommand(trickCommand);
 program.addCommand(finalizeCommand);
 program.addCommand(sessionCommand);
@@ -116,6 +119,7 @@ program.addCommand(intakeCommand);
 program.addCommand(triageCommand);
 program.addCommand(handleCommand);
 program.addCommand(extfileCommand);
+program.addCommand(locationCommand);
 
 // ============================================
 // Inspection commands

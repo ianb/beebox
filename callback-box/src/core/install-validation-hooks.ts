@@ -8,8 +8,15 @@
  *  2. `.git/hooks/pre-commit` — runs `cb validate --staged` and exits
  *     non-zero if any staged card fails validation. Blocks the commit.
  *
- * Together: write-time warns, commit-time blocks. Idempotent — only
- * rewrites when content differs.
+ *  3. `.git/hooks/post-commit` — a marker-delimited managed block that
+ *     fires `cb validate --urls --urls-since HEAD~1` in the background.
+ *     External-URL checking is network-dependent, so it must never sit in
+ *     the commit's critical path; detection of new URLs is offline, the
+ *     HEADing runs detached. The block coexists with a foreign post-commit
+ *     hook (e.g. git-lfs) — we splice our block in, leaving the rest intact.
+ *
+ * Together: write-time warns, commit-time blocks, post-commit checks URLs
+ * without blocking. Idempotent — only rewrites when content differs.
  *
  * Deliberately not routed through `installTemplateFile`: the settings
  * file needs JSON merge semantics (preserve unrelated keys, dedupe a
@@ -34,6 +41,44 @@ function resolveCbBin(): string {
 
 const SETTINGS_PATH = ".claude/settings.json";
 const PRE_COMMIT_PATH = ".git/hooks/pre-commit";
+const POST_COMMIT_PATH = ".git/hooks/post-commit";
+
+/** Delimiters for the post-commit block we own, so we can splice it in/out of a
+ * file that may also carry a foreign hook (git-lfs installs one here). */
+const URLCHECK_BEGIN = "# >>> callback-box url-check (managed) >>>";
+const URLCHECK_END = "# <<< callback-box url-check (managed) <<<";
+
+function postCommitBlock(cbBin: string): string {
+  return [
+    URLCHECK_BEGIN,
+    "# Non-blocking external-URL check (see `cb validate --urls`): HEADs only the",
+    "# http(s) URLs new in this commit, detached in the background, so the commit",
+    "# never waits on the network. Output → .callback-box/url-check.log.",
+    "# Delete just this block to disable; `cb init` re-adds it.",
+    `CB_URLCHECK=${JSON.stringify(cbBin)}`,
+    "[ -x \"$CB_URLCHECK\" ] || CB_URLCHECK=$(command -v cb || true)",
+    "if [ -n \"$CB_URLCHECK\" ] && git rev-parse --verify -q HEAD~1 >/dev/null 2>&1; then",
+    "  ( \"$CB_URLCHECK\" validate --urls --urls-since HEAD~1 >.callback-box/url-check.log 2>&1 & ) || true",
+    "fi",
+    URLCHECK_END,
+  ].join("\n");
+}
+
+/**
+ * Splice our managed block into a post-commit hook: replace it in place if our
+ * markers are already there, append it (preserving a foreign hook) otherwise,
+ * or create the file with a shebang when none exists.
+ */
+function upsertPostCommitBlock(existing: string | null, block: string): string {
+  if (existing === null) return `#!/usr/bin/env bash\n\n${block}\n`;
+  const beginIdx = existing.indexOf(URLCHECK_BEGIN);
+  const endIdx = existing.indexOf(URLCHECK_END);
+  if (beginIdx !== -1 && endIdx !== -1) {
+    return existing.slice(0, beginIdx) + block + existing.slice(endIdx + URLCHECK_END.length);
+  }
+  const sep = existing.endsWith("\n") ? "\n" : "\n\n";
+  return `${existing}${sep}${block}\n`;
+}
 
 /**
  * Marker comment so we recognize a hook we wrote vs one a user installed.
@@ -201,6 +246,24 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
       await fs.writeFile(hookAbs, hookBody);
       await fs.chmod(hookAbs, 0o755);
       changed.push(PRE_COMMIT_PATH);
+    }
+
+    // .git/hooks/post-commit — splice our managed url-check block in, preserving
+    // any foreign hook (git-lfs installs one here).
+    const postAbs = path.join(boxRoot, POST_COMMIT_PATH);
+    let postExisting: string | null = null;
+    try {
+      postExisting = await fs.readFile(postAbs, "utf-8");
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") throw e;
+    }
+    const postMerged = upsertPostCommitBlock(postExisting, postCommitBlock(cbBin));
+    if (postMerged !== postExisting) {
+      await fs.mkdir(path.dirname(postAbs), { recursive: true });
+      await fs.writeFile(postAbs, postMerged);
+      await fs.chmod(postAbs, 0o755);
+      changed.push(POST_COMMIT_PATH);
     }
   }
 
