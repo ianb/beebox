@@ -68,19 +68,44 @@ const GENERATE_MARKER = ".callback-box/docs-generated-at";
 const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
 
 /**
- * Get the current git commit hash of the callback-box repo.
- * Returns null if git is unavailable or this isn't a git repo.
+ * Version signal for the running callback-box code, used to invalidate the
+ * doc-generation cache (the `.callback-box/docs-generated-at` marker). It
+ * combines two sources so it advances whenever the *executing* code changes, in
+ * every environment — if either moves, the combined string flips and
+ * regeneration fires; a stale component never pins it:
+ *
+ *  - **deploy stamp** (prod): `deploy-info.json` at PACKAGE_ROOT carries the
+ *    build's commit hash. Prod runs the bundled `dist/cli.mjs`, and the deploy
+ *    does NOT advance the server's source git HEAD — so the deploy hash is the
+ *    ONLY thing that moves per deploy. Keying solely on git HEAD (the old bug)
+ *    meant generated docs never refreshed on existing boxes after a deploy.
+ *  - **source git HEAD** (dev): no `deploy-info.json` when running from source
+ *    via tsx, so git HEAD is the running code and advances per commit.
+ *
+ * Returns null only when neither is available.
  */
-async function getCallbackBoxCommit(): Promise<string | null> {
+async function getCallbackBoxVersion(): Promise<string | null> {
+  const parts: string[] = [];
   try {
-    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
-      cwd: PACKAGE_ROOT,
-    });
-    return stdout.trim();
-  } catch (e) {
-    console.warn("[generate-docs] git rev-parse HEAD failed; treating commit as unknown:", e);
+    const raw = await readFile(join(PACKAGE_ROOT, "deploy-info.json"), "utf-8");
+    // Parse boundary: deploy-info.json is written by deploy.sh, untyped here.
+    const info = JSON.parse(raw) as { commits?: { "callback-box"?: { hash?: string } } };
+    const hash = info.commits?.["callback-box"]?.hash;
+    if (typeof hash === "string" && hash !== "") parts.push(`deploy:${hash}`);
+  } catch (_e) {
+    // No deploy-info.json (dev) or unreadable — fall through to git HEAD.
+  }
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: PACKAGE_ROOT });
+    parts.push(`git:${stdout.trim()}`);
+  } catch (_e) {
+    // Not a git repo / git unavailable — the deploy stamp alone may still pin it.
+  }
+  if (parts.length === 0) {
+    console.warn("[generate-docs] no deploy stamp and git rev-parse failed; treating version as unknown");
     return null;
   }
+  return parts.join("|");
 }
 
 export interface GenerateDocsOptions {
@@ -286,8 +311,9 @@ async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
 
 /**
  * Decide whether doc generation can be skipped because nothing changed.
- * Returns true only when the input mtimes and source commit both match the
- * marker written by the previous run. Always false when force is set.
+ * Returns true only when the input mtimes and the callback-box version signal
+ * (see getCallbackBoxVersion — deploy stamp ‖ git HEAD) both match the marker
+ * written by the previous run. Always false when force is set.
  */
 async function canSkipGeneration(params: {
   markerPath: string;
@@ -394,7 +420,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Skipped entirely when force is set — see GenerateDocsOptions.force for why.
   const markerPath = join(boxRoot, GENERATE_MARKER);
   const inputMtime = await newestInputMtime(boxRoot);
-  const currentCommit = await getCallbackBoxCommit();
+  const currentCommit = await getCallbackBoxVersion();
   if (await canSkipGeneration({ markerPath, inputMtime, currentCommit, force: options.force ?? false })) {
     return; // Nothing changed — skip regeneration
   }
