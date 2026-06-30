@@ -14,6 +14,7 @@ import { router, publicProcedure } from "../trpc.js";
 import {
   resolveLandmark,
   type ResolvedLink,
+  type ResolvedGroup,
 } from "../../../core/landmark/resolve.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
@@ -29,8 +30,10 @@ export interface LandmarkPayload {
   symbol: string;
   /** Box-relative path to the symbol image, or null for text symbols. */
   symbolSrc: string | null;
-  /** Resolved hand-listed + expanded links, in source order with dedup. */
+  /** Resolved hand-listed + unnamed-expand links, in source order with dedup. */
   links: ResolvedLink[];
+  /** Named expands kept as collapsible groups (submenus). */
+  groups: ResolvedGroup[];
   /** Nesting depth relative to ancestor landmarks (root = 0). */
   depth: number;
   /**
@@ -80,7 +83,7 @@ async function loadLandmarkPayload(
   const navigation = fields.navigation;
   const dir = path.dirname(relPath);
   const landmarkDir = path.dirname(absPath);
-  const links = await resolveLandmark(navigation, { landmarkDir, boxRoot });
+  const { links, groups } = await resolveLandmark(navigation, { landmarkDir, boxRoot });
   const symbol = readSymbol(navigation, { landmarkDir, boxRoot });
 
   return {
@@ -90,6 +93,7 @@ async function loadLandmarkPayload(
     symbol: symbol.text,
     symbolSrc: symbol.src,
     links,
+    groups,
     depth: 0,
     features: readLandmarkFeatures(navigation),
   };

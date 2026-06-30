@@ -120,7 +120,7 @@ const navigation = {
     { ref: "Pasta.recipe.card" },
   ],
 };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
@@ -160,7 +160,7 @@ const navigation = {
     { ref: "Vanished.recipe.card" },
   ],
 };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
@@ -195,7 +195,7 @@ await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
 await box.write("store/recipes/Carrot.recipe.card", "---\ntitle: Carrot\n---\n");
 
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card" }] };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
@@ -227,7 +227,7 @@ const navigation = {
   label: "Recipes",
   expand: [{ query: "*.recipe.card", "template-ref": "${path}", "template-label": "${title}" }],
 };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
@@ -265,7 +265,7 @@ const navigation = {
   links: [{ ref: "Bread.recipe.card", label: "the bread" }],
   expand: [{ query: "*.recipe.card" }],
 };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
@@ -288,6 +288,58 @@ JSON.stringify(links.map((l) => ({ ref: l.ref, label: l.label })), null, 2)
 await box.cleanup();
 ```
 
+## Named expand becomes a collapsible group
+
+An `expand` carrying a `group` title stays grouped instead of flattening
+into the flat `links`. The group reports a `count` and resolved
+`children`; the flat list holds only the static link.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/recipes/Bread.recipe.card", "---\ntitle: Bread\n---\n");
+await box.write("store/recipes/images/A.image.card", "---\ntitle: A\n---\n");
+await box.write("store/recipes/images/B.image.card", "---\ntitle: B\n---\n");
+
+const navigation = {
+  label: "Recipes",
+  links: [{ ref: "Bread.recipe.card", label: "the bread" }],
+  expand: [{ query: "images/*.image.card", group: "Images" }],
+};
+const resolved = await resolveLandmark(navigation, {
+  landmarkDir: box.path("store/recipes"),
+  boxRoot: box.root,
+});
+
+JSON.stringify({
+  links: resolved.links.map((l) => l.ref),
+  groups: resolved.groups.map((g) => ({
+    label: g.label,
+    count: g.count,
+    children: g.children.map((c) => c.ref),
+  })),
+}, null, 2)
+=>
+{
+  "links": [
+    "store/recipes/Bread.recipe.card"
+  ],
+  "groups": [
+    {
+      "label": "Images",
+      "count": 2,
+      "children": [
+        "store/recipes/images/A.image.card",
+        "store/recipes/images/B.image.card"
+      ]
+    }
+  ]
+}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Order: modified-desc
 
 `order: modified-desc` sorts matches by mtime, newest first.
@@ -302,7 +354,7 @@ await utimes(aPath, new Date(2020, 0, 1), new Date(2020, 0, 1));
 await box.write("store/recipes/B.recipe.card", "---\ntitle: B\n---\n");
 
 const navigation = { label: "Recipes", expand: [{ query: "*.recipe.card", order: "modified-desc" }] };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
@@ -334,7 +386,7 @@ const navigation = {
     { ref: "../../docs/About.doc.card", label: "about" },
   ],
 };
-const links = await resolveLandmark(navigation, {
+const { links } = await resolveLandmark(navigation, {
   landmarkDir: box.path("store/recipes"),
   boxRoot: box.root,
 });
