@@ -50,11 +50,26 @@ const reactExternalPlugin: esbuild.Plugin = {
     }));
     build.onLoad({ filter: /.*/, namespace: "react-shim" }, (args) => {
       if (args.path === "react/jsx-runtime" || args.path === "react/jsx-dev-runtime") {
+        // Translate the automatic-runtime calling convention to createElement:
+        // jsx/jsxs/jsxDEV pass children *inside* props and `key` as a separate
+        // arg, while createElement reads children from its rest params and `key`
+        // from config. Aliasing them directly (the old shim) passed a static
+        // children array as a single child — triggering React's spurious
+        // "unique key" dev warning for every multi-child view — and dropped
+        // `key`. Spreading the children array as positional args restores both.
         return {
           contents: `const React = window.__cbReact;
-export const jsx = React.createElement;
-export const jsxs = React.createElement;
-export const jsxDEV = React.createElement;
+function jsx(type, props, key) {
+  const { children, ...rest } = props;
+  if (key !== undefined) rest.key = key;
+  if (children === undefined) return React.createElement(type, rest);
+  return Array.isArray(children)
+    ? React.createElement(type, rest, ...children)
+    : React.createElement(type, rest, children);
+}
+export { jsx };
+export const jsxs = jsx;
+export const jsxDEV = jsx;
 export const Fragment = React.Fragment;`,
           loader: "js",
         };
