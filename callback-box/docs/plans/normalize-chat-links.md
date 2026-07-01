@@ -7,12 +7,12 @@
 > `?view=`/param + companion-tab threading, standalone-view removal, CB001
 > repurpose, instruction scrub + regenerated box docs, and `cb migrate-view-links`
 > (applied to test1/ledger boxes; ledger `bill.tsx` converted to `rendersCardTypes`).
-> **Deferred / needs a decision:** running the new knowledge audits (heavyweight
-> box-agent step); a `cb view lint` for card-less `views/*.tsx` (no known ones
-> remain — `test1/views/todos.tsx` and `hearth-test/views/butterfly-closet.tsx`
-> are card-less dashboards flagged for host-card-or-delete); live `bin/browse`
-> verification (needs the shared dev router). Box repos hold uncommitted migrated
-> content for boxholder review.
+> The three knowledge audits (figure-embed, link-vs-embed, views-attach) **pass**
+> against test1; `cb view lint` flags card-less `views/*.tsx`; the two card-less
+> dashboards (`test1/views/todos.tsx`, `hearth-test/views/butterfly-closet.tsx`)
+> were deleted. **Remaining:** live `bin/browse` verification (needs the shared
+> dev router). Box repos hold uncommitted migrated content + view deletions for
+> boxholder review.
 
 Replace the bespoke `view:` URL scheme for referencing box files/cards in
 markdown with native markdown link/image semantics:
