@@ -20,11 +20,18 @@ overtaken by shipped source (laws.ts now has Laws 1–3; scrolled card-activity
 already carries a read position — `01c63c48`, `a185e70d`). Every track below is
 reconciled against *current* main, cited inline.
 
-**Status (partial — plan is still in progress):** Track 0's first chunk has
-landed on `main`: the NAMED_SECTIONS registry (`agent-guide/sections.ts`), the
-named laws (`THE_LAW_OF_QUOTING`/`SAVING`/`CARDS`), and the canonical
-`ABOUT_CARDS` section (`agent-guide/cards.ts`). Everything else below is still
-future work.
+**Status (partial — plan is still in progress).** Landed on `main` so far:
+- **Track 0** — the NAMED_SECTIONS registry (`agent-guide/sections.ts`,
+  `UPPER_SNAKE_CASE` tokens + `PROVENANCE`), the named laws
+  (`THE_LAW_OF_QUOTING`/`SAVING`/`CARDS`), and the canonical `ABOUT_CARDS`
+  section (`agent-guide/cards.ts`) — including `title`/`status`/validation and
+  the `content-type` removal (see the `content-type` bullet below).
+- **Dedup pass** — `search.ts` (`contains:`), `behavior.ts` (card bullets),
+  `doc.tsx`/`person.tsx`/`recipe.tsx` now defer to `ABOUT_CARDS`/`PROVENANCE`;
+  `source.ts` converted to the `PROVENANCE` heading + generalized `ref`.
+- **Track 5 — `commands.ts`** — restructured (see its bullet below): DONE.
+
+Everything else below is still future work.
 
 ---
 
@@ -301,13 +308,13 @@ cross-cutting refactor: **normalize each section from string-array to a single
 template literal** so it reads as prose (round-2 whole-file note, applies to all
 of `src/core/agent-guide/`).
 
-- **commands.ts** — restructure: heavy-use (`cb create`/`mv`/`rm`/`feedback`)
-  get real *why*; **promote `cb feedback`** up near the everyday cluster (it's
-  what we most want reflexively reached for); system-run (`cb reactor`,
-  `cb finalize`, `cb health`) move out or get "don't invoke manually"; **remove
-  `cb scenario`** from the guide (dev tooling → `pnpm` script); scope `cb finish`
-  to procedure/reactor lifecycle; surface the **two-level families** (`cb chat …`,
-  `cb procedure run`) deliberately; clarify or drop `cb answer`.
+- ~~**commands.ts**~~ — **DONE.** Restructured into "reach for these"
+  (`cb feedback` promoted to the top with its rationale; search/calendar/
+  procedure/the `cb chat` family), "job/procedure lifecycle" (`cb finish`
+  scoped), and "system-run — you don't invoke these" (`cb reactor`/`finalize`/
+  `health`). Card ops (`cb create`/`mv`/`rm`) defer to ABOUT_CARDS; `cb validate`
+  (implicit), `cb answer` (rare), and `cb scenario` (dev tooling) dropped from the
+  surface.
 - **behavior.ts** — drop the three duplicated non-instructions (validate,
   cb-create-over-hand, meaningful-commit); **keep** the git-trailers table (and
   audit it against emitted trailers) and the memory-vs-box rule (check for a
@@ -615,9 +622,8 @@ surface — noted, not yet moved:
 - **`CONTAINS_DOC_APPENDIX`** (`search.ts`) — the per-card-type generated-doc
   appendix now duplicates ABOUT_CARDS' `contains:` rule; replace it with a
   cross-reference (a `generate-docs` change, so deferred).
-- **`commands.ts` card commands** — `cb create`/`mv`/`rm`/`validate` and the
-  raw-tool / validate-is-implicit nudges overlap ABOUT_CARDS; commands.ts should
-  list the commands and let ABOUT_CARDS carry the *why*/nudges (Track 5).
+- ~~**`commands.ts` card commands**~~ — **DONE.** `commands.ts` now defers card
+  ops to ABOUT_CARDS and dropped the `cb validate` nag.
 - **reactor + chat system prompts** — both still re-teach "cards are
   `Name.type.card` + `cb` commands"; since they load the guide, defer to
   ABOUT_CARDS (Track 4 / the reactor trim).
