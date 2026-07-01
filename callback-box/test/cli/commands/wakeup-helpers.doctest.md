@@ -219,3 +219,21 @@ await cleanupStaleJobs(box.root)
 => 0
 ```
 
+### Treats an omitted status as the schema default (pending)
+
+A job that leaves `status:` off relies on the schema default (`pending`), so it
+is still eligible for stale cleanup — `readCardFrontmatter` is a loose read that
+doesn't apply defaults, so cleanup must.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(
+  "box/jobs/nostatus.intake.job.card",
+  "---\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: box/inbox/gone.memo.card\n---\n",
+);
+box.commitAll("queue statusless job");
+
+await cleanupStaleJobs(box.root)
+=> 1
+```
+

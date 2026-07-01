@@ -110,8 +110,13 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
     }
 
     const fm = readCardFrontmatter(content);
-    // Only clean up pending jobs
-    if (fm?.["status"] !== "pending") continue;
+    if (!fm) continue;
+    // Only clean up pending jobs. `readCardFrontmatter` is a loose read that
+    // doesn't apply schema defaults, so treat an omitted status: as its schema
+    // default ("pending") — otherwise a job relying on the default would never
+    // be stale-cleaned.
+    const status = fm["status"] ?? "pending";
+    if (status !== "pending") continue;
 
     // Collect the job's file refs, skipping URL refs (not file paths).
     const refs = collectRefs(fm).filter(
