@@ -10,7 +10,7 @@
 
 import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
-import { SECTION } from "./sections.js";
+import { SECTION, xref } from "./sections.js";
 
 export function aboutCardsSection(): string[] {
   const createExamples = getAllTemplates().map(
@@ -41,8 +41,8 @@ the user's verbatim words, \`{% source %}\` for provenance — the same as anywh
 
 ### Frontmatter every card shares
 
-Most frontmatter is defined by the card's own type (see Card Types, next), but a
-few fields are common to all:
+Most frontmatter is defined by the card's own type (see ${xref(SECTION.CARD_TYPES)},
+next), but a few fields are common to all:
 
 - **\`contains:\`** — one sentence stating what can be found inside the card. It
   is the prime retrieval field for \`cb search\` and listings; write it whenever
@@ -94,14 +94,14 @@ to trash; the raw tools silently break both.
 change. Reach for it explicitly only when debugging a validation error surfaced
 elsewhere.
 
-The full catalogue of card types is in **Card Types**, next.`;
+The full catalogue of card types is in ${xref(SECTION.CARD_TYPES)}, next.`;
 
   return [...intro.split("\n"), ...createExamples, ...outro.split("\n")];
 }
 
 export function cardTypesSection(allCardSchemas: CardSchema[]): string[] {
   const lines: string[] = [
-    "## Card Types",
+    `## ${SECTION.CARD_TYPES}`,
     "",
   ];
   for (const schema of allCardSchemas) {
@@ -116,7 +116,7 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string[] {
 
 export function questionsSection(): string[] {
   return [
-    "## Questions",
+    `## ${SECTION.QUESTIONS}`,
     "",
     "Create question cards in `box/questions/` to ask the user.",
     "Set `answered-by` to your agent name so the answer routes back to you.",
