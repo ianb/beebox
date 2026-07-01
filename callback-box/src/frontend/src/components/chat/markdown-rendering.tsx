@@ -178,6 +178,11 @@ export function MarkdownContent({
     [text],
   );
   const contextDir = useChatContextDir();
+  // `contextDir` is a *directory*, but `resolveRelativePath` treats its base as a
+  // containing file and strips the last segment. A trailing slash makes that
+  // strip a no-op, so a bare `foo.card` resolves to `<contextDir>/foo.card`, not
+  // its parent. Empty/box-root → undefined (resolve against the box root).
+  const basePath = contextDir && contextDir !== "" ? `${contextDir.replace(/\/+$/, "")}/` : undefined;
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
@@ -188,15 +193,15 @@ export function MarkdownContent({
     [onZoomView],
   );
   const components = useMemo(
-    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, contextDir, onZoomView }),
-    [handleNavigate, boxSlug, contextDir, onZoomView],
+    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, contextDir: basePath, onZoomView }),
+    [handleNavigate, boxSlug, basePath, onZoomView],
   );
 
   if (!cleaned) return null;
 
   return (
     <div className="prose prose-sm max-w-none overflow-hidden">
-      <Markdown components={components} onNavigate={handleNavigate} basePath={contextDir}>{cleaned}</Markdown>
+      <Markdown components={components} onNavigate={handleNavigate} basePath={basePath}>{cleaned}</Markdown>
     </div>
   );
 }

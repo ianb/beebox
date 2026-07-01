@@ -9,7 +9,7 @@
  */
 
 import { useMemo } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useParams, useLocation } from "@tanstack/react-router";
 import { parseViewUrl } from "../lib/view-url";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { FileView } from "../components/FileView";
@@ -17,13 +17,16 @@ import { Text } from "../components/ui/Text";
 
 export function ViewPage() {
   const { _splat: splat } = useParams({ strict: false });
+  const location = useLocation();
   const handleNavigate = useViewNavigate();
 
+  // Key on the query string too: navigating `?view=A` -> `?view=B` at the same
+  // path must recompute the viewer/params, not reuse a splat-only memo.
   const target = useMemo(() => {
     if (!splat) return null;
-    const qs = window.location.search;
+    const qs = location.searchStr;
     return parseViewUrl(qs ? `${splat}${qs}` : splat);
-  }, [splat]);
+  }, [splat, location.searchStr]);
 
   if (!target) {
     return <Text as="div" tone="muted" className="p-8">No view specified.</Text>;

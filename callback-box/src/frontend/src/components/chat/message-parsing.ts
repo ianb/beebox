@@ -241,9 +241,12 @@ export function parseTaskNotification(text: string): TaskNotification | null {
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
 
 export function isImagePath(path: string): boolean {
-  const dot = path.lastIndexOf(".");
+  // Strip any ?query / #hash before checking the extension, so a cache-busted
+  // image (`photo.png?v=1`) is still recognized as an image, not an embed.
+  const clean = path.split(/[#?]/, 1)[0]!;
+  const dot = clean.lastIndexOf(".");
   if (dot <= 0) return false;
-  return IMAGE_EXTS.has(path.slice(dot).toLowerCase());
+  return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
 }
 
 /**

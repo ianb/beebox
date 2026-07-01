@@ -88,6 +88,18 @@ JSON.stringify(resolveContentTarget("store/docs/report.md", "/store/x.bill.card?
 => {"path":"store/x.bill.card","viewer":"ledger","params":{}}
 ```
 
+`basePath` is treated like a containing *file* (its last segment is stripped). A
+directory base (e.g. a chat's cwd) must carry a trailing slash so the strip is a
+no-op and the relative path resolves *inside* it, not its parent:
+
+```ts
+JSON.stringify([
+  resolveContentTarget("store/foo/x.md", "bar.card").path,
+  resolveContentTarget("store/foo/", "bar.card").path,
+])
+=> ["store/foo/bar.card","store/foo/bar.card"]
+```
+
 ## classifyMarkdownHref
 
 Splits an href into the cases the Markdown renderer cares about. A plain relative/absolute path is a box reference; anything with a scheme or anchor is external; the retired `view:` scheme is `legacy-view` so renderers can draw a visibly-broken marker:
@@ -106,6 +118,9 @@ JSON.stringify(classifyMarkdownHref("../sibling.md"))
 => {"kind":"relative","path":"../sibling.md"}
 
 JSON.stringify(classifyMarkdownHref("https://example.com"))
+=> {"kind":"external"}
+
+JSON.stringify(classifyMarkdownHref("//cdn.example.com/a.png"))
 => {"kind":"external"}
 
 JSON.stringify(classifyMarkdownHref("mailto:a@b.com"))

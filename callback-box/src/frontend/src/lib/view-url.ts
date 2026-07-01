@@ -170,7 +170,9 @@ export function classifyMarkdownHref(
   | { kind: "relative"; path: string }
   | { kind: "external" } {
   if (href.startsWith("view:")) return { kind: "legacy-view", raw: href };
-  // Anything with a URL scheme (http:, mailto:, tel:, data:, etc.) is external.
+  // Protocol-relative (`//host/x`) and any URL scheme (http:, mailto:, tel:,
+  // data:, …) are external, not in-box paths.
+  if (href.startsWith("//")) return { kind: "external" };
   if (/^[a-z][\w+.-]*:/i.test(href)) return { kind: "external" };
   // Anchors and empty hrefs are not navigations.
   if (href.startsWith("#") || href === "") return { kind: "external" };
