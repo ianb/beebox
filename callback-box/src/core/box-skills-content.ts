@@ -288,6 +288,8 @@ UID:unique-id-here
 SUMMARY:Dentist appointment
 DTSTART;TZID=America/Chicago:20260401T140000
 DTEND;TZID=America/Chicago:20260401T150000
+X-CB-REASON:confirmed in the reschedule email
+X-CB-REF:/store/archive/Dentist_Reschedule.email-message.card
 END:VEVENT
 END:VCALENDAR
 \`\`\`

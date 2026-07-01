@@ -23,7 +23,7 @@ export function sourceSection(): string[] {
     "closed, mostly because she doesn't trust herself to keep them tidy.",
     "{% /source %}",
     "",
-    "{% source ref=\"/box/people/dana.person.card\" usage=\"inferred from her email signature\" %}",
+    "{% source ref=\"/box/people/Dana_Bicking.person.card\" usage=\"inferred from her email signature\" %}",
     "Dana lives in Portland.",
     "{% /source %}",
     "```",
