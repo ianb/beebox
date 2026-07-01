@@ -33,8 +33,8 @@ An intake job means new items have arrived in the inbox and need triage.
 3. Read each referenced item to understand what it is
 4. For each item, follow the guide's triage rules and actions. Without
    a guide:
-   - **Move** to a permanent location (e.g., \`store/\` or
-     \`box/pool/\`) if it's worth keeping
+   - **Move** to a permanent location under \`store/\` if it's worth
+     keeping
    - **Trash** with \`cb rm <path>\` if it's not useful
    - **Ask** the user a question if you need guidance (create a
      question card)

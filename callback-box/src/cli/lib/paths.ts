@@ -43,7 +43,6 @@ export const BOX_DIRS = {
   archiveFailed: "store/archive/failed",
   archiveProcessed: "store/archive/processed",
   trash: "store/trash",
-  integrated: "store/integrated",
   recipes: "store/recipes",
   todos: "store/todos",
 

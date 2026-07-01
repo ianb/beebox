@@ -38,7 +38,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Keep for Reading",
         when: "Item is worth reading later but not urgent",
-        instructions: "Move to box/pool/ for later processing",
+        instructions: "Move to a suitable location under store/ (e.g. store/reading/) with cb mv",
       },
       {
         name: "Trash",

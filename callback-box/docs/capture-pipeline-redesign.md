@@ -56,7 +56,7 @@ Options:
 - **Extract records** (current behavior) — create record cards in `store/catalogs/`. Good for structured documents (bills, receipts, tax forms).
 - **Archive as-is** — move the whole session to `store/archive/captures/`. Good for reference material.
 - **Convert to memo** — create a memo card from the transcript. Good for voice notes.
-- **Move to pool** — put in `box/pool/` for later processing.
+- **Keep for later** — move to a holding spot under `store/` for later processing.
 
 This might just be the regular intake triage system — once the capture is assembled and enriched, it's just another inbox item. Or it might need a capture-specific guide.
 

@@ -60,7 +60,6 @@ Items move through these directories as they're processed. **Location is state**
 
 Additional directories observed in active boxes that are **not** currently in `BOX_DIRS` but are referenced in code or generated content:
 
-- `box/pool/` — items being actively worked on (referenced in `box-shape.ts`; not auto-created by `cb init`).
 - `box/commands/`, `box/bookmarks/` — present in `test1`; legacy or ad-hoc.
 
 When you find a directory in this category, decide: promote it into `BOX_DIRS` if it's canonical, or remove it from `box-shape.ts` / migrate the content if it isn't.
@@ -73,7 +72,6 @@ When you find a directory in this category, decide: promote it into `BOX_DIRS` i
 | `store/archive/failed/` | Items that errored and were moved out of the working set. |
 | `store/archive/processed/` | Items consumed by a procedure step (e.g., raw inputs after digestion). |
 | `store/trash/` | Soft-deleted items (`cb rm` moves here, not to `/dev/null`). |
-| `store/integrated/` | Feedback or notes that have been absorbed into a guide. |
 | `store/recipes/` | Recipe collection (free-form subdirectory tree). |
 | `store/todos/` | Active todo lists — human action items. |
 | `store/drive/` | Google Drive sync (spreadsheets as JSON, docs as markdown). |

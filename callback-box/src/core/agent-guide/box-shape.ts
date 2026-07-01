@@ -26,7 +26,6 @@ export function directoryLayoutSection(): string[] {
     "| `box/questions/` | Pending questions for the user |",
     "| `box/resources/` | Synced external state |",
     "| `box/output/` | Cards that make something happen **outside** the box — an action serialized as a card for an external effector to pick up and execute (a Telegram message to send, etc.), flushed by `cb finalize` |",
-    "| `box/pool/` | A working area for items being actively processed (created on demand) |",
     "| `store/archive/` | Processed/completed items |",
     "| `store/calendar/` | Calendar events (.ics files) — two-way sync with Google Calendar |",
     "| `store/drive/` | Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync |",

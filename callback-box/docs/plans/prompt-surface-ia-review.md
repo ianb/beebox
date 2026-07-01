@@ -50,11 +50,16 @@ reconciled against *current* main, cited inline.
   runs; the intake→triage pipeline is the newer one *not* wired into wakeup), with
   an explicit job-vs-triaged-item distinction; `<category>` clarified as
   per-box (from triage landmarks). **Audit results:** `_unsure/` and
-  `store/reviews/retro/` are real (kept); `box/pool/` is real-but-informal (not a
-  `BOX_DIR`; kept); **`store/integrated/` is vestigial** — in `BOX_DIRS` + printed
-  by `cb init` but **no code writes to it** — dropped from the guide table.
-  Follow-up: remove `store/integrated/` from `BOX_DIRS`/`init.ts` (a code change,
-  not done here).
+  `store/reviews/retro/` are real (kept). **`box/pool/` and `store/integrated/`
+  were both dead and are now removed** — closer inspection showed `box/pool/` is
+  empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
+  and `store/integrated/` has no writers. Removed the `box/pool/` convention from
+  its two agent instructions (`intake-job.tsx`, `guide-templates.tsx`), the
+  `cb-commands` examples, the maps `precheck-ignore`, and the guide; removed
+  `store/integrated/` from `BOX_DIRS` + `cb init` + the guide. Docs
+  (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
+  match. (Empty on-disk `box/pool/` dirs in a few boxes are harmless leftovers,
+  left in place.)
 
 Everything else below is still future work.
 
