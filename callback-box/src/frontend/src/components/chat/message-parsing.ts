@@ -10,49 +10,11 @@ import { bustImageSrc } from "../../lib/file-version";
 import { getApiBase } from "../../api";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat-features";
+import { parseSelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
 
-/**
- * Parse a self-note block out of user-position text. Self-notes are
- * agent-authored messages wrapped in `<self-note ref="..." commit="...">...</self-note>`
- * (see `cb chat self-note`). Returns null if the text is not a self-note.
- */
-export interface SelfNoteInfo {
-  ref: string | null;
-  commit: string | null;
-  body: string;
-}
-
-function decodeXmlAttr(v: string): string {
-  return v
-    .replace(/&quot;/g, "\"")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
-}
-
-function parseSelfNotes(text: string): SelfNoteInfo[] | null {
-  const re = /<self-note\b([^>]*)>([\S\s]*?)<\/self-note>/g;
-  const notes: SelfNoteInfo[] = [];
-  let lastEnd = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const between = text.slice(lastEnd, m.index);
-    if (between.trim().length > 0) return null;
-    const attrs = m[1] || "";
-    const body = (m[2] || "").trim();
-    const refMatch = attrs.match(/\bref="([^"]*)"/);
-    const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
-    notes.push({
-      ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
-      commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
-      body,
-    });
-    lastEnd = m.index + m[0].length;
-  }
-  if (notes.length === 0) return null;
-  if (text.slice(lastEnd).trim().length > 0) return null;
-  return notes;
-}
+// Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
+// Re-exported so ChatMessages.tsx keeps importing the type from this module.
+export type { SelfNoteInfo };
 
 function entrySelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
   if (entry.type !== "user") return null;

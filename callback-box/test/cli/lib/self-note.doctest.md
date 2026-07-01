@@ -65,6 +65,22 @@ note.body
 => hi
 ```
 
+### The server-prepended `<chat-app>` snapshot is tolerated
+
+Every turn is persisted with a `<chat-app .../>` snapshot prepended, so a
+self-note arrives as `<chat-app .../>\n<self-note>...`. The snapshot is
+stripped before matching, otherwise the note falls through to a normal
+user bubble.
+
+```ts
+const note = parseSelfNote('<chat-app narration="off" prose="on" time="2026-07-01T02:47:12.815Z"/>\n<self-note ref="foo.md">did stuff</self-note>');
+print(`ref: ${note.ref}`);
+print(`body: ${note.body}`);
+=>
+ref: foo.md
+body: did stuff
+```
+
 ### XML-escaped attribute values decode
 
 ```ts
