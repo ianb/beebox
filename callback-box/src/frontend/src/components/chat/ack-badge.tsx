@@ -68,7 +68,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
   function handleRefClick() {
     if (!ack.ref || !onZoomView) return;
     const target = parseViewUrl(ack.ref);
-    onZoomView({ target: { ...target, zoom: false }, label: target.path });
+    onZoomView({ target, label: target.path });
     onClose();
   }
 

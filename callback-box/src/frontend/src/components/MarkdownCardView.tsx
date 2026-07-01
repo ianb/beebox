@@ -14,7 +14,7 @@ import { createContext, useContext, useMemo } from "react";
 import { useParams } from "@tanstack/react-router";
 import { Markdown } from "./Markdown";
 import { AttachedComments } from "./AttachedComments";
-import { makeFigureEmbedComponents } from "./FigureEmbed";
+import { makeEmbedComponents } from "./FigureEmbed";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/quote-extract";
 import { resolveRelativePath } from "../lib/view-url";
 import type { RendererProps } from "../renderers";
@@ -67,7 +67,6 @@ function RefLink({ refPath }: { refPath: string }): ReactNode {
       path: resolveRelativePath(nav.basePath, noFrag),
       viewer: null,
       params: {},
-      zoom: false,
     };
     nav.onNavigate(target, { label: refPath });
   };
@@ -183,7 +182,6 @@ function QuoteSpeakersLine({
                 path: speaker,
                 viewer: null,
                 params: {},
-                zoom: false,
               };
               onNavigate(target, { label: display });
             }}
@@ -213,7 +211,7 @@ export function MarkdownCardView({ data, onNavigate }: RendererProps) {
   const navCtx = useMemo<FieldsNavCtx>(() => ({ onNavigate, basePath: data.path }), [onNavigate, data.path]);
   // Inline figure embeds: `![](view:…figure.card)` renders the figure in place.
   const components = useMemo(
-    () => makeFigureEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
+    () => makeEmbedComponents({ onNavigate, basePath: data.path, boxSlug, onJumpToQuote: undefined }),
     [onNavigate, data.path, boxSlug],
   );
 

@@ -37,7 +37,7 @@ import { detectVideoEmbed } from "../lib/video-url";
 import {
   classifyMarkdownHref,
   externalImageProxyUrl,
-  parseViewUrl,
+  resolveContentTarget,
   resolveImageSrc,
   resolveRelativePath,
   serializeViewUrl,
@@ -84,10 +84,13 @@ function flattenText(node: ReactNode): string {
 }
 
 /**
- * Render a markdown link. View URLs and relative paths are intercepted
- * and handed to the caller's `onNavigate`; everything else opens as a
- * normal external link in a new tab. Empty/non-string hrefs render as
- * a plain anchor (defensive against malformed input).
+ * Render a markdown link. A box file/card is referenced by a plain relative or
+ * box-root-absolute path — resolved against the document's `basePath` and handed
+ * to the caller's `onNavigate` (which opens it in the surrounding surface).
+ * Everything else opens as a normal external link. A retired `view:` link
+ * renders as a visibly-broken "legacy link" marker (see `classifyMarkdownHref`).
+ * Empty/non-string hrefs render as a plain anchor (defensive against malformed
+ * input).
  */
 function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?: string; children?: ReactNode }> {
   return function Link({ href, title, children }) {
@@ -95,28 +98,11 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
       return <a title={title}>{children}</a>;
     }
     const classified = classifyMarkdownHref(href);
-    if (classified.kind === "view") {
-      const target = parseViewUrl(classified.raw);
-      const resolved = viewHref(ctx.boxSlug, target);
-      return (
-        <a
-          href={resolved}
-          title={title}
-          onClick={(e) => {
-            if (e.defaultPrevented) return;
-            if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
-            e.preventDefault();
-            const label = flattenText(children).trim();
-            ctx.onNavigate(target, label ? { label } : undefined);
-          }}
-        >
-          {children}
-        </a>
-      );
+    if (classified.kind === "legacy-view") {
+      return <LegacyViewLink>{children}</LegacyViewLink>;
     }
     if (classified.kind === "relative") {
-      const resolved = resolveRelativePath(ctx.basePath, classified.path);
-      const target: ViewTarget = { path: resolved, viewer: null, params: {}, zoom: false };
+      const target = resolveContentTarget(ctx.basePath, classified.path);
       const resolvedHref = viewHref(ctx.boxSlug, target);
       return (
         <a
@@ -144,6 +130,23 @@ function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?
     }
     return <a href={href} title={title}>{children}</a>;
   };
+}
+
+/**
+ * A retired `view:` link. It routes nowhere; it renders as a visibly-disabled
+ * marker so un-migrated content reads as broken-on-sight rather than as a
+ * silently-inert `<a href="view:…">`. Transitional — removable once all
+ * controlled boxes are migrated off the `view:` scheme.
+ */
+function LegacyViewLink({ children }: { children?: ReactNode }) {
+  return (
+    <span
+      className="cursor-not-allowed text-danger-dark underline decoration-dotted"
+      title="Legacy view: link — needs migration to a plain path"
+    >
+      {children}
+    </span>
+  );
 }
 
 export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; alt?: string; title?: string }> {
@@ -269,7 +272,6 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
             path: resolveRelativePath(linkCtx.basePath, ref),
             viewer: null,
             params: {},
-            zoom: false,
           };
           linkCtx.onNavigate(target, label === "" ? undefined : { label });
         }}

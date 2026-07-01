@@ -45,7 +45,7 @@ function LabeledBlock({
 function refToViewTarget(sourceRef: string): ViewTarget {
   const noFrag = sourceRef.split("#")[0] ?? sourceRef;
   const path = noFrag.replace(/^\/+/, "");
-  return { path, viewer: null, params: {}, zoom: false };
+  return { path, viewer: null, params: {} };
 }
 
 function personDisplay(sourceRef: string | undefined, called: string | undefined): string {

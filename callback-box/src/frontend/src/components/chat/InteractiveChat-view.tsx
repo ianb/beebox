@@ -262,7 +262,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
               // detail is where they navigated to.
               props.reportCardActivity("navigated", target.path);
               onZoomView({
-                target: { ...target, zoom: false },
+                target,
                 label: hint && hint.label ? hint.label : target.path,
               });
             }}

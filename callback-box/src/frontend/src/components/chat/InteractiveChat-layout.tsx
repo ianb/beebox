@@ -49,14 +49,14 @@ export function ChatHeader(props: {
       <LandmarkLinksButton
         contextDir={effectiveContextDir}
         onPanel={(link) => onZoomView({
-          target: { path: link.ref, viewer: null, params: {}, zoom: false },
+          target: { path: link.ref, viewer: null, params: {} },
           label: link.label ?? link.title,
         })}
       />
       <RecentFilesButton
         entries={messages}
         onPanel={(summary) => onZoomView({
-          target: { path: summary.path, viewer: null, params: {}, zoom: false },
+          target: { path: summary.path, viewer: null, params: {} },
           label: summary.title,
         })}
       />
