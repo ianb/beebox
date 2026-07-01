@@ -30,6 +30,25 @@ reconciled against *current* main, cited inline.
   `doc.tsx`/`person.tsx`/`recipe.tsx` now defer to `ABOUT_CARDS`/`PROVENANCE`;
   `source.ts` converted to the `PROVENANCE` heading + generalized `ref`.
 - **Track 5 — `commands.ts`** — restructured (see its bullet below): DONE.
+- **Track 5 — `behavior.ts` / `search.ts` / `extensibility.ts`** — DONE. `search.ts`
+  already split search from `contains:`-authoring (defers the write-rule to
+  `ABOUT_CARDS`, has concrete example queries + result-shape). `behavior.ts`:
+  Git-History's 7-row trailer table (stale *and* structurally incomplete — code
+  emits a whole `<Verb>-By` family it missed, per an audit) replaced with the
+  self-maintaining pattern; Where-to-Record's duplicated per-destination
+  subsections + separate quick-test list collapsed into one `kind → destination`
+  decision list; retrospective/personality prose compressed; both normalized to
+  template literals. `extensibility.ts` reframe (schedules "serve the user,
+  practical not dramatic"; tricks "reusable script, `cb trick <name>`") already
+  landed in the earlier schedules/tricks pass and audits clean (`cb trick`,
+  `cb scheduled`, `tricks/scripts/<name>/index.ts`, `not-before`,
+  `create-after-success` all real) — no template-literal conversion forced on its
+  dynamic-loop / code-fence sections (would add escaping noise against the
+  readability goal). Plus a straggler fix: `cards.ts` questionsSection said to
+  include a `<directive>` *element* (XML); `directive:` is a frontmatter field
+  (`question.ts:45`) — corrected, caught by the "cards are not XML" backstop.
+  **Only `briefing-tags.ts` remains in Track 5, deferred to Track 7** (couples to
+  the briefing redesign).
 - **Track 5 — `quotes.ts` / `source.ts` / `landmarks.ts` + reactor prompt** —
   quotes trimmed to mechanics (rule deferred to `THE_LAW_OF_QUOTING`, repeat-
   sentence + user-directed-edit patterns added, "mishears" fixed); `source.ts`
