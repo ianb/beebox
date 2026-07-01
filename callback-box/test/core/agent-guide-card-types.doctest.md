@@ -1,6 +1,6 @@
 # Agent guide — Card Types section
 
-`cardTypesSection` builds the "## Card Types" catalogue in the generated agent
+`cardTypesSection` builds the "## CARD_TYPES" catalogue in the generated agent
 guide from the box's frontmatter card schemas.
 
 It takes `CardSchema[]` and lists each by its `.type`. This regressed once: it
@@ -21,7 +21,7 @@ const withDoc: CardSchema = cardSchema("memo", { fields: { status: z.string() },
 const noDoc: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
 const lines = cardTypesSection([withDoc, noDoc]);
-lines.includes("## Card Types")
+lines.includes("## CARD_TYPES")
 => true
 
 // A schema with instructions links to its per-type doc by .type
@@ -41,5 +41,5 @@ lines.some((l) => l.includes("widget") && l.includes("docs/generated"))
 ```ts
 const lines = cardTypesSection([]);
 lines[0]
-=> ## Card Types
+=> ## CARD_TYPES
 ```
