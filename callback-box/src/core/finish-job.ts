@@ -8,6 +8,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { stageFiles, commit } from "../cli/lib/git.js";
+import { readCardFrontmatter } from "./card-io.js";
 
 class JobDeleteError extends Error {
   readonly jobPath: string;
@@ -33,9 +34,9 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
   let jobType = "";
   try {
     const content = await fs.readFile(absPath, "utf-8");
-    const descMatch = content.match(/<description>(.*?)<\/description>/s);
-    if (descMatch) {
-      description = descMatch[1]!.trim();
+    const desc = readCardFrontmatter(content)?.["description"];
+    if (typeof desc === "string") {
+      description = desc.trim();
     }
     const parts = path.basename(jobRelPath).split(".");
     // parts: ["foo", "intake", "job", "card"]

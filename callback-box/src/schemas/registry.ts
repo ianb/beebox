@@ -33,6 +33,7 @@ import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
+import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { TodoListSchema } from "./todo-list.js";
@@ -102,6 +103,7 @@ export const cardSchemas: CardSchema[] = [
   // system bookkeeping
   IntakeJobSchema,
   ChatJobSchema,
+  ContainsBackfillJobSchema,
   QuestionFollowupJobSchema,
   ProcedureRunSchema,
   ChatThreadSchema,
@@ -462,6 +464,7 @@ export { ScheduledScriptSchema } from "./scheduled-script.js";
 export { TelegramMessageSchema } from "./telegram-message.js";
 export { ChatThreadSchema } from "./chat-thread.js";
 export { ChatJobSchema } from "./chat-job.js";
+export { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
 export { PersonalitySchema } from "./personality.js";
 export { QuestionFollowupJobSchema } from "./question-followup-job.js";
 export { TodoListSchema } from "./todo-list.js";
