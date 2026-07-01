@@ -10,6 +10,7 @@ import {
 } from "../../src/core/reactor/index.js";
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
 import { buildJobDescription } from "../../src/core/reactor/batch-jobs.js";
+import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -250,4 +251,48 @@ desc.includes("Process")
 // The ref section header should not appear (file doesn't exist)
 desc.includes("#### store/items/missing.card")
 => false
+```
+
+### Current behavior (pre-purge): frontmatter jobs lose their refs and instructions
+
+A real frontmatter intake job (produced by `createIntakeJobTemplate`) passes
+through `buildJobDescription`, but the XML-only regexes don't understand it:
+`extractRefs` never matches `items:\n  - ref:`, and `extractRootTag` finds no
+`<tag>`. So the referenced item cards are NOT inlined and the intake-job schema
+instructions are NOT injected — the agent works from a job stripped of its
+context. This asserts that broken status quo; the chunk-2 fix flips these.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/inbox/item1.card", `---\nstatus: new\n---\nHello from item one`);
+
+const jobContent = createIntakeJobTemplate({
+  created: "2026-07-01T00:00:00Z",
+  source: "rss",
+  description: "New items to triage",
+  items: ["store/inbox/item1.card"],
+});
+
+const desc = await buildJobDescription(
+  {
+    card: { file: "x.intake.job.card", priority: "normal" },
+    relPath: "box/jobs/x.intake.job.card",
+    content: jobContent,
+  },
+  box.root,
+);
+
+desc.includes("Hello from item one")
+=> false
+
+desc.includes("#### store/inbox/item1.card")
+=> false
+
+desc.includes("Processing Intake Jobs")
+=> false
+
+desc.includes("```xml")
+=> true
+
+await box.cleanup();
 ```
