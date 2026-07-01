@@ -15,6 +15,7 @@ import { externalImageProxyUrl, isExternalUrl, resolveContentTarget, resolveImag
 import { useBustedImageSrc } from "../../lib/file-version";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
+import { useChatContextDir } from "./chat-context-dir";
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
@@ -161,23 +162,22 @@ function makeChatMarkdownComponents(
 }
 
 /**
- * Render markdown content with prose styling. `contextDir` is the chat's working
- * directory; relative link/embed paths resolve against it (box-root-absolute
- * `/…` paths ignore it), so it flows in as the shared renderer's `basePath`.
+ * Render markdown content with prose styling. Relative link/embed paths resolve
+ * against the chat's working directory (from `useChatContextDir`); box-root-
+ * absolute `/…` paths ignore it. It flows in as the shared renderer's `basePath`.
  */
 export function MarkdownContent({
   text,
-  contextDir,
   onZoomView,
 }: {
   text: string;
-  contextDir?: string;
   onZoomView?: OnZoomView;
 }) {
   const cleaned = useMemo(
     () => stripStructuredOutputTags(stripSpeechTags(text)),
     [text],
   );
+  const contextDir = useChatContextDir();
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {

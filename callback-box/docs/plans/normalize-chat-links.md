@@ -21,14 +21,16 @@ sidebar" (today's `?zoom` behavior, promoted to the default).
 `view:` is dropped from the markdown link/image surface entirely (hard
 cutover). The `?zoom` companion-panel flag is retired — a plain link *is* the
 "open in companion" gesture now. Path resolution: the agent is instructed to
-write box-root-absolute paths (`/store/…`) in chat; resolution is a **real
-server-side contract** — the file/card GET route gains an optional `base`
-(the chat `contextDir`) and resolves **absolute-first, then `base`-relative**,
-404-ing only if neither exists and returning the canonical path so the frontend
-can key live-updates on it. (This is not a pure-frontend "retry on 404": the
-frontend has no filesystem, and directory/binary/JSON targets don't fetch before
-render, so there is no reliable client-side 404 to retry on. See Track 1.)
-Existing hand-authored box content that uses `view:` is migrated in place.
+write box-root-absolute paths (`/store/…`) in chat. Resolution is **syntactic
+and filesystem-like**, keyed on the chat `contextDir` (the Agent SDK cwd),
+threaded to the renderer via a React context: a leading-`/` path is box-root
+absolute; a bare `foo.card` resolves relative to `contextDir` — exactly how a
+shell treats an absolute vs a relative path. (An earlier draft specified an
+existence-based server contract — "try absolute, else retry against cwd." It was
+dropped as over-engineering: it would make resolution async through many call
+sites to rescue only the case of an agent writing a *bare* path *meant* as
+absolute, which the "write absolute" instruction already avoids.) Existing
+hand-authored box content that uses `view:` is migrated in place.
 
 Alongside the syntax change, the plan **removes the standalone (card-less)
 "view" surface entirely** — every view becomes a renderer attached to a card,
@@ -164,19 +166,17 @@ these stop privileging `view:`.
   still need it — see NOT-in-scope). Stop treating `zoom` as meaningful:
   `?zoom` on a user path is ignored (not an error) so a missed migration
   degrades to "opens normally," not "breaks."
-- **Absolute-then-cwd fallback is a server-side contract, not a client 404
-  retry.** (Codex review corrected the earlier "retry in `FileView`" framing:
-  `resolveRelativePath` is pure string math — `view-url.ts:96`; `FileView` takes
-  only `path`, no `contextDir` — `FileView.tsx:47,292`; and directory/binary/JSON
-  targets never fetch before render — `FileView.tsx:192` — so there is no
-  reliable client 404 to hang a retry on.) Instead, the backend file/card GET
-  route gains an optional `base` query param (the chat `contextDir`) and does the
-  existence-aware resolution: try `boxRelativePath(path)`; if absent, try
-  `resolveRelativePath(base, path)`; 404 only if neither exists. The response
-  carries the **canonical resolved path** so the frontend can normalize
-  `ViewTarget.path` for the `file-change` live-update equality contract
-  (`view-url.ts:44-50`). Chat passes `base=contextDir`; card bodies pass no
-  `base` (their `basePath` is unambiguous). This is one round trip in all cases.
+- **Resolution is syntactic (shipped), keyed on `contextDir`.** A leading-`/`
+  path is box-root absolute; a bare `foo.card` resolves against the chat cwd —
+  the existing pure `resolveRelativePath` already does exactly this (leading-`/`
+  short-circuit at `view-url.ts:97`), so the only new work is *supplying* the
+  base. Chat threads `effectiveContextDir` to `MarkdownContent` via a React
+  context (`chat/chat-context-dir.ts`) and passes it as the shared renderer's
+  `basePath`; card bodies keep their own `basePath` (the card's dir). No server
+  round trip, no async resolution. (Codex flagged that the *earlier* draft's
+  "retry in `FileView` on 404" had no home — true; that existence-based variant
+  was dropped rather than built, since it only rescues an agent writing a bare
+  path meant as absolute, which the instruction avoids.)
 - `message-parsing.ts:262-263`: `VIEW_LINK_RE` is deleted; `MARKDOWN_IMAGE_RE`
   stays for lightbox extraction, extended so a card-embed `![](…card)` is *not*
   swept into the image lightbox list.
@@ -511,7 +511,7 @@ visible-in-UI degradation, not a silent one.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Chat link path resolves as neither box-absolute nor `base`-relative | New (route resolve doctest) | Server resolve route 404s → `FileView` broken-file state | Clear (visible broken-file UI) |
+| Chat bare path resolves against the wrong cwd (agent meant box-root) | `resolveContentTarget` doctest | Instruction: write `/`-absolute paths; bare falls back to cwd | Clear (visible broken-file UI if it misses) |
 | A path exists BOTH as box-absolute and cwd-relative (collision) | New (resolver doctest) | Absolute wins by rule | Clear-but-surprising — documented in prompt: absolute is authoritative |
 | `![](path)` where path is a non-image, non-card file (e.g. `.pdf`) | New (embed fork doctest) | `FileView mode="embed"` picks a renderer or a generic viewer | Clear |
 | Un-migrated `view:` link in an external box we don't control | Migration doctest covers the transform, not the miss | Renderer draws a visibly-disabled "legacy link" marker (Track 1); CB001-repurposed + CB002-scheme-hook flag it on next lint | Clear (marked broken + lint warning), not silent |

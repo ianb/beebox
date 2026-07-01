@@ -9,6 +9,7 @@
 import { useRef, useCallback, useEffect, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { MessageList } from "./InteractiveChat-messages";
+import { ChatContextDirProvider } from "./chat-context-dir";
 import { lastWords, countWords } from "../../lib/selection-serialize";
 import type { AddSelectionInput } from "../../lib/selection-position";
 import {
@@ -117,11 +118,13 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     processBusy, debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
+    effectiveContextDir,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
   const { handleLoadOlder } = actions;
   return (
+    <ChatContextDirProvider value={effectiveContextDir ?? undefined}>
     <MessageList
       messages={messages}
       groups={groups}
@@ -146,6 +149,7 @@ function MessageListRegion(props: ChatBodyProps) {
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHqDraft={pendingHqDraft}
     />
+    </ChatContextDirProvider>
   );
 }
 
