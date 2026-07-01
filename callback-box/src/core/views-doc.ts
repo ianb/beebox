@@ -9,15 +9,11 @@ import { examplesSection } from "./views-doc-examples.js";
 
 const introSection = `# Views: Agent-Generated React Components
 
-Views are \`.tsx\` files in the \`views/\` directory at the box root. They get compiled server-side and rendered in the browser — either as standalone pages or embedded in chat messages.
+Views are \`.tsx\` files in the \`views/\` directory at the box root. They get compiled server-side and rendered in the browser. **A view is always attached to a card type** — it exports \`rendersCardTypes\` and becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less "standalone" view.
 
 ## When to Create a View
 
-Create a view when:
-- The user asks to **see** data in a specific way (dashboard, summary, chart, timeline)
-- A collection of cards would benefit from a structured visual layout
-- You want to present data interactively (filtering, sorting, expanding details)
-- The user asks for a "page" or "dashboard" for something
+Create a view to give a **card type** a richer interface than the default markdown rendering — an interactive layout, a chart, a structured summary of the card's data, editable controls. A dashboard over many cards is itself a card type (e.g. a \`.dashboard.card\` whose view reads a collection).
 
 Don't create a view for:
 - Simple one-off answers (just reply in chat)
@@ -30,20 +26,20 @@ Each view is a \`.tsx\` file with named exports for metadata and a default expor
 
 \`\`\`tsx
 export const name = "Ledger Overview";
-export const description = "Summary of ledger assets and their status";
-export const dependencies = ["store/archive/**/*.record.card", "store/archive/**/*.memo.card"];
+export const description = "Interface for an ledger-overview card";
+export const dependencies = ["store/**/*.ledger-overview.card", "store/archive/**/*.record.card"];
 export const modes = ["page", "chat"];
+export const rendersCardTypes = ["ledger-overview"];
 
 export default function EstateOverview({ cards, navigate, boxSlug, params }) {
-  const viewPath = params.path || "/";
-  // Use viewPath to scope what the view shows
+  // params.path is the card being displayed; dependencies must cover it.
+  const card = cards.find(c => c.path === params.path);
   const records = cards.filter(c => c.type === "record");
-  const memos = cards.filter(c => c.type === "memo");
 
   return (
     <div>
-      <h2>Ledger Overview</h2>
-      <p>{records.length} records, {memos.length} memos</p>
+      <h2>{card?.frontmatter?.title ?? "Ledger Overview"}</h2>
+      <p>{records.length} records</p>
       <ul>
         {records.map(card => (
           <li key={card.path}>
@@ -143,71 +139,68 @@ never inlined — attachments can be huge or binary — fetch it with
 
 const showingFilesSection = `## Showing Files in Chat
 
-To show a file to the user, use a \`view:\` link with the file path:
+To show a file to the user, reference it by its plain box path — like a normal
+markdown link or image:
 
 \`\`\`
-[Meeting Notes](view:store/notes/meeting.md)
-[Recipe](view:store/archive/Pasta.recipe.card)
+[Meeting Notes](/store/notes/meeting.md)
+[Recipe](/store/archive/Pasta.recipe.card)
 \`\`\`
 
-The system automatically picks the right viewer based on file type:
+Clicking a link opens the file in the companion pane. The system picks the
+viewer by file type:
 - \`.md\` files render as formatted Markdown
 - \`.card\` files use the card viewer (a card-type-specific renderer if one is registered, otherwise the markdown card view)
 - Directories show a listing of subdirectories and cards
 - Other files show as raw text
 
-To open as a companion panel alongside chat, add \`?zoom\`:
+To force a specific viewer, add \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view):
 \`\`\`
-[Meeting Notes](view:store/notes/meeting.md?zoom)
-\`\`\`
-
-To force a specific viewer, use \`?view=\` with the renderer name (e.g. \`Source\` for the raw card text, \`Card\` for the markdown view):
-\`\`\`
-[Raw source](view:store/archive/Pasta.recipe.card?view=Source)
+[Raw source](/store/archive/Pasta.recipe.card?view=Source)
 \`\`\`
 
 Directory paths work too:
 \`\`\`
-[Catalog](view:store/catalogs/My_Catalog)
+[Catalog](/store/catalogs/My_Catalog)
 \`\`\`
 
-**Note:** \`view:\` links are for file and directory paths only. Do not use them for custom view slugs.`;
+Write box-root-absolute paths (a leading \`/\`); a bare path resolves against the chat's working directory.`;
 
-const companionViewsSection = `### Inline vs Companion Views
+const companionViewsSection = `### Link vs Embed
 
-There are two ways views appear in chat:
+There are two ways to surface a file in chat — the difference is the \`!\`:
 
-**Inline (default)** — the view renders inside the chat message, scrolls with the conversation:
+**Link \`[label](path)\`** — clicking it opens the file in the **companion pane**, a persistent side panel beside the chat:
 \`\`\`
-[Meeting Notes](view:store/notes/meeting.md)
-\`\`\`
-
-**Companion panel** — adding \`?zoom\` opens the view as a persistent side panel alongside the chat:
-\`\`\`
-[Meeting Notes](view:store/notes/meeting.md?zoom)
+[Meeting Notes](/store/notes/meeting.md)
 \`\`\`
 
-The companion panel:
+**Embed \`![label](path)\`** — renders the file **inline** in the chat message, scrolling with the conversation (the same syntax as an image):
+\`\`\`
+![Meeting Notes](/store/notes/meeting.md)
+\`\`\`
+
+The companion pane:
 - Stays visible while the user continues chatting (sticky — doesn't scroll away)
 - Shows side-by-side with chat on desktop, stacked on mobile
 - Has a close button — the user dismisses it when done
-- Updates live when underlying files change (same SSE mechanism as inline views)
-- If the agent writes another zoom link and the user clicks it, it replaces the current companion
+- Updates live when underlying files change (same SSE mechanism as inline embeds)
+- If the agent writes another link and the user clicks it, it replaces the current companion
 
-Use inline views for quick, one-off data displays within a conversation turn. Use companion views when the user needs to reference the view while continuing to talk — collaborative editing, storybuilding, reviewing a document, exploring data.
+Use an embed for a quick, one-off display within a turn. Use a link when the user needs to reference the file while continuing to talk — collaborative editing, storybuilding, reviewing a document, exploring data.
 
 ### How the Agent Knows a Companion View is Open
 
-When a companion view is open, every user message includes a \`zoomed-view\` attribute:
+When a companion view is open, every user message includes a \`zoomed-view\` attribute naming the open file (a box path):
 \`\`\`xml
-<typed zoomed-view="view:ledger-overview?path=/">What about the furniture?</typed>
+<typed zoomed-view="store/notes/meeting.md">What about the furniture?</typed>
 \`\`\`
 
-This tells the agent what the user is looking at, so it can tailor its responses. The attribute value is the full view URI (without \`&zoom\`).
+This tells the agent what the user is looking at, so it can tailor its responses.
 
 The per-turn \`<chat-app>\` snapshot also carries this as the read-only \`open-card\` attribute (box-relative path), plus a \`<card-activity kind="…">\` child element per kind of activity since the agent's last reply (\`scrolled\`/\`navigated\`/\`explored\`/\`modified\`), the element text being the optional free-text detail a view attaches via \`reportActivity(kind, detail)\` (e.g. the query typed). A view contributes the \`explored\` signal by calling \`reportActivity("explored", detail)\` when the user changes its parameters; writes contribute \`modified\` automatically. For the precise change set, the agent runs \`cb chat whats-changed --card <path>\`.
 
-**Note:** Companion views are a chat-only feature. The \`&zoom\` parameter and \`zoomed-view\` attribute are only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't support them.`;
+**Note:** The companion pane is a chat-only feature. The \`zoomed-view\` attribute is only meaningful in the chat frontend — other agent contexts (jobs, wakeup) don't surface it.`;
 
 const reportingActivitySection = `## Reporting Card Activity (\`reportActivity\`)
 

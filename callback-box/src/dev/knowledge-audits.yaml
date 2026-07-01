@@ -2903,11 +2903,40 @@ tests:
       How do you embed a figure inline in a document and pass it a parameter?
     expected_level: knows_directly
     watch_for: >
-      Use the image/embed syntax ![caption](view:…figure.card?name=value); the
-      query-string params reach the sketch as figure.params. A plain
-      [label](view:…) link stays a navigable link, not an inline embed.
-    correct_contains: ["view:"]
+      Use the image/embed syntax with a plain box path,
+      ![caption](/store/…figure.card?name=value); the query-string params reach
+      the sketch as figure.params. A plain [label](…figure.card) link (no !)
+      stays a navigable link, not an inline embed. Must NOT use a `view:` prefix
+      — that scheme is retired; cards are referenced by plain box path.
+    response_not_contains: ["view:"]
     tags: [figure, cards, embedding]
+
+  - id: chat-link-vs-embed-card
+    prompt: >
+      In chat, how do you reference a card so the user can open it, versus show
+      it inline? What path form should you write?
+    expected_level: knows_directly
+    watch_for: >
+      A plain markdown link [label](/store/x.card) references the card — clicking
+      opens it in the companion pane. Prefix with ! — ![label](/store/x.card) —
+      to embed it inline. Write box-root-absolute paths (leading /); a bare path
+      resolves against the chat working directory. Must NOT mention a `view:`
+      prefix or a `?zoom` flag — both are retired.
+    response_not_contains: ["view:", "?zoom", "zoom flag"]
+    tags: [chat, links, embedding]
+
+  - id: views-attach-to-cards
+    prompt: >
+      A user asks you to build a custom dashboard view. How is a view wired up —
+      can it stand alone, or must it attach to something?
+    expected_level: knows_directly
+    watch_for: >
+      Every view attaches to a card type via rendersCardTypes and is selected
+      with ?view=name on a card's path; there is no card-less standalone view. A
+      dashboard is itself a card type whose view reads a collection. Must NOT
+      propose a standalone/slug-addressed page not tied to a card.
+    correct_contains: ["rendersCardTypes"]
+    tags: [views, cards]
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #

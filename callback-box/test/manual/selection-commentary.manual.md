@@ -15,9 +15,9 @@ end-to-end through the actual UI.
 ## Setup
 
 1. `pnpm dev` (or `bin/worktrees serve`) and open the chat for the test box.
-2. Open a document in the companion pane (click a `view:`/file link in a
-   message, or zoom a view). Use a Phase-2 card with frontmatter, headings,
-   and several paragraphs.
+2. Open a document in the companion pane (click a `[label](/store/…)` file link
+   in a message). Use a Phase-2 card with frontmatter, headings, and several
+   paragraphs.
 
 ## Capture flow (Track 2)
 

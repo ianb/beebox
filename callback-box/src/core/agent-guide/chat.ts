@@ -55,7 +55,7 @@ export function viewsSection(): string[] {
     "",
     "Views are React (`.tsx`) components that render box data in the browser. **Read `docs/generated/views.md` before creating or modifying one.**",
     "",
-    "The common, preferred use is giving a **card type** a custom interface: a view exporting `rendersCardTypes = [\"<type>\"]` becomes that type's UI on card pages, peeks, and chat embeds. Prefer extending or overloading a card type's view over building a standalone page — a one-off dashboard not tied to a card type is the unusual case, not the default.",
+    "A view gives a **card type** a custom interface: a view exporting `rendersCardTypes = [\"<type>\"]` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with `?view=name`. Every view is attached to a card type this way — there is no card-less standalone view.",
     "",
   ];
 }
