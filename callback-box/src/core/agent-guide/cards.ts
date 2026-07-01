@@ -45,8 +45,10 @@ and \`{% source %}\` for provenance and refs (see ${xref(SECTION.PROVENANCE)}).
 ### Frontmatter every card shares
 
 Most frontmatter is defined by the card's own type (see ${xref(SECTION.CARD_TYPES)},
-next), but a few fields are common to all:
+next), but a few belong to every card:
 
+- **\`title:\`** — a human-readable display title (distinct from the filename).
+  Optional on most types; a few require it.
 - **\`contains:\`** — one sentence stating what can be found inside the card; the
   prime retrieval field for \`cb search\` and listings. Write it when you create
   or substantially edit a card. Describe what is *in* the card, not what it *is*
@@ -62,6 +64,10 @@ next), but a few fields are common to all:
 - **No Git-tracked metadata.** Don't put \`created\` / \`modified\` (or the like)
   in frontmatter — Git already tracks both authoritatively. Don't duplicate what
   the history already knows.
+
+Many types also carry a \`status:\` field, but its allowed values are
+type-specific (\`new\` / \`processed\`, \`draft\` / \`sent\`, \`active\` / \`archived\`,
+…) — check the type's schema for the vocabulary that applies.
 
 ### Naming
 
@@ -100,9 +106,23 @@ rewrites every inbound reference (frontmatter refs, body tags, inline markdown
 links) and \`cb rm\` routes deletes to trash; the raw tools relocate the files but
 leave those references dangling.
 
-\`cb validate\` runs implicitly on every edit — you don't need to call it after a
-change. Reach for it explicitly only when debugging a validation error surfaced
-elsewhere.
+### Validation
+
+Cards validate on load. After you edit a card, validation runs automatically and
+any problem comes back as a **warning** — it doesn't block the edit, but fix it
+promptly (a commit that includes an invalid card is rejected). You rarely call
+\`cb validate\` yourself; only to re-check a specific card while debugging. The
+warnings you'll see:
+
+- **invalid \`<type>\` frontmatter** — a required field is missing, a value has the
+  wrong type, or an unknown key crept in. Make the frontmatter match the type.
+- **reference failed to resolve / broken internal link** — a \`ref\` or markdown
+  link points at a card that doesn't exist (common after a hand-move — use
+  \`cb mv\`, which rewrites refs).
+- **\`view:\` in a link label** — put it in the URL: \`[label](view:path)\`, not
+  \`[view:path]\`.
+- **duplicate basename** — two cards in one directory share a name; rename one.
+- **\`contains:\` too long** — keep it under 200 characters.
 
 The full catalogue of card types is in ${xref(SECTION.CARD_TYPES)}, next.`;
 

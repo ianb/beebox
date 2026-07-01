@@ -589,11 +589,24 @@ Chunks are commit boundaries in the worktree. The plan completes when all tracks
 Things elsewhere that re-teach card concepts and may belong in the canonical
 surface — noted, not yet moved:
 
-- **`title:` as a shared field** — many types require/allow `title:`; ABOUT_CARDS
-  currently treats it as per-type. If near-universal, hoist a "most cards carry a
-  `title:`" line (ties to open Q #1).
-- **`status:` as a shared field** — person and others carry a `status:` enum;
-  consider whether a common status vocabulary belongs in ABOUT_CARDS.
+- ~~**`title:` as a shared field**~~ — **DONE.** `title` is in `GLOBAL_CARD_FIELDS`
+  (`src/cards/schema.ts:87`, alongside `contains` and `content-type`); documented
+  in ABOUT_CARDS' shared envelope.
+- **`content-type:`** — also in `GLOBAL_CARD_FIELDS`, but **deliberately not
+  documented**: it's a serializer-managed body-encoding marker
+  (`CARD_XML_CONTENT_TYPE = "application/x-card+xml"`, set only for legacy
+  XML-bodied cards — `card-io.ts:263`), not author data. Agents never set it.
+- **`status:` — normalization assessed, deferred.** 16 schemas carry a `status:`
+  field, but the enums are **3–4 different concepts**, not one: processing
+  lifecycle (`new`→`processed`/`analyzed`/`archived`/`sent`/`transcribed`), sync
+  state (`synced`/`error`/`conflict`), and cases where `status` is misused for a
+  *kind* (`text`/`voice`, `query-response`/`comment`/`brief`) or a *priority*
+  (`normal`/`low`). A single normalized vocabulary would force unlike things
+  together and doesn't work. What *would* work is a scoped cleanup — normalize the
+  genuine processing-lifecycle family to a shared vocab, and **rename** the
+  misfiled ones out of `status`. That's a schema migration of its own, not a
+  prompt edit; flagged here for a future effort. For now ABOUT_CARDS just notes
+  that `status` is a common, type-specific field.
 - **`CONTAINS_DOC_APPENDIX`** (`search.ts`) — the per-card-type generated-doc
   appendix now duplicates ABOUT_CARDS' `contains:` rule; replace it with a
   cross-reference (a `generate-docs` change, so deferred).
