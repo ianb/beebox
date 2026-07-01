@@ -59,6 +59,7 @@ config/procedures
 config/schedules
 config/schemas
 people
+places
 store
 store/archive
 store/archive/done

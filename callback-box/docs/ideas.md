@@ -665,6 +665,82 @@ Open questions (don't design here):
 - **Failure mode.** Mis-routes are recoverable but annoying; the bias should be
   "when unsure, start fresh" rather than guess into the wrong conversation.
 
+## Card-aware widgets for box-authored views
+
+Boxes can write their own views (compiled JSX via `src/webapp/views/compiler.ts`),
+but there's no reusable, card-aware widget set for the most common thing a view
+does: *point at another card*. Today an author hand-rolls an `<a>` and has to know
+the URL scheme / `view:` ref convention, and there's no off-the-shelf way to embed
+a card. The render plumbing all exists — `FileView` already has
+`page | chat | companion | embed` modes, an `onNavigate(target, hint)` primitive,
+and `view:`/`ViewTarget` addressing — it just isn't exposed as drop-in components
+the way `callback-box/cards` is exposed to box-local *schemas*.
+
+Two widgets:
+
+- **`<CardLink ref="…">label</CardLink>`** — link to a card by ref, resolving to
+  the correct navigation (the same `onNavigate`/`view:` path the rest of the UI
+  uses), with the ref validated like any card ref (so `cb validate`/`cb mv` track
+  it — a JSX-embedded ref must not be a blind spot). The label falls back to the
+  target's title when omitted, mirroring landmark `links`.
+- **`<CardRef ref="…">` (link + expand)** — richer, with three affordances on one
+  reference: **go** (navigate to the card), **inline** (expand it in place —
+  `FileView` `embed` mode), and **small** (a compact representation). The
+  interesting part: the *small* view is **controlled by the container**, not fixed
+  by the widget — the container (or the target card's own renderer) decides how to
+  summarize: a one-liner, a tile, a self-authored summary, whatever fits. So the
+  widget delegates the small rendering rather than hardcoding a card chip.
+
+Open questions:
+- **Exposure to compiled views.** How the widgets reach a box-authored view — a
+  public `callback-box/view-widgets` (or similar) specifier the compiler leaves
+  unbundled / injects, paralleling `callback-box/cards` for schemas. What's the
+  import surface and how it resolves in both the browser and `cb view test`.
+- **The "small, container-controlled" contract.** Who actually renders the small
+  form — a new `summary`/`small` `FileViewMode`? the target card's renderer
+  exposing a compact variant? a render-prop the container supplies? This is the
+  crux; the other two affordances (go, inline) already have homes.
+- **Ref tracking.** Refs written inside JSX views need the same auto-tracking as
+  card refs (`cb validate`, `cb mv` rewriting) — otherwise moving a target silently
+  breaks a view. This is the same hazard the link-validation work just closed for
+  markdown; JSX views are the next surface.
+- **Consistency with what exists.** Landmark `links` (and the new chat-header
+  landmark menu) already "go / open in sidebar"; these widgets should share the
+  same open-in-companion mechanism (`onZoomView`) rather than invent a parallel
+  one. Related: "The interface itself as cards" and "Agent-editable UI text".
+
+## Review the representation of `<card-activity>` kinds
+
+The `<card-activity>` children of the `<chat-app>` snapshot currently use ONE
+uniform channel: `kind` is an attribute, and the per-kind **detail rides as
+element text** (`<card-activity kind="scrolled">0.6</card-activity>`). Commit
+`8fde2281` deliberately moved details from attributes → element text because
+some are long/multi-line — `explored` carries a query (`boat-water+road ->
+boats`), `modified` a path — and to avoid an ever-widening attribute set as
+kinds grow (`src/core/chat-card-activity.ts`).
+
+But the kinds aren't uniform in shape: `scrolled`'s detail is now a **short
+scalar** (a `0.0`–`1.0` read fraction), where neither reason applies — a scalar
+reads more naturally as an attribute (`<card-activity kind="scrolled"
+pos="0.6"/>`, which also self-closes, matching the "nothing happened"
+convention). So the representation is worth a deliberate pass:
+
+- **Per-kind shape.** Which activity details are genuinely free-text/long
+  (`explored`, `modified` → element text) vs. structured scalars (`scrolled`,
+  and any future numeric/enum kind → attribute)? A mixed model (scalars as
+  attributes, free-text as element text) fits the data better but **forks the
+  mechanism** — the renderer (`renderActivityChildren`), the frontend
+  detail-reporting, and the prompt (`chat-session-prompts.ts`) all grow a
+  per-kind branch. Weigh semantic-fit vs. the one-uniform-channel simplicity.
+- **Not a bug, just cleanliness.** The agent reads either form fine; this is
+  about the representation being honest and easy to extend, not correctness.
+- **Do it once, across the surface.** Any change has to move together: the
+  vocabulary/renderer (`chat-card-activity.ts`), the frontend reporters
+  (`InteractiveChat-controls.tsx` scroll, `FileView`/`ViewRenderer` explored),
+  and the agent-facing prompt description + example. (This is exactly the
+  drift that just bit us — the scroll-position detail landed in code before the
+  prompt was updated.)
+
 ## Feature Ideas
 
 ### JSON as CLI input — structured arguments and composable profiles
@@ -1489,21 +1565,26 @@ questions rendering as a textarea instead of radios (`QuestionForm.tsx` falls
 back to text when there's no `options` array); how triage creates questions and
 the option-id scheme; and the answer schema round-trip. Medium.
 
-### Todo multi-state controls (D2)
+### Todo multi-state controls (D2) — DONE
 
-`src/frontend/src/components/TodoListView.tsx` only toggles `pending`↔`done`, but
-the schema and backend already support `cancelled` and `deferred` — users can't
-reach those states except by hand-editing the card. Replace the binary toggle
-with a 4-state control (dropdown / context menu). Medium; mostly a UI change.
+`src/frontend/src/components/TodoListView.tsx` now pairs a round pending↔done
+checkbox (the common action) with a `⋯` menu exposing all four statuses
+(pending/done/cancelled/deferred), so the rarer cancelled/deferred states are
+reachable from the UI.
 
-### Procedure validation completion (D5)
+### Procedure validation completion (D5) — DONE
 
-`src/core/procedure/engine-phase.ts` stubs instruction-based validation (always
-passes) and downgrades `severity: review` auto-retry to a warning; resuming a run
-from a failed step isn't supported. Build: (1) model-evaluated instruction
-validation against the git diff + box state, (2) `review`-severity auto-retry
-with failure context, (3) resumable runs from the failed step. Large; its own
-plan.
+All three landed. `src/core/procedure/engine-phase.ts` does **model-judged
+instruction validation** against the step's git diff (no longer a pass-by-default
+stub), and `engine-step.ts` / `engine-run-phase.ts` implement **`severity: review`
+auto-retry** — a bounded self-heal that re-invokes the agent with the failure
+context (cost-ceiling guarded) and gates the step when it can't heal. The final
+piece, **resumable runs from a failed step**, now ships as `cb procedure resume
+[run-dir]` (`resumeProcedure` in `engine.ts`): it re-enters the existing run dir
+at the first not-`completed`/`skipped` step — the failed one — re-running it and
+everything after while leaving earlier completed/skipped steps untouched. Run
+orchestration (`runSteps`/`finalizeRun`) is shared with `startProcedure` via
+`engine-orchestrate.ts`. See `docs/procedure-implementation.md`.
 
 ### Retrospective integration (D6) — DONE (procedure, not code)
 
@@ -1526,13 +1607,28 @@ belief instead of adding near-duplicates, and the weekly schedule
 once a few manual runs are reviewed. Maintainer: "analysis must end with
 integration" — it does.
 
-### Asset-manifest completion (D10)
+### Asset-manifest completion (D10) — DONE (descoped)
 
-The pre-commit verify hook landed (bucket C). What remains from the original
-scope: actual content **deduplication** (claimed but never implemented), an
-explicit **attach API/UI** to attach a file to a card, and dropping the
-misleading "versioning" language in `docs/asset-manifests.md` (only current
-state is tracked, no history). Decide the real scope before building. Medium.
+The pre-commit verify hook had already landed (bucket C). The remaining
+"completion" scope was re-examined and mostly **dropped as over-claim**:
+
+- **Content deduplication — dropped.** Never built, and not wanted. Assets
+  are already gitignored / out of the object database; the per-asset sha256
+  is in the manifest if dedup is ever genuinely needed later. Building it
+  now would solve a problem nobody has.
+- **Attach-a-file-to-a-card API + UI — deliberately not built.** Files
+  reach attach scopes through the paths that matter (scan-import, chat
+  uploads, email connectors, agents dropping files), and the pre-commit
+  hook auto-claims all of it. A web affordance to hand-staple a file to a
+  card is *manual attachment management*, which the boxholder explicitly
+  doesn't want; the rare one-off is covered by `cb attachments add`.
+- **Docs corrected.** `docs/asset-manifests.md` had a stale
+  "Not yet implemented" status and a Commands section describing
+  manifest-aware `cb overwrite`/`cb mv`/`cb rm` that don't exist as
+  written (the real command is `cb attachments overwrite`; moves/renames
+  are auto-reconciled by the scan; there is no manifest-aware delete). All
+  corrected to match what shipped. (There was no actual "versioning"
+  language to remove — the doc's history framing is correctly about git.)
 
 ### Deferred: model-switch verification (audit [69])
 

@@ -22,10 +22,13 @@ import { resolveBoxes, killPreviousServer } from "./server-lifecycle.js";
 import { registerBox } from "./server-box-scope.js";
 import {
   registerChromeExtensionCors,
+  registerCspReportingHeaders,
   registerRootInfoRoutes,
   registerSpaFallback,
   registerUnbuiltFrontendRoot,
 } from "./server-root.js";
+import { registerCspReportRoute } from "./routes/api-csp-report.js";
+import { PROD_CSP_REPORT_PATH } from "../lib/csp.js";
 
 export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
 
@@ -54,6 +57,17 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   });
 
   registerChromeExtensionCors(server);
+
+  // Attach the Content-Security-Policy (Report-Only) + Reporting-Endpoints
+  // headers to HTML document responses. Registered early so its onSend runs on
+  // every response; it yields to routes that set their own CSP (frozen pages).
+  // Prod is the only place Fastify serves HTML (dev serves it from Vite, which
+  // sets its own dev policy); the mode keeps script/style strictness correct
+  // either way. The report route is root-level (PROD_CSP_REPORT_PATH).
+  registerCspReportingHeaders(server, {
+    mode: process.env.NODE_ENV === "production" ? "prod" : "dev",
+    reportPath: PROD_CSP_REPORT_PATH,
+  });
 
   // Register cookie support (used for auth sessions)
   await server.register(fastifyCookie);
@@ -89,6 +103,13 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   });
 
   registerRootInfoRoutes(server, boxes);
+
+  // CSP violation report sink. The report-uri/report-to directives point here.
+  // Root-level (a report has no box context); stored under the primary box for
+  // lack of a server-level state dir. No-op if no boxes are mounted.
+  if (boxes.length > 0) {
+    registerCspReportRoute({ server, logDir: boxes[0]!.boxRoot });
+  }
 
   // Resolve from the package root (bundle-safe) rather than a fixed depth off
   // import.meta.dirname: the prod bundle lives at dist/cli.mjs (one level down)

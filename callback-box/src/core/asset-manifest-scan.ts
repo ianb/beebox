@@ -263,7 +263,7 @@ export async function scanAttachScope(
         kind: "hash-mismatch",
         attachDir: scope.relPath,
         name,
-        message: `${scope.relPath}/${name} was modified out of band. Run 'cb overwrite ${scope.relPath}/${name} < ...' to accept the new content, or restore from backup.`,
+        message: `${scope.relPath}/${name} was modified out of band. Run 'cb attachments overwrite ${scope.relPath}/${name} < ...' to accept the new content, or restore from backup.`,
       });
     }
   }
@@ -275,7 +275,7 @@ export async function scanAttachScope(
       kind: "missing-file",
       attachDir: scope.relPath,
       name: orphan,
-      message: `${scope.relPath}/${orphan} is listed in the manifest but missing from disk. Run 'cb rm ${scope.relPath}/${orphan}' to remove the entry, or restore the file.`,
+      message: `${scope.relPath}/${orphan} is listed in the manifest but missing from disk. Restore the file, or remove its entry from ${scope.relPath}/manifest.json by hand.`,
     });
   }
 

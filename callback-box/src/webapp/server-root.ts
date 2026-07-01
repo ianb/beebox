@@ -13,6 +13,7 @@ import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } fr
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { BoxSpec } from "./server-types.js";
+import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -42,6 +43,38 @@ export function registerChromeExtensionCors(server: FastifyInstance): void {
     return reply
       .header("Access-Control-Allow-Methods", "GET,OPTIONS")
       .send();
+  });
+}
+
+/**
+ * Attach the Content-Security-Policy (Report-Only) and its companion
+ * `Reporting-Endpoints` header to HTML document responses. Only documents carry
+ * a CSP, so the hook keys on `text/html` and leaves API/asset/script responses
+ * alone. It also yields to any route that already set a CSP — notably the frozen
+ * captured-page route's strict `sandbox` policy — so that stays authoritative.
+ *
+ * `mode` selects the strict (prod) or relaxed (dev) script/style directives; in
+ * practice prod is the only place Fastify serves HTML, but the param keeps the
+ * choice explicit and testable. Report-Only never blocks a resource — promotion
+ * to the enforcing header is a separate, gated step.
+ */
+export function registerCspReportingHeaders(
+  server: FastifyInstance,
+  { mode, reportPath }: { mode: CspMode; reportPath: string },
+): void {
+  const policy = buildCspPolicy({ mode, reportPath });
+  const reportingEndpoints = reportingEndpointsHeader({ reportPath });
+  // eslint-disable-next-line max-params -- Fastify onSend hook requires 4 params
+  server.addHook("onSend", (_request, reply, payload, done) => {
+    const contentType = String(reply.getHeader("content-type") ?? "");
+    const alreadyHasCsp =
+      reply.getHeader("content-security-policy") !== undefined ||
+      reply.getHeader("content-security-policy-report-only") !== undefined;
+    if (contentType.includes("text/html") && !alreadyHasCsp) {
+      reply.header("Content-Security-Policy-Report-Only", policy);
+      reply.header("Reporting-Endpoints", reportingEndpoints);
+    }
+    done(null, payload);
   });
 }
 

@@ -8,19 +8,18 @@ import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
 /**
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
  */
 export function MobileTextareaRow({
-  input, setInput, isTranscribing, transcription,
+  isTranscribing, transcription,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
   onPaste, onDrop,
 }: {
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
   handleSend: () => void;
@@ -34,6 +33,8 @@ export function MobileTextareaRow({
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
+  const input = useInputValue();
+  const setInput = useInputStore().set;
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
   // This textarea is separate from the desktop composer's (which has its own

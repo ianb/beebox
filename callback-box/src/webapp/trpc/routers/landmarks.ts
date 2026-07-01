@@ -9,10 +9,12 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
+import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import {
   resolveLandmark,
   type ResolvedLink,
+  type ResolvedGroup,
 } from "../../../core/landmark/resolve.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
@@ -28,8 +30,10 @@ export interface LandmarkPayload {
   symbol: string;
   /** Box-relative path to the symbol image, or null for text symbols. */
   symbolSrc: string | null;
-  /** Resolved hand-listed + expanded links, in source order with dedup. */
+  /** Resolved hand-listed + unnamed-expand links, in source order with dedup. */
   links: ResolvedLink[];
+  /** Named expands kept as collapsible groups (submenus). */
+  groups: ResolvedGroup[];
   /** Nesting depth relative to ancestor landmarks (root = 0). */
   depth: number;
   /**
@@ -57,6 +61,44 @@ function readSymbol(
   return { text: "", src: path.relative(boxRoot, absolute) };
 }
 
+/**
+ * Read one `*.landmark.card` file and resolve it into a payload, or null
+ * when it can't be read or has no frontmatter. `relPath` is box-relative.
+ */
+async function loadLandmarkPayload(
+  relPath: string,
+  { boxRoot }: { boxRoot: string },
+): Promise<LandmarkPayload | null> {
+  const absPath = path.join(boxRoot, relPath);
+  let fields;
+  try {
+    const content = await fs.readFile(absPath, "utf-8");
+    fields = parseLandmarkFields(content);
+  } catch (e) {
+    console.warn(`landmarks: failed to read ${relPath}: ${(e as Error).message}`);
+    return null;
+  }
+  if (fields === null) return null;
+
+  const navigation = fields.navigation;
+  const dir = path.dirname(relPath);
+  const landmarkDir = path.dirname(absPath);
+  const { links, groups } = await resolveLandmark(navigation, { landmarkDir, boxRoot });
+  const symbol = readSymbol(navigation, { landmarkDir, boxRoot });
+
+  return {
+    path: relPath,
+    dir: dir === "." ? "" : dir,
+    label: navigation?.label ?? "",
+    symbol: symbol.text,
+    symbolSrc: symbol.src,
+    links,
+    groups,
+    depth: 0,
+    features: readLandmarkFeatures(navigation),
+  };
+}
+
 export const landmarksRouter = router({
   list: publicProcedure.query(async ({ ctx }): Promise<{ landmarks: LandmarkPayload[] }> => {
     const matches = await glob("**/*.landmark.card", {
@@ -68,36 +110,8 @@ export const landmarksRouter = router({
     const payloads: LandmarkPayload[] = [];
 
     for (const relPath of matches) {
-      const absPath = path.join(ctx.boxRoot, relPath);
-      let fields;
-      try {
-        const content = await fs.readFile(absPath, "utf-8");
-        fields = parseLandmarkFields(content);
-      } catch (e) {
-        console.warn(`landmarks.list: failed to read ${relPath}: ${(e as Error).message}`);
-        continue;
-      }
-      if (fields === null) continue;
-
-      const navigation = fields.navigation;
-      const dir = path.dirname(relPath);
-      const landmarkDir = path.dirname(absPath);
-      const links = await resolveLandmark(navigation, {
-        landmarkDir,
-        boxRoot: ctx.boxRoot,
-      });
-      const symbol = readSymbol(navigation, { landmarkDir, boxRoot: ctx.boxRoot });
-
-      payloads.push({
-        path: relPath,
-        dir: dir === "." ? "" : dir,
-        label: navigation?.label ?? "",
-        symbol: symbol.text,
-        symbolSrc: symbol.src,
-        links,
-        depth: 0,
-        features: readLandmarkFeatures(navigation),
-      });
+      const payload = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot });
+      if (payload !== null) payloads.push(payload);
     }
 
     // Sort by dir so each landmark follows its nearest landmark ancestor:
@@ -136,4 +150,36 @@ export const landmarksRouter = router({
 
     return { landmarks: payloads };
   }),
+
+  /**
+   * Resolve the single landmark living directly in `dir` (box-relative,
+   * `""` for the root), or null when that directory has none. Used by the
+   * chat header to surface the scoped landmark's links without resolving
+   * every landmark in the box (as `list` does). `dir` is rejected if it
+   * could escape the box.
+   */
+  forDir: publicProcedure
+    .input(
+      z.object({
+        dir: z
+          .string()
+          .refine(
+            (d) => !d.startsWith("/") && !d.split("/").includes(".."),
+            "dir must be box-relative and contain no '..' segments",
+          ),
+      }),
+    )
+    .query(async ({ ctx, input }): Promise<{ landmark: LandmarkPayload | null }> => {
+      const pattern = input.dir === "" ? "*.landmark.card" : `${input.dir}/*.landmark.card`;
+      const matches = await glob(pattern, {
+        cwd: ctx.boxRoot,
+        nodir: true,
+        ignore: ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"],
+      });
+      // One landmark per directory by convention; take the first match.
+      const relPath = matches.toSorted()[0];
+      if (relPath === undefined) return { landmark: null };
+      const landmark = await loadLandmarkPayload(relPath, { boxRoot: ctx.boxRoot });
+      return { landmark };
+    }),
 });

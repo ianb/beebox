@@ -1,6 +1,10 @@
 # Asset Manifests
 
-**Status: Design. Not yet implemented.**
+**Status: Implemented.** The manifest format, the auto-claim/verify scan,
+the pre-commit hook, and the `cb attachments` CLI have all shipped. The
+manifest tracks only each scope's *current* state — there is no asset
+version history (the only history is git's, which is exactly what these
+assets stay out of).
 
 How assets (the binary subset of attachments — photos, scanned PDFs,
 audio) stay tracked by git without their bytes living in git history.
@@ -80,34 +84,42 @@ hash will catch them on the next rehash event.
 
 ## Commands
 
-### `cb overwrite <path>` (reads stdin or `-`)
+The asset-specific operations live under `cb attachments`. Adding assets is
+normally automatic (the pre-commit hook auto-claims), so the only routine
+explicit command is `overwrite`.
+
+### `cb attachments overwrite <path>` (reads stdin or `-`)
 
 Replace the contents of an existing tracked asset. Sequence:
 
 1. Verify `<path>` lives in an attach scope and has a manifest entry.
-   Refuse if not (use the auto-claim path for new files).
+   Refuse if not (use `cb attachments add` for new files).
 2. `chmod +w <path>`.
-3. Write stdin to a temp file in the same directory; fsync.
+3. Write stdin to a temp file in the same directory.
 4. Atomic rename over `<path>`.
 5. `chmod 444 <path>`.
 6. Recompute sha256; update manifest entry (size, mtime, sha256).
-7. If new content matches old hash, no-op (no manifest churn).
 
-### `cb mv <old> <new>`
+### `cb attachments add <path>`
 
-Rename or move an asset. Updates the source manifest (entry
-removed) and destination manifest (entry added with same hash). Cross-
-attach-scope moves are supported; the hash is unchanged so the entry
-"relocates" rather than re-computing.
+Explicitly claim an on-disk file into its manifest (sha256 + size +
+mtime). Rarely needed — the pre-commit hook auto-claims new files in any
+attach scope — but useful when scripting or when the hook is bypassed.
+No-ops if the file is already tracked with a matching hash.
 
-If `<old>` isn't tracked (e.g., regular file outside an attach scope),
-falls through to existing `cb mv` behavior.
+### Moves and deletes — no dedicated asset command
 
-### `cb rm <path>`
+Renaming or moving an asset needs no manifest call: the pre-commit scan
+detects a hash that relocated (an orphaned manifest entry plus a new
+unclaimed file with the same hash) and moves the entry automatically — see
+[Rename detection](#rename-detection). Moving a whole card with `cb mv`
+carries its `<base>.attach/` scope (manifest included) along untouched,
+since entries are scope-relative.
 
-`chmod +w`, unlink, drop manifest entry. Extends the existing `cb rm`;
-asset targets get the manifest-aware path, others get the existing
-behavior.
+Deletion is the one destructive op without a manifest-aware command:
+removing an asset leaves an orphaned manifest entry that the scan reports
+as a `missing-file` error. Resolve it by restoring the file or by deleting
+the entry from the scope's `manifest.json` by hand.
 
 ## Pre-commit hook
 
@@ -119,13 +131,13 @@ box. For each:
    - Hash matches stored → update mtime in manifest entry. (Touch
      without content change; harmless.)
    - Hash differs → **block commit** with: `<path> modified out of band.
-     Run cb overwrite to accept the new content, or restore from
-     backup.`
+     Run cb attachments overwrite to accept the new content, or restore
+     from backup.`
 3. **File on disk, not in manifest** → hash, add entry, log
    `Auto-claimed <path>`. Stage the updated manifest.
 4. **Manifest entry, no file on disk** → **block commit** with: `<path>
-   listed in manifest but not on disk. Run cb rm to remove the entry,
-   or restore the file.`
+   listed in manifest but not on disk. Restore the file, or remove its
+   entry from manifest.json by hand.`
 
 After the walk, modified manifests are staged via `git add` so they
 become part of the commit being prepared.
@@ -183,7 +195,7 @@ advisory on commit if they stage a >1MB binary outside an attach scope
 | Case | Hook behavior | Recovery |
 |------|---|---|
 | Accidental `rm` | Manifest entry survives → block commit | Restore from backup (post-v1) |
-| In-place edit (vi, etc.) | Size/mtime differ → rehash → mismatch → block | `cb overwrite` if intentional, else restore |
+| In-place edit (vi, etc.) | Size/mtime differ → rehash → mismatch → block | `cb attachments overwrite` if intentional, else restore |
 | `mv` within attach dir | Hash match in same dir → rename in manifest, log | (no action) |
 | Cross-attach `mv` | Hash match across dirs → entry relocates, log | (no action) |
 | Stray `cp` into attach scope | Auto-claimed, logged | If unintended, `git checkout` to undo |

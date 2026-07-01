@@ -322,10 +322,12 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
         mode={mode === "chat" ? "chat" : "page"}
         params={{ path }}
         {...(reportActivity !== undefined ? { reportActivity } : {})}
+        onNavigate={onNavigate}
+        renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={onNavigate} />}
       />
     );
     return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
-  }, [path, data, binding, mode, reportActivity]);
+  }, [path, data, binding, mode, reportActivity, onNavigate]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) {

@@ -15,9 +15,10 @@ import {
   isLintableMarkdown,
   type MarkdownLintSummary,
 } from "./validate-markdown.js";
-import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
+import { requireBoxRoot, findBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
-import { listBoxCardFiles, listBoxMarkdownFiles } from "../../core/list-cards.js";
+import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
+import { lintViewRefs, collectViewRefWarnings } from "../../core/view-refs.js";
 import { getStatus } from "../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
@@ -25,6 +26,7 @@ import { isClaudeMdFile, lintClaudeMdFile, lintAllClaudeMd } from "../../core/cl
 import { buildLoadContext } from "../../core/load-context.js";
 import { staleContainsWarning } from "../../core/search/contains-state.js";
 import { refreshDerivedRules } from "../../core/refresh-derived-rules.js";
+import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external-url-check.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 
 const execFileP = promisify(execFile);
@@ -90,6 +92,8 @@ interface ValidationResults {
   attachErrors: AttachLintError[];
   /** Soft, non-blocking size warnings for oversized CLAUDE.md files. */
   claudeMdWarnings: string[];
+  /** Broken `cardRef="…"` refs in box-authored views (warning-only). */
+  viewWarnings: string[];
 }
 
 /**
@@ -121,6 +125,14 @@ async function runHookMode(): Promise<never> {
     const err = await lintViewFile(fp);
     if (err !== null) {
       process.stderr.write(`View compile error for ${fp}:\n${err}\n`);
+      process.exit(2);
+    }
+    // Same broken-`cardRef` nudge cards get (exit 2). Skip when outside a box —
+    // refs need a box root to resolve, and the compile check already stands.
+    const refBoxRoot = await findBoxRoot(process.cwd());
+    const viewRefWarnings = refBoxRoot === null ? [] : await lintViewRefs(fp, refBoxRoot);
+    if (viewRefWarnings.length > 0) {
+      process.stderr.write(`${viewRefWarnings.join("\n")}\n`);
       process.exit(2);
     }
     process.exit(0);
@@ -160,6 +172,39 @@ async function runHookMode(): Promise<never> {
   process.exit(0);
 }
 
+/**
+ * Pick the URL-check scope from the options. `--since <ref>` (used by the
+ * post-commit trigger) wins; then `--all` (full box sweep); then `--staged`;
+ * otherwise the default working-tree-vs-HEAD diff.
+ */
+function urlCheckMode(options: { all?: boolean; staged?: boolean; urlsSince?: string }): UrlCheckMode {
+  if (typeof options.urlsSince === "string") return { kind: "since", ref: options.urlsSince };
+  if (options.all) return { kind: "all" };
+  if (options.staged) return { kind: "staged" };
+  return { kind: "working" };
+}
+
+/**
+ * The external-URL pass (`cb validate --urls`). Network-dependent and therefore
+ * fully separate from the sync card/markdown lint: it never runs in the
+ * PostToolUse / pre-commit hooks. Warning-style — exits 1 only on a hard-broken
+ * URL when invoked directly, which is safe because nothing in the commit path
+ * calls it. Always exits the process.
+ */
+async function runUrlCheck(
+  options: { all?: boolean; staged?: boolean; urlsSince?: string; json?: boolean }
+): Promise<never> {
+  const boxRoot = await requireBoxRoot();
+  const report = await checkExternalUrls(boxRoot, { mode: urlCheckMode(options), now: new Date().toISOString() });
+  if (options.json === true) {
+    console.log(JSON.stringify(report, null, 2));
+  } else {
+    const text = formatUrlReport(report, { colors: true });
+    console.log(text ?? `Checked ${String(report.checked)} external URL(s); none broken.`);
+  }
+  process.exit(report.broken.length > 0 ? 1 : 0);
+}
+
 interface CollectArgs {
   boxRoot: string;
   ctx: LoadCardContext;
@@ -189,10 +234,11 @@ async function collectStagedResults({ boxRoot, ctx, resolved, json }: CollectArg
   }
   const cardSummary = cards.length > 0 ? await lintCardsDispatch(cards, { boxRoot, ctx }) : null;
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
+  const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
 }
 
-/** Validate every card, markdown file, and attach layout in the box. */
+/** Validate every card, markdown file, view, and attach layout in the box. */
 async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<ValidationResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p));
   const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
@@ -200,7 +246,8 @@ async function collectAllResults({ boxRoot, ctx }: CollectArgs): Promise<Validat
   const mdSummary = mdFiles.length > 0 ? await lintMarkdownFiles(mdFiles, { boxRoot }) : null;
   const attachErrors = await lintAttachLayout(boxRoot);
   const claudeMdWarnings = await lintAllClaudeMd(boxRoot);
-  return { cardSummary, mdSummary, attachErrors, claudeMdWarnings };
+  const viewWarnings = await collectViewRefWarnings(await listBoxViewFiles(boxRoot), boxRoot);
+  return { cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings };
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
@@ -214,11 +261,12 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
   }
   const cardSummary = cardPaths.length > 0 ? await lintCardsDispatch(cardPaths, { boxRoot, ctx }) : null;
   const mdSummary = mdPaths.length > 0 ? await lintMarkdownFiles(mdPaths, { boxRoot }) : null;
-  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [] };
+  const viewWarnings = await collectViewRefWarnings(resolved.filter(isViewFile), boxRoot);
+  return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
 }
 
 /** Print human-readable card/markdown/attach results to stdout. */
-function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings }: ValidationResults): void {
+function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings }: ValidationResults): void {
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors: true });
     if (output) console.log(output);
@@ -242,6 +290,9 @@ function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnin
   }
   if (claudeMdWarnings.length > 0) {
     console.log(`\n${claudeMdWarnings.join("\n")}`);
+  }
+  if (viewWarnings.length > 0) {
+    console.log(`\n${viewWarnings.join("\n")}`);
   }
 }
 
@@ -279,16 +330,22 @@ export const validateCommand = new Command("validate")
   .option("--staged", "Validate the cards currently staged in git")
   .option("--hook", "Hook mode: read Claude Code PostToolUse JSON payload from stdin, validate the touched card. Errors go to stderr with exit code 2 so the agent sees feedback; non-card paths exit 0 silently.")
   .option("--links", "Warn-only box-wide broken-link scan (link rules only). Always exits 0 — used by the pre-commit hook to surface dangling links in unstaged referrers without blocking the commit.")
+  .option("--urls", "Check EXTERNAL http(s) URLs that are new since the base version (HEAD by default). Network pass — never run in the sync hooks. Pair with --all (full box sweep), --staged, or --urls-since <ref>.")
+  .option("--urls-since <ref>", "With --urls: treat URLs absent at <ref> as new (used by the non-blocking post-commit trigger, e.g. --urls-since HEAD~1).")
   .option("--json", "Output results as JSON")
   .option("--committed", "Also check that git working tree is clean")
   .action(
     async (
       targetPaths: string[],
-      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; json?: boolean; committed?: boolean }
+      options: { all?: boolean; staged?: boolean; hook?: boolean; links?: boolean; urls?: boolean; urlsSince?: string; json?: boolean; committed?: boolean }
     ) => {
       try {
         if (options.hook) {
           await runHookMode();
+        }
+
+        if (options.urls || typeof options.urlsSince === "string") {
+          await runUrlCheck(options);
         }
 
         if (options.links) {
@@ -309,7 +366,7 @@ export const validateCommand = new Command("validate")
         const results = await collectResults(options, { boxRoot, ctx, resolved, json });
 
         if (json) {
-          const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings };
+          const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings, views: results.viewWarnings };
           console.log(JSON.stringify(payload, null, 2));
         } else {
           printTextResults(results);

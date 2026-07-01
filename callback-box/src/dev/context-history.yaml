@@ -246,3 +246,50 @@ test1:
       peak: 42616
       added: 1015
       turns: 4
+  user-location-read:
+    - date: 2026-06-29T13:25:10.367Z
+      boxCommit: ff21c172384c8f82b0eedc25a5ed8d6328f1f7c5
+      repoCommit: b026e75faf2b174f1090e220f911c3fd637de1e6
+      initial: 42597
+      peak: 42597
+      added: 0
+      turns: 1
+  place-record:
+    - date: 2026-06-29T14:36:28.597Z
+      boxCommit: 2a632a020810e9cc0fcad14214af49f779832b79
+      repoCommit: 4d337f39b4d5a3203709519fc8adb32a08b1a922
+      initial: 42971
+      peak: 42971
+      added: 0
+      turns: 2
+  view-link-another-card:
+    - date: 2026-06-29T22:24:32.371Z
+      boxCommit: 79a6b4cec45b32f763d3fe5c13c734b2bbe1c540
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47730
+      peak: 58404
+      added: 10674
+      turns: 3
+  view-embed-card-inline:
+    - date: 2026-06-29T22:24:55.743Z
+      boxCommit: 76e3c3545a8925e74f3817cd5990ac577d0eb16b
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47671
+      peak: 58363
+      added: 10692
+      turns: 3
+  view-ref-tracked:
+    - date: 2026-06-29T22:26:06.179Z
+      boxCommit: fe162d3e2cc987a7e13262fdc2f56e459ab2f8ce
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47672
+      peak: 48996
+      added: 1324
+      turns: 5
+    - date: 2026-06-29T22:27:15.346Z
+      boxCommit: 592fa827c7c961650bf845eae04ea314846111d2
+      repoCommit: cab98aa58ed26e3e004a4390687a6c1d5f31f023
+      initial: 47663
+      peak: 48302
+      added: 639
+      turns: 4

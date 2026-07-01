@@ -58,8 +58,6 @@ interface ChatBodyProps {
   scrollToBottomTrigger: number;
   liveTurnId: string | null;
   snapshot: { matches: (state: "loading" | "idle" | "streaming" | "refreshing") => boolean };
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   debugView: boolean;
   setDebugView: React.Dispatch<React.SetStateAction<boolean>>;
@@ -153,7 +151,7 @@ function MessageListRegion(props: ChatBodyProps) {
 
 function ComposerRegion(props: ChatBodyProps) {
   const {
-    model, voice, recoveredDictation, attach, selections, actions, isStreaming, input, setInput, textareaRef,
+    model, voice, recoveredDictation, attach, selections, actions, isStreaming, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
   } = props;
   const { speechPlayback, transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
@@ -181,8 +179,6 @@ function ComposerRegion(props: ChatBodyProps) {
         <ChatInputArea
           hideMobile={typingMode}
           textareaRef={textareaRef}
-          input={input}
-          setInput={setInput}
           isTranscribing={isTranscribing}
           transcription={transcription}
           handleKeyDown={handleKeyDown}
@@ -209,8 +205,6 @@ function ComposerRegion(props: ChatBodyProps) {
       }
       mobileRow={
         <MobileTextareaRow
-          input={input}
-          setInput={setInput}
           isTranscribing={isTranscribing}
           transcription={transcription}
           handleSend={handleSend}

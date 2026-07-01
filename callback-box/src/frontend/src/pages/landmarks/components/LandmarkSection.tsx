@@ -7,6 +7,7 @@
  * docs/landmarks.md for the association model.
  */
 
+import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { href } from "../../../lib/routing";
 import { apiFileUrl } from "../../../lib/view-url";
@@ -22,6 +23,12 @@ interface ResolvedLink {
   exists: boolean;
 }
 
+interface ResolvedGroup {
+  label: string;
+  children: ResolvedLink[];
+  count: number;
+}
+
 interface Landmark {
   path: string;
   dir: string;
@@ -29,6 +36,7 @@ interface Landmark {
   symbol: string;
   symbolSrc: string | null;
   links: ResolvedLink[];
+  groups: ResolvedGroup[];
   depth: number;
 }
 
@@ -70,8 +78,61 @@ export function LandmarkSection({ landmark, boxSlug }: { landmark: Landmark; box
             ))}
           </div>
         ) : null}
+
+        {landmark.groups.map((group) => (
+          <LandmarkGroup key={group.label} group={group} boxSlug={boxSlug} />
+        ))}
       </Stack>
     </Card>
+  );
+}
+
+function ChevronIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      className={`w-4 h-4 transition-transform ${open ? "rotate-90" : ""}`}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M9 6l6 6-6 6" />
+    </svg>
+  );
+}
+
+function LandmarkGroup({ group, boxSlug }: { group: ResolvedGroup; boxSlug: string }) {
+  const [open, setOpen] = useState(false);
+  const overflow = group.count - group.children.length;
+
+  return (
+    <Stack gap="xs">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex items-center gap-2 px-2 py-1 -mx-2 rounded text-left hover:bg-warm-100"
+      >
+        <ChevronIcon open={open} />
+        <Text as="span" size="sm" weight="medium">{group.label}</Text>
+        <Text as="span" size="xs" tone="muted">{group.count}</Text>
+      </button>
+      {open ? (
+        <div className="ml-6 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          {group.children.map((link) => (
+            <LinkTile key={link.ref} link={link} boxSlug={boxSlug} />
+          ))}
+          {overflow > 0 ? (
+            <Text as="div" size="xs" tone="muted" className="self-center">
+              +{overflow} more
+            </Text>
+          ) : null}
+        </div>
+      ) : null}
+    </Stack>
   );
 }
 

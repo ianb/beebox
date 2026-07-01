@@ -17,6 +17,7 @@ import { chatMachine } from "../../machines/chatMachine.js";
 import { groupMessages } from "../ChatMessages";
 import { serializeViewUrl } from "../../lib/view-url";
 import { clearLastMessageAudio } from "../../lib/last-audio-cache";
+import { refreshLocationIfStale } from "../../lib/location-share";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
@@ -33,6 +34,7 @@ import { useChatSse } from "./InteractiveChat-sse";
 import { useChatActions } from "./InteractiveChat-actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
+import { useInputStoreInstance, InputStoreProvider } from "./input-store";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -87,10 +89,13 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const { boxSlug } = useParams({ strict: false });
   const backgroundTasks = useBackgroundTasks();
 
-  const [input, setInput] = useState("");
+  // Composer text lives in an external store, not React state, so a keystroke
+  // re-renders only the composer textareas — not the message history or the
+  // companion view pane (see input-store.ts and components/chat/CLAUDE.md).
+  const inputStore = useInputStoreInstance();
   // Persist the unsent composer text so a remount (e.g. the router re-reading
   // search params on wake-from-sleep) or a reload doesn't silently discard it.
-  useComposerDraft({ boxSlug, sessionId, input, setInput });
+  useComposerDraft({ boxSlug, sessionId, inputStore });
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
@@ -120,9 +125,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       // Any send moves "the last message" past the cached voice recording.
       // A voice send re-caches its own audio right after (see runKeywordSend).
       clearLastMessageAudio();
+      void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
       send({ type: "SEND", message: wrapped, messageId: newMessageId(), ...cardSend.capture() });
     },
-    [send, cardSend]
+    [send, cardSend, boxSlug]
   );
 
   const zoomedViewAttr = useCallback(() => {
@@ -134,20 +140,19 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const timePassedAttr = useCallback(() => {
     if (messages.length === 0) return "";
     const last = messages[messages.length - 1];
-    const elapsed = Date.now() - new Date(last.timestamp).getTime();
-    const formatted = formatTimePassed(elapsed);
+    const formatted = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
     return formatted ? ` time-passed="${formatted}"` : "";
   }, [messages]);
 
-  const attach = useChatAttachments({ input, setInput, textareaRef });
-  const selections = useChatSelections({ input, setInput, textareaRef });
+  const attach = useChatAttachments({ inputStore, textareaRef });
+  const selections = useChatSelections({ inputStore, textareaRef });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    clearDraftRef, input, setInput, doSend, zoomedViewAttr, timePassedAttr,
+    clearDraftRef, inputStore, doSend, zoomedViewAttr, timePassedAttr,
   });
 
   // Persist the in-flight transcript so an interrupted session (screen sleep,
@@ -191,7 +196,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
 
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    input, setInput, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
+    inputStore, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     addImageFiles: attach.addImageFiles,
@@ -209,7 +214,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   }
 
   return (
-    <InteractiveChatBody
+    <InputStoreProvider value={inputStore}>
+      <InteractiveChatBody
       tabs={tabs}
       model={model}
       mute={mute}
@@ -238,8 +244,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       loadingOlder={loadingOlder}
       scrollToBottomTrigger={scrollToBottomTrigger} liveTurnId={liveTurnId}
       snapshot={snapshot}
-      input={input}
-      setInput={setInput}
       textareaRef={textareaRef}
       debugView={debugView}
       setDebugView={setDebugView}
@@ -254,6 +258,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       zoomedViewAttr={zoomedViewAttr}
       timePassedAttr={timePassedAttr}
       reportCardActivity={cardSend.report}
-    />
+      />
+    </InputStoreProvider>
   );
 }

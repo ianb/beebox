@@ -5,7 +5,7 @@
  * and subscribes to SSE for live updates.
  */
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase, withBase } from "../api";
 import type { ActivityKind } from "../../../core/chat-card-activity";
@@ -13,6 +13,19 @@ import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscript
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
 import { useViewFileHelpers, type ViewFile, type ViewFileHelpers } from "../hooks/useViewFileHelpers";
+import { trpc } from "../lib/trpc";
+import {
+  ViewHostProvider,
+  useViewHost,
+  makeOpenCard,
+  refToTarget,
+  type ViewHost,
+  type ResolvedRef,
+} from "../lib/view-host";
+import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../lib/view-url";
+// Side effect: installs window.__cbViewWidgets so the compiler's
+// `callback-box/view-widgets` shim can hand CardLink/CardRef to compiled views.
+import "./view-widgets";
 /** View card data from the API */
 interface ViewCard {
   path: string;
@@ -84,6 +97,60 @@ interface ViewRendererProps {
   params?: Record<string, string>;
   /** Companion-pane activity reporter; omitted for inline/page renders. */
   reportActivity?: (kind: ActivityKind, detail?: string) => void;
+  /**
+   * The surface's "open a card here" primitive — companion → onZoomView,
+   * browse → swap the detail pane, page → push a route. Lifted into the view
+   * host so card widgets (`<CardLink>`/`<CardRef>`) open cards surface-correctly.
+   * Omitted → falls back to a page push so standalone view pages keep working.
+   */
+  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  /**
+   * Render a card expanded in place — backs `<CardRef>`'s expand-inline. Injected
+   * by the mount site (which owns FileView) so ViewRenderer never imports
+   * FileView (that would form a value-import cycle). Omitted → expand is a no-op.
+   */
+  renderInline?: (cardPath: string) => ReactNode;
+}
+
+/**
+ * Browser implementation of the host's `useResolvedRef` capability: title/type/
+ * existence via the `views.resolveRef` tRPC query, resolved against the view's
+ * basePath (read from the host so this stays a bare named-hook reference the
+ * widget can call). Node `cb view test` supplies its own filename-derived
+ * version — the widget consumes whichever through context.
+ */
+function useBrowserResolvedRef(cardRef: string): ResolvedRef | null {
+  const { basePath } = useViewHost();
+  const { data } = trpc.views.resolveRef.useQuery({ ref: cardRef, basePath });
+  return data ?? null;
+}
+
+/**
+ * Assemble the browser {@link ViewHost} the card widgets consume. `basePath`
+ * (the rendered card's path for a card-bound view, else the box root) anchors
+ * relative refs; `surfaceNavigate` is the surface's onNavigate when supplied,
+ * else a plain page push so standalone view pages still route.
+ */
+function buildViewHost(args: {
+  boxSlug: string | undefined;
+  basePath: string;
+  navigate: ReturnType<typeof useNavigate>;
+  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  renderInline?: (cardPath: string) => ReactNode;
+}): ViewHost {
+  const { boxSlug, basePath, navigate, onNavigate, renderInline } = args;
+  const surfaceNavigate: (target: ViewTarget, hint?: NavigateHint) => void =
+    onNavigate ??
+    ((target) => {
+      if (boxSlug) navigate({ to: `/${boxSlug}/views/${serializeViewUrl(target)}` });
+    });
+  return {
+    openCard: makeOpenCard(surfaceNavigate, basePath),
+    useResolvedRef: useBrowserResolvedRef,
+    renderInline: (cardRef) => (renderInline ? renderInline(refToTarget(cardRef, basePath).path) : null),
+    basePath,
+    boxSlug: boxSlug || "",
+  };
 }
 
 interface ViewModule {
@@ -94,7 +161,7 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
-export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: ViewRendererProps) {
+export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNavigate, renderInline }: ViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -111,6 +178,10 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: Vi
   // timestamp. Was `useRef(Date.now())` but the react-hooks/purity rule
   // (rightly) flags Date.now() in render.
   const versionRef = useRef(0);
+  // Bumped on every module (re)load so ViewErrorBoundary can release a latched
+  // error — a runtime-throwing view that the box then fixes recovers on its own
+  // reload instead of staying stuck until a manual Retry.
+  const [reloadSeq, setReloadSeq] = useState(0);
 
   const apiBase = getApiBase();
 
@@ -122,6 +193,10 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: Vi
       ) as ViewModule;
       setMod(imported);
       setError(null);
+      // Bump *after* the new module is in so the boundary's reset and the
+      // fixed component land in the same render — bumping before the await
+      // would reset against the still-broken module and immediately re-throw.
+      setReloadSeq((n) => n + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     }
@@ -231,18 +306,23 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity }: Vi
     ? "max-h-96 overflow-auto border rounded-lg p-3"
     : "w-full";
 
+  // The view host the card widgets (CardLink/CardRef) consume.
+  const viewHost = buildViewHost({ boxSlug, basePath: viewParams.path ?? "", navigate, onNavigate, renderInline });
+
   return (
     <div className={containerClass}>
-      <ViewErrorBoundary onRetry={loadModule}>
-        <Component
-          cards={cards}
-          files={files}
-          {...activityHelpers}
-          navigate={viewNavigate}
-          boxSlug={boxSlug || ""}
-          params={viewParams}
-          reportActivity={report}
-        />
+      <ViewErrorBoundary onRetry={loadModule} resetKey={reloadSeq}>
+        <ViewHostProvider value={viewHost}>
+          <Component
+            cards={cards}
+            files={files}
+            {...activityHelpers}
+            navigate={viewNavigate}
+            boxSlug={boxSlug || ""}
+            params={viewParams}
+            reportActivity={report}
+          />
+        </ViewHostProvider>
       </ViewErrorBoundary>
       {mode === "chat" && Boolean(boxSlug) && (
         <div className="mt-2 text-right">

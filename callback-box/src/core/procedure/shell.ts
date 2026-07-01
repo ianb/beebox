@@ -29,7 +29,10 @@ export async function runShell(
   script: string
 ): Promise<ShellResult> {
   try {
-    const wrappedScript = `set -e -o pipefail\n${script}`;
+    // Strict mode: -e (exit on error), -u (error on unset variable, catching
+    // typo'd var names that would otherwise silently expand to empty), and
+    // pipefail (a failing command in a pipeline fails the whole pipe).
+    const wrappedScript = `set -euo pipefail\n${script}`;
     const { stdout, stderr } = await execa("bash", ["-c", wrappedScript], {
       cwd: boxRoot,
       env: {

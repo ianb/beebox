@@ -79,6 +79,8 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Normalize bare-string card refs onto a `ref` key (landmark procedure-ref,
   // webpage/commentary frozen). See the user-story audit (D11).
   { name: "normalize-ref-keys", script: "scripts/migrate/normalize-ref-keys.ts" },
+  // Rename the person card `called` field to the standard `aliases`.
+  { name: "person-aliases",    script: "scripts/migrate/person-aliases.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

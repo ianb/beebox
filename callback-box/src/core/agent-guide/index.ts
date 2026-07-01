@@ -16,6 +16,7 @@ import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";
 import { calendarSection } from "./calendar.js";
 import { driveSection } from "./drive.js";
+import { locationSection } from "./location.js";
 import {
   proceduresSection,
   guidesSection,
@@ -75,6 +76,7 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...searchSection(),
     ...calendarSection(),
     ...driveSection(),
+    ...locationSection(),
     ...proceduresSection(procedures),
     ...guidesSection(guides),
     ...schedulesSection(),

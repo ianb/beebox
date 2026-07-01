@@ -185,6 +185,56 @@ RestartSec=10
 WantedBy=multi-user.target
 EOF
 
+# ── Quiet-hour recycle of callback-serve ───────────────────────────
+# The web server hot-reloads box-local schema edits by cache-busting the
+# dynamic import (Node never frees the old module), so its memory creeps a
+# little between restarts. A daily restart at a low-traffic hour reclaims it.
+# cb-wait-quiet (shared with deploy.sh) waits, bounded and best-effort, for all
+# boxes to be at rest first so the restart doesn't kill an active chat/script.
+cat > /usr/local/bin/cb-wait-quiet <<EOF
+#!/usr/bin/env bash
+# Best-effort: wait up to ~3 min for all boxes to be at rest (no running
+# scripts/procedures or active chat turns) before the caller restarts
+# callback-serve. Always exits 0 — the wait is advisory, never a hard block.
+set -u
+DEADLINE=\$(( \$(date +%s) + 180 ))
+while true; do
+  if su - $CB_USER -c 'CB_CLI_PREBUILT=1 /usr/local/bin/cb activity' >/tmp/cb-activity.out 2>&1; then
+    echo "cb-wait-quiet: at rest"; exit 0
+  fi
+  if [ "\$(date +%s)" -ge "\$DEADLINE" ]; then
+    echo "cb-wait-quiet: still busy after wait cap, proceeding:"
+    sed 's/^/  /' /tmp/cb-activity.out
+    exit 0
+  fi
+  sleep 10
+done
+EOF
+chmod +x /usr/local/bin/cb-wait-quiet
+
+cat > /etc/systemd/system/callback-serve-recycle.service <<'EOF'
+[Unit]
+Description=Daily quiet-hour recycle of callback-serve (reclaims schema hot-reload memory)
+
+[Service]
+Type=oneshot
+# Wait (best-effort) for at-rest, then restart only callback-serve — chat lives
+# there, and the scheduler doesn't accumulate the hot-reload leak.
+ExecStart=/bin/bash -c '/usr/local/bin/cb-wait-quiet; systemctl restart callback-serve'
+EOF
+
+cat > /etc/systemd/system/callback-serve-recycle.timer <<'EOF'
+[Unit]
+Description=Run callback-serve-recycle daily at a low-traffic hour
+
+[Timer]
+OnCalendar=*-*-* 04:00:00
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+EOF
+
 # ── Systemd: nightly Claude Code self-update ───────────────────────
 # Claude Code's built-in auto-updater only fires during interactive-ish
 # sessions, so server-side short-lived invocations drift behind.
@@ -247,8 +297,8 @@ WantedBy=timers.target
 EOF
 
 systemctl daemon-reload
-systemctl enable callback-serve callback-scheduler claude-update.timer
-systemctl start callback-serve callback-scheduler claude-update.timer
+systemctl enable callback-serve callback-scheduler claude-update.timer callback-serve-recycle.timer
+systemctl start callback-serve callback-scheduler claude-update.timer callback-serve-recycle.timer
 
 # ── Nginx reverse proxy ────────────────────────────────────────────
 echo "Configuring nginx..."

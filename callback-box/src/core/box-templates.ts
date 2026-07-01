@@ -139,18 +139,27 @@ export default cardSchema("task", {
 
 ## After Adding or Modifying Schemas
 
-Run \`cb init\` to regenerate rules and documentation:
+Two independent things happen — don't conflate them:
+
+**1. The card type works immediately.** Loading, validation, and rendering pick
+up a new or edited schema on the next \`cb\` command automatically, and the running
+web server hot-reloads schema files on save too. You do **not** need to run
+anything to "register" a schema — that was never what \`cb init\` did.
+
+**2. Regenerate the agent-facing docs from \`instructions\`** — this is what
+\`cb init\` is for:
 
 \`\`\`bash
 cb init .
 \`\`\`
 
-This will:
-- Generate \`.claude/rules/card-<type>.md\` (if the schema has \`instructions\`)
-- Generate \`docs/generated/card-<type>.md\`
-- Register any templates for \`cb create\`
-
-Schema changes are picked up on the next \`cb\` invocation; a running dev server needs a restart.
+This regenerates, from each schema's \`instructions\`:
+- \`.claude/rules/card-<type>.md\` (auto-loaded when you edit a matching card)
+- \`docs/generated/card-<type>.md\`
+and registers any \`template\` exports for \`cb create\`. Run it after you add or
+change a schema's \`instructions\` so the guidance an agent reads stays current. It
+does not touch the running server's schema registration (a fresh \`cb\` process
+can't — and doesn't need to).
 
 ## Tips
 
@@ -267,6 +276,10 @@ Each view must export:
 - \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\`
 
 React is provided automatically — do not import it.
+
+To link or embed another card, import \`CardLink\`/\`CardRef\` from
+\`callback-box/view-widgets\` (point at cards with \`cardRef="/store/…"\`, not a
+hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 
 After writing or changing a view, render-test it: \`cb view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).

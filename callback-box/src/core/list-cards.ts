@@ -41,3 +41,18 @@ export async function listBoxMarkdownFiles(boxRoot: string): Promise<string[]> {
   });
   return files.toSorted();
 }
+
+/**
+ * List the box-authored view files (`views/*.tsx`), absolute paths, sorted.
+ * These carry `cardRef="…"` refs that `cb validate`/`cb mv` track (see
+ * core/view-refs.ts).
+ */
+export async function listBoxViewFiles(boxRoot: string): Promise<string[]> {
+  const files = await glob("views/*.tsx", {
+    cwd: boxRoot,
+    nodir: true,
+    absolute: true,
+    ignore: CARD_GLOB_IGNORE,
+  });
+  return files.toSorted();
+}

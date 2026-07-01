@@ -48,3 +48,24 @@ across finalize until the next send; the previous turn re-keys to its uuid only
 then (a one-time, send-masked remount — the deliberate trade-off). Because both
 states go through `AssistantMessage`, the now-playing speech highlight works
 during streaming too.
+
+## Composer input lives in a store, not root state
+
+The composer text changes on every keystroke, so it must NOT be `useState` at
+the `InteractiveChat` root — that root is the common parent of the message
+history *and* the companion view pane (custom box views / sandbox cards), and
+React would reconcile both subtrees on every key press. (A custom view
+re-rendering per keystroke is exactly the bug this avoids.)
+
+It lives in a small external store instead (`input-store.ts`): only the composer
+textareas subscribe via `useInputValue()` and re-render on a keystroke;
+everything else (the root, and the hooks that mutate input on send / voice /
+attachments / selections) reads the current value at call-time with `get()` and
+writes with `set()` — neither subscribes, so a keystroke never re-renders them.
+
+**Invariant: don't reintroduce `input`/`setInput` as React state or thread it as
+a prop through the body.** New code that needs the text reads `useInputValue()`
+(reactive, composer-only) or takes the `InputStore` and calls `get()`/`set()`.
+`MessageList` is also wrapped in `React.memo` as a second line of defense; the
+store is the first. Verify with the render-count probe (commit-hook +
+`actualDuration`) that a keystroke re-renders only the composer subtree.
