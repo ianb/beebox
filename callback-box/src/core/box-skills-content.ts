@@ -240,3 +240,83 @@ moment; it does **not** write a \`progress\` status (that comes from real dialog
 (\`runtime: three\` / \`runtime: d3\` in the card). See the figure card-rule for the
 full field reference.
 `;
+
+/** The `calendar` skill: authoring `.ics` events for two-way Google Calendar sync. */
+export const CALENDAR_SKILL = `---
+name: calendar
+description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in store/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
+---
+
+# Calendar
+
+Calendar events live as \`.ics\` files in \`store/calendar/\`. Sync with Google Calendar is **two-way**:
+
+- **View events:** \`cb calendar\` shows upcoming events (\`cb calendar today\`, \`cb calendar 2w\`, …).
+- **Create an event:** write a new \`.ics\` file in \`store/calendar/\`. The next sync pushes it to Google Calendar.
+  - Include \`X-CB-CALENDAR-ID:<calendar-id>\` to target a specific calendar (defaults to primary).
+  - Optionally include \`X-CB-REASON:<why>\` and \`X-CB-REF:<path>\` for tracking.
+- **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
+- **Delete an event:** add an \`X-CB-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
+
+**Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected. Use the box's local timezone.
+
+Example minimal \`.ics\` for a new event:
+
+\`\`\`
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Callback Box//EN
+BEGIN:VTIMEZONE
+TZID:America/Chicago
+BEGIN:STANDARD
+DTSTART:19701101T020000
+RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
+TZOFFSETFROM:-0500
+TZOFFSETTO:-0600
+TZNAME:CST
+END:STANDARD
+BEGIN:DAYLIGHT
+DTSTART:19700308T020000
+RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
+TZOFFSETFROM:-0600
+TZOFFSETTO:-0500
+TZNAME:CDT
+END:DAYLIGHT
+END:VTIMEZONE
+BEGIN:VEVENT
+UID:unique-id-here
+SUMMARY:Dentist appointment
+DTSTART;TZID=America/Chicago:20260401T140000
+DTEND;TZID=America/Chicago:20260401T150000
+END:VEVENT
+END:VCALENDAR
+\`\`\`
+`;
+
+/** The `drive` skill: reading/editing/syncing Google Drive sheets and docs. */
+export const DRIVE_SKILL = `---
+name: drive
+description: Work with Google Drive files synced into the box — read, edit, or sync spreadsheets (.sheet.card) and documents (.gdoc.card), or run cb drive commands. Use when a task involves a Drive-synced spreadsheet or Google Doc.
+---
+
+# Google Drive
+
+Google Drive content syncs **two-way** into \`store/drive/\` (or wherever you place the card). A Drive card keeps all its data in its own **attach scope** (\`<basename>.attach/\`), so \`cb mv\` moves the card and everything with it in one step — the \`drive-id\` in the card keeps the upstream link. Don't move the pieces by hand.
+
+## Spreadsheets (\`.sheet.card\`)
+
+- **Find:** the card lists the title, Google link, and its tabs.
+- **Read:** each tab is a JSON file in the card's attach scope (referenced from the card). Plain cells are bare values; formula cells are \`{"f": "=SUM(A1:B1)", "v": "$42.00"}\` — both the formula and the computed result.
+- **Edit:** edit the tab's JSON and commit (for a formula cell, edit the \`f\` field). The next sync pushes to Google Sheets.
+- **Comments:** if the spreadsheet has comments, a \`<basename>.comments.json\` sidecar in the attach scope holds the full thread (referenced by \`comments.ref:\`). Read-only context.
+
+## Documents (\`.gdoc.card\`)
+
+- **Find:** the card carries only metadata; the document body is markdown at \`attach/<basename>.md\` in its attach scope.
+- **Read / edit:** open and edit \`attach/<basename>.md\`, then commit. The next sync converts the markdown to Doc format and pushes it.
+- **Comments:** collaborative feedback is captured read-only as a \`<basename>.comments.json\` sidecar in the attach scope (content, author, timestamps, resolved status, anchored text, replies). Editing/pushing the \`.md\` does NOT write comments back upstream — a push may even orphan the upstream anchors. Read it to understand reviewer feedback; don't expect it to round-trip.
+- **Lossy content:** the card's \`lossy:\` frontmatter lists upstream features that don't survive markdown export (footnotes, embedded images, equations, suggestions, complex tables). When it's non-empty, pushing local edits will destroy them — surface the loss to the user before encouraging a push.
+- **Conflicts:** if both local and remote changed since the last sync, the card status flips to \`conflict\` and the upstream content is written to \`attach/<basename>.remote.md\`. Resolve by merging the two, deleting \`.remote.md\`, and committing.
+
+CLI: \`cb drive inspect <url>\`, \`cb drive add <url> <path>\`, \`cb drive sync\`, \`cb drive status\`.
+`;

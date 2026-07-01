@@ -14,8 +14,6 @@ import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
 
 import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";
-import { calendarSection } from "./calendar.js";
-import { driveSection } from "./drive.js";
 import { locationSection } from "./location.js";
 import {
   proceduresSection,
@@ -74,8 +72,6 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...howItemsEnterSection(),
     ...keyCommandsSection(),
     ...searchSection(),
-    ...calendarSection(),
-    ...driveSection(),
     ...locationSection(),
     ...proceduresSection(procedures),
     ...guidesSection(guides),

@@ -10,7 +10,7 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { BUILD_COURSE_SKILL, FIGURE_EXAMPLES } from "./box-skills-content.js";
+import { BUILD_COURSE_SKILL, FIGURE_EXAMPLES, CALENDAR_SKILL, DRIVE_SKILL } from "./box-skills-content.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */
@@ -28,6 +28,8 @@ const boxSkills: BoxSkill[] = [
     content: BUILD_COURSE_SKILL,
     files: [{ name: "figure-examples.md", content: FIGURE_EXAMPLES }],
   },
+  { name: "calendar", content: CALENDAR_SKILL },
+  { name: "drive", content: DRIVE_SKILL },
 ];
 
 /**

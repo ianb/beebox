@@ -77,8 +77,16 @@ reconciled against *current* main, cited inline.
   not a "sibling `.md`" or separate "data directory." So `cb mv` moves everything
   in one step — collapsed the two manual "move both together" bullets to `cb mv`.
   Also fixed the stale `<lossy>` angle-bracket → the `lossy:` frontmatter field.
-  (`.sheet` → `.gsheet` rename and the always-loaded→skill move remain their own
-  efforts — subplan + Track 3.)
+  (`.sheet` → `.gsheet` rename remains its own subplan.)
+- **Track 3 — calendar + drive moved to skills** — the `calendar` and `drive`
+  guide sections were **removed from the always-loaded agent guide** and
+  repackaged as on-demand box skills (`CALENDAR_SKILL`/`DRIVE_SKILL` in
+  `box-skills-content.ts`, registered in `box-skills.ts`, installed by `cb init`
+  into `.claude/skills/<name>/SKILL.md`). Each carries a trigger `description` so
+  it loads only when a task touches the calendar / Drive. Deleted `calendar.ts`
+  and `drive.ts`. **Note:** existing boxes need `cb init` re-run to install the
+  new skills. (Extensibility load-timing — procedures/guides/schedules — is still
+  open under Track 3.)
 
 Everything else below is still future work.
 
