@@ -327,12 +327,23 @@ correctly points captured notes/voice memos at `.memo.card`. So **do NOT scrub
 memo** anywhere (`doc.tsx:95`, `chat-session-prompts.ts:112`'s `Trip.memo.card`,
 the source/laws examples) — those references are valid.
 
-**Direction.** Grep-driven: `rg -rni "xml" src/core src/schemas` over the prompt
+**Direction.** Grep-driven: `rg -ni "xml" src/core src/schemas` over the prompt
 surface; fix each to frontmatter/markdown language. (No memo scrub — see the
-correction above.)
+correction above.) The *prose* sites are already handled by Track 0's
+`cards.ts:32` ("Cards are not XML; anything that says so is stale").
 
-**First chunk.** The grep + known sites in one commit; the `<destination>` audit
-resolved separately (may become a Track-6/landmark-schema change).
+**CORRECTION — job cards are NOT still XML (supersedes an earlier note here).**
+Investigation (2026-07) found jobs are ~95% migrated to frontmatter: intake jobs
+(`intake-job.tsx:77`) and chat jobs (`chat-job.ts:80`) are frontmatter; only the
+`contains-backfill` producer (`wakeup-steps.ts:391`) still emits XML, and the
+reactor **consumer** (`batch-jobs.ts`/`chat-jobs.ts`/`finish-job.ts`) still parses
+XML by regex — a real latent bug (frontmatter intake jobs reach the agent without
+inlined refs or schema instructions). That is a **code migration**, not a prose
+scrub, and is split out to **`job-xml-purge.subplan.md`** — executed in its own
+worktree. The `<news-job>` XML in test1 is stale demo data.
+
+**First chunk.** The `<destination>` audit is resolved (stale — fixed). The XML
+code purge is the subplan; nothing further needed on the prose surface here.
 
 ### Track 2 — Discipline cleanups: implicit-validate + raw-tool nudges (new)
 
