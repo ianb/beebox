@@ -22,6 +22,7 @@ import {
   trashCommand,
   moveCommand,
   relinkCommand,
+  migrateViewLinksCommand,
   procedureCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
@@ -83,6 +84,7 @@ program.addCommand(wakeupCommand);
 program.addCommand(trashCommand);
 program.addCommand(moveCommand);
 program.addCommand(relinkCommand);
+program.addCommand(migrateViewLinksCommand);
 program.addCommand(procedureCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);
