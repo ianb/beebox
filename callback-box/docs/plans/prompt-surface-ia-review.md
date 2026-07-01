@@ -20,6 +20,12 @@ overtaken by shipped source (laws.ts now has Laws 1–3; scrolled card-activity
 already carries a read position — `01c63c48`, `a185e70d`). Every track below is
 reconciled against *current* main, cited inline.
 
+**Status (partial — plan is still in progress):** Track 0's first chunk has
+landed on `main`: the NAMED_SECTIONS registry (`agent-guide/sections.ts`), the
+named laws (`THE_LAW_OF_QUOTING`/`SAVING`/`CARDS`), and the canonical
+`ABOUT_CARDS` section (`agent-guide/cards.ts`). Everything else below is still
+future work.
+
 ---
 
 ## Stated preferences this plan trades against
