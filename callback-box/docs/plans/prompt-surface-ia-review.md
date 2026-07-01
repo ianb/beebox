@@ -43,6 +43,18 @@ reconciled against *current* main, cited inline.
   guide examples, and the one real card that used it (blast radius was tiny — 1
   card across all boxes). Undefined `as=` now degrades to a lint warning + no
   label, not a crash.
+- **`box-shape.ts` audited + fixed** — `box/output/` reframed (cards that make
+  something happen *outside* the box, not just "outbound telegram"); the "you do
+  NOT manually place items" overstatement corrected; the backwards "inbox jobs =
+  legacy" framing fixed (**jobs → reactor is the *active* path** that `cb wakeup`
+  runs; the intake→triage pipeline is the newer one *not* wired into wakeup), with
+  an explicit job-vs-triaged-item distinction; `<category>` clarified as
+  per-box (from triage landmarks). **Audit results:** `_unsure/` and
+  `store/reviews/retro/` are real (kept); `box/pool/` is real-but-informal (not a
+  `BOX_DIR`; kept); **`store/integrated/` is vestigial** — in `BOX_DIRS` + printed
+  by `cb init` but **no code writes to it** — dropped from the guide table.
+  Follow-up: remove `store/integrated/` from `BOX_DIRS`/`init.ts` (a code change,
+  not done here).
 
 Everything else below is still future work.
 
