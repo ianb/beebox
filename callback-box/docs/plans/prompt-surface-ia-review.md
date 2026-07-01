@@ -30,6 +30,14 @@ reconciled against *current* main, cited inline.
   `doc.tsx`/`person.tsx`/`recipe.tsx` now defer to `ABOUT_CARDS`/`PROVENANCE`;
   `source.ts` converted to the `PROVENANCE` heading + generalized `ref`.
 - **Track 5 — `commands.ts`** — restructured (see its bullet below): DONE.
+- **Track 5 — `quotes.ts` / `source.ts` / `landmarks.ts` + reactor prompt** —
+  quotes trimmed to mechanics (rule deferred to `THE_LAW_OF_QUOTING`, repeat-
+  sentence + user-directed-edit patterns added, "mishears" fixed); `source.ts`
+  `pos`/`placement` aligned with the selection/activity grammar; `landmarks.ts`
+  states the `<Name>.landmark.card` convention + active-structure guidance;
+  `reactor/prompts.ts` drops its box-concepts block (defers to `ABOUT_CARDS`,
+  scrubs XML). **Held:** the `source.ts` `as` rename (needs a name + it's a
+  data-migration blast radius, see its bullet).
 
 Everything else below is still future work.
 

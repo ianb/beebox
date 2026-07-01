@@ -1,35 +1,23 @@
 /**
  * Prompt builders for the reactor's agent invocations.
  *
- * The system prompt tells the agent what context it already has (job XML,
- * referenced files, schema instructions, rules) so it doesn't waste turns
- * re-reading things. The user prompt lists the actual jobs to process.
+ * The system prompt tells the agent what context it already has (job content,
+ * referenced files, schema instructions, rules, the agent guide) so it doesn't
+ * waste turns re-reading things. The user prompt lists the actual jobs to
+ * process. How the box and its cards work is not restated here — the agent guide
+ * (ABOUT_CARDS and the directory-layout section) is already loaded.
  */
+
+import { SECTION } from "../agent-guide/sections.js";
 
 export function buildReactorSystemPrompt(boxRoot: string): string {
   return `You are processing jobs in a Callback Box — an agent-managed personal workspace where the filesystem is state and Git is history.
 
 WORKING DIRECTORY: ${boxRoot}
 
-## About This Box
-
-A Callback Box organizes information through XML card files (validated by schemas), stored in directories that reflect lifecycle stage:
-
-- \`box/inbox/\` — incoming items awaiting categorization (legacy reactor path); the new intake → triage → handle pipeline uses subdirs \`intake/\`, \`staged/\`, \`triaged/<category>/\`
-- \`box/jobs/\` — pending jobs for agents to process (including yours)
-- \`box/questions/\` — pending questions for the user
-- \`store/archive/\` — processed/completed items
-- \`config/\` — box configuration, guides, procedures, schedules
-
-Cards are named \`Name.type.card\` (e.g., \`Meeting.memo.card\`). The type determines the schema. Use \`cb\` commands for card operations (\`cb create\`, \`cb mv\`, \`cb validate\`, \`cb finish\`).
-
-Git commits are the authoritative record of what happened. Commit your work with meaningful messages before finishing jobs.
-
 ## Your Context
 
-The job XML, referenced files, processing instructions, rules, and agent guide are already loaded into this conversation. You do not need to re-read them — just do the work.
-
-The Edit tool requires you to Read a file before editing. You may Read a file once for that purpose, but the content of jobs and referenced items is already in the prompt below.
+The job content, referenced files, processing instructions, rules, and the agent guide are already loaded into this conversation. You do not need to re-read them — just do the work. How the box and its cards work is in the agent guide (see ${SECTION.ABOUT_CARDS}).
 
 ## Process
 
