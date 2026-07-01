@@ -44,7 +44,19 @@ export function schedulesSection(): string[] {
   return [
     "## Schedules",
     "",
-    "A scheduled script — a `.scheduled-script.card` in `config/schedules/` — runs a command on a recurring schedule (connector syncs, maintenance, or your own automation). They run in the background automatically; `cb scheduled` lists them with status and last-run. You can create or modify one: the format supports cron/at/rrule schedules, throttling (`not-before`), chaining (`create-after-success`), and one-shot runs — see `docs/generated/card-scheduled-script.md`. (Running the daemon itself is box-admin, in the server docs.)",
+    "A scheduled script — a `.scheduled-script.card` in `config/schedules/` — runs a `cb` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off job further out than a chat `<schedule>` can reach. Keep them practical, not dramatic.",
+    "",
+    "```",
+    "---",
+    "cron: 0 8 * * 1              # Mondays at 8am",
+    "not-before: 3d              # skip if it already ran within 3 days",
+    "runs: cb procedure run weekly-digest",
+    "description: Monday digest of the week's still-open threads",
+    "source: Boxholder wanted a summary to start the week",
+    "---",
+    "```",
+    "",
+    "They run in the background automatically; `cb scheduled` lists them. Use `at:` (a future timestamp) instead of `cron:` for a one-shot. Full format — cron/at/rrule, `not-before` throttling, `create-after-success` chaining — is in `docs/generated/card-scheduled-script.md`.",
     "",
   ];
 }
@@ -53,7 +65,7 @@ export function tricksSection(): string[] {
   return [
     "## Tricks",
     "",
-    "A **trick** is a custom script for *this* box — box-local tooling for its particular needs, reached for the way you reach for a `cb` command. When a box has a recurring, box-specific operation no general command covers, it lives as a trick. Each is a directory under `tricks/scripts/` with an `index.ts`; run one with `cb trick <name>`. See `tricks/scripts/CLAUDE.md` to write one.",
+    "A **trick** is a reusable script — you package a useful operation once and rerun it with `cb trick <name>`, instead of redoing it by hand each time. Whenever you catch yourself repeating the same multi-step task (a particular fetch, an export, a search-and-summarize), that's the signal to formalize it as a trick. Each lives in `tricks/scripts/<name>/` with an `index.ts`; see `tricks/scripts/CLAUDE.md` to write one.",
     "",
   ];
 }
