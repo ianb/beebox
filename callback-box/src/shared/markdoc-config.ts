@@ -143,7 +143,10 @@ const source: Schema = {
     // the ref-free default for commentary attached to the page it annotates.
     ref: { type: String },
     href: { type: String },
-    as: { type: String },
+    // `usage` — free-form: the way the source material was used to produce the
+    // wrapped content ("verbatim", "summary of the third section", "inferred
+    // from her email signature", …).
+    usage: { type: String },
     // Anchoring metadata for commentary use: where in the target (`pos`, the
     // freeform locator from selection-position.ts), which file state it was
     // anchored against (`version`, space-separated `kind:value` markers — a

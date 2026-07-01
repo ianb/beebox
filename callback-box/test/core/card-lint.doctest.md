@@ -202,7 +202,7 @@ instructions); bare paths are resolved relative to the source card.
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Meeting.doc.card",
-  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" as=\"verbatim\" %}{% /source %}\n",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" usage=\"verbatim\" %}{% /source %}\n",
 );
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
@@ -231,7 +231,7 @@ await box.write(
 );
 await box.write(
   "box/notes/Meeting.doc.card",
-  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" as=\"verbatim\" %}ship Friday{% /source %}\n",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" usage=\"verbatim\" %}ship Friday{% /source %}\n",
 );
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
@@ -251,7 +251,7 @@ attach scope is clean; a missing one in the same scope warns:
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Note.doc.card",
-  "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" as=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" as=\"b\" %}{% /source %}\n",
+  "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" usage=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" usage=\"b\" %}{% /source %}\n",
 );
 await box.write("box/notes/Note.attach/photo.jpg", "JPG");
 const result = await lintCardsDispatch(

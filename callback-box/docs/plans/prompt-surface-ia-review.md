@@ -36,8 +36,13 @@ reconciled against *current* main, cited inline.
   `pos`/`placement` aligned with the selection/activity grammar; `landmarks.ts`
   states the `<Name>.landmark.card` convention + active-structure guidance;
   `reactor/prompts.ts` drops its box-concepts block (defers to `ABOUT_CARDS`,
-  scrubs XML). **Held:** the `source.ts` `as` rename (needs a name + it's a
-  data-migration blast radius, see its bullet).
+  scrubs XML).
+- **`{% source %}` `as` → `usage`** — renamed (boxholder chose `usage`, "the way
+  the source material was used"). Touched the Markdoc tag schema
+  (`markdoc-config.ts`), the `Source.tsx` renderer prop, the `source.ts`/`laws.ts`
+  guide examples, and the one real card that used it (blast radius was tiny — 1
+  card across all boxes). Undefined `as=` now degrades to a lint warning + no
+  label, not a crash.
 
 Everything else below is still future work.
 
@@ -536,7 +541,7 @@ frontmatter (Track 0); `.sheet`→`.gsheet` rename (Track 9); named laws (Track 
    (Track 4)
 4. **Voice-in → voice-out default** — tighten or accept variance? *Lean:
    accept-and-document.* (Track 4)
-5. **`as` new name** — `derivation`/`how`/`kind`? Decided in Track 5's first
+5. ~~**`as` new name**~~ — **DECIDED: `usage`** (renamed; see Status). Was in Track 5's first
    chunk. (Track 5)
 6. **`{% source %}` span carrier** — attribute vs escaped body. (Track 8)
 7. **`person.participant`** — boolean vs enum (referenced / participant /

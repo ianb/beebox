@@ -15,7 +15,7 @@ The ref value and a `body:<line>:<tag>.<attr>` path are returned.
 
 ```ts
 JSON.stringify(
-  extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" as="verbatim" %}ship Friday{% /source %}'),
+  extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" usage="verbatim" %}ship Friday{% /source %}'),
   null,
   2,
 )
@@ -31,7 +31,7 @@ JSON.stringify(
 Only the `ref` attribute is a ref — `as` and other attributes are opaque.
 
 ```ts
-extractBodyRefs('{% source ref="a/b.doc.card" as="summary" %}x{% /source %}').length
+extractBodyRefs('{% source ref="a/b.doc.card" usage="summary" %}x{% /source %}').length
 => 1
 ```
 
@@ -68,7 +68,7 @@ nothing.
 
 ```ts
 JSON.stringify(
-  extractBodyRefs('{% source ref="/box/m.memo.card" as="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
+  extractBodyRefs('{% source ref="/box/m.memo.card" usage="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
   null,
   2,
 )
