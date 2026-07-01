@@ -584,6 +584,31 @@ and recorded before the plan completes.
 Chunks are commit boundaries in the worktree. The plan completes when all tracks
 + subplans are done; **ships as one unit only on the boxholder's `/finish`.**
 
+## Candidates to move into ABOUT_CARDS (found during the dedup pass)
+
+Things elsewhere that re-teach card concepts and may belong in the canonical
+surface — noted, not yet moved:
+
+- **`title:` as a shared field** — many types require/allow `title:`; ABOUT_CARDS
+  currently treats it as per-type. If near-universal, hoist a "most cards carry a
+  `title:`" line (ties to open Q #1).
+- **`status:` as a shared field** — person and others carry a `status:` enum;
+  consider whether a common status vocabulary belongs in ABOUT_CARDS.
+- **`CONTAINS_DOC_APPENDIX`** (`search.ts`) — the per-card-type generated-doc
+  appendix now duplicates ABOUT_CARDS' `contains:` rule; replace it with a
+  cross-reference (a `generate-docs` change, so deferred).
+- **`commands.ts` card commands** — `cb create`/`mv`/`rm`/`validate` and the
+  raw-tool / validate-is-implicit nudges overlap ABOUT_CARDS; commands.ts should
+  list the commands and let ABOUT_CARDS carry the *why*/nudges (Track 5).
+- **reactor + chat system prompts** — both still re-teach "cards are
+  `Name.type.card` + `cb` commands"; since they load the guide, defer to
+  ABOUT_CARDS (Track 4 / the reactor trim).
+- **"which card type to reach for"** — `doc.tsx`'s `.doc.card` vs `.record.card`
+  vs loose `.md` guidance is partly a general choosing-a-type question that could
+  anchor in ABOUT_CARDS / CARD_TYPES.
+- **person-creation nudge** in `behavior.ts` `whereToRecordSection`
+  (`create a person card at people/First_Last...`) re-states naming — minor.
+
 ## Rollout shape
 
 - **Tests first, as a design tool.** Golden-output doctest for `compileBriefing`
