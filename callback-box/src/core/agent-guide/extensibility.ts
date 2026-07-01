@@ -29,9 +29,7 @@ export function guidesSection(guides: GuideSummary[]): string[] {
   const lines: string[] = [
     "## Guides",
     "",
-    "Guides contain the boxholder's preferences for how you handle specific domains.",
-    "They define interaction patterns, pacing, and actions you wouldn't know from general knowledge.",
-    "**Read the guide before acting** — even if you know the domain, the guide tells you how this user wants it done.",
+    "Guides (`*.guide.card`) hold the boxholder's preferences for handling specific domains — how *this* user wants a domain done, beyond what general knowledge tells you. **Read the relevant guide before acting**, even in a domain you know.",
     "",
   ];
   for (const g of guides) {
@@ -46,19 +44,7 @@ export function schedulesSection(): string[] {
   return [
     "## Schedules",
     "",
-    "Scheduled scripts in `config/schedules/` automate recurring tasks (connector syncs, maintenance, custom jobs).",
-    "Each is a `.scheduled-script.card` with a cron/at/rrule schedule.",
-    "",
-    "- `cb tick` — evaluate and run due schedules",
-    "- `cb scheduled` — list all schedules with status and last-run time",
-    "- `cb scheduler status` — show scheduler daemon status and configured boxes",
-    "",
-    "A background scheduler daemon (`cb scheduler start`) runs `cb tick` every 60 seconds for all configured boxes.",
-    "It is managed via launchd and auto-starts at login. Scheduler logs for this box are at `.callback-box/scheduler.jsonl` (JSONL format, one entry per tick cycle).",
-    "Each entry records which scripts ran, were skipped, or errored, with timestamps and durations.",
-    "",
-    "Agents can create or modify scheduled scripts for custom automation.",
-    "Schedule format includes cron expressions, throttling (`not-before`), chaining (`create-after-success`), and one-shot options — see `docs/generated/card-scheduled-script.md`.",
+    "A scheduled script — a `.scheduled-script.card` in `config/schedules/` — runs a command on a recurring schedule (connector syncs, maintenance, or your own automation). They run in the background automatically; `cb scheduled` lists them with status and last-run. You can create or modify one: the format supports cron/at/rrule schedules, throttling (`not-before`), chaining (`create-after-success`), and one-shot runs — see `docs/generated/card-scheduled-script.md`. (Running the daemon itself is box-admin, in the server docs.)",
     "",
   ];
 }
@@ -67,8 +53,7 @@ export function tricksSection(): string[] {
   return [
     "## Tricks",
     "",
-    "Custom scripts live in `tricks/scripts/`. Each trick is a directory with an `index.ts`.",
-    "Run with `cb trick <name>`. See `tricks/scripts/CLAUDE.md` for how to write tricks.",
+    "A **trick** is a custom script for *this* box — box-local tooling for its particular needs, reached for the way you reach for a `cb` command. When a box has a recurring, box-specific operation no general command covers, it lives as a trick. Each is a directory under `tricks/scripts/` with an `index.ts`; run one with `cb trick <name>`. See `tricks/scripts/CLAUDE.md` to write one.",
     "",
   ];
 }

@@ -106,6 +106,16 @@ reconciled against *current* main, cited inline.
   metadata/deps, read/write API, and `adapterFetch`, and made it corrective:
   the preferred use is a view targeting a **card type** (`rendersCardTypes`); a
   standalone dashboard is the unusual case, not the default.
+- **`extensibility.ts` trimmed** — **schedules** cut from a wall of system-admin
+  detail (daemon, launchd, 60s tick, JSONL logs, `cb tick`/`cb scheduler status`)
+  to the kernel: what a `.scheduled-script.card` is, that they run automatically,
+  `cb scheduled` to list, the format + doc pointer. **Tricks** reframed around the
+  *concept* — a box-local script for *this* box's particular needs, reached for
+  like a `cb` command — not just the file layout. **Guides** intro tightened
+  (kept "read the guide before acting"). **Decision:** procedures + guides stay
+  always-loaded — unlike calendar/drive (heavy static content), they're compact
+  per-box indexes the agent must see to apply them; not moved to skills/on-demand.
+  That resolves the last of Track 3's load-timing question.
 
 Everything else below is still future work.
 
