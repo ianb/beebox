@@ -271,14 +271,22 @@ not inside this chunk — see Open Questions.
 
 **What.** Finish hunting stale format vocabulary across the whole prompt
 surface. Round-2 additions to round-1's list: `cards.ts:29` (*"writing XML
-directly"*), `chat-session-prompts.ts:14` (still *"XML card files"*),
-`doc.tsx:95` (`.memo.card` — retired type), and the `behavior.ts:79`
-`<destination for="…">` **audit** (is it a stale angle-bracket form that should
-be `{% destination %}`, or genuinely current?).
+directly"*), `chat-session-prompts.ts:14` (still *"XML card files"*), and the
+`behavior.ts:79` `<destination for="…">` **audit** (resolved: stale — destinations
+are frontmatter; fixed).
 
-**Direction.** Grep-driven: `rg -rni "xml|\.memo\.card" src/core src/schemas`
-over the prompt surface; fix each to frontmatter/markdown language and current
-card types. The `<destination>` item is an audit → then either scrub or keep.
+**CORRECTION — `memo` is NOT retired.** The commentary claimed `.memo.card` is
+gone; it is not. `memo` is a live, registered, actively-**produced** type — the
+UI's voice-memo recorder (`POST /api/actions/create-voice-memo`, the `voice-memo`
+template) writes `box/inbox/Voice_Memo_<ts>.memo.card` and the `transcribe`
+preaction (`appliesTo: ["memo", "feedback"]`) transcribes it; `doc.tsx:95`
+correctly points captured notes/voice memos at `.memo.card`. So **do NOT scrub
+memo** anywhere (`doc.tsx:95`, `chat-session-prompts.ts:112`'s `Trip.memo.card`,
+the source/laws examples) — those references are valid.
+
+**Direction.** Grep-driven: `rg -rni "xml" src/core src/schemas` over the prompt
+surface; fix each to frontmatter/markdown language. (No memo scrub — see the
+correction above.)
 
 **First chunk.** The grep + known sites in one commit; the `<destination>` audit
 resolved separately (may become a Track-6/landmark-schema change).
@@ -453,7 +461,8 @@ and **tightening loose fields toward typed shapes** (bias-toward-strict):
   prose over "doc card"; hoist `title:`/no-timestamps to About Cards (leave
   one-liners); expand the "when not a doc" list (READMEs, skills scaffolding,
   embedded-in-code markdown; **keep** the `.record.card` alternative prominent;
-  **drop** the `.memo.card` line).
+  **keep** the `.memo.card` line too — memo is live/produced, so "captured note
+  or voice memo → `.memo.card`" is correct guidance).
 - **recipe.tsx** — drop the italian/desserts subdir taxonomy (organization is a
   user conversation); **type `source:`** as `href`/`ref` (not freeform
   "cookbook, person, URL"; enables a future frozen-`.webpage.card` link);
@@ -649,7 +658,7 @@ and recorded before the plan completes.
 
 1. **Track 0** — About Cards + glossary + named laws (unblocks everything;
    settle shared-field set + `pos`).
-2. **Track 1** — XML/`memo` scrub + `<destination>` audit.
+2. **Track 1** — XML scrub + `<destination>` audit (no `memo` scrub — memo is live).
 3. **Track 2** — validate-nag removal + raw-tool nudges (need Track 0's home).
 4. **Track 3** — calendar/drive load-model (prototype calendar), then the
    extensibility load-timing trims.
