@@ -121,6 +121,27 @@ reconciled against *current* main, cited inline.
   stay always-loaded (compact per-box indexes), unlike calendar/drive — resolves
   the last of Track 3's load-timing question.
 
+- **Track 4 — chat system prompt overhauled** (`chat-session-prompts.ts`). Dropped
+  the `ABOUT THIS BOX` block entirely (the chat agent loads the agent guide — same
+  precedent as the reactor trim) and `CALLBACK_BOX_CHAT_MODE`; restructured into
+  crisp sections (working-in-chat, two channels, messages received, showing
+  things, self-notes, state snapshot, ack/callout/schedule). Corrective where the
+  default is wrong: job-card hand-off recalibrated to "the exception," views
+  steered to card-type interfaces, the `view:`-link scar dropped. Added the
+  transcription failure modes (homophones, dropped negatives), the "point to
+  display content in speech" rule, diarization "can't be assumed the same person,"
+  the `contains`-style double-duty examples (image caption, the callout that names
+  the situation). Reframed `<schedule>` as "come back on your own" (proactive),
+  `prose`/`callout` around "when prose isn't shown," and **inlined the narration
+  overlay's *why*** (user speaking at length, may talk over you). **Snapshot code:**
+  stopped emitting `time` and `calendar` (no consumers; dropped from prose too) —
+  updated `chat-features.ts` composer + `session-context.ts` + the snapshot
+  doctests. `.memo.card` examples kept (memo is live). **Deferred (one chunk):**
+  the `health` **mid-session** change — it's a stateful mini-feature needing a
+  flood-gate (don't repeat a persistent failure every message), bundled with the
+  dead calendar-*computation* cleanup; health prose stays first-message-accurate
+  until then.
+
 Everything else below is still future work.
 
 ---

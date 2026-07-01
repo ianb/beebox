@@ -123,42 +123,37 @@ export function mergeSeedFeatures(input: {
 
 /**
  * Attributes the system writes into the snapshot that the agent can
- * never set back via a delta tag. `time`/`local-time`/`channel`, plus
+ * never set back via a delta tag. `local-time`/`channel`, plus
  * `open-card` (companion-pane state), ride on every message;
- * `last-activity`/`calendar`/`health` only on the first message of a new
- * session (see `session-context.ts`). Companion-pane activity rides as
+ * `last-activity`/`health` only on the first message of a new session
+ * (see `session-context.ts`). Companion-pane activity rides as
  * `<card-activity>` child elements, not attributes (see `card-activity.ts`).
  */
 const READ_ONLY_ATTRS = new Set([
-  "time",
   "local-time",
   "channel",
   "last-activity",
-  "calendar",
   "health",
   "open-card",
 ]);
 
 /**
- * Serialize the system → agent snapshot. Carries `time` (lowercase,
- * free-form ISO string), the optional read-only context attributes,
- * plus all current feature states.
+ * Serialize the system → agent snapshot: the optional read-only context
+ * attributes plus all current feature states.
  *
  * Companion-pane activity, when present, rides as `<card-activity>` child
  * elements (so `<chat-app>` becomes a paired tag); otherwise it's
  * self-closing.
  *
  * Example output:
- *   <chat-app narration="on" prose="off" time="2026-05-13T14:23:00-05:00"
+ *   <chat-app narration="on" prose="off"
  *     local-time="Wednesday 2026-05-13 14:23 (afternoon)" channel="web-desktop"/>
  */
 export function composeChatAppSnapshot(input: {
   features: FeatureMap;
-  time: string;
   localTime?: string;
   channel?: string;
   lastActivity?: string;
-  calendar?: string;
   health?: string;
   openCard?: string;
   /** Pre-rendered `<card-activity>` child elements (see `renderActivityChildren`). */
@@ -171,12 +166,10 @@ export function composeChatAppSnapshot(input: {
     if (val === undefined) continue;
     attrs.push(`${f.name}="${escapeAttr(val)}"`);
   }
-  attrs.push(`time="${escapeAttr(input.time)}"`);
   const contextAttrs: Array<[string, string | undefined]> = [
     ["local-time", input.localTime],
     ["channel", input.channel],
     ["last-activity", input.lastActivity],
-    ["calendar", input.calendar],
     ["health", input.health],
     ["open-card", input.openCard],
   ];

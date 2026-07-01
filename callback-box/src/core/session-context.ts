@@ -166,9 +166,9 @@ interface SnapshotContext {
 }
 
 /**
- * Compose the full `<chat-app>` snapshot for one send: feature flags,
- * UTC `time`, and the situational context attributes, stamped at call
- * time. The one-stop entry point for `ChatSession.send`.
+ * Compose the full `<chat-app>` snapshot for one send: feature flags and
+ * the situational context attributes, stamped at call time. The one-stop
+ * entry point for `ChatSession.send`.
  */
 export async function composeSendSnapshot(
   boxRoot: string,
@@ -184,7 +184,6 @@ export async function composeSendSnapshot(
   const context = await buildSnapshotContext(boxRoot, { now, sessionStart });
   return composeChatAppSnapshot({
     features,
-    time: now.toISOString(),
     ...context,
     ...(channel !== undefined ? { channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
