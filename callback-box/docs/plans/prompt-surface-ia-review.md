@@ -592,16 +592,17 @@ surface — noted, not yet moved:
 - ~~**`title:` as a shared field**~~ — **DONE.** `title` is in `GLOBAL_CARD_FIELDS`
   (`src/cards/schema.ts:87`, alongside `contains` and `content-type`); documented
   in ABOUT_CARDS' shared envelope.
-- **`content-type:` — NOT removable yet (load-bearing).** It's the marker that
-  routes legacy XML-bodied cards to the `XmlLoadedCard` path
-  (`CARD_XML_CONTENT_TYPE = "application/x-card+xml"`). **4,438 cards across the
-  boxes still carry it** (3,407 `image`, 562 `record`, 120 `email-message`, …;
-  1,250 in archive, 50 in trash). Removing `content-type` / the `XmlLoadedCard`
-  path would break loading/detection of all of them. The clean removal is a real
-  effort: **migrate (or retire) those XML cards to frontmatter first**, then drop
-  `content-type` + the XML loader together. Deliberately still *undocumented* in
-  ABOUT_CARDS (agents never author it) — but it stays in the code until the
-  migration happens.
+- **`content-type:` — REMOVED.** It was vestigial: the XML loader was already
+  gone (`LoadedCard = FrontmatterLoadedCard`; `XmlLoadedCard` doesn't exist —
+  CLAUDE.md was stale, now fixed), and no schema declared a non-markdown body, so
+  `content-type` + the `kind: "xml"` branches were dead code. (My earlier
+  "load-bearing / 4,438 cards" alarm was wrong: 97% of those cards are stale
+  fixtures in two scratch boxes — `hearth-test`, `ledger-shrink-test`; real
+  boxes have a handful of dead inbox demo-scans.) Dropped `content-type` from
+  `GLOBAL_CARD_FIELDS`, removed `BodyKind`/`BodyFieldOptions`/`kind`,
+  `CARD_XML_CONTENT_TYPE`, and the XML validate/serialize branches; `body()` now
+  takes just a schema. The seam is documented for re-adding if a non-markdown
+  body is ever needed.
 - **`status:` — no misuse; nothing to rename.** Correction to an earlier
   mis-survey: the enums that looked misfiled are already correctly named —
   `text`/`voice` is `feedback.source:`, `query-response`/`comment`/`brief` is

@@ -49,9 +49,6 @@ const text = "---\ntype: email-thread\nthread-id: abc123\nsubject: Re Weekend pl
 const card = parseCardText(text, { source: "thread.email-thread.card", schemas });
 JSON.stringify(card.fields)
 => {"type":"email-thread","thread-id":"abc123","subject":"Re Weekend plans","participants":["alice@example.com","bob@example.com"]}
-
-card.contentType === undefined
-=> true
 ```
 
 ## A card with a markdown body parses both halves
@@ -117,15 +114,6 @@ lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
 const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
 JSON.stringify(drifted.fields)
 => {"type":"doc","drive-id":"d1","title":"T","body":""}
-```
-
-The `content-type` marker is a global field, so a card carrying it keeps it
-through the parse.
-
-```ts
-const ct = parseCardText("---\ntype: email-thread\nthread-id: t1\nsubject: hi\ncontent-type: text/plain\nparticipants:\n  - a@x\n---\n", { source: "ct.email-thread.card", schemas });
-ct.fields["content-type"]
-=> text/plain
 ```
 
 ## Loader dispatch parses recognized frontmatter cards

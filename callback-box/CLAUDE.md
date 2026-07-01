@@ -38,7 +38,7 @@ Body content as plain markdown.
 
 **Schemas** live in `src/schemas/`. Cards use `cardSchema(type, { fields, instructions? })` from `src/cards/` (box-local schemas import the same via `callback-box/cards`). `src/schemas/registry.ts` lists them in `cardSchemas[]`; boxes can add local schemas under `config/schemas/`. The type is taken from the filename (`Foo.<type>.card`) — there is no `type:` field in frontmatter.
 
-**Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a discriminated `FrontmatterLoadedCard | XmlLoadedCard`. Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations to frontmatter cards are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
+**Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a `FrontmatterLoadedCard` (cards are frontmatter + markdown body — there is no other body encoding; the old XML loader and its `content-type` marker are gone). Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
 
 **Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`). Attachments live in a sibling `Name.attach/` directory; refs starting with `attach/` resolve into this scope. No two cards in the same directory may share a basename (lint error).
 

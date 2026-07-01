@@ -29,32 +29,22 @@ class CardSchemaDeclarationError extends Error {
   }
 }
 
-/**
- * Supported body content kinds. Markdown bodies are plain UTF-8 text.
- */
-export type BodyKind = "markdown" | "xml";
-
-export interface BodyFieldOptions {
-  /** Body kind. Defaults to "markdown". */
-  kind?: BodyKind;
-}
-
 export interface BodyField<TSchema extends ZodType = ZodType> {
   readonly [BODY_FIELD_TAG]: true;
   readonly schema: TSchema;
-  readonly kind: BodyKind;
 }
 
 /**
  * Marks a field as living in the card's file body instead of the YAML
- * frontmatter. Each CardSchema may declare at most one body field.
+ * frontmatter. Each CardSchema may declare at most one body field. Bodies are
+ * markdown (plain UTF-8 text); if a non-markdown body encoding is ever needed
+ * again, reintroduce a `kind` discriminator here (and its `content-type`
+ * marker).
  */
 export function body<TSchema extends ZodType>(
-  schema: TSchema,
-  options?: BodyFieldOptions
+  schema: TSchema
 ): BodyField<TSchema> {
-  const kind = options === undefined || options.kind === undefined ? "markdown" : options.kind;
-  return { [BODY_FIELD_TAG]: true, schema, kind };
+  return { [BODY_FIELD_TAG]: true, schema };
 }
 
 export function isBodyField(value: unknown): value is BodyField {
@@ -80,14 +70,10 @@ export type FieldDecl = ZodType | BodyField;
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
  *   the prime retrieval field for search and listings.
- * - `content-type` — body encoding marker the host reads to know how to parse
- *   the body. A structural field set by the serializer, not author data, so
- *   it is allowed on every card type rather than redeclared per schema.
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),
   contains: z.string().optional(),
-  "content-type": z.string().optional(),
 };
 
 /**

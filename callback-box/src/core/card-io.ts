@@ -20,8 +20,6 @@ import { readFile } from "node:fs/promises";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { splitCardContent, type CardSchema } from "../cards/index.js";
 
-const CARD_XML_CONTENT_TYPE = "application/x-card+xml";
-
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
  * to distinguish format-level problems from arbitrary IO errors.
@@ -91,8 +89,6 @@ export interface ParsedCard<TFields extends Record<string, unknown> = Record<str
   fields: TFields;
   /** Body text exactly as it appeared in the file (empty string if none). */
   rawBody: string;
-  /** Optional content-type from frontmatter; undefined for markdown/empty bodies. */
-  contentType: string | undefined;
 }
 
 /**
@@ -135,9 +131,7 @@ export function parseCardText(
   }
   const fmFields = fmParse.data as Record<string, unknown>;
 
-  const contentType = typeof fm["content-type"] === "string" ? fm["content-type"] : undefined;
-
-  const bodyValue = validateCardBody({ schema, body: split.body, contentType, resolved, source });
+  const bodyValue = validateCardBody({ schema, body: split.body, resolved, source });
 
   const fields: Record<string, unknown> = { ...fmFields };
   if (schema.bodyFieldName !== null) {
@@ -148,7 +142,6 @@ export function parseCardText(
     schema,
     fields,
     rawBody: split.body,
-    contentType,
   };
 }
 
@@ -210,22 +203,15 @@ function resolveCardType(input: {
 function validateCardBody(input: {
   schema: CardSchema;
   body: string;
-  contentType: string | undefined;
   resolved: string;
   source: string;
 }): unknown {
-  const { schema, body, contentType, resolved, source } = input;
+  const { schema, body, resolved, source } = input;
   if (schema.bodyField === null || schema.bodyFieldName === null) {
     if (body.trim().length > 0) {
       throw new CardIOError(source, `schema "${resolved}" declares no body, but file has body content`);
     }
     return undefined;
-  }
-  if (schema.bodyField.kind === "xml" && contentType !== CARD_XML_CONTENT_TYPE) {
-    throw new CardIOError(
-      source,
-      `schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
-    );
   }
   const bodyParse = schema.bodyField.schema.safeParse(body);
   if (!bodyParse.success) {
@@ -241,8 +227,7 @@ function validateCardBody(input: {
  * Serialize a parsed card back to its file representation.
  *
  * Splits the input fields object into frontmatter (everything but the body
- * field) + body, sets the appropriate content-type, and emits a fenced YAML
- * block followed by the body text.
+ * field) + body and emits a fenced YAML block followed by the body text.
  */
 export function serializeCardText(input: {
   schema: CardSchema;
@@ -256,12 +241,7 @@ export function serializeCardText(input: {
     if (name === "type") continue;
     if (schema.bodyFieldName === name) {
       if (schema.bodyField === null) continue;
-      if (schema.bodyField.kind === "markdown") {
-        body = typeof value === "string" ? value : String(value);
-      } else if (schema.bodyField.kind === "xml") {
-        body = typeof value === "string" ? value : String(value);
-        frontmatter["content-type"] = CARD_XML_CONTENT_TYPE;
-      }
+      body = typeof value === "string" ? value : String(value);
       continue;
     }
     if (value === undefined) continue;
@@ -283,7 +263,6 @@ export interface FrontmatterLoadedCard {
   readonly path: string;
   readonly schema: CardSchema;
   readonly fields: Record<string, unknown>;
-  readonly contentType: string | undefined;
 }
 
 export interface LoadCardContext {
@@ -324,7 +303,6 @@ export function loadCardFromText(input: {
         path: source,
         schema: parsed.schema,
         fields: parsed.fields,
-        contentType: parsed.contentType,
       });
     }
   }
