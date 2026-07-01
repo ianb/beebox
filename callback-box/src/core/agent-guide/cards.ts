@@ -56,7 +56,8 @@ next), but a few belong to every card:
   info is concise let the sentence carry it ("Dentist moved to June 17"); never a
   list of parts; keep it under 200 characters. If you edit content and the
   sentence still holds, \`cb contains update <card> --text "..."\` clears the
-  staleness flag.
+  staleness flag; \`cb contains list --missing\` / \`--stale\` shows which cards
+  still need one written or refreshed.
 - **\`ref\`** — a pointer to another card. A leading \`/\` resolves from the **box
   root**; a bare path resolves relative to the current card; avoid \`../../\`. The
   full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)

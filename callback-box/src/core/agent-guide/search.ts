@@ -1,29 +1,43 @@
 /**
- * Box search. The `contains:` field's writing rule is canonical in ABOUT_CARDS
- * (agent-guide/cards.ts); this section only covers searching, and each
- * searchable card type's generated doc still gets the short appendix.
+ * Box search — how to *find* cards. Making a card findable (the `contains:`
+ * writing rule + worklist commands) is canonical in ABOUT_CARDS
+ * (agent-guide/cards.ts); each searchable card type's generated doc still gets
+ * the short appendix below.
  */
 
 import { SECTION, xref } from "./sections.js";
 
 export function searchSection(): string[] {
-  return [
-    "## Searching the Box",
-    "",
-    '`cb search "<query>"` is full-text search over the box\'s cards — prefer it',
-    "over grep when looking for cards by content: it understands card structure,",
-    "ranks results, and weights the `contains:` field heavily. Filters:",
-    "`--kind <type>`, `--path <prefix>`, `--limit N`; `--json` for the structured",
-    "envelope. Standalone `.md` files index too (kind `markdown`). Operational",
-    "card types (jobs, runs) are not indexed — find those with `cb ls` under",
-    "`box/jobs/`. Query style: lead with the distinctive words you remember",
-    "(names, unusual terms, numbers); extra descriptive words help when they",
-    "describe the specific target, but generic domain words dilute ranking.",
-    "",
-    `Search ranks the \`contains:\` field heavily; how to write a good one is in ${xref(SECTION.ABOUT_CARDS)}.`,
-    "`cb contains list --missing` / `--stale` shows cards whose `contains:` needs writing or refreshing.",
-    "",
-  ];
+  return `## Searching the Box
+
+\`cb search "<query>"\` is full-text search over the box's cards — prefer it over
+\`grep\` for finding cards by content: it understands card structure, ranks by
+relevance, and weights the \`contains:\` field heavily. Standalone \`.md\` files
+index too (as kind \`markdown\`); operational card types (jobs, runs) aren't
+indexed — find those with \`cb ls\`.
+
+**Query style:** lead with the distinctive words you remember — names, unusual
+terms, numbers. Extra words help only when they describe the specific target;
+generic domain words dilute the ranking. It's relevance-ranked, not exact-match
+— there is no keyword or quoted-phrase mode.
+
+Examples:
+
+- \`cb search "carbonara"\` — find the pasta recipe
+- \`cb search "dentist reschedule" --kind email-message\` — the email about it, emails only
+- \`cb search "Maria phone" --path people\` — her number, under \`people/\`
+
+**Filters:** \`--kind <type>\` (repeatable), \`--path <prefix>\`, \`--limit N\`
+(default 10); \`--json\` for the structured envelope.
+
+**A result** shows the card's path (with a \`#fragment\` locator when the match is
+inside the card) and title, then the card's \`contains:\` sentence and a matched
+excerpt — so you see both *which* card and *where* in it. A truncated run reports
+"N of total."
+
+To make a card findable in the first place, write it a good \`contains:\` — the
+rule and the \`cb contains\` worklist commands are in ${xref(SECTION.ABOUT_CARDS)}.
+`.split("\n");
 }
 
 /** Appended to every searchable card type's docs/generated/card-<type>.md. */

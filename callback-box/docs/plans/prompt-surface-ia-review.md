@@ -87,6 +87,14 @@ reconciled against *current* main, cited inline.
   and `drive.ts`. **Note:** existing boxes need `cb init` re-run to install the
   new skills. (Extensibility load-timing — procedures/guides/schedules — is still
   open under Track 3.)
+- **`search.ts` finished** — added concrete example queries, documented the
+  **output shape** (path + `#fragment` locator, title, the `contains:` sentence,
+  a matched excerpt, "N of total" on truncation) and that it's **relevance-ranked
+  with no keyword/quoted-phrase mode** (all verified against `commands/search.ts`).
+  Moved the `contains:` *maintenance* (`cb contains list --missing`/`--stale`) out
+  of search and into the ABOUT_CARDS `contains:` bullet — search now covers only
+  *finding*, ABOUT_CARDS covers *making findable*. (`CONTAINS_DOC_APPENDIX`
+  per-type duplication is still the noted follow-up.)
 
 Everything else below is still future work.
 
