@@ -29,8 +29,8 @@ export const PersonSchema: CardSchema = cardSchema("person", {
 Person cards track key people referenced in briefings and throughout
 the box.
 
-They live at \`people/First_Last.person.card\`. The filename uses the
-person's name with underscores.
+They live at \`people/First_Last.person.card\` — the person's actual
+name in the \`First_Last\` form ABOUT_CARDS describes, not a slug or alias.
 
 **Frontmatter:**
 - \`name:\` — Full name. Required.
@@ -47,10 +47,7 @@ person's name with underscores.
 - When adding someone to a briefing's \`key-people:\` — always create
   the person card if it doesn't exist.
 - When a person keeps coming up and you need a place to consolidate
-  info about them.
-
-**Filename convention:** \`people/First_Last.person.card\` — use the
-person's actual name, not a slug or alias.`,
+  info about them.`,
 });
 
 export interface PersonFields {

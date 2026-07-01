@@ -26,33 +26,39 @@ this is what one *is* and how to work with it.
 
 ### What a card is
 
-A card is a **markdown file with required YAML frontmatter**, named
-\`Name.type.card\`. The **type comes from the filename** — the \`.recipe.card\` /
-\`.person.card\` suffix — never from a \`type:\` field in the frontmatter (there
-isn't one). Cards are not XML; anything that says so is stale.
+A card is a **markdown file with required YAML frontmatter**, named in
+\`Name.type.card\` form — for example \`Trip_Report.doc.card\`. The **type comes
+from the filename** — the \`.doc.card\` / \`.recipe.card\` suffix — so the filename
+is load-bearing. Cards are not XML; anything that says so is stale.
 
 \`\`\`
 ---
 contains: Dana's kitchen-remodel preferences and the contractor's quote.
 ---
-The body is plain markdown. Standard Markdoc tags work here — \`{% quote %}\` for
-the user's verbatim words, \`{% source %}\` for provenance — the same as anywhere.
+The body is plain markdown.
 \`\`\`
+
+The box defines its own tags for card bodies, written in Markdoc's \`{% tag %}\`
+syntax: \`{% quote %}\` for the user's verbatim words (see ${xref(SECTION.LAW_OF_QUOTING)})
+and \`{% source %}\` for provenance and refs (see ${xref(SECTION.PROVENANCE)}).
 
 ### Frontmatter every card shares
 
 Most frontmatter is defined by the card's own type (see ${xref(SECTION.CARD_TYPES)},
 next), but a few fields are common to all:
 
-- **\`contains:\`** — one sentence stating what can be found inside the card. It
-  is the prime retrieval field for \`cb search\` and listings; write it whenever
-  you create or substantially edit a card. Describe what is *in* the card, not
-  what it *is*: "Maria's phone number and her kids' names," not "a person card."
-- **\`ref\`** — a pointer to another card: \`{ref: "..."}\` in frontmatter, or a
-  body link to a card path. A leading \`/\` resolves from the **box root** (the
-  usual form); a bare path resolves relative to the current card; avoid \`../../\`,
-  it is fragile. \`cb validate\` warns when a ref stops resolving and \`cb mv\`
-  rewrites refs when a target moves.
+- **\`contains:\`** — one sentence stating what can be found inside the card; the
+  prime retrieval field for \`cb search\` and listings. Write it when you create
+  or substantially edit a card. Describe what is *in* the card, not what it *is*
+  ("Maria's phone number and her kids' names," not "a person card"). When the
+  info is concise let the sentence carry it ("Dentist moved to June 17"); never a
+  list of parts; keep it under 200 characters. If you edit content and the
+  sentence still holds, \`cb contains update <card> --text "..."\` clears the
+  staleness flag.
+- **\`ref\`** — a pointer to another card. A leading \`/\` resolves from the **box
+  root**; a bare path resolves relative to the current card; avoid \`../../\`. The
+  full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)
+  live in ${xref(SECTION.PROVENANCE)}.
 - **No Git-tracked metadata.** Don't put \`created\` / \`modified\` (or the like)
   in frontmatter — Git already tracks both authoritatively. Don't duplicate what
   the history already knows.
@@ -74,7 +80,9 @@ store/notes/Trip_Report.doc.card
 store/notes/Trip_Report.attach/photo.jpg
 \`\`\`
 
-Then in the body: \`![the view from the cabin](attach/photo.jpg)\`.
+Then in the body: \`![the view from the cabin](attach/photo.jpg)\`. Create the
+\`.attach/\` directory yourself when you add the first attachment — it's just a
+sibling directory, no special command.
 
 ### Creating and manipulating cards
 
@@ -86,9 +94,11 @@ For array or structured frontmatter values, use **JSON** (\`options='["Red","Blu
 — JSON is the default for anything machine-set. **Two-step pattern:** for a
 complex card, \`cb create\` a minimal one, then edit it to fill in the details.
 
-**Move and delete cards with \`cb mv\` / \`cb rm\`, never \`git mv\` / \`mv\` or
-\`git rm\` / \`rm\`.** The \`cb\` versions rewrite refs to the card and route deletes
-to trash; the raw tools silently break both.
+**Move and delete box content with \`cb mv\` / \`cb rm\`, never \`git mv\` / \`mv\` or
+\`git rm\` / \`rm\`** — a card, a directory, or a plain \`.md\` dossier. \`cb mv\`
+rewrites every inbound reference (frontmatter refs, body tags, inline markdown
+links) and \`cb rm\` routes deletes to trash; the raw tools relocate the files but
+leave those references dangling.
 
 \`cb validate\` runs implicitly on every edit — you don't need to call it after a
 change. Reach for it explicitly only when debugging a validation error surfaced

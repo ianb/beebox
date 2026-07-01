@@ -4,9 +4,11 @@
  * source. Composes with `{% quote %}` for "verbatim from there."
  */
 
+import { SECTION } from "./sections.js";
+
 export function sourceSection(): string[] {
   return [
-    "## Provenance — `{% source %}`",
+    `## ${SECTION.PROVENANCE} — the \`{% source %}\` tag`,
     "",
     "When you write content that's derived from another card or file —",
     "a summary of a memo, an inference from an email, a name pulled from",
@@ -26,14 +28,16 @@ export function sourceSection(): string[] {
     "{% /source %}",
     "```",
     "",
-    "### The `ref` attribute",
+    "### `ref` — pointing at another card",
     "",
-    "Required. Where the content came from — a card path, a file, or a",
-    "card path plus a fragment (`#m12` for a chat message, `#step-3` for",
-    "a procedure step). Leading `/` is box-root-absolute (the usual form);",
-    "bare paths resolve relative to the source card. Body refs are tracked",
-    "automatically — `cb validate` warns when a `ref` no longer resolves,",
-    "and `cb mv` rewrites them when the target moves.",
+    "`ref` is the box's pointer to another card, used throughout the guide:",
+    "frontmatter (`{ref: \"...\"}`, `key-people[].ref`), body links, and tags",
+    "like this one. A leading `/` resolves from the **box root** (the usual",
+    "form); a bare path resolves relative to the current card; avoid `../../`.",
+    "Refs are tracked automatically — `cb validate` warns when a `ref` no",
+    "longer resolves, and `cb mv` rewrites them when the target moves. Inside",
+    "`{% source %}`, exactly one of `ref` / `href` is **required** — it names",
+    "where the wrapped content came from.",
     "",
     "### The `as` attribute",
     "",

@@ -59,7 +59,7 @@ Markdoc-annotated markdown. Vocabulary:
   ingredient or step being substituted.
 - \`{% subrecipe ref="/store/recipes/sauces/Marinara.recipe.card" %}
   Make a half batch.{% /subrecipe %}\` — link to a sibling recipe.
-  \`ref\` is a card path (auto-tracked by Track 4's body ref-walker).
+  \`ref\` is a card path — see PROVENANCE for ref semantics.
 - \`{% recipe-section name="Sauce" %}\` — block. Groups a sub-recipe
   within a recipe (e.g. sauce + pasta in one card). Optional.
 

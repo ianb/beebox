@@ -1,8 +1,10 @@
 /**
- * Box search and the `contains:` field — the canonical statement of the
- * writing rule. The agent guide carries the full section; each searchable
- * card type's generated doc gets the short appendix.
+ * Box search. The `contains:` field's writing rule is canonical in ABOUT_CARDS
+ * (agent-guide/cards.ts); this section only covers searching, and each
+ * searchable card type's generated doc still gets the short appendix.
  */
+
+import { SECTION, xref } from "./sections.js";
 
 export function searchSection(): string[] {
   return [
@@ -18,23 +20,8 @@ export function searchSection(): string[] {
     "(names, unusual terms, numbers); extra descriptive words help when they",
     "describe the specific target, but generic domain words dilute ranking.",
     "",
-    "## The `contains:` Field",
-    "",
-    "Every frontmatter card accepts an optional `contains:` — one sentence",
-    "stating what can be found inside the card. It is the prime retrieval field",
-    "for search and listings. The writing rule:",
-    "",
-    "- When the information is concise, the sentence carries the information",
-    '  itself ("Dentist moved to June 17; confirmation in this email"), not a',
-    '  pointer at it ("contains scheduling information").',
-    "- When it isn't concise, the sentence says what's learnable here.",
-    "- Never a list of parts. Keep it under 200 characters (validation warns).",
-    "",
-    "Write `contains:` when creating or substantially editing a searchable",
-    "card. If you edit a card's content and its `contains:` still holds,",
-    'confirm it with `cb contains update <card> --text "...same text..."` —',
-    "that clears the staleness flag. `cb contains list --missing` /",
-    "`--stale` shows the worklist.",
+    `Search ranks the \`contains:\` field heavily; how to write a good one is in ${xref(SECTION.ABOUT_CARDS)}.`,
+    "`cb contains list --missing` / `--stale` shows cards whose `contains:` needs writing or refreshing.",
     "",
   ];
 }

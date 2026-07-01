@@ -28,8 +28,9 @@ export const SECTION = {
   CARD_TYPES: "CARD_TYPES",
   QUESTIONS: "QUESTIONS",
 
-  // Output vocabulary — verbatim quotes (provenance joins as source.ts converts).
+  // Output vocabulary — verbatim quotes and provenance (the `ref`/`href` home).
   DIRECT_QUOTES: "DIRECT_QUOTES",
+  PROVENANCE: "PROVENANCE",
 } as const;
 
 export type SectionName = (typeof SECTION)[keyof typeof SECTION];

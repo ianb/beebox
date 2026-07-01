@@ -99,9 +99,8 @@ renaming the card moves the whole scope atomically.
 
 ## No timestamps
 
-Doc cards intentionally have no \`created\` or \`modified\` field. Git
-already tracks both authoritatively (\`git log --diff-filter=A\` for
-creation, \`git log\` for any change). Don't add them.`,
+No \`created\` / \`modified\` field — Git tracks both. This is the
+general no-Git-metadata rule in ABOUT_CARDS, not doc-specific.`,
 });
 
 export interface DocFields {
