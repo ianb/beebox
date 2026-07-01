@@ -1,5 +1,19 @@
 # Normalize chat/card links
 
+> **Implementation status (landed on this branch).** Tracks 1–6 + 8 are
+> implemented, `pnpm test` green (2635), typecheck + lint + knip clean:
+> parser/renderers (plain paths, `legacy-view` marker, generalized embeds),
+> `contextDir`-relative resolution (syntactic, not the dropped server variant),
+> `?view=`/param + companion-tab threading, standalone-view removal, CB001
+> repurpose, instruction scrub + regenerated box docs, and `cb migrate-view-links`
+> (applied to test1/ledger boxes; ledger `bill.tsx` converted to `rendersCardTypes`).
+> **Deferred / needs a decision:** running the new knowledge audits (heavyweight
+> box-agent step); a `cb view lint` for card-less `views/*.tsx` (no known ones
+> remain — `test1/views/todos.tsx` and `hearth-test/views/butterfly-closet.tsx`
+> are card-less dashboards flagged for host-card-or-delete); live `bin/browse`
+> verification (needs the shared dev router). Box repos hold uncommitted migrated
+> content for boxholder review.
+
 Replace the bespoke `view:` URL scheme for referencing box files/cards in
 markdown with native markdown link/image semantics:
 
