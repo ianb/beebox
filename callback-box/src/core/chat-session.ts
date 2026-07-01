@@ -54,9 +54,9 @@ import {
   composeTurnContent,
 } from "./chat-session-start.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
+import { createHealthGate } from "./session-context.js";
 
-export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY };
-export { buildContentBlocks };
+export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
 export type { ChatSessionOptions };
 
@@ -74,6 +74,8 @@ export class ChatSession extends EventEmitter {
   /** Path of the chat-active lock held while a run is in flight, or null. */
   private chatLockPath: string | null = null;
   private turnText = "";
+  /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
+  private readonly healthGate = createHealthGate();
   private messageQueue: ChatSendInput[] = [];
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -322,6 +324,7 @@ export class ChatSession extends EventEmitter {
       rawInput,
       features: this.features,
       sessionStart: this.sessionId === null,
+      healthGate: this.healthGate,
     });
 
     if (this.run === null || this.run.closed) {

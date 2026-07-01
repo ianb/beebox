@@ -136,11 +136,19 @@ reconciled against *current* main, cited inline.
   overlay's *why*** (user speaking at length, may talk over you). **Snapshot code:**
   stopped emitting `time` and `calendar` (no consumers; dropped from prose too) —
   updated `chat-features.ts` composer + `session-context.ts` + the snapshot
-  doctests. `.memo.card` examples kept (memo is live). **Deferred (one chunk):**
-  the `health` **mid-session** change — it's a stateful mini-feature needing a
-  flood-gate (don't repeat a persistent failure every message), bundled with the
-  dead calendar-*computation* cleanup; health prose stays first-message-accurate
-  until then.
+  doctests. `.memo.card` examples kept (memo is live).
+- **Track 4 — `health` mid-session (with a hard flood-gate)** — DONE. Health now
+  rides every message, gated by `admitHealth` (`session-context.ts`) into a rare
+  reminder, per the boxholder's "err heavily toward quiet, it's a reminder not a
+  status": the same failing message never repeats until a **10-day** interval;
+  even a *changed* message waits a hard **10-turn** rate limit; only session start
+  and the 10-day re-nudge override the quiet default. A per-session `HealthGate`
+  (with its own turn counter, bumped every send) lives on `ChatSession` and
+  threads through `composeTurnContent`; when no gate is supplied it falls back to
+  the old session-start-only behavior. Prose reframed as a reminder ("won't repeat
+  … run `cb health` yourself; don't treat absence as all-clear"). Tested in
+  `session-context.doctest.md`. (Dead calendar-*computation* cleanup — `calendar`
+  is already un-emitted — still a tiny follow-up.)
 
 Everything else below is still future work.
 
