@@ -71,6 +71,14 @@ reconciled against *current* main, cited inline.
   list; fixed in `behavior.ts` and `box-shape.ts` (incl. the one I'd introduced).
   (Stale `<triage-destination>` mentions remain in `triage.ts`/`handle.ts` *code
   comments* — internal, not agent-facing; a minor follow-up.)
+- **`drive.ts` corrected + trimmed** — the audit found the layout description was
+  stale: a Drive card's data (gdoc body `attach/<basename>.md`, sheet tab JSONs,
+  comments sidecar, conflict `remote.md`) all live in the card's **attach scope**,
+  not a "sibling `.md`" or separate "data directory." So `cb mv` moves everything
+  in one step — collapsed the two manual "move both together" bullets to `cb mv`.
+  Also fixed the stale `<lossy>` angle-bracket → the `lossy:` frontmatter field.
+  (`.sheet` → `.gsheet` rename and the always-loaded→skill move remain their own
+  efforts — subplan + Track 3.)
 
 Everything else below is still future work.
 
