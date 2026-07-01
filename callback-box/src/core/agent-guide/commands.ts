@@ -1,27 +1,51 @@
 /**
- * Key cb commands — the everyday surface for working with cards.
+ * Key cb commands — the everyday `cb` surface, grouped by how the agent
+ * encounters each: commands to reach for, the job/procedure lifecycle, and
+ * system-run commands the agent doesn't invoke. Card operations (create / mv /
+ * rm) live in ABOUT_CARDS and are only pointed at from here.
  */
 
+import { SECTION, xref } from "./sections.js";
+
 export function keyCommandsSection(): string[] {
-  return [
-    "## Key Commands",
-    "",
-    "Use `cb` for all card operations. See `docs/generated/cb-commands.md`.",
-    "",
-    "- `cb create <path>` — Create a card from template (auto-detects type from filename)",
-    "- `cb mv <src> <dest>` — Move a card, updating all references",
-    "- `cb rm <path>` — Soft-delete a card to `store/trash/`",
-    "- `cb validate <path>` — Validate a card against its schema",
-    "- `cb answer <path>` — Answer a pending question",
-    "- `cb reactor` — Process all pending jobs in `box/jobs/`",
-    "- `cb finalize` — Flush outbound cards in `box/output/` (telegram messages, etc.)",
-    "- `cb health` — Scheduled-task health: failing/overdue/blocked tasks + scheduler liveness (exit 1 when unhealthy)",
-    "- `cb scenario list|run` — Run scenario tests against boxes",
-    "- `cb finish <job-file>` — Complete a job (deletes the job card and commits)",
-    "- `cb procedure run <name-or-path>` — Run a procedure (see `docs/generated/procedures.md`)",
-    "- `cb calendar [timespan]` — View upcoming calendar events (default 7d; supports `today`, `3d`, `2w`, `1m`)",
-    "- `cb chat self-note \"<body>\" [--ref <path>] [--commit <hash>]` — Post an agent-authored record into the live chat session. For use by scheduled sub-agents (daily rumination, weekly research) to leave a short summary of what they did, so the boxholder sees it on next chat revisit. Not a conversational message — Claude in chat knows not to reply.",
-    "- `cb feedback \"<message>\"` — Record an observation about CLI friction, confusing options, odd file placements, or unclear conventions. Silent: writes a file to `config/feedback/` and commits it without interrupting the current task. Use this any time something feels off about the tooling — confusing flag names, unclear error messages, awkward workflows, surprising behavior. Good feedback is specific and describes what was confusing and why.",
-    "",
-  ];
+  return `## Key Commands
+
+Card operations — \`cb create\` / \`cb mv\` / \`cb rm\` — live in ${xref(SECTION.ABOUT_CARDS)}.
+This is the rest of the everyday \`cb\` surface; the full reference is
+\`docs/generated/cb-commands.md\`.
+
+**Reach for these:**
+
+- \`cb feedback "<message>"\` — record anything that feels off about the tooling:
+  a confusing flag, an unclear error message, an awkward workflow, a surprising
+  behavior. It's **silent** — writes a file to \`config/feedback/\` and commits it
+  without interrupting your task — so reach for it reflexively the moment
+  something is off. Good feedback is specific about *what* was confusing and
+  *why*.
+- \`cb search "<query>"\` — full-text search over the box's cards; prefer it over
+  \`grep\` for finding cards by content (details in the box-search section).
+- \`cb calendar [timespan]\` — upcoming calendar events (default 7d; also
+  \`today\`, \`3d\`, \`2w\`, \`1m\`).
+- \`cb procedure run <name-or-path>\` — run a procedure. Procedures are how
+  one-shot structured work gets done (see \`docs/generated/procedures.md\`).
+- \`cb chat …\` — a family of commands for the live chat session:
+  \`cb chat self-note "<body>" [--ref <path>] [--commit <hash>]\` posts an
+  agent-authored record a scheduled sub-agent leaves for the boxholder (not a
+  conversational reply — chat knows not to answer it); others include
+  \`cb chat whats-changed\` and \`cb chat retranscribe\`. See the full reference.
+
+**Job / procedure lifecycle** (only while processing a job in a reactor or
+procedure run):
+
+- \`cb finish <job-file>\` — the required closing step: deletes the job card and
+  commits your work.
+
+**System-run — you don't invoke these** (the wakeup cycle and scheduler do; they
+appear here so you recognize them in \`git log\` and health output):
+
+- \`cb reactor\` — process pending jobs in \`box/jobs/\`.
+- \`cb finalize\` — flush outbound cards in \`box/output/\`.
+- \`cb health\` — scheduled-task health (failing / overdue / blocked tasks +
+  scheduler liveness).
+`.split("\n");
 }
