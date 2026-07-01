@@ -30,6 +30,7 @@
     "test:manual": "tap 'test/manual/**/*.doctest.md' 'test/manual/**/*.test.ts'",
     "knowledge-audit": "tsx src/dev/knowledge-audit.ts",
     "csp-digest": "tsx src/dev/csp-digest.ts",
+    "csp-report": "tsx src/dev/csp-report.ts",
     "prompt-report": "tsx src/dev/prompt-report.ts",
     "generate:doc-images": "tsx src/dev/generate-doc-images.ts",
     "doc-graph": "tsx src/dev/doc-graph.ts > docs/doc-graph.md",
