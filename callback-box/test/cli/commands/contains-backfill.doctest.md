@@ -1,8 +1,11 @@
 # contains backfill: wakeup queues one batch at a time
 
-`createContainsBackfillJob` writes a generic `.job.card` asking a
-background agent to fill `contains:` on cards missing it — one batch per
-wakeup, no new job while a previous backfill job is still pending.
+`createContainsBackfillJob` writes a `contains-backfill.job.card` (YAML
+frontmatter) asking a background agent to fill `contains:` on cards missing
+it — one batch per wakeup, no new job while a previous backfill job is still
+pending. The how-to prose lives in the schema's `instructions` (injected into
+the reactor prompt by type), so the card itself just carries the refs and a
+description.
 
 ```ts setup
 import { createContainsBackfillJob } from "../../../src/cli/commands/wakeup-steps.js";
@@ -28,18 +31,22 @@ listing.includes("contains-backfill.job.card")
 => true
 ```
 
-The job card carries the writing rule and the item refs:
+The job card is frontmatter carrying the source, a description, and the item
+refs:
 
 ```ts continue
 const jobs = (await box.list("box/jobs")).split("\n").filter((f) => f.includes("contains-backfill.job.card"));
 const job = await box.read(jobs[0]!);
-job.includes('source="contains-backfill"')
+job.startsWith("---\n")
 => true
 
-job.includes('<item ref="store/notes/A.memo.card"/>')
+job.includes("source: contains-backfill")
 => true
 
-job.includes("cb contains update")
+job.includes("Write the contains: field for 2 cards missing it.")
+=> true
+
+job.includes("ref: store/notes/A.memo.card")
 => true
 ```
 
