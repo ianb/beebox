@@ -12,6 +12,8 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfill-job", {
+  description: "A system job to write missing contains: fields for a batch of cards; cb wakeup queues one batch per cycle",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),
