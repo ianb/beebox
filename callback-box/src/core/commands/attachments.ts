@@ -73,31 +73,41 @@ async function executeAttachments(
 }
 
 /**
- * Read-only scan. Reports claimed/refreshed/renamed/errors but doesn't write
- * any manifests. Exit success only when no errors were found.
+ * Read-only scan. Exit success only when no errors were found. Quiet by
+ * design: this runs on every commit via the pre-commit hook, so routine
+ * states (unclaimed assets awaiting `migrate`, stale mtimes) are one summary
+ * line, never per-scope output — only errors enumerate. (Per-scope detail was
+ * once printed for everything; on a never-migrated box that was ~140 lines of
+ * noise per commit.)
  */
 async function runVerify(ctx: CommandContext): Promise<CommandResult> {
   const result = await scanBoxAttachments(ctx.boxRoot, { dryRun: true });
+  let unclaimed = 0;
+  let stale = 0;
+  let renamed = 0;
   for (const scope of result.scopes) {
-    const parts: string[] = [];
-    if (scope.claimed.length > 0) parts.push(`would claim ${scope.claimed.length}`);
-    if (scope.refreshed.length > 0) parts.push(`would refresh mtime on ${scope.refreshed.length}`);
-    if (scope.renamed.length > 0) parts.push(`renames ${scope.renamed.length}`);
-    if (scope.unchanged.length > 0) parts.push(`${scope.unchanged.length} unchanged`);
-    if (scope.errors.length > 0) parts.push(`${scope.errors.length} error(s)`);
-    if (parts.length > 0) ctx.writeLine(`  ${scope.attachDir}: ${parts.join(", ")}`);
+    unclaimed += scope.claimed.length;
+    stale += scope.refreshed.length;
+    renamed += scope.renamed.length;
   }
-  if (result.errors.length === 0) {
-    ctx.writeLine(`OK: ${result.scopes.length} scope(s) clean.`);
-    return { success: true, data: { scopes: result.scopes.length, errors: 0 } };
+  if (result.errors.length > 0) {
+    ctx.writeLine(`${result.errors.length} asset error(s):`);
+    for (const err of result.errors) ctx.writeLine(`  ${err.message}`);
+    return {
+      success: false,
+      error: `${result.errors.length} asset error(s)`,
+      data: { scopes: result.scopes.length, errors: result.errors.length },
+    };
   }
-  ctx.writeLine("");
-  ctx.writeLine("Errors:");
-  for (const err of result.errors) ctx.writeLine(`  ${err.message}`);
+  const notes: string[] = [];
+  if (unclaimed > 0) notes.push(`${unclaimed} unclaimed asset(s) — \`cb attachments migrate\` claims them`);
+  if (stale > 0) notes.push(`${stale} stale mtime(s)`);
+  if (renamed > 0) notes.push(`${renamed} rename(s) detected`);
+  const suffix = notes.length > 0 ? `; ${notes.join("; ")}` : "";
+  ctx.writeLine(`OK: ${result.scopes.length} scope(s), no errors${suffix}.`);
   return {
-    success: false,
-    error: `${result.errors.length} asset error(s)`,
-    data: { scopes: result.scopes.length, errors: result.errors.length },
+    success: true,
+    data: { scopes: result.scopes.length, errors: 0, unclaimed, stale, renamed },
   };
 }
 
