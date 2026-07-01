@@ -11,6 +11,7 @@ import {
 import { findJobCards } from "../../src/core/reactor/job-discovery.js";
 import { buildJobDescription } from "../../src/core/reactor/batch-jobs.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
+import { createChatJobTemplate } from "../../src/schemas/chat-job.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -192,14 +193,21 @@ cards.length
 
 ## buildJobDescription
 
-### Includes XML content and priority label
+### Includes the job card and priority label (no xml fence)
 
 ```ts
 const desc = await buildJobDescription(
   {
-    card: { file: "task.job.card", priority: "low" },
-    relPath: "box/jobs/task.job.card",
-    content: `<job priority="low"><description>Do something</description></job>`,  },
+    card: { file: "task.intake.job.card", priority: "low" },
+    relPath: "box/jobs/task.intake.job.card",
+    content: createIntakeJobTemplate({
+      created: "2026-07-01T00:00:00Z",
+      source: "rss",
+      description: "Do something",
+      items: [],
+      priority: "low",
+    }),
+  },
   "/tmp/fake-box",
 );
 desc.includes("*(low priority)*")
@@ -208,27 +216,79 @@ desc.includes("*(low priority)*")
 desc.includes("Do something")
 => true
 
+// The card body is fenced plainly — the misleading ```xml label is gone
 desc.includes("```xml")
-=> true
+=> false
 ```
 
-### Inlines referenced files
+### Frontmatter jobs inline their refs and inject schema instructions
+
+The core purge fix: a real frontmatter intake job has its referenced item
+cards inlined and its intake-job schema instructions injected. (Pre-purge the
+XML-only `extractRefs`/`extractRootTag` regexes silently dropped both.)
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/threads/t1.card", `<thread><message>Hello world</message></thread>`);
+await box.write("store/inbox/item1.card", `---\nstatus: new\n---\nHello from item one`);
+
+const desc = await buildJobDescription(
+  {
+    card: { file: "x.intake.job.card", priority: "normal" },
+    relPath: "box/jobs/x.intake.job.card",
+    content: createIntakeJobTemplate({
+      created: "2026-07-01T00:00:00Z",
+      source: "rss",
+      description: "New items to triage",
+      items: ["store/inbox/item1.card"],
+    }),
+  },
+  box.root,
+);
+
+// Referenced item card is inlined
+desc.includes("Hello from item one")
+=> true
+
+desc.includes("#### store/inbox/item1.card")
+=> true
+
+// Intake-job schema instructions are injected
+desc.includes("Processing Intake Jobs")
+=> true
+
+await box.cleanup();
+```
+
+### Inlines a chat job's thread ref
+
+The generic `{ref}` walk handles chat jobs' `thread: {ref}` too, not just
+intake `items:`.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/threads/t1.chat-thread.card", `---\nstatus: new\ncreated: 2026-07-01T00:00:00Z\nsource: telegram\n---\nHello world`);
 
 const desc = await buildJobDescription(
   {
     card: { file: "reply.chat.job.card", priority: "normal" },
     relPath: "box/jobs/reply.chat.job.card",
-    content: `<chat-job><thread ref="store/threads/t1.card" /><description>Reply</description></chat-job>`,  },
+    content: createChatJobTemplate({
+      created: "2026-07-01T00:00:00Z",
+      source: "telegram",
+      description: "Reply",
+      threadRef: "store/threads/t1.chat-thread.card",
+    }),
+  },
   box.root,
 );
 desc.includes("Hello world")
 => true
 
-desc.includes("#### store/threads/t1.card")
+desc.includes("#### store/threads/t1.chat-thread.card")
+=> true
+
+// Chat-job schema instructions are injected
+desc.includes("Processing Chat Jobs")
 => true
 
 await box.cleanup();
@@ -239,13 +299,19 @@ await box.cleanup();
 ```ts
 const desc = await buildJobDescription(
   {
-    card: { file: "task.job.card", priority: "normal" },
-    relPath: "box/jobs/task.job.card",
-    content: `<job><item ref="store/items/missing.card" /><description>Process</description></job>`,  },
+    card: { file: "task.intake.job.card", priority: "normal" },
+    relPath: "box/jobs/task.intake.job.card",
+    content: createIntakeJobTemplate({
+      created: "2026-07-01T00:00:00Z",
+      source: "rss",
+      description: "Process this",
+      items: ["store/items/missing.card"],
+    }),
+  },
   "/tmp/fake-box",
 );
 // Should not crash, just omit the missing ref
-desc.includes("Process")
+desc.includes("Process this")
 => true
 
 // The ref section header should not appear (file doesn't exist)
@@ -253,46 +319,24 @@ desc.includes("#### store/items/missing.card")
 => false
 ```
 
-### Current behavior (pre-purge): frontmatter jobs lose their refs and instructions
+### Unparseable jobs degrade visibly, not silently
 
-A real frontmatter intake job (produced by `createIntakeJobTemplate`) passes
-through `buildJobDescription`, but the XML-only regexes don't understand it:
-`extractRefs` never matches `items:\n  - ref:`, and `extractRootTag` finds no
-`<tag>`. So the referenced item cards are NOT inlined and the intake-job schema
-instructions are NOT injected — the agent works from a job stripped of its
-context. This asserts that broken status quo; the chunk-2 fix flips these.
+A job that isn't a recognized frontmatter card (legacy XML, hand-edited) is
+surfaced with its raw content and a warning rather than crashing the batch.
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write("store/inbox/item1.card", `---\nstatus: new\n---\nHello from item one`);
-
-const jobContent = createIntakeJobTemplate({
-  created: "2026-07-01T00:00:00Z",
-  source: "rss",
-  description: "New items to triage",
-  items: ["store/inbox/item1.card"],
-});
-
 const desc = await buildJobDescription(
   {
-    card: { file: "x.intake.job.card", priority: "normal" },
-    relPath: "box/jobs/x.intake.job.card",
-    content: jobContent,
+    card: { file: "legacy.job.card", priority: "normal" },
+    relPath: "box/jobs/legacy.job.card",
+    content: `<job><description>Old XML job</description></job>`,
   },
-  box.root,
+  "/tmp/fake-box",
 );
-
-desc.includes("Hello from item one")
-=> false
-
-desc.includes("#### store/inbox/item1.card")
-=> false
-
-desc.includes("Processing Intake Jobs")
-=> false
-
-desc.includes("```xml")
+desc.includes("Could not parse this job as a card")
 => true
 
-await box.cleanup();
+// Raw content is still shown so the agent can act
+desc.includes("Old XML job")
+=> true
 ```

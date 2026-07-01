@@ -8,7 +8,8 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { cardSchemas } from "../../schemas/registry.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { parseCardText, CardIOError } from "../card-io.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
@@ -69,17 +70,38 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
 
 /**
  * Build a formatted job description with inlined refs and schema instructions.
+ *
+ * The job card is a YAML-frontmatter card: we parse it with the real card
+ * loader, inline every `{ref}` its frontmatter carries (intake `items:`,
+ * chat `thread:`, question-followup `question-ref:`, …), and inject the
+ * job type's schema instructions. A job we can't parse as a card (legacy
+ * XML, a hand-edited or untyped job) is surfaced visibly with its raw
+ * content rather than crashing the whole batch.
  */
 export async function buildJobDescription(job: JobWithContent, boxRoot: string): Promise<string> {
   const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
-  let desc = `### ${job.relPath}${priorityLabel}\n\`\`\`xml\n${job.content.trim()}\n\`\`\``;
+  const header = `### ${job.relPath}${priorityLabel}`;
 
-  const refs = extractRefs(job.content);
-  for (const ref of refs) {
+  let parsed;
+  try {
+    const schemas = await createCardSchemaMap(boxRoot);
+    parsed = parseCardText(job.content, { source: job.relPath, schemas });
+  } catch (e) {
+    if (e instanceof CardIOError) {
+      // Not a recognized frontmatter card. Show the raw content so the agent
+      // can still act, flagged so the failure isn't silent.
+      return `${header}\n_⚠️ Could not parse this job as a card (${e.detail}); showing raw content._\n\`\`\`\n${job.content.trim()}\n\`\`\``;
+    }
+    throw e;
+  }
+
+  let desc = `${header}\n\`\`\`\n${job.content.trim()}\n\`\`\``;
+
+  for (const ref of collectRefs(parsed.fields)) {
     const refPath = path.join(boxRoot, ref);
     try {
       const refContent = await fs.readFile(refPath, "utf-8");
-      desc += `\n\n#### ${ref}\n\`\`\`xml\n${refContent.trim()}\n\`\`\``;
+      desc += `\n\n#### ${ref}\n\`\`\`\n${refContent.trim()}\n\`\`\``;
     } catch (e) {
       // Referenced file doesn't exist — omit it; the agent will discover this.
       if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -88,42 +110,37 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
     }
   }
 
-  const rootTag = extractRootTag(job.content);
-  if (rootTag) {
-    const instructions = getSchemaInstructions(rootTag);
-    if (instructions) {
-      desc += `\n\n#### Instructions for ${rootTag}\n${instructions}`;
-    }
+  const { instructions, type } = parsed.schema;
+  if (instructions) {
+    desc += `\n\n#### Instructions for ${type}\n${instructions}`;
   }
 
   return desc;
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
 /**
- * Extract ref="..." attributes from elements like <thread ref="..."> and <item ref="...">.
+ * Collect every `{ ref: string }` reference reachable in a job's parsed
+ * frontmatter, regardless of the field it lives under. Job refs are always
+ * `{ ref }` objects (intake `items: [{ref}]`, chat `thread: {ref}`,
+ * question-followup `question-ref: {ref}`), so one recursive walk covers
+ * every job type without per-schema branching.
  */
-function extractRefs(xmlContent: string): string[] {
+function collectRefs(fields: Record<string, unknown>): string[] {
   const refs: string[] = [];
-  const pattern = /<(?:thread|item)\s[^>]*ref="([^"]+)"/g;
-  let match;
-  while ((match = pattern.exec(xmlContent)) !== null) {
-    refs.push(match[1]!);
-  }
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const el of value) walk(el);
+    } else if (isRecord(value)) {
+      if (typeof value["ref"] === "string") refs.push(value["ref"]);
+      for (const key of Object.keys(value)) {
+        if (key !== "ref") walk(value[key]);
+      }
+    }
+  };
+  walk(fields);
   return refs;
-}
-
-/**
- * Extract the root element tag name from XML content (e.g. "chat-job" from "<chat-job ...>").
- */
-function extractRootTag(xmlContent: string): string | null {
-  const match = xmlContent.match(/<([a-z][\w-]*)/);
-  return match ? match[1]! : null;
-}
-
-/**
- * Look up schema instructions for a given card type.
- */
-function getSchemaInstructions(type: string): string | null {
-  const schema = cardSchemas.find((s) => s.type === type);
-  return schema?.instructions ?? null;
 }
