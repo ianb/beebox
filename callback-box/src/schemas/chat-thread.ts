@@ -36,6 +36,8 @@ const SeenEntry = z.object({
 const ThreadEntry = z.discriminatedUnion("kind", [MessageEntry, SeenEntry]);
 
 export const ChatThreadSchema: CardSchema = cardSchema("chat-thread", {
+  description: "An accumulating conversation with one chat (e.g. a Telegram group) — the connector appends incoming messages, the agent appends one reply or seen-marker",
+  category: "system",
   searchable: false,
   fields: {
     "chat-id": z.string(),

@@ -59,6 +59,8 @@ function validateMarkdocBody(body: string): string[] {
 }
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
+  description: "Anchored remarks on a host card (extfile, webpage, or doc) — attach-only, quote-then-remark body",
+  category: "authored",
   validate: ({ fields }) => {
     const body = fields["body"];
     return commentaryErrors(typeof body === "string" ? body : "");

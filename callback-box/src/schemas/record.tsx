@@ -46,6 +46,8 @@ const MeasureEntry = z.object({
 });
 
 export const RecordSchema: CardSchema = cardSchema("record", {
+  description: "A discrete extracted unit (inventory item, archived document, contact) pulled from a capture session or other source",
+  category: "authored",
   fields: {
     status: RecordStatus.default("draft"),
     name: z.string(),

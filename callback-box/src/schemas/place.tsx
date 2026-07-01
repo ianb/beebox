@@ -21,6 +21,8 @@ export const PlaceStatus = z.enum(["active", "inactive", "archived"]);
 export type PlaceStatusType = z.infer<typeof PlaceStatus>;
 
 export const PlaceSchema: CardSchema = cardSchema("place", {
+  description: "A named location (Home, Office) with optional coordinates so location-aware context can recognize where the boxholder is",
+  category: "authored",
   // Cross-field rule Zod's per-field shape can't express: coordinates are
   // both-or-neither. A half-set card still loads (lenient parse) but lint-warns
   // and is skipped by location matching, which requires both lat and lng.

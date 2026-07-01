@@ -118,6 +118,8 @@ const guideFields = {
 };
 
 export const GuideSchema: CardSchema = cardSchema("guide", {
+  description: "A living theory of the user for a job type — triage rules, actions, experiments, and reactions with confidence tracking",
+  category: "authored",
   searchable: false,
   fields: guideFields,
   instructions: `# Handling Guides

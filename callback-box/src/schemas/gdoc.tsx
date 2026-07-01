@@ -36,6 +36,8 @@ const LossyItem = z.object({
 });
 
 export const GdocSchema: CardSchema = cardSchema("gdoc", {
+  description: "A Google Doc synced by the drive connector — connector-managed metadata plus the document as an attached .md (unlike the in-box doc type)",
+  category: "synced",
   fields: {
     "drive-id": z.string(),
     status: z.enum(["synced", "error", "new", "conflict"]).optional(),

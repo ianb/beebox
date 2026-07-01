@@ -34,6 +34,8 @@ const TranscriptionError = z.object({
 });
 
 export const MemoSchema: CardSchema = cardSchema("memo", {
+  description: "A captured text or voice note from the user — generic inbox input awaiting processing",
+  category: "authored",
   fields: {
     status: MemoStatus.default("new"),
     created: z.string().datetime({ offset: true }),

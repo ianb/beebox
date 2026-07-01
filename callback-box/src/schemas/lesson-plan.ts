@@ -48,6 +48,8 @@ const lessonPlanFields = {
 };
 
 export const LessonPlanSchema: CardSchema = cardSchema("lesson-plan", {
+  description: "A course's ordered delivery flow — segments tagged interactive (live in chat) or material (pre-made card), tied to concept-map nodes",
+  category: "authored",
   fields: lessonPlanFields,
   instructions: `# Lesson-Plan Cards
 

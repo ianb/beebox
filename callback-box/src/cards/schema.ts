@@ -92,11 +92,31 @@ export interface CardValidateInput {
 }
 
 /**
+ * Who creates cards of a type — drives how the agent guide groups the
+ * card-type catalogue:
+ * - `authored` — agents (and users via the UI) create and edit these; the
+ *   working vocabulary. Box-local schemas default here.
+ * - `synced` — created by connectors or capture; agents read and edit them
+ *   but rarely create one by hand.
+ * - `system` — created and consumed by the machinery (jobs, run records);
+ *   agents don't author these.
+ */
+export type CardCategory = "authored" | "synced" | "system";
+
+/**
  * Configuration for cardSchema().
  */
 export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
   /** All fields keyed by name. At most one may be body()-wrapped. */
   fields: TFields;
+  /**
+   * One line saying what a card of this type is / is for — shown in the agent
+   * guide's card-type catalogue. Optional only so box-local schemas keep
+   * loading without one; every built-in schema declares it.
+   */
+  description?: string;
+  /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
+  category?: CardCategory;
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
   /**
@@ -124,6 +144,10 @@ export interface CardSchema<
 > {
   readonly type: TTag;
   readonly fields: TFields;
+  /** One-line catalogue description (see {@link CardSchemaConfig.description}). */
+  readonly description?: string;
+  /** Who creates cards of this type. Defaults to "authored". */
+  readonly category: CardCategory;
   /** Name of the single body field, or null if the card is frontmatter-only. */
   readonly bodyFieldName: string | null;
   /** Resolved body field (kind + schema), or null. */
@@ -199,10 +223,14 @@ export function cardSchema<
     frontmatterSchema: z.object(frontmatterShape),
     globalFieldNames,
     searchable: config.searchable === undefined ? true : config.searchable,
+    category: config.category === undefined ? "authored" : config.category,
   };
   // Optional members are spread in only when present so a schema that declares
   // neither still produces the same object shape (exactOptionalPropertyTypes).
   let resolved: CardSchema<TTag, TFields> = schema;
+  if (config.description !== undefined) {
+    resolved = { ...resolved, description: config.description };
+  }
   if (config.instructions !== undefined) {
     resolved = { ...resolved, instructions: config.instructions };
   }

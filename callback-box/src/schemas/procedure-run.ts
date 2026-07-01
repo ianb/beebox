@@ -53,6 +53,8 @@ const procedureRunFields = {
 };
 
 export const ProcedureRunSchema: CardSchema = cardSchema("procedure-run", {
+  description: "Engine-managed execution state for one run of a procedure — read for progress, don't edit (except expires)",
+  category: "system",
   searchable: false,
   fields: procedureRunFields,
   instructions: `# Handling Procedure Runs

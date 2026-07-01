@@ -35,6 +35,8 @@ const expositionPlanFields = {
 };
 
 export const ExpositionPlanSchema: CardSchema = cardSchema("exposition-plan", {
+  description: "A worked plan for how to present a subject — learner translation, rated approaches, and compiled presentation rules",
+  category: "authored",
   fields: expositionPlanFields,
   instructions: `# Exposition-Plan Cards
 

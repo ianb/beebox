@@ -21,6 +21,8 @@ import { body, cardSchema, type CardSchema } from "../cards/index.js";
 import { emitBodyAsMarkdown } from "../core/markdoc-emit.js";
 
 export const BriefingSchema: CardSchema = cardSchema("briefing", {
+  description: "Core situational context for the box or a directory — what every agent needs to know; one per directory",
+  category: "authored",
   fields: {
     body: body(z.string()),
   },

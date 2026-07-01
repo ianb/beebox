@@ -12,6 +12,8 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const ChatJobSchema: CardSchema = cardSchema("chat-job", {
+  description: "A system job to process new messages (or a callback timer) in a chat thread; created by messaging connectors",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),

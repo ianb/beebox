@@ -28,6 +28,8 @@ const FilenameEntry = z.object({
 });
 
 export const FileSchema: CardSchema = cardSchema("file", {
+  description: "Metadata for an arbitrary uploaded file (PDF, archive, …) — the binary lives in the attach scope, awaiting agent handling",
+  category: "synced",
   fields: {
     status: FileStatus.default("new"),
     filename: FilenameEntry,

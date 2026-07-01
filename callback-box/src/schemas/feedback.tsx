@@ -38,6 +38,8 @@ const TranscriptionError = z.object({
 });
 
 export const FeedbackSchema: CardSchema = cardSchema("feedback", {
+  description: "The user's response to an edition element (query answer or comment), typed or voice, targeting a specific card fragment",
+  category: "system",
   fields: {
     "type-of-feedback": FeedbackType.optional(),
     target: TargetEntry,
