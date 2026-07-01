@@ -151,7 +151,7 @@ export function questionsSection(): string[] {
     "",
     "Create question cards in `box/questions/` to ask the user.",
     "Set `answered-by` to your agent name so the answer routes back to you.",
-    "Always include a `<directive>` element describing what you'll do with the answer — when the user answers, the system creates a follow-up job using this directive.",
+    "Always set the `directive:` field describing what you'll do with the answer — when the user answers, the system creates a follow-up job carrying this directive.",
     "See `docs/generated/card-question.md` for templates.",
     "",
   ];
