@@ -29,8 +29,8 @@ import {
   viewsSection,
 } from "./chat.js";
 import {
+  aboutCardsSection,
   cardTypesSection,
-  creatingCardsSection,
   questionsSection,
 } from "./cards.js";
 import {
@@ -65,6 +65,9 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     "# Callback Box Agent Guide",
     "",
     ...lawsSection(),
+    ...aboutCardsSection(),
+    ...cardTypesSection(allCardSchemas),
+    ...questionsSection(),
     ...directoryLayoutSection(),
     ...landmarksSection(),
     ...howItemsEnterSection(),
@@ -81,9 +84,6 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...chatAttachmentsSection(),
     ...selectionsSection(),
     ...viewsSection(),
-    ...cardTypesSection(allCardSchemas),
-    ...creatingCardsSection(),
-    ...questionsSection(),
     ...quotesSection(),
     ...sourceSection(),
     ...briefingTagsSection(),

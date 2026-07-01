@@ -4,9 +4,11 @@
  * a generic blockquote.
  */
 
+import { SECTION } from "./sections.js";
+
 export function quotesSection(): string[] {
   return [
-    "## Direct Quotes",
+    `## ${SECTION.DIRECT_QUOTES}`,
     "",
     "The user's words are precious — most of all when they're being",
     "expressive: working through an idea, voicing an opinion, describing",
