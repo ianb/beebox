@@ -43,8 +43,8 @@ prompt.includes("do not need to re-read")
 ```ts
 const prompt = buildReactorUserPrompt(
   ["box/jobs/task1.job.card", "box/jobs/task2.job.card"],
-  ["### box/jobs/task1.job.card\n```xml\n<job>do thing 1</job>\n```",
-   "### box/jobs/task2.job.card\n```xml\n<job>do thing 2</job>\n```"],
+  ["### box/jobs/task1.job.card\n```\ndo thing 1\n```",
+   "### box/jobs/task2.job.card\n```\ndo thing 2\n```"],
 );
 prompt.includes("2 job(s)")
 => true
@@ -64,7 +64,7 @@ prompt.includes("cb finish")
 ```ts
 const prompt = buildReactorUserPrompt(
   ["box/jobs/only.job.card"],
-  ["### box/jobs/only.job.card\n```xml\n<job>solo task</job>\n```"],
+  ["### box/jobs/only.job.card\n```\nsolo task\n```"],
 );
 prompt.includes("1 job(s)")
 => true
@@ -80,9 +80,9 @@ prompt.includes("solo task")
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/task-a.job.card", `<job priority="low"><description>Low A</description></job>`);
-await box.write("box/jobs/task-b.job.card", `<job><description>Normal B</description></job>`);
-await box.write("box/jobs/task-c.job.card", `<job priority="low"><description>Low C</description></job>`);
+await box.write("box/jobs/task-a.job.card", `---\npriority: low\n---\nLow A`);
+await box.write("box/jobs/task-b.job.card", `---\npriority: normal\n---\nNormal B`);
+await box.write("box/jobs/task-c.job.card", `---\npriority: low\n---\nLow C`);
 
 const cards = await findJobCards(jobsDir);
 cards.length
@@ -106,8 +106,8 @@ await box.cleanup();
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/msg1.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
-await box.write("box/jobs/sweep.intake.job.card", `<intake-job source="gmail"><description>Intake</description></intake-job>`);
+await box.write("box/jobs/msg1.chat.job.card", `---\nsource: telegram\n---\nChat`);
+await box.write("box/jobs/sweep.intake.job.card", `---\nsource: gmail\n---\nIntake`);
 
 const chatOnly = await findJobCards(jobsDir, { typeFilter: "chat" });
 chatOnly.length
@@ -123,14 +123,14 @@ all.length
 await box.cleanup();
 ```
 
-### Source filter drops jobs whose root source attr does not match
+### Source filter drops jobs whose source field does not match
 
 ```ts
 const box = await makeTmpBox({ git: true });
 const jobsDir = path.join(box.root, "box/jobs");
-await box.write("box/jobs/email.intake.job.card", `<intake-job source="gmail"><description>Email triage</description></intake-job>`);
-await box.write("box/jobs/chat.chat.job.card", `<chat-job source="telegram"><description>Chat</description></chat-job>`);
-await box.write("box/jobs/rss.intake.job.card", `<intake-job source="rss"><description>RSS triage</description></intake-job>`);
+await box.write("box/jobs/email.intake.job.card", `---\nsource: gmail\n---\nEmail triage`);
+await box.write("box/jobs/chat.chat.job.card", `---\nsource: telegram\n---\nChat`);
+await box.write("box/jobs/rss.intake.job.card", `---\nsource: rss\n---\nRSS triage`);
 
 const gmailOnly = await findJobCards(jobsDir, { sourceFilter: "gmail" });
 JSON.stringify(gmailOnly.map((c) => c.file))

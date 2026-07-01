@@ -9,7 +9,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { parseCardText, CardIOError, isRecord } from "../card-io.js";
+import { parseCardText, CardIOError, collectRefs } from "../card-io.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
@@ -116,27 +116,4 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
   }
 
   return desc;
-}
-
-/**
- * Collect every `{ ref: string }` reference reachable in a job's parsed
- * frontmatter, regardless of the field it lives under. Job refs are always
- * `{ ref }` objects (intake `items: [{ref}]`, chat `thread: {ref}`,
- * question-followup `question-ref: {ref}`), so one recursive walk covers
- * every job type without per-schema branching.
- */
-function collectRefs(fields: Record<string, unknown>): string[] {
-  const refs: string[] = [];
-  const walk = (value: unknown): void => {
-    if (Array.isArray(value)) {
-      for (const el of value) walk(el);
-    } else if (isRecord(value)) {
-      if (typeof value["ref"] === "string") refs.push(value["ref"]);
-      for (const key of Object.keys(value)) {
-        if (key !== "ref") walk(value[key]);
-      }
-    }
-  };
-  walk(fields);
-  return refs;
 }

@@ -8,7 +8,7 @@ import { join } from "node:path";
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { initBox } from "../../../src/core/box.js";
-import { createIntakeJobsForUnjobbed } from "../../../src/cli/commands/wakeup.js";
+import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../src/cli/commands/wakeup.js";
 ```
 
 ## createIntakeJobsForUnjobbed
@@ -71,7 +71,7 @@ await box.seed("box/inbox/already-handled.memo.card", "<memo>Old</memo>");
 // Create a job that already references it
 await box.seed(
   "box/jobs/existing.intake.job.card",
-  '<intake-job created="2026-01-01T00:00:00Z" source="test"><item ref="box/inbox/already-handled.memo.card" /></intake-job>',
+  "---\nstatus: pending\ncreated: 2026-01-01T00:00:00Z\nsource: test\ndescription: Existing\nitems:\n  - ref: box/inbox/already-handled.memo.card\n---\n",
 );
 box.commitAll("setup");
 
@@ -178,5 +178,44 @@ content.includes("source: gmail")
 
 content.includes("pages-saved")
 => false
+```
+
+## cleanupStaleJobs
+
+Stale-job cleanup reads the job's frontmatter `status:` and refs. (It used to
+match the XML attribute `status="pending"`, so it silently skipped every
+frontmatter job — the format all live jobs use.)
+
+### Deletes a pending job whose refs all point at missing files
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(
+  "box/jobs/dead.intake.job.card",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: box/inbox/gone.memo.card\n---\n",
+);
+box.commitAll("queue stale job");
+
+const cleaned = await cleanupStaleJobs(box.root);
+cleaned
+=> 1
+
+(await readdir(join(box.root, "box/jobs"))).includes("dead.intake.job.card")
+=> false
+```
+
+### Keeps a pending job that still has a live ref
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("box/inbox/live.memo.card", "---\nstatus: new\n---\nstill here");
+await box.write(
+  "box/jobs/live.intake.job.card",
+  "---\nstatus: pending\ncreated: 2026-07-01T00:00:00Z\nsource: gmail\ndescription: Triage\nitems:\n  - ref: box/inbox/live.memo.card\n---\n",
+);
+box.commitAll("queue live job");
+
+await cleanupStaleJobs(box.root)
+=> 0
 ```
 

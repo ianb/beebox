@@ -151,6 +151,29 @@ export function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * Collect every `{ ref: string }` reference reachable in a card's fields,
+ * regardless of the field it lives under. Job refs are always `{ ref }`
+ * objects (intake `items: [{ref}]`, chat `thread: {ref}`, question-followup
+ * `question-ref: {ref}`), so one recursive walk covers every job type
+ * without per-schema branching.
+ */
+export function collectRefs(fields: Record<string, unknown>): string[] {
+  const refs: string[] = [];
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const el of value) walk(el);
+    } else if (isRecord(value)) {
+      if (typeof value["ref"] === "string") refs.push(value["ref"]);
+      for (const key of Object.keys(value)) {
+        if (key !== "ref") walk(value[key]);
+      }
+    }
+  };
+  walk(fields);
+  return refs;
+}
+
+/**
  * Loosely read a card's frontmatter as a plain mapping, without schema
  * validation. Returns null when there is no frontmatter block or the YAML is
  * unparseable. For best-effort reads (commit-message context, session keys)

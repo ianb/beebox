@@ -16,6 +16,7 @@ import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
+import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
 import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
@@ -108,17 +109,14 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
       continue;
     }
 
+    const fm = readCardFrontmatter(content);
     // Only clean up pending jobs
-    if (!content.includes("status=\"pending\"")) continue;
+    if (fm?.["status"] !== "pending") continue;
 
-    // Extract all ref="..." from the job
-    const refs: string[] = [];
-    for (const match of content.matchAll(/ref="([^"]+)"/g)) {
-      const ref = match[1]!;
-      // Skip URL refs (not file paths)
-      if (ref.startsWith("http://") || ref.startsWith("https://")) continue;
-      refs.push(ref);
-    }
+    // Collect the job's file refs, skipping URL refs (not file paths).
+    const refs = collectRefs(fm).filter(
+      (ref) => !ref.startsWith("http://") && !ref.startsWith("https://")
+    );
 
     if (refs.length === 0) continue;
 
@@ -247,9 +245,8 @@ export async function createIntakeJobsForUnjobbed(
 
 /**
  * Collect every item ref from existing job cards, so the inbox scan can
- * skip items that are already tracked. Handles both card generations:
- * YAML frontmatter `- ref: path` lines and legacy XML `ref="path"`
- * attributes.
+ * skip items that are already tracked. Refs are read from the job's YAML
+ * frontmatter (`items: [{ref}]`, `thread: {ref}`, …).
  */
 async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
   const jobsDir = path.join(boxRoot, "box/jobs");
@@ -261,26 +258,15 @@ async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
       // legacy dotted names like `.intake.job.card`.
       if (!file.endsWith("job.card")) continue;
       const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
-      for (const match of content.matchAll(/ref="([^"]+)"/g)) {
-        existingRefs.add(match[1]!);
-      }
-      for (const match of content.matchAll(/^\s*-?\s*ref:\s*(.+?)\s*$/gm)) {
-        existingRefs.add(stripMatchingQuotes(match[1]!));
+      const fm = readCardFrontmatter(content);
+      if (fm) {
+        for (const ref of collectRefs(fm)) existingRefs.add(ref);
       }
     }
   } catch (_e) {
     // No jobs dir yet (ENOENT) — treat as no existing refs.
   }
   return existingRefs;
-}
-
-/** Strip one pair of surrounding quotes a YAML stringifier may have added. */
-function stripMatchingQuotes(value: string): string {
-  const quote = value[0];
-  if ((quote === '"' || quote === "'") && value.endsWith(quote) && value.length >= 2) {
-    return value.slice(1, -1);
-  }
-  return value;
 }
 
 /**
