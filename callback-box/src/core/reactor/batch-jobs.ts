@@ -9,7 +9,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { parseCardText, CardIOError } from "../card-io.js";
+import { parseCardText, CardIOError, isRecord } from "../card-io.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
@@ -116,10 +116,6 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
   }
 
   return desc;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
