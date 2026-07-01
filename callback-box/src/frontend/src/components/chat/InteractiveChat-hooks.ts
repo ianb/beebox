@@ -13,7 +13,7 @@ import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
 import { href } from "../../lib/routing";
-import { parseViewUrl } from "../../lib/view-url";
+import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -29,8 +29,17 @@ export function useChatTabs() {
 
   const onZoomView = useCallback<OnZoomView>((view) => {
     setPanel((p) => {
-      const exists = p.tabs.some((t) => t.target.path === view.target.path);
-      const tabs = exists ? p.tabs : [...p.tabs, view];
+      // One tab per card path. Re-opening the same card with a different
+      // viewer/params refreshes the existing tab's target in place (so
+      // `?view=` actually switches) rather than colliding silently.
+      const idx = p.tabs.findIndex((t) => t.target.path === view.target.path);
+      const key = serializeViewUrl(view.target);
+      const tabs =
+        idx === -1
+          ? [...p.tabs, view]
+          : serializeViewUrl(p.tabs[idx]!.target) === key
+          ? p.tabs
+          : p.tabs.map((t, i) => (i === idx ? view : t));
       return { tabs, activePath: view.target.path };
     });
   }, []);

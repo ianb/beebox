@@ -7,7 +7,7 @@
 
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
-import { getApiBase, withBase } from "../api";
+import { getApiBase } from "../api";
 import type { ActivityKind } from "../../../core/chat-card-activity";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
@@ -22,7 +22,7 @@ import {
   type ViewHost,
   type ResolvedRef,
 } from "../lib/view-host";
-import { serializeViewUrl, type NavigateHint, type ViewTarget } from "../lib/view-url";
+import { type NavigateHint, type ViewTarget } from "../lib/view-url";
 // Side effect: installs window.__cbViewWidgets so the compiler's
 // `callback-box/view-widgets` shim can hand CardLink/CardRef to compiled views.
 import "./view-widgets";
@@ -101,9 +101,9 @@ interface ViewRendererProps {
    * The surface's "open a card here" primitive — companion → onZoomView,
    * browse → swap the detail pane, page → push a route. Lifted into the view
    * host so card widgets (`<CardLink>`/`<CardRef>`) open cards surface-correctly.
-   * Omitted → falls back to a page push so standalone view pages keep working.
+   * Required: every mount (card-attached page/chat/companion) supplies it.
    */
-  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /**
    * Render a card expanded in place — backs `<CardRef>`'s expand-inline. Injected
    * by the mount site (which owns FileView) so ViewRenderer never imports
@@ -128,24 +128,17 @@ function useBrowserResolvedRef(cardRef: string): ResolvedRef | null {
 /**
  * Assemble the browser {@link ViewHost} the card widgets consume. `basePath`
  * (the rendered card's path for a card-bound view, else the box root) anchors
- * relative refs; `surfaceNavigate` is the surface's onNavigate when supplied,
- * else a plain page push so standalone view pages still route.
+ * relative refs; `onNavigate` is the surface's open-a-card primitive.
  */
 function buildViewHost(args: {
   boxSlug: string | undefined;
   basePath: string;
-  navigate: ReturnType<typeof useNavigate>;
-  onNavigate?: (target: ViewTarget, hint?: NavigateHint) => void;
+  onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   renderInline?: (cardPath: string) => ReactNode;
 }): ViewHost {
-  const { boxSlug, basePath, navigate, onNavigate, renderInline } = args;
-  const surfaceNavigate: (target: ViewTarget, hint?: NavigateHint) => void =
-    onNavigate ??
-    ((target) => {
-      if (boxSlug) navigate({ to: `/${boxSlug}/views/${serializeViewUrl(target)}` });
-    });
+  const { boxSlug, basePath, onNavigate, renderInline } = args;
   return {
-    openCard: makeOpenCard(surfaceNavigate, basePath),
+    openCard: makeOpenCard(onNavigate, basePath),
     useResolvedRef: useBrowserResolvedRef,
     renderInline: (cardRef) => (renderInline ? renderInline(refToTarget(cardRef, basePath).path) : null),
     basePath,
@@ -203,7 +196,6 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
   }, [apiBase, slug]);
 
   const paramsString = JSON.stringify(viewParams);
-  const fullPageQs = new URLSearchParams(viewParams).toString();
   const loadCards = useCallback(async () => {
     try {
       const qs = new URLSearchParams(viewParams).toString();
@@ -307,7 +299,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
     : "w-full";
 
   // The view host the card widgets (CardLink/CardRef) consume.
-  const viewHost = buildViewHost({ boxSlug, basePath: viewParams.path ?? "", navigate, onNavigate, renderInline });
+  const viewHost = buildViewHost({ boxSlug, basePath: viewParams.path ?? "", onNavigate, renderInline });
 
   return (
     <div className={containerClass}>
@@ -324,20 +316,6 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
           />
         </ViewHostProvider>
       </ViewErrorBoundary>
-      {mode === "chat" && Boolean(boxSlug) && (
-        <div className="mt-2 text-right">
-          <a
-            href={withBase(`/${boxSlug}/views/${slug}${fullPageQs ? "?" + fullPageQs : ""}`)}
-            className="text-sm text-blue-600 hover:text-blue-800"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate({ to: `/${boxSlug}/views/${slug}${fullPageQs ? "?" + fullPageQs : ""}` });
-            }}
-          >
-            Open full page &rarr;
-          </a>
-        </div>
-      )}
     </div>
   );
 }
