@@ -592,21 +592,25 @@ surface — noted, not yet moved:
 - ~~**`title:` as a shared field**~~ — **DONE.** `title` is in `GLOBAL_CARD_FIELDS`
   (`src/cards/schema.ts:87`, alongside `contains` and `content-type`); documented
   in ABOUT_CARDS' shared envelope.
-- **`content-type:`** — also in `GLOBAL_CARD_FIELDS`, but **deliberately not
-  documented**: it's a serializer-managed body-encoding marker
-  (`CARD_XML_CONTENT_TYPE = "application/x-card+xml"`, set only for legacy
-  XML-bodied cards — `card-io.ts:263`), not author data. Agents never set it.
-- **`status:` — normalization assessed, deferred.** 16 schemas carry a `status:`
-  field, but the enums are **3–4 different concepts**, not one: processing
-  lifecycle (`new`→`processed`/`analyzed`/`archived`/`sent`/`transcribed`), sync
-  state (`synced`/`error`/`conflict`), and cases where `status` is misused for a
-  *kind* (`text`/`voice`, `query-response`/`comment`/`brief`) or a *priority*
-  (`normal`/`low`). A single normalized vocabulary would force unlike things
-  together and doesn't work. What *would* work is a scoped cleanup — normalize the
-  genuine processing-lifecycle family to a shared vocab, and **rename** the
-  misfiled ones out of `status`. That's a schema migration of its own, not a
-  prompt edit; flagged here for a future effort. For now ABOUT_CARDS just notes
-  that `status` is a common, type-specific field.
+- **`content-type:` — NOT removable yet (load-bearing).** It's the marker that
+  routes legacy XML-bodied cards to the `XmlLoadedCard` path
+  (`CARD_XML_CONTENT_TYPE = "application/x-card+xml"`). **4,438 cards across the
+  boxes still carry it** (3,407 `image`, 562 `record`, 120 `email-message`, …;
+  1,250 in archive, 50 in trash). Removing `content-type` / the `XmlLoadedCard`
+  path would break loading/detection of all of them. The clean removal is a real
+  effort: **migrate (or retire) those XML cards to frontmatter first**, then drop
+  `content-type` + the XML loader together. Deliberately still *undocumented* in
+  ABOUT_CARDS (agents never author it) — but it stays in the code until the
+  migration happens.
+- **`status:` — no misuse; nothing to rename.** Correction to an earlier
+  mis-survey: the enums that looked misfiled are already correctly named —
+  `text`/`voice` is `feedback.source:`, `query-response`/`comment`/`brief` is
+  `feedback.type-of-feedback:`, `normal`/`low` is `intake-job.priority:`. The
+  actual `status:` fields are all legitimate domain statuses (lifecycle
+  `new`→`processed`; entity `active`/`archived`; Drive sync `synced`/`error`/
+  `conflict`; experiment `proposed`/…). They aren't one concept, so a single
+  normalized vocabulary still doesn't fit — but there's no misuse to fix.
+  ABOUT_CARDS just notes `status` is common and type-specific.
 - **`CONTAINS_DOC_APPENDIX`** (`search.ts`) — the per-card-type generated-doc
   appendix now duplicates ABOUT_CARDS' `contains:` rule; replace it with a
   cross-reference (a `generate-docs` change, so deferred).
