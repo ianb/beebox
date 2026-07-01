@@ -60,6 +60,17 @@ reconciled against *current* main, cited inline.
   (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
   match. (Empty on-disk `box/pool/` dirs in a few boxes are harmless leftovers,
   left in place.)
+- **`behavior.ts` trimmed + audited** — dropped the "meaningful commit"
+  non-instruction; trimmed the briefing subsection's stale `<purpose>`/`<key-people>`
+  tag enumeration (defers to the briefing schema doc); compressed the personality
+  paragraph; trimmed the retrospective detail. **Audits:** the git-trailers table
+  is accurate (all 7 emitted), but the `Retro-Run:` trailer claim was aspirational
+  (**emitted nowhere**) — removed. The `<destination for="…">` / `<triage-destination>`
+  angle-bracket notation was **stale everywhere** — destinations are actually a
+  landmark **frontmatter** `destinations: [{ for: [triage], rules, procedure }]`
+  list; fixed in `behavior.ts` and `box-shape.ts` (incl. the one I'd introduced).
+  (Stale `<triage-destination>` mentions remain in `triage.ts`/`handle.ts` *code
+  comments* — internal, not agent-facing; a minor follow-up.)
 
 Everything else below is still future work.
 
