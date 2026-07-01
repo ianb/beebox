@@ -125,48 +125,65 @@ export function AssistantMessage({
   }, [grouped]);
 
   return (
-    <div className="px-3 sm:px-6 py-2 min-w-0 overflow-hidden relative">
+    <div className="px-3 sm:px-6 py-2">
+      {/* Zero-height sticky bar pinned to the top-right of the message. It
+          takes no vertical space (h-0, so prose doesn't shift) and sticks
+          within this message's bounds as the list scrolls: the speaker icon
+          stays visible while a tall message is read, then releases when the
+          message's bottom scrolls past. Lives OUTSIDE the overflow-hidden
+          content wrapper below — a sticky child of an overflow:hidden box
+          would stick within that short non-scrolling box, not the message
+          list. pointer-events-none keeps the empty bar from blocking text
+          selection; the icon itself re-enables pointer events. */}
       {!debugView && (hasSpeech || hasSilentThinking) ? (
-        <div className="absolute right-2 top-2 flex items-center gap-2">
-          {hasSilentThinking ? <ThinkingCornerMark /> : null}
-          {hasSpeech ? (
-            <SpeechMenu
-              segments={segments}
-              playing={isPlaying}
-              anyPlaying={anySpeechPlaying === true}
-              canSkip={speechCanSkip === true}
-              onStop={() => onStopSpeech?.()}
-              onSkip={() => onSkipSpeech?.()}
-              onReplay={(fromIndex) => onReplaySpeech?.({ messageId, segments, fromIndex })}
-            />
-          ) : null}
+        <div className="sticky top-2 z-10 h-0 flex justify-end items-start pointer-events-none">
+          <div className="flex items-center gap-2 pointer-events-auto">
+            {hasSilentThinking ? <ThinkingCornerMark /> : null}
+            {hasSpeech ? (
+              <SpeechMenu
+                segments={segments}
+                playing={isPlaying}
+                anyPlaying={anySpeechPlaying === true}
+                canSkip={speechCanSkip === true}
+                onStop={() => onStopSpeech?.()}
+                onSkip={() => onSkipSpeech?.()}
+                onReplay={(fromIndex) => onReplaySpeech?.({ messageId, segments, fromIndex })}
+              />
+            ) : null}
+          </div>
         </div>
       ) : null}
-      {showProse ? grouped.map((group, i) =>
-        group.kind === "text" ? (
-          debugView ? (
-            <Pre key={i} size="xs" boxed>{group.text}</Pre>
+      {/* min-w-0 overflow-hidden clips wide/unbreakable content (long code,
+          tables, URLs) so it can't stretch the message width. Kept here as a
+          sibling of the sticky bar, not an ancestor, so it doesn't capture the
+          icon's sticky positioning. */}
+      <div className="min-w-0 overflow-hidden">
+        {showProse ? grouped.map((group, i) =>
+          group.kind === "text" ? (
+            debugView ? (
+              <Pre key={i} size="xs" boxed>{group.text}</Pre>
+            ) : (
+              <AssistantSpeechText
+                key={i}
+                text={group.text}
+                indexOffset={groupSpeechOffsets[i] ?? 0}
+                activeIndex={activeIndex}
+                onZoomView={onZoomView}
+              />
+            )
           ) : (
-            <AssistantSpeechText
-              key={i}
-              text={group.text}
-              indexOffset={groupSpeechOffsets[i] ?? 0}
-              activeIndex={activeIndex}
-              onZoomView={onZoomView}
-            />
+            <ActivityGroup key={i} parts={group.parts} />
           )
-        ) : (
-          <ActivityGroup key={i} parts={group.parts} />
-        )
-      ) : null}
-      {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
-      {isStreaming ? (
-        // The "agent is working" progress animation, shown below the streamed
-        // content for the whole turn (matches the pre-unification throbber).
-        <div className="flex flex-col items-center gap-2 my-6">
-          <Grid size={40} color="#D4845A" speed={1.5} />
-        </div>
-      ) : null}
+        ) : null}
+        {!debugView ? <CalloutStack callouts={callouts} onZoomView={onZoomView} /> : null}
+        {isStreaming ? (
+          // The "agent is working" progress animation, shown below the streamed
+          // content for the whole turn (matches the pre-unification throbber).
+          <div className="flex flex-col items-center gap-2 my-6">
+            <Grid size={40} color="#D4845A" speed={1.5} />
+          </div>
+        ) : null}
+      </div>
     </div>
   );
 }
