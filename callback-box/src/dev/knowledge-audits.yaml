@@ -2906,11 +2906,15 @@ tests:
       Use the image/embed syntax with a plain box path,
       ![caption](/store/…figure.card?name=value); the query-string params reach
       the sketch as figure.params. A plain [label](…figure.card) link (no !)
-      stays a navigable link, not an inline embed. Must NOT use a `view:` prefix
-      — that scheme is retired; cards are referenced by plain box path.
-    response_not_contains: ["view:"]
+      stays a navigable link, not an inline embed. The embed target is a plain
+      box path — must NOT use a `view:` prefix in the syntax (that scheme is
+      retired; naming it as retired to warn against it is fine).
     tags: [figure, cards, embedding]
 
+  # Status (2026-07-01): all three below pass against ~/src/boxes/test1 —
+  # the agent recalls link-vs-embed with plain box paths (no view:/?zoom) and
+  # that views attach to a card type via rendersCardTypes, directly (0 files
+  # read). Part of the normalize-chat-links work.
   - id: chat-link-vs-embed-card
     prompt: >
       In chat, how do you reference a card so the user can open it, versus show
@@ -2920,9 +2924,10 @@ tests:
       A plain markdown link [label](/store/x.card) references the card — clicking
       opens it in the companion pane. Prefix with ! — ![label](/store/x.card) —
       to embed it inline. Write box-root-absolute paths (leading /); a bare path
-      resolves against the chat working directory. Must NOT mention a `view:`
-      prefix or a `?zoom` flag — both are retired.
-    response_not_contains: ["view:", "?zoom", "zoom flag"]
+      resolves against the chat working directory. Must NOT use a `view:` prefix
+      or a `?zoom` flag in the syntax — both are retired (naming them as retired
+      to warn against them is fine).
+    response_not_contains: ["?zoom", "zoom flag"]
     tags: [chat, links, embedding]
 
   - id: views-attach-to-cards
