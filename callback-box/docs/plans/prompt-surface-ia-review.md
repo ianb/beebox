@@ -95,6 +95,17 @@ reconciled against *current* main, cited inline.
   of search and into the ABOUT_CARDS `contains:` bullet — search now covers only
   *finding*, ABOUT_CARDS covers *making findable*. (`CONTAINS_DOC_APPENDIX`
   per-type duplication is still the noted follow-up.)
+- **`chat.ts` (external tools / attachments / selections / views) rewritten** —
+  crisp, and corrective where the default is wrong. External Tools → a one-liner
+  naming the guaranteed tools (`pandoc`, `imagemagick`, `poppler-utils` — verified
+  installed in `deploy/setup-server.sh`). Chat Attachments compressed to the
+  kernel (land in `tmp/`, which **isn't storage** — keep-into-box or `rm`).
+  Selections now **defer `ref`/`pos`/`placement` to PROVENANCE** (closes the loop
+  with source.ts's "identical to `<user-selection>`") and simplify the
+  inline-vs-appended framing. **Views gutted** — dropped the URL form,
+  metadata/deps, read/write API, and `adapterFetch`, and made it corrective:
+  the preferred use is a view targeting a **card type** (`rendersCardTypes`); a
+  standalone dashboard is the unusual case, not the default.
 
 Everything else below is still future work.
 

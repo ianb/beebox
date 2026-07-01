@@ -1,15 +1,16 @@
 /**
  * Things relevant when responding to chat messages and the user-facing
- * surfaces around them: external converters, file attachments, custom views.
+ * surfaces around them: external converters, file attachments, selections,
+ * and custom views.
  */
+
+import { SECTION, xref } from "./sections.js";
 
 export function externalToolsSection(): string[] {
   return [
     "## External Tools",
     "",
-    "`pandoc` is installed for converting document formats (.doc, .docx, .rtf, .odt, etc.) to plain text or markdown.",
-    "",
-    "Python CLI tools: `docs/generated/python-tools.md`.",
+    "Always available on the box host, reach for them directly: `pandoc` (document conversion — .doc/.docx/.rtf/.odt → text or markdown), `imagemagick` (`magick`), and `poppler-utils` (`pdftotext`, `pdfimages`). Box-specific Python CLIs: `docs/generated/python-tools.md`.",
     "",
   ];
 }
@@ -18,7 +19,7 @@ export function chatAttachmentsSection(): string[] {
   return [
     "## Chat Attachments",
     "",
-    "When the user attaches files in chat, their message contains `[fileN]` tokens plus a sibling `<attachments>` block mapping each token to a path:",
+    "Files the user attaches arrive as `[fileN]` tokens with a sibling `<attachments>` block mapping each token to a path under `tmp/`:",
     "",
     "```",
     "<attachments>",
@@ -26,13 +27,7 @@ export function chatAttachmentsSection(): string[] {
     "</attachments>",
     "```",
     "",
-    "Files live in `<box-root>/tmp/` — gitignored, transient. Read them with the right tool: Read for text/images/PDFs; `pandoc <path> -t plain` for .doc/.docx/.rtf/.odt.",
-    "",
-    "**`tmp/` is not storage.** After you've used a file, decide:",
-    "",
-    "- **Worth keeping** — move or copy it into the box where it belongs (e.g., create a card that references it as an attachment, or place it under `box/inbox/` or `store/`). Don't leave keepers in `tmp/`.",
-    "- **Done with it** — delete it (`rm tmp/<filename>`).",
-    "- Otherwise leave it for `cb wakeup` housekeeping, which sweeps `tmp/` files older than 7 days.",
+    "Read them with the right tool (Read for text/images/PDFs; `pandoc <path> -t plain` for Office docs). **`tmp/` is not storage** — it's gitignored and swept after 7 days. Once you've used a file, decide: a keeper goes *into* the box (a card that attaches it, or a spot under `box/inbox/` / `store/`) — don't leave it in `tmp/`; otherwise `rm` it or let the sweep take it.",
     "",
   ];
 }
@@ -44,14 +39,12 @@ export function selectionsSection(): string[] {
     "The user can select text in a document they have open and attach it to a message. It arrives as a `<user-selection>` element:",
     "",
     "```",
-    "<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing the dough (#proofing-the-dough); paragraph 2; ~line 42\">let it rise until doubled in size</user-selection>",
+    "<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body; heading: Proofing the dough (#proofing-the-dough); ~line 42\">let it rise until doubled in size</user-selection>",
     "```",
     "",
-    "- The wrapped text is **what the user saw** — the rendered text, verbatim. Treat it as a quote; don't re-derive it.",
-    "- `ref` is the source document (box-relative path). Use it if you need the exact source markup or surrounding context.",
-    "- `pos` is a **rough** locator (section, nearest heading + its `#id`, paragraph, approximate line) — a hint for finding the original, not an exact offset. Clauses are omitted when not determinable.",
-    "- A `placement=\"estimated, ~N% through the message\"` attribute means the selection's *spot in this message* is approximate: the user grabbed it mid-speech but the phrase it anchored to was reworded by transcription, so it was positioned by rough timing (N% of the way through). The `pos`/`ref` still point at the real source; only its order within the message is a guess.",
-    "- It may appear **inline** inside `<typed>` (the user typed around it) or **appended after** a `<speech>` body (the user spoke and attached it separately). Treat both the same.",
+    "The wrapped text is **what the user saw** — rendered, verbatim. Treat it as a quote; don't re-derive it.",
+    "",
+    `\`ref\`, \`pos\`, and (when present) \`placement\` mean exactly what they do on a \`{% source %}\` anchor — see ${xref(SECTION.PROVENANCE)}. A \`placement="estimated, ~N% through the message"\` says only the selection's *spot in this message* is a guess (positioned by rough timing when transcription reworded the phrase it anchored to); \`ref\`/\`pos\` still point at the real source. Whether it appears inline inside \`<typed>\` or appended after a \`<speech>\` body, treat it the same — a best effort to place it where the user made it, falling back to the end.`,
     "",
   ];
 }
@@ -60,25 +53,9 @@ export function viewsSection(): string[] {
   return [
     "## Views",
     "",
-    "Views are React components (`.tsx` files) in the `views/` directory that render in the browser.",
-    "Use views to create dashboards, data summaries, interactive explorers, or any custom UI for box data.",
+    "Views are React (`.tsx`) components that render box data in the browser. **Read `docs/generated/views.md` before creating or modifying one.**",
     "",
-    "- Views appear as full pages at `/<box>/views/<slug>?path=/` and can be embedded in chat messages",
-    "- Each view declares metadata (name, description, dependencies, modes) as named exports",
-    "- Views receive query parameters via `params` — always include `path=` to scope what the view shows",
-    "- Views re-render automatically when files matching their dependency globs change",
-    "- Views can read AND write box files: cards arrive parsed; attachments and",
-    "  other files arrive as metadata (`{path, size, mtimeMs, etag, gitStatus?}`),",
-    "  with on-demand `readFile` (byte-range tails for large logs), `fileUrl` for",
-    "  images/audio, conflict-safe `writeFile`/`appendFile` (etag preconditions),",
-    "  and `commitFile` for deliberate git commits of a file + its attachments",
-    "- Views call external APIs (LLMs) via `adapterFetch` — the server injects",
-    "  the key from `config/connectors/<adapter>.secret.json`; never read a",
-    "  secret file into the browser or put a key in view source",
-    "- A view exporting `rendersCardTypes = [\"<type>\"]` becomes that card",
-    "  type's default UI on card pages, peeks, and chat embeds — the way a",
-    "  custom card type gets a custom interface",
-    "- **Read `docs/generated/views.md` before creating or modifying views.**",
+    "The common, preferred use is giving a **card type** a custom interface: a view exporting `rendersCardTypes = [\"<type>\"]` becomes that type's UI on card pages, peeks, and chat embeds. Prefer extending or overloading a card type's view over building a standalone page — a one-off dashboard not tied to a card type is the unusual case, not the default.",
     "",
   ];
 }
