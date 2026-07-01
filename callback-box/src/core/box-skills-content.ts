@@ -241,8 +241,15 @@ moment; it does **not** write a \`progress\` status (that comes from real dialog
 full field reference.
 `;
 
-/** The `calendar` skill: authoring `.ics` events for two-way Google Calendar sync. */
-export const CALENDAR_SKILL = `---
+/**
+ * The `calendar` skill: authoring `.ics` events for two-way Google Calendar
+ * sync. Generated per-box so the example carries the box's real timezone and a
+ * correct VTIMEZONE block the agent can copy verbatim (hand-writing DST rules
+ * is exactly the error this prevents). The caller (box-skills.ts) resolves
+ * both.
+ */
+export function calendarSkill({ timezone, vtimezone }: { timezone: string; vtimezone: string }): string {
+  return `---
 name: calendar
 description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in store/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
 ---
@@ -258,7 +265,7 @@ Calendar events live as \`.ics\` files in \`store/calendar/\`. Sync with Google 
 - **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
 - **Delete an event:** add an \`X-CB-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
 
-**Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected. Use the box's local timezone.
+**Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected. This box's timezone is \`${timezone}\`; the example below carries its correct VTIMEZONE block — copy it as-is.
 
 Example minimal \`.ics\` for a new event:
 
@@ -266,34 +273,19 @@ Example minimal \`.ics\` for a new event:
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Callback Box//EN
-BEGIN:VTIMEZONE
-TZID:America/Chicago
-BEGIN:STANDARD
-DTSTART:19701101T020000
-RRULE:FREQ=YEARLY;BYMONTH=11;BYDAY=1SU
-TZOFFSETFROM:-0500
-TZOFFSETTO:-0600
-TZNAME:CST
-END:STANDARD
-BEGIN:DAYLIGHT
-DTSTART:19700308T020000
-RRULE:FREQ=YEARLY;BYMONTH=3;BYDAY=2SU
-TZOFFSETFROM:-0600
-TZOFFSETTO:-0500
-TZNAME:CDT
-END:DAYLIGHT
-END:VTIMEZONE
+${vtimezone.trim()}
 BEGIN:VEVENT
 UID:unique-id-here
 SUMMARY:Dentist appointment
-DTSTART;TZID=America/Chicago:20260401T140000
-DTEND;TZID=America/Chicago:20260401T150000
+DTSTART;TZID=${timezone}:20260401T140000
+DTEND;TZID=${timezone}:20260401T150000
 X-CB-REASON:confirmed in the reschedule email
 X-CB-REF:/store/archive/Dentist_Reschedule.email-message.card
 END:VEVENT
 END:VCALENDAR
 \`\`\`
 `;
+}
 
 /** The `drive` skill: reading/editing/syncing Google Drive sheets and docs. */
 export const DRIVE_SKILL = `---
