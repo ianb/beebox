@@ -1,6 +1,6 @@
 # Nav card resolution
 
-`nav.card` at the box root drives the top navigation (docs/plans/nav-card.md).
+`nav.card` at the box root drives the top navigation (docs/implemented-plans/nav-card.md).
 `resolveNav` loads and validates it: `absent` means "show the builtin nav",
 `invalid` means "builtin nav + health warning", `ok` carries render-ready
 entries plus non-fatal `problems` (dangling refs) for the health check.

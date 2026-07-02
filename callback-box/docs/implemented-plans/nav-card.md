@@ -1,8 +1,16 @@
 # Nav as a card — first interface-as-cards slice
 
-Status: planned 2026-07. First implementation slice of
-`docs/plans/interface-as-cards.md`. Small on the surface, but deliberately
-forces the three load-bearing pieces of the architecture into existence:
+Status: **implemented 2026-07** (all three PRs, verified in a live box).
+Where it lives now: the naming grammar in `src/shared/card-name.ts`, the
+route table in `src/shared/nav-routes.ts`, the schema in
+`src/schemas/nav.ts`, resolution in `src/core/nav.ts` (tRPC `nav.get` + a
+`nav-card` health check), and AppNav consumption via
+`src/frontend/src/hooks/useNavLinks.ts`. The "Deliberately deferred"
+section at the bottom is still future.
+
+First implementation slice of `docs/plans/interface-as-cards.md`. Small on
+the surface, but deliberately forces the three load-bearing pieces of the
+architecture into existence:
 
 1. a schema for an interface card,
 2. the shell-reads-a-card-with-builtin-fallback pattern (the can't-break

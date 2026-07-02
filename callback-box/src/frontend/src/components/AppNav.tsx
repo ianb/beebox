@@ -103,7 +103,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const freshCount = chatPicker.data ? chatPicker.data.freshCount : 0;
 
   // Card-driven when the box has a root nav.card; the builtin list
-  // (shared/nav-routes.ts) is the fallback floor. See docs/plans/nav-card.md.
+  // (shared/nav-routes.ts) is the fallback floor. See docs/implemented-plans/nav-card.md.
   const links = useNavLinks({ base, freshCount });
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";

@@ -6,7 +6,7 @@
  * list, now serving as the can't-break floor (an invalid card additionally
  * surfaces as a health warning; nothing here improvises UI). A file-change
  * event on `nav.card` refetches, so an agent edit reshapes the nav live.
- * See docs/plans/nav-card.md.
+ * See docs/implemented-plans/nav-card.md.
  */
 
 import { useCallback } from "react";

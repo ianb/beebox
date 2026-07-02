@@ -5,7 +5,7 @@
  * AppNav; when the card is absent or invalid, the shell falls back to the
  * builtin nav (and an invalid card is surfaced as a health warning — see
  * runHealthChecks). First slice of docs/plans/interface-as-cards.md; plan in
- * docs/plans/nav-card.md.
+ * docs/implemented-plans/nav-card.md.
  *
  *   ---
  *   entries:
