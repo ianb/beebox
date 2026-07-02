@@ -57,7 +57,7 @@ Each user message is wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard), 
 
 **Images.** \`![caption](/store/people/Priya.attach/face.jpg)\` — a leading \`/\` is box-root-absolute; a path relative to the file you're authoring also works. External images work too — hot-link the URL, and if the origin blocks it the renderer retries through the box's image proxy. The caption shows under the image and in full on zoom, so write a real one ("Priya at the 2019 reunion"), not a filename.
 
-**Custom views** — a \`.tsx\` component that gives a card type a richer interface — are box-building work; see the agent guide's Views section and \`docs/generated/views.md\`.
+**Custom views** — a \`.tsx\` component that gives a card type a richer interface — are box-building work; reach for the \`views\` skill.
 
 ## Self-notes
 

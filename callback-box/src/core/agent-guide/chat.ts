@@ -6,6 +6,9 @@
 
 import { SECTION, xref } from "./sections.js";
 
+// Custom views (giving a card type a .tsx interface) were moved out of the
+// always-loaded guide into the on-demand `views` skill (box-skills-content.ts).
+
 export function externalToolsSection(): string[] {
   return [
     "## External Tools",
@@ -45,17 +48,6 @@ export function selectionsSection(): string[] {
     "The wrapped text is **what the user saw** — rendered, verbatim. Treat it as a quote; don't re-derive it.",
     "",
     `\`ref\`, \`pos\`, and (when present) \`placement\` mean exactly what they do on a \`{% source %}\` anchor — see ${xref(SECTION.PROVENANCE)}. A \`placement="estimated, ~N% through the message"\` says only the selection's *spot in this message* is a guess (positioned by rough timing when transcription reworded the phrase it anchored to); \`ref\`/\`pos\` still point at the real source. Whether it appears inline inside \`<typed>\` or appended after a \`<speech>\` body, treat it the same — a best effort to place it where the user made it, falling back to the end.`,
-    "",
-  ];
-}
-
-export function viewsSection(): string[] {
-  return [
-    "## Views",
-    "",
-    "Views are React (`.tsx`) components that render box data in the browser. **Read `docs/generated/views.md` before creating or modifying one.**",
-    "",
-    "The common, preferred use is giving a **card type** a custom interface: a view exporting `rendersCardTypes = [\"<type>\"]` becomes that type's UI on card pages, peeks, and chat embeds. Prefer extending or overloading a card type's view over building a standalone page — a one-off dashboard not tied to a card type is the unusual case, not the default.",
     "",
   ];
 }

@@ -14,18 +14,11 @@ import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
 
 import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";
-import { locationSection } from "./location.js";
-import {
-  proceduresSection,
-  guidesSection,
-  schedulesSection,
-  tricksSection,
-} from "./extensibility.js";
+import { proceduresSection, guidesSection } from "./extensibility.js";
 import {
   externalToolsSection,
   chatAttachmentsSection,
   selectionsSection,
-  viewsSection,
 } from "./chat.js";
 import {
   aboutCardsSection,
@@ -39,7 +32,6 @@ import { lawsSection } from "./laws.js";
 import { quotesSection } from "./quotes.js";
 import { sourceSection } from "./source.js";
 import { searchSection } from "./search.js";
-import { briefingTagsSection } from "./briefing-tags.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
@@ -72,19 +64,14 @@ export function generateAgentGuide(options: AgentGuideOptions): string {
     ...howItemsEnterSection(),
     ...keyCommandsSection(),
     ...searchSection(),
-    ...locationSection(),
     ...proceduresSection(procedures),
     ...guidesSection(guides),
-    ...schedulesSection(),
-    ...tricksSection(),
     ...secretsSection(),
     ...externalToolsSection(),
     ...chatAttachmentsSection(),
     ...selectionsSection(),
-    ...viewsSection(),
     ...quotesSection(),
     ...sourceSection(),
-    ...briefingTagsSection(),
     ...gitHistorySection(),
     ...whereToRecordSection(),
   ];
