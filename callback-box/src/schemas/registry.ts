@@ -46,6 +46,7 @@ import { CommentarySchema } from "./commentary.js";
 import { WebpageSchema } from "./webpage.js";
 import { ExtfileSchema } from "./extfile.js";
 import { LandmarkSchema } from "./landmark.js";
+import { NavSchema } from "./nav.js";
 import { FigureSchema } from "./figure.js";
 import { ConceptMapSchema } from "./concept-map.js";
 import { CourseSchema } from "./course.js";
@@ -62,6 +63,7 @@ export const cardSchemas: CardSchema[] = [
   CaptureSessionSchema,
   GuideSchema,
   LandmarkSchema,
+  NavSchema,
   ProcedureSchema,
   ProcedureRunSchema,
   RecipeSchema,
@@ -465,3 +467,4 @@ export { DocSchema } from "./doc.js";
 export { GdocSchema } from "./gdoc.js";
 export { ExtfileSchema } from "./extfile.js";
 export { LandmarkSchema } from "./landmark.js";
+export { NavSchema } from "./nav.js";
