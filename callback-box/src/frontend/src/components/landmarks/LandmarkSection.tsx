@@ -9,12 +9,12 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { href } from "../../../lib/routing";
-import { apiFileUrl } from "../../../lib/view-url";
-import { trpc } from "../../../lib/trpc";
-import { Card } from "../../../components/ui/Card";
-import { Stack } from "../../../components/ui/Stack";
-import { Text } from "../../../components/ui/Text";
+import { href } from "../../lib/routing";
+import { apiFileUrl } from "../../lib/view-url";
+import { trpc } from "../../lib/trpc";
+import { Card } from "../ui/Card";
+import { Stack } from "../ui/Stack";
+import { Text } from "../ui/Text";
 
 interface ResolvedLink {
   ref: string;

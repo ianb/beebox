@@ -15,6 +15,10 @@
  */
 
 import { type ReactNode } from "react";
+// Relative (not `@shared/…`): this file is also the dist/view-widgets node
+// bundle entry, built with `packages: "external"`, which would leave the
+// aliased specifier unresolved at runtime. Relative paths bundle inline.
+import { cardTypeFromName } from "../../../../shared/card-name";
 import { ViewHostProvider, type ViewHost, type ResolvedRef } from "../../lib/view-host";
 import { CardLink } from "./CardLink";
 import { CardRef } from "./CardRef";
@@ -31,12 +35,9 @@ function filenameTitle(ref: string): string {
   return stem.replaceAll("_", " ").replaceAll("-", " ");
 }
 
-/** Card type from a `Foo.<type>.card` ref, or "" (mirrors typeFromFilename). */
+/** Card type from a card ref (nominal or positional naming), or "". */
 function typeFromRef(ref: string): string {
-  const noQuery = ref.split("?")[0] ?? ref;
-  const base = noQuery.split("/").pop() ?? noQuery;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match?.[1] ?? "";
+  return cardTypeFromName(ref) ?? "";
 }
 
 function useNodeResolvedRef(cardRef: string): ResolvedRef {

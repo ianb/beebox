@@ -19,6 +19,7 @@
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { splitCardContent, type CardSchema } from "../cards/index.js";
+import { parseCardFileName } from "../shared/card-name.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
@@ -229,7 +230,7 @@ function resolveCardType(input: {
   if (resolved === undefined) {
     throw new CardIOError(
       source,
-      "cannot determine card type — filename must match Foo.<type>.card"
+      "cannot determine card type — filename must match Foo.<type>.card or <type>.card"
     );
   }
   if (type !== undefined && yamlType !== undefined && yamlType !== type) {
@@ -358,20 +359,15 @@ export function loadCardFromText(input: {
 }
 
 /**
- * Extract the card type from a filename matching `Foo.<type>.card`.
- * Job cards use the dotted convention `Foo.<kind>.job.card` (the reactor
- * discovers jobs by that suffix — see reactor/job-discovery.ts) while
- * their schemas are registered under hyphenated names, so e.g.
- * `Foo.intake.job.card` resolves to type `intake-job`.
- * Returns undefined when the source doesn't fit either pattern (e.g.
- * test fixtures with non-card paths).
+ * Extract the card type from a filename — nominal `Foo.<type>.card`,
+ * positional `<type>.card`, or the job convention `Foo.<kind>.job.card`
+ * (→ `<kind>-job`). Thin wrapper over the canonical grammar in
+ * src/shared/card-name.ts. Returns undefined when the source doesn't fit
+ * (e.g. test fixtures with non-card paths).
  */
 export function typeFromFilename(source: string): string | undefined {
   const base = source.split("/").pop() ?? source;
-  const jobMatch = base.match(/^.+\.([^.]+)\.job\.card$/);
-  if (jobMatch) return `${jobMatch[1]}-job`;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match ? match[1] : undefined;
+  return parseCardFileName(base)?.type;
 }
 
 

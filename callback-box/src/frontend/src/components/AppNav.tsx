@@ -9,6 +9,7 @@
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
+import { useNavLinks } from "../hooks/useNavLinks";
 import { trpc } from "../lib/trpc";
 import { useErrorCount, clearErrorCount } from "./DebugLog";
 import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
@@ -101,24 +102,9 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   });
   const freshCount = chatPicker.data ? chatPicker.data.freshCount : 0;
 
-  const links: Array<{
-    to: string;
-    label: string;
-    match: (p: string) => boolean;
-    badge?: number;
-  }> = [
-    { to: `${base}/`, label: "Dashboard", match: (p: string) => p === base || p === `${base}/` },
-    // "Chat" used to mean "go to the most-active session." It still does —
-    // renamed to "Recent" so "Chats" (the picker) can sit next to it
-    // without two entries fighting over the same word.
-    { to: `${base}/chat`, label: "Recent", match: (p: string) => p === `${base}/chat` || p.startsWith(`${base}/chat?`) || p.startsWith(`${base}/chat/`) },
-    { to: `${base}/chats`, label: "Chats", match: (p: string) => p.startsWith(`${base}/chats`), badge: freshCount },
-    { to: `${base}/questions`, label: "Questions", match: (p: string) => p.startsWith(`${base}/questions`) },
-    { to: `${base}/browse`, label: "Browse", match: (p: string) => p.startsWith(`${base}/browse`) },
-    { to: `${base}/landmarks`, label: "Landmarks", match: (p: string) => p.startsWith(`${base}/landmarks`) },
-    { to: `${base}/history`, label: "History", match: (p: string) => p.startsWith(`${base}/history`) },
-    { to: `${base}/capture`, label: "Capture", match: (p: string) => p.startsWith(`${base}/capture`) },
-  ];
+  // Card-driven when the box has a root nav.card; the builtin list
+  // (shared/nav-routes.ts) is the fallback floor. See docs/implemented-plans/nav-card.md.
+  const links = useNavLinks({ base, freshCount });
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
 

@@ -158,21 +158,34 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
 }
 
 /**
- * Parse a card filename into its components.
- * Card names follow the pattern: Name.type.card
+ * Parse a card filename into its components: nominal `Name.type.card`, or
+ * positional `type.card` ("the ‹type› of this directory") where the name
+ * doubles as the type for display purposes.
+ *
+ * Legacy divergence from src/shared/card-name.ts (the canonical grammar):
+ * job cards parse here as `{ name: "Foo.intake", type: "job" }` rather than
+ * `{ name: "Foo", type: "intake-job" }`. Callers depend on the flat split;
+ * unify when they're audited.
  *
  * @param filename - The card filename (e.g., "Meeting_Tomorrow.email-thread.card")
  * @returns Parsed components or null if not a valid card name
  */
 export function parseCardName(filename: string): { name: string; type: string } | null {
   const match = filename.match(/^(.+)\.([^.]+)\.card$/);
-  if (!match) {
-    return null;
+  if (match) {
+    return {
+      name: match[1]!,
+      type: match[2]!,
+    };
   }
-  return {
-    name: match[1]!,
-    type: match[2]!,
-  };
+  const positional = filename.match(/^([^.]+)\.card$/);
+  if (positional) {
+    return {
+      name: positional[1]!,
+      type: positional[1]!,
+    };
+  }
+  return null;
 }
 
 /**
