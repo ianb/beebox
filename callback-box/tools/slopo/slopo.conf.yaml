@@ -1,0 +1,32 @@
+# slopo — embedding-based near-duplicate detector config for callback-box/src.
+# See the cb-codehealth skill (§1) for how and when to run this.
+#
+# Run from THIS directory so `source_dir` resolves to callback-box/src and the
+# cluster hashes in slopo.ignore.txt stay stable:
+#   cd callback-box/tools/slopo
+#   SLOPO_EMBEDDING_API_KEY=$THINKING_OPENAI_API_KEY slopo index && slopo embed && slopo analyze
+
+# Code to analyze — callback-box's main system surface. Relative to this dir.
+source_dir: ../../src
+
+# Vendored/build/test code is noise; excluding node_modules is REQUIRED
+# (without it ~70% of clusters are bundled vite helpers).
+source_dir_exclude:
+  - "**/node_modules/**"
+  - "**/dist/**"
+  - "**/build/**"
+  - "**/*.test.ts"
+  - "**/*.test.tsx"
+  - "**/*.spec.ts"
+  - "**/__tests__/**"
+
+# OpenAI embeddings via slopo's LiteLLM backend. Key comes from the
+# SLOPO_EMBEDDING_API_KEY env var (do not commit a key here).
+embedding_model: text-embedding-3-small
+embedding_dimensions: 1536
+
+# SQLite index (gitignored) and markdown report dir (gitignored); the reviewed
+# ignore list is committed so triage decisions persist across runs.
+db_file: slopo.db
+report_dir: slopo-report
+ignore_file: slopo.ignore.txt
