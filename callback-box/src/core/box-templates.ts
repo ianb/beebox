@@ -262,7 +262,7 @@ import { helper } from "../../lib/helper.js";
 
 const VIEWS_CLAUDE_MD = `# Views Directory
 
-This directory contains agent-generated React components (.tsx files) that render in the browser.
+This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
 
 **IMPORTANT: Read \`docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
 
@@ -273,7 +273,8 @@ Each view must export:
 - \`description\` (string) — what the view shows
 - \`dependencies\` (string[]) — glob patterns for cards that affect rendering
 - \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
-- \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\`
+- \`rendersCardTypes\` (string[]) — the card type(s) this view renders
+- \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\` (\`params.path\` is the card being rendered)
 
 React is provided automatically — do not import it.
 

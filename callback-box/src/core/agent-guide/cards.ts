@@ -122,8 +122,8 @@ warnings you'll see:
 - **reference failed to resolve / broken internal link** — a \`ref\` or markdown
   link points at a card that doesn't exist (common after a hand-move — use
   \`cb mv\`, which rewrites refs).
-- **\`view:\` in a link label** — put it in the URL: \`[label](view:path)\`, not
-  \`[view:path]\`.
+- **retired \`view:\` scheme** — drop the prefix and reference the plain box path:
+  \`[label](store/x.card)\` to link, \`![label](store/x.card)\` to embed.
 - **duplicate basename** — two cards in one directory share a name; rename one.
 - **\`contains:\` too long** — keep it under 200 characters.
 

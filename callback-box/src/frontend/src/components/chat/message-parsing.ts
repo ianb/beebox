@@ -5,9 +5,8 @@
  */
 
 import type { LightboxImage } from "../ImageLightbox";
-import { parseViewUrl, resolveImageSrc } from "../../lib/view-url";
+import { isExternalUrl, resolveImageSrc } from "../../lib/view-url";
 import { bustImageSrc } from "../../lib/file-version";
-import { getApiBase } from "../../api";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat-features";
 import { parseSelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
@@ -204,9 +203,12 @@ export function parseTaskNotification(text: string): TaskNotification | null {
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
 
 export function isImagePath(path: string): boolean {
-  const dot = path.lastIndexOf(".");
+  // Strip any ?query / #hash before checking the extension, so a cache-busted
+  // image (`photo.png?v=1`) is still recognized as an image, not an embed.
+  const clean = path.split(/[#?]/, 1)[0]!;
+  const dot = clean.lastIndexOf(".");
   if (dot <= 0) return false;
-  return IMAGE_EXTS.has(path.slice(dot).toLowerCase());
+  return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
 }
 
 /**
@@ -222,7 +224,6 @@ export function imageBlockSrc(block: SessionContentBlock): string | null {
 }
 
 const MARKDOWN_IMAGE_RE = /!\[([^\]]*)]\(([^\s)]+)(?:\s+"[^"]*")?\)/g;
-const VIEW_LINK_RE = /\[([^\]]*)]\(view:([^\s)]+)\)/g;
 
 function extractImagesFromMarkdown(
   text: string,
@@ -231,23 +232,15 @@ function extractImagesFromMarkdown(
   for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
     const alt = match[1];
     const rawSrc = match[2];
-    if (rawSrc) {
+    // `![…](…)` is the embed syntax: an image src belongs in the lightbox, but a
+    // card/file embed (an in-box, non-image path) does not — skip it.
+    if (rawSrc && (isExternalUrl(rawSrc) || isImagePath(rawSrc))) {
       const src = bustImageSrc(resolveImageSrc(rawSrc, { boxSlug, basePath: undefined }));
       const trimmedAlt = alt.trim();
       out.push({
         src,
         alt,
         caption: trimmedAlt === "" ? undefined : alt,
-      });
-    }
-  }
-  for (const match of text.matchAll(VIEW_LINK_RE)) {
-    const label = match[1];
-    const target = parseViewUrl(`view:${match[2]}`);
-    if (isImagePath(target.path)) {
-      out.push({
-        src: bustImageSrc(`${getApiBase()}/files/${target.path}`),
-        alt: label,
       });
     }
   }

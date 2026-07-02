@@ -18,7 +18,7 @@ const text = [
   "See [the docs](https://example.org/guide#install) for setup.",
   "Bare: https://example.org/guide, and again https://example.org/guide#top.",
   "Autolink <https://other.test/x>.",
-  "Internal [card](view:store/a.card) and [rel](../b.md) are ignored.",
+  "Internal [card](/store/a.card) and [rel](../b.md) are ignored.",
 ].join("\n");
 
 JSON.stringify([...extractExternalUrls(text)].toSorted(), null, 2)

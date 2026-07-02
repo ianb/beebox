@@ -431,12 +431,12 @@ Tricks are box-local by default, but the operation itself needn't be box-specifi
  */
 export const VIEWS_SKILL = `---
 name: views
-description: Give a card type a custom interface, or build a dashboard — a React component that renders box data in the browser. Use when a card type needs a richer display than the default, or the user wants a custom page or dashboard.
+description: Give a card type a custom interface — a React component that renders a card in the browser. Use when a card type needs a richer display than its default renderer.
 ---
 
 # Views
 
 Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, the view-host context, and how to test a view.
 
-The common, preferred use is giving a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds. Prefer extending or overloading a card type's view over building a standalone page — a one-off dashboard not tied to a card type is the unusual case, not the default.
+A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
 `;

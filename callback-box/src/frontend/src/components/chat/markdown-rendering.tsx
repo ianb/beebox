@@ -11,11 +11,11 @@ import { Image } from "../ui/Image";
 import { VideoEmbed } from "../ui/VideoEmbed";
 import { detectVideoEmbed } from "../../lib/video-url";
 import { FileView } from "../FileView";
-import { externalImageProxyUrl, parseViewUrl, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
+import { externalImageProxyUrl, isExternalUrl, resolveContentTarget, resolveImageSrc, type NavigateHint, type ViewTarget } from "../../lib/view-url";
 import { useBustedImageSrc } from "../../lib/file-version";
-import { getApiBase } from "../../api";
 import { stripStructuredOutputTags } from "../../lib/structured-output-parsing";
 import { isImagePath, stripSpeechTags } from "./message-parsing";
+import { useChatContextDir } from "./chat-context-dir";
 
 export type OnZoomView = (view: { target: ViewTarget; label: string }) => void;
 
@@ -118,37 +118,23 @@ function ChatParagraph({ children }: { children?: React.ReactNode }) {
 
 function makeChatMarkdownComponents(
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
-  { boxSlug, onZoomView }: { boxSlug: string | undefined; onZoomView?: OnZoomView },
+  {
+    boxSlug,
+    contextDir,
+    onZoomView,
+  }: { boxSlug: string | undefined; contextDir: string | undefined; onZoomView?: OnZoomView },
 ): MarkdownComponentOverrides {
+  // `![…](…)` is the embed syntax. An image src embeds an image (chat sizing +
+  // lightbox); any other in-box path embeds that card/file inline via its own
+  // viewer (`mode="chat"` — a compact frame with an open-in-sidebar button).
   function ChatImg({ src, alt }: { src?: string; alt?: string }) {
-    // A video URL renders an embed, mirroring the default `makeImg` path —
-    // chat overrides `Img`, so the detection has to live here too.
     const video = src ? detectVideoEmbed(src) : null;
     if (video !== null) {
       return <VideoEmbed embedUrl={video.embedUrl} title={alt || ""} className="mx-auto" />;
     }
-    const resolved = src ? resolveImageSrc(src, { boxSlug, basePath: undefined }) : "";
-    return <ChatInlineImage src={resolved} alt={alt || ""} />;
-  }
-  function ChatLink({ href, children }: { href?: string; children?: React.ReactNode }) {
-    if (href && href.startsWith("view:")) {
-      const target = parseViewUrl(href);
-      if (isImagePath(target.path)) {
-        const alt = typeof children === "string" ? children : target.path;
-        return <ChatInlineImage src={`${getApiBase()}/files/${target.path}`} alt={alt} />;
-      }
-      if (target.zoom && onZoomView) {
-        const label = typeof children === "string" ? children : target.path;
-        return (
-          <button
-            onClick={() => onZoomView({ target: { ...target, zoom: false }, label })}
-            className="text-primary hover:text-primary/80 underline cursor-pointer"
-          >
-            {children}
-          </button>
-        );
-      }
-      const panelLabel = typeof children === "string" ? children : target.path;
+    if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
+    if (!isExternalUrl(src) && !isImagePath(src)) {
+      const target = resolveContentTarget(contextDir, src);
       return (
         <FileView
           path={target.path}
@@ -157,73 +143,65 @@ function makeChatMarkdownComponents(
           onNavigate={onNavigate}
           params={target.params}
           {...(onZoomView
-            ? { onOpenInPanel: () => onZoomView({ target: { ...target, zoom: false }, label: panelLabel }) }
+            ? { onOpenInPanel: () => onZoomView({ target, label: alt || target.path }) }
             : {})}
         />
       );
     }
-    const isExternal = typeof href === "string" && (href.startsWith("http://") || href.startsWith("https://"));
-    if (isExternal) {
-      return (
-        <a href={href} target="_blank" rel="noopener noreferrer">
-          {children}
-          <ExternalLinkIndicator />
-        </a>
-      );
-    }
-    return <a href={href}>{children}</a>;
+    const resolved = resolveImageSrc(src, { boxSlug, basePath: contextDir });
+    return <ChatInlineImage src={resolved} alt={alt || ""} />;
   }
+  // No `Link` override: the shared `makeLink` (with basePath=contextDir and
+  // onNavigate wired to the companion pane) already renders a plain-path link
+  // that opens in the sidebar on click, an external link, and the retired-`view:`
+  // legacy marker.
   return {
     Para: ChatParagraph as React.ComponentType<Record<string, unknown>>,
     Img: ChatImg as React.ComponentType<Record<string, unknown>>,
-    Link: ChatLink as React.ComponentType<Record<string, unknown>>,
   };
 }
 
-function ExternalLinkIndicator() {
-  return (
-    <svg
-      className="inline-block w-[0.85em] h-[0.85em] ml-0.5 align-[-0.1em] opacity-70"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth={2}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" />
-    </svg>
-  );
-}
-
 /**
- * Render markdown content with prose styling.
+ * Render markdown content with prose styling. Relative link/embed paths resolve
+ * against the chat's working directory (from `useChatContextDir`); box-root-
+ * absolute `/…` paths ignore it. It flows in as the shared renderer's `basePath`.
  */
-export function MarkdownContent({ text, onZoomView }: { text: string; onZoomView?: OnZoomView }) {
+export function MarkdownContent({
+  text,
+  onZoomView,
+}: {
+  text: string;
+  onZoomView?: OnZoomView;
+}) {
   const cleaned = useMemo(
     () => stripStructuredOutputTags(stripSpeechTags(text)),
     [text],
   );
+  const contextDir = useChatContextDir();
+  // `contextDir` is a *directory*, but `resolveRelativePath` treats its base as a
+  // containing file and strips the last segment. A trailing slash makes that
+  // strip a no-op, so a bare `foo.card` resolves to `<contextDir>/foo.card`, not
+  // its parent. Empty/box-root → undefined (resolve against the box root).
+  const basePath = contextDir && contextDir !== "" ? `${contextDir.replace(/\/+$/, "")}/` : undefined;
   const { boxSlug } = useParams({ strict: false });
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
       if (onZoomView) {
-        onZoomView({ target: { ...target, zoom: false }, label: target.path });
+        onZoomView({ target, label: target.path });
       }
     },
     [onZoomView],
   );
   const components = useMemo(
-    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, onZoomView }),
-    [handleNavigate, boxSlug, onZoomView],
+    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, contextDir: basePath, onZoomView }),
+    [handleNavigate, boxSlug, basePath, onZoomView],
   );
 
   if (!cleaned) return null;
 
   return (
     <div className="prose prose-sm max-w-none overflow-hidden">
-      <Markdown components={components} onNavigate={handleNavigate}>{cleaned}</Markdown>
+      <Markdown components={components} onNavigate={handleNavigate} basePath={basePath}>{cleaned}</Markdown>
     </div>
   );
 }

@@ -53,11 +53,11 @@ Each user message is wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard), 
 
 ## Showing things in chat
 
-**Links.** A plain markdown link is often enough — \`[the plan](/store/notes/Plan.doc.card)\` — and the user can click to open it; reach for one instead of re-describing a file in prose. To render a file *inline*, use a view link, preferring a card: \`[Bread](view:store/recipes/Bread.recipe.card)\` renders with the recipe's own viewer. Add \`?zoom\` to open it as a companion panel that stays up while you keep chatting (good for collaborative work). The viewer is chosen by file type; views update live as the file changes.
+**Links.** Reference a file or card by its plain box path — \`[the plan](/store/notes/Plan.doc.card)\`. Clicking it opens the file in the companion pane (a panel beside the chat that stays up while you keep chatting), rendered by the viewer its type gets and updating live as the file changes. Reach for a link instead of re-describing a file in prose. Write box-root-absolute paths (a leading \`/\`); a bare path resolves against the chat's working directory.
 
-**Images.** \`![caption](/store/people/Priya.attach/face.jpg)\` — a leading \`/\` is box-root-absolute; a path relative to the file you're authoring also works. External images work too — hot-link the URL, and if the origin blocks it the renderer retries through the box's image proxy. The caption shows under the image and in full on zoom, so write a real one ("Priya at the 2019 reunion"), not a filename.
+**Embeds.** Prefix a link with \`!\` to render the target *inline* instead of linking to it — the same syntax as an image: \`![Bread](/store/recipes/Bread.recipe.card)\` shows the recipe inline via its own viewer, \`![caption](/store/people/Priya.attach/face.jpg)\` shows the image, \`![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)\` renders a figure (pass parameters in the query string). External images work too — hot-link the URL, and if the origin blocks it the renderer retries through the box's image proxy. Write a real caption ("Priya at the 2019 reunion"), not a filename.
 
-**Custom views** — a \`.tsx\` component that gives a card type a richer interface — are box-building work; reach for the \`views\` skill.
+**Custom views** — a \`.tsx\` component that gives a card type a richer interface — are box-building work; a view is always attached to a card type and selected with \`?view=name\` on the card's path. Reach for the \`views\` skill.
 
 ## Self-notes
 

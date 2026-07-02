@@ -320,14 +320,16 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
       <ViewRenderer
         slug={binding.slug}
         mode={mode === "chat" ? "chat" : "page"}
-        params={{ path }}
+        // Link/embed query params (e.g. `?view=…&k=v`) reach the view; `path`
+        // is the card's own path and is authoritative (can't be clobbered).
+        params={{ ...params, path }}
         {...(reportActivity !== undefined ? { reportActivity } : {})}
         onNavigate={onNavigate}
         renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={onNavigate} />}
       />
     );
     return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
-  }, [path, data, binding, mode, reportActivity, onNavigate]);
+  }, [path, data, binding, mode, reportActivity, onNavigate, params]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) {

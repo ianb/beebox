@@ -1,74 +1,46 @@
 /**
- * Full-page wrapper for a view, rendered at /$boxSlug/views/$viewPath.
+ * Full-page wrapper for a file/card view, rendered at /$boxSlug/views/$viewPath.
  *
- * File paths (containing "/" or a known extension) use FileView with the
- * renderer registry. Plain slugs fall back to ViewRenderer for legacy
- * agent-generated .tsx views.
+ * The splat is always a box path. FileView picks the renderer from the registry
+ * (including a card type's own `rendersCardTypes` view, injected as a
+ * card-attached renderer); `?view=` selects a specific one and other params
+ * pass through to it. There is no card-less "standalone view" — every view is
+ * attached to a card.
  */
 
 import { useMemo } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useParams, useLocation } from "@tanstack/react-router";
 import { parseViewUrl } from "../lib/view-url";
 import { useViewNavigate } from "../hooks/useViewNavigate";
 import { FileView } from "../components/FileView";
-import { ViewRenderer } from "../components/ViewRenderer";
 import { Text } from "../components/ui/Text";
-
-const FILE_EXTENSIONS = new Set([
-  ".md", ".card", ".txt", ".json", ".xml", ".html", ".csv", ".tsv", ".yaml", ".yml",
-  ".pdf",
-  ".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".bmp",
-]);
-
-function looksLikeFilePath(value: string): boolean {
-  if (value.includes("/")) return true;
-  const dotIdx = value.lastIndexOf(".");
-  if (dotIdx > 0 && FILE_EXTENSIONS.has(value.slice(dotIdx))) return true;
-  return false;
-}
 
 export function ViewPage() {
   const { _splat: splat } = useParams({ strict: false });
+  const location = useLocation();
   const handleNavigate = useViewNavigate();
 
-  const parsed = useMemo(() => {
+  // Key on the query string too: navigating `?view=A` -> `?view=B` at the same
+  // path must recompute the viewer/params, not reuse a splat-only memo.
+  const target = useMemo(() => {
     if (!splat) return null;
-    const qs = window.location.search;
-    const raw = qs ? `${splat}${qs}` : splat;
-    if (looksLikeFilePath(splat)) {
-      return { type: "file" as const, target: parseViewUrl(raw) };
-    }
-    // Plain slug — legacy custom view
-    const params: Record<string, string> = {};
-    const search = new URLSearchParams(window.location.search);
-    for (const [key, value] of search.entries()) {
-      params[key] = value;
-    }
-    return { type: "slug" as const, slug: splat, params };
-  }, [splat]);
+    const qs = location.searchStr;
+    return parseViewUrl(qs ? `${splat}${qs}` : splat);
+  }, [splat, location.searchStr]);
 
-  if (!parsed) {
+  if (!target) {
     return <Text as="div" tone="muted" className="p-8">No view specified.</Text>;
   }
 
   return (
     <div className="p-4">
-      {parsed.type === "file" ? (
-        <FileView
-          path={parsed.target.path}
-          mode="page"
-          rendererName={parsed.target.viewer}
-          onNavigate={handleNavigate}
-        />
-      ) : (
-        <ViewRenderer
-          slug={parsed.slug}
-          mode="page"
-          params={parsed.params}
-          onNavigate={handleNavigate}
-          renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={handleNavigate} />}
-        />
-      )}
+      <FileView
+        path={target.path}
+        mode="page"
+        rendererName={target.viewer}
+        params={target.params}
+        onNavigate={handleNavigate}
+      />
     </div>
   );
 }

@@ -15,6 +15,7 @@ export { wakeupCommand } from "./wakeup.js";
 export { trashCommand } from "./trash.js";
 export { moveCommand } from "./move.js";
 export { relinkCommand } from "./relink.js";
+export { migrateViewLinksCommand } from "./migrate-view-links.js";
 export { procedureCommand } from "./procedure.js";
 export { transcribeCapturesCommand } from "./transcribe-captures.js";
 export { assembleTimelineCommand } from "./assemble-timeline.js";

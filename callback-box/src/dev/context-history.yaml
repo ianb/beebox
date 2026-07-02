@@ -62,6 +62,13 @@ test1:
       peak: 42922
       added: 1637
       turns: 3
+    - date: 2026-07-01T21:03:45.410Z
+      boxCommit: 5cbab44bb834402690122d6730177b91081fdee0
+      repoCommit: d36f61e27cc6ae7b17616375f6e2d8f486126f2c
+      initial: 42406
+      peak: 44658
+      added: 2252
+      turns: 3
   courseware-build-a-course:
     - date: 2026-06-24T05:32:02.635Z
       boxCommit: 037033ee77b6a621c9b2a14ba93b2e724ceb9b3b
@@ -293,3 +300,26 @@ test1:
       peak: 48302
       added: 639
       turns: 4
+  chat-link-vs-embed-card:
+    - date: 2026-07-01T21:08:05.697Z
+      boxCommit: 27a3ed2b8e4b1ec8d99187eb684db3fd0ac5b689
+      repoCommit: d36f61e27cc6ae7b17616375f6e2d8f486126f2c
+      initial: 42401
+      peak: 42401
+      added: 0
+      turns: 2
+    - date: 2026-07-01T21:19:09.782Z
+      boxCommit: f034c6a2325cbabafc68afdd0df752f1a7f0a472
+      repoCommit: d36f61e27cc6ae7b17616375f6e2d8f486126f2c
+      initial: 42804
+      peak: 42804
+      added: 0
+      turns: 2
+  views-attach-to-cards:
+    - date: 2026-07-01T21:08:48.821Z
+      boxCommit: ee955cc0c21c357ba41365e024e3e215d2ee170a
+      repoCommit: d36f61e27cc6ae7b17616375f6e2d8f486126f2c
+      initial: 42400
+      peak: 42400
+      added: 0
+      turns: 2
