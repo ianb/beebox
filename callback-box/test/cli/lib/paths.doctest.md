@@ -30,16 +30,25 @@ parseCardName("Meeting_Tomorrow.email-thread.card")
 }
 ```
 
+Positional names (bare `<type>.card` — "the ‹type› of this directory") parse
+with the stem doing double duty as name and type:
+
+```ts
+parseCardName("nav.card")
+=>
+{
+  "name": "nav",
+  "type": "nav"
+}
+```
+
 Returns `null` for strings that aren't valid card filenames:
 
 ```ts
-parseCardName("invalid.card")
-=> null
-
 parseCardName("no-extension")
 => null
 
-parseCardName("only.card")
+parseCardName(".card")
 => null
 ```
 

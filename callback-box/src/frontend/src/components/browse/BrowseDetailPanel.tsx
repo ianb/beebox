@@ -5,6 +5,7 @@
  */
 
 import { Link } from "@tanstack/react-router";
+import { cardTypeFromName } from "@shared/card-name";
 import { href } from "../../lib/routing";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import { FileView } from "../FileView";
@@ -27,9 +28,9 @@ function displayName(path: string): string {
   return path.split("/").pop() ?? path;
 }
 
-/** Card type from a `Name.type.card` path (the enforced naming convention). */
+/** Card type from a card path (nominal or positional naming). */
 function cardTypeFromPath(path: string): string | undefined {
-  return path.match(/\.([^.]+)\.card$/)?.[1];
+  return cardTypeFromName(path);
 }
 
 export function BrowseDetailPanel({

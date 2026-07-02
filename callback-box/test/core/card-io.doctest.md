@@ -63,7 +63,26 @@ JSON.stringify(card.fields["body"])
 => "# Project Notes\n\nBody content goes here.\n"
 ```
 
+## Positional naming: bare `<type>.card` takes its type from the stem
+
+A positional card ("the ‹type› of this directory" — landmarks, briefings,
+nav) has no name segment; the whole stem is the type.
+
+```ts
+const text = "---\ndrive-id: drv-9\ntitle: Directory Doc\n---\nPositional body.\n";
+const card = parseCardText(text, { source: "doc.card", schemas });
+card.schema.type
+=> doc
+
+card.fields["title"]
+=> Directory Doc
+```
+
 ## Missing `type` field surfaces a clear error
+
+A single-dot filename is positional, so its "type" is the stem — unknown
+stems fail schema lookup rather than name parsing. A name that fits neither
+form reports the naming convention.
 
 ```ts
 const tryParse = (text: string, source: string): string => {
@@ -71,7 +90,10 @@ const tryParse = (text: string, source: string): string => {
   catch (e) { return (e as Error).message; }
 };
 tryParse("---\nsubject: nope\n---\n", "broken.card")
-=> broken.card: cannot determine card type — filename must match Foo.<type>.card
+=> broken.card: no schema registered for type "broken"
+
+tryParse("---\nsubject: nope\n---\n", "not-a-card")
+=> not-a-card: cannot determine card type — filename must match Foo.<type>.card or <type>.card
 ```
 
 ## Round-trip: serialize then parse returns the same fields

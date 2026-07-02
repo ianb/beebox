@@ -15,6 +15,15 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar.js";
+
+// The connector only writes events inside its sync window (now-30d .. now+90d),
+// so fixture dates are computed relative to the test run, never pinned — pinned
+// dates rot out of the window as real time passes.
+const DAY_MS = 24 * 3600 * 1000;
+const tomorrow = new Date(Date.now() + DAY_MS).toISOString().slice(0, 10);
+const dayAfter = new Date(Date.now() + 2 * DAY_MS).toISOString().slice(0, 10);
+const tomorrowCompact = tomorrow.replaceAll("-", "");
+const dayAfterCompact = dayAfter.replaceAll("-", "");
 ```
 
 ## A timezone-bearing event round-trips through ICS
@@ -38,8 +47,8 @@ const calendar = createFakeGoogleCalendar({
       id: "evt-meeting",
       status: "confirmed",
       summary: "Weekly sync",
-      start: { dateTime: "2026-06-01T14:00:00-04:00", timeZone: "America/New_York" },
-      end: { dateTime: "2026-06-01T15:00:00-04:00", timeZone: "America/New_York" },
+      start: { dateTime: `${tomorrow}T14:00:00-04:00`, timeZone: "America/New_York" },
+      end: { dateTime: `${tomorrow}T15:00:00-04:00`, timeZone: "America/New_York" },
       recurrence: ["RRULE:FREQ=WEEKLY;BYDAY=MO"],
     },
   ],
@@ -116,8 +125,8 @@ await box.seed("store/calendar/local-new.ics",
   "BEGIN:VEVENT\r\n" +
   "UID:local-1\r\n" +
   "SUMMARY:Locally created\r\n" +
-  "DTSTART;VALUE=DATE:20260601\r\n" +
-  "DTEND;VALUE=DATE:20260602\r\n" +
+  `DTSTART;VALUE=DATE:${tomorrowCompact}\r\n` +
+  `DTEND;VALUE=DATE:${dayAfterCompact}\r\n` +
   "END:VEVENT\r\n" +
   "END:VCALENDAR\r\n",
 );
@@ -166,8 +175,8 @@ const calendar = createFakeGoogleCalendar({
       status: "confirmed",
       summary: "Lunch",
       updated: "2026-06-01T10:00:00Z",
-      start: { dateTime: "2026-06-03T12:00:00-04:00", timeZone: "America/New_York" },
-      end: { dateTime: "2026-06-03T13:00:00-04:00", timeZone: "America/New_York" },
+      start: { dateTime: `${tomorrow}T12:00:00-04:00`, timeZone: "America/New_York" },
+      end: { dateTime: `${tomorrow}T13:00:00-04:00`, timeZone: "America/New_York" },
     },
   ],
 });
@@ -222,8 +231,8 @@ const calendar = createFakeGoogleCalendar({
       status: "confirmed",
       summary: "Standup",
       updated: "2026-06-01T10:00:00Z",
-      start: { dateTime: "2026-06-02T09:00:00-04:00", timeZone: "America/New_York" },
-      end: { dateTime: "2026-06-02T09:15:00-04:00", timeZone: "America/New_York" },
+      start: { dateTime: `${tomorrow}T09:00:00-04:00`, timeZone: "America/New_York" },
+      end: { dateTime: `${tomorrow}T09:15:00-04:00`, timeZone: "America/New_York" },
     },
   ],
 });
