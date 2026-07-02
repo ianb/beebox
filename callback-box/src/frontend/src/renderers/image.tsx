@@ -96,16 +96,19 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   // surfaces) keep the full card.
   if (mode === "embed") {
     const embedCaption = caption && caption.trim() !== "" ? caption : card.description ?? undefined;
+    // Centered like a hot-linked chat image (a captioned Image is an
+    // inline-flex figure, so it needs a flex parent to center — mx-auto can't).
     return (
-      <Image
-        src={imageSrc}
-        alt={caption ?? altText}
-        size="chat"
-        lightbox
-        rotation={card.rotation}
-        caption={embedCaption}
-        className="mx-auto my-2"
-      />
+      <Row justify="center" className="my-2">
+        <Image
+          src={imageSrc}
+          alt={caption ?? altText}
+          size="chat"
+          lightbox
+          rotation={card.rotation}
+          caption={embedCaption}
+        />
+      </Row>
     );
   }
 
