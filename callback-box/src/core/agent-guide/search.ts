@@ -7,7 +7,7 @@
 
 import { SECTION, xref } from "./sections.js";
 
-export function searchSection(): string[] {
+export function searchSection(): string {
   return `## Searching the Box
 
 \`cb search "<query>"\` is full-text search over the box's cards — prefer it over
@@ -37,7 +37,7 @@ excerpt — so you see both *which* card and *where* in it. A truncated run repo
 
 To make a card findable in the first place, write it a good \`contains:\` — the
 rule and the \`cb contains\` worklist commands are in ${xref(SECTION.ABOUT_CARDS)}.
-`.split("\n");
+`;
 }
 
 /** Appended to every searchable card type's docs/generated/card-<type>.md. */

@@ -7,7 +7,7 @@
 
 import { SECTION, xref } from "./sections.js";
 
-export function keyCommandsSection(): string[] {
+export function keyCommandsSection(): string {
   return `## Key Commands
 
 Card operations — \`cb create\` / \`cb mv\` / \`cb rm\` — live in ${xref(SECTION.ABOUT_CARDS)}.
@@ -47,5 +47,5 @@ appear here so you recognize them in \`git log\` and health output):
 - \`cb finalize\` — flush outbound cards in \`box/output/\`.
 - \`cb health\` — scheduled-task health (failing / overdue / blocked tasks +
   scheduler liveness).
-`.split("\n");
+`;
 }
