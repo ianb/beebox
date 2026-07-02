@@ -323,3 +323,11 @@ test1:
       peak: 42400
       added: 0
       turns: 2
+  source-anchor-span-not-quote:
+    - date: 2026-07-02T23:31:11.469Z
+      boxCommit: c8a50074fc26b0495a68caf6d2cc8f19d2820988
+      repoCommit: 0fe4b02c58cbeb5b76745e8609eff13d442f5945
+      initial: 41867
+      peak: 41867
+      added: 0
+      turns: 1

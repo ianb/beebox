@@ -68,15 +68,18 @@ The two tags compose to express "verbatim from there":
 {% /source %}
 \`\`\`
 
-Outer tag pins the origin; inner tag marks that the words are exact.
-Bare \`{% source %}\` without an inner \`{% quote %}\` is paraphrased /
-summarized / inferred content with a citation.
+Outer tag pins the origin; inner tag marks that the words are exact. Use the
+inner \`{% quote %}\` **only** for the *user's own words*, never for a document
+excerpt you're pointing at — that goes in the source body (see anchoring, next).
+A bare \`{% source %}\` (no inner \`{% quote %}\`) holds content *from* the source in
+its body; \`usage\` says how faithful — paraphrase, summary, or a verbatim excerpt.
 
 ### Anchoring an existing span (\`pos\`, \`version\`, \`href\`)
 
-When you're citing a *specific span of a specific version* of a file —
-as in a commentary card built from selections — \`{% source %}\` also
-carries:
+When you're citing a *specific span of a specific version* of a file — as in a
+commentary card built from selections — the span itself is the \`{% source %}\`
+**body**, verbatim (escaped to valid Markdoc), *not* an inner \`{% quote %}\`. The
+anchor also carries:
 
 - \`pos\` — a rough locator. **Identical in form and meaning to the \`pos\` on
   \`<user-selection>\` and \`<card-activity>\`** — same grammar (section, nearest
