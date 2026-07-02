@@ -583,6 +583,12 @@ Consider a `docs/cli-design.md` that codifies these so new commands have a check
 
 ## The interface itself as cards
 
+**Superseded by `docs/plans/interface-as-cards.md`** (2026-07 design
+exploration): subject/view/binding factoring, query vs. instrument cards, the
+can't-break resolver invariant, beside-claims/inside-annotations, `?create`,
+chat husks + the companion slot + frame bus/callouts, and a per-surface
+conversion map. The original sketch is kept below for the record.
+
 A wild, probably-bad idea worth keeping on the table: what if interface surfaces —
 the dashboard, history, maybe the questions queue or a landmark view — were *cards*
 rather than bespoke React pages? The system already treats the filesystem as state
