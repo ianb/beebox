@@ -149,6 +149,7 @@ export const adminRouter = router({
         boxSlug: ctx.boxSlug,
         allowedEmails: (config.allowedEmails ?? []) as string[],
         publicUrl: (config.publicUrl ?? null) as string | null,
+        ownerEmail: process.env.CB_OWNER_EMAIL || null,
         googleServices: (config.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
     } catch (e) {
@@ -159,6 +160,7 @@ export const adminRouter = router({
         boxSlug: ctx.boxSlug,
         allowedEmails: [] as string[],
         publicUrl: null as string | null,
+        ownerEmail: process.env.CB_OWNER_EMAIL || null,
         googleServices: {} as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
     }
@@ -207,7 +209,16 @@ export const adminRouter = router({
     }),
 
   updateBoxConfig: ownerProcedure
-    .input(z.object({ allowedEmails: z.array(z.string()) }))
+    .input(
+      z
+        .object({
+          allowedEmails: z.array(z.string()).optional(),
+          googleServices: z.record(z.string(), z.boolean()).optional(),
+        })
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined, {
+          message: "At least one of allowedEmails or googleServices is required",
+        }),
+    )
     .mutation(async ({ input, ctx }) => {
       const configPath = path.join(ctx.boxRoot, "config/box.json");
       let existing: Record<string, unknown> = {};
@@ -219,13 +230,27 @@ export const adminRouter = router({
         }
       }
 
-      existing.allowedEmails = input.allowedEmails.filter(
-        (e) => typeof e === "string" && e.includes("@")
-      );
+      const changed: string[] = [];
+      if (input.allowedEmails) {
+        existing.allowedEmails = input.allowedEmails.filter(
+          (e) => typeof e === "string" && e.includes("@"),
+        );
+        changed.push("allowedEmails");
+      }
+      if (input.googleServices) {
+        existing.googleServices = input.googleServices;
+        changed.push("googleServices");
+      }
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
+      await stageFiles(ctx.boxRoot, ["config/box.json"]);
+      await commit(ctx.boxRoot, { message: `Update box config: ${changed.join(", ")}` });
 
-      return { success: true, allowedEmails: existing.allowedEmails as string[] };
+      return {
+        success: true,
+        allowedEmails: (existing.allowedEmails ?? []) as string[],
+        googleServices: (existing.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
+      };
     }),
 
   claudeStatus: ownerProcedure.query(async ({ ctx }) => {
