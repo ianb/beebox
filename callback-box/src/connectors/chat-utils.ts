@@ -260,8 +260,8 @@ export interface UpdatePersonResult {
  * Telegram correspondent triggers a broken-reference at validate time.
  *
  * With `force: true`, an existing person card has its connector-derived
- * identity (`name`) refreshed in place — agent-owned fields (status, contact,
- * role, aliases, contains, body, …) are preserved untouched. Username and
+ * identity (`name`) refreshed in place — agent-owned fields (status, email,
+ * phone, address, role, aliases, contains, body, …) are preserved untouched. Username and
  * numeric ids have no field in the person-card schema; they live in the
  * sibling `<connector>.json` metadata, which is always kept current.
  */

@@ -23,7 +23,9 @@ export const PersonSchema: CardSchema = cardSchema("person", {
     status: PersonStatus.default("active"),
     ...namedEntityFields,
     role: z.string().optional(),
-    contact: z.string().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    address: z.string().optional(),
     body: body(z.string()),
   },
   instructions: `# Person Cards
@@ -40,10 +42,13 @@ name in the \`First_Last\` form ABOUT_CARDS describes, not a slug or alias.
   uses these names (e.g., ["Dad", "Papa"]).
 - \`role:\` — Relationship or function (e.g., "Ledger subject —
   boxholder's father", "Financial advisor").
-- \`contact:\` — Freeform contact info (phone, email, address).
+- \`email:\`, \`phone:\`, \`address:\` — contact details, each optional.
+  One value apiece; put a second email, a fax, or any other channel in
+  the body notes.
 - \`status:\` — \`active\` (default), \`inactive\`, or \`archived\`.
 
-**Body (markdown):** freeform notes / context about the person.
+**Body (markdown):** freeform notes / context about the person — and the
+home for contact details that don't fit the three fields above.
 
 **When to create a person card:**
 - When adding someone to a briefing's \`key-people:\` — always create
@@ -58,7 +63,9 @@ export interface PersonFields {
   name: string;
   aliases?: string[];
   role?: string;
-  contact?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
   body: string;
 }
 
