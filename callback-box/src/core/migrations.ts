@@ -81,6 +81,8 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "normalize-ref-keys", script: "scripts/migrate/normalize-ref-keys.ts" },
   // Rename the person card `called` field to the standard `aliases`.
   { name: "person-aliases",    script: "scripts/migrate/person-aliases.ts" },
+  // Retype recipe `source`/`hero-image` from freeform strings to typed objects.
+  { name: "recipe-source-shape", script: "scripts/migrate/recipe-source-shape.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
