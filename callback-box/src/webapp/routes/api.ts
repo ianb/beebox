@@ -13,10 +13,7 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getSystemState } from "../../core/state.js";
-import { generateContext } from "../context.js";
 import { runHealthChecks } from "../trpc/routers/health.js";
-import { getLog } from "../../cli/lib/git.js";
 import type { EventBus } from "../../core/event-bus.js";
 import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
@@ -40,72 +37,15 @@ export async function registerApiRoutes(
   options: RegisterApiRoutesOptions,
 ): Promise<void> {
   const { boxRoot, eventBus } = options;
-  // GET /api/health - Health check (permissions, API keys)
+  // GET /api/health - Health check (permissions, API keys). Stays raw: hit by
+  // infra/uptime monitors that aren't tRPC clients. The summary endpoints
+  // (status/inbox/questions/activity/context) moved to the `status` tRPC router.
   server.get("/api/health", async () => {
     const checks = await runHealthChecks(boxRoot);
     const hasErrors = checks.some((c) => !c.ok && c.severity === "error");
     const hasWarnings = checks.some((c) => !c.ok && c.severity === "warning");
     const status = hasErrors ? "unhealthy" : hasWarnings ? "degraded" : "healthy";
     return { status, checks };
-  });
-
-  // GET /api/status - System state summary
-  server.get("/api/status", async () => {
-    const state = await getSystemState(boxRoot);
-    return {
-      boxRoot: state.boxRoot,
-      boxVersion: state.boxVersion,
-      created: state.created,
-      git: state.git,
-      counts: {
-        inbox: state.inbox.length,
-        questions: state.questions.length,
-        pendingQuestions: state.questions.filter(q => q.status === "pending").length,
-      },
-    };
-  });
-
-  // GET /api/inbox - List inbox cards
-  server.get("/api/inbox", async () => {
-    const state = await getSystemState(boxRoot);
-    return {
-      items: state.inbox,
-    };
-  });
-
-  // GET /api/questions - List question cards
-  server.get("/api/questions", async () => {
-    const state = await getSystemState(boxRoot);
-    const context = await generateContext(boxRoot);
-
-    // Enrich questions with prompt data from context
-    const enriched = state.questions.map(q => {
-      const pending = context.pendingQuestions.find(p => p.path === q.relativePath);
-      return {
-        ...q,
-        prompt: pending?.prompt,
-        options: pending?.options,
-      };
-    });
-
-    return {
-      items: enriched,
-    };
-  });
-
-  // GET /api/activity - Recent git commits (renamed from /api/log to avoid ad blockers)
-  server.get<{ Querystring: { count?: string } }>("/api/activity", async (request) => {
-    const count = parseInt(request.query.count ?? "10", 10);
-    const entries = await getLog(boxRoot, count);
-    return {
-      entries,
-    };
-  });
-
-  // GET /api/context - Agent context
-  server.get("/api/context", async () => {
-    const context = await generateContext(boxRoot);
-    return context;
   });
 
   // /api/browse/* — one-level directory listing

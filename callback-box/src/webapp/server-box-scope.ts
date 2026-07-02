@@ -13,7 +13,6 @@ import { registerApiRoutes } from "./routes/api.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
-import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
@@ -170,7 +169,6 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
-  await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
   await registerSchedulerRoutes(instance, box.boxRoot);
   await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
   // Wrap box admin routes in their own sub-scope so the owner-check
