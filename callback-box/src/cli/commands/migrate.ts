@@ -24,6 +24,7 @@ import {
 } from "../../core/migrations.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { installProcedures } from "../../core/box-defaults.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -193,6 +194,21 @@ export const migrateCommand = new Command("migrate")
     if (pending.length === 0) {
       console.log("Nothing to do — manifest is up to date.");
       return;
+    }
+
+    // A procedure-kind migration needs its procedure definition present in the
+    // box (config/procedures/). A box provisioned before that migration existed
+    // won't have it — the migration would fail hard with ENOENT and jam the whole
+    // queue behind it. Install current procedures first so it can run. Targeted,
+    // not a full `cb init`: this writes only procedure cards, which land in the
+    // working tree for review like every other migrate change (no doc
+    // regeneration, no auto-commit — migrate's contract is preserved). Box-modified
+    // procedure copies are parked, not clobbered (see installProcedures).
+    if (pending.some(isProcedureMigration)) {
+      const provisioned = await installProcedures(boxRoot);
+      if (provisioned.length > 0) {
+        console.log(`Provisioned procedure definitions for pending procedure migration(s): ${provisioned.join(", ")}\n`);
+      }
     }
 
     console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);
