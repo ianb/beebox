@@ -231,6 +231,29 @@ reconciled against *current* main, cited inline.
     pointing to a `SKILL.md` by path double-loads it when the skill is also
     invoked. So agent-facing prompts reference a skill by *capability/name*, never
     by path (the chat prompt's views pointer follows this).
+  - **Instruction-duplication cleanup** (Track 6, non-field). Six schema
+    instruction sites that re-taught ABOUT_CARDS concepts now defer: doc's "No
+    timestamps" section deleted; record's ref guidance reframed (defers semantics,
+    keeps the type-specific "absolute reads clearest"); feedback's "edition
+    element" jargon reworded; image/audio attach re-explanation trimmed;
+    `CONTAINS_DOC_APPENDIX` cross-references instead of duplicating the rule.
+  - **Schema field redesigns** (Track 6, the migration-bearing part). Grounded in
+    real box data first (which reframed the plan): **recipe** `source:` → typed
+    `{label?, href?, ref?}` and `hero-image:` → `{ref? | href?}` (migration
+    `recipe-source-shape`; effectively insurance — no real box uses the frontmatter
+    fields). **person** `contact:` freeform string → structured `email:` / `phone:`
+    / `address:` scalars (migration `person-contact-split` — conservative and
+    noisy: structures what parses cleanly, preserves fax / second emails /
+    annotations / biographical misuse verbatim in a `## Contact` body note with a
+    per-card warning; **validated on ledger-copy + test1**, zero loss, zero
+    mis-filing; search indexer updated to the three fields). **person**
+    `boxholder:` boolean added (additive, no migration) — the participant/self
+    question resolved: no "self" (the box stands apart from any individual),
+    boxholder-ness is the meaningful *plural-capable* flag. Both migrations
+    registered append-only; they apply on a box's next `cb migrate`, the person
+    one leaving review notes.
+    - *Open follow-on:* `personality.boxholder` still models a single boxholder —
+      reconcile with the new plural person-card flag separately.
 
 Everything else below is still future work.
 
