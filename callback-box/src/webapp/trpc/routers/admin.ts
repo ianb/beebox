@@ -8,12 +8,8 @@ import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
-
-function baseServerUrl(publicUrl: string): string {
-  const url = new URL(publicUrl);
-  url.pathname = url.pathname.replace(/\/[^/]+\/?$/, "");
-  return url.origin + url.pathname;
-}
+import { baseServerUrl } from "../../base-server-url.js";
+import { googleAdminProcedures } from "./admin-google.js";
 
 /**
  * Per-box admin router (Telegram, box config).
@@ -252,6 +248,8 @@ export const adminRouter = router({
         googleServices: (existing.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
     }),
+
+  ...googleAdminProcedures,
 
   claudeStatus: ownerProcedure.query(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
