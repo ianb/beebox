@@ -147,7 +147,7 @@ function runFakeStream(
  * the session-id init, live text deltas, the final assistant blocks, and the
  * terminal result.
  */
-function handleTurnMessage(
+export function handleTurnMessage(
   msg: ChatMessage,
   ctx: {
     sessionInput: string;
@@ -188,7 +188,14 @@ function handleTurnMessage(
     if (content) {
       for (const block of content) {
         if (block.type === "text" && block.text) {
-          // Skip text already accumulated via stream_event deltas.
+          // Skip text already accumulated via stream_event deltas. `sawTextPartial`
+          // is scoped to the CURRENT block (reset below): the SDK emits one
+          // assistant message per content block, and a streamed block's deltas
+          // always arrive immediately before that block's own assistant frame. So
+          // the latch is true here only when *this* block streamed — an atomic
+          // block (post-tool text/embeds delivered with no deltas) finds it false
+          // and is surfaced. A turn-global latch dropped every atomic block after
+          // the first streamed one (the "only the last block renders" bug).
           if (state.sawTextPartial) continue;
           sendBack({ type: "STREAM_TEXT", text: block.text });
         } else if (block.type === "tool_use") {
@@ -205,6 +212,9 @@ function handleTurnMessage(
         }
       }
     }
+    // One block per assistant frame: clear the latch so the next block's deltas
+    // (if any) re-arm it, and an atomic next block isn't mistaken for a duplicate.
+    state.sawTextPartial = false;
     return;
   }
 
