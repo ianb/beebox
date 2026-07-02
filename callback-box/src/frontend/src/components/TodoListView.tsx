@@ -12,6 +12,7 @@
  * because the bespoke round-checkbox + status look is appearance-heavy.
  */
 
+import { isRecord } from "../lib/is-record";
 import { Dropdown, MenuItem } from "./ui/Dropdown";
 import { cbSource, cbSourceItem } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
@@ -39,10 +40,6 @@ interface TodoListInfo {
   counts: { pending: number; done: number; cancelled: number; deferred: number };
 }
 
-/** Frontmatter arrives over the wire as untyped JSON; narrow before reading. */
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
 
 function stringField(record: Record<string, unknown>, key: string): string | undefined {
   const value = record[key];

@@ -9,21 +9,11 @@ import { isExternalUrl, resolveImageSrc } from "../../lib/view-url";
 import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat-features";
-import { parseSelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
+import { entrySelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
 export type { SelfNoteInfo };
-
-function entrySelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
-  if (entry.type !== "user") return null;
-  for (const block of entry.content) {
-    if (block.type !== "text") continue;
-    const notes = parseSelfNotes(block.text || "");
-    if (notes) return notes;
-  }
-  return null;
-}
 
 /**
  * Strip system-injected tags from user message text for display.

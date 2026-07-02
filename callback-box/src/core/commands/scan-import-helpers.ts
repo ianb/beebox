@@ -9,6 +9,7 @@
  * place.
  */
 
+import { sleep } from "../../lib/sleep.js";
 import {
   analyzeScanBatchWithGemini,
   type RawScanAnalysis,
@@ -159,9 +160,6 @@ function isTransientGeminiError(err: unknown): boolean {
   );
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 interface RunOneBatchArgs {
   apiKey: string;

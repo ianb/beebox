@@ -70,16 +70,6 @@ function scanJsonSpan(text: string, start: number): unknown {
   return undefined;
 }
 
-/**
- * Drop env entries with undefined values to satisfy Record<string, string>.
- */
-export function dropUndefined(env: Record<string, string | undefined>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(env)) {
-    if (v !== undefined) out[k] = v;
-  }
-  return out;
-}
 
 /**
  * Turn a raw `AgentResult` from a structured run into a validated

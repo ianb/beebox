@@ -16,6 +16,7 @@
  * id is appended to `chat-session-history.json`.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./chat-session.js";
 import {
@@ -70,9 +71,7 @@ const DEFAULT_MAX_LIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_CLEANUP_INTERVAL_MS = 60 * 1000;
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSessionRegistry:${context}]`, ...args);
-}
+const log = makeLog("ChatSessionRegistry");
 
 export class ChatSessionRegistry extends EventEmitter {
   private readonly boxRoot: string;

@@ -2,9 +2,9 @@
  * Directory and children listing for the map refresh precheck.
  *
  * The filesystem/git walking half of the precheck: which directories deserve
- * a MAP.md (`listMappableDirs`), whether a MAP.md exists (`fileExists`), and
- * the immediate-children listings at a commit (`listChildrenAtCommit`) or on
- * disk (`listChildrenOnDisk`) that the diff in `precheck.ts` compares.
+ * a MAP.md (`listMappableDirs`) and the immediate-children listings at a commit
+ * (`listChildrenAtCommit`) or on disk (`listChildrenOnDisk`) that the diff in
+ * `precheck.ts` compares.
  *
  * Depends only on `precheck-ignore.ts` (a leaf), never back on `precheck.ts`.
  */
@@ -75,18 +75,6 @@ export async function listMappableDirs(
 
   await walk("");
   return result.toSorted();
-}
-
-export async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    // fs.access throws iff the path is inaccessible/absent — that is exactly
-    // the "false" answer this predicate exists to report; the error carries
-    // no information beyond that.
-    return false;
-  }
 }
 
 interface ListChildrenAtCommitOptions {

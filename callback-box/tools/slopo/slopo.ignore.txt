@@ -1,0 +1,33 @@
+# Cluster hashes reviewed and dismissed. One hash per line.
+#
+# A hash covers each unit's code body and its path relative to the index root.
+# It changes when the code or that path changes, so the cluster re-surfaces.
+# Re-indexing from a different root shifts every path, changing the hashes —
+# always run slopo from callback-box/tools/slopo (see slopo.conf.yaml).
+#
+# Dismissed here = reviewed and judged NOT worth consolidating (trivial
+# one-liners, semantic false positives, or duplicates that can't share a home
+# across a layer boundary). Real-but-unaddressed duplicates are left OUT of this
+# list so they stay visible in the report.
+
+# Trivial sort/predicate one-liners — idiomatic; a shared helper would cost more
+# indirection than the duplication.
+#   (a, b) => b.mtime.getTime() - a.mtime.getTime()
+fd250d1a105d
+#   (a, b) => a.name.localeCompare(b.name)
+fa2966a71e88
+#   (c) => !c.ok && c.severity === "error" / "warning"
+691165caa6af
+#   (e) => e.isDirectory() && e.name === attachDirName
+203ce9eab2dd
+#   (e) => typeof e === "string" && e.includes("@")
+2ec9f692bea8
+
+# Semantic false positive: the two arrows are OPPOSITE predicates (firesAt > now
+# vs <= now); embeddings read them as near-identical but they are not.
+c7659e387a91
+
+# Real near-duplicate, but the two isRecord copies straddle the backend/frontend
+# layer boundary (core/card-io pulls in node deps, so the frontend can't import
+# it). Kept as two intentional copies; reviewed, won't-fix.
+78711c873e09

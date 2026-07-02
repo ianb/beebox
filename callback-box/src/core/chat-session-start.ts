@@ -8,6 +8,7 @@
  * value back, leaving the instance to store it.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import * as path from "node:path";
 import { getDirectoryForSession } from "./chat-session-history.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
@@ -28,9 +29,7 @@ import type { FeatureStore } from "./chat-session-features.js";
 import type { ChatBackendStartOptions, ChatContentBlock } from "../services/claude-chat.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSession:${context}]`, ...args);
-}
+const log = makeLog("ChatSession");
 
 /** The pieces of ChatSession state these helpers read or update. */
 interface StartContext {

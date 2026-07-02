@@ -15,6 +15,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import { fileExists } from "../lib/file-exists.js";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -27,16 +28,6 @@ const CONFIG_DIR = path.join(os.homedir(), ".config/cb");
 const CONFIG_FILE = path.join(CONFIG_DIR, "boxes.json");
 const LEGACY_CONFIG_FILE = path.join(CONFIG_DIR, "scheduler.json");
 
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    // access() throws when the path is absent or unreadable; for an
-    // existence probe, both mean "not there" — no info to log.
-    return false;
-  }
-}
 
 /**
  * Read the manifest. Falls back to the legacy scheduler.json on first

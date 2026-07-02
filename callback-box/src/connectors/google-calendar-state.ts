@@ -7,7 +7,6 @@
  * module: depends only on fs, the calendar service, and transient-state.
  */
 
-import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { HTTPError } from "ky";
@@ -38,11 +37,6 @@ export interface CalendarState {
 /** Get filename from eventFiles entry (handles legacy string format) */
 export function getFilename(entry: string | EventFileEntry): string {
   return typeof entry === "string" ? entry : entry.filename;
-}
-
-/** Short content hash for detecting local edits to .ics files */
-export function contentHash(content: string): string {
-  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
 
 export function calendarStatePath(boxRoot: string): string {

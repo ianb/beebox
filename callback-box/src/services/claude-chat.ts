@@ -26,6 +26,7 @@ import {
 } from "@anthropic-ai/claude-agent-sdk";
 import { cardValidatorHook, gitMvNudgeHook } from "../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
+import { dropUndefined } from "../lib/drop-undefined.js";
 import { createAsyncIterableQueue } from "./claude-chat-queue.js";
 
 // Fake implementation lives in a sibling; re-exported here so the public
@@ -108,14 +109,6 @@ export interface ChatBackend {
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
-
-function dropUndefined(env: Record<string, string | undefined>): Record<string, string> {
-  const out: Record<string, string> = {};
-  for (const [k, v] of Object.entries(env)) {
-    if (v !== undefined) out[k] = v;
-  }
-  return out;
-}
 
 /**
  * Build SDK Options from a ChatBackendStartOptions for either `query()` or

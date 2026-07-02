@@ -15,10 +15,10 @@ import {
   GitCommandError,
   NoPathsError,
   isIndexLockError,
-  sleep,
   unstageOversizedBlobs,
   LOG_FORMAT,
 } from "./git-internal.js";
+import { sleep } from "../../lib/sleep.js";
 import type { GitLogFormat } from "./git-internal.js";
 import { parseTrailers } from "./git-trailers.js";
 
