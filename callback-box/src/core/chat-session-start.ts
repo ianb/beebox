@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { getDirectoryForSession } from "./chat-session-history.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
-import { composeSendSnapshot } from "./session-context.js";
+import { composeSendSnapshot, type HealthGate } from "./session-context.js";
 import { renderActivityChildren } from "./chat-card-activity.js";
 import {
   CHAT_SYSTEM_PROMPT,
@@ -133,10 +133,11 @@ export async function buildBackendStartOptions(
  */
 export async function composeTurnContent(
   boxRoot: string,
-  { rawInput, features, sessionStart }: {
+  { rawInput, features, sessionStart, healthGate }: {
     rawInput: ChatSendInput;
     features: FeatureStore;
     sessionStart: boolean;
+    healthGate?: HealthGate;
   },
 ): Promise<ChatContentBlock[]> {
   await features.ensureLoaded();
@@ -157,6 +158,7 @@ export async function composeTurnContent(
     ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
     ...(activityChildren !== "" ? { activityChildren } : {}),
+    ...(healthGate !== undefined ? { healthGate } : {}),
   });
   const input: ChatSendInput = {
     ...rawInput,

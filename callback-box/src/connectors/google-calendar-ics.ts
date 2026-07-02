@@ -152,6 +152,15 @@ function generateVtimezone(tzid: string): ICAL.Component {
 }
 
 /**
+ * Serialized VTIMEZONE block for an IANA timezone name — for embedding in
+ * generated .ics examples (e.g. the box calendar skill), so an agent can copy
+ * a correct block for the box's own zone instead of hand-writing DST rules.
+ */
+export function vtimezoneBlock(tzid: string): string {
+  return generateVtimezone(tzid).toString();
+}
+
+/**
  * Set a datetime property with timezone on a VEVENT component.
  * Parses local time from the ISO string and sets TZID parameter.
  */

@@ -1,7 +1,6 @@
 /**
- * Briefing vocabulary: the five tags that replaced the briefing
- * schema's old YAML frontmatter fields. Reference for agents editing
- * briefings.
+ * Briefing vocabulary: the five body tags a briefing card is written in.
+ * Reference for agents editing briefings.
  */
 
 export function briefingTagsSection(): string[] {
@@ -9,8 +8,8 @@ export function briefingTagsSection(): string[] {
     "## Briefing Tags",
     "",
     "Briefing cards (`*.briefing.card`) carry their semantic content in",
-    "the body as Markdoc tags — the frontmatter is now just `type:",
-    "briefing`. Five tags cover the briefing vocabulary:",
+    "the body as Markdoc tags (the frontmatter carries nothing beyond the",
+    "shared envelope). Five tags cover the briefing vocabulary:",
     "",
     "- `{% purpose %}what this box is for{% /purpose %}` — block. One",
     "  per briefing; required at the box root.",
@@ -33,10 +32,9 @@ export function briefingTagsSection(): string[] {
     "\"Finances,\" general notes — use plain markdown headings and",
     "paragraphs. Don't invent a tag for everything.",
     "",
-    "When you edit a briefing, the compiled output that lands in",
-    "`@`-included CLAUDE.md uses the same `**Label:** …` shape the",
-    "old structured compiler produced, so existing agent expectations",
-    "carry forward. The body-side tags are the source of truth.",
+    "The briefing card is the source of truth; `cb init` compiles it",
+    "into the `@`-included CLAUDE.md. Edit the card, not the compiled",
+    "output.",
     "",
   ];
 }

@@ -9,7 +9,9 @@ attributes serialize into the tag.
 
 ```ts setup
 import {
+  admitHealth,
   buildSnapshotContext,
+  createHealthGate,
   describeElapsed,
   formatLocalTime,
   summarizeEvents,
@@ -230,4 +232,40 @@ await box.write("config/schedules/.state/sync-notes.json", JSON.stringify({
 
 ```ts cleanup
 await box.cleanup();
+```
+
+## admitHealth — the schedule-health rate limit
+
+`admitHealth` keeps the `health` reminder from becoming chatter. A fresh gate
+admits the first failure (session start); the same message then stays quiet until
+a long interval passes; a *changed* message waits out a hard per-turn limit.
+Every call bumps the gate's turn counter, so the limits read as "since last
+shown."
+
+```ts
+const gate = createHealthGate();
+const t0 = 1_700_000_000_000;
+admitHealth("check-email: failing", { gate, now: t0 })
+=> true
+
+admitHealth("check-email: failing", { gate, now: t0 + 60_000 })
+=> false
+
+admitHealth("check-calendar: overdue", { gate, now: t0 + 120_000 })
+=> false
+```
+
+Once enough sends pass a changed failure gets through, and the same message
+re-nudges only after a long interval; a healthy state is never surfaced.
+
+```ts continue
+for (let i = 0; i < 10; i++) admitHealth(null, { gate, now: t0 + 200_000 });
+admitHealth("check-calendar: overdue", { gate, now: t0 + 300_000 })
+=> true
+
+admitHealth("check-calendar: overdue", { gate, now: t0 + 11 * 24 * 60 * 60 * 1000 })
+=> true
+
+admitHealth(null, { gate, now: t0 + 12 * 24 * 60 * 60 * 1000 })
+=> false
 ```

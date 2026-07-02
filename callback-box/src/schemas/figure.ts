@@ -27,6 +27,8 @@ const FigureParam = z.object({
 });
 
 export const FigureSchema: CardSchema = cardSchema("figure", {
+  description: "A small embeddable interactive graphic (p5.js/three.js/D3) demonstrating one thing; source lives in the attach scope",
+  category: "authored",
   fields: {
     runtime: FigureRuntime,
     entry: z.string(),

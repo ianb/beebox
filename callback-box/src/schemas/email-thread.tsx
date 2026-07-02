@@ -33,6 +33,8 @@ import { cardSchema, type CardSchema } from "../cards/index.js";
 const StatusEnum = z.enum(["new", "read", "replied", "archived"]);
 
 export const EmailThreadSchema: CardSchema = cardSchema("email-thread", {
+  description: "A synced Gmail thread envelope — subject, participants, and refs to its email-message cards; created by the Gmail connector",
+  category: "synced",
   fields: {
     "thread-id": z.string(),
     status: StatusEnum.optional(),

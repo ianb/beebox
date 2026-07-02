@@ -18,6 +18,8 @@ import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const RecipeSchema: CardSchema = cardSchema("recipe", {
+  description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
+  category: "authored",
   fields: {
     title: z.string(),
     description: z.string().optional(),

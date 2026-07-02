@@ -30,6 +30,25 @@ reconciled against *current* main, cited inline.
   `doc.tsx`/`person.tsx`/`recipe.tsx` now defer to `ABOUT_CARDS`/`PROVENANCE`;
   `source.ts` converted to the `PROVENANCE` heading + generalized `ref`.
 - **Track 5 — `commands.ts`** — restructured (see its bullet below): DONE.
+- **Track 5 — `behavior.ts` / `search.ts` / `extensibility.ts`** — DONE. `search.ts`
+  already split search from `contains:`-authoring (defers the write-rule to
+  `ABOUT_CARDS`, has concrete example queries + result-shape). `behavior.ts`:
+  Git-History's 7-row trailer table (stale *and* structurally incomplete — code
+  emits a whole `<Verb>-By` family it missed, per an audit) replaced with the
+  self-maintaining pattern; Where-to-Record's duplicated per-destination
+  subsections + separate quick-test list collapsed into one `kind → destination`
+  decision list; retrospective/personality prose compressed; both normalized to
+  template literals. `extensibility.ts` reframe (schedules "serve the user,
+  practical not dramatic"; tricks "reusable script, `cb trick <name>`") already
+  landed in the earlier schedules/tricks pass and audits clean (`cb trick`,
+  `cb scheduled`, `tricks/scripts/<name>/index.ts`, `not-before`,
+  `create-after-success` all real) — no template-literal conversion forced on its
+  dynamic-loop / code-fence sections (would add escaping noise against the
+  readability goal). Plus a straggler fix: `cards.ts` questionsSection said to
+  include a `<directive>` *element* (XML); `directive:` is a frontmatter field
+  (`question.ts:45`) — corrected, caught by the "cards are not XML" backstop.
+  **Only `briefing-tags.ts` remains in Track 5, deferred to Track 7** (couples to
+  the briefing redesign).
 - **Track 5 — `quotes.ts` / `source.ts` / `landmarks.ts` + reactor prompt** —
   quotes trimmed to mechanics (rule deferred to `THE_LAW_OF_QUOTING`, repeat-
   sentence + user-directed-edit patterns added, "mishears" fixed); `source.ts`
@@ -136,11 +155,58 @@ reconciled against *current* main, cited inline.
   overlay's *why*** (user speaking at length, may talk over you). **Snapshot code:**
   stopped emitting `time` and `calendar` (no consumers; dropped from prose too) —
   updated `chat-features.ts` composer + `session-context.ts` + the snapshot
-  doctests. `.memo.card` examples kept (memo is live). **Deferred (one chunk):**
-  the `health` **mid-session** change — it's a stateful mini-feature needing a
-  flood-gate (don't repeat a persistent failure every message), bundled with the
-  dead calendar-*computation* cleanup; health prose stays first-message-accurate
-  until then.
+  doctests. `.memo.card` examples kept (memo is live).
+- **Track 4 — `health` mid-session (with a hard flood-gate)** — DONE. Health now
+  rides every message, gated by `admitHealth` (`session-context.ts`) into a rare
+  reminder, per the boxholder's "err heavily toward quiet, it's a reminder not a
+  status": the same failing message never repeats until a **10-day** interval;
+  even a *changed* message waits a hard **10-turn** rate limit; only session start
+  and the 10-day re-nudge override the quiet default. A per-session `HealthGate`
+  (with its own turn counter, bumped every send) lives on `ChatSession` and
+  threads through `composeTurnContent`; when no gate is supplied it falls back to
+  the old session-start-only behavior. Prose reframed as a reminder ("won't repeat
+  … run `cb health` yourself; don't treat absence as all-clear"). Tested in
+  `session-context.doctest.md`. (Dead calendar-*computation* cleanup — `calendar`
+  is already un-emitted — still a tiny follow-up.)
+
+- **Fable review pass (this session)** — a second-reviewer sweep over the landed
+  surface, plus the tooling to keep it honest:
+  - **CARD_TYPES catalogue rebuilt** (Track 0/6) — `cardSchema()` gained
+    `description` (a one-line headline) and `category`
+    (`authored`/`synced`/`system`); all 39 built-in schemas declare both. The
+    section renders a grouped, described catalogue (registry order is now
+    presentational — everyday recording types first, the course family together,
+    then synced and system) instead of 39 identical name-plus-see-docs bullets,
+    and states the `docs/generated/card-<type>.md` pattern once. Doctest rewritten
+    to the grouped shape.
+  - **Guide identity + orphan cleanup** — added a 3-line identity preamble under
+    the guide H1 (who reads it, what a box is, keep the record true); deleted the
+    decayed `General Principles` section (its `cb init` note moved to the header).
+  - **Corrections** — the chat prompt's self-contradicting `health` bullet
+    ("absence means all healthy" vs "don't treat absence as all-clear") resolved
+    to the correct reading; `box-shape` dated status claims ("active path" / "not
+    wired into wakeup yet") and `briefing-tags` "replaced-the-old-fields"
+    archaeology made timeless; Law 1's transcription-exception list compressed to
+    the decision rule, deferring boundary cases to `DIRECT_QUOTES`.
+  - **ABOUT_CARDS `ref` bullet** reframed as a *pattern* (refs appear wherever a
+    field points at another card), not a shared top-level field.
+  - **Calendar skill per-box** (Track 3) — `cb init` now interpolates the box's
+    real timezone + a correct `VTIMEZONE` block (generated by the connector's own
+    `vtimezoneBlock`, newly exported) so the agent copies real values instead of
+    adapting the `America/Chicago` sample.
+  - **Attach-scope dedup** (Track 6) — `memo`/`file`/`doc` instructions that
+    re-taught the attach-scope mechanic now defer to ABOUT_CARDS. (Still open:
+    `doc`'s "No timestamps" section, `record`'s absolute-path guidance tension.)
+  - **`cb attachments verify` quieted** — it ran on every commit via the
+    pre-commit hook and printed a per-scope line for every unclaimed asset (~140
+    lines on a never-migrated box); routine states now aggregate to one summary
+    line, only errors enumerate.
+  - **`pnpm agent-context`** (new dev tool, `src/dev/agent-context.ts`) — renders
+    the complete assembled context an agent receives per situation (chat /
+    chat-thread / reactor), layer by layer with loading class + word counts; box
+    layers read from disk so `cb init` staleness is visible. Paired with the
+    **`cb-prompt-review` skill** (monorepo `.claude/skills/`) documenting the
+    layering model and review principles.
 
 Everything else below is still future work.
 
@@ -319,12 +385,23 @@ correctly points captured notes/voice memos at `.memo.card`. So **do NOT scrub
 memo** anywhere (`doc.tsx:95`, `chat-session-prompts.ts:112`'s `Trip.memo.card`,
 the source/laws examples) — those references are valid.
 
-**Direction.** Grep-driven: `rg -rni "xml" src/core src/schemas` over the prompt
+**Direction.** Grep-driven: `rg -ni "xml" src/core src/schemas` over the prompt
 surface; fix each to frontmatter/markdown language. (No memo scrub — see the
-correction above.)
+correction above.) The *prose* sites are already handled by Track 0's
+`cards.ts:32` ("Cards are not XML; anything that says so is stale").
 
-**First chunk.** The grep + known sites in one commit; the `<destination>` audit
-resolved separately (may become a Track-6/landmark-schema change).
+**CORRECTION — job cards are NOT still XML (supersedes an earlier note here).**
+Investigation (2026-07) found jobs are ~95% migrated to frontmatter: intake jobs
+(`intake-job.tsx:77`) and chat jobs (`chat-job.ts:80`) are frontmatter; only the
+`contains-backfill` producer (`wakeup-steps.ts:391`) still emits XML, and the
+reactor **consumer** (`batch-jobs.ts`/`chat-jobs.ts`/`finish-job.ts`) still parses
+XML by regex — a real latent bug (frontmatter intake jobs reach the agent without
+inlined refs or schema instructions). That is a **code migration**, not a prose
+scrub, and is split out to **`job-xml-purge.subplan.md`** — executed in its own
+worktree. The `<news-job>` XML in test1 is stale demo data.
+
+**First chunk.** The `<destination>` audit is resolved (stale — fixed). The XML
+code purge is the subplan; nothing further needed on the prose surface here.
 
 ### Track 2 — Discipline cleanups: implicit-validate + raw-tool nudges (new)
 

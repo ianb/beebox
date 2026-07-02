@@ -11,6 +11,8 @@ import { z } from "zod";
 import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const IntakeJobSchema: CardSchema = cardSchema("intake-job", {
+  description: "A system job to triage newly arrived inbox items; created by connectors and cb wakeup",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),

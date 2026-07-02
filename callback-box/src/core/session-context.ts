@@ -166,22 +166,85 @@ interface SnapshotContext {
 }
 
 /**
+ * Per-session gate that keeps schedule-health a rare reminder rather than a live
+ * status line (the agent can run `cb health` any time it wants the current
+ * picture). Mutated in place by `admitHealth`; one lives on each `ChatSession`.
+ */
+export interface HealthGate {
+  /** Sends so far this session; `admitHealth` bumps it on every call. */
+  turn: number;
+  /** The health string last surfaced this session, or null if none yet. */
+  lastValue: string | null;
+  /** The turn number and wall-clock ms at which it was last surfaced. */
+  lastTurn: number;
+  lastTime: number;
+}
+
+export function createHealthGate(): HealthGate {
+  return { turn: 0, lastValue: null, lastTurn: 0, lastTime: 0 };
+}
+
+// Health is a reminder, not a status point — the likely error is *too much*, so
+// err heavily toward quiet. The two cases that override the quiet default and
+// surface something: the first message of a session (a fresh gate), and a long
+// interval having passed since we last showed anything (a re-nudge). Otherwise
+// only a genuinely *changed* message surfaces, and even then only after a hard
+// per-turn rate limit; the same message never repeats until the long interval.
+const HEALTH_REPEAT_MS = 10 * 24 * 60 * 60 * 1000; // 10 days
+const HEALTH_CHANGED_MIN_TURNS = 10;
+
+/**
+ * Decide whether to surface `current` schedule-health this turn, mutating `gate`
+ * when it does (so the caller's persistent gate carries forward). Returns false —
+ * and leaves the gate untouched — when nothing is wrong or the limit says stay
+ * quiet. A fresh gate (`lastValue === null`) always admits the first failure.
+ */
+export function admitHealth(
+  current: string | null,
+  { gate, now }: { gate: HealthGate; now: number },
+): boolean {
+  gate.turn += 1; // counts every send, so the limits below are "since last shown"
+  if (current === null) return false;
+  let show: boolean;
+  if (gate.lastValue === null) {
+    show = true; // session start / never shown this session
+  } else if (now - gate.lastTime >= HEALTH_REPEAT_MS) {
+    show = true; // a long interval has passed — re-nudge, even the same message
+  } else if (current !== gate.lastValue) {
+    show = gate.turn - gate.lastTurn >= HEALTH_CHANGED_MIN_TURNS; // new/changed, rate-limited
+  } else {
+    show = false; // same message, recent — stay quiet
+  }
+  if (show) {
+    gate.lastValue = current;
+    gate.lastTurn = gate.turn;
+    gate.lastTime = now;
+  }
+  return show;
+}
+
+/**
  * Compose the full `<chat-app>` snapshot for one send: feature flags and
  * the situational context attributes, stamped at call time. The one-stop
  * entry point for `ChatSession.send`.
  */
 export async function composeSendSnapshot(
   boxRoot: string,
-  { features, sessionStart, channel, openCard, activityChildren }: {
+  { features, sessionStart, channel, openCard, activityChildren, healthGate }: {
     features: FeatureMap;
     sessionStart: boolean;
     channel?: string;
     openCard?: string;
     activityChildren?: string;
+    healthGate?: HealthGate;
   },
 ): Promise<string> {
   const now = new Date();
-  const context = await buildSnapshotContext(boxRoot, { now, sessionStart });
+  const context = await buildSnapshotContext(boxRoot, {
+    now,
+    sessionStart,
+    ...(healthGate !== undefined ? { healthGate } : {}),
+  });
   return composeChatAppSnapshot({
     features,
     ...context,
@@ -192,22 +255,39 @@ export async function composeSendSnapshot(
 }
 
 /**
- * Compute the snapshot context for one send. `localTime` is always
- * present. The session-start extras (`lastActivity` from the
- * most-active pointer's savedAt, `calendar` from the next 24h of
- * `store/calendar/`, `health` from scheduled-task health — present
- * only when something is failing or overdue, so every-session green
- * noise never trains the agent to ignore it) are computed only when
- * `sessionStart` is true — the first message of a brand-new
- * conversation. Failures in the extras degrade to omission; they must
- * never block a send.
+ * Compute the snapshot context for one send. `localTime` is always present.
+ *
+ * `health` rides on **every** message (a scheduled task can start failing
+ * mid-session), but `admitHealth` gates it into a rare reminder — see
+ * `HealthGate`. When no `healthGate` is supplied it falls back to the old
+ * behavior (surfaced only on `sessionStart`, ungated). The remaining extras —
+ * `lastActivity` (the most-active pointer's savedAt) and `calendar` (the next 24h
+ * of `store/calendar/`) — are session-start only. Failures in any extra degrade
+ * to omission; they must never block a send.
  */
 export async function buildSnapshotContext(
   boxRoot: string,
-  { now, sessionStart }: { now: Date; sessionStart: boolean },
+  { now, sessionStart, healthGate }: {
+    now: Date;
+    sessionStart: boolean;
+    healthGate?: HealthGate;
+  },
 ): Promise<SnapshotContext> {
   const timezone = await loadBoxTimezone(boxRoot);
   const out: SnapshotContext = { localTime: formatLocalTime(now, { timezone }) };
+
+  if (healthGate !== undefined || sessionStart) {
+    try {
+      const health = summarizeScheduleHealth(await loadScheduleHealth(boxRoot, now), now);
+      const admit = healthGate !== undefined
+        ? admitHealth(health, { gate: healthGate, now: now.getTime() })
+        : health !== null;
+      if (admit && health !== null) out.health = health;
+    } catch (e) {
+      console.warn(`[session-context] schedule health summary failed: ${e instanceof Error ? e.message : e}`);
+    }
+  }
+
   if (!sessionStart) return out;
 
   try {
@@ -229,13 +309,6 @@ export async function buildSnapshotContext(
     if (calendar !== null) out.calendar = calendar;
   } catch (e) {
     console.warn(`[session-context] calendar summary failed: ${e instanceof Error ? e.message : e}`);
-  }
-
-  try {
-    const health = summarizeScheduleHealth(await loadScheduleHealth(boxRoot, now), now);
-    if (health !== null) out.health = health;
-  } catch (e) {
-    console.warn(`[session-context] schedule health summary failed: ${e instanceof Error ? e.message : e}`);
   }
 
   return out;

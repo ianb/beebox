@@ -15,6 +15,8 @@ import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const DocSchema: CardSchema = cardSchema("doc", {
+  description: "A generic typed document (title + markdown body) — the default for agent-authored prose instead of a plain .md",
+  category: "authored",
   fields: {
     title: z.string(),
     body: body(z.string()),
@@ -62,31 +64,9 @@ References to other cards use the standard ref form (frontmatter
 ## Embedding images and other files
 
 Files the doc references — images, attachments, supporting media — go
-inside the doc's own **attach scope**: a sibling directory named
-\`<basename>.attach/\` (where \`<basename>\` is the card's filename
-without the \`.doc.card\` suffix). Refer to them from the body using
-the scoped form \`attach/<filename>\`.
-
-Layout for a doc with an embedded image:
-
-\`\`\`
-store/notes/Trip_Report.doc.card
-store/notes/Trip_Report.attach/photo.jpg
-\`\`\`
-
-And the doc's body:
-
-\`\`\`markdown
-# Trip Report
-
-![A view from the cabin](attach/photo.jpg)
-
-We drove down on Friday...
-\`\`\`
-
-The image lives inside \`Trip_Report.attach/\` (the card's scope), not
-at the top level or in a shared \`images/\` directory. Moving or
-renaming the card moves the whole scope atomically.
+in the card's attach scope (\`<basename>.attach/\`), referenced from the
+body as \`attach/<filename>\` — see the agent guide's ABOUT_CARDS.
+Never a top-level or shared \`images/\` directory.
 
 ## When NOT to use a doc card
 

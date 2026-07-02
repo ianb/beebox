@@ -6,6 +6,7 @@ Stand-alone CLI tools that aren't part of the running app. Each is run manually 
 |--------|--------------|----------|
 | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
 | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
+| `agent-context.ts` | Renders the complete assembled context a box agent gets in one situation (chat/chat-thread/reactor), layer by layer with word counts (`pnpm agent-context chat --box <path>`) | monorepo `.claude/skills/cb-prompt-review/SKILL.md` |
 | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.md` |
 | `doc-graph-html.ts` | Generates `docs/doc-graph.html` — narrative showcase of the doc system (onboarding rings + topic pillars). Shares the data layer (`doc-graph-data.ts`) with `doc-graph.ts`. | — |
 | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |

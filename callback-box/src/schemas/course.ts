@@ -31,6 +31,8 @@ const courseFields = {
 };
 
 export const CourseSchema: CardSchema = cardSchema("course", {
+  description: "The manifest for one learning experience — binds a concept-map, exposition-plan, lesson-plan, material, and per-learner progress",
+  category: "authored",
   fields: courseFields,
   instructions: `# Course Cards
 
