@@ -139,7 +139,7 @@ converts):
 
 Cards have two identity modes. **Nominal**: `Name.type.card`, identity from
 the name. **Positional**: bare `type.card` ("the ‹type› of this directory"),
-identity from location — landmarks, briefings, lenses, chat-session organs.
+identity from location — landmarks, briefings, chat-session organs.
 The stuttering names (`briefing.briefing.card`) were the format forcing
 nominal identity onto positional cards. Basename uniqueness gives positional
 cards at-most-one-per-directory for free, which is the semantics they want.
@@ -156,7 +156,9 @@ itself:
   is where it keeps its stuff.
 - **Annotating** ("this spot is navigationally notable" / "agent context" /
   "present it this way") — non-exclusive, stackable, nameless: positional
-  cards inside. `landmark.card`, `briefing.card`, `lens.card`.
+  cards inside. `landmark.card`, `briefing.card`, and a
+  presentation/view-binding card (type name unsettled; "lens" floated —
+  see Open questions).
 
 Positional cards have no name to pair with a directory, so an annotation is
 *structurally incapable* of claiming. Beside = "is a"; inside = "has a". No
@@ -169,9 +171,11 @@ sprawling project. (Inside-identity — the index.html convention — would make
 growth a `cb mv` with ref rewriting. That convention assumes
 directory-primacy, which fits the web but not this system.)
 
-`.attach` retires into this pattern: an attach bag becomes an ordinary
-claimed directory whose claiming *schema* declares ownership semantics
-(private bag vs. peer namespace). Known costs of the migration:
+**Debated, not concluded:** whether `.attach` retires into this pattern — an
+attach bag becoming an ordinary claimed directory whose claiming *schema*
+declares ownership semantics (private bag vs. peer namespace). The
+beside-claim grammar above stands on its own; folding attachments into it is
+the open fork. Known costs if it proceeds:
 
 - Path-keyed machinery (gitignore, asset-manifest globs, `attach/` ref
   prefix) loses its static marker. gitignore can't run schema logic —
@@ -186,8 +190,9 @@ claimed directory whose claiming *schema* declares ownership semantics
   card's view. Claiming a directory doesn't require writing into it (matters
   for synced/generated content).
 
-This is an on-disk shape change over existing boxes — needs a real migration
-plan before any interface-as-cards work hardcodes `.attach` assumptions.
+If it proceeds, it's an on-disk shape change over existing boxes — needs a
+real migration plan. Either way, interface-as-cards work should avoid
+hardcoding `.attach` assumptions while the fork is open.
 
 ### Directory addressability
 
@@ -229,7 +234,7 @@ bespoke `useBusSubscription` lists).
 |---|---|---|
 | Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. |
 | Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. |
-| Browse | directory subject + builtin master-detail view | Delete/context-menu are view affordances; a `lens.card` parameterizes (order, grouping, prominence, tiles vs rows). |
+| Browse | directory subject + builtin master-detail view | Delete/context-menu are view affordances; a positional presentation card parameterizes (order, grouping, prominence, tiles vs rows). |
 | Chats | query card over chat husks + named `chat-picker` view | Freshness filter declarative; landmark-proximity grouping stays code. Blocked on husks. |
 | History | instrument card over the timeline view | Filter state (already URL-encoded) becomes frontmatter params; **saved filters = more instrument cards** with frozen params + notes body. Subject is git, never a card query. |
 | Nav | curated `refs` card + per-entry overrides | Each target renders its **nav form** — a third form beside tile/full (label, symbol, optional badge). Badges computed by the target's own renderer (questions card shows pending count), not by nav vocabulary. Anything can go in the nav. Minimal hardcoded fallback nav per can't-break. |
@@ -239,7 +244,8 @@ bespoke `useBusSubscription` lists).
 | Chat | husk card per session + chat view + the slot | Below. |
 
 Order of attack: Landmarks → Questions → resolver unification → directory
-lens/Browse → chat husks, then Chats → History saved-filters, Nav, Dashboard.
+presentation/Browse → chat husks, then Chats → History saved-filters, Nav,
+Dashboard.
 Each step ships something usable. The `.attach`/claiming migration should be
 *planned* before this work hardcodes assumptions, even if executed later.
 
@@ -325,10 +331,13 @@ differently embodied."
 - **Naming.** "View" is already four things (the `?view=` param, box
   `views/` `.tsx`, `ViewPage`/`view:` scheme, and now view cards). Either
   the new thing takes the word while the others rename out from under it,
-  or a fresh word (`lens` is the candidate: short, "a way of looking," zero
-  collisions; `recipes/lens.card` reads well positionally).
-- **Ownership marker mechanics** after `.attach` retires: generated
-  gitignore/manifest sections vs. a residual path marker for private bags.
+  or a fresh word. "Lens" was floated (assistant suggestion, not agreed):
+  short, "a way of looking," zero collisions, and `recipes/lens.card` reads
+  well positionally — but the name is wide open.
+- **The `.attach` fork itself** (debated, unresolved): whether attachments
+  fold into beside-claims at all — and if so, ownership marker mechanics
+  (generated gitignore/manifest sections vs. a residual path marker for
+  private bags).
 - **Head/annotation precedence details**, and whether `landmark.card`
   eventually dissolves into claiming cards carrying a navigation/prominence
   role (the prominence-unification thread).
