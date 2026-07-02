@@ -6,6 +6,7 @@
  */
 
 import { execa, type ExecaError } from "execa";
+import { buildScriptEnv } from "../script-env.js";
 
 /** Exit code that signals "skip this step" */
 export const CHECK_SKIP_CODE = 75;
@@ -33,12 +34,15 @@ export async function runShell(
     // typo'd var names that would otherwise silently expand to empty), and
     // pipefail (a failing command in a pipeline fails the whole pipe).
     const wrappedScript = `set -euo pipefail\n${script}`;
+    // Use the box subprocess env (buildScriptEnv) rather than raw process.env so
+    // `cb` is on PATH here just like it is for the reactor/agent — on the server
+    // `cb` happens to be on the user's PATH, but in a dev worktree it isn't, and
+    // procedure shells (e.g. an agent-migration's `cb view check` gate) must run
+    // the same in both. buildScriptEnv prepends callback-box's bin/ to PATH.
+    const env = await buildScriptEnv(boxRoot, { CHECK_SKIP: String(CHECK_SKIP_CODE) });
     const { stdout, stderr } = await execa("bash", ["-c", wrappedScript], {
       cwd: boxRoot,
-      env: {
-        ...process.env,
-        CHECK_SKIP: String(CHECK_SKIP_CODE),
-      },
+      env,
       maxBuffer: 1024 * 1024, // 1MB
     });
 

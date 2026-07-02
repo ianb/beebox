@@ -24,7 +24,6 @@ import {
 } from "../../core/migrations.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { installProcedures } from "../../core/box-defaults.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -117,6 +116,15 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
   if (!hasGate) throw new ProcedureGateError(args.procedure);
 }
 
+/** Fully provision the box (`cb init`) before migrating. */
+function runInit(boxRoot: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(CB_BIN, ["init", boxRoot], { cwd: boxRoot, stdio: "inherit" });
+    child.on("error", reject);
+    child.on("close", (code) => resolve(code ?? 1));
+  });
+}
+
 /** Run an agent-applied (procedure) migration by delegating to `cb procedure run`. */
 function runProcedure(args: { procedure: string; boxRoot: string }): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -196,20 +204,21 @@ export const migrateCommand = new Command("migrate")
       return;
     }
 
-    // A procedure-kind migration needs its procedure definition present in the
-    // box (config/procedures/). A box provisioned before that migration existed
-    // won't have it — the migration would fail hard with ENOENT and jam the whole
-    // queue behind it. Install current procedures first so it can run. Targeted,
-    // not a full `cb init`: this writes only procedure cards, which land in the
-    // working tree for review like every other migrate change (no doc
-    // regeneration, no auto-commit — migrate's contract is preserved). Box-modified
-    // procedure copies are parked, not clobbered (see installProcedures).
-    if (pending.some(isProcedureMigration)) {
-      const provisioned = await installProcedures(boxRoot);
-      if (provisioned.length > 0) {
-        console.log(`Provisioned procedure definitions for pending procedure migration(s): ${provisioned.join(", ")}\n`);
-      }
+    // Fully provision the box before migrating. A migration can depend on any
+    // provisioned state — a procedure-kind migration needs its procedure card in
+    // config/procedures/, but updated rules, guides, schemas, or briefing may
+    // matter too — and running one against a partially-updated box risks the
+    // silent-inconsistency class this whole discipline guards against. `cb init`
+    // is the canonical, complete provisioning (idempotent — a current box is a
+    // near-no-op). Its template-sync commit is its own; the migration's data
+    // changes still land uncommitted for review.
+    console.log("Provisioning the box (cb init) before migrating…\n");
+    const initCode = await runInit(boxRoot);
+    if (initCode !== 0) {
+      console.error(`\ncb init failed (exit ${String(initCode)}); not migrating. Fix provisioning first.`);
+      process.exit(1);
     }
+    console.log("");
 
     console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);
     // Exit-code convention shared by the harness and every migrator: 2 means
