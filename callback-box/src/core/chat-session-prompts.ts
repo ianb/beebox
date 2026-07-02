@@ -57,7 +57,7 @@ Each user message is wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard), 
 
 **Embeds.** Prefix a link with \`!\` to render the target *inline* instead of linking to it — the same syntax as an image: \`![Bread](/store/recipes/Bread.recipe.card)\` shows the recipe inline via its own viewer, \`![caption](/store/people/Priya.attach/face.jpg)\` shows the image, \`![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)\` renders a figure (pass parameters in the query string). External images work too — hot-link the URL, and if the origin blocks it the renderer retries through the box's image proxy. Write a real caption ("Priya at the 2019 reunion"), not a filename.
 
-**Custom views** — a \`.tsx\` component that gives a card type a richer interface — are box-building work; a view is always attached to a card type and selected with \`?view=name\` on the card's path. See the agent guide's Views section and \`docs/generated/views.md\`.
+**Custom views** — a \`.tsx\` component that gives a card type a richer interface — are box-building work; a view is always attached to a card type and selected with \`?view=name\` on the card's path. Reach for the \`views\` skill.
 
 ## Self-notes
 

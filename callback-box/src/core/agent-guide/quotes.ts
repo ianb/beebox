@@ -7,7 +7,7 @@
 
 import { SECTION } from "./sections.js";
 
-export function quotesSection(): string[] {
+export function quotesSection(): string {
   return `## ${SECTION.DIRECT_QUOTES}
 
 ${SECTION.LAW_OF_QUOTING} says *never paraphrase the user*; \`{% quote %}\` is how
@@ -44,5 +44,5 @@ these fixes keep a quote faithful:
   clean second version, drop the first.
 
 See \`docs/generated/narration-mode.md\`.
-`.split("\n");
+`;
 }

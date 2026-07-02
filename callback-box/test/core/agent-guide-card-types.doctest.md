@@ -30,7 +30,8 @@ const system: CardSchema = cardSchema("chat-job", {
   fields: { status: z.string() },
 });
 
-const lines = cardTypesSection([authored, system]);
+const text = cardTypesSection([authored, system]);
+const lines = text.split("\n");
 lines.includes("## CARD_TYPES")
 => true
 
@@ -54,7 +55,8 @@ lines.filter((l) => l.includes("docs/generated/card-")).length
 ```ts
 const bare: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
 
-const lines = cardTypesSection([bare]);
+const text = cardTypesSection([bare]);
+const lines = text.split("\n");
 lines.includes("- **widget**")
 => true
 
@@ -65,7 +67,8 @@ lines.some((l) => l.startsWith("**Types you create"))
 ## An empty schema list still renders the header (no crash)
 
 ```ts
-const lines = cardTypesSection([]);
+const text = cardTypesSection([]);
+const lines = text.split("\n");
 lines[0]
 => ## CARD_TYPES
 ```

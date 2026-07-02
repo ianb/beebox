@@ -314,3 +314,129 @@ Google Drive content syncs **two-way** into \`store/drive/\` (or wherever you pl
 
 CLI: \`cb drive inspect <url>\`, \`cb drive add <url> <path>\`, \`cb drive sync\`, \`cb drive status\`.
 `;
+
+/**
+ * The `email` skill: the doorway from "email someone" to an email-outbound
+ * card. The field-level reference (headers, threading, lifecycle) lives in the
+ * email-outbound schema's own instructions, which load via the card rule when
+ * the card exists — this skill covers the intent, where the card goes, and how
+ * to write it, then hands off.
+ */
+export const EMAIL_SKILL = `---
+name: email
+description: Draft or reply to an email for the user to review and send. Use when asked to email someone, reply to a message, follow up by email, or send anything that isn't a chat or Telegram reply.
+---
+
+# Email
+
+You don't send email directly — you **draft** it, and the user reviews and sends. A draft is an \`email-outbound\` card; the Gmail connector picks it up on the next sync and creates a Gmail draft.
+
+## Create the draft
+
+- **Replying** to a thread: put the draft inside that thread's attach scope, beside the message you're answering — e.g. \`box/inbox/email/<thread>.attach/draft-001.email-outbound.card\` — and set \`in-reply-to.ref:\` to the source \`.email-message.card\` (a path relative to the draft, usually just the sibling filename) so Gmail threads it correctly.
+- **A new email** (no thread): a fresh card under \`box/inbox/email/\`.
+
+\`cb create <path> -t email-outbound\` scaffolds one. The field details — required headers, threading, lifecycle — are in the \`email-outbound\` card's own instructions, which load when you create or open it. Follow them.
+
+## How to write it
+
+- It's a draft on purpose: the user has the last word before anything leaves the box. Compose the *whole* message — don't hand them a half-written stub to finish.
+- Match the user's voice and their relationship to the recipient (read the person card if there is one). A note to a sibling isn't a note to a landlord.
+- Only real recipients — never invent an address. If you don't have one, say so or raise a question card.
+
+If the user only wants to *know* about an email they received, that's \`cb search --kind email-message\`, not a draft.
+`;
+
+/**
+ * The `location` skill: the box's on-demand location surface (reading the
+ * user's shared device location + teaching named places). Moved out of the
+ * always-loaded guide — location never appears in context automatically, so
+ * an agent only needs this when a task actually turns on where the user is.
+ */
+export const LOCATION_SKILL = `---
+name: location
+description: Find where the user is, or teach the box a named place (Home, Office). Use when a task needs the user's current whereabouts, or to record or recognize a location by name.
+---
+
+# User location
+
+The boxholder can share their device location from the web UI. It is **on-demand only** — it never appears in your context automatically, so query it when the conversation needs it. It comes from the browser, so it stays \`unknown\` on Telegram and other channels.
+
+- **Read it:** \`cb location get\` prints the last-known fix as \`lat,lng (±accuracy, captured <age> ago, web)\`, prefixed with the place name (\`Home — …\`) when the fix is inside a known place. Add \`--json\` for structured output (\`place\`, \`lat\`, \`lng\`, \`accuracy\`, \`capturedAt\`, \`ageMs\`, \`stale\`).
+- **Not shared:** prints \`unknown\` when the boxholder hasn't shared location. Don't guess or fabricate a location — report that it's unknown.
+- **Staleness:** an old fix is flagged \`[stale]\` (and \`stale: true\` in JSON); treat it as approximate.
+
+## Named places
+
+Place cards (\`places/<Name>.place.card\`) let the box recognize a location by name — so \`cb location get\` can say "Home" instead of bare coordinates.
+
+- **Record a place (card first, then mark):** create the card describing the place — \`cb create places/Home.place.card name=Home address="…"\` — with a body explaining what it is and why it matters. Then, while the boxholder is physically there, run \`cb location mark places/Home.place.card\` to stamp the current location into it. Don't hand-type \`lat\`/\`lng\` — \`mark\` writes them from the live fix and reports the fix's age so you can judge whether it's current.
+- **Outside the radius:** if the boxholder is now outside a place's radius, \`mark\` won't change it; re-run with \`--expand\` to grow the radius to include the new spot.
+`;
+
+/**
+ * The `schedules` skill: authoring a scheduled-script card so the box does
+ * something later or on a cadence. The description is the discovery surface —
+ * an agent forms the "come back to this later" intent from it — while the card
+ * format lives in the scheduled-script card's own docs.
+ */
+export const SCHEDULES_SKILL = `---
+name: schedules
+description: Have the box do something later or on a cadence — a reminder, a recheck, a periodic job that runs on its own. Use when you want to return to something after this turn, revisit a decision at intervals, or run a command on a schedule.
+---
+
+# Schedules
+
+A scheduled script — a \`.scheduled-script.card\` in \`config/schedules/\` — runs a \`cb\` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off further out than a chat \`<schedule>\` can reach. Keep them practical, not dramatic.
+
+\`\`\`
+---
+cron: 0 8 * * 1              # Mondays at 8am
+not-before: 3d              # skip if it already ran within 3 days
+runs: cb procedure run weekly-digest
+description: Monday digest of the week's still-open threads
+source: Boxholder wanted a summary to start the week
+---
+\`\`\`
+
+They run in the background automatically; \`cb scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`docs/generated/card-scheduled-script.md\`.
+
+(This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
+`;
+
+/**
+ * The `tricks` skill: formalizing a repeated operation as a reusable script.
+ * The trigger is *self-noticing* ("I keep doing this"), so the description
+ * carries that instinct — nothing else in context plants it once this leaves
+ * the always-loaded guide.
+ */
+export const TRICKS_SKILL = `---
+name: tricks
+description: Formalize a repeated operation as a reusable script you can rerun with cb trick. Use when you notice you're doing the same multi-step task by hand more than once (a particular fetch, an export, a search-and-summarize) and want to package it.
+---
+
+# Tricks
+
+A **trick** is a reusable script — you package a useful operation once and rerun it with \`cb trick <name>\`, instead of redoing it by hand each time. The signal to make one is *repetition*: the second time you find yourself running the same multi-step task, that's when it's worth formalizing.
+
+Each trick lives in \`tricks/scripts/<name>/\` with an \`index.ts\`. Read \`tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one.
+
+Tricks are box-local by default, but the operation itself needn't be box-specific — a general utility (an image generation, a format conversion) is a fine trick if it's something this box does repeatedly.
+`;
+
+/**
+ * The `views` skill: authoring a .tsx view. Rare, mechanics-heavy box-building
+ * work — out of the always-loaded guide, reached when a card type needs a
+ * richer interface than the default renderer.
+ */
+export const VIEWS_SKILL = `---
+name: views
+description: Give a card type a custom interface — a React component that renders a card in the browser. Use when a card type needs a richer display than its default renderer.
+---
+
+# Views
+
+Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, the view-host context, and how to test a view.
+
+A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
+`;

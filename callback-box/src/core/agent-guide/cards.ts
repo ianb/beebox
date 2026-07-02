@@ -12,7 +12,7 @@ import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
 
-export function aboutCardsSection(): string[] {
+export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(
     (t) => `- \`cb create <path> -t ${t.name}\` — ${t.description}`,
   );
@@ -129,7 +129,7 @@ warnings you'll see:
 
 The full catalogue of card types is in ${xref(SECTION.CARD_TYPES)}, next.`;
 
-  return [...intro.split("\n"), ...createExamples, ...outro.split("\n")];
+  return [intro, ...createExamples, outro].join("\n");
 }
 
 const CARD_CATEGORY_GROUPS = [
@@ -149,7 +149,7 @@ const CARD_CATEGORY_GROUPS = [
   },
 ] as const;
 
-export function cardTypesSection(allCardSchemas: CardSchema[]): string[] {
+export function cardTypesSection(allCardSchemas: CardSchema[]): string {
   const lines: string[] = [
     `## ${SECTION.CARD_TYPES}`,
     "",
@@ -168,18 +168,14 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string[] {
     lines.push("");
   }
   lines.push("New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");
-  lines.push("");
-  return lines;
+  return lines.join("\n");
 }
 
-export function questionsSection(): string[] {
-  return [
-    `## ${SECTION.QUESTIONS}`,
-    "",
-    "Create question cards in `box/questions/` to ask the user.",
-    "Set `answered-by` to your agent name so the answer routes back to you.",
-    "Always set the `directive:` field describing what you'll do with the answer — when the user answers, the system creates a follow-up job carrying this directive.",
-    "See `docs/generated/card-question.md` for templates.",
-    "",
-  ];
+export function questionsSection(): string {
+  return `## ${SECTION.QUESTIONS}
+
+Create question cards in \`box/questions/\` to ask the user.
+Set \`answered-by\` to your agent name so the answer routes back to you.
+Always set the \`directive:\` field describing what you'll do with the answer — when the user answers, the system creates a follow-up job carrying this directive.
+See \`docs/generated/card-question.md\` for templates.`;
 }

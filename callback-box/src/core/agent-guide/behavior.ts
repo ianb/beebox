@@ -3,7 +3,7 @@
  * where to record discovered information.
  */
 
-export function gitHistorySection(): string[] {
+export function gitHistorySection(): string {
   return `## Git History
 
 Git history is the box's primary record of what happened — who did what, when,
@@ -23,10 +23,10 @@ by one when you want a slice:
 - \`git log --all --grep='Phase: brief'\` — every brief-creation commit
 - \`git log -- box/inbox/\` — history of one directory
 - \`git show <hash>\` — the full diff of a change
-`.split("\n");
+`;
 }
 
-export function whereToRecordSection(): string[] {
+export function whereToRecordSection(): string {
   return `## Where to Record What You Find
 
 The box's own files capture knowledge that persists across sessions and is
@@ -82,5 +82,5 @@ is the worst outcome. Handle it by context:
   isn't lost.
 
 When in doubt, ask.
-`.split("\n");
+`;
 }

@@ -19,7 +19,12 @@ written
 => [
   "build-course",
   "calendar",
-  "drive"
+  "drive",
+  "email",
+  "location",
+  "schedules",
+  "tricks",
+  "views"
 ]
 ```
 
@@ -50,4 +55,18 @@ cal.startsWith("---\nname: calendar\n") && cal.includes("description:") && cal.i
 const drv = await readFile(box.path(".claude/skills/drive/SKILL.md"), "utf8");
 drv.startsWith("---\nname: drive\n") && drv.includes("description:") && drv.includes("# Google Drive")
 => true
+```
+
+The guide-section extractions — `email`, `location`, `schedules`, `tricks`, `views` —
+install the same way. Each is a doorway to a capability the always-loaded guide no
+longer carries, discovered via its trigger `description`:
+
+```ts
+const box = await makeTmpBox();
+await generateSkills(box.root);
+const names = ["email", "location", "schedules", "tricks", "views"];
+const texts = await Promise.all(names.map((name) => readFile(box.path(".claude/skills/" + name + "/SKILL.md"), "utf8")));
+const bad = names.filter((name, i) => !(texts[i].startsWith("---\nname: " + name + "\n") && texts[i].includes("description:")));
+bad.join(",")
+=>
 ```

@@ -10,7 +10,17 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile } from "node:fs/promises";
-import { BUILD_COURSE_SKILL, FIGURE_EXAMPLES, calendarSkill, DRIVE_SKILL } from "./box-skills-content.js";
+import {
+  BUILD_COURSE_SKILL,
+  FIGURE_EXAMPLES,
+  calendarSkill,
+  DRIVE_SKILL,
+  EMAIL_SKILL,
+  LOCATION_SKILL,
+  SCHEDULES_SKILL,
+  TRICKS_SKILL,
+  VIEWS_SKILL,
+} from "./box-skills-content.js";
 import { vtimezoneBlock } from "../connectors/google-calendar-ics.js";
 import { loadBoxTimezone } from "../webapp/box-config.js";
 
@@ -41,6 +51,11 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
     },
     { name: "calendar", content: calendarSkill({ timezone, vtimezone }) },
     { name: "drive", content: DRIVE_SKILL },
+    { name: "email", content: EMAIL_SKILL },
+    { name: "location", content: LOCATION_SKILL },
+    { name: "schedules", content: SCHEDULES_SKILL },
+    { name: "tricks", content: TRICKS_SKILL },
+    { name: "views", content: VIEWS_SKILL },
   ];
 }
 
