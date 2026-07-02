@@ -30,6 +30,7 @@ export {
   type SelfNoteInfo,
   parseSelfNote,
   parseSelfNotes,
+  entrySelfNotes,
   stripSpeechWrappers,
 } from "./session-text.js";
 export { type SessionEntry } from "./session-entry.js";

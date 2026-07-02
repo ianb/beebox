@@ -5,7 +5,7 @@ Tests for agent-authored self-notes: the `<self-note>` tag parser, the
 input validation.
 
 ```ts setup
-import { parseSelfNote, parseSelfNotes, parseSessionLog, getSessionMetadata } from "../../../src/cli/lib/session.js";
+import { parseSelfNote, parseSelfNotes, entrySelfNotes, parseSessionLog, getSessionMetadata } from "../../../src/cli/lib/session.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { makeTestServer } from "../../helpers/doctest-server.js";
 ```
@@ -155,6 +155,38 @@ No self-notes in the text:
 
 ```ts
 parseSelfNotes("just a typed message") === null
+=> true
+```
+
+## entrySelfNotes — extract from a session entry
+
+`entrySelfNotes` is the shared extractor used by both the CLI transcript
+renderer and the frontend chat renderer (a single implementation in
+`core/self-note.ts`; the two formerly kept byte-identical copies under
+different names). It takes any object with `type` + `content[]` and returns the
+notes only for a pure-self-note `user` entry.
+
+```ts
+const entry = { type: "user", content: [{ type: "text", text: "<self-note ref=\"a.card\">hello</self-note>" }] };
+const notes = entrySelfNotes(entry);
+print(`count: ${notes.length}`);
+print(`ref: ${notes[0].ref}, body: ${notes[0].body}`);
+=>
+count: 1
+ref: a.card, body: hello
+```
+
+Non-user entries return null:
+
+```ts
+entrySelfNotes({ type: "assistant", content: [{ type: "text", text: "<self-note>x</self-note>" }] }) === null
+=> true
+```
+
+A user entry with no self-note text returns null:
+
+```ts
+entrySelfNotes({ type: "user", content: [{ type: "text", text: "just chatting" }] }) === null
 => true
 ```
 

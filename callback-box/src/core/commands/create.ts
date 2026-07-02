@@ -20,6 +20,7 @@ import {
 } from "../../schemas/index.js";
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
+import { mimetypeToExtension } from "../../lib/mimetype.js";
 
 async function validateGeneratedCard(input: {
   boxRoot: string;
@@ -223,31 +224,6 @@ async function executeCreate(
         : undefined,
     },
   };
-}
-
-/**
- * Convert MIME type to file extension.
- */
-function mimetypeToExtension(mimetype: string): string {
-  const map: Record<string, string> = {
-    "audio/webm": ".webm",
-    "audio/mp3": ".mp3",
-    "audio/mpeg": ".mp3",
-    "audio/wav": ".wav",
-    "audio/ogg": ".ogg",
-    "audio/m4a": ".m4a",
-    "audio/mp4": ".m4a",
-    "audio/flac": ".flac",
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
-    "image/heic": ".heic",
-    "image/heif": ".heif",
-    "video/mp4": ".mp4",
-    "video/webm": ".webm",
-  };
-  return map[mimetype] ?? ".bin";
 }
 
 // Register the command

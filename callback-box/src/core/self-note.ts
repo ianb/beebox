@@ -77,3 +77,28 @@ export function parseSelfNote(text: string): SelfNoteInfo | null {
   const notes = parseSelfNotes(text);
   return notes && notes.length > 0 ? notes[0]! : null;
 }
+
+/**
+ * Minimal shape of a session entry needed to extract self-notes. Both the CLI
+ * (`cli/lib/session-entry.ts`) and frontend (`frontend/src/api-chat.ts`)
+ * `SessionEntry` types structurally satisfy this, so the extractor is shared.
+ */
+export interface SelfNoteEntry {
+  type: string;
+  content: readonly { type: string; text?: string }[];
+}
+
+/**
+ * Extract self-notes from a single session entry: notes only live in `user`
+ * entries, in a `text` block whose content is entirely `<self-note>` blocks.
+ * Returns null for any other entry (so it falls through to normal rendering).
+ */
+export function entrySelfNotes(entry: SelfNoteEntry): SelfNoteInfo[] | null {
+  if (entry.type !== "user") return null;
+  for (const block of entry.content) {
+    if (block.type !== "text") continue;
+    const notes = parseSelfNotes(block.text || "");
+    if (notes) return notes;
+  }
+  return null;
+}
