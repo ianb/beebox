@@ -254,6 +254,26 @@ reconciled against *current* main, cited inline.
     one leaving review notes.
     - *Open follow-on:* `personality.boxholder` still models a single boxholder —
       reconcile with the new plural person-card flag separately.
+  - **Track 8 — `{% quote %}` vs `{% source %}` overload — DONE, prose-only.**
+    Investigation collapsed the feared runtime blast radius: the on-disk
+    commentary cards already anchor spans as the `{% source %}` body, nothing in
+    code generates the inner-`{% quote %}` form, and the Markdoc `source` tag
+    already renders its body — so the overload survived only in the commentary
+    *instructions*, contradicting their own next section. Fixed the prose
+    (`commentary.tsx` anchor example → source-body form; `source.ts` + `quotes.ts`
+    reinforce `{% quote %}` = the user's own words alone, a commented-on excerpt
+    goes in a `{% source %}` body; `Source.tsx` renderer comment corrected). New
+    `source-anchor-span-not-quote` knowledge audit passes `knows_directly`. **No
+    migration** (cards already clean). The `as`→`usage` rename it intersected was
+    already done.
+  - **Chat-scope move (Track 3 structural piece) — DONE.** The always-loaded
+    guide's **Attachments** and **Selections** sections were chat-surface concepts
+    the reactor/procedure agents loaded for nothing (a batch job never gets a
+    `<user-selection>` or a `tmp/` attachment; the thread prompt doesn't handle
+    them either). Moved both into `chat-session-prompts.ts` (web-chat only, beside
+    "The messages you receive"), dropped from `chat.ts` + the guide assembly.
+    External Tools stays in the guide (the reactor uses `pandoc` too). ~240 words
+    off every non-chat agent's context.
 
 Everything else below is still future work.
 
