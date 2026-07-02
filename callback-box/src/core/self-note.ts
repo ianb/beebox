@@ -19,7 +19,8 @@ export interface SelfNoteInfo {
   body: string;
 }
 
-function decodeXmlAttr(v: string): string {
+/** Decode the five predefined XML entities in an attribute value. */
+export function decodeXmlAttr(v: string): string {
   return v
     .replace(/&quot;/g, "\"")
     .replace(/&lt;/g, "<")

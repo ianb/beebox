@@ -3,6 +3,7 @@
  * rotation correction, description, and extracted text.
  */
 
+import { isRecord } from "../lib/is-record";
 import { useState } from "react";
 import { Markdown } from "../components/Markdown";
 import { Image } from "../components/ui/Image";
@@ -17,9 +18,6 @@ import type { RendererProps } from "./index";
 import { registerCardRenderer, registerFileRenderer } from "./index";
 import { resolveRelativePath } from "../lib/view-url";
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 function strOf(v: unknown): string | null {
   return typeof v === "string" ? v : null;
 }

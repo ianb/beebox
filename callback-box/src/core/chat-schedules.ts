@@ -10,6 +10,7 @@
  */
 
 import * as fs from "node:fs";
+import { parseAttrs } from "./parse-attrs.js";
 import * as path from "node:path";
 import { parseDuration } from "../schemas/scheduled-script.js";
 
@@ -290,15 +291,3 @@ export function parseCancelScheduleTags(text: string): string[] {
   return labels;
 }
 
-function parseAttrs(s: string): Record<string, string> {
-  if (!s || !s.trim()) return {};
-  const attrs: Record<string, string> = {};
-  for (const m of s.trim().matchAll(/([^\s=]+)="([^"]*)"/g)) {
-    const key = m[1];
-    const val = m[2];
-    if (key && val !== undefined) {
-      attrs[key.trim()] = val;
-    }
-  }
-  return attrs;
-}
