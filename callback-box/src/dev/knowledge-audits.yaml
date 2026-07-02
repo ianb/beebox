@@ -1060,7 +1060,7 @@ tests:
     correct_contains_any: ["selected", "selection", "highlighted"]
     tags: [chat, input-format]
     notes: >
-      The Selections section of the chat agent guide explains this tag. Failure
+      The Selections section of the chat system prompt explains this tag. Failure
       modes: treating position as an exact offset, ignoring the ref and
       re-deriving the text, or not recognizing it as user-attached document
       text. The text IS what the user saw, verbatim; ref + position locate the
