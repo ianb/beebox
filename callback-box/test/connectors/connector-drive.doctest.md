@@ -43,8 +43,8 @@ const drive = createFakeGoogleDrive({
 });
 
 // Create the card manually first (simulating cb drive add)
-const { createSheetTemplate } = await import("../../src/schemas/sheet.js");
-const cardContent = createSheetTemplate({
+const { createGsheetTemplate } = await import("../../src/schemas/gsheet.js");
+const cardContent = createGsheetTemplate({
   driveId: "sheet-abc123",
   title: "Test Budget",
   modified: "2026-03-29T10:00:00Z",
@@ -52,7 +52,7 @@ const cardContent = createSheetTemplate({
   owner: "test@example.com",
   sheets: [{ ref: "Budget/Sheet1.json", title: "Sheet1", gid: "0" }],
 });
-await box.seed("store/drive/Budget.sheet.card", cardContent);
+await box.seed("store/drive/Budget.gsheet.card", cardContent);
 await box.seed("store/drive/Budget/Sheet1.json", '[\n["Name","Age"],\n["Alice","30"]\n]\n');
 box.commitAll("add drive sheet");
 
@@ -65,7 +65,7 @@ result.success
 The card file contains the spreadsheet metadata:
 
 ```ts continue
-const card = await box.read("store/drive/Budget.sheet.card");
+const card = await box.read("store/drive/Budget.gsheet.card");
 card.includes("drive-id: sheet-abc123")
 => true
 
@@ -104,8 +104,8 @@ const drive3 = createFakeGoogleDrive({
   spreadsheets: new Map([["sheet-push1", ss3]]),
 });
 
-const { createSheetTemplate: tpl3 } = await import("../../src/schemas/sheet.js");
-await box3.seed("store/drive/Expenses.sheet.card", tpl3({
+const { createGsheetTemplate: tpl3 } = await import("../../src/schemas/gsheet.js");
+await box3.seed("store/drive/Expenses.gsheet.card", tpl3({
   driveId: "sheet-push1",
   title: "Expenses",
   modified: "2026-03-29T10:00:00Z",
@@ -176,8 +176,8 @@ const drive4 = createFakeGoogleDrive({
   spreadsheets: new Map([["sheet-multi", ss4]]),
 });
 
-const { createSheetTemplate: tpl4 } = await import("../../src/schemas/sheet.js");
-await box4.seed("store/drive/Multi.sheet.card", tpl4({
+const { createGsheetTemplate: tpl4 } = await import("../../src/schemas/gsheet.js");
+await box4.seed("store/drive/Multi.gsheet.card", tpl4({
   driveId: "sheet-multi",
   title: "Multi",
   modified: "2026-03-29T10:00:00Z",
@@ -253,8 +253,8 @@ const drive5 = createFakeGoogleDrive({
   }]]),
 });
 
-const { createSheetTemplate: tpl5 } = await import("../../src/schemas/sheet.js");
-await box5.seed("store/drive/Reviewed.sheet.card", tpl5({
+const { createGsheetTemplate: tpl5 } = await import("../../src/schemas/gsheet.js");
+await box5.seed("store/drive/Reviewed.gsheet.card", tpl5({
   driveId: "sheet-comm",
   title: "Reviewed",
   modified: "2026-03-29T10:00:00Z",
@@ -268,7 +268,7 @@ const result5 = await createGoogleDriveConnector(box5.root, drive5).sync();
 result5.success
 => true
 
-const card5 = await box5.read("store/drive/Reviewed.sheet.card");
+const card5 = await box5.read("store/drive/Reviewed.gsheet.card");
 card5.includes("ref: attach/Reviewed.comments.json")
 => true
 

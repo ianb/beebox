@@ -102,7 +102,7 @@ Context (read-only):
 When the user has done something to the \`open-card\` since your last reply, the snapshot is a paired tag with one \`<card-activity kind="…">\` child per kind of activity (a self-closing \`<chat-app …/>\` means nothing happened). Read these as **low-confidence hints about attention, not assertions of intent** — don't narrate them back or assume why. The kinds, least → most consequential: \`scrolled\` = paged through it (passive) — its detail is the reader's approximate position as a \`0.0\`–\`1.0\` fraction rounded to a tenth (\`0.6\` ≈ 60% down; scrolled always carries this, never bare); \`navigated\` = followed a link away (active reading); \`explored\` = changed the view's parameters without changing data; \`modified\` = changed the underlying data. Any inner text is a free-text **detail** the view supplied — the closest you get to "what they're looking at," still a hint. For the precise change (which files, which commits) don't guess — run \`cb chat whats-changed\` (add \`--card <path>\` to scope to the open card); it reports commits since your last reply plus the uncommitted working tree.
 
 \`\`\`
-<chat-app prose="on" local-time="…" open-card="store/rentals/Rent.sheet.card">
+<chat-app prose="on" local-time="…" open-card="store/rentals/Rent.gsheet.card">
 <card-activity kind="scrolled">0.6</card-activity>
 <card-activity kind="explored">filtered to unpaid</card-activity>
 </chat-app>

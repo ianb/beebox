@@ -290,14 +290,14 @@ END:VCALENDAR
 /** The `drive` skill: reading/editing/syncing Google Drive sheets and docs. */
 export const DRIVE_SKILL = `---
 name: drive
-description: Work with Google Drive files synced into the box — read, edit, or sync spreadsheets (.sheet.card) and documents (.gdoc.card), or run cb drive commands. Use when a task involves a Drive-synced spreadsheet or Google Doc.
+description: Work with Google Drive files synced into the box — read, edit, or sync spreadsheets (.gsheet.card) and documents (.gdoc.card), or run cb drive commands. Use when a task involves a Drive-synced spreadsheet or Google Doc.
 ---
 
 # Google Drive
 
 Google Drive content syncs **two-way** into \`store/drive/\` (or wherever you place the card). A Drive card keeps all its data in its own **attach scope** (\`<basename>.attach/\`), so \`cb mv\` moves the card and everything with it in one step — the \`drive-id\` in the card keeps the upstream link. Don't move the pieces by hand.
 
-## Spreadsheets (\`.sheet.card\`)
+## Spreadsheets (\`.gsheet.card\`)
 
 - **Find:** the card lists the title, Google link, and its tabs.
 - **Read:** each tab is a JSON file in the card's attach scope (referenced from the card). Plain cells are bare values; formula cells are \`{"f": "=SUM(A1:B1)", "v": "$42.00"}\` — both the formula and the computed result.
