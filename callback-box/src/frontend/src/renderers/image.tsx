@@ -74,7 +74,7 @@ function parseImageCard(fm: Record<string, unknown>): ParsedImageCard {
   };
 }
 
-function ImageCardRenderer({ data, onNavigate }: RendererProps) {
+function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   const [showBbox, setShowBbox] = useState(true);
 
   if (!data.frontmatter) return null;
@@ -88,6 +88,26 @@ function ImageCardRenderer({ data, onNavigate }: RendererProps) {
   const resolvedPath = resolveRelativePath(data.path, card.filename);
   const imageSrc = `${getApiBase()}/files/${resolvedPath}`;
   const altText = card.description || card.filename;
+
+  // Embedded inline (`![caption](…image.card)`): render exactly like a
+  // hot-linked image — the photo plus the embed's caption, no bbox controls,
+  // exif, or extracted text (those belong to the full card). This is the image
+  // *view* opting out of chrome for embeds only; page/companion (open-it-fully
+  // surfaces) keep the full card.
+  if (mode === "embed") {
+    const embedCaption = caption && caption.trim() !== "" ? caption : card.description ?? undefined;
+    return (
+      <Image
+        src={imageSrc}
+        alt={caption ?? altText}
+        size="chat"
+        lightbox
+        rotation={card.rotation}
+        caption={embedCaption}
+        className="mx-auto my-2"
+      />
+    );
+  }
 
   const rotationTransform = card.rotation !== 0 ? `rotate(${card.rotation}deg)` : undefined;
   const bbox = showBbox && card.subjectBbox ? (

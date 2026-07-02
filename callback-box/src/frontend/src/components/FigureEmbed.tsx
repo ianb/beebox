@@ -32,19 +32,18 @@ export function makeEmbedComponents(ctx: LinkContext): MarkdownComponentOverride
     // Images and external URLs are ordinary markdown images.
     if (typeof src === "string" && src !== "" && !isExternalUrl(src) && !isImagePath(src)) {
       const target = resolveContentTarget(ctx.basePath, src);
+      // Frameless embed: the renderer owns its own appearance and the caption
+      // (a media renderer shows it beneath, so an image card reads like a plain
+      // captioned image). No `<figure>`/header wrapper here.
       return (
-        <figure className="my-4">
-          <FileView
-            path={target.path}
-            mode="embed"
-            rendererName={target.viewer}
-            onNavigate={onNavigate}
-            params={target.params}
-          />
-          {alt !== undefined && alt !== "" ? (
-            <figcaption className="text-xs text-warm-500 mt-1 text-center">{alt}</figcaption>
-          ) : null}
-        </figure>
+        <FileView
+          path={target.path}
+          mode="embed"
+          rendererName={target.viewer}
+          onNavigate={onNavigate}
+          params={target.params}
+          {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
+        />
       );
     }
     return <DefaultImg src={src} alt={alt} title={title} />;

@@ -118,15 +118,11 @@ function ChatParagraph({ children }: { children?: React.ReactNode }) {
 
 function makeChatMarkdownComponents(
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void,
-  {
-    boxSlug,
-    contextDir,
-    onZoomView,
-  }: { boxSlug: string | undefined; contextDir: string | undefined; onZoomView?: OnZoomView },
+  { boxSlug, contextDir }: { boxSlug: string | undefined; contextDir: string | undefined },
 ): MarkdownComponentOverrides {
   // `![…](…)` is the embed syntax. An image src embeds an image (chat sizing +
-  // lightbox); any other in-box path embeds that card/file inline via its own
-  // viewer (`mode="chat"` — a compact frame with an open-in-sidebar button).
+  // lightbox); any other in-box path embeds that card/file inline (frameless)
+  // via its own viewer.
   function ChatImg({ src, alt }: { src?: string; alt?: string }) {
     const video = src ? detectVideoEmbed(src) : null;
     if (video !== null) {
@@ -135,16 +131,17 @@ function makeChatMarkdownComponents(
     if (!src) return <ChatInlineImage src="" alt={alt || ""} />;
     if (!isExternalUrl(src) && !isImagePath(src)) {
       const target = resolveContentTarget(contextDir, src);
+      // Frameless embed (no chat header/border): the renderer owns its
+      // appearance and the caption, so an embedded image card reads like a
+      // plain captioned image. To open a card in the sidebar, use a link.
       return (
         <FileView
           path={target.path}
-          mode="chat"
+          mode="embed"
           rendererName={target.viewer}
           onNavigate={onNavigate}
           params={target.params}
-          {...(onZoomView
-            ? { onOpenInPanel: () => onZoomView({ target, label: alt || target.path }) }
-            : {})}
+          {...(alt !== undefined && alt !== "" ? { caption: alt } : {})}
         />
       );
     }
@@ -193,8 +190,8 @@ export function MarkdownContent({
     [onZoomView],
   );
   const components = useMemo(
-    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, contextDir: basePath, onZoomView }),
-    [handleNavigate, boxSlug, basePath, onZoomView],
+    () => makeChatMarkdownComponents(handleNavigate, { boxSlug, contextDir: basePath }),
+    [handleNavigate, boxSlug, basePath],
   );
 
   if (!cleaned) return null;

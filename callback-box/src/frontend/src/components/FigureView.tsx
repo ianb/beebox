@@ -39,7 +39,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-export function FigureView({ data, onNavigate, params, mode }: RendererProps) {
+export function FigureView({ data, onNavigate, params, mode, caption }: RendererProps) {
   const apiBase = getApiBase();
   const frontmatter = useMemo(() => data.frontmatter ?? {}, [data.frontmatter]);
   const runtime = parseRuntime(frontmatter.runtime);
@@ -125,9 +125,10 @@ export function FigureView({ data, onNavigate, params, mode }: RendererProps) {
     </ViewErrorBoundary>
   );
 
-  // Embedded (chat/companion): just the interactive — minimal chrome. On the
-  // full page, show the card's description below it. (FileView's page header
-  // already offers the Source toggle.)
+  // Embedded (chat/companion): just the interactive — minimal chrome — with the
+  // `![caption]` shown beneath, mirroring a captioned image. On the full page,
+  // show the card's description below it. (FileView's page header already offers
+  // the Source toggle.)
   if (mode === "page") {
     const description = typeof data.body === "string" ? data.body : "";
     return (
@@ -139,6 +140,14 @@ export function FigureView({ data, onNavigate, params, mode }: RendererProps) {
           </div>
         ) : null}
       </div>
+    );
+  }
+  if (caption !== undefined && caption.trim() !== "") {
+    return (
+      <figure className="my-2">
+        {figureEl}
+        <figcaption className="text-xs text-warm-500 mt-1 text-center">{caption}</figcaption>
+      </figure>
     );
   }
   return figureEl;
