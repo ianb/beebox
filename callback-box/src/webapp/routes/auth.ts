@@ -12,11 +12,11 @@ import { OAuth2Client } from "google-auth-library";
 import {
   signSession,
   getSessionUser,
-  getPublicUrl,
   getOwnerEmail,
   COOKIE_NAME,
   SESSION_MAX_AGE_MS,
 } from "../auth.js";
+import { getPublicUrl } from "../../lib/public-url.js";
 import { loadBoxConfig } from "../box-config.js";
 import type { BoxSpec } from "../server.js";
 
@@ -30,7 +30,7 @@ export async function registerAuthRoutes(
 ) {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID!;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET!;
-  const publicUrl = getPublicUrl();
+  const publicUrl = getPublicUrl("http://localhost:3210");
   const redirectUri = `${publicUrl}/auth/callback`;
 
   const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
