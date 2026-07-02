@@ -17,6 +17,23 @@ The evaluation that motivates this plan lives at
 `slopo-eval/REPORT.md` in the `try-slopo` worktree (not committed): 105 clusters
 on a clean run, ~68 cross-file, with a clear signal/noise split.
 
+## Status — implemented 2026-07-02
+
+Track A (slopo wired into `cb-codehealth`, config at `tools/slopo/`) and Track B
+(the duplication consolidations) shipped; see the `feat(codehealth)` and
+`refactor(dedup)` commits. Re-running slopo on the consolidated tree confirmed
+all consolidated helpers dropped out of the report. Two places the
+implementation diverged from the proposal below:
+
+- **The `slugify` data migration proved unnecessary.** Checking callers showed
+  the feedback slug only feeds a timestamp-prefixed, write-once filename that is
+  never looked up by recomputed slug, so unifying to the canonical `slugify`
+  changes only the cosmetic slug portion of *future* filenames — no on-disk
+  migration (the "verify callers before assuming" path in the posture below).
+- **The REST/tRPC systemic consolidation remains an open follow-up** — its own
+  subplan, never part of this plan's committed scope. Those clusters are left
+  visible in the slopo report (out of `slopo.ignore.txt`), not consolidated.
+
 ## Stated preferences this plan trades against
 
 - **`callback-box/CLAUDE.md`** — project conventions; doctests are the primary
