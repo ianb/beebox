@@ -14,7 +14,7 @@
 
 import { SECTION, xref } from "./sections.js";
 
-export function lawsSection(): string[] {
+export function lawsSection(): string {
   return `## ${SECTION.LAWS}
 
 These come first because they matter most. They are not tips — they are
@@ -84,5 +84,5 @@ in-conversation summaries, scratch notes that never land on disk: none of these
 count as recording. If something is worth ${SECTION.LAW_OF_SAVING}'s saving, it
 goes into a card. What a card actually is — its shape, its frontmatter, and the
 commands that manage it — is ${xref(SECTION.ABOUT_CARDS)} below.
-`.split("\n");
+`;
 }

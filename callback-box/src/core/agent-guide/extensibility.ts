@@ -10,8 +10,8 @@
 
 import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
 
-export function proceduresSection(procedures: ProcedureSummary[]): string[] {
-  if (procedures.length === 0) return [];
+export function proceduresSection(procedures: ProcedureSummary[]): string {
+  if (procedures.length === 0) return "";
   const lines: string[] = [
     "## Procedures",
     "",
@@ -23,12 +23,11 @@ export function proceduresSection(procedures: ProcedureSummary[]): string[] {
   }
   lines.push("");
   lines.push("Run with `cb procedure run <name>`. Read `docs/generated/procedures.md` before writing or modifying.");
-  lines.push("");
-  return lines;
+  return lines.join("\n");
 }
 
-export function guidesSection(guides: GuideSummary[]): string[] {
-  if (guides.length === 0) return [];
+export function guidesSection(guides: GuideSummary[]): string {
+  if (guides.length === 0) return "";
   const lines: string[] = [
     "## Guides",
     "",
@@ -39,6 +38,5 @@ export function guidesSection(guides: GuideSummary[]): string[] {
     const note = g.appliesTo ? ` — ${g.appliesTo}` : "";
     lines.push(`- **${g.name}**${note} → \`${g.compiledPath}\``);
   }
-  lines.push("");
-  return lines;
+  return lines.join("\n");
 }
