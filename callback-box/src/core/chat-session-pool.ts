@@ -8,6 +8,7 @@
  * so sessions can be resumed after server restarts.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { ChatThreadSession } from "./chat-thread-session.js";
@@ -43,9 +44,7 @@ interface SessionRecord {
 
 type SessionStore = Record<string, SessionRecord>;
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSessionPool:${context}]`, ...args);
-}
+const log = makeLog("ChatSessionPool");
 
 /** Callback to deliver a response to the external channel (e.g., Telegram). Stored per-thread for schedule fires. */
 type DeliverResponse = (text: string) => void | Promise<void>;

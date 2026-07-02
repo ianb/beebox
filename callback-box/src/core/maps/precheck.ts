@@ -25,10 +25,10 @@ import {
 } from "./precheck-ignore.js";
 import {
   listMappableDirs,
-  fileExists,
   listChildrenAtCommit,
   listChildrenOnDisk,
 } from "./precheck-listing.js";
+import { fileExists } from "../../lib/file-exists.js";
 
 export interface MapTask {
   /** Path of the MAP.md to write, relative to box root. */

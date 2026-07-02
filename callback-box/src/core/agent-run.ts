@@ -14,7 +14,7 @@ import { cardValidatorHook, gitMvNudgeHook } from "./sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "./sdk-binary-path.js";
 import { startPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./agent-stream.js";
-import { dropUndefined } from "./agent-json.js";
+import { dropUndefined } from "../lib/drop-undefined.js";
 import type { AgentResult } from "./agent-types.js";
 
 export interface RunAgentOptions {

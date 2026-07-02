@@ -17,6 +17,7 @@
  * 5. Optionally poll (sleep + recurse)
  */
 
+import { sleep } from "../../lib/sleep.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import {
@@ -396,6 +397,3 @@ async function releaseReactorLock(lockPath: string): Promise<void> {
   await releaseFileLock(lockPath);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}

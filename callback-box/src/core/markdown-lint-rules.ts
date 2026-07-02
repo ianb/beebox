@@ -2,7 +2,7 @@
  * Custom markdownlint rules for callback boxes.
  */
 
-import * as fs from "node:fs/promises";
+import { fileExists } from "../lib/file-exists.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -171,12 +171,3 @@ function isRelativePath(url: string): boolean {
   return true;
 }
 
-export async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch (_e) {
-    // access() throwing IS the answer here: the file is absent/unreadable.
-    return false;
-  }
-}

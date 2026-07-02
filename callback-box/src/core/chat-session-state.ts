@@ -8,6 +8,7 @@
  * line budget; nothing here is part of the module's public surface.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
@@ -51,9 +52,7 @@ export async function loadSessionHistory(
   return { sessionId, entries, total };
 }
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSession:${context}]`, ...args);
-}
+const log = makeLog("ChatSession");
 
 /**
  * Acquire the chat-active lock for the duration of an SDK run so housekeeping
