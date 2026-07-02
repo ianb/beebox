@@ -183,6 +183,12 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
     boxSlug: slug,
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
     services: {} as Services,
+    // Server-side prefetch is a trusted local render (invoked by `cb render`,
+    // not an untrusted HTTP client), so it retains the full access it had when
+    // every procedure was `publicProcedure` — owner-gated included.
+    user: null,
+    authed: true,
+    isOwner: true,
   };
 
   const caller = appRouter.createCaller(ctx);

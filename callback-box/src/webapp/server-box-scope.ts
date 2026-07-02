@@ -8,7 +8,7 @@
 
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
-import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
+import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 import { registerApiRoutes } from "./routes/api.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
@@ -24,7 +24,7 @@ import { registerBoxAdminRoutes } from "./routes/admin.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
+import { isAuthEnabled, getSessionEmail, getSessionUser, getOwnerEmail, isOwner, isDiagnosticBypassRequest } from "./auth.js";
 import { verifyAgentBearer } from "../core/agent-token.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { EventBus } from "../core/event-bus.js";
@@ -137,12 +137,27 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     // Server-side heartbeat: ping idle WS clients and drop ones that don't
     // pong, freeing sockets held by crashed/NAT-dropped tabs.
     keepAlive: { enabled: true, pingMs: 30_000, pongWaitMs: 5_000 },
-    createContext: (): TrpcContext => ({
-      boxRoot: box.boxRoot,
-      boxSlug: box.slug,
-      eventBus,
-      services: options.services ?? {},
-    }),
+    createContext: ({ req }: CreateFastifyContextOptions): TrpcContext => {
+      // Extract identity from the request the same way the box auth preHandler
+      // (and the raw `addOwnerCheck`) do, so tRPC procedures can gate on it.
+      // The preHandler already rejected unauthorized requests before this runs
+      // when auth is enabled; we recompute here to fail closed rather than
+      // assume it ran.
+      const user = getSessionUser(req);
+      const authEnabled = isAuthEnabled();
+      return {
+        boxRoot: box.boxRoot,
+        boxSlug: box.slug,
+        eventBus,
+        services: options.services ?? {},
+        user,
+        authed:
+          !authEnabled ||
+          user !== null ||
+          verifyAgentBearer(box.boxRoot, req.headers["authorization"]),
+        isOwner: !authEnabled || isOwner(req),
+      };
+    },
   };
   await instance.register(fastifyTRPCPlugin<typeof appRouter>, {
     prefix: "/api/trpc",

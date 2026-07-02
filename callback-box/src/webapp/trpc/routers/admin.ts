@@ -3,7 +3,7 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
@@ -19,7 +19,7 @@ function baseServerUrl(publicUrl: string): string {
  * Per-box admin router (Telegram, box config).
  */
 export const adminRouter = router({
-  telegramStatus: publicProcedure.query(async ({ ctx }) => {
+  telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {
       let publicUrl: string | undefined;
@@ -59,7 +59,7 @@ export const adminRouter = router({
     }
   }),
 
-  telegramSetup: publicProcedure
+  telegramSetup: ownerProcedure
     .input(z.object({ botToken: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const tg = ctx.services.telegram ?? createTelegramService(input.botToken);
@@ -119,7 +119,7 @@ export const adminRouter = router({
       };
     }),
 
-  telegramDisconnect: publicProcedure.mutation(async ({ ctx }) => {
+  telegramDisconnect: ownerProcedure.mutation(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (config) {
       try {
@@ -140,7 +140,7 @@ export const adminRouter = router({
     return { success: true };
   }),
 
-  boxConfig: publicProcedure.query(async ({ ctx }) => {
+  boxConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/box.json");
     try {
       const raw = await fs.readFile(configPath, "utf-8");
@@ -164,7 +164,7 @@ export const adminRouter = router({
     }
   }),
 
-  gmailConfig: publicProcedure.query(async ({ ctx }) => {
+  gmailConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
     try {
       const raw = await fs.readFile(configPath, "utf-8");
@@ -183,7 +183,7 @@ export const adminRouter = router({
     }
   }),
 
-  updateGmailConfig: publicProcedure
+  updateGmailConfig: ownerProcedure
     .input(
       z.object({
         query: z.string(),
@@ -206,7 +206,7 @@ export const adminRouter = router({
       return { query: next.query ?? "", labels: next.labels ?? [] };
     }),
 
-  updateBoxConfig: publicProcedure
+  updateBoxConfig: ownerProcedure
     .input(z.object({ allowedEmails: z.array(z.string()) }))
     .mutation(async ({ input, ctx }) => {
       const configPath = path.join(ctx.boxRoot, "config/box.json");
@@ -228,12 +228,12 @@ export const adminRouter = router({
       return { success: true, allowedEmails: existing.allowedEmails as string[] };
     }),
 
-  claudeStatus: publicProcedure.query(async ({ ctx }) => {
+  claudeStatus: ownerProcedure.query(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authStatus();
   }),
 
-  claudeLogin: publicProcedure.mutation(async ({ ctx }) => {
+  claudeLogin: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     const ownerEmail = process.env.CB_OWNER_EMAIL;
     const result = await claude.authLogin(ownerEmail);
@@ -246,7 +246,7 @@ export const adminRouter = router({
     });
   }),
 
-  claudeLogout: publicProcedure.mutation(async ({ ctx }) => {
+  claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authLogout();
   }),
