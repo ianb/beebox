@@ -232,10 +232,10 @@ bespoke `useBusSubscription` lists).
 
 | Surface | Becomes | Notes |
 |---|---|---|
-| Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. |
+| Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + renderers/view.tsx) — the query-card form waits for the pattern vocabulary. |
 | Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. |
 | Browse | directory subject + builtin master-detail view | Delete/context-menu are view affordances; a positional presentation card parameterizes (order, grouping, prominence, tiles vs rows). |
-| Chats | query card over chat husks + named `chat-picker` view | Freshness filter declarative; landmark-proximity grouping stays code. Blocked on husks. |
+| Chats | query card over chat husks + named `chat-picker` view | Freshness filter declarative; landmark-proximity grouping stays code. Blocked on husks. **Shipped 2026-07 as an instrument card** (`view: chat-picker`); the husk-based query form is still future. |
 | History | instrument card over the timeline view | Filter state (already URL-encoded) becomes frontmatter params; **saved filters = more instrument cards** with frozen params + notes body. Subject is git, never a card query. |
 | Nav | curated `refs` card + per-entry overrides | Each target renders its **nav form** — a third form beside tile/full (label, symbol, optional badge). Badges computed by the target's own renderer (questions card shows pending count), not by nav vocabulary. Anything can go in the nav. Minimal hardcoded fallback nav per can't-break. |
 | Dashboard | markdown card transcluding other cards | Prose + embedded health instrument, questions query, activity instrument. Reuses embedding instead of a layout schema. Accepts a document-flow layout ceiling; stresses embed machinery (embed-level error boundaries, live-updating embeds) — the right work. Non-singleton: any such card is *a* dashboard; the root binding picks *the* dashboard. |

@@ -47,6 +47,7 @@ import { WebpageSchema } from "./webpage.js";
 import { ExtfileSchema } from "./extfile.js";
 import { LandmarkSchema } from "./landmark.js";
 import { NavSchema } from "./nav.js";
+import { ViewSchema } from "./view.js";
 import { FigureSchema } from "./figure.js";
 import { ConceptMapSchema } from "./concept-map.js";
 import { CourseSchema } from "./course.js";
@@ -64,6 +65,7 @@ export const cardSchemas: CardSchema[] = [
   GuideSchema,
   LandmarkSchema,
   NavSchema,
+  ViewSchema,
   ProcedureSchema,
   ProcedureRunSchema,
   RecipeSchema,
@@ -434,37 +436,3 @@ export async function createCardSchemaMap(boxRoot?: string): Promise<Map<string,
   }
   return map;
 }
-
-// Re-export individual schemas for direct access
-export { MemoSchema } from "./memo.js";
-export { QuestionSchema } from "./question.js";
-export { FeedbackSchema } from "./feedback.js";
-export { ProcedureSchema } from "./procedure.js";
-export { ProcedureRunSchema } from "./procedure-run.js";
-export { ImageSchema } from "./image.js";
-export { AudioSchema } from "./audio.js";
-export { FileSchema } from "./file.js";
-export { CaptureSessionSchema } from "./capture-session.js";
-export { RecordSchema } from "./record.js";
-export { RecipeSchema } from "./recipe.js";
-export { EmailThreadSchema } from "./email-thread.js";
-export { EmailMessageSchema } from "./email-message.js";
-export { EmailOutboundSchema } from "./email-outbound.js";
-export { IntakeJobSchema } from "./intake-job.js";
-export { GuideSchema } from "./guide.js";
-export { ScheduledScriptSchema } from "./scheduled-script.js";
-export { TelegramMessageSchema } from "./telegram-message.js";
-export { ChatThreadSchema } from "./chat-thread.js";
-export { ChatJobSchema } from "./chat-job.js";
-export { PersonalitySchema } from "./personality.js";
-export { QuestionFollowupJobSchema } from "./question-followup-job.js";
-export { TodoListSchema } from "./todo-list.js";
-export { BriefingSchema } from "./briefing.js";
-export { PersonSchema } from "./person.js";
-export { PlaceSchema } from "./place.js";
-export { SheetSchema } from "./sheet.js";
-export { DocSchema } from "./doc.js";
-export { GdocSchema } from "./gdoc.js";
-export { ExtfileSchema } from "./extfile.js";
-export { LandmarkSchema } from "./landmark.js";
-export { NavSchema } from "./nav.js";
