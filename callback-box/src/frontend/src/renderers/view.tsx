@@ -8,16 +8,25 @@
  */
 
 import { NAMED_VIEW_NAMES } from "@shared/named-views";
+import { isRecord } from "../lib/is-record";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
 import { ChatsPicker } from "../components/chats/ChatsPicker";
+import { HistoryViewCard } from "../components/history/HistoryViewCard";
 import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
 import { registerCardRenderer, type RendererProps } from "./index";
 
-const VIEW_COMPONENTS: Record<string, React.ComponentType> = {
+/** Frontmatter `params` (already schema-validated by cb validate; each view re-parses defensively). */
+const VIEW_COMPONENTS: Record<string, React.ComponentType<{ params?: Record<string, unknown> }>> = {
   landmarks: LandmarksList,
   "chat-picker": ChatsPicker,
+  history: HistoryViewCard,
 };
+
+function readParams(frontmatter: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+  const params = frontmatter?.["params"];
+  return isRecord(params) ? params : undefined;
+}
 
 function ViewCard({ data }: RendererProps) {
   const name = typeof data.frontmatter?.["view"] === "string" ? data.frontmatter["view"] : "";
@@ -34,7 +43,7 @@ function ViewCard({ data }: RendererProps) {
       </Card>
     );
   }
-  return <Component />;
+  return <Component params={readParams(data.frontmatter)} />;
 }
 
 registerCardRenderer("view", {
