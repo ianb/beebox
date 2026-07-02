@@ -43,9 +43,8 @@ export const AudioSchema: CardSchema = cardSchema("audio", {
   instructions: `# Audio Cards
 
 An audio card represents a chunk of recorded speech from a capture
-session. The attached audio file lives in the card's attach scope
-(e.g. \`audio-001.audio.card\` with \`audio-001.attach/audio-001.webm\`);
-\`filename.ref:\` points into that scope via the \`attach/\` prefix.
+session. The audio file itself lives in the card's attach scope,
+pointed to by \`filename.ref:\` (attach scope: see ABOUT_CARDS).
 
 Frontmatter:
 - \`filename:\` — \`{ref, recorded, source, duration?}\` for the audio

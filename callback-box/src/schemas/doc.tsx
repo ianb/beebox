@@ -75,12 +75,7 @@ Never a top-level or shared \`images/\` directory.
 - A captured note or voice memo — use \`.memo.card\`.
 - A structured record extracted from something — use \`.record.card\`.
 - An ad-hoc README that lives next to code/config rather than being
-  content in its own right — plain \`.md\` is fine.
-
-## No timestamps
-
-No \`created\` / \`modified\` field — Git tracks both. This is the
-general no-Git-metadata rule in ABOUT_CARDS, not doc-specific.`,
+  content in its own right — plain \`.md\` is fine.`,
 });
 
 export interface DocFields {
