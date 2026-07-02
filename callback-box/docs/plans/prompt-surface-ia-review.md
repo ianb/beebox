@@ -207,6 +207,30 @@ reconciled against *current* main, cited inline.
     layers read from disk so `cb init` staleness is visible. Paired with the
     **`cb-prompt-review` skill** (monorepo `.claude/skills/`) documenting the
     layering model and review principles.
+  - **Skill extraction — always-loaded weight architecture** (Track 3, extended
+    past calendar/drive). Five surfaces left the always-loaded guide for
+    on-demand skills, each discovered via its trigger `description` (which is now
+    where the "one core sentence" lives): **email** (a real capability *gap* — an
+    agent had no path from "reply to Dana" to the `email-outbound` card, whose
+    schema instructions only load once the card exists), **location** and
+    **views** (full moves), and **schedules** and **tricks** (doorways whose
+    descriptions carry the — partly self-noticing — trigger). **Briefing Tags
+    deleted** outright: the briefing schema's own instructions (loaded via the
+    card rule) carry strictly more, and Where-to-Record already routes the intent.
+    ~1000 words off the always-loaded budget. Chat-only Attachments/Selections
+    scoping is the remaining structural piece, deferred.
+  - **Section-shape normalization** (Track 5). The agent-guide section files used
+    three return patterns (template-literal-then-`.split`, arrays of quoted
+    line-fragments, dynamic `.push` loops); now every section returns a single
+    `string` (static prose as a bare template literal, dynamic sections build a
+    string), joined by `index.ts`. Verified prose-preserving by diffing the
+    rendered guide before/after — content byte-identical, only inter-section
+    spacing normalized.
+  - **`reference` finding (not in the plan, but governs it):** Claude Code does
+    **not** dedupe a skill's `SKILL.md` body against a `Read` of the same file —
+    pointing to a `SKILL.md` by path double-loads it when the skill is also
+    invoked. So agent-facing prompts reference a skill by *capability/name*, never
+    by path (the chat prompt's views pointer follows this).
 
 Everything else below is still future work.
 
