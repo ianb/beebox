@@ -17,7 +17,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
 import { listBoxMarkdownFiles } from "./list-cards.js";
-import { extractInlineLinks, resolveInternalLink, fileExists } from "./markdown-lint-rules.js";
+import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
+import { fileExists } from "../lib/file-exists.js";
 
 const INDEX_IGNORE = [
   "**/node_modules/**",

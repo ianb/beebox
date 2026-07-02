@@ -25,7 +25,7 @@ export function CalloutBlock({
 }) {
   const handleNavigate = useCallback(
     (target: ViewTarget) => {
-      if (onZoomView) onZoomView({ target: { ...target, zoom: false }, label: target.path });
+      if (onZoomView) onZoomView({ target, label: target.path });
     },
     [onZoomView],
   );

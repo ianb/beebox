@@ -93,7 +93,7 @@ function scaleAmount(raw: string, scale: number): ReactNode {
 function refToViewTarget(sourceRef: string): ViewTarget {
   const noFrag = sourceRef.split("#")[0] ?? sourceRef;
   const path = noFrag.replace(/^\/+/, "");
-  return { path, viewer: null, params: {}, zoom: false };
+  return { path, viewer: null, params: {} };
 }
 
 function AmountUnit({ amount, unit }: { amount?: string; unit?: string }): ReactNode {

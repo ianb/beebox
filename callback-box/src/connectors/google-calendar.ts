@@ -50,6 +50,17 @@ import {
 import { syncCalendar } from "./google-calendar-sync.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
 
+interface GoogleCalendarConnectorOptions {
+  /** Injected calendar service (tests); the real one is built from box auth when omitted. */
+  calendar?: GoogleCalendarService;
+  /**
+   * Clock for the sync time-window. Injectable so the window isn't tied to wall
+   * time — tests freeze it so fixed-date fixtures stay in-window regardless of
+   * when the suite runs. Defaults to `() => new Date()` in production.
+   */
+  now?: () => Date;
+}
+
 class GoogleCalendarConnector implements Connector {
   name = "google-calendar";
   produces = ["calendar-event"];
@@ -58,10 +69,12 @@ class GoogleCalendarConnector implements Connector {
 
   private boxRoot: string;
   private injectedService?: GoogleCalendarService | undefined;
+  private now: () => Date;
 
-  constructor(boxRoot: string, service?: GoogleCalendarService) {
+  constructor(boxRoot: string, options?: GoogleCalendarConnectorOptions) {
     this.boxRoot = boxRoot;
-    this.injectedService = service;
+    this.injectedService = options?.calendar;
+    this.now = options?.now ?? (() => new Date());
   }
 
   private async getCalendar(): Promise<GoogleCalendarService | null> {
@@ -134,7 +147,7 @@ class GoogleCalendarConnector implements Connector {
 
     // Time window for client-side filtering (incremental sync can return
     // events outside our window, e.g. all instances of a recurring event)
-    const now = new Date();
+    const now = this.now();
     const windowStart = new Date(now);
     windowStart.setDate(windowStart.getDate() - syncDaysBack);
     const windowEnd = new Date(now);
@@ -267,9 +280,9 @@ class GoogleCalendarConnector implements Connector {
 
 export function createGoogleCalendarConnector(
   boxRoot: string,
-  calendar?: GoogleCalendarService,
+  options?: GoogleCalendarConnectorOptions,
 ): Connector {
-  const connector = new GoogleCalendarConnector(boxRoot, calendar);
+  const connector = new GoogleCalendarConnector(boxRoot, options);
   registerConnector(connector);
   return connector;
 }

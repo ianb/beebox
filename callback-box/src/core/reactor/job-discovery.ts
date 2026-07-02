@@ -2,16 +2,16 @@
  * Job card discovery — scans box/jobs/ for pending job cards.
  *
  * Job cards have the suffix `.job.card` (optionally `.TYPE.job.card`
- * for typed jobs like chat). Priority and source are extracted from the
- * card — YAML frontmatter fields (`priority:`, `source:`) for current
- * cards, root-element attributes (`priority="..."`, `source="..."`) for
- * legacy XML ones. When a sourceFilter is provided, jobs whose source
- * does not match are dropped — used by `cb wakeup --connector X` to
- * scope the reactor to just the jobs that the same partial run produced.
+ * for typed jobs like chat). Priority and source are read from the card's
+ * YAML frontmatter (`priority:`, `source:`). When a sourceFilter is
+ * provided, jobs whose source does not match are dropped — used by
+ * `cb wakeup --connector X` to scope the reactor to just the jobs that the
+ * same partial run produced.
  */
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import { readCardFrontmatter } from "../card-io.js";
 import type { JobCardInfo } from "./types.js";
 
 export async function findJobCards(
@@ -41,17 +41,11 @@ export async function findJobCards(
     let source: string | undefined;
     try {
       const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
-      // YAML frontmatter field first; legacy XML root-element attribute as
-      // fallback (the first source="..." is reliable because root attrs
-      // precede children).
-      const priorityMatch =
-        content.match(/^priority:\s*(low|normal)\s*$/m) ??
-        content.match(/priority="(low|normal)"/);
-      if (priorityMatch?.[1] === "low") priority = "low";
-      const sourceMatch =
-        content.match(/^source:\s*(\S+)\s*$/m) ??
-        content.match(/source="([^"]*)"/);
-      if (sourceMatch) source = sourceMatch[1];
+      const fm = readCardFrontmatter(content);
+      if (fm) {
+        if (fm["priority"] === "low") priority = "low";
+        if (typeof fm["source"] === "string") source = fm["source"];
+      }
     } catch (e) {
       // Can't read this card — default to normal priority, no source. The job
       // is still surfaced; whatever processes it will hit the same read error.

@@ -8,6 +8,7 @@
  * rather than captured.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import {
   getFeaturesForSession,
   updateFeaturesForSession,
@@ -34,9 +35,7 @@ class InvalidFeatureValueError extends Error {
   }
 }
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSession:${context}]`, ...args);
-}
+const log = makeLog("ChatSession");
 
 interface FeatureStoreDeps {
   boxRoot: string;

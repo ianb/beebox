@@ -325,6 +325,7 @@ export function CompanionViewPanel({
                 path={tab.target.path}
                 mode="companion"
                 rendererName={tab.target.viewer}
+                params={tab.target.params}
                 onNavigate={onNavigate}
                 onAddSelection={onAddSelection}
                 reportActivity={reportActivity}

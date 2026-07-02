@@ -7,7 +7,7 @@
 
 import { SECTION, xref } from "./sections.js";
 
-export function searchSection(): string[] {
+export function searchSection(): string {
   return `## Searching the Box
 
 \`cb search "<query>"\` is full-text search over the box's cards — prefer it over
@@ -37,15 +37,13 @@ excerpt — so you see both *which* card and *where* in it. A truncated run repo
 
 To make a card findable in the first place, write it a good \`contains:\` — the
 rule and the \`cb contains\` worklist commands are in ${xref(SECTION.ABOUT_CARDS)}.
-`.split("\n");
+`;
 }
 
 /** Appended to every searchable card type's docs/generated/card-<type>.md. */
 export const CONTAINS_DOC_APPENDIX = `## The \`contains:\` field
 
-Set \`contains:\` to one sentence stating what can be found in this card —
-the prime retrieval field for search and listings. When the information is
-concise, the sentence carries the information itself ("Dentist moved to
-June 17; confirmation in this email"), not a pointer at it ("contains
-scheduling information"); when it isn't concise, the sentence says what's
-learnable here. Never a list of parts. Keep it under 200 characters.`;
+Give this card a one-sentence \`contains:\` — the prime retrieval field for
+\`cb search\` and listings. How to write a good one (carry the information when
+it's concise, never a list of parts, under 200 characters) is in the agent
+guide's ABOUT_CARDS section.`;

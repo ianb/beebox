@@ -75,10 +75,15 @@ interface FileViewProps {
    */
   onOpenInPanel?: () => void;
   /**
-   * Optional. Embed query params from a `view:` link, forwarded to the active
-   * renderer's `params`. Set on the chat-embed path; absent elsewhere.
+   * Optional. Embed query params, forwarded to the active renderer's `params`.
+   * Set on the embed path; absent elsewhere.
    */
   params?: Record<string, string>;
+  /**
+   * Optional. The `![caption](path)` caption, forwarded to a media renderer so
+   * an embedded image/figure card shows it like a normal captioned image.
+   */
+  caption?: string;
 }
 
 /* ---------- path classification ---------- */
@@ -289,7 +294,7 @@ function PageHeader({
 
 /* ---------- main component ---------- */
 
-export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params }: FileViewProps) {
+export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAddSelection, reportActivity, onOpenInPanel, params, caption }: FileViewProps) {
   const mode = modeProp ?? "page";
   const { data, loading, error } = useFileData(path);
 
@@ -320,14 +325,16 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
       <ViewRenderer
         slug={binding.slug}
         mode={mode === "chat" ? "chat" : "page"}
-        params={{ path }}
+        // Link/embed query params (e.g. `?view=…&k=v`) reach the view; `path`
+        // is the card's own path and is authoritative (can't be clobbered).
+        params={{ ...params, path }}
         {...(reportActivity !== undefined ? { reportActivity } : {})}
         onNavigate={onNavigate}
         renderInline={(cardPath) => <FileView path={cardPath} mode="embed" onNavigate={onNavigate} />}
       />
     );
     return [{ name: binding.name, Component: Bound, priority: 100 }, ...base];
-  }, [path, data, binding, mode, reportActivity, onNavigate]);
+  }, [path, data, binding, mode, reportActivity, onNavigate, params]);
 
   if (loading) return <div className="p-4 text-warm-600">Loading...</div>;
   if (error) {
@@ -348,7 +355,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;
   }
 
-  const rendered = <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} />;
+  const rendered = <active.Component data={data} onNavigate={onNavigate} params={params} mode={mode} caption={caption} />;
   const body = onAddSelection === undefined
     ? rendered
     : <SelectionCapture onCapture={handleCapture}>{rendered}</SelectionCapture>;

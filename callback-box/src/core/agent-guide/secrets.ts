@@ -8,11 +8,8 @@
  * wait for the agent to think of opening the right doc.
  */
 
-export function secretsSection(): string[] {
-  return [
-    "## API keys & secrets",
-    "",
-    "Credentials live under `config/connectors/` (gitignored) — never in a card or any committed file. Before saving or reading a key, see the Credentials section of `docs/generated/connectors.md` for the file convention.",
-    "",
-  ];
+export function secretsSection(): string {
+  return `## API keys & secrets
+
+Credentials live under \`config/connectors/\` (gitignored) — never in a card or any committed file. Before saving or reading a key, see the Credentials section of \`docs/generated/connectors.md\` for the file convention.`;
 }

@@ -37,6 +37,7 @@ import { renderToString } from "react-dom/server";
 import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../lib/paths.js";
 import { compileView, listViews } from "../../webapp/views/compiler.js";
+import { viewLintCommand } from "./view-lint.js";
 import { loadViewCards } from "../../core/view-cards.js";
 import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
@@ -406,4 +407,5 @@ export const viewCommand = new Command("view")
   .description("Work with agent-authored views")
   .addCommand(viewTestCommand)
   .addCommand(viewCheckCommand)
-  .addCommand(viewTypecheckCommand);
+  .addCommand(viewTypecheckCommand)
+  .addCommand(viewLintCommand);

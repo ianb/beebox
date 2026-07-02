@@ -1,7 +1,8 @@
 # Agent guide — Card Types section
 
 `cardTypesSection` builds the "## CARD_TYPES" catalogue in the generated agent
-guide from the box's frontmatter card schemas.
+guide from the box's frontmatter card schemas: grouped by `category`
+(authored / synced / system), each type with its one-line `description`.
 
 It takes `CardSchema[]` and lists each by its `.type`. This regressed once: it
 took the legacy XML `ElementSchema[]` (`.tagName`), which is empty since every
@@ -14,32 +15,60 @@ import { cardSchema, type CardSchema } from "../../src/cards/index.js";
 import { z } from "zod";
 ```
 
-## Lists each card type, linking to its generated doc when it has instructions
+## Groups by category and carries each type's description
 
 ```ts
-const withDoc: CardSchema = cardSchema("memo", { fields: { status: z.string() }, instructions: "How to memo." });
-const noDoc: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
+const authored: CardSchema = cardSchema("memo", {
+  description: "a captured note",
+  category: "authored",
+  fields: { status: z.string() },
+  instructions: "How to memo.",
+});
+const system: CardSchema = cardSchema("chat-job", {
+  description: "reactor bookkeeping",
+  category: "system",
+  fields: { status: z.string() },
+});
 
-const lines = cardTypesSection([withDoc, noDoc]);
+const text = cardTypesSection([authored, system]);
+const lines = text.split("\n");
 lines.includes("## CARD_TYPES")
 => true
 
-// A schema with instructions links to its per-type doc by .type
-lines.includes("- **memo** — see `docs/generated/card-memo.md`")
+lines.includes("- **memo** — a captured note")
 => true
 
-// A schema without instructions is listed without a doc link
+lines.includes("- **chat-job** — reactor bookkeeping")
+=> true
+
+// The authored group renders before the system group
+lines.findIndex((l) => l.startsWith("**Types you create")) < lines.findIndex((l) => l.startsWith("**System bookkeeping"))
+=> true
+
+// The per-type doc location is stated once up front, not per line
+lines.filter((l) => l.includes("docs/generated/card-")).length
+=> 1
+```
+
+## A description-less schema (e.g. box-local) still lists, defaulting to authored
+
+```ts
+const bare: CardSchema = cardSchema("widget", { fields: { size: z.string() } });
+
+const text = cardTypesSection([bare]);
+const lines = text.split("\n");
 lines.includes("- **widget**")
 => true
 
-lines.some((l) => l.includes("widget") && l.includes("docs/generated"))
-=> false
+lines.some((l) => l.startsWith("**Types you create"))
+=> true
 ```
 
 ## An empty schema list still renders the header (no crash)
 
 ```ts
-const lines = cardTypesSection([]);
+const text = cardTypesSection([]);
+const lines = text.split("\n");
 lines[0]
 => ## CARD_TYPES
 ```

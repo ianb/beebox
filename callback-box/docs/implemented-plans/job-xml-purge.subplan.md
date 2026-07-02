@@ -1,5 +1,20 @@
 # Job-Card XML Purge (subplan)
 
+> **Landed** (2026-07). Implemented on `worktree-job-xml-purge`, merged to main.
+> The verify step confirmed the "critical gap" was a **real silent bug**:
+> frontmatter jobs reached the reactor agent stripped of their referenced cards
+> and schema instructions. Two consumers this plan under-scoped were fixed
+> alongside the enumerated ones: `wakeup-steps.ts` `cleanupStaleJobs` (matched
+> the XML attribute `status="pending"`, so it silently skipped every frontmatter
+> job — all live jobs — and never cleaned up stale ones; it had no test) and
+> `collectExistingJobRefs` (carried a dead XML `ref="..."` fallback). A third
+> buggy frontmatter producer the plan missed — `question-followup-job`
+> (`question-ref: {ref}`) — is why the fix uses a generic `{ref}` walker
+> (`card-io.collectRefs`) rather than per-schema extraction. Backfill got its own
+> schema (`contains-backfill-job`), the reactor job body uses a plain fence, and
+> a codex review follow-up hardened stale-cleanup to honor the schema-default
+> `status`. The rest of the doc below is the original plan, preserved as-is.
+
 Job cards were migrated to YAML-frontmatter (Phase 2) on the **producer** side,
 but the reactor **consumer** side and one straggler producer still speak the old
 XML format. This subplan finishes the purge: convert the last XML producer, make

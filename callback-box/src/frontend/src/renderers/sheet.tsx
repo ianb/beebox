@@ -2,6 +2,7 @@
  * Sheet card renderer — read-only spreadsheet view with tabs.
  */
 
+import { isRecord } from "../lib/is-record";
 import { useState, useEffect } from "react";
 import type { RendererProps } from "./index";
 import { registerCardRenderer } from "./index";
@@ -26,9 +27,6 @@ interface ParsedSheet {
   tabs: Array<{ ref: string; title: string; gid: string }>;
 }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 function strOf(v: unknown): string {
   return typeof v === "string" ? v : "";
 }

@@ -38,7 +38,7 @@ function Attribution({
       <button
         type="button"
         onClick={() => {
-          const target: ViewTarget = { path: from, viewer: null, params: {}, zoom: false };
+          const target: ViewTarget = { path: from, viewer: null, params: {} };
           linkCtx.onNavigate(target, { label: displayName });
         }}
         className="not-italic text-warm-600 hover:text-warm-800 underline-offset-2 hover:underline cursor-pointer"

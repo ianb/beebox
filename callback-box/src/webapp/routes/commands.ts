@@ -17,6 +17,7 @@ import {
   type CommandContext,
 } from "../../core/commands/index.js";
 import type { EventBus } from "../../core/event-bus.js";
+import { mimetypeToExtension } from "../../lib/mimetype.js";
 
 interface ExecuteBody {
   command: string;
@@ -210,26 +211,3 @@ export async function registerCommandRoutes(
   });
 }
 
-/**
- * Convert MIME type to file extension.
- */
-function mimetypeToExtension(mimetype: string): string {
-  const map: Record<string, string> = {
-    "audio/webm": ".webm",
-    "audio/mp3": ".mp3",
-    "audio/mpeg": ".mp3",
-    "audio/wav": ".wav",
-    "audio/ogg": ".ogg",
-    "audio/m4a": ".m4a",
-    "audio/mp4": ".m4a",
-    "audio/flac": ".flac",
-    "image/jpeg": ".jpg",
-    "image/png": ".png",
-    "image/gif": ".gif",
-    "image/webp": ".webp",
-    "application/pdf": ".pdf",
-    "text/plain": ".txt",
-    "application/json": ".json",
-  };
-  return map[mimetype] ?? ".bin";
-}

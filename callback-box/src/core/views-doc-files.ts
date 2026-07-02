@@ -130,27 +130,16 @@ uncommitted is safe: box housekeeping sweeps stray changes on wakeup.
 
 ## Query Parameters (path and others)
 
-Views receive query parameters via \`params\`. The most important parameter is \`path\`, which scopes what the view shows.
-
-**Always provide a \`path\` parameter** when linking to or embedding a view:
-- \`path=/\` — the entire box
-- \`path=store/archive/bills/\` — a specific directory
-- \`path=store/archive/bills/Electric.record.card\` — a specific card
-
-The view component reads it from \`params.path\`:
+Views receive query parameters via \`params\`. \`params.path\` is **the card this view is rendering** — set automatically to the card's own path (the view is that card type's interface). Read the card from \`cards\` with it:
 
 \`\`\`tsx
 export default function MyView({ cards, params }) {
-  const viewPath = params.path || "/";
-  // Filter cards by path, or use it as context
-  const filtered = viewPath === "/"
-    ? cards
-    : cards.filter(c => c.path.startsWith(viewPath));
-  // ...
+  const card = cards.find(c => c.path === params.path);
+  // ...render card.frontmatter / card.body...
 }
 \`\`\`
 
-You can also use custom query parameters for filtering, sorting, etc. — they all arrive in \`params\`.
+Any extra query params on the link/embed — \`![x](/store/Foo.dash.card?tab=costs&range=90d)\` — arrive alongside \`path\` in \`params\` for filtering, sorting, selecting a tab, etc.
 
 ## React
 

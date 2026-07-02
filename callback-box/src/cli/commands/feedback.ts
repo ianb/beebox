@@ -11,6 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { requireBoxRoot } from "../lib/paths.js";
 import { stageFiles, commitPaths } from "../lib/git.js";
+import { slugify } from "../../lib/filename.js";
 import {
   getSessionLogPath,
   listSessions,
@@ -19,17 +20,6 @@ import {
 } from "../lib/session.js";
 
 const MAX_CONTEXT_ENTRIES = 12;
-
-function slugify(text: string, maxLen?: number): string {
-  maxLen = maxLen ?? 40;
-  return text
-    .toLowerCase()
-    .replace(/[^\s\w-]/g, "")
-    .replace(/\s+/g, "-")
-    .replace(/-+/g, "-")
-    .replace(/^-|-$/g, "")
-    .slice(0, maxLen);
-}
 
 function formatEntry(entry: SessionEntry): string {
   const role = entry.type === "user" ? "User" : "Agent";
@@ -107,7 +97,7 @@ export const feedbackCommand = new Command("feedback")
       const now = new Date();
 
       const timestamp = now.toISOString().replace(/[.:]/g, "-").slice(0, 19);
-      const slug = slugify(message);
+      const slug = slugify(message, { maxLength: 40 });
       const fileName = `${timestamp}-${slug}.md`;
       const feedbackDir = path.join(boxRoot, "config", "feedback");
       const filePath = path.join(feedbackDir, fileName);

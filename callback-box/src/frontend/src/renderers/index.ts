@@ -40,6 +40,12 @@ export interface RendererProps {
   params?: Record<string, string>;
   /** The surface this renderer is shown in, so it can adapt its own chrome. */
   mode?: "page" | "chat" | "companion" | "embed";
+  /**
+   * The caption from an `![caption](path)` embed. A "media" renderer (image,
+   * figure) shows it beneath the content so an embedded card reads exactly like
+   * a normal captioned image; other renderers ignore it. Absent outside embeds.
+   */
+  caption?: string;
 }
 
 /** A renderer that can display a file */

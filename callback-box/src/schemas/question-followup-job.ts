@@ -10,6 +10,8 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
 export const QuestionFollowupJobSchema: CardSchema = cardSchema("question-followup-job", {
+  description: "A system job created when the user answers a question — carries the directive and answer for an agent to act on",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),

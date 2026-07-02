@@ -17,6 +17,7 @@ export {
   type FieldDecl,
   type CardSchemaConfig,
   type CardSchema,
+  type CardCategory,
   type CardValidateInput,
 } from "./schema.js";
 

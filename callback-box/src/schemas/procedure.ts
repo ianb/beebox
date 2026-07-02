@@ -67,6 +67,8 @@ const procedureFields = {
 };
 
 export const ProcedureSchema: CardSchema = cardSchema("procedure", {
+  description: "A declarative multi-step workflow definition (precheck/run/validate phases); execution state lives in procedure-run cards",
+  category: "authored",
   searchable: false,
   fields: procedureFields,
   instructions: `# Handling Procedure Definitions

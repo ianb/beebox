@@ -17,28 +17,64 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
+/**
+ * Where a recipe came from — at least one of: `label` (a freeform name, e.g.
+ * "The Kitchen" or "Grandma"), `href` (an external URL), or `ref` (a card, e.g.
+ * a frozen `*.webpage.card`). Typed rather than freeform so a source can be a
+ * clickable link or a tracked ref while still allowing a plain name.
+ */
+export const RecipeSource = z
+  .object({
+    label: z.string().optional(),
+    href: z.string().optional(),
+    ref: z.string().optional(),
+  })
+  .refine((s) => s.label !== undefined || s.href !== undefined || s.ref !== undefined, {
+    message: "source needs at least one of label / href / ref",
+  });
+
+/**
+ * A representative image — exactly one of `ref` (into the recipe's attach scope,
+ * e.g. `attach/finished.jpg`) or `href` (an external URL).
+ */
+export const RecipeHeroImage = z
+  .object({
+    ref: z.string().optional(),
+    href: z.string().optional(),
+  })
+  .refine((h) => (h.ref === undefined) !== (h.href === undefined), {
+    message: "hero-image needs exactly one of ref / href",
+  });
+
 export const RecipeSchema: CardSchema = cardSchema("recipe", {
+  description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
+  category: "authored",
   fields: {
     title: z.string(),
     description: z.string().optional(),
-    source: z.string().optional(),
+    source: RecipeSource.optional(),
     tags: z.array(z.string()).optional(),
-    "hero-image": z.string().optional(),
+    "hero-image": RecipeHeroImage.optional(),
     body: body(z.string()),
   },
   instructions: `# Recipe Cards
 
-Recipes live in \`store/recipes/\`. Use subdirectories for organization
-(e.g., \`store/recipes/italian/\`, \`store/recipes/desserts/\`).
+Recipes live in \`store/recipes/\`. Organize with subdirectories only if
+the user wants that — don't impose a taxonomy.
 
 ## Frontmatter
 
 - \`title:\` — required. Recipe name.
 - \`description:\` — optional prose.
-- \`source:\` — optional. Cookbook, person, URL.
+- \`source:\` — optional. Where the recipe came from, as an object with at
+  least one of: \`label\` (a freeform name — a cookbook, a person),
+  \`href\` (an external URL), or \`ref\` (a card, e.g. a frozen
+  \`*.webpage.card\`). E.g. \`source: {label: "The Kitchen"}\` or
+  \`source: {href: "<the recipe's URL>"}\`.
 - \`tags:\` — optional array of strings.
-- \`hero-image:\` — optional path to a representative image (relative
-  to the recipe card's attach scope, e.g. \`attach/finished.jpg\`).
+- \`hero-image:\` — optional representative image, as an object with
+  exactly one of \`ref\` (into this card's attach scope, e.g.
+  \`{ref: "attach/finished.jpg"}\`) or \`href\` (an external URL).
 
 ## Body
 
@@ -75,9 +111,9 @@ export interface RecipeFields {
   type: "recipe";
   title: string;
   description?: string;
-  source?: string;
+  source?: z.infer<typeof RecipeSource>;
   tags?: string[];
-  "hero-image"?: string;
+  "hero-image"?: z.infer<typeof RecipeHeroImage>;
   body: string;
 }
 

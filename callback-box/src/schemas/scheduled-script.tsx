@@ -46,6 +46,8 @@ const RequiresField = z.object({
 });
 
 export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", {
+  description: "Declarative scheduling for a command — cron/at/rrule plus budgets, locks, and wakeup opportunism",
+  category: "authored",
   searchable: false,
   fields: {
     cron: z.string().optional(),

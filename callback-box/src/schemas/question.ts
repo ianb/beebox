@@ -36,6 +36,8 @@ const QuestionAnswer = z.object({
 });
 
 export const QuestionSchema: CardSchema = cardSchema("question", {
+  description: "Asks the user something (select/text/confirm) and routes the answer back to an agent via its directive",
+  category: "authored",
   fields: {
     status: QuestionStatus.default("pending"),
     "answered-by": z.string().optional(),

@@ -12,7 +12,7 @@ import type { CardSchema } from "../../cards/index.js";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { SECTION, xref } from "./sections.js";
 
-export function aboutCardsSection(): string[] {
+export function aboutCardsSection(): string {
   const createExamples = getAllTemplates().map(
     (t) => `- \`cb create <path> -t ${t.name}\` — ${t.description}`,
   );
@@ -58,7 +58,9 @@ next), but a few belong to every card:
   sentence still holds, \`cb contains update <card> --text "..."\` clears the
   staleness flag; \`cb contains list --missing\` / \`--stale\` shows which cards
   still need one written or refreshed.
-- **\`ref\`** — a pointer to another card. A leading \`/\` resolves from the **box
+- **refs** — not a fixed field but a pattern: wherever frontmatter or a body tag
+  points at another card (a \`ref:\` value, \`key-people[].ref\`, a \`{% source %}\`
+  anchor), the path works the same way. A leading \`/\` resolves from the **box
   root**; a bare path resolves relative to the current card; avoid \`../../\`. The
   full \`ref\`/\`href\` semantics (tracking, \`cb mv\` rewriting, external \`href\`)
   live in ${xref(SECTION.PROVENANCE)}.
@@ -120,39 +122,60 @@ warnings you'll see:
 - **reference failed to resolve / broken internal link** — a \`ref\` or markdown
   link points at a card that doesn't exist (common after a hand-move — use
   \`cb mv\`, which rewrites refs).
-- **\`view:\` in a link label** — put it in the URL: \`[label](view:path)\`, not
-  \`[view:path]\`.
+- **retired \`view:\` scheme** — drop the prefix and reference the plain box path:
+  \`[label](store/x.card)\` to link, \`![label](store/x.card)\` to embed.
 - **duplicate basename** — two cards in one directory share a name; rename one.
 - **\`contains:\` too long** — keep it under 200 characters.
 
 The full catalogue of card types is in ${xref(SECTION.CARD_TYPES)}, next.`;
 
-  return [...intro.split("\n"), ...createExamples, ...outro.split("\n")];
+  return [intro, ...createExamples, outro].join("\n");
 }
 
-export function cardTypesSection(allCardSchemas: CardSchema[]): string[] {
+const CARD_CATEGORY_GROUPS = [
+  {
+    category: "authored",
+    heading: "**Types you create and edit** — the working vocabulary:",
+  },
+  {
+    category: "synced",
+    heading:
+      "**Synced & captured** — created by connectors and the capture UI; you read and edit them, but rarely create one by hand:",
+  },
+  {
+    category: "system",
+    heading:
+      "**System bookkeeping** — created and consumed by the machinery; you don't author these:",
+  },
+] as const;
+
+export function cardTypesSection(allCardSchemas: CardSchema[]): string {
   const lines: string[] = [
     `## ${SECTION.CARD_TYPES}`,
     "",
+    "Each type with handling instructions has a full reference at `docs/generated/card-<type>.md` — read it before working with a card of that type.",
+    "",
   ];
-  for (const schema of allCardSchemas) {
-    const hasDoc = schema.instructions ? ` — see \`docs/generated/card-${schema.type}.md\`` : "";
-    lines.push(`- **${schema.type}**${hasDoc}`);
+  for (const group of CARD_CATEGORY_GROUPS) {
+    const schemas = allCardSchemas.filter((s) => s.category === group.category);
+    if (schemas.length === 0) continue;
+    lines.push(group.heading);
+    lines.push("");
+    for (const schema of schemas) {
+      const desc = schema.description === undefined ? "" : ` — ${schema.description}`;
+      lines.push(`- **${schema.type}**${desc}`);
+    }
+    lines.push("");
   }
-  lines.push("");
   lines.push("New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");
-  lines.push("");
-  return lines;
+  return lines.join("\n");
 }
 
-export function questionsSection(): string[] {
-  return [
-    `## ${SECTION.QUESTIONS}`,
-    "",
-    "Create question cards in `box/questions/` to ask the user.",
-    "Set `answered-by` to your agent name so the answer routes back to you.",
-    "Always set the `directive:` field describing what you'll do with the answer — when the user answers, the system creates a follow-up job carrying this directive.",
-    "See `docs/generated/card-question.md` for templates.",
-    "",
-  ];
+export function questionsSection(): string {
+  return `## ${SECTION.QUESTIONS}
+
+Create question cards in \`box/questions/\` to ask the user.
+Set \`answered-by\` to your agent name so the answer routes back to you.
+Always set the \`directive:\` field describing what you'll do with the answer — when the user answers, the system creates a follow-up job carrying this directive.
+See \`docs/generated/card-question.md\` for templates.`;
 }

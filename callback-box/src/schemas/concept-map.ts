@@ -125,6 +125,8 @@ export function conceptMapShapeWarnings(fields: Record<string, unknown>): LintIs
 }
 
 export const ConceptMapSchema: CardSchema = cardSchema("concept-map", {
+  description: "A module-scale knowledge graph for one bounded topic — concepts as in-card nodes with typed edges; a course component",
+  category: "authored",
   validate: ({ fields }) => conceptMapErrors(fields),
   fields: {
     concepts: z.array(ConceptNode),

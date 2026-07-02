@@ -27,6 +27,8 @@ const FigureParam = z.object({
 });
 
 export const FigureSchema: CardSchema = cardSchema("figure", {
+  description: "A small embeddable interactive graphic (p5.js/three.js/D3) demonstrating one thing; source lives in the attach scope",
+  category: "authored",
   fields: {
     runtime: FigureRuntime,
     entry: z.string(),
@@ -102,11 +104,12 @@ export default function (p5, { mount, figure }) {
 ## Embedding
 
 Embed a figure inline in a card or document body with the **image/embed
-syntax** — \`![caption](view:…figure.card)\` — passing parameters in the query
-string. It renders frameless (just the figure) in place. A plain
-\`[label](view:…)\` link stays a navigable link, not an embed.
+syntax** — \`![caption](…figure.card)\` (a plain box path, like an image) —
+passing parameters in the query string. It renders frameless (just the figure)
+in place. A plain \`[label](…figure.card)\` link (no \`!\`) stays a navigable
+link, not an embed.
 
-    ![caffeine](view:store/figures/Molecule.figure.card?molecule=H2O2)
+    ![caffeine](/store/figures/Molecule.figure.card?molecule=H2O2)
 
 The sketch reads those values from \`figure.params\`; the caption (alt text)
 shows beneath the figure.`,

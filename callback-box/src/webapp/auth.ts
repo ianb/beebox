@@ -48,10 +48,6 @@ export function isAuthEnabled(): boolean {
   return !!process.env.GOOGLE_OAUTH_CLIENT_ID;
 }
 
-export function getPublicUrl(): string {
-  return process.env.CB_PUBLIC_URL || process.env.PUBLIC_URL || "http://localhost:3210";
-}
-
 /**
  * Verify the request's Authorization header carries the configured
  * CB_DIAG_API_KEY as a bearer token. Returns false when the env var

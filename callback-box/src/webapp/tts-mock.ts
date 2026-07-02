@@ -12,6 +12,7 @@
  * request body explicitly opts in (`mock: true`).
  */
 
+import { sleep } from "../lib/sleep.js";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { Readable } from "node:stream";
@@ -32,9 +33,6 @@ export interface MockTtsRequest {
   chunkSize?: number | undefined;
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 function hashText(text: string): number {
   let h = 0;

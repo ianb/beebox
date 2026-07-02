@@ -84,7 +84,7 @@ function sourceLabel(sourceRef: string): string {
  */
 function refToViewTarget(sourceRef: string, basePath: string | undefined): ViewTarget {
   const noFrag = sourceRef.split("#")[0] ?? sourceRef;
-  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {}, zoom: false };
+  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {} };
 }
 
 /** Short label from an external `href` — basename of the file:/URL path. */

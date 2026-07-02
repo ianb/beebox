@@ -5,7 +5,7 @@
  * Detects local edits via content hash and pushes changes back.
  */
 
-import * as crypto from "node:crypto";
+import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { safeFilename } from "./chat-utils.js";
@@ -27,9 +27,6 @@ import { createSheetTemplate } from "../schemas/sheet.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
 import { reconcileCommentsSidecar } from "./drive-comments-sidecar.js";
 
-function contentHash(content: string): string {
-  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
-}
 
 const sheetsHandler: DriveTypeHandler = {
   mimeTypes: ["application/vnd.google-apps.spreadsheet"],

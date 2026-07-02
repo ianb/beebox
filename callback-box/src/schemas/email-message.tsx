@@ -32,6 +32,8 @@ import { z } from "zod";
 import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const EmailMessageSchema: CardSchema = cardSchema("email-message", {
+  description: "One received email's metadata inside a thread's attach scope; untrusted body text lives in a separate .txt file",
+  category: "synced",
   fields: {
     "message-id": z.string(),
     "thread-id": z.string(),

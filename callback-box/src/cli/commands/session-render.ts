@@ -6,7 +6,7 @@
  */
 
 import {
-  parseSelfNotes,
+  entrySelfNotes,
   stripSpeechWrappers,
   type SelfNoteInfo,
   type SessionEntry,
@@ -53,21 +53,6 @@ export function formatToolUse(block: SessionContentBlock): string | null {
   const formatter = toolFormatters[name];
   if (formatter) return formatter(block);
   return `  \u{1F527} ${name} ${block.inputSummary || ""}`;
-}
-
-/**
- * If this entry is a pure self-note entry (user-position text composed
- * entirely of one or more `<self-note>` blocks), return all the notes.
- * Otherwise null.
- */
-function getSelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
-  if (entry.type !== "user") return null;
-  for (const block of entry.content) {
-    if (block.type !== "text") continue;
-    const notes = parseSelfNotes(block.text || "");
-    if (notes) return notes;
-  }
-  return null;
 }
 
 function renderSelfNote(note: SelfNoteInfo, options: RenderOptions): void {
@@ -126,7 +111,7 @@ export function renderEntries(entries: SessionEntry[], options: RenderOptions): 
   const separator = "─".repeat(40);
 
   for (const entry of entries) {
-    const notes = getSelfNotes(entry);
+    const notes = entrySelfNotes(entry);
     if (notes) {
       for (const note of notes) {
         renderSelfNote(note, options);

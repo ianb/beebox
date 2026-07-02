@@ -34,6 +34,8 @@ export interface TodoItem {
 }
 
 export const TodoListSchema: CardSchema = cardSchema("todo-list", {
+  description: "Human-oriented action items grouped by topic, nestable — tracks things people need to do, not agent jobs",
+  category: "authored",
   fields: {
     name: z.string(),
     details: z.string().optional(),

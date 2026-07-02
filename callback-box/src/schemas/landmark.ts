@@ -127,6 +127,8 @@ const LandmarkObject = z.object(landmarkFields);
 export type LandmarkFields = z.infer<typeof LandmarkObject>;
 
 export const LandmarkSchema: CardSchema = cardSchema("landmark", {
+  description: "Marks its directory as a notable spot — a curated navigation bookmark and/or a triage filing destination; one per directory",
+  category: "authored",
   fields: landmarkFields,
   searchable: false,
   instructions: `# Landmark Cards

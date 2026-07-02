@@ -28,6 +28,8 @@ const FilenameEntry = z.object({
 });
 
 export const FileSchema: CardSchema = cardSchema("file", {
+  description: "Metadata for an arbitrary uploaded file (PDF, archive, …) — the binary lives in the attach scope, awaiting agent handling",
+  category: "synced",
   fields: {
     status: FileStatus.default("new"),
     filename: FilenameEntry,
@@ -36,11 +38,7 @@ export const FileSchema: CardSchema = cardSchema("file", {
   instructions: `# File Cards
 
 A file card represents an arbitrary file uploaded via the capture UI
-(e.g. a PDF, text document, spreadsheet, archive). The attached file
-lives in the card's attach scope (e.g.
-\`file-001-tax-return.file.card\` with
-\`file-001-tax-return.attach/file-001-tax-return.pdf\`); \`filename.ref:\`
-points into that scope.
+(e.g. a PDF, text document, spreadsheet, archive).
 
 Frontmatter:
 - \`filename:\` — the attached file as a \`{ref, captured, source, ...}\`

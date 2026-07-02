@@ -8,6 +8,7 @@
  * `resume` option.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "./chat-features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./chat-session-features.js";
@@ -62,9 +63,7 @@ export type { ChatSessionOptions };
 
 const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSession:${context}]`, ...args);
-}
+const log = makeLog("ChatSession");
 
 export class ChatSession extends EventEmitter {
   private run: ChatBackendRun | null = null;

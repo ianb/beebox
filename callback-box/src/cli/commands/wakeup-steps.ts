@@ -15,6 +15,8 @@ import { runPreActions } from "../../core/preactions/index.js";
 import { getSystemState } from "../../core/state.js";
 import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
+import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
+import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
 import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
@@ -107,17 +109,19 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
       continue;
     }
 
-    // Only clean up pending jobs
-    if (!content.includes("status=\"pending\"")) continue;
+    const fm = readCardFrontmatter(content);
+    if (!fm) continue;
+    // Only clean up pending jobs. `readCardFrontmatter` is a loose read that
+    // doesn't apply schema defaults, so treat an omitted status: as its schema
+    // default ("pending") — otherwise a job relying on the default would never
+    // be stale-cleaned.
+    const status = fm["status"] ?? "pending";
+    if (status !== "pending") continue;
 
-    // Extract all ref="..." from the job
-    const refs: string[] = [];
-    for (const match of content.matchAll(/ref="([^"]+)"/g)) {
-      const ref = match[1]!;
-      // Skip URL refs (not file paths)
-      if (ref.startsWith("http://") || ref.startsWith("https://")) continue;
-      refs.push(ref);
-    }
+    // Collect the job's file refs, skipping URL refs (not file paths).
+    const refs = collectRefs(fm).filter(
+      (ref) => !ref.startsWith("http://") && !ref.startsWith("https://")
+    );
 
     if (refs.length === 0) continue;
 
@@ -246,9 +250,8 @@ export async function createIntakeJobsForUnjobbed(
 
 /**
  * Collect every item ref from existing job cards, so the inbox scan can
- * skip items that are already tracked. Handles both card generations:
- * YAML frontmatter `- ref: path` lines and legacy XML `ref="path"`
- * attributes.
+ * skip items that are already tracked. Refs are read from the job's YAML
+ * frontmatter (`items: [{ref}]`, `thread: {ref}`, …).
  */
 async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
   const jobsDir = path.join(boxRoot, "box/jobs");
@@ -260,26 +263,15 @@ async function collectExistingJobRefs(boxRoot: string): Promise<Set<string>> {
       // legacy dotted names like `.intake.job.card`.
       if (!file.endsWith("job.card")) continue;
       const content = await fs.readFile(path.join(jobsDir, file), "utf-8");
-      for (const match of content.matchAll(/ref="([^"]+)"/g)) {
-        existingRefs.add(match[1]!);
-      }
-      for (const match of content.matchAll(/^\s*-?\s*ref:\s*(.+?)\s*$/gm)) {
-        existingRefs.add(stripMatchingQuotes(match[1]!));
+      const fm = readCardFrontmatter(content);
+      if (fm) {
+        for (const ref of collectRefs(fm)) existingRefs.add(ref);
       }
     }
   } catch (_e) {
     // No jobs dir yet (ENOENT) — treat as no existing refs.
   }
   return existingRefs;
-}
-
-/** Strip one pair of surrounding quotes a YAML stringifier may have added. */
-function stripMatchingQuotes(value: string): string {
-  const quote = value[0];
-  if ((quote === '"' || quote === "'") && value.endsWith(quote) && value.length >= 2) {
-    return value.slice(1, -1);
-  }
-  return value;
 }
 
 /**
@@ -359,14 +351,6 @@ const CONTAINS_BACKFILL_BATCH = 25;
 
 const CONTAINS_BACKFILL_SOURCE = "contains-backfill";
 
-function escapeXmlAttr(value: string): string {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;");
-}
-
 /**
  * Queue one generic job card asking a background agent to write `contains:`
  * for cards missing it. One batch per wakeup; drains until
@@ -385,22 +369,12 @@ export async function createContainsBackfillJob(boxRoot: string): Promise<number
   const batch = missing.slice(0, CONTAINS_BACKFILL_BATCH);
   const created = new Date().toISOString();
   const stamp = created.slice(0, 16).replaceAll(":", "-");
-  const jobFilename = `${stamp}-contains-backfill.job.card`;
-  const items = batch.map((p) => `<item ref="${escapeXmlAttr(p)}"/>`).join("\n");
-  const remaining = missing.length - batch.length;
-  const card = `<contains-backfill-job created="${created}" source="${CONTAINS_BACKFILL_SOURCE}" priority="low">
-<description>Write the contains: field for ${String(batch.length)} cards missing it</description>
-<instructions>For each item below: read the card, then set its contains: field with
-  cb contains update "&lt;path&gt;" --text "..."
-— one sentence stating what can be found inside the card. When the
-information is concise, the sentence carries the information itself
-("Dentist moved to June 17; confirmation in this email"), not a pointer at
-it ("contains scheduling information"); when it isn't concise, say what's
-learnable there. Never a list of parts; under 200 characters. Commit your
-work, then run cb finish on this job file.${remaining > 0 ? ` ${String(remaining)} more cards remain; the next wakeup queues another batch.` : ""}</instructions>
-${items}
-</contains-backfill-job>
-`;
+  const jobFilename = `${stamp}.contains-backfill.job.card`;
+  const card = createContainsBackfillJobTemplate({
+    created,
+    items: batch,
+    remaining: missing.length - batch.length,
+  });
   await fs.mkdir(jobsDir, { recursive: true });
   const jobPath = path.join(jobsDir, jobFilename);
   await fs.writeFile(jobPath, card);

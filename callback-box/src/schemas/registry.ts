@@ -33,6 +33,7 @@ import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
+import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { TodoListSchema } from "./todo-list.js";
@@ -59,49 +60,58 @@ import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } 
 /**
  * Markdown-frontmatter card schemas. Loaded into a Map<type, CardSchema> by
  * createCardSchemaMap below.
+ *
+ * Order is presentational: the agent guide's CARD_TYPES catalogue renders
+ * groups (by each schema's `category`) in this order, so within each category
+ * the everyday, most-reached-for types come first.
  */
 export const cardSchemas: CardSchema[] = [
-  CaptureSessionSchema,
+  // authored — everyday recording types first
+  DocSchema,
+  RecordSchema,
+  MemoSchema,
+  PersonSchema,
+  PlaceSchema,
+  TodoListSchema,
+  QuestionSchema,
+  RecipeSchema,
+  CommentarySchema,
+  BriefingSchema,
   GuideSchema,
+  PersonalitySchema,
   LandmarkSchema,
   NavSchema,
   ViewSchema,
   ProcedureSchema,
-  ProcedureRunSchema,
-  RecipeSchema,
-  EmailThreadSchema,
-  EmailMessageSchema,
+  ScheduledScriptSchema,
   EmailOutboundSchema,
-  BriefingSchema,
-  DocSchema,
-  GdocSchema,
-  CommentarySchema,
-  WebpageSchema,
-  FigureSchema,
-  ConceptMapSchema,
+  // authored — the course family
   CourseSchema,
+  ConceptMapSchema,
   ExpositionPlanSchema,
   LessonPlanSchema,
   ProgressSchema,
-  ExtfileSchema,
+  FigureSchema,
+  // synced & captured
+  EmailThreadSchema,
+  EmailMessageSchema,
+  TelegramMessageSchema,
+  GdocSchema,
   SheetSchema,
-  FileSchema,
+  WebpageSchema,
+  ExtfileSchema,
+  CaptureSessionSchema,
   ImageSchema,
   AudioSchema,
-  RecordSchema,
-  PersonSchema,
-  PlaceSchema,
-  MemoSchema,
-  TodoListSchema,
-  TelegramMessageSchema,
-  FeedbackSchema,
+  FileSchema,
+  // system bookkeeping
   IntakeJobSchema,
   ChatJobSchema,
+  ContainsBackfillJobSchema,
   QuestionFollowupJobSchema,
-  PersonalitySchema,
-  ScheduledScriptSchema,
-  QuestionSchema,
+  ProcedureRunSchema,
   ChatThreadSchema,
+  FeedbackSchema,
 ];
 
 /**

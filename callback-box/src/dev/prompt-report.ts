@@ -17,15 +17,12 @@ import { buildThreadSystemPrompt } from "../core/chat-thread-session.js";
 import { COMMIT_NUDGE_PROMPT } from "../core/agent.js";
 import { connectorRules } from "../core/init-rules.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { wordCount } from "./lib/context-assembly.js";
 
 const PLACEHOLDER = "${boxRoot}";
 const TEMPLATES_DIR = path.join(PACKAGE_ROOT, "templates", "procedures");
 
 // ─── Helpers ────────────────────────────────────────────────────────
-
-function wordCount(text: string): number {
-  return text.split(/\s+/).filter(Boolean).length;
-}
 
 function lineCount(text: string): number {
   return text.split("\n").length;

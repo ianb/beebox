@@ -16,9 +16,8 @@ export interface ViewTarget {
   path: string;
   /** Explicit ?view= override (viewer name) */
   viewer: string | null;
-  /** Remaining query params (excluding view and zoom) */
+  /** Remaining query params (excluding the reserved `view` key) */
   params: Record<string, string>;
-  zoom: boolean;
 }
 
 /**
@@ -48,25 +47,50 @@ export function parseViewUrl(raw: string): ViewTarget {
   // mount (card.get tolerates it) but never matches a `file-change` event, so the
   // companion pane silently stops live-updating. See src/shared/box-path.ts.
   const path = boxRelativePath(rawPath);
+  const { viewer, params } = parseViewQuery(qIndex === -1 ? "" : value.slice(qIndex + 1));
+  return { path, viewer, params };
+}
 
+/**
+ * Parse the query-string portion of a content/view URL into the reserved `view`
+ * key (the viewer override) and the remaining passthrough params. Shared by
+ * `parseViewUrl` (box-root-normalized) and `resolveContentTarget`
+ * (document-relative), which differ only in how they treat the path part.
+ */
+function parseViewQuery(query: string): { viewer: string | null; params: Record<string, string> } {
   const params: Record<string, string> = {};
   let viewer: string | null = null;
-  let zoom = false;
-
-  if (qIndex !== -1) {
-    const search = new URLSearchParams(value.slice(qIndex + 1));
+  if (query !== "") {
+    const search = new URLSearchParams(query);
     for (const [key, val] of search.entries()) {
       if (key === "view") {
         viewer = val;
-      } else if (key === "zoom") {
-        zoom = true;
       } else {
         params[key] = val;
       }
     }
   }
+  return { viewer, params };
+}
 
-  return { path, viewer, params, zoom };
+/** True for an absolute URL (any scheme) or a protocol-relative `//host` URL. */
+export function isExternalUrl(src: string): boolean {
+  return /^[a-z][\w+.-]*:/i.test(src) || src.startsWith("//");
+}
+
+/**
+ * Turn a markdown link/image href — a box path that may be leading-slash
+ * absolute or document-relative, and may carry `?view=`/params — into a
+ * ViewTarget, resolving the path part against `basePath`. The query is split off
+ * BEFORE resolution so a leading slash stays meaningful (absolute vs relative);
+ * routing the whole href through `parseViewUrl` would strip it (`boxRelativePath`)
+ * and mis-resolve absolute paths as document-relative.
+ */
+export function resolveContentTarget(basePath: string | undefined, href: string): ViewTarget {
+  const qIndex = href.indexOf("?");
+  const pathPart = qIndex === -1 ? href : href.slice(0, qIndex);
+  const { viewer, params } = parseViewQuery(qIndex === -1 ? "" : href.slice(qIndex + 1));
+  return { path: resolveRelativePath(basePath, pathPart), viewer, params };
 }
 
 /**
@@ -75,7 +99,6 @@ export function parseViewUrl(raw: string): ViewTarget {
 export function serializeViewUrl(target: ViewTarget): string {
   const parts: string[] = [];
   if (target.viewer) parts.push(`view=${encodeURIComponent(target.viewer)}`);
-  if (target.zoom) parts.push("zoom");
   for (const [k, v] of Object.entries(target.params)) {
     parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
   }
@@ -130,16 +153,26 @@ function cardBasenameOf(filename: string): string {
 }
 
 /**
- * Classify an href as one of: a view: link, a relative path that can be
- * resolved against a document, or an external/non-navigable link (http,
- * mailto, anchor, etc.). For `view:` and `relative`, callers should
- * `preventDefault` and hand the result to an onNavigate handler.
+ * Classify a markdown link href. A box file/card is referenced by a plain
+ * relative or box-root-absolute path (`store/x.card`, `/store/x.card`); callers
+ * `preventDefault` and hand a `relative` result to `onNavigate`. Anything with a
+ * URL scheme, an anchor, or empty is `external` (a normal link).
+ *
+ * `legacy-view` is the retired `view:` scheme. It no longer routes anywhere; it
+ * exists only so renderers can draw a visibly-broken "needs migration" marker
+ * instead of a silently-inert `<a href="view:…">`. Removable once all controlled
+ * boxes are migrated off `view:`.
  */
 export function classifyMarkdownHref(
   href: string,
-): { kind: "view"; raw: string } | { kind: "relative"; path: string } | { kind: "external" } {
-  if (href.startsWith("view:")) return { kind: "view", raw: href };
-  // Anything with a URL scheme (http:, mailto:, tel:, data:, etc.) is external.
+):
+  | { kind: "legacy-view"; raw: string }
+  | { kind: "relative"; path: string }
+  | { kind: "external" } {
+  if (href.startsWith("view:")) return { kind: "legacy-view", raw: href };
+  // Protocol-relative (`//host/x`) and any URL scheme (http:, mailto:, tel:,
+  // data:, …) are external, not in-box paths.
+  if (href.startsWith("//")) return { kind: "external" };
   if (/^[a-z][\w+.-]*:/i.test(href)) return { kind: "external" };
   // Anchors and empty hrefs are not navigations.
   if (href.startsWith("#") || href === "") return { kind: "external" };

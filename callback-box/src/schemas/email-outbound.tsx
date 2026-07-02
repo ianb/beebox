@@ -36,6 +36,8 @@ import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const EmailOutboundSchema: CardSchema = cardSchema("email-outbound", {
+  description: "An agent-composed outgoing email — uploaded to Gmail as a draft for the user to review and send",
+  category: "authored",
   fields: {
     status: z.enum(["draft", "sent"]).default("draft"),
     to: z.string(),

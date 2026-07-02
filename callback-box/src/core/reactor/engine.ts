@@ -17,6 +17,7 @@
  * 5. Optionally poll (sleep + recurse)
  */
 
+import { sleep } from "../../lib/sleep.js";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import {
@@ -52,8 +53,8 @@ export interface ReactorOptions {
   /** Only process jobs of this type (e.g. "chat" matches *.chat.job.card) */
   type?: string | undefined;
   /**
-   * Only process jobs whose root element has source="<value>". Used by
-   * `cb wakeup --connector X` to drain just the jobs that the same
+   * Only process jobs whose frontmatter `source:` matches this value. Used
+   * by `cb wakeup --connector X` to drain just the jobs that the same
    * partial run produced. Cross-cutting jobs (different source) are
    * left for the next run that does match them.
    */
@@ -396,6 +397,3 @@ async function releaseReactorLock(lockPath: string): Promise<void> {
   await releaseFileLock(lockPath);
 }
 
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}

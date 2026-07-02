@@ -23,7 +23,7 @@
  * not pushed back upstream. See `drive-comments-sidecar.ts`.
  */
 
-import * as crypto from "node:crypto";
+import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type {
@@ -46,9 +46,6 @@ import { reconcileCommentsSidecar } from "./drive-comments-sidecar.js";
 const DOC_MIME = "application/vnd.google-apps.document";
 const MARKDOWN_MIME = "text/markdown";
 
-function contentHash(content: string): string {
-  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
-}
 
 interface LossyCounts {
   comments: number;
