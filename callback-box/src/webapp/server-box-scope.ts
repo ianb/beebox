@@ -16,7 +16,6 @@ import { registerHistoryRoutes } from "./routes/history.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
-import { registerClerkRoutes } from "./routes/clerk.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
@@ -174,7 +173,6 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
   // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
-  await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
 

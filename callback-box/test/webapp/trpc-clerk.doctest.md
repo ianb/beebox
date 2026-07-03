@@ -1,0 +1,89 @@
+# clerk tRPC router
+
+The browser-extension endpoints (formerly raw `/api/clerk/*`) as tRPC
+procedures: list commentary destinations, and capture a page as a
+`.webpage.card` + sibling `.commentary.card`, committed, returning the companion
+`open` URL. Invalid input is rejected by Zod; an unknown destination is a clear
+error rather than a silent misfile.
+
+```ts setup
+import { appRouter } from "../../src/webapp/trpc/router.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { readFile, readdir } from "node:fs/promises";
+import * as path from "node:path";
+
+function caller(boxRoot) {
+  const ctx = {
+    boxRoot,
+    boxSlug: "test",
+    eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    services: {},
+    user: null,
+    authed: true,
+    isOwner: true,
+  };
+  return appRouter.createCaller(ctx);
+}
+```
+
+## commentary captures a page into the inbox and returns the companion URL
+
+```ts
+const box = await makeTmpBox({ git: true });
+const res = await caller(box.root).clerk.commentary({
+  url: "https://example.com/article",
+  title: "An Example Article",
+  readableMarkdown: "# Heading\n\nBody text.",
+});
+// Two cards created: the webpage card and its sibling commentary card.
+print(`created: ${res.created.length}`);
+print(`webpage: ${res.created.some((p) => p.endsWith(".webpage.card"))}`);
+print(`commentary: ${res.created.some((p) => p.endsWith(".commentary.card"))}`);
+print(`filed in inbox: ${res.created[0].startsWith("box/inbox/")}`);
+print(`open startsWith chat: ${res.open.startsWith("chat?session=new")}`);
+=>
+created: 2
+webpage: true
+commentary: true
+filed in inbox: true
+open startsWith chat: true
+```
+
+## the webpage card holds the readable body + source provenance
+
+```ts continue
+const webpageRel = res.created.find((p) => p.endsWith(".webpage.card"));
+const body = await readFile(path.join(box.root, webpageRel), "utf-8");
+print(body.includes("https://example.com/article"));
+print(body.includes("Body text."));
+=>
+true
+true
+```
+
+## an unknown destination is rejected
+
+```ts continue
+const err = await caller(box.root).clerk.commentary({
+  url: "https://example.com/x",
+  title: "X",
+  readableMarkdown: "body",
+  destinationDir: "box/does-not-exist",
+}).then(() => "no-error", (e) => e.code);
+print(err);
+=>
+BAD_REQUEST
+```
+
+## invalid input (bad url) is rejected by Zod
+
+```ts continue
+const err2 = await caller(box.root).clerk.commentary({
+  url: "not-a-url",
+  title: "X",
+  readableMarkdown: "body",
+}).then(() => "no-error", (e) => e.code);
+print(err2);
+=>
+BAD_REQUEST
+```

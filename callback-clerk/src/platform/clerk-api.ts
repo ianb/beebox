@@ -1,8 +1,9 @@
 /**
- * Thin client for the box-hosted clerk API
- * (callback-box src/webapp/routes/clerk.ts). Auth is the browser's own
- * session cookie: credentials:"include" plus the per-origin host
- * permission granted when the box was enabled.
+ * Thin client for the box-hosted clerk API — the `clerk` tRPC router
+ * (callback-box src/webapp/trpc/routers/clerk.ts), called over its plain
+ * HTTP transport. Auth is the browser's own session cookie:
+ * credentials:"include" plus the per-origin host permission granted when the
+ * box was enabled.
  */
 
 import type { EnabledBox } from "../domain/config.js";
@@ -42,26 +43,30 @@ async function fetchOrThrow(url: string, init: RequestInit): Promise<Response> {
   return res;
 }
 
-async function postJsonResult<T>(url: string, body: unknown): Promise<T> {
-  const res = await fetchOrThrow(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  const data: T = await res.json();
-  return data;
+/**
+ * Call a tRPC query/mutation on the box (non-batched form) and unwrap the
+ * `{ result: { data } }` envelope. The clerk endpoints moved from raw routes to
+ * the `clerk` tRPC router; the transport is otherwise unchanged (credentialed
+ * cross-origin fetch via the box host permission).
+ */
+async function trpcQuery<T>(box: EnabledBox, procedure: string): Promise<T> {
+  const res = await fetchOrThrow(`${box.boxUrl}/api/trpc/${procedure}`, { method: "GET" });
+  const body: { result: { data: T } } = await res.json();
+  return body.result.data;
 }
 
-async function getJson<T>(url: string): Promise<T> {
-  const res = await fetchOrThrow(url, { method: "GET" });
-  const data: T = await res.json();
-  return data;
+async function trpcMutation<T>(box: EnabledBox, opts: { procedure: string; input: unknown }): Promise<T> {
+  const res = await fetchOrThrow(`${box.boxUrl}/api/trpc/${opts.procedure}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(opts.input),
+  });
+  const body: { result: { data: T } } = await res.json();
+  return body.result.data;
 }
 
 export async function getCommentaryDestinations(box: EnabledBox): Promise<CommentaryDestination[]> {
-  const data = await getJson<{ destinations: CommentaryDestination[] }>(
-    `${box.boxUrl}/api/clerk/commentary-destinations`,
-  );
+  const data = await trpcQuery<{ destinations: CommentaryDestination[] }>(box, "clerk.commentaryDestinations");
   return data.destinations;
 }
 
@@ -69,5 +74,5 @@ export async function postCommentary(
   box: EnabledBox,
   payload: CommentaryPayload,
 ): Promise<{ created: string[]; open: string }> {
-  return postJsonResult(`${box.boxUrl}/api/clerk/commentary`, payload);
+  return trpcMutation(box, { procedure: "clerk.commentary", input: payload });
 }
