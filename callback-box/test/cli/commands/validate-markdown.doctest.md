@@ -65,6 +65,22 @@ isLintableMarkdown("store/notes.txt")
 => false
 ```
 
+It also skips cb's own machine-generated docs — a `docs/generated/` segment pair
+at ANY depth, not just box root (generated trees are nested per-area, e.g.
+`store/roadtrip/docs/generated/`). A plain `docs/` dir that isn't generated is
+still linted:
+
+```ts
+isLintableMarkdown("docs/generated/card-doc.md")
+=> false
+
+isLintableMarkdown("store/roadtrip/docs/generated/card-email-outbound.md")
+=> false
+
+isLintableMarkdown("store/handbook/docs/onboarding.md")
+=> true
+```
+
 `boxWideLinkWarnings` is the warn-only commit-time scan: it finds a broken link
 in any box file (even one that isn't staged — the move-collateral case) and
 returns advisory text, or null when the box is link-clean.
@@ -104,5 +120,42 @@ await writeFile(join(box5.root, "docs/generated/card-x.md"), "![ex](attach/photo
 const genWarn = await boxWideLinkWarnings(box5.root);
 await box5.cleanup();
 genWarn
+=> null
+```
+
+Nested per-area generated docs (`store/<area>/docs/generated/`, the shape that
+actually appeared on prod) are skipped too — the old root-anchored ignore missed
+these, so their placeholder links leaked into the scan:
+
+```ts
+const box6 = await makeTmpBox();
+await mkdir(join(box6.root, "store/roadtrip/docs/generated"), { recursive: true });
+await writeFile(join(box6.root, "store/roadtrip/docs/generated/card-doc.md"), "![caffeine](/store/figures/Molecule.figure.card)\n[Recipe](/store/archive/Pasta.recipe.card)\n");
+const nestedWarn = await boxWideLinkWarnings(box6.root);
+await box6.cleanup();
+nestedWarn
+=> null
+```
+
+The box-specific `config/cb-validate.ignore` (the boxholder's gitignore-style
+escape hatch) suppresses links under any path it matches. A broken link in a
+vendored tree is silenced once the tree is listed, and restored when it isn't:
+
+```ts
+const box7 = await makeTmpBox();
+await mkdir(join(box7.root, "vendor/imported"), { recursive: true });
+await writeFile(join(box7.root, "vendor/imported/sample.md"), "![gone](/store/nope.png)\n");
+
+const beforeIgnore = await boxWideLinkWarnings(box7.root);
+beforeIgnore?.includes("Broken link: /store/nope.png")
+=> true
+```
+
+```ts continue
+await mkdir(join(box7.root, "config"), { recursive: true });
+await writeFile(join(box7.root, "config/cb-validate.ignore"), "vendor/**\n");
+const afterIgnore = await boxWideLinkWarnings(box7.root);
+await box7.cleanup();
+afterIgnore
 => null
 ```
