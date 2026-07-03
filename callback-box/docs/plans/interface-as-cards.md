@@ -88,7 +88,14 @@ declarative and the *presentation* is a named view in code. When someone
 wants conditionals or computed columns, the answer is "graduate to a `.tsx`
 view," never "grow the frontmatter vocabulary."
 
-### Runtime param overrides, with provenance (designed 2026-07, not built)
+### Runtime param overrides, with provenance
+
+**Mostly shipped 2026-07**: `resolveViewParams` + per-view codecs in
+`src/shared/named-views.ts` (the resolved shape also retains the card
+layer for diff/reset); URL params thread from `/views/…` and Browse;
+history chips emit diffed override-URLs and a marker names overridden
+keys with reset. Still future: save-override-to-card (needs UI
+card-write plumbing) and the embed-site origin.
 
 View-card `params` (shipped with `view: history`) want the same cascade as
 bindings: **view defaults < card frontmatter < embed-site args < URL query
