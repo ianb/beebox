@@ -1242,6 +1242,12 @@ Convention to make it stick: a short rule in `CLAUDE.md` ("before writing a new 
 
 Open questions: where embeddings live (local Faiss index in `.callback-cache/`? a small server?); how to keep the index from going stale (rebuild on file change vs. on demand); whether the search is a CLI or a tRPC procedure the agent calls; how to surface *what was missed* — false negatives are the painful kind ("the helper existed but the search didn't return it").
 
+## Check out slopo — embedding-based near-duplicate detector
+
+[github.com/rafal-qa/slopo](https://github.com/rafal-qa/slopo) — finds *non-exact* code duplication: similar implementations scattered across files/modules that exact-match and lint tools miss (the "same thing written twice under different names" drift). Python CLI (`uv tool install slopo`, `slopo init/index/embed/analyze`): embeds every code unit via an external embedding model, clusters close pairs, boosts by distance (directory hops, line separation), filters through two thresholds, and emits a ranked HTML/markdown report. Supports TypeScript/JS among others; incremental re-index; a shared `slopo.ignore.txt` to persist reviewed clusters; explicitly agent-friendly (an agent can validate the flagged duplicates).
+
+The callback-box angle: it's the *detection* complement to [[before-you-build-this]] (which tries to *prevent* new duplicates at author time) — slopo finds the ones that already crept in. Sits alongside the existing periodic health tools (knip = dead code, madge = cycles, oxlint) as a "run occasionally, review the clusters" pass — a natural fit for the `cb-codehealth` skill's deliberate de-cruft sweeps rather than pre-commit (embedding a whole tree isn't cheap enough to run every commit). Caveats to weigh before adopting: it needs an external embedding model (cost/API + which model, and sending source to it — check that's acceptable), the repo is a multi-package monorepo (scope per-package or whole-tree?), and near-duplicate ranking has false positives — the value is triaging clusters, not auto-acting on them.
+
 ## Check out spec-kit
 
 [GitHub: github/spec-kit](https://github.com/github/spec-kit) — a spec-driven-development toolkit from GitHub for building software with AI agents from formal specifications. Worth a read for: how they structure the spec → plan → tasks → implementation pipeline, what they expose to the agent at each phase, whether their patterns map onto how procedures/commands work here.
