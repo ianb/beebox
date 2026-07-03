@@ -336,6 +336,27 @@ researching). This inverts today's architecture: instead of the chat page
 hosting a companion card pane, the shell hosts both and chat becomes the
 sidekick of everything.
 
+### The input is its own frame primitive — and a true singleton
+
+Noted 2026-07 (boxholder aside, recorded for later): the **input** —
+voice, typing, attachments, accumulated selections — is independent of
+chat. It *attaches* to a chat when you send, but it lives between chats
+(switch conversations and the draft stays), and it is genuinely singular
+in the system: one boxholder, one input. It is the natural receiver of
+frame signals like card selections (today's implementation already agrees
+— a selection becomes supplementary text on the next message, i.e.
+composer state, not session state).
+
+This splits what the witness section below conflates: the slot's occupant
+is *who is attending*; the input is *what you speak through*, aimed at the
+occupant but not owned by it. Frame primitives are therefore four: nav,
+arrangement, the companion slot, and the input. And unlike everything
+else in this design (dashboards, navs, views — all de-singleton'd into
+bindings), the input is correctly a **complete singleton**: it extends
+the person, not the content. Its state (draft, attachments, pending
+selections) is frame state per the standing rule — never a card, never in
+the URL.
+
 ### Signals: the frame bus
 
 Inter-surface communication is **frame traffic, not card traffic** — no
