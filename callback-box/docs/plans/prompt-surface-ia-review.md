@@ -25,8 +25,8 @@ Left open when the review session wrapped. Grep `IA_REVIEW` to find them.
   `loadBoxholders` reads them and `compilePersonality` emits the "Your boxholder
   is …" line (oxford-joined for several). The personality card keeps only the
   relational notes. Migrator `boxholder-person` lifts inline
-  `boxholder.{full-name,called}` onto a person card. NOTE: can't run on prod
-  until the `cb migrate` tsx/tsconfig break is fixed (local/dev works).
+  `boxholder.{full-name,called}` onto a person card. Runnable on deployed
+  boxes now that the `cb migrate` prod tsconfig break is fixed on main.
 - `IA_REVIEW` — **deployed-box migration:** this session's migrations
   (`recipe-source-shape`, `person-contact-split`, `gsheet-rename`) ran on **local
   dev copies only**. Run `cb migrate --apply` on the deployed server boxes (real

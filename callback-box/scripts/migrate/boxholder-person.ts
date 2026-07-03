@@ -20,10 +20,6 @@
  * Idempotent: a personality card whose `boxholder` has none of those legacy
  * keys is left untouched. A box with no personality card is a no-op.
  *
- * NOTE: `cb migrate --apply` is currently broken on the deployed server (tsx
- * can't resolve tsconfig on the bundled deploy), so this can only be applied
- * to local/dev boxes until that tooling is fixed — a separate effort.
- *
  * Registered in src/core/migrations.ts. Also runnable directly:
  *   pnpm exec tsx scripts/migrate/boxholder-person.ts <boxRoot>           # dry-run
  *   pnpm exec tsx scripts/migrate/boxholder-person.ts <boxRoot> --apply
