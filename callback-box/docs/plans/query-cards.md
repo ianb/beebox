@@ -1,5 +1,19 @@
 # Query cards — the "select and arrange cards" vocabulary
 
+**Status: PARKED (2026-07-03), not planned for implementation.** After
+design (including the display-param correction and the Obsidian Bases
+comparison), the boxholder's verdict: *too complex, too contextless*. The
+diagnosis worth keeping: every interface-as-cards success has been
+anchored (the nav, a history filter on an existing surface, a session's
+husk, a landmark's expand — "the recipes *here*"), while a standalone
+query card is a selection with no *here*; the vocabulary's complexity is
+a symptom of the missing anchor. Landmark `expand` may already be the
+box's query-with-context surface. If a genuinely anchored need for saved
+queries appears, restart from this plan. One piece survives
+independently: the tile-renderer registry + question tile (chunk 1) —
+planned in docs/landmarks.md long before this, useful for any list-shaped
+surface, no query vocabulary required.
+
 A saved query over the box's cards, expressed as a card: the `list` named
 view, whose params say *which cards* (refs / include / exclude / type) and
 *how arranged* (order, group-by, limit) — nothing presentational; each
