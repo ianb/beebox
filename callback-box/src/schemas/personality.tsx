@@ -75,8 +75,6 @@ const ObservationEntry = z.object({
 const ExperimentEntry = z.object({
   id: z.string(),
   status: ExperimentStatus.default("proposed"),
-  "created-at": z.string().optional(),
-  "updated-at": z.string().optional(),
   hypothesis: z.string().optional(),
   approach: z.string().optional(),
   observations: z.array(ObservationEntry).optional(),
@@ -86,7 +84,6 @@ const ExperimentEntry = z.object({
 const ContextNote = z.object({
   text: z.string(),
   duration: z.enum(["ongoing", "temporary", "past"]).default("ongoing"),
-  "added-at": z.string().optional(),
 });
 
 export const PersonalitySchema: CardSchema = cardSchema("personality", {

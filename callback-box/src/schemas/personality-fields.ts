@@ -66,8 +66,6 @@ export interface PersonalityFields {
   experiments?: Array<{
     id: string;
     status?: ExperimentStatusType;
-    "created-at"?: string;
-    "updated-at"?: string;
     hypothesis?: string;
     approach?: string;
     observations?: Array<{ text: string; ref?: string; date?: string }>;
@@ -76,7 +74,6 @@ export interface PersonalityFields {
   "context-notes"?: Array<{
     text: string;
     duration?: "ongoing" | "temporary" | "past";
-    "added-at"?: string;
   }>;
   body: string;
 }

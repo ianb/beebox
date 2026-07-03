@@ -183,7 +183,6 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
  */
 export function createInitialGuideTemplate(options: { name: string }): string {
   const seed = DOMAIN_SEEDS[options.name];
-  const now = new Date().toISOString();
   const fields: Record<string, unknown> = { version: "1.0.0" };
 
   if (!seed) {
@@ -200,7 +199,6 @@ export function createInitialGuideTemplate(options: { name: string }): string {
       {
         id: "exp-initial",
         status: "active",
-        "created-at": now,
         hypothesis: "Initial rules need calibration through feedback",
         approach: "Start conservative, learn from user responses",
       },
@@ -224,7 +222,6 @@ export function createInitialGuideTemplate(options: { name: string }): string {
     {
       id: seed.experiment.id,
       status: "active",
-      "created-at": now,
       hypothesis: seed.experiment.hypothesis,
       approach: seed.experiment.approach,
     },
