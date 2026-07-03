@@ -1351,3 +1351,280 @@ test1:
       peak: 46148
       added: 0
       turns: 1
+  todo-list-structure:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41190
+      peak: 41190
+      added: 0
+      turns: 2
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41187
+      peak: 42439
+      added: 1252
+      turns: 2
+  todo-list-storage:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41186
+      peak: 41186
+      added: 0
+      turns: 1
+  todo-list-lifecycle:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41189
+      peak: 42481
+      added: 1292
+      turns: 3
+  todo-list-create:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41207
+      peak: 42627
+      added: 1420
+      turns: 8
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41206
+      peak: 42428
+      added: 1222
+      turns: 7
+  todo-list-nested-items:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41192
+      peak: 42483
+      added: 1291
+      turns: 3
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41191
+      peak: 42482
+      added: 1291
+      turns: 3
+  todo-list-vs-job:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41189
+      peak: 41189
+      added: 0
+      turns: 1
+  briefing-is-writable:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41212
+      peak: 42172
+      added: 960
+      turns: 3
+  incidental-person-where:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41218
+      peak: 41218
+      added: 0
+      turns: 1
+  core-person-where:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41253
+      peak: 41253
+      added: 0
+      turns: 2
+  individual-item-where:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41205
+      peak: 41205
+      added: 0
+      turns: 2
+  processing-pattern-where:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41207
+      peak: 41207
+      added: 0
+      turns: 2
+  user-prefers-terse:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41220
+      peak: 41220
+      added: 0
+      turns: 1
+  triage-rule-where:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41203
+      peak: 41203
+      added: 0
+      turns: 2
+  new-category-needed:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41203
+      peak: 41203
+      added: 0
+      turns: 1
+  knowledge-triage-test:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41285
+      peak: 41285
+      added: 0
+      turns: 2
+  view-zoom-companion:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41206
+      peak: 44038
+      added: 2832
+      turns: 6
+  view-zoom-user-context:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41202
+      peak: 44243
+      added: 3041
+      turns: 8
+  companion-card-activity:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41215
+      peak: 41215
+      added: 0
+      turns: 2
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46147
+      peak: 46147
+      added: 0
+      turns: 1
+  companion-card-activity-hints:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41214
+      peak: 41214
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46146
+      peak: 46146
+      added: 0
+      turns: 1
+  chat-voice-per-message-override:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41219
+      peak: 41219
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46151
+      peak: 46151
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:31:44.023Z
+      boxCommit: 27aca00c0e1d7483202f9dcefd951b828a8ab9b1
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46151
+      peak: 46151
+      added: 0
+      turns: 1
+  chat-voice-hard-override:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 41313
+      peak: 43175
+      added: 1862
+      turns: 3
+  chat-user-selection-tag:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46214
+      peak: 46214
+      added: 0
+      turns: 1
+  narration-defaults-silent:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46212
+      peak: 49990
+      added: 3778
+      turns: 13
+  narration-no-voice-out-by-default:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46162
+      peak: 46162
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:30:01.562Z
+      boxCommit: e6c17d3e6770e66bc0ba15e0a12b3709ae4f86dc
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46161
+      peak: 46161
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:31:50.560Z
+      boxCommit: 1f1bc8984cefae58b7236dc3153d5a393ff50682
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46161
+      peak: 46161
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:31:57.405Z
+      boxCommit: e66c344622f7aaad5930e5691216a891e12dcbcf
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46160
+      peak: 46160
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:32:05.057Z
+      boxCommit: 55c9c12a276bdcdfcf2f013bb1b26c88cc78b8a3
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46159
+      peak: 46159
+      added: 0
+      turns: 1
+  narration-callout-on-real-question:
+    - date: 2026-07-03T11:26:09.904Z
+      boxCommit: 7f7242d8d9967072c347fa28f7b151615d84d493
+      repoCommit: d04e9567d4977c3937908f90823dd4cbe80a1ec9
+      initial: 46220
+      peak: 46220
+      added: 0
+      turns: 2

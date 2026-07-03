@@ -153,7 +153,41 @@ Run in batches by section. Two buckets per failure:
   the seen-note mechanism isn't surfacing. Audit check updated to the YAML form
   (`seen`); left failing as the flag.
 
+### narration-no-voice-out-by-default — REAL GAP, INTERMITTENT (batch 5)
+
+- **Prompt (chat_mode + narration overlay):** `<chat-app narration="on" prose="off"/>`
+  then `<speech>Quick question — what's two plus two?</speech>`. Expected: the
+  agent does NOT emit `<speech>` (narration mode overrides the usual
+  "voice-in ⇒ voice-out" rule); a `<callout>` or silent ack is fine.
+- **Observed:** across 5 runs, **2 pass / 3 fail** — the agent emits
+  `<speech>Four.</speech>` about 60% of the time. The narration overlay *is*
+  applied by the harness (`test-runner.ts` appends `NARRATION_OVERLAY` for
+  chat_mode audits), so this is behavioral, not a harness bug.
+- **Why it's real:** the narration override ("stay silent even when the user
+  spoke") isn't robust — the base "voice-in implies voice-out" reflex
+  (chat-session-prompts.ts:21) wins more often than not. The prompt-surface
+  overhaul rewrote the chat/reactor prompts; the narration override likely needs
+  strengthening to reliably beat the voice-in-voice-out rule.
+- **Fix (boxholder):** harden `NARRATION_OVERLAY` so it reliably suppresses
+  `<speech>`. Audit left as-is (chat_mode: true) — it correctly catches the
+  intermittent violation.
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 5 (narration / voice / chat-input / views-in-chat / todos / recording):
+
+- **todo-list-structure / -create / -nested-items** — todo-list cards moved from
+  XML `<todo-list>`/`<item>` to YAML `items:` array; de-baited the "XML structure"
+  prompt, updated checks to `items:`, dropped stale should_read.
+- **companion-card-activity / -hints** — were `chat_mode: false` but test the
+  chat companion pane's `open-card`/`card-activity` snapshot, which only exists in
+  the chat system prompt. **Added `chat_mode: true`** and both pass — audit-config
+  bug, not a knowledge gap. (-hints check also loosened off a wording mismatch:
+  "not **to** assume" ≠ "not assume".)
+- **chat-voice-per-message-override** — added `chat_mode: true` (the mechanism is
+  in the chat prompt + docs/chat-voice.md); accept either valid per-message
+  override — `voice="…"` attribute *or* nested `<instructions>` (both satisfy
+  "speak this one sentence differently").
 
 Batch 4 (chat threads / structured-output tags) — the chat-thread card format
 moved from XML (`<message>`, `<seen>`, `sender="agent"`) to YAML `entries:` with
@@ -242,3 +276,9 @@ one real failure is `procedure-in-job` (undocumented job→procedure trampoline)
 § 18 raw; 22 after fixing 4 stale XML→YAML chat-thread audits (re-run confirmed).
 Remaining: `ack-conservative-text` (real behavioral gap) and `chat-thread-seen-note`
 (minor mechanism conflation).
+| 5 | Narration, Chat Voice, Chat Input, Views-in-Chat, Todos, Recording | 25 | 18→24¶ | 1 intermittent | 6 |
+
+¶ 18 raw; 24 after fixing 6 audits (3 stale XML/should_read + 2 chat_mode-config
++ 1 accept-both-mechanisms; all re-run confirmed). The one remaining is
+`narration-no-voice-out-by-default` — intermittent (~40% pass), a real behavioral
+gap in the narration override.
