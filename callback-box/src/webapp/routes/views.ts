@@ -1,14 +1,14 @@
 /**
- * REST routes for agent-generated views.
+ * Raw routes for agent-generated views — these serve non-JSON payloads, so they
+ * stay raw. The JSON view *list* moved to the `views.list` tRPC procedure.
  *
- * - GET /api/views — list all views
- * - GET /api/views/:slug/module.js — compiled JS module
+ * - GET /api/views/:slug/module.js — compiled JS module (JavaScript body)
  * - GET /api/views/:slug/cards — cards matching view dependencies
  */
 
 import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
-import { compileView, listViews, buildErrorModule } from "../views/compiler.js";
+import { compileView, buildErrorModule } from "../views/compiler.js";
 import { loadViewCards } from "../../core/view-cards.js";
 
 interface RegisterViewRoutesOptions {
@@ -32,11 +32,6 @@ function resolveViewPath(boxRoot: string, slug: string): string | null {
 
 export async function registerViewRoutes(options: RegisterViewRoutesOptions): Promise<void> {
   const { server, boxRoot } = options;
-
-  // GET /api/views — list all views
-  server.get("/api/views", async () => {
-    return listViews(boxRoot);
-  });
 
   // GET /api/views/:slug/module.js — compiled JS module
   server.get<{ Params: { slug: string } }>(

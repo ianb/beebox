@@ -12,18 +12,12 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getApiBase } from "../api";
+import { trpcClient } from "./trpc";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
 export interface CardViewBinding {
   slug: string;
   name: string;
-}
-
-interface ViewMetaLite {
-  slug: string;
-  name: string;
-  rendersCardTypes?: string[];
 }
 
 let bindingsPromise: Promise<Map<string, CardViewBinding>> | null = null;
@@ -32,9 +26,7 @@ function fetchBindings(): Promise<Map<string, CardViewBinding>> {
   bindingsPromise ??= (async () => {
     const map = new Map<string, CardViewBinding>();
     try {
-      const resp = await fetch(`${getApiBase()}/views`);
-      if (!resp.ok) return map;
-      const metas = await resp.json() as ViewMetaLite[];
+      const metas = await trpcClient.views.list.query();
       for (const meta of [...metas].toSorted((a, b) => a.slug.localeCompare(b.slug))) {
         for (const type of meta.rendersCardTypes ?? []) {
           if (!map.has(type)) map.set(type, { slug: meta.slug, name: meta.name });
