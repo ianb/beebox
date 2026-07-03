@@ -244,3 +244,35 @@ export async function pruneStaleTemplateUpdates(
   return removed;
 }
 
+/**
+ * List the box-relative paths of template files that have a **parked** update —
+ * i.e. a newer stock template sits in `config/_template-updates/<relpath>` while
+ * a divergent copy remains in place. Returns the ORIGINAL relpaths (the parked
+ * mirror's `<relpath>`, with the `config/_template-updates/` prefix stripped), so
+ * a caller can say "these guides/procedures have an update waiting."
+ *
+ * This is the observable signal for template drift — a box that has diverged from
+ * upstream stock (either boxholder-edited, or on a version whose hash isn't in the
+ * template's `priorStockHashes`). Surfaced by `cb status` and `/healthz` so drift
+ * is seen rather than discovered by SSHing into a server box.
+ */
+export async function listParkedTemplateUpdates(boxRoot: string): Promise<string[]> {
+  const rootAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR);
+  let entries: Dirent[];
+  try {
+    entries = await fs.readdir(rootAbs, { withFileTypes: true, recursive: true });
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === "ENOENT") return [];
+    throw e;
+  }
+  const parked: string[] = [];
+  for (const entry of entries) {
+    if (!entry.isFile()) continue;
+    const fileAbs = path.join((entry as unknown as { parentPath: string }).parentPath, entry.name);
+    // Strip the boxRoot + TEMPLATE_UPDATES_DIR prefix to recover the original relpath.
+    parked.push(path.relative(rootAbs, fileAbs));
+  }
+  return parked.toSorted();
+}
+

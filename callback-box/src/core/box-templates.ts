@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "./install-template-file.js";
+import { TEMPLATE_STOCK_HASHES } from "./template-stock-hashes.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -314,47 +315,36 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
 }
 
 /**
- * sha256 of the pre-frontmatter, XML-only schemas guide shipped before the
- * guide adopted the template tracker. Every box installed by an older
- * callback-box has this exact file; recognizing it lets the new
- * frontmatter-first guide overwrite the stale one (which actively steers box
- * agents toward `element()`/XML) while still parking any guide a boxholder
- * has actually edited.
+ * The template files that ship with a `priorStockHashes` allowlist — the
+ * box-local CLAUDE.md guides an agent reads. Each maps a ledger key
+ * (`TEMPLATE_STOCK_HASHES`) to its live content. Kept as a registry so the
+ * forcing-function test and `pnpm template-stock:update` can iterate them: the
+ * test fails if any content's hash drifts from the ledger's `current`, which is
+ * what keeps every superseded hash recorded (and thus rollouts non-parking).
  */
-const OLD_XML_SCHEMAS_GUIDE_SHA256 =
-  "127bdcaa2598ad8664037bd01659e8f23d4fcd5af493788102b9387b090b5452";
+export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
+  name: keyof typeof TEMPLATE_STOCK_HASHES;
+  relPath: string;
+  content: string;
+}> = [
+  { name: "schemas-guide", relPath: "config/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD },
+  { name: "views-guide", relPath: "views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+];
 
 /**
  * Install (or refresh) the box-local schemas guide. Uses the template tracker
  * so the stock guide is refreshed when unmodified and parked under
- * `config/_template-updates/` when the boxholder has customized it.
+ * `config/_template-updates/` when the boxholder has customized it. Prior stock
+ * hashes come from the ledger so a box on any shipped version overwrites cleanly.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
   await installTemplateFile({
     boxRoot,
     relPath: "config/schemas/CLAUDE.md",
     templateContent: SCHEMAS_CLAUDE_MD,
-    priorStockHashes: [OLD_XML_SCHEMAS_GUIDE_SHA256],
+    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"]!.superseded,
   });
 }
-
-/**
- * sha256s of prior stock views guides — every version we shipped before this
- * one, all of which listed `dependencies`/`modes` but never `rendersCardTypes`
- * or the "every view attaches to a card type; no card-less standalone view"
- * rule. Boxes carrying any of these steer agents toward standalone glob-driven
- * views, so a box whose guide matches one is recognized as our own unmodified
- * output and overwritten with the attach-to-cards rewrite; a guide the boxholder
- * has edited (matching none) is parked instead. Enumerating every known stock
- * hash — not just the latest — is what lets the refresh reach boxes that were
- * inited at different template eras (verified against the live server boxes:
- * workshop/birch/hearth/hearth shared one hash, ledger another).
- */
-const OLD_STANDALONE_VIEWS_GUIDE_SHA256S = [
-  "e32a89430eb0a2bf05ca833e4311f7857543c5a83f1862d03240911952abdeba",
-  "a4fb7c549b4489596a74e51414450e70717402c416117ae292ce0ce85f9e822c",
-  "194058211ef635603909c19041b8db17d1beb7620f6510510aa5ad9d78a33c1b",
-];
 
 /**
  * Install (or refresh) the box-local views guide. Uses the template tracker so
@@ -367,6 +357,6 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     boxRoot,
     relPath: "views/CLAUDE.md",
     templateContent: VIEWS_CLAUDE_MD,
-    priorStockHashes: OLD_STANDALONE_VIEWS_GUIDE_SHA256S,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"]!.superseded,
   });
 }

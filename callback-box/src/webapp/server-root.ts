@@ -11,6 +11,7 @@ import * as fs from "node:fs";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
+import { listParkedTemplateUpdates } from "../core/install-template-file.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
@@ -133,7 +134,24 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       return reply.status(401).send({ status: "unauthorized" });
     }
     const version = await readVersionInfo();
-    return { status: "ok", boxCount: boxes.length, version };
+    // Template drift: stock templates whose upstream update is parked because
+    // the box copy diverged. Surfaced here so an uptime monitor can alarm on
+    // drift server-wide instead of it being found only by SSHing into a box.
+    const byBox: Record<string, number> = {};
+    let templateDriftTotal = 0;
+    for (const box of boxes) {
+      const parked = await listParkedTemplateUpdates(box.boxRoot);
+      if (parked.length > 0) {
+        byBox[box.slug] = parked.length;
+        templateDriftTotal += parked.length;
+      }
+    }
+    return {
+      status: "ok",
+      boxCount: boxes.length,
+      version,
+      templateDrift: { total: templateDriftTotal, byBox },
+    };
   });
 
   // Build info — written by deploy.sh, shows what's deployed

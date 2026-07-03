@@ -29,6 +29,7 @@
     "test": "tap",
     "test:manual": "tap 'test/manual/**/*.doctest.md' 'test/manual/**/*.test.ts'",
     "knowledge-audit": "tsx src/dev/knowledge-audit.ts",
+    "template-stock:update": "tsx scripts/update-template-stock-hashes.ts",
     "csp-digest": "tsx src/dev/csp-digest.ts",
     "csp-report": "tsx src/dev/csp-report.ts",
     "prompt-report": "tsx src/dev/prompt-report.ts",
