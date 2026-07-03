@@ -1,5 +1,4 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
 /**
  * Move boxholder identity out of the personality card onto person cards.
  *
@@ -36,7 +35,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 /** Split a card's frontmatter text from its body. Returns null if no frontmatter. */
 function splitCard(raw: string): { fm: string; body: string } | null {
-  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  const m = raw.match(/^---\r?\n([\S\s]*?)\r?\n---\r?\n?([\S\s]*)$/);
   if (m === null) return null;
   return { fm: m[1] === undefined ? "" : m[1], body: m[2] === undefined ? "" : m[2] };
 }
