@@ -2,8 +2,9 @@
 
 A saved query over the box's cards, expressed as a card: the `list` named
 view, whose params say *which cards* (refs / include / exclude / type) and
-*how arranged* (order, group-by, display), resolved server-side and
-rendered by composing per-card-type renderers. This is the "query card"
+*how arranged* (order, group-by, limit) — nothing presentational; each
+match renders as its type's tile form (the landmarks contextual rule),
+resolved server-side. This is the "query card"
 species deferred from `docs/plans/interface-as-cards.md` — the piece that
 turns saved searches into addressable, agent-editable cards and lets the
 Questions surface become configuration instead of code.
@@ -52,11 +53,16 @@ Questions surface become configuration instead of code.
   `resolveViewParams`); validate hook in `src/schemas/view.ts`
   (`validateViewParams`). **Reused**: the query card IS a named view
   (`list`) with a rich param schema — no new card type (see Direction).
-- **Per-card-type rendering with an embed mode** —
-  `src/frontend/src/renderers/index.ts:42` (`mode?: "page" | "chat" |
-  "companion" | "embed"`), composed via `FileView`
-  (`src/frontend/src/components/FileView.tsx:333` shows the
-  `mode="embed"` composition pattern). **Reused** for `display: full`.
+- **The tile/full contextual rule** — docs/landmarks.md: *"There's no
+  per-link display attribute. The rule is contextual: anything rendered
+  inside a list-shaped surface uses the tile form… If a real case demands
+  an override later, the attribute can be added."* **Reused as the
+  rendering rule** — an earlier draft of this plan had a `display:
+  tiles|full` param and was corrected against this precedent. The
+  planned-but-never-built *"Tile-renderer registry (mirrors existing
+  renderer registry)"* (docs/landmarks.md, implementation table) is built
+  by this plan; landmark links currently hardcode a fallback tile
+  (`LinkTile` in `components/landmarks/LandmarkSection.tsx`).
 - **Question rendering** — `src/frontend/src/components/QuestionForm.tsx`,
   used by `components/questions/QuestionsList.tsx`. There is **no**
   registered `question` card renderer today (grep: no
@@ -106,7 +112,6 @@ params:
     - { ref: /store/notes/Read_Me_First.memo.card }
   order: modified-desc      # alphabetical | modified-desc | modified-asc
   group-by: status          # frontmatter field; groups sort by value
-  display: tiles            # tiles (default) | full
   limit: 100                # optional; capped output always says "+N more"
 ---
 ```
@@ -151,15 +156,20 @@ these cards" surface currently costs a code change.
    missing the field bucket last under `(none)`), `limit` (default 100,
    hard server cap 500; capped output always reports the total —
    "no silent caps").
-5. **Rendering: `display: tiles | full`.** `tiles` (default) renders
-   server-resolved rows (title, path, type) as link tiles — the landmark
-   LinkTile shape, cheap at any N. `full` composes each match's own
-   card-type renderer via `FileView mode="embed"` — interactive, so a
-   question's answer form works inside the list (the layering rule cashed
-   in); capped at 25 with an explicit "+N more shown as tiles" spillover.
-   Within `display: full`, matches of type `view` render as tiles
-   unconditionally — a list never expands another list inline, which
-   breaks query-card→query-card cycles structurally.
+5. **Rendering: the tile form, contextually — no `display` param.** An
+   earlier draft had `display: tiles | full`; it contradicted the shipped
+   landmarks rule ("no per-link display attribute — anything rendered
+   inside a list-shaped surface uses the tile form") and is dropped. Every
+   match renders its type's **tile form**: card renderers gain an optional
+   `Tile` component in the registry (the tile-renderer registry the
+   landmarks doc planned and never built); types without one fall back to
+   the generic title+path link tile. A tile is *"a bounded form fitting in
+   a list cell"* — nothing says static, so the pending question's tile IS
+   its answer form: interactivity lives in the type's tile, which is the
+   layering rule working rather than a presentation dial. A `view` card's
+   tile is a link tile, so lists structurally never nest. Per the
+   landmarks doc's own escape hatch, a display override can be added later
+   *if a real case demands it* — none does yet.
 6. **Self-exclusion default.** Matches of type `view` are excluded from
    results unless the query names `type: view` explicitly — a dashboard
    query card shouldn't list itself and its siblings by accident (the
@@ -168,27 +178,31 @@ these cards" surface currently costs a code change.
    (`views.resolveList` or similar), mirroring "the expand evaluator runs
    server-side at fetch time" (docs/landmarks.md). Core logic in
    `src/core/query-list/` sharing extracted glob/order/cap helpers with
-   landmark expand. The wire response is fully resolved rows + total
-   counts; `display: full` items are then fetched by `FileView` per item
-   as today's embeds are.
-8. **Question renderer promotion.** `registerCardRenderer("question", …)`
+   landmark expand. The wire response is fully resolved rows (path, type,
+   title, group key) + total counts; types with a registered `Tile` then
+   fetch their card data per item (the FileView embed pattern,
+   `src/frontend/src/components/FileView.tsx:333`), so a heavy tile costs
+   only where a type opted in.
+8. **Question tile promotion.** The `question` type registers a `Tile`
    wrapping `QuestionForm` (pending) / muted summary (answered). The
    `questions` named view then becomes replaceable by a query card
-   (`view: list, params: {type: question, group-by: status, display:
-   full}`); the named view stays registered as an alias during this plan
-   (removal is NOT in scope).
+   (`view: list, params: {type: question, group-by: status}`); the named
+   view stays registered as an alias during this plan (removal is NOT in
+   scope).
 
 **Vocabulary lock-ins.** Param keys `refs, include, exclude, type, order,
-group-by, display, limit`; order enum values reused from landmarks;
-`display` values `tiles|full`; pattern anchoring semantics; comma-in-type
-alternation; quoted-`!` sugar. These names appear in schema instructions,
-audits, and box cards — renaming later is a migration.
+group-by, limit` — selection and arrangement only, nothing presentational;
+order enum values reused from landmarks; pattern anchoring semantics;
+comma-in-type alternation; quoted-`!` sugar. These names appear in schema
+instructions, audits, and box cards — renaming later is a migration.
 
-**First implementation chunk** (no open questions inside it): the
-question card renderer — `registerCardRenderer("question", …)` +
-`QuestionsList` refactored to render through it, doctest for the
-renderer's pending/answered split. Independent of the vocabulary and
-immediately useful (questions render anywhere cards embed).
+**First implementation chunk** (no open questions inside it): the tile
+registry slot (optional `Tile` component per registered card renderer,
+generic link-tile fallback) + the question tile
+(`QuestionForm`-wrapping, pending/answered split), with `QuestionsList`
+refactored to render through it; doctest for the split. Independent of
+the vocabulary and immediately useful (questions render as themselves in
+any list-shaped surface).
 
 ## Subplans
 
@@ -207,11 +221,11 @@ than sub-planned.
 | Unquoted `!pattern` becomes a YAML tag | planned (schema doctest: tagged node → validation error, message names the quoting fix) | frontmatter YAML parse surfaces it; message must say *quote exclusions* | clear |
 | `group-by` field absent on some/all matches | planned (resolver doctest) | `(none)` bucket, sorted last | clear |
 | Match count exceeds `limit`/server cap | planned (resolver doctest) | rows + exact total; UI shows "+N more" | clear ("no silent caps") |
-| `display: full` over many interactive embeds (perf) | planned (resolver doctest for the 25-cap) | full-render cap with tile spillover | clear |
+| Many heavy tiles (a type whose tile fetches its card, e.g. question) | planned (renderer note; limit doctest) | per-item fetch only for types with a registered Tile; `limit` bounds the list | clear |
 | Query card matches itself / other view cards | planned (resolver doctest) | type `view` excluded by default | clear (documented in schema instructions) |
-| Nested list-in-list recursion | planned (renderer behavior; doctest at resolver level for classification) | `full` renders `view`-type matches as tiles, never inline | clear |
+| Nested list-in-list recursion | structural (no test needed) | tiles never expand a view card's list — a view card's tile is a link tile | clear |
 | A pinned `refs` target is missing | planned (resolver doctest) | row renders with `exists: false` (nav precedent); reported like nav problems | clear |
-| Per-item embed fetch fails mid-list (`display: full`) | existing FileView error handling per item | one broken item doesn't blank the list | clear |
+| Per-item card fetch fails mid-list (a Tile's data load) | existing FileView error handling per item | one broken tile doesn't blank the list | clear |
 
 ## Agent-flow / user-flow edge cases
 
@@ -260,6 +274,10 @@ than sub-planned.
 - **`group:` static labels (landmark-style) on query cards** — `group-by`
   covers the shipped need; two grouping spellings in one schema invites
   confusion.
+- **A `display` override param** — an earlier draft had one; dropped
+  against the landmarks precedent ("no per-link display attribute…
+  if a real case demands an override later, the attribute can be
+  added"). Rendering is contextual: tile forms in lists, full standalone.
 
 ## Open design questions
 
@@ -289,8 +307,10 @@ Both run (`pnpm knowledge-audit run --box <absolute-path-to-test-box>
 
 ## Implementation order
 
-1. **Question card renderer** — `registerCardRenderer("question")`,
-   `QuestionsList` renders through it; doctest. (Independent; commit 1.)
+1. **Tile registry slot + question tile** — optional `Tile` per
+   registered card renderer with the generic link-tile fallback; the
+   question tile wraps `QuestionForm`; `QuestionsList` renders through
+   it; doctest. (Independent; commit 1.)
 2. **Core resolver** — extract glob/order/cap helpers from landmark
    resolve into a shared module (landmark behavior unchanged, its
    doctests stay green); `src/core/query-list/resolve.ts` implementing
@@ -309,9 +329,9 @@ Both run (`pnpm knowledge-audit run --box <absolute-path-to-test-box>
    `list` documentation (exclusion quoting front and center);
    `docs/plans/interface-as-cards.md` surfaces-table updates.
 6. **Knowledge audits** — written and run against the test box.
-7. **Demo/verify** — an `Open_Questions.view.card` (`display: full`) and
-   a saved-search card in the worktree box; live verification incl. a
-   URL-override re-scope.
+7. **Demo/verify** — an `Open_Questions.view.card` (interactive question
+   tiles) and a saved-search card in the worktree box; live verification
+   incl. a URL-override re-scope.
 
 ## Rollout shape
 
