@@ -11,14 +11,22 @@ the chat prompt and laws).
 
 Left open when the review session wrapped. Grep `IA_REVIEW` to find them.
 
-- `IA_REVIEW` — **Track 7 (briefing redesign):** decide whether to move briefing
-  content from body Markdoc-tags to frontmatter (`purpose:`, `key-people:`). The
-  body-tag design works and its redundant guide section was deleted, so the
-  redesign may be superseded — decide *before* spending a migration.
-- `IA_REVIEW` — **`personality.boxholder` single→plural:** the personality card
-  models one boxholder (`boxholder: {full-name, called}`); the new
-  `person.boxholder` flag is plural-capable (a family/ledger box has several).
-  Reconcile — e.g. personality points at the boxholder person cards.
+- **Track 7 (briefing redesign): DONE (partial).** Resolved via the
+  structured-entry-vs-prose-framework principle, not a wholesale move: the
+  *records* (`key-person` → `key-people:`, `property` → `properties:`) moved to
+  briefing frontmatter; the *free-text* (`purpose`, `correction`, prose
+  sections) stays as body Markdoc. `project-phase` was retired (zero usage).
+  Hard cutover (no dual-support migration): the one card using the old tags
+  (workshop briefing) was hand-converted. `key-people[].ref` is now a real
+  frontmatter field (the `person.tsx` comment that referenced it is no longer
+  stale). See `feat(briefing): move key-person/property to frontmatter records`.
+- **`personality.boxholder` single→plural: DONE.** Reconciled by making person
+  cards with `boxholder: true` the single, plural-capable source of truth:
+  `loadBoxholders` reads them and `compilePersonality` emits the "Your boxholder
+  is …" line (oxford-joined for several). The personality card keeps only the
+  relational notes. Migrator `boxholder-person` lifts inline
+  `boxholder.{full-name,called}` onto a person card. NOTE: can't run on prod
+  until the `cb migrate` tsx/tsconfig break is fixed (local/dev works).
 - `IA_REVIEW` — **deployed-box migration:** this session's migrations
   (`recipe-source-shape`, `person-contact-split`, `gsheet-rename`) ran on **local
   dev copies only**. Run `cb migrate --apply` on the deployed server boxes (real
