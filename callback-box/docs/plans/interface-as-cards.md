@@ -357,6 +357,25 @@ the person, not the content. Its state (draft, attachments, pending
 selections) is frame state per the standing rule — never a card, never in
 the URL.
 
+Like the slot (occupancy × embodiment), the input has two orthogonal
+axes:
+
+- **Target** — an *interlocutor* (a chat session; a reply is expected),
+  a *place* (a directory; a deposit, receipt at most), or *unaddressed*
+  (the triage-memo idea: fire-and-forget, the box routes it).
+- **Embodiment** — full composer, camera-first capture screen,
+  voice-only, or the OS share sheet (an embodiment the phone owns).
+
+**Capture is the input, place-targeted, camera-first** — not a separate
+instrument. Its "less interactive" feel is a property of the target kind,
+not the widget: aimed at a person the input is a dialogue instrument;
+aimed at a place it is a deposit chute. One consequence to preserve when
+building: accumulated content can be re-aimed across target kinds
+(photos gathered for a chat can flip to a plain inbox deposit without
+loss). The triage memo is just the unaddressed target, not a fourth
+thing. (Conceptual unification only so far — capture's device/upload
+apparatus is separate code today.)
+
 ### Signals: the frame bus
 
 Inter-surface communication is **frame traffic, not card traffic** — no
