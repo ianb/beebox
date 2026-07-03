@@ -13,9 +13,9 @@ a reason to leave a duplicate standing. What stays out of Track B is *noise*
 `slopo.ignore.txt`, not consolidated — and the systemic REST/tRPC duplication,
 which is a seam decision deferred to a subplan.
 
-The evaluation that motivates this plan lives at
-`slopo-eval/REPORT.md` in the `try-slopo` worktree (not committed): 105 clusters
-on a clean run, ~68 cross-file, with a clear signal/noise split.
+The evaluation that motivates this plan is recorded at
+`docs/implemented-plans/slopo-evaluation.md`: 105 clusters on a clean run,
+~68 cross-file, with a clear signal/noise split.
 
 ## Status — implemented 2026-07-02
 
