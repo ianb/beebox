@@ -16,6 +16,8 @@ export interface PickerSession {
   sessionId: string;
   label: string;
   lastActivity: string;
+  /** Box-relative path of the session's husk card. */
+  huskPath: string;
 }
 
 export interface PickerLandmark {
@@ -131,17 +133,28 @@ function formatRelativeTime(iso: string): string {
 
 function SessionRow({ session, boxSlug }: { session: PickerSession; boxSlug: string }) {
   return (
-    <Link
-      to={href(`/${boxSlug}/chat`)}
-      search={{ session: session.sessionId } as never}
-      className="block px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
-    >
-      <div className="flex items-start gap-3">
-        <Text as="div" size="sm" className="flex-1 line-clamp-2">{session.label}</Text>
-        <Text as="span" size="xs" tone="muted" className="flex-shrink-0">
-          {formatRelativeTime(session.lastActivity)}
-        </Text>
-      </div>
-    </Link>
+    <div className="flex items-stretch gap-1">
+      <Link
+        to={href(`/${boxSlug}/chat`)}
+        search={{ session: session.sessionId } as never}
+        className="block flex-1 px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
+      >
+        <div className="flex items-start gap-3">
+          <Text as="div" size="sm" className="flex-1 line-clamp-2">{session.label}</Text>
+          <Text as="span" size="xs" tone="muted" className="flex-shrink-0">
+            {formatRelativeTime(session.lastActivity)}
+          </Text>
+        </div>
+      </Link>
+      {/* The session's husk card — the durable, editable face of this chat. */}
+      <Link
+        to={href(`/${boxSlug}/browse/${session.huskPath}`)}
+        title="Open this chat's card"
+        aria-label="Open this chat's card"
+        className="flex items-center px-2 rounded border border-subtle text-warm-400 hover:text-info-dark hover:border-info-400 transition-colors"
+      >
+        <Text as="span" size="xs">card</Text>
+      </Link>
+    </div>
   );
 }

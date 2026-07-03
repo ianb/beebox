@@ -10,7 +10,7 @@ skipping ghosts whose transcript is gone.
 import { mkdir, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { ensureChatHusk, findChatHusk, backfillChatHusks } from "../../src/core/chat-husk.js";
+import { ensureChatHusk, findChatHusk, backfillChatHusks, listChatHusks } from "../../src/core/chat-husk.js";
 import { getSessionLogPath } from "../../src/cli/lib/session.js";
 ```
 
@@ -98,4 +98,41 @@ await findChatHusk(box.root, "cccc1111-2222-3333-4444-555566667777")
 
 ```ts cleanup
 delete process.env["CB_CLAUDE_PROJECTS_DIR"];
+```
+
+## listChatHusks enumerates the cards — they ARE the session list
+
+The picker reads husks, not the history file: a `title` on the card wins
+over any transcript snippet, and a deleted husk means the session is
+editorially gone from the picker. Files without a `session` field are
+skipped.
+
+```ts
+const box = await makeTmpBox();
+await ensureChatHusk(box.root, {
+  sessionId: "aaaa1111-0000-0000-0000-000000000000",
+  contextDir: "store/projects",
+  date: new Date("2026-07-01T12:00:00Z"),
+});
+await box.write("store/chat/web/renamed-topic_bbbb2222.chat.card", `---
+session: bbbb2222-0000-0000-0000-000000000000
+title: Planning the garden
+---
+`);
+await box.write("store/chat/web/broken.chat.card", "no frontmatter here\n");
+const husks = await listChatHusks(box.root);
+JSON.stringify(husks.map((h) => ({ session: h.session.slice(0, 8), title: h.title ?? null, contextDir: h.contextDir ?? null })), null, 2)
+=>
+[
+  {
+    "session": "aaaa1111",
+    "title": null,
+    "contextDir": "store/projects"
+  },
+  {
+    "session": "bbbb2222",
+    "title": "Planning the garden",
+    "contextDir": null
+  }
+]
 ```
