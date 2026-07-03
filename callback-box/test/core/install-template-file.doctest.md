@@ -239,11 +239,13 @@ result.outcome
 
 ## Pruning stale parked files
 
-`pruneStaleTemplateUpdates` deletes files in `config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone:
+`pruneStaleTemplateUpdates` deletes files in `config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone. Each mirror has its on-disk target present (the realistic case — a mirror is only ever parked because an on-disk copy diverged), so only *age* decides removal here:
 
 ```ts
 const box = await makeBox();
 await fs.mkdir(path.join(box, "config/_template-updates"), { recursive: true });
+await fs.writeFile(path.join(box, "old.card"), "local\n");
+await fs.writeFile(path.join(box, "new.card"), "local\n");
 const oldFile = path.join(box, "config/_template-updates/old.card");
 const newFile = path.join(box, "config/_template-updates/new.card");
 await fs.writeFile(oldFile, "old\n");
@@ -286,6 +288,8 @@ Empty subdirectories are swept after files:
 
 ```ts
 const box = await makeBox();
+await fs.mkdir(path.join(box, "procedures"), { recursive: true });
+await fs.writeFile(path.join(box, "procedures/x.procedure.card"), "local\n");
 const subdir = path.join(box, "config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });
 const stale = path.join(subdir, "x.procedure.card");
@@ -298,10 +302,13 @@ await fs.access(subdir).then(() => true).catch(() => false)
 => false
 ```
 
-A subdir that still holds a non-stale file is left in place — the sweep is best-effort and silent, so a non-empty directory is not an error:
+A subdir that still holds a non-stale file (with its on-disk target present) is left in place — the sweep is best-effort and silent, so a non-empty directory is not an error:
 
 ```ts
 const box = await makeBox();
+await fs.mkdir(path.join(box, "procedures"), { recursive: true });
+await fs.writeFile(path.join(box, "procedures/old.procedure.card"), "local\n");
+await fs.writeFile(path.join(box, "procedures/fresh.procedure.card"), "local\n");
 const subdir = path.join(box, "config/_template-updates/procedures");
 await fs.mkdir(subdir, { recursive: true });
 const stale = path.join(subdir, "old.procedure.card");
@@ -319,4 +326,65 @@ const removed = await pruneStaleTemplateUpdates(box);
   ],
   true
 ]
+```
+
+### Orphaned mirrors are reaped regardless of age
+
+A parked mirror whose on-disk `<relpath>` no longer exists (the copy was deleted, or a relpath-scheme migration renamed it) is drift-count noise — nothing for it to update. It's removed even when recent:
+
+```ts
+const box = await makeBox();
+const subdir = path.join(box, "config/_template-updates/procedures");
+await fs.mkdir(subdir, { recursive: true });
+// Freshly parked (mtime = now) but NO on-disk box/procedures/gone.procedure.card:
+await fs.writeFile(path.join(subdir, "gone.procedure.card"), "orphan\n");
+
+const removed = await pruneStaleTemplateUpdates(box, { now: Date.now() });
+removed
+=> [
+  "config/_template-updates/procedures/gone.procedure.card"
+]
+```
+
+## Convergence clears the parked mirror
+
+Once a divergent box comes back into line with the template — the boxholder copies the parked update into place, or a migration strips the diverging field — the next `installTemplateFile` sees a match and clears the obsolete mirror. This is what keeps the drift count tracking *real* divergence instead of a pile of stale "update available" entries.
+
+Park an update by diverging the local copy, then bring it back in line:
+
+```ts
+const box = await makeBox();
+await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
+await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+JSON.stringify(await listParkedTemplateUpdates(box))
+=> ["config/x.card"]
+```
+
+The local reverts to the last cleanly-installed version (recorded hash = v1), so a fresh v2 push is now a clean `overwritten` — and the obsolete mirror is cleared:
+
+```ts continue
+await fs.writeFile(path.join(box, "config/x.card"), "v1\n");
+const result = await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+result.outcome
+=> overwritten
+
+JSON.stringify(await listParkedTemplateUpdates(box))
+=> []
+```
+
+An `unchanged` outcome clears it too — e.g. a migration edits the local file to match the current template:
+
+```ts
+const box = await makeBox();
+await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
+await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+await fs.writeFile(path.join(box, "config/x.card"), "v2\n");
+const result = await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+result.outcome
+=> unchanged
+
+JSON.stringify(await listParkedTemplateUpdates(box))
+=> []
 ```

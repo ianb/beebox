@@ -79,6 +79,47 @@ function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
 }
 
+async function fileExists(absPath: string): Promise<boolean> {
+  try {
+    await fs.access(absPath);
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
+/**
+ * Remove the parked mirror for `relPath` (if any) and sweep now-empty parent
+ * dirs under `config/_template-updates/`. Called whenever the box's on-disk
+ * copy converges to the current template (fresh / unchanged / overwritten):
+ * the parked "update available" is then obsolete, and leaving it behind is
+ * exactly what kept the drift count stuck above the real divergence. Silent
+ * and idempotent — a missing mirror is the common case.
+ */
+async function removeParkedMirror(boxRoot: string, relPath: string): Promise<void> {
+  const mirrorAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, relPath);
+  try {
+    await fs.unlink(mirrorAbs);
+  } catch (e) {
+    const err = e as NodeJS.ErrnoException;
+    if (err.code === "ENOENT") return;
+    throw e;
+  }
+  // Sweep empty parents up to (but not including) the updates root.
+  const rootAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR);
+  let dir = path.dirname(mirrorAbs);
+  while (dir.length > rootAbs.length && dir.startsWith(rootAbs)) {
+    try {
+      await fs.rmdir(dir);
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code === "ENOTEMPTY" || err.code === "ENOENT") break;
+      throw e;
+    }
+    dir = path.dirname(dir);
+  }
+}
+
 async function readVersions(boxRoot: string): Promise<VersionsFile> {
   const abs = path.join(boxRoot, VERSIONS_FILE);
   try {
@@ -126,6 +167,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     const versions = await readVersions(boxRoot);
     versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
     await writeVersions(boxRoot, versions);
+    await removeParkedMirror(boxRoot, relPath);
     return { outcome: "fresh", writtenAt: relPath };
   }
 
@@ -141,6 +183,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
       versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
       await writeVersions(boxRoot, versions);
     }
+    await removeParkedMirror(boxRoot, relPath);
     return { outcome: "unchanged" };
   }
 
@@ -158,6 +201,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     await fs.writeFile(targetAbs, templateContent);
     versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
     await writeVersions(boxRoot, versions);
+    await removeParkedMirror(boxRoot, relPath);
     return { outcome: "overwritten", writtenAt: relPath };
   }
 
@@ -188,9 +232,17 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
 export const STALE_TEMPLATE_UPDATE_MS = 30 * 24 * 60 * 60 * 1000;
 
 /**
- * Delete parked template-update files under `config/_template-updates/`
- * whose mtime is older than `maxAgeMs` (default 30 days). Empty parent
- * directories are removed too. Returns the relative paths of removed files.
+ * Delete parked template-update files under `config/_template-updates/` that are
+ * either **stale** (mtime older than `maxAgeMs`, default 30 days) or **orphaned**
+ * (no on-disk `<relpath>` for the mirror to update). Empty parent directories are
+ * removed too. Returns the relative paths of removed files.
+ *
+ * The orphan case matters because a mirror is only ever parked when an on-disk
+ * copy existed and diverged; if that copy is later deleted or renamed (e.g. a
+ * relpath-scheme migration moves `procedures/X` → `config/procedures/X`), the
+ * mirror points at nothing and is pure drift-count noise. `installTemplateFile`
+ * clears mirrors for files that converge back to the template, but it never sees
+ * a relpath that's no longer installed — this sweep is what reaps those.
  *
  * Idempotent and silent — safe to call from `syncTemplatesFromSource` every
  * cycle. Doesn't touch anything outside `config/_template-updates/`.
@@ -218,8 +270,12 @@ export async function pruneStaleTemplateUpdates(
     if (!entry.isFile()) continue;
     // Node 20: Dirent.parentPath is the directory containing the entry.
     const fileAbs = path.join((entry as unknown as { parentPath: string }).parentPath, entry.name);
-    const stat = await fs.stat(fileAbs);
-    if (now - stat.mtimeMs < maxAgeMs) continue;
+    const relPath = path.relative(rootAbs, fileAbs);
+    const orphaned = !(await fileExists(path.join(boxRoot, relPath)));
+    if (!orphaned) {
+      const stat = await fs.stat(fileAbs);
+      if (now - stat.mtimeMs < maxAgeMs) continue;
+    }
     await fs.unlink(fileAbs);
     removed.push(path.relative(boxRoot, fileAbs));
   }
