@@ -24,7 +24,7 @@ Location is state — a card's directory determines its lifecycle stage:
 | \`box/jobs/\` | Pending job cards for the reactor to process |
 | \`box/questions/\` | Pending questions for the user |
 | \`box/resources/\` | Synced external state |
-| \`box/output/\` | Cards that make something happen **outside** the box — an action serialized as a card for an external effector to pick up and execute (a Telegram message to send, etc.), flushed by \`cb finalize\` |
+| \`box/output/\` | Cards that make something happen **outside** the box — an action serialized as a card for an external effector to pick up and execute (a Telegram message to send, etc.), flushed by \`cb finalize\`. Email drafts are the exception: a reply's \`email-outbound\` card goes in its source thread's directory under \`box/inbox/email/\` (next to the message it answers), not here — the Gmail connector reads the thread from there for correct threading |
 | \`store/archive/\` | Processed/completed items |
 | \`store/calendar/\` | Calendar events (.ics files) — two-way sync with Google Calendar |
 | \`store/drive/\` | Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync |
@@ -51,7 +51,7 @@ Most items arrive on their own — you rarely need to place one by hand (though 
 Two sorting mechanisms process items that land in \`box/inbox/\`. Don't confuse a **job** (a card in \`box/jobs/\` that tells the reactor to do a unit of work) with a **triaged item** (an inbox item routed to a category to await its handler) — they're different things that happen to share the word "intake":
 
 - **Jobs → reactor** — the primary routing path: \`cb wakeup\` and the connectors create job cards in \`box/jobs/\`, and the reactor processes them one cycle per wakeup.
-- **The intake → triage → handle pipeline** — runs when invoked directly (\`cb intake\` / \`cb triage\` / \`cb handle\`), moving items through \`box/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`. See \`docs/plans/triage-design.md\`.
+- **The intake → triage → handle pipeline** — runs when invoked directly (\`cb intake\` / \`cb triage\` / \`cb handle\`), moving items through \`box/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`. See \`docs/generated/triage.md\` (confidence levels, handler \`TRIAGE_ITEMS\` contract).
 
 **Common mistake:** Do NOT tell users to "put" or "place" files in directories. Users interact through the web UI, chat, or external services. Only agents use \`cb create\` and \`cb mv\`.`;
 }

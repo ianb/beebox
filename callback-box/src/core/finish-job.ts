@@ -1,8 +1,7 @@
 /**
  * Core logic for finishing a job — deleting the job card and committing.
  *
- * Extracted from CLI `finish` command so it can be called programmatically
- * (e.g., by the reactor after trampolining a procedure job).
+ * Extracted from CLI `finish` command so it can be called programmatically.
  */
 
 import * as path from "node:path";

@@ -121,7 +121,7 @@ For a discrete action you took, emit a compact \`<ack>\` instead of describing i
   \`<ack kind="appended" ref="recipes/Bread.recipe.card" />\`
   \`<ack kind="edited" ref="docs/plan.md">tightened the proofing section</ack>\`
 
-\`kind\` is required, one of: \`created\` (a new file/card exists), \`appended\` (content added to an existing one), \`edited\` (existing content changed), \`todo-added\`, \`todo-completed\`, or \`no-response\` (you deliberately did nothing — use this instead of writing "nothing to do"; no \`ref\` or text needed). If no kind fits, write prose or a \`<callout>\` rather than forcing an \`<ack>\`. Inner text is worth adding whenever it names a real detail the user couldn't have predicted (which section, what changed, why this and not that); omit it only when it would just restate the action. Don't mix \`no-response\` with other acks.
+\`kind\` is required, one of: \`created\` (a new file/card exists), \`appended\` (new content added to an existing one — a new note, section, or paragraph), \`edited\` (content already there was changed or reworded), \`todo-added\`, \`todo-completed\`, or \`no-response\` (you deliberately did nothing — use this instead of writing "nothing to do"; no \`ref\` or text needed). Adding a note the user asked for is \`appended\`, not \`edited\` — reserve \`edited\` for altering existing text. If no kind fits, write prose or a \`<callout>\` rather than forcing an \`<ack>\`. Inner text is worth adding only when it names a real detail the user couldn't have predicted (which section, what changed, why this and not that); when you did exactly the discrete thing they asked for, emit a **bare** \`<ack>\` — text that just restates their request is noise. Don't mix \`no-response\` with other acks.
 
 ## Callouts (\`<callout>\`)
 
@@ -161,7 +161,9 @@ export const NARRATION_OVERLAY = `
 
 ## Narration mode
 
-When the \`<chat-app>\` snapshot reports \`narration="on"\`, the user is **speaking at length and does not expect answers** — dumping content, thinking out loud — and may talk over anything you say. That's why your turn defaults to **silent**: prefer \`<ack>\` for work done and \`<callout>\` for a genuine question, and skip \`<speech>\` unless asked or the user is hands-busy. See \`docs/generated/narration-mode.md\` for the full rules; consult it when narration is on.`;
+When the \`<chat-app>\` snapshot reports \`narration="on"\`, the user is **speaking at length and does not expect answers** — dumping content, thinking out loud — and may talk over anything you say. That's why your turn defaults to **silent**: prefer \`<ack>\` for work done and \`<callout>\` for a genuine question.
+
+**The "voice in implies voice out" rule is suspended here.** Even when the user's message arrived as \`<speech>\`, do NOT reply with \`<speech>\` — their speaking is narration, not a request to be spoken back to. Answer with a \`<callout>\` (it reaches them even with \`prose="off"\`), or stay silent with an \`<ack>\`. Emit \`<speech>\` only if they explicitly ask you to speak, or are hands-busy and need the answer aloud. See \`docs/generated/narration-mode.md\` for the full rules; consult it when narration is on.`;
 
 /**
  * Note appended to the system prompt when this chat is bound to a

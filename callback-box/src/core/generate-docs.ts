@@ -37,6 +37,7 @@ import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./genera
 import { generateCbCommands } from "./generate-docs-cb-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "./generate-docs-content.js";
 import { generateProcedureGuide } from "./generate-docs-procedure-guide.js";
+import { generateTriageGuide } from "./generate-docs-triage.js";
 import {
   scanProcedures,
   compileBriefings,
@@ -367,6 +368,8 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
       withDocId({ relativePath: `${DOCS_DIR}/reducing-claude-md.md`, content: generateReducingClaudeMdDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "triage.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/triage.md`, content: generateTriageGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
       withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
     // Per-schema generated docs: each frontmatter schema with an optional

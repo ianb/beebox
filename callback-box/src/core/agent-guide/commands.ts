@@ -33,6 +33,9 @@ This is the rest of the everyday \`cb\` surface; the full reference is
   agent-authored record a scheduled sub-agent leaves for the boxholder (not a
   conversational reply — chat knows not to answer it); others include
   \`cb chat whats-changed\` and \`cb chat retranscribe\`. See the full reference.
+  (This is the *live chat session* only — to leave yourself a note while
+  processing a \`chat-thread\` card, put it in the \`text:\` of the \`kind: seen\`
+  entry you append, not \`self-note\`.)
 
 **Job / procedure lifecycle** (only while processing a job in a reactor or
 procedure run):

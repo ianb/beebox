@@ -87,13 +87,13 @@ tests:
 
   # === Card Types and Schemas ===
   #
-  # Status (2026-07-03): 7/8 pass after full rerun. Fixed 4 stale expectations
-  # (memo-xml-structure, create-question-card, question-directive,
-  # create-new-card-type) — the overhaul moved card/question/extension knowledge
-  # into the always-on surface, so the agent answers directly & correctly and the
-  # old `should_read` / `<directive>` XML checks were obsolete. REGRESSION:
-  # schema-validate-hook now answers Zod `.refine()` instead of discovering the
-  # real `validate` hook (was passing 2026-06-18) — see
+  # Status (2026-07-03): 8/8 pass. Fixed 4 stale expectations (memo-xml-structure,
+  # create-question-card, question-directive, create-new-card-type) — the overhaul
+  # moved card/question/extension knowledge into the always-on surface, so the
+  # agent answers directly & correctly and the old `should_read` / `<directive>`
+  # XML checks were obsolete. schema-validate-hook had regressed to a Zod
+  # `.refine()` answer; FIXED by a corrective in agent-guide/cards.ts ("rules Zod
+  # can't express go in the schema's `validate` hook, not a `.refine()`"). See
   # docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-card-types
@@ -153,21 +153,23 @@ tests:
     correct_contains_any: ["config/schemas", "cb init"]
     tags: [schemas, extension]
 
-  # Status (2026-06-18): pass (verified). Agent discovered config/schemas/CLAUDE.md
-  # and named the `validate` hook — self-contained, returns LintIssue[], not a
-  # card-lint.ts branch. Convention also in the repo's docs/adding-schemas.md.
+  # Status (2026-07-03): pass. The always-on cards section (agent-guide/cards.ts)
+  # now carries a corrective — "rules Zod can't express go in the schema's
+  # `validate` hook, not a Zod `.refine()`" — so the agent answers directly
+  # instead of reaching for its Zod prior. (Regressed after the overhaul when the
+  # extension pointer named only Zod; the corrective restored it.) should_read
+  # dropped: the agent knows it directly now.
   - id: schema-validate-hook
     prompt: >
       You're adding a card type whose rules go beyond what Zod field types can
       express — e.g. a cross-field constraint, or validating the body's parsed
       structure. Where does that validation go?
-    expected_level: discoverable
+    expected_level: knows_about
     watch_for: >
       Names the schema's `validate` hook on cardSchema() — self-contained,
       co-located with the schema, returning LintIssue[]. Must NOT say to add a
-      branch/type=== check to a central dispatch (card-lint.ts). Knowing it sees
-      only the card's own data (no loader/cross-card access) is a plus.
-    should_read: ["config/schemas/CLAUDE.md"]
+      branch/type=== check to a central dispatch (card-lint.ts), nor a Zod
+      `.refine()`. Knowing it sees only the card's own data is a plus.
     correct_contains: ["validate"]
     tags: [schemas, extension, validation]
 
@@ -302,11 +304,13 @@ tests:
 
   # === Procedures ===
   #
-  # Status (2026-07-03): 6/7 pass. Fixed create-procedure + procedure-directive
+  # Status (2026-07-03): 7/7 pass. Fixed create-procedure + procedure-directive
   # (answered shape/flag directly — dropped stale should_read procedures.md).
-  # REAL GAP: procedure-in-job — the job→procedure trampoline (<procedure ref>
-  # XML, procedure-trampoline.ts + reactor engine) is real but UNDOCUMENTED, so
-  # the agent searches and emits nothing. See docs/knowledge-audit-rerun-2026-07-03.md.
+  # procedure-in-job was testing a job→procedure `<procedure ref>` trampoline that
+  # DOES NOT EXIST in the code (the reactor dispatches only batch/chat agent jobs;
+  # the stale engine.ts comment was misleading). Reframed to test the real triggers
+  # (`cb procedure run` + the triage handler) and fixed the comments. See
+  # docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-procedures
     prompt: "What procedures are configured in this box?"
@@ -369,20 +373,24 @@ tests:
     tags: [procedures, cli]
 
   - id: procedure-in-job
-    prompt: "Can a job card trigger a procedure? How does that work?"
-    expected_level: knows_directly
-    watch_for: "Describes <procedure ref='...'> in job cards and reactor trampolining"
-    correct_contains: ["procedure"]
+    prompt: "How does a procedure actually get run — what kicks one off?"
+    expected_level: knows_about
+    watch_for: >
+      Procedures run via `cb procedure run <name>` (manual or scheduled) or as a
+      triage category's handler — `cb handle` runs a category landmark's
+      `destinations` handler `procedure` over its bucket. Job cards in box/jobs/
+      are worked by agents, not trampolined into procedures.
+    correct_contains_any: ["cb procedure run", "handle", "handler"]
     tags: [procedures, jobs]
     notes: >
-      REAL GAP (2026-07-03): the mechanism is real — detectProcedureInJob in
-      procedure-trampoline.ts + reactor trampolining via an XML `<procedure ref>`
-      in the job card (one of the last XML holdouts). But it's UNDOCUMENTED in the
-      box's generated docs (procedures.md never mentions jobs triggering
-      procedures), so the agent greps ~9 times, finds nothing, and emits an empty
-      response at the turn limit. Fix is to document it (then expected_level could
-      become knows_about/discoverable), not to weaken the audit. See
-      docs/knowledge-audit-rerun-2026-07-03.md.
+      Reframed 2026-07-03: an earlier version asked "can a job card trigger a
+      procedure?" expecting an XML `<procedure ref>` job-trampoline — but that
+      mechanism does not exist in the code. `startProcedure` is called only by
+      `cb procedure run`, migrations, and the triage handle stage; the reactor
+      dispatches box/jobs/ only to batch/chat agent jobs (no procedure
+      partition). The stale "procedure jobs via trampoline" comments in
+      engine.ts / finish-job.ts describe a planned-but-unbuilt path. This audit
+      now tests the real triggers.
 
   # === Procedure gating & checklists ===
   #
@@ -619,12 +627,14 @@ tests:
 
   # === Chat Threads ===
   #
-  # Status (2026-07-03): 12/13 pass. The chat-thread card format moved from XML
+  # Status (2026-07-03): 13/13 pass. The chat-thread card format moved from XML
   # (<message>/<seen>/sender="agent") to YAML entries: with kind: message/seen
   # discriminators — the agent answers the new format correctly, so 4 audits'
-  # stale XML checks were updated to YAML (structure de-baited off "XML"). MINOR
-  # GAP: chat-thread-seen-note — agent answers `cb chat self-note` instead of the
-  # kind: seen entry's text: note-to-self. See docs/knowledge-audit-rerun-2026-07-03.md.
+  # stale XML checks were updated to YAML (structure de-baited off "XML").
+  # chat-thread-seen-note had reached for `cb chat self-note`; FIXED by a
+  # corrective in agent-guide/commands.ts (self-note is the live chat session; a
+  # note while processing a chat-thread goes in the kind: seen entry's text:) plus
+  # scoping the audit prompt to thread processing. See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: chat-thread-structure
     prompt: "Show me the structure of a chat-thread card."
@@ -677,16 +687,17 @@ tests:
       marking the message sent/delivered itself.
 
   - id: chat-thread-seen-note
-    prompt: "Can I leave a note for myself when acknowledging chat messages?"
+    prompt: "You're processing a chat-thread card and decide to acknowledge the new messages without replying. Can you leave yourself a note to pick up on your next pass over this thread? How?"
     expected_level: knows_about
-    watch_for: "Describes the text: field on a kind: seen entry as a note-to-self for the next invocation (NOT cb chat self-note, which is the live-chat-session mechanism)"
+    watch_for: "Describes the text: field on the kind: seen entry as a note-to-self for the next invocation (NOT cb chat self-note, which is the live-chat-session mechanism)"
     correct_contains: ["seen"]
     tags: [chat, processing]
     notes: >
       The acknowledgment-note is the `text:` on a `kind: seen` entry (per the
-      chat-thread schema instructions). Watch for the agent conflating it with
-      `cb chat self-note`, which posts into a live chat session — a different
-      context. See docs/knowledge-audit-rerun-2026-07-03.md.
+      chat-thread schema instructions). The prompt was reworded 2026-07-03 to scope
+      it to chat-thread processing — the old "acknowledging chat messages" phrasing
+      read ambiguously and drew the agent to `cb chat self-note` (the live-chat
+      mechanism, a different context).
 
   - id: chat-job-processing
     prompt: "I have a chat job card. Walk me through how to process it."
@@ -1202,11 +1213,11 @@ tests:
   # audit harness loads the chat system prompt the same way a real chat
   # session would.
   #
-  # Status (2026-07-03): 10/11 pass. REAL GAP: ack-conservative-text — for an
-  # obvious action (add a cardamom note to the bread recipe) the agent emits
-  # <ack kind="edited">added a cardamom note</ack> instead of the prompt's own
-  # canonical <ack kind="appended" .../> (bare) — wrong kind + restating inner
-  # text the conservative rule says to omit. See docs/knowledge-audit-rerun-2026-07-03.md.
+  # Status (2026-07-03): 11/11 pass. ack-conservative-text had emitted
+  # <ack kind="edited">restating text</ack> for an obvious action instead of the
+  # canonical bare <ack kind="appended" .../>. FIXED by sharpening the ack section
+  # (chat-session-prompts.ts): adding a note is `appended` not `edited`, and a bare
+  # ack when you did exactly what was asked. See docs/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-05-13): All 8 pass. Agent has clean direct knowledge of
   # all three tags — names the snapshot purpose, emits the right mutation
@@ -1329,10 +1340,11 @@ tests:
   # turn-expectations accordingly: receive content, stay quiet, prefer
   # structured-output tags over conversational prose.
   #
-  # Status (2026-07-03): narration-no-voice-out-by-default is now INTERMITTENT
-  # (~2/5 pass) — the agent emits <speech>Four.</speech> more often than not,
-  # i.e. the base "voice-in implies voice-out" reflex beats the narration
-  # override. Real behavioral gap; NARRATION_OVERLAY needs hardening. See
+  # Status (2026-07-03): both pass (4/4 on a flakiness re-probe).
+  # narration-no-voice-out-by-default had been INTERMITTENT (~2/5) — the base
+  # "voice-in implies voice-out" reflex beat the narration override. FIXED by
+  # hardening NARRATION_OVERLAY (chat-session-prompts.ts) to state the reflex is
+  # suspended and NOT to reply with <speech> even when the user spoke. See
   # docs/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-05-13): Both pass after the narration overlay was
@@ -1515,9 +1527,11 @@ tests:
   # The schema's `instructions` block teaches authoring; these audits
   # verify the agent can find that knowledge.
   #
-  # Status (2026-07-03): 5/6 pass. REAL GAP: draft-email-placement — agent puts
-  # reply drafts in box/output/ instead of the source thread's .attach/ under
-  # box/inbox/email/ (loses Gmail threading). See docs/knowledge-audit-rerun-2026-07-03.md.
+  # Status (2026-07-03): 6/6 pass. draft-email-placement had put reply drafts in
+  # box/output/ instead of the source thread's .attach/ (loses Gmail threading).
+  # FIXED by a corrective on the box/output/ row (agent-guide/box-shape.ts) noting
+  # email drafts are the exception, plus a pointer in email-message.tsx. See
+  # docs/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-04-28): split from email-message after the unified design
   # caused the wakeup intake to triage drafts as incoming mail. Cold
@@ -1877,13 +1891,14 @@ tests:
 
   # === Triage Pipeline ===
   #
-  # Status (2026-07-03): 8/10 pass. Same 2 real gaps persist (triage-confidence-levels,
+  # Status (2026-07-03): 10/10 pass. The 2 real gaps (triage-confidence-levels,
   # triage-handler-env) — the confident/probable/guess enum (src/core/triage.ts)
-  # and the TRIAGE_ITEMS handler contract (src/core/handle.ts) still aren't
-  # surfaced in the box's agent docs; both fail honestly on substance. Cleaned up
-  # the should_read-only false-fails (triage-vs-reactor-flow) by dropping the
-  # broken docs/plans/triage-design.md read (not in box) and fixing
-  # triage-pipeline-not-wired's brittle wording check. See findings doc.
+  # and the TRIAGE_ITEMS handler contract (src/core/handle.ts) — were FIXED by
+  # generating a box-side triage doc (generate-docs-triage.ts →
+  # docs/generated/triage.md) and repointing the always-on guide there (the old
+  # docs/plans/triage-design.md pointer was a dev-repo path never shipped to
+  # boxes). Also cleaned up the should_read-only false-fails (triage-vs-reactor-flow)
+  # and triage-pipeline-not-wired's brittle wording check. See findings doc.
   #
   # Status (2026-05-20): 8/10 pass on substance against test1 (run via
   # `knowledge-audit run --box ~/src/boxes/test1 --filter triage-pipeline`).
@@ -1936,9 +1951,9 @@ tests:
     expected_level: knows_about
     watch_for: >
       Names confident (proceed silently), probable (proceed but flag for review),
-      guess (block pending a question). Does NOT invent a "wrong" level — the
-      design doc is explicit that wrong is not a confidence level.
-    should_read: ["docs/plans/triage-design.md"]
+      guess (block pending a question). Does NOT invent a "wrong" level —
+      docs/generated/triage.md is explicit that wrong is not a confidence level.
+    should_read: ["docs/generated/triage.md"]
     correct_contains: ["confident", "probable", "guess"]
     tags: [triage-pipeline, behavioral]
     notes: >
@@ -2011,7 +2026,6 @@ tests:
       The handler reads the TRIAGE_ITEMS environment variable, which contains
       null-delimited box-relative paths of items in the bucket. Useful idiom:
       pipe through `xargs -0` for shell steps.
-    should_read: ["docs/plans/triage-design.md"]
     correct_contains: ["TRIAGE_ITEMS"]
     tags: [triage-pipeline, procedures]
 

@@ -167,7 +167,7 @@ export function cardTypesSection(allCardSchemas: CardSchema[]): string {
     }
     lines.push("");
   }
-  lines.push("New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Run `cb init` after adding a schema to generate rules and docs.");
+  lines.push("New card types can be defined in `config/schemas/` using `cardSchema()` (YAML frontmatter + markdown body) + Zod — see `config/schemas/CLAUDE.md` for how. Rules Zod field types can't express (cross-field constraints, body-structure checks) go in the schema's `validate` hook, not a Zod `.refine()`. Run `cb init` after adding a schema to generate rules and docs.");
   return lines.join("\n");
 }
 

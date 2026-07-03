@@ -14,27 +14,38 @@ Run in batches by section. Two buckets per failure:
 
 ## Bottom line
 
-All 217 audits reran against test1. **214/217 effectively pass** after correcting
-stale audits. The overhaul landed well — quotes/laws/source, cards, chat-thread
-YAML, courseware, most of chat are all clean. **31 audits were stale** (mostly
-`should_read` checks made obsolete because the overhaul moved knowledge into the
-always-on surface, plus XML→YAML format renames: `<message>`/`<seen>`→`entries:`,
-`<todo-list>`/`<item>`→`items:`, `<triage-destination>`→`destinations:`,
-`<directive>`→`directive:`) — those were fixed and re-run green.
+All 217 audits reran against test1. After correcting stale audits, **214/217
+effectively passed** on the first pass; **a follow-up prompt-fix pass then closed 8
+of the 9 real gaps** — only `views-attach-to-cards` remains (it needs the actual
+view-migration, not a prompt). The overhaul landed well — quotes/laws/source,
+cards, chat-thread YAML, courseware, most of chat are all clean. **31 audits were
+stale** (mostly `should_read` checks made obsolete because the overhaul moved
+knowledge into the always-on surface, plus XML→YAML format renames:
+`<message>`/`<seen>`→`entries:`, `<todo-list>`/`<item>`→`items:`,
+`<triage-destination>`→`destinations:`, `<directive>`→`directive:`) — those were
+fixed and re-run green.
 
-**What actually needs your attention (real gaps, left failing on purpose):**
+## Prompt fixes applied (2026-07-03) — 8 real gaps closed
+
+Each was re-run against test1 and now passes; a 21-audit regression pass over the
+touched sections stayed green, and `pnpm typecheck` / `pnpm test` are clean.
+
+| Gap | Fix | Where |
+|---|---|---|
+| `schema-validate-hook` | corrective: rules Zod can't express go in the schema's `validate` hook, **not** a Zod `.refine()` | `agent-guide/cards.ts` (always-on) |
+| `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-triage.ts` → `docs/generated/triage.md` |
+| `triage-handler-env` | same doc documents the `TRIAGE_ITEMS` handler contract (+`xargs -0`); always-on pointer names it | `docs/generated/triage.md`, `box-shape.ts` |
+| `draft-email-placement` | corrective on the `box/output/` row: email reply drafts go in the source thread's dir, not here | `box-shape.ts`, `email-message.tsx` |
+| `narration-no-voice-out-by-default` | hardened overlay: "voice-in⇒voice-out is *suspended*; do NOT reply with `<speech>` even when the user spoke" (now 4/4, was ~2/5) | `chat-session-prompts.ts` (NARRATION_OVERLAY) |
+| `ack-conservative-text` | sharpened kind taxonomy (adding a note is `appended`, not `edited`) + bare-ack-when-obvious rule | `chat-session-prompts.ts` (ack section) |
+| `chat-thread-seen-note` | corrective: `self-note` is the *live chat session*; a note while processing a `chat-thread` goes in the `kind: seen` entry's `text:` | `agent-guide/commands.ts` |
+| `procedure-in-job` | **audit reframed** — the `<procedure ref>` job-trampoline it tested *does not exist in the code*; now tests the real triggers (`cb procedure run` + the triage handler). Removed stale trampoline comments in `engine.ts`/`finish-job.ts` | `knowledge-audits.yaml`, `reactor/engine.ts` |
+
+**Still failing — needs code, not a prompt:**
 
 | Gap | Kind | One-liner |
 |---|---|---|
-| `schema-validate-hook` | regression | answers Zod `.refine()` instead of the real `validate` hook |
-| `procedure-in-job` | undocumented | job→procedure trampoline (`<procedure ref>`) real but not in box docs |
-| `triage-confidence-levels` | undocumented | `confident/probable/guess` enum not in box docs (pre-known) |
-| `triage-handler-env` | undocumented | `TRIAGE_ITEMS` handler contract not in box docs (pre-known) |
-| `draft-email-placement` | behavior | puts reply drafts in `box/output/` not the thread `.attach/` |
-| `narration-no-voice-out-by-default` | behavior (intermittent ~40%) | emits `<speech>` despite narration mode |
-| `ack-conservative-text` | behavior | `<ack kind="edited">` + restating text vs canonical bare `appended` |
-| `chat-thread-seen-note` | minor | reaches for `cb chat self-note` vs the `seen` entry's `text:` |
-| `views-attach-to-cards` | migration incomplete | standalone `view:` scheme still live; agent correctly reports it |
+| `views-attach-to-cards` | migration incomplete | standalone `view:` scheme still live; agent correctly reports it. Finish the view-migration (remove the `view:` scheme, rewrite `views/CLAUDE.md`) to make it pass. |
 
 **Needs-decision / box-drift (not knowledge gaps):**
 - `cb-session-exists` — "past chat" now reads as chat-thread cards vs `cb session`.
