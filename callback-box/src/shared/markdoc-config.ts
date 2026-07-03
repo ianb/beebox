@@ -186,31 +186,16 @@ const source: Schema = {
 };
 
 /**
- * Briefing vocabulary. Each tag replaces a former YAML frontmatter
- * field; all are block-shaped (paragraph-or-larger constructs; inline
- * variants aren't meaningful for them). The backend `compileBriefing`
- * emitter walks the parsed body and emits a "**Label:** …" markdown
- * shape — the same shape the old structured compiler produced.
+ * Briefing body vocabulary: `purpose` and `correction` — the free-text
+ * material. Both are block-shaped (paragraph-or-larger; inline variants
+ * aren't meaningful). The structured records (key-people, properties) live
+ * in briefing frontmatter, not as body tags. The backend `compileBriefing`
+ * emitter walks the parsed body and emits a "**Label:** …" markdown shape.
  */
 
 const purpose: Schema = {
   transform(node, config) {
     return new Tag("Purpose", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const keyPerson: Schema = {
-  attributes: {
-    ref: { type: String },
-    called: { type: String },
-    role: { type: String },
-  },
-  transform(node, config) {
-    // `ref` → `sourceRef` rename for React's reserved-prop rule (same
-    // pattern as `source`).
-    const { ref, ...rest } = node.transformAttributes(config) as { ref?: string };
-    const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
-    return new Tag("KeyPerson", renamed, node.transformChildren(config));
   },
 };
 
@@ -220,32 +205,6 @@ const correction: Schema = {
   },
   transform(node, config) {
     return new Tag("Correction", node.transformAttributes(config), node.transformChildren(config));
-  },
-};
-
-const property: Schema = {
-  attributes: {
-    name: { type: String },
-    address: { type: String },
-    "address-uncertain": { type: Boolean, default: false },
-  },
-  transform(node, config) {
-    // dash-case attribute → camelCase for React.
-    const { "address-uncertain": addressUncertain, ...rest } =
-      node.transformAttributes(config) as { "address-uncertain"?: boolean };
-    const renamed = addressUncertain === undefined
-      ? rest
-      : { ...rest, addressUncertain };
-    return new Tag("Property", renamed, node.transformChildren(config));
-  },
-};
-
-const projectPhase: Schema = {
-  attributes: {
-    date: { type: String },
-  },
-  transform(node, config) {
-    return new Tag("ProjectPhase", node.transformAttributes(config), node.transformChildren(config));
   },
 };
 
@@ -400,10 +359,7 @@ export const markdocConfig: Config = {
     quote,
     source,
     purpose,
-    "key-person": keyPerson,
     correction,
-    property,
-    "project-phase": projectPhase,
     ingredient,
     step,
     yield: recipeYield,
