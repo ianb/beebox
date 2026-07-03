@@ -1628,3 +1628,153 @@ test1:
       peak: 46220
       added: 0
       turns: 2
+  calendar-create-event:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41206
+      peak: 43027
+      added: 1821
+      turns: 5
+  calendar-edit-event:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41207
+      peak: 41207
+      added: 0
+      turns: 1
+  calendar-bidirectional:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41198
+      peak: 42272
+      added: 1074
+      turns: 3
+  drive-find-spreadsheet:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41196
+      peak: 41196
+      added: 0
+      turns: 1
+  drive-edit-spreadsheet:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41191
+      peak: 42542
+      added: 1351
+      turns: 6
+  drive-understand-formulas:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41193
+      peak: 41716
+      added: 523
+      turns: 5
+  drive-docs-supported:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41196
+      peak: 41196
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:39:31.985Z
+      boxCommit: 79a22d440376943386a21ba6cf0b2e6080113ec4
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41194
+      peak: 41194
+      added: 0
+      turns: 1
+  drive-docs-edit:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41195
+      peak: 42212
+      added: 1017
+      turns: 3
+  drive-docs-not-json:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41197
+      peak: 41197
+      added: 0
+      turns: 1
+  drive-docs-conflict:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41218
+      peak: 42256
+      added: 1038
+      turns: 3
+  drive-docs-lossy:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41198
+      peak: 42159
+      added: 961
+      turns: 4
+  draft-email-can-write:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41201
+      peak: 41201
+      added: 0
+      turns: 1
+  draft-email-format:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41194
+      peak: 42586
+      added: 1392
+      turns: 3
+  draft-email-placement:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41198
+      peak: 41198
+      added: 0
+      turns: 2
+    - date: 2026-07-03T11:39:31.985Z
+      boxCommit: 79a22d440376943386a21ba6cf0b2e6080113ec4
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41196
+      peak: 41196
+      added: 0
+      turns: 2
+  draft-email-after-upload:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41206
+      peak: 42439
+      added: 1233
+      turns: 4
+  draft-email-body-format:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41194
+      peak: 42718
+      added: 1524
+      turns: 4
+  outbound-not-treated-as-incoming:
+    - date: 2026-07-03T11:37:34.849Z
+      boxCommit: f0643c3b3c648b254e31d7d562b8c7e716fca370
+      repoCommit: ad9deb4dfea3eea57bd71320764f46aeae0611d1
+      initial: 41205
+      peak: 42255
+      added: 1050
+      turns: 3

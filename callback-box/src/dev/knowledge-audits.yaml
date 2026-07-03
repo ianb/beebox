@@ -1431,6 +1431,12 @@ tests:
       deletion, and edited tracked files get pushed back.
 
   # === Google Drive / Spreadsheets ===
+  #
+  # Status (2026-07-03): 1/3 pass. BOX DRIFT: drive-edit-spreadsheet +
+  # drive-understand-formulas need a synced .gsheet fixture in test1 to exercise
+  # (edit a value / read the formula JSON), but store/drive/ is empty — the agent
+  # correctly reports none exist. Restore a drive fixture or accept they can't run.
+  # See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: drive-find-spreadsheet
     prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
@@ -1455,6 +1461,9 @@ tests:
 
   # === Google Drive / Documents ===
   #
+  # Status (2026-07-03): all 5 pass. Fixed drive-docs-supported — a synced Google
+  # Doc is a `gdoc` card, not `.doc.card` (the old check named the wrong type).
+  #
   # The drive connector handles both spreadsheets and docs. These tests
   # verify the agent doesn't claim docs are unsupported and knows the
   # local-edit + conflict-resolution flow.
@@ -1462,9 +1471,13 @@ tests:
   - id: drive-docs-supported
     prompt: "Can I sync a Google Doc into this box, or only spreadsheets?"
     expected_level: knows_directly
-    watch_for: "Says yes, Google Docs are supported. Should NOT say only spreadsheets work."
-    correct_contains_any: [".doc.card", "Google Docs", "doc card"]
+    watch_for: "Says yes, Google Docs are supported — names the gdoc card type (synced as a sibling .md). Should NOT say only spreadsheets work."
+    correct_contains_any: ["gdoc", "Google Doc"]
     tags: [drive, docs]
+    notes: >
+      Updated 2026-07-03: a synced Google Doc is a `gdoc` card (src/schemas/gdoc.tsx),
+      NOT a `.doc.card` (that's a local doc card — a different type). The old check
+      for ".doc.card" was wrong; the agent correctly answers "gdoc" / "Google Doc".
 
   - id: drive-docs-edit
     prompt: "How do I edit the body of a Google Doc that's been synced into the box?"
@@ -1501,6 +1514,10 @@ tests:
   # folder for human review); future status="sent" will direct-send.
   # The schema's `instructions` block teaches authoring; these audits
   # verify the agent can find that knowledge.
+  #
+  # Status (2026-07-03): 5/6 pass. REAL GAP: draft-email-placement — agent puts
+  # reply drafts in box/output/ instead of the source thread's .attach/ under
+  # box/inbox/email/ (loses Gmail threading). See docs/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-04-28): split from email-message after the unified design
   # caused the wakeup intake to triage drafts as incoming mail. Cold

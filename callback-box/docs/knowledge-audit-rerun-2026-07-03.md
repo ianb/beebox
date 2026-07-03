@@ -172,7 +172,41 @@ Run in batches by section. Two buckets per failure:
   `<speech>`. Audit left as-is (chat_mode: true) — it correctly catches the
   intermittent violation.
 
+### draft-email-placement — REAL GAP (batch 6)
+
+- **Prompt:** "If you're drafting a reply to an email I received, where on disk
+  should the draft card go?"
+- **Agent answered (consistent, 2 runs):** `box/output/` as an `email-outbound`
+  card, picked up by `cb finalize`.
+- **Why it's real:** the `email-outbound` schema instructions
+  (`src/schemas/email-outbound.tsx`) say **reply drafts go inside the existing
+  thread's `.attach/`** next to the source message, e.g.
+  `box/inbox/email/thread-X.attach/draft-001.email-outbound.card` — "place the
+  draft in the same directory as the source message." The connector reads the
+  source card's `message-id`/`thread-id` from that directory to set Gmail
+  threading; a `box/output/` draft would **silently lose threading**. The agent
+  defaults to an outbox model (likely generalizing from telegram-message output
+  cards, which do use `box/output/`).
+- **Fix (boxholder):** make the reply-draft placement (co-locate with the source
+  thread) more prominent in the always-on surface / email-outbound instructions.
+
+### drive-edit-spreadsheet / drive-understand-formulas — BOX DRIFT (batch 6)
+
+- Both require a **synced Google Sheet fixture** in test1 (edit a value / read the
+  JSON to find formula cells), but `store/drive/` is **empty** — no `.gsheet.card`
+  / `.gdoc.card` anywhere. The agent correctly reports none exist and offers
+  `cb drive add`, but can't demonstrate the edit-JSON / formula-cell knowledge with
+  nothing to act on.
+- Decision for the boxholder: restore a synced gsheet (and gdoc) fixture to test1
+  to exercise these, or accept they can't run. Audits left unchanged.
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 6 (calendar / drive / email):
+
+- **drive-docs-supported** — a synced Google Doc is a `gdoc` card, not a
+  `.doc.card` (that's the *local* doc type); the old `.doc.card` check was simply
+  wrong. Agent answers "gdoc"/"Google Doc" correctly; check → `["gdoc", "Google Doc"]`.
 
 Batch 5 (narration / voice / chat-input / views-in-chat / todos / recording):
 
@@ -282,3 +316,8 @@ Remaining: `ack-conservative-text` (real behavioral gap) and `chat-thread-seen-n
 + 1 accept-both-mechanisms; all re-run confirmed). The one remaining is
 `narration-no-voice-out-by-default` — intermittent (~40% pass), a real behavioral
 gap in the narration override.
+| 6 | Calendar, Drive/Sheets, Drive/Docs, Email Outbound | 17 | 13→14** | 1 + 2 box-drift | 1 |
+
+\** 13 raw; 14 after fixing the `drive-docs-supported` wrong check. Remaining:
+`draft-email-placement` (real gap) and `drive-edit-spreadsheet` /
+`drive-understand-formulas` (box drift — empty store/drive/ in test1).
