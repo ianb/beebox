@@ -39,6 +39,35 @@ import { splitCardContent } from "../cards/index.js";
 const VERSIONS_FILE = "config/template-versions.json";
 const TEMPLATE_UPDATES_DIR = "config/_template-updates";
 
+/**
+ * Box-relative paths that callback-box owns as template output (the `install*`
+ * and `generateRules` helpers write them). `syncTemplatesFromSource` uses this
+ * to commit just their output without sweeping up unrelated user work. Simple
+ * regex over relative paths — no globbing needed for what we generate.
+ */
+const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
+  /^config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
+  /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
+  /^config\/.+\.(?:guide|orig-guide)\.card$/,
+  /^config\/.+\.(?:personality|orig-personality)\.card$/,
+  /^config\/_template-updates\/.+$/,
+  // The install tracker: installTemplateFile rewrites it when it records a
+  // hash, so it commits with the template change instead of leaving dirt.
+  /^config\/template-versions\.json$/,
+  /^config\/schemas\/CLAUDE\.md$/,
+  /^config\/cb-validate\.ignore$/,
+  /^views\/CLAUDE\.md$/,
+  /^briefing\.(?:briefing|orig-briefing)\.card$/,
+  /^briefing\.md$/,
+  /^\.claude\/rules\/.+\.md$/,
+  /^\.claude\/settings\.json$/,
+];
+
+/** Whether `relPath` is callback-box template output (see {@link TEMPLATE_MANAGED_PATTERNS}). */
+export function isTemplateManagedPath(relPath: string): boolean {
+  return TEMPLATE_MANAGED_PATTERNS.some((re) => re.test(relPath));
+}
+
 interface VersionsFile {
   [relPath: string]: {
     /** sha256 of the (normalized) template content as we last installed it. */
