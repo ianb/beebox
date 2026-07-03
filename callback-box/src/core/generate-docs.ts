@@ -247,6 +247,7 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/.+\.(?:personality|orig-personality)\.card$/,
   /^config\/_template-updates\/.+$/,
   /^config\/schemas\/CLAUDE\.md$/,
+  /^config\/cb-validate\.ignore$/,
   /^views\/CLAUDE\.md$/,
   /^briefing\.(?:briefing|orig-briefing)\.card$/,
   /^briefing\.md$/,

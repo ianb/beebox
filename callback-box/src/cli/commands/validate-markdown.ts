@@ -12,12 +12,10 @@ import { promisify } from "node:util";
 import { lint as markdownlint } from "markdownlint/promise";
 import type { LintError } from "markdownlint";
 import { customLinkRules, linkRuleConfig } from "../../core/markdown-lint-rules.js";
-import { listBoxMarkdownFiles } from "../../core/list-cards.js";
+import { listBoxMarkdownFiles, isBuiltinLintableMarkdown } from "../../core/list-cards.js";
+import { loadValidationIgnore } from "../../core/validation-ignore.js";
 
 const execFileP = promisify(execFile);
-
-const SKIP_DIRS = new Set(["node_modules", ".git", ".pnpm", ".claude", ".callback-box"]);
-const SKIP_FILES = new Set(["CLAUDE.md"]);
 
 // Opt-in validity rules: a few markdownlint style rules plus the box's custom
 // link rules (CB001/CB002). `default: false` keeps everything else off. CB002
@@ -34,15 +32,15 @@ function markdownConfig(boxRoot: string): Record<string, unknown> {
 }
 
 /**
- * True if `filePath` is a markdown file we lint. Shared by the recursive box
- * scan and the staged-file collector so `--all` and `--staged` agree on the
- * skip set (CLAUDE.md, and anything under node_modules/.git/.pnpm/.claude).
+ * True if `filePath` is a markdown file we lint. Thin wrapper over the shared
+ * builtin predicate (`isBuiltinLintableMarkdown`) so the staged/hook collectors
+ * and the box-wide scan agree on the skip set (CLAUDE.md, dependency/VCS dirs,
+ * and cb's own `docs/generated/` output at any depth). The box-specific
+ * `config/cb-validate.ignore` file is layered on separately by the callers that
+ * have a box root loaded — this predicate is the always-on builtin floor.
  */
 export function isLintableMarkdown(filePath: string): boolean {
-  if (!filePath.endsWith(".md")) return false;
-  const parts = filePath.split(path.sep);
-  if (parts.some((p) => SKIP_DIRS.has(p))) return false;
-  return !SKIP_FILES.has(parts[parts.length - 1]!);
+  return isBuiltinLintableMarkdown(filePath);
 }
 
 /**
@@ -100,7 +98,8 @@ export async function lintMarkdownFiles(
  * without blocking the commit. Returns formatted findings, or null if clean.
  */
 export async function boxWideLinkWarnings(boxRoot: string): Promise<string | null> {
-  const mdFiles = await listBoxMarkdownFiles(boxRoot);
+  const ignore = await loadValidationIgnore(boxRoot);
+  const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((f) => !ignore.isIgnored(f));
   if (mdFiles.length === 0) return null;
   const summary = await runMarkdownlint(mdFiles, { default: false, ...linkRuleConfig(boxRoot) });
   if (summary.totalErrors === 0) return null;

@@ -29,9 +29,11 @@ const box = await makeBox();
 const changed = await installValidationHooks(box);
 changed.sort()
 => [
+  ".claude/rules/cb-validate-ignore.md",
   ".claude/settings.json",
   ".git/hooks/post-commit",
-  ".git/hooks/pre-commit"
+  ".git/hooks/pre-commit",
+  "config/cb-validate.ignore"
 ]
 ```
 
@@ -183,9 +185,11 @@ If `.git/` doesn't exist (e.g. a `--skip-git` box, or a non-box directory), only
 ```ts
 const box = await fs.mkdtemp(path.join(os.tmpdir(), "cb-hooks-no-git-"));
 const changed = await installValidationHooks(box);
-changed
+changed.sort()
 => [
-  ".claude/settings.json"
+  ".claude/rules/cb-validate-ignore.md",
+  ".claude/settings.json",
+  "config/cb-validate.ignore"
 ]
 ```
 
@@ -272,5 +276,54 @@ const again = await installValidationHooks(box);
   false,
   true
 ]
+```
+
+## Validation-ignore scaffold — seed file + operator guardrail rule
+
+`installValidationHooks` also seeds the operator-owned `config/cb-validate.ignore`
+(a commented template — no active entries, since the builtin skips already cover
+cb's generated docs) and installs a path-conditional `.claude/rules/` rule that
+fires only when an agent opens that file, warning it off. The seed is commented
+out; the rule is scoped to the ignore file's path and is blunt about not
+silencing errors:
+
+```ts
+const box = await makeBox();
+await installValidationHooks(box);
+
+const seed = await fs.readFile(path.join(box, "config/cb-validate.ignore"), "utf-8");
+// Every non-blank line is a comment — nothing is actively ignored out of the box.
+seed.split("\n").filter((l) => l.trim() !== "").every((l) => l.trimStart().startsWith("#"))
+=> true
+```
+
+```ts continue
+const rule = await fs.readFile(path.join(box, ".claude/rules/cb-validate-ignore.md"), "utf-8");
+[
+  rule.includes(`- "config/cb-validate.ignore"`),  // path-conditional scope
+  rule.includes("operator-owned") || rule.includes("boxholder"),
+  rule.includes("Never add an entry here to silence"),
+]
+=> [
+  true,
+  true,
+  true
+]
+```
+
+An operator's edits to the ignore file are never clobbered — the seed is written
+only when the file is absent, so a second install (or a deploy-sync) leaves a
+customized file untouched:
+
+```ts continue
+await fs.writeFile(path.join(box, "config/cb-validate.ignore"), "vendor/**\n");
+const again = await installValidationHooks(box);
+again.includes("config/cb-validate.ignore")
+=> false
+```
+
+```ts continue
+(await fs.readFile(path.join(box, "config/cb-validate.ignore"), "utf-8")).trim()
+=> vendor/**
 ```
 
