@@ -13,7 +13,6 @@
  * prompt must stay time-invariant.
  */
 
-import * as path from "node:path";
 import { loadBoxTimezone } from "../webapp/box-config.js";
 import { getMostActiveSavedAt } from "./chat-session-history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat-features.js";
@@ -21,14 +20,6 @@ import {
   loadScheduleHealth,
   summarizeScheduleHealth,
 } from "./schedule-health-box.js";
-import {
-  filterByDateRange,
-  loadAllEvents,
-  type CalendarEvent,
-} from "../connectors/calendar-utils.js";
-
-const CALENDAR_HORIZON_MS = 24 * 60 * 60 * 1000;
-const MAX_CALENDAR_ITEMS = 4;
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";
@@ -128,40 +119,10 @@ function plural(n: number, unit: string): string {
   return `${n} ${unit}${n === 1 ? "" : "s"}`;
 }
 
-/**
- * One-line summary of upcoming events for the snapshot's `calendar`
- * attribute: `16:00-17:00 Dentist; Wed 09:00-09:30 Standup; +2 more`.
- * Events on a later local day than `now` get a short weekday prefix.
- * Cancelled events are skipped. Returns null when there's nothing.
- */
-export function summarizeEvents(
-  events: CalendarEvent[],
-  { timezone, now }: { timezone: string | null; now: Date },
-): string | null {
-  const active = events.filter((e) => e.status.toUpperCase() !== "CANCELLED");
-  if (active.length === 0) return null;
-  const today = dayKey(now, timezone);
-  const items = active.slice(0, MAX_CALENDAR_ITEMS).map((e) => {
-    const p = localParts(e.start, timezone);
-    const prefix = dayKey(e.start, timezone) === today ? "" : `${p.weekday.slice(0, 3)} `;
-    if (e.allDay) return `${prefix}all day: ${e.summary}`;
-    const end = localParts(e.end, timezone);
-    return `${prefix}${p.hour}:${p.minute}-${end.hour}:${end.minute} ${e.summary}`;
-  });
-  const overflow = active.length - items.length;
-  return items.join("; ") + (overflow > 0 ? `; +${overflow} more` : "");
-}
-
-function dayKey(date: Date, timezone: string | null): string {
-  const p = localParts(date, timezone);
-  return `${p.year}-${p.month}-${p.day}`;
-}
-
 /** Snapshot attribute values computed per send. */
 interface SnapshotContext {
   localTime: string;
   lastActivity?: string;
-  calendar?: string;
   health?: string;
 }
 
@@ -260,10 +221,9 @@ export async function composeSendSnapshot(
  * `health` rides on **every** message (a scheduled task can start failing
  * mid-session), but `admitHealth` gates it into a rare reminder — see
  * `HealthGate`. When no `healthGate` is supplied it falls back to the old
- * behavior (surfaced only on `sessionStart`, ungated). The remaining extras —
- * `lastActivity` (the most-active pointer's savedAt) and `calendar` (the next 24h
- * of `store/calendar/`) — are session-start only. Failures in any extra degrade
- * to omission; they must never block a send.
+ * behavior (surfaced only on `sessionStart`, ungated). The other extra —
+ * `lastActivity` (the most-active pointer's savedAt) — is session-start only.
+ * Failures in any extra degrade to omission; they must never block a send.
  */
 export async function buildSnapshotContext(
   boxRoot: string,
@@ -297,18 +257,6 @@ export async function buildSnapshotContext(
     }
   } catch (e) {
     console.warn(`[session-context] last-activity lookup failed: ${e instanceof Error ? e.message : e}`);
-  }
-
-  try {
-    const range = { from: now, to: new Date(now.getTime() + CALENDAR_HORIZON_MS) };
-    const events = filterByDateRange(
-      await loadAllEvents(path.join(boxRoot, "store", "calendar"), range),
-      range,
-    );
-    const calendar = summarizeEvents(events, { timezone, now });
-    if (calendar !== null) out.calendar = calendar;
-  } catch (e) {
-    console.warn(`[session-context] calendar summary failed: ${e instanceof Error ? e.message : e}`);
   }
 
   return out;

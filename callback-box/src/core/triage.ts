@@ -2,9 +2,9 @@
  * Triage stage — the second stage of the triage pipeline.
  *
  * Reads intake-complete items from `inbox/staged/`, compiles the
- * triage-instructions doc from landmarks with `<triage-destination>`,
- * runs the triage subagent against the batch, and applies its
- * decisions via the routing module.
+ * triage-instructions doc from landmarks' `destinations:` frontmatter
+ * (entries scoped `for: [triage]`), runs the triage subagent against the
+ * batch, and applies its decisions via the routing module.
  *
  * See `docs/plans/triage-design.md` §Triage (stage 2).
  */
