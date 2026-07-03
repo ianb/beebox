@@ -7,7 +7,12 @@
  * blank surface.
  */
 
-import { NAMED_VIEW_NAMES } from "@shared/named-views";
+import {
+  NAMED_VIEW_NAMES,
+  namedViewFor,
+  resolveViewParams,
+  type ResolvedViewParams,
+} from "@shared/named-views";
 import { isRecord } from "../lib/is-record";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
 import { ChatsPicker } from "../components/chats/ChatsPicker";
@@ -16,19 +21,23 @@ import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
 import { registerCardRenderer, type RendererProps } from "./index";
 
-/** Frontmatter `params` (already schema-validated by cb validate; each view re-parses defensively). */
-const VIEW_COMPONENTS: Record<string, React.ComponentType<{ params?: Record<string, unknown> }>> = {
+/**
+ * Params arrive pre-merged with provenance: card frontmatter (validated by
+ * cb validate; each view re-parses defensively) overlaid per-key by URL
+ * query params via the view's codec. Views never read the URL themselves.
+ */
+const VIEW_COMPONENTS: Record<string, React.ComponentType<{ params?: ResolvedViewParams }>> = {
   landmarks: LandmarksList,
   "chat-picker": ChatsPicker,
   history: HistoryViewCard,
 };
 
-function readParams(frontmatter: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
+function readCardParams(frontmatter: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   const params = frontmatter?.["params"];
   return isRecord(params) ? params : undefined;
 }
 
-function ViewCard({ data }: RendererProps) {
+function ViewCard({ data, params }: RendererProps) {
   const name = typeof data.frontmatter?.["view"] === "string" ? data.frontmatter["view"] : "";
   const Component = VIEW_COMPONENTS[name];
   if (!Component) {
@@ -43,7 +52,12 @@ function ViewCard({ data }: RendererProps) {
       </Card>
     );
   }
-  return <Component params={readParams(data.frontmatter)} />;
+  const resolved = resolveViewParams({
+    card: readCardParams(data.frontmatter),
+    query: params,
+    codec: namedViewFor(name)?.query,
+  });
+  return <Component params={resolved} />;
 }
 
 registerCardRenderer("view", {

@@ -5,7 +5,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { type ViewTarget } from "../lib/view-url";
@@ -98,10 +98,27 @@ function useBrowseListLiveRefresh(dirPath: string): void {
   });
 }
 
+/**
+ * Query params on the browse URL, for the detail panel's renderer —
+ * runtime overrides on view-card params (the `view` key stays reserved
+ * for renderer selection, mirroring view: URL semantics).
+ */
+function useBrowseUrlParams(): Record<string, string> {
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  return useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [key, value] of new URLSearchParams(searchStr)) {
+      if (key !== "view") out[key] = value;
+    }
+    return out;
+  }, [searchStr]);
+}
+
 export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
+  const urlParams = useBrowseUrlParams();
 
   const handleLinkNavigate = useCallback(
     (target: ViewTarget) => {
@@ -245,6 +262,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             onBack={() => setSelectedFilePath(null)}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
+            params={urlParams}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}

@@ -19,6 +19,8 @@ interface BrowseDetailPanelProps {
   onBack: () => void;
   onDelete: (path: string) => void | Promise<void>;
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
+  /** URL query params, forwarded to the renderer (view-card runtime overrides). */
+  params?: Record<string, string>;
   selectedCard: { relativePath: string } | null;
   selectedFilePath: string;
   selectedRawFile: string | null;
@@ -40,6 +42,7 @@ export function BrowseDetailPanel({
   onBack,
   onDelete,
   onNavigate,
+  params,
   selectedCard,
   selectedFilePath,
   selectedRawFile,
@@ -95,7 +98,7 @@ export function BrowseDetailPanel({
             ) : null}
           </div>
         </div>
-        <FileView path={selectedFilePath} mode="companion" onNavigate={onNavigate} />
+        <FileView path={selectedFilePath} mode="companion" onNavigate={onNavigate} params={params} />
       </div>
     </div>
   );
