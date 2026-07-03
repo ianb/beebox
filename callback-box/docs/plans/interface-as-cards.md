@@ -94,8 +94,10 @@ view," never "grow the frontmatter vocabulary."
 `src/shared/named-views.ts` (the resolved shape also retains the card
 layer for diff/reset); URL params thread from `/views/…` and Browse;
 history chips emit diffed override-URLs and a marker names overridden
-keys with reset. Still future: save-override-to-card (needs UI
-card-write plumbing) and the embed-site origin.
+keys with reset. Still future: the embed-site origin. (A
+"save override into the card" affordance was floated during design but
+not adopted — an assistant suggestion, not a boxholder ask; revisit only
+if the need shows up in practice.)
 
 View-card `params` (shipped with `view: history`) want the same cascade as
 bindings: **view defaults < card frontmatter < embed-site args < URL query
@@ -104,16 +106,16 @@ string is the ephemeral, shareable overlay —
 `Feedback_Commits.view.card?session=abc` is "the feedback card, scoped to
 this session, right now." Interactions inside a card (e.g. history's
 session/connector chips) then stay on the card's address as override-URLs
-instead of escaping to the page; "save" writes an override into frontmatter
-(or forks a card) — explore in the URL, commit to the card.
+instead of escaping to the page. Committing an override into the card is
+just an edit to its frontmatter (the agent's job when asked); no dedicated
+"save" affordance is planned.
 
 Requirements settled in discussion:
 
 - **Per-key provenance.** The merge layer emits `{ values, origins }`
   (`default | card | url | embed | …`, open-ended; an embed origin can name
   the embedding card). Consumers: the shell renders a generic
-  "modified from card · reset · save" marker and knows exactly which keys
-  save-to-card writes; views may treat card-recorded vs injected params as
+  "modified from card · reset" marker; views may treat card-recorded vs injected params as
   different in kind (a saved filter vs an ad hoc slice; declining expensive
   or sensitive params unless durably recorded); the `<card-activity>`
   snapshot reports overrides without misattributing them to the card.
