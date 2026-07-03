@@ -1,3 +1,4 @@
+/* eslint-disable complexity -- one-shot test script that already ran; decomposition is pure churn with no runtime consumer */
 /**
  * Quick test script: push a local .ics change back to Google Calendar.
  *
@@ -9,7 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ICAL from "ical.js";
+import * as ICAL from "ical.js";
 import { getGoogleAuth } from "../src/connectors/google-auth.js";
 
 interface EventFileEntry {

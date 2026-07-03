@@ -12,8 +12,6 @@ export function createInitialPersonalityTemplate(): string {
     "goes-by": "Egg",
     role: "Personal information aide",
     boxholder: {
-      "full-name": "",
-      called: "",
       relationships: [],
     },
     "speaking-voice": {

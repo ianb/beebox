@@ -28,15 +28,39 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { execFileSync } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 /**
- * Resolve `bin/cb` in the callback-box checkout that's running this code.
- * Embedding the absolute path in the hooks means they don't depend on the
- * user's PATH — the hook always invokes the same `cb` that installed it.
+ * Resolve `bin/cb` to embed in a box's git hooks. Embedding an absolute path
+ * means the hooks don't depend on the user's PATH.
+ *
+ * The catch: boxes live OUTSIDE the monorepo, so the embedded path is their only
+ * link back to a `cb`, and whichever checkout last ran `cb` on the box stamps it.
+ * A git *worktree*'s checkout (`~/src/callback-worktrees/<name>/callback-box`) is
+ * ephemeral — deleted on session exit — so stamping it leaves the hook pointing
+ * at a vanished `cb` that then silently skips validation. So when we're running
+ * inside a worktree, resolve to the stable **main checkout**'s `cb` (via the
+ * shared git dir) instead of the worktree's. Degrades to the local path when git
+ * isn't available (e.g. the server's rsynced, `.git`-less deploy tree).
  */
 function resolveCbBin(): string {
-  return path.join(PACKAGE_ROOT, "bin", "cb");
+  const local = path.join(PACKAGE_ROOT, "bin", "cb");
+  try {
+    const opts = { cwd: PACKAGE_ROOT, encoding: "utf8" as const };
+    const top = execFileSync("git", ["rev-parse", "--show-toplevel"], opts).trim();
+    const commonDir = execFileSync(
+      "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts,
+    ).trim();
+    const mainTop = path.dirname(commonDir); // main worktree root (== `top` unless we're in a linked worktree)
+    if (top !== "" && mainTop !== "" && mainTop !== top) {
+      // In a linked worktree — rebase PACKAGE_ROOT's repo-relative path onto the main checkout.
+      return path.join(mainTop, path.relative(top, PACKAGE_ROOT), "bin", "cb");
+    }
+  } catch (_e) {
+    // Not a git repo / git missing — the local checkout path is the best we have.
+  }
+  return local;
 }
 
 const SETTINGS_PATH = ".claude/settings.json";

@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * One-off generator for TTS audio fixtures used by the speech browser test.
  *
@@ -12,11 +12,10 @@
  */
 
 import { mkdirSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
-import { dirname, join } from "node:path";
+import { join } from "node:path";
 import { createOpenAIAudioService } from "../src/services/openai-audio.js";
 
-const OUT_DIR = join(dirname(fileURLToPath(import.meta.url)), "..", "src", "webapp", "test-fixtures", "tts");
+const OUT_DIR = join(import.meta.dirname, "..", "src", "webapp", "test-fixtures", "tts");
 
 const CLIPS: Array<{ name: string; text: string }> = [
   { name: "seg0.mp3", text: "This is the first segment of the test speech." },

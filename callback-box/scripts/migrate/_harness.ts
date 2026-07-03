@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Shared scaffold for new box-data migrations.
  *
@@ -92,8 +92,8 @@ async function findMatching(root: string, match: (name: string) => boolean): Pro
 export async function runMigration(opts: MigrationOptions): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const boxRoot = positional[0];
+  const positional = args.find((a) => !a.startsWith("--"));
+  const boxRoot = positional;
   if (boxRoot === undefined) {
     const cmd = process.argv[1] ?? "migrate";
     console.error(`Usage: ${cmd} <boxRoot> [--apply]\n\n${opts.description}`);

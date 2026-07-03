@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
-/* eslint-disable import/no-namespace, security/detect-non-literal-fs-filename */
+/* eslint-disable max-lines, max-lines-per-function, complexity -- one-shot migrator that already ran; decomposition is pure churn with no runtime consumer */
+
 /**
  * Migrate a box from the old sibling-attachment layout to the new
  * `<basename>.attach/` directory layout.
@@ -43,6 +44,17 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+
+class MergeConflictError extends Error {
+  readonly fromAbs: string;
+  readonly toAbs: string;
+  constructor(params: { fromAbs: string; toAbs: string }) {
+    super("mergeMove conflict: source and destination files differ");
+    this.name = "MergeConflictError";
+    this.fromAbs = params.fromAbs;
+    this.toAbs = params.toAbs;
+  }
+}
 
 interface MigrationOptions {
   boxRoot: string;
@@ -132,21 +144,13 @@ function cardBasename(filename: string): string {
   return withoutCard.slice(0, lastDot);
 }
 
-function cardType(filename: string): string | null {
-  if (!filename.endsWith(".card")) return null;
-  const withoutCard = filename.slice(0, -".card".length);
-  const lastDot = withoutCard.lastIndexOf(".");
-  if (lastDot === -1) return null;
-  return withoutCard.slice(lastDot + 1);
-}
-
 async function walkAll(boxRoot: string): Promise<string[]> {
   const out: string[] = [];
   async function visit(absDir: string): Promise<void> {
     let entries: Array<{ name: string; isDirectory: () => boolean; isFile: () => boolean }>;
     try {
       entries = await fs.readdir(absDir, { withFileTypes: true });
-    } catch {
+    } catch (_e) {
       return;
     }
     for (const e of entries) {
@@ -165,16 +169,7 @@ async function isDirectory(absPath: string): Promise<boolean> {
   try {
     const stat = await fs.stat(absPath);
     return stat.isDirectory();
-  } catch {
-    return false;
-  }
-}
-
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch {
+  } catch (_e) {
     return false;
   }
 }
@@ -276,7 +271,7 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
       const content = await fs.readFile(path.join(boxRoot, rel), "utf-8");
       const filenames = extractReferencedFilenames(content);
       cardReferencedFilenames.set(rel, filenames);
-    } catch {
+    } catch (_e) {
       cardReferencedFilenames.set(rel, new Set());
     }
   }
@@ -454,13 +449,6 @@ async function buildPlan(boxRoot: string): Promise<MigrationPlan> {
   return plan;
 }
 
-interface FindWrappersArgs {
-  boxRoot: string;
-  scanDirAbs: string;
-  cardType: string;
-  out: WrapperInfo[];
-}
-
 /**
  * Pull out leaf filenames referenced from a card's content. Picks up
  * `ref="..."`, `src="..."`, and text content of `<body-file>` / `<content>`-
@@ -496,36 +484,6 @@ function extractReferencedFilenames(cardContent: string): Set<string> {
   return out;
 }
 
-async function findWrappers(args: FindWrappersArgs): Promise<void> {
-  const { boxRoot, scanDirAbs, cardType, out } = args;
-  let entries: Array<{ name: string; isDirectory: () => boolean }>;
-  try {
-    entries = await fs.readdir(scanDirAbs, { withFileTypes: true });
-  } catch {
-    return;
-  }
-  for (const e of entries) {
-    if (!e.isDirectory()) continue;
-    if (SKIP_DIRS.has(e.name)) continue;
-    const wrapperAbs = path.join(scanDirAbs, e.name);
-    let inner: string[];
-    try {
-      inner = await fs.readdir(wrapperAbs);
-    } catch {
-      continue;
-    }
-    const cardFile = inner.find((f) => f.endsWith(`.${cardType}.card`));
-    if (!cardFile) continue;
-    out.push({
-      wrapperRel: path.relative(boxRoot, wrapperAbs),
-      parentRel: path.relative(boxRoot, scanDirAbs),
-      basename: e.name,
-      type: cardType,
-      innerCardName: cardFile,
-    });
-  }
-}
-
 interface FindWrappersRecursiveArgs {
   boxRoot: string;
   scanDirAbs: string;
@@ -552,7 +510,7 @@ async function findWrappersRecursive(args: FindWrappersRecursiveArgs): Promise<v
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
     entries = await fs.readdir(scanDirAbs, { withFileTypes: true });
-  } catch {
+  } catch (_e) {
     return;
   }
 
@@ -565,7 +523,7 @@ async function findWrappersRecursive(args: FindWrappersRecursiveArgs): Promise<v
     let innerEntries: Array<{ name: string; isDirectory: () => boolean }>;
     try {
       innerEntries = await fs.readdir(childAbs, { withFileTypes: true });
-    } catch {
+    } catch (_e) {
       continue;
     }
     const inner = innerEntries.map((d) => d.name);
@@ -637,7 +595,7 @@ async function planRefRewrites(args: PlanRefArgs): Promise<void> {
     let content: string;
     try {
       content = await fs.readFile(absPath, "utf-8");
-    } catch {
+    } catch (_e) {
       continue;
     }
 
@@ -652,7 +610,7 @@ async function planRefRewrites(args: PlanRefArgs): Promise<void> {
     const pendingRewrites: Array<{ oldText: string; newText: string }> = [];
 
     // Sort by length descending so longer/more-specific paths are replaced first.
-    const moves = [...plan.moves].sort((a, b) => b.from.length - a.from.length);
+    const moves = [...plan.moves].toSorted((a, b) => b.from.length - a.from.length);
 
     for (const m of moves) {
       // Full-path replacement (box-relative).
@@ -725,7 +683,7 @@ async function executePlan(boxRoot: string, plan: MigrationPlan): Promise<void> 
     let content: string;
     try {
       content = await fs.readFile(abs, "utf-8");
-    } catch {
+    } catch (_e) {
       continue;
     }
     let updated = content;
@@ -740,13 +698,13 @@ async function executePlan(boxRoot: string, plan: MigrationPlan): Promise<void> 
   // 2. Apply moves. Sort so deeper paths move first (move children before
   //    parents), and so directory moves don't collide with subsequent moves
   //    that target the same directory.
-  const moves = [...plan.moves].sort((a, b) => b.from.length - a.from.length);
+  const moves = [...plan.moves].toSorted((a, b) => b.from.length - a.from.length);
   for (const m of moves) {
     const fromAbs = path.join(boxRoot, m.from);
     const toAbs = path.join(boxRoot, m.to);
     try {
       await fs.access(fromAbs);
-    } catch {
+    } catch (_e) {
       // Source might have already been moved (e.g. as part of a parent dir).
       continue;
     }
@@ -793,7 +751,7 @@ async function mergeMove(fromAbs: string, toAbs: string): Promise<void> {
       await fs.unlink(fromAbs);
       return;
     }
-    throw new Error(`mergeMove conflict: file ${fromAbs} and ${toAbs} differ`);
+    throw new MergeConflictError({ fromAbs, toAbs });
   }
   const children = await fs.readdir(fromAbs);
   for (const name of children) {
@@ -817,7 +775,7 @@ async function removeEmptyDirsRecursively(dirAbs: string): Promise<void> {
   let entries: Array<{ name: string; isDirectory: () => boolean }>;
   try {
     entries = await fs.readdir(dirAbs, { withFileTypes: true });
-  } catch {
+  } catch (_e) {
     return;
   }
   for (const e of entries) {
@@ -830,7 +788,7 @@ async function removeEmptyDirsRecursively(dirAbs: string): Promise<void> {
     if (remaining.length === 0) {
       await fs.rmdir(dirAbs);
     }
-  } catch {
+  } catch (_e) {
     // already gone
   }
 }
@@ -853,7 +811,7 @@ async function checkGitClean(boxRoot: string): Promise<boolean> {
 }
 
 function printPlan(plan: MigrationPlan): void {
-  console.log(`\n=== Migration plan ===`);
+  console.log("\n=== Migration plan ===");
   console.log(`\nSession dissolutions: ${plan.sessionMoves.length}`);
   for (const sm of plan.sessionMoves) {
     console.log(`  ${sm.oldWrapperRel}/ → ${sm.newSessionCardRel} (+ ${sm.newAttachRel}/)`);
@@ -879,11 +837,11 @@ function printPlan(plan: MigrationPlan): void {
     console.log(`  …and ${byCard.size - 50} more cards`);
   }
   if (plan.warnings.length > 0) {
-    console.log(`\nWarnings:`);
+    console.log("\nWarnings:");
     for (const w of plan.warnings) console.log(`  ${w}`);
   }
   if (plan.errors.length > 0) {
-    console.log(`\nErrors:`);
+    console.log("\nErrors:");
     for (const e of plan.errors) console.log(`  ${e}`);
   }
 }
@@ -901,7 +859,7 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  console.log(`\nBuilding migration plan...`);
+  console.log("\nBuilding migration plan...");
   const plan = await buildPlan(options.boxRoot);
   printPlan(plan);
 

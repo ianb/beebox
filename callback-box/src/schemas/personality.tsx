@@ -27,9 +27,9 @@ import {
   appendTone,
 } from "./personality-compile.js";
 import { PERSONALITY_INSTRUCTIONS } from "./personality-instructions.js";
-import { VOICE_MODELS, type VoiceModel, type PersonalityFields } from "./personality-fields.js";
+import { VOICE_MODELS, type VoiceModel, type PersonalityFields, type Boxholder } from "./personality-fields.js";
 export { createInitialPersonalityTemplate } from "./personality-template.js";
-export { VOICE_MODELS, type VoiceModel, type PersonalityFields } from "./personality-fields.js";
+export { VOICE_MODELS, type VoiceModel, type PersonalityFields, type Boxholder } from "./personality-fields.js";
 
 const RelationshipEntry = z.object({
   text: z.string(),
@@ -39,9 +39,6 @@ const RelationshipEntry = z.object({
 });
 
 const BoxholderEntry = z.object({
-  ref: z.string().optional(),
-  "full-name": z.string().optional(),
-  called: z.string().optional(),
   relationships: z.array(RelationshipEntry).optional(),
 });
 
@@ -115,9 +112,12 @@ export const PersonalitySchema: CardSchema = cardSchema("personality", {
  * Compile a personality fields object into markdown for the agent
  * guide. The "core instructions" compilation — what every agent sees.
  * Uses the body paragraph (not bullet-point traits), confident tone
- * instructions, and boxholder relationship info.
+ * instructions, and boxholder relationship info. `boxholders` are
+ * resolved from `people/*.person.card` (`boxholder: true`) by the caller
+ * — the identity source of truth; the personality card only carries the
+ * relational notes.
  */
-export function compilePersonality(fields: PersonalityFields): string {
+export function compilePersonality(fields: PersonalityFields, { boxholders }: { boxholders: Boxholder[] }): string {
   const lines: string[] = [];
   lines.push("## Personality");
   lines.push("");
@@ -125,7 +125,7 @@ export function compilePersonality(fields: PersonalityFields): string {
   lines.push("");
 
   appendIdentity(lines, fields);
-  appendBoxholder(lines, fields);
+  appendBoxholder(lines, { fields, boxholders });
   lines.push("");
   appendDescription(lines, fields);
   appendTone(lines, fields);

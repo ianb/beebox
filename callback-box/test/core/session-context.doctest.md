@@ -14,9 +14,7 @@ import {
   createHealthGate,
   describeElapsed,
   formatLocalTime,
-  summarizeEvents,
 } from "../../src/core/session-context.js";
-import type { CalendarEvent } from "../../src/connectors/calendar-utils.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 // The invalid-timezone example exercises the warn-and-fall-back path;
@@ -83,64 +81,6 @@ describeElapsed(21 * 86_400_000)
 => 3 weeks
 ```
 
-## summarizeEvents
-
-One-line calendar summary. Events on the same local day as `now` show
-bare times; later days get a short weekday prefix; all-day events say so.
-
-```ts setup
-function ev(summary: string, startIso: string, endIso: string): CalendarEvent {
-  return {
-    uid: summary,
-    summary,
-    start: new Date(startIso),
-    end: new Date(endIso),
-    allDay: false,
-    status: "CONFIRMED",
-    opaque: true,
-    filename: `${summary}.ics`,
-  };
-}
-const now = new Date("2026-06-09T10:00:00Z");
-const tz = { timezone: "UTC", now };
-```
-
-```ts
-summarizeEvents([
-  ev("Dentist", "2026-06-09T16:00:00Z", "2026-06-09T17:00:00Z"),
-  ev("Standup", "2026-06-10T09:00:00Z", "2026-06-10T09:30:00Z"),
-], tz)
-=> 16:00-17:00 Dentist; Wed 09:00-09:30 Standup
-
-summarizeEvents([
-  { ...ev("Field Day", "2026-06-09T00:00:00Z", "2026-06-10T00:00:00Z"), allDay: true },
-], tz)
-=> all day: Field Day
-```
-
-Cancelled events are skipped; an empty (or all-cancelled) list summarizes
-to null.
-
-```ts
-summarizeEvents([
-  { ...ev("Old Mtg", "2026-06-09T12:00:00Z", "2026-06-09T13:00:00Z"), status: "CANCELLED" },
-], tz)
-=> null
-
-summarizeEvents([], tz)
-=> null
-```
-
-Output is capped at four events with an overflow count, so a packed day
-doesn't balloon the snapshot.
-
-```ts
-const six = ["A", "B", "C", "D", "E", "F"].map((s, i) =>
-  ev(s, `2026-06-09T1${i}:00:00Z`, `2026-06-09T1${i}:30:00Z`));
-summarizeEvents(six, tz)
-=> 10:00-10:30 A; 11:00-11:30 B; 12:00-12:30 C; 13:00-13:30 D; +2 more
-```
-
 ## buildSnapshotContext
 
 The per-send entry point. `localTime` is always present; the
@@ -162,47 +102,19 @@ JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart
 ```
 
 With a most-active pointer (written whenever any chat session on the box
-sees activity) and a synced calendar, the session-start extras appear.
+sees activity), the session-start `lastActivity` extra appears.
 
 ```ts continue
 await box.write(".callback-box/chat-session-id.json", JSON.stringify({
   sessionId: "prev-session",
   savedAt: "2026-06-06T10:00:00Z",
 }));
-await box.write("store/calendar/dentist.ics", `BEGIN:VCALENDAR
-BEGIN:VEVENT
-UID:dentist-1
-SUMMARY:Dentist
-DTSTART:20260609T160000Z
-DTEND:20260609T170000Z
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR`);
 
 JSON.stringify(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true }), null, 2)
 => {
   "localTime": "Tuesday 2026-06-09 10:00 UTC (morning)",
-  "lastActivity": "3 days ago",
-  "calendar": "16:00-17:00 Dentist"
+  "lastActivity": "3 days ago"
 }
-```
-
-Events outside the 24-hour horizon don't surface — the attribute is
-about imminent commitments, not the whole calendar.
-
-```ts continue
-await box.write("store/calendar/later.ics", `BEGIN:VCALENDAR
-BEGIN:VEVENT
-UID:later-1
-SUMMARY:Next Week Review
-DTSTART:20260616T160000Z
-DTEND:20260616T170000Z
-STATUS:CONFIRMED
-END:VEVENT
-END:VCALENDAR`);
-
-(await buildSnapshotContext(box.root, { now: sendNow, sessionStart: true })).calendar
-=> 16:00-17:00 Dentist
 ```
 
 The `health` extra speaks only when a scheduled task is unhealthy —

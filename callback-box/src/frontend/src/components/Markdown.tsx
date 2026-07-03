@@ -246,7 +246,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
   const Img = makeImg(linkCtx);
   const { QuoteInline, QuoteBlock } = makeQuoteComponents({ onNavigate: linkCtx.onNavigate });
   const { SourceInline, SourceBlock } = makeSourceComponents({ onNavigate: linkCtx.onNavigate, basePath: linkCtx.basePath, onJumpToQuote: linkCtx.onJumpToQuote });
-  const briefing = makeBriefingComponents({ onNavigate: linkCtx.onNavigate });
+  const briefing = makeBriefingComponents();
   const recipe = makeRecipeComponents({ onNavigate: linkCtx.onNavigate });
   const Task = ({ done }: { done?: boolean }) => (
     <input
@@ -297,10 +297,7 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
     SourceInline: cast(SourceInline),
     SourceBlock: cast(SourceBlock),
     Purpose: cast(briefing.Purpose),
-    KeyPerson: cast(briefing.KeyPerson),
     Correction: cast(briefing.Correction),
-    Property: cast(briefing.Property),
-    ProjectPhase: cast(briefing.ProjectPhase),
     IngredientInline: cast(recipe.IngredientInline),
     IngredientBlock: cast(recipe.IngredientBlock),
     Step: cast(recipe.Step),
