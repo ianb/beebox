@@ -103,7 +103,43 @@ Run in batches by section. Two buckets per failure:
   the answer is reachable. Bumped `max_turns: 10 → 20`; **re-run then passed** with
   a complete answer (both env vars + `CB_AGENT_TOKEN`). Fixed.
 
+### procedure-in-job — REAL GAP (batch 3, undocumented mechanism)
+
+- **Prompt:** "Can a job card trigger a procedure? How does that work?" Audit
+  (`knows_directly`) expects `<procedure ref='...'>` in job cards + reactor
+  trampolining.
+- **Agent answered (consistent):** empty response — grepped ~9 times across
+  `procedures.md`, `card-intake-job.md`, `config/`, and found nothing, then hit
+  the turn limit.
+- **Why it's real:** the mechanism *exists* — `detectProcedureInJob`
+  (`src/core/procedure/procedure-trampoline.ts`) + the reactor trampoline
+  (`src/core/reactor/engine.ts:13` "Run procedure jobs via trampoline") via an XML
+  `<procedure ref="...">` in the job card (one of the last XML holdouts,
+  `src/core/handle.ts:10`). But it is **undocumented** in the box's generated docs
+  — `procedures.md` never mentions jobs triggering procedures — so the agent
+  genuinely can't find it, and it certainly isn't `knows_directly`.
+- **Fix (boxholder):** document job→procedure trampolining (and the surviving
+  `<procedure ref>` XML form) in `procedures.md` / the job-card docs; then the
+  audit's `expected_level` can move to `knows_about`/`discoverable`. Left failing
+  as a red flag.
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 3 (procedures / connectors / scheduled / extension / image) — all the
+same "overhaul moved knowledge into the always-on surface, so the agent answers
+correctly & directly; the `should_read` is stale" pattern:
+
+- **describe-images-batch** — recommends batching directly; dropped should_read.
+- **create-procedure** — describes config/procedures/ + precheck/run/validate
+  phases correctly (whether generated YAML validates is a scenario-test question,
+  per the audit's own notes); should_read → substance check.
+- **procedure-directive** — names `--directive` directly; dropped should_read.
+- **add-daily-task** — names the scheduled-script card + config/schedules/
+  directly; dropped should_read.
+- **track-reading-list** — proposes a custom `book` schema directly (its notes
+  already flagged should_read as too strict); should_read → substance check.
+- **create-task-card-type** — inherently conversational; re-encoded as a negative
+  check (must not claim card types are built-in) instead of a brittle positive.
 
 Batch 2 (nav / CLI / guides / git / tricks):
 
@@ -151,3 +187,7 @@ confirmed). Remaining 5: `find-memo-cards` (real gap), `cb-session-exists` (need
 decision), `trick-scripts-path` (minor gap), and `cooking-guide-awareness` /
 `cooking-follow-recipe-pattern` (box drift — no cooking guide in test1). See
 sections above.
+| 3 | Image Analysis, Procedures (+gating), Connectors, Scheduled, Extension, Python | 22 | 15→21‡ | 1 | 6 |
+
+‡ 15 raw; 21 after fixing 6 stale should_read audits (all re-run confirmed). The
+one real failure is `procedure-in-job` (undocumented job→procedure trampoline).

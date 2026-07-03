@@ -23,6 +23,13 @@ test1:
       peak: 46094
       added: 4453
       turns: 3
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41288
+      peak: 46039
+      added: 4751
+      turns: 3
   procedure-checklist-discipline:
     - date: 2026-06-21T20:24:58.778Z
       boxCommit: 3c7f1cdc08517757669a1a78e15fd6cd6b891667
@@ -36,6 +43,13 @@ test1:
       repoCommit: 2d536e446cb3d7189fafcf133826257329113f6a
       initial: 41240
       peak: 41240
+      added: 0
+      turns: 2
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41243
+      peak: 41243
       added: 0
       turns: 2
   figure-card-where-code-lives:
@@ -259,6 +273,13 @@ test1:
       peak: 42332
       added: 712
       turns: 4
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41207
+      peak: 45960
+      added: 4753
+      turns: 3
   procedure-review-severity:
     - date: 2026-06-27T17:32:12.820Z
       boxCommit: 05636ac8ee3cb9ae45071d576a475bea4bf02081
@@ -266,6 +287,13 @@ test1:
       initial: 41601
       peak: 42616
       added: 1015
+      turns: 4
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41192
+      peak: 42186
+      added: 994
       turns: 4
   user-location-read:
     - date: 2026-06-29T13:25:10.367Z
@@ -867,4 +895,211 @@ test1:
       initial: 41181
       peak: 41910
       added: 729
+      turns: 3
+  describe-images-command:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41192
+      peak: 42607
+      added: 1415
+      turns: 3
+  describe-images-batch:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41198
+      peak: 41198
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:05:30.352Z
+      boxCommit: cc77bd134f9727f8e2f39bd64b1203c7452c6071
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41196
+      peak: 41196
+      added: 0
+      turns: 1
+  image-exif-date:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41185
+      peak: 42865
+      added: 1680
+      turns: 5
+  list-procedures:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41182
+      peak: 41182
+      added: 0
+      turns: 1
+  create-procedure:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41190
+      peak: 41190
+      added: 0
+      turns: 2
+    - date: 2026-07-03T11:05:30.352Z
+      boxCommit: cc77bd134f9727f8e2f39bd64b1203c7452c6071
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41188
+      peak: 45931
+      added: 4743
+      turns: 4
+  procedure-vs-procedurerun:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41193
+      peak: 41193
+      added: 0
+      turns: 1
+  procedure-directive:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41188
+      peak: 41502
+      added: 314
+      turns: 3
+    - date: 2026-07-03T11:05:30.352Z
+      boxCommit: cc77bd134f9727f8e2f39bd64b1203c7452c6071
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41186
+      peak: 41502
+      added: 316
+      turns: 3
+  procedure-in-job:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41189
+      peak: 46486
+      added: 5297
+      turns: 14
+  list-connectors:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41182
+      peak: 41464
+      added: 282
+      turns: 3
+  rss-to-inbox-flow:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41188
+      peak: 55376
+      added: 14188
+      turns: 14
+  outbound-notifications:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41181
+      peak: 43055
+      added: 1874
+      turns: 8
+  how-schedules-work:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41185
+      peak: 42914
+      added: 1729
+      turns: 4
+  add-daily-task:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41180
+      peak: 41180
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:05:30.352Z
+      boxCommit: cc77bd134f9727f8e2f39bd64b1203c7452c6071
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41178
+      peak: 41178
+      added: 0
+      turns: 1
+  track-reading-list:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41196
+      peak: 41196
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:05:30.352Z
+      boxCommit: cc77bd134f9727f8e2f39bd64b1203c7452c6071
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41194
+      peak: 41194
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:06:52.396Z
+      boxCommit: 398c512e678dc42d45f595d7acea53c8ac0c2c7e
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41194
+      peak: 41194
+      added: 0
+      turns: 1
+  create-task-card-type:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41189
+      peak: 42754
+      added: 1565
+      turns: 7
+    - date: 2026-07-03T11:05:30.352Z
+      boxCommit: cc77bd134f9727f8e2f39bd64b1203c7452c6071
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41187
+      peak: 45147
+      added: 3960
+      turns: 6
+    - date: 2026-07-03T11:06:52.396Z
+      boxCommit: 398c512e678dc42d45f595d7acea53c8ac0c2c7e
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41187
+      peak: 41799
+      added: 612
+      turns: 5
+    - date: 2026-07-03T11:08:25.827Z
+      boxCommit: 78c158f6cfba7f242e1e0cfa76dea8bb38873ed6
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41187
+      peak: 45366
+      added: 4179
+      turns: 7
+  add-new-capability:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41183
+      peak: 41183
+      added: 0
+      turns: 1
+  card-types-and-add-new:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41187
+      peak: 41187
+      added: 0
+      turns: 1
+  python-tool-invocation:
+    - date: 2026-07-03T11:01:45.769Z
+      boxCommit: 70e60ead52f851e6f3ad6217a7afe438b367a069
+      repoCommit: f051ac6ba94981797ba45e79ae9e78f137aa3b5d
+      initial: 41212
+      peak: 42210
+      added: 998
       turns: 3
