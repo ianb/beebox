@@ -277,7 +277,7 @@ bespoke `useBusSubscription` lists).
 | Surface | Becomes | Notes |
 |---|---|---|
 | Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + renderers/view.tsx) — the query-card form waits for the pattern vocabulary. |
-| Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. |
+| Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. **Ported as-is 2026-07** (`view: questions` instrument card, page body extracted); the query-card form needs its own design first. |
 | Browse | directory subject + builtin master-detail view | Delete/context-menu are view affordances; a positional presentation card parameterizes (order, grouping, prominence, tiles vs rows). |
 | Chats | query card over chat husks + named `chat-picker` view | Freshness filter declarative; landmark-proximity grouping stays code. Blocked on husks. **Shipped 2026-07 as an instrument card** (`view: chat-picker`); the husk-based query form is still future. |
 | History | instrument card over the timeline view | Filter state (already URL-encoded) becomes frontmatter params; **saved filters = more instrument cards** with frozen params + notes body. Subject is git, never a card query. **Shipped 2026-07** (`view: history` + params — the first configurable instrument card; filter interactions inside a card escape to the History page). |
@@ -285,7 +285,7 @@ bespoke `useBusSubscription` lists).
 | Dashboard | markdown card transcluding other cards | Prose + embedded health instrument, questions query, activity instrument. Reuses embedding instead of a layout schema. Accepts a document-flow layout ceiling; stresses embed machinery (embed-level error boundaries, live-updating embeds) — the right work. Non-singleton: any such card is *a* dashboard; the root binding picks *the* dashboard. |
 | Capture, Settings | instrument cards | View stays code; card holds destination defaults / exposed config + notes. |
 | Admin | stays shell | Permission boundary. |
-| Chat | husk card per session + chat view + the slot | Below. |
+| Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a `chat` card per web session, created at id-assignment + one-shot backfill; renderer opens the live session; the Chats picker enumerates husks (title/deletion are editorial). Path-addressed chat and the slot still future. |
 
 Order of attack: Landmarks → Questions → resolver unification → directory
 presentation/Browse → chat husks, then Chats → History saved-filters, Nav,

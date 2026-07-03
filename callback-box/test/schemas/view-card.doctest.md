@@ -38,7 +38,7 @@ const tryParse = (text: string, source: string): string => {
   try { parseCardText(text, { source, schemas }); return "did not throw"; }
   catch (e) { return (e as Error).message; }
 };
-tryParse("---\nview: dashbord\n---\n", "Oops.view.card").includes("view must be one of: landmarks, chat-picker, history")
+tryParse("---\nview: dashbord\n---\n", "Oops.view.card").includes("view must be one of: landmarks, chat-picker, questions, history")
 => true
 
 tryParse("---\n---\n", "Empty.view.card").includes("view")

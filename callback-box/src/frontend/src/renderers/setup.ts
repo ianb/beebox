@@ -22,3 +22,4 @@ import "./binary";
 import "./directory";
 import "./todo-list";
 import "./view";
+import "./chat-husk";

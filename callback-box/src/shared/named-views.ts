@@ -155,6 +155,10 @@ export const NAMED_VIEWS: readonly NamedView[] = [
     description: "Fresh chats grouped by landmark, with a New-chat button per landmark",
   },
   {
+    name: "questions",
+    description: "Pending questions as answerable forms, with answered ones archived below",
+  },
+  {
     name: "history",
     description:
       "The commit timeline, filtered by the card's params (connectors, workflows, touchpoint, feedback, session) — a saved filter over history",
