@@ -94,8 +94,10 @@ view," never "grow the frontmatter vocabulary."
 `src/shared/named-views.ts` (the resolved shape also retains the card
 layer for diff/reset); URL params thread from `/views/…` and Browse;
 history chips emit diffed override-URLs and a marker names overridden
-keys with reset. Still future: save-override-to-card (needs UI
-card-write plumbing) and the embed-site origin.
+keys with reset. Still future: the embed-site origin. (A
+"save override into the card" affordance was floated during design but
+not adopted — an assistant suggestion, not a boxholder ask; revisit only
+if the need shows up in practice.)
 
 View-card `params` (shipped with `view: history`) want the same cascade as
 bindings: **view defaults < card frontmatter < embed-site args < URL query
@@ -104,16 +106,16 @@ string is the ephemeral, shareable overlay —
 `Feedback_Commits.view.card?session=abc` is "the feedback card, scoped to
 this session, right now." Interactions inside a card (e.g. history's
 session/connector chips) then stay on the card's address as override-URLs
-instead of escaping to the page; "save" writes an override into frontmatter
-(or forks a card) — explore in the URL, commit to the card.
+instead of escaping to the page. Committing an override into the card is
+just an edit to its frontmatter (the agent's job when asked); no dedicated
+"save" affordance is planned.
 
 Requirements settled in discussion:
 
 - **Per-key provenance.** The merge layer emits `{ values, origins }`
   (`default | card | url | embed | …`, open-ended; an embed origin can name
   the embedding card). Consumers: the shell renders a generic
-  "modified from card · reset · save" marker and knows exactly which keys
-  save-to-card writes; views may treat card-recorded vs injected params as
+  "modified from card · reset" marker; views may treat card-recorded vs injected params as
   different in kind (a saved filter vs an ad hoc slice; declining expensive
   or sensitive params unless durably recorded); the `<card-activity>`
   snapshot reports overrides without misattributing them to the card.
@@ -276,8 +278,8 @@ bespoke `useBusSubscription` lists).
 
 | Surface | Becomes | Notes |
 |---|---|---|
-| Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + renderers/view.tsx) — the query-card form waits for the pattern vocabulary. |
-| Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. **Ported as-is 2026-07** (`view: questions` instrument card, page body extracted); the query-card form needs its own design first. |
+| Landmarks page | query card (`type: landmark`) | Trivial; machinery proof. **Shipped 2026-07 as an instrument card** (`view: landmarks` on a `view` card; src/schemas/view.ts + renderers/view.tsx). The query-card form is **parked** (`docs/plans/query-cards.md` — too complex, too contextless; anchored queries are landmark `expand`'s job). |
+| Questions | query card + `group-by: status` | `QuestionForm` promotes to the question type's renderer — the layering rule cashed in. **Ported as-is 2026-07** (`view: questions` instrument card, page body extracted). The query-card form is **parked** (`docs/plans/query-cards.md`); the renderer promotion (tile registry + question tile) still stands on its own. |
 | Browse | directory subject + builtin master-detail view | Delete/context-menu are view affordances; a positional presentation card parameterizes (order, grouping, prominence, tiles vs rows). |
 | Chats | query card over chat husks + named `chat-picker` view | Freshness filter declarative; landmark-proximity grouping stays code. Blocked on husks. **Shipped 2026-07 as an instrument card** (`view: chat-picker`); the husk-based query form is still future. |
 | History | instrument card over the timeline view | Filter state (already URL-encoded) becomes frontmatter params; **saved filters = more instrument cards** with frozen params + notes body. Subject is git, never a card query. **Shipped 2026-07** (`view: history` + params — the first configurable instrument card; filter interactions inside a card escape to the History page). |
@@ -333,6 +335,46 @@ subject; the slot can in principle hold any card (a scratchpad while
 researching). This inverts today's architecture: instead of the chat page
 hosting a companion card pane, the shell hosts both and chat becomes the
 sidekick of everything.
+
+### The input is its own frame primitive — and a true singleton
+
+Noted 2026-07 (boxholder aside, recorded for later): the **input** —
+voice, typing, attachments, accumulated selections — is independent of
+chat. It *attaches* to a chat when you send, but it lives between chats
+(switch conversations and the draft stays), and it is genuinely singular
+in the system: one boxholder, one input. It is the natural receiver of
+frame signals like card selections (today's implementation already agrees
+— a selection becomes supplementary text on the next message, i.e.
+composer state, not session state).
+
+This splits what the witness section below conflates: the slot's occupant
+is *who is attending*; the input is *what you speak through*, aimed at the
+occupant but not owned by it. Frame primitives are therefore four: nav,
+arrangement, the companion slot, and the input. And unlike everything
+else in this design (dashboards, navs, views — all de-singleton'd into
+bindings), the input is correctly a **complete singleton**: it extends
+the person, not the content. Its state (draft, attachments, pending
+selections) is frame state per the standing rule — never a card, never in
+the URL.
+
+Like the slot (occupancy × embodiment), the input has two orthogonal
+axes:
+
+- **Target** — an *interlocutor* (a chat session; a reply is expected),
+  a *place* (a directory; a deposit, receipt at most), or *unaddressed*
+  (the triage-memo idea: fire-and-forget, the box routes it).
+- **Embodiment** — full composer, camera-first capture screen,
+  voice-only, or the OS share sheet (an embodiment the phone owns).
+
+**Capture is the input, place-targeted, camera-first** — not a separate
+instrument. Its "less interactive" feel is a property of the target kind,
+not the widget: aimed at a person the input is a dialogue instrument;
+aimed at a place it is a deposit chute. One consequence to preserve when
+building: accumulated content can be re-aimed across target kinds
+(photos gathered for a chat can flip to a plain inbox deposit without
+loss). The triage memo is just the unaddressed target, not a fourth
+thing. (Conceptual unification only so far — capture's device/upload
+apparatus is separate code today.)
 
 ### Signals: the frame bus
 
