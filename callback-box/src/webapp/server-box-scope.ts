@@ -42,6 +42,12 @@ function isApiUrl(url: string): boolean {
  */
 function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
   instance.addHook("preHandler", async (request, reply) => {
+    // CORS preflight carries no credentials and triggers no side effect — the
+    // browser only reads the response headers to decide whether to send the
+    // real (still-authed) request, so never 401 it. Extension-origin preflights
+    // are already short-circuited at the root (registerChromeExtensionCors);
+    // this covers any other OPTIONS that reaches the box scope.
+    if (request.method === "OPTIONS") return;
     // Let static assets (served by fastify-static) through. Scope this
     // narrowly: API paths (like /api/files/foo.jpg) need the auth
     // check even when they end in an asset extension.

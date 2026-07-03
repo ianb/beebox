@@ -160,13 +160,13 @@ ssh root@<server> 'journalctl -t claude-update --since "-7 days" --no-pager'
 
 ## Diagnostic endpoints behind auth
 
-In production, `/api/debug-log` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.
+In production, `/api/trpc/debugLog.get` and `/api/trpc/health.check` sit behind the Google OAuth cookie gate — `curl` without a browser cookie gets rejected.
 
-**Bypass** for machine access: if `CB_DIAG_API_KEY` is set in `/home/callback/.env`, GET requests to those two endpoints are allowed with an `Authorization: Bearer <key>` header:
+**Bypass** for machine access: if `CB_DIAG_API_KEY` is set in `/home/callback/.env`, GET requests to those two endpoints are allowed with an `Authorization: Bearer <key>` header. The debug log returns the tRPC envelope (`{"result":{"data":{"entries":[…]}}}`):
 
 ```bash
 curl -H "Authorization: Bearer $CB_DIAG_API_KEY" \
-  https://box.example.com/<box>/api/debug-log | python3 -m json.tool
+  https://box.example.com/<box>/api/trpc/debugLog.get | python3 -m json.tool
 ```
 
 On localhost/dev (no `GOOGLE_OAUTH_CLIENT_ID` set), auth is disabled entirely — curl works without the header.
