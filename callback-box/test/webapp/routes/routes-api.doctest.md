@@ -170,34 +170,3 @@ Saved before user delete: store/images/dirty-delete.webp
 ```ts cleanup
 await ctx.cleanup();
 ```
-
-## Debug log
-
-The debug log supports a POST/GET/DELETE cycle for client-side logging:
-
-```ts
-const ctx = await makeTestServer();
-await ctx.inject({
-  method: "POST",
-  url: "/api/debug-log",
-  payload: { entries: [{ level: "info", message: "test message" }] },
-});
-await ctx.inject({ method: "GET", url: "/api/debug-log" })
-=>
-200
-«*»"level": "info",
-      "message": "test message"«*»
-```
-
-Deleting clears all entries:
-
-```ts continue
-await ctx.inject({ method: "DELETE", url: "/api/debug-log" });
-const res = await ctx.request({ method: "GET", url: "/api/debug-log" });
-res.body.entries.length
-=> 0
-```
-
-```ts cleanup
-await ctx.cleanup();
-```

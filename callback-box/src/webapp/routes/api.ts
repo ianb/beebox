@@ -7,7 +7,6 @@
  *
  *   api-browse.ts      — GET /api/browse/*
  *   api-files.ts       — GET/HEAD + DELETE /api/files/*
- *   api-debug-log.ts   — GET/POST/DELETE /api/debug-log
  */
 
 import type { FastifyInstance } from "fastify";
@@ -21,7 +20,6 @@ import { registerProxyImageRoutes } from "./proxy-image.js";
 import { registerApiFilesWriteRoutes } from "./api-files-write.js";
 import { registerApiAdapterRoutes } from "./api-adapters.js";
 import { registerApiExternalRoute } from "./api-external.js";
-import { registerApiDebugLogRoutes } from "./api-debug-log.js";
 import { registerApiImageRoutes } from "./api-image.js";
 
 /**
@@ -93,7 +91,4 @@ export async function registerApiRoutes(
       }
     }
   );
-
-  // /api/debug-log — client console-log collector (in-memory + rolling file)
-  registerApiDebugLogRoutes({ server, boxRoot });
 }

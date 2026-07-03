@@ -74,15 +74,12 @@ export function verifyDiagBearerKey(request: FastifyRequest): boolean {
  *   - the request path matches a whitelisted diagnostic endpoint
  *   - the bearer key check passes (see verifyDiagBearerKey)
  *
- * Whitelist: /api/debug-log, /api/trpc/health.check.
+ * Whitelist: /api/trpc/health.check.
  * Top-level /healthz is handled by its own root-level route, not this bypass.
  */
 export function isDiagnosticBypassRequest(request: FastifyRequest): boolean {
   if (request.method !== "GET") return false;
-  const url = request.url;
-  const isDebugLog = url.includes("/api/debug-log");
-  const isHealth = url.includes("/api/trpc/health.check");
-  if (!isDebugLog && !isHealth) return false;
+  if (!request.url.includes("/api/trpc/health.check")) return false;
   return verifyDiagBearerKey(request);
 }
 
