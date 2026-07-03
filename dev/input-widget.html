@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Input — a design walkthrough</title>
+<style>
+  :root {
+    --ink: #2b2620; --ink-soft: #6b6257; --ink-faint: #9a9084;
+    --paper: #faf7f2; --panel: #ffffff; --line: #e6ded2;
+    --accent: #b4552d; --accent-soft: #f6e3d8;
+    --blue: #34606e; --blue-soft: #e2edf0;
+    --green: #4a6b3f; --green-soft: #e7efe2;
+    --gold: #8a6d1f; --gold-soft: #f4ecd4;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  main { max-width: 60rem; margin: 0 auto; padding: 2rem 1.25rem 6rem; }
+  h1 { font-size: 2rem; margin: .5rem 0 0; letter-spacing: -.02em; }
+  h2 { font-size: 1.35rem; margin: 3rem 0 .75rem; letter-spacing: -.01em;
+       border-bottom: 2px solid var(--line); padding-bottom: .35rem; }
+  h3 { font-size: 1.05rem; margin: 1.5rem 0 .5rem; }
+  p { max-width: 46rem; }
+  .kicker { color: var(--accent); font-weight: 600; text-transform: uppercase;
+            letter-spacing: .08em; font-size: .75rem; }
+  .lede { font-size: 1.1rem; color: var(--ink-soft); max-width: 44rem; }
+  code { font-family: var(--mono); font-size: .85em; background: var(--panel);
+         border: 1px solid var(--line); border-radius: 4px; padding: .05em .35em; }
+  pre { background: var(--panel); border: 1px solid var(--line); border-radius: 8px;
+        padding: 1rem 1.25rem; overflow-x: auto; font-family: var(--mono);
+        font-size: .8rem; line-height: 1.55; }
+  pre code { border: 0; background: none; padding: 0; }
+  .cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+          gap: 1rem; margin: 1.25rem 0; }
+  .card { background: var(--panel); border: 1px solid var(--line);
+          border-radius: 10px; padding: 1rem 1.15rem; }
+  .card h3 { margin-top: 0; }
+  .card .tag { font-family: var(--mono); font-size: .72rem; font-weight: 700;
+               padding: .15em .5em; border-radius: 999px; }
+  .tag.emission { background: var(--accent-soft); color: var(--accent); }
+  .tag.input    { background: var(--blue-soft);   color: var(--blue); }
+  .tag.target   { background: var(--green-soft);  color: var(--green); }
+  .why-list li { margin: .5rem 0; max-width: 44rem; }
+  .why-list b { color: var(--accent); }
+  .note { background: var(--gold-soft); border: 1px solid #e3d5a8; border-radius: 8px;
+          padding: .75rem 1rem; max-width: 46rem; font-size: .92rem; }
+  table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+  th, td { text-align: left; padding: .5rem .7rem; border-bottom: 1px solid var(--line);
+           vertical-align: top; }
+  th { color: var(--ink-soft); font-size: .75rem; text-transform: uppercase;
+       letter-spacing: .06em; }
+  td code { white-space: nowrap; }
+  .tablewrap { overflow-x: auto; }
+
+  /* ------- system map ------- */
+  .map { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+         padding: 1.25rem; margin: 1.25rem 0; }
+  .map svg { width: 100%; height: auto; display: block; }
+  .map text { font-family: var(--mono); font-size: 11px; fill: var(--ink); }
+  .map .lbl { font-size: 12.5px; font-weight: 700; }
+  .map .soft { fill: var(--ink-faint); font-size: 10px; }
+
+  /* ------- flows / stepper ------- */
+  .tabs { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1rem 0; }
+  .tabs button {
+    font: inherit; font-size: .85rem; padding: .4rem .85rem; border-radius: 999px;
+    border: 1px solid var(--line); background: var(--panel); cursor: pointer;
+    color: var(--ink-soft);
+  }
+  .tabs button.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .stage { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+           padding: 1rem 1rem 1.25rem; }
+  .lanes { display: grid; gap: 0; position: relative; }
+  .lane-head { text-align: center; font-family: var(--mono); font-size: .72rem;
+               font-weight: 700; padding: .3rem .2rem; color: var(--ink-soft);
+               border-bottom: 2px solid var(--line); position: relative; }
+  .lane-head.hot { color: var(--ink); }
+  .steps { position: relative; }
+  .msg { position: relative; height: 2.35rem; opacity: .18; transition: opacity .2s; }
+  .msg.shown { opacity: 1; }
+  .msg.current .wire { border-color: var(--accent); }
+  .msg.current .mlabel { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .wire { position: absolute; top: 1.35rem; border-top: 2px solid var(--ink-faint); }
+  .wire::after { content: ""; position: absolute; right: -1px; top: -5px;
+                 border: 4px solid transparent; }
+  .wire.r::after { right: -2px; border-left: 7px solid var(--ink-faint); }
+  .wire.l::after { left: -2px; right: auto; border-right: 7px solid var(--ink-faint); }
+  .msg.current .wire.r::after { border-left-color: var(--accent); }
+  .msg.current .wire.l::after { border-right-color: var(--accent); }
+  .wire.self { border-top: 0; }
+  .mlabel { position: absolute; top: .28rem; transform: translateX(-50%);
+            font-family: var(--mono); font-size: .72rem; white-space: nowrap;
+            background: var(--panel); border: 1px solid var(--line);
+            padding: .1em .55em; border-radius: 999px; z-index: 2; }
+  .guide { position: absolute; top: 0; bottom: 0; width: 0;
+           border-left: 1px dashed var(--line); }
+  .caption { min-height: 3.4rem; margin-top: .9rem; padding: .65rem .9rem;
+             background: var(--blue-soft); border-radius: 8px; font-size: .92rem; }
+  .caption b { color: var(--blue); }
+  .ctl { display: flex; gap: .5rem; align-items: center; margin-top: .75rem; }
+  .ctl button { font: inherit; font-size: .85rem; padding: .35rem .9rem;
+                border-radius: 6px; border: 1px solid var(--line);
+                background: var(--panel); cursor: pointer; }
+  .ctl button.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .ctl .pos { margin-left: auto; font-family: var(--mono); font-size: .75rem;
+              color: var(--ink-faint); }
+
+  /* ------- interface annotations ------- */
+  .iface { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+           gap: 1rem; align-items: start; margin: 1rem 0 1.75rem; }
+  @media (max-width: 780px) { .iface { grid-template-columns: 1fr; } }
+  .iface aside { font-size: .88rem; color: var(--ink-soft); }
+  .iface aside p { margin: 0 0 .7rem; }
+  .iface aside b { color: var(--ink); }
+  .hl-k { color: #7a4988; } .hl-t { color: var(--blue); } .hl-c { color: var(--ink-faint); }
+  .hl-s { color: var(--green); }
+
+  /* ------- lifecycle ------- */
+  .life svg { width: 100%; max-width: 44rem; height: auto; }
+  .life text { font-family: var(--mono); font-size: 11.5px; fill: var(--ink); }
+  .life .soft { fill: var(--ink-faint); font-size: 10px; }
+
+  .analogies { display: grid; grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+               gap: .75rem; }
+  .analogies .card { font-size: .88rem; }
+  .analogies .card b { display: block; margin-bottom: .25rem; }
+  footer { margin-top: 4rem; color: var(--ink-faint); font-size: .8rem; }
+  nav.toc { font-size: .85rem; color: var(--ink-soft); margin-top: 1rem; }
+  nav.toc a { color: var(--blue); text-decoration: none; margin-right: 1rem; }
+</style>
+</head>
+<body>
+<main>
+  <div class="kicker">Design walkthrough</div>
+  <h1>The Input</h1>
+  <p class="lede">One instrument for everything you put into the box — typing, voice,
+  photos, files, selections — pulled out of the chat and given a firm shape.
+  Three nouns carry the whole design: the <b>Emission</b> (what you're composing),
+  the <b>Input</b> (the instrument itself, a true singleton), and the
+  <b>Target</b> (whatever accepts the submission).</p>
+  <nav class="toc">
+    <a href="#why">Why</a> <a href="#nouns">The three nouns</a>
+    <a href="#map">System map</a> <a href="#flows">Flows, step by step</a>
+    <a href="#ifaces">The interfaces</a> <a href="#mapping">Today → tomorrow</a>
+    <a href="#decisions">Decisions</a>
+  </nav>
+
+  <h2 id="why">Why anything needs to change</h2>
+  <p>An inventory of the current code (~4,200 lines across 30+ files) found the mess
+  isn't essential complexity — it's the absence of two abstractions. The receipts:</p>
+  <ul class="why-list">
+    <li><b>The message-being-composed doesn't exist as a thing.</b> Text, images,
+      files, selections and audio live in six separate hooks; the payload is
+      assembled ad hoc at send time — <i>twice</i>, in parallel: the typed path and
+      the voice path are separate implementations sharing one helper. Every payload
+      rule can drift between them.</li>
+    <li><b>There is no boundary.</b> The "composer" is a set of hooks owned by the
+      chat page, passed down as a 40+-prop bag, entangled with the chat machine,
+      the companion pane, and card-activity tracking.</li>
+    <li><b>"The input stays when you switch chats" is mostly false today.</b> Typed
+      text survives (saved per-session); attachments, file uploads and selections are
+      destroyed by the remount.</li>
+    <li><b>Stored audio is one mutable slot.</b> The "agent can fetch the original
+      audio" feature keeps exactly one blob, in memory, overwritten by the next send,
+      gone on reload.</li>
+    <li><b>Stop is conflated with send.</b> Interrupting the agent lives in the input
+      surface, entangling "add to the conversation" with "halt the process."</li>
+  </ul>
+
+  <h2 id="nouns">The three nouns</h2>
+  <div class="cols">
+    <div class="card">
+      <span class="tag emission">EMISSION</span>
+      <h3>What you're composing</h3>
+      <p>One value holding text + images + files + selections + audio, with an id
+      that becomes the message id. Feeders write into it through one editor;
+      panels just render slices of it. <b>One <code>assemble()</code> function</b>
+      turns it into a payload — the dual typed/voice assembly paths die.</p>
+    </div>
+    <div class="card">
+      <span class="tag input">INPUT</span>
+      <h3>The instrument · a true singleton</h3>
+      <p>There's one of you, so there's one input. It holds the current emission,
+      is <i>aimed</i> at a target, and hosts the feeders (keyboard, voice, attach,
+      camera, frame signals). Re-aiming — switching chats, or flipping from chat
+      to inbox-deposit — <b>never touches the emission</b>.</p>
+    </div>
+    <div class="card">
+      <span class="tag target">TARGET</span>
+      <h3>What accepts the submission</h3>
+      <p>An acceptor with <b>observable status</b> (ready · busy-will-queue ·
+      unavailable) shown <i>before</i> you submit, and a <b>receipt</b> after
+      (delivered · queued · deposited · rejected). It owns its own controls —
+      <b>stop lives here</b>, on the target's strip, not in the input.</p>
+    </div>
+  </div>
+
+  <h2 id="map">System map</h2>
+  <div class="map">
+    <svg viewBox="0 0 900 380" role="img" aria-label="System map of feeders, emission, input, target">
+      <!-- input boundary -->
+      <rect x="180" y="18" width="470" height="344" rx="14" fill="#f2ede4" stroke="#d8cdba"/>
+      <text class="lbl" x="200" y="42">THE INPUT (singleton)</text>
+      <!-- feeders -->
+      <g>
+        <text class="lbl" x="30" y="66">feeders</text>
+        <rect x="22" y="80"  width="120" height="34" rx="8" fill="#fff" stroke="#d8cdba"/>
+        <text x="40" y="101">keyboard</text>
+        <rect x="22" y="122" width="120" height="34" rx="8" fill="#fff" stroke="#d8cdba"/>
+        <text x="40" y="143">voice</text>
+        <rect x="22" y="164" width="120" height="34" rx="8" fill="#fff" stroke="#d8cdba"/>
+        <text x="40" y="185">attach</text>
+        <rect x="22" y="206" width="120" height="34" rx="8" fill="#fff" stroke="#d8cdba"/>
+        <text x="40" y="227">camera</text>
+        <rect x="22" y="248" width="120" height="34" rx="8" fill="#fff" stroke="#d8cdba"/>
+        <text x="40" y="269">signals</text>
+        <text class="soft" x="22" y="300">selections arrive from</text>
+        <text class="soft" x="22" y="313">the frame bus</text>
+      </g>
+      <!-- feeder arrows -->
+      <g stroke="#9a9084" stroke-width="1.6" fill="none" marker-end="url(#arr)">
+        <path d="M142 97  H 235"/>
+        <path d="M142 139 H 235"/>
+        <path d="M142 181 H 235"/>
+        <path d="M142 223 H 235"/>
+        <path d="M142 265 H 235"/>
+      </g>
+      <!-- editor + emission -->
+      <rect x="236" y="70" width="30" height="220" rx="6" fill="#e2edf0" stroke="#a9c4cc"/>
+      <text x="251" y="192" transform="rotate(-90 251 192)" text-anchor="middle">EDITOR</text>
+      <rect x="290" y="86" width="220" height="150" rx="10" fill="#f6e3d8" stroke="#d9a88b"/>
+      <text class="lbl" x="308" y="112" fill="#b4552d">EMISSION</text>
+      <text x="308" y="136">text · images · files</text>
+      <text x="308" y="154">selections · audio</text>
+      <text class="soft" x="308" y="176">id → messageId → audio key</text>
+      <text class="soft" x="308" y="194">survives re-aiming, whole</text>
+      <path d="M266 160 H 288" stroke="#9a9084" stroke-width="1.6" marker-end="url(#arr)"/>
+      <!-- retention -->
+      <rect x="290" y="292" width="150" height="42" rx="8" fill="#fff" stroke="#d8cdba"/>
+      <text x="306" y="318">RETENTION</text>
+      <path d="M355 290 V 238" stroke="#9a9084" stroke-width="1.6" marker-end="url(#arr)" fill="none"/>
+      <text class="soft" x="362" y="270">retain(audio, id)</text>
+      <!-- assemble/submit -->
+      <path d="M512 160 H 590" stroke="#9a9084" stroke-width="1.6" marker-end="url(#arr)" fill="none"/>
+      <text class="soft" x="516" y="150">assemble()</text>
+      <rect x="560" y="140" width="76" height="40" rx="8" fill="#fff" stroke="#d8cdba"/>
+      <text x="571" y="164">submit()</text>
+      <!-- target -->
+      <rect x="700" y="90" width="180" height="160" rx="12" fill="#e7efe2" stroke="#a9c39e"/>
+      <text class="lbl" x="718" y="116" fill="#4a6b3f">TARGET</text>
+      <text x="718" y="140">acceptor: chat · place</text>
+      <text x="718" y="162">status strip:</text>
+      <text x="718" y="180">busy · 1 queued · STOP</text>
+      <text class="soft" x="718" y="204">owns its queue and</text>
+      <text class="soft" x="718" y="218">its stop control</text>
+      <path d="M636 160 H 698" stroke="#4a6b3f" stroke-width="1.8" marker-end="url(#arrg)" fill="none"/>
+      <text class="soft" x="640" y="150">accept()</text>
+      <path d="M698 200 H 650 Q 636 200 636 214 V 214" stroke="#4a6b3f" stroke-width="1.4"
+            marker-end="url(#arrg)" fill="none" stroke-dasharray="4 3"/>
+      <text class="soft" x="600" y="232">receipt</text>
+      <!-- status back-channel -->
+      <path d="M700 110 H 520 Q 505 110 505 96 V 78 Q 505 64 490 64 H 300"
+            stroke="#34606e" stroke-width="1.4" fill="none" stroke-dasharray="4 3" marker-end="url(#arrb)"/>
+      <text class="soft" x="330" y="58" fill="#34606e">status / speaking (pre-submit truth: Send vs Queue)</text>
+      <!-- agent fetch -->
+      <path d="M700 320 H 442" stroke="#8a6d1f" stroke-width="1.4" fill="none"
+            stroke-dasharray="4 3" marker-end="url(#arry)"/>
+      <text class="soft" x="700" y="312" fill="#8a6d1f">agent: get original audio</text>
+      <text class="soft" x="700" y="334" fill="#8a6d1f">(by message id / latest)</text>
+      <defs>
+        <marker id="arr"  viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#9a9084"/></marker>
+        <marker id="arrg" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#4a6b3f"/></marker>
+        <marker id="arrb" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#34606e"/></marker>
+        <marker id="arry" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+          <path d="M0 0 L10 5 L0 10 z" fill="#8a6d1f"/></marker>
+      </defs>
+    </svg>
+  </div>
+  <p>Read it left to right: <b>feeders</b> write into the <b>emission</b> through one
+  editor; <code>submit()</code> assembles the emission and hands it to the aimed
+  <b>target</b>, which answers with a receipt. Two back-channels flow the other way:
+  the target's <i>status</i> (shown on the submit button before you press it) and the
+  agent's <i>original-audio</i> requests served from retention.</p>
+
+  <h2 id="flows">The flows, step by step</h2>
+  <p>Click through each scenario — every step is one message crossing one boundary.
+  Use ← → keys or the buttons.</p>
+  <div class="tabs" id="tabs"></div>
+  <div class="stage">
+    <div class="lanes" id="laneHeads"></div>
+    <div class="lanes" id="laneBody" style="min-height: 1rem"></div>
+    <div class="caption" id="caption"></div>
+    <div class="ctl">
+      <button id="back">← Back</button>
+      <button id="next" class="primary">Next →</button>
+      <button id="restart">Restart</button>
+      <span class="pos" id="pos"></span>
+    </div>
+  </div>
+
+  <h2>The emission's lifecycle</h2>
+  <div class="life">
+    <svg viewBox="0 0 760 200" role="img" aria-label="Emission lifecycle state diagram">
+      <defs><marker id="la" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#6b6257"/></marker></defs>
+      <rect x="20"  y="70" width="110" height="44" rx="10" fill="#fff" stroke="#d8cdba"/>
+      <text x="47" y="97">EMPTY</text>
+      <rect x="210" y="70" width="150" height="44" rx="10" fill="#f6e3d8" stroke="#d9a88b"/>
+      <text x="238" y="97">COMPOSING</text>
+      <rect x="440" y="70" width="150" height="44" rx="10" fill="#e2edf0" stroke="#a9c4cc"/>
+      <text x="464" y="97">SUBMITTING</text>
+      <rect x="640" y="70" width="110" height="44" rx="10" fill="#e7efe2" stroke="#a9c39e"/>
+      <text x="660" y="97">ACCEPTED</text>
+      <g stroke="#6b6257" stroke-width="1.5" fill="none" marker-end="url(#la)">
+        <path d="M130 92 H 208"/>
+        <path d="M360 92 H 438"/>
+        <path d="M590 92 H 638"/>
+        <path d="M285 68 Q 285 30 320 30 H 330" stroke-dasharray="0"/>
+        <path d="M515 116 Q 515 160 420 160 H 300 Q 285 160 285 130 V 116"/>
+        <path d="M695 116 Q 695 185 380 185 H 90 Q 75 185 75 130 V 116"/>
+      </g>
+      <path d="M330 30 Q 360 30 360 30" fill="none"/>
+      <text class="soft" x="140" y="84">first content</text>
+      <text class="soft" x="368" y="84">submit()</text>
+      <text class="soft" x="594" y="84">receipt ok</text>
+      <text class="soft" x="240" y="26">editor mutations, any feeder — loops here</text>
+      <text class="soft" x="330" y="152">rejected / transport error → emission intact, error shown</text>
+      <text class="soft" x="240" y="180">retain audio by id · clear() · fresh emission</text>
+    </svg>
+  </div>
+  <div class="note"><b>Queued still clears.</b> A <code>queued</code> receipt is a
+  success: the emission is accepted and now belongs to the <i>target's</i> queue,
+  rendered on the target's strip. The input immediately hosts a fresh emission — it's
+  an instrument, not a mailbox.</div>
+
+  <h2 id="ifaces">The interfaces</h2>
+
+  <div class="iface">
+<pre><code><span class="hl-k">interface</span> <span class="hl-t">Emission</span> {
+  <span class="hl-k">readonly</span> id: <span class="hl-t">EmissionId</span>;
+  <span class="hl-k">readonly</span> text: <span class="hl-t">string</span>;
+  <span class="hl-k">readonly</span> images: <span class="hl-k">readonly</span> <span class="hl-t">ImageAttachment</span>[];
+  <span class="hl-k">readonly</span> pendingImages: <span class="hl-t">number</span>;
+  <span class="hl-k">readonly</span> files: <span class="hl-k">readonly</span> <span class="hl-t">FileAttachment</span>[];
+  <span class="hl-k">readonly</span> selections: <span class="hl-k">readonly</span> <span class="hl-t">Selection</span>[];
+  <span class="hl-k">readonly</span> audio: <span class="hl-t">RetainedAudio</span> | <span class="hl-t">null</span>;
+  <span class="hl-k">readonly</span> origin: <span class="hl-s">"typed"</span> | <span class="hl-s">"voice"</span> | <span class="hl-s">"mixed"</span>;
+}
+
+<span class="hl-c">// all mutation through one surface:</span>
+<span class="hl-k">interface</span> <span class="hl-t">EmissionEditor</span> {
+  setText(text): <span class="hl-t">void</span>;
+  insertAtCursor(text): <span class="hl-t">void</span>;   <span class="hl-c">// [imageN] tokens…</span>
+  addImages(blobs): <span class="hl-t">Promise</span>&lt;<span class="hl-t">void</span>&gt;;
+  addFiles(files): <span class="hl-t">Promise</span>&lt;<span class="hl-t">void</span>&gt;;
+  addSelection(input): <span class="hl-t">void</span>;
+  attachAudio(audio): <span class="hl-t">void</span>;
+  remove(kind, id): <span class="hl-t">void</span>;
+  clear(): <span class="hl-t">void</span>;
+}
+
+<span class="hl-k">function</span> assemble(e: <span class="hl-t">Emission</span>, ctx): <span class="hl-t">AssembledPayload</span>;</code></pre>
+    <aside>
+      <p><b>The id is load-bearing.</b> It's generated at compose time, becomes the
+      <code>messageId</code> the chat already uses, and is the key under which the
+      original audio is retained — so "agent fetches the audio for message X" is one
+      lookup, not a race against a mutable slot.</p>
+      <p><b>One editor.</b> Feeders call it; the attachment panel, selection chips and
+      dictation-recovery widget become plain renderings of emission slices. This
+      replaces six root-owned hooks and the 40-prop bag.</p>
+      <p><b>One <code>assemble()</code>.</b> <code>origin</code> picks the
+      <code>&lt;typed&gt;</code>/<code>&lt;speech&gt;</code> wrapper; selection folding
+      happens in exactly one place. The typed and voice send paths stop being two
+      programs.</p>
+    </aside>
+  </div>
+
+  <div class="iface">
+<pre><code><span class="hl-k">interface</span> <span class="hl-t">Input</span> {
+  <span class="hl-k">readonly</span> emission: <span class="hl-t">Observable</span>&lt;<span class="hl-t">Emission</span>&gt;;
+  <span class="hl-k">readonly</span> editor: <span class="hl-t">EmissionEditor</span>;
+  <span class="hl-k">readonly</span> target: <span class="hl-t">Observable</span>&lt;<span class="hl-t">Target</span>&gt;;
+  aim(target: <span class="hl-t">Target</span>): <span class="hl-t">void</span>;
+  submit(): <span class="hl-t">Promise</span>&lt;<span class="hl-t">Receipt</span>&gt;;
+  <span class="hl-k">readonly</span> feeders: {
+    keyboard; voice; attach; camera; signals;
+  };
+  <span class="hl-k">readonly</span> retained: <span class="hl-t">RetentionStore</span>;
+}
+
+<span class="hl-k">interface</span> <span class="hl-t">VoiceFeeder</span> {
+  <span class="hl-k">readonly</span> profile: <span class="hl-s">"streaming"</span> | <span class="hl-s">"recorded"</span>;
+  <span class="hl-k">readonly</span> state: <span class="hl-t">Observable</span>&lt;<span class="hl-t">VoiceState</span>&gt;;
+  start(); stop(); cancel();
+  <span class="hl-k">readonly</span> intents: <span class="hl-t">Observable</span>&lt;<span class="hl-t">VoiceIntent</span>&gt;;
+    <span class="hl-c">// "submit" | "cancel" | "mic-off" | "erase"</span>
+  coordinate(speaking): <span class="hl-t">Unsubscribe</span>;
+    <span class="hl-c">// THE sanctioned crossing: target speech</span>
+    <span class="hl-c">// pauses the mic (barge-in / turn-taking)</span>
+}</code></pre>
+    <aside>
+      <p><b>One input per person.</b> Its state — the emission, the aim — is frame
+      state: never a card, never in the URL. It persists <i>whole</i> under a
+      singleton key, so photos and selections survive a chat switch, not just text.</p>
+      <p><b>Feeders never send.</b> Saying "send it" makes the voice feeder emit an
+      <i>intent</i>; the input interprets it and calls <code>submit()</code>. The
+      feeder's job ends at feeding and signaling.</p>
+      <p><b>Two voice pipelines, one interface.</b> Streaming transcription (chat
+      today) and record-then-upload (capture today) are genuinely different machines —
+      they stay separate <i>profiles</i> under one API. Unifying interfaces, not
+      internals.</p>
+      <p><b>The keyboard shell escapes.</b> Mobile open/locked/auto-close state is
+      embodiment chrome — it only ever lived in "composerMachine" for lack of a home.</p>
+    </aside>
+  </div>
+
+  <div class="iface">
+<pre><code><span class="hl-k">interface</span> <span class="hl-t">Target</span> {
+  <span class="hl-k">readonly</span> kind: <span class="hl-s">"chat"</span> | <span class="hl-s">"place"</span> | <span class="hl-s">"unaddressed"</span>;
+  <span class="hl-k">readonly</span> status: <span class="hl-t">Observable</span>&lt;
+    | { state: <span class="hl-s">"ready"</span> }
+    | { state: <span class="hl-s">"busy"</span>;
+        disposition: <span class="hl-s">"will-queue"</span> | <span class="hl-s">"will-interrupt"</span> }
+    | { state: <span class="hl-s">"unavailable"</span>; reason }&gt;;
+  <span class="hl-k">readonly</span> pending: <span class="hl-t">Observable</span>&lt;<span class="hl-t">PendingEmission</span>[]&gt;;
+  <span class="hl-k">readonly</span> controls: <span class="hl-t">TargetControl</span>[];  <span class="hl-c">// ← stop lives here</span>
+  <span class="hl-k">readonly</span> speaking?: <span class="hl-t">Observable</span>&lt;<span class="hl-t">SpeechState</span>&gt;;
+  accept(payload): <span class="hl-t">Promise</span>&lt;<span class="hl-t">Receipt</span>&gt;;
+}
+
+<span class="hl-k">type</span> <span class="hl-t">Receipt</span> =
+  | { disposition: <span class="hl-s">"delivered"</span>; emissionId; at }
+  | { disposition: <span class="hl-s">"queued"</span>;    emissionId; at;
+      behind: <span class="hl-s">"turn"</span> }
+  | { disposition: <span class="hl-s">"deposited"</span>; emissionId; at;
+      cardPath: <span class="hl-t">string</span> }   <span class="hl-c">// a deposit's receipt</span>
+                             <span class="hl-c">// is a card address</span>
+  | { disposition: <span class="hl-s">"rejected"</span>;  emissionId; reason };</code></pre>
+    <aside>
+      <p><b>Status is pre-submit truth.</b> The send button renders the acceptor's
+      state: "Send", "Queue", or disabled-with-reason. HTTP figured this out decades
+      ago — 200 vs 202 Accepted — surfaced here at compose time.</p>
+      <p><b>Stop is a target control</b>, rendered on the target's status strip beside
+      the input but across the API line. Submit always means <i>add to the
+      conversation</i>; interruption is only ever the explicit target-side control.
+      A place target simply has no stop, and the input doesn't know the difference.</p>
+      <p><b>Two adapters to start:</b> ChatTarget (wraps send + turn state + interrupt;
+      merges witness context — open card, card activity — at accept, so the composer
+      never sees frame state) and PlaceTarget (wraps today's capture finalize, which
+      already produces an inbox card — hence the receipt with a
+      <code>cardPath</code>). "Unaddressed" is the declared future triage-memo kind.</p>
+    </aside>
+  </div>
+
+  <h2>Four analogies that carry the design</h2>
+  <div class="analogies">
+    <div class="card"><b>An instrument, not a mailbox</b>
+      The input is what you speak through. What's queued belongs to the acceptor;
+      the instrument is immediately free for the next thought.</div>
+    <div class="card"><b>Ctrl-C</b>
+      Interrupt aims at the running process, never at the readline buffer. Stop is
+      the target's control, not a key on the keyboard.</div>
+    <div class="card"><b>HTTP 202 Accepted</b>
+      "Received, will process" is a different answer than "done" — and the UI should
+      say which one you're about to get, before you press send.</div>
+    <div class="card"><b>One microphone</b>
+      You don't have a microphone per conversation. You have one, and you point it —
+      at a chat, at the inbox, or (someday) at "wherever this belongs."</div>
+  </div>
+
+  <h2 id="mapping">Today → tomorrow</h2>
+  <div class="tablewrap">
+  <table>
+    <tr><th>Today (file / mechanism)</th><th>Becomes</th></tr>
+    <tr><td><code>input-store.ts</code> + <code>useComposerDraft</code> + <code>useDictationDraft</code></td>
+        <td>Emission persistence — whole, singleton-keyed (not per-session)</td></tr>
+    <tr><td><code>useChatAttachments</code> / <code>useChatSelections</code></td>
+        <td>EmissionEditor + panels rendering emission slices</td></tr>
+    <tr><td><code>handleSend</code> and <code>buildSpeechMessage</code>/<code>runKeywordSend</code> (two assembly paths)</td>
+        <td>one <code>assemble()</code></td></tr>
+    <tr><td><code>realtimeTranscriptionMachine</code> (+ actor + hook)</td>
+        <td>VoiceFeeder, profile <code>streaming</code></td></tr>
+    <tr><td><code>voiceRecorderMachine</code> (capture)</td>
+        <td>VoiceFeeder, profile <code>recorded</code></td></tr>
+    <tr><td><code>composerMachine.voice</code> region + turn-taking context</td>
+        <td><code>voice.coordinate(target.speaking)</code> — the one sanctioned crossing</td></tr>
+    <tr><td><code>composerMachine.keyboard</code> region (mobile shell)</td>
+        <td>embodiment chrome, out of the API entirely</td></tr>
+    <tr><td><code>composerMachine.hq</code> region (narration HQ pass)</td>
+        <td>inside the streaming profile's finalize</td></tr>
+    <tr><td>keyword callbacks (<code>onKeywordSend</code>…)</td>
+        <td><code>voice.intents</code> — feeders signal, the input decides</td></tr>
+    <tr><td><code>last-audio-cache.ts</code> single slot + loopback routes</td>
+        <td>RetentionStore keyed by emission id (loopback unchanged)</td></tr>
+    <tr><td><code>chat-uploads.ts</code> / <code>file-upload.ts</code></td>
+        <td>AttachFeeder → <code>editor.addFiles</code> (route unchanged)</td></tr>
+    <tr><td>capture pages / api / routes</td>
+        <td>CameraFeeder + PlaceTarget (finalize = accept)</td></tr>
+    <tr><td>SEND event's <code>openCard</code>/<code>cardActivity</code>/<code>cardState</code></td>
+        <td>merged by the ChatTarget adapter — witness-side, composer never sees it</td></tr>
+    <tr><td>stop / interrupt in the composer bar</td>
+        <td>TargetControl on the target strip</td></tr>
+  </table>
+  </div>
+
+  <h2 id="decisions">Decisions, and what they trade away</h2>
+  <div class="cols">
+    <div class="card"><h3>Singleton draft</h3>
+      <p>One emission that travels with you across chats — the boxholder's stated
+      model. <b>Trade:</b> departs from the messaging-app convention of
+      per-conversation drafts. Chosen because the box's input is one person's
+      instrument, not N conversation buffers.</p></div>
+    <div class="card"><h3>Queued clears the input</h3>
+      <p>The queue is the target's, visible on its strip. <b>Trade:</b> you can't
+      edit a queued message from the composer (it's submitted). Chosen so the
+      instrument is always free and "what's pending" has one honest home.</p></div>
+    <div class="card"><h3>Stop moves out</h3>
+      <p>Submit never interrupts; interruption is only the explicit control on the
+      target strip. <b>Trade:</b> one extra visual region beside the input.
+      Chosen to unconflate two unrelated verbs that currently share a surface.</p></div>
+    <div class="card"><h3>One sanctioned crossing</h3>
+      <p>Target speech pauses the mic (barge-in / turn-taking) via
+      <code>coordinate()</code>. <b>Trade:</b> the boundary isn't perfectly airtight.
+      Chosen because pretending otherwise would just hide the wire.</p></div>
+  </div>
+
+  <div class="note" style="margin-top:1.5rem"><b>Where this goes if accepted:</b>
+  staged implementation, first stage pure refactor (Emission + assemble(), doctests, no
+  UI change), then the boundary, then targets/receipts/stop, then singleton persistence
+  (the visible behavior change), capture-as-PlaceTarget last. Full spec:
+  <code>callback-box/docs/plans/input-widget.md</code>.</div>
+
+  <footer>Generated from docs/plans/input-widget.md · worktree interface-as-cards · 2026-07</footer>
+</main>
+
+<script>
+const SCENARIOS = [
+  {
+    name: "Typed send, agent busy",
+    actors: ["You", "Input", "Emission", "ChatTarget", "Chat machine"],
+    steps: [
+      { f:0, t:1, label:"type: “also check the calendar”",
+        note:"<b>Keyboard feeder</b> writes through the editor; the emission accumulates text. Nothing here knows about chat." },
+      { f:3, t:1, label:"status: busy (will-queue)",
+        note:"The agent is mid-turn. The <b>acceptor broadcasts its state</b> — the send button now reads <b>“Queue”</b>. Pre-submit truth, not a surprise afterward." },
+      { f:0, t:1, label:"press ⏎  → submit()",
+        note:"You submit knowingly. The input asks the emission to assemble." },
+      { f:1, t:2, label:"assemble()",
+        note:"<b>One function</b> builds the payload: &lt;typed&gt; wrapper, selections folded in, attachments block appended. The old dual typed/voice paths are gone." },
+      { f:1, t:3, label:"accept(payload)",
+        note:"The only forward channel between input and target." },
+      { f:3, t:4, label:"enqueue behind turn",
+        note:"The ChatTarget adapter owns the relationship with the chat machine — including merging witness context (open card, activity) that the composer never saw." },
+      { f:3, t:1, label:"receipt: queued (behind: turn)",
+        note:"HTTP 202, essentially: accepted for processing. The receipt is explicit about what happened." },
+      { f:1, t:2, label:"clear()",
+        note:"<b>Queued still clears.</b> The queue belongs to the target; the input is an instrument, not a mailbox. You can immediately compose the next thing." },
+      { f:3, t:0, label:"strip: “1 queued” · STOP",
+        note:"The target's status strip shows its queue — and its stop control. When the turn ends, it delivers and the strip clears." },
+    ],
+  },
+  {
+    name: "Voice: “send it” + audio fetch",
+    actors: ["You", "VoiceFeeder", "Emission", "Input", "ChatTarget", "Agent"],
+    steps: [
+      { f:0, t:1, label:"speak…",
+        note:"The <b>streaming profile</b>: mic audio flows over a websocket to realtime transcription." },
+      { f:1, t:2, label:"interim + committed transcript",
+        note:"The feeder writes transcript into the emission as it firms up. If you select text in a card while speaking, the selection anchors to your last words — same emission." },
+      { f:0, t:1, label:"“…send it”",
+        note:"Keyword detected. But the feeder does not send —" },
+      { f:1, t:2, label:"finalize · attachAudio(blob)",
+        note:"The recording is attached to the emission itself: the audio and the message it became share an id." },
+      { f:1, t:3, label:"intent: submit",
+        note:"<b>Feeders signal intents; the input decides.</b> “Send it”, “cancel”, “mic off”, “erase” are the whole intent vocabulary." },
+      { f:3, t:4, label:"accept(assemble → ⟨speech⟩)",
+        note:"Same assemble() as typing — origin: voice just selects the ⟨speech⟩ wrapper." },
+      { f:4, t:3, label:"receipt: delivered",
+        note:"Immediate this time — the target was ready." },
+      { f:3, t:3, label:"retain(audio, id) · clear()",
+        note:"On acceptance the audio moves to <b>retention, keyed by the emission id</b> — no more single slot clobbered by the next send." },
+      { f:5, t:3, label:"(later) request original audio",
+        note:"The agent runs <code>cb chat get-last-audio</code>. The loopback mechanism is unchanged — only the storage got an identity." },
+      { f:3, t:5, label:"retained.fetch(id) → blob",
+        note:"“Last audio” is now just the degenerate case of “this message's audio” — the agent already holds the messageId." },
+    ],
+  },
+  {
+    name: "Re-aim: chat → chat → inbox",
+    actors: ["You", "Input", "Chat A", "Chat B", "Inbox (place)"],
+    steps: [
+      { f:0, t:1, label:"2 photos + half a note",
+        note:"Aimed at Chat A. The emission holds images and text together — one thing." },
+      { f:0, t:1, label:"switch chat → aim(Chat B)",
+        note:"<b>The emission is untouched.</b> Today this loses your photos and selections (only typed text survives, and only per-session). The singleton fixes it by construction." },
+      { f:0, t:1, label:"“nothing to discuss” → aim(Inbox)",
+        note:"Re-aiming across <b>target kinds</b>: from an interlocutor to a place. Capture stops being a separate app — it's the same instrument pointed at a directory." },
+      { f:0, t:1, label:"submit()",
+        note:"Same button, different acceptor." },
+      { f:1, t:4, label:"accept(deposit)",
+        note:"The PlaceTarget wraps today's capture apparatus — session, upload, finalize." },
+      { f:4, t:1, label:"receipt: deposited { cardPath }",
+        note:"<b>A deposit's receipt is a card address</b> — box/inbox/….capture-session.card. The toast links straight to it. Interface-as-cards and the input meet here." },
+    ],
+  },
+  {
+    name: "Stop is not send",
+    actors: ["You", "Input", "Target strip", "ChatTarget"],
+    steps: [
+      { f:3, t:2, label:"status: busy → STOP appears",
+        note:"The strip is the target's UI, rendered beside the input but owned across the boundary." },
+      { f:0, t:2, label:"click STOP",
+        note:"Aimed at the running process, not the keyboard — the Ctrl-C precedent. The input is not involved and never was." },
+      { f:2, t:3, label:"controls.stop → interrupt turn",
+        note:"Interruption is only ever this explicit control. Submitting never interrupts; mid-turn submits queue." },
+      { f:3, t:1, label:"status: ready",
+        note:"The submit affordance reads “Send” again. Two verbs, two surfaces, zero conflation." },
+    ],
+  },
+];
+
+let scenario = 0, step = -1;
+const tabs = document.getElementById("tabs");
+const heads = document.getElementById("laneHeads");
+const body = document.getElementById("laneBody");
+const caption = document.getElementById("caption");
+const pos = document.getElementById("pos");
+
+SCENARIOS.forEach((s, i) => {
+  const b = document.createElement("button");
+  b.textContent = s.name;
+  b.onclick = () => { scenario = i; step = -1; render(); };
+  tabs.appendChild(b);
+});
+
+function render() {
+  const s = SCENARIOS[scenario];
+  [...tabs.children].forEach((b, i) => b.classList.toggle("active", i === scenario));
+  const n = s.actors.length;
+  heads.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
+  heads.innerHTML = "";
+  const hot = new Set();
+  if (step >= 0) { hot.add(s.steps[step].f); hot.add(s.steps[step].t); }
+  s.actors.forEach((a, i) => {
+    const d = document.createElement("div");
+    d.className = "lane-head" + (hot.has(i) ? " hot" : "");
+    d.textContent = a;
+    heads.appendChild(d);
+  });
+  body.innerHTML = "";
+  const colW = 100 / n;
+  const guides = document.createElement("div");
+  guides.style.cssText = "position:absolute;inset:0;pointer-events:none";
+  for (let i = 0; i < n; i++) {
+    const g = document.createElement("div");
+    g.className = "guide";
+    g.style.left = (colW * i + colW / 2) + "%";
+    guides.appendChild(g);
+  }
+  body.appendChild(guides);
+  s.steps.forEach((m, i) => {
+    const row = document.createElement("div");
+    row.className = "msg" + (i <= step ? " shown" : "") + (i === step ? " current" : "");
+    const a = colW * m.f + colW / 2, b = colW * m.t + colW / 2;
+    const left = Math.min(a, b), width = Math.abs(b - a);
+    const wire = document.createElement("div");
+    if (m.f === m.t) {
+      wire.className = "wire self";
+      wire.style.cssText = `left:${a}%;width:0`;
+    } else {
+      wire.className = "wire " + (b > a ? "r" : "l");
+      wire.style.cssText = `left:${left}%;width:${width}%`;
+    }
+    const lab = document.createElement("div");
+    lab.className = "mlabel";
+    lab.style.left = (m.f === m.t ? a : left + width / 2) + "%";
+    lab.textContent = m.label;
+    row.appendChild(wire); row.appendChild(lab);
+    body.appendChild(row);
+  });
+  caption.innerHTML = step < 0
+    ? "Press <b>Next</b> to walk the flow."
+    : s.steps[step].note;
+  pos.textContent = `${Math.max(step + 1, 0)} / ${s.steps.length}`;
+}
+document.getElementById("next").onclick = () => {
+  if (step < SCENARIOS[scenario].steps.length - 1) { step++; render(); }
+};
+document.getElementById("back").onclick = () => { if (step > -1) { step--; render(); } };
+document.getElementById("restart").onclick = () => { step = -1; render(); };
+document.addEventListener("keydown", (e) => {
+  if (e.key === "ArrowRight") document.getElementById("next").click();
+  if (e.key === "ArrowLeft") document.getElementById("back").click();
+});
+render();
+</script>
+</body>
+</html>
