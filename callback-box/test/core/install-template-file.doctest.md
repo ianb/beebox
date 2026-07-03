@@ -237,6 +237,79 @@ result.outcome
 => unchanged
 ```
 
+## Box-owned fields — a toggle doesn't freeze the box on old content
+
+Some card templates have fields the box owns as per-box *state* rather than definition — the canonical case is a schedule's `enabled`. `boxOwnedFields` strips those before the customised-or-not comparison, so a box that only toggled `enabled` still reads as unmodified stock and takes a definition update, with its own `enabled` carried onto the new version.
+
+A box installs a schedule, disables it, then upstream ships a new definition:
+
+```ts
+const box = await makeBox();
+const rel = "config/schedules/s.scheduled-script.card";
+const v1 = "---\nruns: cb sync\ndescription: v1\n---\n";
+await installTemplateFile({ boxRoot: box, relPath: rel, templateContent: v1 });
+// Box disables it (adds enabled: false), touching nothing else:
+await fs.writeFile(path.join(box, rel), "---\nruns: cb sync\ndescription: v1\nenabled: false\n---\n");
+const v2 = "---\nruns: cb sync\ndescription: v2\n---\n";
+const result = await installTemplateFile({
+  boxRoot: box,
+  relPath: rel,
+  templateContent: v2,
+  boxOwnedFields: ["enabled"],
+});
+result.outcome
+=> overwritten
+```
+
+The box now has the new definition (`v2`) with its own `enabled: false` preserved — not parked, not re-enabled:
+
+```ts continue
+await fs.readFile(path.join(box, rel), "utf-8")
+=>
+---
+runs: cb sync
+description: v2
+enabled: false
+---
+```
+
+But an edit *beyond* the owned fields still parks — the box's real customization is never clobbered:
+
+```ts
+const box = await makeBox();
+const rel = "config/schedules/s.scheduled-script.card";
+const v1 = "---\nruns: cb sync\ndescription: v1\n---\n";
+await installTemplateFile({ boxRoot: box, relPath: rel, templateContent: v1 });
+// Box disables AND retimes it (edits the definition):
+await fs.writeFile(path.join(box, rel), "---\nruns: cb sync --fast\ndescription: v1\nenabled: false\n---\n");
+const result = await installTemplateFile({
+  boxRoot: box,
+  relPath: rel,
+  templateContent: "---\nruns: cb sync\ndescription: v2\n---\n",
+  boxOwnedFields: ["enabled"],
+});
+result.outcome
+=> parked
+```
+
+When the box is already on current content and only differs by the toggle, it's `unchanged` — the box keeps its `enabled`, nothing is rewritten:
+
+```ts
+const box = await makeBox();
+const rel = "config/schedules/s.scheduled-script.card";
+const v = "---\nruns: cb sync\ndescription: v1\n---\n";
+await installTemplateFile({ boxRoot: box, relPath: rel, templateContent: v });
+await fs.writeFile(path.join(box, rel), "---\nruns: cb sync\ndescription: v1\nenabled: false\n---\n");
+const result = await installTemplateFile({
+  boxRoot: box,
+  relPath: rel,
+  templateContent: v,
+  boxOwnedFields: ["enabled"],
+});
+result.outcome
+=> unchanged
+```
+
 ## Pruning stale parked files
 
 `pruneStaleTemplateUpdates` deletes files in `config/_template-updates/` older than the threshold (default 30 days). Recent parks are left alone. Each mirror has its on-disk target present (the realistic case — a mirror is only ever parked because an on-disk copy diverged), so only *age* decides removal here:

@@ -19,12 +19,22 @@
  * — guides, personality), pass a `normalize` function. Hashing the
  * normalized form makes "did the user edit it" comparison stable
  * across reinstalls that only differ in timestamp.
+ *
+ * For card templates with fields the box owns as per-box STATE rather than
+ * definition (a schedule's `enabled` toggle), pass `boxOwnedFields`. Those keys
+ * are stripped before the customised-or-not comparison — so a box that only
+ * flipped `enabled` still reads as unmodified stock and takes definition
+ * updates — and the box's own values for them are carried onto the written
+ * template. See `TemplateMergePolicy` in `src/cards/schema.ts`, which is how a
+ * schema declares them.
  */
 
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { splitCardContent } from "../cards/index.js";
 
 const VERSIONS_FILE = "config/template-versions.json";
 const TEMPLATE_UPDATES_DIR = "config/_template-updates";
@@ -58,8 +68,22 @@ export interface InstallTemplateOptions {
    * installed create-if-missing before adopting the tracker. A local file
    * matching none of them (and lacking a recorded hash) is treated as
    * user-edited and parked.
+   *
+   * These hashes are of the CANONICAL form — normalized and with any
+   * {@link boxOwnedFields} stripped — so they still recognise a box that has
+   * only toggled a box-owned field.
    */
   priorStockHashes?: string[];
+  /**
+   * Frontmatter keys the box owns as per-box state rather than template
+   * definition (a schema's {@link TemplateMergePolicy.boxOwnedFields}; the
+   * canonical case is a schedule's `enabled`). They are stripped before every
+   * hash comparison — so a box copy that differs from stock ONLY in these keys
+   * still reads as unmodified and takes the update — and the box's own values
+   * for them are carried onto the template when it's written. Divergence in any
+   * other key or the body still parks. Empty/omitted = strict whole-file match.
+   */
+  boxOwnedFields?: readonly string[];
 }
 
 export type InstallOutcome =
@@ -77,6 +101,65 @@ export interface InstallResult {
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
+}
+
+/** Parse a card's frontmatter into an object + body, or null if it isn't a card. */
+function parseCard(content: string): { fm: Record<string, unknown>; body: string } | null {
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return null;
+  const parsed = parseYaml(split.frontmatterText) as unknown;
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return { fm: parsed as Record<string, unknown>, body: split.body };
+}
+
+function serializeCard(fm: Record<string, unknown>, body: string): string {
+  return `---\n${stringifyYaml(fm)}---\n${body}`;
+}
+
+/**
+ * Drop box-owned frontmatter keys for the divergence decision (hashing only,
+ * never written). A box that has only toggled such a key thus hashes the same
+ * as the stock it came from. No-ops when there are no owned fields or the
+ * content isn't a card.
+ */
+function stripBoxOwnedFields(content: string, fields: readonly string[]): string {
+  if (fields.length === 0) return content;
+  const card = parseCard(content);
+  if (card === null) return content;
+  for (const f of fields) delete card.fm[f];
+  // Always re-serialize (not only when a key was dropped) so both sides of a
+  // comparison pass through identical YAML normalization — the box's copy and
+  // the freshly-generated template then hash the same modulo owned fields,
+  // regardless of incidental frontmatter formatting differences.
+  return serializeCard(card.fm, card.body);
+}
+
+/**
+ * Carry the box's values for box-owned keys onto the upstream template — so a
+ * definition update is applied while the box keeps its own state (e.g. its
+ * `enabled` toggle). A key absent from the box is removed from the result (the
+ * box chose the template default). No-ops when there are no owned fields or
+ * either side isn't a card.
+ */
+function applyBoxOwnedFields(
+  { upstream, box }: { upstream: string; box: string },
+  fields: readonly string[],
+): string {
+  if (fields.length === 0) return upstream;
+  const up = parseCard(upstream);
+  const bx = parseCard(box);
+  if (up === null || bx === null) return upstream;
+  let changed = false;
+  for (const f of fields) {
+    if (f in bx.fm) {
+      if (!(f in up.fm) || !Object.is(up.fm[f], bx.fm[f])) changed = true;
+      up.fm[f] = bx.fm[f];
+    } else if (f in up.fm) {
+      delete up.fm[f];
+      changed = true;
+    }
+  }
+  return changed ? serializeCard(up.fm, up.body) : upstream;
 }
 
 async function fileExists(absPath: string): Promise<boolean> {
@@ -148,6 +231,13 @@ async function writeVersions(boxRoot: string, versions: VersionsFile): Promise<v
 export async function installTemplateFile(opts: InstallTemplateOptions): Promise<InstallResult> {
   const { boxRoot, relPath, templateContent } = opts;
   const normalize = opts.normalize ?? ((s) => s);
+  const boxOwnedFields = opts.boxOwnedFields ?? [];
+  // Canonical form for every hash comparison: normalized (volatile fields out)
+  // AND box-owned state stripped, so a box that only toggled an owned field
+  // still hashes as the stock it came from. When neither applies this is just
+  // the raw content, so existing callers are unaffected.
+  const canonicalize = (content: string): string =>
+    stripBoxOwnedFields(normalize(content), boxOwnedFields);
   const targetAbs = path.join(boxRoot, relPath);
 
   await fs.mkdir(path.dirname(targetAbs), { recursive: true });
@@ -160,7 +250,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     if (err.code !== "ENOENT") throw e;
   }
 
-  const templateHash = sha256(normalize(templateContent));
+  const templateHash = sha256(canonicalize(templateContent));
 
   if (localContent === null) {
     await fs.writeFile(targetAbs, templateContent);
@@ -171,7 +261,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     return { outcome: "fresh", writtenAt: relPath };
   }
 
-  const localHash = sha256(normalize(localContent));
+  const localHash = sha256(canonicalize(localContent));
 
   // Local is already what we'd write — no-op (avoids dirtying the working
   // tree on every install with no semantic change).
@@ -198,7 +288,11 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
     (lastInstalledHash !== undefined && lastInstalledHash === localHash)
     || priorStockHashes.includes(localHash)
   ) {
-    await fs.writeFile(targetAbs, templateContent);
+    // Write the new definition, but carry over any box-owned state (e.g. the
+    // box's `enabled` toggle) so updating the schedule doesn't silently
+    // re-enable/disable it. With no owned fields this is the template verbatim.
+    const merged = applyBoxOwnedFields({ upstream: templateContent, box: localContent }, boxOwnedFields);
+    await fs.writeFile(targetAbs, merged);
     versions[relPath] = { sha256: templateHash, "installed-at": new Date().toISOString() };
     await writeVersions(boxRoot, versions);
     await removeParkedMirror(boxRoot, relPath);
@@ -216,7 +310,10 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   // template and overwrite cleanly.
   const updateAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, relPath);
   await fs.mkdir(path.dirname(updateAbs), { recursive: true });
-  await fs.writeFile(updateAbs, templateContent);
+  // Park the new definition carrying the box's owned state, so copying the
+  // mirror into place to accept keeps that state. With no owned fields this is
+  // the template verbatim.
+  await fs.writeFile(updateAbs, applyBoxOwnedFields({ upstream: templateContent, box: localContent }, boxOwnedFields));
   return { outcome: "parked", writtenAt: path.relative(boxRoot, updateAbs) };
 }
 

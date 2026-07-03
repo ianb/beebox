@@ -121,6 +121,50 @@ There is intentionally **no box-aware validate variant** today — if you find
 yourself wanting one (resolve a ref, inspect another card), raise it rather than
 smuggling box access in; the self-contained shape is the deliberate contract.
 
+#### Box-owned state on *template* cards — the `templateMerge` policy
+
+Only relevant if your card type is one callback-box **ships and updates as a
+template** (procedures, guides, schedules — the things `cb init` installs and
+later re-syncs). Box-local schemas and ordinary authored cards never install as
+templates, so they don't need this.
+
+The default sync rule is strict: when an upstream template changes, a box gets
+the new version only if its copy is unmodified stock; if the box edited the
+card **at all**, the update is parked in `config/_template-updates/` for review
+rather than clobbering the edit. That's usually right — but some fields are
+per-box **state**, not part of the definition, and a change to one shouldn't
+freeze the box on old content. The canonical case is a schedule's `enabled`: a
+box turning a schedule off for itself should still receive later definition
+updates (new cron, runs, description), not have the whole card park forever.
+
+Declare those keys as box-owned with `templateMerge`:
+
+```ts
+export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", {
+  fields: { /* ... enabled: z.boolean().optional(), ... */ },
+  templateMerge: { boxOwnedFields: ["enabled"] },
+});
+```
+
+Effect on the sync:
+
+- The owned keys are **stripped before** the customised-or-not comparison, so a
+  box differing from stock *only* in them still reads as unmodified and takes
+  the update.
+- The box's own values for those keys are **carried onto** the new version when
+  it's written (the schedule stays disabled).
+- Divergence in **any other key or the body** still parks — a retimed `cron` or
+  edited `runs` is a real customization and is never overwritten.
+
+It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
+judgement that matters — "is this box on unmodified old stock, or did the
+boxholder edit the definition?" — needs the last-shipped hash, which lives in
+the version tracker (`config/template-versions.json`), not in the two card
+texts. A free callback couldn't see that and would have to either clobber real
+edits or freeze old stock. Naming which keys are *state* lets the tracker keep
+making that call correctly. (Implementation: `boxOwnedFields` on
+`installTemplateFile`, `src/core/install-template-file.ts`.)
+
 ### 2. Register in `src/schemas/registry.ts`
 
 ```ts
