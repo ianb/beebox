@@ -525,23 +525,37 @@ interface Player {            // the target's long-form speech, seekable
 }
 ```
 
-Mode transitions — **pause is the gate**:
+Mode transitions — **pause is just pause; conversation is always
+explicit** (boxholder correction 2026-07): in listening posture a pause
+is most likely about the room — an external interruption — not a desire
+to talk. Paused stays mic-cold. Entering conversation is a deliberate
+act from paused (or a combined "pause-and-talk" control from playing);
+it never happens automatically.
 
 ```
-     LISTENING (playing)          LISTENING (paused)           CONVERSATION
-     mic cold · seekable   pause   mic armed · input     speak  mic hot · barge-in
-     input parked         ──────▶  available            ──────▶ player yields,
-          ▲                         │ resume                    position kept
-          └─────────────────────────┘                   ◀────── return / done
+   LISTENING (playing) ──pause──▶ LISTENING (paused) ──"talk" (explicit)──▶ CONVERSATION
+     mic cold · seekable            still mic cold                          mic hot · barge-in
+     input parked                     │ resume                              player yields;
+          ▲                           │                                     playback marker
+          └───────────────────────────┘                        ◀─────────── rides the emission
+     (optional combined control: pause-and-talk, one gesture from playing)
 ```
 
-Speaking while paused is the intent to converse; the player yields with
-its position retained for return. This also completes a symmetry the
-design half-built: the emission's audio gets identity + retention —
-listening mode wants the same for **received** speech (utterance retained
-with transcript), so rewind is a fetch, not a regret. Implementation-wise
-the Player hangs off the target (it is the target's output surface, like
-the status strip), and `InteractionMode` is frame state.
+**The playback marker is selection-shaped.** Entering conversation from
+listening drops a marker into the emission through the same
+`addSelection` path a card selection uses: `ref` = the retained
+utterance, `text` = the last words before the pause, `position` = the
+playback timestamp. The question you then ask automatically carries
+"asked at 12:34, after '…'," which is what the agent needs to answer a
+"wait, what did you mean there?" without re-explanation.
+
+This also completes a symmetry the design half-built: the emission's
+audio gets identity + retention — listening mode wants the same for
+**received** speech (utterance retained with transcript), so rewind is a
+fetch, not a regret, and playback markers have something real to point
+at. Implementation-wise the Player hangs off the target (it is the
+target's output surface, like the status strip), and `InteractionMode`
+is frame state.
 
 ## Open questions
 
