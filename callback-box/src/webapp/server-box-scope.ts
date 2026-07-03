@@ -19,7 +19,6 @@ import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerClerkRoutes } from "./routes/clerk.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
-import { registerBoxAdminRoutes } from "./routes/admin.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
@@ -171,16 +170,9 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerHistoryRoutes(instance, box.boxRoot);
   await registerSchedulerRoutes(instance, box.boxRoot);
   await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
-  // Wrap box admin routes in their own sub-scope so the owner-check
-  // preHandler (added by addOwnerCheck inside registerBoxAdminRoutes)
-  // is encapsulated to /api/admin/* only, not every per-box route.
-  // Without this sub-scope, the owner check bleeds out over the whole
-  // per-box instance and makes allowedEmails dead code (anyone who
-  // isn't the owner would be rejected by addOwnerCheck on any request).
-  // Mirrors the pattern used for registerSystemAdminRoutes at the root.
-  await instance.register(async (adminScope) => {
-    await registerBoxAdminRoutes(adminScope, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
-  });
+  // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
+  // behind ownerProcedure; only the OAuth redirect callback stays a raw route
+  // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
   await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });

@@ -8,7 +8,7 @@
  */
 
 import { setup, assign, fromPromise, fromCallback } from "xstate";
-import { withBase } from "../api";
+import { trpcClient } from "../lib/trpc";
 import { RequestError } from "../lib/errors";
 
 interface ClaudeStatus {
@@ -34,51 +34,30 @@ type ClaudeAuthEvent =
 
 // -- Actors --
 
-const fetchStatus = fromPromise(async () => {
-  const resp = await fetch(withBase("/api/admin/claude-status"));
-  if (!resp.ok) {
-    const message = `Status check failed: ${resp.status}`;
-    throw new RequestError(message);
-  }
-  return (await resp.json()) as ClaudeStatus;
+const fetchStatus = fromPromise<ClaudeStatus>(async () => {
+  return trpcClient.admin.claudeStatus.query();
 });
 
 const startLogin = fromPromise(async () => {
-  const resp = await fetch(withBase("/api/admin/claude-login"), { method: "POST" });
-  if (!resp.ok) {
-    const data = await resp.json().catch(() => ({ error: resp.statusText }));
-    throw new RequestError(data.error || "Login failed");
-  }
-  const result = (await resp.json()) as { authUrl?: string; error?: string };
-  if (!result.authUrl) {
-    throw new RequestError(result.error || "No auth URL received");
-  }
-  return result.authUrl;
+  // claudeLogin throws on failure and always returns a non-empty authUrl.
+  const { authUrl } = await trpcClient.admin.claudeLogin.mutate();
+  return authUrl;
 });
 
-const doLogout = fromPromise(async () => {
-  const resp = await fetch(withBase("/api/admin/claude-logout"), { method: "POST" });
-  const data = await resp.json();
-  if (!data.success) {
-    throw new RequestError(data.error || "Logout failed");
+const doLogout = fromPromise<ClaudeStatus>(async () => {
+  const result = await trpcClient.admin.claudeLogout.mutate();
+  if (!result.success) {
+    throw new RequestError(result.error || "Logout failed");
   }
-  // Fetch fresh status after logout
-  const statusResp = await fetch(withBase("/api/admin/claude-status"));
-  if (!statusResp.ok) {
-    const message = `Status check failed: ${statusResp.status}`;
-    throw new RequestError(message);
-  }
-  return (await statusResp.json()) as ClaudeStatus;
+  // Fetch fresh status after logout.
+  return trpcClient.admin.claudeStatus.query();
 });
 
 const pollForLogin = fromCallback(({ sendBack }) => {
   const id = setInterval(async () => {
     try {
-      const resp = await fetch(withBase("/api/admin/claude-status"));
-      if (resp.ok) {
-        const status = (await resp.json()) as ClaudeStatus;
-        sendBack({ type: "POLL_RESULT", status });
-      }
+      const status = await trpcClient.admin.claudeStatus.query();
+      sendBack({ type: "POLL_RESULT", status });
     } catch (_e) {
       // Transient poll failure (network/offline); the interval retries every
       // 3s, so logging each miss would just spam.

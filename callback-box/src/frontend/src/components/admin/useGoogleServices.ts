@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { RequestError } from "../../lib/errors";
+import { trpcClient } from "../../lib/trpc";
 
 export interface GoogleStatus {
   available: boolean;
@@ -31,7 +31,7 @@ function errorMessage(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
-export function useGoogleServices(apiBase: string): GoogleServicesState {
+export function useGoogleServices(): GoogleServicesState {
   const [status, setStatus] = useState<GoogleStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,12 +42,7 @@ export function useGoogleServices(apiBase: string): GoogleServicesState {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const resp = await fetch(`${apiBase}/admin/google-status`);
-      if (!resp.ok) {
-        const message = `Status check failed: ${resp.status}`;
-        throw new RequestError(message);
-      }
-      const data: GoogleStatus = await resp.json();
+      const data = await trpcClient.admin.googleStatus.query();
       setStatus(data);
       setError(null);
       return data;
@@ -55,7 +50,7 @@ export function useGoogleServices(apiBase: string): GoogleServicesState {
       setError(errorMessage(err));
       return null;
     }
-  }, [apiBase]);
+  }, []);
 
   // Mount-only fetch.
 
@@ -88,15 +83,7 @@ export function useGoogleServices(apiBase: string): GoogleServicesState {
     setSuccessMessage(null);
 
     try {
-      const resp = await fetch(`${apiBase}/admin/google-setup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: "{}",
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new RequestError(data.error || "Setup failed");
-      }
+      const data = await trpcClient.admin.googleSetup.mutate({});
       window.location.href = data.authUrl;
     } catch (err) {
       setError(errorMessage(err));
@@ -110,11 +97,7 @@ export function useGoogleServices(apiBase: string): GoogleServicesState {
     setSuccessMessage(null);
 
     try {
-      const resp = await fetch(`${apiBase}/admin/google-disconnect`, { method: "POST" });
-      const data = await resp.json();
-      if (!data.success) {
-        throw new RequestError(data.error || "Disconnect failed");
-      }
+      await trpcClient.admin.googleDisconnect.mutate();
       await fetchStatus();
     } catch (err) {
       setError(errorMessage(err));
@@ -130,15 +113,7 @@ export function useGoogleServices(apiBase: string): GoogleServicesState {
 
     const updated = { ...status.enabledServices, [service]: enabled };
     try {
-      const resp = await fetch(`${apiBase}/admin/box-config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ googleServices: updated }),
-      });
-      const data = await resp.json();
-      if (!data.success) {
-        throw new RequestError(data.error || "Failed to save service settings");
-      }
+      await trpcClient.admin.updateBoxConfig.mutate({ googleServices: updated });
       setStatus({ ...status, enabledServices: updated });
     } catch (err) {
       setError(errorMessage(err));

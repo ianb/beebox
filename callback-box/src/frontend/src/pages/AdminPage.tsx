@@ -5,7 +5,6 @@
 
 import { useParams } from "@tanstack/react-router";
 import { href } from "../lib/routing";
-import { getApiBase } from "../api.js";
 import { ClaudeCodeSection } from "../components/admin/ClaudeCodeSection";
 import { AllowedEmailsSection } from "../components/admin/AllowedEmailsSection";
 import { GoogleServicesSection } from "../components/admin/GoogleServicesSection";
@@ -18,7 +17,6 @@ import { TextLink } from "../components/ui/TextLink";
 
 export function AdminPage() {
   const { boxSlug } = useParams({ strict: false });
-  const apiBase = getApiBase();
 
   return (
     <Column overflow="auto" className="h-full">
@@ -31,10 +29,10 @@ export function AdminPage() {
 
         <Stack gap="lg">
           <ClaudeCodeSection />
-          <AllowedEmailsSection apiBase={apiBase} />
-          <GoogleServicesSection apiBase={apiBase} />
+          <AllowedEmailsSection />
+          <GoogleServicesSection />
           <GmailFiltersSection />
-          <TelegramSection apiBase={apiBase} />
+          <TelegramSection />
         </Stack>
       </Stack>
     </Column>
