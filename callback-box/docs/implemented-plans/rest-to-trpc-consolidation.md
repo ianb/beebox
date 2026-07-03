@@ -1,5 +1,28 @@
 # REST → tRPC route consolidation
 
+## Status — implemented 2026-07-03
+
+All tracks shipped (see the `feat(trpc)` / `refactor(*)` commits). Notes on where
+execution diverged from the plan below:
+
+- **Track 0** landed as designed: `ownerProcedure`/`authedProcedure` in `trpc.ts`
+  + the request user threaded into `createContext` (`server-box-scope.ts`).
+- **Track 1** — the twin-backed dedup — completed; admin, debug-log (with the
+  per-box + rolling-file parity the plan flagged), calendar/api/commands/history
+  dead routes all done.
+- **Track 2** — the chat control-plane's 7 registry-bound endpoints were the one
+  real fork: the plan assumed all-JSON, but they need the live per-box
+  `ChatSessionRegistry`/`ChatScheduleManager`. Chosen resolution: a boxRoot-keyed
+  accessor (`webapp/chat-runtime.ts`) that exposes them to tRPC, migrating all 11.
+- **Track 3 (clerk)** shipped, incl. the `callback-clerk` extension calling tRPC
+  over its plain HTTP transport. A codex review caught two regressions fixed
+  before merge: the extension POST's **CORS preflight** (a root `onRequest`
+  short-circuit now answers it) and the **debug-log diagnostic bypass**
+  (re-whitelisted at `/api/trpc/debugLog.get`).
+- **Track 4** — stale SSE naming purged.
+
+The rest of this document is the original plan, preserved as the design record.
+
 Retire the duplicated raw Fastify routes in `src/webapp/routes/` in favour of
 their tRPC equivalents, so each endpoint has one implementation. The end state:
 raw Fastify is used **only** for non-JSON bytes (file/image/audio upload &
