@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Split captured-page commentary and converge saved-page records onto the
  * `.webpage.card` type.
@@ -41,7 +41,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 
 /** Split a card's frontmatter (parsed YAML) from its markdown body. */
 function splitCard(raw: string): { fm: Record<string, unknown>; body: string } {
-  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  const m = raw.match(/^---\r?\n([\S\s]*?)\r?\n---\r?\n?([\S\s]*)$/);
   if (m === null) return { fm: {}, body: raw };
   const parsed: unknown = parseYaml(m[1] ?? "");
   return { fm: isRecord(parsed) ? parsed : {}, body: m[2] ?? "" };
@@ -94,10 +94,10 @@ function firstHttpRef(sources: unknown): string | null {
  * too. Returns null when there's no such line.
  */
 function bodyProvenance(body: string): { source: string; captured: string | undefined; remarks: string } | null {
-  const link = body.match(/\[[^\]]*\]\((https?:\/\/[^)\s]+)\)/);
+  const link = body.match(/\[[^\]]*]\((https?:\/\/[^\s)]+)\)/);
   if (link === null) return null;
   const captured = body.match(/captured\s+(\S+)/);
-  const remarks = body.replace(/^[^\n]*\[[^\]]*\]\((?:https?:\/\/[^)\s]+)\)[^\n]*\n+/, "");
+  const remarks = body.replace(/^[^\n]*\[[^\]]*]\(https?:\/\/[^\s)]+\)[^\n]*\n+/, "");
   return { source: link[1] ?? "", captured: captured === null ? undefined : captured[1], remarks };
 }
 

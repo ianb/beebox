@@ -43,8 +43,6 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
     experiments: (fields.experiments ?? []).map((e) => ({
       id: e.id,
       status: e.status,
-      createdAt: e["created-at"],
-      updatedAt: e["updated-at"],
       hypothesis: e.hypothesis,
       approach: e.approach,
       observations: (e.observations ?? []).map((o) => ({
@@ -62,7 +60,6 @@ export function parseGuide(fields: GuideFields): ParsedGuide {
     contextNotes: (fields["context-notes"] ?? []).map((c) => ({
       text: c.text,
       duration: c.duration,
-      addedAt: c["added-at"],
     })),
   };
 }

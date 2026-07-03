@@ -7,7 +7,12 @@
 // ratcheted via eslint-suppressions.json, not by disabling rules.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
-  ...vibeCheck({ react: false, ignores: ["src/frontend/**", "**/*.mjs"] }),
+  // `roots` extends the reviewed ruleset to first-party tooling under scripts/
+  // (migrators etc.), which otherwise falls through to eslint-config-agent's
+  // harsher global base — same rules as src/, not a weakening. See the per-edit
+  // lint hook: this is what stops it flagging scripts with rules src/ is held to
+  // deliberately (and `lint` below now covers scripts/ too).
+  ...vibeCheck({ react: false, roots: ["src", "scripts"], ignores: ["src/frontend/**", "**/*.mjs"] }),
   {
     rules: {
       "max-params": ["error", 2],

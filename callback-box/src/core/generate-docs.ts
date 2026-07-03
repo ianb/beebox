@@ -28,7 +28,7 @@ import {
   installBriefing,
   installSchedules,
 } from "./box.js";
-import { installSchemasGuide } from "./box-templates.js";
+import { installSchemasGuide, installViewsGuide } from "./box-templates.js";
 import { pruneStaleTemplateUpdates } from "./install-template-file.js";
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
@@ -37,6 +37,7 @@ import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./genera
 import { generateCbCommands } from "./generate-docs-cb-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "./generate-docs-content.js";
 import { generateProcedureGuide } from "./generate-docs-procedure-guide.js";
+import { generateTriageGuide } from "./generate-docs-triage.js";
 import {
   scanProcedures,
   compileBriefings,
@@ -191,6 +192,10 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
   // Briefing cards (root + any subdirectory)
   await check(join(boxRoot, "briefing.briefing.card"));
 
+  // Person cards — a `boxholder: true` flag feeds the compiled personality's
+  // boxholder identity line, so editing one must invalidate the doc cache.
+  await checkDir(join(boxRoot, "people"), /\.person\.card$/);
+
   // Per-chat guide cards
   await checkChatGuideMtimes(boxRoot, check);
 
@@ -242,6 +247,8 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/.+\.(?:personality|orig-personality)\.card$/,
   /^config\/_template-updates\/.+$/,
   /^config\/schemas\/CLAUDE\.md$/,
+  /^config\/cb-validate\.ignore$/,
+  /^views\/CLAUDE\.md$/,
   /^briefing\.(?:briefing|orig-briefing)\.card$/,
   /^briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
@@ -276,6 +283,10 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   // just on an explicit `cb init`). Tracker-based, so user-edited guides are
   // parked, not clobbered.
   await installSchemasGuide(boxRoot);
+  // Same tracker treatment for the views guide, so boxes carrying the old
+  // standalone-view guide pick up the attach-to-cards rewrite on the normal
+  // cycle (not just an explicit `cb init`); user-edited guides are parked.
+  await installViewsGuide(boxRoot);
   await generateRules(boxRoot);
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
@@ -367,6 +378,8 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
       withDocId({ relativePath: `${DOCS_DIR}/reducing-claude-md.md`, content: generateReducingClaudeMdDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "triage.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/triage.md`, content: generateTriageGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
       withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
     // Per-schema generated docs: each frontmatter schema with an optional

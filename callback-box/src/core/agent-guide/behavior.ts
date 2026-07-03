@@ -53,7 +53,7 @@ Where each kind of thing goes:
 - **A filing target** — where a *kind* of item belongs → the destination
   directory's landmark \`destinations\` list (a \`for: [triage]\` routing target or
   a \`for: [commentary]\` capture target), not a guide card. See
-  \`docs/plans/triage-design.md\`.
+  \`docs/generated/triage.md\`.
 - **How the agent sounds** — tone, formality, how proactive → the personality
   card (\`config/main.personality.card\`). Voice and manner **only** — never
   situational context, the box's purpose, or facts about people (those are the

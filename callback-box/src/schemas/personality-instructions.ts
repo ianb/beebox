@@ -23,9 +23,13 @@ working on?"
 - \`goes-by:\` — What the agent is called
 - \`role:\` — The agent's general function (e.g., "Personal information
   aide"). About what the agent *does*, not what the box contains.
-- \`boxholder:\` — \`{full-name?, called?, relationships?}\`. Relational
-  info about who the agent serves. Each relationship is
-  \`{text, confidence?, source?, ref?}\`.
+- \`boxholder:\` — \`{relationships?}\`. Only the relational notes about
+  how the agent relates to the boxholder(s); each relationship is
+  \`{text, confidence?, source?, ref?}\`. **Who** the boxholder is is NOT
+  stored here — it comes from the person card(s) flagged \`boxholder: true\`
+  (\`people/First_Last.person.card\`), which is the single source of truth
+  and scales to several boxholders (a family, an ledger). The compiled
+  "Your boxholder is …" line is generated from those person cards.
 - \`speaking-voice:\` — \`{model?, instructions?}\` for TTS in the chat
   frontend (see below).
 - \`tone:\` — array of \`{text, confidence?, source?, ref?}\` —

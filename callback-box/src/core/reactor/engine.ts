@@ -9,10 +9,8 @@
  *    a. Sync (cb wakeup) — pulls from external sources, creates jobs
  *    b. generateDocs — refresh agent docs (fast mtime-cached no-op)
  *    c. Find job cards in box/jobs/
- *    d. Partition: procedure jobs vs agent jobs
- *    e. Run procedure jobs via trampoline (no agent needed)
- *    f. Run agent jobs via batch or chat processing
- *    g. Stop if no jobs remain or none were processed (stuck)
+ *    d. Run jobs via batch or chat processing (each worked by an agent)
+ *    e. Stop if no jobs remain or none were processed (stuck)
  * 4. Finalize (cb finalize) — flush outbound cards
  * 5. Optionally poll (sleep + recurse)
  */

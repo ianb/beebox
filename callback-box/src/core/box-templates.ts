@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "./install-template-file.js";
+import { TEMPLATE_STOCK_HASHES } from "./template-stock-hashes.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -314,41 +315,48 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
 }
 
 /**
- * sha256 of the pre-frontmatter, XML-only schemas guide shipped before the
- * guide adopted the template tracker. Every box installed by an older
- * callback-box has this exact file; recognizing it lets the new
- * frontmatter-first guide overwrite the stale one (which actively steers box
- * agents toward `element()`/XML) while still parking any guide a boxholder
- * has actually edited.
+ * The template files that ship with a `priorStockHashes` allowlist — the
+ * box-local CLAUDE.md guides an agent reads. Each maps a ledger key
+ * (`TEMPLATE_STOCK_HASHES`) to its live content. Kept as a registry so the
+ * forcing-function test and `pnpm template-stock:update` can iterate them: the
+ * test fails if any content's hash drifts from the ledger's `current`, which is
+ * what keeps every superseded hash recorded (and thus rollouts non-parking).
  */
-const OLD_XML_SCHEMAS_GUIDE_SHA256 =
-  "127bdcaa2598ad8664037bd01659e8f23d4fcd5af493788102b9387b090b5452";
+export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
+  name: keyof typeof TEMPLATE_STOCK_HASHES;
+  relPath: string;
+  content: string;
+}> = [
+  { name: "schemas-guide", relPath: "config/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD },
+  { name: "views-guide", relPath: "views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+];
 
 /**
  * Install (or refresh) the box-local schemas guide. Uses the template tracker
  * so the stock guide is refreshed when unmodified and parked under
- * `config/_template-updates/` when the boxholder has customized it.
+ * `config/_template-updates/` when the boxholder has customized it. Prior stock
+ * hashes come from the ledger so a box on any shipped version overwrites cleanly.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
   await installTemplateFile({
     boxRoot,
     relPath: "config/schemas/CLAUDE.md",
     templateContent: SCHEMAS_CLAUDE_MD,
-    priorStockHashes: [OLD_XML_SCHEMAS_GUIDE_SHA256],
+    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"]!.superseded,
   });
 }
 
 /**
- * Install views CLAUDE.md guide if it doesn't exist.
+ * Install (or refresh) the box-local views guide. Uses the template tracker so
+ * the stock guide is refreshed when unmodified and parked under
+ * `_template-updates/` when the boxholder has customized it.
  */
 export async function installViewsGuide(boxRoot: string): Promise<void> {
-  const claudeMdPath = path.join(boxRoot, "views/CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No views guide yet (fs.access throws ENOENT) — install it. The error
-    // carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
-    await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
-  }
+  await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
+  await installTemplateFile({
+    boxRoot,
+    relPath: "views/CLAUDE.md",
+    templateContent: VIEWS_CLAUDE_MD,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"]!.superseded,
+  });
 }

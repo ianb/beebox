@@ -189,6 +189,9 @@ importers:
       ical.js:
         specifier: ^2.2.1
         version: 2.2.1
+      ignore:
+        specifier: ^5.3.2
+        version: 5.3.2
       ky:
         specifier: ^1.14.3
         version: 1.14.3

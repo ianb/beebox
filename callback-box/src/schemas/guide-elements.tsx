@@ -55,8 +55,6 @@ const ContextDuration = z.enum(["ongoing", "temporary", "past"]);
 // Field validators
 // ============================================
 
-const Iso = z.string().datetime({ offset: true });
-
 const TriageRuleField = z.object({
   text: z.string(),
   confidence: ConfidenceLevel.default("low"),
@@ -85,8 +83,6 @@ const ObservationField = z.object({
 const ExperimentField = z.object({
   id: z.string(),
   status: ExperimentStatus.default("proposed"),
-  "created-at": Iso.optional(),
-  "updated-at": Iso.optional(),
   hypothesis: z.string().optional(),
   approach: z.string().optional(),
   observations: z.array(ObservationField).optional(),
@@ -102,7 +98,6 @@ const ReactionField = z.object({
 const ContextNoteField = z.object({
   text: z.string(),
   duration: ContextDuration.default("ongoing"),
-  "added-at": Iso.optional(),
 });
 
 const guideFields = {
@@ -174,8 +169,6 @@ export interface ParsedGuide {
   experiments: Array<{
     id: string;
     status: ExperimentStatus;
-    createdAt: string | undefined;
-    updatedAt: string | undefined;
     hypothesis: string | undefined;
     approach: string | undefined;
     observations: Array<{
@@ -193,6 +186,5 @@ export interface ParsedGuide {
   contextNotes: Array<{
     text: string;
     duration: "ongoing" | "temporary" | "past";
-    addedAt: string | undefined;
   }>;
 }

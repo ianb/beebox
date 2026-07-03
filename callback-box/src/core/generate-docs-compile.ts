@@ -13,6 +13,7 @@ import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { parseGuide, parseGuideCard, compileGuide } from "../schemas/guide.js";
 import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
 import { compileBriefing, type BriefingFields } from "../schemas/briefing.js";
+import { loadBoxholders } from "./boxholder-cards.js";
 import { parseCardText } from "./card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./generate-docs-shared.js";
@@ -355,7 +356,8 @@ export async function compilePersonalities(boxRoot: string, debug: boolean): Pro
       schemas: await createCardSchemaMap(boxRoot),
     });
     const fields = parsed.fields as unknown as PersonalityFields;
-    const compiled = compilePersonality(fields);
+    const boxholders = await loadBoxholders(boxRoot);
+    const compiled = compilePersonality(fields, { boxholders });
     const compiledFilename = `personality-${personalityName}.md`;
     const compiledPath = `${DOCS_DIR}/${compiledFilename}`;
 

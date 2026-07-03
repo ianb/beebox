@@ -87,6 +87,30 @@ function computePending(applied: ManifestEntry[]): Migration[] {
   return MIGRATIONS.filter((m) => !seen.has(m.name));
 }
 
+export type MarkAppliedResult =
+  | { status: "marked" }
+  | { status: "already-applied" }
+  | { status: "unknown-migration" }
+  | { status: "no-manifest" };
+
+/**
+ * Record a single migration as applied WITHOUT running it. The escape hatch for
+ * a box that's already in a migration's post-state but never got the manifest
+ * entry — e.g. a retired migrator (`bill`) that can no longer run, or a box that
+ * had a migration's effect applied out-of-band. Unlike `--mark-all-applied`
+ * (which seeds a whole missing manifest) this touches one entry on a box that
+ * already has a manifest. Refuses an unknown name or a missing manifest; a
+ * no-op if the migration is already recorded.
+ */
+export async function markMigrationApplied(args: { boxRoot: string; name: string }): Promise<MarkAppliedResult> {
+  if (!MIGRATIONS.some((m) => m.name === args.name)) return { status: "unknown-migration" };
+  const existing = await readManifest(args.boxRoot);
+  if (existing === null) return { status: "no-manifest" };
+  if (existing.some((e) => e.name === args.name)) return { status: "already-applied" };
+  await appendManifestEntry(args.boxRoot, { name: args.name, "applied-at": new Date().toISOString() });
+  return { status: "marked" };
+}
+
 function runScript(args: { script: string; boxRoot: string }): Promise<number> {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(CALLBACK_BOX_ROOT, args.script);
@@ -158,6 +182,7 @@ interface MigrateOptions {
   apply?: boolean;
   status?: boolean;
   markAllApplied?: boolean;
+  markApplied?: string;
 }
 
 export const migrateCommand = new Command("migrate")
@@ -165,8 +190,31 @@ export const migrateCommand = new Command("migrate")
   .option("--apply", "Run all pending migrations in order")
   .option("--status", "Show applied + pending lists (default when no flag given)")
   .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already fully migrated before this command existed; new boxes get their manifest seeded automatically by `cb init`.")
+  .option("--mark-applied <name>", "Record a single migration as applied WITHOUT running it. For a box already in that migration's post-state (e.g. a retired migrator) that never got the manifest entry. Refuses an unknown name or a manifest-less box.")
   .action(async (options: MigrateOptions) => {
     const boxRoot = await requireBoxRoot();
+
+    if (options.markApplied !== undefined) {
+      const name = options.markApplied;
+      const result = await markMigrationApplied({ boxRoot, name });
+      switch (result.status) {
+        case "unknown-migration":
+          console.error(`Unknown migration "${name}". It must match a name in src/core/migrations.ts (see \`cb migrate --status\`).`);
+          process.exit(1);
+        // falls through to exit — process.exit returns never
+        case "no-manifest":
+          console.error(`No migration manifest at ${MANIFEST_PATH}. Seed it with \`cb migrate --mark-all-applied\` (or \`cb init\`) first, then mark individual migrations.`);
+          process.exit(1);
+        // falls through to exit — process.exit returns never
+        case "already-applied":
+          console.log(`"${name}" is already recorded as applied in ${MANIFEST_PATH}; nothing to do.`);
+          break;
+        case "marked":
+          console.log(`Marked "${name}" as applied in ${MANIFEST_PATH} (did NOT run it). Review the manifest change and commit it.`);
+          break;
+      }
+      return;
+    }
 
     if (options.markAllApplied) {
       const existing = await readManifest(boxRoot);

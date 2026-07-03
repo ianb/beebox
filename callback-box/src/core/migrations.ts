@@ -87,6 +87,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "person-contact-split", script: "scripts/migrate/person-contact-split.ts" },
   // Rename the `sheet` card type to `gsheet` (.sheet.card → .gsheet.card + refs).
   { name: "gsheet-rename",       script: "scripts/migrate/gsheet-rename.ts" },
+  // Move inline personality boxholder identity onto `boxholder: true` person cards.
+  { name: "boxholder-person",    script: "scripts/migrate/boxholder-person.ts" },
+  // Strip file-metadata timestamps (created-at/updated-at/added-at) from guide +
+  // personality cards — git is the record; they were also a template-churn source.
+  { name: "strip-entry-timestamps", script: "scripts/migrate/strip-entry-timestamps.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

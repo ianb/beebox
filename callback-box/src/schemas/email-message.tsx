@@ -66,7 +66,8 @@ specifically needed and after appropriate vetting.
 
 Attachments live in this message's attach scope too. To **draft** an
 email (reply or new message), don't edit this card — write an
-\`email-outbound\` card instead.`,
+\`email-outbound\` card instead, placed in this thread's directory
+(next to this message), not in \`box/output/\`.`,
 });
 
 export interface EmailMessageFields {

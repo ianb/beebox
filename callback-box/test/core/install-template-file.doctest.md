@@ -18,6 +18,7 @@ import * as os from "node:os";
 import {
   installTemplateFile,
   pruneStaleTemplateUpdates,
+  listParkedTemplateUpdates,
 } from "../../src/core/install-template-file.js";
 
 async function makeBox() {
@@ -150,6 +151,29 @@ const result2 = await installTemplateFile({
 const versions2 = await readVersions(box);
 versions2["config/x.card"].sha256 === hashBefore
 => true
+```
+
+## Listing parked updates — the drift signal
+
+`listParkedTemplateUpdates` returns the original relpaths that currently have a
+parked update, so `cb status` / `/healthz` can surface template drift. A clean box
+reports nothing:
+
+```ts
+const box = await makeBox();
+await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v1\n" });
+JSON.stringify(await listParkedTemplateUpdates(box))
+=> []
+```
+
+After the box diverges and a new template parks, the original relpath (not the
+mirrored `_template-updates/` path) is listed:
+
+```ts continue
+await fs.writeFile(path.join(box, "config/x.card"), "user edit\n");
+await installTemplateFile({ boxRoot: box, relPath: "config/x.card", templateContent: "v2\n" });
+JSON.stringify(await listParkedTemplateUpdates(box))
+=> ["config/x.card"]
 ```
 
 ## Bootstrap — pre-existing file with no recorded hash
