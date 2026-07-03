@@ -30,7 +30,7 @@ import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
-import { useChatSse } from "./InteractiveChat-sse";
+import { useChatWs } from "./InteractiveChat-ws";
 import { useChatActions } from "./InteractiveChat-actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
@@ -188,7 +188,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
     />
   ) : null;
 
-  useChatSse({
+  useChatWs({
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,

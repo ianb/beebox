@@ -170,7 +170,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
   }
 
   // Shutdown handler — force-close all connections immediately so
-  // --watch restarts don't hang on open SSE/WebSocket sockets.
+  // --watch restarts don't hang on open WebSocket sockets.
   const shutdown = async (signal: string) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     for (const pf of pidFiles) {

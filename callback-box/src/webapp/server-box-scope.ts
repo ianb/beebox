@@ -44,7 +44,7 @@ function isApiUrl(url: string): boolean {
 function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
   instance.addHook("preHandler", async (request, reply) => {
     // Let static assets (served by fastify-static) through. Scope this
-    // narrowly: API/SSE paths (like /api/files/foo.jpg) need the auth
+    // narrowly: API paths (like /api/files/foo.jpg) need the auth
     // check even when they end in an asset extension.
     const urlPath = request.url.split("?")[0]!;
     if (!isApiUrl(urlPath) && ASSET_EXTENSIONS.test(urlPath)) {
@@ -62,7 +62,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     }
     const email = getSessionEmail(request);
     if (!email) {
-      // For API/SSE requests, return 401 JSON. For page navigations, redirect to login.
+      // For API requests, return 401 JSON. For page navigations, redirect to login.
       if (isApiUrl(request.url)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
@@ -88,7 +88,7 @@ interface BoxScopeDeps {
 }
 
 /**
- * Register the main per-box scope under `/<slug>`: auth hook, SSE, tRPC,
+ * Register the main per-box scope under `/<slug>`: auth hook, tRPC,
  * the REST routes that can't move to tRPC, box admin, and static frontend.
  */
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
@@ -163,7 +163,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     trpcOptions,
   });
 
-  // REST routes that can't move to tRPC (SSE streaming, file uploads, WebSocket)
+  // Raw routes that can't move to tRPC (byte streaming, file uploads, WebSocket)
   await registerApiRoutes(instance, { boxRoot: box.boxRoot, eventBus });
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
