@@ -2,12 +2,13 @@
  * Source tag — provenance for content that wasn't your own synthesis.
  *
  * `{% source ref="..." usage="..." %}content{% /source %}` marks a span as
- * derived from somewhere. Distinct from `{% quote %}` (which marks
- * verbatim words from a person): `source` answers *where*, optionally
- * *how* it was derived. The two compose — a `{% source %}` wrapping a
- * `{% quote %}` reads as "verbatim words from there." Bare `{% source %}`
- * without an inner `{% quote %}` is paraphrased / summarized / inferred
- * content with a cited origin.
+ * from somewhere. Distinct from `{% quote %}` (which marks the *user's own*
+ * verbatim words): `source` answers *where*, optionally *how* it was
+ * derived. The two compose — a `{% source %}` wrapping a `{% quote %}`
+ * reads as "the user's verbatim words, from there." A bare `{% source %}`
+ * (no inner `{% quote %}`) holds content *from* the source in its body — a
+ * verbatim excerpt (e.g. a commentary anchor), a paraphrase, or a summary,
+ * per `usage`.
  *
  * Inline form: the wrapped span is rendered as-is followed by a small
  * citation chip `[→ Label]`. Block form: a styled figure with a caption

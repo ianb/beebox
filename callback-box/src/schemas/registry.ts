@@ -40,7 +40,7 @@ import { TodoListSchema } from "./todo-list.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
 import { PlaceSchema } from "./place.js";
-import { SheetSchema } from "./sheet.js";
+import { GsheetSchema } from "./gsheet.js";
 import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
 import { CommentarySchema } from "./commentary.js";
@@ -97,7 +97,7 @@ export const cardSchemas: CardSchema[] = [
   EmailMessageSchema,
   TelegramMessageSchema,
   GdocSchema,
-  SheetSchema,
+  GsheetSchema,
   WebpageSchema,
   ExtfileSchema,
   CaptureSessionSchema,

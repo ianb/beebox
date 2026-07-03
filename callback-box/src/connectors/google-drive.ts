@@ -2,7 +2,7 @@
  * Google Drive connector — syncs Drive files with the box filesystem.
  *
  * Two sync sources:
- * 1. Card-based: globs for *.sheet.card (and future types) anywhere in the box.
+ * 1. Card-based: globs for *.gsheet.card (and future types) anywhere in the box.
  *    The card's drive-id attribute IS the config — no separate mapping needed.
  * 2. Folder mounts: config/connectors/google-drive.json lists Drive folders to auto-sync.
  *    New files in mounted folders get cards created automatically.

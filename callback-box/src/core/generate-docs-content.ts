@@ -27,8 +27,8 @@ const CONNECTORS: ConnectorInfo[] = [
   },
   {
     name: "google-drive",
-    produces: ["sheet", "gdoc"],
-    description: "Two-way sync with Google Drive. Spreadsheets become `.sheet.card` files with JSON tabs; Google Docs become `.gdoc.card` files with sibling markdown. Push detects conflicts when remote changed since the last pull.",
+    produces: ["gsheet", "gdoc"],
+    description: "Two-way sync with Google Drive. Spreadsheets become `.gsheet.card` files with JSON tabs; Google Docs become `.gdoc.card` files with sibling markdown. Push detects conflicts when remote changed since the last pull.",
   },
 ];
 

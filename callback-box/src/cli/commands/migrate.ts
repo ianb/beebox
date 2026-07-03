@@ -24,6 +24,7 @@ import {
 } from "../../core/migrations.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { getStatus, stageAll, commit } from "../lib/git.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -204,6 +205,18 @@ export const migrateCommand = new Command("migrate")
       return;
     }
 
+    // Require a clean tree before migrating. `cb init` (below) commits its
+    // provisioning output so the queue starts clean, and several migrators
+    // (e.g. `attachments`) refuse to run against a dirty tree. Checking up
+    // front means init's commit captures exactly what init produced — not any
+    // of the user's uncommitted work — and keeps the migration's own changes
+    // reviewable rather than tangled with pre-existing edits.
+    const startStatus = await getStatus(boxRoot);
+    if (!startStatus.clean) {
+      console.error("Working tree is not clean. Commit or stash your changes before migrating.");
+      process.exit(1);
+    }
+
     // Fully provision the box before migrating. A migration can depend on any
     // provisioned state — a procedure-kind migration needs its procedure card in
     // config/procedures/, but updated rules, guides, schemas, or briefing may
@@ -219,6 +232,17 @@ export const migrateCommand = new Command("migrate")
       process.exit(1);
     }
     console.log("");
+
+    // Commit init's provisioning output so the queue starts from a clean tree.
+    // The tree was clean before init (checked above), so this commits exactly
+    // what init produced. The migrations' own data changes still land
+    // uncommitted afterward, for review.
+    const afterInit = await getStatus(boxRoot);
+    if (!afterInit.clean) {
+      await stageAll(boxRoot);
+      await commit(boxRoot, { message: "cb init provisioning (before migration)" });
+      console.log("Committed provisioning changes.\n");
+    }
 
     console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);
     // Exit-code convention shared by the harness and every migrator: 2 means

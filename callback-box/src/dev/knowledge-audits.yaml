@@ -1054,17 +1054,19 @@ tests:
     chat_mode: true
     watch_for: >
       Recognizes it as text the user selected from a document they were
-      viewing. Treats the wrapped text as a verbatim quote (what the user saw),
+      viewing. Treats the wrapped text as a verbatim span (what the user saw),
       and position as a rough locator (heading/paragraph/line) for finding the
       original — not an exact offset.
     correct_contains_any: ["selected", "selection", "highlighted"]
     tags: [chat, input-format]
     notes: >
-      The Selections section of the chat agent guide explains this tag. Failure
+      The Selections section of the chat system prompt explains this tag. Failure
       modes: treating position as an exact offset, ignoring the ref and
-      re-deriving the quote, or not recognizing it as user-attached document
-      text. The text IS the quote; ref + position locate the source if the
-      exact markup is needed.
+      re-deriving the text, or not recognizing it as user-attached document
+      text. The text IS what the user saw, verbatim; ref + position locate the
+      original if the exact markup is needed. (When later anchored into a
+      commentary card it goes in a {% source %} body, not a {% quote %} — that
+      tag is for the user's own words.)
 
   # === Chat Structured-Output Tags (chat-app, ack, callout) ===
   #
@@ -1295,7 +1297,7 @@ tests:
   - id: drive-find-spreadsheet
     prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
     expected_level: knows_about
-    watch_for: "Looks in store/drive/ for .sheet.card files"
+    watch_for: "Looks in store/drive/ for .gsheet.card files"
     correct_contains: ["store/drive"]
     tags: [drive, navigation]
 
@@ -2360,6 +2362,27 @@ tests:
       is the exception that surfaces non-original content.
     correct_contains_any: ["no", "own framing", "connective", "default", "unwrapped", "exception"]
     tags: [source, behavioral, provenance]
+
+  - id: source-anchor-span-not-quote
+    prompt: >
+      I'm writing a commentary card and want to anchor my remark to a specific
+      passage from the host document — the exact text I'm commenting on. How do
+      I mark that passage in the card body, and should it go inside a
+      {% quote %} tag?
+    expected_level: knows_directly
+    watch_for: >
+      Puts the passage in the `{% source %}` body itself — a bare
+      `{% source pos="..." %}the passage{% /source %}` — with the remark as
+      prose after the tag. Says NO to `{% quote %}`: that tag is reserved for
+      the *user's own verbatim words* (THE LAW OF QUOTING), not a document
+      excerpt being pointed at. (Escaping the span to valid Markdoc is a bonus.)
+    correct_contains_any: ["{% source", "source body", "not a quote", "not.*quote", "no"]
+    tags: [source, quotes, commentary, provenance]
+    notes: >
+      Track 8: the sacrosanct {% quote %} was previously overloaded (in the
+      commentary instructions) as the carrier for a commented-on span. The span
+      belongs in the {% source %} body; {% quote %} stays for the user's words.
+      Failure mode: wrapping the anchored passage in {% quote %}.
 
   # === Briefing tags ===
   #

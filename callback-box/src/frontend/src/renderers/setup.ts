@@ -13,7 +13,7 @@ import "./pdf";
 import "./recipe";
 import "./figure";
 import "./concept-map";
-import "./sheet";
+import "./gsheet";
 import "./markdown";
 import "./comments";
 import "./json";

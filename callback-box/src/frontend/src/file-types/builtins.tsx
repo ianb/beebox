@@ -33,7 +33,7 @@ export function registerBuiltinFileTypes(): void {
   registerFileType({ type: "email-thread" }, { icon: DocumentIcon });
   registerFileType({ type: "recipe" }, { icon: DocumentIcon });
   registerFileType({ type: "record" }, { icon: CardIcon });
-  registerFileType({ type: "sheet" }, { icon: CardIcon });
+  registerFileType({ type: "gsheet" }, { icon: CardIcon });
   registerFileType({ type: "doc" }, { icon: DocumentIcon });
   registerFileType({ type: "gdoc" }, { icon: DocumentIcon });
   registerFileType({ type: "procedure" }, { icon: JobIcon });

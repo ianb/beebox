@@ -15,11 +15,7 @@ import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
 import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";
 import { proceduresSection, guidesSection } from "./extensibility.js";
-import {
-  externalToolsSection,
-  chatAttachmentsSection,
-  selectionsSection,
-} from "./chat.js";
+import { externalToolsSection } from "./chat.js";
 import {
   aboutCardsSection,
   cardTypesSection,
@@ -69,8 +65,6 @@ This guide is for every agent working in this box — chat, background jobs, and
     guidesSection(guides),
     secretsSection(),
     externalToolsSection(),
-    chatAttachmentsSection(),
-    selectionsSection(),
     quotesSection(),
     sourceSection(),
     gitHistorySection(),
