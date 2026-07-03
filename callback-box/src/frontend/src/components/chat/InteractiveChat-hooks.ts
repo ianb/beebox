@@ -7,7 +7,8 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { getApiBase, getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
+import { getChatHistory, getChatStatus, setChatModel, getChatFeatures, setChatFeature, type SessionEntry } from "../../api";
+import { trpcClient } from "../../lib/trpc";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
@@ -227,13 +228,12 @@ export function useChatSchedules(opts: {
   isStreaming: boolean;
   send: ChatSendFn;
 }) {
-  const { messages, isStreaming, send } = opts;
+  const { messages } = opts;
   const [activeSchedules, setActiveSchedules] = useState<ChatSchedule[]>([]);
 
   const fetchSchedules = useCallback(() => {
-    fetch(`${getApiBase()}/chat/schedules`)
-      .then((r) => r.json())
-      .then((data: { schedules: ChatSchedule[] }) => {
+    trpcClient.chat.schedules.query()
+      .then((data) => {
         setActiveSchedules(data.schedules);
       })
       .catch(() => {});
@@ -244,48 +244,14 @@ export function useChatSchedules(opts: {
     fetchSchedules();
   }, [messages, fetchSchedules]);
 
-  // Poll for history updates when a schedule has fired (fallback for SSE)
-  const prevMessageCountRef = useRef(messages.length);
-  useEffect(() => {
-    prevMessageCountRef.current = messages.length;
-  }, [messages.length]);
-
-  useEffect(() => {
-    if (activeSchedules.length === 0) return;
-    if (isStreaming) return; // Don't poll while user is streaming
-
-    const checkAndPoll = () => {
-      const now = Date.now();
-      const anyFired = activeSchedules.some(
-        (s) => new Date(s.firesAt).getTime() <= now
-      );
-      if (!anyFired) return;
-
-      fetch(`${getApiBase()}/chat/history`)
-        .then((r) => r.json())
-        .then((data: { entries: SessionEntry[]; sessionId: string | null }) => {
-          // Only update if message count actually changed
-          if (data.entries.length !== prevMessageCountRef.current) {
-            send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
-          }
-          fetchSchedules();
-        })
-        .catch(() => {});
-    };
-
-    // Start polling every 3 seconds
-    const id = setInterval(checkAndPoll, 3000);
-    // Also check immediately
-    checkAndPoll();
-    return () => clearInterval(id);
-  }, [activeSchedules, send, fetchSchedules, isStreaming]);
+  // NOTE: a former "poll /chat/history after a schedule fires" fallback lived
+  // here but was inert — it fetched history with no session id, which the
+  // endpoint rejected, so it never refreshed anything. Schedule-fired turns
+  // arrive over the WS event stream (events.subscribe); the fallback is dropped
+  // rather than ported.
 
   const handleCancelSchedule = useCallback((label: string) => {
-    fetch(`${getApiBase()}/chat/schedules/cancel`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ label }),
-    })
+    trpcClient.chat.cancelSchedule.mutate({ label })
       .then(() => fetchSchedules())
       .catch(() => {});
   }, [fetchSchedules]);

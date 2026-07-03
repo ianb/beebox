@@ -11,6 +11,7 @@ import { glob } from "glob";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
+import { chatControlProcedures } from "./chat-control-procedures.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
 import {
   getDirectoryForSession,
@@ -167,6 +168,7 @@ async function loadAllSessions(
 
 export const chatRouter = router({
   ...chatSessionProcedures,
+  ...chatControlProcedures,
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.

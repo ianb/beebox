@@ -7,7 +7,7 @@
  * The registry/scheduleManager-dependent chat controls (status, set-model,
  * set-feature, interrupt, restart, schedules) stay raw Fastify routes — they
  * need the live per-box `ChatSessionRegistry`, the same reason `/chat/send` is
- * raw (see `routes/chat-session-routes.ts`).
+ * raw — they now live in `chat-control-procedures.ts` via `chat-runtime`.
  */
 
 import * as fs from "node:fs/promises";
