@@ -123,7 +123,53 @@ Run in batches by section. Two buckets per failure:
   audit's `expected_level` can move to `knows_about`/`discoverable`. Left failing
   as a red flag.
 
+### ack-conservative-text — REAL GAP (batch 4, chat prompt behavior)
+
+- **Prompt:** user said "add a note about cardamom to my bread recipe," the agent
+  did it — confirm with prose / `<ack>` / `<callout>`? If `<ack>`, does it need
+  inner text?
+- **Agent answered (consistent, 2 runs):** `<ack kind="edited" ref="…Bread.recipe.card">added a cardamom note</ack>`
+  and argued inner text is "worth adding when it names a real detail."
+- **Why it's real:** the chat system prompt's *own example* for this exact case is
+  `<ack kind="appended" ref="recipes/Bread.recipe.card" />` —
+  **`appended`** (adding content to an existing card), **bare** (no text). Two
+  misses: (a) the agent picks `kind="edited"` over `appended`; (b) it adds
+  restating inner text, exactly the failure the audit guards against. The rule
+  ("omit inner text when it would just restate the action") isn't landing — the
+  agent applied the "worth adding a detail" half but missed that "added a cardamom
+  note" merely restates the user's request.
+- **Fix (boxholder):** sharpen the appended-vs-edited guidance and the
+  restate-vs-real-detail line in `chat-session-prompts.ts` (~line 124). Left
+  failing as a red flag.
+
+### chat-thread-seen-note — MINOR GAP (batch 4, mechanism conflation)
+
+- **Prompt:** "Can I leave a note for myself when acknowledging chat messages?"
+- **Agent answered (consistent, 3 runs):** `cb chat self-note …`.
+- **Why it's off:** the acknowledgment-note is the `text:` field on a `kind: seen`
+  entry (per the chat-thread schema instructions) — a private note-to-future-self
+  read on the next invocation. `cb chat self-note` posts into a *live chat
+  session*, a different context. The agent conflates the two. Low severity, but
+  the seen-note mechanism isn't surfacing. Audit check updated to the YAML form
+  (`seen`); left failing as the flag.
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 4 (chat threads / structured-output tags) — the chat-thread card format
+moved from XML (`<message>`, `<seen>`, `sender="agent"`) to YAML `entries:` with
+`kind: message` / `kind: seen` discriminators; the agent answers in the new
+format but 5 audits still checked the old XML tags:
+
+- **chat-thread-structure** — de-baited the "XML structure" prompt (it made the
+  agent stop to correct the premise and often not show the structure); checks
+  `entries:` / `kind:`.
+- **chat-thread-respond-vs-acknowledge** — `<seen` → `seen` (agent says
+  "seen-marker").
+- **chat-thread-agent-message** — `sender="agent"` → accept `sender: agent` OR a
+  `telegram-message` output card (both respect connector-owned delivery).
+- **chat-thread-invariant** — `<seen` → `seen`.
+- (chat-thread-new-messages / -callback watch_for prose also de-XML'd; they
+  already passed on YAML-compatible checks.)
 
 Batch 3 (procedures / connectors / scheduled / extension / image) — all the
 same "overhaul moved knowledge into the always-on surface, so the agent answers
@@ -191,3 +237,8 @@ sections above.
 
 ‡ 15 raw; 21 after fixing 6 stale should_read audits (all re-run confirmed). The
 one real failure is `procedure-in-job` (undocumented job→procedure trampoline).
+| 4 | Chat Threads, Chat Structured-Output Tags | 24 | 18→22§ | 1 + 1 minor | 4 |
+
+§ 18 raw; 22 after fixing 4 stale XML→YAML chat-thread audits (re-run confirmed).
+Remaining: `ack-conservative-text` (real behavioral gap) and `chat-thread-seen-note`
+(minor mechanism conflation).

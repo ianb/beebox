@@ -618,19 +618,32 @@ tests:
     tags: [cards, schemas, extension]
 
   # === Chat Threads ===
+  #
+  # Status (2026-07-03): 12/13 pass. The chat-thread card format moved from XML
+  # (<message>/<seen>/sender="agent") to YAML entries: with kind: message/seen
+  # discriminators — the agent answers the new format correctly, so 4 audits'
+  # stale XML checks were updated to YAML (structure de-baited off "XML"). MINOR
+  # GAP: chat-thread-seen-note — agent answers `cb chat self-note` instead of the
+  # kind: seen entry's text: note-to-self. See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: chat-thread-structure
-    prompt: "Show me the XML structure of a chat-thread card."
+    prompt: "Show me the structure of a chat-thread card."
     expected_level: knows_about
-    watch_for: "Reads docs/generated/card-chat-thread.md before answering"
-    should_read: ["docs/generated/card-chat-thread.md"]
-    correct_contains: ["<message", "<seen"]
+    watch_for: "Describes the YAML entries: array with kind: message / kind: seen discriminators"
+    correct_contains: ["entries:", "kind:"]
     tags: [cards, chat]
+    notes: >
+      chat-thread cards are YAML frontmatter with an `entries:` array
+      (kind: message / kind: seen), never XML. De-baited 2026-07-03: the old
+      "XML structure" prompt made the agent stop to correct the premise and often
+      not show the structure at all (the XML-rejection reflex is covered by
+      memo-xml-structure); this now reliably elicits the entries:/kind: shape,
+      which the agent knows directly.
 
   - id: chat-thread-new-messages
     prompt: "I have a chat-thread card with some messages. How do I find which messages are new?"
     expected_level: knows_about
-    watch_for: "Describes scanning backward for last <seen> or <message sender='agent'>"
+    watch_for: "Describes scanning backward for the last kind: seen or kind: message with sender: agent"
     should_read: ["docs/generated/card-chat-thread.md"]
     correct_contains: ["seen", "agent"]
     tags: [chat, processing]
@@ -638,14 +651,14 @@ tests:
   - id: chat-thread-respond-vs-acknowledge
     prompt: "When processing a chat thread, how do I decide whether to respond or just acknowledge?"
     expected_level: knows_about
-    watch_for: "Describes <message sender='agent'> for response and <seen /> for acknowledgment"
-    correct_contains: ["<seen"]
+    watch_for: "Describes a kind: message, sender: agent entry for response and a kind: seen entry (seen-marker) for acknowledgment"
+    correct_contains: ["seen"]
     tags: [chat, processing]
 
   - id: chat-thread-callback
     prompt: "When processing a chat-thread card, how can I tell the system to re-invoke me later if no new messages arrive?"
     expected_level: knows_about
-    watch_for: "Mentions callback-in attribute on <seen> element"
+    watch_for: "Mentions the callback-in field on a kind: seen entry"
     should_read: ["docs/generated/card-chat-thread.md"]
     correct_contains: ["callback-in"]
     tags: [chat, processing]
@@ -653,20 +666,27 @@ tests:
   - id: chat-thread-agent-message
     prompt: "I want to send a message to a Telegram chat from a chat thread. How do I do that?"
     expected_level: knows_about
-    watch_for: "Describes appending <message sender='agent'>text</message> without sent attribute"
-    correct_contains: ["sender=\"agent\""]
+    watch_for: "Appends a kind: message, sender: agent entry to the thread (or creates a telegram-message output card) — and does NOT set sent/id; the connector handles delivery"
+    correct_contains_any: ["sender: agent", "telegram-message"]
     tags: [chat, processing]
     notes: >
-      Critical that the agent knows NOT to fill in sent or id attributes.
-      The connector handles delivery. If the agent fills in sent, the message
-      won't actually be delivered.
+      Critical that the agent knows NOT to fill in sent or id — the connector
+      handles delivery. Two valid mechanisms both respect that: appending a
+      kind: message, sender: agent entry to the chat-thread card, or creating a
+      *.telegram-message.card output card (status: pending). The failure mode is
+      marking the message sent/delivered itself.
 
   - id: chat-thread-seen-note
     prompt: "Can I leave a note for myself when acknowledging chat messages?"
     expected_level: knows_about
-    watch_for: "Describes text content of <seen> as a note-to-self for future invocation"
-    correct_contains: ["<seen"]
+    watch_for: "Describes the text: field on a kind: seen entry as a note-to-self for the next invocation (NOT cb chat self-note, which is the live-chat-session mechanism)"
+    correct_contains: ["seen"]
     tags: [chat, processing]
+    notes: >
+      The acknowledgment-note is the `text:` on a `kind: seen` entry (per the
+      chat-thread schema instructions). Watch for the agent conflating it with
+      `cb chat self-note`, which posts into a live chat session — a different
+      context. See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: chat-job-processing
     prompt: "I have a chat job card. Walk me through how to process it."
@@ -679,9 +699,9 @@ tests:
   - id: chat-thread-invariant
     prompt: "After I process a chat thread, what must be true about the last element?"
     expected_level: knows_about
-    watch_for: "States that the last element must be <seen> or <message sender='agent'>"
+    watch_for: "States the last entry must be exactly one appended kind: seen or kind: message with sender: agent"
     should_read: ["docs/generated/card-chat-thread.md"]
-    correct_contains: ["<seen", "agent"]
+    correct_contains: ["seen", "agent"]
     tags: [chat, processing]
 
   - id: chat-thread-dont-modify
@@ -1158,6 +1178,12 @@ tests:
   # basics. All tests in this section run with `chat_mode: true` so the
   # audit harness loads the chat system prompt the same way a real chat
   # session would.
+  #
+  # Status (2026-07-03): 10/11 pass. REAL GAP: ack-conservative-text — for an
+  # obvious action (add a cardamom note to the bread recipe) the agent emits
+  # <ack kind="edited">added a cardamom note</ack> instead of the prompt's own
+  # canonical <ack kind="appended" .../> (bare) — wrong kind + restating inner
+  # text the conservative rule says to omit. See docs/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-05-13): All 8 pass. Agent has clean direct knowledge of
   # all three tags — names the snapshot purpose, emits the right mutation

@@ -1103,3 +1103,251 @@ test1:
       peak: 42210
       added: 998
       turns: 3
+  chat-thread-structure:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41188
+      peak: 42655
+      added: 1467
+      turns: 3
+    - date: 2026-07-03T11:18:56.182Z
+      boxCommit: 99ab62f7bf780f4d02538fd0313cc5b3fdf256fb
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41187
+      peak: 41395
+      added: 208
+      turns: 3
+    - date: 2026-07-03T11:20:32.513Z
+      boxCommit: c6594d4014cc60738c52c9e8e59261dc63998f4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41188
+      peak: 42642
+      added: 1454
+      turns: 3
+  chat-thread-new-messages:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41195
+      peak: 42644
+      added: 1449
+      turns: 3
+  chat-thread-respond-vs-acknowledge:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41198
+      peak: 42875
+      added: 1677
+      turns: 4
+    - date: 2026-07-03T11:18:56.182Z
+      boxCommit: 99ab62f7bf780f4d02538fd0313cc5b3fdf256fb
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41197
+      peak: 41197
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:20:32.513Z
+      boxCommit: c6594d4014cc60738c52c9e8e59261dc63998f4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41200
+      peak: 43088
+      added: 1888
+      turns: 5
+  chat-thread-callback:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41206
+      peak: 43037
+      added: 1831
+      turns: 5
+  chat-thread-agent-message:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41198
+      peak: 42094
+      added: 896
+      turns: 5
+    - date: 2026-07-03T11:18:56.182Z
+      boxCommit: 99ab62f7bf780f4d02538fd0313cc5b3fdf256fb
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41197
+      peak: 42099
+      added: 902
+      turns: 4
+  chat-thread-seen-note:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41192
+      peak: 41192
+      added: 0
+      turns: 2
+    - date: 2026-07-03T11:18:56.182Z
+      boxCommit: 99ab62f7bf780f4d02538fd0313cc5b3fdf256fb
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41191
+      peak: 41191
+      added: 0
+      turns: 1
+  chat-job-processing:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41189
+      peak: 59294
+      added: 18105
+      turns: 5
+  chat-thread-invariant:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41189
+      peak: 42733
+      added: 1544
+      turns: 6
+    - date: 2026-07-03T11:18:56.182Z
+      boxCommit: 99ab62f7bf780f4d02538fd0313cc5b3fdf256fb
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41188
+      peak: 42550
+      added: 1362
+      turns: 5
+  chat-thread-dont-modify:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41190
+      peak: 41759
+      added: 569
+      turns: 4
+  chat-thread-participants:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41184
+      peak: 42784
+      added: 1600
+      turns: 4
+  chat-thread-guidelines:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41197
+      peak: 43011
+      added: 1814
+      turns: 5
+  chat-guide-compilation:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41197
+      peak: 42209
+      added: 1012
+      turns: 3
+  chat-thread-outbound-flow:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 41197
+      peak: 41780
+      added: 583
+      turns: 4
+  chat-app-snapshot-purpose:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46145
+      peak: 46145
+      added: 0
+      turns: 1
+  chat-app-mutation:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46140
+      peak: 46140
+      added: 0
+      turns: 1
+  chat-app-features-list:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46120
+      peak: 46120
+      added: 0
+      turns: 1
+  ack-purpose:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46128
+      peak: 46128
+      added: 0
+      turns: 1
+  ack-kinds:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46123
+      peak: 46123
+      added: 0
+      turns: 1
+  narration-self-correction-cleanup:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46186
+      peak: 48325
+      added: 2139
+      turns: 8
+  ack-no-response:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46190
+      peak: 46190
+      added: 0
+      turns: 1
+  ack-conservative-text:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46170
+      peak: 46170
+      added: 0
+      turns: 1
+    - date: 2026-07-03T11:18:56.182Z
+      boxCommit: 99ab62f7bf780f4d02538fd0313cc5b3fdf256fb
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46169
+      peak: 46169
+      added: 0
+      turns: 1
+  callout-purpose-and-context:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46130
+      peak: 46130
+      added: 0
+      turns: 1
+  callout-for-a-question:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46159
+      peak: 46159
+      added: 0
+      turns: 1
+  callout-speech-relationship:
+    - date: 2026-07-03T11:14:29.560Z
+      boxCommit: d793ad015395f58e763f7810b1af56184968ee4a
+      repoCommit: 5c622b280c8a6fe0fc07b3c716bd49d1bc039441
+      initial: 46148
+      peak: 46148
+      added: 0
+      turns: 1
