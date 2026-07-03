@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Run a WAV file through transcribeAudioVoxtral() with diarization on
  * and print the result. Defaults to scripts/test.wav; override with

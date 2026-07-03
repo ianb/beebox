@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Rename the `sheet` card type to `gsheet` (consistency with `gdoc` — both are
  * Google-Drive-synced). Two passes:
@@ -109,7 +109,7 @@ async function migrateBox(absRoot: string, apply: boolean): Promise<Report> {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const boxRoot = args.filter((a) => !a.startsWith("--"))[0];
+  const boxRoot = args.find((a) => !a.startsWith("--"));
   if (boxRoot === undefined) {
     console.error("Usage: gsheet-rename <boxRoot> [--apply]");
     process.exit(1);

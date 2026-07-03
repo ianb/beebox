@@ -355,6 +355,11 @@ function allRulesOffFrom(config) {
  * @param {object} [options]
  * @param {boolean} [options.react] — include React/JSX rules (default: false)
  * @param {string[]} [options.ignores] — additional ignore patterns
+ * @param {string[]} [options.roots] — source roots the ruleset applies to
+ *   (default: `["src"]`). Add e.g. `"scripts"` to hold first-party tooling
+ *   outside src/ to the same reviewed rules instead of eslint-config-agent's
+ *   harsher global base. Only affects the main (non-type-aware) rule block; the
+ *   type-aware scope stays src-only since it needs tsconfig project membership.
  * @param {object} [options.restrictComponentClasses] — enable the
  *   restrict-component-classes rule. Pass an options object, e.g.
  *     `{ components: ["./ui/**", "./components/ui/**"] }`.
@@ -363,6 +368,7 @@ function allRulesOffFrom(config) {
 export function vibeCheck(options) {
   const react = options && options.react;
   const extraIgnores = (options && options.ignores) || [];
+  const roots = (options && options.roots) || ["src"];
   const restrictClassesOptions =
     options && options.restrictComponentClasses ? options.restrictComponentClasses : null;
 
@@ -460,9 +466,8 @@ export function vibeCheck(options) {
 
   const reactSettings = react ? { react: { version: "detect" } } : {};
 
-  const filePatterns = react
-    ? ["src/**/*.{ts,tsx,js,jsx}"]
-    : ["src/**/*.{ts,js}"];
+  const exts = react ? "{ts,tsx,js,jsx}" : "{ts,js}";
+  const filePatterns = roots.map((r) => `${r}/**/*.${exts}`);
 
   // eslint-config-agent applies a strict `no-restricted-syntax` selector set to
   // .tsx files. We keep all of it EXCEPT the nullish-coalescing (`??`) ban —

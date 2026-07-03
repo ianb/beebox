@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * One-shot migrator: remove the redundant `type:` field from every card's
  * YAML frontmatter. The filename (`Foo.<type>.card`) is the canonical type
@@ -21,7 +21,7 @@ import { readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
 
 const TYPE_LINE_RE = /^type:\s*([\w-]+)\s*$/m;
-const FRONTMATTER_RE = /^---\r?\n([\s\S]*?)\r?\n---/;
+const FRONTMATTER_RE = /^---\r?\n([\S\s]*?)\r?\n---/;
 
 async function findCards(root: string): Promise<string[]> {
   const out: string[] = [];
@@ -130,8 +130,8 @@ async function processFile(absPath: string): Promise<{ outcome: Outcome; detail?
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const boxRoot = positional[0];
+  const positional = args.find((a) => !a.startsWith("--"));
+  const boxRoot = positional;
   if (boxRoot === undefined) {
     console.error("Usage: strip-type-field <boxRoot> [--apply]");
     process.exit(1);

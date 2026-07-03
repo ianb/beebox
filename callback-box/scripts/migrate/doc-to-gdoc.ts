@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Rename existing Google-Doc cards from `.doc.card` to `.gdoc.card` and
  * flip the frontmatter `type:` field from "doc" to "gdoc". The `doc`
@@ -53,7 +53,7 @@ async function migrateFile(absPath: string): Promise<Outcome> {
   // their filename brought in line; cards declaring `type: doc` for the
   // new generic schema (no drive-id, no content-ref) are left alone —
   // we distinguish by the presence of `drive-id:`.
-  const typeMatch = raw.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  const typeMatch = raw.match(/^---\r?\n([\S\s]*?)\r?\n---/);
   const fm = typeMatch ? typeMatch[1] ?? "" : "";
   const typeField = /^type:\s*([\w-]+)\s*$/m.exec(fm);
   const currentType = typeField?.[1];
@@ -91,8 +91,8 @@ async function migrateFile(absPath: string): Promise<Outcome> {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const boxRoot = positional[0];
+  const positional = args.find((a) => !a.startsWith("--"));
+  const boxRoot = positional;
   if (boxRoot === undefined) {
     console.error("Usage: migrate-doc-to-gdoc <boxRoot> [--apply]");
     process.exit(1);
