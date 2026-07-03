@@ -200,7 +200,48 @@ Run in batches by section. Two buckets per failure:
 - Decision for the boxholder: restore a synced gsheet (and gdoc) fixture to test1
   to exercise these, or accept they can't run. Audits left unchanged.
 
+### triage-confidence-levels / triage-handler-env — REAL GAPS, pre-existing (batch 7)
+
+- Both are **already documented** in the yaml's Triage Pipeline status
+  (2026-05-20) and still fail on the same root cause: the triage pipeline's
+  internals live in dev-repo source and `docs/plans/triage-design.md`, which is
+  **not propagated into boxes**.
+  - `triage-confidence-levels`: the enum is `confident` / `probable` / `guess`
+    (`src/core/triage.ts:75`), but the box agent can't find it — it answers "no
+    documented per-item scale" and describes `_unsure/` + the guide-rule
+    low/medium/high confidence (a different thing). Real.
+  - `triage-handler-env`: handlers receive their items via the `TRIAGE_ITEMS`
+    env var (null-delimited paths — `src/core/handle.ts:30`), but the agent can't
+    find it and improvises a `ls box/inbox/triaged/<cat>/` directory listing. Real.
+- **Fix (boxholder):** propagate a `docs/generated/triage-pipeline.md` derivative
+  into boxes (the confidence enum + the `TRIAGE_ITEMS` contract). Left failing
+  honestly — the substance checks (`probable`/`guess`, `TRIAGE_ITEMS`) correctly
+  flag the gap.
+
+Note: also discovered a **systemic broken-`should_read`** issue — several
+landmark/triage audits pointed `should_read` at dev-repo docs
+(`docs/landmark-curation.md`, `docs/plans/triage-design.md`) that don't exist in
+the box, so they failed automatically even though the agent answered correctly
+from the always-on guide. Dropped those broken reads (see fixes below).
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 7 (landmarks / sessions / feedback / triage-pipeline / don't-drop):
+
+- **landmarks-recurrence-signal / -criteria / -not-everywhere** — dropped the
+  broken `should_read docs/landmark-curation.md` (dev-repo doc not in the box);
+  the agent answers curation questions correctly from the always-on guide.
+- **landmarks-dont-create-quietly** — `should_read` repointed to the real
+  `docs/generated/card-landmark.md` (which the agent reads).
+- **landmark-roles** — the agent-facing routing role is `destinations:` frontmatter
+  (with `for: [triage]`/`[commentary]`), renamed from the old XML
+  `<triage-destination>`; check `triage-destination` → `destinations`.
+- **triage-vs-reactor-flow** — dropped the broken
+  `should_read docs/plans/triage-design.md`; the agent distinguishes the two
+  "intake" paths correctly from the guide.
+- **triage-pipeline-not-wired** — the agent answered correctly ("runs only when
+  invoked directly via cb intake/triage/handle") but in different words; added
+  "invoked directly"/"directly via" to the accepted phrasings.
 
 Batch 6 (calendar / drive / email):
 
@@ -321,3 +362,8 @@ gap in the narration override.
 \** 13 raw; 14 after fixing the `drive-docs-supported` wrong check. Remaining:
 `draft-email-placement` (real gap) and `drive-edit-spreadsheet` /
 `drive-understand-formulas` (box drift — empty store/drive/ in test1).
+| 7 | Landmarks, Landmark Sessions, Feedback, Triage Pipeline, Don't-Drop | 27 | 18→25†† | 2 (pre-existing) | 5 |
+
+†† 18 raw; 25 after fixing 5 audits (3 broken-should_read + 1 repointed + 1 vocab
++ 1 wording; re-run confirmed). The 2 remaining (`triage-confidence-levels`,
+`triage-handler-env`) are the pre-documented undocumented-triage-internals gaps.

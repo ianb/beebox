@@ -1606,6 +1606,13 @@ tests:
   # docs/landmark-curation.md; the schema reference is at
   # docs/generated/card-landmark.md.
   #
+  # Status (2026-07-03): all 8 pass. The curation trio + dont-create-quietly had
+  # should_read pointing at docs/landmark-curation.md, which is a DEV-REPO doc not
+  # regenerated into the box — a guaranteed false-fail. Dropped those (curation
+  # knowledge is in the always-on guide; the agents answer correctly) and
+  # repointed dont-create-quietly to the real docs/generated/card-landmark.md.
+  # landmark-roles: routing role is now `destinations:` (was XML <triage-destination>).
+  #
   # Status (2026-05-04): All 7 pass. landmarks-vs-directories initially
   # failed on a too-narrow keyword check (agent answered with "boxholder"
   # / "you" instead of "user") — broadened correct_contains_any to
@@ -1640,27 +1647,25 @@ tests:
     prompt: "I have asked you about my recipes three times this week already. Should you do something?"
     expected_level: knows_about
     watch_for: >
-      Reads docs/landmark-curation.md, recognizes recurrence as the
-      signal that argues for a landmark, and proposes one to the user
-      as a question — does NOT silently create one. Does NOT treat the
-      question as purely about the recipes themselves.
-    should_read: ["docs/landmark-curation.md"]
+      Recognizes recurrence as the signal that argues for a landmark, and
+      proposes one to the user as a question — does NOT silently create one.
+      Does NOT treat the question as purely about the recipes themselves.
     correct_contains_any: ["landmark"]
     tags: [landmarks, curation]
     notes: >
-      The agent should read the curation doc and propose a landmark
-      rather than creating one quietly. Failure modes: creates the
-      landmark silently, or ignores the recurrence signal entirely.
+      The agent should propose a landmark rather than creating one quietly.
+      Failure modes: creates the landmark silently, or ignores the recurrence
+      signal entirely. (should_read docs/landmark-curation.md dropped 2026-07-03 —
+      that dev-repo doc isn't in the box; curation knowledge is now in the
+      always-on agent guide and the agent answers correctly directly.)
 
   - id: landmarks-criteria
     prompt: "What makes a directory worth turning into a landmark?"
     expected_level: knows_about
     watch_for: >
-      Reads docs/landmark-curation.md and answers in user-perspective
-      terms — recurrence in conversation, places the user returns to,
-      navigational asks rather than search. Does NOT cite size, volume,
-      or technical importance as criteria.
-    should_read: ["docs/landmark-curation.md"]
+      Answers in user-perspective terms — recurrence in conversation, places
+      the user returns to, navigational asks rather than search. Does NOT cite
+      size, volume, or technical importance as criteria.
     correct_contains_any: ["recurrence", "return", "user", "navigate"]
     tags: [landmarks, curation]
 
@@ -1671,7 +1676,6 @@ tests:
       Says no. Explains that the Landmarks page is meant to be short —
       a half-dozen high-traffic spots, not a complete map of the box.
       Does NOT just answer "yes, for organization."
-    should_read: ["docs/landmark-curation.md"]
     correct_contains_any: ["no", "few", "short"]
     tags: [landmarks, curation]
 
@@ -1682,9 +1686,8 @@ tests:
       Confirms the user's intent and the spot before creating. May
       create the landmark since the user explicitly asked, but should
       NOT proceed without confirming the symbol/label or hand-waving
-      the curated links. Reads docs/landmark-curation.md or
-      docs/generated/card-landmark.md before writing.
-    should_read: ["docs/landmark-curation.md"]
+      the curated links. Reads docs/generated/card-landmark.md before writing.
+    should_read: ["docs/generated/card-landmark.md"]
     tags: [landmarks, curation]
     notes: >
       Even with explicit user direction, creation is editorial work —
@@ -1874,6 +1877,14 @@ tests:
 
   # === Triage Pipeline ===
   #
+  # Status (2026-07-03): 8/10 pass. Same 2 real gaps persist (triage-confidence-levels,
+  # triage-handler-env) — the confident/probable/guess enum (src/core/triage.ts)
+  # and the TRIAGE_ITEMS handler contract (src/core/handle.ts) still aren't
+  # surfaced in the box's agent docs; both fail honestly on substance. Cleaned up
+  # the should_read-only false-fails (triage-vs-reactor-flow) by dropping the
+  # broken docs/plans/triage-design.md read (not in box) and fixing
+  # triage-pipeline-not-wired's brittle wording check. See findings doc.
+  #
   # Status (2026-05-20): 8/10 pass on substance against test1 (run via
   # `knowledge-audit run --box ~/src/boxes/test1 --filter triage-pipeline`).
   # Two real knowledge gaps:
@@ -1951,12 +1962,17 @@ tests:
     prompt: "What roles can a landmark card carry?"
     expected_level: knows_about
     watch_for: >
-      Names `<navigation>` (human-facing bookmark) and `<triage-destination>`
-      (agent-facing routing target). A landmark must carry at least one role
-      and can carry both. Confirmed by reading `docs/generated/card-landmark.md`.
+      Names the `navigation` role (human-facing bookmark) and `destinations`
+      (agent-facing routing targets, each with `for:` listing triage/commentary).
+      A landmark must carry at least one role and can carry both. Confirmed by
+      reading `docs/generated/card-landmark.md`.
     should_read: ["docs/generated/card-landmark.md"]
-    correct_contains: ["navigation", "triage-destination"]
+    correct_contains: ["navigation", "destinations"]
     tags: [triage-pipeline, landmarks, schemas]
+    notes: >
+      Updated 2026-07-03: the agent-facing routing role is `destinations:`
+      frontmatter (with `for: [triage]` / `[commentary]`), renamed from the old
+      XML `<triage-destination>` element in the prompt-surface overhaul.
 
   - id: triage-vs-reactor-flow
     prompt: "What's the difference between the triage pipeline's intake stage and the reactor's intake jobs?"
@@ -1968,12 +1984,14 @@ tests:
       box/inbox/staged/. Reactor intake jobs are the legacy path —
       connectors drop items in box/inbox/, wakeup creates job cards in
       box/jobs/, the reactor agent processes them. The two paths coexist.
-    should_read: ["docs/plans/triage-design.md"]
     correct_contains_any: ["legacy", "coexist", "two", "parallel", "reactor"]
     tags: [triage-pipeline, lifecycle, behavioral]
     notes: >
       The terminology collision (both call themselves "intake") is the failure
       mode this test guards against. The agent should not conflate them.
+      (should_read docs/plans/triage-design.md dropped 2026-07-03 — that dev-repo
+      plan isn't in the box; the agent distinguishes the two paths correctly from
+      the always-on guide.)
 
   - id: triage-guess-handling
     prompt: "What happens when the triage agent isn't sure where an item belongs?"
@@ -2005,7 +2023,7 @@ tests:
       `cb intake`, `cb triage`, and `cb handle` manually. Wakeup currently
       drives only the legacy reactor inbox-job path. The agent guide is
       explicit: "the new pipeline isn't wired into wakeup yet."
-    correct_contains_any: ["not wired", "manual", "manually", "not yet", "legacy"]
+    correct_contains_any: ["not wired", "manual", "manually", "not yet", "legacy", "invoked directly", "directly via"]
     tags: [triage-pipeline, lifecycle]
     notes: >
       This pins the current state. When wakeup eventually invokes the

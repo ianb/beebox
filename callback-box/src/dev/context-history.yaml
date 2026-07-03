@@ -1778,3 +1778,282 @@ test1:
       peak: 42255
       added: 1050
       turns: 3
+  intake-unexpected-legal:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41318
+      peak: 50079
+      added: 8761
+      turns: 23
+  intake-unexpected-person:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41311
+      peak: 53348
+      added: 12037
+      turns: 25
+  intake-account-number-in-narrative:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41289
+      peak: 50999
+      added: 9710
+      turns: 22
+  chat-unexpected-ledger-info:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41280
+      peak: 41280
+      added: 0
+      turns: 2
+  intake-emotional-context:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41312
+      peak: 49350
+      added: 8038
+      turns: 18
+  landmarks-purpose:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41184
+      peak: 41184
+      added: 0
+      turns: 1
+  landmarks-vs-directories:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41188
+      peak: 41188
+      added: 0
+      turns: 1
+  landmarks-recurrence-signal:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41192
+      peak: 41529
+      added: 337
+      turns: 3
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41204
+      peak: 41643
+      added: 439
+      turns: 4
+  landmarks-criteria:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41186
+      peak: 41186
+      added: 0
+      turns: 1
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41186
+      peak: 41186
+      added: 0
+      turns: 1
+  landmarks-not-everywhere:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41186
+      peak: 41186
+      added: 0
+      turns: 1
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41186
+      peak: 41186
+      added: 0
+      turns: 1
+  landmarks-dont-create-quietly:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41193
+      peak: 45498
+      added: 4305
+      turns: 13
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41193
+      peak: 45117
+      added: 3924
+      turns: 10
+  landmark-link-attribute:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41196
+      peak: 42725
+      added: 1529
+      turns: 3
+  landmark-template-ref:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41211
+      peak: 43034
+      added: 1823
+      turns: 5
+  landmark-subdir-claude-md-loads:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 26500
+      peak: 26500
+      added: 0
+      turns: 1
+  landmark-parent-claude-md-loads:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 26512
+      peak: 26512
+      added: 0
+      turns: 1
+  cb-feedback-purpose:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41190
+      peak: 41190
+      added: 0
+      turns: 1
+  cb-feedback-when-to-use:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41196
+      peak: 41196
+      added: 0
+      turns: 1
+  cb-feedback-uses-it:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41253
+      peak: 42149
+      added: 896
+      turns: 4
+  triage-pipeline-stages:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41187
+      peak: 41187
+      added: 0
+      turns: 1
+  triage-pipeline-directories:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41188
+      peak: 41188
+      added: 0
+      turns: 1
+  triage-confidence-levels:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41199
+      peak: 46713
+      added: 5514
+      turns: 16
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41199
+      peak: 49650
+      added: 8451
+      turns: 16
+  triage-rules-location:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41201
+      peak: 45164
+      added: 3963
+      turns: 11
+  landmark-roles:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41182
+      peak: 42719
+      added: 1537
+      turns: 3
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41182
+      peak: 42714
+      added: 1532
+      turns: 3
+  triage-vs-reactor-flow:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41200
+      peak: 41200
+      added: 0
+      turns: 1
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41200
+      peak: 41200
+      added: 0
+      turns: 1
+  triage-guess-handling:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41191
+      peak: 41191
+      added: 0
+      turns: 1
+  triage-handler-env:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41200
+      peak: 43873
+      added: 2673
+      turns: 11
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41200
+      peak: 44617
+      added: 3417
+      turns: 11
+  triage-pipeline-not-wired:
+    - date: 2026-07-03T11:51:45.838Z
+      boxCommit: 081ae213036c14a4948f1699aab50ab52f2c08de
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41199
+      peak: 41199
+      added: 0
+      turns: 1
+    - date: 2026-07-03T12:00:57.518Z
+      boxCommit: bb79b2aa71ba12f7eee59fcdbd2d869a9c0b20a8
+      repoCommit: 90767b87d889769f8481e93d20a913eb0a4dcde6
+      initial: 41199
+      peak: 41199
+      added: 0
+      turns: 1
