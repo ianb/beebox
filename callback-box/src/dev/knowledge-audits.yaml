@@ -80,6 +80,15 @@ tests:
     tags: [intake, lifecycle, legacy-flow]
 
   # === Card Types and Schemas ===
+  #
+  # Status (2026-07-03): 7/8 pass after full rerun. Fixed 4 stale expectations
+  # (memo-xml-structure, create-question-card, question-directive,
+  # create-new-card-type) — the overhaul moved card/question/extension knowledge
+  # into the always-on surface, so the agent answers directly & correctly and the
+  # old `should_read` / `<directive>` XML checks were obsolete. REGRESSION:
+  # schema-validate-hook now answers Zod `.refine()` instead of discovering the
+  # real `validate` hook (was passing 2026-06-18) — see
+  # docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -89,29 +98,33 @@ tests:
 
   - id: memo-xml-structure
     prompt: "Show me the XML structure of a memo card."
-    expected_level: knows_about
-    watch_for: "Reads docs/generated/card-memo.md before answering"
-    should_read: ["docs/generated/card-memo.md"]
+    expected_level: knows_directly
+    watch_for: "Rejects the XML premise; describes YAML frontmatter + markdown body directly"
+    correct_contains_any: ["frontmatter", "YAML"]
     tags: [cards, schemas]
+    notes: >
+      Trick question — cards are YAML frontmatter + markdown body, never XML
+      (Phase 2 removed the XML card format). The agent should correct the
+      premise and describe the real structure directly, not invent XML.
 
   - id: create-question-card
     prompt: "How would you create a new question card asking the user to pick a color?"
-    expected_level: knows_about
-    watch_for: "Reads docs/generated/card-question.md, uses cb create, includes a directive"
-    should_read: ["docs/generated/card-question.md"]
+    expected_level: knows_directly
+    watch_for: "Uses cb create for a question card and includes a directive; answers from the guide"
     correct_contains: ["cb create", "directive"]
     tags: [cards, schemas, questions]
 
   - id: question-directive
     prompt: "I want to ask the user whether to archive a recipe under store/recipes or store/archive. Create the question card."
     expected_level: knows_about
-    watch_for: "Includes a <directive> element describing what to do with the answer"
-    should_read: ["docs/generated/card-question.md"]
-    correct_contains: ["<directive>"]
+    watch_for: "Creates a question card with a directive: frontmatter field describing the concrete action (move the recipe)"
+    cards_contain: ["directive:"]
     tags: [cards, questions]
     notes: >
       The directive is critical — without it, answering the question is a dead end.
-      The agent should describe the concrete action (e.g., move the recipe) not
+      In the YAML card format it's a `directive:` frontmatter field, not an XML
+      `<directive>` element (that form now survives only for procedure directives).
+      The agent should describe the concrete action (e.g., move the recipe), not
       just restate the question.
 
   - id: question-answer-creates-job
@@ -130,8 +143,8 @@ tests:
   - id: create-new-card-type
     prompt: "How would you create a brand new card type for this box?"
     expected_level: discoverable
-    watch_for: "Navigates to config/schemas/ and finds CLAUDE.md"
-    should_read: ["config/schemas/CLAUDE.md"]
+    watch_for: "Names config/schemas/ + cardSchema()/Zod + cb init; reading config/schemas/CLAUDE.md is fine but the agent now knows the shape directly"
+    correct_contains_any: ["config/schemas", "cb init"]
     tags: [schemas, extension]
 
   # Status (2026-06-18): pass (verified). Agent discovered config/schemas/CLAUDE.md
@@ -1890,6 +1903,11 @@ tests:
   # audits pin what the agent should know about that current state, plus
   # the cross-cutting attach-scope and schema-discovery facts.
   #
+  # Status (2026-07-03): 10/10 pass after full rerun. doc-body-inline-not-separate-file
+  # was the only failure and only on the stale `should_read` — the doc schema's
+  # instructions now teach inline-body directly, so it's `knows_directly` with the
+  # content checks kept. All others answered correctly.
+  #
   # Status (2026-05-24, second pass): 8/10 pass after fixing the doc-gen
   # bug (now regenerates phase-2 schema docs) + strengthening doc/memo
   # schema `instructions` with worked attach-scope examples + cleaning up
@@ -2056,13 +2074,13 @@ tests:
       Where does the body content of a `.doc.card` live on disk? Show me
       the layout of a simple doc card titled "Notes" with the body
       "Some thoughts here."
-    expected_level: knows_about
+    expected_level: knows_directly
     watch_for: >
       Body lives INLINE in the .doc.card file itself, after the closing
       `---` of the frontmatter. NOT in a separate `.md` file beside the
       card; NOT inside a `.attach/` directory. Single file: just
-      `Notes.doc.card`.
-    should_read: ["docs/generated/card-doc.md"]
+      `Notes.doc.card`. The doc schema's instructions now teach this
+      directly, so no doc read is required.
     response_not_contains: ["Notes.attach/Notes.md", ".attach/Notes.md"]
     correct_contains: ["title: Notes"]
     tags: [cards, doc, format, behavioral]
@@ -2107,6 +2125,10 @@ tests:
   # distinct from the agent's paraphrase. Verbatim content only inside
   # the tag; functional asks ("remind me at 4pm") need no tag. The agent
   # guide's `quotesSection` (loaded via CLAUDE.md) carries the rules.
+  #
+  # Status (2026-07-03): all 7 pass after full rerun (quote-*, law-*,
+  # narration-capture-uses-quote-tag) — the overhaul's quote/law reconciliation
+  # landed cleanly; agent answers directly (0 reads) with correct syntax.
   #
   # Status (2026-05-29): 4/4 pass on rewritten ~185-word `quotesSection`.
   # All four answered with zero file reads and zero searches — true
@@ -2294,12 +2316,17 @@ tests:
 
   # === Provenance (`{% source %}`) ===
   #
-  # `{% source ref="..." as="..." %}` marks content derived from a card
+  # `{% source ref="..." usage="..." %}` marks content derived from a card
   # or file: required `ref` (auto-tracked by `cb validate` and `cb mv`
-  # via Track 4's body ref-walker) and optional free-form `as=`
-  # describing how the content was derived. Complements `{% quote %}`:
-  # the two compose for "verbatim from there." Agent-guide section is
-  # the `sourceSection` (loaded via CLAUDE.md).
+  # via Track 4's body ref-walker) and optional free-form `usage=`
+  # describing how the content was derived (renamed from `as=` in the
+  # prompt-surface overhaul). Complements `{% quote %}`: the two compose
+  # for "verbatim from there." Agent-guide section is the `sourceSection`
+  # (loaded via CLAUDE.md).
+  #
+  # Status (2026-07-03): all 5 pass after full rerun — source-tag-syntax,
+  # source-as-is-free-form, source-vs-quote-composition, source-when-to-skip,
+  # source-anchor-span-not-quote. Agent knows the `usage=` form directly.
   #
   # Status (2026-05-30): 4/4 pass on first run. All four answered with
   # zero file reads and zero searches — true knows_directly. Answers

@@ -331,3 +331,284 @@ test1:
       peak: 41867
       added: 0
       turns: 1
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41258
+      peak: 41258
+      added: 0
+      turns: 1
+  list-card-types:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41199
+      peak: 41199
+      added: 0
+      turns: 1
+  memo-xml-structure:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41201
+      peak: 41201
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:39:36.890Z
+      boxCommit: 5714a4265915aaa14df36251e27d669df3848534
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41187
+      peak: 41187
+      added: 0
+      turns: 1
+  create-question-card:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41205
+      peak: 41205
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:39:36.890Z
+      boxCommit: 5714a4265915aaa14df36251e27d669df3848534
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41191
+      peak: 41191
+      added: 0
+      turns: 1
+  question-directive:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41221
+      peak: 43360
+      added: 2139
+      turns: 8
+    - date: 2026-07-03T10:39:36.890Z
+      boxCommit: 5714a4265915aaa14df36251e27d669df3848534
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41207
+      peak: 43381
+      added: 2174
+      turns: 9
+  question-answer-creates-job:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41198
+      peak: 41198
+      added: 0
+      turns: 1
+  guide-vs-procedure:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41204
+      peak: 41204
+      added: 0
+      turns: 1
+  create-new-card-type:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41201
+      peak: 41201
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:39:36.890Z
+      boxCommit: 5714a4265915aaa14df36251e27d669df3848534
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41187
+      peak: 44553
+      added: 3366
+      turns: 3
+  schema-validate-hook:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41244
+      peak: 41244
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:36:51.248Z
+      boxCommit: 12e114e8fdd0bd011f728bbf2f0a725c526dd2f7
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41240
+      peak: 41240
+      added: 0
+      turns: 1
+  memo-yaml-format:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41213
+      peak: 41213
+      added: 0
+      turns: 1
+  card-type-from-filename:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41210
+      peak: 41210
+      added: 0
+      turns: 1
+  attach-sibling-directory:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41221
+      peak: 41221
+      added: 0
+      turns: 1
+  doc-with-image-attach-scope:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41294
+      peak: 43271
+      added: 1977
+      turns: 7
+  find-schema-fields:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41216
+      peak: 41216
+      added: 0
+      turns: 2
+  schema-instructions-load-when:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41217
+      peak: 42980
+      added: 1763
+      turns: 9
+  classify-thought-as-memo:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41252
+      peak: 41252
+      added: 0
+      turns: 1
+  doc-body-inline-not-separate-file:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41239
+      peak: 41239
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:39:36.890Z
+      boxCommit: 5714a4265915aaa14df36251e27d669df3848534
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41225
+      peak: 41225
+      added: 0
+      turns: 1
+  doc-with-image-where-body:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41249
+      peak: 41249
+      added: 0
+      turns: 2
+  classify-person-fact:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41230
+      peak: 41230
+      added: 0
+      turns: 1
+  quote-tag-syntax:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41216
+      peak: 41216
+      added: 0
+      turns: 1
+  quote-when-to-use:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41251
+      peak: 41251
+      added: 0
+      turns: 1
+  quote-functional-vs-expressive:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41231
+      peak: 41231
+      added: 0
+      turns: 1
+  quote-no-fabrication:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41273
+      peak: 41273
+      added: 0
+      turns: 1
+  law-never-paraphrase:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41254
+      peak: 41254
+      added: 0
+      turns: 1
+  law-paraphrase-pressure:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41246
+      peak: 41246
+      added: 0
+      turns: 1
+  narration-capture-uses-quote-tag:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 46262
+      peak: 49060
+      added: 2798
+      turns: 10
+  source-tag-syntax:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41229
+      peak: 41229
+      added: 0
+      turns: 1
+  source-as-is-free-form:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41248
+      peak: 41248
+      added: 0
+      turns: 1
+  source-vs-quote-composition:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41237
+      peak: 41237
+      added: 0
+      turns: 1
+  source-when-to-skip:
+    - date: 2026-07-03T10:34:32.749Z
+      boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
+      repoCommit: f79558b98be3f1c945378c38136b107bfefbbe09
+      initial: 41243
+      peak: 41243
+      added: 0
+      turns: 1
