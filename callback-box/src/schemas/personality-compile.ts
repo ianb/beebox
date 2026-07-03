@@ -4,7 +4,7 @@
  * to keep the compiler's branching complexity low; behavior is identical.
  */
 
-import type { PersonalityFields } from "./personality-fields.js";
+import type { Boxholder, PersonalityFields } from "./personality-fields.js";
 
 export function appendIdentity(lines: string[], fields: PersonalityFields): void {
   if (fields["goes-by"] !== undefined && fields["goes-by"] !== "") {
@@ -17,20 +17,36 @@ export function appendIdentity(lines: string[], fields: PersonalityFields): void
   }
 }
 
-export function appendBoxholder(lines: string[], fields: PersonalityFields): void {
-  const boxholder = fields.boxholder ?? {};
-  if (boxholder["full-name"] !== undefined && boxholder["full-name"] !== "") {
-    const called = boxholder.called !== undefined && boxholder.called !== ""
-      ? ` (${boxholder.called})`
-      : "";
-    lines.push(`Your boxholder is **${boxholder["full-name"]}**${called}.`);
-  }
-  const confidentRelationships = (boxholder.relationships ?? []).filter(
+export function appendBoxholder(
+  lines: string[],
+  { fields, boxholders }: { fields: PersonalityFields; boxholders: Boxholder[] },
+): void {
+  const identityLine = formatBoxholders(boxholders);
+  if (identityLine !== "") lines.push(identityLine);
+
+  const confidentRelationships = (fields.boxholder?.relationships ?? []).filter(
     (r) => (r.confidence ?? "confirmed") !== "hypothesis",
   );
   for (const rel of confidentRelationships) {
     lines.push(rel.text);
   }
+}
+
+/**
+ * Render the boxholder identity sentence. One boxholder →
+ * "Your boxholder is **Name** (Called)."; several →
+ * "Your boxholders are **A** (a), **B**, and **C**.". Empty list → "".
+ */
+function formatBoxholders(boxholders: Boxholder[]): string {
+  const parts = boxholders.map((b) => {
+    const called = b.called !== undefined && b.called !== "" ? ` (${b.called})` : "";
+    return `**${b.name}**${called}`;
+  });
+  if (parts.length === 0) return "";
+  if (parts.length === 1) return `Your boxholder is ${parts[0]}.`;
+  const last = parts[parts.length - 1]!;
+  const rest = parts.slice(0, -1).join(", ");
+  return `Your boxholders are ${rest}, and ${last}.`;
 }
 
 export function appendDescription(lines: string[], fields: PersonalityFields): void {

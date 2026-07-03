@@ -191,6 +191,10 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
   // Briefing cards (root + any subdirectory)
   await check(join(boxRoot, "briefing.briefing.card"));
 
+  // Person cards — a `boxholder: true` flag feeds the compiled personality's
+  // boxholder identity line, so editing one must invalidate the doc cache.
+  await checkDir(join(boxRoot, "people"), /\.person\.card$/);
+
   // Per-chat guide cards
   await checkChatGuideMtimes(boxRoot, check);
 

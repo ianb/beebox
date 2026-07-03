@@ -22,15 +22,23 @@ export const VOICE_MODELS = [
 ] as const;
 export type VoiceModel = typeof VOICE_MODELS[number];
 
+/**
+ * A boxholder, resolved from a `people/*.person.card` with `boxholder: true`.
+ * `name` is the person's full name; `called` is their first alias (the
+ * nickname the boxholder goes by), if any. This is the single source of
+ * truth for who the box serves — the personality card no longer embeds it.
+ */
+export interface Boxholder {
+  name: string;
+  called?: string;
+}
+
 export interface PersonalityFields {
   type: "personality";
   version: string;
   "goes-by"?: string;
   role?: string;
   boxholder?: {
-    ref?: string;
-    "full-name"?: string;
-    called?: string;
     relationships?: Array<{
       text: string;
       confidence?: ConfidenceLevelType;
