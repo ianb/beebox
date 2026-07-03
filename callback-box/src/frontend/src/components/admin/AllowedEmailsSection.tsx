@@ -6,9 +6,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
-import { RequestError } from "../../lib/errors";
+import { trpcClient } from "../../lib/trpc";
 
-export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
+export function AllowedEmailsSection() {
   const [emails, setEmails] = useState<string[]>([]);
   const [ownerEmail, setOwnerEmail] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -18,19 +18,14 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
 
   const fetchConfig = useCallback(async () => {
     try {
-      const resp = await fetch(`${apiBase}/admin/box-config`);
-      if (!resp.ok) {
-        const message = `Failed to load config: ${resp.status}`;
-        throw new RequestError(message);
-      }
-      const data = await resp.json();
+      const data = await trpcClient.admin.boxConfig.query();
       setEmails(data.allowedEmails ?? []);
       setOwnerEmail(data.ownerEmail ?? null);
       setError(null);
     } catch (err) {
       setError((err as Error).message);
     }
-  }, [apiBase]);
+  }, []);
 
   // Mount-only fetch — the setLoading calls are the standard
   // "show spinner, fetch, hide spinner" pattern; nothing to be derived
@@ -46,13 +41,7 @@ export function AllowedEmailsSection({ apiBase }: { apiBase: string }) {
     setSaving(true);
     setError(null);
     try {
-      const resp = await fetch(`${apiBase}/admin/box-config`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ allowedEmails: updated }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) throw new RequestError(data.error || "Save failed");
+      const data = await trpcClient.admin.updateBoxConfig.mutate({ allowedEmails: updated });
       setEmails(data.allowedEmails ?? updated);
     } catch (err) {
       setError((err as Error).message);

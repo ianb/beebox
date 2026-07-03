@@ -13,7 +13,7 @@ import * as path from "node:path";
 import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
 import { registerAuthRoutes } from "./routes/auth.js";
-import { registerSystemAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
+import { registerGoogleServicesCallback } from "./routes/admin.js";
 import { isAuthEnabled } from "./auth.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -93,10 +93,6 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
       return reply.type("application/json").send("null");
     });
   }
-  // System-wide admin routes (Claude Code auth)
-  await server.register(async (instance) => {
-    await registerSystemAdminRoutes(instance, options.services ?? {});
-  });
   // Root-level Google Services OAuth callback (single redirect URI for all boxes)
   await server.register(async (instance) => {
     await registerGoogleServicesCallback(instance, { boxes });
@@ -174,7 +170,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
   }
 
   // Shutdown handler — force-close all connections immediately so
-  // --watch restarts don't hang on open SSE/WebSocket sockets.
+  // --watch restarts don't hang on open WebSocket sockets.
   const shutdown = async (signal: string) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     for (const pf of pidFiles) {

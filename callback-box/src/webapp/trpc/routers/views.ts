@@ -13,6 +13,7 @@ import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
+import { listViews } from "../../views/compiler.js";
 import { resolveRefToPath } from "../../../core/ref-exists.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { splitCardContent } from "../../../cards/frontmatter.js";
@@ -46,6 +47,11 @@ async function frontmatterTitle(absPath: string): Promise<string | null> {
 }
 
 export const viewsRouter = router({
+  /** List all box-authored views (slug, name, rendered card types). */
+  list: publicProcedure.query(({ ctx }) => {
+    return listViews(ctx.boxRoot);
+  }),
+
   resolveRef: publicProcedure
     .input(
       z.object({

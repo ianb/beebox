@@ -8,23 +8,20 @@
 
 import type { FastifyInstance } from "fastify";
 import fastifyStatic from "@fastify/static";
-import { fastifyTRPCPlugin } from "@trpc/server/adapters/fastify";
+import { fastifyTRPCPlugin, type CreateFastifyContextOptions } from "@trpc/server/adapters/fastify";
 import { registerApiRoutes } from "./routes/api.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
-import { registerCalendarRoutes } from "./routes/calendar.js";
 import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
-import { registerClerkRoutes } from "./routes/clerk.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
-import { registerBoxAdminRoutes } from "./routes/admin.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail, isDiagnosticBypassRequest } from "./auth.js";
+import { isAuthEnabled, getSessionEmail, getSessionUser, getOwnerEmail, isOwner, isDiagnosticBypassRequest } from "./auth.js";
 import { verifyAgentBearer } from "../core/agent-token.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { EventBus } from "../core/event-bus.js";
@@ -45,8 +42,14 @@ function isApiUrl(url: string): boolean {
  */
 function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
   instance.addHook("preHandler", async (request, reply) => {
+    // CORS preflight carries no credentials and triggers no side effect — the
+    // browser only reads the response headers to decide whether to send the
+    // real (still-authed) request, so never 401 it. Extension-origin preflights
+    // are already short-circuited at the root (registerChromeExtensionCors);
+    // this covers any other OPTIONS that reaches the box scope.
+    if (request.method === "OPTIONS") return;
     // Let static assets (served by fastify-static) through. Scope this
-    // narrowly: API/SSE paths (like /api/files/foo.jpg) need the auth
+    // narrowly: API paths (like /api/files/foo.jpg) need the auth
     // check even when they end in an asset extension.
     const urlPath = request.url.split("?")[0]!;
     if (!isApiUrl(urlPath) && ASSET_EXTENSIONS.test(urlPath)) {
@@ -64,7 +67,7 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     }
     const email = getSessionEmail(request);
     if (!email) {
-      // For API/SSE requests, return 401 JSON. For page navigations, redirect to login.
+      // For API requests, return 401 JSON. For page navigations, redirect to login.
       if (isApiUrl(request.url)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
@@ -90,7 +93,7 @@ interface BoxScopeDeps {
 }
 
 /**
- * Register the main per-box scope under `/<slug>`: auth hook, SSE, tRPC,
+ * Register the main per-box scope under `/<slug>`: auth hook, tRPC,
  * the REST routes that can't move to tRPC, box admin, and static frontend.
  */
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
@@ -137,12 +140,27 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     // Server-side heartbeat: ping idle WS clients and drop ones that don't
     // pong, freeing sockets held by crashed/NAT-dropped tabs.
     keepAlive: { enabled: true, pingMs: 30_000, pongWaitMs: 5_000 },
-    createContext: (): TrpcContext => ({
-      boxRoot: box.boxRoot,
-      boxSlug: box.slug,
-      eventBus,
-      services: options.services ?? {},
-    }),
+    createContext: ({ req }: CreateFastifyContextOptions): TrpcContext => {
+      // Extract identity from the request the same way the box auth preHandler
+      // (and the raw `addOwnerCheck`) do, so tRPC procedures can gate on it.
+      // The preHandler already rejected unauthorized requests before this runs
+      // when auth is enabled; we recompute here to fail closed rather than
+      // assume it ran.
+      const user = getSessionUser(req);
+      const authEnabled = isAuthEnabled();
+      return {
+        boxRoot: box.boxRoot,
+        boxSlug: box.slug,
+        eventBus,
+        services: options.services ?? {},
+        user,
+        authed:
+          !authEnabled ||
+          user !== null ||
+          verifyAgentBearer(box.boxRoot, req.headers["authorization"]),
+        isOwner: !authEnabled || isOwner(req),
+      };
+    },
   };
   await instance.register(fastifyTRPCPlugin<typeof appRouter>, {
     prefix: "/api/trpc",
@@ -150,26 +168,17 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     trpcOptions,
   });
 
-  // REST routes that can't move to tRPC (SSE streaming, file uploads, WebSocket)
+  // Raw routes that can't move to tRPC (byte streaming, file uploads, WebSocket)
   await registerApiRoutes(instance, { boxRoot: box.boxRoot, eventBus });
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
-  await registerCalendarRoutes({ server: instance, boxRoot: box.boxRoot, calendar: options.services?.calendar });
   await registerSchedulerRoutes(instance, box.boxRoot);
   await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
-  // Wrap box admin routes in their own sub-scope so the owner-check
-  // preHandler (added by addOwnerCheck inside registerBoxAdminRoutes)
-  // is encapsulated to /api/admin/* only, not every per-box route.
-  // Without this sub-scope, the owner check bleeds out over the whole
-  // per-box instance and makes allowedEmails dead code (anyone who
-  // isn't the owner would be rejected by addOwnerCheck on any request).
-  // Mirrors the pattern used for registerSystemAdminRoutes at the root.
-  await instance.register(async (adminScope) => {
-    await registerBoxAdminRoutes(adminScope, { boxRoot: box.boxRoot, boxSlug: box.slug, services: options.services ?? {} });
-  });
+  // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
+  // behind ownerProcedure; only the OAuth redirect callback stays a raw route
+  // (registered at the root, see server.ts).
   await registerCaptureRoutes({ server: instance, boxRoot: box.boxRoot, boxSlug: box.slug, eventBus });
-  await registerClerkRoutes({ server: instance, boxRoot: box.boxRoot });
   await registerViewRoutes({ server: instance, boxRoot: box.boxRoot });
   registerFigureRoutes({ server: instance, boxRoot: box.boxRoot });
 

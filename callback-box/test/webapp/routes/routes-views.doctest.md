@@ -25,55 +25,6 @@ Test memo content
 `;
 ```
 
-## Listing views
-
-An empty box returns no views:
-
-```ts
-const ctx = await makeTestServer();
-await ctx.inject({ method: "GET", url: "/api/views" })
-=>
-200
-[]
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
-A box with a view in `views/` returns its metadata:
-
-```ts
-const ctx = await makeTestServer();
-await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
-await ctx.seed("views/test.tsx", VIEW_SOURCE);
-
-const res = await ctx.request({ method: "GET", url: "/api/views" });
-res.statusCode
-=> 200
-```
-
-```ts continue
-res.body.length
-=> 1
-
-res.body[0].name
-=> Test View
-
-res.body[0].slug
-=> test
-
-res.body[0].description
-=> A test view
-
-JSON.stringify(res.body[0].modes)
-=> ["page","chat"]
-```
-
-```ts cleanup
-await ctx.cleanup();
-```
-
 ## Serving compiled modules
 
 The module endpoint returns compiled JavaScript (not JSON), so we use `rawRequest` to get the raw payload:

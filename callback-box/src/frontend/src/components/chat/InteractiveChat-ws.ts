@@ -1,6 +1,7 @@
 /**
- * SSE + session-lifecycle effects for InteractiveChat: subscribes to the
- * global event stream (schedule-fired, chat-history, chat-complete,
+ * Realtime + session-lifecycle effects for InteractiveChat: subscribes to the
+ * global event stream over the shared WebSocket (schedule-fired, chat-history,
+ * chat-complete,
  * chat-user-message, chat-features-changed, chat-session-assigned), syncs the
  * URL once a session id is assigned, and loads the voice config on mount.
  * Bundled into one hook so the component body isn't dominated by the event
@@ -48,7 +49,7 @@ interface SecondaryEventDeps {
 }
 
 /**
- * Dispatch the lower-frequency / session-lifecycle SSE events (background
+ * Dispatch the lower-frequency / session-lifecycle events (background
  * tasks, file changes, feature toggles, session assignment). Split out of the
  * main dispatcher to keep each handler's branching legible.
  */
@@ -80,7 +81,7 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
   }
 }
 
-export function useChatSse(opts: {
+export function useChatWs(opts: {
   sessionId: string | null;
   sessionInput: string;
   boxSlug: string | undefined;
@@ -122,13 +123,13 @@ export function useChatSse(opts: {
       } else if (event.event === "chat-history") {
         const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
         if (!forSession(data.sessionId, sessionId)) return;
-        console.debug(`[chatfsm] sse-chat-history entries=${data.entries.length}`);
+        console.debug(`[chatfsm] ws-chat-history entries=${data.entries.length}`);
         send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         fetchSchedules();
       } else if (event.event === "chat-complete") {
         const data = event.data as { sessionId: string | null };
         if (!forSession(data.sessionId, sessionId)) return;
-        console.debug("[chatfsm] sse-chat-complete");
+        console.debug("[chatfsm] ws-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
         send({ type: "REFRESH" });
       } else if (event.event === "chat-user-message") {
@@ -151,7 +152,7 @@ export function useChatSse(opts: {
   // Update the URL when the machine learns the assigned session id. Fires for
   // both signal paths — the in-stream `system/init` (first frame of every
   // turn, dispatched from chatMachine's streamActor) and the side-channel
-  // `chat-session-assigned` SSE event — so a backend restart that loses one
+  // `chat-session-assigned` event — so a backend restart that loses one
   // can't strand the chat on `?session=new`. `replace: true` so reload lands
   // on the right session.
   useEffect(() => {

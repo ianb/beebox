@@ -22,6 +22,25 @@ const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|
  * onSend CORS reflection hook and the preflight handler for /api/boxes.
  */
 export function registerChromeExtensionCors(server: FastifyInstance): void {
+  // Answer the browser's CORS preflight for extension-origin requests before
+  // routing, so it short-circuits Fastify's auto-generated OPTIONS (which omits
+  // the ACAO reflection). Needed for the extension's `application/json` POST to
+  // the clerk tRPC procedures. Only fires for chrome-extension origins; every
+  // other OPTIONS falls through to normal handling.
+  server.addHook("onRequest", async (request, reply) => {
+    const origin = request.headers.origin;
+    if (request.method === "OPTIONS" && origin && origin.startsWith("chrome-extension://")) {
+      return reply
+        .header("Access-Control-Allow-Origin", origin)
+        .header("Access-Control-Allow-Credentials", "true")
+        .header("Vary", "Origin")
+        .header("Access-Control-Allow-Headers", "Content-Type")
+        .header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        .status(204)
+        .send();
+    }
+  });
+
   // eslint-disable-next-line max-params -- Fastify onSend hook requires 4 params
   server.addHook("onSend", (request, reply, payload, done) => {
     const origin = request.headers.origin;

@@ -2,7 +2,8 @@
 
 Chrome (MV3) extension companion for callback-box. Clerk is a **surface, not
 an engine**: it routes content (memos, saved pages, tab snapshots) into a
-box's clerk API (`callback-box/src/webapp/routes/clerk.ts`); the box does the
+box's clerk API (the `clerk` tRPC router,
+`callback-box/src/webapp/trpc/routers/clerk.ts`); the box does the
 thinking. Design record of the 2026 refresh:
 `callback-box/docs/implemented-plans/refresh-clerk.md`.
 

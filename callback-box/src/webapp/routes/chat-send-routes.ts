@@ -1,7 +1,7 @@
 /**
  * Chat send + self-note routes.
  *
- * POST /api/chat/send      - Send a message; streams the response via SSE
+ * POST /api/chat/send      - Send a message; streams the response over the WS event bus
  * POST /api/chat/self-note - Inject a self-note into a session transcript
  *
  * Split out of `chat.ts`; shares the registry, schedule manager, dedup map and

@@ -4,14 +4,14 @@
  */
 
 import { useState, useEffect, useCallback } from "react";
-import { RequestError } from "../../lib/errors";
+import { trpcClient } from "../../lib/trpc";
 import {
   TelegramConnectedView,
   TelegramSetupView,
   type TelegramStatus,
 } from "./TelegramSection-views";
 
-export function TelegramSection({ apiBase }: { apiBase: string }) {
+export function TelegramSection() {
   const [status, setStatus] = useState<TelegramStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -21,12 +21,7 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
 
   const fetchStatus = useCallback(async () => {
     try {
-      const resp = await fetch(`${apiBase}/admin/telegram-status`);
-      if (!resp.ok) {
-        const message = `Status check failed: ${resp.status}`;
-        throw new RequestError(message);
-      }
-      const data: TelegramStatus = await resp.json();
+      const data = await trpcClient.admin.telegramStatus.query();
       setStatus(data);
       setError(null);
       return data;
@@ -34,7 +29,7 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
       setError((err as Error).message);
       return null;
     }
-  }, [apiBase]);
+  }, []);
 
   // Mount-only fetch.
 
@@ -49,15 +44,7 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
     setError(null);
 
     try {
-      const resp = await fetch(`${apiBase}/admin/telegram-setup`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ botToken: botToken.trim() }),
-      });
-      const data = await resp.json();
-      if (!resp.ok) {
-        throw new RequestError(data.error || "Setup failed");
-      }
+      await trpcClient.admin.telegramSetup.mutate({ botToken: botToken.trim() });
       setBotToken("");
       await fetchStatus();
     } catch (err) {
@@ -72,11 +59,7 @@ export function TelegramSection({ apiBase }: { apiBase: string }) {
     setError(null);
 
     try {
-      const resp = await fetch(`${apiBase}/admin/telegram-disconnect`, { method: "POST" });
-      const data = await resp.json();
-      if (!data.success) {
-        throw new RequestError(data.error || "Disconnect failed");
-      }
+      await trpcClient.admin.telegramDisconnect.mutate();
       await fetchStatus();
     } catch (err) {
       setError((err as Error).message);
