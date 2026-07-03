@@ -285,7 +285,7 @@ bespoke `useBusSubscription` lists).
 | Dashboard | markdown card transcluding other cards | Prose + embedded health instrument, questions query, activity instrument. Reuses embedding instead of a layout schema. Accepts a document-flow layout ceiling; stresses embed machinery (embed-level error boundaries, live-updating embeds) — the right work. Non-singleton: any such card is *a* dashboard; the root binding picks *the* dashboard. |
 | Capture, Settings | instrument cards | View stays code; card holds destination defaults / exposed config + notes. |
 | Admin | stays shell | Permission boundary. |
-| Chat | husk card per session + chat view + the slot | Below. |
+| Chat | husk card per session + chat view + the slot | Below. **Husks shipped 2026-07** (`docs/plans/chat-husks.md`): a `chat` card per web session, created at id-assignment + one-shot backfill; renderer opens the live session. Path-addressed chat, the slot, and picker-over-husks still future. |
 
 Order of attack: Landmarks → Questions → resolver unification → directory
 presentation/Browse → chat husks, then Chats → History saved-filters, Nav,

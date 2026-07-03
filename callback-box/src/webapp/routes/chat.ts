@@ -25,6 +25,7 @@ import {
   getMostActive,
   runBackfillIfNeeded,
 } from "../../core/chat-session-history.js";
+import { backfillChatHusks } from "../../core/chat-husk.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import {
@@ -68,6 +69,12 @@ export async function registerChatRoutes(
   // Idempotent — returns early on subsequent boots.
   void runBackfillIfNeeded(boxRoot).catch((e: unknown) => {
     console.error("[chat] backfill failed:", e instanceof Error ? e.message : e);
+  });
+
+  // One-shot husk-card backfill for pre-husk sessions (marker-gated; ghosts
+  // whose transcript is gone are skipped). See docs/plans/chat-husks.md.
+  void backfillChatHusks(boxRoot).catch((e: unknown) => {
+    console.error("[chat] husk backfill failed:", e instanceof Error ? e.message : e);
   });
 
   // Per-box registry of ChatSession instances, keyed by sessionId.
