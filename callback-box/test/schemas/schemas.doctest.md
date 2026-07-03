@@ -189,7 +189,6 @@ createIntakeJobTemplate({
 =>
 ---
 status: pending
-created: «*»
 source: capture-connector
 priority: normal
 description: Triage 2 new capture sessions
@@ -211,7 +210,6 @@ createIntakeJobTemplate({
 =>
 ---
 status: pending
-created: «*»
 source: capture-connector
 priority: low
 description: Triage bookmarks

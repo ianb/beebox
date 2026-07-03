@@ -28,7 +28,6 @@ await box.read(path)
 =>
 ---
 status: pending
-created: «*»
 source: test-connector
 priority: normal
 description: Triage 1 item
@@ -70,7 +69,6 @@ await box.read(path2)
 =>
 ---
 status: pending
-created: «*»
 source: test-connector
 priority: normal
 description: Triage 2 items

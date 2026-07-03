@@ -17,7 +17,6 @@ export const ChatJobSchema: CardSchema = cardSchema("chat-job", {
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string(),
     description: z.string(),
     thread: z.object({ ref: z.string() }),
@@ -60,21 +59,18 @@ jobs without picking up unrelated work.
 export interface ChatJobFields {
   type: "chat-job";
   status: string;
-  created: string;
   source: string;
   description: string;
   thread: { ref: string };
 }
 
 export function createChatJobTemplate(options: {
-  created?: string;
   description: string;
   threadRef: string;
   source: string;
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: options.source,
     description: options.description,
     thread: { ref: options.threadRef },

@@ -371,7 +371,6 @@ export async function createContainsBackfillJob(boxRoot: string): Promise<number
   const stamp = created.slice(0, 16).replaceAll(":", "-");
   const jobFilename = `${stamp}.contains-backfill.job.card`;
   const card = createContainsBackfillJobTemplate({
-    created,
     items: batch,
     remaining: missing.length - batch.length,
   });

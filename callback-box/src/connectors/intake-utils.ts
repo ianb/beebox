@@ -63,7 +63,6 @@ export async function createOrAppendIntakeJob(
   const jobPath = path.join(jobsDir, jobFilename);
 
   const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {
-    created: getBoxTimeISO(opts.boxRoot),
     source: opts.source,
     description: opts.description,
     items: opts.items,

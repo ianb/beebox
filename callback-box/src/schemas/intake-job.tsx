@@ -16,7 +16,6 @@ export const IntakeJobSchema: CardSchema = cardSchema("intake-job", {
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string(),
     priority: z.enum(["normal", "low"]).default("normal"),
     description: z.string(),
@@ -54,7 +53,6 @@ An intake job means new items have arrived in the inbox and need triage.
 export interface IntakeJobFields {
   type: "intake-job";
   status: string;
-  created: string;
   source: string;
   priority: "normal" | "low";
   description: string;
@@ -62,7 +60,6 @@ export interface IntakeJobFields {
 }
 
 export function createIntakeJobTemplate(options: {
-  created?: string;
   source: string;
   description: string;
   items: string[];
@@ -70,7 +67,6 @@ export function createIntakeJobTemplate(options: {
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: options.source,
     priority: options.priority ?? "normal",
     description: options.description,
