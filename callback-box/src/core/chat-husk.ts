@@ -10,6 +10,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { parse as parseYaml } from "yaml";
+import { splitCardContent } from "../cards/index.js";
 import { createChatHuskTemplate } from "../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./chat-session-history.js";
 import { getSessionMetadata } from "../cli/lib/session.js";
@@ -90,6 +92,77 @@ export async function ensureChatHusk(
     if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
   }
   return relPath;
+}
+
+/** Frontmatter mapping from a husk file, or null when the shape is wrong. */
+function parseHuskFrontmatter(content: string): Record<string, unknown> | null {
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return null;
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(split.frontmatterText);
+  } catch (_e) {
+    // Malformed YAML — reported by the caller as a skipped husk.
+    return null;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return parsed as Record<string, unknown>;
+}
+
+export interface ChatHuskEntry {
+  /** Box-relative husk card path. */
+  path: string;
+  /** SDK session id (the `session` field). */
+  session: string;
+  contextDir?: string;
+  title?: string;
+}
+
+/**
+ * All husk cards under store/chat/web — the enumeration source for
+ * "which web chats exist" (the picker reads these, not the history
+ * JSON, so deleting a husk is editorial removal from the picker).
+ * Unparseable or session-less files are skipped with a warning.
+ */
+export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
+  let names: string[];
+  try {
+    names = await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
+  }
+  const out: ChatHuskEntry[] = [];
+  for (const name of names) {
+    if (!name.endsWith(".chat.card")) continue;
+    const relPath = `${CHAT_HUSK_DIR}/${name}`;
+    let content: string;
+    try {
+      content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
+    } catch (e) {
+      console.warn(`chat-husk: skipping unreadable ${relPath}: ${(e as Error).message}`);
+      continue;
+    }
+    const fm = parseHuskFrontmatter(content);
+    if (fm === null) {
+      console.warn(`chat-husk: skipping ${relPath}: no frontmatter mapping`);
+      continue;
+    }
+    const session = fm["session"];
+    if (typeof session !== "string" || session === "") {
+      console.warn(`chat-husk: skipping ${relPath}: no session field`);
+      continue;
+    }
+    const contextDir = fm["context-dir"];
+    const title = fm["title"];
+    out.push({
+      path: relPath,
+      session,
+      ...(typeof contextDir === "string" ? { contextDir } : {}),
+      ...(typeof title === "string" && title !== "" ? { title } : {}),
+    });
+  }
+  return out;
 }
 
 /**

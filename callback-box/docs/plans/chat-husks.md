@@ -48,11 +48,21 @@ bookkeeping (`lastActivity` is the transcript mtime, merged at read time)
   (frame/companion-slot work), as is converting `chat.byLandmark` to
   enumerate husks (a query-card design question).
 
+## Phase 2 (implemented 2026-07): the picker reads husks
+
+`chat.byLandmark` enumerates husk cards, not the history JSON — the cards
+are the source of truth for which web chats exist and what they're called
+(`title` beats the transcript snippet; deleting a husk is editorial
+removal from the picker; the husk's own `context-dir` locates the
+transcript, no history lookup). Freshness stays runtime-derived from
+transcript mtime, and husks whose transcript is gone are skipped (nothing
+to resume) while remaining browsable as cards. Each picker row links to
+its husk ("card").
+
 ## Deferred
 
 - Path-addressed live chat (`<husk>?view=chat`), the companion slot, and
   URL untangling.
-- byLandmark / Chats picker over husks.
 - Automatic title/contains enrichment; refs from husks to discussed cards
   (agent behavior, not plumbing).
 - Claiming a directory (`<slug>.chat.card` + `<slug>/`) if transcripts or
