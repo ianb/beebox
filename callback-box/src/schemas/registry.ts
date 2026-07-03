@@ -31,6 +31,7 @@ import { IntakeJobSchema } from "./intake-job.js";
 import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
+import { ChatSchema } from "./chat.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
 import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
@@ -110,6 +111,7 @@ export const cardSchemas: CardSchema[] = [
   ContainsBackfillJobSchema,
   QuestionFollowupJobSchema,
   ProcedureRunSchema,
+  ChatSchema,
   ChatThreadSchema,
   FeedbackSchema,
 ];
