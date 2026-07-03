@@ -339,16 +339,26 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
 }
 
 /**
- * Install views CLAUDE.md guide if it doesn't exist.
+ * sha256 of the pre-attach-to-cards views guide (listed `dependencies`/`modes`
+ * but never `rendersCardTypes` or the "every view attaches to a card type; no
+ * card-less standalone view" rule). Boxes carrying it steer agents toward
+ * standalone glob-driven views — refresh it, while parking any guide a
+ * boxholder has edited.
+ */
+const OLD_STANDALONE_VIEWS_GUIDE_SHA256 =
+  "e32a89430eb0a2bf05ca833e4311f7857543c5a83f1862d03240911952abdeba";
+
+/**
+ * Install (or refresh) the box-local views guide. Uses the template tracker so
+ * the stock guide is refreshed when unmodified and parked under
+ * `_template-updates/` when the boxholder has customized it.
  */
 export async function installViewsGuide(boxRoot: string): Promise<void> {
-  const claudeMdPath = path.join(boxRoot, "views/CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No views guide yet (fs.access throws ENOENT) — install it. The error
-    // carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
-    await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
-  }
+  await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
+  await installTemplateFile({
+    boxRoot,
+    relPath: "views/CLAUDE.md",
+    templateContent: VIEWS_CLAUDE_MD,
+    priorStockHashes: [OLD_STANDALONE_VIEWS_GUIDE_SHA256],
+  });
 }

@@ -2994,18 +2994,21 @@ tests:
 
   - id: view-link-another-card
     prompt: >
-      I'm writing a view in views/ that lists related cards. Check the box's
-      own view docs first, then tell me: how do I render a link to another
-      card that opens correctly whether the view is shown in chat, browse, or
-      a full page — without hand-rolling an anchor and a URL?
+      I'm writing a view in views/ that lists related cards. How do I render a
+      link to another card that opens correctly whether the view is shown in
+      chat, browse, or a full page — without hand-rolling an anchor and a URL?
     expected_level: knows_about
     watch_for: >
-      Reads the views guide, then names <CardLink> from callback-box/view-widgets
-      with a cardRef="…" attribute — not a hand-built <a href> or a guessed URL
-      scheme.
-    should_read: ["docs/generated/views.md"]
+      Names <CardLink> from callback-box/view-widgets with a cardRef="…"
+      attribute — not a hand-built <a href> or a guessed URL scheme.
     correct_contains_any: ["CardLink", "view-widgets"]
     tags: [views, cards]
+    notes: >
+      Dropped should_read docs/generated/views.md 2026-07-03: the refreshed
+      views/CLAUDE.md (auto-loaded) now names CardLink/CardRef, so the agent
+      answers correctly whether it reads views.md or answers directly. The
+      content check is the real assertion; also de-baited the "check the docs
+      first" preamble that the should_read was pinning.
 
   - id: view-embed-card-inline
     prompt: >
@@ -3167,23 +3170,24 @@ tests:
       can it stand alone, or must it attach to something?
     expected_level: knows_directly
     watch_for: >
-      Every view attaches to a card type via rendersCardTypes and is selected
+      Every view attaches to a card type (via rendersCardTypes) and is selected
       with ?view=name on a card's path; there is no card-less standalone view. A
       dashboard is itself a card type whose view reads a collection. Must NOT
       propose a standalone/slug-addressed page not tied to a card.
-    correct_contains: ["rendersCardTypes"]
+    correct_contains_any: ["rendersCardTypes", "attaches to a card", "attach to a card", "not standalone", "bind to a card"]
     tags: [views, cards]
     notes: >
-      FAILS 2026-07-03 because the migration this encodes is INCOMPLETE, not
-      because the agent is ignorant. rendersCardTypes + ?view= exist
-      (view-bindings.ts, view-url.ts), but the standalone `view:` scheme
-      (src/schemas/view.ts: chat-picker/history/…) still lives, and the box's
-      views/CLAUDE.md still teaches custom React views as "standalone surfaces
-      driven by dependencies globs" (todos.tsx). So the agent correctly reports
-      standalone views exist. This audit asserts the target end-state ("every view
-      attaches to a card; no card-less standalone view") — leave it failing until
-      the view-migration lands (remove the view: scheme, rewrite views/CLAUDE.md
-      to the attach-to-cards model). See docs/knowledge-audit-rerun-2026-07-03.md.
+      Passes 2026-07-03 after fixing a box-staleness bug (NOT an incomplete
+      migration — an earlier note wrongly said so). The code was already correct:
+      the `view:` URL scheme is retired (view-url.ts) and every view attaches to a
+      card (ViewPage: "no card-less standalone view"). But box `views/CLAUDE.md`
+      was refreshed only on explicit `cb init`, not on the generateDocs cycle, so
+      test1 carried the old standalone-view guide. Fixed by giving installViewsGuide
+      the template-tracker treatment, wiring it into generateDocs, and adding
+      views/CLAUDE.md to TEMPLATE_MANAGED_PATTERNS (so the refresh commits + ships).
+      Check accepts either the literal `rendersCardTypes` (when the agent reads the
+      guide) or the attach-to-a-card concept (when it answers directly). See
+      docs/knowledge-audit-rerun-2026-07-03.md.
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #

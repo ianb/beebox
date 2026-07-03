@@ -15,9 +15,9 @@ Run in batches by section. Two buckets per failure:
 ## Bottom line
 
 All 217 audits reran against test1. After correcting stale audits, **214/217
-effectively passed** on the first pass; **a follow-up prompt-fix pass then closed 8
-of the 9 real gaps** — only `views-attach-to-cards` remains (it needs the actual
-view-migration, not a prompt). The overhaul landed well — quotes/laws/source,
+effectively passed** on the first pass; **a follow-up fix pass then closed all 9
+real gaps** (8 prompt/doc fixes + 1 box-staleness bug fix). The overhaul landed
+well — quotes/laws/source,
 cards, chat-thread YAML, courseware, most of chat are all clean. **31 audits were
 stale** (mostly `should_read` checks made obsolete because the overhaul moved
 knowledge into the always-on surface, plus XML→YAML format renames:
@@ -40,12 +40,7 @@ touched sections stayed green, and `pnpm typecheck` / `pnpm test` are clean.
 | `ack-conservative-text` | sharpened kind taxonomy (adding a note is `appended`, not `edited`) + bare-ack-when-obvious rule | `chat-session-prompts.ts` (ack section) |
 | `chat-thread-seen-note` | corrective: `self-note` is the *live chat session*; a note while processing a `chat-thread` goes in the `kind: seen` entry's `text:` | `agent-guide/commands.ts` |
 | `procedure-in-job` | **audit reframed** — the `<procedure ref>` job-trampoline it tested *does not exist in the code*; now tests the real triggers (`cb procedure run` + the triage handler). Removed stale trampoline comments in `engine.ts`/`finish-job.ts` | `knowledge-audits.yaml`, `reactor/engine.ts` |
-
-**Still failing — needs code, not a prompt:**
-
-| Gap | Kind | One-liner |
-|---|---|---|
-| `views-attach-to-cards` | migration incomplete | standalone `view:` scheme still live; agent correctly reports it. Finish the view-migration (remove the `view:` scheme, rewrite `views/CLAUDE.md`) to make it pass. |
+| `views-attach-to-cards` | **box-staleness bug** (I first wrongly called it an incomplete migration). The code was already correct — the `view:` **URL scheme** is retired (`view-url.ts`) and `ViewPage` enforces "no card-less standalone view." The failure: box `views/CLAUDE.md` refreshed only on `cb init`, not on the generateDocs cycle, so test1 carried the old standalone-view guide. Fixed by giving `installViewsGuide` the template-tracker treatment, calling it from `generateDocs`, and adding `views/CLAUDE.md` to `TEMPLATE_MANAGED_PATTERNS`. (Don't confuse the retired `view:` URL scheme with the alive `view:` *field* on interface-as-cards view cards.) | `box-templates.ts`, `generate-docs.ts` |
 
 **Needs-decision / box-drift (not knowledge gaps):**
 - `cb-session-exists` — "past chat" now reads as chat-thread cards vs `cb session`.
@@ -267,26 +262,32 @@ landmark/triage audits pointed `should_read` at dev-repo docs
 the box, so they failed automatically even though the agent answered correctly
 from the always-on guide. Dropped those broken reads (see fixes below).
 
-### views-attach-to-cards — REAL FINDING: incomplete migration (batch 8)
+### views-attach-to-cards — BOX-STALENESS BUG (batch 8; my first diagnosis was wrong)
 
 - **Prompt:** "How is a view wired up — can it stand alone, or must it attach to
-  something?" Audit (`knows_directly`) expects: every view attaches to a card type
-  via `rendersCardTypes`, selected with `?view=name`; **no card-less standalone
-  view**.
-- **Agent answered (accurately, per current box docs):** two mechanisms — a
-  builtin `view:` card (stands alone) and a custom React view in `views/*.tsx`
-  that's a "**standalone surface driven by dependencies globs**" (todos.tsx), and
-  said these "don't need to attach to a specific card type."
-- **Why it's the code, not the agent:** `rendersCardTypes` + `?view=` do exist
-  (`view-bindings.ts`, `view-url.ts`), but the standalone `view:` scheme still
-  lives (`src/schemas/view.ts`: chat-picker/history/…) and the box's
-  `views/CLAUDE.md` still teaches glob-driven standalone views. So the "views
-  attach to cards, kill the `view:` scheme" migration is **incomplete** — the
-  audit encodes the target end-state (like the triage gaps), and the agent
-  faithfully reports current reality.
-- **Fix (boxholder):** finish the view migration — remove the standalone `view:`
-  scheme, rewrite `views/CLAUDE.md` to the attach-to-cards model — then this
-  passes. Audit left failing as the driver.
+  something?" Audit (`knows_directly`) expects: every view attaches to a card;
+  **no card-less standalone view**.
+- **What first tripped me up:** the agent described `views/*.tsx` as "standalone
+  surfaces driven by dependencies globs," and I wrongly concluded the
+  "views-attach-to-cards" migration was incomplete because `src/schemas/view.ts`
+  still exists. **That was a conflation of two different `view:` things:**
+  - the `view:` **URL/link scheme** (`view:/store/x.card`) — genuinely **retired**
+    (`view-url.ts`: `legacy-view`, no longer routes). This is what "view: is dead"
+    refers to.
+  - the `view:` **frontmatter field** on interface-as-cards *view cards*
+    (`src/schemas/view.ts`) — alive, but that card **is** the view; not card-less.
+- **The actual cause:** the code was already correct — `ViewPage.tsx` enforces
+  "There is no card-less 'standalone view' — every view is attached to a card,"
+  and the current `VIEWS_CLAUDE_MD` template says so too. But box `views/CLAUDE.md`
+  was written only by explicit `cb init`, never refreshed on the `generateDocs`
+  cycle (unlike `config/schemas/CLAUDE.md`), so test1 carried the **old** guide
+  that listed `dependencies`/`modes` without `rendersCardTypes` or the attach rule
+  — and the agent read that stale guide.
+- **Fix:** gave `installViewsGuide` the template-tracker treatment (replace the
+  known-old stock hash, park user edits), called it from `generateDocs`, and added
+  `views/CLAUDE.md` to `TEMPLATE_MANAGED_PATTERNS` so the refresh commits and
+  ships to every box on the normal cycle. Now the agent answers correctly whether
+  it reads the (refreshed) guide or answers directly; passes 3/3.
 
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
 
@@ -446,18 +447,18 @@ gap in the narration override.
 `triage-handler-env`) are the pre-documented undocumented-triage-internals gaps.
 | 8 | Briefing, Recipe, Search, Views (×3), Retro, Last-Audio, Clerk, Figure, Location | 33 | 31→32‡‡ | 1 (migration) | 1 |
 
-‡‡ 31 raw; 32 after fixing `recipe-prose-vs-tag` (stale should_read). The one
-remaining, `views-attach-to-cards`, fails because the view-migration is
-incomplete — the audit encodes the target state.
+‡‡ 31 raw; 32 after fixing `recipe-prose-vs-tag` (stale should_read).
+`views-attach-to-cards` also passes after the follow-up fix pass (box-staleness
+bug — see the prompt-fixes section above; the `view:` URL scheme is already dead).
 | 9 | Courseware | 12 | 11→12 | 0 | 1 |
 | **Total** | **all sections** | **217** | **~172→214** | **8 + 3 minor** | **31** |
 
-Overall: **214/217 effectively pass** after the audit corrections. The 3 audits
-left failing on purpose are the real gaps that need code/doc work, not audit
-edits: `schema-validate-hook`, `procedure-in-job`, `triage-confidence-levels`,
-`triage-handler-env`, `draft-email-placement`, `views-attach-to-cards`,
-`narration-no-voice-out-by-default` (intermittent), and `chat-thread-seen-note`
-(minor) — plus the box-drift / needs-decision items (cooking guide,
-drive fixtures, cb-session vocabulary). (The "~172→214" reflects the sum of raw
-per-batch passes rising to post-fix passes; exact raw total varies with re-run
-flakiness.)
+Overall: **214/217 effectively pass** after the audit corrections, and the
+follow-up fix pass then closed all 9 real gaps (`schema-validate-hook`,
+`procedure-in-job`, `triage-confidence-levels`, `triage-handler-env`,
+`draft-email-placement`, `views-attach-to-cards`, `narration-no-voice-out-by-default`,
+`ack-conservative-text`, `chat-thread-seen-note`) — see the "Prompt fixes applied"
+section. What remains is box-drift / needs-decision, not knowledge gaps (cooking
+guide, drive fixtures, cb-session vocabulary, trick-scripts-path). (The
+"~172→214" reflects the sum of raw per-batch passes rising to post-fix passes;
+exact raw total varies with re-run flakiness.)
