@@ -3173,6 +3173,10 @@ tests:
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #
+  # Status (2026-07-03): all 12 pass against test1. courseware-exposition-plan was
+  # failing only on the stale should_read (agent recalls "keep the reasoning in"
+  # directly) — dropped it, matching the -concept-map-edges / -lesson-plan fixes.
+  #
   # Status (2026-06-25): All 12 pass against the worktree box. The agent reaches
   # for build-course / probing first, names the course's parts, picks the right
   # closed-set edge (commonly-confused-with), affirms cycles are valid spirals,
@@ -3261,7 +3265,6 @@ tests:
   - id: courseware-exposition-plan
     prompt: "What is an exposition-plan card for, and what should it always keep?"
     expected_level: knows_about
-    should_read: ["docs/generated/card-exposition-plan.md"]
     watch_for: >
       It's the plan for how to PRESENT the material; it keeps the reasoning /
       rationale in so later adaptation stays coherent.
