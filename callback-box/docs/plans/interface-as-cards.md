@@ -88,6 +88,40 @@ declarative and the *presentation* is a named view in code. When someone
 wants conditionals or computed columns, the answer is "graduate to a `.tsx`
 view," never "grow the frontmatter vocabulary."
 
+### Runtime param overrides, with provenance (designed 2026-07, not built)
+
+View-card `params` (shipped with `view: history`) want the same cascade as
+bindings: **view defaults < card frontmatter < embed-site args < URL query
+string.** Frontmatter is the durable, validated configuration; the query
+string is the ephemeral, shareable overlay —
+`Feedback_Commits.view.card?session=abc` is "the feedback card, scoped to
+this session, right now." Interactions inside a card (e.g. history's
+session/connector chips) then stay on the card's address as override-URLs
+instead of escaping to the page; "save" writes an override into frontmatter
+(or forks a card) — explore in the URL, commit to the card.
+
+Requirements settled in discussion:
+
+- **Per-key provenance.** The merge layer emits `{ values, origins }`
+  (`default | card | url | embed | …`, open-ended; an embed origin can name
+  the embedding card). Consumers: the shell renders a generic
+  "modified from card · reset · save" marker and knows exactly which keys
+  save-to-card writes; views may treat card-recorded vs injected params as
+  different in kind (a saved filter vs an ad hoc slice; declining expensive
+  or sensitive params unless durably recorded); the `<card-activity>`
+  snapshot reports overrides without misattributing them to the card.
+  Precedent: config provenance (`git config --show-origin`, CSS origin).
+- **One assembly point.** Views never read `location.search` themselves;
+  params arrive only through the resolver, or configuration becomes
+  unattributable.
+- **Codec per view.** Typed params need a params↔query-string codec next to
+  each param schema in the named-views table (`history-filter.ts` is
+  already this for history; generalize, zod coercion covers most). Merge is
+  per-key overlay.
+- `RendererProps.params` (query params from `view:` URLs on the chat-embed
+  path, e.g. figure `?molecule=`) is this pattern already growing one-off —
+  bless it as the convention and thread page/Browse query params through.
+
 ## The can't-break invariant
 
 Safety does not come from keeping surfaces out of the card system; it comes
