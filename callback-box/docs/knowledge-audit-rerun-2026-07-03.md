@@ -224,7 +224,34 @@ landmark/triage audits pointed `should_read` at dev-repo docs
 the box, so they failed automatically even though the agent answered correctly
 from the always-on guide. Dropped those broken reads (see fixes below).
 
+### views-attach-to-cards — REAL FINDING: incomplete migration (batch 8)
+
+- **Prompt:** "How is a view wired up — can it stand alone, or must it attach to
+  something?" Audit (`knows_directly`) expects: every view attaches to a card type
+  via `rendersCardTypes`, selected with `?view=name`; **no card-less standalone
+  view**.
+- **Agent answered (accurately, per current box docs):** two mechanisms — a
+  builtin `view:` card (stands alone) and a custom React view in `views/*.tsx`
+  that's a "**standalone surface driven by dependencies globs**" (todos.tsx), and
+  said these "don't need to attach to a specific card type."
+- **Why it's the code, not the agent:** `rendersCardTypes` + `?view=` do exist
+  (`view-bindings.ts`, `view-url.ts`), but the standalone `view:` scheme still
+  lives (`src/schemas/view.ts`: chat-picker/history/…) and the box's
+  `views/CLAUDE.md` still teaches glob-driven standalone views. So the "views
+  attach to cards, kill the `view:` scheme" migration is **incomplete** — the
+  audit encodes the target end-state (like the triage gaps), and the agent
+  faithfully reports current reality.
+- **Fix (boxholder):** finish the view migration — remove the standalone `view:`
+  scheme, rewrite `views/CLAUDE.md` to the attach-to-cards model — then this
+  passes. Audit left failing as the driver.
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 8 (briefing / recipe / search / views / retro / last-audio / clerk /
+figure / location) — cleanest batch:
+
+- **recipe-prose-vs-tag** — dropped the stale `should_read docs/generated/card-recipe.md`;
+  the agent knows "don't invent tags, use plain markdown" directly.
 
 Batch 7 (landmarks / sessions / feedback / triage-pipeline / don't-drop):
 
@@ -367,3 +394,8 @@ gap in the narration override.
 †† 18 raw; 25 after fixing 5 audits (3 broken-should_read + 1 repointed + 1 vocab
 + 1 wording; re-run confirmed). The 2 remaining (`triage-confidence-levels`,
 `triage-handler-env`) are the pre-documented undocumented-triage-internals gaps.
+| 8 | Briefing, Recipe, Search, Views (×3), Retro, Last-Audio, Clerk, Figure, Location | 33 | 31→32‡‡ | 1 (migration) | 1 |
+
+‡‡ 31 raw; 32 after fixing `recipe-prose-vs-tag` (stale should_read). The one
+remaining, `views-attach-to-cards`, fails because the view-migration is
+incomplete — the audit encodes the target state.

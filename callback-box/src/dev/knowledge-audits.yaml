@@ -2648,6 +2648,10 @@ tests:
   # below are `knows_about` — the agent reads the recipe doc on
   # demand when asked about recipes.
   #
+  # Status (2026-07-03): all 3 pass. recipe-prose-vs-tag was failing only on the
+  # stale should_read — the agent knows "don't invent tags, use plain markdown"
+  # directly — so it was dropped.
+  #
   # Status (2026-05-30): 3/3 content-correct; 1/3 triggered the
   # expected `Read docs/generated/card-recipe.md`. The other two:
   # `recipe-ingredient-attrs` discovered the doc via `Bash` (ls / find)
@@ -2704,9 +2708,12 @@ tests:
       the six tags listed in the recipe-card doc; everything else
       stays as plain markdown headings and paragraphs. Does NOT
       invent a new tag.
-    should_read: ["docs/generated/card-recipe.md"]
     correct_contains_any: ["plain markdown", "## Tips", "heading", "prose", "don't invent"]
     tags: [recipe, cards, behavioral]
+    notes: >
+      Dropped should_read 2026-07-03: the agent knows the "don't invent tags,
+      use plain markdown" rule directly (an unknown tag trips validation) and
+      itself suggests checking card-recipe.md for an existing field.
 
   # === Search and the contains: field ===
   #
@@ -3152,6 +3159,17 @@ tests:
       propose a standalone/slug-addressed page not tied to a card.
     correct_contains: ["rendersCardTypes"]
     tags: [views, cards]
+    notes: >
+      FAILS 2026-07-03 because the migration this encodes is INCOMPLETE, not
+      because the agent is ignorant. rendersCardTypes + ?view= exist
+      (view-bindings.ts, view-url.ts), but the standalone `view:` scheme
+      (src/schemas/view.ts: chat-picker/history/…) still lives, and the box's
+      views/CLAUDE.md still teaches custom React views as "standalone surfaces
+      driven by dependencies globs" (todos.tsx). So the agent correctly reports
+      standalone views exist. This audit asserts the target end-state ("every view
+      attaches to a card; no card-less standalone view") — leave it failing until
+      the view-migration lands (remove the view: scheme, rewrite views/CLAUDE.md
+      to the attach-to-cards model). See docs/knowledge-audit-rerun-2026-07-03.md.
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #
