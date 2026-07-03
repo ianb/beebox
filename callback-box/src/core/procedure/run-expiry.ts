@@ -21,6 +21,18 @@ export const COMPLETED_RUN_EXPIRY = "30d";
  */
 export const FAILED_RUN_EXPIRY = "90d";
 
+/**
+ * Hard ceiling on how many run dirs GC retains per procedure, independent of
+ * expiry. A backstop against a runaway procedure that fails (or completes)
+ * every scheduler tick: at 90d, once-a-minute failures would otherwise pile up
+ * ~130k un-expired run dirs before the age clock reclaims any. Run dirs are a
+ * recent cache (git history is the archive), so keeping only the newest N is
+ * safe. The newest run, anything still running, and runs pinned with
+ * `expires: never` are never cap-evicted (they still count toward the ceiling,
+ * so the total retained stays around N except when pins exceed it).
+ */
+export const MAX_RUNS_PER_PROCEDURE = 100;
+
 export class InvalidRunExpiryError extends Error {
   constructor(attr: string, value: string) {
     super(
