@@ -6,7 +6,7 @@
  * at one tab file.
  *
  * Example file layout:
- *   store/drive/Budget.sheet.card
+ *   store/drive/Budget.gsheet.card
  *   store/drive/Budget.attach/Summary.json
  *   store/drive/Budget.attach/Expenses.json
  */
@@ -21,7 +21,7 @@ const SheetTab = z.object({
   gid: z.string(),
 });
 
-export const SheetSchema: CardSchema = cardSchema("sheet", {
+export const GsheetSchema: CardSchema = cardSchema("gsheet", {
   description: "A Google Sheets spreadsheet synced by the drive connector — tab data as attached JSON files, pushed back on sync",
   category: "synced",
   fields: {
@@ -34,11 +34,11 @@ export const SheetSchema: CardSchema = cardSchema("sheet", {
     sheets: z.array(SheetTab),
     comments: z.object({ ref: z.string() }).optional(),
   },
-  instructions: `# Sheet Cards
+  instructions: `# Gsheet Cards
 
 **Location:** Anywhere in the box, commonly \`store/drive/\`.
 
-Each synced Google Spreadsheet has a \`.sheet.card\` metadata file plus
+Each synced Google Spreadsheet has a \`.gsheet.card\` metadata file plus
 an attach scope (\`{basename}.attach/\`) containing one JSON file per
 sheet tab. The \`sheets:\` field lists \`{ref, title, gid}\` entries
 pointing into that scope.
@@ -77,8 +77,8 @@ Moving the card moves its attach scope (with the tab data inside)
 atomically — the \`drive-id\` field maintains the link to Google Drive.`,
 });
 
-export interface SheetFields {
-  type: "sheet";
+export interface GsheetFields {
+  type: "gsheet";
   "drive-id": string;
   status?: "synced" | "error" | "new";
   title: string;
@@ -89,7 +89,7 @@ export interface SheetFields {
   comments?: { ref: string };
 }
 
-export function createSheetTemplate(options: {
+export function createGsheetTemplate(options: {
   driveId: string;
   title: string;
   modified: string;

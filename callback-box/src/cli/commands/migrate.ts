@@ -24,6 +24,7 @@ import {
 } from "../../core/migrations.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { getStatus, stageAll, commit } from "../lib/git.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -116,6 +117,15 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
   if (!hasGate) throw new ProcedureGateError(args.procedure);
 }
 
+/** Fully provision the box (`cb init`) before migrating. */
+function runInit(boxRoot: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(CB_BIN, ["init", boxRoot], { cwd: boxRoot, stdio: "inherit" });
+    child.on("error", reject);
+    child.on("close", (code) => resolve(code ?? 1));
+  });
+}
+
 /** Run an agent-applied (procedure) migration by delegating to `cb procedure run`. */
 function runProcedure(args: { procedure: string; boxRoot: string }): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -193,6 +203,45 @@ export const migrateCommand = new Command("migrate")
     if (pending.length === 0) {
       console.log("Nothing to do — manifest is up to date.");
       return;
+    }
+
+    // Require a clean tree before migrating. `cb init` (below) commits its
+    // provisioning output so the queue starts clean, and several migrators
+    // (e.g. `attachments`) refuse to run against a dirty tree. Checking up
+    // front means init's commit captures exactly what init produced — not any
+    // of the user's uncommitted work — and keeps the migration's own changes
+    // reviewable rather than tangled with pre-existing edits.
+    const startStatus = await getStatus(boxRoot);
+    if (!startStatus.clean) {
+      console.error("Working tree is not clean. Commit or stash your changes before migrating.");
+      process.exit(1);
+    }
+
+    // Fully provision the box before migrating. A migration can depend on any
+    // provisioned state — a procedure-kind migration needs its procedure card in
+    // config/procedures/, but updated rules, guides, schemas, or briefing may
+    // matter too — and running one against a partially-updated box risks the
+    // silent-inconsistency class this whole discipline guards against. `cb init`
+    // is the canonical, complete provisioning (idempotent — a current box is a
+    // near-no-op). Its template-sync commit is its own; the migration's data
+    // changes still land uncommitted for review.
+    console.log("Provisioning the box (cb init) before migrating…\n");
+    const initCode = await runInit(boxRoot);
+    if (initCode !== 0) {
+      console.error(`\ncb init failed (exit ${String(initCode)}); not migrating. Fix provisioning first.`);
+      process.exit(1);
+    }
+    console.log("");
+
+    // Commit init's provisioning output so the queue starts from a clean tree.
+    // The tree was clean before init (checked above), so this commits exactly
+    // what init produced. The migrations' own data changes still land
+    // uncommitted afterward, for review.
+    const afterInit = await getStatus(boxRoot);
+    if (!afterInit.clean) {
+      await stageAll(boxRoot);
+      await commit(boxRoot, { message: "cb init provisioning (before migration)" });
+      console.log("Committed provisioning changes.\n");
     }
 
     console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);

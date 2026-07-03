@@ -120,7 +120,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Read Spreadsheet",
         when: "User asks about data in a synced spreadsheet",
-        instructions: "Find the .sheet.card file to understand structure (tabs, title). Then read the JSON tab file(s) in the matching subdirectory. Plain cells are bare values; formula cells are {\"f\": formula, \"v\": computed_result}.",
+        instructions: "Find the .gsheet.card file to understand structure (tabs, title). Then read the JSON tab file(s) in the matching subdirectory. Plain cells are bare values; formula cells are {\"f\": formula, \"v\": computed_result}.",
       },
       {
         name: "Edit Spreadsheet",

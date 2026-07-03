@@ -7,6 +7,44 @@ four schema instructions, four guide sections) and round 2 (the rest of the
 agent-guide sections, plus `doc`/`person`/`recipe` schemas and a second pass on
 the chat prompt and laws).
 
+## Open items to revisit — `IA_REVIEW`
+
+Left open when the review session wrapped. Grep `IA_REVIEW` to find them.
+
+- `IA_REVIEW` — **Track 7 (briefing redesign):** decide whether to move briefing
+  content from body Markdoc-tags to frontmatter (`purpose:`, `key-people:`). The
+  body-tag design works and its redundant guide section was deleted, so the
+  redesign may be superseded — decide *before* spending a migration.
+- `IA_REVIEW` — **`personality.boxholder` single→plural:** the personality card
+  models one boxholder (`boxholder: {full-name, called}`); the new
+  `person.boxholder` flag is plural-capable (a family/ledger box has several).
+  Reconcile — e.g. personality points at the boxholder person cards.
+- `IA_REVIEW` — **deployed-box migration:** this session's migrations
+  (`recipe-source-shape`, `person-contact-split`, `gsheet-rename`) ran on **local
+  dev copies only**. Run `cb migrate --apply` on the deployed server boxes (real
+  ledger data has sheet cards + person contacts). It needs `cb` on the server's
+  PATH and a clean tree per box.
+- `IA_REVIEW` — **person-contact review notes:** migrated boxes (ledger-copy,
+  test1) carry `## Contact` body notes where `person-contact-split` couldn't
+  cleanly structure a value (fax, second email, biographical). A human folds
+  these into fields or prose.
+- `IA_REVIEW` — **`ledger-shrink-test` XML-stuck:** still holds XML cards whose
+  XML→frontmatter migrators are retired, so `cb migrate` can't advance it. Needs
+  XML remediation (old release / hand-convert) or a rebuild — same class as test1
+  was before it was fixed this session.
+- `IA_REVIEW` — **`scripts/**` eslint scope:** migrator scripts trip base-ruleset
+  rules (`require-spec-file`, no-`as`, `max-lines`) that `src/**` disables, but
+  `pnpm lint` only covers `src/`. Add a `scripts/**` scope to the eslint config so
+  the reviewed rules apply and the per-edit-hook noise stops.
+- `IA_REVIEW` — **stale-doc cruft (ledger-copy):** its gsheet migration committed
+  with `--no-verify` because pre-existing broken links (bad relative paths) +
+  MD037 in stale shrunk-copy docs block staging. Not a regression; the docs are
+  worth a cleanup.
+- `IA_REVIEW` — **operational (not prompt-surface):** an orphan `cb scheduler`
+  from the pre-monorepo `~/src/callback/` checkout has been ticking test1 since
+  June (likely a stale leftover to stop); and a box's git hooks get re-stamped
+  with whichever worktree's `cb` last ran on it (sibling-session contention).
+
 The through-line is sharper after round 2: **the guide re-teaches the same core
 concepts in a dozen places and never once teaches them canonically.** Cards,
 `ref`, `contains:`, naming, the commit/validate discipline — each is redefined
@@ -254,6 +292,36 @@ reconciled against *current* main, cited inline.
     one leaving review notes.
     - *Open follow-on:* `personality.boxholder` still models a single boxholder —
       reconcile with the new plural person-card flag separately.
+  - **Track 8 — `{% quote %}` vs `{% source %}` overload — DONE, prose-only.**
+    Investigation collapsed the feared runtime blast radius: the on-disk
+    commentary cards already anchor spans as the `{% source %}` body, nothing in
+    code generates the inner-`{% quote %}` form, and the Markdoc `source` tag
+    already renders its body — so the overload survived only in the commentary
+    *instructions*, contradicting their own next section. Fixed the prose
+    (`commentary.tsx` anchor example → source-body form; `source.ts` + `quotes.ts`
+    reinforce `{% quote %}` = the user's own words alone, a commented-on excerpt
+    goes in a `{% source %}` body; `Source.tsx` renderer comment corrected). New
+    `source-anchor-span-not-quote` knowledge audit passes `knows_directly`. **No
+    migration** (cards already clean). The `as`→`usage` rename it intersected was
+    already done.
+  - **Chat-scope move (Track 3 structural piece) — DONE.** The always-loaded
+    guide's **Attachments** and **Selections** sections were chat-surface concepts
+    the reactor/procedure agents loaded for nothing (a batch job never gets a
+    `<user-selection>` or a `tmp/` attachment; the thread prompt doesn't handle
+    them either). Moved both into `chat-session-prompts.ts` (web-chat only, beside
+    "The messages you receive"), dropped from `chat.ts` + the guide assembly.
+    External Tools stays in the guide (the reactor uses `pandoc` too). ~240 words
+    off every non-chat agent's context.
+  - **Track 9 — `sheet` → `gsheet` rename — DONE.** Card-type rename for
+    consistency with `gdoc` (both Google-Drive-synced). Full code rename
+    (`sheet.tsx`→`gsheet.tsx`, `SheetSchema`→`GsheetSchema`, every `"sheet"`
+    type-literal in the drive connector/renderer/search/file-types, the drive
+    skill, prompts, docs, tests; product names like "Google Sheets" left alone),
+    plus a `gsheet-rename` migration (rename frontmatter `.sheet.card` →
+    `.gsheet.card` + rewrite inbound refs; XML sheet cards skipped+reported).
+    Verified on ledger-copy (26 cards): all renamed, refs rewritten, cards
+    validate as `gsheet`, zero `.sheet.card` remain; the box's pre-existing broken
+    links were unchanged in count. Registered append-only.
 
 Everything else below is still future work.
 

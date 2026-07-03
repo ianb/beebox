@@ -85,6 +85,8 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "recipe-source-shape", script: "scripts/migrate/recipe-source-shape.ts" },
   // Split the person card's freeform `contact:` into email/phone/address.
   { name: "person-contact-split", script: "scripts/migrate/person-contact-split.ts" },
+  // Rename the `sheet` card type to `gsheet` (.sheet.card → .gsheet.card + refs).
+  { name: "gsheet-rename",       script: "scripts/migrate/gsheet-rename.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

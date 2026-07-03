@@ -34,6 +34,8 @@ Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json` (singl
 
 **Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
 
+**Docs-only commits may skip hooks.** For commits touching only markdown/docs files, `git commit --no-verify` is fine — the pre-commit typecheck/lint pass adds nothing there. Any commit touching code or cards runs the hooks.
+
 **Husky lives at the monorepo root.** A single `.husky/` directory at the monorepo top level holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; post-checkout/post-merge/pre-push wrap git-lfs). Subprojects no longer have their own husky setup — they each `prepare: ":"` to opt out. Running `pnpm install` at the monorepo root is what wires up `core.hooksPath`.
 
 **Per-edit lint hook reports can be transient mid-batch.** The PostToolUse hook lints after every single Edit/Write. When a change spans coordinated edits (e.g. add an import in one edit, use it in the next), the intermediate report may show errors the rest of the batch resolves — typically unused-var. Don't react to each intermediate report; finish the batch, then trust the next clean report or verify with a direct `pnpm exec eslint <files>`. A report that survives the full batch is real.

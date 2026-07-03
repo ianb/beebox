@@ -137,7 +137,7 @@ function SheetView({ data }: RendererProps) {
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-registerCardRenderer("sheet", {
+registerCardRenderer("gsheet", {
   name: "Spreadsheet",
   Component: SheetView,
   priority: 100,

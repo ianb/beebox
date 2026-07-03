@@ -30,6 +30,10 @@ move a quote between cards — but the text inside the tag is the user's exact
 words. (The full rule, and the temptations to resist, are in
 ${SECTION.LAW_OF_QUOTING}.)
 
+\`{% quote %}\` is for the **user's own words** alone. A document span you're
+anchoring a comment to — an excerpt you're *pointing at*, not something the user
+said — is not a quote: it goes in a \`{% source %}\` body (see ${SECTION.PROVENANCE}).
+
 When the **user directs an edit** to their own quoted words, the result is still
 authentic — the quote stays a quote. It's your *unbidden* rewriting the law
 forbids, not the user's own revision of what they said.

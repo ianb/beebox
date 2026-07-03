@@ -140,6 +140,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Calendar integration | `docs/calendar.md` |
 | PDF intake design | `docs/plans/pdf-intake-design.md` |
 | Source editor plan | `docs/plans/source-editor.md` |
+| Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 | Feature ideas | `docs/ideas.md` |
 | Glossary | `docs/glossary.md` |
 

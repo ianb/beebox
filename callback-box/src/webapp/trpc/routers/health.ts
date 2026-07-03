@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
+import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription.js";
 
@@ -168,6 +169,27 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
       : "store/archive/ is not writable — inbox processing will fail",
     severity: "error",
   });
+
+  // --- Interface card checks ---
+
+  // nav.card, when present, must validate and point at real targets. An
+  // absent card is fine (builtin nav); a broken one silently falls back to
+  // the builtin nav, so this warning is the only place the breakage shows.
+  const nav = await resolveNav(boxRoot);
+  if (nav.status !== "absent") {
+    const navProblem =
+      nav.status === "invalid"
+        ? `${NAV_CARD_PATH} is invalid (builtin nav in use): ${nav.error}`
+        : nav.problems.length > 0
+          ? `${NAV_CARD_PATH}: ${nav.problems.join("; ")}`
+          : null;
+    checks.push({
+      name: "nav-card",
+      ok: navProblem === null,
+      message: navProblem ?? `${NAV_CARD_PATH} is valid`,
+      severity: "warning",
+    });
+  }
 
   // --- API key checks ---
 
