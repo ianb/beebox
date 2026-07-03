@@ -13,9 +13,12 @@ cb migrate                      # status — show applied + pending
 cb migrate --apply              # run all pending in order
 cb migrate --mark-all-applied   # seed the manifest as if every known migration ran
                                 # (legacy box that was already fully migrated before this command existed)
+cb migrate --mark-applied bill  # record ONE migration as applied without running it
 ```
 
 `cb init` writes a seeded manifest (all-applied) for new boxes automatically — new boxes don't need to run historical migrations. A missing manifest in an existing box is a hard error; the user must explicitly `--mark-all-applied` to declare "this box is already up to date."
+
+`--mark-applied <name>` is the single-entry escape hatch: it records one migration as applied **without running it**, for a box already in that migration's post-state that never got the manifest line. The motivating case is a **retired migrator** — e.g. `bill` (the cardworks XML→frontmatter conversion) always exits non-zero now that the `cardworks` parser is gone, so a box already in frontmatter shape but missing the `bill` entry would halt `cb migrate --apply` on it forever. Marking it applied unblocks the sweep. It refuses an unknown name or a manifest-less box (use `--mark-all-applied` for the latter), and is an idempotent no-op if the migration is already recorded. Like the other write paths it leaves the manifest edit uncommitted for review.
 
 If a migration fails, the manifest is **not** updated for the failing entry and subsequent migrations are not attempted. Fix the underlying problem and re-run; the loop picks up where it stopped.
 
