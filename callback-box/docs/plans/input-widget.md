@@ -498,6 +498,51 @@ interface RetentionStore {
   profiles are genuinely different machines; unifying their *interface*
   is the win, unifying their internals is not attempted.
 
+## Interaction stances: conversation vs listening (added 2026-07)
+
+Boxholder addition, motivated by real friction (trying to *learn* from a
+long spoken generation while the assistant's hot mic keeps hearing
+"interruptions," with no way to rewind a missed sentence): the design
+above assumes one stance — **conversation** — and there is a second.
+
+- **Conversation** (everything specified above): mic hot, turn-taking
+  active, `voice.coordinate(target.speaking)` does barge-in; speech
+  output is ephemeral.
+- **Listening**: podcast-like. Long generation; **mic cold** — the
+  sanctioned crossing is *suspended*, so ambient sound is never an
+  interruption. The target's speech output becomes a **Player**:
+
+```ts
+type InteractionMode = "conversation" | "listening";
+
+interface Player {            // the target's long-form speech, seekable
+  state: Observable<{ status: "playing" | "paused" | "ended";
+                      position: number; duration: number | null }>;
+  play(): void; pause(): void;
+  seek(to: number): void; nudge(seconds: number): void;
+  setRate(rate: number): void;
+  transcript: Observable<readonly TranscriptSegment[]>; // synced read-along/scrub
+}
+```
+
+Mode transitions — **pause is the gate**:
+
+```
+     LISTENING (playing)          LISTENING (paused)           CONVERSATION
+     mic cold · seekable   pause   mic armed · input     speak  mic hot · barge-in
+     input parked         ──────▶  available            ──────▶ player yields,
+          ▲                         │ resume                    position kept
+          └─────────────────────────┘                   ◀────── return / done
+```
+
+Speaking while paused is the intent to converse; the player yields with
+its position retained for return. This also completes a symmetry the
+design half-built: the emission's audio gets identity + retention —
+listening mode wants the same for **received** speech (utterance retained
+with transcript), so rewind is a fetch, not a regret. Implementation-wise
+the Player hangs off the target (it is the target's output surface, like
+the status strip), and `InteractionMode` is frame state.
+
 ## Open questions
 
 - **Blob persistence** for emission images / retained audio across
