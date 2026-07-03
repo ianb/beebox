@@ -16,6 +16,7 @@ import {
 import { isRecord } from "../lib/is-record";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
 import { ChatsPicker } from "../components/chats/ChatsPicker";
+import { QuestionsList } from "../components/questions/QuestionsList";
 import { HistoryViewCard } from "../components/history/HistoryViewCard";
 import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
@@ -29,6 +30,7 @@ import { registerCardRenderer, type RendererProps } from "./index";
 const VIEW_COMPONENTS: Record<string, React.ComponentType<{ params?: ResolvedViewParams }>> = {
   landmarks: LandmarksList,
   "chat-picker": ChatsPicker,
+  questions: QuestionsList,
   history: HistoryViewCard,
 };
 
