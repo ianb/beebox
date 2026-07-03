@@ -1,5 +1,9 @@
 tests:
   # === Box Structure and Navigation ===
+  #
+  # Status (2026-07-03): 2/3 pass. REAL GAP: find-memo-cards — agent answers
+  # `cb ls --kind memo` (hallucinated; `cb ls` has no --kind) instead of the
+  # `*.memo.card` glob. See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: box-structure-inbox
     prompt: "Where would you look for unprocessed incoming items?"
@@ -23,6 +27,8 @@ tests:
     tags: [navigation, lifecycle]
 
   # === How Items Enter the Box ===
+  #
+  # Status (2026-07-03): all 5 still pass after full rerun.
   #
   # Status (2026-03-16): All 5 pass. Agent knows input mechanisms directly
   # from the new "How Items Enter the Box" section in the agent guide.
@@ -166,6 +172,12 @@ tests:
     tags: [schemas, extension, validation]
 
   # === CLI Commands ===
+  #
+  # Status (2026-07-03): 8/9 pass. cb-chat-self-note-env now passes after
+  # max_turns 10→20 (agent reaches script-env.ts but over-explores; needed room).
+  # NEEDS DECISION: cb-session-exists — agent answers "past chat" via chat-thread
+  # cards (interface-as-cards) rather than `cb session` (which still exists and
+  # cb-session-how-to-use passes). See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-cb-commands
     prompt: "What cb commands are available to you? List the ones you'd use most."
@@ -244,6 +256,7 @@ tests:
     expected_level: knows_about
     watch_for: "Names CB_BOX_NAME and CB_SERVER_URL; knows they're set by the scheduler/script-runner from config/box.json publicUrl, not hardcoded or defaulted"
     correct_contains_any: ["CB_BOX_NAME", "CB_SERVER_URL"]
+    max_turns: 20
     tags: [cli, chat]
     notes: >
       Self-note intentionally has no default server/box — the caller must
@@ -407,6 +420,13 @@ tests:
       loaded in context. No need to require file reads.
 
   # === Guides ===
+  #
+  # Status (2026-07-03): 3/5 pass. Fixed modify-intake-triage (answers
+  # config/intake.guide.card directly — dropped stale should_read). BOX DRIFT:
+  # cooking-guide-awareness + cooking-follow-recipe-pattern should_read a
+  # docs/generated/cooking-guide.md that no longer exists in test1 (no
+  # cooking.guide.card configured) — restore the guide or retire these two.
+  # See docs/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-guides
     prompt: "What guides exist in this box and what do they do?"
@@ -420,12 +440,15 @@ tests:
   - id: modify-intake-triage
     prompt: "If I wanted to change how inbox items are triaged, what would I modify?"
     expected_level: knows_about
-    watch_for: "Knows about the intake guide from agent guide, reads the compiled guide for details"
-    should_read: ["docs/generated/intake-guide.md"]
+    watch_for: "Names config/intake.guide.card as the thing to modify (and the destinations list on landmark cards for routing targets)"
+    correct_contains: ["intake.guide.card"]
     tags: [guides]
     notes: >
-      Updated from discoverable: agent guide now lists the intake guide and its
-      compiled path. Agent should follow the pointer to read the compiled guide.
+      Updated 2026-07-03: the agent now answers the modification target directly
+      from the always-on guide (config/intake.guide.card, plus the destinations
+      list on target landmark cards) — reading the compiled intake-guide.md is no
+      longer required to answer "what would I modify." Substance check replaces the
+      old should_read.
 
   - id: cooking-guide-awareness
     prompt: "I want to make pasta tonight. Can you help me cook?"
@@ -464,13 +487,23 @@ tests:
       find the recipe file.
 
   # === Tricks ===
+  #
+  # Status (2026-07-03): 1/2 pass. Fixed what-are-tricks (tricks authoring moved
+  # behind the `tricks` skill — dropped stale should_read tricks/scripts/CLAUDE.md).
+  # MINOR GAP: trick-scripts-path — agent says `tricks/` (parroting MAP.md) not
+  # `tricks/scripts/` where scripts actually live. See findings doc.
 
   - id: what-are-tricks
     prompt: "What are tricks and how would I create a new one?"
     expected_level: knows_about
-    watch_for: "Reads tricks/scripts/CLAUDE.md for details"
-    should_read: ["tricks/scripts/CLAUDE.md"]
+    watch_for: "Explains tricks (reusable cb trick scripts) and points to the `tricks` skill for authoring; may not need to open tricks/scripts/CLAUDE.md"
+    correct_contains: ["cb trick"]
     tags: [tricks, extension]
+    notes: >
+      Updated 2026-07-03: tricks authoring now lives behind the `tricks` skill,
+      which the agent correctly reaches for. It carries the pointer to
+      tricks/scripts/CLAUDE.md, so requiring a direct read of that file is stale —
+      the substance check (explains tricks + cb trick) is what matters.
 
   - id: trick-scripts-path
     prompt: "Where do trick scripts live?"
@@ -813,6 +846,8 @@ tests:
       is communication style.
 
   # === Git History ===
+  #
+  # Status (2026-07-03): all 3 still pass after full rerun.
   #
   # Status (2026-03-17): All 3 pass. Agents use git log as first action for
   # history questions. bash_contains checks the actual command string (not

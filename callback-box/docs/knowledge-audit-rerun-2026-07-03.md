@@ -41,7 +41,79 @@ Run in batches by section. Two buckets per failure:
   in the box still surfaces the `validate` hook prominently, and whether the
   ABOUT_CARDS/extension prose over-emphasizes Zod.
 
+### find-memo-cards — REAL GAP (batch 2)
+
+- **Prompt:** "If I wanted to find all memo cards in the system, how would you search?"
+- **Agent answered (consistent, 2 runs):** `cb ls --kind memo` and `cb search
+  "<query>" --kind memo`.
+- **Why it's real:** `cb ls` has **no `--kind` flag** — it takes glob paths + `-f`
+  (`src/cli/commands/ls.ts`). So `cb ls --kind memo` is hallucinated. `cb search
+  --kind memo` *is* valid, but search wants a query and doesn't enumerate. The
+  agent never names the `*.memo.card` filename-glob convention (the audit's
+  `knows_directly` expectation, still correct — e.g. `cb ls '**/*.memo.card'`).
+- **Likely culprit:** the always-on surface teaches `--kind` for `cb search` but
+  the agent over-generalizes it to `cb ls`; and the `*.memo.card` naming
+  convention as a *search* strategy isn't landing. Consider (a) documenting the
+  `cb ls '**/*.memo.card'` glob idiom, and/or (b) whether `cb ls` should accept
+  `--kind` for symmetry with `cb search`.
+
+### cb-session-exists — NEEDS DECISION (batch 2, interface-as-cards vocabulary)
+
+- **Prompt:** "I want to review the transcript of a past chat — what command
+  gives me that?" Audit expects `cb session`.
+- **Agent answered (consistent):** chat threads are `chat-thread` cards — find
+  with `cb ls`/`cb search` and read the card; also `cb chat retranscribe`. Never
+  says `cb session`.
+- **Why it's ambiguous:** `cb session` still exists (`src/cli/commands/session.ts`)
+  and the sibling audit `cb-session-how-to-use` (whose prompt says "cb session"
+  explicitly) *passed* — so the agent knows the command. The failure is that
+  "past **chat**" now reads, post-interface-as-cards, as chat-thread cards, not
+  the underlying Claude Code session transcript. Decision for the boxholder: is
+  the canonical answer to "review a past chat" now the chat-thread card (→ update
+  this audit's prompt/checks), or should the guide still steer to `cb session`?
+  Not changed pending your call.
+
+### cooking-guide-awareness / cooking-follow-recipe-pattern — BOX DRIFT (batch 2)
+
+- Both audits `should_read docs/generated/cooking-guide.md`, but **test1 has no
+  cooking guide** — no `config/cooking.guide.card`, and no generated
+  `cooking-guide.md` (only calendar/intake/news guides exist). So the read can
+  never happen and the audits can't pass. The agent's direct cooking help is
+  reasonable given nothing to read. (The sibling `cooking-recipe-lookup`, which
+  needs no guide, passes.)
+- Decision for the boxholder: restore a cooking guide to test1 (if it's meant to
+  be a demo fixture) or retire these two audits. Not changed pending your call.
+
+### trick-scripts-path — MINOR GAP (batch 2)
+
+- **Prompt:** "Where do trick scripts live?" Audit expects `tricks/scripts`.
+- **Agent answered:** "`tricks/` at the box root (per MAP.md)." Trick *scripts*
+  actually live in `tricks/scripts/<name>/` (per `tricks/scripts/CLAUDE.md` and
+  the `tricks` skill); the box's `MAP.md` line is just "`tricks/` — Custom
+  automation scripts," which is what the agent parroted. Low severity — either
+  tighten MAP.md to name `tricks/scripts/`, or accept that the agent should pull
+  the finer path from the tricks skill. Audit expectation left as-is (it's the
+  correct path).
+
+### cb-chat-self-note-env — TURN LIMIT (batch 2)
+
+- The agent reaches the right files (`chat.ts`, `src/core/script-env.ts`) but
+  over-explores (runs the command to observe its env errors) and exhausts turns,
+  emitting an **empty** response twice at the default limit. Not a knowledge gap —
+  the answer is reachable. Bumped `max_turns: 10 → 20`; **re-run then passed** with
+  a complete answer (both env vars + `CB_AGENT_TOKEN`). Fixed.
+
 ## Stale audit expectations fixed (in knowledge-audits.yaml)
+
+Batch 2 (nav / CLI / guides / git / tricks):
+
+- **modify-intake-triage** — agent names the modification target directly
+  (`config/intake.guide.card` + the `destinations` list on landmark cards); the
+  overhaul's richer always-on guide made the compiled-doc read unnecessary.
+  Replaced `should_read` with a `correct_contains` substance check.
+- **what-are-tricks** — tricks authoring moved behind the `tricks` skill, which
+  the agent correctly reaches for; dropped the stale
+  `should_read tricks/scripts/CLAUDE.md`, check for `cb trick`.
 
 Batch 1 (cards / quotes / source):
 
@@ -69,6 +141,13 @@ Batch 1 (cards / quotes / source):
 | Batch | Sections | Audits | Pass | Real gaps | Stale-fixed |
 |---|---|--:|--:|--:|--:|
 | 1 | Card Types & Schemas, Card Format & Schema Discovery, Direct Quotes, Provenance | 30 | 24→29* | 1 | 5 |
+| 2 | Box Structure, How Items Enter, CLI Commands, Git History, Guides, Tricks | 27 | 19→22† | 1 + 1 minor | 2 (+1 max_turns) |
 
 \* 24 raw; 29 after correcting the 5 stale audits (re-run confirmed passing). The
 one remaining failure is the real regression above.
+
+† 19 raw; 22 after fixing 2 stale audits + a `max_turns` bump (all re-run
+confirmed). Remaining 5: `find-memo-cards` (real gap), `cb-session-exists` (needs
+decision), `trick-scripts-path` (minor gap), and `cooking-guide-awareness` /
+`cooking-follow-recipe-pattern` (box drift — no cooking guide in test1). See
+sections above.

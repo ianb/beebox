@@ -229,12 +229,26 @@ test1:
       peak: 41614
       added: 0
       turns: 1
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41200
+      peak: 41200
+      added: 0
+      turns: 1
   internal-links-resolve-to-box-root:
     - date: 2026-06-27T11:23:12.864Z
       boxCommit: 2f6fed59dd31aaa18d71211dba194ea4762e508a
       repoCommit: 5fa3a50997fa4a021aa51e88ba7aa8febc236dd1
       initial: 41623
       peak: 41623
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41209
+      peak: 41209
       added: 0
       turns: 1
   procedure-instructions-gate:
@@ -612,3 +626,245 @@ test1:
       peak: 41243
       added: 0
       turns: 1
+  box-structure-inbox:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41186
+      peak: 41186
+      added: 0
+      turns: 1
+  find-memo-cards:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41191
+      peak: 41191
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:51:21.306Z
+      boxCommit: 33ef99765f78c9850d4a79f2af84b8b87a8f353f
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41192
+      peak: 41192
+      added: 0
+      turns: 1
+  card-after-processing:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41182
+      peak: 41182
+      added: 0
+      turns: 1
+  how-items-enter:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41189
+      peak: 41189
+      added: 0
+      turns: 1
+  user-adds-item:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41195
+      peak: 41195
+      added: 0
+      turns: 1
+  dont-tell-user-to-place-files:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41190
+      peak: 41190
+      added: 0
+      turns: 1
+  inbox-vs-store:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41190
+      peak: 41190
+      added: 0
+      turns: 1
+  wakeup-intake-flow:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41199
+      peak: 41199
+      added: 0
+      turns: 1
+  list-cb-commands:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41190
+      peak: 41190
+      added: 0
+      turns: 1
+  move-card-syntax:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41184
+      peak: 41184
+      added: 0
+      turns: 1
+  validate-card:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41182
+      peak: 41182
+      added: 0
+      turns: 1
+  cb-session-exists:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41191
+      peak: 41191
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:51:21.306Z
+      boxCommit: 33ef99765f78c9850d4a79f2af84b8b87a8f353f
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41192
+      peak: 41943
+      added: 751
+      turns: 5
+  cb-session-how-to-use:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41200
+      peak: 41599
+      added: 399
+      turns: 3
+  cb-chat-self-note-exists:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41244
+      peak: 41244
+      added: 0
+      turns: 1
+  cb-chat-self-note-env:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41192
+      peak: 44749
+      added: 3557
+      turns: 12
+    - date: 2026-07-03T10:51:21.306Z
+      boxCommit: 33ef99765f78c9850d4a79f2af84b8b87a8f353f
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41193
+      peak: 46312
+      added: 5119
+      turns: 13
+    - date: 2026-07-03T10:54:53.708Z
+      boxCommit: 5b22de5859a6a233d93f73aa2d99f6b9f7fc4449
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41205
+      peak: 47774
+      added: 6569
+      turns: 12
+  list-guides:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41184
+      peak: 41184
+      added: 0
+      turns: 1
+  modify-intake-triage:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41193
+      peak: 41193
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:51:21.306Z
+      boxCommit: 33ef99765f78c9850d4a79f2af84b8b87a8f353f
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41194
+      peak: 41194
+      added: 0
+      turns: 1
+  cooking-guide-awareness:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41189
+      peak: 41360
+      added: 171
+      turns: 3
+  cooking-recipe-lookup:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41186
+      peak: 41358
+      added: 172
+      turns: 3
+  cooking-follow-recipe-pattern:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41185
+      peak: 41346
+      added: 161
+      turns: 3
+  what-are-tricks:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41184
+      peak: 41184
+      added: 0
+      turns: 1
+    - date: 2026-07-03T10:51:21.306Z
+      boxCommit: 33ef99765f78c9850d4a79f2af84b8b87a8f353f
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41185
+      peak: 41185
+      added: 0
+      turns: 1
+  trick-scripts-path:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41180
+      peak: 41180
+      added: 0
+      turns: 1
+  git-history-first:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41201
+      peak: 42055
+      added: 854
+      turns: 7
+  git-trailers:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41188
+      peak: 41188
+      added: 0
+      turns: 1
+  git-recent-activity:
+    - date: 2026-07-03T10:45:45.958Z
+      boxCommit: b6670fb94ebe8a22d5f77905ef243eea8ae527ce
+      repoCommit: 8f5584edbb05986677787151b1de99b377237ac5
+      initial: 41181
+      peak: 41910
+      added: 729
+      turns: 3
