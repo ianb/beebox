@@ -274,6 +274,16 @@ reconciled against *current* main, cited inline.
     "The messages you receive"), dropped from `chat.ts` + the guide assembly.
     External Tools stays in the guide (the reactor uses `pandoc` too). ~240 words
     off every non-chat agent's context.
+  - **Track 9 — `sheet` → `gsheet` rename — DONE.** Card-type rename for
+    consistency with `gdoc` (both Google-Drive-synced). Full code rename
+    (`sheet.tsx`→`gsheet.tsx`, `SheetSchema`→`GsheetSchema`, every `"sheet"`
+    type-literal in the drive connector/renderer/search/file-types, the drive
+    skill, prompts, docs, tests; product names like "Google Sheets" left alone),
+    plus a `gsheet-rename` migration (rename frontmatter `.sheet.card` →
+    `.gsheet.card` + rewrite inbound refs; XML sheet cards skipped+reported).
+    Verified on ledger-copy (26 cards): all renamed, refs rewritten, cards
+    validate as `gsheet`, zero `.sheet.card` remain; the box's pre-existing broken
+    links were unchanged in count. Registered append-only.
 
 Everything else below is still future work.
 
