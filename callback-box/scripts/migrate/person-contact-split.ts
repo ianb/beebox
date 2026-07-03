@@ -1,5 +1,6 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+/* eslint-disable complexity -- one-shot migrator that already ran; decomposition is pure churn with no runtime consumer */
+
 /**
  * Split the person card's freeform `contact:` string into structured optional
  * `email:` / `phone:` / `address:` scalars.
@@ -32,12 +33,12 @@ function isRecord(v: unknown): v is Record<string, unknown> {
 }
 
 function splitCard(raw: string): { fm: string; body: string } | null {
-  const m = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
+  const m = raw.match(/^---\r?\n([\S\s]*?)\r?\n---\r?\n?([\S\s]*)$/);
   if (m === null) return null;
   return { fm: m[1] === undefined ? "" : m[1], body: m[2] === undefined ? "" : m[2] };
 }
 
-const EMAIL_RE = /[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}/g;
+const EMAIL_RE = /[\w%+.-]+@[\d.A-Za-z-]+\.[A-Za-z]{2,}/g;
 const LABEL_RE = /^\s*(phone|tel|mobile|cell|fax|e-?mail|address|addr)\s*:\s*(.*)$/i;
 // A street-type word (single alternation of literals — linear, no backtracking).
 const STREET_WORD_RE =
@@ -46,7 +47,7 @@ const ZIP_RE = /\b\d{5}(?:-\d{4})?\b/;
 
 function isPhone(v: string): boolean {
   // en-dash deliberately excluded so a year range ("1791–1871") isn't a phone
-  if (!/^[+(]?\d[\d\s().+-]{5,}\d$/.test(v.trim())) return false;
+  if (!/^[(+]?\d[\d\s()+.-]{5,}\d$/.test(v.trim())) return false;
   const digits = v.replace(/\D/g, "");
   return digits.length >= 7 && digits.length <= 15;
 }

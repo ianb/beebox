@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit && cd src/frontend && pnpm exec tsc --noEmit",
     "typecheck:frontend": "cd src/frontend && pnpm typecheck",
     "typecheck:all": "pnpm typecheck && pnpm typecheck:frontend",
-    "lint": "eslint src/ && cd src/frontend && pnpm exec eslint src/",
+    "lint": "eslint src/ scripts/ && cd src/frontend && pnpm exec eslint src/",
     "start": "node dist/webapp/server.js",
     "cli": "node dist/cli/index.js",
     "pretest": "node scripts/build-cli.mjs",

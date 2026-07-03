@@ -9,49 +9,68 @@ the chat prompt and laws).
 
 ## Open items to revisit — `IA_REVIEW`
 
-Left open when the review session wrapped. Grep `IA_REVIEW` to find them.
+Grep `IA_REVIEW` to find what's still genuinely open. Status as of 2026-07-02.
 
-- **Track 7 (briefing redesign): DONE (partial).** Resolved via the
-  structured-entry-vs-prose-framework principle, not a wholesale move: the
-  *records* (`key-person` → `key-people:`, `property` → `properties:`) moved to
-  briefing frontmatter; the *free-text* (`purpose`, `correction`, prose
-  sections) stays as body Markdoc. `project-phase` was retired (zero usage).
-  Hard cutover (no dual-support migration): the one card using the old tags
-  (workshop briefing) was hand-converted. `key-people[].ref` is now a real
-  frontmatter field (the `person.tsx` comment that referenced it is no longer
-  stale). See `feat(briefing): move key-person/property to frontmatter records`.
-- **`personality.boxholder` single→plural: DONE.** Reconciled by making person
-  cards with `boxholder: true` the single, plural-capable source of truth:
-  `loadBoxholders` reads them and `compilePersonality` emits the "Your boxholder
-  is …" line (oxford-joined for several). The personality card keeps only the
-  relational notes. Migrator `boxholder-person` lifts inline
-  `boxholder.{full-name,called}` onto a person card. Runnable on deployed
-  boxes now that the `cb migrate` prod tsconfig break is fixed on main.
-- `IA_REVIEW` — **deployed-box migration:** this session's migrations
-  (`recipe-source-shape`, `person-contact-split`, `gsheet-rename`) ran on **local
-  dev copies only**. Run `cb migrate --apply` on the deployed server boxes (real
-  ledger data has sheet cards + person contacts). It needs `cb` on the server's
-  PATH and a clean tree per box.
-- `IA_REVIEW` — **person-contact review notes:** migrated boxes (ledger-copy,
-  test1) carry `## Contact` body notes where `person-contact-split` couldn't
-  cleanly structure a value (fax, second email, biographical). A human folds
-  these into fields or prose.
-- `IA_REVIEW` — **`ledger-shrink-test` XML-stuck:** still holds XML cards whose
-  XML→frontmatter migrators are retired, so `cb migrate` can't advance it. Needs
-  XML remediation (old release / hand-convert) or a rebuild — same class as test1
-  was before it was fixed this session.
-- `IA_REVIEW` — **`scripts/**` eslint scope:** migrator scripts trip base-ruleset
-  rules (`require-spec-file`, no-`as`, `max-lines`) that `src/**` disables, but
-  `pnpm lint` only covers `src/`. Add a `scripts/**` scope to the eslint config so
-  the reviewed rules apply and the per-edit-hook noise stops.
-- `IA_REVIEW` — **stale-doc cruft (ledger-copy):** its gsheet migration committed
-  with `--no-verify` because pre-existing broken links (bad relative paths) +
-  MD037 in stale shrunk-copy docs block staging. Not a regression; the docs are
-  worth a cleanup.
-- `IA_REVIEW` — **operational (not prompt-surface):** an orphan `cb scheduler`
-  from the pre-monorepo `~/src/callback/` checkout has been ticking test1 since
-  June (likely a stale leftover to stop); and a box's git hooks get re-stamped
-  with whichever worktree's `cb` last ran on it (sibling-session contention).
+### Still open
+
+None — the two operational leftovers were resolved 2026-07-03 (see Resolved).
+Genuinely-open work now lives only in the worktrees below.
+
+### In progress (spun into worktrees)
+
+- **deployed-box migration** → worktree `fix-prod-migrate`. The server is 6–7
+  migrations behind, and `cb migrate` is currently broken on the bundled prod
+  deploy (tsx can't resolve the tsconfig extends-chain — only `callback-box/` is
+  rsynced). That worktree fixes the tooling, then runs the full (locally-validated)
+  sequence on the 6 pending boxes.
+
+### Resolved
+
+- **Track 7 (briefing redesign)** (2026-07-03) → worktree `briefing-boxholder`.
+  Resolved via the structured-entry-vs-prose-framework principle, not a wholesale
+  move: the *records* (`key-person` → `key-people:`, `property` → `properties:`)
+  moved to briefing frontmatter; the *free-text* (`purpose`, `correction`, prose
+  sections) stays as body Markdoc. `project-phase` retired (zero usage). Hard
+  cutover — the one card using the old tags (workshop briefing) was
+  hand-converted; `key-people[].ref` is now a real frontmatter field. See
+  `feat(briefing): move key-person/property to frontmatter records`.
+- **`personality.boxholder` single→plural** (2026-07-03) → worktree
+  `briefing-boxholder`. Reconciled by making person cards with `boxholder: true`
+  the single, plural-capable source of truth: `loadBoxholders` reads them and
+  `compilePersonality` emits the "Your boxholder is …" line (oxford-joined for
+  several). The personality card keeps only the relational notes. Migrator
+  `boxholder-person` lifts inline `boxholder.{full-name,called}` onto a person
+  card.
+- **`scripts/**` eslint scope** (2026-07-02) — fixed via a new `roots` option on
+  the `personal-vibe-check` preset (`roots: ["src","scripts"]`), giving scripts
+  full `src/` parity; the scripts were brought into compliance. `pnpm lint` now
+  covers `scripts/`.
+- **person-contact review notes** (2026-07-02) — folded the `## Contact` residue:
+  ledger-copy Idris Okafor (fax + firm URL → body prose), Kwame Boateng (2nd email →
+  body prose; preferred already in `email`), test1 Ian Bicking (neighborhood → bio
+  prose). No schema change — each was a one-off the schema deliberately homes in
+  body notes. NOTE: the same review recurs on the real `ledger` box after
+  `fix-prod-migrate` runs `person-contact-split` there.
+- **orphan `cb scheduler`** (2026-07-02) — a launchd-managed leftover
+  (`com.callback.scheduler`) from the pre-monorepo `~/src/callback/` checkout, which
+  had been ticking hearth-test every 60s since Jun 9. Booted out of launchd, plist
+  archived. (Related: the `cb` on PATH still resolves to that old checkout — worth
+  repointing.)
+- **`ledger-shrink-test` XML-stuck** — dropped; the box was deleted (long
+  unimportant).
+- **git-hook restamping (sibling contention)** (2026-07-03) — `resolveCbBin`
+  (`install-validation-hooks.ts`) now embeds the stable **main-checkout** `cb`
+  (derived via the shared git dir) instead of the ephemeral worktree's, so a box
+  hook no longer points at a vanished `cb` and silently skips validation.
+  Degrades to the local path when git is absent (the server's rsynced tree).
+  Re-stamped test1 + ledger-copy; other boxes update on their next `cb` run.
+- **stale-doc cruft (ledger-copy)** (2026-07-03) — neutralized 46 shrink-orphaned
+  broken links to plain text and cleared 2 MD037 hits; `cb validate` is now
+  error-clean (only non-blocking warnings remain).
+- **dead calendar computation** (2026-07-03) — removed the un-emitted
+  `calendar` snapshot field + `summarizeEvents`/`dayKey` + their doctest from
+  `session-context.ts`. Also corrected stale `<triage-destination>` comments in
+  `triage.ts`/`handle.ts` to the `destinations:` frontmatter shape.
 
 The through-line is sharper after round 2: **the guide re-teaches the same core
 concepts in a dozen places and never once teaches them canonically.** Cards,

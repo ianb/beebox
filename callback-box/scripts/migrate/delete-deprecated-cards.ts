@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Delete deprecated, schema-less card types: `news-item`, `news-brief`, and
  * `workflow`.
