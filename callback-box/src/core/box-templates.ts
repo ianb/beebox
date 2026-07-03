@@ -339,14 +339,22 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
 }
 
 /**
- * sha256 of the pre-attach-to-cards views guide (listed `dependencies`/`modes`
- * but never `rendersCardTypes` or the "every view attaches to a card type; no
- * card-less standalone view" rule). Boxes carrying it steer agents toward
- * standalone glob-driven views — refresh it, while parking any guide a
- * boxholder has edited.
+ * sha256s of prior stock views guides — every version we shipped before this
+ * one, all of which listed `dependencies`/`modes` but never `rendersCardTypes`
+ * or the "every view attaches to a card type; no card-less standalone view"
+ * rule. Boxes carrying any of these steer agents toward standalone glob-driven
+ * views, so a box whose guide matches one is recognized as our own unmodified
+ * output and overwritten with the attach-to-cards rewrite; a guide the boxholder
+ * has edited (matching none) is parked instead. Enumerating every known stock
+ * hash — not just the latest — is what lets the refresh reach boxes that were
+ * inited at different template eras (verified against the live server boxes:
+ * workshop/birch/hearth/hearth shared one hash, ledger another).
  */
-const OLD_STANDALONE_VIEWS_GUIDE_SHA256 =
-  "e32a89430eb0a2bf05ca833e4311f7857543c5a83f1862d03240911952abdeba";
+const OLD_STANDALONE_VIEWS_GUIDE_SHA256S = [
+  "e32a89430eb0a2bf05ca833e4311f7857543c5a83f1862d03240911952abdeba",
+  "a4fb7c549b4489596a74e51414450e70717402c416117ae292ce0ce85f9e822c",
+  "194058211ef635603909c19041b8db17d1beb7620f6510510aa5ad9d78a33c1b",
+];
 
 /**
  * Install (or refresh) the box-local views guide. Uses the template tracker so
@@ -359,6 +367,6 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     boxRoot,
     relPath: "views/CLAUDE.md",
     templateContent: VIEWS_CLAUDE_MD,
-    priorStockHashes: [OLD_STANDALONE_VIEWS_GUIDE_SHA256],
+    priorStockHashes: OLD_STANDALONE_VIEWS_GUIDE_SHA256S,
   });
 }
