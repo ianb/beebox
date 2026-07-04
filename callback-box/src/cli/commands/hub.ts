@@ -8,9 +8,15 @@
  */
 
 import { Command } from "commander";
+import * as crypto from "node:crypto";
 import { loadHubConfig, defaultHubConfigPath, HubConfigError } from "../../hub/hub-config.js";
-import { Supervisor } from "../../hub/supervisor.js";
+import { Supervisor, resolveBoxRoot } from "../../hub/supervisor.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
+import type { BoxSpec } from "../../webapp/server-types.js";
+
+function describeError(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
+}
 
 /** No strong precedent for a hub default port (it's a new, prod-only
  *  concept distinct from the dev router's 3210) — chosen simply to avoid
@@ -37,11 +43,35 @@ export const hubCommand = new Command("hub")
     const port = config.port ?? DEFAULT_HUB_PORT;
     const host = config.host ?? "127.0.0.1";
 
-    const supervisor = new Supervisor(config);
+    // Fresh per boot -- never persisted, never logged. The only channels
+    // that see it are each child's env (Supervisor) and the hub's own
+    // header-injection logic (createHubServer). See auth.ts's isHubMode.
+    const hubSecret = crypto.randomBytes(32).toString("hex");
+
+    const supervisor = new Supervisor(config, hubSecret);
     await supervisor.startAll();
 
+    // Best-effort: this list only feeds the hub's own login surface
+    // (/auth/me's accessible-boxes list) and the box picker (D3), so a
+    // misconfigured entry here must not crash the whole hub -- the
+    // supervisor already handles that box's own resolution failure
+    // gracefully (it's reported "unhealthy" via getStatuses()/healthz), and
+    // this list is separately best-effort so a box that never came up is
+    // simply omitted from what login/the picker can name.
+    const boxEntries = await Promise.all(
+      Object.entries(config.boxes).map(async ([slug, entry]): Promise<BoxSpec | undefined> => {
+        try {
+          return { slug, boxRoot: await resolveBoxRoot(entry.path) };
+        } catch (e) {
+          console.error(`Could not resolve box root for "${slug}" (${entry.path}): ${describeError(e)}`);
+          return undefined;
+        }
+      }),
+    );
+    const boxes: BoxSpec[] = boxEntries.filter((box): box is BoxSpec => box !== undefined);
+
     const getHealth = (): HubHealth => ({ status: "ok", boxes: supervisor.getStatuses() });
-    const server = createHubServer({ endpoints: supervisor, getHealth });
+    const server = await createHubServer({ endpoints: supervisor, getHealth, hubSecret, boxes });
 
     let shuttingDown = false;
     const shutdown = async (signal: string): Promise<void> => {

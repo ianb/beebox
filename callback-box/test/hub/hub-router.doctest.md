@@ -1,4 +1,4 @@
-# `cb hub` routing: the endpoint seam (Track D, chunk D1)
+# `cb hub` routing: the endpoint seam, plus the D2 auth split (Track D, chunks D1-D2)
 
 `src/hub/hub-server.ts` never talks to a child process directly — it only
 consumes `EndpointProvider` (`src/hub/endpoints.ts`). This doctest proves
@@ -9,6 +9,12 @@ point of the seam — routing correctness doesn't need a real child process,
 only something that speaks HTTP (and, for the WS case, the upgrade
 handshake) at a known origin.
 
+It also covers the D2 auth split's routing-layer half: the hub strips any
+client-supplied `x-cb-*` header before proxying (the spoof wall) and
+injects its own hub-secret-gated identity header. `createHubServer` is
+`async` (it builds a Fastify app internally and returns its underlying
+`http.Server` after `ready()`), and now takes `hubSecret` + `boxes`.
+
 ```ts setup
 import http from "node:http";
 import net from "node:net";
@@ -17,6 +23,7 @@ import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+const HUB_SECRET = "test-hub-secret-for-router-doctest";
 
 /** A minimal fake "box": echoes back method/url/headers as JSON for plain
  *  HTTP, and completes a bare-bones WebSocket handshake (no framing) for
@@ -31,7 +38,15 @@ async function startFakeBox() {
   const sockets = [];
   const server = http.createServer((req, res) => {
     res.writeHead(200, { "content-type": "application/json" });
-    res.end(JSON.stringify({ method: req.method, url: req.url, xForwardedHost: req.headers["x-forwarded-host"] ?? null }));
+    res.end(JSON.stringify({
+      method: req.method,
+      url: req.url,
+      headers: {
+        xCbAuthenticatedEmail: req.headers["x-cb-authenticated-email"] ?? null,
+        xCbHubSecret: req.headers["x-cb-hub-secret"] ?? null,
+        xCbHubAuth: req.headers["x-cb-hub-auth"] ?? null,
+      },
+    }));
   });
   server.on("connection", (socket) => sockets.push(socket));
   server.on("upgrade", (req, socket) => {
@@ -50,9 +65,14 @@ async function startFakeBox() {
   return { server, sockets, port, origin: `http://127.0.0.1:${port}` };
 }
 
-async function startHub(endpoints) {
+async function startHub(endpoints, { boxes } = {}) {
   const sockets = [];
-  const server = createHubServer({ endpoints, getHealth: () => ({ status: "ok", boxes: [] }) });
+  const server = await createHubServer({
+    endpoints,
+    getHealth: () => ({ status: "ok", boxes: [] }),
+    hubSecret: HUB_SECRET,
+    boxes: boxes ?? [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+  });
   server.on("connection", (socket) => sockets.push(socket));
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
   const { port } = server.address();
@@ -95,12 +115,20 @@ missingResponse.status
 => 404
 ```
 
-## `/` lists configured slugs, `/healthz` returns the injected health
+## `/` renders the box picker, `/healthz` returns the injected health
+
+With `GOOGLE_OAUTH_CLIENT_ID` unset (the doctest process's default), hub
+auth is off — the box picker lists every configured box unconditionally,
+same "open" semantics a standalone box gets outside auth mode.
 
 ```ts continue
 const rootResponse = await fetch(`${hub.base}/`);
-JSON.stringify(await rootResponse.json())
-=> {"boxes":["test1"]}
+rootResponse.status
+=> 200
+
+const rootBody = await rootResponse.text();
+rootBody.includes(`href="/test1/"`)
+=> true
 
 const healthResponse = await fetch(`${hub.base}/healthz`);
 JSON.stringify(await healthResponse.json())
@@ -120,6 +148,39 @@ proxied.status
 
 JSON.stringify({ method: body.method, url: body.url })
 => {"method":"GET","url":"/test1/browse/some-card"}
+```
+
+## A client-supplied `x-cb-authenticated-email` header is stripped, never reaches the child
+
+The spoof wall: no matter what a client sends, the box only ever sees
+identity the HUB decided on. With hub auth off, that means the box sees
+`x-cb-hub-auth: off` + the hub secret — never the client's claimed email.
+
+```ts continue
+const spoofed = await fetch(`${hub.base}/test1/browse/some-card`, {
+  headers: { "x-cb-authenticated-email": "attacker@evil.com", "x-cb-hub-secret": "attacker-supplied-secret" },
+});
+const spoofedBody = await spoofed.json();
+JSON.stringify(spoofedBody.headers)
+=> {"xCbAuthenticatedEmail":null,"xCbHubSecret":"test-hub-secret-for-router-doctest","xCbHubAuth":"off"}
+```
+
+## A webhook path is proxied unauthenticated, carrying only the hub secret
+
+```ts continue
+const webhookHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]));
+const webhookResponse = await fetch(`${webhookHub.base}/webhook/test1/incoming`);
+const webhookBody = await webhookResponse.json();
+webhookResponse.status
+=> 200
+
+JSON.stringify(webhookBody.headers)
+=> {"xCbAuthenticatedEmail":null,"xCbHubSecret":"test-hub-secret-for-router-doctest","xCbHubAuth":null}
+```
+
+```ts continue
+for (const socket of webhookHub.sockets) socket.destroy();
+await new Promise((resolve) => webhookHub.server.close(resolve));
 ```
 
 ## A WebSocket upgrade under a configured slug is proxied through

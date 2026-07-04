@@ -9,13 +9,13 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
+import { isAuthEnabled, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { listParkedTemplateUpdates } from "../core/install-template-file.js";
 import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxSchemas } from "../schemas/registry.js";
 import { getEngineVersionReport } from "../core/engine-version.js";
-import { loadBoxConfig } from "./box-config.js";
+import { canAccessBox } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 
@@ -106,13 +106,7 @@ async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Arr
   const ownerEmail = getOwnerEmail();
   const accessible: Array<{ slug: string; name: string }> = [];
   for (const b of boxes) {
-    if (email === ownerEmail) {
-      accessible.push({ slug: b.slug, name: b.slug });
-      continue;
-    }
-    const config = await loadBoxConfig(b.boxRoot);
-    // Only show boxes where user is explicitly allowed
-    if (config.allowedEmails?.length && config.allowedEmails.includes(email)) {
+    if (await canAccessBox({ boxRoot: b.boxRoot, email, ownerEmail })) {
       accessible.push({ slug: b.slug, name: b.slug });
     }
   }
@@ -242,11 +236,21 @@ export function registerSpaFallback(server: FastifyInstance, frontendPath: strin
       return reply.status(404).send({ error: "Not found" });
     }
 
-    // Auth wall: if auth is enabled and user isn't logged in, redirect to login
-    // (except for root "/" which shows its own login UI, and /auth/* routes)
-    if (isAuthEnabled() && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
-      const email = getSessionEmail(request);
-      if (!email) {
+    // Auth wall: if auth is enabled (or this box is behind a hub) and the
+    // user isn't identified, gate the navigation (except for root "/" which
+    // shows its own login UI, and /auth/* routes).
+    if ((isAuthEnabled() || isHubMode()) && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
+      const identity = resolveRequestIdentity(request);
+      if (identity.source === "open") {
+        // Hub-wide auth is off — fall through to the SPA below.
+      } else if (!identity.email) {
+        if (isHubMode()) {
+          // See addBoxAuthHook's doc comment: a child never redirects to its
+          // own /auth/login in hub mode — the hub gates navigation before
+          // proxying, so reaching here unauthenticated means the request
+          // bypassed the hub (spoof or misconfiguration).
+          return reply.status(401).send({ error: "Not authenticated (hub mode)" });
+        }
         return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(url)}`);
       }
     }

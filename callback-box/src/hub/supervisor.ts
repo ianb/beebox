@@ -106,7 +106,16 @@ interface ManagedBox {
 export class Supervisor implements EndpointProvider {
   private readonly boxes = new Map<string, ManagedBox>();
 
-  constructor(private readonly config: HubConfig) {
+  /**
+   * `hubSecret` is handed to every spawned child via `CB_HUB_SECRET` (Track
+   * D, chunk D2) -- the per-boot secret that gates the hub-injected
+   * identity headers a box trusts in hub mode. See
+   * `src/webapp/auth.ts`'s `isHubMode`/`resolveRequestIdentity`.
+   */
+  constructor(
+    private readonly config: HubConfig,
+    private readonly hubSecret: string,
+  ) {
     for (const [slug, entry] of Object.entries(config.boxes)) {
       this.boxes.set(slug, {
         slug,
@@ -193,7 +202,7 @@ export class Supervisor implements EndpointProvider {
         ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
         {
           cwd: shape.packageRoot,
-          env: process.env,
+          env: { ...process.env, CB_HUB_SECRET: this.hubSecret },
           stdio: ["ignore", "pipe", "pipe"],
           detached: true,
           cleanup: true,

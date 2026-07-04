@@ -13,15 +13,37 @@ import {
   signSession,
   getSessionUser,
   getOwnerEmail,
+  isAuthEnabled,
   COOKIE_NAME,
   SESSION_MAX_AGE_MS,
 } from "../auth.js";
 import { getPublicUrl } from "../../lib/public-url.js";
-import { loadBoxConfig } from "../box-config.js";
+import { canAccessBox } from "../box-access.js";
 import type { BoxSpec } from "../server.js";
 
 interface AuthRoutesOptions {
   boxes: BoxSpec[];
+}
+
+/**
+ * Register the login surface: the full OAuth routes when auth is enabled,
+ * or a stub `/auth/me` (always `null`) otherwise. Factored out so both the
+ * standalone box server (`server.ts`) and the hub (`src/hub/hub-server.ts`,
+ * Track D chunk D2) get identical behavior from one place — the hub hosts
+ * login for the whole fleet, and reusing this exact function is what keeps
+ * that from becoming a second, drifting copy of the OAuth flow.
+ */
+export async function registerAuthSurface(server: FastifyInstance, options: AuthRoutesOptions): Promise<void> {
+  if (isAuthEnabled()) {
+    await server.register(registerAuthRoutes, options);
+  } else {
+    // Auth disabled (no GOOGLE_OAUTH_CLIENT_ID — e.g. local dev): answer the
+    // client's /auth/me probe with `200 null` instead of letting it 404 and
+    // spam the browser console. There's no session, so there's no user.
+    server.get("/auth/me", async (_request, reply) => {
+      return reply.type("application/json").send("null");
+    });
+  }
 }
 
 export async function registerAuthRoutes(
@@ -131,14 +153,8 @@ export async function registerAuthRoutes(
     const ownerEmail = getOwnerEmail();
     const accessibleBoxes: string[] = [];
     for (const box of options.boxes) {
-      if (user.email === ownerEmail) {
+      if (await canAccessBox({ boxRoot: box.boxRoot, email: user.email, ownerEmail })) {
         accessibleBoxes.push(box.slug);
-      } else {
-        const config = await loadBoxConfig(box.boxRoot);
-        // Only show boxes where user is explicitly allowed
-        if (config.allowedEmails?.length && config.allowedEmails.includes(user.email)) {
-          accessibleBoxes.push(box.slug);
-        }
       }
     }
 

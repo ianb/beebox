@@ -12,9 +12,9 @@ import fastifyCookie from "@fastify/cookie";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
-import { registerAuthRoutes } from "./routes/auth.js";
+import { registerAuthSurface } from "./routes/auth.js";
 import { registerGoogleServicesCallback } from "./routes/admin.js";
-import { isAuthEnabled } from "./auth.js";
+import { isHubMode } from "./auth.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { ServerOptions } from "./server-types.js";
@@ -82,16 +82,21 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   // Register WebSocket support (used by realtime transcription proxy)
   await server.register(fastifyWebsocket);
 
-  // Register auth routes (login, callback, logout, me) when auth is enabled
-  if (isAuthEnabled()) {
-    await server.register(registerAuthRoutes, { boxes });
-  } else {
-    // Auth disabled (no GOOGLE_OAUTH_CLIENT_ID — e.g. local dev): answer the
-    // client's /auth/me probe with `200 null` instead of letting it 404 and
-    // spam the browser console. There's no session, so there's no user.
-    server.get("/auth/me", async (_request, reply) => {
-      return reply.type("application/json").send("null");
+  // Register the login surface (login, callback, logout, me) — UNLESS this
+  // box is running behind a hub, in which case the hub owns login (Track D,
+  // chunk D2) and the box's own /auth/* is dead surface: 404, not a stub,
+  // since a child never redirects to its own /auth/login in hub mode (see
+  // server-box-scope.ts's addBoxAuthHook) and nothing should legitimately
+  // reach these paths through the hub (RESERVED_SLUGS reserves "auth").
+  if (isHubMode()) {
+    server.all("/auth/*", async (_request, reply) => {
+      return reply.status(404).send({
+        error: "not_found",
+        message: "This box is served behind a hub; login lives at the hub, not this box.",
+      });
     });
+  } else {
+    await registerAuthSurface(server, { boxes });
   }
   // Root-level Google Services OAuth callback (single redirect URI for all boxes)
   await server.register(async (instance) => {
