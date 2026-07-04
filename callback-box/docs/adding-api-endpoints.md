@@ -216,16 +216,6 @@ myQuery: publicProcedure.query(async ({ ctx }) => { ... })
 const { data } = trpc.my.myQuery.useQuery();
 ```
 
-### `@jsxImportSource` pragma on schema files
-
-The frontend tsconfig uses `"@backend/*"` path alias to import the `AppRouter` type from the backend. This causes TypeScript to follow the full backend import chain, including `src/schemas/*.tsx` files that use cardworks custom JSX (not React JSX). Each schema `.tsx` file must include a pragma at the very top:
-
-```typescript
-/** @jsxImportSource cardworks/jsx */
-```
-
-This overrides the project-level JSX setting per-file. Without it, the frontend typecheck will report hundreds of `Property 'X' does not exist on type 'JSX.IntrinsicElements'` errors. See any existing schema `.tsx` file for the pattern.
-
 ### Audio as base64
 
 For endpoints that accept audio (brief feedback, query responses), convert Blob to base64 on the frontend and send as a string field. Don't use file uploads for small audio clips:

@@ -16,7 +16,7 @@ When we talk about what the agent "knows," there are distinct phenomena worth na
 
 6. **Guessable** — Appears to be answerable from general knowledge, but the correct answer for callback-box may differ from the common/default answer. Dangerous because the agent will sound confident. Example: guessing how the agentic loop works based on general knowledge of agent systems, when callback-box has specific conventions.
 
-7. **Improvised** — The agent constructs a plausible approach without checking if there's an established one. Unlike guessing (which is about facts), this is about strategy: the agent builds something that works but misses patterns or tools it should have used. Example: writing a custom XML parser when cardworks already has one, or hand-rolling a card file instead of using `cb create`. The result may actually function, which makes it harder to catch than a wrong guess — the problem is that it's not the *right* way, and it'll diverge from conventions. Often a fallback when the agent decides it can figure things out as it goes rather than looking up how things are done.
+7. **Improvised** — The agent constructs a plausible approach without checking if there's an established one. Unlike guessing (which is about facts), this is about strategy: the agent builds something that works but misses patterns or tools it should have used. Example: hand-parsing frontmatter with string splitting when `callback-box/cards` already has a parser, or hand-rolling a card file instead of using `cb create`. The result may actually function, which makes it harder to catch than a wrong guess — the problem is that it's not the *right* way, and it'll diverge from conventions. Often a fallback when the agent decides it can figure things out as it goes rather than looking up how things are done.
 
 8. **Knows it doesn't know** — The agent is aware of the gap. Something is acknowledged to exist but the agent genuinely lacks access to the information. Better than guessing — the agent can say "I don't have that information" or ask. Example: connector auth secrets live in `config/connectors/*.secret.*` — ideally these would be inaccessible to the agent (not just forbidden), so the agent knows connectors need credentials but can't read the actual values. (Today the agent *can* read these files, which makes this "deducible" rather than true "doesn't know" — a gap in the access model.)
 
@@ -42,7 +42,7 @@ The agent's context is built in layers, each corresponding to a knowledge level:
 - **Conditionally loaded** → *knows directly, in context*: `.claude/rules/*.md` (~28 rules, triggered by `paths:` glob patterns when the agent reads/edits matching files — e.g., `card-memo.md` loads when touching `*.memo.card`). Also, directory-level `CLAUDE.md` files (e.g., `config/schemas/CLAUDE.md`) are loaded when the agent works in that directory.
 - **Referenced but not loaded** → *knows about*: `docs/generated/*.md` (~31 files — full card type specs, command reference, procedure authoring guide, domain guides). The agent guide points to these by path.
 - **Present but not referenced** → *discoverable*: config files, procedure definitions, guide cards. Available in the box but the agent has to find them by exploring.
-- **Outside the box** → *deducible*: callback-box source code, cardworks library. Accessible if the agent knows where to look (`~/src/callback/`), but outside the box.
+- **Outside the box** → *deducible*: callback-box source code (`src/cards/`, `src/schemas/`, etc., or `node_modules/callback-box` from inside the box). Accessible if the agent knows where to look, but outside the box.
 - **On the internet** → *researchable*: Third-party API docs, standards, libraries the codebase depends on but doesn't document locally.
 
 ## Prompt Style Effects
@@ -101,10 +101,10 @@ cb prompt "What card types do you know about? List them all."
 - Watch for: does it list them from the guide, or does it search the filesystem?
 
 ```
-cb prompt "Show me the XML structure of a memo card."
+cb prompt "Show me the frontmatter structure of a memo card."
 ```
 - **Expected level: Knows about** — the agent guide references `docs/generated/card-memo.md`; the agent should read that file
-- Watch for: does it read the doc, or guess at XML structure? Guessing will miss specific attrs/children
+- Watch for: does it read the doc, or guess at the frontmatter fields? Guessing will miss specifics
 
 ```
 cb prompt "How would you create a new question card asking the user to pick a color?"
@@ -121,8 +121,8 @@ cb prompt "What's the difference between a guide card and a procedure card?"
 ```
 cb prompt "How would you create a brand new card type for this box?"
 ```
-- **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but `config/schemas/CLAUDE.md` exists and is discoverable
-- Watch for: does the agent look at `config/schemas/` and find the CLAUDE.md? Or does it say "you can't"?
+- **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but the schemas dir's `CLAUDE.md` exists and is discoverable
+- Watch for: does the agent look at `src/schemas/` (or `config/schemas/` on a legacy box) and find the CLAUDE.md? Or does it say "you can't"?
 
 ## 3. CLI Commands
 
@@ -158,7 +158,7 @@ cb prompt "What procedures are configured in this box?"
 cb prompt "How would you create a new procedure that processes bookmark cards?"
 ```
 - **Expected level: Knows about** — the agent guide mentions procedures exist; `docs/generated/procedures.md` has the authoring guide
-- Watch for: does it read the procedure docs, or guess at XML structure?
+- Watch for: does it read the procedure docs, or guess at the card structure?
 
 ```
 cb prompt "Explain the relationship between a procedure card and a procedure-run card."
@@ -237,13 +237,13 @@ cb prompt "How would I add a daily task?"
 ## Extending the Box: What CAN the Agent Do?
 
 ### Things the agent CAN do today (in-box):
-- **Create new card types/schemas** — write `.ts` files in `config/schemas/` using `element()` + Zod (see `config/schemas/CLAUDE.md`)
-- **Create new procedures** — write XML to `config/procedures/`
+- **Create new card types/schemas** — write `.ts` files exporting a `cardSchema()` (a v2 box's schemas dir is `src/schemas/` at the package root; a legacy box's is `config/schemas/` — see the schemas guide installed by `cb init`)
+- **Create new procedures** — write a procedure card to `config/procedures/`
 - **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (intake triage, feedback handling, calendar review)
 - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/plans/triage-design.md`)
 - **Add tricks** — create scripts in `tricks/scripts/`
 - **Add scheduled tasks** — create `config/scheduled/*.scheduled-script.card`
-- **Create any card** — using `cb create` or writing XML directly
+- **Create any card** — using `cb create` or writing the frontmatter card directly
 
 ### Things the agent CANNOT do today (require source changes):
 - **Add new connectors** — connectors are TypeScript in `callback-box/src/connectors/`, outside the box
@@ -251,11 +251,11 @@ cb prompt "How would I add a daily task?"
 
 ### Box-Local Schemas
 
-Agents can define new card types by creating `.ts` files in `config/schemas/`. Each file exports a default `ElementSchema` using the same `element()` + `z` (Zod) API as built-in schemas. Optionally, files can also export a `template` for `cb create`.
+Agents can define new card types by creating `.ts` files that default-export a `cardSchema()` (frontmatter + markdown body — the same shape and API as built-in schemas, imported from `callback-box/cards`). A v2 box's schemas dir is `src/schemas/` at the package root; a legacy box's is `config/schemas/`.
 
 After adding a schema, run `cb init` to regenerate rules and docs so the agent and `cb validate` recognize the new type.
 
-The `config/schemas/CLAUDE.md` guide (installed by `cb init`) teaches the agent how to create schemas.
+The schemas-guide `CLAUDE.md` (installed by `cb init` at `src/schemas/CLAUDE.md` for a v2 box, `config/schemas/CLAUDE.md` for a legacy box) teaches the agent how to create schemas.
 
 ### Test Prompts for Extension:
 

@@ -35,7 +35,7 @@ RSYNC_OPTS=(-az --delete
 
 # Reconcile local node_modules to the committed lockfile before any local
 # build. A just-merged dependency change (added/removed dep) otherwise builds
-# the frontend/cardworks against stale modules and fails — this has bitten the
+# the frontend/cards package against stale modules and fails — this has bitten the
 # auto-deploy repeatedly. Frozen so it's deterministic and never rewrites the
 # lockfile; a no-op when already in sync.
 echo "Reconciling local deps..."

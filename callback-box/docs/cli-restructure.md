@@ -121,6 +121,13 @@ Already exists (`cb chat self-note`). Keep as is.
 - **`cb refresh-maps`** (commit `5def6f1`) — new command added independently
   during this review. Not yet audited. When applying the remaining renames,
   classify it: agent-facing? procedure-internal? Does it want a group home?
+- **`cb hub`, `cb upgrade`, `cb boxes`** — added for the v2 (package-layout)
+  box world: `cb hub` supervises per-box child processes behind one router
+  (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
+  lifecycle verb (bump dependency, migrate, sync templates, typecheck,
+  commit), and `cb boxes` manages the older manifest used by the pre-hub
+  `cb serve`/scheduler shape. None of this plan's renames or groupings
+  anticipated these; audit them into the taxonomy when resuming this pass.
 
 ## Side issues surfaced during the audit
 

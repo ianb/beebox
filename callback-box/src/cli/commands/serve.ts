@@ -4,18 +4,23 @@
  * Serves one or more boxes, each at its own URL slug based on directory basename.
  * Usage: cb serve [dirs...]
  *   - With args: uses the given dirs directly.
- *   - No args, manifest populated: serves every box in ~/.config/cb/boxes.json.
- *   - No args, manifest empty: serves the current directory (legacy fallback,
- *     useful for one-off local development).
+ *   - No args: walks up from the current directory to its box root (so this
+ *     works from a v2 box's package root or any subdirectory), falling back
+ *     to the bare cwd if no box is found — a one-off local-dev convenience.
+ *
+ * The `~/.config/cb/boxes.json` manifest (`cb boxes add/remove/list`) feeds
+ * the SCHEDULER only — see `docs/scheduler.md`. `cb serve` never reads it;
+ * to serve several boxes behind one process, use `cb hub`, which has its own
+ * manifest (`hub.json`).
  */
 
 import { Command } from "commander";
 import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
-import { loadBoxesConfig } from "../../core/boxes-config.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { findBoxRoot } from "../lib/paths.js";
 
 /**
  * The slug a box gets when nothing overrides it. For a legacy (shapeVersion
@@ -100,21 +105,18 @@ export const serveCommand = new Command("serve")
 
     // Resolve which box dirs to serve. Precedence:
     //   1. Explicit positional args.
-    //   2. Manifest at ~/.config/cb/boxes.json (the production path on
-    //      servers — added/removed via `cb boxes add|remove`).
-    //   3. Current directory (legacy fallback for one-off local dev).
+    //   2. The current directory, walked up to its box root (handles running
+    //      from a v2 box's package root or any subdirectory) — falls back to
+    //      the bare cwd if no box is found (fixtures, or a plain directory
+    //      for one-off local dev).
+    // The boxes.json manifest is never consulted here — it feeds the
+    // scheduler only; see the module doc-comment above.
     let boxDirs: string[];
     if (dirs.length > 0) {
       boxDirs = dirs;
     } else {
-      const manifest = await loadBoxesConfig();
-      if (manifest.boxes.length > 0) {
-        boxDirs = manifest.boxes;
-        console.log(`Serving ${manifest.boxes.length} box(es) from manifest:`);
-        for (const b of manifest.boxes) console.log(`  ${b}`);
-      } else {
-        boxDirs = [process.cwd()];
-      }
+      const cwdBoxRoot = await findBoxRoot(process.cwd());
+      boxDirs = [cwdBoxRoot ?? process.cwd()];
     }
     const boxes = await resolveBoxes(boxDirs, options.slug);
 

@@ -18,7 +18,7 @@ Four projects live in one git repository (previously independent repos, merged 2
 
 **`/<worktree>/dev/` — a space to build things for the human to view.** Per-worktree, like the box apps: `http://localhost:3210/<name>/dev/` serves that worktree's tracked `dev/` directory (drop a `.html` and it's served as-is; drop a `.md` and the router renders it via Markdoc). Served straight from disk, so it never cold-starts the worktree. The landing is a manifest of available views; a built-in markdown doc browser lives at `/<name>/dev/docs/` (reads every tracked `.md` in that worktree, grouped by area). Bare `/dev/` redirects to `/main/dev/`. Each homepage row has a `dev ↗` link. Implemented in `bin/router.ts`.
 
-Each worktree gets its own Vite + Fastify pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The router source is `bin/router.ts`. URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the tRPC WebSocket all flow through the router. Lifecycle commands:
+Each worktree gets its own Vite + `cb hub` pair, spawned as direct children of the router (no Overmind, no tmux — flat process tree). The hub then lazily spawns/idle-collects a `cb serve` child per box within that worktree, so boxes cold-start and idle-stop independently of the worktree they live in (`CB_DEV_NO_HUB=1` reverts to the router spawning a single legacy `server-main.ts` Fastify process per worktree instead). The router source is `bin/router.ts`. URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the tRPC WebSocket all flow through the router. Lifecycle commands:
 
 - `bin/worktrees status` — JSON of running worktrees, PIDs, ports, idle ms
 - `bin/worktrees down <name>` — stop one worktree's processes now
@@ -37,6 +37,8 @@ Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json` (singl
 **Docs-only commits may skip hooks.** For commits touching only markdown/docs files, `git commit --no-verify` is fine — the pre-commit typecheck/lint pass adds nothing there. Any commit touching code or cards runs the hooks.
 
 **Husky lives at the monorepo root.** A single `.husky/` directory at the monorepo top level holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; post-checkout/post-merge/pre-push wrap git-lfs). Subprojects no longer have their own husky setup — they each `prepare: ":"` to opt out. Running `pnpm install` at the monorepo root is what wires up `core.hooksPath`.
+
+**Subagents are your discretion.** Start subagents (the Agent tool) whenever it helps — parallel or independent work, fan-out searches, or keeping a noisy sub-task out of the main thread — you don't need to ask first. Choose the subagent's model to fit the task; Sonnet 5 is good at subagent work.
 
 **Per-edit lint hook reports can be transient mid-batch.** The PostToolUse hook lints after every single Edit/Write. When a change spans coordinated edits (e.g. add an import in one edit, use it in the next), the intermediate report may show errors the rest of the batch resolves — typically unused-var. Don't react to each intermediate report; finish the batch, then trust the next clean report or verify with a direct `pnpm exec eslint <files>`. A report that survives the full batch is real.
 

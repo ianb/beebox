@@ -53,7 +53,10 @@ The first backlog batch was migrated and all `docs/…` references rewritten:
   the old paths; it self-heals on the next run.
 - A few more plan-shaped docs remain in `docs/` and need a judgment call on
   reference-vs-proposal before moving: `activities-design.md`,
-  `capture-pipeline-redesign.md`, `event-bus-design.md`, `design-card-views.md`,
+  `capture-pipeline-redesign.md`, `event-bus-design.md`,
   `photo-storage-investigation.md`. Left in place (some read more like vision/
   reference than active proposals — `DESIGN.md`, `design-vision.md`,
-  `stack-decisions.md` are reference and stay).
+  `stack-decisions.md` are reference and stay). `design-card-views.md` has
+  since moved to `unimplemented-plans/` (superseded by the shipped renderer
+  registry) and `attach-implementation.md` to `implemented-plans/`
+  (superseded by `docs/asset-manifests.md`).

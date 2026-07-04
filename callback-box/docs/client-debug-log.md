@@ -51,4 +51,4 @@ tRPC procedures (from the app or a tRPC client), not a raw HTTP endpoint.
 
 - `src/frontend/src/components/DebugLog.tsx` — console patching, server forwarding, panel UI
 - `src/frontend/src/app-shell.tsx` — init capture, error badge, global panel rendering
-- `src/webapp/routes/api.ts` — server endpoints, log file writing
+- `src/webapp/trpc/routers/debugLog.ts` — `submit`/`get`/`clear` procedures, ring buffer, log file writing

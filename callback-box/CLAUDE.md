@@ -6,12 +6,12 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Development
 
-**Dev server** — run the monorepo dev router from the repo root: `bin/worktrees serve` (or `pnpm dev`). The router lazy-starts Vite + Fastify per worktree on first HTTP request, and idle-shuts-them-down after 5 minutes. URLs:
+**Dev server** — run the monorepo dev router from the repo root: `bin/worktrees serve` (or `pnpm dev`). The router lazy-starts Vite + a `cb hub` per worktree on first HTTP request, and idle-shuts-them-down after 5 minutes; the hub in turn lazy-starts/idle-collects a `cb serve` child per box within that worktree, so individual boxes cold-start and idle-stop independently. URLs:
 
 - `http://localhost:3210/main/<box>/...` — the main checkout
 - `http://localhost:3210/<name>/<box>/...` — any git worktree
 
-Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same two processes (Vite, Fastify) directly as its children — flat tree, predictable signal handling, no tmux. See the monorepo CLAUDE.md for the lifecycle commands (`worktrees status`, `down`, `panic`).
+Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns Vite and the hub directly as its children — flat tree, predictable signal handling, no tmux. See the monorepo CLAUDE.md for the lifecycle commands (`worktrees status`, `down`, `panic`).
 
 **Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
 - `pnpm typecheck` — TypeScript (both backend and frontend)
@@ -21,7 +21,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
 - Run tests before committing. If tests fail, fix them. If a test failure is clearly pre-existing and unrelated to your changes, note it but don't ignore your own failures.
 
-**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. Prod runs the bundled `dist/cli.mjs` (built by `scripts/build-cli.mjs`, rsynced by the deploy) via `cb serve` — not tsx, and not the per-file compiled tree. Because the bundle lives at `dist/` (one level below the package root, not `dist/webapp/`), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`.
+**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. Prod runs a resident `cb hub` (systemd unit `callback-hub`; the old single-process `callback-serve` unit is stopped/disabled but left on disk as a rollback lever) that routes `/<slug>/...` to per-box `cb serve` children, each running the bundled `dist/cli.mjs` (built by `scripts/build-cli.mjs`, rsynced by the deploy) — not tsx, and not the per-file compiled tree. Because the bundle lives at `dist/` (one level below the package root, not `dist/webapp/`), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`. See `deploy/README.md` for the full server-layout and systemd-unit reference.
 
 ## Cards
 
@@ -61,6 +61,7 @@ src/connectors/   External integrations (rss, gmail, telegram, etc.)
 src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
   trpc/           tRPC router and sub-routers
+src/hub/          `cb hub`: routes /<slug>/... to per-box `cb serve` children (lazy start, idle-collect, health-check)
 src/frontend/     React UI (Vite, separate tsconfig)
   src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
                       Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/landmarks/LandmarksPage.tsx` + `pages/landmarks/components/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
@@ -83,7 +84,7 @@ deploy/           Server provisioning and deployment scripts
 plugins/          Claude Code plugins (card-validator hook)
 ```
 
-**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`.
+**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`. Newer boxes (`shapeVersion: 2`, incl. `test1`) wrap this in a package: the box itself is the `content/` subdirectory (operational root = `boxRoot` = agent cwd), while `src/{schemas,views,tricks}` and `.claude/` live at the package root alongside a `package.json` depending on `callback-box`. Box code (schemas, views, tricks) only imports `callback-box/cards`, `callback-box/schema`, or `callback-box/view-widgets` — never engine internals. See `docs/box-layout.md` for the full shape.
 
 ## Key Concepts
 

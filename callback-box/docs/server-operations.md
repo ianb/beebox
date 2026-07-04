@@ -9,7 +9,7 @@ Services run as the **`callback` user** (User/Group in systemd unit files), not 
 | Path | Owner | Purpose |
 |------|-------|---------|
 | `/opt/callback/` | root (read-only to `callback`) | Checked-out source code (callback-box) |
-| `/home/callback/boxes/` | `callback` | Box data — each subdirectory is a box (inbox/, store/, config/, .callback-box/) |
+| `/home/callback/boxes/` | `callback` | Box data — each subdirectory is a v2 (package-layout) box; operational data (inbox/, store/, config/, .callback-box/) lives under its `content/` subdirectory |
 | `/home/callback/.env` | `callback` | Environment variables for services (API keys, `CB_DIAG_API_KEY`, etc.) |
 | `/home/callback/.claude/.credentials.json` | `callback` | Claude Code OAuth credentials (see below) |
 
@@ -38,8 +38,8 @@ ssh callback@$(cat deploy/server-ip)
 | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/callback/.config/cb/boxes.json` |
 | Service logs | `journalctl -u cb-hub -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
 | Service status | `systemctl status cb-hub callback-scheduler --no-pager` |
-| Client debug log per box | `/home/callback/boxes/<box>/.callback-box/client-debug.log` |
-| Procedure runs | `/home/callback/boxes/<box>/procedure/runs/` |
+| Client debug log per box | `/home/callback/boxes/<box>/content/.callback-box/client-debug.log` |
+| Procedure runs | `/home/callback/boxes/<box>/content/procedure/runs/` |
 | Claude Code update log | `/home/callback/claude-update.log` |
 | Source the server is actually running | `/opt/callback/callback-box/src/` (rsynced `.ts`, no `dist/`) |
 

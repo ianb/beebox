@@ -44,4 +44,4 @@ Once the user agrees, the landmark itself is small editorial work:
 - **Symbol** — iconic, recognizable at a glance. Pick something the user would associate with the spot from their own life, not a generic placeholder.
 - **Curated links** — the *handful* of cards in that directory that the user actually reaches for, in the order they'd think about them. Many landmarks won't need any internal links at all — the bookmark itself, plus the directory it points at, is the value. Don't pad the list to make it feel substantive.
 
-The schema details and the `<expand>` element for templated link lists are documented in `docs/generated/card-landmark.md`.
+The schema details and the `expand` field for templated link lists are documented in `docs/generated/card-landmark.md`.

@@ -178,7 +178,7 @@ export const CURATOR: CuratorSection[] = [
     title: "Speculative",
     blurb: "Designs for things that don't exist yet — or might never. Useful for finding out where Ian's head was at when he wrote them.",
     entries: [
-      { path: "docs/design-card-views.md", note: "876 lines of plugin system that may or may not get built." },
+      { path: "docs/unimplemented-plans/design-card-views.md", note: "876 lines of plugin system — superseded by the shipped renderer registry." },
       { path: "docs/event-bus-design.md", note: "An event bus, designed, awaiting motivation to exist." },
       { path: "docs/unimplemented-plans/boxes-as-packages.md", note: "What if every box were an npm package? Thought experiment." },
       { path: "docs/unimplemented-plans/box-user-account-spec.md", note: "What if every box were a Linux user? Also thought experiment." },

@@ -296,7 +296,7 @@ Dry run: `cb scenario run <name> --dry-run`
 
 Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/` with its own git repo as the test box.
 
-**Directory structure:**
+**Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an operational `content/` subdirectory — see `docs/plans/boxes-as-packages-v2.md`), so a freshly-created scenario's `box/` looks like:
 ```
 ~/src/boxes/scenarios/my-scenario/
   scenario.yaml      # step definitions (required)
@@ -305,11 +305,13 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
     feed.xml
     article.html
   setup.md           # human-readable description of what this tests
-  box/               # the git repo — a real box initialized with cb init
-    box/inbox/       # pre-seeded test data
-    config/          # connector configs, schedules, etc.
+  box/               # the git repo (package root) — a real box initialized with cb init
+    content/
+      box/inbox/     # pre-seeded test data
+      config/        # connector configs, schedules, etc.
     ...
 ```
+The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still legacy-shape (`box/inbox/`, `config/` directly under `box/`, no `content/` nesting) — they haven't needed conversion, so both shapes are in use. `cb wakeup`/`cb reactor`/etc. resolve either shape fine from `box/`'s cwd; `script:` validations (which run with cwd `box/`) need to match whichever shape the scenario's box actually has.
 
 **Steps to create:**
 
@@ -321,7 +323,7 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
    cb init .
    ```
 
-2. **Seed the box with test data.** Put cards in `box/inbox/`, configure connectors in `config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
+2. **Seed the box with test data.** Put cards in `content/box/inbox/`, configure connectors in `content/config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
 
 3. **Write `scenario.yaml`** with steps. Each step runs a shell command (usually a `cb` command) and validates the result. See the format description above.
 
@@ -467,7 +469,7 @@ Not every session has problems. If the critique comes back clean, that's a posit
 **Location:** `src/core/sdk-hooks.ts` (`cardValidatorHook`)
 **Trigger:** Runs automatically during agent sessions on `PostToolUse` of `Write`/`Edit`
 
-Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the hook calls cardworks' `lintCards` in-process and feeds any issues back as `additionalContext`. This catches XML/schema issues during agent work rather than after.
+Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the hook calls the card linter (`src/core/card-lint.ts`, built on the card primitives absorbed from the former `cardworks` package into `src/cards/`) in-process and feeds any issues back as `additionalContext`. This catches frontmatter/schema issues during agent work rather than after.
 
 Also enforces directory structure rules (e.g., trick scripts must be in subdirectories of `tricks/scripts/`).
 

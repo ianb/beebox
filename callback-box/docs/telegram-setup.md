@@ -1,10 +1,10 @@
 # Telegram Connector Setup
 
-The Telegram connector lets you connect a Telegram group chat (or private chat) to your box. Incoming messages become memo cards in your inbox; outbound messages are sent from output cards.
+The Telegram connector lets you connect a Telegram group chat (or private chat) to your box. Incoming messages accumulate on a per-chat thread card; outbound messages are sent from output cards.
 
 ## How it works
 
-- **Inbound (real-time):** Telegram pushes messages to a webhook on your server. Each message becomes a memo card in `box/inbox/telegram/`.
+- **Inbound (real-time):** Telegram pushes messages to a webhook on your server. Each message is appended to a `chat-thread` card at `store/chat/telegram/<Chat>/thread.chat-thread.card` (one accumulating thread per chat), and a chat job is created for the agent.
 - **Inbound (catch-up):** On `cb wakeup`, the connector polls for any messages missed while the server was down, then re-establishes the webhook.
 - **Outbound:** Create a `telegram-message.card` in `box/output/` and run `cb wakeup --connector telegram`. The connector sends it and deletes the card.
 
@@ -71,17 +71,19 @@ After this, new messages will be pushed to your server in real-time via the webh
 ## 6. Verify
 
 1. Send a message in the Telegram group
-2. Check that a memo card appeared in `box/inbox/telegram/`
-3. The card should contain the message text, sender name, and chat metadata
+2. Check that the message was appended to a `thread.chat-thread.card` under `store/chat/telegram/`
+3. The thread entry should contain the message text, sender name, and chat metadata
 
 ## Sending messages
 
 To send a message to the Telegram chat, create a card in `box/output/`:
 
-```xml
-<telegram-message status="pending" chat-id="-1001234567890">
-<text>Hello from the box!</text>
-</telegram-message>
+```yaml
+---
+status: pending
+chat-id: "-1001234567890"
+text: Hello from the box!
+---
 ```
 
 Save it with a `.telegram-message.card` extension, stage and commit, then run:
@@ -90,39 +92,34 @@ Save it with a `.telegram-message.card` extension, stage and commit, then run:
 cb wakeup --connector telegram
 ```
 
-The connector sends the message and deletes the card.
-
-To reply to a specific message, add a `<reply-to>` element with the message ID:
-
-```xml
-<telegram-message status="pending" chat-id="-1001234567890">
-<text>Got it, thanks!</text>
-<reply-to>12345</reply-to>
-</telegram-message>
-```
+The connector sends the message and deletes the card. (There's no reply-to-message-id field currently — only a flat chat message.)
 
 ## What gets created
 
-Each incoming Telegram message becomes a memo card:
+Each incoming Telegram message is appended as an entry on the chat's thread card:
 
 ```
-box/inbox/telegram/
-  Alice_2026-02-26T13-00-00.memo.card
-  Bob_2026-02-26T13-05-00.memo.card
+store/chat/telegram/Family_Group/
+  thread.chat-thread.card
 ```
 
-The memo cards include Telegram metadata on the `<context>` element:
+The thread card's frontmatter carries the chat metadata and its `entries` accumulate the messages:
 
-```xml
-<memo status="new">
-<created>2026-02-26T13:00:00.000Z</created>
-<content>Hey dad, can you pick me up at 3?</content>
-<source>telegram</source>
-<context telegram-chat-id="-1001234567890"
-telegram-message-id="456"
-telegram-sender="Alice"
-telegram-sender-id="789">Family Group</context>
-</memo>
+```yaml
+---
+chat-id: "-1001234567890"
+connector: telegram
+description: Family Group
+participants:
+  - ref: /people/alice.person.card
+entries:
+  - kind: message
+    id: "456"
+    sender: Alice
+    sender-id: "789"
+    time: 2026-02-26T13:00:00.000Z
+    text: Hey dad, can you pick me up at 3?
+---
 ```
 
 ## Notes

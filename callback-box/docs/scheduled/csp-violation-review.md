@@ -15,10 +15,10 @@ below.
 
 This is a **local** routine — it reads the CSP log the local dev server writes,
 not prod. The `/api/csp-report` sink appends violations (as JSONL) to the primary
-box at `~/src/boxes/test1/.callback-box/csp-reports.log` as you exercise the app
-locally. The routine must therefore run **on the machine where that box lives**
-(e.g. a local `/schedule` task), not in a cloud environment that doesn't have the
-box. There is no SSH or HTTPS log-fetch step — it reads the file directly.
+box at `~/src/boxes/test1/content/.callback-box/csp-reports.log` as you exercise the app
+locally. The routine must therefore run **on the machine where that box lives** (e.g. a
+local `/schedule` task), not in a cloud environment that doesn't have the box. There is
+no SSH or HTTPS log-fetch step — it reads the file directly.
 
 ## Cadence
 
@@ -33,14 +33,16 @@ Run from the `callback-box/` directory.
 
 1. **Digest the new violations since the last run:**
    ```bash
-   pnpm csp-digest
+   pnpm csp-digest --box ~/src/boxes/test1/content
    ```
+   (`--box` is required for now — the command's own default still points at
+   `~/src/boxes/test1`, the pre-v2 package root, not its `content/` subdirectory.)
    This reads the local primary box's log, prints only entries newer than the
    last run, and advances a timestamp cursor (in the git-ignored
    `.callback-box/csp-digest-cursor.json`) so the next run resumes after them. No
    output / "No new CSP violations" means nothing new since last time — a *clean*
    result, not an error. (Add `--json` if you want the digest structured for
-   analysis; `--box <path>` to point at a different box.)
+   analysis.)
 
 2. **Analyze what's new.** The incremental digest is the delta. For the harden
    decision you need the whole-log picture, so when the delta is clean (or you're
