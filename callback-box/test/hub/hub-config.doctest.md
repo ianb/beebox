@@ -115,6 +115,61 @@ dupeErr.message.includes("test1-again")
 => true
 ```
 
+## A v2 package root and its own `content/` dir are the same box (canonicalized before comparing)
+
+Without canonicalizing to the actual box root first, `./boxes/pkg` (the
+package root) and `./boxes/pkg/content` (its own content dir) compare as
+different strings and both pass the check -- exactly the "two engines on
+one `events.db`" hazard above, just reached through the v2 bilingual layout
+instead of a literal duplicate path. `resolveBoxRoot` (the same resolution
+`src/hub/supervisor.ts` uses at boot) resolves both to one root before the
+duplicate check runs.
+
+```ts continue
+await box.write("boxes/pkg/content/.cb-box", "");
+const aliasConfig = await writeConfig(box.root, {
+  boxes: {
+    "pkg-root": { path: "./boxes/pkg" },
+    "pkg-content": { path: "./boxes/pkg/content" },
+  },
+});
+const aliasErr = await tryLoad(aliasConfig);
+aliasErr instanceof HubConfigError
+=> true
+
+aliasErr.message.includes("pkg-root") && aliasErr.message.includes("pkg-content")
+=> true
+```
+
+## A symlinked alias to the same box is also caught
+
+```ts continue
+await fs.symlink(path.join(box.root, "boxes/test1"), path.join(box.root, "boxes/test1-link"));
+const symlinkConfig = await writeConfig(box.root, {
+  boxes: {
+    test1: { path: "./boxes/test1" },
+    "test1-symlink": { path: "./boxes/test1-link" },
+  },
+});
+const symlinkErr = await tryLoad(symlinkConfig);
+symlinkErr instanceof HubConfigError
+=> true
+
+symlinkErr.message.includes("test1-symlink")
+=> true
+```
+
+A box path that doesn't resolve at all (no `.cb-box` anywhere) still loads
+successfully -- canonicalization failures don't block config load, only the
+supervisor reports that box "unhealthy" once it actually tries to launch it
+(see `cli/commands/hub.ts`'s best-effort `boxEntries` handling):
+
+```ts continue
+const unresolvableConfig = await writeConfig(box.root, { boxes: { broken: { path: "./boxes/does-not-exist" } } });
+(await tryLoad(unresolvableConfig)) instanceof HubConfigError
+=> false
+```
+
 ```ts cleanup
 await box.cleanup();
 ```

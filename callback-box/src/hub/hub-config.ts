@@ -18,6 +18,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { z } from "zod";
+import { resolveBoxRoot } from "./supervisor.js";
 
 /**
  * URL prefixes the box server itself claims at the root level (outside any
@@ -82,12 +83,53 @@ export function defaultHubConfigPath(): string {
 }
 
 /**
+ * Canonicalize a resolved `hub.json` entry path for the duplicate-box check
+ * below: resolve it to the box's actual root the same way the supervisor
+ * does (`resolveBoxRoot` -- handles the v2 package-root-vs-`content/`-dir
+ * bilingual layout) and `fs.realpath` it (catches a symlinked alias to the
+ * same box). Without this, `/boxes/a` (package root) and `/boxes/a/content`
+ * (the same box's content dir) compare as different strings and both pass
+ * the check, letting two `cb serve` processes start against one box's
+ * `events.db`.
+ *
+ * Resolution failures (e.g. a misconfigured entry with no `.cb-box`
+ * anywhere) do NOT throw here -- `loadHubConfig` stays a load-time
+ * validator that a single bad entry shouldn't take down; a box that can't
+ * resolve is reported "unhealthy" once the supervisor actually tries to
+ * launch it (see `cli/commands/hub.ts`'s best-effort `boxEntries` handling).
+ * Falling back to `fs.realpath` of the raw path still catches a symlinked
+ * alias to a bad-but-real path; falling back further to the raw path itself
+ * only matters for a path that doesn't exist at all, which can't collide
+ * with anything real anyway.
+ */
+async function canonicalBoxKey(resolvedPath: string): Promise<string> {
+  try {
+    const boxRoot = await resolveBoxRoot(resolvedPath);
+    return await fs.realpath(boxRoot);
+  } catch (_e) {
+    try {
+      return await fs.realpath(resolvedPath);
+    } catch (_e2) {
+      return resolvedPath;
+    }
+  }
+}
+
+/**
  * Load and validate `hub.json`. Fails closed: unknown top-level keys, an
  * unknown per-box key, a reserved or malformed slug, or two slugs pointing
  * at the same resolved box path (which would start two engine processes
  * against one box's on-disk state — the exact "two engines on one
  * `events.db`" hazard the plan's Failure modes section calls out) are all
- * load errors, not warnings.
+ * load errors, not warnings. The duplicate check canonicalizes each entry
+ * (`canonicalBoxKey`) before comparing, so a package-root path and its own
+ * `content/` subdirectory -- or a symlinked alias -- are caught as the same
+ * box, not accepted as two distinct ones. `loadHubConfig` was already
+ * async (it reads the file from disk), so making this one check async too
+ * doesn't change the function's shape -- it stays the one place that
+ * validates `hub.json`, which is what keeps this module's doctests
+ * (`test/hub/hub-config.doctest.md`) meaningful as pure-ish validation
+ * tests rather than needing supervisor/process machinery.
  */
 export async function loadHubConfig(configPath: string): Promise<HubConfig> {
   let raw: string;
@@ -120,7 +162,11 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
 
   const configDir = path.dirname(path.resolve(configPath));
   const boxes: Record<string, BoxEntry> = {};
-  const pathToSlugs = new Map<string, string[]>();
+  interface DupeEntry {
+    slug: string;
+    resolvedPath: string;
+  }
+  const canonicalToEntries = new Map<string, DupeEntry[]>();
 
   for (const [slug, entry] of Object.entries(result.data.boxes)) {
     if (RESERVED_SLUGS.has(slug)) {
@@ -132,15 +178,20 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     }
     const resolvedPath = path.resolve(configDir, entry.path);
     boxes[slug] = { path: resolvedPath };
-    const existing = pathToSlugs.get(resolvedPath) ?? [];
-    existing.push(slug);
-    pathToSlugs.set(resolvedPath, existing);
+    const canonicalKey = await canonicalBoxKey(resolvedPath);
+    const existing = canonicalToEntries.get(canonicalKey) ?? [];
+    existing.push({ slug, resolvedPath });
+    canonicalToEntries.set(canonicalKey, existing);
   }
 
-  const duplicated = Array.from(pathToSlugs.entries()).filter(([, slugs]) => slugs.length > 1);
+  const duplicated = Array.from(canonicalToEntries.values()).filter((entries) => entries.length > 1);
   if (duplicated.length > 0) {
     const detail = duplicated
-      .map(([boxPath, slugs]) => `  - ${boxPath} is claimed by slugs: ${slugs.join(", ")}`)
+      .map(
+        (entries) =>
+          `  - ${entries[0]!.resolvedPath} is claimed by slugs: ` +
+          entries.map(({ slug, resolvedPath }) => `${slug} (${resolvedPath})`).join(", ")
+      )
       .join("\n");
     throw new HubConfigError(
       `Hub config at ${configPath}: the same box path is registered under more than one ` +

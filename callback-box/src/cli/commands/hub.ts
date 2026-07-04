@@ -48,7 +48,7 @@ export const hubCommand = new Command("hub")
     // header-injection logic (createHubServer). See auth.ts's isHubMode.
     const hubSecret = crypto.randomBytes(32).toString("hex");
 
-    const supervisor = new Supervisor(config, hubSecret);
+    const supervisor = new Supervisor({ config, hubSecret });
     await supervisor.startAll();
 
     // Best-effort: this list only feeds the hub's own login surface
@@ -71,7 +71,11 @@ export const hubCommand = new Command("hub")
     const boxes: BoxSpec[] = boxEntries.filter((box): box is BoxSpec => box !== undefined);
 
     const getHealth = (): HubHealth => ({ status: "ok", boxes: supervisor.getStatuses() });
-    const server = await createHubServer({ endpoints: supervisor, getHealth, hubSecret, boxes });
+    // The hub's own base URL -- see hub-server.ts's `baseUrl` doc comment for
+    // why this must be threaded in rather than letting the auth routes fall
+    // back to the box server's unrelated default port.
+    const baseUrl = `http://${host}:${port}`;
+    const server = await createHubServer({ endpoints: supervisor, getHealth, hubSecret, boxes, baseUrl });
 
     let shuttingDown = false;
     const shutdown = async (signal: string): Promise<void> => {

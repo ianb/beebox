@@ -26,6 +26,122 @@ import { waitForHttp, killGroup, sleep, HttpReadinessTimeoutError } from "./chil
 
 type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
+/**
+ * Env vars a hub-spawned box child (`cb serve`) may inherit from the hub's
+ * own process env. Fail-closed ALLOWLIST, not a denylist -- `process.env`
+ * on the hub process holds hub-only credentials (`CB_SESSION_SECRET`,
+ * `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`) that must NEVER
+ * reach a child: the session secret is symmetric (HMAC), so any box that
+ * can VERIFY a cookie could also FORGE one for a sibling box, and the
+ * OAuth client secret would let a box impersonate the hub's own login flow.
+ * Spreading `process.env` into every child (as this used to do) reopens
+ * exactly the forgery hole Track D's D2 auth split closed (see
+ * `docs/plans/boxes-as-packages-v2.md`'s "Isolation is layered": the hub is
+ * trusted, boxes are not trusted with each other's secrets). Widen this
+ * list only by adding a new named entry with a reasoned comment -- never by
+ * reverting to a spread.
+ *
+ * Built from evidence: every `process.env.X` read under `src/webapp/`,
+ * `src/core/`, and `src/connectors/` as of this writing (a hub-spawned
+ * child only ever runs `cb serve`, which is built from those trees), plus
+ * the OS/runtime basics any Node process needs and the few Claude
+ * Agent SDK knobs that are config, not secrets (subscription auth itself
+ * reads `~/.claude/`, keyed off `HOME` below -- `ANTHROPIC_API_KEY` is
+ * deliberately excluded, and is actively stripped elsewhere:
+ * `cli/bootstrap.ts`, `core/script-env.ts`).
+ */
+const CHILD_ENV_ALLOWLIST: readonly string[] = [
+  // --- OS/runtime basics ---
+  "PATH",
+  "HOME",
+  "USERPROFILE", // Windows HOME equivalent -- src/core/box.ts's homeDir fallback.
+  "TMPDIR",
+  "TEMP",
+  "TMP",
+  "NODE_ENV", // src/webapp/routes/api.ts, chat-audio-routes.ts: dev-only branches.
+  "TZ",
+  "LANG",
+  "LC_ALL",
+  "LC_CTYPE",
+  "LC_MESSAGES",
+
+  // --- Box-legitimate config/secrets a `cb serve` child reads directly ---
+  "PUBLIC_URL", // src/lib/public-url.ts, telegram-helpers.ts, script-env.ts fallback.
+  "CB_PUBLIC_URL", // src/lib/public-url.ts -- preferred over PUBLIC_URL when set.
+  "CB_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
+  "CB_DIAG_API_KEY", // src/webapp/auth.ts verifyDiagBearerKey -- shared read-only diag bearer key.
+  "CB_GOOGLE_TOKENS_FILE", // src/connectors/google-auth.ts, requirements.ts -- a path, not a credential.
+  "CB_LOG_PROMPTS", // src/core/agent-run.ts -- debug flag.
+  "CB_STRICT_FETCH", // src/cli/bootstrap.ts -- test/scenario harness flag.
+  "CB_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.
+  "CB_SCENARIO_START_TIME", // src/cli/lib/fetch.ts -- scenario harness.
+  "CB_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
+  "THINKING_OPENAI_API_KEY", // src/webapp/routes/chat-audio-routes.ts -- box's own transcription key.
+  "CALLBACK_MISTRAL_API_KEY", // src/core/mistral-key.ts -- box's own transcription key fallback.
+
+  // --- Claude Agent SDK config knobs (not credentials) ---
+  "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.
+  "DISABLE_TELEMETRY",
+  "DISABLE_ERROR_REPORTING",
+  "DO_NOT_TRACK",
+];
+
+/**
+ * Build a hub-spawned child's env: only `CHILD_ENV_ALLOWLIST` entries from
+ * `sourceEnv` (normally the hub's own `process.env`), plus `hubExtras`
+ * (currently just `CB_HUB_SECRET`) layered on top. Pure and exported so it
+ * can be pinning-tested directly without spawning anything real -- see
+ * `test/hub/supervisor.doctest.md`.
+ */
+export function buildChildEnv(params: {
+  sourceEnv: NodeJS.ProcessEnv;
+  hubExtras: Record<string, string>;
+}): NodeJS.ProcessEnv {
+  const { sourceEnv, hubExtras } = params;
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of CHILD_ENV_ALLOWLIST) {
+    const value = sourceEnv[key];
+    if (value !== undefined) env[key] = value;
+  }
+  return { ...env, ...hubExtras };
+}
+
+/** Params for spawning a box child process -- see `SpawnChildFn`. */
+export interface ChildSpawnParams {
+  cbBinary: string;
+  args: string[];
+  cwd: string;
+  env: NodeJS.ProcessEnv;
+}
+
+/**
+ * Injectable child-process spawner. Real `execa` by default; tests override
+ * it to simulate a child that never becomes ready, deterministically and
+ * without a real process -- see `test/hub/supervisor.doctest.md`'s restart
+ * race coverage.
+ */
+export type SpawnChildFn = (params: ChildSpawnParams) => ChildProc;
+
+function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
+  return execa(params.cbBinary, params.args, {
+    cwd: params.cwd,
+    env: params.env,
+    stdio: ["ignore", "pipe", "pipe"],
+    detached: true,
+    cleanup: true,
+  }) as ChildProc;
+}
+
+/** Injectable readiness probe -- real `waitForHttp` by default; tests
+ *  override it to fail immediately instead of waiting out
+ *  `READY_TIMEOUT_MS` for real, so the restart race in
+ *  `test/hub/supervisor.doctest.md` runs in milliseconds. */
+export type CheckReadyFn = (params: { port: number; label: string }) => Promise<void>;
+
+function defaultCheckReady(params: { port: number; label: string }): Promise<void> {
+  return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });
+}
+
 const READY_TIMEOUT_MS = 30_000;
 const KILL_GRACE_MS = 2000;
 /** After this many consecutive crash-loop restarts, stop retrying and mark
@@ -95,6 +211,32 @@ interface ManagedBox {
    *  `onChildExit` comment describes for worktrees. */
   generation: number;
   restartTimer: NodeJS.Timeout | undefined;
+  /**
+   * Set to the generation number `launch()`'s own readiness-timeout catch
+   * block just killed, right before it calls `killGroup()` -- so when that
+   * kill's "exit" event later fires (same generation, since a restart
+   * hasn't started yet), `onChildExit` recognizes the failure was already
+   * recorded and a restart already scheduled, instead of double-counting
+   * both and scheduling a second, overlapping child. Cleared once consumed.
+   */
+  expectedExitGeneration: number | undefined;
+}
+
+export interface SupervisorOptions {
+  config: HubConfig;
+  /**
+   * Handed to every spawned child via `CB_HUB_SECRET` (Track D, chunk D2) --
+   * the per-boot secret that gates the hub-injected identity headers a box
+   * trusts in hub mode. See `src/webapp/auth.ts`'s
+   * `isHubMode`/`resolveRequestIdentity`.
+   */
+  hubSecret: string;
+  /** Injectable child spawner -- real `execa` (`defaultSpawnChild`) unless
+   *  a test overrides it. See `SpawnChildFn`. */
+  spawnChild?: SpawnChildFn;
+  /** Injectable readiness probe -- real `waitForHttp` (`defaultCheckReady`)
+   *  unless a test overrides it. See `CheckReadyFn`. */
+  checkReady?: CheckReadyFn;
 }
 
 /**
@@ -105,18 +247,17 @@ interface ManagedBox {
  */
 export class Supervisor implements EndpointProvider {
   private readonly boxes = new Map<string, ManagedBox>();
+  private readonly config: HubConfig;
+  private readonly hubSecret: string;
+  private readonly spawnChild: SpawnChildFn;
+  private readonly checkReady: CheckReadyFn;
 
-  /**
-   * `hubSecret` is handed to every spawned child via `CB_HUB_SECRET` (Track
-   * D, chunk D2) -- the per-boot secret that gates the hub-injected
-   * identity headers a box trusts in hub mode. See
-   * `src/webapp/auth.ts`'s `isHubMode`/`resolveRequestIdentity`.
-   */
-  constructor(
-    private readonly config: HubConfig,
-    private readonly hubSecret: string,
-  ) {
-    for (const [slug, entry] of Object.entries(config.boxes)) {
+  constructor(options: SupervisorOptions) {
+    this.config = options.config;
+    this.hubSecret = options.hubSecret;
+    this.spawnChild = options.spawnChild ?? defaultSpawnChild;
+    this.checkReady = options.checkReady ?? defaultCheckReady;
+    for (const [slug, entry] of Object.entries(options.config.boxes)) {
       this.boxes.set(slug, {
         slug,
         entry,
@@ -128,6 +269,7 @@ export class Supervisor implements EndpointProvider {
         lastError: undefined,
         generation: 0,
         restartTimer: undefined,
+        expectedExitGeneration: undefined,
       });
     }
   }
@@ -197,17 +339,13 @@ export class Supervisor implements EndpointProvider {
       const cbBinary = await resolveCbBinary(shape);
       const port = await getPorts();
 
-      const child = execa(
+      const env = buildChildEnv({ sourceEnv: process.env, hubExtras: { CB_HUB_SECRET: this.hubSecret } });
+      const child = this.spawnChild({
         cbBinary,
-        ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
-        {
-          cwd: shape.packageRoot,
-          env: { ...process.env, CB_HUB_SECRET: this.hubSecret },
-          stdio: ["ignore", "pipe", "pipe"],
-          detached: true,
-          cleanup: true,
-        }
-      ) as ChildProc;
+        args: ["serve", boxRoot, "--slug", box.slug, "--port", String(port)],
+        cwd: shape.packageRoot,
+        env,
+      });
       // Swallow the execa promise rejection here (not just via .on("exit")) --
       // otherwise a killed child's eventual rejection surfaces minutes later
       // as an unhandledRejection and crashes the hub. Same fix router.ts
@@ -221,7 +359,7 @@ export class Supervisor implements EndpointProvider {
         this.onChildExit({ box, generation, code, signal });
       });
 
-      await waitForHttp({ port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: `box/${box.slug}` });
+      await this.checkReady({ port, label: `box/${box.slug}` });
       if (box.generation !== generation) return; // superseded mid-startup
       box.status = "running";
       box.consecutiveFailures = 0;
@@ -232,6 +370,14 @@ export class Supervisor implements EndpointProvider {
       box.lastError = message;
       box.consecutiveFailures += 1;
       if (box.child) {
+        // We're about to kill this generation's child ourselves (e.g. a
+        // readiness timeout) -- mark the exit that kill will eventually
+        // produce as "expected" so onChildExit doesn't ALSO treat it as an
+        // unexpected crash and schedule a second, overlapping restart. Set
+        // BEFORE killGroup() so there's no window for the exit event (which
+        // can fire synchronously in tests, and fast in practice) to arrive
+        // unguarded.
+        box.expectedExitGeneration = generation;
         killGroup(box.child.pid, "SIGTERM");
         setTimeout(() => killGroup(box.child?.pid, "SIGKILL"), KILL_GRACE_MS).unref();
       }
@@ -250,6 +396,14 @@ export class Supervisor implements EndpointProvider {
     const { box, generation, code, signal } = params;
     if (box.generation !== generation) return; // stale exit from a superseded generation
     if (box.status === "stopped") return; // expected -- stopAll() is tearing down
+    if (box.expectedExitGeneration === generation) {
+      // This generation's child was killed by launch()'s own
+      // readiness-timeout catch block, which already recorded the failure
+      // and scheduled the restart -- without this guard the same failure
+      // gets double-counted and a second, overlapping child gets spawned.
+      box.expectedExitGeneration = undefined;
+      return;
+    }
     box.lastError = `child exited unexpectedly (code=${String(code)}, signal=${String(signal)})`;
     box.consecutiveFailures += 1;
     box.child = undefined;

@@ -64,6 +64,14 @@ export interface HubServerOptions {
   /** Slug -> resolved box root, for the login surface's `/auth/me`
    *  accessible-boxes list and the box picker (D3). */
   boxes: BoxSpec[];
+  /**
+   * The hub's own `http://host:port`, per `cli/commands/hub.ts`'s resolved
+   * listen config. Passed to `registerAuthSurface` as its OAuth-redirect
+   * fallback so `/auth/login` without `CB_PUBLIC_URL` set redirects back to
+   * the hub itself, not `registerAuthSurface`'s box-server default of
+   * `http://localhost:3210` (the dev router's port, not the hub's).
+   */
+  baseUrl: string;
 }
 
 /** First path segment, e.g. `/test1/browse/x` -> `test1`. Mirrors the dev
@@ -149,7 +157,7 @@ function decideHubAuth({
  * `.on("upgrade")`) `cli/commands/hub.ts` and the doctests already use.
  */
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
-  const { endpoints, getHealth, hubSecret, boxes } = options;
+  const { endpoints, getHealth, hubSecret, boxes, baseUrl } = options;
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
 
   // The hub's login routes (routes/auth.ts) read the session cookie via
@@ -170,7 +178,7 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // Login lives at the hub for the whole fleet (Track D, chunk D2) --
   // reuses the SAME routes a standalone box server registers, so there's
   // no second OAuth implementation to drift from the box's.
-  await registerAuthSurface(app, { boxes });
+  await registerAuthSurface(app, { boxes, publicUrlFallback: baseUrl });
 
   // The box picker (Track D, chunk D3).
   registerBoxPicker(app, { boxes });

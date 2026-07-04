@@ -23,6 +23,17 @@ import type { BoxSpec } from "../server.js";
 
 interface AuthRoutesOptions {
   boxes: BoxSpec[];
+  /**
+   * Fallback base URL for `getPublicUrl()` when neither `CB_PUBLIC_URL` nor
+   * `PUBLIC_URL` is set — defaults to the standalone box server's own
+   * default port (3210). The hub (`src/hub/hub-server.ts`, Track D chunk D2)
+   * passes ITS OWN `host:port` here instead: without this, an unconfigured
+   * hub's OAuth redirect URI would name port 3210 (the dev-router default,
+   * not the hub's own default of 4310 or whatever `hub.json` configures),
+   * so Google would round-trip the login back to a server that was never
+   * listening there.
+   */
+  publicUrlFallback?: string;
 }
 
 /**
@@ -52,7 +63,7 @@ export async function registerAuthRoutes(
 ) {
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID!;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET!;
-  const publicUrl = getPublicUrl("http://localhost:3210");
+  const publicUrl = getPublicUrl(options.publicUrlFallback ?? "http://localhost:3210");
   const redirectUri = `${publicUrl}/auth/callback`;
 
   const oauth2Client = new OAuth2Client(clientId, clientSecret, redirectUri);
