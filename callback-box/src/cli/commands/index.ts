@@ -6,6 +6,7 @@
 
 export { initCommand } from "./init.js";
 export { migrateCommand } from "./migrate.js";
+export { upgradeCommand } from "./upgrade.js";
 export { statusCommand } from "./status.js";
 export { validateCommand } from "./validate.js";
 export { createCommand } from "./create.js";

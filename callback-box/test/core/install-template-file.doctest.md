@@ -461,3 +461,81 @@ result.outcome
 JSON.stringify(await listParkedTemplateUpdates(box))
 => []
 ```
+
+## v2 (package-layout) boxes: a `../`-prefixed relPath reaches the package root
+
+A v2 box's three CLAUDE.md guides (schemas, views, tricks) live one level up
+from `boxRoot` (`content/`), at the package root's `src/`. `relPath` starting
+with `../` is resolved the normal way — `path.join` walks it up — so the
+target lands outside `boxRoot` while the tracker bookkeeping
+(`template-versions.json`) stays inside it, tracked with the box's own git
+history:
+
+```ts continue
+async function makePackageBox() {
+  const packageRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-install-tpl-pkg-"));
+  const boxRoot = path.join(packageRoot, "content");
+  await fs.mkdir(boxRoot, { recursive: true });
+  return { packageRoot, boxRoot };
+}
+
+const { packageRoot, boxRoot } = await makePackageBox();
+const fresh = await installTemplateFile({
+  boxRoot,
+  relPath: "../src/schemas/CLAUDE.md",
+  templateContent: "v1\n",
+});
+fresh.outcome
+=> fresh
+
+await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8")
+=> v1
+
+const versions = await readVersions(boxRoot);
+JSON.stringify(Object.keys(versions))
+=> ["../src/schemas/CLAUDE.md"]
+```
+
+A divergent local copy still parks — but the mirror stays INSIDE `boxRoot`
+(the leading `../` is stripped, not carried into `config/_template-updates/`,
+which would otherwise try to escape it):
+
+```ts continue
+await fs.writeFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "user edit\n");
+const parked = await installTemplateFile({
+  boxRoot,
+  relPath: "../src/schemas/CLAUDE.md",
+  templateContent: "v2\n",
+});
+parked.outcome
+=> parked
+
+parked.writtenAt
+=> config/_template-updates/src/schemas/CLAUDE.md
+
+await fs.readFile(path.join(boxRoot, parked.writtenAt), "utf-8")
+=> v2
+
+await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8")
+=> user edit
+```
+
+Bringing the local copy back in line clears the mirror, same as the legacy case:
+
+```ts continue
+await fs.writeFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "v1\n");
+const overwritten = await installTemplateFile({
+  boxRoot,
+  relPath: "../src/schemas/CLAUDE.md",
+  templateContent: "v2\n",
+});
+overwritten.outcome
+=> overwritten
+
+JSON.stringify(await listParkedTemplateUpdates(boxRoot))
+=> []
+```
+
+```ts cleanup
+await fs.rm(packageRoot, { recursive: true, force: true });
+```

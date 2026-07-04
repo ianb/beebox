@@ -331,30 +331,39 @@ Full documentation: \`docs/generated/views.md\`
  * exist. Shape-aware: a legacy box's tricks live at `boxRoot/tricks/`; a v2
  * box's live at `packageRoot/src/tricks/` (`boxCodePaths` resolves either).
  */
+/** Write `content` to `filePath` only if nothing is there yet (ENOENT is the
+ *  expected, silent "scaffold it" case — the error itself carries no
+ *  actionable info). */
+async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
+  try {
+    await fs.access(filePath);
+  } catch (_e) {
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, content);
+  }
+}
+
 export async function installTricksFiles(boxRoot: string): Promise<void> {
   const shape = await getBoxShapeOrLegacyFallback(boxRoot);
   const tricksDir = boxCodePaths(shape).tricksDir;
-  const claudeMdContent = shape.shapeVersion === 1 ? TRICKS_CLAUDE_MD : TRICKS_CLAUDE_MD_V2;
 
-  const packageJsonPath = path.join(tricksDir, "package.json");
-  try {
-    await fs.access(packageJsonPath);
-  } catch (_e) {
-    // No tricks package.json yet (fs.access throws ENOENT) — scaffold it.
-    // The error carries no actionable info; absence is the normal path.
-    await fs.mkdir(tricksDir, { recursive: true });
-    await fs.writeFile(packageJsonPath, TRICKS_PACKAGE_JSON);
+  await writeFileIfMissing(path.join(tricksDir, "package.json"), TRICKS_PACKAGE_JSON);
+
+  // The CLAUDE.md guide: legacy stays a plain create-if-missing write; a v2
+  // box's copy goes through the template tracker like the schemas/views
+  // guides above, so `cb upgrade` can roll out future guide changes without
+  // clobbering a customized copy.
+  if (shape.shapeVersion === 1) {
+    await writeFileIfMissing(path.join(tricksDir, "scripts/CLAUDE.md"), TRICKS_CLAUDE_MD);
+    return;
   }
 
-  const claudeMdPath = path.join(tricksDir, "scripts/CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No tricks CLAUDE.md yet (fs.access throws ENOENT) — scaffold it. The
-    // error carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(tricksDir, "scripts"), { recursive: true });
-    await fs.writeFile(claudeMdPath, claudeMdContent);
-  }
+  await installTemplateFile({
+    boxRoot,
+    relPath: "../src/tricks/scripts/CLAUDE.md",
+    templateContent: TRICKS_CLAUDE_MD_V2,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["tricks-guide-v2"]!.superseded,
+  });
 }
 
 /**
@@ -372,19 +381,27 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
 }> = [
   { name: "schemas-guide", relPath: "config/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD },
   { name: "views-guide", relPath: "views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  // v2 (package-layout) counterparts — same tracker, but the file lives one
+  // level up at the package root (`src/...`), reached via a `../`-prefixed
+  // relPath (see the "v2 (package-layout) boxes" note in
+  // install-template-file.ts). Separate ledger entries so a future divergence
+  // in any one guide never has to be threaded through a shared entry.
+  { name: "schemas-guide-v2", relPath: "../src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
+  { name: "views-guide-v2", relPath: "../src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  { name: "tricks-guide-v2", relPath: "../src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
 ];
 
 /**
  * Install (or refresh) the box-local schemas guide.
  *
- * A legacy box uses the template tracker so the stock guide is refreshed
- * when unmodified and parked under `config/_template-updates/` when the
- * boxholder has customized it (prior stock hashes come from the ledger so a
- * box on any shipped version overwrites cleanly). A v2 box has no existing
- * install to diverge from at scaffold time, so it's a plain create-if-missing
- * write to `src/schemas/CLAUDE.md` at the package root — the tracker's
- * park-on-divergence machinery is for the fleet-migration/upgrade path
- * (Tracks E/H), not `cb init` on a fresh box.
+ * Both shapes go through the template tracker: refreshed when unmodified,
+ * parked under `config/_template-updates/` when the boxholder has customized
+ * it (prior stock hashes come from the ledger so a box on any shipped
+ * version overwrites cleanly). A v2 box's copy lives at the package root
+ * (`src/schemas/CLAUDE.md`), reached via the `../`-prefixed relPath
+ * convention (see install-template-file.ts) — tracker coverage from a fresh
+ * `cb init` is what lets `cb upgrade` (Track E) roll out guide updates later
+ * without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
   const shape = await getBoxShapeOrLegacyFallback(boxRoot);
@@ -398,16 +415,12 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
     return;
   }
 
-  const schemasDir = boxCodePaths(shape).schemasDir;
-  const claudeMdPath = path.join(schemasDir, "CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No schemas guide yet (fs.access throws ENOENT) — scaffold it. The
-    // error carries no actionable info; absence is the normal path.
-    await fs.mkdir(schemasDir, { recursive: true });
-    await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD_V2);
-  }
+  await installTemplateFile({
+    boxRoot,
+    relPath: "../src/schemas/CLAUDE.md",
+    templateContent: SCHEMAS_CLAUDE_MD_V2,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide-v2"]!.superseded,
+  });
 }
 
 /**
@@ -428,14 +441,10 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     return;
   }
 
-  const viewsDir = boxCodePaths(shape).viewsDir;
-  const claudeMdPath = path.join(viewsDir, "CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No views guide yet (fs.access throws ENOENT) — scaffold it. The error
-    // carries no actionable info; absence is the normal path.
-    await fs.mkdir(viewsDir, { recursive: true });
-    await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
-  }
+  await installTemplateFile({
+    boxRoot,
+    relPath: "../src/views/CLAUDE.md",
+    templateContent: VIEWS_CLAUDE_MD,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"]!.superseded,
+  });
 }

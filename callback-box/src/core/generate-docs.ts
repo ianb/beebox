@@ -273,12 +273,24 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
 /**
  * Commit any template-managed paths the install/generateRules helpers
  * dirtied, leaving user work in progress (in other paths) alone.
+ *
+ * Runs at the REPO ROOT, not `boxRoot`. `getStatus`/`stageFiles`/`commitPaths`
+ * all shell out to `git`, which reports and accepts pathspecs relative to
+ * wherever it's invoked from — for a v2 box `boxRoot` (`content/`) is nested
+ * one level under the actual repo root (the package root), so a path like
+ * `.claude/settings.json` (which git status reports relative to the repo
+ * root it found) would resolve to the wrong file (or nothing) if staged with
+ * cwd=`boxRoot`. Legacy boxes are unaffected — their repo root IS `boxRoot`.
+ * Found via `cb upgrade`'s end-to-end smoke run: the `.claude/settings.json`
+ * hook install landed here, staging fatally errored with "pathspec did not
+ * match any files" before this fix.
  */
 async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
-  if (!(await isRepo(boxRoot))) return;
-  if (!(await hasCommits(boxRoot))) return;
+  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  if (!(await isRepo(packageRoot))) return;
+  if (!(await hasCommits(packageRoot))) return;
 
-  const status = await getStatus(boxRoot);
+  const status = await getStatus(packageRoot);
   const candidates = [
     ...status.staged,
     ...status.modified,
@@ -288,8 +300,8 @@ async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
   if (toCommit.length === 0) return;
 
   // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
-  await stageFiles(boxRoot, toCommit);
-  await commitPaths(boxRoot, {
+  await stageFiles(packageRoot, toCommit);
+  await commitPaths(packageRoot, {
     paths: toCommit,
     message: "Sync templates from upstream",
     trailers: { "Triggered-By": "generateDocs" },

@@ -9,6 +9,7 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../lib/box-shape.js";
 import { loadBoxSchemas } from "../../schemas/registry.js";
 import { listSchemaLoadFailures } from "../../schemas/schema-load-status.js";
+import { getEngineVersionReport } from "../../core/engine-version.js";
 
 export const statusCommand = new Command("status")
   .description("Show current state summary")
@@ -21,6 +22,19 @@ export const statusCommand = new Command("status")
       // Header
       console.log(`Callback Box: ${boxRoot}`);
       console.log(`Version: ${state.boxVersion}`);
+
+      // Engine version: the process serving this box vs. the version a v2
+      // box has pinned in its own node_modules (null/legacy for shapeVersion
+      // 1, which has no separate installed engine). A mismatch is
+      // future-normal once the hub serves per-box engines (Track D) — for
+      // now it's just flagged, same treatment as parked template drift below.
+      const engineVersions = await getEngineVersionReport(boxRoot);
+      if (engineVersions.installed !== null) {
+        console.log(`Engine: serving ${engineVersions.serving ?? "unknown"}, box pins ${engineVersions.installed}`);
+        if (engineVersions.mismatch) {
+          console.log("  MISMATCH: this box is running under a different engine version than it has pinned.");
+        }
+      }
       console.log();
 
       // Git status

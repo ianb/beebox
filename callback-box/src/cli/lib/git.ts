@@ -435,6 +435,19 @@ export async function getHead(boxRoot: string): Promise<string> {
 }
 
 /**
+ * Hard-reset the working tree to `sha`, discarding all commits and working-tree
+ * changes made since. Used by `cb upgrade`'s revert-on-failure path (see
+ * `src/cli/commands/upgrade.ts`) to undo a data migration and the dependency
+ * bump TOGETHER as one unit — the Ghost-CLI lesson this whole design guards
+ * against (`ghost update --rollback` used to revert only the code, leaving
+ * migrated data behind). This is real data loss by design: only ever call it
+ * against a `sha` captured before the changes being discarded.
+ */
+export async function resetHard(boxRoot: string, sha: string): Promise<void> {
+  await simpleGit(boxRoot).raw(["reset", "--hard", sha]);
+}
+
+/**
  * Remove untracked files from the working tree.
  */
 export async function clean(

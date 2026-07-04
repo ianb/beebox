@@ -14,6 +14,7 @@ import { readVersionInfo } from "./trpc/routers/health.js";
 import { listParkedTemplateUpdates } from "../core/install-template-file.js";
 import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxSchemas } from "../schemas/registry.js";
+import { getEngineVersionReport } from "../core/engine-version.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
@@ -166,12 +167,25 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
         schemaFailureTotal += failures.length;
       }
     }
+    // Engine version per box: a v2 box pins its own callback-box dependency,
+    // which can drift from the engine serving it (future-normal once the
+    // hub serves per-box engines — Track D; for now just flagged, same
+    // treatment as the drift signals above). Legacy boxes report nothing —
+    // they have no separate installed engine.
+    const engineMismatchByBox: Record<string, { serving: string | null; installed: string }> = {};
+    for (const box of boxes) {
+      const report = await getEngineVersionReport(box.boxRoot);
+      if (report.mismatch && report.installed !== null) {
+        engineMismatchByBox[box.slug] = { serving: report.serving, installed: report.installed };
+      }
+    }
     return {
       status: "ok",
       boxCount: boxes.length,
       version,
       templateDrift: { total: templateDriftTotal, byBox },
       schemaLoadFailures: { total: schemaFailureTotal, byBox: schemaFailuresByBox },
+      engineVersionMismatch: { total: Object.keys(engineMismatchByBox).length, byBox: engineMismatchByBox },
     };
   });
 
