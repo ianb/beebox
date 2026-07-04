@@ -143,6 +143,25 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
   problem we don't have.
 - **Home Assistant's partial backup/restore** (per-add-on restore) — noted for the hub's
   future: restoring one box without touching siblings is inherent in per-box git repos.
+- **OpenClaw** (https://github.com/openclaw/openclaw; local review at
+  `docs/openclaw-architecture-review.md`) — verified: `npm i -g openclaw` +
+  `openclaw onboard --install-daemon` wizard, `openclaw doctor`, `openclaw update
+  --channel stable|beta|dev`, minimal `~/.openclaw/openclaw.json`, single gateway daemon
+  over many channel workspaces, ClawHub skill registry. **Adapt**: onboarding-wizard +
+  doctor + channels are the same lifecycle-verb family as `cb init`/preflight/`cb upgrade`
+  (channels optional for our tarball feed). **Scoping ammunition**: OpenClaw explicitly does
+  *not* claim a hard multi-tenant security boundary — one gateway, N *trusted* workspaces —
+  which matches the hub's stance (isolate trusted boxes; adversarial tenancy stays out of
+  scope).
+- **Hermes Agent** (NousResearch, https://github.com/NousResearch/hermes-agent) — verified:
+  curl-pipe-bash installer that bundles the toolchain, state under `~/.hermes/`, secrets
+  (`.env`) shipped separate from config (`cli-config.yaml`), and a `hermes claw migrate`
+  competitor-import verb. **Already-have**: secrets/config separation
+  (`config/connectors/*.secret.json`, gitignored). Two attractive ideas surfaced but
+  **unverified** against its docs (do not build on without checking): named profiles as
+  fully isolated state trees, and a config version bumped *only* when a real migration is
+  needed (additive keys deep-merged silently) — the latter matches how our template-sync
+  already avoids ceremony for additive changes.
 - **`module.registerHooks`** — shipped stable in Node 22.15 as the durable synchronous
   successor to the now-deprecated async `module.register()` (DEP0205;
   https://nodejs.org/en/blog/release/v22.15.0,
