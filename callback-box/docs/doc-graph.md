@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-04T21:58:38Z
+Generated: 2026-07-04T22:04:53Z
 Total documents: 140
 
 ## Issues
@@ -39,10 +39,6 @@ These references point to files that don't exist.
   Context: `[x](/store/foo/bar.md)`. What does the leading slash mean?"*;
 - **docs/knowledge-audits.md:76** → `MAP.md` (at-include)
   Context: - `context_dir` — box-relative subdirectory to run the agent from. Sets the SDK's `cwd` there and adds the box root to `
-- **docs/knowledge-taxonomy.md:329** → `view:store/path/to/file.md` (link)
-  Context: - **Expected level: Knows directly** — the chat system prompt describes the `[Display Name](view:store/path/to/file.md)`
-- **docs/prompt-audits.md:47** → `../../.claude/memory/tone-design.md` (link)
-  Context: Stock LLM phrases ("Great question!", "Let me unpack that," "That's a real tension") often come from prompt language tha
 - **docs/reports/user-stories-audit-2026-06-26.md:5334** → `MAP.md` (at-include)
   Context: - Ensure per-dir CLAUDE.md includes are correct: IMPLEMENTED in finalize.ts lines 58-79 with `ensureClaudeMdInDir()` tha
 
@@ -108,6 +104,40 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:1474 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
 - docs/stack-decisions.md:1183 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:411 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
+- ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
+- ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
+- ../.claude/skills/cb-codehealth/SKILL.md:29 (mention) — and a short usage doc at its root (a directory `CLAUDE.md` / README — like
+- ../.claude/skills/cb-context/SKILL.md:3 (mention) — description: Use when engineering what a box agent knows — writing or curating a box's CLAUDE.md, a nested CLAUDE.md, a 
+- ../.claude/skills/cb-frontend/SKILL.md:11 (mention) — read it before writing UI (`CLAUDE.md` already says so). This skill is the
+- ../.claude/skills/cb-plan/SKILL.md:93 (mention) — - `callback-box/CLAUDE.md` — project conventions, validation contract,
+- ../.claude/skills/cb-prompt-review/SKILL.md:22 (mention) — **Boxes go stale.** The box-side layers (CLAUDE.md, agent guide, skills, rules) are what `cb init` last wrote — re-run `
+- ../CLAUDE.md:5 (mention) — - **callback-box/** — Main system. See its CLAUDE.md for details. (Card primitives that used to live in the separate `ca
+- ../bin/CLAUDE.md:5 (mention) — summary lives in the root CLAUDE.md; this file is the mechanism.
+- ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
+- ../research/gstack/README.md:21 (mention) — 3. When something becomes a real change to our project, link out to where it landed (CLAUDE.md, a skill of our own, etc.
+- ../research/gstack/notes/design-consultation.md:3 (mention) — Six-phase conversation that ends with a written DESIGN.md and a CLAUDE.md update telling the agent to always read it. Th
+- ../research/gstack/notes/design-shotgun.md:52 (mention) — Basic good practice but worth codifying as a rule: **don't ask the user what you could find out from the code/files/rece
+- ../research/gstack/notes/investigate.md:139 (mention) — A callback-specific debugging guide (in CLAUDE.md or a `docs/debugging.md`) with:
+- ../research/gstack/notes/plan-eng-review.md:25 (mention) — **Worth borrowing.** A callback equivalent would write out your engineering preferences and have any code-review skill (
+- ../research/gstack/notes/ship-pipeline.md:127 (mention) — If no `~/.gstack/projects/$SLUG/land-deploy-confirmed` marker → dry-run walkthrough first. Also hashes the `## Deploy Co
+- ../research/gstack/overlap-with-ideas.md:23 (mention) — ↔ ideas.md §**"Retrospective session scan — surfacing CLAUDE.md and
+- ../research/gstack/skills.md:73 (mention) — | [investigate](https://github.com/garrytan/gstack/blob/main/investigate/SKILL.md) | `integrate (parts)` | Read — see [n
+- ../research/openclaw-hermes/README.md:28 (mention) — 4. **Layered, budgeted instruction files.** OpenClaw: 8 bootstrap files with per-file (20k) and total (60k) char budgets
+- ../research/openclaw-hermes/compare-agent-core.md:126 (mention) — execution, permission modes, transcript persistence, CLAUDE.md auto-loading) to add this,
+- ../research/openclaw-hermes/compare-channels.md:178 (mention) — `CLAUDE.md`/agent-guide, own connector configs, own chat-session state) — CBX
+- ../research/openclaw-hermes/compare-context-memory.md:14 (mention) — | Mechanism | Claude Code CLI auto-loads `CLAUDE.md` (walked up from cwd) + `.claude/rules/*.md` (path-conditional) + `.
+- ../research/openclaw-hermes/compare-letta.md:9 (mention) — `letta-code` is Claude Code re-imagined against that server: thin SSE client, projects don't own agents (pinned agents +
+- ../research/openclaw-hermes/compare-skills-tools.md:33 (mention) — tool call, not a governed slash-command/index mechanism. Directory `CLAUDE.md` is the other
+- ../research/openclaw-hermes/compare-ux-prompt.md:17 (mention) — | **Builder** | No single builder. Layers: Claude Code preset prompt + auto-loaded box `CLAUDE.md` (`@`-includes `agent-
+- ../research/openclaw-hermes/deep-cbx-retro.md:398 (mention) — (per `CLAUDE.md`, only `src/lib/file-lock.ts`-based locks are sanctioned,
+- ../research/openclaw-hermes/deep-letta-code.md:16 (mention) — - **`LocalBackend`** (`src/backend/local/local-backend.ts:287`) — experimental, gated by `LETTA_LOCAL_BACKEND_EXPERIMENT
+- ../research/openclaw-hermes/scout-agent-zero.md:66 (mention) — - **Different, worth noting but not necessarily adopting:** (a) the entire framework directory is agent-writable with no
+- ../research/openclaw-hermes/scout-goose.md:279 (mention) — `load_hints.rs:27-97`), similar to nested `CLAUDE.md`. This is pure static
+- ../research/openclaw-hermes/scout-nanobot.md:37 (mention) — - **Memory architecture is the single most CBX-relevant finding**: nanobot converged on the same shape CBX already uses 
+- ../research/pai/README.md:17 (mention) — | [prompts.md](./prompts.md) | The actual prompt text — system prompt, CLAUDE.md, Algorithm doctrine — quoted and annota
+- ../research/pai/information-layout.md:17 (mention) — CLAUDE.md:
+- ../research/pai/prompts.md:20 (mention) — > layer. CLAUDE.md defines operational procedures and format templates.
+- ../research/pai/telos.md:36 (mention) — > | `PRINCIPAL_TELOS.md` | **Auto-generated summary** of all the above. Loaded into every session via CLAUDE.md. |
 
 References:
 - → CLAUDE.md (mention)
@@ -195,6 +225,10 @@ Referenced by:
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
+- ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
+- ../.claude/skills/cb-plan/SKILL.md:96 (mention) — - `callback-box/code-style.md` — explicit style preferences (no
+- ../CLAUDE.md:34 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
 - → frontend.md (mention)
@@ -217,6 +251,8 @@ Referenced by:
 - docs/plans/design-reconciliation.md:39 (mention) — capture, dashboard, views, and a real design system (frontend.md).
 - docs/plans/narration-mode.md:193 (mention) — Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 - frontend.md:113 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
+- ../.claude/skills/cb-frontend/SKILL.md:10 (mention) — semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
+- ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
 - → code-style.md (mention)
@@ -231,6 +267,13 @@ Referenced by:
 - docs/adding-a-box.md:24 (link) — see the root [`README.md`](../README.md) for that path. This doc is about
 - docs/implemented-plans/boxes-as-packages-v2.md:497 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/implemented-plans/courseware-lesson-plan.md:13 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
+- ../research/CLAUDE.md:11 (mention) — `pai/`, …) with a `README.md` index: a table of the corpus's documents plus
+- ../research/gstack/skills.md:3 (link) — See [README.md](README.md) for the status legend.
+- ../research/openclaw-hermes/deep-letta-code.md:5 (mention) — **What it is:** a Claude-Code-shaped CLI where the agent is not a process you start but a **persistent server-side entit
+- ../research/openclaw-hermes/scout-agent-zero.md:7 (mention) — Agent Zero bills itself as "a full Linux system for your AI agent" (`README.md:6-8`): one Docker container ships a full 
+- ../research/openclaw-hermes/scout-khoj.md:7 (mention) — Khoj bills itself as "Your AI second brain" (`README.md:15`) — a personal-knowledge chat assistant that layers retrieval
+- ../research/openclaw-hermes/scout-nanobot.md:7 (mention) — - Self-description: "an open-source, ultra-lightweight personal AI agent you can truly own" — WebUI, chat channels, tool
+- ../research/pai/telos.md:4 (mention) — - `$PAI/PAI/USER/TELOS/` — nine source files + `README.md` + generated summary + `CURRENT_STATE/`/`IDEAL_STATE/` dirs
 
 References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (link)
@@ -291,6 +334,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:24 (mention) — `docs/activities-retrospective.md`).
 - docs/plans/docs-reorg.md:227 (mention) — `activities-design.md` + `activities-retrospective.md` pair (the model for
 - docs/plans/narration-mode.md:5 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
+- ../research/openclaw-hermes/deep-cbx-retro.md:11 (mention) — line-by-line below). Note: `callback-box/docs/activities-retrospective.md` is an
 
 References:
 - → docs/activities-design.md (link)
@@ -328,6 +372,7 @@ Referenced by:
 - CLAUDE.md:122 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
 - docs/plans/docs-reorg.gap-analysis.md:160 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/plans/docs-reorg.md:147 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
+- ../.claude/skills/cb-guide-api/SKILL.md:3 (mention) — description: Explains how HTTP endpoints are added in callback-box and the tRPC-vs-raw-Fastify decision. Use when adding
 
 #### docs/adding-schemas.md
 
@@ -348,6 +393,8 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:44 (mention) — prime retrieval field. `docs/adding-schemas.md` never mentions it and
 - docs/plans/docs-reorg.md:87 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/reports/user-stories-audit-2026-06-26.md:764 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
+- ../.claude/skills/cb-guide-schemas/SKILL.md:3 (mention) — description: Explains adding or changing card types (schemas) in callback-box — what a schema is, the automatic fields, 
+- ../.claude/skills/cb-migration/SKILL.md:22 (mention) — **no migration.** Old cards load unchanged. See `docs/adding-schemas.md`.
 
 References:
 - → CLAUDE.md (mention)
@@ -387,6 +434,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:87 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/plans/prompt-surface-ia-review.md:146 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/reports/user-stories-audit-2026-06-26.md:4927 (mention) — The user story is accurately implemented across both claimed files. `/Users/ianbicking/src/callback-worktrees/user-stori
+- ../research/pai/information-layout.md:10 (mention) — knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 
 References:
 - → CLAUDE.md (mention)
@@ -472,6 +520,7 @@ Referenced by:
 - CLAUDE.md:101 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
 - docs/box-layout.md:162 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
 - docs/server-operations.md:178 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
+- ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 
 #### docs/composer-input-machine.md
 
@@ -592,6 +641,8 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:143 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
 - docs/plans/docs-reorg.md:88 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/plans/pdf-intake-design.md:19 (link) — **Intake-time extraction.** When a PDF arrives (`cb import`, capture endpoint, email connector), the intake path runs do
+- ../.claude/skills/cb-codehealth/SKILL.md:106 (mention) — Read `docs/glossary.md` for the domain's real names; don't re-litigate decisions
+- ../research/external-skills-harvest.md:93 (mention) — Markdown), the CONTEXT.md/ADR coupling (→ `docs/glossary.md` + git history +
 
 References:
 - → docs/ideas.md (mention)
@@ -679,6 +730,11 @@ Referenced by:
 - docs/plans/interface-as-cards.md:6 (mention) — "The interface itself as cards" entry in `docs/ideas.md`; this doc supersedes
 - docs/prompt-audits.md:5 (link) — Many of the lenses here, and a number of the related entries in [ideas.md](ideas.md), originated from working through th
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:702 (link) — - **Interaction with the [Markdown cards idea](../ideas.md#markdown-cards-replacing-xml).** Both touch the schema-defini
+- ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
+- ../.claude/skills/launch-worktree-session/SKILL.md:131 (mention) — - ideas.md "Gmail sync improvements" already captures three options:
+- ../research/CLAUDE.md:29 (mention) — `callback-box/docs/ideas.md`** (or a plan, if a finding is ready for one) —
+- ../research/external-skills-harvest.md:21 (mention) — callback-box skill), `idea` (file in ideas.md for later), or `skip` (with a
+- ../research/gstack/overlap-with-ideas.md:1 (mention) — # gstack ↔ callback-box/docs/ideas.md overlap
 
 References:
 - → CLAUDE.md (mention)
@@ -736,6 +792,9 @@ Referenced by:
 - docs/plans/docs-reorg.md:116 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/reports/user-stories-audit-2026-06-26.md:5670 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
+- ../.claude/memory/feedback_run_audits.md:10 (mention) — When the user asks for new knowledge audits in `src/dev/knowledge-audits.yaml`, just run them after writing them. Don't 
+- ../.claude/skills/cb-context/SKILL.md:133 (mention) — `docs/knowledge-audits.md`).
+- ../.claude/skills/cb-guide-schemas/SKILL.md:41 (mention) — (`docs/knowledge-audits.md`).
 
 References:
 - → CLAUDE.md (mention)
@@ -750,12 +809,14 @@ Title: "Agent Knowledge Audit: What It Should Know and How to Verify" | 493 line
 Referenced by:
 - docs/implemented-plans/card-view-widgets.md:574 (mention) — **Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
 - docs/testing.md:382 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
+- ../research/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** CBX's always-loaded/conditionally-loaded/referenced-but-n
+- ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/knowledge-taxonomy.md`). There is no plugin manifest, no
+- ../research/pai/information-layout.md:9 (mention) — cb's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
 
 References:
 - → CLAUDE.md (mention)
 - → docs/connectors.md (mention)
 - → docs/triage.md (mention)
-- → view:store/path/to/file.md (link) **[BROKEN]**
 
 #### docs/landmark-curation.md
 
@@ -764,6 +825,7 @@ Title: "Landmark Curation" | 48 lines
 Referenced by:
 - docs/plans/docs-reorg.md:189 (mention) — Two flagged cases: `landmark-curation.md` is written as second-person
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:261 (mention) — (`docs/landmark-curation.md`, `docs/triage.md`) that don't exist in
+- ../research/openclaw-hermes/compare-skills-tools.md:56 (mention) — by `docs/landmark-curation.md`). None of these have a formal create/edit/patch/delete tool
 
 References:
 - → docs/landmarks.md (mention)
@@ -822,6 +884,7 @@ Referenced by:
 - docs/maintenance.md:56 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
 - docs/plans/docs-reorg.gap-analysis.md:161 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/plans/docs-reorg.md:87 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
+- ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
 
 References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
@@ -862,10 +925,11 @@ Referenced by:
 - docs/plans/box-commentary-surface.md:109 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
 - docs/plans/docs-reorg.md:102 (mention) — `browse`); `prompt-audits.md` → nonexistent `tone-design.md`;
 - docs/prompt-audits.md:174 (mention) — **Useful: what-changed closers.** One or two sentences naming what changed and where: "Added the pre-tool-brevity audit 
+- ../.claude/skills/cb-prompt-review/SKILL.md:59 (mention) — Prior art: `callback-box/docs/plans/prompt-surface-ia-review.md` is the worked example of a full-surface review (what wa
 
 References:
 - → docs/ideas.md (link)
-- → ../../.claude/memory/tone-design.md (link) **[BROKEN]**
+- → ../.claude/memory/tone-design.md (link)
 - → docs/prompt-audits.md (mention)
 
 #### docs/prompt-logging.md
@@ -906,6 +970,7 @@ Referenced by:
 - docs/plans/design-reconciliation.md:533 (mention) — `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
 - docs/plans/docs-reorg.gap-analysis.md:137 (mention) — contradicts `serve.ts:11-14` and `docs/scheduler.md:31`;
 - docs/plans/docs-reorg.md:176 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
+- ../research/pai/README.md:65 (mention) — | Scheduling | Pulse daemon, `[[job]]` cron in one TOML | `cb tick` + per-box `scheduled-script.card`s (`docs/scheduler.
 
 #### docs/server-operations.md
 
@@ -918,6 +983,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/docs-reorg.md:88 (mention) — `server-operations.md`, `procedure-implementation.md`, `glossary.md`,
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:366 (mention) — - **`CB_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.m
+- ../.claude/memory/MEMORY.md:4 (mention) — Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easi
 
 References:
 - → deploy/README.md (link)
@@ -933,6 +999,7 @@ Title: "SSR Render Testing (`cb render`)" | 185 lines
 Referenced by:
 - CLAUDE.md:139 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 - docs/reports/user-stories-audit-2026-06-26.md:4686 (mention) — All files exist and are properly implemented. Verified: (1) src/cli/commands/render.ts spawns render.tsx with full optio
+- ../.claude/skills/cb-guide-testing/SKILL.md:38 (mention) — - **SSR render tests** (`cb render`, `docs/ssr-render-testing.md`) —
 
 #### docs/stack-decisions.md
 
@@ -983,6 +1050,10 @@ Referenced by:
 - docs/implemented-plans/view-render-testing.md:31 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; doctests are the
 - docs/plans/docs-reorg.gap-analysis.md:53 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/plans/docs-reorg.md:87 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
+- ../.claude/skills/cb-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
+- ../.claude/skills/cb-guide-testing/SKILL.md:3 (mention) — description: Explains callback-box's testing system — the test tiers, what each is for, and how to choose. Use when deci
+- ../.claude/skills/cb-plan/SKILL.md:282 (mention) — `docs/testing.md`): a test's first job is to force decomposition —
+- ../research/external-skills-harvest.md:288 (mention) — - [x] **X1 — reconcile cb-plan's test posture with `docs/testing.md`. DONE →
 
 References:
 - → src/services/CLAUDE.md (mention)
@@ -1018,6 +1089,7 @@ Referenced by:
 - docs/plans/cli-restructure.md:90 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now oc
 - docs/reports/knowledge-audit-rerun-2026-07-03.md:36 (mention) — | `triage-confidence-levels` | new generated box doc documenting the `confident/probable/guess` enum | `generate-docs-tr
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
+- ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
 
 References:
 - → docs/photo-storage-investigation.md (mention)
@@ -1149,6 +1221,7 @@ Title: "Box Retrospectives" | 433 lines
 
 Referenced by:
 - docs/glossary.md:44 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `cb retro`): mines recent chat sessions for what th
+- ../research/openclaw-hermes/deep-cbx-retro.md:9 (mention) — `callback-box/docs/implemented-plans/box-retrospectives.md` (the original plan;
 
 References:
 - → code-style.md (mention)
@@ -1871,6 +1944,7 @@ Title: "Prompt Surface Cleanup — IA Review" | 990 lines
 Referenced by:
 - docs/implemented-plans/job-xml-purge.subplan.md:25 (mention) — (`prompt-surface-ia-review.md`, Track 1). The parent plan's original Track 1
 - docs/plans/docs-reorg.md:41 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
+- ../.claude/skills/cb-prompt-review/SKILL.md:59 (mention) — Prior art: `callback-box/docs/plans/prompt-surface-ia-review.md` is the worked example of a full-surface review (what wa
 
 References:
 - → CLAUDE.md (mention)
@@ -1884,6 +1958,8 @@ Title: "docs/plans/ — proposals and in-flight plans" | 100 lines
 
 Referenced by:
 - docs/README.md:13 (mention) — opens with a `**Status:**` line; see `docs/plans/README.md` for the full
+- ../.claude/agents/finish.md:103 (mention) — `callback-box/docs/plans/README.md`), then either fold durable "how it works
+- ../.claude/skills/cb-plan/SKILL.md:76 (mention) — live there, separate from reference docs (see `docs/plans/README.md`).
 
 References:
 - → docs/ideas.md (mention)
@@ -2065,6 +2141,7 @@ Referenced by:
 - CLAUDE.md:87 (mention) — **Connectors** — Sync external services with the box filesystem. Each implements `Connector.sync()`. See `src/connectors
 - docs/glossary.md:36 (mention) — **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Con
 - docs/plans/docs-reorg.gap-analysis.md:20 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or
+- ../.claude/skills/cb-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
 
 References:
 - → src/services/CLAUDE.md (mention)
@@ -2090,6 +2167,8 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:33 (mention) — hint today is `reactor/DESIGN.md:78`).
 - docs/plans/docs-reorg.md:201 (mention) — `DESIGN.md`/`IMPLEMENTATION.md` — never cross-referenced. Decide canonical
 - src/core/reactor/CLAUDE.md:3 (link) — See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
+- ../research/gstack/notes/design-consultation.md:3 (mention) — Six-phase conversation that ends with a written DESIGN.md and a CLAUDE.md update telling the agent to always read it. Th
+- ../research/gstack/notes/design-shotgun.md:48 (mention) — > "Pre-fill what you inferred from the codebase, DESIGN.md, and office-hours output. Then ask for what's missing. Frame 
 
 References:
 - → src/core/reactor/CLAUDE.md (mention)
@@ -2155,6 +2234,7 @@ Referenced by:
 - docs/glossary.md:40 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/testing.md:123 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s
 - src/connectors/CLAUDE.md:15 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
+- ../.claude/skills/cb-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
 
 ### test/manual/
 

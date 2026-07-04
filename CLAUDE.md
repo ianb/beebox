@@ -21,7 +21,7 @@ Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `de
 
 **Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
 
-**Docs-only commits may skip hooks.** For commits touching only markdown/docs files, `git commit --no-verify` is fine — the pre-commit typecheck/lint pass adds nothing there. Any commit touching code or cards runs the hooks.
+**Commit docs WITH hooks.** Docs-only commits run only a fast `doc-check` (broken doc references + orphans; ~1s — typecheck/lint are skipped automatically), so don't `--no-verify` them: doc moves/renames are exactly what the check catches. If it fails, fix the links or see `callback-box/docs/README.md` for conventions.
 
 **Husky lives at the monorepo root.** One `.husky/` directory holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; the rest wrap git-lfs); subprojects opt out via `prepare: ":"`. Root `pnpm install` wires up `core.hooksPath`.
 
