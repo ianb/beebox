@@ -336,6 +336,36 @@ researching). This inverts today's architecture: instead of the chat page
 hosting a companion card pane, the shell hosts both and chat becomes the
 sidekick of everything.
 
+### Reifying the frame: per-tab frames with fork-on-open (noted 2026-07)
+
+Boxholder direction: the page layout must survive reloads and be
+well-specified — "card path in the URL" doesn't scale to multiple
+tabs/panes/contexts. The answer is a persisted **frame** (deliberately
+not "session" — chat sessions own that word): each browser tab has one,
+holding the arrangement and nothing else.
+
+- **URL split.** The path keeps addressing the focal subject (the
+  standing rule survives); a `?frame=<id>` rides along carrying the
+  arrangement. A bare path URL (no frame id) mints a fresh frame seeded
+  with that subject — every existing link keeps working and quietly
+  upgrades. Chat's `companion`/`card` params dissolve into the frame.
+- **Fork-on-open.** The frame id in a URL is a seed, not a live handle:
+  same-tab reload resumes (per-tab identity via sessionStorage; a
+  duplicated tab is detected by the copied token and forks with a fresh
+  id, URL rewritten); a shared URL gives the recipient a *copy* of the
+  arrangement, never a live view. tmux minus shared-attach.
+- **Contents: arrangement only.** Panes/tabs (each: subject path,
+  view?, params?), the active pane, companion-slot occupancy. Explicitly
+  NOT: the input's emission (the instrument follows the person, not the
+  arrangement — a fork must not duplicate a half-typed draft),
+  transcripts, preferences, scroll positions.
+- **Storage: server-side runtime state** (`.callback-box/`, like session
+  history), with stale-frame GC — client-only storage would break
+  fork-on-share (the recipient lacks your localStorage). Never a card,
+  per the standing rule; but a frame someone wants to *name and keep* is
+  the materialization door (a saved-layout card, later, if ever —
+  address-free/assertions-materialize applied to layouts).
+
 ### The input is its own frame primitive — and a true singleton
 
 Noted 2026-07 (boxholder aside, recorded for later): the **input** —
