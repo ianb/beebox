@@ -6,7 +6,7 @@
  * (entries scoped `for: [triage]`), runs the triage subagent against the
  * batch, and applies its decisions via the routing module.
  *
- * See `docs/triage-design.md` §Triage (stage 2).
+ * See `docs/triage.md` §Triage (stage 2).
  */
 
 import * as fs from "node:fs/promises";

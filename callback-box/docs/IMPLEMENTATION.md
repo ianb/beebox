@@ -1,6 +1,6 @@
 > **Note:** Several sections are now historical:
 > - References to "command cards", `box/commands/`, `cb do`, and `cb execute-commands` — the command card system has been removed; external actions are handled through the reactor/jobs model.
-> - References to a single "triage" agent / "triage" run-mode / `--agent triage` predate both the reactor and the new sorting pipeline. The current sorting pipeline (intake → triage → handle) is documented in `docs/triage-design.md`; legacy inbox processing runs through reactor jobs.
+> - References to a single "triage" agent / "triage" run-mode / `--agent triage` predate both the reactor and the new sorting pipeline. The current sorting pipeline (intake → triage → handle) is documented in `docs/triage.md`; legacy inbox processing runs through reactor jobs.
 > - Card format: most schemas are now YAML frontmatter + markdown body, not XML. Anywhere this doc shows an XML envelope or root tag, see the live schema in `src/schemas/` or `docs/cards-as-markdown.md` for the current shape.
 
 # Callback Box: Implementation Guide

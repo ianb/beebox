@@ -35,7 +35,7 @@ export const BOX_LAYOUT = [
     area: "box",
     description:
       "Items with no clear destination after triage. Pre-existing catch-all; predates the formal " +
-      "triage pipeline (its lifecycle is `docs/triage-design.md` Open Question #9).",
+      "triage pipeline (its lifecycle is `docs/triage.md` Open Question #9).",
     agentDescription: "Items with no clear destination",
   },
   {
@@ -44,7 +44,7 @@ export const BOX_LAYOUT = [
     area: "box",
     description:
       "Items being prepared before triage (transcription, OCR, filename normalization). " +
-      "See `docs/triage-design.md`.",
+      "See `docs/triage.md`.",
     agentDescription: "Items being prepared before triage (transcription, OCR, filename normalization).",
   },
   {

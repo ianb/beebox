@@ -6,7 +6,7 @@ against each feature's allowed set, composes the `<chat-app>` snapshot
 the server prepends to user messages, and parses agent-emitted
 `<chat-app>` mutation tags out of assistant responses.
 
-See `docs/narration-mode-design.md` for the bigger picture; this file
+See `docs/plans/narration-mode.md` for the bigger picture; this file
 covers the registry primitives.
 
 ```ts setup

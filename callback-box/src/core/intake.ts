@@ -17,7 +17,7 @@
  *   3. Move every remaining item into `box/inbox/staged/` — they're
  *      intake-complete and ready for the triage stage.
  *
- * See `docs/triage-design.md` for the surrounding design.
+ * See `docs/triage.md` for the surrounding design.
  */
 
 import * as fs from "node:fs/promises";

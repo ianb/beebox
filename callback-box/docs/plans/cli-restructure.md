@@ -87,7 +87,7 @@ Already exists in this shape. Keep as is.
 
 ## `cb import` group (file → box)
 
-> **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now occupied by the triage-pipeline stage-1 command (`docs/triage-design.md`). Renaming the file-import group to `cb import` resolves the collision and matches the verb better — these commands *import* external files into the box; they don't run the pipeline's intake stage.
+> **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now occupied by the triage-pipeline stage-1 command (`docs/triage.md`). Renaming the file-import group to `cb import` resolves the collision and matches the verb better — these commands *import* external files into the box; they don't run the pipeline's intake stage.
 
 *File ingestion* only — file → box, agent-runnable. Processing-of-already-imported items (transcribe, describe) stays top-level.
 

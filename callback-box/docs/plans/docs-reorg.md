@@ -349,8 +349,14 @@ design sections are written)*
   unify/cross-reference the boxes.json vs hub.json registration
   manifests? `@xstate/store` — still the plan or strike the
   stack-decisions entry?
-- Filename conventions (pending track 6 proposals): SCREAMING-case
-  top-level docs, date-stamped report names.
+- ~~Filename conventions~~ RULED (2026-07-04): kebab-case everywhere
+  (lowercase the SCREAMING files; README/CLAUDE.md exempt); point-in-time
+  artifacts live in `docs/reports/` with date-stamped names (generated
+  indexes whose paths tooling hardcodes, like doc-graph.md, stay put);
+  superseded docs ALWAYS get a `-superseded` filename suffix; "design"/
+  "investigation" stems are stripped when a doc's role changes to
+  current-state reference (decision-record narratives keep their names).
+  Conventions to be recorded in a new `docs/README.md`.
 - `chat-job.ts` schema `instructions` still describe XML message tags
   while `chat-thread.ts` writes YAML `kind:` entries — prompt-surface
   bug found during the batch; fix under cb-prompt-review discipline.

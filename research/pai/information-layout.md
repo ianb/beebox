@@ -6,7 +6,7 @@ Sources:
 - `$PAI/PAI/MEMORY/KNOWLEDGE/README.md`
 - `$PAI/PAI/PULSE/PULSE.toml` (scheduling config)
 
-cb's comparable thinking is `docs/agent-knowledge.md` (the knows-directly /
+cb's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
 knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 arrived at the same core architecture independently; the differences are at the
 edges, and a few of PAI's edges are better.
@@ -48,7 +48,7 @@ The stated token economics (from `IsaFormat.md` §Design Rationale): "**Referenc
 file pattern**: This spec lives at `~/.claude/PAI/DOCUMENTATION/IsaFormat.md`, not
 inline in CLAUDE.md. Saves ~2,500 tokens/response."
 
-**vs. cb:** same layering as `docs/agent-knowledge.md` (always-loaded → rules
+**vs. cb:** same layering as `docs/knowledge-taxonomy.md` (always-loaded → rules
 triggered by path globs → referenced-but-not-loaded → discoverable), and cb's
 ~3000-line generated agent guide already contains pointer sections. Differences
 worth noting:

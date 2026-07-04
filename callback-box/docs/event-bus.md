@@ -1,4 +1,4 @@
-# Event Bus Design
+# Event Bus
 
 **Status: Implemented.** The `broadcastEvent` system has been fully replaced by `EventBus`. See `src/core/event-bus.ts`.
 

@@ -5,7 +5,7 @@ mapping. When a chat is started from a landmark, those defaults seed the
 session's features; the user can still toggle afterward.
 
 See `src/core/landmark/features.ts` for the readers and
-`docs/narration-mode-design.md` for the design.
+`docs/plans/narration-mode.md` for the design.
 
 ```ts setup
 import {

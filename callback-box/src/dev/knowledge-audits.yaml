@@ -80,7 +80,7 @@ tests:
       Describes the legacy reactor path: connectors sync, items land in inbox,
       intake jobs created in box/jobs/, reactor processes them. Bonus credit if
       the agent acknowledges the parallel new pipeline (intake → triage → handle,
-      docs/triage-design.md) — but wakeup currently only drives the reactor path,
+      docs/triage.md) — but wakeup currently only drives the reactor path,
       so naming that flow is the primary expectation.
     correct_contains: ["job", "inbox"]
     tags: [intake, lifecycle, legacy-flow]
@@ -885,7 +885,7 @@ tests:
       Either a per-domain guide card (`config/*.guide.card`) for an existing
       pipeline that already handles insurance, OR a landmark `<triage-destination><rules>`
       at the archive directory the items should route to (the new
-      intake→triage→handle pipeline; see docs/triage-design.md). Both are
+      intake→triage→handle pipeline; see docs/triage.md). Both are
       valid; the choice depends on which path actually routes insurance items
       in this box.
     correct_contains_any: ["landmark", "triage-destination", ".guide.card"]
@@ -1896,7 +1896,7 @@ tests:
   # and the TRIAGE_ITEMS handler contract (src/core/handle.ts) — were FIXED by
   # generating a box-side triage doc (generate-docs-triage.ts →
   # docs/generated/triage.md) and repointing the always-on guide there (the old
-  # docs/triage-design.md pointer was a dev-repo path never shipped to
+  # docs/triage.md pointer was a dev-repo path never shipped to
   # boxes). Also cleaned up the should_read-only false-fails (triage-vs-reactor-flow)
   # and triage-pipeline-not-wired's brittle wording check. See findings doc.
   #
@@ -1907,13 +1907,13 @@ tests:
   #   - `triage-confidence-levels`: agent invented a "confidence ladder"
   #     (hypothesis/low/medium/high/confirmed) from `docs/generated/card-guide.md`
   #     instead of naming the pipeline's confident/probable/guess. The
-  #     pipeline's enum lives in `docs/triage-design.md` in the callback-box
+  #     pipeline's enum lives in `docs/triage.md` in the callback-box
   #     monorepo, which the box agent can't see.
   #   - `triage-handler-env`: agent spent 20+ tool calls looking for the
   #     TRIAGE_ITEMS env contract, found nothing, returned an empty response.
   #     Same root cause: design doc isn't distributed into boxes.
   #
-  # Fix direction (separate work): propagate triage-design.md (or a
+  # Fix direction (separate work): propagate triage.md (or a
   # `docs/generated/triage-pipeline.md` derivative) into boxes so the agent
   # has access. Until then these two tests fail honestly.
   #
@@ -2004,7 +2004,7 @@ tests:
     notes: >
       The terminology collision (both call themselves "intake") is the failure
       mode this test guards against. The agent should not conflate them.
-      (should_read docs/triage-design.md dropped 2026-07-03 — that dev-repo
+      (should_read docs/triage.md dropped 2026-07-03 — that dev-repo
       plan isn't in the box; the agent distinguishes the two paths correctly from
       the always-on guide.)
 

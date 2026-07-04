@@ -1564,14 +1564,14 @@ Files: `src/core/narration-mode-doc.ts`, `src/core/chat-features.ts`
 **CRITICAL ACCURACY GAP:**
 The user story says "switch to narration mode" implying user-facing discoverability. However, the ONLY way to enable narration mode is through the debug menu (three-dot dropdown in chat header labeled "Debug controls"), which is not a user-facing feature control surface. 
 
-The design doc (narration-mode-design.md line 240) explicitly states: "The chat has a `...` menu where settings live; the explicit narration toggle goes there." This is NOT implemented. Instead, narration lives only in debug controls alongside debug-view, debug-log, transcription service selection, etc.
+The design doc (narration-mode.md line 240) explicitly states: "The chat has a `...` menu where settings live; the explicit narration toggle goes there." This is NOT implemented. Instead, narration lives only in debug controls alongside debug-view, debug-log, transcription service selection, etc.
 
 Users cannot easily discover narration mode through normal UI patterns. While the underlying feature works correctly, it is not properly exposed to users as described in the story. This is a UX/accessibility gap between design intent and implementation.
 
 **Evidence:**
 - /src/frontend/src/components/chat/InteractiveChat-debug-menu.tsx (only narration toggle UI)
 - /src/frontend/src/components/chat/InteractiveChat-layout.tsx (NarrationStatusBadge only shows when already on, no "turn on" button)
-- /docs/implemented-plans/narration-mode-design.md (design explicitly describes user menu, not implemented)
+- /docs/plans/narration-mode.md (design explicitly describes user menu, not implemented)
 
 ### Create reminders and scheduled callbacks through chat  
 ❌ INACCURATE
@@ -1655,7 +1655,7 @@ VERIFIED: The user story is completely accurate and fully implemented. The claim
 
 **Test coverage:** Fully tested in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/test/core/triage.doctest.md with comprehensive scenarios for all three confidence levels.
 
-**Design alignment:** Matches triage-design.md §5 exactly, with all three confidence levels implemented as specified including the review marker for probable and question card for guess.
+**Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including the review marker for probable and question card for guess.
 
 </details>
 
@@ -1677,7 +1677,7 @@ Files: `src/core/triage-routing.ts`, `src/schemas/question.ts`
 
 <details><summary>verification note</summary>
 
-Both claimed files exist at specified paths and implement automatic question generation for uncertain triage decisions exactly as described. Feature is complete and documented: low-confidence ("guess") routing decisions trigger question card creation in triage-routing.ts using createSelectQuestionTemplate() from question.ts. Questions are answerable via command system, which creates follow-up jobs for training/rule updates. Implementation matches design document (triage-design.md §5).
+Both claimed files exist at specified paths and implement automatic question generation for uncertain triage decisions exactly as described. Feature is complete and documented: low-confidence ("guess") routing decisions trigger question card creation in triage-routing.ts using createSelectQuestionTemplate() from question.ts. Questions are answerable via command system, which creates follow-up jobs for training/rule updates. Implementation matches design document (triage.md §5).
 
 </details>
 
@@ -2506,7 +2506,7 @@ The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories
 
 Files: `src/connectors/drive-handler-docs.ts`
 
-**Verifier (flagged):** The story is partially accurate. Core features (markdown export, lossy detection, warning display) are implemented, but material gaps exist: (1) drawings are not separately detected from images (code comment explicitly states this would need additional work), (2) the push mechanism unconditionally overwrites upstream content without preservation options, (3) lossy warnings are agent-responsibility only, not enforced by code. The official project verification document (callback-box/docs/user-stories.md lines 1340-1347) already flags this story as inaccurate with these same gaps.
+**Verifier (flagged):** The story is partially accurate. Core features (markdown export, lossy detection, warning display) are implemented, but material gaps exist: (1) drawings are not separately detected from images (code comment explicitly states this would need additional work), (2) the push mechanism unconditionally overwrites upstream content without preservation options, (3) lossy warnings are agent-responsibility only, not enforced by code. The official project verification document (callback-box/docs/user-stories-audit.md lines 1340-1347) already flags this story as inaccurate with these same gaps.
 
 ### Concurrent edits to Google Docs are detected and prevent overwrites  
 ✅ verified
@@ -2617,7 +2617,7 @@ The implementation in `/Users/ianbicking/src/callback-worktrees/user-stories/cal
 - "Local changes pushed back": Correct—detected local edits are pushed via patchEvent()
 - "Rather than silently overwritten": Partially correct—local edits are pushed, but overwrite still happens after push (even if push succeeds, the file is rewritten from Google's response)
 
-**Related story in docs/user-stories.md:**
+**Related story in docs/user-stories-audit.md:**
 A similar story "Detect and prevent calendar sync conflicts from remote modifications" is marked INACCURATE for the same reason: code doesn't track remote modifications. The current user story's misleading title would also be marked inaccurate under adversarial review.
 
 ### Rate-limit calendar event deletions to prevent accidents  
@@ -2655,7 +2655,7 @@ Files: `src/connectors/google-calendar-push.ts`
 
 <details><summary>verification note</summary>
 
-User story is accurately implemented. Both required files exist: google-calendar-push.ts and calendar-utils.ts. The validateIcsTimezone() function validates that non-all-day events have TZID parameters on DTSTART. In google-calendar-push.ts (lines 68-73), this validation runs before pushing events. Events with invalid timezones are skipped with a warning, exactly matching the story requirements. Previously verified as accurate in docs/user-stories.md.
+User story is accurately implemented. Both required files exist: google-calendar-push.ts and calendar-utils.ts. The validateIcsTimezone() function validates that non-all-day events have TZID parameters on DTSTART. In google-calendar-push.ts (lines 68-73), this validation runs before pushing events. Events with invalid timezones are skipped with a warning, exactly matching the story requirements. Previously verified as accurate in docs/user-stories-audit.md.
 
 </details>
 
@@ -2675,7 +2675,7 @@ Files: `src/connectors/intake-utils.ts`
 
 Files: `src/connectors/telegram-outbound.ts`
 
-**Verifier (flagged):** The feature exists and works as described functionally (parsing durations, recording timers, scheduling reminders), but the story's perspective is inaccurate. The claimed file exists and contains the code to record and check callback timers. However, the story incorrectly frames this as "As a user" when it is actually an agent feature. Chat-thread schema instructions make clear that the agent appends seen entries with callback-in timers. No UI exists for users to specify these durations—users would need to manually edit YAML. The official user-stories.md documentation correctly identifies this as "As an agent, I want to compose messages in Telegram chat threads that include callback-in timers."
+**Verifier (flagged):** The feature exists and works as described functionally (parsing durations, recording timers, scheduling reminders), but the story's perspective is inaccurate. The claimed file exists and contains the code to record and check callback timers. However, the story incorrectly frames this as "As a user" when it is actually an agent feature. Chat-thread schema instructions make clear that the agent appends seen entries with callback-in timers. No UI exists for users to specify these durations—users would need to manually edit YAML. The official user-stories-audit.md documentation correctly identifies this as "As an agent, I want to compose messages in Telegram chat threads that include callback-in timers."
 
 ### Auto-deduplicate chat processing jobs per thread  
 ✅ verified
@@ -2816,7 +2816,7 @@ Files: `src/connectors/telegram-outbound.ts`, `src/connectors/telegram.ts`
 
 <details><summary>verification note</summary>
 
-Both claimed files exist and fully implement the user story as described. The callback-in mechanism is complete: (1) telegram-outbound.ts records callback-in durations from seen entries using parseDuration() and stores timers in transient state with absolute timestamps; (2) telegram.ts checkCallbackTimers() checks for expired timers during sync and creates chat jobs automatically; (3) schema confirms callback-in field support in seen entries. Minor discrepancies: the story uses XML-like notation (<seen callback-in="duration">) but actual format is YAML frontmatter; terminology is "callback job" not "reminder job" — functionally identical. This user story closely mirrors another independently-verified story in docs/user-stories.md dated 2026-06-26 marked as ✅ verified.
+Both claimed files exist and fully implement the user story as described. The callback-in mechanism is complete: (1) telegram-outbound.ts records callback-in durations from seen entries using parseDuration() and stores timers in transient state with absolute timestamps; (2) telegram.ts checkCallbackTimers() checks for expired timers during sync and creates chat jobs automatically; (3) schema confirms callback-in field support in seen entries. Minor discrepancies: the story uses XML-like notation (<seen callback-in="duration">) but actual format is YAML frontmatter; terminology is "callback job" not "reminder job" — functionally identical. This user story closely mirrors another independently-verified story in docs/user-stories-audit.md dated 2026-06-26 marked as ✅ verified.
 
 </details>
 
@@ -3356,7 +3356,7 @@ Files: `src/services/telegram.ts`
 - Update admin routes to expose configuration UI
 - Add tests for the configuration
 
-The existing code achieves basic filtering (rejecting callback_queries, inline_queries, etc.), but it's hardcoded, not configurable. The documented user-stories.md acknowledges this caveat: "The filtering is hardcoded to these two types and not configurable per box via TelegramConfig." The described user story explicitly requires configurability, so accurate=false.
+The existing code achieves basic filtering (rejecting callback_queries, inline_queries, etc.), but it's hardcoded, not configurable. The documented user-stories-audit.md acknowledges this caveat: "The filtering is hardcoded to these two types and not configurable per box via TelegramConfig." The described user story explicitly requires configurability, so accurate=false.
 
 ### Customize text-to-speech voice instructions for tone and pacing  
 ❌ INACCURATE
@@ -4670,7 +4670,7 @@ Files: `src/cli/commands/handle.ts`
 
 <details><summary>verification note</summary>
 
-The story is accurately implemented. The code in src/cli/commands/handle.ts and the core implementation (src/core/handle.ts) correctly execute handler procedures for each triage category bucket. Verification: (1) reads from inbox/triaged/<category>/ buckets populated by prior triage stage; (2) resolves procedure-ref from category landmarks via compileTriageInstructions(); (3) invokes procedures via startProcedure() with items passed as TRIAGE_ITEMS env var; (4) handles edge cases (no items, no category, no procedure); (5) tested in test/core/handle.doctest.md; (6) documented in docs/triage-design.md
+The story is accurately implemented. The code in src/cli/commands/handle.ts and the core implementation (src/core/handle.ts) correctly execute handler procedures for each triage category bucket. Verification: (1) reads from inbox/triaged/<category>/ buckets populated by prior triage stage; (2) resolves procedure-ref from category landmarks via compileTriageInstructions(); (3) invokes procedures via startProcedure() with items passed as TRIAGE_ITEMS env var; (4) handles edge cases (no items, no category, no procedure); (5) tested in test/core/handle.doctest.md; (6) documented in docs/triage.md
 
 </details>
 
@@ -5134,7 +5134,7 @@ There is no:
 
 The user must manually copy-paste the stdout output and manually update whatever they want. The story's "so that the commit reflects accurate text" outcome is NOT automated. It's a CLI tool that returns text for manual application, not a tool that automatically updates commits.
 
-**Verification**: The existing user-stories.md (line 2778) marks a different story "Re-transcribe audio with speaker diarization" (✅ verified) with narrower scope focusing on diarization, not commit updating. Your story's claim about automatic commit reflection is not implemented.
+**Verification**: The existing user-stories-audit.md (line 2778) marks a different story "Re-transcribe audio with speaker diarization" (✅ verified) with narrower scope focusing on diarization, not commit updating. Your story's claim about automatic commit reflection is not implemented.
 
 ### Manage multiple boxes in a unified manifest  
 ✅ verified
@@ -5165,7 +5165,7 @@ Files: `src/cli/commands/attachments.ts`
 
 Files: `src/cli/commands/feedback.ts`
 
-**Verifier (flagged):** The feedback.ts file exists and is integrated into the CLI, but the implementation violates the story's core requirement of "without interrupting my task." The error handling calls process.exit(1) (line 153), which terminates the agent's task on any error. Additionally, the success path writes to stdout (line 149), contradicting the documentation's claim that it's "Silent." The implementation is marked as INACCURATE in the project's own user-stories.md.
+**Verifier (flagged):** The feedback.ts file exists and is integrated into the CLI, but the implementation violates the story's core requirement of "without interrupting my task." The error handling calls process.exit(1) (line 153), which terminates the agent's task on any error. Additionally, the success path writes to stdout (line 149), contradicting the documentation's claim that it's "Silent." The implementation is marked as INACCURATE in the project's own user-stories-audit.md.
 
 ### Keep external file pointers synchronized  
 ❌ INACCURATE
@@ -5504,7 +5504,7 @@ Files: `src/cli/commands/usage.ts`
 
 <details><summary>verification note</summary>
 
-User story is fully accurate. Claimed file src/cli/commands/usage.ts exists with complete implementation: syncUsage() reads Claude Code logs from ~/.claude/projects/ and task manifest from store/usage/session-manifest.jsonl, writes to .callback-box/usage.db with schema tracking session_id, task, date, model, and all token types. queryUsage() supports arbitrary SQL. Command is integrated in CLI with --sync, --sql, and --schema flags. Agent manifest integration via appendSessionManifest() enables task attribution. Feature is already verified accurate in official docs/user-stories.md line 2436.
+User story is fully accurate. Claimed file src/cli/commands/usage.ts exists with complete implementation: syncUsage() reads Claude Code logs from ~/.claude/projects/ and task manifest from store/usage/session-manifest.jsonl, writes to .callback-box/usage.db with schema tracking session_id, task, date, model, and all token types. queryUsage() supports arbitrary SQL. Command is integrated in CLI with --sync, --sql, and --schema flags. Agent manifest integration via appendSessionManifest() enables task attribution. Feature is already verified accurate in official docs/user-stories-audit.md line 2436.
 
 </details>
 

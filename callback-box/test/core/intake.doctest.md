@@ -9,7 +9,7 @@ in one pass:
    no step changes anything (quiescent).
 3. Moves the intake-complete items to `box/inbox/staged/`.
 
-See `docs/triage-design.md` and `src/core/intake.ts`.
+See `docs/triage.md` and `src/core/intake.ts`.
 
 ```ts setup
 import { runIntake } from "../../src/core/intake.js";

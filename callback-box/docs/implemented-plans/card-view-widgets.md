@@ -571,7 +571,7 @@ This plan introduces an agent-facing convention: **box-authored views import
 `callback-box/view-widgets` and use `<CardLink>`/`<CardRef cardRef="…">` to point at
 cards; those refs are tracked by `cb validate`/`cb mv`.**
 
-**Altitude.** Per `docs/agent-knowledge.md:307` view authoring sits at
+**Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
 **knows_about** — *"the agent guide references `docs/generated/views.md`; the
 agent should read it for the exact format."* The existing view audits follow
 this: `views-render-test-command`, `views-read-large-attachment`,

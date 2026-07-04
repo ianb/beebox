@@ -8,7 +8,7 @@
  *
  * 1. Fused capture commentary — a `*.commentary.card` with
  *    `defaultRef: attach/readable.md` and a `source:` URL (the old
- *    web-page-commentary shape: readable markdown + frozen snapshot in
+ *    clerk-webpage-capture shape: readable markdown + frozen snapshot in
  *    `.attach/`, remarks in the body). Becomes:
  *      <base>.webpage.card                    (readable body + provenance)
  *      <base>.attach/page.frozen              (unchanged, if present)

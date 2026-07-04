@@ -1,4 +1,4 @@
-# Triage — Design
+# Triage
 
 **Status:** implemented — serves as the triage pipeline reference; not yet re-verified line-by-line against current code
 

@@ -1,8 +1,8 @@
 # Narration Mode — Design
 
-Status: proposal, for discussion.
+**Status:** active — proposal, for discussion; misfiled in implemented-plans until 2026-07-04
 
-> Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phased out work"). Activities have since been removed entirely — see [activities-retrospective.md](activities-retrospective.md). The narration-as-piecemeal-feature direction described here is what stuck.
+> Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phased out work"). Activities have since been removed entirely — see [activities-retrospective.md](../activities-retrospective.md). The narration-as-piecemeal-feature direction described here is what stuck.
 
 ## Motivation
 

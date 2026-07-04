@@ -57,7 +57,7 @@ every PAI mechanism has a cb counterpart that is smaller and enforced in code:
 
 | Concern | PAI | Callback Box |
 |---|---|---|
-| Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle in code (`src/core/reactor/`, `docs/triage-design.md`) |
+| Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle in code (`src/core/reactor/`, `docs/triage.md`) |
 | Task spec | ISA markdown file per task, model-maintained | job cards + procedures, schema-validated |
 | Output structure | visual format templates the model must self-enforce | `invokeStructured` with Zod; chat tags parsed by UI |
 | Identity | static user-authored `DA_IDENTITY.md` / `PRINCIPAL_IDENTITY.md` | evolving personality card with evidence model (`config/main.personality.card`) |

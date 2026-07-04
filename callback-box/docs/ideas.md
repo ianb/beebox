@@ -346,7 +346,7 @@ The friction this addresses: without it, you get either constant permission requ
 
 ## /spark mode — batch harvest of the proactive layer
 
-Conceptual inverse of narration mode (see [narration-mode-design.md](narration-mode-design.md)). Narration is user-talks-mostly (long dumps, agent files quietly). /spark is agent-talks-mostly (agent surfaces everything it's been holding back; user triages). Both intentionally break the turn-balanced rhythm in opposite directions.
+Conceptual inverse of narration mode (see [narration-mode.md](plans/narration-mode.md)). Narration is user-talks-mostly (long dumps, agent files quietly). /spark is agent-talks-mostly (agent surfaces everything it's been holding back; user triages). Both intentionally break the turn-balanced rhythm in opposite directions.
 
 The premise: the agent runs a proactive layer continuously, with normal suppression discipline (park-on-ignore, thresholded surfacing, silent consultation as default). Observations the agent would have surfaced eventually but didn't yet — because timing was wrong, because the boxholder was focused elsewhere, because the quota was already spent — accumulate. /spark is the deliberate harvest of that accumulation.
 
@@ -468,7 +468,7 @@ Open questions:
 - **Where does triage run?** During `cb wakeup` per-item as new things land? As a separate `cb intake` step? Inside the reactor on intake-jobs? The answer affects how aggressively rules get applied (a wakeup-time rule that auto-trashes feels different from a reactor decision that asks first).
 - **One guide or per-stream?** A single `intake.guide.card` is simpler but blurs domains; per-stream guides (recipes vs bookmarks vs voice memos) match how feedback naturally clusters but multiplies setup.
 - **Feedback surface.** Where does the boxholder say "this routing was wrong"? Probably a lightweight "wrong bucket" gesture on archived items + periodic guide-revision passes that read accumulated signals and rewrite the guide.
-- **Relation to landmarks/triage-design.** `docs/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
+- **Relation to landmarks/triage.** `docs/triage.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
 
 ## Capitalize glossary terms as Proper Nouns?
 

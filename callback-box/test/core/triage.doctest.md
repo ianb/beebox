@@ -5,7 +5,7 @@ subagent which one each staged item belongs in, and routes the items
 into per-category holding spots. The subagent is stubbed below via
 `runTriage`'s `decide` option so the tests stay deterministic.
 
-See `docs/triage-design.md` §Triage (stage 2).
+See `docs/triage.md` §Triage (stage 2).
 
 ```ts setup
 import { compileTriageInstructions } from "../../src/core/triage-instructions.js";

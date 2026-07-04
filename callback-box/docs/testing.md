@@ -379,7 +379,7 @@ Knowledge audits test what the agent _knows_ rather than what the system _does_.
 
 **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior.
 
-See [agent-knowledge.md](agent-knowledge.md) for the full knowledge taxonomy and test prompt guide.
+See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
 
 ### Test Definition
 

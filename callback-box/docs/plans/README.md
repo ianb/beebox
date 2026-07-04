@@ -71,18 +71,24 @@ The first backlog batch was migrated and all `docs/…` references rewritten:
 - → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-design.md`
   (+ `.review.md`, `.gstack-trial-review.md`), `markdoc-format-investigation.md`,
   `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
-  (feature shipped, despite the doc's stale "proposal" header).
+  (feature shipped, despite the doc's stale "proposal" header — later
+  found to be inaccurate; see 2026-07-04 below).
 - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
-  `source-editor.md`. (`triage-design.md` later turned out to be fully built
-  and was promoted to `docs/triage-design.md` as a reference doc — see the
+  `source-editor.md`. (`triage.md` later turned out to be fully built
+  and was promoted to `docs/triage.md` as a reference doc — see the
   2026-07 doc reorg.)
+
+**2026-07-04:** `implemented-plans/narration-mode-design.md` was moved back
+to `plans/narration-mode.md` — the doc opens "Status: proposal, for
+discussion" and was never actually implemented; its earlier placement in
+`implemented-plans/` above was a misfiling, not a correction.
 
 **Follow-ups:**
 - Regenerate the doc graph (`pnpm doc-graph`) — it's generated and still shows
   the old paths; it self-heals on the next run.
 - A few more plan-shaped docs remain in `docs/` and need a judgment call on
   reference-vs-proposal before moving: `activities-design.md`,
-  `event-bus-design.md`, `photo-storage-investigation.md`. Left in place
+  `event-bus.md`, `photo-storage-investigation.md`. Left in place
   (some read more like vision/reference than active proposals — `DESIGN.md`,
   `design-vision.md`, `stack-decisions.md` are reference and stay).
   `design-card-views.md` has since moved to `unimplemented-plans/`
