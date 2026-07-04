@@ -212,7 +212,6 @@ export const CURATOR: CuratorSection[] = [
       { path: "docs/prompt-audits.md", note: "Catching stock-LLM phrases that crept into prompts." },
       { path: "docs/prompt-logging.md", note: "Log every agent invocation — what was sent, what came back." },
       { path: "THINKING_CLAUDE.md", note: "Experimental thinking mode for Claude itself. Might get deleted." },
-      { path: "docs/ideas.md", note: "936-line idea graveyard. The good ones bubble up to actual docs eventually." },
       { path: "docs/testing-gaps.md", note: "Areas where coverage is admittedly thin. Honesty in writing." },
     ],
   },

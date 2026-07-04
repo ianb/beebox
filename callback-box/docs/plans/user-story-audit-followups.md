@@ -37,9 +37,9 @@ every comment is traceable back to its story.
   possible trade-off. [69] (model-switch) is **deferred** — it needs a live
   Claude invocation to test, not an automated test.
 - **Catalog:** 413 → **400 stories**; all `IAN:` annotations cleared — the
-  unbuilt bucket-D features are now parked as the backlog in `docs/ideas.md`
-  ("User-story audit — remaining feature backlog"), so the catalog reads as a
-  clean reference doc.
+  unbuilt bucket-D features are now parked as the backlog in `/issues/`
+  (formerly "User-story audit — remaining feature backlog" in `docs/ideas.md`),
+  so the catalog reads as a clean reference doc.
 - **Bucket D — partially done:**
   - **D7 (calendar remote-conflict) — built.** `EventFileEntry` now stores the
     remote `updated` timestamp; on a local edit, if the remote also changed since
@@ -54,12 +54,13 @@ every comment is traceable back to its story.
     compliant; `template-ref` is a `${…}` substitution pattern, not a card ref.)
   - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
     card-shape examples refreshed to YAML; build deferred.
-  - **D8 (Docs/Sheets comments → sidecar)** and **D9 (Drive mounting/browsing)** —
-    parked as entries in `docs/ideas.md`.
-  - **Remaining (unstarted):** D1 questions overhaul, D2 todo multi-state, D3
-    frontmatter write, D5 procedure validation, D6 retrospective integration, D10
-    asset-manifest completion, plus deferred [69] model-switch verification — all
-    parked in `docs/ideas.md` ("User-story audit — remaining feature backlog").
+  - **D8 (Docs/Sheets comments → sidecar)** — implemented, entry retired. **D9
+    (Drive mounting/browsing)** — parked as
+    `/issues/2026-06-26-drive-mounting-file-browsing-ui.md`.
+  - **Remaining:** D1 questions overhaul (open, `/issues/2026-06-26-questions-end-to-end-d1.md`),
+    D2/D5/D6/D10 all done (see `/issues/closed/`), D3 frontmatter write (WONTFIX,
+    story deleted), plus deferred [69] model-switch verification (open,
+    `/issues/2026-06-26-model-switch-verification-deferred.md`).
 
 ## Summary
 

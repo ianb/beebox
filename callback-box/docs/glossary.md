@@ -11,7 +11,7 @@ When a term here conflicts with how code or other docs use it, the glossary is t
 
 Keep entries short. One paragraph max. Link to deeper docs rather than restating them.
 
-**Open question — capitalization.** Proper nouns in English are normally capitalized. We may want to write "Asset" and "Card" with initial caps in prose to signal "this is the project term, not the everyday word." Not yet decided; entries below use lowercase pending that call. See `docs/ideas.md`.
+**Open question — capitalization.** Proper nouns in English are normally capitalized. We may want to write "Asset" and "Card" with initial caps in prose to signal "this is the project term, not the everyday word." Not yet decided; entries below use lowercase pending that call. See [issues/2026-05-21-glossary-proper-nouns.md](../../issues/2026-05-21-glossary-proper-nouns.md).
 
 ## Storage and files
 

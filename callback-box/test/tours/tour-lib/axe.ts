@@ -24,12 +24,11 @@ function loadAxeSource(): Promise<string> {
 // Rules we don't want axe to check on every tour run. Listed here rather
 // than filtered after-the-fact so the violations don't even land in the
 // .axe.json reports — keeps artifacts focused on what we're actually
-// triaging right now. See callback-box/docs/ideas.md for context on each
-// suppression. Remove an entry to re-enable that rule.
+// triaging right now. See issues/2026-05-28-color-contrast-wcag-aa-audit.md
+// for context on each suppression. Remove an entry to re-enable that rule.
 const SUPPRESS_RULES: readonly string[] = [
   // Systemic palette issue across the warm-* scale + semantic -dark
-  // variants. Deferred — see "Color contrast — full WCAG AA audit"
-  // in docs/ideas.md.
+  // variants. Deferred — see issues/2026-05-28-color-contrast-wcag-aa-audit.md.
   "color-contrast",
 ];
 

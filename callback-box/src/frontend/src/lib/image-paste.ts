@@ -8,7 +8,7 @@
  * browser canvas only produces *lossy* WebP/AVIF (no lossless flag exists), so
  * converting a screenshot / line-art PNG here would silently degrade it.
  * PNG→WebP belongs to the lossless, high-effort server-side intake step, not
- * this lossy client path (see docs/ideas.md, "AVIF / WebP for stored images").
+ * this lossy client path (see issues/2026-06-18-avif-webp-for-stored-images.md).
  *
  * This is the transient chat-attachment path (already downscaled); archival
  * fidelity is the server's job.

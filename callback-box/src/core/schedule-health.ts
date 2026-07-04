@@ -1,6 +1,6 @@
 /**
- * Health evaluation for scheduled tasks (see docs/ideas.md
- * "Scheduled-task health surfacing").
+ * Health evaluation for scheduled tasks (see
+ * issues/2026-05-19-scheduled-task-health-surfacing.md).
  *
  * A task's run state already records when it was last *attempted*
  * (lastRun) and last *succeeded* (lastSuccess); the divergence is the

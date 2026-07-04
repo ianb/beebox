@@ -142,7 +142,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | PDF intake design | `docs/plans/pdf-intake-design.md` |
 | Source editor plan | `docs/plans/source-editor.md` |
 | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
-| Feature ideas | `docs/ideas.md` |
+| Feature ideas & open issues | `/issues/` (monorepo root) |
 | OpenClaw/Hermes comparison & idea triage | `docs/plans/openclaw-hermes-comparison.md` |
 | Glossary | `docs/glossary.md` |
 
