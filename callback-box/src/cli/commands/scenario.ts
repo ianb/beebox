@@ -23,13 +23,11 @@ const listCommand = new Command("list")
 const runCommand = new Command("run")
   .description("Run a scenario")
   .argument("<name>", "Scenario name")
-  .option("--from <checkpoint>", "Start from a checkpoint")
   .option("--dry-run", "Show steps without executing")
-  .action(async (name: string, options: { from?: string; dryRun?: boolean }) => {
+  .action(async (name: string, options: { dryRun?: boolean }) => {
     try {
       const result = await runScenario({
         name,
-        from: options.from,
         dryRun: options.dryRun,
         onLog: (text) => console.log(text),
       });

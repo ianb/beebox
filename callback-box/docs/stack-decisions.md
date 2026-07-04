@@ -142,7 +142,7 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 
 ### Stately ecosystem pieces we'll use
 
-- **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is overkill. Same `send()` API, so upgrading to a full machine later is smooth.
+- **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is overkill. Same `send()` API, so upgrading to a full machine later is smooth. (recorded as adopted but never installed as of 2026-07 — unresolved; see docs/plans/docs-reorg.md open questions)
 - **@xstate/graph** — Exhaustive state exploration and test path generation. Core to the testing strategy.
 - **@statelyai/inspect** — Runtime debugging via `inspect` callback on `createActor()`. Sees every event and transition. Will wire this into a debug panel / event logger.
 - **@statelyai/agent** — Not a dependency, but the *pattern* of using Zod schemas as event validators for external input (LLM actions, user events, API responses) is directly relevant. Borrow the pattern, don't import the library.

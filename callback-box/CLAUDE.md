@@ -25,7 +25,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns Vite and
 
 ## Cards
 
-Cards are the core data format. The format is **YAML frontmatter + markdown body** (Phase 2). Every schema is frontmatter; the legacy XML card format, its loader, and the `cardworks` package have been removed. The card primitives (`cardSchema`, `body`, `splitCardContent`, lint formatting, …) now live in `src/cards/` and are exposed to box-local schemas via the public `callback-box/cards` specifier.
+Cards are the core data format. The format is **YAML frontmatter + markdown body** (Phase 2). Every schema is frontmatter; the legacy XML card format, its loader, and the `cardworks` package have been removed (this is about the file format — pseudo-XML elements like `<schedule>` remain a live pattern embedded within markdown bodies and chat text; see `docs/chat-schedules.md`). The card primitives (`cardSchema`, `body`, `splitCardContent`, lint formatting, …) now live in `src/cards/` and are exposed to box-local schemas via the public `callback-box/cards` specifier.
 
 ```
 ---
@@ -38,7 +38,7 @@ Body content as plain markdown.
 
 **Schemas** live in `src/schemas/`. Cards use `cardSchema(type, { fields, instructions? })` from `src/cards/` (box-local schemas import the same via `callback-box/cards`). `src/schemas/registry.ts` lists them in `cardSchemas[]`; boxes can add local schemas under `config/schemas/`. The type is taken from the filename (`Foo.<type>.card`) — there is no `type:` field in frontmatter.
 
-**Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a `FrontmatterLoadedCard` (cards are frontmatter + markdown body — there is no other body encoding; the old XML loader and its `content-type` marker are gone). Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations are parse-mutate-reserialize via `yaml`'s `parse`/`stringify`.
+**Loading:** `src/core/card-io.ts` `loadCardFile(absPath, ctx)` returns a `FrontmatterLoadedCard` (cards are frontmatter + markdown body — there is no other body encoding; the old XML loader and its `content-type` marker are gone). Most consumer code uses `parseCardText()` directly when it already has the file contents. Mutations are parse-mutate-reserialize via `yaml`'s `parse`/`stringify` — reserialization reorders frontmatter keys to match the schema's declared field order, not necessarily the original file order.
 
 **Naming**: `Name.type.card` — the type determines which schema validates it (e.g. `Meeting_Notes.memo.card`). Attachments live in a sibling `Name.attach/` directory; refs starting with `attach/` resolve into this scope. No two cards in the same directory may share a basename (lint error).
 
@@ -61,7 +61,7 @@ src/connectors/   External integrations (rss, gmail, telegram, etc.)
 src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
   trpc/           tRPC router and sub-routers
-src/hub/          `cb hub`: routes /<slug>/... to per-box `cb serve` children (lazy start, idle-collect, health-check)
+src/hub/          `cb hub`: routes /<slug>/... to per-box `cb serve` children (lazy start, idle-collect, health-check) — see src/hub/CLAUDE.md
 src/frontend/     React UI (Vite, separate tsconfig)
   src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
                       Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/landmarks/LandmarksPage.tsx` + `pages/landmarks/components/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
@@ -76,13 +76,16 @@ src/schemas/      Card type definitions (Zod + `cardSchema` from src/cards/)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
-src/lib/          Cross-cutting helpers
+src/lib/          Generic cross-cutting helpers — check here before writing your own
+                  (content-hash, mimetype, filename, file-exists, drop-undefined,
+                  public-url, awake-timeout, exec-with-timeout, sleep, ...)
 src/types/        Ambient type declarations
-src/test-lib/     Test utilities, doctest infrastructure
 test/             Doctest files
 deploy/           Server provisioning and deployment scripts
 plugins/          Claude Code plugins (card-validator hook)
 ```
+
+There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-doctest/` package (the loader/runner) plus this project's `test/helpers/` (test-server, fake-agent, fixture-replay, etc.).
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`. Newer boxes (`shapeVersion: 2`, incl. `test1`) wrap this in a package: the box itself is the `content/` subdirectory (operational root = `boxRoot` = agent cwd), while `src/{schemas,views,tricks}` and `.claude/` live at the package root alongside a `package.json` depending on `callback-box`. Box code (schemas, views, tricks) only imports `callback-box/cards`, `callback-box/schema`, or `callback-box/view-widgets` — never engine internals. See `docs/box-layout.md` for the full shape.
 
@@ -104,6 +107,7 @@ plugins/          Claude Code plugins (card-validator hook)
 - **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Real-time/streaming also lives in tRPC now — **subscriptions over the WebSocket** (`useWSS` on the per-box plugin; `events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; client routes subscriptions through `wsLink` via the `splitLink` in `lib/trpc.ts`). Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: file upload/download, OAuth redirects, webhooks, and the `/chat/send` POST (it needs the request's user + the session registry). Older raw routes are tech debt — migrate when you touch the area.
 - **Frontend uses UI primitives and a semantic palette.** Read FRONTEND.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Commits go through plain `git commit`; the per-box `.git/hooks/pre-commit` (installed by `cb init`) runs `cb validate --staged` and blocks invalid card commits.
+- **Time discipline.** Get timestamps via `getBoxTime`/`getBoxTimeISO` (`src/cli/lib/time.ts`), not plain `new Date()` — it honors `CB_TIME`/scenario-frozen time for tests. Long-running timeouts must count only awake time via `startAwakeTimeout` (`src/lib/awake-timeout.ts`) — a plain `setTimeout` fires instantly on wake because its underlying clock advances during macOS sleep.
 - **All cross-process locks go through `src/lib/file-lock.ts`.** Don't roll your own with `proper-lockfile` or hand-built `.lock` files — the primitive handles PID liveness, sleep, and crash recovery. In-process async serialization (e.g. a `Map<id, Promise>` chain) is a different problem and stays separate.
 - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via the `debugLog.submit` tRPC mutation). Read them from the rolling file `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
 - **Leave the repo clean when committing.** Fix any lint/type/test errors you encounter (even pre-existing ones) and make enough commits that nothing half-done is left lying around.
@@ -119,15 +123,20 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 |-------|----------|
 | Design rationale | `docs/DESIGN.md` |
 | Implementation guide | `docs/IMPLEMENTATION.md` |
-| Card examples | `docs/EXAMPLE_FILES.md` |
+| Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |
-| Doctest syntax | `.claude/rules/doctest.md`, `src/test-lib/docs/` |
+| Doctest syntax | `.claude/rules/doctest.md`; deeper reference in the monorepo's `agent-doctest/docs/` |
 | Adding a card type | `docs/adding-schemas.md` |
 | Card format & migration history | `docs/cards-as-markdown.md` |
 | Box migration runbook | `docs/migrations.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
 | Connectors | `docs/connectors.md` |
 | Procedures | `docs/procedure-implementation.md` |
+| Scheduler daemon (`cb tick`) | `docs/scheduler.md` |
+| Deployed-server health-check runbooks | `docs/health-checks.md` |
+| Agent-set chat timers (`<schedule>` tag) | `docs/chat-schedules.md` |
+| Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
+| Triage pipeline design | `docs/triage-design.md` |
 | Deployment | `deploy/README.md` |
 | Server operations | `docs/server-operations.md` |
 | Adding a box | `docs/adding-a-box.md` |

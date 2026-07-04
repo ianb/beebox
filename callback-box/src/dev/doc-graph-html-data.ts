@@ -37,7 +37,6 @@ export const PILLARS: Pillar[] = [
     entryNote: "The deep design RFC. 2,553 lines. The first ~200 are the spine; skim the rest unless you're migrating.",
     supporting: [
       { path: "docs/adding-schemas.md", note: "Read this before writing a new card type. Saves an embarrassing amount of time." },
-      { path: "docs/EXAMPLE_FILES.md", note: "A browseable cookbook of every card shape in the system." },
       { path: "docs/migrations.md", note: "What to run when the card format changes under a live box." },
     ],
     code: ["src/schemas/", "src/core/card-io.ts"],

@@ -2,6 +2,8 @@
 
 This directory contains architecture documentation told through the story of a fictional family (the Lund-Vegas). The docs are a mix of narrative, technical explanation, and design exploration.
 
+The user-facing chapters themselves start with **`01-what-is-this.md`** and **`02-cards-and-memory.md`**.
+
 ## Steering docs (not user-facing)
 
 These files guide the writing but aren't part of the final documentation:

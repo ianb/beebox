@@ -2,6 +2,8 @@
 
 This guide walks through setting up Google OAuth2 credentials for Callback Box. These credentials are shared across all Google connectors (Calendar, Gmail API, Drive).
 
+See also: `gmail-setup.md`, `google-drive.md`, `calendar.md` for the per-connector guides that build on this setup.
+
 ## 1. Create a Google Cloud Project
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)

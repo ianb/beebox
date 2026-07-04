@@ -35,7 +35,6 @@ const NoteEntry = z.object({
 export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   fields: {
     status: MyThingStatus.default("draft"),
-    title: z.string(),
     notes: z.array(NoteEntry).optional(),
     body: body(z.string()),  // omit this line if the card has no prose body
   },
@@ -54,7 +53,6 @@ Include:
 export interface MyThingFields {
   type: "my-thing";
   status: MyThingStatusType;
-  title: string;
   notes?: Array<{ text: string; added?: string }>;
   body: string;  // omit if no body
 }
@@ -71,6 +69,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
+- Every schema automatically gets optional `title` and `contains` frontmatter fields (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.

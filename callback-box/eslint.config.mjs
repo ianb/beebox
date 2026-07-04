@@ -4,7 +4,7 @@
 // rule to make a new preset land (or to dodge a wave of violations) is exactly
 // how this config ended up lying about our style for months. If a rule is
 // genuinely wrong, raise it — don't quietly switch it off. Existing debt is
-// ratcheted via eslint-suppressions.json, not by disabling rules.
+// tracked and burned down rule-by-rule; see ../docs/eslint-rule-suppression-audit.md.
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 export default [
   // `roots` extends the reviewed ruleset to first-party tooling under scripts/
@@ -26,6 +26,6 @@ export default [
   // NOTE: The other 16 rules in this block were turned off when
   // personal-vibe-check was integrated (1efb334c, 2026-02-14), silently
   // disabling a chunk of our own documented style. They are now re-enabled;
-  // existing debt is recorded in eslint-suppressions.json and burned down
-  // rule-by-rule. See docs/eslint-rule-suppression-audit.md.
+  // existing debt is burned down rule-by-rule. See
+  // ../docs/eslint-rule-suppression-audit.md.
 ];

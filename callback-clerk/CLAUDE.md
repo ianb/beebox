@@ -21,9 +21,15 @@ tab sync, context-menu save).
 - `wxt.config.ts` — WXT config; the manifest is **generated** from here (no
   hand-written manifest.json).
 - `src/entrypoints/` — WXT entrypoints, kept thin: `background.ts`,
-  `extract.content.ts` (Readability+Turndown extraction shim),
-  `popup/`, `sidepanel/`.
-- `src/platform/` — browser-API and DOM code (`extract-page.ts`, `tabs.ts`).
+  `commentary-capture.content.ts` (Defuddle+DOMPurify+Turndown extraction
+  shim, plus the page-freeze capture), `popup/`, `sidepanel/`.
+- `src/platform/` — browser-API and DOM code: `clerk-api.ts` (clerk tRPC
+  HTTP client), `config-storage.ts` (chrome.storage config load/save, clears
+  legacy Dropbox-relay keys), `detect-box.ts` (reads the box-identity meta
+  from the active tab), `enable-box.ts` (requests the per-origin host
+  permission and persists the box), `extract-readable.ts` (Defuddle isolates
+  content, DOMPurify sanitizes, Turndown converts to markdown), and
+  `freeze-page.ts` (single-file-core page freeze into self-contained HTML).
 - `src/domain/` — pure logic (config schema, URL building) with tap tests.
 - `src/ui/` — React components.
 - `public/` — static assets copied into the build (icons).

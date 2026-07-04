@@ -14,6 +14,10 @@ When no service is provided, connectors create real implementations from config 
 
 See `src/services/CLAUDE.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patterns.
 
+## Sync rebuilds destroy agent-added fields
+
+A connector sync rebuilds a card's frontmatter+body wholesale from its template. Any field an agent added by hand that the template doesn't produce is silently overwritten — **except** the fields `preserve-agent-fields.ts` explicitly re-injects before the write (currently just `contains`, its `AGENT_FIELDS` list). Adding a new agent-owned field to a connector-managed card type means adding it to that list, not just writing it once and hoping the next sync leaves it alone.
+
 ## Currently service-injected
 
 - **telegram.ts** — uses `TelegramService`

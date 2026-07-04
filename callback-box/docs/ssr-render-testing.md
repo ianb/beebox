@@ -176,3 +176,9 @@ Edit `machineRegistry` in `state-registry.ts`:
 - **Stderr noise**: `[ChatSession:init]` and `useLayoutEffect` warnings go to stderr. Use `2>/dev/null`.
 - **CSS classes are Tailwind**: No semantic class names like `.chat-messages`. Use structural selectors (`h3`, `nav a`, `textarea`) or Tailwind patterns (`[class*=pattern]`).
 - **Route normalization**: Routes match by first path segment only (`/chat/some-session` → `/chat`). Sub-routes use the same scenarios as the parent.
+
+## Authoring components for SSR
+
+- `setup.ts` polyfills `document` at import time but deliberately leaves `window` undefined until `setRoute()` runs — never touch `window` at module/import scope.
+- Inside render bodies, guard any `window` access with a `typeof window === "undefined"` check.
+- Use `useSSRMachine` (`src/frontend/src/hooks/useSSRMachine.ts`) instead of `@xstate/react`'s `useMachine` for any XState machine in an SSR-rendered component.

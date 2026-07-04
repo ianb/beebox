@@ -1,5 +1,12 @@
 # Ideas & Planned Features
 
+## Small backlog (2026-07)
+
+- **Webapp card-mutation concurrency.** Webapp card mutations (todo toggles, scheduler edits) have no concurrency protection, while view-widgets' `writeFile {expect}` already does compare-and-swap. Low priority — agent-led editing dominates — but the webapp paths should eventually get the same guard.
+- **Logging consolidation.** `makeLog` (`src/core/chat-session-log.ts`) exists but ~1000 raw `console.*` calls remain across `src/`. Boxholder wants one way to log everywhere — needs an assessment pass then a migration. (Overlaps the "design and build a logger" item in the CLAUDE.md backlog below.)
+- **SSR lint rule.** Consider a lint rule forcing `useSSRMachine` over `@xstate/react`'s `useMachine` in frontend components, so SSR safety isn't convention-only.
+- **Knip exports enforcement.** `knip.json` excludes the `exports` check; removing the exclusion surfaces ~277 unused exports (measured 2026-07). Burn down the backlog, then re-enable so "only export what's needed" is machine-enforced.
+
 ## MAP.md for docs/generated/
 
 The per-box `docs/generated/` tree is fully templated from this repo by `cb init` / `generateDocs` — every box gets the same contents. The recursive box-side MAP generator hides this subtree (it's not box-specific information), so agents working in a box currently have no index of what's in `docs/generated/`.

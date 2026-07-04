@@ -19,7 +19,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 ## 1. Doctests
 
 **Location:** `test/*.doctest.md`
-**Runner:** TAP with a custom Node.js loader (`src/test-lib/doctest-hooks.mjs`)
+**Runner:** TAP with a custom Node.js loader (the monorepo's `agent-doctest` package — loader hook at `agent-doctest/src/doctest-hooks.mjs`, exposed via the `agent-doctest/hooks` export)
 **Run:** `pnpm test` (runs alongside traditional tests)
 
 Doctest files are executable markdown documents. The prose explains behavior; fenced code blocks contain examples that are run as tests. A Node.js loader hook transforms them into TAP tests at runtime.
@@ -77,7 +77,7 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 
 **Shared helpers:**
 - `test/helpers/doctest-helpers.ts` — `makeTmpBox()` for filesystem tests. Returns `.root`, `.list()`, `.read()`, `.write()`, `.cleanup()`. All output is relative paths (no temp dir names in expected output).
-- `test/helpers/doctest-server.ts` — `makeTestServer()` for route tests. Returns `.inject()` (string for check), `.request()` (parsed object), `.seed()`, `.read()`, `.commitAll()`, `.cleanup()`. Uses Fastify `inject()` internally — no socket server.
+- `test/helpers/doctest-server.ts` — `makeTestServer()` for route tests. Returns `.inject()` (string for check), `.request()` (parsed object), `.seed()`, `.read()`, `.commitAll()`, `.cleanup()`. Uses Fastify `inject()` internally — no socket server. `.request()`/`.inject()` prefix URLs with the test box slug (`/test`); use `.rootRequest()` to hit a root-level route without that prefix.
 
 **Current doctest files:**
 
@@ -235,7 +235,7 @@ steps:
   - name: sync
     run: cb wakeup
     time: "2026-01-20T15:00:00Z"     # sets CB_TIME for this step onward
-    checkpoint: after-sync            # git tag for --from resumption
+    checkpoint: after-sync            # git tag on the step's commit, for manual inspection
     validate:
       - committed: true               # working tree must be clean
       - script: "ls box/jobs/*.intake.job.card | wc -l | grep -q 2"
@@ -281,8 +281,13 @@ HTTP stubs intercept `fetch()` calls. Patterns can use `*` suffix wildcards. Whe
 4. Runs steps sequentially; failed step skips remaining steps
 5. On completion, checks out `main` (test branch preserved for inspection)
 
-Resume from a checkpoint: `cb scenario run <name> --from <checkpoint>`
 Dry run: `cb scenario run <name> --dry-run`
+
+Scenarios always run every step from the beginning — there is no flag to
+resume from a checkpoint. `checkpoint:` on a step still tags the commit
+(`scenario/<name>/<checkpoint>`) for manual inspection with `git checkout`,
+but nothing restores state from it; a prior `--from <checkpoint>` flag that
+only skipped steps without restoring their state was removed.
 
 ### Available Scenarios
 
@@ -342,7 +347,7 @@ The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-c
 - **Each scenario tests one pipeline or behavior.** Don't combine unrelated features. `intake-basic` tests intake jobs only; `tick-basic` tests scheduled-script behavior only.
 - **Seed the minimal data needed.** The `intake-basic` box has just 2 memos in inbox — enough to verify the behavior, not so much that agent processing is slow or unpredictable.
 - **Use `--skip-*` flags** on `cb wakeup` to isolate phases when you don't need the full wakeup cycle.
-- **Use checkpoints** on steps that are expensive (agent runs). This lets you re-run later steps without re-running expensive earlier ones: `cb scenario run my-scenario --from after-wakeup`.
+- **Use checkpoints** on steps that are expensive (agent runs) to tag the resulting commit for manual inspection later. Scenarios always run from the beginning, so a checkpoint doesn't let you skip re-running earlier steps.
 - **Prefer `script:` validations** for structural checks (files exist, XML contains expected content). Use `prompt:` validations only for things that require judgment (quality of generated text, correct interpretation of ambiguous input).
 - **`prompt:` validations cost money.** Each one invokes a Claude agent with up to 5 turns / $0.50. Use them sparingly.
 
@@ -478,8 +483,8 @@ Also enforces directory structure rules (e.g., trick scripts must be in subdirec
 Some frontend bugs only manifest against real layout and measurement — scroll
 behavior, virtualization, streaming-driven reflow — and can't be reproduced in a
 doctest. For these, drive the running app with `bin/browse` (see
-`.claude/skills/agent-browser/SKILL.md`) and use a dev stub to make the input
-deterministic instead of depending on a live agent response.
+`.claude/skills/browse/SKILL.md`, monorepo root) and use a dev stub to make the
+input deterministic instead of depending on a live agent response.
 
 ### `/fakestream` — deterministic chat streaming
 

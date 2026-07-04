@@ -19,7 +19,7 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "users" of the system). See CLAUDE.md note on avoiding personal names.
 
-**card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Most cards are YAML frontmatter + markdown body; a handful with inline-attributed prose remain the legacy XML form. See `docs/adding-schemas.md` and `docs/cards-as-markdown.md`.
+**card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.type.card` (e.g. `Voice_Memo.memo.card`). Every card is YAML frontmatter + markdown body — the legacy XML card *file format* and its loader are gone (see the `cardworks` entry below). That doesn't mean XML-shaped markup is gone from card content: pseudo-XML elements like `<schedule>` (see `docs/chat-schedules.md`) still show up as a live pattern embedded *within* markdown bodies and chat text — a different thing from the on-disk file format. See `docs/adding-schemas.md` and `docs/cards-as-markdown.md`.
 
 **attach scope** — A directory named `<basename>.attach/` sitting next to a card with the same basename. Holds the card's attached files. Cards reference into it via `<filename ref="attach/...">`. Nested cards have nested attach scopes.
 
@@ -39,7 +39,7 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observable state for testing. See `src/services/CLAUDE.md`.
 
-**cardworks** — A former standalone card library, now removed. Its card primitives (`cardSchema()` for YAML-frontmatter cards, `element()` for legacy XML cards, parsing, serialization, Zod-based validation, the frontmatter splitter) were absorbed into `src/cards/` in this repo and are exposed to box-local schemas via the public `callback-box/cards` specifier. See `docs/implemented-plans/remove-cardworks-package.md`.
+**cardworks** — A former standalone card library, now removed. Its frontmatter-card primitives (`cardSchema()`, parsing, serialization, Zod-based validation, the frontmatter splitter) were absorbed into `src/cards/` in this repo and are exposed to box-local schemas via the public `callback-box/cards` specifier. Its XML-card support (`element()`) was not carried forward — the XML file format went away with the package, not into `src/cards/`. See `docs/implemented-plans/remove-cardworks-package.md`.
 
 **retrospective** — The `process-retrospective` procedure (driven by `cb retro`): mines recent chat sessions for what the boxholder implicitly taught the agent and integrates it into personality/guide cards as `source: inferred` beliefs, confidence set by recurrence (1 session = hypothesis, 2–3 = low, 4+ = medium — the ceiling for inferred). Authoritative changes (briefing corrections, conflicts with `user-stated` beliefs) become question cards. Audit trail: run reports in `store/reviews/retro/`, ledger in `.callback-box/retro/`, commits trailered `Retro-Run: <runId>`. See `docs/implemented-plans/box-retrospectives.md`.
 

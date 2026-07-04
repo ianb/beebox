@@ -21,6 +21,8 @@ The harness lives in `src/dev/`:
 
 `docs/maintenance.md` lists this alongside the other periodic tasks.
 
+See `docs/knowledge-audit-rerun-2026-07-03.md` for the latest full-corpus rerun record.
+
 ## Running
 
 ```bash

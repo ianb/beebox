@@ -225,7 +225,7 @@ Simple sync actions (for connectors without push support):
 </scheduled>
 ```
 
-See EXAMPLE_FILES.md for RRULE examples and other card/schema samples.
+See `docs/scheduler.md` and `docs/chat-schedules.md` for scheduling examples.
 
 Schedules can also be embedded in other cards. The tailing phase finds all schedule entries, calculates the next wakeup time, and archives one-time tasks that have no remaining future occurrences.
 
@@ -274,7 +274,7 @@ Each connector has a config card in `/config/connectors/`:
 /config/connectors/voice.connector.card
 ```
 
-Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's available but typically don't modify them. See [EXAMPLE_FILES.md](./EXAMPLE_FILES.md) for connector card examples.
+Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's available but typically don't modify them. See [connectors.md](./connectors.md) for connector card examples.
 
 ### How connectors work
 
@@ -398,7 +398,7 @@ Different command types require different authorization. For example:
 
 This structure lets agents document their reasoning, and lets humans (or validation rules) verify that commands are properly justified before execution.
 
-See [EXAMPLE_FILES.md](./EXAMPLE_FILES.md) for concrete card examples.
+See [adding-schemas.md](./adding-schemas.md) for concrete card examples.
 
 ### Dry run
 
@@ -495,7 +495,7 @@ Schemas define valid card structures using Zod (via cardworks).
 
 Schemas must be explicitly registered in `registry.ts`. A linter checks that all schemas are registered and that all card types have corresponding schemas.
 
-See [EXAMPLE_FILES.md](./EXAMPLE_FILES.md) for schema examples.
+See [adding-schemas.md](./adding-schemas.md) for schema examples.
 
 ### Validation and the agent loop
 
@@ -516,7 +516,7 @@ When an agent can't proceed, it creates a question card.
 
 ### Question card structure
 
-See [EXAMPLE_FILES.md](./EXAMPLE_FILES.md) for question card examples.
+See [adding-schemas.md](./adding-schemas.md) for question card examples.
 
 ### Input types
 

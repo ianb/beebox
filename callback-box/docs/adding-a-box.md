@@ -15,7 +15,11 @@ deployment (`box.example.com`) rather than something every hub needs.
   slug → box path, plus optional `port`/`host`/`lazy`/`idleMs`. See
   `src/hub/hub-config.ts` for the schema. The hub does **not** hot-reload
   this file — adding or removing a box entry needs a hub restart (SIGHUP
-  only reloads the crash-loop latch, not the box list).
+  only reloads the crash-loop latch, not the box list). With `lazy: true`,
+  every configured box starts "stopped" instead of spawning at hub startup —
+  the hub cold-starts a box's `cb serve` child on its first proxied request
+  and idle-stops it again after `idleMs`, the same lazy-per-worktree
+  semantics `bin/router.ts` uses for dev worktrees.
 - **`cb serve`** (no hub) is still the standalone story for a single box —
   see the root [`README.md`](../README.md) for that path. This doc is about
   the multi-box case.

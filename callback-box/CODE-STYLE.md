@@ -56,4 +56,4 @@ pnpm lint:circular  # Circular dependency detector (madge)
 - Prefer explicit types over inference where it aids readability
 - Use meaningful variable names
 - Files max 300 lines, functions max 150 lines (excluding blanks/comments)
-- **Only export what's needed**: don't export functions/constants only used within their own file. knip enforces this.
+- **Only export what's needed**: don't export functions/constants only used within their own file. Not currently knip-enforced — `knip.json` excludes the `exports` check because the codebase has a backlog of ~277 unused exports; enforce this by convention/review until that backlog is cleared.

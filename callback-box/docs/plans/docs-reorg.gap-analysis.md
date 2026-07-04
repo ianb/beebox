@@ -74,6 +74,15 @@ Data-loss / corruption tier:
 
 ## B. Undocumented + possibly-incidental → boxholder questions
 
+**Boxholder dispositions (2026-07-04):** (1) maybe a bug, finicky area —
+investigation commissioned. (2) low priority — agent-led editing matters
+more than interactive; backlog it. (3) no continuation wanted — a test
+should run from the beginning; remove `--from` and fix the doc claim.
+(4) important — gets a CLAUDE.md mention ("persistently missed needs a
+mention, even if small"). (5) there should be one way to log everywhere;
+if there isn't, fix it — consolidation backlogged. (6)–(9) not yet
+answered — remain open questions in `docs-reorg.md`.
+
 1. **Reactor chat session-id plumbing may not resume anything.**
    `chat-reactor-sessions.ts:59-71` pre-mints a UUID;
    `agent.ts:51` records the SDK-assigned id only `if (getSessionId() ===

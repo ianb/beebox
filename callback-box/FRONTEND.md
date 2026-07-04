@@ -51,10 +51,14 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<TextLink>` — styled inline internal link (primary + underline-on-hover).
 - `<ExternalLink>` — external-url link with target=_blank, rel=noopener, trailing icon. Variants: inline / plain / button.
 - `<ExternalIconLink>` — icon-only "open in new tab" affordance with required `label` for aria. `onDark` variant.
+- `<OpenInPanelButton>` — icon-only button that opens a file in the chat's companion side panel; sibling to `<ExternalIconLink>`'s open-in-new-tab action. Sizes `sm`/`md`.
 
 **Display**
 - `<Image>` — src/alt/size with built-in lightbox, error placeholder, bbox overlay, rotation. Lightbox and onClick are mutually exclusive at the type level.
+- `<VideoEmbed>` — responsive 16:9 lazy-loaded video iframe (privacy-friendly nocookie domain), block-level like a figure; used for embedded video in rendered markdown.
 - `<Avatar>` — user profile image with initial fallback. `fallbackClassName` for dark nav contexts.
+- `<FriendlyDate>` — renders an ISO timestamp as a localized date/time in a semantic `<time>`. SSR (`cb render`) and the client format in different timezones, so the text is expected to differ between hydration passes — the component sets `suppressHydrationWarning` to account for it. `mode` prop: `"datetime"` (default) or `"date"`.
+- `<VisuallyHidden>` — renders content for screen readers/the a11y tree only (`sr-only`), hidden visually; use for page-level headings that live inside a component which can collapse or move off-screen at some viewports. `as` prop picks the rendered tag (e.g. `"h1"`).
 - `<Pre>` — preformatted block (code, xml, JSON dumps). Props: `size`, `boxed`, `scroll`, `error`, `muted`.
 - `<HighlightedCode>` — wraps highlight.js output in a `<code class="hljs">`. Use inside a `<Pre boxed>`.
 - `<JsonView>` — human-friendly JSON renderer (keys label indented values, arrays as hanging-indent `0:`/`1:` lists, recursive). Strings keep whitespace and wrap on any character; numbers/booleans/null show via `JSON.stringify` in a distinct color. Use for tool-call args and similar object dumps instead of `JSON.stringify` in a `<Pre>`.
@@ -70,6 +74,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 - `<Accordion>` — collapsible disclosure. `variant: bordered/plain`.
 
 **Overlays & Composite**
+- `<FileEntry>` — canonical one-line file representation (icon + title/path + peek button) shared across the recent-files dropdown and tool-use expansions. Expands in place to the full file viewer; `onPanel` escalates to a companion side panel.
 - `<Dropdown>` + `<MenuItem>` + `<MenuDivider>` — menu with click-outside, escape-to-close, auto-close on select. `<Dropdown>` takes a render-prop `trigger`.
 - `<TabBar>` — generic tab group with active state.
 - `<ImageLightbox>` — fullscreen image overlay (usually accessed via `<Image lightbox>` rather than directly).
@@ -80,7 +85,7 @@ Reach for a primitive from `src/frontend/src/components/ui/` before writing appe
 
 ### `className` convention
 
-Every primitive accepts a `className` prop. It is for **outer-layout classes only** — margin, padding, flex/grid item behavior, sizing, position. The `restrict-component-classes` ESLint rule enforces this on files outside `components/` subdirectories.
+Every primitive accepts a `className` prop. It is for **outer-layout classes only** — margin, padding, flex/grid item behavior, sizing, position. The `restrict-component-classes` ESLint rule enforces this on files outside `components/` subdirectories. The rule can only check classes it can prove statically (string literals, template-literal quasis, and the resolvable branches of conditional/logical expressions) — a value built from a variable, function call, or member expression is invisible to it and passes silently, so keep `className` values literal if you want the rule to actually catch violations.
 
 Inside the primitive, `className` is merged with the component's own classes via the `cn()` helper in `src/frontend/src/lib/cn.ts`, which wraps `tailwind-merge` — caller values win where they overlap (caller's `p-6` overrides component's default `p-3`).
 

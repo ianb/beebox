@@ -56,4 +56,11 @@ Every agent's context is a stack; each layer has a loading class:
 5. New conventions get knowledge audits; run them before calling the work done.
 6. Re-run `cb init` on live boxes so the change actually ships.
 
-Prior art: `callback-box/docs/plans/prompt-surface-ia-review.md` is the worked example of a full-surface review (what was found, what each fix traded against).
+Prior art: `callback-box/docs/plans/prompt-surface-ia-review.md` is the worked example of a full-surface review (what was found, what each fix traded against). `callback-box/docs/prompt-audits.md` is the full lens catalog to work through during the "hunt" step above.
+
+## Invariants: session/prompt cache
+
+Two things any prompt-surface edit has to respect:
+
+- The system prompt must stay time-invariant (no timestamps, no per-turn values) — the warm session-subprocess pool only reuses a prewarmed subprocess when the system prompt is byte-identical across turns.
+- Resumed sessions never re-send the system prompt, so an edit to the prompt surface is invisible to an already-open thread until its session resets.

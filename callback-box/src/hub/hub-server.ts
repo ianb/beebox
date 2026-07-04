@@ -2,10 +2,14 @@
  * `cb hub`'s HTTP/WS router (Track D: chunk D1 shaped the routing seam,
  * chunk D2 adds the auth split, chunk D3 the box picker). Adapted from the
  * monorepo dev router's proxy layer (`../../../bin/router.ts`'s
- * `proxy`/`upgrade` handling), but simplified: no lazy-start
- * (`ensureRunning` becomes a plain `endpoints.get(slug)` lookup -- a box is
- * either up or it isn't, the hub never spawns on first request), no idle
- * shutdown, no Vite/worktree concepts. The routing/proxy layer knows
+ * `proxy`/`upgrade` handling), but simplified relative to that router: no
+ * Vite/worktree concepts. Lazy-start/idle-shutdown IS supported, opt-in per
+ * hub via `hub.json`'s `lazy` flag (`Supervisor`, in `./supervisor.ts`,
+ * mirrors the dev router's `ensureRunning`/idle-timer semantics) -- see
+ * `resolveEndpoint()` below, which prefers `EndpointProvider.ensureRunning`
+ * when the provider offers it and falls back to a plain `endpoints.get(slug)`
+ * lookup otherwise (a non-lazy hub's boxes are resident: either up or not,
+ * never spawned on request). The routing/proxy layer knows
  * NOTHING about child processes -- it only consumes `EndpointProvider`
  * (`./endpoints.js`), per the plan's "routing consumes endpoints" seam.
  *

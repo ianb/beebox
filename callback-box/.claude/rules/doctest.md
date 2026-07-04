@@ -13,6 +13,7 @@ paths:
 - ` ```ts cleanup ` blocks register teardown code via `t.teardown()` — runs after the current test even on failure. **It tears down the test it follows** — examples in later (non-`continue`) blocks run *after* the cleanup, so a tmp box created in one block is already deleted by the time the next block runs. Keep everything that uses the resource in the same block (or chained `continue` blocks) and put the cleanup at the section's end.
 - Multi-line template literals work in example blocks (blank lines, `=>`-looking lines, and `;` line-endings inside the literal are treated as string content). The tracker doesn't understand backticks inside regex literals or `${}` interpolations — avoid those spanning lines.
 - `=> value` starts the expected result on the same line; continues on subsequent lines until a blank line or end of block. `=>` alone starts expected on the next line. Both forms work the same way — **a blank line always separates examples**
+- `=> throws ErrorName` (or `=> throws ErrorName: message`) asserts the expression throws — matched against `err.name` (plus `: message` when given)
 - No `=>` means "just run" — use for setup statements within a block
 - Lines ending with `;` before a check expression are emitted as statements (e.g., `const x = foo();` then `x.length` then `=> 5`)
 - `t.check()` wildcards work in expected values: `«*»` (anything), `«date»`, `«int»`, `«codeblock»` (matches ` ``` `), `«blankline»` (matches empty line in multi-line output), `«name=*»`, `«name=type»`

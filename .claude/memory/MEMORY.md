@@ -4,7 +4,7 @@
 Auto-memory (`~/.claude/projects/` path) is problematic: path-hash-based, machine-specific, not version-controlled, easily lost. Prefer storing durable knowledge in repo files (CLAUDE.md, docs/) rather than here. This file is best for ephemeral/session-adjacent notes, feedback, and preferences. Planned features + ideas live in `docs/ideas.md`. Server operations live in `docs/server-operations.md`. See [issue #25739](https://github.com/anthropics/claude-code/issues/25739) for the open feature request for portable memory.
 
 ## Key Locations
-- Monorepo: `~/src/callback/` (callback-box, callback-clerk, cardworks)
+- Monorepo: `~/src/callback-mono/` (callback-box, callback-clerk, agent-doctest, personal-vibe-check)
 - Boxes: `~/src/boxes/` (outside the monorepo so agents don't inherit parent CLAUDE.md)
 - Test box: `~/src/boxes/test1/`
 

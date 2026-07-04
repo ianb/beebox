@@ -40,6 +40,16 @@ repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full des
   `tricks/`, and `views/` (those moved up to the package root's `src/` and
   `.claude/`). Every box-root-relative path an agent sees (URLs, card refs,
   git trailers) is unaffected — only the three code dirs and `.claude/` moved.
+  Paths come in two string forms (a leading `/` means box-root-relative, not
+  filesystem-absolute; see `src/shared/box-path.ts` for the authoring vs.
+  internal forms and where each is expected) — that convention is unaffected
+  by v2 either.
+
+  A v2 box's URL slug (the `cb serve`/`cb hub` path prefix) is derived from
+  the **package root**'s directory basename, not `content/`'s — `content/`'s
+  own basename is always the literal string `content`, so slugging off it
+  would collide across every v2 box (see `defaultSlugFor` in
+  `src/cli/commands/serve.ts`).
 
   **The git-hooks trap:** `.git` sits at the package root, but git always
   invokes hooks with cwd = the package root regardless of where you ran `git
