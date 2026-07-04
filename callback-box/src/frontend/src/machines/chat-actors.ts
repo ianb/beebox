@@ -240,6 +240,10 @@ export const streamActor = fromCallback(
 
     const unwrapped = input.message.replace(/^<typed[^>]*>/, "").replace(/<\/typed>$/, "");
     if (unwrapped.startsWith("/fakestream")) {
+      // The fake stream never reaches startChatTurn, so settle the receipt
+      // here — otherwise it times out to `rejected` 30s in and the dispatcher
+      // "restores" the already-running prompt into the composer.
+      settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false });
       return runFakeStream(unwrapped, { sendBack, terminal });
     }
 

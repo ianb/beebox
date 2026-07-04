@@ -59,9 +59,14 @@ export function useChatAttachments(opts: {
 }) {
   const { emissionStore, textareaRef } = opts;
   const { editor } = emissionStore;
-  const attachments = useSyncExternalStore(emissionStore.subscribe, () => emissionStore.get().images);
-  const pendingImageCount = useSyncExternalStore(emissionStore.subscribe, () => emissionStore.get().pendingImages);
-  const fileAttachments = useSyncExternalStore(emissionStore.subscribe, () => emissionStore.get().files);
+  // Third argument (server snapshot) is required for SSR (`cb render` goes
+  // through renderToString) — same convention as useInputValue in input-store.ts.
+  const getImages = () => emissionStore.get().images;
+  const getPendingImages = () => emissionStore.get().pendingImages;
+  const getFiles = () => emissionStore.get().files;
+  const attachments = useSyncExternalStore(emissionStore.subscribe, getImages, getImages);
+  const pendingImageCount = useSyncExternalStore(emissionStore.subscribe, getPendingImages, getPendingImages);
+  const fileAttachments = useSyncExternalStore(emissionStore.subscribe, getFiles, getFiles);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addImageFiles = useCallback(async (files: File[]) => {

@@ -114,6 +114,15 @@ function pathBasename(path: string): string {
  * a documented no-op, not an error.
  */
 export function applyRestorePlan(editor: EmissionEditor, plan: RestorePlan): void {
+  // The send that just failed reset the id counters; the restored items keep
+  // their original ids (they must — the text still carries the matching
+  // tokens), so reserve those ids or the next added item could mint a
+  // duplicate [image1]/[file1]/[selection1].
+  editor.reserveIds({
+    image: Math.max(0, ...plan.images.map((image) => image.id)),
+    file: Math.max(0, ...plan.files.map((file) => file.id)),
+    selection: Math.max(0, ...plan.selections.map((selection) => selection.id)),
+  });
   editor.setText(plan.text);
   for (const image of plan.images) {
     const item: ImageItem = {

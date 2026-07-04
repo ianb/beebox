@@ -5,13 +5,14 @@ machine's busy signals onto the target's status vocabulary; `planRestore`
 is the pure half of what happens when a dispatched emission comes back
 `rejected` — putting it back into the composer rather than losing it to
 the error banner. Both are framework-free (no React/DOM), so they're
-doctestable headlessly; `acceptEmission`/`applyRestorePlan` thread a `send`
-function and a live `EmissionEditor` respectively and are covered by
-typecheck + manual verification instead.
+doctestable headlessly; `applyRestorePlan` runs against a real (also
+framework-free) emission store below; `acceptEmission` threads a `send`
+function and is covered by typecheck + manual verification instead.
 
 ```ts setup
-import { chatTargetStatus, planRestore } from "../../src/frontend/src/input/targets/chat-target.js";
+import { chatTargetStatus, planRestore, applyRestorePlan } from "../../src/frontend/src/input/targets/chat-target.js";
 import { createTypedEmission, createVoiceEmission } from "../../src/frontend/src/input/emission.js";
+import { createEmissionStore } from "../../src/frontend/src/input/emission-store.js";
 
 const emptyDraft = { text: "", images: [], pendingImages: 0, files: [], selections: [] };
 ```
@@ -79,4 +80,36 @@ plan3.files.length
 
 plan3.selections.length
 => 1
+```
+
+## applyRestorePlan: restored ids are reserved, so new items can't collide
+
+The send that got rejected already `reset()` the store, dropping the id
+counters back to 1. The restored items keep their original ids (the text
+still carries the matching tokens), so the counters must advance past
+them — otherwise the next pasted image would mint a duplicate `[image1]`.
+
+```ts
+const store = createEmissionStore();
+store.editor.setText("was typing"); // simulates typing after the failed send
+const failed = createTypedEmission({
+  text: "see [image1] and [image2]",
+  images: [
+    { id: 1, mimeType: "image/png", dataBase64: "aGk=" },
+    { id: 2, mimeType: "image/png", dataBase64: "aG8=" },
+  ],
+  files: [{ id: 1, path: "tmp/report.pdf" }],
+  selections: [{ id: 3, ref: "/x.card", text: "t", position: "body", anchor: null, spokenWords: null }],
+});
+applyRestorePlan(store.editor, planRestore(store.get(), failed));
+store.get().text
+=> was typing
+see [image1] and [image2]
+
+store.get().images.map((i) => i.id).join(",")
+=> 1,2
+
+// Fresh ids start past the restored ones — no [image1]/[file1]/[selection3] duplicates.
+[store.editor.nextImageId(), store.editor.nextFileId(), store.editor.nextSelectionId()].join(",")
+=> 3,2,4
 ```

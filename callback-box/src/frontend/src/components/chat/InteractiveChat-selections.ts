@@ -24,7 +24,9 @@ export function useChatSelections(opts: {
 }) {
   const { emissionStore, textareaRef } = opts;
   const { editor } = emissionStore;
-  const selections = useSyncExternalStore(emissionStore.subscribe, () => emissionStore.get().selections);
+  // Server snapshot (third arg) required for SSR — see InteractiveChat-attachments.ts.
+  const getSelections = () => emissionStore.get().selections;
+  const selections = useSyncExternalStore(emissionStore.subscribe, getSelections, getSelections);
 
   const addSelection = useCallback((selection: AddSelectionInput, voice: { anchor: string | null; spokenWords: number | null }) => {
     const { anchor, spokenWords } = voice;

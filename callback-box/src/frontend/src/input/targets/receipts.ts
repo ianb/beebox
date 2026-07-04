@@ -38,12 +38,20 @@ const pending = new Map<string, PendingReceipt>();
  * error) if nothing reports.
  */
 export function expectReceipt(emissionId: string): Promise<Receipt> {
+  // A duplicate expectation for the same id (a double dispatch) supersedes
+  // the older one: settle it as rejected now, so its promise doesn't hang
+  // until timeout and its timer can't fire later against the new entry.
+  settleReceipt({ disposition: "rejected", emissionId, reason: "superseded by a newer send with the same id" });
   return new Promise((resolve) => {
-    const timer = setTimeout(() => {
-      pending.delete(emissionId);
-      resolve({ disposition: "rejected", emissionId, reason: "no outcome reported (timeout)" });
-    }, RECEIPT_TIMEOUT_MS);
-    pending.set(emissionId, { resolve, timer });
+    const entry: PendingReceipt = {
+      resolve,
+      timer: setTimeout(() => {
+        if (pending.get(emissionId) !== entry) return;
+        pending.delete(emissionId);
+        resolve({ disposition: "rejected", emissionId, reason: "no outcome reported (timeout)" });
+      }, RECEIPT_TIMEOUT_MS),
+    };
+    pending.set(emissionId, entry);
   });
 }
 

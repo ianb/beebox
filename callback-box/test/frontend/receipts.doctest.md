@@ -58,3 +58,28 @@ const ra = await a;
 ra.disposition === "rejected" && ra.reason === "network"
 => true
 ```
+
+## A duplicate expectation supersedes the older one
+
+A double dispatch of the same emission id must not leave the first
+promise hanging until timeout, nor let its stale timer clobber the new
+entry: the older expectation settles `rejected` immediately and the
+newer one carries the id alone.
+
+```ts
+const first = expectReceipt("msg-dup");
+const second = expectReceipt("msg-dup");
+const r1 = await first;
+r1.disposition === "rejected" && r1.reason.includes("superseded")
+=> true
+
+pendingReceiptCount()
+=> 1
+
+settleReceipt({ disposition: "sent", emissionId: "msg-dup", deduplicated: false });
+(await second).disposition
+=> sent
+
+pendingReceiptCount()
+=> 0
+```
