@@ -3,8 +3,9 @@
 **Status:** Draft for review.
 **Supersedes:** `docs/unimplemented-plans/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
 design from the current codebase, corrects what has gone stale, and locks the decisions the
-boxholder made on 2026-07-03. Companion working notes: `scratch/cb-as-library-fresh-design.md`
-(independent re-derivation) and `scratch/cb-as-library-comparison.md` (reconciliation).
+boxholder made on 2026-07-03. (Session working notes — an independent re-derivation and a
+reconciliation against the old plan — lived in the untracked monorepo `scratch/` dir; their
+conclusions are folded into this document.)
 
 Each box becomes a Node package that depends on `callback-box` as a library — real imports,
 real types, its own process — while the *operational* box (cards, config, runtime state) stays
@@ -68,7 +69,7 @@ existing pieces, and whether each is reused or replaced:
 | Template sync: *"When a template changes upstream, we want to push the new version into boxes — but only if the local copy hasn't been customised."* park-on-divergence + `boxOwnedFields` | `src/core/install-template-file.ts:1-30` | **Reuse** — the second stage of `cb upgrade` |
 | `cb serve` box resolution: args → manifest (`~/.config/cb/boxes.json`) → cwd | `src/cli/commands/serve.ts:60-75` | **Replace** — standalone `cb serve` serves the current box; the manifest is retired in favor of hub config |
 | Multi-box Fastify (per-box scope, per-box EventBus, webhooks outside auth) | `src/webapp/server.ts:126-133`, `src/webapp/server-box-scope.ts:200-213` | **Reuse internals**; the multi-box loop survives only behind the legacy escape hatch during transition |
-| In-process Google OAuth gate + per-box `allowedEmails` ACL | `src/webapp/` auth preHandler, `deploy/README.md:144-173` | **Split**: login moves to the hub; the per-box ACL check stays in the box process |
+| In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80` (missing/empty `allowedEmails` = owner-only, fail-closed — note `deploy/README.md:171` stales this as "open to any authenticated user"; fix the README) | **Split**: login moves to the hub; the per-box ACL check stays in the box process. Identity is *also* recomputed in tRPC context creation (`server-box-scope.ts:149`) — header identity must thread through both paths, not just the preHandler |
 | Dev router: lazy spawn, prefix routing, idle shutdown, WebSocket passthrough | `bin/router.ts:384-596` | **Reuse the shape** — the hub is its productization; the dev router itself stays monorepo-only |
 | `cb init` (idempotent scaffold: dirs, templates, rules, skills, hooks, docs, search index) | `src/cli/commands/init.ts:26-160` | **Reuse** — remains the idempotent step after package scaffolding |
 | Session/env plumbing: `buildScriptEnv` (`CB_BOX_ROOT`, `PATH` prepend) | `src/core/script-env.ts` | **Reuse**, paths updated for the new layout |
@@ -144,7 +145,9 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
 - **Home Assistant's partial backup/restore** (per-add-on restore) — noted for the hub's
   future: restoring one box without touching siblings is inherent in per-box git repos.
 - **OpenClaw** (https://github.com/openclaw/openclaw; local review at
-  `docs/openclaw-architecture-review.md`) — verified: `npm i -g openclaw` +
+  monorepo-root `docs/openclaw-architecture-review.md`, which covers memory/plugins, not
+  lifecycle; the lifecycle claims below were verified against the repo directly) —
+  verified: `npm i -g openclaw` +
   `openclaw onboard --install-daemon` wizard, `openclaw doctor`, `openclaw update
   --channel stable|beta|dev`, minimal `~/.openclaw/openclaw.json`, single gateway daemon
   over many channel workspaces, ClawHub skill registry. **Adapt**: onboarding-wizard +
@@ -358,8 +361,12 @@ against the surface only via the resolve-hook/shim fakery.
 `./server` exports the existing `createServer`/`startServer` (`src/webapp/server.ts:40`,
 already side-effect-free by design — `server-main.ts` exists precisely so importing the
 server has no side effects).
-**First chunk:** add the three export entries + type shipping; a doctest that imports each
-export the way box code will and exercises one symbol from each.
+**First chunk:** make the surface actually shippable — two latent defects block it today:
+the `"."` export targets `dist/cli/index.js` (`package.json:8`) but the bundle build emits
+`dist/cli.mjs` (only the tsc tree produces `dist/cli/`, and it isn't always present), and
+`tsconfig.json:23` has `"declaration": false`, so no types ship at all. Fix the export
+targets, turn on declarations (or a separate d.ts build), add the three new export entries;
+a doctest imports each export the way box code will and exercises one symbol from each.
 
 ### Track B — Box package contract
 **What:** The repo layout above; `cb init` learns to scaffold the wrapper (package.json,
@@ -375,10 +382,18 @@ and v2 layouts (the bilingual switch lands before anything depends on it).
 **What:** Schema registry reads `src/schemas/` (v2) or `config/schemas/` (legacy); native
 import resolution for v2 (no resolve hook); view compiler node-target uses real resolution;
 view metadata read from the imported compiled module instead of regex; tricks unchanged
-except path. Stance B editing model formalized: views/schemas/tricks are the hot-reload
-surface (chokidar watcher already exists for schemas — `src/core/schema-watcher.ts`);
-`package.json`/`src` beyond that surface is off-limits to the operating agent, stated in the
-agent guide.
+except path. Honest sizing: this is a path-model change, not a branch — the legacy path is
+hardcoded across the loader (`registry.ts:296`), the watcher (`schema-watcher.ts:37`), view
+listing and routes (`compiler.ts:264`, `webapp/routes/views.ts:26`), plus validation and
+docs generation; enumerate and update all of them behind the `boxPackageRoot()` predicate.
+Two surfacing fixes ride along: (a) schema load failure today is only a `console.warn`
+(`registry.ts:383`) — keep-last-good stays, but the failure also lands in `cb status` and
+`/healthz`; (b) a v2 box containing legacy-path `content/config/schemas/*.ts` is an explicit
+`cb validate`/`cb status` error (the PostToolUse hook exits silently for non-card `.ts`
+paths — `validate-hook.ts:101` — so without this check a misplaced schema is invisible).
+Stance B editing model formalized: views/schemas/tricks are the hot-reload surface (chokidar
+watcher already exists for schemas — `src/core/schema-watcher.ts`); `package.json`/`src`
+beyond that surface is off-limits to the operating agent, stated in the agent guide.
 **Why:** This is the "clarifying imports" heart — the old plan's pain points #1–#4.
 **First chunk:** v2 branch of `loadBoxSchemas` with native import + keep-last-good retained,
 doctested against a fixture v2 box.
@@ -460,7 +475,7 @@ the top priority is the good end-state, not legacy accommodation.
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
 | `pnpm install` fails mid-`cb upgrade` (network, bad tarball) | planned (Track E chunk) | revert bump + reinstall previous + nonzero exit | clear (log + exit code) |
-| Box `src/schemas` file throws on import after upgrade | exists pattern (`registry.ts:347-353` keep-last-good) | keep-last-good + lint surfacing | clear |
+| Box `src/schemas` file throws on import after upgrade | exists pattern (`registry.ts:347-353` keep-last-good) | keep-last-good; today surfaced only via `console.warn` (`registry.ts:383`) — Track C adds `cb status`/`/healthz` surfacing | clear once Track C lands; **currently near-silent** |
 | Hub child crash-loops (bad box, port conflict) | planned (Track D) | restart with backoff, box marked unhealthy in picker/healthz | clear |
 | Box process trusts identity header outside hub mode (spoofable) | planned (Track D chunk: header rejected unless hub-mode flag) | fail closed by default | clear |
 | `.claude/memory` symlink breaks on migration (Claude Code keys project dirs by cwd path; cwd moves from `<repo>` to `<repo>/data`) | planned (Track H script test) | migration re-links and moves the old project memory dir | clear if handled; **silent memory loss if forgotten** — hence in the migration script, not the runbook |
@@ -473,9 +488,10 @@ the top priority is the good end-state, not legacy accommodation.
 ## Agent-flow / user-flow edge cases
 
 - **Wrong location for new code** (agent writes a schema into `content/config/schemas/` out of
-  habit) — **ADDRESSED**: legacy path absent in v2 boxes; `cb validate` + generated
-  `.claude/rules` and the schemas/views CLAUDE.md scaffolds point at `src/`; knowledge audit
-  below verifies recall.
+  habit) — **ADDRESSED (Track C, new check)**: today this would be *silent* (the validate
+  hook exits 0 for non-card `.ts` paths, `validate-hook.ts:101`), so Track C adds an explicit
+  legacy-path error to `cb validate`/`cb status`; the generated rules and schemas/views
+  CLAUDE.md scaffolds point at `src/`, and the knowledge audit below verifies recall.
 - **Stale ref** — **ADDRESSED** by design: box-root-relative paths are unchanged (boxRoot
   moves with the content), so no new staleness class is introduced.
 - **Two agents touching the same card** — unchanged by this plan; existing behavior. **NOT
@@ -553,7 +569,10 @@ surfaces, never in an operating agent's context.
 3. **B2** scaffold: `cb init` writes the wrapper for new boxes; box-shape spec consolidation.
 4. **C1** schema loading v2 (native resolution), **C2** views (native node-target +
    real-import metadata), **C3** agent-guide/rules for the editing model. Depends on A1+B1.
-5. **F1** release script + tarball channel; smoke: fresh scaffold in a temp dir boots.
+5. **F1** release script + tarball channel. **This is the plan's first hard gate**: a fresh
+   external v2 box, scaffolded in a temp dir against the tarball, must import every public
+   export, typecheck, pass `cb validate`, and serve its `content/` — before any hub, fleet,
+   or migration work proceeds. (The stranger path is the point; prove it first.)
 6. **E1** `cb upgrade` (+ revert path), **E2** version-lag surfacing.
 7. **D1** hub spawn/route/health, **D2** login extraction + trusted-header mode, **D3** box
    picker. D1 depends on nothing above (can parallel A–C); D2 depends on D1.
