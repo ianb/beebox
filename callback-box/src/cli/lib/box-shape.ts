@@ -207,3 +207,22 @@ export function boxCodePaths(shape: BoxShape): BoxCodePaths {
     tricksDir: path.join(shape.packageRoot, "src/tricks"),
   };
 }
+
+/**
+ * `boxCodePaths`, expressed as POSIX-style relative paths from `shape.boxRoot`
+ * — the operating agent's cwd. Agent-facing prose (the generated agent guide)
+ * needs "how do I reach this from where I'm sitting," not an absolute path
+ * that embeds this machine's temp/home directory. For a legacy box this is
+ * the same paths already relative (`config/schemas`); for a package (v2) box
+ * it's the `../src/...` climb out of `content/` into the package root.
+ */
+export function boxCodePathsRelativeToBoxRoot(shape: BoxShape): BoxCodePaths {
+  const paths = boxCodePaths(shape);
+  const toRelative = (absolute: string): string =>
+    path.relative(shape.boxRoot, absolute).split(path.sep).join("/");
+  return {
+    schemasDir: toRelative(paths.schemasDir),
+    viewsDir: toRelative(paths.viewsDir),
+    tricksDir: toRelative(paths.tricksDir),
+  };
+}

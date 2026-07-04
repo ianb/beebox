@@ -19,6 +19,7 @@ import {
   LOCATION_SKILL,
   SCHEDULES_SKILL,
   TRICKS_SKILL,
+  TRICKS_SKILL_V2,
   VIEWS_SKILL,
 } from "./box-skills-content.js";
 import { vtimezoneBlock } from "../connectors/google-calendar-ics.js";
@@ -44,6 +45,8 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
   const timezone =
     (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const vtimezone = vtimezoneBlock(timezone).replaceAll("\r\n", "\n");
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const tricksSkillContent = shape.shapeVersion === 1 ? TRICKS_SKILL : TRICKS_SKILL_V2;
   return [
     {
       name: "build-course",
@@ -55,7 +58,7 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
     { name: "email", content: EMAIL_SKILL },
     { name: "location", content: LOCATION_SKILL },
     { name: "schedules", content: SCHEDULES_SKILL },
-    { name: "tricks", content: TRICKS_SKILL },
+    { name: "tricks", content: tricksSkillContent },
     { name: "views", content: VIEWS_SKILL },
   ];
 }

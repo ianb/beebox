@@ -77,12 +77,18 @@ export interface ScanOptions {
   dryRun?: boolean;
 }
 
-/** Directories that should never be descended into when finding attach scopes. */
+/**
+ * Directories that should never be descended into when finding attach
+ * scopes. Matched against a directory's basename (`Dirent.name`), never a
+ * path, so a single `"node_modules"` entry already covers a trick's nested
+ * `node_modules/` regardless of where it lives (`boxRoot/tricks/` for a
+ * legacy box, `packageRoot/src/tricks/` for a package box) — no
+ * shape-specific entry is needed here.
+ */
 const SKIP_DIRS = new Set([
   ".git",
   "node_modules",
   ".callback-box",
-  "tricks/node_modules",
   ".scan-archive",
   ".scan-api",
 ]);

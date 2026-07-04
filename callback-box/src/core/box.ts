@@ -140,7 +140,20 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitattributes"), gitattributes);
 
-  // Always write .gitignore (keep in sync with cb version)
+  // Always write .gitignore (keep in sync with cb version). The "trick
+  // dependencies" entry only applies to a legacy (v1) box, whose tricks live
+  // at `boxRoot/tricks/` — inside this very .gitignore's tree. A v2 box's
+  // tricks live at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`)
+  // entirely, so an entry here would never match anything; that box's
+  // `src/tricks/node_modules/` is already covered by the package root's own
+  // `.gitignore` (`ROOT_GITIGNORE` in `./box-package.js`).
+  const tricksGitignoreBlock =
+    shape.shapeVersion === 1
+      ? `
+# Trick dependencies (installed by agent)
+tricks/node_modules/
+`
+      : "";
   const gitignore = `# Callback Box .gitignore
 # Lock files
 .cb-lock
@@ -161,10 +174,7 @@ docs/generated/
 
 # Schedule state (machine-local)
 config/schedules/.state/
-
-# Trick dependencies (installed by agent)
-tricks/node_modules/
-
+${tricksGitignoreBlock}
 # Chat file uploads (transient, swept by cb wakeup housekeeping)
 tmp/
 

@@ -32,6 +32,7 @@ import { installSchemasGuide, installViewsGuide } from "./box-templates.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "./install-template-file.js";
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
+import { getBoxShapeOrLegacyFallback, type BoxShape } from "../cli/lib/box-shape.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./generate-docs-shared.js";
 import { generateCbCommands } from "./generate-docs-cb-commands.js";
@@ -328,6 +329,7 @@ interface DocWritePlan {
   procedures: ProcedureSummary[];
   allCardSchemas: typeof cardSchemas;
   personalitySection: string | undefined;
+  shape: BoxShape;
 }
 
 /**
@@ -335,10 +337,10 @@ interface DocWritePlan {
  * connectors, views, voice, per-card-type, etc.) in parallel.
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, debug, procedures, allCardSchemas, personalitySection } = plan;
+  const { boxRoot, debug, procedures, allCardSchemas, personalitySection, shape } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection }), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, shape }), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
@@ -430,10 +432,14 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const allCardSchemas = [...cardSchemas, ...boxSchemas.cardSchemas];
 
+  // Determines whether the agent guide teaches the package-layout code
+  // location rules — see "boxCodeLocationSection" in agent-guide/box-shape.ts.
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot, debug);
 
-  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, personalitySection });
+  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, personalitySection, shape });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot, debug);
@@ -443,7 +449,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides }), debug }));
+    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides, shape }), debug }));
 
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);

@@ -1,7 +1,9 @@
 /**
  * cb trick - Run box-local agent-authored scripts.
  *
- * Tricks are TypeScript scripts in tricks/scripts/<name>/index.ts.
+ * Tricks are TypeScript scripts in `<tricksDir>/scripts/<name>/index.ts`,
+ * where `tricksDir` is `boxCodePaths(shape).tricksDir` — `boxRoot/tricks`
+ * for a legacy (v1) box, `packageRoot/src/tricks` for a package (v2) box.
  * The agent writes them; they're only callable from within the box.
  *
  * Scripts run as subprocesses via tsx with their own package context,
@@ -16,6 +18,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { stageAll, commit, getStatus } from "../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
+import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 const require = createRequire(import.meta.url);
 
@@ -66,10 +69,11 @@ async function readDescription(entryPoint: string): Promise<string> {
 }
 
 /**
- * Discover all tricks by scanning tricks/scripts/ for directories with index.ts.
+ * Discover all tricks by scanning `<tricksDir>/scripts/` for directories
+ * with index.ts.
  */
-async function discoverTricks(boxRoot: string): Promise<TrickInfo[]> {
-  const scriptsDir = path.join(boxRoot, "tricks/scripts");
+async function discoverTricks(tricksDir: string): Promise<TrickInfo[]> {
+  const scriptsDir = path.join(tricksDir, "scripts");
 
   let entries: string[];
   try {
@@ -102,13 +106,17 @@ async function discoverTricks(boxRoot: string): Promise<TrickInfo[]> {
 
 interface RunTrickOptions {
   boxRoot: string;
+  tricksDir: string;
   name: string;
   entryPoint: string;
   args: string[];
 }
 
 /**
- * Run a trick as a subprocess via tsx.
+ * Run a trick as a subprocess via tsx. The subprocess cwd is `tricksDir`
+ * (`boxRoot/tricks` for a legacy box, `packageRoot/src/tricks` for a
+ * package box) so relative imports and the trick's own `package.json`
+ * resolve the same way in either shape.
  * Returns the exit code.
  */
 async function runTrick(opts: RunTrickOptions): Promise<number> {
@@ -118,7 +126,7 @@ async function runTrick(opts: RunTrickOptions): Promise<number> {
   });
   return new Promise((resolve) => {
     const child = spawn(process.execPath, [resolveTsx(), opts.entryPoint, ...opts.args], {
-      cwd: path.join(opts.boxRoot, "tricks"),
+      cwd: opts.tricksDir,
       env,
       stdio: "inherit",
     });
@@ -141,15 +149,21 @@ export const trickCommand = new Command("trick")
   .allowExcessArguments(true)
   .action(async function (this: Command, name: string | undefined) {
     const boxRoot = await requireBoxRoot();
+    const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+    const tricksDir = boxCodePaths(shape).tricksDir;
+    // The relative "tricks/scripts" (or "../src/tricks/scripts" for a
+    // package box) shown in user-facing messages below, expressed from the
+    // agent's actual cwd (boxRoot).
+    const relScriptsDir = `${boxCodePathsRelativeToBoxRoot(shape).tricksDir}/scripts`;
 
     if (!name) {
       // List available tricks
-      const tricks = await discoverTricks(boxRoot);
+      const tricks = await discoverTricks(tricksDir);
       if (tricks.length === 0) {
         console.log("No tricks found.");
         console.log("");
-        console.log("Create one at tricks/scripts/<name>/index.ts");
-        console.log("See tricks/scripts/CLAUDE.md for details.");
+        console.log(`Create one at ${relScriptsDir}/<name>/index.ts`);
+        console.log(`See ${relScriptsDir}/CLAUDE.md for details.`);
         return;
       }
 
@@ -163,14 +177,14 @@ export const trickCommand = new Command("trick")
     }
 
     // Run the named trick
-    const entryPoint = path.join(boxRoot, "tricks/scripts", name, "index.ts");
+    const entryPoint = path.join(tricksDir, "scripts", name, "index.ts");
     try {
       await fs.access(entryPoint);
     } catch (_e) {
       // fs.access throws only because the entry point is absent; the
       // not-found message below is the meaningful handling of that.
       console.error(`Trick not found: ${name}`);
-      console.error(`Expected: tricks/scripts/${name}/index.ts`);
+      console.error(`Expected: ${relScriptsDir}/${name}/index.ts`);
       process.exitCode = 1;
       return;
     }
@@ -178,7 +192,7 @@ export const trickCommand = new Command("trick")
     // Collect remaining args after the trick name
     const trickArgs = this.args.slice(1);
 
-    const exitCode = await runTrick({ boxRoot, name, entryPoint, args: trickArgs });
+    const exitCode = await runTrick({ boxRoot, tricksDir, name, entryPoint, args: trickArgs });
     if (exitCode !== 0) {
       process.exitCode = exitCode;
       return;
