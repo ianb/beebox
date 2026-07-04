@@ -1,5 +1,5 @@
 /**
- * The one user-send funnel (docs/plans/input-extraction.md chunk 1): every
+ * The one user-send funnel (docs/implemented-plans/input-extraction.md chunk 1): every
  * send site builds an Emission and lands in `dispatchEmission`, which
  * assembles the wire payload via the chat-target assembler and dispatches
  * SEND. Witness context (open card, zoomed view, time passed) is captured

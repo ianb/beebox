@@ -1,6 +1,6 @@
 /**
  * VoiceIntent — the four spoken commands the realtime-transcription
- * keyword spotter recognizes (docs/plans/input-extraction.md, chunk 5;
+ * keyword spotter recognizes (docs/implemented-plans/input-extraction.md, chunk 5;
  * vocabulary locked in as `submit | cancel | mic-off | erase`). The feeder
  * (`useRealtimeTranscription`) emits these through one `onVoiceIntent`
  * handler instead of four separate callbacks; the input side

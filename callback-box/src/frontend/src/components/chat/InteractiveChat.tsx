@@ -77,7 +77,7 @@ interface InteractiveChatProps {
   /**
    * The lifted emission store: created once in `ChatPage`, above this
    * component's `key={keyState.epoch}` remount boundary, so the in-progress
-   * composition survives a session switch (docs/plans/input-extraction.md,
+   * composition survives a session switch (docs/implemented-plans/input-extraction.md,
    * chunk 4).
    */
   emissionStore: EmissionStore;
@@ -128,7 +128,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
   // The one user-send funnel: every send site builds an Emission and lands
-  // in dispatchEmission (docs/plans/input-extraction.md chunk 1); assembly
+  // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
   // and witness capture live in InteractiveChat-dispatch.ts.
   const attach = useChatAttachments({ emissionStore, textareaRef });
   const selections = useChatSelections({ emissionStore, textareaRef });

@@ -59,7 +59,7 @@ interface VoiceDevices {
  * Module-level so the hook body stays under the per-function line budget.
  */
 function runKeywordSend(opts: {
-  /** The realtime keyword spotter's "submit" intent (docs/plans/input-extraction.md, chunk 5). */
+  /** The realtime keyword spotter's "submit" intent (docs/implemented-plans/input-extraction.md, chunk 5). */
   intent: Extract<VoiceIntent, { kind: "submit" }>;
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
@@ -112,7 +112,7 @@ function runKeywordSend(opts: {
     dispatchEmission(emission);
     // Keep the original recording around, keyed by this emission's id, so the
     // agent can fetch it via `cb chat get-last-audio` — retention is
-    // per-emission (docs/plans/input-extraction.md, chunk 5), so nothing
+    // per-emission (docs/implemented-plans/input-extraction.md, chunk 5), so nothing
     // ever needs to clear it on a later send. No recording -> an explicit
     // tombstone, so get-last-audio answers none instead of an older message's.
     if (audioBlob) retainVoiceAudio(emission.id, { blob: audioBlob, text: emission.text });

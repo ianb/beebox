@@ -1,6 +1,6 @@
 /**
  * Whole-emission persistence, wired to the lifted singleton store
- * (docs/plans/input-extraction.md, chunk 4). Subscribes to the emission
+ * (docs/implemented-plans/input-extraction.md, chunk 4). Subscribes to the emission
  * store (all slices — text, images, files, selections) and debounce-writes
  * to `localStorage` under the singleton key (`emissionKey`, one per box —
  * NOT per session), so the composition survives a session switch and a

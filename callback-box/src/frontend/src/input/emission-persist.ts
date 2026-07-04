@@ -1,6 +1,6 @@
 /**
  * Whole-emission persistence, singleton-keyed
- * (docs/plans/input-extraction.md, chunk 4).
+ * (docs/implemented-plans/input-extraction.md, chunk 4).
  *
  * The composition survives reloads AND session switches under ONE key per
  * box (`cb-input-emission:<box>`) — the input is the person's instrument,

@@ -7,7 +7,7 @@
  * send paths).
  *
  * State lives in the emission store (`../../input/emission-store.ts`,
- * docs/plans/input-extraction.md chunk 2); this hook is a thin React
+ * docs/implemented-plans/input-extraction.md chunk 2); this hook is a thin React
  * binding subscribing to the selections slice and calling `EmissionEditor`
  * methods for every mutation.
  */

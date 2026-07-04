@@ -29,7 +29,7 @@ export type { TranscriptionState };
 export interface UseRealtimeTranscriptionOptions {
   /**
    * The four spoken commands the keyword spotter recognizes, as one
-   * `VoiceIntent` stream (docs/plans/input-extraction.md, chunk 5) instead
+   * `VoiceIntent` stream (docs/implemented-plans/input-extraction.md, chunk 5) instead
    * of four separate callbacks. `submit`'s `text` is the processed
    * transcript, `matchedPhrase` the trigger phrase the realtime pass
    * matched (so a later transcription pass that drops it can re-inject),

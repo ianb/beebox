@@ -1,5 +1,5 @@
 /**
- * Test-only mic seam (docs/plans/input-extraction.md, chunk 5) for
+ * Test-only mic seam (docs/implemented-plans/input-extraction.md, chunk 5) for
  * behaviors a real device can't reliably reproduce on demand: a slow
  * permission grant, an outright denial, and the OS yanking the mic
  * mid-recording (track `ended`, e.g. a phone call, another app grabbing

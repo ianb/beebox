@@ -10,7 +10,7 @@
  * recovery the text is surfaced in a dedicated widget — not auto-filled into
  * the composer — and submitted as a narration `<speech>` message.
  *
- * Since chunk 4 (docs/plans/input-extraction.md) the key is a singleton per
+ * Since chunk 4 (docs/implemented-plans/input-extraction.md) the key is a singleton per
  * box, not per session — matching the composer's singleton-draft decision:
  * the mic is one instrument, not a per-conversation buffer. The one-shot
  * `adoptLegacyDictationDrafts` mirrors `adoptLegacyComposerDrafts`

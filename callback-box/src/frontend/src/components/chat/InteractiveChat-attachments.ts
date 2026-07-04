@@ -5,7 +5,7 @@
  * textarea cursor; removal strips the matching tokens back out.
  *
  * State itself lives in the emission store (`../../input/emission-store.ts`,
- * docs/plans/input-extraction.md chunk 2) — this hook is a thin React
+ * docs/implemented-plans/input-extraction.md chunk 2) — this hook is a thin React
  * binding: it subscribes to the images/pendingImages/files slices via
  * `useSyncExternalStore` and calls `EmissionEditor` methods for every
  * mutation. DOM-bound caret handling (`insertTokensAtCursor`) has no place

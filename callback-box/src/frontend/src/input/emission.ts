@@ -1,7 +1,7 @@
 /**
  * The Emission — the message-being-composed as a value
  * (docs/plans/input-widget.md; implementation plan
- * docs/plans/input-extraction.md, chunk 1).
+ * docs/implemented-plans/input-extraction.md, chunk 1).
  *
  * One serializable noun bundling everything the input accumulates: text,
  * images, file references, selections, and voice metadata. Every send site

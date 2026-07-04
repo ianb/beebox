@@ -1,5 +1,5 @@
 /**
- * ChatTarget — status + accept (docs/plans/input-extraction.md, chunk 3).
+ * ChatTarget — status + accept (docs/implemented-plans/input-extraction.md, chunk 3).
  * Wraps today's machine/backend state into `TargetStatus`, and turns a
  * dispatched Emission into a settled `Receipt` by pairing the receipt
  * registry (`targets/receipts.ts`) with the wire assembler

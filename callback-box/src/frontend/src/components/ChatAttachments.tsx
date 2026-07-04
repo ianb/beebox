@@ -18,7 +18,7 @@ import type { ImageItem, FileItem } from "../input/emission-store";
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview
  * metadata). Defined in `input/emission-store.ts` (the ONE emission-draft
- * store, chunk 2 of docs/plans/input-extraction.md); re-exported here under
+ * store, chunk 2 of docs/implemented-plans/input-extraction.md); re-exported here under
  * its historical name so this component's own prop types read naturally.
  */
 export type AttachmentItem = ImageItem;

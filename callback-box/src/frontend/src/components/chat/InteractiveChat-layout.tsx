@@ -95,7 +95,7 @@ export function ChatStatusBanners(props: {
       ) : null}
 
       {/* Queued-message indicator + stop controls now live in TargetStrip
-          (docs/plans/input-extraction.md chunk 3) — the target's own status
+          (docs/implemented-plans/input-extraction.md chunk 3) — the target's own status
           row, rendered by InteractiveChat-view.tsx just after this. */}
 
       {/* Active schedules */}
@@ -124,7 +124,7 @@ export function ChatStatusBanners(props: {
  * Dismissible notice for attachments dropped when a persisted emission was
  * restored — their `tmp/…` upload no longer exists (housekeeping sweeps
  * uploads after 7 days), so they're never restored silently-broken
- * (docs/plans/input-extraction.md, chunk 4). Rendered in the composer
+ * (docs/implemented-plans/input-extraction.md, chunk 4). Rendered in the composer
  * region, above the attachment panels, alongside `RecoveredDictation`.
  */
 export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: () => void }) {

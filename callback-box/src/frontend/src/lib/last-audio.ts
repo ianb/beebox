@@ -4,7 +4,7 @@
  * `cb chat get-last-audio`; the server relays the request over the event
  * bus; this tab uploads a cached recording in response).
  *
- * Replaces the old single-slot cache (docs/plans/input-extraction.md,
+ * Replaces the old single-slot cache (docs/implemented-plans/input-extraction.md,
  * chunk 5): recordings are now retained per emission id in a
  * `RetentionStore` (`input/retention.ts`), so a send never has to clear
  * anything — `latest()` is well-defined by construction. Recordings live
@@ -29,7 +29,7 @@ export interface VoiceAudioPayload {
  */
 const MAX_TEXT_CHARS = 1500;
 
-/** v1 policy (docs/plans/input-extraction.md, chunk 5): memory-only, 5 most recent. */
+/** v1 policy (docs/implemented-plans/input-extraction.md, chunk 5): memory-only, 5 most recent. */
 const RETENTION_CAPACITY = 5;
 
 // `null` is a tombstone: a voice send that had NO recording (stop-and-send,

@@ -43,7 +43,7 @@ export function ChatPage() {
   // Created here, above the InteractiveChat remount boundary below, so the
   // in-progress composition (text, images, files, selections) survives a
   // session switch — the design's singleton-draft promise
-  // (docs/plans/input-extraction.md, chunk 4). ChatPage itself only remounts
+  // (docs/implemented-plans/input-extraction.md, chunk 4). ChatPage itself only remounts
   // on a hard page navigation (route change), not a session switch.
   const emissionStore = useEmissionStoreInstance(boxSlug);
   const sessionParam = search.session;

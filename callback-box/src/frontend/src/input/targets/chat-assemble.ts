@@ -1,6 +1,6 @@
 /**
  * Chat-target assembly — the ONE place an Emission becomes a chat wire
- * payload (docs/plans/input-extraction.md, chunk 1). Replaces the five
+ * payload (docs/implemented-plans/input-extraction.md, chunk 1). Replaces the five
  * scattered payload builders (typed handleSend, keyword-voice submit, the
  * desktop/mobile stop-and-send buttons, recovered dictation), whose exact
  * output strings are pinned by test/frontend/emission-assemble.doctest.md.

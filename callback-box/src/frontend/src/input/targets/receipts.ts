@@ -1,5 +1,5 @@
 /**
- * Receipt correlation for chat sends (docs/plans/input-extraction.md,
+ * Receipt correlation for chat sends (docs/implemented-plans/input-extraction.md,
  * chunk 3). The send outcome is consumed deep inside the chat machine's
  * stream actor today; this registry gives the dispatcher an async answer
  * without restructuring the machine: the dispatcher `expect()`s a receipt

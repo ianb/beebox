@@ -6,7 +6,7 @@
  * whole chat subtree — message history and the companion view pane included
  * (the expensive trap this store exists to avoid; see components/chat/CLAUDE.md).
  *
- * Since chunk 2 (docs/plans/input-extraction.md) the text is one slice of the
+ * Since chunk 2 (docs/implemented-plans/input-extraction.md) the text is one slice of the
  * emission store (`../../input/emission-store.ts`), which also holds images,
  * files, and selections — the whole composition. This module is now a thin
  * adapter exposing just the text slice under the original `InputStore` API,
@@ -19,7 +19,7 @@
  * `set()` mirrors React's state-setter contract (a value or an updater) so
  * existing `setInput(...)` call sites carry over unchanged.
  *
- * Since chunk 4 (docs/plans/input-extraction.md), the emission store
+ * Since chunk 4 (docs/implemented-plans/input-extraction.md), the emission store
  * instance is created ABOVE the `key={keyState.epoch}` remount in
  * `ChatPage` (via `useEmissionStoreInstance`) so it survives a session
  * switch, and passed into `InteractiveChat` as a prop. `InteractiveChat`
