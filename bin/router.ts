@@ -1128,7 +1128,14 @@ ${artifactsHtml}`;
 
 async function listRepoMarkdown(repoRoot: string): Promise<string[]> {
   try {
-    const { stdout } = await execa("git", ["ls-files", "*.md", "**/*.md"], { cwd: repoRoot });
+    // --cached (tracked) + --others (untracked) so in-progress, never-committed
+    // docs show up too; --exclude-standard keeps .gitignored trees out (e.g.
+    // node_modules, docs/generated/).
+    const { stdout } = await execa(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", "*.md", "**/*.md"],
+      { cwd: repoRoot },
+    );
     return Array.from(new Set(stdout.split("\n").filter(Boolean))).sort();
   } catch {
     return [];
@@ -1138,7 +1145,7 @@ async function listRepoMarkdown(repoRoot: string): Promise<string[]> {
 // Last-commit unix time per .md file (one history walk; first occurrence wins,
 // since `git log` is newest-first). Filesystem mtime is useless in a worktree —
 // every file shares the clone time — so we use git for "recently edited".
-async function mdLastModified(repoRoot: string): Promise<Map<string, number>> {
+async function mdLastModified(repoRoot: string, files: string[]): Promise<Map<string, number>> {
   const times = new Map<string, number>();
   try {
     const { stdout } = await execa("git", ["log", "--format=%ct", "--name-only", "--", "*.md", "**/*.md"], { cwd: repoRoot });
@@ -1149,6 +1156,20 @@ async function mdLastModified(repoRoot: string): Promise<Map<string, number>> {
       if (!times.has(line)) times.set(line, cur);
     }
   } catch { /* leave empty */ }
+  // Untracked (never-committed) files have no git time. Their filesystem mtime
+  // IS meaningful here — they were created after the worktree clone, not shared
+  // at clone time like tracked files — so fall back to it, which floats
+  // in-progress docs to the top of the "recent" sort.
+  await Promise.all(
+    files
+      .filter((f) => !times.has(f))
+      .map(async (f) => {
+        try {
+          const st = await fs.stat(path.resolve(repoRoot, f));
+          times.set(f, Math.floor(st.mtimeMs / 1000));
+        } catch { /* unreadable — skip */ }
+      }),
+  );
   return times;
 }
 
@@ -1425,7 +1446,7 @@ async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort
   // rel is the part after "/docs", e.g. "" | "/" | "/callback-box/CLAUDE.md"
   const fileRel = rel.replace(/^\//, "");
   const files = await listRepoMarkdown(repoRoot);
-  const times = sort === "recent" ? await mdLastModified(repoRoot) : new Map<string, number>();
+  const times = sort === "recent" ? await mdLastModified(repoRoot, files) : new Map<string, number>();
 
   let contentHtml: string;
   let title = "doc browser";
