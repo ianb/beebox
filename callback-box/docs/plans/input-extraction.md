@@ -147,11 +147,21 @@ key). `input/targets/chat-assemble.ts`: ONE
 wrapper + `<attachments>` block; `"voice"` → `<speech diarized?>`;
 selection folding via the existing `applySelections`. `witness` is a
 serializable value (`{localTime, zoomedView?, timePassed?}` strings), not
-functions. Both send paths (`handleSend`, `runKeywordSend`'s submit)
-refactor to build an `Emission` and call the one assembler; the two SEND
+functions. **All five send sites** refactor to build an `Emission` and
+call the one assembler (codex review finding — the original draft named
+only two): typed `handleSend` (`InteractiveChat-actions.ts:80-115`),
+keyword voice (`InteractiveChat-voice.ts:112-125`), the desktop
+stop-and-send button (`InteractiveChat-composer.tsx:99-106`, hand-built
+`<speech>`, no selection folding), the mobile stop-and-send
+(`InteractiveChat-mobile-row.tsx:88-96`, same), and recovered dictation
+(`InteractiveChat.tsx:169-176`, `selections: []`). The two SEND
 dispatchers collapse to one. **Zero behavior change** — the doctest pins
-exact output strings for both origins (wrapper attrs, attachments block,
-selection tokens, diarized attr) before and after.
+exact output strings for EACH site (wrapper attrs, attachments block,
+selection tokens, diarized attr, and the stop-send buttons' current
+no-selection-folding behavior, reproduced via explicit empty selections)
+before the refactor lands. Aligning the stop-send paths to fold
+selections is a NAMED follow-up decision deferred to chunk 5, not
+smuggled into the refactor.
 
 **Why.** The two assembly paths + two dispatchers are the core of
 "implied and spread out"; every payload rule exists twice.
@@ -186,18 +196,30 @@ add/remove/clear, pendingImages accounting; no DOM).
   value; chat never interrupts on send), no live session→`unavailable`.
 - `accept(serializedEmission)`: assembles (chunk 1's function + witness
   snapshot from `cardSend.capture()` — witness context moves INTO the
-  adapter, off the composer), dispatches SEND, returns a **synchronous
-  disposition receipt**: `sent` (machine was idle) or `queued` (machine
-  streaming — today's optimistic-pending bubble path). Async settlement
-  (delivered-confirmations from `{turnId}`/`STREAM_QUEUED`) is deliberately
-  NOT modeled — today's pending/reconcile machinery
-  (`chat-actions.ts:41-49, 98-111`) already owns that and keeps doing so.
+  adapter, off the composer), dispatches SEND, and returns
+  **`Promise<Receipt>` settled from the actual outcome** (codex review
+  finding: a pre-submit status snapshot cannot truthfully decide — an
+  idle-path POST can still resolve `{queued:true}`, `{deduplicated:true}`,
+  or fail: `chat-actors.ts:294-307`, backend busy branch
+  `chat-send-routes.ts:246-254`). Receipt mapping: `{turnId}`→`sent`,
+  `{queued}`→`queued`, `{deduplicated}`→`sent` (idempotent success),
+  transport/machine failure→`rejected`. UX stays today's: the input
+  clears optimistically at dispatch, but the submitted emission is HELD
+  until settlement and **restored into the editor on `rejected`** —
+  strictly better than today, where a failed send loses the text to the
+  error banner. The optimistic-pending bubble machinery
+  (`chat-actions.ts:41-49, 98-111`) is untouched.
 - Stop relocation: the stop-agent and stop-TTS buttons
   (`InteractiveChat-composer.tsx:236-259`) move to a new `TargetStrip`
   component rendered by the chat view adjacent to the composer — the
   target's UI, across the boundary. Submit affordance text derives from
   `status` ("Send"/"Queue"). The composer bar no longer receives
-  `onInterrupt`/`onStopSpeech`.
+  `onInterrupt`/`onStopSpeech`. Seam caution (codex finding): stop-TTS is
+  NOT a pure button move — `STOP_SPEECH` in `pausedForSpeech` must also
+  `resumeMic` (`composerMachine.ts:194-199`, wired via `handleStopSpeech`,
+  `InteractiveChat-voice.ts:313-317`). The strip's stop-TTS control
+  therefore invokes the existing voice-coordination handler (the design's
+  sanctioned crossing); only the rendering moves.
 
 **Why.** Status/queueing/interrupt semantics already exist and are
 correct; they're just unlabeled and physically conflated with the input.
@@ -221,6 +243,18 @@ merging N drafts is wrong and keeping them contradicts the one-input
 model; named as a behavior change, see Failure modes). The dictation
 draft (`cb-chat-draft:*`) gets the same treatment.
 
+Two hardening requirements (codex findings): **restore-time validation
+of file attachments** — persisted `files` are `tmp/…` paths that
+housekeeping sweeps after 7 days (`src/core/housekeeping.ts:23`), so a
+restored emission validates each path (cheap existence check) and drops
+dead ones with a visible "attachment expired" note, never restoring
+silently-broken references; and **all localStorage access goes through a
+guarded try/catch helper** — the current draft hooks call `setItem`
+unguarded (`useComposerDraft.ts:80,105`) while the repo already has the
+safe best-effort pattern at `lib/location-share.ts:102-113`; the new
+persistence adopts that pattern for reads, writes, migration, and key
+cleanup.
+
 **Why.** "The input stays when you switch chats" is the design's core
 promise and is currently false for everything but typed text.
 
@@ -231,7 +265,16 @@ Doctest: serialization round-trip + migration adoption logic
 
 **What.** The keyword callbacks (`onKeywordSend/Cancel/MicOff/Erase`)
 re-shape into a `VoiceIntent` stream consumed by the input (submit →
-`input.submit()`; the feeder never sends). `RetentionStore`
+`input.submit()`; the feeder never sends). **Freeze boundary preserved**
+(codex finding): today's keyword send snapshots `priorInput` and
+`selections` at keyword time and clears them immediately — selections
+added during the async HQ window deliberately belong to the NEXT message
+(`InteractiveChat-voice.ts:92-118, 126-149`). The intent flow keeps this:
+submit consumes a point-in-time emission SNAPSHOT (emissions are values),
+the live emission clears at once, and HQ-window additions accumulate in
+the fresh emission. This chunk also decides (named, boxholder-visible)
+whether the stop-send buttons align to fold selections like every other
+path, or keep their historical no-fold behavior. `RetentionStore`
 (`input/retention.ts`): audio keyed by emission id, N most recent
 in-memory (v1 N=5), `latest()` = most recent *with audio*;
 `fulfillLastAudioRequest` reads it. The loopback protocol, routes, and
@@ -255,7 +298,9 @@ drift) is mitigated by exact-string doctests written BEFORE the refactor.
 |---|---|---|---|
 | Assembled payload differs from today's (wrapper attrs, block order, token folding) | chunk-1 doctest pins exact strings for both origins first | refactor lands only when byte-identical | clear (test fails) |
 | Draft migration picks the wrong draft / loses one (per-session → singleton) | chunk-4 doctest on adoption logic | most-recent-wins is deterministic; discarded drafts are a NAMED behavior change | clear in plan; silent to the user at runtime — accepted, documented in commit |
-| localStorage quota exceeded persisting a fat emission (base64 images) | chunk-4 doctest (size-threshold path) | images/audio dropped from persistence over threshold; text/files/selections always fit | clear (console warn; emission still lives in memory) |
+| localStorage quota / disabled storage (writes throw) | chunk-4 doctest (guarded-helper path) | ALL storage access via the try/catch helper (pattern: `lib/location-share.ts:102-113`); images/audio dropped from persistence over a size threshold | clear (console warn; emission still lives in memory) |
+| Restored file attachment points at swept `tmp/` path (7-day housekeeping) | chunk-4 doctest (validation/drop path) | restore-time existence check; dead attachments dropped with a visible note | clear (user sees "attachment expired") |
+| Send fails after optimistic clear (network / machine error) | chunk-3 doctest (rejected → restore) | submitted emission held until receipt settles; restored on `rejected` | clear (better than today, which loses the text) |
 | Double submit (Enter twice / keyword + Enter race) | chunk-3 doctest | editor `clear()` is synchronous with dispatch; second submit sees empty emission and no-ops (today's empty-guard behavior, `InteractiveChat-actions.ts:82`) | clear |
 | Voice submit races transcription finalize (audio blob not yet attached) | chunk-5 doctest | today's ordering preserved: finalize→attach→intent; intent handler reads the post-finalize emission | clear |
 | Selection ids/tokens drift when state moves stores (chunk 2) | editor doctest covers insert/remove/strip round-trips | per-emission id counters travel with the emission | clear |
