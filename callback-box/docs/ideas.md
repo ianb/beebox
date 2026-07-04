@@ -86,7 +86,32 @@ just-use-a-rule; should the box actively *suggest* promoting an oversized
 CLAUDE.md section into a rule/skill when the size lint fires; how does this
 interact with `agent-guide.md` generation (another always-on consumer).
 
-## User-model dimensions to accumulate
+## Size targets + self-slimming nudges for instruction surfaces
+
+(From the OpenClaw/Hermes comparison, 2026-07: the agent guide is generated at
+~657 lines with no budget at all — we *measure* via the knowledge-audit ledger
+but nothing acts on the measurement.)
+
+Give each instruction surface (agent guide, box CLAUDE.md, guide cards,
+personality) a **target size**. When a surface exceeds its target, don't
+truncate — inject a prompt telling the agent to slim it down: consolidate
+overlapping rules, demote detail to lazier tiers (rules/skills per the
+loading-eagerness axis above), drop what no longer earns its tokens. Open
+question: does the nudge fire on the next turn (cheap, piggybacks) or
+immediately as a dedicated maintenance pass (bounded, doesn't distract a
+live task)?
+
+Competitor precedent, both mechanical-truncation-shaped, which we specifically
+*don't* want: OpenClaw budget-caps bootstrap files (20k chars/file, 60k total)
+and head+tail-truncates on overflow, salvaging rule-like lines via a regex
+"policy digest" — i.e., a lossy machine guess at what mattered. Hermes is
+closer to our shape: memory files have hard caps and an overflow write simply
+*errors with instructions to the model to consolidate* (max 3 retries) — the
+model does the slimming, code only enforces the ceiling. The synthesis for us:
+knowledge-audit supplies the measurement, a target supplies the threshold, and
+the agent (not a truncator) does the editing — with the existing
+claude-md-lint soft warning upgraded from "guardrail" to "router" by actually
+prompting the fix.
 
 Related to the memory-writing guidance above: a deep model of the principal (boxholder) is something that *develops over time* from observed interactions, not something written upfront. But for accumulation to add up to a model rather than a pile of facts, the agent needs scaffolding of *which dimensions to pay attention to*. Candidates:
 
