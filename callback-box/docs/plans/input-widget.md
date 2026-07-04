@@ -166,6 +166,27 @@ chips, recovered-dictation widget) are pure renderings of emission
 slices. Nothing else holds composition state — this replaces the six
 root-owned hooks and the 40+-prop bag.
 
+## The native-embodiment constraint (added 2026-07)
+
+A stated future goal: on a mobile port, **the input is the part that goes
+native** (mic, camera, pickers, share sheet, keyboard handling) while the
+rest of the app stays HTML in a webview. This makes the input's boundary
+a bridge, and imposes one hard rule and one design change:
+
+- **Rule: everything crossing the input boundary is serializable
+  message-passing.** No React types, no DOM types in any interface here;
+  blobs cross by handle/upload, never by reference. Cheap to keep now,
+  brutal to retrofit.
+- **Change: `assemble()` belongs to the target adapter, not the input.**
+  `Target.accept(emission)` takes the serialized emission; assembly
+  (wrappers, selection folding, attachment blocks) is the adapter's first
+  act, in one JS-side place forever. A native input that assembled
+  payloads would reimplement the format rules in Swift/Kotlin and drift —
+  the dual-path disease again. Native ships nouns; JS makes payloads.
+  (The Assembly section below is retained for the payload shapes, but
+  read `accept(payload)` throughout as `accept(emission)` with assembly
+  inside the adapter.)
+
 ## Assembly — one function, two shapes
 
 ```ts

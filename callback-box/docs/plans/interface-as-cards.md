@@ -342,7 +342,12 @@ Boxholder direction: the page layout must survive reloads and be
 well-specified — "card path in the URL" doesn't scale to multiple
 tabs/panes/contexts. The answer is a persisted **frame** (deliberately
 not "session" — chat sessions own that word): each browser tab has one,
-holding the arrangement and nothing else.
+holding the arrangement and nothing else. The boxholder wants a proper
+name for it; candidates: **tableau** (solitaire's word for the
+arrangement of cards in play — the lean) or **spread** (tarot's word;
+collides with the JS spread operator). Similarly the companion "slot"
+needs a real name; candidates: **shotgun** (riding shotgun — the lean),
+**perch**, sidecar (Apple collision). Unpicked as of this note.
 
 - **URL split.** The path keeps addressing the focal subject (the
   standing rule survives); a `?frame=<id>` rides along carrying the
