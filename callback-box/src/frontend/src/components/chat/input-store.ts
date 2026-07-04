@@ -18,6 +18,12 @@
  *
  * `set()` mirrors React's state-setter contract (a value or an updater) so
  * existing `setInput(...)` call sites carry over unchanged.
+ *
+ * Since chunk 4 (docs/plans/input-extraction.md), the emission store
+ * instance is created ABOVE the `key={keyState.epoch}` remount in
+ * `ChatPage` (via `useEmissionStoreInstance`) so it survives a session
+ * switch, and passed into `InteractiveChat` as a prop. `InteractiveChat`
+ * derives its text-only `InputStore` view with `createInputStoreAdapter`.
  */
 
 import { createContext, useContext, useState, useSyncExternalStore } from "react";
@@ -53,7 +59,7 @@ class MissingEmissionStoreError extends Error {
   }
 }
 
-function createInputStoreAdapter(emissionStore: EmissionStore): InputStore {
+export function createInputStoreAdapter(emissionStore: EmissionStore): InputStore {
   return {
     get: () => emissionStore.get().text,
     set: (next) => emissionStore.editor.setText(next),
@@ -66,15 +72,14 @@ const InputStoreContext = createContext<InputStore | null>(null);
 export const InputStoreProvider = InputStoreContext.Provider;
 
 /**
- * The per-InteractiveChat store instance: a full emission store (text,
- * images, files, selections) plus the text-only `InputStore` view over it.
- * Created once and held stable across renders.
+ * The lifted emission store instance: created once in `ChatPage` (above the
+ * `InteractiveChat` remount boundary) so the composition — text, images,
+ * files, selections — survives a session switch. `InteractiveChat` receives
+ * this as a prop and derives its text-only `InputStore` view from it with
+ * `createInputStoreAdapter`.
  */
-export function useInputStoreInstance(): { inputStore: InputStore; emissionStore: EmissionStore } {
-  const [instance, setInstance] = useState(() => {
-    const emissionStore = createEmissionStore();
-    return { inputStore: createInputStoreAdapter(emissionStore), emissionStore };
-  });
+export function useEmissionStoreInstance(): EmissionStore {
+  const [instance, setInstance] = useState(() => createEmissionStore());
   void setInstance;
   return instance;
 }

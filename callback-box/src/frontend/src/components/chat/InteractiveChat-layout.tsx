@@ -120,6 +120,28 @@ export function ChatStatusBanners(props: {
   );
 }
 
+/**
+ * Dismissible notice for attachments dropped when a persisted emission was
+ * restored — their `tmp/…` upload no longer exists (housekeeping sweeps
+ * uploads after 7 days), so they're never restored silently-broken
+ * (docs/plans/input-extraction.md, chunk 4). Rendered in the composer
+ * region, above the attachment panels, alongside `RecoveredDictation`.
+ */
+export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: () => void }) {
+  const { names, onDismiss } = props;
+  if (names.length === 0) return null;
+  return (
+    <div className="mx-3 mb-2 px-3 py-1.5 bg-warm-100 border border-warm-300 rounded-lg text-warm-700 text-xs flex items-center justify-between gap-2">
+      <span>
+        {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
+      </span>
+      <button onClick={onDismiss} className="flex-shrink-0 text-warm-600 hover:text-warm-900 underline">
+        dismiss
+      </button>
+    </div>
+  );
+}
+
 export interface ComposerSectionProps {
   attachments: AttachmentItem[];
   pendingImageCount: number;
@@ -137,6 +159,8 @@ export interface ComposerSectionProps {
   isTranscribing: boolean;
   /** Interrupted-dictation recovery widget, rendered above the composer. */
   recoveredDictation: ReactNode;
+  /** Dismissible notice for attachments dropped on emission restore (swept `tmp/…` uploads), or null when none. */
+  expiredAttachmentsNotice: ReactNode;
   inputArea: ReactNode;
   mobileRow: ReactNode;
 }
@@ -145,12 +169,15 @@ export function ChatComposerSection(props: ComposerSectionProps) {
   const {
     attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
-    isTranscribing, recoveredDictation, inputArea, mobileRow,
+    isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow,
   } = props;
   return (
     <>
       {/* Recovery widget for an interrupted dictation (above all composer panels) */}
       {recoveredDictation}
+
+      {/* Notice for attachments dropped on restore (swept before reload) */}
+      {expiredAttachmentsNotice}
 
       {/* Image attachment panel: shows thumbnails above the composer */}
       <AttachmentPanel attachments={attachments} pendingCount={pendingImageCount} onRemove={onRemoveAttachment} />

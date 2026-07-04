@@ -213,6 +213,7 @@ function StateBlock({ spec }: { spec: Spec }) {
         setTypingLocked={noop}
         isTranscribing={spec.isTranscribing}
         recoveredDictation={null}
+        expiredAttachmentsNotice={null}
         inputArea={inputArea}
         mobileRow={mobileRow}
       />

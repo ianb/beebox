@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { InteractiveChat } from "../components/chat/InteractiveChat";
+import { useEmissionStoreInstance } from "../components/chat/input-store";
 import { getDefaultChatSession } from "../api";
 import { href } from "../lib/routing";
 
@@ -39,6 +40,12 @@ export function ChatPage() {
   const search = useSearch({ strict: false }) as ChatSearch;
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();
+  // Created here, above the InteractiveChat remount boundary below, so the
+  // in-progress composition (text, images, files, selections) survives a
+  // session switch — the design's singleton-draft promise
+  // (docs/plans/input-extraction.md, chunk 4). ChatPage itself only remounts
+  // on a hard page navigation (route change), not a session switch.
+  const emissionStore = useEmissionStoreInstance();
   const sessionParam = search.session;
   const contextDir = search.contextDir;
   const companion = search.companion;
@@ -108,6 +115,7 @@ export function ChatPage() {
       contextDir={rendered === "new" ? contextDir : undefined}
       companion={companion}
       card={card}
+      emissionStore={emissionStore}
     />
   );
 }

@@ -11,20 +11,66 @@ import {
   parseDraft,
   serializeDraft,
   formatDraftAge,
+  adoptLegacyDictationDrafts,
 } from "../../../src/frontend/src/lib/dictation-draft.js";
+import type { KeyValueStorage } from "../../../src/frontend/src/input/emission-persist.js";
+
+function fakeStorage(): KeyValueStorage & { dump(): Record<string, string> } {
+  const m = new Map<string, string>();
+  return {
+    getItem: (k) => m.get(k) ?? null,
+    setItem: (k, v) => { m.set(k, v); },
+    removeItem: (k) => { m.delete(k); },
+    key: (i) => [...m.keys()][i] ?? null,
+    get length() { return m.size; },
+    dump: () => Object.fromEntries(m),
+  };
+}
 ```
 
 ## draftKey
 
-Scopes a draft by box and session. New chats (no server-assigned id yet) share
-the `:new` slot; a missing box slug falls back to `default`:
+One singleton slot per box (docs/plans/input-extraction.md, chunk 4) — not
+per session, mirroring the composer's `emissionKey`. A missing box slug falls
+back to `default`:
 
 ```ts
-draftKey({ boxSlug: "test1", sessionId: "sess-abc" })
-=> cb-chat-draft:test1:sess-abc
+draftKey({ boxSlug: "test1" })
+=> cb-chat-draft:test1:singleton
 
-draftKey({ boxSlug: undefined, sessionId: null })
-=> cb-chat-draft:default:new
+draftKey({ boxSlug: undefined })
+=> cb-chat-draft:default:singleton
+```
+
+## adoptLegacyDictationDrafts: most-recent wins, all legacy keys removed
+
+The named behavior change (mirrors `adoptLegacyComposerDrafts`): other
+sessions' stale dictation drafts are discarded, not merged.
+
+```ts
+const s = fakeStorage();
+s.setItem("cb-chat-draft:test1:sess-a", JSON.stringify({ text: "older", narration: false, updatedAt: 100 }));
+s.setItem("cb-chat-draft:test1:sess-b", JSON.stringify({ text: "newest", narration: true, updatedAt: 300 }));
+s.setItem("cb-chat-draft:otherbox:sess-z", JSON.stringify({ text: "not ours", narration: false, updatedAt: 999 }));
+const result = adoptLegacyDictationDrafts(s, "test1");
+JSON.stringify(result.adopted)
+=> {"text":"newest","narration":true,"updatedAt":300}
+
+result.discarded
+=> 1
+
+// This box's legacy keys are gone; the other box's are untouched.
+Object.keys(s.dump()).sort().join(",")
+=> cb-chat-draft:otherbox:sess-z
+```
+
+An empty box (no legacy keys, or none that parse) adopts nothing:
+
+```ts
+const empty = fakeStorage();
+const result2 = adoptLegacyDictationDrafts(empty, "test1");
+JSON.stringify(result2)
+=> {"adopted":null,"discarded":0}
 ```
 
 ## serializeDraft / parseDraft

@@ -37,6 +37,8 @@ interface ChatBodyProps {
   voice: ReturnType<typeof useChatVoice>;
   /** Recovery widget for an interrupted dictation, or null when none is pending. */
   recoveredDictation: ReactNode;
+  /** Dismissible notice for attachments dropped on emission restore, or null when none. */
+  expiredAttachmentsNotice: ReactNode;
   attach: ReturnType<typeof useChatAttachments>;
   selections: ReturnType<typeof useChatSelections>;
   actions: ReturnType<typeof useChatActions>;
@@ -155,7 +157,7 @@ function MessageListRegion(props: ChatBodyProps) {
 
 function ComposerRegion(props: ChatBodyProps) {
   const {
-    model, voice, recoveredDictation, attach, selections, actions, isStreaming, processBusy, textareaRef,
+    model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
@@ -180,6 +182,7 @@ function ComposerRegion(props: ChatBodyProps) {
       setTypingLocked={setTypingLocked}
       isTranscribing={isTranscribing}
       recoveredDictation={recoveredDictation}
+      expiredAttachmentsNotice={expiredAttachmentsNotice}
       inputArea={
         <ChatInputArea
           hideMobile={typingMode}

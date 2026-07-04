@@ -210,6 +210,46 @@ store.editor.nextImageId()
 => 3
 ```
 
+## reserveIds: advances counters past ids added directly, never rewinds them
+
+Restoring a persisted emission (docs/plans/input-extraction.md, chunk 4)
+re-adds items with their ORIGINAL ids (the restored text still carries the
+matching `[imageN]`/`[fileN]`/`[selectionN]` tokens), bypassing
+`nextImageId()`/`nextFileId()`/`nextSelectionId()` entirely. `reserveIds`
+is how the store is told those ids are taken, so a later mint can't collide:
+
+```ts
+const store = createEmissionStore();
+store.editor.addImage({ id: 5, mimeType: "image/png", dataBase64: "x", objectUrl: "data:x", byteLength: 1 });
+store.editor.reserveIds({ image: 5 });
+store.editor.nextImageId()
+=> 6
+```
+
+A lower reservation than the current counter is a no-op — it never rewinds:
+
+```ts continue
+store.editor.reserveIds({ image: 2 });
+store.editor.nextImageId()
+=> 7
+```
+
+Files and selections reserve independently, and an absent field in the input
+leaves that counter untouched:
+
+```ts
+const store = createEmissionStore();
+store.editor.reserveIds({ file: 3, selection: 10 });
+store.editor.nextFileId()
+=> 4
+
+store.editor.nextSelectionId()
+=> 11
+
+store.editor.nextImageId()
+=> 1
+```
+
 ## Unrelated slices keep their reference across a mutation
 
 The keystroke-isolation invariant (components/chat/CLAUDE.md) depends on a

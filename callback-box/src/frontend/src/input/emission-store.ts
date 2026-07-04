@@ -99,6 +99,15 @@ export interface EmissionEditor {
   /** Mints the next selection id (monotonic; not reused after removal). */
   nextSelectionId(): number;
   /**
+   * Advances the id counters past ids already in use by items added
+   * directly with a caller-supplied id (restoring a persisted emission
+   * reuses its ids so they keep matching the `[imageN]`/`[fileN]`/
+   * `[selectionN]` tokens already in the restored text) — without this, a
+   * later `nextImageId()` could re-mint an id a restored item already
+   * holds. No-op for a slice whose `id` is below the current counter.
+   */
+  reserveIds(ids: { image?: number; file?: number; selection?: number }): void;
+  /**
    * Clears a slice post-send: "attachments" clears images+files, their id
    * counters, and pendingImages (matching today's `resetAttachments`);
    * "selections" clears selections and its id counter (today's
@@ -193,6 +202,11 @@ export function createEmissionStore(): EmissionStore {
     },
     nextSelectionId() {
       return nextSelectionIdValue++;
+    },
+    reserveIds(ids) {
+      if (ids.image !== undefined) nextImageIdValue = Math.max(nextImageIdValue, ids.image + 1);
+      if (ids.file !== undefined) nextFileIdValue = Math.max(nextFileIdValue, ids.file + 1);
+      if (ids.selection !== undefined) nextSelectionIdValue = Math.max(nextSelectionIdValue, ids.selection + 1);
     },
     reset(kind) {
       if (kind === "selections") {

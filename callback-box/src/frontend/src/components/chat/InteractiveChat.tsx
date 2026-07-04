@@ -20,8 +20,9 @@ import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useDictationDraft } from "../../hooks/useDictationDraft";
-import { useComposerDraft } from "../../hooks/useComposerDraft";
+import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
 import { RecoveredDictation } from "./RecoveredDictation";
+import { ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
@@ -31,7 +32,8 @@ import { useChatWs } from "./InteractiveChat-ws";
 import { useChatActions } from "./InteractiveChat-actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
-import { useInputStoreInstance, InputStoreProvider } from "./input-store";
+import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
+import type { EmissionStore } from "../../input/emission-store";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -72,9 +74,16 @@ interface InteractiveChatProps {
    * sync as the active card changes. Distinct from `companion` (one-shot).
    */
   card?: string;
+  /**
+   * The lifted emission store: created once in `ChatPage`, above this
+   * component's `key={keyState.epoch}` remount boundary, so the in-progress
+   * composition survives a session switch (docs/plans/input-extraction.md,
+   * chunk 4).
+   */
+  emissionStore: EmissionStore;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -89,10 +98,14 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   // Composer text lives in an external store, not React state, so a keystroke
   // re-renders only the composer textareas — not the message history or the
   // companion view pane (see input-store.ts and components/chat/CLAUDE.md).
-  const { inputStore, emissionStore } = useInputStoreInstance();
-  // Persist the unsent composer text so a remount (e.g. the router re-reading
-  // search params on wake-from-sleep) or a reload doesn't silently discard it.
-  useComposerDraft({ boxSlug, sessionId, inputStore });
+  // The full emission store is a prop (see above); this derives the
+  // text-only view every render — cheap, and stable in identity as long as
+  // `emissionStore` is (it always is, across a session switch).
+  const inputStore = useMemo(() => createInputStoreAdapter(emissionStore), [emissionStore]);
+  // Persist the whole in-progress emission (text, images, files, selections)
+  // under one singleton key per box, so it survives a session switch AND a
+  // reload — the design's singleton-draft promise.
+  const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
@@ -136,7 +149,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   // tab eviction, reload) doesn't erase it. Recovery surfaces in a dedicated
   // widget above the composer rather than autofilling the field.
   const { recoveredDraft, clearDraft } = useDictationDraft({
-    boxSlug, sessionId,
+    boxSlug,
     transcript: voice.transcription.transcript,
     isTranscribing: voice.isTranscribing,
     narrationEnabled: model.narrationEnabled,
@@ -163,6 +176,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       onDiscard={clearDraft}
     />
   ) : null;
+
+  const expiredAttachmentsNotice = (
+    <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />
+  );
 
   useChatWs({
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
@@ -197,6 +214,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       mute={mute}
       voice={voice}
       recoveredDictation={recoveredDictation}
+      expiredAttachmentsNotice={expiredAttachmentsNotice}
       attach={attach}
       selections={selections}
       actions={actions}
