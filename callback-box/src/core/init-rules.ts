@@ -8,7 +8,7 @@
  * to regenerate rules in a box.
  */
 
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
@@ -68,9 +68,18 @@ Use \`cb calendar today\`, \`cb calendar upcoming\`, or \`cb calendar <timespan>
  * Called by `cb init`.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot } = shape;
   const rulesDir = join(packageRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });
+
+  // "" for a legacy box (packageRoot === boxRoot); "content" for a v2 box.
+  // Card rule globs already start with `**/`, which matches at any depth
+  // regardless of shape — but the connector rules below are box-root
+  // anchored (e.g. `store/calendar/**/*.ics`), so they need this prefix or
+  // they'd never match a real file once `.claude/rules` moves to the
+  // package root and the box's own files are a level deeper, under `content/`.
+  const boxPrefix = relative(shape.packageRoot, shape.boxRoot);
 
   // Clean up old generated rules (card-* and connector-*)
   try {
@@ -119,10 +128,14 @@ ${instructions.trim()}
     generated.push(filename);
   }
 
-  // Connector rules for non-card files
+  // Connector rules for non-card files. Their paths are box-root anchored
+  // (not `**/`-prefixed), so they need the box-relative-to-package prefix.
   for (const rule of connectorRules) {
     const filename = `${rule.name}.md`;
-    const pathsYaml = rule.paths.map((p) => `  - "${p}"`).join("\n");
+    const pathsYaml = rule.paths
+      .map((p) => (boxPrefix === "" ? p : `${boxPrefix}/${p}`))
+      .map((p) => `  - "${p}"`)
+      .join("\n");
     const content = `---
 paths:
 ${pathsYaml}

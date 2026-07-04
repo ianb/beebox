@@ -175,8 +175,26 @@ can't — and doesn't need to).
  * `src/schemas/` (the package root), not `config/schemas/` (the box root).
  * Derived by substitution rather than duplicated by hand so the two stay in
  * lockstep — everything else about writing a schema is identical.
+ *
+ * A v2 box's schemas dir gets no resolve-hook fakery (see
+ * `registry.ts`'s `ensureResolveHooks` doc) — only `callback-box/*`
+ * specifiers resolve there, via the package's own `node_modules`. The v1
+ * guide's `import ... from "zod"` / `from "yaml"` examples would fail to
+ * load in a v2 box, so those lines and the "Available Imports" section are
+ * rewritten to the `callback-box/schema` re-export instead.
  */
-const SCHEMAS_CLAUDE_MD_V2 = SCHEMAS_CLAUDE_MD.replaceAll("config/schemas/", "src/schemas/");
+const SCHEMAS_CLAUDE_MD_V2 = SCHEMAS_CLAUDE_MD.replaceAll("config/schemas/", "src/schemas/")
+  .replaceAll("import { z } from \"zod\";", "import { z } from \"callback-box/schema\";")
+  .replace(
+    "import { stringify as stringifyYaml } from \"yaml\";\nimport { z } from \"callback-box/schema\";",
+    "import { stringifyYaml, z } from \"callback-box/schema\";"
+  )
+  .replace(
+    "From `zod`:\n- `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)",
+    "From `callback-box/schema`:\n" +
+      "- `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)\n" +
+      "- `parseYaml`/`stringifyYaml` — YAML (de)serialization, e.g. for a `template.generate`"
+  );
 
 const TRICKS_PACKAGE_JSON = JSON.stringify(
   {

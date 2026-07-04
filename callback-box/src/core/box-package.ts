@@ -14,6 +14,18 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 export type BoxInitMode = "fresh" | "update-legacy" | "update-v2";
 
+/**
+ * Thrown when a fresh `cb init` would overwrite a package.json it didn't
+ * create — the target directory already has one, so scaffolding blindly
+ * risks clobbering an unrelated package.
+ */
+export class BoxPackageConflictError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BoxPackageConflictError";
+  }
+}
+
 export interface BoxTarget {
   mode: BoxInitMode;
   /** The operational root — where `.cb-box`, `box/`, `config/`, etc. live (or will). */
@@ -88,9 +100,29 @@ async function engineVersion(): Promise<string> {
  * use — so the box is loadable (`getBoxShape`'s dependency check, native
  * schema/view resolution) before a real install ever happens. Track F's real
  * install replaces this symlink with an actual dependency.
+ *
+ * `detectBoxTarget` only checks whether `targetPath` (and `targetPath/content`)
+ * is a *box* — a plain non-empty directory (an existing project, a directory
+ * with an unrelated package.json) still reads as "fresh." Overwriting that
+ * directory's `package.json` would silently clobber someone else's package,
+ * so a pre-existing `package.json` is a hard conflict; the other three
+ * scaffold files (`tsconfig.json`, `CLAUDE.md`, `.gitignore`) are only
+ * written when absent, so a directory that already has its own is left
+ * alone.
+ * @throws BoxPackageConflictError if `packageRoot` already has a `package.json`
  */
 export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
   await fs.mkdir(packageRoot, { recursive: true });
+
+  const packageJsonPath = path.join(packageRoot, "package.json");
+  if (await pathExists(packageJsonPath)) {
+    throw new BoxPackageConflictError(
+      `Cannot initialize a callback-box package at ${packageRoot}: it already has a ` +
+        "package.json. Fresh `cb init` scaffolds a new coding-session package there and " +
+        "won't overwrite an existing one — remove it first, or run `cb init` on the " +
+        "directory only after confirming it's meant to become a box package."
+    );
+  }
 
   const version = await engineVersion();
   const packageJson = {
@@ -99,32 +131,44 @@ export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
     type: "module",
     dependencies: { "callback-box": `^${version}` },
   };
-  await fs.writeFile(
-    path.join(packageRoot, "package.json"),
-    JSON.stringify(packageJson, null, 2) + "\n"
-  );
+  await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
 
-  await fs.writeFile(
+  await writeFileIfAbsent(
     path.join(packageRoot, "tsconfig.json"),
     JSON.stringify({ extends: "callback-box/tsconfig.base.json", include: ["src"] }, null, 2) + "\n"
   );
 
-  await fs.writeFile(path.join(packageRoot, "CLAUDE.md"), ROOT_CLAUDE_MD);
-  await fs.writeFile(path.join(packageRoot, ".gitignore"), ROOT_GITIGNORE);
+  await writeFileIfAbsent(path.join(packageRoot, "CLAUDE.md"), ROOT_CLAUDE_MD);
+  await writeFileIfAbsent(path.join(packageRoot, ".gitignore"), ROOT_GITIGNORE);
 
   await fs.mkdir(path.join(packageRoot, "src"), { recursive: true });
 
   const nodeModulesDir = path.join(packageRoot, "node_modules");
-  let hasNodeModules = true;
-  try {
-    await fs.access(nodeModulesDir);
-  } catch (_e) {
-    // No node_modules yet (fs.access throws ENOENT) — the normal case for a
-    // fresh scaffold. The error carries no actionable info.
-    hasNodeModules = false;
-  }
-  if (!hasNodeModules) {
+  if (!(await pathExists(nodeModulesDir))) {
     await fs.mkdir(nodeModulesDir, { recursive: true });
     await fs.symlink(PACKAGE_ROOT, path.join(nodeModulesDir, "callback-box"), "dir");
   }
+}
+
+/** Whether `filePath` exists, tolerating (only) the not-found case. */
+async function pathExists(filePath: string): Promise<boolean> {
+  try {
+    await fs.access(filePath);
+    return true;
+  } catch (_e) {
+    // ENOENT is the expected "doesn't exist yet" case — the error carries no
+    // other actionable info.
+    return false;
+  }
+}
+
+/**
+ * Write `content` to `filePath` only if nothing is there yet. Used for the
+ * package scaffold files that a directory might already have its own
+ * version of (`tsconfig.json`, `CLAUDE.md`, `.gitignore`) — unlike
+ * `package.json`, which is a hard conflict, these are fine to leave in place.
+ */
+async function writeFileIfAbsent(filePath: string, content: string): Promise<void> {
+  if (await pathExists(filePath)) return;
+  await fs.writeFile(filePath, content);
 }

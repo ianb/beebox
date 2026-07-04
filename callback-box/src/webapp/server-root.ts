@@ -13,6 +13,7 @@ import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } fr
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { listParkedTemplateUpdates } from "../core/install-template-file.js";
 import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
+import { loadBoxSchemas } from "../schemas/registry.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
@@ -149,11 +150,16 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
     }
     // Box-local schema load failures: keep-last-good means a broken save
     // doesn't blank the type, but the failure itself needs to be seen.
-    // Reads the in-process map populated by the server's own box-registration
-    // schema loads — no extra load here, unlike `cb status`'s fresh process.
+    // `loadBoxSchemas` populates the in-process failure map as a side effect
+    // (same as `cb status`) — box registration itself never calls it (only
+    // starts the schema *watcher*, which doesn't load), so without this a
+    // fresh restart would report zero failures until unrelated card traffic
+    // happened to trigger a load. Cheap after the first call: it's cached
+    // per box and only re-scans a file whose content hash changed.
     const schemaFailuresByBox: Record<string, number> = {};
     let schemaFailureTotal = 0;
     for (const box of boxes) {
+      await loadBoxSchemas(box.boxRoot);
       const failures = listSchemaLoadFailures(box.boxRoot);
       if (failures.length > 0) {
         schemaFailuresByBox[box.slug] = failures.length;

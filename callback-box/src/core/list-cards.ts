@@ -7,6 +7,7 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"];
 
@@ -79,13 +80,17 @@ export async function listBoxMarkdownFiles(boxRoot: string): Promise<string[]> {
 }
 
 /**
- * List the box-authored view files (`views/*.tsx`), absolute paths, sorted.
- * These carry `cardRef="…"` refs that `cb validate`/`cb mv` track (see
- * core/view-refs.ts).
+ * List the box-authored view files, absolute paths, sorted. These carry
+ * `cardRef="…"` refs that `cb validate`/`cb mv` track (see core/view-refs.ts).
+ *
+ * Shape-aware: a legacy box's views live at `boxRoot/views/`; a v2 box's live
+ * at `packageRoot/src/views/` (`boxCodePaths` resolves either).
  */
 export async function listBoxViewFiles(boxRoot: string): Promise<string[]> {
-  const files = await glob("views/*.tsx", {
-    cwd: boxRoot,
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const viewsDir = boxCodePaths(shape).viewsDir;
+  const files = await glob("*.tsx", {
+    cwd: viewsDir,
     nodir: true,
     absolute: true,
     ignore: CARD_GLOB_IGNORE,

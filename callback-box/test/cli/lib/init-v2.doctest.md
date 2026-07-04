@@ -27,7 +27,11 @@ import {
   installSchedules,
   installPersonality,
 } from "../../../src/core/box.js";
-import { detectBoxTarget, scaffoldPackageRoot } from "../../../src/core/box-package.js";
+import {
+  detectBoxTarget,
+  scaffoldPackageRoot,
+  BoxPackageConflictError,
+} from "../../../src/core/box-package.js";
 import { generateRules } from "../../../src/core/init-rules.js";
 import { generateSkills } from "../../../src/core/box-skills.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
@@ -177,7 +181,8 @@ await exists(link)
 scaffolds, path-adjusted for the package layout:
 
 ```ts continue
-(await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8")).includes("src/schemas/")
+const schemasGuide = await fs.readFile(path.join(packageRoot, "src/schemas/CLAUDE.md"), "utf-8");
+schemasGuide.includes("src/schemas/")
 => true
 
 (await exists(path.join(packageRoot, "src/views/CLAUDE.md")))
@@ -185,6 +190,24 @@ scaffolds, path-adjusted for the package layout:
 
 (await fs.readFile(path.join(packageRoot, "src/tricks/scripts/CLAUDE.md"), "utf-8")).includes("src/tricks/")
 => true
+```
+
+The v2 schemas guide teaches `import { z } from "callback-box/schema"` (and
+`stringifyYaml` from the same specifier) — not the bare `zod`/`yaml`
+specifiers the v1 guide uses, which a v2 box's `src/schemas/` has no
+resolve-hook fakery to make resolvable (see `registry.ts`'s
+`ensureResolveHooks` doc and `test/schemas/box-schemas-v2.doctest.md`'s "bare
+zod import fails" case):
+
+```ts continue
+schemasGuide.includes('from "callback-box/schema"')
+=> true
+
+schemasGuide.includes('from "zod"')
+=> false
+
+schemasGuide.includes('from "yaml"')
+=> false
 ```
 
 `.claude/` lives at the package root, not under `content/` — rules, skills,
@@ -198,6 +221,21 @@ and the validation hooks all landed there:
 => true
 
 (await exists(path.join(packageRoot, ".claude", "skills", "views", "SKILL.md")))
+=> true
+```
+
+The generated `connector-calendar` rule is box-root ANCHORED (unlike the
+`**/*.<type>.card` card rules, which match at any depth regardless of
+shape) — its `paths:` glob needs a `content/` prefix so it still matches a
+real `.ics` file, which now lives one level deeper than `.claude/rules`
+itself:
+
+```ts continue
+const calendarRule = await fs.readFile(
+  path.join(packageRoot, ".claude/rules/connector-calendar.md"),
+  "utf-8"
+);
+calendarRule.includes('"content/store/calendar/**/*.ics"')
 => true
 ```
 
@@ -233,6 +271,67 @@ log[0].subject
 
 ```ts cleanup
 await fs.rm(target, { recursive: true, force: true });
+```
+
+## `scaffoldPackageRoot` refuses to clobber an existing `package.json`
+
+A directory that already has a `package.json` (an unrelated project, or a
+box package that's already been scaffolded) is a hard conflict — fresh `cb
+init` must not silently overwrite it:
+
+```ts
+const conflictDir = await makeTmpDir();
+await fs.writeFile(path.join(conflictDir, "package.json"), '{"name":"unrelated-project"}');
+
+const err = await scaffoldPackageRoot(conflictDir).catch((e) => e);
+err instanceof BoxPackageConflictError
+=> true
+
+err.message.includes("package.json")
+=> true
+
+err.message.includes(conflictDir)
+=> true
+```
+
+```ts cleanup
+await fs.rm(conflictDir, { recursive: true, force: true });
+```
+
+When `package.json` is absent but the other scaffold files
+(`tsconfig.json`, `CLAUDE.md`, `.gitignore`) already exist, `scaffoldPackageRoot`
+leaves their content untouched — those three are create-if-absent, not
+hard conflicts:
+
+```ts
+const partialDir = await makeTmpDir();
+await fs.writeFile(path.join(partialDir, "tsconfig.json"), '{"extends":"./custom.json"}');
+await fs.writeFile(path.join(partialDir, "CLAUDE.md"), "# Custom instructions\n");
+await fs.writeFile(path.join(partialDir, ".gitignore"), "*.log\n");
+
+await scaffoldPackageRoot(partialDir);
+
+(await fs.readFile(path.join(partialDir, "tsconfig.json"), "utf-8"))
+=> {"extends":"./custom.json"}
+
+(await fs.readFile(path.join(partialDir, "CLAUDE.md"), "utf-8"))
+=> # Custom instructions
+
+(await fs.readFile(path.join(partialDir, ".gitignore"), "utf-8"))
+=> *.log
+```
+
+`package.json` itself was still created fresh, since it was the one file
+absent:
+
+```ts continue
+const partialPkg = await readJson(path.join(partialDir, "package.json"));
+partialPkg.name === path.basename(partialDir)
+=> true
+```
+
+```ts cleanup
+await fs.rm(partialDir, { recursive: true, force: true });
 ```
 
 ## The v2 git-hooks trap: hooks `cd` into `content/`
@@ -376,6 +475,21 @@ anything for a legacy box:
 ```ts continue
 (await exists(path.join(legacyBox, ".claude/rules/card-memo.md")))
 => true
+```
+
+The connector-calendar rule's path stays un-prefixed for a legacy box
+(`packageRoot === boxRoot`, so there's no extra level to climb):
+
+```ts continue
+const legacyCalendarRule = await fs.readFile(
+  path.join(legacyBox, ".claude/rules/connector-calendar.md"),
+  "utf-8"
+);
+legacyCalendarRule.includes('"store/calendar/**/*.ics"')
+=> true
+
+legacyCalendarRule.includes("content/store/calendar")
+=> false
 ```
 
 ```ts cleanup
