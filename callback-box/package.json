@@ -3,11 +3,18 @@
   "version": "0.1.0",
   "description": "A Claude Code wrapper system for file-based processing",
   "type": "module",
-  "main": "dist/cli/index.js",
   "exports": {
-    ".": "./dist/cli/index.js",
-    "./cards": "./dist/cards/index.js",
-    "./view-widgets": "./dist/view-widgets/index.js"
+    "./cards": {
+      "types": "./dist/cards/index.d.ts",
+      "default": "./dist/cards/index.js"
+    },
+    "./schema": {
+      "types": "./dist/exports/schema.d.ts",
+      "default": "./dist/schema/index.js"
+    },
+    "./server": "./dist/server/index.js",
+    "./view-widgets": "./dist/view-widgets/index.js",
+    "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "bin": {
     "cb": "./bin/cb"
@@ -16,7 +23,7 @@
     "build": "tsc",
     "build:frontend": "cd src/frontend && pnpm build",
     "build:all": "pnpm build && pnpm build:frontend",
-    "build:cli": "node scripts/build-cli.mjs",
+    "build:cli": "node scripts/build-cli.mjs && tsc -p tsconfig.declarations.json",
     "dev": "echo 'The dev server is the monorepo router. Run \\`pnpm dev\\` from the monorepo root.' && exit 1",
     "cb": "./bin/cb",
     "typecheck": "tsc --noEmit && cd src/frontend && pnpm exec tsc --noEmit",

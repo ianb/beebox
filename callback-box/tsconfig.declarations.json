@@ -1,0 +1,19 @@
+{
+  // Declaration-only build for the public export surface (callback-box/cards,
+  // /schema, /server). The main tsconfig keeps `declaration: false` because
+  // full-program d.ts emit trips TS2742 on tRPC subscription routers; this
+  // config emits d.ts only for the export entry points and their transitive
+  // graph. If /server's graph ever hits TS2742, drop it from `files` and ship
+  // it untyped rather than weakening types elsewhere.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "noEmit": false
+  },
+  "include": [],
+  // server.ts is absent: its graph pulls the tRPC routers and hits TS2742
+  // (verified 2026-07-03) — /server ships untyped until those routers get
+  // explicit type annotations.
+  "files": ["src/cards/index.ts", "src/exports/schema.ts"]
+}

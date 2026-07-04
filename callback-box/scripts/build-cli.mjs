@@ -60,6 +60,38 @@ await build({
   logLevel: "warning",
 });
 
+// Also build the public schema-deps layer (the `callback-box/schema` export):
+// z and yaml helpers re-exported so a box's only dependency is callback-box.
+// zod/yaml stay external (resolved from callback-box's node_modules at runtime).
+await build({
+  entryPoints: [join(root, "src/exports/schema.ts")],
+  outfile: join(distDir, "schema", "index.js"),
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+  packages: "external",
+  sourcemap: true,
+  logLevel: "warning",
+});
+
+// Also build the public server layer (the `callback-box/server` export): the
+// programmatic createServer/startServer entry for the hub and embedders. The
+// graph is large (whole webapp) but it's the same graph already inside
+// dist/cli.mjs; bundling it separately keeps the export side-effect-free.
+await build({
+  entryPoints: [join(root, "src/exports/server.ts")],
+  outfile: join(distDir, "server", "index.js"),
+  bundle: true,
+  platform: "node",
+  format: "esm",
+  target: "node22",
+  jsx: "automatic",
+  packages: "external",
+  sourcemap: true,
+  logLevel: "warning",
+});
+
 // Also build the public view-widgets layer (the `callback-box/view-widgets`
 // export) to dist/view-widgets/index.js. Box-authored views import this
 // specifier for <CardLink>/<CardRef>; `cb view test` resolves it via the

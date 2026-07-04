@@ -51,9 +51,12 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   await ensureDirectories(resolvedRoot);
 
   if (!isUpdate) {
-    // Create marker file with metadata
+    // Create marker file with metadata. shapeVersion 1 is the legacy
+    // layout this scaffold still creates (box root === package root); B2
+    // flips fresh scaffolds to shapeVersion 2 (see box-shape.ts).
     const marker = {
       version: "1.0.0",
+      shapeVersion: 1,
       created: new Date().toISOString(),
     };
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
