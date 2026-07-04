@@ -75,10 +75,24 @@ below — the fixture's `node_modules/.bin/cb` resolves (through the
 `node_modules/callback-box` symlink) to THIS checkout's real `bin/cb`,
 which self-heals a stale bundle by rebuilding before running; without a
 fresh bundle here, that rebuild would eat into the supervisor's own
-readiness timeout instead of happening once, up front, on our terms:
+readiness timeout instead of happening once, up front, on our terms.
+
+The built **frontend** is a second undeclared dependency: the
+traffic-reaches-the-child probe below rides the SPA fallback, which
+serves `src/frontend/dist/index.html` — a file no dev worktree has
+(Vite serves the frontend live; only deploys run the production build).
+Build it once if absent; when present (CI, a prior run) this is a stat
+call. It is deliberately not rebuilt when stale — this test proves
+routing, not frontend freshness:
 
 ```ts
 await execFileP("node", ["scripts/build-cli.mjs"], { cwd: PACKAGE_ROOT });
+
+const frontendIndex = path.join(PACKAGE_ROOT, "src/frontend/dist/index.html");
+const frontendBuilt = await fs.access(frontendIndex).then(() => true, () => false);
+if (!frontendBuilt) {
+  await execFileP("pnpm", ["run", "build:frontend"], { cwd: PACKAGE_ROOT });
+}
 ```
 
 ## The hub starts the box, `/healthz` reports it running, and traffic reaches it

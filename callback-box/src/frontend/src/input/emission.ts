@@ -1,0 +1,88 @@
+/**
+ * The Emission — the message-being-composed as a value
+ * (docs/plans/input-widget.md; implementation plan
+ * docs/implemented-plans/input-extraction.md, chunk 1).
+ *
+ * One serializable noun bundling everything the input accumulates: text,
+ * images, file references, selections, and voice metadata. Every send site
+ * builds one of these and hands it to the target adapter, which assembles
+ * the wire payload (see targets/chat-assemble.ts) — the emission itself
+ * never contains payload markup.
+ *
+ * Serializable-boundary rule (the native-embodiment constraint from the
+ * design doc): nothing in this module may reference React or DOM types;
+ * binary content crosses as base64 or by reference (file paths, retention
+ * keys), never as live objects.
+ */
+
+import type { ChatImageAttachment } from "../api-chat";
+import type { SelectionItem } from "../lib/selection-serialize";
+import { newMessageId } from "../components/chat/InteractiveChat-helpers";
+
+/**
+ * A file attachment as the emission carries it: the upload already
+ * happened (the path is a box-relative `tmp/…` reference); `id` pairs the
+ * entry with its `[fileN]` token in the text.
+ */
+export interface EmissionFile {
+  id: number;
+  path: string;
+}
+
+/**
+ * The message being composed, as an immutable value. `id` is minted at
+ * creation and becomes the wire `messageId` — the backend's dedup key and
+ * (from chunk 5) the audio-retention key.
+ */
+export interface Emission {
+  readonly id: string;
+  readonly origin: "typed" | "voice";
+  readonly text: string;
+  readonly images: readonly ChatImageAttachment[];
+  readonly files: readonly EmissionFile[];
+  readonly selections: readonly SelectionItem[];
+  /** Voice metadata: the HQ transcription reported speaker diarization. */
+  readonly diarized: boolean;
+}
+
+interface TypedEmissionInput {
+  text: string;
+  images: readonly ChatImageAttachment[];
+  files: readonly EmissionFile[];
+  selections: readonly SelectionItem[];
+}
+
+/** A typed-composer emission (the desktop/mobile textarea send). */
+export function createTypedEmission(input: TypedEmissionInput): Emission {
+  return {
+    id: newMessageId(),
+    origin: "typed",
+    text: input.text,
+    images: input.images,
+    files: input.files,
+    selections: input.selections,
+    diarized: false,
+  };
+}
+
+interface VoiceEmissionInput {
+  text: string;
+  selections: readonly SelectionItem[];
+  diarized: boolean;
+}
+
+/**
+ * A voice emission (keyword send, the stop-and-send buttons, recovered
+ * dictation). Voice sends carry no images or file attachments today.
+ */
+export function createVoiceEmission(input: VoiceEmissionInput): Emission {
+  return {
+    id: newMessageId(),
+    origin: "voice",
+    text: input.text,
+    images: [],
+    files: [],
+    selections: input.selections,
+    diarized: input.diarized,
+  };
+}

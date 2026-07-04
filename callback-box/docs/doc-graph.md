@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-04T20:00:22Z
-Total documents: 177
+Generated: 2026-07-04T22:54:07Z
+Total documents: 179
 
 ## Issues
 
@@ -20,6 +20,8 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/companion-pane-card-activity.md** — "Companion-pane card activity awareness for chat" (366 lines)
 - **docs/implemented-plans/courseware-lesson-plan.md** — "Courseware: the `lesson-plan` card" (345 lines)
 - **docs/implemented-plans/extfile-card.md** — "`extfile` Card — an In-Box Pointer to a Live External File" (714 lines)
+- **docs/implemented-plans/input-extraction.md** — "Input extraction — isolating the composer behind the Emission/Input/Target API" (426 lines)
+- **docs/implemented-plans/input-extraction.review.md** — "Plan Engineering Review — input-extraction (codex cross-model pass)" (86 lines)
 - **docs/implemented-plans/link-validation-fix.md** — "Markdown link validation — turn it on, make it correct, close the commit-time hole" (652 lines)
 - **docs/implemented-plans/markdoc-tags-design.gstack-trial-review.md** — "Plan Engineering Review — Markdoc Tags Design" (129 lines)
 - **docs/implemented-plans/markdoc-tags-design.review.md** — "Plan Engineering Review — Markdoc Tags Design" (505 lines)
@@ -35,7 +37,6 @@ These documents are not referenced by any other document.
 - **docs/knowledge-audit-rerun-2026-07-03.md** — "Knowledge-audit full rerun — 2026-07-03" (465 lines)
 - **docs/plans/courseware-phase1.md** — "Courseware Phase 1 — the course: cards, rules, and the authoring skill" (510 lines)
 - **docs/plans/external-skills-harvest.md** — "External skills harvest — evaluation backlog" (314 lines)
-- **docs/plans/input-widget.md** — "The input — interface design" (608 lines)
 - **docs/telegram-setup.md** — "Telegram Connector Setup" (133 lines)
 - **docs/todo-security.md** — "Security TODOs" (25 lines)
 - **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
@@ -224,6 +225,7 @@ Referenced by:
 - docs/implemented-plans/courseware-lesson-plan.md:23 (mention) — - `callback-box/CODE-STYLE.md` — no `any`, no default params, max 2 positional params, files ≤300
 - docs/implemented-plans/extfile-card.md:42 (mention) — - `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional params
 - docs/implemented-plans/figure-card-type.md:72 (mention) — - **`callback-box/CODE-STYLE.md`** — *"No default parameters"*, *"Max 2 positional
+- docs/implemented-plans/input-extraction.md:16 (mention) — - `callback-box/CODE-STYLE.md`: no `any`; max 2 positional params; custom
 - docs/implemented-plans/job-xml-purge.subplan.md:35 (mention) — - `callback-box/CODE-STYLE.md` — no `any`, max-2 positional params, named-error
 - docs/implemented-plans/link-validation-fix.md:31 (mention) — - `callback-box/CODE-STYLE.md` — no `any`, double quotes, semicolons, max 2
 - docs/implemented-plans/markdoc-tags-design.gstack-trial-review.md:16 (mention) — Drawn from `CLAUDE.md` and `CODE-STYLE.md`; referenced by name in findings below.
@@ -1016,6 +1018,7 @@ Referenced by:
 - docs/implemented-plans/chat-stream-finalize-unify.md:53 (mention) — - `callback-box/docs/testing.md:5-9` + `:474-521` — layout/streaming behavior is
 - docs/implemented-plans/courseware-lesson-plan.md:326 (mention) — - **Tests** (per `docs/testing.md`, on substantial codepaths): the `lesson-plan` parse doctest
 - docs/implemented-plans/figure-card-type.md:78 (mention) — - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
+- docs/implemented-plans/input-extraction.md:30 (mention) — - `docs/testing.md` via the cb-plan template: tests first as a design tool;
 - docs/implemented-plans/link-validation-fix.md:35 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; name the doctest for
 - docs/implemented-plans/normalize-chat-links.md:78 (mention) — - **`callback-box/docs/testing.md`** — tests as a design tool; doctest the
 - docs/implemented-plans/procedure-validation-completion.md:36 (mention) — - **`docs/testing.md`** — tests come first as a design tool; cover substantial codepaths, not coverage-for-its-own-sake.
@@ -1317,6 +1320,21 @@ Referenced by:
 
 References:
 - → docs/connectors.md (mention)
+
+#### docs/implemented-plans/input-extraction.md **[ORPHAN]**
+
+Title: "Input extraction — isolating the composer behind the Emission/Input/Target API" | 426 lines
+
+References:
+- → docs/plans/input-widget.md (mention)
+- → CODE-STYLE.md (mention)
+- → docs/testing.md (mention)
+
+#### docs/implemented-plans/input-extraction.review.md **[ORPHAN]**
+
+Title: "Plan Engineering Review — input-extraction (codex cross-model pass)" | 86 lines
+
+No references in or out.
 
 #### docs/implemented-plans/job-xml-purge.subplan.md
 
@@ -1695,9 +1713,12 @@ References:
 - → docs/glossary.md (mention)
 - → docs/testing.md (mention)
 
-#### docs/plans/input-widget.md **[ORPHAN]**
+#### docs/plans/input-widget.md
 
 Title: "The input — interface design" | 608 lines
+
+Referenced by:
+- docs/implemented-plans/input-extraction.md:5 (mention) — `docs/plans/input-widget.md`. Scope: the chat target only — Emission +
 
 References:
 - → docs/plans/interface-as-cards.md (mention)
