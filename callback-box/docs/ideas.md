@@ -96,10 +96,15 @@ Give each instruction surface (agent guide, box CLAUDE.md, guide cards,
 personality) a **target size**. When a surface exceeds its target, don't
 truncate — inject a prompt telling the agent to slim it down: consolidate
 overlapping rules, demote detail to lazier tiers (rules/skills per the
-loading-eagerness axis above), drop what no longer earns its tokens. Open
-question: does the nudge fire on the next turn (cheap, piggybacks) or
-immediately as a dedicated maintenance pass (bounded, doesn't distract a
-live task)?
+loading-eagerness axis above), drop what no longer earns its tokens.
+
+Delivery mechanism (boxholder, 2026-07-04): **just do it with `cb validate`** —
+add a size warning to validation, so the existing PostToolUse hook surfaces it
+the moment the agent touches an oversized surface, and the agent can consider
+fixing it right away in the same session. No new machinery: validate already
+runs on every Edit/Write and already has the warn-don't-block channel (exit 2
+on stderr). The size targets become validation config; knowledge-audit remains
+the longitudinal view.
 
 Competitor precedent, both mechanical-truncation-shaped, which we specifically
 *don't* want: OpenClaw budget-caps bootstrap files (20k chars/file, 60k total)
