@@ -263,7 +263,7 @@ export interface RequestIdentity {
  * Resolve the authenticated identity for a request through ONE path,
  * consumed by both the box auth preHandler (`server-box-scope.ts`) and the
  * tRPC context creation, so the two can never diverge (Track D, chunk D2 —
- * `docs/plans/boxes-as-packages-v2.md` calls this out explicitly: identity
+ * `docs/implemented-plans/boxes-as-packages-v2.md` calls this out explicitly: identity
  * used to be recomputed separately in both places).
  *
  * In hub mode (`isHubMode()`), identity comes ONLY from hub-injected

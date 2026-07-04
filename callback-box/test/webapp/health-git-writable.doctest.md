@@ -5,7 +5,7 @@
 git root, so that was correct. For a v2 (package-layout) box the git
 repository lives at the PACKAGE root — `content/` is a plain subdirectory
 with no `.git` of its own (see "One git repository at the repo root" in
-`docs/plans/boxes-as-packages-v2.md`) — so the check must resolve via
+`docs/implemented-plans/boxes-as-packages-v2.md`) — so the check must resolve via
 `getBoxShapeOrLegacyFallback` and probe `packageRoot/.git/objects` instead.
 
 ```ts setup

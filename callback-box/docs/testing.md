@@ -296,7 +296,7 @@ Dry run: `cb scenario run <name> --dry-run`
 
 Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/` with its own git repo as the test box.
 
-**Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an operational `content/` subdirectory — see `docs/plans/boxes-as-packages-v2.md`), so a freshly-created scenario's `box/` looks like:
+**Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an operational `content/` subdirectory — see `docs/implemented-plans/boxes-as-packages-v2.md`), so a freshly-created scenario's `box/` looks like:
 ```
 ~/src/boxes/scenarios/my-scenario/
   scenario.yaml      # step definitions (required)
@@ -595,7 +595,7 @@ pnpm lint:circular  # Value-import circular dependencies (type-only cycles are O
 
 ## Future Directions
 
-See [testing-gaps.md](testing-gaps.md) for detailed plans. Key ideas:
+Key ideas not yet implemented:
 
 - **Self-describing services** — Services export `description`, `examples`, and `properties` alongside their functions. Tests get generated from these.
 - **Property testing** — Semantically meaningful invariants (like `parse(serialize(card)) === card`), not random fuzzing.

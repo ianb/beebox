@@ -1,6 +1,6 @@
 /**
  * Endpoints — the seam between supervision and routing (Track D's "Isolation
- * is layered" requirement, `docs/plans/boxes-as-packages-v2.md`, verbatim:
+ * is layered" requirement, `docs/implemented-plans/boxes-as-packages-v2.md`, verbatim:
  * "routing consumes *endpoints*, of which 'child process the hub spawned' is
  * merely the first implementation").
  *

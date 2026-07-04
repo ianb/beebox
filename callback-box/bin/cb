@@ -8,7 +8,7 @@
 # Three modes:
 #   - Packed (installed as a dependency, e.g. `node_modules/callback-box`):
 #     `scripts/` and `src/` aren't shipped (see package.json's `files`
-#     allowlist / `docs/plans/boxes-as-packages-v2.md` Track F) — there is
+#     allowlist / `docs/implemented-plans/boxes-as-packages-v2.md` Track F) — there is
 #     nothing to rebuild from and no tsx fallback to degrade to, so this mode
 #     is detected by `scripts/build-cli.mjs`'s absence and just runs the
 #     bundle unconditionally. A missing bundle here is a broken install, not

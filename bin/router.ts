@@ -113,7 +113,7 @@ const KILL_GRACE_MS = 2000;
 // within it. One release of insurance while this beds in: CB_DEV_NO_HUB=1
 // reverts to spawning server-main.ts directly, the old one-process-many-
 // boxes shape (Track G's prior escape hatch). Delete this flag once the
-// hub path has proven itself — tracked in docs/plans/boxes-as-packages-v2.md.
+// hub path has proven itself — tracked in docs/implemented-plans/boxes-as-packages-v2.md.
 const DEV_NO_HUB = process.env.CB_DEV_NO_HUB === "1";
 const HUB_CONFIG_DIR = path.join(STATE_DIR, "hub-configs");
 

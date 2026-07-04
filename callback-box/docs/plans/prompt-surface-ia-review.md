@@ -1,5 +1,7 @@
 # Prompt Surface Cleanup — IA Review
 
+**Status:** active
+
 This plan acts on the boxholder's commentary on the callback-box chat/agent
 **prompt and output-vocabulary surface** (the `ia-review` box review). It now
 integrates **two commentary rounds**: round 1 (chat + reactor system prompts,

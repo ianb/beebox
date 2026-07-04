@@ -1,6 +1,8 @@
 # The input — interface design
 
-Status: design 2026-07, no implementation. Extracts the chat composer and
+**Status:** active — design 2026-07, no implementation yet
+
+Extracts the chat composer and
 its satellites into a distinct component with a firm API. Grows out of
 the frame-model notes in `docs/plans/interface-as-cards.md` ("The input
 is its own frame primitive — and a true singleton"). The factual ground

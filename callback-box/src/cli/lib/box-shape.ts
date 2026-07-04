@@ -5,7 +5,7 @@
  * package root lives.
  *
  * This is the entire bilingual-transition switch described in
- * `docs/plans/boxes-as-packages-v2.md` ("The box repository"): every other
+ * `docs/implemented-plans/boxes-as-packages-v2.md` ("The box repository"): every other
  * consumer (schema registry, view compiler, trick runner, agent guide) reads
  * this predicate instead of re-deriving the layout itself.
  */
@@ -153,7 +153,7 @@ export interface BoxCodePaths {
  * Resolve a box's code directories from its shape. Legacy (shapeVersion 1)
  * boxes keep code inside the operational root (`boxRoot`); shapeVersion 2
  * boxes moved code out to the package root's `src/` (see "The box
- * repository" in `docs/plans/boxes-as-packages-v2.md`) — everything else
+ * repository" in `docs/implemented-plans/boxes-as-packages-v2.md`) — everything else
  * left in `boxRoot` is operational data.
  */
 /**

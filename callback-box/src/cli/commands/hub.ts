@@ -1,6 +1,6 @@
 /**
  * `cb hub` — the multi-box parent process (Track D, chunk D1 in
- * `docs/plans/boxes-as-packages-v2.md`): supervision + routing + health, no
+ * `docs/implemented-plans/boxes-as-packages-v2.md`): supervision + routing + health, no
  * auth changes (children keep doing their own in-process auth exactly as
  * today — this works because cookies ride the same origin through the
  * proxy, precisely how the monorepo dev router already behaves for

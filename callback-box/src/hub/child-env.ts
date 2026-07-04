@@ -1,6 +1,6 @@
 /**
  * The hub-spawned box child's env allowlist (Track D, chunk D1 in
- * `docs/plans/boxes-as-packages-v2.md`), split out of `supervisor.ts` to
+ * `docs/implemented-plans/boxes-as-packages-v2.md`), split out of `supervisor.ts` to
  * keep that file under the 300-line cap -- see `supervisor.ts`'s module doc
  * for how this fits into the supervisor's job.
  */
@@ -13,7 +13,7 @@
  * VERIFY a session cookie could also FORGE one for a sibling box. Spreading
  * `process.env` into every child (as this used to do) reopens exactly the
  * forgery hole Track D's D2 auth split closed (see
- * `docs/plans/boxes-as-packages-v2.md`'s "Isolation is layered": the hub is
+ * `docs/implemented-plans/boxes-as-packages-v2.md`'s "Isolation is layered": the hub is
  * trusted, boxes are not trusted with each other's secrets). Widen this
  * list only by adding a new named entry with a reasoned comment -- never by
  * reverting to a spread.

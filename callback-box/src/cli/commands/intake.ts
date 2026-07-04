@@ -2,7 +2,7 @@
  * cb intake — Run one pass of the intake stage.
  *
  * Thin wrapper around the core intake command. See
- * `docs/plans/triage-design.md` for the surrounding pipeline.
+ * `docs/triage-design.md` for the surrounding pipeline.
  */
 
 import { Command } from "commander";

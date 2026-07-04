@@ -1,7 +1,7 @@
 /**
  * Per-box access predicate: the fail-closed "owner-only when
  * `allowedEmails` is missing/empty" rule. Factored out (Track D, chunk D3 —
- * `docs/plans/boxes-as-packages-v2.md`) so it lives in exactly one place
+ * `docs/implemented-plans/boxes-as-packages-v2.md`) so it lives in exactly one place
  * instead of being copied at each call site: the box's own ACL check
  * (`server-box-scope.ts`'s `addBoxAuthHook`), its `/auth/me`
  * accessible-boxes list (`routes/auth.ts`), the root `/api/boxes` listing

@@ -10,7 +10,7 @@
  * It is a present-state snapshot, NOT a decay/forgetting model. The running
  * session log lives as a plain file in the card's `<basename>.attach/` scope.
  *
- * See docs/plans/courseware-phase1.md.
+ * See docs/implemented-plans/courseware-phase1.md.
  */
 
 import { body, cardSchema, type CardSchema } from "../cards/index.js";

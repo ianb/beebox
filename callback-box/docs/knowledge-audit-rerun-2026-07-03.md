@@ -242,7 +242,7 @@ touched sections stayed green, and `pnpm typecheck` / `pnpm test` are clean.
 
 - Both are **already documented** in the yaml's Triage Pipeline status
   (2026-05-20) and still fail on the same root cause: the triage pipeline's
-  internals live in dev-repo source and `docs/plans/triage-design.md`, which is
+  internals live in dev-repo source and `docs/triage-design.md`, which is
   **not propagated into boxes**.
   - `triage-confidence-levels`: the enum is `confident` / `probable` / `guess`
     (`src/core/triage.ts:75`), but the box agent can't find it — it answers "no
@@ -258,7 +258,7 @@ touched sections stayed green, and `pnpm typecheck` / `pnpm test` are clean.
 
 Note: also discovered a **systemic broken-`should_read`** issue — several
 landmark/triage audits pointed `should_read` at dev-repo docs
-(`docs/landmark-curation.md`, `docs/plans/triage-design.md`) that don't exist in
+(`docs/landmark-curation.md`, `docs/triage-design.md`) that don't exist in
 the box, so they failed automatically even though the agent answered correctly
 from the always-on guide. Dropped those broken reads (see fixes below).
 
@@ -315,7 +315,7 @@ Batch 7 (landmarks / sessions / feedback / triage-pipeline / don't-drop):
   (with `for: [triage]`/`[commentary]`), renamed from the old XML
   `<triage-destination>`; check `triage-destination` → `destinations`.
 - **triage-vs-reactor-flow** — dropped the broken
-  `should_read docs/plans/triage-design.md`; the agent distinguishes the two
+  `should_read docs/triage-design.md`; the agent distinguishes the two
   "intake" paths correctly from the guide.
 - **triage-pipeline-not-wired** — the agent answered correctly ("runs only when
   invoked directly via cb intake/triage/handle") but in different words; added

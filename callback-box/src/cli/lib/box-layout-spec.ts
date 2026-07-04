@@ -14,7 +14,7 @@
  *     `test/cli/lib/box-layout-spec.doctest.md` (a doc that drifts fails the
  *     test rather than silently going stale).
  *
- * See "Track B — Box package contract" in `docs/plans/boxes-as-packages-v2.md`.
+ * See "Track B — Box package contract" in `docs/implemented-plans/boxes-as-packages-v2.md`.
  */
 
 import type { BoxLayoutEntry } from "./box-layout-types.js";
@@ -35,7 +35,7 @@ export const BOX_LAYOUT = [
     area: "box",
     description:
       "Items with no clear destination after triage. Pre-existing catch-all; predates the formal " +
-      "triage pipeline (its lifecycle is `docs/plans/triage-design.md` Open Question #9).",
+      "triage pipeline (its lifecycle is `docs/triage-design.md` Open Question #9).",
     agentDescription: "Items with no clear destination",
   },
   {
@@ -44,7 +44,7 @@ export const BOX_LAYOUT = [
     area: "box",
     description:
       "Items being prepared before triage (transcription, OCR, filename normalization). " +
-      "See `docs/plans/triage-design.md`.",
+      "See `docs/triage-design.md`.",
     agentDescription: "Items being prepared before triage (transcription, OCR, filename normalization).",
   },
   {

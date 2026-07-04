@@ -201,7 +201,7 @@ All scripts live in `scripts/migrate/`.
 
 The newest registered migration, `scripts/migrate/box-packageify.ts`, converts a
 whole legacy (shapeVersion 1) box in place into the v2 package layout (see
-"The box repository" in `docs/plans/boxes-as-packages-v2.md`): `views/`,
+"The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`): `views/`,
 `config/schemas/`, and `tricks/` move to `src/{views,schemas,tricks}/`;
 everything else moves to `content/`; `.git` and `.claude/` stay at the
 top-level directory, which becomes the package root. It's structurally

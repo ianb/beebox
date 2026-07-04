@@ -1,6 +1,6 @@
 /**
  * Per-box process supervision for `cb hub` (Track D, chunk D1 in
- * `docs/plans/boxes-as-packages-v2.md`). Adapted from the monorepo dev
+ * `docs/implemented-plans/boxes-as-packages-v2.md`). Adapted from the monorepo dev
  * router's spawn/readiness/teardown mechanics (`../../../bin/router.ts`,
  * `startWorktree`/`onChildExit`/`stopWorktree`), productized as engine code:
  * no lazy-start or idle-shutdown (hub children are resident — schedulers and

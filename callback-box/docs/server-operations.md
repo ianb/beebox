@@ -35,7 +35,7 @@ ssh callback@$(cat deploy/server-ip)
 |------|-------|
 | Box data | `/home/callback/boxes/<box>/` |
 | Hub routing table (which boxes `cb hub` serves, and at what slug) | `/home/callback/.config/cb/hub.json` |
-| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/callback/.config/cb/boxes.json` |
+| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/callback/.config/cb/boxes.json` |
 | Service logs | `journalctl -u cb-hub -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
 | Service status | `systemctl status cb-hub callback-scheduler --no-pager` |
 | Client debug log per box | `/home/callback/boxes/<box>/content/.callback-box/client-debug.log` |

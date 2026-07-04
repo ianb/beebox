@@ -9,7 +9,7 @@
  * form: a v2 box's content dir basename is always the literal string
  * "content", so the router resolves the meaningful slug itself (the box's
  * package root basename) before spawning this process — see Track G in
- * `docs/plans/boxes-as-packages-v2.md`.
+ * `docs/implemented-plans/boxes-as-packages-v2.md`.
  *
  * This is kept separate from `server.ts` so that importing the server
  * library (e.g. from the `cb serve` command, or when the CLI is bundled)

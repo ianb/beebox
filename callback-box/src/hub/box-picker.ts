@@ -1,6 +1,6 @@
 /**
  * `cb hub`'s box picker (Track D, chunk D3 in
- * `docs/plans/boxes-as-packages-v2.md`): a minimal, dependency-free
+ * `docs/implemented-plans/boxes-as-packages-v2.md`): a minimal, dependency-free
  * server-rendered HTML page at `/` listing the boxes the authenticated
  * user can access. Auth-gated exactly like any HTML navigation through the
  * hub (`src/hub/hub-server.ts`'s proxy path) — but this route lives on the

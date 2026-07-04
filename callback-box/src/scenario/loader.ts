@@ -8,7 +8,7 @@
  *
  * The root is `CB_SCENARIOS_DIR` if set, else `~/src/boxes/scenarios` --
  * the historical default from before `callback-box` became a standalone
- * package (see `docs/plans/boxes-as-packages-v2.md` Track H). Kept as a
+ * package (see `docs/implemented-plans/boxes-as-packages-v2.md` Track H). Kept as a
  * documented default, not a bare hardcoded constant, so a checkout outside
  * `~/src` (or with boxes living elsewhere) can point scenarios at the right
  * place without editing engine source.

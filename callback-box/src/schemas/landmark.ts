@@ -22,7 +22,7 @@
  *   ---
  *
  * At least one role should be present; a landmark with neither is inert.
- * See docs/landmarks.md and docs/plans/triage-design.md.
+ * See docs/landmarks.md and docs/triage-design.md.
  */
 
 import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";

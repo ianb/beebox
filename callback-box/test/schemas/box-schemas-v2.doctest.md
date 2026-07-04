@@ -2,7 +2,7 @@
 
 A shapeVersion 2 box moves its code out of the operational root into a
 package root's `src/` (see "The box repository" in
-`docs/plans/boxes-as-packages-v2.md`). `loadBoxSchemas` resolves the
+`docs/implemented-plans/boxes-as-packages-v2.md`). `loadBoxSchemas` resolves the
 schemas dir from `getBoxShape`/`boxCodePaths` instead of a hardcoded
 `config/schemas`, and for v2 boxes it skips the v1 resolve-hook fakery
 entirely: the box's own `node_modules/callback-box` (installed like any

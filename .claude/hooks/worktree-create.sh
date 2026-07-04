@@ -16,7 +16,7 @@
 #   - for a v2 (package-layout) clone, points its "callback-box" dependency
 #     at THIS worktree's own engine checkout (pnpm.overrides link:) and
 #     installs the box's own node_modules — see Track G in
-#     docs/plans/boxes-as-packages-v2.md. Legacy clones are untouched.
+#     docs/implemented-plans/boxes-as-packages-v2.md. Legacy clones are untouched.
 #   - runs pnpm install at the worktree root (root husky), callback-box, and
 #     callback-box/src/frontend. After this the worktree is ready for the
 #     dev router to serve.
@@ -80,7 +80,7 @@ fi
 #
 # BOX_DEST is either a legacy box (content lives at its root) or a v2
 # package (content lives at BOX_DEST/content — see "The box repository" in
-# docs/plans/boxes-as-packages-v2.md). Either way its basename stays
+# docs/implemented-plans/boxes-as-packages-v2.md). Either way its basename stays
 # "test1", so the URL slug matches across worktrees (bin/box-entry.ts
 # derives the v2 slug from the PACKAGE root's basename for exactly this
 # reason — confirmed against this clone layout).
@@ -117,7 +117,7 @@ if [ ! -d "$BOX_DEST" ]; then
     # THIS worktree's own callback-box checkout via a pnpm.overrides
     # `link:` entry — a live symlink that never installs the target's own
     # deps, revertible without touching `dependencies` (see "Prior art" /
-    # Track G in docs/plans/boxes-as-packages-v2.md). Without this the
+    # Track G in docs/implemented-plans/boxes-as-packages-v2.md). Without this the
     # clone would resolve callback-box from whatever the box's lockfile
     # pins — never this worktree's in-progress engine code, defeating the
     # whole point of a worktree. Legacy clones have no package.json here

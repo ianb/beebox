@@ -1,5 +1,7 @@
 # Web-page commentary capture
 
+**Status:** implemented 2026-06 — merged to main via worktree-callback-clerk
+
 Make the callback-clerk browser extension's primary action turn the current
 web page into a **commentary document** inside a box: extract a readable
 markdown rendering, freeze a faithful full copy of the page as an attachment,
@@ -14,7 +16,7 @@ existing destination concept rather than adding a parallel one.
 
 ## Implementation status (2026-06-13)
 
-Implemented on branch `worktree-callback-clerk` (not yet merged to main):
+Implemented on branch `worktree-callback-clerk` and merged to main:
 
 - **Track 1.1 — done.** `<destination for="…">` role + `<triage-destination>`
   back-compat alias; shared `core/landmark/destination.ts`

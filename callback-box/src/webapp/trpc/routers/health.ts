@@ -139,7 +139,7 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
   // git repo (and its .git) lives at boxRoot; for a v2 box the git repo is
   // the PACKAGE root one level up — content/ is a plain subdirectory with no
   // .git of its own (see "One git repository at the repo root" in
-  // docs/plans/boxes-as-packages-v2.md).
+  // docs/implemented-plans/boxes-as-packages-v2.md).
   const { packageRoot: gitRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
   const gitWritable = await isWritable(gitObjectsDir);

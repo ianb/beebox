@@ -22,7 +22,7 @@ box's cards, config, and runtime state).
 ## Five-minute start
 
 Distribution is currently a prebuilt tarball (npm publish is planned but not
-live yet — see [`docs/plans/boxes-as-packages-v2.md`](docs/plans/boxes-as-packages-v2.md)
+live yet — see [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md)
 for the roadmap). Given a tarball URL or path:
 
 ```bash
@@ -80,4 +80,4 @@ migrations) is `cb upgrade`, run from the package root.
 - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
 - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
 - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
-- [`docs/plans/boxes-as-packages-v2.md`](docs/plans/boxes-as-packages-v2.md) — the design behind the package layout and the multi-box hub
+- [`docs/implemented-plans/boxes-as-packages-v2.md`](docs/implemented-plans/boxes-as-packages-v2.md) — the design behind the package layout and the multi-box hub

@@ -12,7 +12,7 @@ A box is a directory marked by a `.cb-box` file. It's a git repository (`cb init
 
 `.cb-box`'s `shapeVersion` field selects the physical layout — see
 `getBoxShape`/`boxCodePaths` in `src/cli/lib/box-shape.ts`, and "The box
-repository" in `docs/plans/boxes-as-packages-v2.md` for the full design.
+repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full design.
 
 - **shapeVersion 1 (legacy, the default when the field is absent)** — the box
   root IS the package root. This is every box created before this plan and
@@ -94,8 +94,8 @@ Items move through these directories as they're processed. **Location is state**
 | Directory | Purpose |
 |-----------|---------|
 | `box/inbox/` | Incoming items awaiting triage. Created by capture UI, connectors, `cb create`. |
-| `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal triage pipeline (its lifecycle is `docs/plans/triage-design.md` Open Question #9). |
-| `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). See `docs/plans/triage-design.md`. |
+| `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal triage pipeline (its lifecycle is `docs/triage-design.md` Open Question #9). |
+| `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). See `docs/triage-design.md`. |
 | `box/inbox/staged/` | Intake-complete; waiting for the triage agent. |
 | `box/inbox/triaged/` | Per-category holding spots (`<category>/`), plus `_unsure/` for low-confidence items paired with a question card. |
 | `box/inbox/triaged/_unsure/` | Low-confidence triage results; paired with a question card. |

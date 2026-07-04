@@ -1,6 +1,6 @@
 # Boxes as Packages v2 — callback-box as a library
 
-**Status:** Implemented (2026-07-04). The laptop and server fleet are converted to the v2
+**Status:** implemented 2026-07 — the laptop and server fleet are converted to the v2
 package layout, the server runs `cb hub` in place of shared `callback-serve`, and the dev loop
 runs one `cb hub` per worktree. Deferred/loose ends — the deploy provisioning scripts not yet
 codifying the hub units, npm publish, and per-box OS isolation — live in "Post-cutover state"
@@ -149,7 +149,7 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
 - **Home Assistant's partial backup/restore** (per-add-on restore) — noted for the hub's
   future: restoring one box without touching siblings is inherent in per-box git repos.
 - **OpenClaw** (https://github.com/openclaw/openclaw; local review at
-  monorepo-root `docs/openclaw-architecture-review.md`, which covers memory/plugins, not
+  monorepo-root `research/openclaw-architecture-review.md`, which covers memory/plugins, not
   lifecycle; the lifecycle claims below were verified against the repo directly) —
   verified: `npm i -g openclaw` +
   `openclaw onboard --install-daemon` wizard, `openclaw doctor`, `openclaw update

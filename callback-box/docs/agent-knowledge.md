@@ -240,7 +240,7 @@ cb prompt "How would I add a daily task?"
 - **Create new card types/schemas** — write `.ts` files exporting a `cardSchema()` (a v2 box's schemas dir is `src/schemas/` at the package root; a legacy box's is `config/schemas/` — see the schemas guide installed by `cb init`)
 - **Create new procedures** — write a procedure card to `config/procedures/`
 - **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (intake triage, feedback handling, calendar review)
-- **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/plans/triage-design.md`)
+- **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/triage-design.md`)
 - **Add tricks** — create scripts in `tricks/scripts/`
 - **Add scheduled tasks** — create `config/scheduled/*.scheduled-script.card`
 - **Create any card** — using `cb create` or writing the frontmatter card directly

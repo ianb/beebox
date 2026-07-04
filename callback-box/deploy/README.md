@@ -52,7 +52,7 @@ Installs everything on Ubuntu 24.04:
 (one process serving every box off `~/.config/cb/boxes.json`), not `cb hub` +
 per-box `cb@<box>.service` units. The live server has since been switched
 over to the hub by hand (see "Systemd units" below and
-`docs/plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+`docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
 `create-server.sh` run today would need the same by-hand steps repeated
 until this script catches up.
 
@@ -128,7 +128,7 @@ unaffected by this change and still runs as a separate unit.
   box's own `cb serve` child.
 - `callback-scheduler` — scheduler daemon for periodic tasks (still reads
   `~/.config/cb/boxes.json`, the older manifest — see
-  `docs/plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
+  `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
   manifest is deferred, not forgotten).
 
 ```bash

@@ -8,7 +8,7 @@
  * (concept-map, exposition-plan) live as attached cards in the course's
  * `<basename>.attach/` scope and travel with it.
  *
- * See docs/plans/courseware-phase1.md.
+ * See docs/implemented-plans/courseware-phase1.md.
  */
 
 import { body, cardSchema, type CardSchema } from "../cards/index.js";

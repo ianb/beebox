@@ -63,7 +63,7 @@ Use \`cb calendar today\`, \`cb calendar upcoming\`, or \`cb calendar <timespan>
  *
  * `.claude/` lives at the box's package root (which equals `boxRoot` for a
  * legacy box) — see "Where Claude Code runs" in
- * `docs/plans/boxes-as-packages-v2.md`.
+ * `docs/implemented-plans/boxes-as-packages-v2.md`.
  *
  * Called by `cb init`.
  */

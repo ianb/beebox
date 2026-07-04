@@ -2,7 +2,7 @@
  * Real-import view metadata extraction, isolated in a subprocess.
  *
  * A view module can have top-level side effects (the risk is documented in
- * `docs/plans/boxes-as-packages-v2.md`'s Failure modes table: "a view module
+ * `docs/implemented-plans/boxes-as-packages-v2.md`'s Failure modes table: "a view module
  * with top-level side effects now executes at list time"). Reading its
  * `name`/`description`/`dependencies`/`modes`/`rendersCardTypes` exports
  * therefore means importing it, which we isolate the same way `cb view

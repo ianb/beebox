@@ -318,7 +318,7 @@ export {
 /**
  * Ensure `.claude/memory/` exists (at the box's package root — `.claude/`
  * lives there, not in `content/`; see "Where Claude Code runs" in
- * `docs/plans/boxes-as-packages-v2.md`) and symlink it from
+ * `docs/implemented-plans/boxes-as-packages-v2.md`) and symlink it from
  * `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory is stored
  * inside the git-tracked project directory.
  *

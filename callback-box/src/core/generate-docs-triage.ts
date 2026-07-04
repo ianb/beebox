@@ -4,7 +4,7 @@
  * Documents the intake → triage → handle pipeline that sorts inbox items into
  * category buckets: the confidence levels the triage agent assigns and the
  * `TRIAGE_ITEMS` contract a category's handler procedure reads. This is the
- * box-side home for what used to live only in `docs/plans/triage-design.md`
+ * box-side home for what used to live only in `docs/triage-design.md`
  * (a repo plan boxes never receive).
  */
 

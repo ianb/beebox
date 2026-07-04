@@ -461,7 +461,7 @@ Open questions:
 - **Where does triage run?** During `cb wakeup` per-item as new things land? As a separate `cb intake` step? Inside the reactor on intake-jobs? The answer affects how aggressively rules get applied (a wakeup-time rule that auto-trashes feels different from a reactor decision that asks first).
 - **One guide or per-stream?** A single `intake.guide.card` is simpler but blurs domains; per-stream guides (recipes vs bookmarks vs voice memos) match how feedback naturally clusters but multiplies setup.
 - **Feedback surface.** Where does the boxholder say "this routing was wrong"? Probably a lightweight "wrong bucket" gesture on archived items + periodic guide-revision passes that read accumulated signals and rewrite the guide.
-- **Relation to landmarks/triage-design.** `docs/plans/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
+- **Relation to landmarks/triage-design.** `docs/triage-design.md` already sketches a typed-routing pipeline using `<triage-destination>` on landmarks. Guides and landmarks both encode routing intent — figure out the division (landmarks = structural destinations, guides = policy for choosing among them?) before building either further.
 
 ## Capitalize glossary terms as Proper Nouns?
 
@@ -1195,7 +1195,7 @@ Worth a deliberate pass with a design consultation or shotgun approach. Two patt
 - **SAFE / RISK split**: explicitly separate where the chat controls should look like a typical chat UI (so users aren't disoriented) from where they should deliberately diverge (because the developer-user + transparency posture call for surfaces a normal chat doesn't have — visible state, inspectable in-flight work, error states that don't hide). Each risk gets a "why it works, what it costs" justification.
 - **Memorable-thing forcing question**: what's the one thing a developer-user should remember after seeing the chat controls for the first time? Probably has to do with transparency or agent-as-collaborator. Constraint that disciplines everything else.
 
-Full notes on the underlying skills: `~/src/callback/gstack-review/notes/design-consultation.md` and `notes/design-shotgun.md`. Not adopting the gstack skills wholesale (heavy infrastructure), but the SAFE/RISK and memorable-thing patterns work standalone.
+Full notes on the underlying skills: `research/gstack/notes/design-consultation.md` and `research/gstack/notes/design-shotgun.md`. Not adopting the gstack skills wholesale (heavy infrastructure), but the SAFE/RISK and memorable-thing patterns work standalone.
 
 ## In-repo issue tracking — evaluate Beads
 
@@ -1520,7 +1520,7 @@ Open questions for an eventual plan (don't design here):
 
 Explored whether text-to-image earns a place in courseware (prior art:
 `dmccreary/claude-skills` — `verified-infographic-generator`,
-`interactive-infographic-overlay`; see `docs/plans/courseware-external-skills-triage.md`).
+`interactive-infographic-overlay`; see `research/courseware-external-skills-triage.md`).
 Parked as too complex to pursue now, but the shape of the answer is worth keeping.
 
 The load-bearing fact: **text-to-image models can't be trusted with text or
@@ -1564,7 +1564,7 @@ verification for figures?
 
 ## Google Drive mounting / file browsing UI
 
-Surfaced by the user-story audit (`docs/plans/user-story-audit-followups.md` D9).
+Surfaced by the user-story audit (`docs/implemented-plans/user-story-audit-followups.md` D9).
 The Drive backend is built but has no driver: `src/webapp/trpc/routers/drive.ts`
 exposes `available` (lists spreadsheets), `inspect` (file details — currently
 dead, no caller), and `updateConfig` (folder-mount config), but **no UI or CLI
@@ -1589,7 +1589,7 @@ up or delete it).
 
 ## User-story audit — remaining feature backlog
 
-From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
+From the user-story audit (`docs/implemented-plans/user-story-audit-followups.md`, bucket D).
 The removals, doc fixes, small fixes, and the calendar-conflict (D7) +
 ref-normalization (D11) features all landed; these larger features were scoped
 but not built. Parked here as the durable backlog (the audit plan doc and the
@@ -1679,3 +1679,40 @@ no test coverage and recent "model-picker desync" fixes suggest it was flaky.
 It's worth exercising, but a meaningful test needs a real Claude invocation
 (drive a session, switch models, confirm context survives) rather than a mock —
 so it's a manual verification task, not an automated one. Not started.
+
+## CLAUDE.md / docs backlog (from CLAUDE-MD-REVIEW, 2026-04)
+
+Still-open items from the 2026-04-28 CLAUDE.md self-audit (`CLAUDE-MD-REVIEW.md`,
+since deleted — most of its scope was completed and folded into CODE-STYLE.md,
+FRONTEND.md, docs/maintenance.md, and docs/knowledge-audits.md over several
+passes). What's left:
+
+- **Design and build a logger, then document "adding logging."** No central
+  logger module today — `console.log`/`console.error` scattered with no
+  levels, structured fields, or convention for where logs go outside agent
+  traces and `client-debug.log`. Code work has to land before the doc can.
+- **Write `docs/reliability.md`.** Nothing documents idempotence expectations
+  for connectors/activities on crash-mid-cycle re-run, retry/backoff for
+  external APIs, recoverable-vs-fatal error classification, stuck `processing`
+  card-status recovery, or the reactor's lock-file semantics.
+- **Write `docs/testing-practice.md`** (distinct from the mechanics-focused
+  `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
+  real, expected thoroughness, and a test-first default.
+- **Write `docs/state-machines.md`.** Seven XState machines exist with no doc
+  on when to reach for XState vs. `useState`/`useReducer`, naming
+  (`fooMachine.ts`), the one-machine-per-hook pattern, or the boundary between
+  machine state and tRPC/SSE-driven state.
+- **Decide which directories get their own CLAUDE.md.** Candidates that carry
+  real conventions with no home: `src/cli/` (40+ commands, shared `lib/`,
+  where to add a new one) and `src/webapp/` (tRPC routers, raw routes, auth,
+  server — where the tRPC-by-default rule logically lives).
+- **Fill in missing "how to add X" guides**: add a connector, add a service
+  (interface + real + fake), add a CLI command. (Adding a card type, an API
+  endpoint, and a box are already covered.)
+- **Write a decision-tree doc** for recurring judgment calls that aren't
+  written down anywhere: service vs. direct library call, connector vs. CLI
+  command, procedure vs. plain code, and the boundary cases for raw Fastify
+  route vs. tRPC procedure (long-polling, large responses, binary uploads).
+- **State the "typed everywhere" principle in one place.** Currently only
+  inferable from a dozen scattered conventions (tRPC end-to-end types, Zod at
+  the boundary, no `as` casts to dodge the type checker).

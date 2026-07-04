@@ -93,7 +93,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // personality cards — git is the record; they were also a template-churn source.
   { name: "strip-entry-timestamps", script: "scripts/migrate/strip-entry-timestamps.ts" },
   // Convert a legacy (shapeVersion 1) box in place into the v2 package
-  // layout (Track H, docs/plans/boxes-as-packages-v2.md). Unlike every
+  // layout (Track H, docs/implemented-plans/boxes-as-packages-v2.md). Unlike every
   // migration above, this one commits its own change (see the module doc
   // comment in the script) — a half-converted box is unsafe, not just
   // incomplete.

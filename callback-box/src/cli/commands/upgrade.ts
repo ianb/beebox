@@ -4,7 +4,7 @@
  * typecheck, committing the result as one reviewable commit.
  *
  * See "Upgrade lifecycle (decision 4)" in
- * `docs/plans/boxes-as-packages-v2.md` — the step list there is this file's
+ * `docs/implemented-plans/boxes-as-packages-v2.md` — the step list there is this file's
  * spec. The critical property is the **Ghost lesson**: code and data revert
  * as ONE unit. `ghost update --rollback` used to revert only the code symlink
  * while the database stayed migrated forward, silently corrupting data
@@ -44,7 +44,7 @@ export class LegacyBoxUpgradeError extends Error {
     super(
       `${boxRoot} is a legacy (shapeVersion 1) box — \`cb upgrade\` only works on v2 ` +
         "(package-layout) boxes, which pin their own callback-box dependency. Convert it " +
-        "first with the box-packageify migration (see docs/plans/boxes-as-packages-v2.md, " +
+        "first with the box-packageify migration (see docs/implemented-plans/boxes-as-packages-v2.md, " +
         "Track H) — not yet implemented."
     );
     this.name = "LegacyBoxUpgradeError";

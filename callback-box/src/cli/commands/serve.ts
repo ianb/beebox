@@ -26,7 +26,7 @@ import { findBoxRoot } from "../lib/paths.js";
  * The slug a box gets when nothing overrides it. For a legacy (shapeVersion
  * 1) box this is the box dir's own basename, same as always. For a v2 box
  * `boxRoot` is the `content/` directory (see "The box repository" in
- * `docs/plans/boxes-as-packages-v2.md`), so `path.basename(boxRoot)` would
+ * `docs/implemented-plans/boxes-as-packages-v2.md`), so `path.basename(boxRoot)` would
  * always be the literal string "content" — the F1 gap the plan calls out.
  * The meaningful name for a v2 box is its PACKAGE root's basename instead.
  */

@@ -154,7 +154,7 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 
 ### Implementation notes
 
-Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
+Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/implemented-plans/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
 
 ### Machines
 
@@ -790,7 +790,7 @@ Mocking is built into the code through explicit dependency injection, not bolted
 
 ### Implementation notes
 
-Core doctest system is **done** and working well. See `docs/testing-gaps.md` for coverage status. The remaining items from the original vision are future enhancements, not blockers.
+Core doctest system is **done** and working well. The remaining items from the original vision are future enhancements, not blockers.
 
 ---
 

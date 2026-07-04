@@ -233,9 +233,64 @@ hosted in dev docs) may deserve an explicit home.
 
 ---
 
+## Direction (boxholder input, 2026-07-04)
+
+Principles set by the boxholder after reviewing the survey; the design
+sections below must trace to these.
+
+- **Colocate module docs; leave a one-sentence pointer in the parent.**
+  When documentation is clearly about one module/directory (e.g. the dev
+  router), it goes in a CLAUDE.md in that directory. The parent CLAUDE.md
+  keeps only a pointer: the agent must know the thing exists, where, and
+  what it does — one sentence, dense, doesn't have to read well (the
+  register of a thought, not prose). All detail lives at the destination.
+- **Two kinds of skills: behavioral and instructional.** Existing `cb-*`
+  skills are behavioral (they shape how the agent works). When there's a
+  *motivation/explanation* not obviously tied to one implementation locus
+  (e.g. testing patterns — distinct from the behavioral cb-debug), it can
+  be an *instructional* skill: brief, pointing to docs for depth. Several
+  small ones can collapse into a single pointer-skill if the skill count
+  grows too much. Use a naming pattern that distinguishes the two kinds.
+- **Document only the non-obvious.** If a convention matches a fresh
+  agent's intuition, documenting it is waste. The valuable docs are where
+  the codebase *contradicts* intuition. Divergences that look incidental
+  (ended up unusual by accident, not intent) get raised as questions to
+  the boxholder, not enshrined in docs.
+- **Competitive/research material gets a dedicated directory**, with a
+  CLAUDE.md describing how the boxholder likes such reviews made (derived
+  from how the existing ones were made).
+- **Pointers to docs may live in module source comments** — worth using
+  where an agent lands in code first.
+- **Long docs can become subdirectories of small files** when the
+  filename index itself makes content easier to search and find — the
+  directory listing acts as a table of contents, and a search hit lands
+  in a focused file rather than deep inside a monolith. Judge per doc:
+  split when the doc is a collection of separable topics (DESIGN.md's 24
+  sections, ideas.md's backlog), not when it's one continuous argument.
+- **Filenames are part of the doc surface — review them and rename
+  freely.** A filename is what an agent sees in a directory listing, a
+  grep hit, or an index before deciding to read; it should say what the
+  doc is now, not what it was when created. The survey's mislabels
+  (EXAMPLE_FILES.md promising current examples, `triage-design.md` for
+  what is now the triage reference, `webpage-card-and-commentary.md` vs
+  `web-page-commentary.md` near-collision) are naming bugs, not just
+  filing bugs. Renames are cheap: doc-graph self-heals and inbound links
+  get updated in the same commit.
+- **Design docs require reconciliation, not just filing.** None of the
+  design documents may be right: the boxholder's design preferences have
+  been developing, so DESIGN.md / design-vision.md / the architecture
+  series can't be merged mechanically — reconciliation against current
+  preference is its own work item.
+- **Calibrate to current models.** Documentation practice should be
+  contemporary with recent models (Opus 4.x / Claude 5 era) — what's
+  worth writing changes as models improve; older CLAUDE.md-era guidance
+  may over-document. (External research pass commissioned.)
+
 ## Stated preferences this plan trades against
 
-*(pending — next section to write)*
+*(pending — next section to write; will include the Direction section
+above, `callback-box/CLAUDE.md`, CODE-STYLE.md, and the doc-altitude
+feedback principle)*
 
 ## What already exists
 

@@ -1,5 +1,7 @@
 # User-story audit — follow-up plans
 
+**Status:** implemented 2026-06 — buckets A–C done; bucket D partially done (see body)
+
 This plan triages the 95 `IAN:` comments left on `docs/user-stories.md` (the
 auto-generated user-story catalog). Each comment was investigated against the
 **current** code by a read-only agent, classified, and given a concrete action

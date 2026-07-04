@@ -1,7 +1,7 @@
 # Migration: box-packageify (legacy → v2 package layout)
 
 `scripts/migrate/box-packageify.ts` converts a legacy (shapeVersion 1) box
-in place into the v2 package layout (`docs/plans/boxes-as-packages-v2.md`,
+in place into the v2 package layout (`docs/implemented-plans/boxes-as-packages-v2.md`,
 Track H): code dirs move to `src/`, everything else moves to `content/`,
 and the whole conversion lands as ONE commit — the one migration where
 "halfway" is unsafe, not just incomplete. `runBoxPackageify(boxRoot)` is

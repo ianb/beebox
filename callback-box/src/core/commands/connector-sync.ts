@@ -4,7 +4,7 @@
  * This is a lightweight command that only runs connector sync.
  * The full wakeup flow (preprocessing, feedback-triage, reactor inbox jobs, etc.)
  * lives in src/cli/commands/wakeup.ts. Distinct from `cb triage` (the
- * triage-pipeline stage; see docs/plans/triage-design.md).
+ * triage-pipeline stage; see docs/triage-design.md).
  */
 
 import {

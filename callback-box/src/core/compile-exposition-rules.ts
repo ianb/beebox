@@ -71,7 +71,7 @@ function renderRule(input: { courseDir: string; rulePath: string; rules: string[
  *
  * `.claude/rules` lives at the box's package root (equal to `boxRoot` for a
  * legacy box) — see "Where Claude Code runs" in
- * `docs/plans/boxes-as-packages-v2.md`. A v2 box's course directories are
+ * `docs/implemented-plans/boxes-as-packages-v2.md`. A v2 box's course directories are
  * nested under `content/` relative to that package root, so the generated
  * `paths:` glob needs the box-root-relative-to-package-root prefix
  * (`content/`) or it never matches anything under the operational root.

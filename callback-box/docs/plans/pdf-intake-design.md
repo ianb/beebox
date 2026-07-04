@@ -1,6 +1,6 @@
 # PDF Intake
 
-**Status: Design. Not yet implemented.**
+**Status:** active — design, not yet implemented
 
 How PDFs (and eventually other document formats) move from upload to a structured `.pdf.card` with extracted text, tables, page renders, and figure assets — using [docling](https://github.com/DS4SD/docling) as the extraction engine.
 

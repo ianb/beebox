@@ -13,7 +13,7 @@
  * A single-file card, usually embedded in a course's attach scope. General
  * beyond courseware — any deliberate presentation could use it.
  *
- * See docs/plans/courseware-phase1.md.
+ * See docs/implemented-plans/courseware-phase1.md.
  */
 
 import { body, cardSchema, type CardSchema } from "../cards/index.js";

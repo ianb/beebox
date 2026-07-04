@@ -1,6 +1,6 @@
 /**
  * Engine-version surfacing (Track E, chunk E2 in
- * `docs/plans/boxes-as-packages-v2.md`): a v2 box pins its own `callback-box`
+ * `docs/implemented-plans/boxes-as-packages-v2.md`): a v2 box pins its own `callback-box`
  * dependency, which can drift from whichever engine is actually SERVING it
  * (the hub serving a v2 box with a different engine version is
  * future-normal per the plan's "Distribution" section — for now a mismatch

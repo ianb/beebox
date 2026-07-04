@@ -61,7 +61,7 @@ export function formatUnsafeAuditBox(err: UnsafeAuditBoxError): string {
  *
  * A package-layout (shapeVersion 2+) box nests its operational root
  * (`content/`) one level inside the git repo, whose top level is the
- * package root — that's by design (`docs/plans/boxes-as-packages-v2.md`,
+ * package root — that's by design (`docs/implemented-plans/boxes-as-packages-v2.md`,
  * "The box repository": one git repo at the repo root, `boxRoot` is
  * `content/`). So the expected top level is the box's `packageRoot`
  * (`boxCodePaths`' predicate), not `boxRoot` itself; a legacy box has

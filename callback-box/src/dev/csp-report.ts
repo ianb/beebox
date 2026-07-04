@@ -25,7 +25,7 @@
  *
  * `--boxes-dir`/`CB_BOXES_DIR` override where local boxes are found
  * (default `~/src/boxes`, the historical layout from before `callback-box`
- * became a standalone package -- see `docs/plans/boxes-as-packages-v2.md`
+ * became a standalone package -- see `docs/implemented-plans/boxes-as-packages-v2.md`
  * Track H). Kept as a documented default, not a bare hardcoded constant, so
  * a checkout with boxes living elsewhere doesn't have to edit engine source.
  *

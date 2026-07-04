@@ -3,7 +3,7 @@
 /**
  * `box-packageify` — convert a legacy (shapeVersion 1) box in place into the
  * v2 package layout described in "The box repository"
- * (`docs/plans/boxes-as-packages-v2.md`, Track H).
+ * (`docs/implemented-plans/boxes-as-packages-v2.md`, Track H).
  *
  * Legacy shape (box root == package root):
  *   <box>/.cb-box, CLAUDE.md, box/, config/, config/schemas/*.ts, views/*.tsx,
@@ -247,7 +247,7 @@ export interface ClaudeProjectRelocationResult {
  * cwd, see `encodeProjectDir` in `src/cli/lib/session.ts`) to the key for
  * the box's new operating cwd (`content/`). Silent memory/history loss on
  * this exact rename is a named failure mode in
- * `docs/plans/boxes-as-packages-v2.md` ("Failure modes" table) -- hence
+ * `docs/implemented-plans/boxes-as-packages-v2.md` ("Failure modes" table) -- hence
  * this runs as part of the migration itself, not left to the runbook.
  * Callers decide whether/how to surface a non-`"moved"` outcome (this
  * function itself never logs) since `runBoxPackageify` -- the only caller --

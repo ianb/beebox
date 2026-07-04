@@ -1,6 +1,6 @@
 /**
  * `cb hub` configuration — `hub.json`, the fleet's routing table (Track D,
- * chunk D1 in `docs/plans/boxes-as-packages-v2.md`).
+ * chunk D1 in `docs/implemented-plans/boxes-as-packages-v2.md`).
  *
  * This file is intentionally strict (`z.strictObject`, closed enums, fail on
  * unknown keys): it decides which processes the hub spawns and which URL

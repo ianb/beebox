@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Build a release tarball: the `dist-release/*.tgz` a box's `package.json`
- * pins (Track F, `docs/plans/boxes-as-packages-v2.md` "Distribution
+ * pins (Track F, `docs/implemented-plans/boxes-as-packages-v2.md` "Distribution
  * (decision 2)"). No install-time build, no registry — the tarball itself
  * (or its hash) is what a box depends on.
  *

@@ -4670,7 +4670,7 @@ Files: `src/cli/commands/handle.ts`
 
 <details><summary>verification note</summary>
 
-The story is accurately implemented. The code in src/cli/commands/handle.ts and the core implementation (src/core/handle.ts) correctly execute handler procedures for each triage category bucket. Verification: (1) reads from inbox/triaged/<category>/ buckets populated by prior triage stage; (2) resolves procedure-ref from category landmarks via compileTriageInstructions(); (3) invokes procedures via startProcedure() with items passed as TRIAGE_ITEMS env var; (4) handles edge cases (no items, no category, no procedure); (5) tested in test/core/handle.doctest.md; (6) documented in docs/plans/triage-design.md
+The story is accurately implemented. The code in src/cli/commands/handle.ts and the core implementation (src/core/handle.ts) correctly execute handler procedures for each triage category bucket. Verification: (1) reads from inbox/triaged/<category>/ buckets populated by prior triage stage; (2) resolves procedure-ref from category landmarks via compileTriageInstructions(); (3) invokes procedures via startProcedure() with items passed as TRIAGE_ITEMS env var; (4) handles edge cases (no items, no category, no procedure); (5) tested in test/core/handle.doctest.md; (6) documented in docs/triage-design.md
 
 </details>
 

@@ -6,7 +6,7 @@ directory, keyed by an encoding of the operating cwd — see
 `encodeProjectDir` in `src/cli/lib/session.ts`) to the key for the box's
 new operating cwd (`content/`) when `box-packageify` moves a box's
 operating root. Silent memory/history loss on this exact rename is a named
-failure mode in `docs/plans/boxes-as-packages-v2.md` ("Failure modes"
+failure mode in `docs/implemented-plans/boxes-as-packages-v2.md` ("Failure modes"
 table). Split into its own file from `migrate-box-packageify.doctest.md`
 (same migration, same fixture conventions) purely to keep each file's
 `ts continue` chain short.

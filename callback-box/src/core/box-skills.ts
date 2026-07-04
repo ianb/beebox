@@ -3,7 +3,7 @@
  * managed box skills into `<box>/.claude/skills/<name>/SKILL.md` so the box
  * agent (which auto-discovers project-level `.claude/skills/` via the SDK's
  * `settingSources`) can invoke them. Verified: a box-level skill is discovered
- * with no SDK-option change (see docs/plans/courseware-phase1.md, Track 1).
+ * with no SDK-option change (see docs/implemented-plans/courseware-phase1.md, Track 1).
  *
  * Called from `cb init`.
  */
@@ -67,7 +67,7 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
  * Write each managed box skill to `<packageRoot>/.claude/skills/<name>/SKILL.md`
  * (`.claude/` lives at the box's package root, which equals `boxRoot` for a
  * legacy box — see "Where Claude Code runs" in
- * `docs/plans/boxes-as-packages-v2.md`). Idempotent overwrite — re-running
+ * `docs/implemented-plans/boxes-as-packages-v2.md`). Idempotent overwrite — re-running
  * `cb init` refreshes them. Returns the skill names written. Only writes the
  * directories it manages, so a hand-authored box skill alongside is left
  * untouched.

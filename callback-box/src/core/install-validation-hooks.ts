@@ -26,7 +26,7 @@
  * overwrite-or-park-the-whole-file shape that helper is built for.
  *
  * **The v2 git-hooks trap** (see "THE TRAP" in
- * `docs/plans/boxes-as-packages-v2.md`, Track B): for a shapeVersion 2 box,
+ * `docs/implemented-plans/boxes-as-packages-v2.md`, Track B): for a shapeVersion 2 box,
  * `.git` sits at the package root, not at `boxRoot` (`content/`). Git always
  * invokes hooks with cwd = the repository's top level regardless of where
  * `git commit` was run from — i.e. the PACKAGE root, not `content/` — so

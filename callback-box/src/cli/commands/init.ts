@@ -77,7 +77,7 @@ export async function runInit(targetPath: string, options: InitOptions): Promise
   // legacy — conversion is a later migration, not init's job), an existing
   // v2 box (`content/` nested inside), or nothing yet. A fresh init always
   // scaffolds the v2 package layout — see "The box repository" in
-  // docs/plans/boxes-as-packages-v2.md.
+  // docs/implemented-plans/boxes-as-packages-v2.md.
   const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 

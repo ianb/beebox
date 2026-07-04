@@ -1,7 +1,7 @@
 # Adding a Box
 
 How to provision a new box behind a `cb hub` (the multi-box parent process —
-see "Serving" in [`docs/plans/boxes-as-packages-v2.md`](plans/boxes-as-packages-v2.md)
+see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](plans/boxes-as-packages-v2.md)
 for the full design). This doc covers the generic shape; the concrete
 commands below are annotated where they're specific to one example
 deployment (`box.example.com`) rather than something every hub needs.

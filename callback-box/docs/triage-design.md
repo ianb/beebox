@@ -1,6 +1,6 @@
 # Triage — Design
 
-Status: early notes, design in progress.
+**Status:** implemented — serves as the triage pipeline reference; not yet re-verified line-by-line against current code
 
 ## Motivation
 

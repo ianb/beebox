@@ -13,6 +13,8 @@ Contrast with the siblings:
 
 | Doc | Disposition |
 |---|---|
-| `boxes-as-packages.md` | Superseded by `../plans/boxes-as-packages-v2.md` (2026-07-03), which re-derived the design against the current codebase and kept its core (Option C, per-box processes, auth-in-front, Stance B editing model) while reversing distribution (tarball/npm over private bare repo) and the src/data framing details. |
-| `box-user-account-spec.md` | Derivative of boxes-as-packages.md; the OS-user-as-box-identity idea is deferred to the isolation-hardening subplan named in `../plans/boxes-as-packages-v2.md` (§Subplans). Not superseded — parked until the fleet conversion lands. |
+| `boxes-as-packages.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), which re-derived the design against the current codebase and kept its core (Option C, per-box processes, auth-in-front, Stance B editing model) while reversing distribution (tarball/npm over private bare repo) and the src/data framing details. |
+| `box-user-account-spec.md` | Derivative of boxes-as-packages.md; the OS-user-as-box-identity idea is deferred to the isolation-hardening subplan named in `../implemented-plans/boxes-as-packages-v2.md` (§Subplans). Not superseded — parked until the fleet conversion lands. |
 | `design-card-views.md` | Superseded by the shipped renderer system: `src/frontend/src/renderers/` + the file-types registry, keyed off frontmatter `type` rather than this doc's XML `tagName`-based plugin registry. |
+| `query-cards.md` | Parked 2026-07-03; vocabulary explored but not planned for implementation. Parent design lives on in `../plans/interface-as-cards.md`. |
+| `capture-pipeline-redesign.md` | Parked 2026-03 — direction (simpler capture pipeline) may still be relevant; OCR vendor pricing in body is stale. |

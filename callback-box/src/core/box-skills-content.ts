@@ -5,7 +5,7 @@
  * the same pattern as schema `instructions`.
  *
  * NOTE: this is agent-facing prose under review — the boxholder reviews the
- * skill before it ships. See docs/plans/courseware-phase1.md (Track 5).
+ * skill before it ships. See docs/implemented-plans/courseware-phase1.md (Track 5).
  */
 
 /** The `build-course` skill: the pedagogical process for building a course. */

@@ -1,6 +1,6 @@
 /**
  * Package-root scaffolding for shapeVersion 2 boxes (see "The box
- * repository" in `docs/plans/boxes-as-packages-v2.md`). `cb init` on a path
+ * repository" in `docs/implemented-plans/boxes-as-packages-v2.md`). `cb init` on a path
  * with no existing box detects a fresh init and lays down BOTH halves: a
  * thin coding-session package at the target path, and the operational box
  * at `<target>/content/`. An existing box (legacy or v2) is left in its
@@ -165,7 +165,7 @@ export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
   // range against the running engine's own version — meaningless to resolve
   // via a real install today (there's no registry; Track F's "Now" channel
   // is a tarball, not `npm publish` — see "Distribution (decision 2)" in
-  // docs/plans/boxes-as-packages-v2.md), but harmless, since scaffolding
+  // docs/implemented-plans/boxes-as-packages-v2.md), but harmless, since scaffolding
   // immediately symlinks `node_modules/callback-box` at the running engine
   // instead of installing anything. A release/install tool that DOES want a
   // real `pnpm install` to resolve this dependency (pinning a tarball path

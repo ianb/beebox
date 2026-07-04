@@ -1,5 +1,7 @@
 # In-box Commentary Surface for Out-of-Box Files
 
+**Status:** partially implemented 2026-06 — see "Implementation status" below for what's landed vs. remaining
+
 A Callback Box capability for viewing, selecting, and commenting on files
 that live **outside** the box — repo docs and source, including the same
 logical file across multiple git worktrees — from inside a dedicated box.

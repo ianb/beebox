@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * The plan's first hard gate (Track F, "Implementation order" item 5 in
- * `docs/plans/boxes-as-packages-v2.md`): "a fresh external v2 box, scaffolded
+ * `docs/implemented-plans/boxes-as-packages-v2.md`): "a fresh external v2 box, scaffolded
  * in a temp dir against the tarball, must import every public export,
  * typecheck, pass `cb validate`, and serve its `content/` — before any hub,
  * fleet, or migration work proceeds."

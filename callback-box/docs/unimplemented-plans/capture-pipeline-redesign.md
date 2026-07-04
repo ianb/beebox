@@ -1,5 +1,7 @@
 # Capture Pipeline Redesign
 
+**Status:** parked 2026-03 — direction (simpler capture pipeline) may still be relevant; OCR vendor pricing in body is stale
+
 ## Problem
 
 The current `process-captures` procedure uses 7 agent steps (summarize, purpose, describe-images, assemble, rename, plan-extraction, extract). This is slow, unpredictable, and fails mid-way. The pipeline should be mostly deterministic with targeted agent use.
