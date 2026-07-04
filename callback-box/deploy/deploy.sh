@@ -195,7 +195,7 @@ if [[ "$SKIP_RESTART" != true ]]; then
   ssh "root@$SERVER_IP" 'test -x /usr/local/bin/cb-wait-quiet && /usr/local/bin/cb-wait-quiet || echo "  (cb-wait-quiet not installed; re-run setup-server.sh to enable)"'
 
   echo "Restarting services..."
-  ssh "root@$SERVER_IP" 'systemctl restart callback-serve callback-scheduler && echo "Services restarted"'
+  ssh "root@$SERVER_IP" 'systemctl restart callback-hub callback-scheduler && echo "Services restarted"'
 
   # Verify /healthz responds with 200 — proves the process came back up
   # and is actually serving requests, not just that systemctl returned.
