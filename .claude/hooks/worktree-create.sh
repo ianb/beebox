@@ -4,17 +4,22 @@
 # Replaces the default `git worktree add` with logic that also:
 #   - OVERRIDES the worktree location: Claude Code defaults to
 #     <repo>/.claude/worktrees/<name>/, but we put it at
-#     ~/src/callback-worktrees/<name>/ instead. Reason: callback-box and
-#     cardworks have file: deps on personal-vibe-check at file:../personal-vibe-check.
-#     The relative path only resolves correctly when the worktree is a
-#     sibling of the monorepo root (same depth as main checkout).
+#     ~/src/callback-worktrees/<name>/ instead. Reason: callback-box has a
+#     file: dep on personal-vibe-check at file:../personal-vibe-check. The
+#     relative path only resolves correctly when the worktree is a sibling
+#     of the monorepo root (same depth as main checkout).
 #   - clones ~/src/boxes/test1 to ~/src/box-worktrees/<name>/test1/
 #     (URL slug = basename = "test1" for every worktree, so links like
-#     /<wt>/test1/... swap cleanly across worktrees)
+#     /<wt>/test1/... swap cleanly across worktrees — true whether the clone
+#     is a legacy box or a v2 package, see box-entry.ts)
 #     (kept outside the monorepo so the box doesn't inherit monorepo CLAUDE.md)
-#   - runs pnpm install at the worktree root (root husky), in cardworks (and
-#     builds it), callback-box, and callback-box/src/frontend. After this the
-#     worktree is ready for the dev router to serve.
+#   - for a v2 (package-layout) clone, points its "callback-box" dependency
+#     at THIS worktree's own engine checkout (pnpm.overrides link:) and
+#     installs the box's own node_modules — see Track G in
+#     docs/plans/boxes-as-packages-v2.md. Legacy clones are untouched.
+#   - runs pnpm install at the worktree root (root husky), callback-box, and
+#     callback-box/src/frontend. After this the worktree is ready for the
+#     dev router to serve.
 #
 # The dev router lazy-spawns Vite + Fastify per worktree on first request, so
 # we don't start any dev server here. Ports are also allocated dynamically by
@@ -72,26 +77,59 @@ else
 fi
 
 # 2. Clone the test box if it doesn't already exist (idempotent).
+#
+# BOX_DEST is either a legacy box (content lives at its root) or a v2
+# package (content lives at BOX_DEST/content — see "The box repository" in
+# docs/plans/boxes-as-packages-v2.md). Either way its basename stays
+# "test1", so the URL slug matches across worktrees (bin/box-entry.ts
+# derives the v2 slug from the PACKAGE root's basename for exactly this
+# reason — confirmed against this clone layout).
 mkdir -p "$(dirname "$BOX_DEST")"
 if [ ! -d "$BOX_DEST" ]; then
   if [ -d "$BOX_SRC" ]; then
     echo "[worktree-create] cloning $BOX_SRC -> $BOX_DEST"
     git clone --quiet "$BOX_SRC" "$BOX_DEST"
+
+    box_content_dir="$BOX_DEST"
+    [ -d "$BOX_DEST/content" ] && box_content_dir="$BOX_DEST/content"
+
     # Carry over gitignored connector secrets (deepgram, gmail, google,
     # dropbox, etc.). The source box gitignores config/connectors/*.secret.*
     # so git clone leaves them behind, breaking transcription and external
-    # syncs in the worktree until the user manually copies them.
-    if [ -d "$BOX_SRC/config/connectors" ]; then
-      mkdir -p "$BOX_DEST/config/connectors"
+    # syncs in the worktree until the user manually copies them. config/
+    # lives under content/ for a v2 box, at the root for legacy.
+    box_src_content_dir="$BOX_SRC"
+    [ -d "$BOX_SRC/content" ] && box_src_content_dir="$BOX_SRC/content"
+    if [ -d "$box_src_content_dir/config/connectors" ]; then
+      mkdir -p "$box_content_dir/config/connectors"
       copied=0
-      for f in "$BOX_SRC"/config/connectors/*.secret.*; do
+      for f in "$box_src_content_dir"/config/connectors/*.secret.*; do
         [ -e "$f" ] || continue
-        cp "$f" "$BOX_DEST/config/connectors/"
+        cp "$f" "$box_content_dir/config/connectors/"
         copied=$((copied + 1))
       done
       if [ "$copied" -gt 0 ]; then
         echo "[worktree-create] copied $copied connector secret(s) from source box"
       fi
+    fi
+
+    # v2 (package-layout) box: redirect its "callback-box" dependency at
+    # THIS worktree's own callback-box checkout via a pnpm.overrides
+    # `link:` entry — a live symlink that never installs the target's own
+    # deps, revertible without touching `dependencies` (see "Prior art" /
+    # Track G in docs/plans/boxes-as-packages-v2.md). Without this the
+    # clone would resolve callback-box from whatever the box's lockfile
+    # pins — never this worktree's in-progress engine code, defeating the
+    # whole point of a worktree. Legacy clones have no package.json here
+    # and are left untouched.
+    if [ -f "$BOX_DEST/package.json" ] && jq -e '(.dependencies["callback-box"] // .devDependencies["callback-box"]) != null' "$BOX_DEST/package.json" >/dev/null; then
+      echo "[worktree-create] v2 box detected — pointing callback-box at $worktree_path/callback-box"
+      tmp_pkg=$(mktemp)
+      jq --arg link "link:$worktree_path/callback-box" '.pnpm.overrides["callback-box"] = $link' \
+        "$BOX_DEST/package.json" > "$tmp_pkg"
+      mv "$tmp_pkg" "$BOX_DEST/package.json"
+      echo "[worktree-create] running pnpm install in $BOX_DEST..."
+      (cd "$BOX_DEST" && pnpm install)
     fi
   else
     echo "[worktree-create] warning: $BOX_SRC not found; router will fall back to defaults"
@@ -100,21 +138,15 @@ else
   echo "[worktree-create] reusing existing box $BOX_DEST"
 fi
 
-# 3. pnpm install + cardworks build. ONE workspace install at the root —
-# never per-subpackage. Under pnpm workspaces with node-linker=hoisted,
-# running `pnpm install` inside a subpackage walks up to the workspace
-# root anyway, but in practice it also seems to wipe the root lockfile
-# in some cases, leaving the worktree with node_modules/ populated but
-# node_modules/.bin/ empty (which then breaks bin/browse, bin/cb, etc.).
-# Same shape as what deploy/deploy.sh does on the server.
+# 3. pnpm install. ONE workspace install at the root — never per-subpackage.
+# Under pnpm workspaces with node-linker=hoisted, running `pnpm install`
+# inside a subpackage walks up to the workspace root anyway, but in
+# practice it also seems to wipe the root lockfile in some cases, leaving
+# the worktree with node_modules/ populated but node_modules/.bin/ empty
+# (which then breaks bin/browse, bin/cb, etc.). Same shape as what
+# deploy/deploy.sh does on the server.
 echo "[worktree-create] running pnpm install (workspace-wide)..."
 (cd "$worktree_path" && pnpm install)
-
-# cardworks/dist must exist before any callback-box import resolves
-# (node-linker=hoisted lays out cardworks via dist). The root install
-# above doesn't run the cardworks build script.
-echo "[worktree-create] building cardworks..."
-(cd "$worktree_path" && pnpm --filter cardworks run build)
 
 # 4. Write .claude/settings.local.json so the agent's shell sees the worktree's
 # own cb on PATH. Per-worktree because each worktree has its own absolute

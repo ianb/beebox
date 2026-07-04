@@ -34,6 +34,7 @@ import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
+import { resolveBoxEntries, boxEntryToArg } from "./box-entry.js";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
 
@@ -425,6 +426,10 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
 
   log(`[${name}] frontend=${frontendPort} backend=${backendPort} dashboard=${dashboardPort} base=${baseUrl}`);
 
+  // Each of wt.boxes may be a legacy box dir, a v2 package root, or a v2
+  // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
+  // handing off to server-main.ts, which no longer guesses the slug itself.
+  const resolvedBoxes = await resolveBoxEntries(wt.boxes);
   const fastify = execa(
     "node",
     [
@@ -432,7 +437,7 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       "--import",
       "tsx",
       "./src/webapp/server-main.ts",
-      ...wt.boxes,
+      ...resolvedBoxes.map(boxEntryToArg),
     ],
     {
       cwd: wt.backendCwd,
