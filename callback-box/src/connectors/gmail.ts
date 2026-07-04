@@ -18,15 +18,24 @@
  *                                          "seenMessageIds": [...] }  (legacy)
  *   config/connectors/gmail.state.json - { "historyId": "..." } (gitignored)
  *
- * Each Gmail thread becomes a directory in box/inbox/email/:
- *   thread-Subject_Line-abc123/
- *     thread.email-thread.card
- *     msg-001.email-message.card
- *     msg-001.body.txt
- *     msg-002.email-message.card
- *     msg-002.body.txt
- *     attachments/
- *       document.pdf
+ * On-disk layout (written by gmail-threads.ts). Each thread is a single
+ * `email-thread` card living directly in box/inbox/email/ — NOT a wrapper
+ * directory; the `thread-Subject_Line-abc123` string is the card's basename.
+ * Its per-message children live in the thread card's own `.attach/` scope, and
+ * each message's body + file attachments live in that message's `.attach/`
+ * scope (never as flat siblings):
+ *
+ *   box/inbox/email/
+ *     thread-Subject_Line-abc123.email-thread.card
+ *     thread-Subject_Line-abc123.attach/
+ *       msg-001.email-message.card         (metadata only; body-file.ref → attach/msg-001.body.txt)
+ *       msg-001.attach/
+ *         msg-001.body.txt                 (message body text)
+ *         attachments/
+ *           document.pdf                   (file attachments, per message)
+ *       msg-002.email-message.card
+ *       msg-002.attach/
+ *         msg-002.body.txt
  */
 
 import * as fs from "node:fs/promises";
