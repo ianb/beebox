@@ -6,12 +6,7 @@ This is not an app — it's a system that Claude Code operates. The human teache
 
 ## Development
 
-**Dev server** — run the monorepo dev router from the repo root: `bin/worktrees serve` (or `pnpm dev`). The router lazy-starts Vite + a `cb hub` per worktree on first HTTP request, and idle-shuts-them-down after 5 minutes; the hub in turn lazy-starts/idle-collects a `cb serve` child per box within that worktree, so individual boxes cold-start and idle-stop independently. URLs:
-
-- `http://localhost:3210/main/<box>/...` — the main checkout
-- `http://localhost:3210/<name>/<box>/...` — any git worktree
-
-Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns Vite and the hub directly as its children — flat tree, predictable signal handling, no tmux. See the monorepo CLAUDE.md for the lifecycle commands (`worktrees status`, `down`, `panic`).
+**Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy start, idle stop); don't restart it from a worktree session. Contract in the monorepo root CLAUDE.md; mechanism in `bin/CLAUDE.md`.
 
 **Testing** — `pnpm test` runs tap. Pre-commit hook runs typecheck + lint automatically.
 - `pnpm typecheck` — TypeScript (both backend and frontend)
@@ -21,7 +16,7 @@ Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns Vite and
 - Use `t.check(actual, expected)` for string comparisons. Objects serialize as `JSON.stringify(val, null, 2)`.
 - Run tests before committing. If tests fail, fix them. If a test failure is clearly pre-existing and unrelated to your changes, note it but don't ignore your own failures.
 
-**Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktrees on other branches commit without deploying; ship by merging to `main`. Server runs as `callback` user at `/opt/callback/`. Prod runs a resident `cb hub` (systemd unit `callback-hub`; the old single-process `callback-serve` unit is stopped/disabled but left on disk as a rollback lever) that routes `/<slug>/...` to per-box `cb serve` children, each running the bundled `dist/cli.mjs` (built by `scripts/build-cli.mjs`, rsynced by the deploy) — not tsx, and not the per-file compiled tree. Because the bundle lives at `dist/` (one level below the package root, not `dist/webapp/`), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`. See `deploy/README.md` for the full server-layout and systemd-unit reference.
+**Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` to per-box `cb serve` children executing the bundled `dist/cli.mjs` — not tsx. Because the bundle lives at `dist/` (one level below the package root), resolve package-relative asset paths via `src/lib/package-root.ts` `PACKAGE_ROOT`, never a hardcoded `import.meta.dirname + "../.."`. Server layout, systemd units, rollback lever: `deploy/README.md`.
 
 ## Cards
 
@@ -44,13 +39,7 @@ Body content as plain markdown.
 
 **Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
 
-**Validation**: Cards validate on load. `cb validate` checks all cards (or a list of files, or `--staged`). Boxes get two hooks installed during `cb init`:
-
-- `.claude/settings.json` — PostToolUse hook that runs `cb validate --hook` after Edit/Write/MultiEdit. On a card path with errors it exits 2 with the error on stderr so Claude Code surfaces it to the agent (warning, not blocking).
-- `.git/hooks/pre-commit` — runs `cb validate --staged`, blocks commits that include cards failing validation.
-- `.git/hooks/post-commit` — fires `cb validate --urls --urls-since HEAD~1` in the background (non-blocking) to HEAD-check *external* http(s) URLs the first time they appear. Warning-only, never gates; verdict cache is gitignored at `.callback-box/url-checks.json`. The synchronous lint above never touches the network — only this pass does. See `docs/implemented-plans/external-url-validation.md`.
-
-See `src/core/install-validation-hooks.ts`. The hook commands embed the absolute path to the installing `bin/cb` so they don't depend on the user's PATH. See `docs/cards-as-markdown.md` for the format design and migration history; `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts` are the per-schema migrators with noisy-mode field-loss detection.
+**Validation**: Cards validate on load; `cb validate` checks all cards, a file list, or `--staged`. `cb init` installs per-box hooks (agent-facing PostToolUse warning, commit-blocking pre-commit, background URL checks) — mechanics in `docs/card-validation.md`. Format design and migration history: `docs/cards-as-markdown.md`.
 
 ## Source Layout
 
@@ -87,7 +76,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-doctest/` package (the loader/runner) plus this project's `test/helpers/` (test-server, fake-agent, fixture-replay, etc.).
 
-**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box. Box layout: `box/inbox/`, `box/jobs/`, `box/commands/`, `box/questions/`, `store/archive/`, `config/`. Newer boxes (`shapeVersion: 2`, incl. `test1`) wrap this in a package: the box itself is the `content/` subdirectory (operational root = `boxRoot` = agent cwd), while `src/{schemas,views,tricks}` and `.claude/` live at the package root alongside a `package.json` depending on `callback-box`. Box code (schemas, views, tricks) only imports `callback-box/cards`, `callback-box/schema`, or `callback-box/view-widgets` — never engine internals. See `docs/box-layout.md` for the full shape.
+**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the primary test box. Newer boxes (`shapeVersion: 2`, incl. `test1`) are packages — the operational box is the `content/` subdirectory, and box code imports only the public `callback-box/{cards,schema,view-widgets}` specifiers, never engine internals. Full on-disk shape: `docs/box-layout.md`.
 
 ## Key Concepts
 
@@ -129,6 +118,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Adding a card type | `docs/adding-schemas.md` |
 | Card format & migration history | `docs/cards-as-markdown.md` |
 | Box migration runbook | `docs/migrations.md` |
+| Card validation hooks | `docs/card-validation.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
 | Connectors | `docs/connectors.md` |
 | Procedures | `docs/procedure-implementation.md` |
