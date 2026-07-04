@@ -15,6 +15,7 @@ import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription.js";
+import { getBoxShapeOrLegacyFallback } from "../../../cli/lib/box-shape.js";
 
 export interface HealthCheck {
   name: string;
@@ -134,15 +135,20 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "error",
   });
 
-  // .git/objects writable (git add/commit needs this)
-  const gitObjectsDir = path.join(boxRoot, ".git/objects");
+  // .git/objects writable (git add/commit needs this). For a legacy box the
+  // git repo (and its .git) lives at boxRoot; for a v2 box the git repo is
+  // the PACKAGE root one level up — content/ is a plain subdirectory with no
+  // .git of its own (see "One git repository at the repo root" in
+  // docs/plans/boxes-as-packages-v2.md).
+  const { packageRoot: gitRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const gitObjectsDir = path.join(gitRoot, ".git/objects");
   const gitWritable = await isWritable(gitObjectsDir);
   checks.push({
     name: "git-writable",
     ok: gitWritable,
     message: gitWritable
       ? ".git/objects is writable"
-      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + boxRoot + ")",
+      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + gitRoot + ")",
     severity: "error",
   });
 

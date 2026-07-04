@@ -49,9 +49,12 @@ export function isLintableMarkdown(filePath: string): boolean {
  * staged dossier edit the way it already covers staged cards.
  */
 export async function listStagedMarkdown(boxRoot: string): Promise<string[]> {
+  // `--relative` (see `listStagedCards` in `validate.ts` for why): reports
+  // paths relative to and scoped to `boxRoot`, which matters once `boxRoot`
+  // (a v2 box's `content/`) isn't the repo root.
   const { stdout } = await execFileP(
     "git",
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "--relative"],
     { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
   );
   return stdout

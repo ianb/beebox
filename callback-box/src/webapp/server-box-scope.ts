@@ -21,9 +21,15 @@ import { registerFigureRoutes } from "./routes/figure.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
-import { isAuthEnabled, getSessionEmail, getSessionUser, getOwnerEmail, isOwner, isDiagnosticBypassRequest } from "./auth.js";
+import {
+  isAuthEnabled,
+  isHubMode,
+  resolveRequestIdentity,
+  getOwnerEmail,
+  isDiagnosticBypassRequest,
+} from "./auth.js";
 import { verifyAgentBearer } from "../core/agent-token.js";
-import { loadBoxConfig } from "./box-config.js";
+import { canAccessBox } from "./box-access.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box-file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
@@ -31,14 +37,22 @@ import type { BoxSpec, ServerOptions } from "./server-types.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
-function isApiUrl(url: string): boolean {
+/** Exported for the hub (`src/hub/hub-server.ts`), which needs the same
+ *  HTML-navigation-vs-API distinction when a proxied request is
+ *  unauthenticated: API/WS gets 401, HTML navigation gets a login redirect. */
+export function isApiUrl(url: string): boolean {
   return url.includes("/api/") || url.includes("/trpc/") || url.includes("/events");
 }
 
 /**
- * Per-box auth preHandler: verify session and box-level access. Installed
- * only when auth is enabled. Lets static assets and diagnostic-bypass
- * requests through; redirects page navigations to login and 401s API calls.
+ * Per-box auth preHandler: verify identity and box-level access. Installed
+ * when either standalone auth is enabled OR this box is running behind a
+ * hub (`isHubMode()`). Lets static assets and diagnostic-bypass requests
+ * through; redirects page navigations to login and 401s API calls —
+ * EXCEPT in hub mode, where the box never redirects to its own
+ * `/auth/login` (the hub owns login and gates page navigation before
+ * proxying, so a child 401 here means the request bypassed the hub —
+ * spoofed headers or a misconfigured proxy, not "please log in").
  */
 function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
   instance.addHook("preHandler", async (request, reply) => {
@@ -65,21 +79,26 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
       return;
     }
-    const email = getSessionEmail(request);
+    const identity = resolveRequestIdentity(request);
+    if (identity.source === "open") return; // hub-wide auth is off
+    const email = identity.email;
     if (!email) {
-      // For API requests, return 401 JSON. For page navigations, redirect to login.
       if (isApiUrl(request.url)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
+      if (isHubMode()) {
+        return reply.status(401).send({
+          error: "Not authenticated",
+          detail:
+            "This box is served behind a hub, which gates page navigation before proxying. " +
+            "Reaching this box unauthenticated means the request bypassed the hub, or the " +
+            "hub-injected identity headers were missing/invalid (spoof or misconfiguration).",
+        });
+      }
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    const ownerEmail = getOwnerEmail();
-    if (email !== ownerEmail) {
-      const config = await loadBoxConfig(box.boxRoot);
-      // If no allowedEmails configured, only the owner can access
-      if (!config.allowedEmails?.length || !config.allowedEmails.includes(email)) {
-        return reply.status(403).send({ error: "Not authorized for this box" });
-      }
+    if (!(await canAccessBox({ boxRoot: box.boxRoot, email, ownerEmail: getOwnerEmail() }))) {
+      return reply.status(403).send({ error: "Not authorized for this box" });
     }
   });
 }
@@ -99,7 +118,7 @@ interface BoxScopeDeps {
 async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps): Promise<void> {
   const { box, eventBus, options, frontendPath, frontendExists } = deps;
 
-  if (isAuthEnabled()) {
+  if (isAuthEnabled() || isHubMode()) {
     addBoxAuthHook(instance, box);
   }
 
@@ -108,7 +127,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // run whether or not a UI is connected (a headless server still serves cards
   // that need up-to-date box schemas), so start it here at registration. Close
   // both on shutdown.
-  ensureSchemaWatcher(box.boxRoot);
+  await ensureSchemaWatcher(box.boxRoot);
   instance.addHook("onClose", async () => {
     await closeBoxWatcher(box.boxRoot);
     await closeSchemaWatcher(box.boxRoot);
@@ -141,24 +160,25 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
     // pong, freeing sockets held by crashed/NAT-dropped tabs.
     keepAlive: { enabled: true, pingMs: 30_000, pongWaitMs: 5_000 },
     createContext: ({ req }: CreateFastifyContextOptions): TrpcContext => {
-      // Extract identity from the request the same way the box auth preHandler
-      // (and the raw `addOwnerCheck`) do, so tRPC procedures can gate on it.
-      // The preHandler already rejected unauthorized requests before this runs
-      // when auth is enabled; we recompute here to fail closed rather than
-      // assume it ran.
-      const user = getSessionUser(req);
-      const authEnabled = isAuthEnabled();
+      // Extract identity via the SAME helper the box auth preHandler uses
+      // (`resolveRequestIdentity` — see auth.ts), so tRPC procedures gate on
+      // exactly what the preHandler already decided, never a second,
+      // independently-computed answer. The preHandler already rejected
+      // unauthorized requests before this runs when auth is enabled; we
+      // recompute here to fail closed rather than assume it ran (e.g. the
+      // WS upgrade path shares this same createContext).
+      const identity = resolveRequestIdentity(req);
+      const openAccess = isHubMode() ? identity.source === "open" : !isAuthEnabled();
+      const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
+      const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
         eventBus,
         services: options.services ?? {},
         user,
-        authed:
-          !authEnabled ||
-          user !== null ||
-          verifyAgentBearer(box.boxRoot, req.headers["authorization"]),
-        isOwner: !authEnabled || isOwner(req),
+        authed: openAccess || user !== null || bearerOk,
+        isOwner: openAccess || (user !== null && user.email === getOwnerEmail()),
       };
     },
   };

@@ -4,6 +4,9 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
+import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
+
+export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
 class NotInBoxError extends Error {
   constructor() {
@@ -12,64 +15,35 @@ class NotInBoxError extends Error {
   }
 }
 
+export class UnknownBoxDirsKeyError extends Error {
+  constructor(boxDirsKey: string) {
+    super(`No box-layout-spec entry for BOX_DIRS key "${boxDirsKey}".`);
+    this.name = "UnknownBoxDirsKeyError";
+  }
+}
+
 /**
- * Standard directory names in a callback box.
- *
- * If you add, remove, or rename an entry here, also update:
- *   - docs/box-layout.md (developer reference)
- *   - src/core/agent-guide/box-shape.ts (in-box agent reference)
- * The three are not auto-generated from each other; drift between them
- * has caused confusion before.
+ * Standard directory names in a callback box, derived from the single
+ * `BOX_LAYOUT` spec in `box-layout-spec.ts`. That file is also the source
+ * for `docs/box-layout.md`'s tables (checked by
+ * `test/cli/lib/box-layout-spec.doctest.md`) and the in-box agent guide
+ * (`src/core/agent-guide/box-shape.ts`) — add, remove, or rename a directory
+ * there, not here.
  */
-export const BOX_DIRS = {
-  // Working state
-  inbox: "box/inbox",
-  inboxUnhandled: "box/inbox/unhandled",
-  /** Pre-triage stage 1: items currently being prepared (transcription, OCR, filename normalization). */
-  inboxIntake: "box/inbox/intake",
-  /** Pre-triage stage 2: intake-complete items waiting for the triage agent. */
-  inboxStaged: "box/inbox/staged",
-  /** Post-triage holding spots; per-category subdirectories live below this. */
-  inboxTriaged: "box/inbox/triaged",
-  /** Low-confidence triage results; paired with a question card. */
-  inboxTriagedUnsure: "box/inbox/triaged/_unsure",
-  jobs: "box/jobs",
-  output: "box/output",
-  questions: "box/questions",
-  resources: "box/resources",
+export const BOX_DIRS: BoxDirs = Object.fromEntries(
+  BOX_LAYOUT.filter(
+    (entry): entry is BoxDirsEntry => "boxDirsKey" in entry && entry.boxDirsKey !== undefined
+  ).map((entry) => [entry.boxDirsKey, entry.path])
+) as BoxDirs;
 
-  // Archives
-  archiveDone: "store/archive/done",
-  archiveFailed: "store/archive/failed",
-  archiveProcessed: "store/archive/processed",
-  trash: "store/trash",
-  recipes: "store/recipes",
-  todos: "store/todos",
-
-  // Drive sync
-  drive: "store/drive",
-
-  // People
-  people: "people",
-
-  // Places
-  places: "places",
-
-  // Configuration
-  config: "config",
-  connectors: "config/connectors",
-  schemas: "config/schemas",
-  procedures: "config/procedures",
-  schedules: "config/schedules",
-
-  // Tricks (agent-authored scripts)
-  tricks: "tricks/scripts",
-  tricksLib: "tricks/lib",
-
-  // Agent configuration
-  claude: ".claude",
-  rules: ".claude/rules",
-} as const;
+/** Look up a `box-layout-spec.ts` entry by its `BOX_DIRS` key, for callers that also need its prose. */
+export function boxLayoutEntry(boxDirsKey: keyof BoxDirs): BoxLayoutEntry {
+  const entry = BOX_LAYOUT.find((candidate) => "boxDirsKey" in candidate && candidate.boxDirsKey === boxDirsKey);
+  if (!entry) {
+    throw new UnknownBoxDirsKeyError(boxDirsKey);
+  }
+  return entry;
+}
 
 /** Marker file indicating a valid callback box root */
 export const BOX_MARKER = ".cb-box";

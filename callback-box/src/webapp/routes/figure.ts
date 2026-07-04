@@ -6,7 +6,7 @@
  * A figure card's runnable source lives in its `<basename>.attach/` scope; the
  * frontend resolves the card's `entry` against the card path and passes the
  * resolved box-relative path here. We compile it with the shared esbuild view
- * compiler (`compileView`), externalizing the runtime libraries — the harness
+ * compiler (`bundleView`), externalizing the runtime libraries — the harness
  * provides `p5`/`three`/`d3` to the sketch, which must not import them.
  *
  * On a compile error we return a figure-shaped module exporting
@@ -19,7 +19,7 @@
 import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { compileView } from "../views/compiler.js";
+import { bundleView } from "../views/compiler.js";
 
 /**
  * Runtime libraries the harness injects into a sketch. Externalized so a stray
@@ -83,7 +83,7 @@ export function registerFigureRoutes(options: RegisterFigureRoutesOptions): void
       }
 
       try {
-        const { output } = await compileView(resolved, { external: FIGURE_EXTERNALS });
+        const { output } = await bundleView(resolved, { external: FIGURE_EXTERNALS });
         return reply
           .header("Content-Type", "application/javascript")
           .header("Cache-Control", "no-cache")

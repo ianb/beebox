@@ -195,6 +195,43 @@ All scripts live in `scripts/migrate/`.
 | 18 | `doc-to-gdoc`      | `doc-to-gdoc.ts`       | Rename Google-Doc `.doc.card` → `.gdoc.card` and flip the YAML `type:` so the `doc` type name can be reused for a generic in-box document type |
 | 19 | `strip-type-field` | `strip-type-field.ts`  | Remove the redundant `type:` field from every card's frontmatter — filename is the canonical type discriminator. Also renames `.X.job.card` → `.X-job.card` so the filename actually carries the canonical type for jobs |
 
+(This table stops at #19 — later migrators registered in `src/core/migrations.ts` after `strip-type-field`, up through `strip-entry-timestamps`, aren't reflected here; each one's own doc comment is the source of truth until this table is refreshed.)
+
+### `box-packageify` (structural — legacy → v2 package layout)
+
+The newest registered migration, `scripts/migrate/box-packageify.ts`, converts a
+whole legacy (shapeVersion 1) box in place into the v2 package layout (see
+"The box repository" in `docs/plans/boxes-as-packages-v2.md`): `views/`,
+`config/schemas/`, and `tricks/` move to `src/{views,schemas,tricks}/`;
+everything else moves to `content/`; `.git` and `.claude/` stay at the
+top-level directory, which becomes the package root. It's structurally
+unlike every migrator above it, in three ways worth calling out:
+
+- **It self-commits.** Every other migrator leaves its changes (and the
+  manifest entry) uncommitted for review — `cb migrate` never auto-commits.
+  `box-packageify` is the deliberate exception: a box caught mid-conversion
+  is neither a valid legacy box nor a valid v2 box, so the whole transform
+  (moves, scaffold, `cb init`'s regen tail) lands as ONE commit, wrapped in a
+  snapshot + `revertToSnapshot` (the same helper `cb upgrade` uses — factored
+  into `src/cli/lib/git.ts`) so any failure at any step restores the box
+  byte-for-byte. The manifest entry itself is still left uncommitted, same as
+  always — `cb migrate`'s own bookkeeping, not the script's.
+- **It moves the box root out from under `cb migrate`'s own loop.** Because
+  the box's `config/migrations.jsonl` moves from `<box>/config/...` to
+  `<box>/content/config/...`, `src/cli/commands/migrate.ts` re-resolves the
+  operational root (via `detectBoxTarget`) after every script/procedure runs,
+  not just once at the top — see the comment on the `boxRoot` reassignment
+  there.
+- **Memory continuity.** `~/.claude/projects/<cwd-key>/` (Claude Code's
+  session-transcript directory) is keyed by the operating cwd, which moves
+  from the box root to `content/`. `relocateClaudeProjectDir` (in the same
+  script) moves that directory to the new key, never clobbering an existing
+  one at the destination — see its doc comment for the conflict case.
+
+Exercised end-to-end on a scratch clone of `~/src/boxes/test1` via
+`pnpm smoke:packageify` (`scripts/smoke-packageify.ts`) — never against the
+real box.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `cb migrate`. If you do this and want it to count, append the entry yourself or run `cb migrate --apply` afterwards.

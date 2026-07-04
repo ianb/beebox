@@ -425,6 +425,15 @@ Tricks are box-local by default, but the operation itself needn't be box-specifi
 `;
 
 /**
+ * v2 (package-layout) variant of the tricks skill: tricks live at
+ * `src/tricks/` (the package root), not `tricks/` (the box root). Derived by
+ * substitution — same pattern as `TRICKS_CLAUDE_MD_V2` in `box-templates.ts`
+ * — so the two paths named here can't drift out of lockstep by hand-editing
+ * only one.
+ */
+export const TRICKS_SKILL_V2 = TRICKS_SKILL.replaceAll("tricks/scripts/", "src/tricks/scripts/");
+
+/**
  * The `views` skill: authoring a .tsx view. Rare, mechanics-heavy box-building
  * work — out of the always-loaded guide, reached when a card type needs a
  * richer interface than the default renderer.

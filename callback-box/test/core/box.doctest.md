@@ -65,10 +65,15 @@ store/archive
 store/archive/done
 store/archive/failed
 store/archive/processed
+store/calendar
+store/chat
 store/drive
 store/recipes
+store/reviews
+store/reviews/retro
 store/todos
 store/trash
+store/usage
 tricks
 tricks/lib
 tricks/scripts

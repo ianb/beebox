@@ -27,6 +27,22 @@
  * updates — and the box's own values for them are carried onto the written
  * template. See `TemplateMergePolicy` in `src/cards/schema.ts`, which is how a
  * schema declares them.
+ *
+ * **v2 (package-layout) boxes**: `relPath` is normally resolved against
+ * `boxRoot` (the operational root, `content/` for a v2 box). Some templates a
+ * v2 box owns live one level up, at the package root's `src/` (the schemas,
+ * views, and tricks CLAUDE.md guides) — outside `boxRoot` entirely. Rather
+ * than invent a second tracker section or a `packageRoot` option, a `relPath`
+ * that starts with `../` is simply resolved the normal way: `path.join`
+ * already walks it up to the package root (`content/../src/... ===
+ * src/...`), and `git status` run from `boxRoot` already reports changes
+ * there the same way (see the callers in `box-templates.ts`) — so this is the
+ * least-magic option: no new path space, just letting relative-path
+ * resolution do what it already does. The one place this needs help is the
+ * parked-update mirror (`config/_template-updates/`), which must stay INSIDE
+ * `boxRoot` (it's tracked box content) — see `mirrorRelPath` below, which
+ * strips a leading `../` there only, since `content/` is always exactly one
+ * level under the package root.
  */
 
 import * as fs from "node:fs/promises";
@@ -57,6 +73,20 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^config\/schemas\/CLAUDE\.md$/,
   /^config\/cb-validate\.ignore$/,
   /^views\/CLAUDE\.md$/,
+  // v2 (package-layout) equivalents of the two guides above — see the
+  // "v2 (package-layout) boxes" note on `InstallTemplateOptions.relPath`.
+  // These patterns are written in `installTemplateFile`'s own relPath
+  // convention (this file): normally boxRoot-relative, `../...` for the
+  // package-root-level templates below. `isTemplateManagedPath`'s callers
+  // see `git status` output relative to the *repo* root instead — for a v2
+  // box that's the package root, not `boxRoot` (`content/`) — so
+  // `commitTemplateSyncChanges` (generate-docs.ts) normalizes each
+  // git-reported path into this same boxRoot-relative convention before
+  // filtering. `cb upgrade`'s own commit step still stages everything (`git
+  // add -A`) rather than relying on this selective list.
+  /^\.\.\/src\/schemas\/CLAUDE\.md$/,
+  /^\.\.\/src\/views\/CLAUDE\.md$/,
+  /^\.\.\/src\/tricks\/scripts\/CLAUDE\.md$/,
   /^briefing\.(?:briefing|orig-briefing)\.card$/,
   /^briefing\.md$/,
   /^\.claude\/rules\/.+\.md$/,
@@ -191,6 +221,19 @@ function applyBoxOwnedFields(
   return changed ? serializeCard(up.fm, up.body) : upstream;
 }
 
+/**
+ * Where a `relPath`'s parked mirror lives under `config/_template-updates/`.
+ * Identical to `relPath` except a leading `../` (the packageRoot-relative
+ * marker — see the "v2 (package-layout) boxes" note above) is stripped, so
+ * the mirror always stays inside `boxRoot` instead of trying to escape
+ * `config/_template-updates/` itself. Only one level is stripped —
+ * `content/` is always exactly one level under the package root, so a
+ * v2-owned template never needs more than one `../`.
+ */
+function mirrorRelPath(relPath: string): string {
+  return relPath.startsWith("../") ? relPath.slice(3) : relPath;
+}
+
 async function fileExists(absPath: string): Promise<boolean> {
   try {
     await fs.access(absPath);
@@ -209,7 +252,7 @@ async function fileExists(absPath: string): Promise<boolean> {
  * and idempotent — a missing mirror is the common case.
  */
 async function removeParkedMirror(boxRoot: string, relPath: string): Promise<void> {
-  const mirrorAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, relPath);
+  const mirrorAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, mirrorRelPath(relPath));
   try {
     await fs.unlink(mirrorAbs);
   } catch (e) {
@@ -337,7 +380,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   // hash — if the user later accepts the new template by copying it
   // into place, the next install will recognise it as the current
   // template and overwrite cleanly.
-  const updateAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, relPath);
+  const updateAbs = path.join(boxRoot, TEMPLATE_UPDATES_DIR, mirrorRelPath(relPath));
   await fs.mkdir(path.dirname(updateAbs), { recursive: true });
   // Park the new definition carrying the box's owned state, so copying the
   // mirror into place to accept keeps that state. With no owned fields this is

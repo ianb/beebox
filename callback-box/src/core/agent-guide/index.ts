@@ -11,8 +11,9 @@
 import type { CardSchema } from "../../cards/index.js";
 import { cardSchemas } from "../../schemas/registry.js";
 import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
+import type { BoxShape } from "../../cli/lib/box-shape.js";
 
-import { directoryLayoutSection, howItemsEnterSection } from "./box-shape.js";
+import { directoryLayoutSection, howItemsEnterSection, boxCodeLocationSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";
 import { proceduresSection, guidesSection } from "./extensibility.js";
 import { externalToolsSection } from "./chat.js";
@@ -31,6 +32,10 @@ import { searchSection } from "./search.js";
 
 export interface AgentGuideOptions {
   procedures: ProcedureSummary[];
+  /** This box's physical layout. Determines whether the guide teaches the
+   * package-layout code-location rules (shape 2+) or omits them entirely
+   * (legacy shape 1, unchanged from before shape-awareness existed). */
+  shape: BoxShape;
   allCardSchemas?: CardSchema[];
   personalitySection?: string | undefined;
   guides?: GuideSummary[];
@@ -39,6 +44,7 @@ export interface AgentGuideOptions {
 export function generateAgentGuide(options: AgentGuideOptions): string {
   const {
     procedures,
+    shape,
     allCardSchemas = cardSchemas,
     personalitySection,
     guides = [],
@@ -57,6 +63,7 @@ This guide is for every agent working in this box — chat, background jobs, and
     cardTypesSection(allCardSchemas),
     questionsSection(),
     directoryLayoutSection(),
+    boxCodeLocationSection(shape),
     landmarksSection(),
     howItemsEnterSection(),
     keyCommandsSection(),

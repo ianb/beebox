@@ -6,10 +6,12 @@
 
 export { initCommand } from "./init.js";
 export { migrateCommand } from "./migrate.js";
+export { upgradeCommand } from "./upgrade.js";
 export { statusCommand } from "./status.js";
 export { validateCommand } from "./validate.js";
 export { createCommand } from "./create.js";
 export { serveCommand } from "./serve.js";
+export { hubCommand } from "./hub.js";
 export { answerCommand } from "./answer.js";
 export { wakeupCommand } from "./wakeup.js";
 export { trashCommand } from "./trash.js";

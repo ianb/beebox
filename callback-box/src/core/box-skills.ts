@@ -19,10 +19,12 @@ import {
   LOCATION_SKILL,
   SCHEDULES_SKILL,
   TRICKS_SKILL,
+  TRICKS_SKILL_V2,
   VIEWS_SKILL,
 } from "./box-skills-content.js";
 import { vtimezoneBlock } from "../connectors/google-calendar-ics.js";
 import { loadBoxTimezone } from "../webapp/box-config.js";
+import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */
@@ -43,6 +45,8 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
   const timezone =
     (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
   const vtimezone = vtimezoneBlock(timezone).replaceAll("\r\n", "\n");
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const tricksSkillContent = shape.shapeVersion === 1 ? TRICKS_SKILL : TRICKS_SKILL_V2;
   return [
     {
       name: "build-course",
@@ -54,21 +58,25 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
     { name: "email", content: EMAIL_SKILL },
     { name: "location", content: LOCATION_SKILL },
     { name: "schedules", content: SCHEDULES_SKILL },
-    { name: "tricks", content: TRICKS_SKILL },
+    { name: "tricks", content: tricksSkillContent },
     { name: "views", content: VIEWS_SKILL },
   ];
 }
 
 /**
- * Write each managed box skill to `<box>/.claude/skills/<name>/SKILL.md`
- * (idempotent overwrite — re-running `cb init` refreshes them). Returns the
- * skill names written. Only writes the directories it manages, so a
- * hand-authored box skill alongside is left untouched.
+ * Write each managed box skill to `<packageRoot>/.claude/skills/<name>/SKILL.md`
+ * (`.claude/` lives at the box's package root, which equals `boxRoot` for a
+ * legacy box — see "Where Claude Code runs" in
+ * `docs/plans/boxes-as-packages-v2.md`). Idempotent overwrite — re-running
+ * `cb init` refreshes them. Returns the skill names written. Only writes the
+ * directories it manages, so a hand-authored box skill alongside is left
+ * untouched.
  */
 export async function generateSkills(boxRoot: string): Promise<string[]> {
+  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
   const written: string[] = [];
   for (const skill of await buildBoxSkills(boxRoot)) {
-    const dir = join(boxRoot, ".claude", "skills", skill.name);
+    const dir = join(packageRoot, ".claude", "skills", skill.name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skill.content);
     for (const file of skill.files ?? []) {

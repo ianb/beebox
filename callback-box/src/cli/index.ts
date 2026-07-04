@@ -13,10 +13,12 @@ import { Command } from "commander";
 import {
   initCommand,
   migrateCommand,
+  upgradeCommand,
   statusCommand,
   validateCommand,
   createCommand,
   serveCommand,
+  hubCommand,
   answerCommand,
   wakeupCommand,
   trashCommand,
@@ -75,10 +77,12 @@ program
 
 program.addCommand(initCommand);
 program.addCommand(migrateCommand);
+program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);
+program.addCommand(hubCommand);
 program.addCommand(answerCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(trashCommand);

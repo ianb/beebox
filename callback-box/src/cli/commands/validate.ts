@@ -25,6 +25,7 @@ import { buildLoadContext } from "../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external-url-check.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
+import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../lib/box-shape.js";
 
 const execFileP = promisify(execFile);
 
@@ -51,9 +52,14 @@ function isTrashedCard(boxRelOrAbs: string): boolean {
 }
 
 async function listStagedCards(boxRoot: string): Promise<string[]> {
+  // `--relative` reports paths relative to cwd (and scoped to it) instead of
+  // the repo root — needed because a v2 box's `boxRoot` (`content/`) isn't
+  // the repo root (the package root is; see "THE TRAP" in
+  // `../../core/install-validation-hooks.js`). A no-op for a legacy box,
+  // where the two already coincide.
   const { stdout } = await execFileP(
     "git",
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "--relative"],
     { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
   );
   return stdout
@@ -71,7 +77,7 @@ function formatAttachLintErrors(errors: AttachLintError[], { colors }: { colors:
     .join("\n");
 }
 
-interface ValidationResults {
+interface CollectedResults {
   cardSummary: LintSummary | null;
   mdSummary: MarkdownLintSummary | null;
   attachErrors: AttachLintError[];
@@ -79,6 +85,30 @@ interface ValidationResults {
   claudeMdWarnings: string[];
   /** Broken `cardRef="…"` refs in box-authored views (warning-only). */
   viewWarnings: string[];
+}
+
+interface ValidationResults extends CollectedResults {
+  /**
+   * A v2 box with stray `*.ts` files under the legacy `config/schemas/`
+   * location — blocking, since the loader and validate hook can't otherwise
+   * catch a misplaced schema (see `findLegacySchemaFiles`). Box-wide, not
+   * per-file, so it's checked once and merged in regardless of scope
+   * (`--all`/`--staged`/explicit paths), rather than threaded through each
+   * `collect*Results` variant.
+   */
+  legacySchemaErrors: string[];
+}
+
+/**
+ * Check for schemas left in the pre-package `config/schemas/` location on a
+ * v2 box. Returns a one-element (or empty) array of formatted error strings —
+ * an array so it composes with `countTotalErrors`/`printTextResults` like the
+ * other result buckets, even though there's only ever one message.
+ */
+async function checkLegacySchemaPath(boxRoot: string): Promise<string[]> {
+  const shape = await getBoxShape(boxRoot);
+  const files = await findLegacySchemaFiles(shape);
+  return files.length > 0 ? [describeLegacySchemaFiles(shape, files)] : [];
 }
 
 /**
@@ -134,14 +164,14 @@ interface CollectArgs {
 async function collectResults(
   options: { staged?: boolean; all?: boolean; json?: boolean },
   args: CollectArgs
-): Promise<ValidationResults> {
+): Promise<CollectedResults> {
   if (options.staged) return collectStagedResults(args);
   if (options.all || args.resolved.length === 0) return collectAllResults(args);
   return collectExplicitResults(args);
 }
 
 /** Validate the union of git-staged cards/markdown and any explicit paths given. */
-async function collectStagedResults({ boxRoot, ctx, resolved, json, ignore }: CollectArgs): Promise<ValidationResults> {
+async function collectStagedResults({ boxRoot, ctx, resolved, json, ignore }: CollectArgs): Promise<CollectedResults> {
   const cards = [...(await listStagedCards(boxRoot)).filter((p) => !ignore.isIgnored(p)), ...resolved.filter(isCardFile)];
   const mdFiles = [...(await listStagedMarkdown(boxRoot)).filter((p) => !ignore.isIgnored(p)), ...resolved.filter(isMarkdownFile)];
   if (cards.length === 0 && mdFiles.length === 0 && !json) {
@@ -154,7 +184,7 @@ async function collectStagedResults({ boxRoot, ctx, resolved, json, ignore }: Co
 }
 
 /** Validate every card, markdown file, view, and attach layout in the box. */
-async function collectAllResults({ boxRoot, ctx, ignore }: CollectArgs): Promise<ValidationResults> {
+async function collectAllResults({ boxRoot, ctx, ignore }: CollectArgs): Promise<CollectedResults> {
   const cardPaths = (await listBoxCardFiles(boxRoot)).filter((p) => !isTrashedCard(p) && !ignore.isIgnored(p));
   const cardSummary = await lintCardsDispatch(cardPaths, { boxRoot, ctx });
   const mdFiles = (await listBoxMarkdownFiles(boxRoot)).filter((p) => !ignore.isIgnored(p));
@@ -166,7 +196,7 @@ async function collectAllResults({ boxRoot, ctx, ignore }: CollectArgs): Promise
 }
 
 /** Validate an explicit list of card/markdown paths; exit 1 on unknown types. */
-async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): Promise<ValidationResults> {
+async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): Promise<CollectedResults> {
   const cardPaths = resolved.filter(isCardFile);
   const mdPaths = resolved.filter(isMarkdownFile);
   const unknown = resolved.filter((p) => !isCardFile(p) && !isMarkdownFile(p));
@@ -180,8 +210,8 @@ async function collectExplicitResults({ boxRoot, ctx, resolved }: CollectArgs): 
   return { cardSummary, mdSummary, attachErrors: [], claudeMdWarnings: [], viewWarnings };
 }
 
-/** Print human-readable card/markdown/attach results to stdout. */
-function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings }: ValidationResults): void {
+/** Print human-readable card/markdown/attach/legacy-schema-path results to stdout. */
+function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnings, viewWarnings, legacySchemaErrors }: ValidationResults): void {
   const colors = useColor();
   if (cardSummary !== null) {
     const output = formatLintResults(cardSummary, { colors });
@@ -210,6 +240,9 @@ function printTextResults({ cardSummary, mdSummary, attachErrors, claudeMdWarnin
   if (viewWarnings.length > 0) {
     console.log(`\n${viewWarnings.join("\n")}`);
   }
+  if (legacySchemaErrors.length > 0) {
+    console.log(`\n${legacySchemaErrors.join("\n")}`);
+  }
 }
 
 /**
@@ -231,11 +264,12 @@ async function checkCommitted(boxRoot: string, { json }: { json: boolean }): Pro
   }
 }
 
-function countTotalErrors({ cardSummary, mdSummary, attachErrors }: ValidationResults): number {
+function countTotalErrors({ cardSummary, mdSummary, attachErrors, legacySchemaErrors }: ValidationResults): number {
   return (
     (cardSummary !== null ? cardSummary.totalErrors : 0) +
     (mdSummary !== null ? mdSummary.totalErrors : 0) +
-    attachErrors.length
+    attachErrors.length +
+    legacySchemaErrors.length
   );
 }
 
@@ -281,10 +315,19 @@ export const validateCommand = new Command("validate")
           path.isAbsolute(p) ? p : path.join(process.cwd(), p)
         );
 
-        const results = await collectResults(options, { boxRoot, ctx, resolved, json, ignore });
+        const collected = await collectResults(options, { boxRoot, ctx, resolved, json, ignore });
+        const legacySchemaErrors = await checkLegacySchemaPath(boxRoot);
+        const results: ValidationResults = { ...collected, legacySchemaErrors };
 
         if (json) {
-          const payload = { cards: results.cardSummary, markdown: results.mdSummary, attach: results.attachErrors, claudeMd: results.claudeMdWarnings, views: results.viewWarnings };
+          const payload = {
+            cards: results.cardSummary,
+            markdown: results.mdSummary,
+            attach: results.attachErrors,
+            claudeMd: results.claudeMdWarnings,
+            views: results.viewWarnings,
+            legacySchemaPath: results.legacySchemaErrors,
+          };
           console.log(JSON.stringify(payload, null, 2));
         } else {
           printTextResults(results);

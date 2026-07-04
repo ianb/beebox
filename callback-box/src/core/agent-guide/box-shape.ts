@@ -2,39 +2,88 @@
  * Directory layout and intake mechanisms — the shape of the box and how
  * items get into it.
  *
- * This is the in-box agent-facing summary. The canonical directory list
- * lives in BOX_DIRS (src/cli/lib/paths.ts) and the developer-facing
- * reference is docs/box-layout.md. When you change directories here, keep
- * those two in sync — drift between them has caused confusion before.
+ * This is the in-box agent-facing summary — a curated subset of directories,
+ * some collapsed together (all of `store/archive/*` reads as one row here).
+ * Path and description text come from the single `BOX_LAYOUT` spec
+ * (`src/cli/lib/box-layout-spec.ts`); this file only owns which rows appear,
+ * in what order, and the `store/archive/` rollup row that spec doesn't
+ * itself model. Add, remove, or rename a directory in the spec, not here.
  */
 
+import { boxLayoutEntry, type BoxDirs } from "../../cli/lib/paths.js";
+import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../cli/lib/box-shape.js";
+
+/** The shape version of every box created before the boxes-as-packages plan. */
+const LEGACY_SHAPE_VERSION = 1;
+
+/** One row of the agent-facing directory table: its spec path (unless `path` overrides it) and description. */
+function row(boxDirsKey: keyof BoxDirs, options?: { path: string }): string {
+  const entry = boxLayoutEntry(boxDirsKey);
+  const description = entry.agentDescription ?? entry.description;
+  const path = options ? options.path : entry.path;
+  return `| \`${path}/\` | ${description} |`;
+}
+
 export function directoryLayoutSection(): string {
+  const rows = [
+    row("inbox"),
+    row("inboxIntake"),
+    row("inboxStaged"),
+    row("inboxTriaged", { path: "box/inbox/triaged/<category>" }),
+    row("inboxTriagedUnsure"),
+    row("inboxUnhandled"),
+    row("jobs"),
+    row("questions"),
+    row("resources"),
+    row("output"),
+    "| `store/archive/` | Processed/completed items |",
+    row("calendar"),
+    row("drive"),
+    row("recipes"),
+    row("retroReports"),
+    row("todos"),
+    row("trash"),
+    row("people"),
+    row("places"),
+    row("config"),
+  ].join("\n");
+
   return `## Directory Layout
 
 Location is state — a card's directory determines its lifecycle stage:
 
 | Directory | Purpose |
 |-----------|---------|
-| \`box/inbox/\` | Incoming items to be triaged |
-| \`box/inbox/intake/\` | Items being prepared before triage (transcription, OCR, filename normalization). |
-| \`box/inbox/staged/\` | Intake-complete; waiting for the triage agent. |
-| \`box/inbox/triaged/<category>/\` | Categorized; awaiting the handler procedure. \`<category>\` is one of this box's triage destinations (a landmark with a \`for: [triage]\` entry in its \`destinations\`), not a fixed list. |
-| \`box/inbox/triaged/_unsure/\` | Held low-confidence items, paired with a question card. |
-| \`box/inbox/unhandled/\` | Items with no clear destination |
-| \`box/jobs/\` | Pending job cards for the reactor to process |
-| \`box/questions/\` | Pending questions for the user |
-| \`box/resources/\` | Synced external state |
-| \`box/output/\` | Cards that make something happen **outside** the box — an action serialized as a card for an external effector to pick up and execute (a Telegram message to send, etc.), flushed by \`cb finalize\`. Email drafts are the exception: a reply's \`email-outbound\` card goes in its source thread's directory under \`box/inbox/email/\` (next to the message it answers), not here — the Gmail connector reads the thread from there for correct threading |
-| \`store/archive/\` | Processed/completed items |
-| \`store/calendar/\` | Calendar events (.ics files) — two-way sync with Google Calendar |
-| \`store/drive/\` | Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync |
-| \`store/recipes/\` | Recipe collection (subdirectories for organization) |
-| \`store/reviews/retro/\` | Retrospective run reports (written by \`cb retro\`) |
-| \`store/todos/\` | Active todo lists — human action items |
-| \`store/trash/\` | Soft-deleted items |
-| \`people/\` | Person cards — key people referenced from briefings |
-| \`places/\` | Place cards — named locations the box recognizes (Home, Office) |
-| \`config/\` | Box configuration |`;
+${rows}`;
+}
+
+/**
+ * Where box-authored code lives, and what's editable, for a package (shape
+ * 2+) box. A legacy box keeps its schemas/views/tricks inside the box root
+ * itself — nothing to add, so this renders empty and is dropped by the guide
+ * assembler in `index.ts`, leaving legacy guide output byte-identical to
+ * before shape-awareness existed.
+ */
+export function boxCodeLocationSection(shape: BoxShape): string {
+  if (shape.shapeVersion === LEGACY_SHAPE_VERSION) return "";
+
+  const { schemasDir, viewsDir, tricksDir } = boxCodePathsRelativeToBoxRoot(shape);
+
+  return `## Box-Owned Code
+
+This box uses the package layout: your working directory (this box root) is a \`content/\` directory nested inside a package that also holds \`package.json\`, \`node_modules/\`, and the box's source code. Box-authored code — schemas, views, tricks — lives at the **package root**, not in this box root:
+
+| Code | Reached from here as |
+|------|------------------------|
+| Schemas | \`${schemasDir}/\` |
+| Views | \`${viewsDir}/\` |
+| Tricks | \`${tricksDir}/\` |
+
+**Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart.
+
+**Not yours to edit.** \`package.json\`, \`node_modules/\`, lockfiles, \`tsconfig.json\`, and anything else at the package root outside those three directories belong to the boxholder, not to you — upgrading the \`callback-box\` dependency (and everything that comes with it) is the boxholder's job, done from outside this session.
+
+**Imports.** Box code may only import from the callback-box library surface: \`callback-box/cards\` (card/schema primitives), \`callback-box/schema\` (Zod and YAML, version-pinned to the engine), and \`callback-box/view-widgets\` (view components). Don't add other dependencies to \`package.json\` — that file isn't yours to edit.`;
 }
 
 export function howItemsEnterSection(): string {

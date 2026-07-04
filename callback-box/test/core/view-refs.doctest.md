@@ -10,7 +10,38 @@ body-ref machinery — a different surface, the same `{path, ref}` shape.
 ```ts setup
 import { extractViewRefs, lintViewRefs } from "../../src/core/view-refs.js";
 import { rewriteViewRefs } from "../../src/core/rewrite-card-refs.js";
+import { listBoxViewFiles } from "../../src/core/list-cards.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { mkdtemp, mkdir, writeFile, rm } from "node:fs/promises";
+import { join } from "node:path";
+import { tmpdir } from "node:os";
+
+/**
+ * A v2 (package-layout) box fixture: `<root>/package.json` declares a
+ * `callback-box` dependency (all `getBoxShape` needs here — this module
+ * never imports through `node_modules`), and `<root>/content/.cb-box` marks
+ * the operational root, one level below the package root, where views live
+ * at `src/views/` instead of `views/`.
+ */
+async function makeV2ViewsBox() {
+  const root = await mkdtemp(join(tmpdir(), "cb-doctest-v2-views-"));
+  await writeFile(
+    join(root, "package.json"),
+    JSON.stringify({ name: "my-box", private: true, dependencies: { "callback-box": "0.1.0" } }),
+  );
+  const boxRoot = join(root, "content");
+  await mkdir(boxRoot, { recursive: true });
+  await writeFile(join(boxRoot, ".cb-box"), JSON.stringify({ shapeVersion: 2 }));
+  await mkdir(join(root, "src/views"), { recursive: true });
+  await writeFile(join(root, "src/views/dashboard.tsx"), "export default function Dashboard() { return null; }");
+  return {
+    root,
+    boxRoot,
+    async cleanup() {
+      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
+  };
+}
 ```
 
 ## extractViewRefs finds literal `cardRef` attributes
@@ -93,6 +124,37 @@ await box.write(
 const warnings = await lintViewRefs(`${box.root}/views/v.tsx`, box.root);
 warnings.join("\n")
 => Broken reference at view:1:1: /store/Missing.memo.card does not exist
+```
+
+## listBoxViewFiles resolves views per box shape
+
+A legacy box's views live at `boxRoot/views/`:
+
+```ts
+const box = await makeTmpBox();
+await box.write("views/dashboard.tsx", "export default function Dashboard() { return null; }");
+(await listBoxViewFiles(box.root)).map((p) => p.endsWith("views/dashboard.tsx"))
+=> [
+  true
+]
+```
+
+A v2 (package-layout) box's views live at `packageRoot/src/views/` instead —
+`cb validate`'s view-ref check and `cb mv`'s ref-rewrite pass (both call
+`listBoxViewFiles`) need to find them there, not at the (nonexistent)
+`boxRoot/views/`:
+
+```ts
+const v2box = await makeV2ViewsBox();
+const found = await listBoxViewFiles(v2box.boxRoot);
+found.map((p) => p.endsWith("src/views/dashboard.tsx"))
+=> [
+  true
+]
+```
+
+```ts cleanup
+await v2box.cleanup();
 ```
 
 ## rewriteViewRefs rewrites a moved target, leaves others alone

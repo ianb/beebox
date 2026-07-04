@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
+import { detectBoxTarget } from "../../core/box-package.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,
@@ -192,7 +193,13 @@ export const migrateCommand = new Command("migrate")
   .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already fully migrated before this command existed; new boxes get their manifest seeded automatically by `cb init`.")
   .option("--mark-applied <name>", "Record a single migration as applied WITHOUT running it. For a box already in that migration's post-state (e.g. a retired migrator) that never got the manifest entry. Refuses an unknown name or a manifest-less box.")
   .action(async (options: MigrateOptions) => {
-    const boxRoot = await requireBoxRoot();
+    // `topPath` is the stable top-level directory `requireBoxRoot` found —
+    // it never moves. `boxRoot` (the operational root) DOES move, exactly
+    // once, if the `box-packageify` migration runs in this pass (legacy →
+    // v2 nests it under `topPath/content`); see the re-resolution after
+    // each migration in the apply loop below.
+    const topPath = await requireBoxRoot();
+    let boxRoot = topPath;
 
     if (options.markApplied !== undefined) {
       const name = options.markApplied;
@@ -320,6 +327,12 @@ export const migrateCommand = new Command("migrate")
         console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
         process.exit(code);
       }
+      // A script can have just converted the box from legacy to v2 layout
+      // (`box-packageify`) — re-derive the operational root from the
+      // stable top-level path before touching the manifest, so the entry
+      // (and any FURTHER migration in this same pass) targets the box's
+      // current location, not its pre-migration one.
+      boxRoot = (await detectBoxTarget(topPath)).boxRoot;
       await appendManifestEntry(boxRoot, { name: m.name, "applied-at": new Date().toISOString() });
       if (code === 2) {
         softFailures.push(m.name);

@@ -9,10 +9,13 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
+import { isAuthEnabled, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { listParkedTemplateUpdates } from "../core/install-template-file.js";
-import { loadBoxConfig } from "./box-config.js";
+import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
+import { loadBoxSchemas } from "../schemas/registry.js";
+import { getEngineVersionReport } from "../core/engine-version.js";
+import { filterAccessibleBoxes } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 
@@ -98,22 +101,16 @@ export function registerCspReportingHeaders(
   });
 }
 
-/** Build the box list visible to the requesting user (auth-filtered). */
-async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
+/**
+ * Build the box list visible to the requesting user (auth-filtered) in the
+ * `/api/boxes` response shape. Exported so the hub's own `/api/boxes`
+ * (`src/hub/hub-server.ts`) returns the identical shape from the identical
+ * filter, instead of a second copy that could drift.
+ */
+export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
   const ownerEmail = getOwnerEmail();
-  const accessible: Array<{ slug: string; name: string }> = [];
-  for (const b of boxes) {
-    if (email === ownerEmail) {
-      accessible.push({ slug: b.slug, name: b.slug });
-      continue;
-    }
-    const config = await loadBoxConfig(b.boxRoot);
-    // Only show boxes where user is explicitly allowed
-    if (config.allowedEmails?.length && config.allowedEmails.includes(email)) {
-      accessible.push({ slug: b.slug, name: b.slug });
-    }
-  }
-  return accessible;
+  const accessible = await filterAccessibleBoxes({ boxes, email, ownerEmail });
+  return accessible.map((b) => ({ slug: b.slug, name: b.slug }));
 }
 
 /**
@@ -146,11 +143,43 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
         templateDriftTotal += parked.length;
       }
     }
+    // Box-local schema load failures: keep-last-good means a broken save
+    // doesn't blank the type, but the failure itself needs to be seen.
+    // `loadBoxSchemas` populates the in-process failure map as a side effect
+    // (same as `cb status`) — box registration itself never calls it (only
+    // starts the schema *watcher*, which doesn't load), so without this a
+    // fresh restart would report zero failures until unrelated card traffic
+    // happened to trigger a load. Cheap after the first call: it's cached
+    // per box and only re-scans a file whose content hash changed.
+    const schemaFailuresByBox: Record<string, number> = {};
+    let schemaFailureTotal = 0;
+    for (const box of boxes) {
+      await loadBoxSchemas(box.boxRoot);
+      const failures = listSchemaLoadFailures(box.boxRoot);
+      if (failures.length > 0) {
+        schemaFailuresByBox[box.slug] = failures.length;
+        schemaFailureTotal += failures.length;
+      }
+    }
+    // Engine version per box: a v2 box pins its own callback-box dependency,
+    // which can drift from the engine serving it (future-normal once the
+    // hub serves per-box engines — Track D; for now just flagged, same
+    // treatment as the drift signals above). Legacy boxes report nothing —
+    // they have no separate installed engine.
+    const engineMismatchByBox: Record<string, { serving: string | null; installed: string }> = {};
+    for (const box of boxes) {
+      const report = await getEngineVersionReport(box.boxRoot);
+      if (report.mismatch && report.installed !== null) {
+        engineMismatchByBox[box.slug] = { serving: report.serving, installed: report.installed };
+      }
+    }
     return {
       status: "ok",
       boxCount: boxes.length,
       version,
       templateDrift: { total: templateDriftTotal, byBox },
+      schemaLoadFailures: { total: schemaFailureTotal, byBox: schemaFailuresByBox },
+      engineVersionMismatch: { total: Object.keys(engineMismatchByBox).length, byBox: engineMismatchByBox },
     };
   });
 
@@ -207,11 +236,21 @@ export function registerSpaFallback(server: FastifyInstance, frontendPath: strin
       return reply.status(404).send({ error: "Not found" });
     }
 
-    // Auth wall: if auth is enabled and user isn't logged in, redirect to login
-    // (except for root "/" which shows its own login UI, and /auth/* routes)
-    if (isAuthEnabled() && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
-      const email = getSessionEmail(request);
-      if (!email) {
+    // Auth wall: if auth is enabled (or this box is behind a hub) and the
+    // user isn't identified, gate the navigation (except for root "/" which
+    // shows its own login UI, and /auth/* routes).
+    if ((isAuthEnabled() || isHubMode()) && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
+      const identity = resolveRequestIdentity(request);
+      if (identity.source === "open") {
+        // Hub-wide auth is off — fall through to the SPA below.
+      } else if (!identity.email) {
+        if (isHubMode()) {
+          // See addBoxAuthHook's doc comment: a child never redirects to its
+          // own /auth/login in hub mode — the hub gates navigation before
+          // proxying, so reaching here unauthenticated means the request
+          // bypassed the hub (spoof or misconfiguration).
+          return reply.status(401).send({ error: "Not authenticated (hub mode)" });
+        }
         return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(url)}`);
       }
     }
