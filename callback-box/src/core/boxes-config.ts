@@ -1,10 +1,10 @@
 /**
  * Box manifest — the canonical list of boxes on this machine.
  *
- * Lives at `~/.config/cb/boxes.json`. Both `cb serve` (when no positional
- * arguments are given) and `cb scheduler start` consult this manifest, so
- * the two stay in sync and a new box only needs to be registered in one
- * place.
+ * Lives at `~/.config/cb/boxes.json`. Only `cb scheduler start` (via
+ * `cb tick`) consults this manifest now — `cb serve` resolves its box(es)
+ * from argv or the cwd, and multi-box serving lives behind `cb hub`, which
+ * has its own manifest (`hub.json`). See `docs/scheduler.md`.
  *
  * Earlier versions stored just the scheduler's box list at
  * `~/.config/cb/scheduler.json`. We migrate it transparently on first
