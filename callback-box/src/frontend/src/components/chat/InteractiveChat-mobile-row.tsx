@@ -15,13 +15,15 @@ import type { TranscriptionHandle } from "./InteractiveChat-composer";
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
  */
 export function MobileTextareaRow({
-  isTranscribing, transcription,
+  isTranscribing, transcription, targetBusy,
   handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend,
   onPaste, onDrop,
 }: {
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
+  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
+  targetBusy: boolean;
   handleSend: () => void;
   handleCancelTranscription: () => void;
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
@@ -107,7 +109,7 @@ export function MobileTextareaRow({
           onClick={handleSend}
           disabled={!input.trim()}
           className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-          title="Send"
+          title={targetBusy ? "Queue message (agent is busy)" : "Send"}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />

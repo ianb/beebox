@@ -32,7 +32,7 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
  * buttons. Hidden below the `sm` breakpoint.
  */
 function DesktopComposerRow({
-  textareaRef, input, setInput, isTranscribing, transcription,
+  textareaRef, input, setInput, isTranscribing, transcription, targetBusy,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
 }: {
@@ -41,6 +41,8 @@ function DesktopComposerRow({
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
+  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
+  targetBusy: boolean;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -118,7 +120,7 @@ function DesktopComposerRow({
           onClick={handleSend}
           disabled={!input.trim()}
           className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-          title="Send"
+          title={targetBusy ? "Queue message (agent is busy)" : "Send"}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SEND_PATH} />
@@ -135,16 +137,17 @@ function DesktopComposerRow({
  * On mobile: [capture] [camera] [spacer] [stop] [keyboard] [voice] — textarea appears below when typing.
  */
 export function ChatInputArea({
-  textareaRef, isTranscribing, transcription,
+  textareaRef, isTranscribing, transcription, targetBusy,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onKeyboard, onVoice, speechPlaying, onStopSpeech,
-  isStreaming, onInterrupt, onStopDictation, onVoiceSegmentSend,
+  onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
+  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
+  targetBusy: boolean;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -152,10 +155,6 @@ export function ChatInputArea({
   clearDraft: () => void;
   onKeyboard: () => void;
   onVoice: () => void;
-  speechPlaying: boolean;
-  onStopSpeech: () => void;
-  isStreaming: boolean;
-  onInterrupt: () => void;
   onStopDictation: () => void;
   onVoiceSegmentSend: (text: string) => void;
   voicePaused: boolean;
@@ -213,6 +212,7 @@ export function ChatInputArea({
           setInput={setInput}
           isTranscribing={isTranscribing}
           transcription={transcription}
+          targetBusy={targetBusy}
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
@@ -225,32 +225,6 @@ export function ChatInputArea({
 
         {/* Mobile: spacer */}
         <div className="flex-1 sm:hidden" />
-
-        {/* Shared: conditional stop buttons */}
-        {speechPlaying ? (
-          <button
-            onClick={onStopSpeech}
-            className={`${CIRCLE_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
-            title="Stop speaking"
-          >
-            {/* Speaker-x (audio), not the stop circle — that one stops the agent. */}
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
-            </svg>
-          </button>
-        ) : null}
-        {isStreaming ? (
-          <button
-            onClick={onInterrupt}
-            className={`${CIRCLE_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
-            title="Stop agent"
-          >
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-            </svg>
-          </button>
-        ) : null}
 
         {/* Mobile-only: keyboard button */}
         <button

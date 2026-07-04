@@ -12,7 +12,10 @@ import { serializeViewUrl } from "../../lib/view-url";
 import { refreshLocationIfStale } from "../../lib/location-share";
 import { clearLastMessageAudio } from "../../lib/last-audio-cache";
 import { createVoiceEmission, type Emission } from "../../input/emission";
-import { assembleChatMessage, type ChatWitness } from "../../input/targets/chat-assemble";
+import type { ChatWitness } from "../../input/targets/chat-assemble";
+import { acceptEmission, planRestore, applyRestorePlan } from "../../input/targets/chat-target";
+import type { Receipt } from "../../input/targets/receipts";
+import type { EmissionStore } from "../../input/emission-store";
 import { localTime, formatTimePassed } from "./InteractiveChat-helpers";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
@@ -24,8 +27,9 @@ export function useEmissionDispatch(opts: {
   boxSlug: string | undefined;
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
+  emissionStore: EmissionStore;
 }) {
-  const { send, captureCardSend, boxSlug, activeView, messages } = opts;
+  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore } = opts;
 
   // Frame state at the moment of sending, as plain values — consumed by the
   // chat-target assembler (input/targets/chat-assemble.ts).
@@ -45,23 +49,33 @@ export function useEmissionDispatch(opts: {
   // `captureCardSend` stamps the open card + activity since the last reply
   // onto every user turn. System sends (e.g. /compact) bypass this funnel,
   // leaving the accumulator be.
+  //
+  // Returns the settled Receipt (never rejects the promise itself — a
+  // `rejected` disposition is a normal value, not a thrown error). Every
+  // current call site is fire-and-forget and ignores the return value; it
+  // exists for callers that DO want to await the outcome (docs/plans/
+  // input-extraction.md chunk 3).
   const dispatchEmission = useCallback(
-    (emission: Emission) => {
+    (emission: Emission): Promise<Receipt> => {
       // Historical behavior, preserved exactly: only the voice funnel cleared
       // the cached recording (a voice send re-caches its own right after —
       // see runKeywordSend). Typed sends never cleared it. Chunk 5 replaces
       // this cache with emission-keyed retention and the asymmetry goes away.
       if (emission.origin === "voice") clearLastMessageAudio();
       void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
-      const { message, messageId, images } = assembleChatMessage(emission, getWitness());
       const cardFields = captureCardSend();
-      if (images.length > 0) {
-        send({ type: "SEND", message, messageId, images: [...images], ...cardFields });
-      } else {
-        send({ type: "SEND", message, messageId, ...cardFields });
-      }
+      return acceptEmission(emission, { witness: getWitness(), cardFields, send }).then((receipt) => {
+        if (receipt.disposition === "rejected") {
+          // The composer was cleared optimistically at dispatch — put the
+          // emission back rather than losing it to the error banner.
+          const plan = planRestore(emissionStore.get(), emission);
+          applyRestorePlan(emissionStore.editor, plan);
+          console.warn(`[chat] send rejected, restored emission into composer: ${receipt.reason}`);
+        }
+        return receipt;
+      });
     },
-    [send, captureCardSend, boxSlug, getWitness]
+    [send, captureCardSend, boxSlug, getWitness, emissionStore]
   );
 
   // Voice segment without keyword machinery: the stop-and-send buttons and

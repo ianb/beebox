@@ -118,7 +118,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   // in dispatchEmission (docs/plans/input-extraction.md chunk 1); assembly
   // and witness capture live in InteractiveChat-dispatch.ts.
   const { dispatchEmission, sendVoiceSegment } = useEmissionDispatch({
-    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages,
+    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
   });
 
   const attach = useChatAttachments({ emissionStore, textareaRef });

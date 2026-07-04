@@ -73,11 +73,10 @@ export function ChatStatusBanners(props: {
   error: string | null | undefined;
   transcriptionError: string | null | undefined;
   onDismissError: () => void;
-  pendingCount: number;
   activeSchedules: ChatSchedule[];
   onCancelSchedule: (label: string) => void;
 }) {
-  const { error, transcriptionError, onDismissError, pendingCount, activeSchedules, onCancelSchedule } = props;
+  const { error, transcriptionError, onDismissError, activeSchedules, onCancelSchedule } = props;
   return (
     <>
       {/* Error display */}
@@ -95,15 +94,9 @@ export function ChatStatusBanners(props: {
         </div>
       ) : null}
 
-      {/* Queued-message indicator: visible whenever the agent is busy with
-          a previous turn and one or more user messages are sitting in the
-          backend queue waiting to be processed. Without this the UI looks
-          idle even though work is pending. */}
-      {pendingCount > 0 ? (
-        <div className="px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs">
-          Agent is busy — {pendingCount === 1 ? "your message is queued" : `${pendingCount} messages are queued`}
-        </div>
-      ) : null}
+      {/* Queued-message indicator + stop controls now live in TargetStrip
+          (docs/plans/input-extraction.md chunk 3) — the target's own status
+          row, rendered by InteractiveChat-view.tsx just after this. */}
 
       {/* Active schedules */}
       {activeSchedules.length > 0 ? (

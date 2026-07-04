@@ -15,6 +15,8 @@ import type { AddSelectionInput } from "../../lib/selection-position";
 import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";
+import { TargetStrip } from "./TargetStrip";
+import { chatTargetStatus } from "../../input/targets/chat-target";
 import { DebugLogPanel } from "../DebugLog";
 import { BackgroundTasks } from "./BackgroundTasks";
 import type { LiveTask } from "./background-tasks";
@@ -153,13 +155,14 @@ function MessageListRegion(props: ChatBodyProps) {
 
 function ComposerRegion(props: ChatBodyProps) {
   const {
-    model, voice, recoveredDictation, attach, selections, actions, isStreaming, textareaRef,
+    model, voice, recoveredDictation, attach, selections, actions, isStreaming, processBusy, textareaRef,
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend,
   } = props;
-  const { speechPlayback, transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
+  const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { attachments, pendingImageCount, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
   const { selections: selectionItems, removeSelection } = selections;
-  const { handleSend, handleKeyDown, handleInterrupt, handlePaste, handleDrop } = actions;
+  const { handleSend, handleKeyDown, handlePaste, handleDrop } = actions;
+  const targetBusy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";
   return (
     <ChatComposerSection
       attachments={attachments}
@@ -183,16 +186,13 @@ function ComposerRegion(props: ChatBodyProps) {
           textareaRef={textareaRef}
           isTranscribing={isTranscribing}
           transcription={transcription}
+          targetBusy={targetBusy}
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
           onKeyboard={() => setTypingMode(true)}
           onVoice={startVoice}
-          speechPlaying={speechPlayback.isPlaying}
-          onStopSpeech={handleStopSpeech}
-          isStreaming={isStreaming}
-          onInterrupt={handleInterrupt}
           onStopDictation={stopDictation}
           onVoiceSegmentSend={onVoiceSegmentSend}
           voicePaused={voicePaused}
@@ -207,6 +207,7 @@ function ComposerRegion(props: ChatBodyProps) {
         <MobileTextareaRow
           isTranscribing={isTranscribing}
           transcription={transcription}
+          targetBusy={targetBusy}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
@@ -221,7 +222,7 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, showDebugLog, setShowDebugLog, send } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
   const { addSelection } = selections;
   // Capture the live transcript phrase at grab-time so voice selections get a
@@ -281,9 +282,16 @@ export function InteractiveChatBody(props: ChatBodyProps) {
               send({ type: "DISMISS_ERROR" });
               voice.transcription.dismissError();
             }}
-            pendingCount={pendingCount}
             activeSchedules={schedules.activeSchedules}
             onCancelSchedule={schedules.handleCancelSchedule}
+          />
+          <TargetStrip
+            status={chatTargetStatus({ isStreaming, processBusy })}
+            pendingCount={pendingCount}
+            isStreaming={isStreaming}
+            onInterrupt={actions.handleInterrupt}
+            speechPlaying={voice.speechPlayback.isPlaying}
+            onStopSpeech={voice.handleStopSpeech}
           />
         </>
       }

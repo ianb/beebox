@@ -28,6 +28,8 @@ import { ChatInputArea, type TranscriptionHandle } from "../../../components/cha
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
 import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout";
 import { NarrationStatusBadge, MuteButton } from "../../../components/chat/InteractiveChat-controls";
+import { TargetStrip } from "../../../components/chat/TargetStrip";
+import { chatTargetStatus } from "../../../input/targets/chat-target";
 import { InputStoreProvider, type InputStore } from "../../../components/chat/input-store";
 
 // --- Axes ---
@@ -140,22 +142,20 @@ function StateBlock({ spec }: { spec: Spec }) {
     stop: () => Promise.resolve(spec.transcript),
     cancel: noop,
   };
+  const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";
   const inputArea = (
     <ChatInputArea
       hideMobile={spec.typingMode}
       textareaRef={textareaRef}
       isTranscribing={spec.isTranscribing}
       transcription={transcription}
+      targetBusy={targetBusy}
       handleKeyDown={noop}
       handleSend={noop}
       handleCancelTranscription={noop}
       clearDraft={noop}
       onKeyboard={noop}
       onVoice={noop}
-      speechPlaying={spec.speechPlaying}
-      onStopSpeech={noop}
-      isStreaming={spec.isStreaming}
-      onInterrupt={noop}
       onStopDictation={noop}
       onVoiceSegmentSend={noop}
       voicePaused={spec.voicePaused}
@@ -168,11 +168,22 @@ function StateBlock({ spec }: { spec: Spec }) {
     <MobileTextareaRow
       isTranscribing={spec.isTranscribing}
       transcription={transcription}
+      targetBusy={targetBusy}
       handleSend={noop}
       handleCancelTranscription={noop}
       clearDraft={noop}
       onStopDictation={noop}
       onVoiceSegmentSend={noop}
+    />
+  );
+  const targetStrip = (
+    <TargetStrip
+      status={chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false })}
+      pendingCount={0}
+      isStreaming={spec.isStreaming}
+      onInterrupt={noop}
+      speechPlaying={spec.speechPlaying}
+      onStopSpeech={noop}
     />
   );
   return (
@@ -185,6 +196,7 @@ function StateBlock({ spec }: { spec: Spec }) {
         <div className="flex-1" />
         <MuteButton muted={spec.muted} onToggle={noop} />
       </header>
+      {targetStrip}
       <ChatComposerSection
         attachments={[]}
         pendingImageCount={0}
