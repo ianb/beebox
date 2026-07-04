@@ -48,6 +48,13 @@ import { getApiBase } from "../api-core";
 
 const PERSIST_DEBOUNCE_MS = 400;
 
+// Restore is once per store LIFETIME, not per hook mount: the store is the
+// lifted singleton (ChatPage), but this hook remounts with InteractiveChat
+// on every session switch — and React StrictMode double-runs effects. A
+// second restore racing the first past the empty check would double-add
+// every restored item.
+const restoreAttempted = new WeakSet<object>();
+
 export interface EmissionPersistenceApi {
   /** Restored attachments whose `tmp/…` upload was swept before reload — display names for the dismissible notice. */
   expiredAttachments: string[];
@@ -102,6 +109,8 @@ export function useEmissionPersistence(opts: {
   // pre-restore empty one.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (restoreAttempted.has(emissionStore)) return;
+    restoreAttempted.add(emissionStore);
     if (!isEmptyDraft(emissionStore.get())) return;
 
     const persisted = loadPersistedEmission(window.localStorage, boxSlug);
@@ -123,6 +132,14 @@ export function useEmissionPersistence(opts: {
 
     async function restorePersisted(p: PersistedEmission): Promise<void> {
       const checks = await Promise.all(p.files.map(async (f) => [f.path, await fileExists(f.path)] as const));
+      // Commit-time recheck: the file HEADs are a network round trip, and
+      // the user may have started typing during it. Their live composition
+      // wins — abort rather than clobber (the persisted draft is then
+      // superseded by the next debounced save of what they typed).
+      if (!isEmptyDraft(emissionStore.get())) {
+        console.warn("[input-persist] composer used before restore finished — persisted draft discarded");
+        return;
+      }
       const existingPaths = new Set(checks.filter(([, ok]) => ok).map(([path]) => path));
       const { live, dead } = partitionFiles(p.files, existingPaths);
 
@@ -135,6 +152,14 @@ export function useEmissionPersistence(opts: {
         editor.addImage(item);
       }
       for (const file of live) editor.addFile(file);
+      // Dead files (their tmp/ upload was swept) must not leave dangling
+      // [fileN] tokens in the restored text — a send would reference an
+      // attachment that isn't in the outgoing block. add+remove reuses the
+      // store's own token-stripping.
+      for (const file of dead) {
+        editor.addFile(file);
+        editor.removeFile(file.id);
+      }
       for (const selection of p.selections) editor.addSelection(selection);
       editor.reserveIds({
         image: maxId(p.images),

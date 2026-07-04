@@ -45,9 +45,11 @@ export function draftKey(opts: { boxSlug: string | undefined }): string {
 /**
  * One-shot adoption of the legacy per-session dictation drafts
  * (`cb-chat-draft:<box>:<session>`): the most-recently-updated draft becomes
- * the seed value; ALL of the box's legacy keys (every session, INCLUDING a
- * pre-existing singleton slot from a previous adoption) are removed. Returns
- * the adopted draft (or null) plus how many were discarded.
+ * the seed value; ALL of the box's legacy keys are removed. The singleton
+ * key itself is never a candidate — the new key shares the legacy prefix
+ * (unlike the composer's migration, which changed prefixes), and adoption
+ * must not be able to delete the very slot it writes to. Returns the
+ * adopted draft (or null) plus how many were discarded.
  */
 export function adoptLegacyDictationDrafts(
   storage: KeyValueStorage,
@@ -55,10 +57,11 @@ export function adoptLegacyDictationDrafts(
 ): { adopted: DictationDraft | null; discarded: number } {
   const box = boxSlug ?? "default";
   const prefix = `${KEY_PREFIX}:${box}:`;
+  const singleton = draftKey({ boxSlug });
   const keys: string[] = [];
   for (let i = 0; i < storage.length; i++) {
     const key = storage.key(i);
-    if (key !== null && key.startsWith(prefix)) keys.push(key);
+    if (key !== null && key.startsWith(prefix) && key !== singleton) keys.push(key);
   }
 
   let best: DictationDraft | null = null;

@@ -45,7 +45,7 @@ export function ChatPage() {
   // session switch — the design's singleton-draft promise
   // (docs/plans/input-extraction.md, chunk 4). ChatPage itself only remounts
   // on a hard page navigation (route change), not a session switch.
-  const emissionStore = useEmissionStoreInstance();
+  const emissionStore = useEmissionStoreInstance(boxSlug);
   const sessionParam = search.session;
   const contextDir = search.contextDir;
   const companion = search.companion;

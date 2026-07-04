@@ -78,10 +78,19 @@ export const InputStoreProvider = InputStoreContext.Provider;
  * this as a prop and derives its text-only `InputStore` view from it with
  * `createInputStoreAdapter`.
  */
-export function useEmissionStoreInstance(): EmissionStore {
-  const [instance, setInstance] = useState(() => createEmissionStore());
-  void setInstance;
-  return instance;
+export function useEmissionStoreInstance(boxSlug: string | undefined): EmissionStore {
+  const [instance, setInstance] = useState(() => ({ boxSlug, store: createEmissionStore() }));
+  // The router can reuse ChatPage across a box param change; a composition
+  // must never leak from one box to another (it would then be persisted
+  // under the new box's key). Swap in a fresh store when the slug changes —
+  // the render-time state-from-props pattern, not an effect, so no frame
+  // ever sees the stale store.
+  if (instance.boxSlug !== boxSlug) {
+    const next = { boxSlug, store: createEmissionStore() };
+    setInstance(next);
+    return next.store;
+  }
+  return instance.store;
 }
 
 export function useInputStore(): InputStore {

@@ -73,6 +73,23 @@ JSON.stringify(result2)
 => {"adopted":null,"discarded":0}
 ```
 
+The singleton key itself is never a candidate — it shares the legacy
+prefix (unlike the composer migration, which changed prefixes), and
+adoption must not delete or re-adopt the slot it writes to:
+
+```ts
+const s2 = fakeStorage();
+s2.setItem("cb-chat-draft:test1:singleton", "not json {{{");
+s2.setItem("cb-chat-draft:test1:sess-a", JSON.stringify({ text: "legacy", narration: false, updatedAt: 100 }));
+const result3 = adoptLegacyDictationDrafts(s2, "test1");
+JSON.stringify(result3.adopted)
+=> {"text":"legacy","narration":false,"updatedAt":100}
+
+// The malformed singleton survives (the caller overwrites it); only the legacy key is removed.
+Object.keys(s2.dump()).sort().join(",")
+=> cb-chat-draft:test1:singleton
+```
+
 ## serializeDraft / parseDraft
 
 A well-formed draft round-trips:
