@@ -31,6 +31,18 @@ export interface EndpointProvider {
   /** All slugs this provider knows about, whether or not they currently
    *  have a live endpoint — used for the `/` box listing and `/healthz`. */
   slugs(): string[];
+  /**
+   * Lazy-mode cold start (boxholder directive, 2026-07-04): for a provider
+   * backing a lazy hub, spawn `slug`'s box if it's stopped and wait for it
+   * to become ready, then return its endpoint — mirrors `bin/router.ts`'s
+   * `ensureRunning` for worktrees. A non-lazy provider may implement this as
+   * a synchronous-under-the-hood `get(slug)` (see `Supervisor.ensureRunning`),
+   * or omit it entirely — HTTP routing in `hub-server.ts` falls back to
+   * plain `get()` when it's absent. Deliberately NOT consulted on the WS
+   * upgrade path: an upgrade to a stopped box is refused (503), never used
+   * to trigger a cold start (see `hub-server.ts`'s WS handler for why).
+   */
+  ensureRunning?(slug: string): Promise<Endpoint | undefined>;
 }
 
 /**

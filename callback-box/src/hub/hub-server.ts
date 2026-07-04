@@ -300,7 +300,20 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     Object.assign(request.raw.headers, decision.headersToSet);
 
     const slug = slugForPath(reqPath);
-    const endpoint = slug ? endpoints.get(slug) : undefined;
+    // A lazy hub's box may be "stopped" (idle-collected or never yet
+    // requested) — ensureRunning cold-starts it and waits for readiness,
+    // same as bin/router.ts's ensureRunning does for a whole worktree. A
+    // non-lazy Supervisor's ensureRunning is just get() under the hood, so
+    // this one call covers both hub flavors; a provider without the method
+    // at all (e.g. a test's staticEndpointProvider) falls back to plain get().
+    let endpoint = slug ? endpoints.get(slug) : undefined;
+    if (!endpoint && slug && endpoints.ensureRunning) {
+      try {
+        endpoint = await endpoints.ensureRunning(slug);
+      } catch (e) {
+        return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+      }
+    }
     if (!endpoint) {
       return reply.status(404).send({ error: "not_found", message: `No running box for ${JSON.stringify(reqPath)}` });
     }
@@ -334,7 +347,17 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = slugForPath(reqPath);
     const endpoint = slug ? endpoints.get(slug) : undefined;
     if (!endpoint) {
-      socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n");
+      // WebSocket upgrades never cold-start a lazy hub's box — same
+      // rationale as bin/router.ts's WS handler: ws clients (tRPC's
+      // wsLink, in particular) auto-reconnect on timers, so honoring an
+      // upgrade as "activity" would let an abandoned background tab
+      // resurrect an idle-collected box forever. A KNOWN slug that just
+      // isn't running right now gets 503 (client backs off and retries;
+      // the box comes back on the next real HTTP request); an
+      // unconfigured slug still gets a plain 404.
+      const known = slug !== null && endpoints.slugs().includes(slug);
+      const status = known ? "503 Service Unavailable" : "404 Not Found";
+      socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
       socket.destroy();
       return;
     }
@@ -344,4 +367,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   });
 
   return server;
+}
+
+function describeHubError(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }

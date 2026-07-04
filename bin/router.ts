@@ -34,7 +34,7 @@ import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
-import { resolveBoxEntries, boxEntryToArg } from "./box-entry.js";
+import { resolveBoxEntries, boxEntryToArg, type ResolvedBoxEntry } from "./box-entry.js";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
 
@@ -101,6 +101,21 @@ function browseDirsFor(name: string): { base: string; socketDir: string; profile
 
 const IDLE_TIMEOUT_MS = Number(process.env.ROUTER_IDLE_MS) || 5 * 60 * 1000;
 const KILL_GRACE_MS = 2000;
+
+// Boxholder directive (2026-07-04): each worktree's backend is now a
+// per-worktree `cb hub` (lazy: true, idleMs matching IDLE_TIMEOUT_MS above)
+// instead of one `server-main.ts` Fastify process serving every box in the
+// worktree's BOXES list. This gives each BOX its own process, lazily
+// started and idle-collected — the same semantics this router already gives
+// whole worktrees — composing cleanly with the router's own lazy/idle
+// worktree layer: the router still lazy-starts/idle-stops the WORKTREE
+// (vite + hub), and the hub now separately lazy-starts/idle-stops each BOX
+// within it. One release of insurance while this beds in: CB_DEV_NO_HUB=1
+// reverts to spawning server-main.ts directly, the old one-process-many-
+// boxes shape (Track G's prior escape hatch). Delete this flag once the
+// hub path has proven itself — tracked in docs/plans/boxes-as-packages-v2.md.
+const DEV_NO_HUB = process.env.CB_DEV_NO_HUB === "1";
+const HUB_CONFIG_DIR = path.join(STATE_DIR, "hub-configs");
 
 const MAIN_BOX_DEFAULTS = [
   path.join(os.homedir(), "src", "boxes", "hearthside"),
@@ -370,6 +385,43 @@ async function ensureRunning(name: string): Promise<WorktreeEntry> {
   return placeholder.startPromise;
 }
 
+/**
+ * Generate this worktree's `hub.json`, written fresh on every (re)start
+ * (single-slot per worktree, like the pidfile) so a `BOXES=` edit in the
+ * worktree's `.env` or a resolved-slug change always takes effect on the
+ * next cold start. `port` is the worktree's own dynamically-assigned
+ * `backendPort` — Vite's `vite.config.ts` proxies `/<box>/api/...` etc. to
+ * `http://localhost:BACKEND_PORT`, and the hub's own routing (unprefixed,
+ * first-path-segment slug matching — see `src/hub/hub-server.ts`) composes
+ * with that unchanged: Vite already stripped the worktree's own `/<name>`
+ * prefix before proxying, so the hub sees exactly `/<slug>/...`, the same
+ * shape it expects from a production request. `lazy: true` + `idleMs:
+ * IDLE_TIMEOUT_MS` give each BOX the same lazy-start/idle-collect semantics
+ * this router already gives each WORKTREE. No `GOOGLE_OAUTH_CLIENT_ID` is
+ * set here (this config carries no auth fields at all) — the hub's own
+ * `isAuthEnabled()` reads it from the hub PROCESS's inherited env, exactly
+ * as `server-main.ts` always did directly, so dev's "open on localhost
+ * unless you've configured OAuth" behavior is unchanged; a hub-mode box
+ * child never re-checks its OWN `GOOGLE_OAUTH_CLIENT_ID` for identity
+ * either way (`resolveRequestIdentity` short-circuits on `isHubMode()`).
+ */
+async function writeWorktreeHubConfig(params: {
+  name: string;
+  backendPort: number;
+  resolvedBoxes: ResolvedBoxEntry[];
+}): Promise<string> {
+  const { name, backendPort, resolvedBoxes } = params;
+  await fs.mkdir(HUB_CONFIG_DIR, { recursive: true });
+  const configPath = path.join(HUB_CONFIG_DIR, `${name}.json`);
+  const boxes: Record<string, { path: string }> = {};
+  for (const { slug, contentDir } of resolvedBoxes) boxes[slug] = { path: contentDir };
+  await fs.writeFile(
+    configPath,
+    JSON.stringify({ port: backendPort, host: "127.0.0.1", lazy: true, idleMs: IDLE_TIMEOUT_MS, boxes }, null, 2),
+  );
+  return configPath;
+}
+
 let touch = (entry: WorktreeEntry): void => {
   entry.lastActivity = Date.now();
   if (entry.idleTimer) clearTimeout(entry.idleTimer);
@@ -428,17 +480,19 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
 
   // Each of wt.boxes may be a legacy box dir, a v2 package root, or a v2
   // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
-  // handing off to server-main.ts, which no longer guesses the slug itself.
+  // handing off to the backend, which no longer guesses the slug itself.
   const resolvedBoxes = await resolveBoxEntries(wt.boxes);
+  const backendArgs = DEV_NO_HUB
+    ? ["./src/webapp/server-main.ts", ...resolvedBoxes.map(boxEntryToArg)]
+    : [
+        "./src/cli/index.ts",
+        "hub",
+        "--config",
+        await writeWorktreeHubConfig({ name, backendPort, resolvedBoxes }),
+      ];
   const fastify = execa(
     "node",
-    [
-      "--import=./tsx-preload.mjs",
-      "--import",
-      "tsx",
-      "./src/webapp/server-main.ts",
-      ...resolvedBoxes.map(boxEntryToArg),
-    ],
+    ["--import=./tsx-preload.mjs", "--import", "tsx", ...backendArgs],
     {
       cwd: wt.backendCwd,
       env: childEnv,

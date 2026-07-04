@@ -294,6 +294,48 @@ LSP/typecheck — today *"the view doesn't compile, but its metadata is regex-ex
 - The legacy multi-box `cb serve <dir>...` form survives the transition window only, then is
   removed along with the manifest.
 
+**Dev and prod now share the hub (boxholder directive, 2026-07-04).** The "should the
+production hub idle-shutdown" open question below is answered by making lazy/idle **config**,
+not a dev-only/prod-only fork: `hub.json` gains `lazy?: boolean` (default `false`) and
+`idleMs?: number` (default 300000, matching the dev router's own default). A lazy hub spawns
+nothing at boot — the first HTTP request for a slug cold-starts it and the request waits on
+readiness (`Supervisor.ensureRunning`, mirroring `bin/router.ts`'s `ensureRunning` for whole
+worktrees); a WebSocket upgrade to a box that isn't running is refused (503), never used to
+trigger a cold start — same rationale as the dev router's WS handler: an abandoned background
+tab's reconnect timer must not resurrect an idle-collected box forever. Only HTTP requests
+count as activity; an idle box is SIGTERM'd back to `"stopped"`, visible in `/healthz` and
+still listed by the box picker (which reads the static config, not live status). Crash-loop
+backoff is unchanged. Production `hub.json` keeps `lazy: false` — the fleet's boxes are
+resident because schedulers and webhooks want the process up regardless of HTTP traffic; a
+memory-constrained host can opt in to `lazy: true` per the "Hub idle-shutdown" open question's
+original framing, now that the code path exists either way.
+
+The monorepo dev router (`bin/router.ts`) is the first `lazy: true` consumer: instead of
+spawning one `server-main.ts` Fastify process serving every box in a worktree's `BOXES` list,
+it generates a per-worktree `hub.json` (`lazy: true`, `idleMs` matching the router's own
+`IDLE_TIMEOUT_MS`) and spawns `cb hub --config <generated path>` as the worktree's backend.
+This gives each BOX its own process, lazily started and idle-collected, composing with the
+router's existing per-WORKTREE lazy/idle layer rather than replacing it (the router still
+lazy-starts/idle-stops the worktree's vite+hub pair; the hub separately lazy-starts/idle-stops
+each box inside it). The prefix plumbing composes cleanly with no changes: Vite's dev-only
+proxy rules (`src/frontend/vite.config.ts`) already strip the *worktree's* `/<name>` prefix
+before forwarding `/<box>/api/...`-shaped requests to the backend port, so the hub — which
+does no prefix stripping of its own, matching a slug off the first path segment — sees exactly
+the shape it expects from a production request. The generated dev `hub.json` carries no auth
+fields, so the hub's own `isAuthEnabled()` reads `GOOGLE_OAUTH_CLIENT_ID` from the hub
+process's inherited env exactly as `server-main.ts` always did directly — dev's "open on
+localhost unless OAuth is configured" behavior is unchanged. Spawned box children *are* now in
+hub mode (`CB_HUB_SECRET` injected, per Track D chunk D2's `resolveRequestIdentity`), but
+that's the mechanism, not a behavior change: with hub auth off, the hub attaches
+`x-cb-hub-auth: off` and a child in hub mode with that header resolves to `source: "open"` —
+the same unauthenticated-everyone-through outcome as a standalone box's `isAuthEnabled() ===
+false` short-circuit.
+
+**Escape hatch, one release of insurance:** `CB_DEV_NO_HUB=1` makes the router fall back to
+spawning `server-main.ts` directly (the pre-hub, one-process-many-boxes shape). Delete once
+the hub path has proven itself in daily use — tracked here so it doesn't become permanent
+by default.
+
 **Isolation is layered — a stated goal, not just a deferral.** The trust model is: the hub
 is trusted (it authenticates and routes correctly); boxes do **not** have to trust each
 other. How strongly boxes are isolated from one another is a dial the architecture must
@@ -429,13 +471,18 @@ box scaffold points at the channel; document the release ritual.
 smoke script that scaffolds a fresh box against it in a temp dir and boots it.
 
 ### Track G — Dev loop
-**What:** Monorepo router spawns per-box `cb serve` (v2-aware) instead of passing box paths
-to a shared `server-main`; worktree box clones get a `pnpm.overrides` `link:` redirect to their
-sibling engine worktree (WorktreeCreate hook update); `.claude/memory` symlink re-pointing
-(see Failure modes — the Claude Code project key changes when the agent cwd moves to
-`content/`).
+**Status: the serving half is DONE (2026-07-04)** — see "Serving" above for the full
+design. `bin/router.ts` now spawns a per-worktree `cb hub --config <generated hub.json>`
+(`lazy: true`) instead of a shared `server-main.ts`, giving each box in a worktree's `BOXES`
+list its own lazily-started, idle-collected process — the same semantics the router already
+had for whole worktrees, now one level down. `CB_DEV_NO_HUB=1` is the escape hatch back to the
+old shape while this beds in.
+
+**What's still open:** worktree box clones getting a `pnpm.overrides` `link:` redirect to
+their sibling engine worktree (WorktreeCreate hook update); `.claude/memory` symlink
+re-pointing (see Failure modes — the Claude Code project key changes when the agent cwd moves
+to `content/`).
 **Why:** Engine development against live boxes must stay zero-ceremony (edit → next request).
-**First chunk:** router change behind a v2-detection branch so main keeps working mid-plan.
 
 ### Track H — Fleet migration
 **Status: H1–H3 DONE (2026-07-04).** The `box-packageify` migration script landed, the whole
@@ -588,9 +635,11 @@ lost between the report (not checked into this repo) and this plan:
 - **`cb deps add` verb for agent-driven dependency additions** (Stance B relief valve) —
   lean: defer until an agent actually needs a dep beyond `callback-box`; tricks already have
   their own escape hatch.
-- **Hub idle-shutdown** — the dev router idles boxes out after 5 min; should the production
-  hub? Lean: no (schedulers/webhooks want the process resident), but keep the code path for
-  memory-constrained hosts.
+- **Hub idle-shutdown** — **RESOLVED (boxholder directive, 2026-07-04)**: lazy/idle is
+  `hub.json` config (`lazy`/`idleMs`), not a fork — see "Serving" above. Production stays
+  `lazy: false` (resident, schedulers/webhooks want it up); the code path is exercised today
+  by every dev worktree via `bin/router.ts`'s generated per-worktree `hub.json`, and a
+  memory-constrained production host can opt in per-box-host without any new code.
 - **Where the hub lives** — `cb hub` inside callback-box (lean: yes, one package; the hub
   pins its own engine version independently of the boxes it supervises) vs. a separate
   package.

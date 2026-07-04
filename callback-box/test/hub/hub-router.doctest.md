@@ -201,6 +201,67 @@ rejectedUpgrade.startsWith("HTTP/1.1 404")
 => true
 ```
 
+## A lazy provider's `ensureRunning` cold-starts an HTTP request; WS upgrades never trigger it
+
+Mirrors a lazy `Supervisor` (`src/hub/supervisor.ts`) without spawning a real
+process: `get()` only returns an endpoint while `running` is true;
+`ensureRunning()` is the only thing that flips it on. This proves
+`hub-server.ts`'s contract, not `Supervisor`'s own cold-start mechanics
+(covered separately in `supervisor.doctest.md`).
+
+```ts continue
+function makeLazyProvider({ slug, origin }) {
+  let running = false;
+  let ensureCalls = 0;
+  return {
+    get: (s) => (s === slug && running ? { slug, origin } : undefined),
+    slugs: () => [slug],
+    ensureRunning: async (s) => {
+      if (s !== slug) return undefined;
+      ensureCalls++;
+      running = true;
+      return { slug, origin };
+    },
+    stop: () => { running = false; },
+    get ensureCalls() { return ensureCalls; },
+  };
+}
+
+const lazyProvider = makeLazyProvider({ slug: "lazybox", origin: box.origin });
+const lazyHub = await startHub(lazyProvider, { boxes: [{ slug: "lazybox", boxRoot: "/nonexistent/lazybox" }] });
+```
+
+An HTTP request to the stopped box cold-starts it via `ensureRunning` and
+still gets proxied through on the SAME request (no separate retry needed):
+
+```ts continue
+const coldResponse = await fetch(`${lazyHub.base}/lazybox/browse/x`);
+coldResponse.status
+=> 200
+
+lazyProvider.ensureCalls
+=> 1
+```
+
+A WebSocket upgrade to that same slug once it's stopped again gets a 503
+(known slug, not running) -- never a 404, and `ensureRunning` is NOT called
+(an abandoned tab's WS reconnect must not resurrect the box):
+
+```ts continue
+lazyProvider.stop();
+const idleUpgrade = await rawUpgradeRequest({ port: lazyHub.port, path: "/lazybox/ws" });
+idleUpgrade.startsWith("HTTP/1.1 503")
+=> true
+
+lazyProvider.ensureCalls
+=> 1
+```
+
+```ts continue
+for (const socket of lazyHub.sockets) socket.destroy();
+await new Promise((resolve) => lazyHub.server.close(resolve));
+```
+
 ## The Google-services OAuth callback routes to the box named in `state`, headers intact
 
 `/auth/google-services/callback` isn't a box slug -- the generic catch-all

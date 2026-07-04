@@ -165,3 +165,105 @@ JSON.stringify({ status: afterExit.status, restarts: afterExit.restarts })
 await supervisor.stopAll();
 await fixture.cleanup();
 ```
+
+## Lazy mode: `startAll` spawns nothing, `ensureRunning` cold-starts on first call, idle collection returns it to "stopped"
+
+Boxholder directive (2026-07-04): a `lazy: true` hub gives each box the same
+lazy/idle semantics `bin/router.ts` already has for whole worktrees. No real
+process is spawned here either -- `spawnChild`/`checkReady` are faked the
+same way as above, and the idle timer is driven by a tiny `idleMs` so the
+doctest doesn't wait out a real 5-minute default.
+
+```ts continue
+const lazyFixture = await makeTmpBox();
+let lazyChildren = [];
+function lazySpawnChild() {
+  const child = makeFakeChild(910000 + lazyChildren.length);
+  lazyChildren.push(child);
+  return child;
+}
+function lazyCheckReady() {
+  return Promise.resolve(); // instantly "ready" -- no real HTTP involved
+}
+
+const lazyConfig = {
+  port: undefined,
+  host: undefined,
+  boxes: { fixture: { path: lazyFixture.root } },
+  configPath: lazyFixture.path("hub.json"),
+  lazy: true,
+  idleMs: 30,
+};
+const lazySupervisor = new Supervisor({
+  config: lazyConfig,
+  hubSecret: "test-hub-secret",
+  spawnChild: lazySpawnChild,
+  checkReady: lazyCheckReady,
+});
+await lazySupervisor.startAll();
+```
+
+`startAll()` spawned nothing -- the box starts "stopped", not "starting":
+
+```ts continue
+lazySupervisor.getStatuses()[0].status
+=> stopped
+
+lazyChildren.length
+=> 0
+
+lazySupervisor.get("fixture")
+=> undefined
+```
+
+`ensureRunning` spawns it and returns the endpoint once ready:
+
+```ts continue
+const endpoint = await lazySupervisor.ensureRunning("fixture");
+endpoint.slug
+=> fixture
+
+lazySupervisor.getStatuses()[0].status
+=> running
+
+lazyChildren.length
+=> 1
+```
+
+After `idleMs` with no further `ensureRunning` calls, the box is SIGTERM'd
+and reported "stopped" again -- `getStatuses()`/`/healthz` surface it, and a
+fresh `ensureRunning` spawns a NEW child (not the same generation):
+
+```ts continue
+await new Promise((r) => setTimeout(r, 150));
+lazySupervisor.getStatuses()[0].status
+=> stopped
+
+lazySupervisor.get("fixture")
+=> undefined
+
+const revived = await lazySupervisor.ensureRunning("fixture");
+revived.slug
+=> fixture
+
+lazyChildren.length
+=> 2
+
+lazySupervisor.getStatuses()[0].status
+=> running
+```
+
+An unconfigured slug's `ensureRunning` just resolves `undefined` -- no spawn attempt:
+
+```ts continue
+(await lazySupervisor.ensureRunning("nope")) === undefined
+=> true
+
+lazyChildren.length
+=> 2
+```
+
+```ts cleanup
+await lazySupervisor.stopAll();
+await lazyFixture.cleanup();
+```

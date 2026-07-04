@@ -193,3 +193,34 @@ await fs.writeFile(notJson, "{ not json");
 ```ts cleanup
 await box2.cleanup();
 ```
+
+## `lazy`/`idleMs` default off, and parse when set
+
+Boxholder directive (2026-07-04): `lazy` defaults to `false` (production
+hubs stay resident) and `idleMs` always resolves to a real number (the dev
+router's own 5-minute default) even when the config omits it, so callers
+never need a second fallback.
+
+```ts
+const box3 = await makeTmpBox();
+await box3.write("boxes/test1/.cb-box", "");
+const plainConfigPath = await writeConfig(box3.root, { boxes: { test1: { path: "./boxes/test1" } } });
+const plainConfig = await loadHubConfig(plainConfigPath);
+JSON.stringify({ lazy: plainConfig.lazy, idleMs: plainConfig.idleMs })
+=> {"lazy":false,"idleMs":300000}
+```
+
+```ts continue
+const lazyConfigPath = await writeConfig(box3.root, {
+  boxes: { test1: { path: "./boxes/test1" } },
+  lazy: true,
+  idleMs: 60000,
+});
+const lazyConfig = await loadHubConfig(lazyConfigPath);
+JSON.stringify({ lazy: lazyConfig.lazy, idleMs: lazyConfig.idleMs })
+=> {"lazy":true,"idleMs":60000}
+```
+
+```ts cleanup
+await box3.cleanup();
+```

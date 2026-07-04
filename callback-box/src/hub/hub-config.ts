@@ -57,9 +57,27 @@ const hubConfigFileSchema = z.strictObject({
   port: z.number().int().positive().optional(),
   host: z.string().optional(),
   boxes: z.record(slugSchema, boxEntrySchema),
+  /**
+   * Lazy mode (boxholder directive, 2026-07-04): children are NOT spawned at
+   * boot. The first HTTP request (never a WS upgrade — see
+   * `hub-server.ts`'s WS-refusal comment) for a slug spawns it on demand,
+   * the same semantics the monorepo dev router already has for whole
+   * worktrees (`bin/router.ts`'s `ensureRunning`). Idle boxes (only HTTP
+   * request traffic counts as activity) get SIGTERM'd back to "stopped"
+   * after `idleMs`. Defaults to `false` — production hubs stay resident
+   * (schedulers/webhooks want the process up) unless a config opts in.
+   */
+  lazy: z.boolean().optional(),
+  /** Idle timeout before a lazy hub stops a box, in ms. Only meaningful
+   *  when `lazy: true`. Defaults to 5 minutes, matching the dev router's
+   *  `IDLE_TIMEOUT_MS`. */
+  idleMs: z.number().int().positive().optional(),
 });
 
 export type BoxEntry = z.infer<typeof boxEntrySchema>;
+
+/** Default idle timeout for a lazy hub — mirrors the dev router's `IDLE_TIMEOUT_MS`. */
+export const DEFAULT_IDLE_MS = 5 * 60 * 1000;
 
 export interface HubConfig {
   port: number | undefined;
@@ -68,6 +86,11 @@ export interface HubConfig {
   boxes: Record<string, BoxEntry>;
   /** Where this config was loaded from — supervisor SIGHUP reload re-reads this path. */
   configPath: string;
+  /** Defaults to `false` — see the file-schema field's doc comment above. */
+  lazy: boolean;
+  /** Always populated (falls back to `DEFAULT_IDLE_MS`), even when `lazy` is false, so
+   *  callers never need to know the default separately. */
+  idleMs: number;
 }
 
 export class HubConfigError extends Error {
@@ -205,6 +228,8 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     host: result.data.host,
     boxes,
     configPath: path.resolve(configPath),
+    lazy: result.data.lazy ?? false,
+    idleMs: result.data.idleMs ?? DEFAULT_IDLE_MS,
   };
 }
 
