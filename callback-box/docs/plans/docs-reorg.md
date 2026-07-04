@@ -1,9 +1,12 @@
 # Documentation reorganization
 
-**Status:** partially implemented 2026-07-04 — survey done; plans sweep,
-research/ dir, corrections batch, CLAUDE.md slimming, and first
-cb-guide-* skills shipped; design reconciliation and filename review in
-flight; see Tracks.
+**Status:** implemented 2026-07-04 — all eight tracks executed on
+worktree-doc-review (survey → plans sweep + research/ → corrections +
+convention docs → CLAUDE.md slimming → cb-guide-* skills → design
+reconciliation (rulings recorded and executed; docs/design/) → filename
+conventions (two batches) → doc-check enforcement → cards-as-markdown
+split). Remaining follow-ups live in Open design questions and
+ideas.md, plus the /finish auto-move wiring (plans/README.md TODO).
 
 This plan reorganizes the monorepo's developer-facing documentation (~252
 tracked `.md` files, excluding `callback-box/test/` fixtures and box-agent
@@ -325,19 +328,26 @@ design sections are written)*
    cb-guide-schemas (each: motivation + decision rules, pointing to the
    reference doc for mechanics). Add more only when a real trigger gap
    shows up; collapse into one pointer-skill if the count grows heavy.
-5. **Design reconciliation** — IN FLIGHT. Boxholder chose
-   adjudication-first: a divergence list
-   (`docs/plans/design-reconciliation.md`) where he rules per item;
-   docs are rewritten to match rulings afterwards. Roles of DESIGN.md /
-   IMPLEMENTATION.md / design-vision.md / architecture-series get
-   settled there, including possible long-doc → subdirectory splits.
-6. **Filename review** — IN FLIGHT. Proposal list being produced
-   (rename freely once approved; doc-graph self-heals, links fixed in
-   the same commit).
-7. **Findability enforcement** — NOT STARTED. doc-graph measures but
-   nothing enforces: candidate = a commit-time (or maintenance-cadence)
-   check that a new doc has ≥1 inbound reference and no broken links;
-   also fix doc-graph's `.claude/` blind spot so skill references count.
+5. **Design reconciliation** — DONE. Adjudication doc
+   (`docs/plans/design-reconciliation.md`) with 20 rulings + roles
+   ruling, all recorded 2026-07-04 and executed: design.md split into
+   `docs/design/` (8 topic files + README acknowledging spirit.md),
+   implementation.md → implemented-plans/mvp-implementation-guide.md
+   after salvage, design-vision.md → unimplemented-plans (superseded),
+   architecture/ = onboarding narrative. Wakeup description corrected
+   against code everywhere. Identity ruled: "a personal assistant and
+   operating system built on Claude Code."
+6. **Filename review** — DONE. Two batches: role-change renames
+   (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
+   conventions (kebab-case everywhere, docs/reports/ for dated
+   snapshots, -superseded always suffixed, design-stems stripped on
+   role change). Conventions recorded in `docs/README.md`.
+7. **Findability enforcement** — DONE. `pnpm doc-check` (broken refs +
+   live-area orphans fail; frozen reports exempt; justified allowlist)
+   runs from pre-commit on any .md commit; docs-only commits skip
+   typecheck/lint automatically, so `--no-verify` for docs is retired.
+   doc-graph now scans monorepo-level sources (root/bin CLAUDE.md,
+   .claude/, dev/, research/) so skill references count.
 8. **Long-doc splits** — the design.md split executes under track 5;
    remaining item: move cards-as-markdown.md's resolved RFC body to
    implemented-plans/ keeping a short format reference. ideas.md is
