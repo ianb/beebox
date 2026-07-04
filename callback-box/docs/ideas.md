@@ -547,7 +547,7 @@ Options to consider:
 - A `cb secrets` command to list which secrets each box has/is missing
 - Fall back to env vars more aggressively (the env var `CALLBACK_MISTRAL_API_KEY` exists but is commented out by default in setup)
 
-For now: manually copy secret files to new boxes. See `docs/adding-a-box.md` step 7.
+For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
 
 ## Box deployment friction
 

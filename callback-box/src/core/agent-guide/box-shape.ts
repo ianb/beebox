@@ -81,7 +81,7 @@ This box uses the package layout: your working directory (this box root) is a \`
 
 **Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart.
 
-**Not yours to edit.** \`package.json\`, \`node_modules/\`, lockfiles, \`tsconfig.json\`, and anything else at the package root outside those three directories belong to the boxholder, not to you — upgrading the \`callback-box\` dependency (and everything that comes with it) is the boxholder's job, done from outside this session.
+**Not yours to edit.** \`package.json\`, \`node_modules/\`, lockfiles, \`tsconfig.json\`, and anything else at the package root outside those three directories belong to the boxholder, not to you. Upgrading the engine — bumping the \`callback-box\` dependency and everything that comes with it — is done with \`cb upgrade\`, run by the boxholder from outside this session. Don't run \`cb upgrade\` yourself unless explicitly asked to.
 
 **Imports.** Box code may only import from the callback-box library surface: \`callback-box/cards\` (card/schema primitives), \`callback-box/schema\` (Zod and YAML, version-pinned to the engine), and \`callback-box/view-widgets\` (view components). Don't add other dependencies to \`package.json\` — that file isn't yours to edit.`;
 }

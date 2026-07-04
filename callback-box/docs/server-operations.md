@@ -8,7 +8,7 @@ Services run as the **`callback` user** (User/Group in systemd unit files), not 
 
 | Path | Owner | Purpose |
 |------|-------|---------|
-| `/opt/callback/` | root (read-only to `callback`) | Checked-out source code (callback-box, cardworks, callback-clerk) |
+| `/opt/callback/` | root (read-only to `callback`) | Checked-out source code (callback-box) |
 | `/home/callback/boxes/` | `callback` | Box data — each subdirectory is a box (inbox/, store/, config/, .callback-box/) |
 | `/home/callback/.env` | `callback` | Environment variables for services (API keys, `CB_DIAG_API_KEY`, etc.) |
 | `/home/callback/.claude/.credentials.json` | `callback` | Claude Code OAuth credentials (see below) |
@@ -34,9 +34,10 @@ ssh callback@$(cat deploy/server-ip)
 | What | Where |
 |------|-------|
 | Box data | `/home/callback/boxes/<box>/` |
-| Box manifest (which boxes serve+scheduler see) | `/home/callback/.config/cb/boxes.json` |
-| Service logs | `journalctl -u callback-serve -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
-| Service status | `systemctl status callback-serve callback-scheduler --no-pager` |
+| Hub routing table (which boxes `cb hub` serves, and at what slug) | `/home/callback/.config/cb/hub.json` |
+| Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/plans/boxes-as-packages-v2.md`'s "H4 deletions") | `/home/callback/.config/cb/boxes.json` |
+| Service logs | `journalctl -u cb-hub -n 200 --no-pager` / `journalctl -u callback-scheduler -n 200 --no-pager` |
+| Service status | `systemctl status cb-hub callback-scheduler --no-pager` |
 | Client debug log per box | `/home/callback/boxes/<box>/.callback-box/client-debug.log` |
 | Procedure runs | `/home/callback/boxes/<box>/procedure/runs/` |
 | Claude Code update log | `/home/callback/claude-update.log` |
@@ -53,8 +54,11 @@ su - callback -c "cd /home/callback/boxes/<box> && cb validate"
 **Restart services after deploying or after manual config changes:**
 
 ```bash
-ssh root@$(cat deploy/server-ip) "systemctl restart callback-serve callback-scheduler"
+ssh root@$(cat deploy/server-ip) "systemctl restart cb-hub callback-scheduler"
 ```
+
+`hub.json` doesn't hot-reload — adding, removing, or re-pointing a box entry needs a `cb-hub`
+restart, not just a config edit.
 
 For helper `ssh-server.sh` see `deploy/`.
 
@@ -90,7 +94,7 @@ callers. Don't write a fresh `ssh root@... 'command'` line.
 
 ## Prod runs the bundled `dist/cli.mjs`
 
-`cb serve` runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.mjs`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle locally and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes.
+`cb serve` (spawned by `cb hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.mjs`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle locally and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `cb hub` itself runs from the same bundle.
 
 Consequences:
 

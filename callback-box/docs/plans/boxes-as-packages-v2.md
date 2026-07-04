@@ -1,6 +1,10 @@
 # Boxes as Packages v2 — callback-box as a library
 
-**Status:** Draft for review.
+**Status:** Implemented (2026-07-04). The laptop and server fleet are converted to the v2
+package layout, the server runs `cb hub` in place of shared `callback-serve`, and the dev loop
+runs one `cb hub` per worktree. Deferred/loose ends — the deploy provisioning scripts not yet
+codifying the hub units, npm publish, and per-box OS isolation — live in "Post-cutover state"
+above and the isolation-hardening subplan, not tracked as open items on this plan.
 **Supersedes:** `docs/unimplemented-plans/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
 design from the current codebase, corrects what has gone stale, and locks the decisions the
 boxholder made on 2026-07-03. (Session working notes — an independent re-derivation and a
@@ -485,11 +489,16 @@ to `content/`).
 **Why:** Engine development against live boxes must stay zero-ceremony (edit → next request).
 
 ### Track H — Fleet migration
-**Status: H1–H3 DONE (2026-07-04).** The `box-packageify` migration script landed, the whole
-laptop + server fleet converted, and the server now runs `cb hub` (per-box `cb@<box>.service`
-children) in place of the old shared `callback-serve`. H4 (deletions) is **partially done** —
-see the rewritten paragraph below for exactly what shipped and what's intentionally still
-here. H5 (knowledge audits + docs rewrite) has not started.
+**Status: H1–H3, H5 DONE (2026-07-04).** The `box-packageify` migration script landed, the whole
+laptop + server fleet converted, and the server now runs `cb hub` (per-box children) in place of
+the old shared `callback-serve`. H4 (deletions) is **partially done** — see the rewritten
+paragraph below for exactly what shipped and what's intentionally still here. H5 (knowledge
+audits + docs rewrite) is done: four `box-packageify` audits landed and pass against `test1`
+(a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
+rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
+statements fixed. The deploy *provisioning scripts* (`setup-server.sh`, `add-box.sh`) still
+target the pre-hub shape — documented as a known gap in `deploy/README.md` rather than silently
+left wrong.
 
 **What:** A standard migration `box-packageify` (registry entry + script): `git mv` code dirs
 into `src/`, everything else into `content/`, write wrapper files, re-point memory symlink,
@@ -520,10 +529,13 @@ fleet, they don't all retire on the same schedule:
   `boxes.json`, serve every box from one process) still exists as Track G's dev-loop escape
   hatch: a plain `pnpm dev`-style local run without standing up a hub. Not dead code — an
   intentional dev convenience, kept on purpose.
-- **Resolve hook — DEFERRED, not forgotten.** Still present because the server still runs one
-  legacy-shape box: `test1` (`docs/box-layout.md`'s "primary test box"), kept unconverted on
-  purpose as the live legacy-compat canary. The hook comes out only once no box anywhere needs
-  it — tracked here, not silently dropped.
+- **Resolve hook — DEFERRED, not forgotten.** `test1` (`docs/box-layout.md`'s "primary test
+  box") is itself now converted to v2 — as of this H5 pass, its `.cb-box` marker declares
+  `shapeVersion: 2` and it has a real package root. This plan previously stated `test1` was
+  kept legacy-shape on purpose as a canary; that's now stale. The hook stays deferred anyway —
+  it comes out only once every box everywhere is confirmed v2, and that inventory hasn't been
+  done as part of this pass — but the "which box still needs it" premise needs re-checking
+  rather than assumed to still be `test1`.
 - **Rsync deploy of the engine — STAYS.** Deploy (`deploy/deploy.sh`, the post-commit hook)
   still rsyncs the built engine to the server; it has not been replaced by release-tarball +
   `cb fleet upgrade` distribution (Track F/E). That channel exists for boxes that consume
@@ -679,13 +691,14 @@ surfaces, never in an operating agent's context.
    picker. D1 depends on nothing above (can parallel A–C); D2 depends on D1.
 8. **G1** dev router v2 branch + worktree hook update. Depends on B2, C1.
 9. **H1** `box-packageify` migration script (scratch-clone tested) — **DONE**. **H2** laptop
-   fleet conversion — **DONE**. **H3** server conversion (canary → `test1` → rest; hub
-   replaces `callback-serve`; runbook step for the critical-gap cutover) — **DONE**, except
-   `test1` is deliberately left legacy-shape as the live resolve-hook canary (see Track H's
-   "H4 deletions" writeup). **H4** deletions — **PARTIAL**: hardcoded paths done; manifest,
-   multi-box serve, resolve hook, and rsync deploy all stay for now, each for its own
-   documented reason (Track H). **H5** knowledge audits run, docs rewrite (`adding-a-box.md`,
-   `deploy/README.md`, a real `README.md` with the stranger's five-minute path) — not started.
+   fleet conversion — **DONE** (`test1` included — as of this H5 pass it's a converted v2 box
+   on disk, correcting an earlier claim in this plan that it was deliberately left legacy as a
+   resolve-hook canary). **H3** server conversion (canary → `test1` → rest; hub
+   replaces `callback-serve`; runbook step for the critical-gap cutover) — **DONE**. **H4**
+   deletions — **PARTIAL**: hardcoded paths done; manifest, multi-box serve, resolve hook, and
+   rsync deploy all stay for now, each for its own documented reason (Track H). **H5**
+   knowledge audits run, docs rewrite (`adding-a-box.md`, `deploy/README.md`, a real
+   `README.md` with the stranger's five-minute path) — **DONE**.
 
 Each numbered item is a commit-sized chunk on this worktree; the plan ships as one unit when
 H5 completes. No merge to main without the boxholder's explicit go.

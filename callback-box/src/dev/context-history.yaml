@@ -2801,3 +2801,35 @@ test1:
       peak: 41215
       added: 0
       turns: 1
+  box-packageify-schemas-location:
+    - date: 2026-07-04T19:01:55.493Z
+      boxCommit: 042fc9d72609a2c24c42535c758cf7a3885eaeb9
+      repoCommit: c30328c8ab7ffe56dc58f1d0f477ee104bb5b81b
+      initial: 40867
+      peak: 43986
+      added: 3119
+      turns: 6
+  box-packageify-views-location:
+    - date: 2026-07-04T19:01:55.493Z
+      boxCommit: 042fc9d72609a2c24c42535c758cf7a3885eaeb9
+      repoCommit: c30328c8ab7ffe56dc58f1d0f477ee104bb5b81b
+      initial: 26528
+      peak: 54372
+      added: 27844
+      turns: 12
+  box-packageify-stance-b-off-limits:
+    - date: 2026-07-04T19:01:55.493Z
+      boxCommit: 042fc9d72609a2c24c42535c758cf7a3885eaeb9
+      repoCommit: c30328c8ab7ffe56dc58f1d0f477ee104bb5b81b
+      initial: 26528
+      peak: 26528
+      added: 0
+      turns: 2
+  box-packageify-cb-upgrade:
+    - date: 2026-07-04T19:01:55.493Z
+      boxCommit: 042fc9d72609a2c24c42535c758cf7a3885eaeb9
+      repoCommit: c30328c8ab7ffe56dc58f1d0f477ee104bb5b81b
+      initial: 26533
+      peak: 41776
+      added: 15243
+      turns: 14

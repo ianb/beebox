@@ -122,7 +122,7 @@ export interface RunTestOptions {
 export async function runTest(options: RunTestOptions): Promise<TestResult> {
   const { test, boxRoot, onOutput } = options;
   // Guard before any destructive git op — boxRoot must be its own repo.
-  assertStandaloneBox(boxRoot);
+  await assertStandaloneBox(boxRoot);
   const prompt = test.style
     ? `${test.style}. ${test.prompt}`
     : test.prompt;
