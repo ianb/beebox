@@ -1,6 +1,9 @@
 # Documentation reorganization
 
-Status: survey complete (2026-07-04); design sections not yet written.
+**Status:** partially implemented 2026-07-04 — survey done; plans sweep,
+research/ dir, corrections batch, CLAUDE.md slimming, and first
+cb-guide-* skills shipped; design reconciliation and filename review in
+flight; see Tracks.
 
 This plan reorganizes the monorepo's developer-facing documentation (~252
 tracked `.md` files, excluding `callback-box/test/` fixtures and box-agent
@@ -303,34 +306,94 @@ design sections are written)*
 
 ## Tracks / scope
 
-*(pending — candidate tracks visible in the survey: plans-taxonomy sweep +
-/finish wiring + research home; reference-area corrections; CLAUDE.md
-slimming; skill seam; findability/index enforcement; deletions/archives)*
-
-## Failure modes
-
-*(pending)*
-
-## Agent-flow / user-flow edge cases
-
-*(pending)*
-
-## NOT in scope
-
-*(pending)*
+1. **Plans-taxonomy sweep + research/ home** — DONE (commit d4ab..→).
+   5 shipped plans → implemented-plans/, 2 parked, triage-design promoted
+   to reference, status-header convention in plans/README.md, top-level
+   `research/` with its own CLAUDE.md. Remaining: wire `/finish` to
+   auto-move shipped plans (still a plans/README TODO).
+2. **Corrections + non-obvious-conventions batch** — DONE (86cc902a).
+   38 items: all confirmed-wrong claims fixed; 13 undocumented
+   conventions documented at colocated homes (new `src/hub/CLAUDE.md`,
+   `docs/card-validation.md`); findability quick wins (Guides rows,
+   orphan links, prompt-audits ↔ cb-prompt-review cross-refs).
+3. **CLAUDE.md slimming** — DONE. Root 47→34 lines (mechanism →
+   `bin/CLAUDE.md`); callback-box CLAUDE.md deduped/trimmed with
+   pointers. Shared-router caution promoted to a stated rule.
+4. **Instructional skills (`cb-guide-*`)** — STARTED. Naming decided:
+   behavioral skills stay bare `cb-*`; explanatory/pointer skills are
+   `cb-guide-*`. First three shipped: cb-guide-testing, cb-guide-api,
+   cb-guide-schemas (each: motivation + decision rules, pointing to the
+   reference doc for mechanics). Add more only when a real trigger gap
+   shows up; collapse into one pointer-skill if the count grows heavy.
+5. **Design reconciliation** — IN FLIGHT. Boxholder chose
+   adjudication-first: a divergence list
+   (`docs/plans/design-reconciliation.md`) where he rules per item;
+   docs are rewritten to match rulings afterwards. Roles of DESIGN.md /
+   IMPLEMENTATION.md / design-vision.md / architecture-series get
+   settled there, including possible long-doc → subdirectory splits.
+6. **Filename review** — IN FLIGHT. Proposal list being produced
+   (rename freely once approved; doc-graph self-heals, links fixed in
+   the same commit).
+7. **Findability enforcement** — NOT STARTED. doc-graph measures but
+   nothing enforces: candidate = a commit-time (or maintenance-cadence)
+   check that a new doc has ≥1 inbound reference and no broken links;
+   also fix doc-graph's `.claude/` blind spot so skill references count.
+8. **Long-doc splits** — NOT STARTED, gated on track 5 rulings
+   (DESIGN.md sections, ideas.md, moving cards-as-markdown's resolved
+   RFC body to implemented-plans with a short reference kept).
 
 ## Open design questions
 
-*(pending)*
+- Unanswered from the gap analysis (docs-reorg.gap-analysis.md B6–B9):
+  pin YAML `lineWidth: 0`? case-insensitive basename-collision lint?
+  unify/cross-reference the boxes.json vs hub.json registration
+  manifests? `@xstate/store` — still the plan or strike the
+  stack-decisions entry?
+- Filename conventions (pending track 6 proposals): SCREAMING-case
+  top-level docs, date-stamped report names.
+- `chat-job.ts` schema `instructions` still describe XML message tags
+  while `chat-thread.ts` writes YAML `kind:` entries — prompt-surface
+  bug found during the batch; fix under cb-prompt-review discipline.
+- Where does the reactor-resume class of finding go long-term: the
+  gap-analysis produced one real bug (fixed, 62667243) — should future
+  doc audits routinely include a "docs claim X, code does Y, which is
+  right?" pass?
+
+## Failure modes
+
+| What can fail | Test exists? | Handling exists? | Clear-or-silent? |
+|---|---|---|---|
+| A moved/renamed doc leaves a stale inbound link | doc-graph reports broken refs | manual re-run only | silent until doc-graph is next run |
+| New doc lands with zero inbound links (orphan) | doc-graph orphan list | no enforcement (track 7) | silent |
+| CLAUDE.md pointer says one sentence but the colocated doc drifts | no | banner convention only | silent |
+| A cb-guide-* skill restates a doc and they drift apart | no | skills kept pointer-shaped by convention | silent |
+| /finish ships a plan but doesn't move it to implemented-plans | no | README TODO; manual sweep | silent (this survey found 5 such) |
+
+**Critical gap:** orphan/broken-link creation is silent between manual
+doc-graph runs — track 7 is the fix; until it lands, `pnpm doc-graph`
+belongs in the maintenance cadence (it is listed in docs/maintenance.md).
+
+## NOT in scope
+
+- Rewriting box-agent-facing documentation (agent guide, box CLAUDE.md
+  templates, rules) — that's the cb-context/cb-prompt-review surface;
+  this plan only touched it where dev docs were wrong about it.
+- The 277-unused-exports knip backlog (recorded in ideas.md).
+- Splitting `test/helpers/fake-agent.ts` to clear its pre-existing
+  single-export lint errors (noted during the reactor fix).
+- Automating design-doc freshness (e.g. doctest-enforced doc claims)
+  beyond box-layout.md's existing doctest guard.
 
 ## Knowledge audits
 
-*(pending)*
+This plan is dev-repo documentation; box agents never see these docs, so
+no knowledge-audit entries land with it. The one agent-facing change
+(chat-schedules/glossary wording about pseudo-XML) is covered by the
+existing schedule-tag audits.
 
-## Implementation order
+## Implementation order / rollout
 
-*(pending)*
-
-## Rollout shape
-
-*(pending)*
+Tracks 1–4 shipped as three commits on this worktree branch (plus the
+reactor fix that fell out of the gap analysis). Remaining order: 5 and 6
+land after boxholder rulings; 7 is independent and small; 8 last, gated
+on 5. Ships by merging the worktree to main as usual.
