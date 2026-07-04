@@ -29,17 +29,27 @@ type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: tr
 /**
  * Env vars a hub-spawned box child (`cb serve`) may inherit from the hub's
  * own process env. Fail-closed ALLOWLIST, not a denylist -- `process.env`
- * on the hub process holds hub-only credentials (`CB_SESSION_SECRET`,
- * `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`) that must NEVER
- * reach a child: the session secret is symmetric (HMAC), so any box that
- * can VERIFY a cookie could also FORGE one for a sibling box, and the
- * OAuth client secret would let a box impersonate the hub's own login flow.
- * Spreading `process.env` into every child (as this used to do) reopens
- * exactly the forgery hole Track D's D2 auth split closed (see
+ * on the hub process holds a hub-only credential, `CB_SESSION_SECRET`, that
+ * must NEVER reach a child: it's symmetric (HMAC), so any box that can
+ * VERIFY a session cookie could also FORGE one for a sibling box. Spreading
+ * `process.env` into every child (as this used to do) reopens exactly the
+ * forgery hole Track D's D2 auth split closed (see
  * `docs/plans/boxes-as-packages-v2.md`'s "Isolation is layered": the hub is
  * trusted, boxes are not trusted with each other's secrets). Widen this
  * list only by adding a new named entry with a reasoned comment -- never by
  * reverting to a spread.
+ *
+ * `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` are listed below
+ * deliberately, not withheld like the session secret: they're the app's
+ * connector identity (registered with Google), not a per-box or per-hub
+ * secret, and every box's calendar/gmail/drive connectors read them
+ * directly (`getGoogleClientCreds()` in `src/connectors/google-auth.ts`) to
+ * run and refresh their own per-box tokens. Under the current architecture
+ * connector OAuth stays per-box -- the box owns its tokens -- so the client
+ * creds are shared on purpose. Splitting them so each box holds distinct
+ * client creds (or a hub-mediated OAuth proxy) is the OS-user hardening
+ * subplan's concern (`docs/unimplemented-plans/box-user-account-spec.md`),
+ * not this allowlist's.
  *
  * Built from evidence: every `process.env.X` read under `src/webapp/`,
  * `src/core/`, and `src/connectors/` as of this writing (a hub-spawned
@@ -71,6 +81,8 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "CB_OWNER_EMAIL", // src/webapp/auth.ts getOwnerEmail() -- fleet owner identity, not a secret.
   "CB_DIAG_API_KEY", // src/webapp/auth.ts verifyDiagBearerKey -- shared read-only diag bearer key.
   "CB_GOOGLE_TOKENS_FILE", // src/connectors/google-auth.ts, requirements.ts -- a path, not a credential.
+  "GOOGLE_OAUTH_CLIENT_ID", // src/connectors/google-auth.ts getGoogleClientCreds() -- app identity, shared per-box by design (see block comment above).
+  "GOOGLE_OAUTH_CLIENT_SECRET", // ditto -- connector OAuth stays per-box; the box owns its tokens.
   "CB_LOG_PROMPTS", // src/core/agent-run.ts -- debug flag.
   "CB_STRICT_FETCH", // src/cli/bootstrap.ts -- test/scenario harness flag.
   "CB_STUBS_FILE", // src/cli/lib/fetch.ts -- scenario fixture path.

@@ -199,6 +199,49 @@ rejectedUpgrade.startsWith("HTTP/1.1 404")
 => true
 ```
 
+## The Google-services OAuth callback routes to the box named in `state`, headers intact
+
+`/auth/google-services/callback` isn't a box slug -- the generic catch-all
+can't route it. The hub instead reads the box out of the OAuth `state` query
+param (`"boxSlug"` or `"boxSlug:returnPath"`, same format the box's own
+callback handler parses) and proxies straight to that child, applying the
+same identity-header gate as any other proxied request.
+
+```ts continue
+const callbackResponse = await fetch(
+  `${hub.base}/auth/google-services/callback?code=abc123&state=test1:admin`,
+  { headers: { "x-cb-authenticated-email": "attacker@evil.com" } },
+);
+const callbackBody = await callbackResponse.json();
+callbackResponse.status
+=> 200
+
+JSON.stringify({ url: callbackBody.url, headers: callbackBody.headers })
+=> {"url":"/auth/google-services/callback?code=abc123&state=test1:admin","headers":{"xCbAuthenticatedEmail":null,"xCbHubSecret":"test-hub-secret-for-router-doctest","xCbHubAuth":"off"}}
+```
+
+An unknown/missing box in `state` never reaches any endpoint:
+
+```ts continue
+const unknownBoxResponse = await fetch(`${hub.base}/auth/google-services/callback?code=abc123&state=nope`);
+unknownBoxResponse.status
+=> 400
+```
+
+## `/api/boxes` is hub-owned, matching the standalone server's shape
+
+With hub auth off (this doctest's default), every configured box is listed
+-- same "open" semantics as `/` and a standalone box outside auth mode.
+
+```ts continue
+const apiBoxesResponse = await fetch(`${hub.base}/api/boxes`);
+apiBoxesResponse.status
+=> 200
+
+JSON.stringify(await apiBoxesResponse.json())
+=> {"boxes":[{"slug":"test1","name":"test1"}]}
+```
+
 ```ts cleanup
 // Force-destroy every tracked socket (not just closeAllConnections(), which
 // doesn't reliably reach sockets detached via the "upgrade" event -- see

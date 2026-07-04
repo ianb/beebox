@@ -4,10 +4,14 @@ Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
 
 1. `buildChildEnv` must ALLOWLIST what a hub-spawned box child inherits from
    the hub's own env, not spread `process.env` wholesale -- `CB_SESSION_SECRET`
-   and `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET` are hub-only
-   credentials (see `supervisor.ts`'s `CHILD_ENV_ALLOWLIST` doc comment for
-   why: the session secret is symmetric, so any box that could verify a
-   cookie could also forge one for a sibling box).
+   is a hub-only credential (see `supervisor.ts`'s `CHILD_ENV_ALLOWLIST` doc
+   comment for why: it's symmetric, so any box that could verify a cookie
+   could also forge one for a sibling box) and must never reach a child.
+   `GOOGLE_OAUTH_CLIENT_ID`/`GOOGLE_OAUTH_CLIENT_SECRET`, by contrast, DO pass
+   through: they're the app's connector identity, not a hub secret, and every
+   box's Google connectors read them directly to run/refresh their own
+   per-box tokens (connector OAuth stays per-box under the current
+   architecture -- the box owns its tokens).
 2. When `launch()`'s readiness timeout fires and it kills the still-starting
    child itself, that kill's own eventual "exit" event must NOT ALSO be
    treated as an unexpected crash -- otherwise one failure gets counted (and
@@ -47,10 +51,12 @@ const sourceEnv = {
   CB_DIAG_API_KEY: "diag-key-value",
   CB_GOOGLE_TOKENS_FILE: "/home/callback/.google-tokens.json",
   THINKING_OPENAI_API_KEY: "sk-thinking-value",
-  // Hub-only credentials -- must NEVER reach a child.
+  // Box-legitimate connector identity -- DOES pass through (shared per-box
+  // by design; see block comment above and in supervisor.ts).
+  GOOGLE_OAUTH_CLIENT_ID: "app-oauth-client-id",
+  GOOGLE_OAUTH_CLIENT_SECRET: "app-oauth-client-secret",
+  // Hub-only credential -- must NEVER reach a child.
   CB_SESSION_SECRET: "hub-only-session-secret",
-  GOOGLE_OAUTH_CLIENT_ID: "hub-only-oauth-client-id",
-  GOOGLE_OAUTH_CLIENT_SECRET: "hub-only-oauth-client-secret",
   // Not on the allowlist at all -- an arbitrary var from the hub's shell.
   SOME_UNRELATED_VAR: "should-not-leak",
 };
@@ -65,9 +71,11 @@ JSON.stringify({
   diagKey: env.CB_DIAG_API_KEY,
   tokensFile: env.CB_GOOGLE_TOKENS_FILE,
   thinkingKey: env.THINKING_OPENAI_API_KEY,
+  googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
+  googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
   hubSecret: env.CB_HUB_SECRET,
 })
-=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","hubSecret":"per-boot-hub-secret"}
+=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","hubSecret":"per-boot-hub-secret"}
 ```
 
 ```ts continue
@@ -75,10 +83,10 @@ JSON.stringify({
 => false
 
 "GOOGLE_OAUTH_CLIENT_ID" in env
-=> false
+=> true
 
 "GOOGLE_OAUTH_CLIENT_SECRET" in env
-=> false
+=> true
 
 "SOME_UNRELATED_VAR" in env
 => false

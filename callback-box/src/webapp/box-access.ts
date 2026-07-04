@@ -29,3 +29,26 @@ export async function canAccessBox({
   const config = await loadBoxConfig(boxRoot);
   return !!(config.allowedEmails?.length && config.allowedEmails.includes(email));
 }
+
+/**
+ * Filter `boxes` down to the ones `email` may access, via `canAccessBox`.
+ * The one place that loop is written -- shared by the root `/api/boxes`
+ * listing (`server-root.ts`), the hub's `/api/boxes` (`src/hub/hub-server.ts`),
+ * and the hub's box picker (`src/hub/box-picker.ts`) so they can't drift into
+ * three different filtering rules.
+ */
+export async function filterAccessibleBoxes<T extends { boxRoot: string }>({
+  boxes,
+  email,
+  ownerEmail,
+}: {
+  boxes: T[];
+  email: string;
+  ownerEmail: string | null;
+}): Promise<T[]> {
+  const accessible: T[] = [];
+  for (const box of boxes) {
+    if (await canAccessBox({ boxRoot: box.boxRoot, email, ownerEmail })) accessible.push(box);
+  }
+  return accessible;
+}

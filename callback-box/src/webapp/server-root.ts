@@ -15,7 +15,7 @@ import { listParkedTemplateUpdates } from "../core/install-template-file.js";
 import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxSchemas } from "../schemas/registry.js";
 import { getEngineVersionReport } from "../core/engine-version.js";
-import { canAccessBox } from "./box-access.js";
+import { filterAccessibleBoxes } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 
@@ -101,16 +101,16 @@ export function registerCspReportingHeaders(
   });
 }
 
-/** Build the box list visible to the requesting user (auth-filtered). */
-async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
+/**
+ * Build the box list visible to the requesting user (auth-filtered) in the
+ * `/api/boxes` response shape. Exported so the hub's own `/api/boxes`
+ * (`src/hub/hub-server.ts`) returns the identical shape from the identical
+ * filter, instead of a second copy that could drift.
+ */
+export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
   const ownerEmail = getOwnerEmail();
-  const accessible: Array<{ slug: string; name: string }> = [];
-  for (const b of boxes) {
-    if (await canAccessBox({ boxRoot: b.boxRoot, email, ownerEmail })) {
-      accessible.push({ slug: b.slug, name: b.slug });
-    }
-  }
-  return accessible;
+  const accessible = await filterAccessibleBoxes({ boxes, email, ownerEmail });
+  return accessible.map((b) => ({ slug: b.slug, name: b.slug }));
 }
 
 /**

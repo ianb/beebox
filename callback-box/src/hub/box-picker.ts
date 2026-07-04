@@ -11,7 +11,7 @@
 
 import type { FastifyInstance } from "fastify";
 import { isAuthEnabled, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
-import { canAccessBox } from "../webapp/box-access.js";
+import { filterAccessibleBoxes } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 
 function escapeHtml(value: string): string {
@@ -68,12 +68,7 @@ export function registerBoxPicker(server: FastifyInstance, { boxes }: { boxes: B
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
     const ownerEmail = getOwnerEmail();
-    const accessible: BoxSpec[] = [];
-    for (const box of boxes) {
-      if (await canAccessBox({ boxRoot: box.boxRoot, email: user.email, ownerEmail })) {
-        accessible.push(box);
-      }
-    }
+    const accessible = await filterAccessibleBoxes({ boxes, email: user.email, ownerEmail });
     return reply.type("text/html").send(renderPage(accessible));
   });
 }

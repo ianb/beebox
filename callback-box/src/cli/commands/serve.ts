@@ -31,11 +31,25 @@ async function defaultSlugFor(boxRoot: string): Promise<string> {
 }
 
 /**
+ * `<slug>=<boxRoot>` argv encoding `server-main.ts` expects. Exported so
+ * `--dev`'s spawn args (below) and its doctest build it the same way a
+ * resolved `BoxSpec[]` always does — a v2 box's `content/` dir basename is
+ * always the literal string "content", so passing a bare dir instead would
+ * silently slug every v2 box "content" (server-main.ts's bare-dir fallback
+ * derives the slug from `path.basename`, same gap `--slug`/`resolveBoxes`
+ * exist to close for the non-dev path).
+ */
+export function toBoxArgs(boxes: BoxSpec[]): string[] {
+  return boxes.map((box) => `${box.slug}=${box.boxRoot}`);
+}
+
+/**
  * Resolve directory arguments into a `BoxSpec` array. `slugOverride` (from
  * `--slug`) only applies when there's exactly one dir — passing it with
  * multiple dirs is an ambiguous request, not a "apply to all" default.
+ * Exported for `--dev`'s arg building above and its doctest.
  */
-async function resolveBoxes(dirs: string[], slugOverride: string | undefined): Promise<BoxSpec[]> {
+export async function resolveBoxes(dirs: string[], slugOverride: string | undefined): Promise<BoxSpec[]> {
   if (slugOverride !== undefined && dirs.length > 1) {
     console.error("Error: --slug can only be used when serving a single box directory.");
     process.exit(1);
@@ -110,14 +124,14 @@ export const serveCommand = new Command("serve")
       const projectDir = PACKAGE_ROOT;
       const serverTs = path.join(projectDir, "src/webapp/server-main.ts");
       const srcDir = path.join(projectDir, "src");
-      const resolvedDirs = boxDirs.map((d) => path.resolve(d));
+      const boxArgs = toBoxArgs(boxes);
 
       const args = [
         "--watch",
         `--watch-path=${srcDir}`,
         "--import", "tsx",
         serverTs,
-        ...resolvedDirs,
+        ...boxArgs,
       ];
 
       // Set PORT/HOST as env vars for the server entry point

@@ -86,8 +86,14 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   // box is running behind a hub, in which case the hub owns login (Track D,
   // chunk D2) and the box's own /auth/* is dead surface: 404, not a stub,
   // since a child never redirects to its own /auth/login in hub mode (see
-  // server-box-scope.ts's addBoxAuthHook) and nothing should legitimately
-  // reach these paths through the hub (RESERVED_SLUGS reserves "auth").
+  // server-box-scope.ts's addBoxAuthHook). This wildcard is registered
+  // BEFORE the Google-services callback below on purpose to document intent
+  // (login is dead here), but it doesn't actually shadow that static route —
+  // Fastify's router (find-my-way) always prefers a static route over a
+  // wildcard regardless of registration order, so `/auth/google-services
+  // /callback` still reaches its handler even in hub mode: the hub proxies
+  // that one path straight through to this box (see `src/hub/hub-server.ts`)
+  // because it's the box's own connector setup, not login.
   if (isHubMode()) {
     server.all("/auth/*", async (_request, reply) => {
       return reply.status(404).send({

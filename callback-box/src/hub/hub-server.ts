@@ -19,10 +19,14 @@
  * identity header attached (`x-cb-authenticated-email` or, when hub-wide
  * auth is off, `x-cb-hub-auth: off`) alongside `x-cb-hub-secret` -- see
  * `src/webapp/auth.ts`'s `resolveRequestIdentity` for the child side of
- * this contract. `/healthz`, `/auth/*`, and `/webhook/<slug>/*` are the
- * three paths NOT behind this auth wall (health checks, login itself, and
- * external webhook callers that have never gone through Cloudflare Access
- * either).
+ * this contract. `/healthz`, the hub's own `/auth/login|callback|logout|me`
+ * (registered by `registerAuthSurface` below, not proxied), and
+ * `/webhook/<slug>/*` are the paths NOT behind this auth wall (health
+ * checks, login itself, and external webhook callers that have never gone
+ * through Cloudflare Access either). `/auth/google-services/callback` is
+ * NOT in that list even though it shares the `/auth/` prefix -- it's a
+ * per-box connector callback, proxied to a child like any other request and
+ * gated the same way (see its dedicated route below).
  *
  * A box's own Fastify instance already serves itself under `/<slug>/...`
  * (see `server-box-scope.ts`'s `registerBox`, and `cb serve --slug`) -- so
@@ -40,9 +44,11 @@ import type { BoxRuntimeStatus } from "./supervisor.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
+import { listAccessibleBoxes } from "../webapp/server-root.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import {
   isAuthEnabled,
+  getSessionUser,
   getSessionUserFromCookieHeader,
   HUB_SECRET_HEADER,
   HUB_EMAIL_HEADER,
@@ -183,6 +189,22 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // The box picker (Track D, chunk D3).
   registerBoxPicker(app, { boxes });
 
+  // The frontend's box switcher calls /api/boxes on whatever server it's
+  // loaded from -- the standalone server answers it (server-root.ts), but
+  // the hub only ever served the HTML picker at "/", so this 404'd behind a
+  // hub (caught by "auth"/"api" being reserved slugs the catch-all below
+  // can't match to a box). Own it here with the SAME shape and the SAME
+  // filter (`listAccessibleBoxes`, which shares `canAccessBox` with the box
+  // picker) so the two never drift into different box lists.
+  app.get("/api/boxes", async (request) => {
+    if (isAuthEnabled()) {
+      const user = getSessionUser(request);
+      if (!user) return { boxes: [], authRequired: true };
+      return { boxes: await listAccessibleBoxes(boxes, user.email) };
+    }
+    return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
+  });
+
   const proxy = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
   // eslint-disable-next-line max-params -- http-proxy-3's ProxyServer "error" event signature is (err, req, res)
   proxy.on("error", (err: Error, _req, res) => {
@@ -196,6 +218,40 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
         /* already gone */
       }
     }
+  });
+
+  // The Google-services OAuth callback is a single fleet-wide redirect URI
+  // (`GET /auth/google-services/callback`) registered on EVERY child at a
+  // path under the "auth" reserved slug, which the generic catch-all below
+  // can never route (no box is actually named "auth"). The setup flow
+  // (`admin-google.ts`'s `googleSetup`) already encodes which box initiated
+  // it in the OAuth `state` param ("boxSlug" or "boxSlug:returnPath", same
+  // format `routes/admin.ts`'s callback handler parses) -- so the hub reads
+  // just enough of `state` to pick the child, then forwards unchanged. The
+  // child's own handler (still registered on every `cb serve`, per-box) is
+  // the one that exchanges the code and saves tokens; the hub only routes
+  // and injects the same gated identity headers every proxied request gets.
+  // Fastify's router (find-my-way) matches this static route ahead of the
+  // "/*" wildcard below regardless of registration order, so this always
+  // wins for this exact path.
+  app.get("/auth/google-services/callback", async (request, reply) => {
+    const { state } = request.query as { state?: string };
+    const colonIdx = (state ?? "").indexOf(":");
+    const boxSlug = colonIdx !== -1 ? (state ?? "").slice(0, colonIdx) : (state ?? "");
+    const endpoint = boxSlug ? endpoints.get(boxSlug) : undefined;
+    if (!endpoint) {
+      return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
+    }
+
+    stripHubHeaders(request.raw.headers);
+    const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret });
+    if (!decision.authorized) {
+      return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+    }
+    Object.assign(request.raw.headers, decision.headersToSet);
+
+    reply.hijack();
+    proxy.web(request.raw, reply.raw, { target: endpoint.origin });
   });
 
   // Everything else: gate on identity, then proxy to the box's own Fastify
