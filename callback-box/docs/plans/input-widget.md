@@ -180,9 +180,13 @@ a bridge, and imposes one hard rule and one design change:
 - **Change: `assemble()` belongs to the target adapter, not the input.**
   `Target.accept(emission)` takes the serialized emission; assembly
   (wrappers, selection folding, attachment blocks) is the adapter's first
-  act, in one JS-side place forever. A native input that assembled
-  payloads would reimplement the format rules in Swift/Kotlin and drift —
-  the dual-path disease again. Native ships nouns; JS makes payloads.
+  act. Rationale: it keeps the bridge surface small (native ships one
+  noun, not N payload shapes) and co-locates each payload format with the
+  target that defines it (the `<speech>` wrapper is ChatTarget's
+  business; the capture-card shape is PlaceTarget's). Cross-language
+  duplication was NOT the deciding argument — the boxholder's explicit
+  position is that duplication is controllable and observable with
+  development process; this change stands on locality and bridge-size.
   (The Assembly section below is retained for the payload shapes, but
   read `accept(payload)` throughout as `accept(emission)` with assembly
   inside the adapter.)

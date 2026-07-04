@@ -336,25 +336,23 @@ researching). This inverts today's architecture: instead of the chat page
 hosting a companion card pane, the shell hosts both and chat becomes the
 sidekick of everything.
 
-### Reifying the frame: per-tab frames with fork-on-open (noted 2026-07)
+### The tableau: per-tab arrangement state with fork-on-open (noted 2026-07)
 
 Boxholder direction: the page layout must survive reloads and be
 well-specified — "card path in the URL" doesn't scale to multiple
-tabs/panes/contexts. The answer is a persisted **frame** (deliberately
-not "session" — chat sessions own that word): each browser tab has one,
-holding the arrangement and nothing else. The boxholder wants a proper
-name for it; candidates: **tableau** (solitaire's word for the
-arrangement of cards in play — the lean) or **spread** (tarot's word;
-collides with the JS spread operator). Similarly the companion "slot"
-needs a real name; candidates: **shotgun** (riding shotgun — the lean),
-**perch**, sidecar (Apple collision). Unpicked as of this note.
+tabs/panes/contexts. The answer is the **tableau** (named 2026-07;
+solitaire's word for the arrangement of cards in play — deliberately not
+"session," which chat owns): a persisted arrangement object, one per
+browser tab, holding the layout and nothing else. The companion "slot"
+still needs its real name; candidates: **shotgun** (riding shotgun),
+**perch**, sidecar (Apple collision).
 
 - **URL split.** The path keeps addressing the focal subject (the
-  standing rule survives); a `?frame=<id>` rides along carrying the
-  arrangement. A bare path URL (no frame id) mints a fresh frame seeded
+  standing rule survives); a `?tableau=<id>` rides along carrying the
+  arrangement. A bare path URL (no tableau id) mints a fresh tableau seeded
   with that subject — every existing link keeps working and quietly
   upgrades. Chat's `companion`/`card` params dissolve into the frame.
-- **Fork-on-open.** The frame id in a URL is a seed, not a live handle:
+- **Fork-on-open.** The tableau id in a URL is a seed, not a live handle:
   same-tab reload resumes (per-tab identity via sessionStorage; a
   duplicated tab is detected by the copied token and forks with a fresh
   id, URL rewritten); a shared URL gives the recipient a *copy* of the
@@ -365,9 +363,9 @@ needs a real name; candidates: **shotgun** (riding shotgun — the lean),
   arrangement — a fork must not duplicate a half-typed draft),
   transcripts, preferences, scroll positions.
 - **Storage: server-side runtime state** (`.callback-box/`, like session
-  history), with stale-frame GC — client-only storage would break
+  history), with stale-tableau GC — client-only storage would break
   fork-on-share (the recipient lacks your localStorage). Never a card,
-  per the standing rule; but a frame someone wants to *name and keep* is
+  per the standing rule; but a tableau someone wants to *name and keep* is
   the materialization door (a saved-layout card, later, if ever —
   address-free/assertions-materialize applied to layouts).
 
