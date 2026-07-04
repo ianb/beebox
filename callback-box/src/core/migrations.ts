@@ -92,6 +92,12 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Strip file-metadata timestamps (created-at/updated-at/added-at) from guide +
   // personality cards — git is the record; they were also a template-churn source.
   { name: "strip-entry-timestamps", script: "scripts/migrate/strip-entry-timestamps.ts" },
+  // Convert a legacy (shapeVersion 1) box in place into the v2 package
+  // layout (Track H, docs/plans/boxes-as-packages-v2.md). Unlike every
+  // migration above, this one commits its own change (see the module doc
+  // comment in the script) — a half-converted box is unsafe, not just
+  // incomplete.
+  { name: "box-packageify", script: "scripts/migrate/box-packageify.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

@@ -61,8 +61,19 @@ import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
  * inside a worktree, resolve to the stable **main checkout**'s `cb` (via the
  * shared git dir) instead of the worktree's. Degrades to the local path when git
  * isn't available (e.g. the server's rsynced, `.git`-less deploy tree).
+ *
+ * `CB_HOOK_BIN` overrides all of the above with an explicit absolute path.
+ * For doctests/smoke scripts driving a full `cb init` end-to-end (installing
+ * AND immediately exercising a real, executable hook) against a worktree
+ * checkout: the worktree-routing logic above would otherwise stamp the
+ * MAIN checkout's `cb`, which can lag behind whatever the worktree is
+ * actively developing (e.g. box-package-layout support genuinely absent
+ * from `main` mid-plan) — pinning the override to the worktree's own
+ * freshly-built `bin/cb` avoids exercising a stale, incompatible binary.
  */
 function resolveCbBin(): string {
+  const override = process.env["CB_HOOK_BIN"];
+  if (override) return override;
   const local = path.join(PACKAGE_ROOT, "bin", "cb");
   try {
     // stdio: pipe the failure-case stderr instead of letting execFileSync's

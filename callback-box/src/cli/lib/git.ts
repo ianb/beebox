@@ -44,6 +44,17 @@ export interface GitCommitOptions {
   message: string;
   trailers?: Record<string, string>;
   amend?: boolean;
+  /**
+   * Skip `pre-commit`/`commit-msg` hooks (`git commit --no-verify`). Default
+   * false — an engine-driven commit SHOULD normally clear the same
+   * card-validation gate a human commit does. The one deliberate exception
+   * today is `box-packageify` (`scripts/migrate/box-packageify.ts`): its
+   * commit both installs a fresh `.git/hooks/pre-commit` AND is the commit
+   * that would trigger it, and the migration's own preconditions already
+   * machine-verify the structural transform — see that script's doc
+   * comment for the full rationale.
+   */
+  noVerify?: boolean;
 }
 
 export interface GitPathCommitOptions extends GitCommitOptions {
@@ -178,6 +189,7 @@ export async function commit(
 
   const git = simpleGit(boxRoot);
   const commitArgs = options.amend ? ["--amend"] : [];
+  if (options.noVerify) commitArgs.push("--no-verify");
   try {
     await git.commit(message, commitArgs);
   } catch (err) {
@@ -459,4 +471,21 @@ export async function clean(
   if (opts.gitignored) modes.push(CleanOptions.IGNORED_ONLY);
   if (opts.directories) modes.push(CleanOptions.RECURSIVE);
   await simpleGit(boxRoot).clean(modes);
+}
+
+/**
+ * The shared "undo everything since the snapshot" primitive: `resetHard`
+ * (discards tracked-file changes back to `sha`) followed by `clean` with
+ * `directories: true` (removes untracked debris a failed step left behind —
+ * safe only when the tree was verified clean immediately before the
+ * snapshot, since then anything untracked found now was created by the
+ * failed operation). Factored out of `cb upgrade`'s revert path
+ * (`src/cli/commands/upgrade.ts`) so any OTHER all-or-nothing operation
+ * (e.g. the `box-packageify` migration, which wraps a whole legacy→v2
+ * conversion in this same guarantee) shares one implementation of the
+ * Ghost-CLI lesson: code and data revert together, as one unit.
+ */
+export async function revertToSnapshot(boxRoot: string, sha: string): Promise<void> {
+  await resetHard(boxRoot, sha);
+  await clean(boxRoot, { directories: true });
 }

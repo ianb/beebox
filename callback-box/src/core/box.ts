@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
 import { initRepo, isRepo } from "../cli/lib/git.js";
 import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { claudeProjectsRoot } from "../cli/lib/session.js";
 import { MIGRATIONS } from "./migrations.js";
 import {
   installSchemasGuide,
@@ -335,8 +336,11 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const { packageRoot } = await getBoxShapeOrLegacyFallback(resolvedRoot);
   const localMemoryDir = path.join(packageRoot, ".claude", "memory");
   const slug = resolvedRoot.replaceAll("/", "-");
-  const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? "";
-  const globalMemoryDir = path.join(homeDir, ".claude", "projects", slug, "memory");
+  // `claudeProjectsRoot()` (src/cli/lib/session.ts) is the one shared
+  // resolver for `~/.claude/projects` — it also honors
+  // `CB_CLAUDE_PROJECTS_DIR`, so doctests and the box-packageify smoke test
+  // can point this at a fixture directory instead of the real global one.
+  const globalMemoryDir = path.join(claudeProjectsRoot(), slug, "memory");
 
   // Check if the global path is already a symlink pointing here
   try {
