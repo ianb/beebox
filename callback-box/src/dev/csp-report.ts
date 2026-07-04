@@ -21,7 +21,13 @@
  * report + notification ARE the output. Everything degrades gracefully: prod
  * unreachable still reports local; missing `alerter` falls back to osascript.
  *
- *   pnpm csp-report
+ *   pnpm csp-report [--boxes-dir <path>]
+ *
+ * `--boxes-dir`/`CB_BOXES_DIR` override where local boxes are found
+ * (default `~/src/boxes`, the historical layout from before `callback-box`
+ * became a standalone package -- see `docs/plans/boxes-as-packages-v2.md`
+ * Track H). Kept as a documented default, not a bare hardcoded constant, so
+ * a checkout with boxes living elsewhere doesn't have to edit engine source.
  *
  * See docs/scheduled/csp-violation-review.md for the review guidance this report
  * inlines, and docs/content-security-policy.md for the policy itself.
@@ -39,8 +45,16 @@ import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, typ
 
 const execFileP = promisify(execFile);
 
-const HOME = os.homedir();
-const BOXES_DIR = path.join(HOME, "src/boxes");
+/** `--boxes-dir <path>` from argv, else `CB_BOXES_DIR`, else the historical `~/src/boxes` default. */
+function resolveBoxesDir(argv: string[]): string {
+  const flagIndex = argv.indexOf("--boxes-dir");
+  if (flagIndex !== -1 && argv[flagIndex + 1] !== undefined) {
+    return path.resolve(argv[flagIndex + 1]!);
+  }
+  return process.env["CB_BOXES_DIR"] || path.join(os.homedir(), "src/boxes");
+}
+
+const BOXES_DIR = resolveBoxesDir(process.argv.slice(2));
 const MONOREPO_ROOT = path.resolve(import.meta.dirname, "../../..");
 const SCRATCH_DIR = path.join(MONOREPO_ROOT, "scratch");
 const REPORT_PATH = path.join(SCRATCH_DIR, "csp-report.html");

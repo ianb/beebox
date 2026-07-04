@@ -15,7 +15,7 @@ table). Split into its own file from `migrate-box-packageify.doctest.md`
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { relocateClaudeProjectDir } from "../../../scripts/migrate/box-packageify.js";
+import { relocateClaudeProjectDir, relocateAllClaudeProjectDirs } from "../../../scripts/migrate/box-packageify.js";
 import { encodeProjectDir } from "../../../src/cli/lib/session.js";
 
 const fakeClaudeProjectsRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-claude-projects-"));
@@ -24,6 +24,14 @@ process.env.CB_CLAUDE_PROJECTS_DIR = fakeClaudeProjectsRoot;
 async function exists(p) {
   try { await fs.access(p); return true; }
   catch (_e) { return false; }
+}
+
+function outcomesOf(results) {
+  const outcomes = [];
+  for (const result of results) {
+    outcomes.push(result.outcome);
+  }
+  return outcomes;
 }
 ```
 
@@ -75,5 +83,48 @@ const oldStillHasOldSession = await exists(path.join(oldKeyDir2, "old-session.js
 const newStillHasNewSession = await exists(path.join(newKeyDir2, "new-session.jsonl"));
 const markerPointsAtNew = path.resolve(marker, "..", markerTarget) === newKeyDir2;
 oldStillHasOldSession && newStillHasNewSession && markerPointsAtNew
+=> true
+```
+
+## Landmark chat project dirs (cwd = a subdirectory of the box root) relocate alongside the box-root dir
+
+A landmark chat started at `<boxRoot>/store/foo` gets its own `~/.claude/projects` key, munged from the full cwd — `encodeProjectDir` turns the path separator between the box root and the subdirectory into the same `-` it uses for everything else, so the landmark key is always `<box-root-key>-<munged-suffix>`. `relocateAllClaudeProjectDirs` finds every such key and moves it to the equivalent key under the new box-root key, in addition to the box-root key itself.
+
+```ts
+const oldCwd3 = "/tmp/fixture-box-landmarks-example";
+const newCwd3 = "/tmp/fixture-box-landmarks-example/content";
+const oldRootKeyDir3 = path.join(fakeClaudeProjectsRoot, encodeProjectDir(oldCwd3));
+const oldLandmarkKeyDir3 = path.join(fakeClaudeProjectsRoot, encodeProjectDir(path.join(oldCwd3, "store", "foo")));
+await fs.mkdir(oldRootKeyDir3, { recursive: true });
+await fs.writeFile(path.join(oldRootKeyDir3, "root-session.jsonl"), "{}\n");
+await fs.mkdir(oldLandmarkKeyDir3, { recursive: true });
+await fs.writeFile(path.join(oldLandmarkKeyDir3, "landmark-session.jsonl"), "{}\n");
+
+const results3 = await relocateAllClaudeProjectDirs({ oldCwd: oldCwd3, newCwd: newCwd3 });
+JSON.stringify(outcomesOf(results3))
+=> ["moved","moved"]
+```
+
+```ts continue
+const newRootKeyDir3 = path.join(fakeClaudeProjectsRoot, encodeProjectDir(newCwd3));
+const newLandmarkKeyDir3 = path.join(fakeClaudeProjectsRoot, encodeProjectDir(path.join(newCwd3, "store", "foo")));
+const rootMoved = await exists(path.join(newRootKeyDir3, "root-session.jsonl"));
+const landmarkMoved = await exists(path.join(newLandmarkKeyDir3, "landmark-session.jsonl"));
+const oldRootGone = !(await exists(oldRootKeyDir3));
+const oldLandmarkGone = !(await exists(oldLandmarkKeyDir3));
+rootMoved && landmarkMoved && oldRootGone && oldLandmarkGone
+=> true
+```
+
+An unrelated box (a genuinely different key, not merely an extension of the same path) is never touched:
+
+```ts continue
+const oldCwd4 = "/tmp/fixture-different-unrelated-box";
+const oldOtherKeyDir4 = path.join(fakeClaudeProjectsRoot, encodeProjectDir(oldCwd4));
+await fs.mkdir(oldOtherKeyDir4, { recursive: true });
+await fs.writeFile(path.join(oldOtherKeyDir4, "other-session.jsonl"), "{}\n");
+
+await relocateAllClaudeProjectDirs({ oldCwd: oldCwd3, newCwd: newCwd3 });
+await exists(path.join(oldOtherKeyDir4, "other-session.jsonl"))
 => true
 ```

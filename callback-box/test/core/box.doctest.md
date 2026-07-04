@@ -117,6 +117,55 @@ found === box
 => true
 ```
 
+## Finding a v2 box from its PACKAGE root
+
+A v2 box's operational root moves to `<packageRoot>/content/` (marker at
+`content/.cb-box`, not at the package root itself). `findBoxRoot` also
+checks one level down: a directory with no `.cb-box` of its own, but a
+`content/.cb-box` AND a `package.json` declaring a `callback-box`
+dependency, resolves to `content/`.
+
+```ts
+const packageRoot = await makeTmpDir();
+const v2Box = path.join(packageRoot, "content");
+await initBox(v2Box, { skipGit: true });
+await fs.writeFile(
+  path.join(packageRoot, "package.json"),
+  JSON.stringify({ name: "my-box", dependencies: { "callback-box": "^1.0.0" } })
+);
+
+const fromPackageRoot = await findBoxRoot(packageRoot);
+fromPackageRoot === v2Box
+=> true
+```
+
+Running from inside `content/` itself, or a subdirectory of it, still resolves the same way (the `.cb-box` marker there is found first, before the downward check is even considered):
+
+```ts continue
+const fromContentRoot = await findBoxRoot(v2Box);
+const fromContentSubdir = await findBoxRoot(path.join(v2Box, "box", "inbox"));
+fromContentRoot === v2Box && fromContentSubdir === v2Box
+=> true
+```
+
+An unrelated directory — no `.cb-box` anywhere upward, and no `content/.cb-box` + qualifying `package.json` at any level — fails closed with `null`, not a guess:
+
+```ts continue
+const unrelatedDir = await makeTmpDir();
+await findBoxRoot(unrelatedDir)
+=> null
+```
+
+A directory with a `content/.cb-box` but NO `package.json` declaring `callback-box` (e.g. an unrelated directory that just happens to contain a `content/` folder) is never mistaken for a package root:
+
+```ts continue
+const lookalikeRoot = await makeTmpDir();
+const lookalikeContent = path.join(lookalikeRoot, "content");
+await initBox(lookalikeContent, { skipGit: true });
+await findBoxRoot(lookalikeRoot)
+=> null
+```
+
 ## Metadata and idempotent initialization
 
 `getBoxMetadata` reads the marker file. Running `initBox` again preserves the original created timestamp:

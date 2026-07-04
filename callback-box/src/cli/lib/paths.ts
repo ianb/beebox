@@ -48,8 +48,60 @@ export function boxLayoutEntry(boxDirsKey: keyof BoxDirs): BoxLayoutEntry {
 /** Marker file indicating a valid callback box root */
 export const BOX_MARKER = ".cb-box";
 
+async function pathExists(candidate: string): Promise<boolean> {
+  try {
+    await fs.access(candidate);
+    return true;
+  } catch (_e) {
+    // Absent — the only meaningful outcome of access() here.
+    return false;
+  }
+}
+
+/**
+ * Check whether `dir` is a v2 box's PACKAGE root: no `.cb-box` of its own,
+ * but `dir/content/.cb-box` exists (the operational root moved one level
+ * down) and `dir/package.json` actually declares a dependency on
+ * `callback-box` (not just any directory that happens to contain a
+ * `content/` subdirectory with a marker — e.g. a box's own `content/store/`
+ * could coincidentally nest something named `content` one day; the
+ * package.json check keeps this fail-closed).
+ */
+async function packageRootContentDir(dir: string): Promise<string | null> {
+  const contentRoot = path.join(dir, "content");
+  if (!(await pathExists(path.join(contentRoot, BOX_MARKER)))) return null;
+
+  const packageJsonPath = path.join(dir, "package.json");
+  let raw: string;
+  try {
+    raw = await fs.readFile(packageJsonPath, "utf-8");
+  } catch (_e) {
+    // No package.json alongside `content/` — not a v2 package root.
+    return null;
+  }
+
+  let parsed: { dependencies?: Record<string, unknown> };
+  try {
+    parsed = JSON.parse(raw) as { dependencies?: Record<string, unknown> };
+  } catch (_e) {
+    // Malformed package.json — fail closed, same as "not a box" here.
+    return null;
+  }
+
+  if (!parsed.dependencies || !("callback-box" in parsed.dependencies)) return null;
+  return contentRoot;
+}
+
 /**
  * Find the callback box root by searching upward from the given path.
+ *
+ * At each level checked, a legacy/v2 box's own `.cb-box` marker wins first.
+ * Failing that, this also checks ONE level DOWN for a v2 box's operational
+ * root (`<dir>/content/.cb-box`, gated on `<dir>/package.json` declaring a
+ * `callback-box` dependency) — this is what lets `cb` run from a box's
+ * PACKAGE root (`~/src/boxes/foo/`, where a coding session normally opens)
+ * and still resolve to the operational box at `foo/content/`, not just from
+ * inside `content/` itself or one of its subdirectories.
  *
  * @param startPath - Directory to start searching from
  * @returns The box root path, or null if not found
@@ -58,13 +110,13 @@ export async function findBoxRoot(startPath: string): Promise<string | null> {
   let current = path.resolve(startPath);
 
   while (true) {
-    const markerPath = path.join(current, BOX_MARKER);
-    try {
-      await fs.access(markerPath);
+    if (await pathExists(path.join(current, BOX_MARKER))) {
       return current;
-    } catch (_e) {
-      // Marker absent at this level — the only meaningful outcome of access()
-      // here; walk up to the parent. No actionable info in the error.
+    }
+
+    const packageRootContent = await packageRootContentDir(current);
+    if (packageRootContent) {
+      return packageRootContent;
     }
 
     const parent = path.dirname(current);

@@ -90,6 +90,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "CB_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
   "THINKING_OPENAI_API_KEY", // src/webapp/routes/chat-audio-routes.ts -- box's own transcription key.
   "CALLBACK_MISTRAL_API_KEY", // src/core/mistral-key.ts -- box's own transcription key fallback.
+  "GEMINI_KEY", // src/core/audio-question.ts, commands/scan-import.ts, describe-images.ts, chat-audio.ts, webapp/trpc/routers/health.ts -- box's own image/audio description key.
 
   // --- Claude Agent SDK config knobs (not credentials) ---
   "CLAUDE_CONFIG_DIR", // relocates the ~/.claude/ credentials dir the SDK reads.
@@ -99,11 +100,22 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
 ];
 
 /**
- * Build a hub-spawned child's env: only `CHILD_ENV_ALLOWLIST` entries from
- * `sourceEnv` (normally the hub's own `process.env`), plus `hubExtras`
- * (currently just `CB_HUB_SECRET`) layered on top. Pure and exported so it
- * can be pinning-tested directly without spawning anything real -- see
- * `test/hub/supervisor.doctest.md`.
+ * Env var PREFIXES a hub-spawned box child may inherit -- for families with
+ * more than one suffix, so adding a suffix later doesn't require touching
+ * this file again. `CALLBACK_DEEPGRAM_` covers `CALLBACK_DEEPGRAM_API_KEY`
+ * + `CALLBACK_DEEPGRAM_PROJECT` (src/core/deepgram-key.ts), the box's own
+ * transcription credential fallback when no `config/connectors/deepgram.secret.json`
+ * exists -- same "box-legitimate config a `cb serve` child reads directly"
+ * category as the exact-name entries above.
+ */
+const CHILD_ENV_PREFIX_ALLOWLIST: readonly string[] = ["CALLBACK_DEEPGRAM_"];
+
+/**
+ * Build a hub-spawned child's env: only `CHILD_ENV_ALLOWLIST`/
+ * `CHILD_ENV_PREFIX_ALLOWLIST` entries from `sourceEnv` (normally the hub's
+ * own `process.env`), plus `hubExtras` (currently just `CB_HUB_SECRET`)
+ * layered on top. Pure and exported so it can be pinning-tested directly
+ * without spawning anything real -- see `test/hub/supervisor.doctest.md`.
  */
 export function buildChildEnv(params: {
   sourceEnv: NodeJS.ProcessEnv;
@@ -114,6 +126,12 @@ export function buildChildEnv(params: {
   for (const key of CHILD_ENV_ALLOWLIST) {
     const value = sourceEnv[key];
     if (value !== undefined) env[key] = value;
+  }
+  for (const [key, value] of Object.entries(sourceEnv)) {
+    if (value === undefined) continue;
+    if (CHILD_ENV_PREFIX_ALLOWLIST.some((prefix) => key.startsWith(prefix))) {
+      env[key] = value;
+    }
   }
   return { ...env, ...hubExtras };
 }

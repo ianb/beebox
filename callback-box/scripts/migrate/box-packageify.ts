@@ -268,14 +268,7 @@ export interface ClaudeProjectRelocationResult {
  *   the (comparatively minor) session-transcript merge becomes a manual
  *   step instead of an automatic one.
  */
-export async function relocateClaudeProjectDir(args: {
-  oldCwd: string;
-  newCwd: string;
-}): Promise<ClaudeProjectRelocationResult> {
-  const root = claudeProjectsRoot();
-  const oldDir = path.join(root, encodeProjectDir(path.resolve(args.oldCwd)));
-  const newDir = path.join(root, encodeProjectDir(path.resolve(args.newCwd)));
-
+async function relocateProjectDirByAbsolutePaths(oldDir: string, newDir: string): Promise<ClaudeProjectRelocationResult> {
   if (!(await pathExists(oldDir))) return { outcome: "noop", oldDir, newDir };
   if (oldDir === newDir) return { outcome: "noop", oldDir, newDir };
 
@@ -293,6 +286,62 @@ export async function relocateClaudeProjectDir(args: {
   await fs.mkdir(path.dirname(newDir), { recursive: true });
   await fs.rename(oldDir, newDir);
   return { outcome: "moved", oldDir, newDir };
+}
+
+export async function relocateClaudeProjectDir(args: {
+  oldCwd: string;
+  newCwd: string;
+}): Promise<ClaudeProjectRelocationResult> {
+  const root = claudeProjectsRoot();
+  const oldDir = path.join(root, encodeProjectDir(path.resolve(args.oldCwd)));
+  const newDir = path.join(root, encodeProjectDir(path.resolve(args.newCwd)));
+  return relocateProjectDirByAbsolutePaths(oldDir, newDir);
+}
+
+/**
+ * Relocate the box-root project dir AND every "landmark chat" project dir
+ * stranded under it. Claude Code sessions started at a subdirectory of the
+ * box root (landmark chats, whose cwd is something like
+ * `<boxRoot>/store/foo`) get their OWN `~/.claude/projects` key --
+ * `encodeProjectDir` munges the full cwd, so a landmark key is always
+ * `<box-root-key>-<munged-suffix>` (the path separator between the box root
+ * and the subdirectory becomes the same `-` the encoder uses everywhere
+ * else). `relocateClaudeProjectDir` alone only ever moved the box-root key
+ * itself, leaving every landmark key stranded at its old (now-nonexistent)
+ * cwd -- discovered by hand-sweeping the whole fleet after the first round
+ * of `box-packageify` runs. This function enumerates `claudeProjectsRoot()`
+ * for every directory name that IS the old box-root key or starts with
+ * `<old box-root key>-`, and relocates each to the corresponding key under
+ * the new box-root key, applying `relocateProjectDirByAbsolutePaths`'s same
+ * never-clobber rules to each one independently (one landmark hitting a
+ * `"conflict"` never blocks the others).
+ */
+export async function relocateAllClaudeProjectDirs(args: {
+  oldCwd: string;
+  newCwd: string;
+}): Promise<ClaudeProjectRelocationResult[]> {
+  const root = claudeProjectsRoot();
+  const oldRootKey = encodeProjectDir(path.resolve(args.oldCwd));
+  const newRootKey = encodeProjectDir(path.resolve(args.newCwd));
+
+  let entries: string[] = [];
+  try {
+    entries = await fs.readdir(root);
+  } catch (_e) {
+    // No projects root at all (e.g. a fresh CB_CLAUDE_PROJECTS_DIR fixture) --
+    // fall through with no landmark keys; the box-root move below still
+    // no-ops correctly via relocateProjectDirByAbsolutePaths.
+  }
+
+  const landmarkKeys = entries.filter((name) => name !== oldRootKey && name.startsWith(`${oldRootKey}-`));
+
+  const results: ClaudeProjectRelocationResult[] = [];
+  results.push(await relocateProjectDirByAbsolutePaths(path.join(root, oldRootKey), path.join(root, newRootKey)));
+  for (const oldKey of landmarkKeys) {
+    const newKey = newRootKey + oldKey.slice(oldRootKey.length);
+    results.push(await relocateProjectDirByAbsolutePaths(path.join(root, oldKey), path.join(root, newKey)));
+  }
+  return results;
 }
 
 /**
@@ -427,14 +476,16 @@ export async function runBoxPackageify(boxRoot: string, deps?: BoxPackageifyDeps
     // and `relocateClaudeProjectDir`'s own never-clobber behavior (see its
     // doc comment) means it's always safe to run by hand afterward too.
     try {
-      const relocation = await relocateClaudeProjectDir({ oldCwd: resolvedRoot, newCwd: contentRoot });
-      if (relocation.outcome === "conflict") {
-        console.warn(
-          `box-packageify: migration committed (${commitHash}), but Claude Code session history ` +
-            `at ${relocation.oldDir} could not be auto-merged into ${relocation.newDir} (both exist). ` +
-            "Nothing was lost -- merge it by hand, e.g.:\n" +
-            `  mv ${relocation.oldDir}/*.jsonl ${relocation.newDir}/`
-        );
+      const relocations = await relocateAllClaudeProjectDirs({ oldCwd: resolvedRoot, newCwd: contentRoot });
+      for (const relocation of relocations) {
+        if (relocation.outcome === "conflict") {
+          console.warn(
+            `box-packageify: migration committed (${commitHash}), but Claude Code session history ` +
+              `at ${relocation.oldDir} could not be auto-merged into ${relocation.newDir} (both exist). ` +
+              "Nothing was lost -- merge it by hand, e.g.:\n" +
+              `  mv ${relocation.oldDir}/*.jsonl ${relocation.newDir}/`
+          );
+        }
       }
     } catch (e) {
       console.warn(

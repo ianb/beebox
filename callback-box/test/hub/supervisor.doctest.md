@@ -55,10 +55,18 @@ const sourceEnv = {
   // by design; see block comment above and in supervisor.ts).
   GOOGLE_OAUTH_CLIENT_ID: "app-oauth-client-id",
   GOOGLE_OAUTH_CLIENT_SECRET: "app-oauth-client-secret",
+  // Box-legitimate transcription/image-description keys a `cb serve` child
+  // reads directly -- CALLBACK_DEEPGRAM_* is a PREFIX (covers both
+  // API_KEY and PROJECT suffixes), GEMINI_KEY is an exact name.
+  CALLBACK_DEEPGRAM_API_KEY: "dg-api-key-value",
+  CALLBACK_DEEPGRAM_PROJECT: "dg-project-value",
+  GEMINI_KEY: "gemini-key-value",
   // Hub-only credential -- must NEVER reach a child.
   CB_SESSION_SECRET: "hub-only-session-secret",
   // Not on the allowlist at all -- an arbitrary var from the hub's shell.
   SOME_UNRELATED_VAR: "should-not-leak",
+  // Looks like the Deepgram prefix but isn't it -- must not leak by accident.
+  CALLBACK_DEEPGRAM: "not-actually-prefixed",
 };
 
 const env = buildChildEnv({ sourceEnv, hubExtras: { CB_HUB_SECRET: "per-boot-hub-secret" } });
@@ -73,9 +81,12 @@ JSON.stringify({
   thinkingKey: env.THINKING_OPENAI_API_KEY,
   googleClientId: env.GOOGLE_OAUTH_CLIENT_ID,
   googleClientSecret: env.GOOGLE_OAUTH_CLIENT_SECRET,
+  deepgramApiKey: env.CALLBACK_DEEPGRAM_API_KEY,
+  deepgramProject: env.CALLBACK_DEEPGRAM_PROJECT,
+  geminiKey: env.GEMINI_KEY,
   hubSecret: env.CB_HUB_SECRET,
 })
-=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","hubSecret":"per-boot-hub-secret"}
+=> {"path":"/usr/bin:/bin","home":"/home/callback","nodeEnv":"production","publicUrl":"https://cb.example.org","diagKey":"diag-key-value","tokensFile":"/home/callback/.google-tokens.json","thinkingKey":"sk-thinking-value","googleClientId":"app-oauth-client-id","googleClientSecret":"app-oauth-client-secret","deepgramApiKey":"dg-api-key-value","deepgramProject":"dg-project-value","geminiKey":"gemini-key-value","hubSecret":"per-boot-hub-secret"}
 ```
 
 ```ts continue
@@ -89,6 +100,9 @@ JSON.stringify({
 => true
 
 "SOME_UNRELATED_VAR" in env
+=> false
+
+"CALLBACK_DEEPGRAM" in env
 => false
 ```
 

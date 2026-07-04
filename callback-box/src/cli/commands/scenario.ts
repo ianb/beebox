@@ -4,7 +4,7 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { listScenarios } from "../../scenario/loader.js";
+import { listScenarios, getScenariosDir } from "../../scenario/loader.js";
 import { runScenario } from "../../scenario/runner.js";
 
 const listCommand = new Command("list")
@@ -12,7 +12,7 @@ const listCommand = new Command("list")
   .action(async () => {
     const scenarios = await listScenarios();
     if (scenarios.length === 0) {
-      console.log("No scenarios found in ~/src/boxes/scenarios/");
+      console.log(`No scenarios found in ${getScenariosDir()} (override with CB_SCENARIOS_DIR).`);
       return;
     }
     for (const name of scenarios) {

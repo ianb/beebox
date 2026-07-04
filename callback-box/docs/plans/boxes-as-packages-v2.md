@@ -438,18 +438,70 @@ sibling engine worktree (WorktreeCreate hook update); `.claude/memory` symlink r
 **First chunk:** router change behind a v2-detection branch so main keeps working mid-plan.
 
 ### Track H — Fleet migration
+**Status: H1–H3 DONE (2026-07-04).** The `box-packageify` migration script landed, the whole
+laptop + server fleet converted, and the server now runs `cb hub` (per-box `cb@<box>.service`
+children) in place of the old shared `callback-serve`. H4 (deletions) is **partially done** —
+see the rewritten paragraph below for exactly what shipped and what's intentionally still
+here. H5 (knowledge audits + docs rewrite) has not started.
+
 **What:** A standard migration `box-packageify` (registry entry + script): `git mv` code dirs
 into `src/`, everything else into `content/`, write wrapper files, re-point memory symlink,
 `pnpm install`, `cb init`, commit. Then per-box server conversion (hub config entry +
 `cb@<box>.service`), canary first (`hearth-test`), `test1` second, then the rest.
-Deletions at the end: resolve hook, `boxes.json` manifest + `cb boxes`, multi-box serve path,
-rsync deploy of the engine (replaced by release + `cb fleet upgrade`), hardcoded
-`~/src/boxes` paths in engine source (`src/scenario/loader.ts:16`, `src/dev/csp-report.ts:43`,
-`src/cli/commands/scenario.ts:15`).
 **Why:** All boxes live on this laptop or box.example.com and are available for migration;
 the top priority is the good end-state, not legacy accommodation.
 **First chunk:** the `box-packageify` migration script, exercised on a scratch clone of
 `test1`.
+
+**H4 deletions — what actually happened, not what was originally planned.** The original
+"deletions at the end" line named five things in one breath; after living with the converted
+fleet, they don't all retire on the same schedule:
+
+- **Hardcoded `~/src/boxes` paths in engine source — DONE.** `src/scenario/loader.ts`,
+  `src/cli/commands/scenario.ts`, and `src/dev/csp-report.ts` no longer hardcode the path.
+  `CB_SCENARIOS_DIR` / `CB_BOXES_DIR` (or `--boxes-dir`) override it; the historical
+  `~/src/boxes` location remains the documented default when unset, so existing invocations
+  (LaunchAgent, scenario runs) keep working unchanged.
+- **`boxes.json` manifest + `cb boxes` — STAYS, for now.** `cb serve` (no positional box) and
+  `cb scheduler start` both still read `~/.config/cb/boxes.json` (`src/core/boxes-config.ts`,
+  `src/core/scheduler.ts`) to know which boxes to run. Retiring it needs a per-box scheduler
+  (each box's own process schedules its own wakeups, the way `cb hub` gives each box its own
+  server process) — that's a bigger change than this plan's serving track, and it's the same
+  shape of problem the isolation-hardening subplan (per-box OS users, per-box everything) is
+  already solving. Its retirement moves there rather than staying an orphaned line item here.
+- **Multi-box serve path — STAYS, deliberately.** `cb serve` with no box argument (iterate
+  `boxes.json`, serve every box from one process) still exists as Track G's dev-loop escape
+  hatch: a plain `pnpm dev`-style local run without standing up a hub. Not dead code — an
+  intentional dev convenience, kept on purpose.
+- **Resolve hook — DEFERRED, not forgotten.** Still present because the server still runs one
+  legacy-shape box: `test1` (`docs/box-layout.md`'s "primary test box"), kept unconverted on
+  purpose as the live legacy-compat canary. The hook comes out only once no box anywhere needs
+  it — tracked here, not silently dropped.
+- **Rsync deploy of the engine — STAYS.** Deploy (`deploy/deploy.sh`, the post-commit hook)
+  still rsyncs the built engine to the server; it has not been replaced by release-tarball +
+  `cb fleet upgrade` distribution (Track F/E). That channel exists for boxes that consume
+  `callback-box` as a published dependency — the server's own boxes are still deployed the
+  monorepo way. Revisit once Track F's tarball channel is the boxholder's own boxes' install
+  path too, not just the "stranger" path this plan optimizes for.
+
+## Post-cutover state
+
+Loose ends noted in the H2/H3 cutover report, not yet resolved, listed here so they don't get
+lost between the report (not checked into this repo) and this plan:
+
+- **`CB_CLI_PREBUILT` on server units** — `bin/cb` skips its dev-mode staleness rebuild check
+  when `CB_CLI_PREBUILT` is set (see `bin/cb`'s own comment), which `deploy/setup-server.sh`
+  sets for the old shared `callback-serve`/scheduler units. The new hub-spawned
+  `cb@<box>.service` units need the same treatment (and `deploy/setup-server.sh` needs to
+  actually generate them) — not yet verified end-to-end that every per-box unit runs prebuilt
+  rather than silently paying (or worse, attempting and failing) a tsx rebuild at boot.
+- **`cb attachments verify` has a server-only assets note** — some assets it checks only exist
+  on the server (not reproducible against a local dev box), so a clean local run isn't the
+  same signal as a clean server run. Needs a documented distinction (or a `--server`/`--local`
+  scope flag) so "verify passed" doesn't get misread as "passed everywhere."
+- **`ledger`'s `process-captures` procedure has a pre-existing failure** — predates this
+  migration, not caused by it, and confirmed still present post-cutover. Needs its own
+  investigation; tracked here only so the cutover isn't blamed for it later.
 
 ## Subplans
 
@@ -577,12 +629,14 @@ surfaces, never in an operating agent's context.
 7. **D1** hub spawn/route/health, **D2** login extraction + trusted-header mode, **D3** box
    picker. D1 depends on nothing above (can parallel A–C); D2 depends on D1.
 8. **G1** dev router v2 branch + worktree hook update. Depends on B2, C1.
-9. **H1** `box-packageify` migration script (scratch-clone tested), **H2** laptop fleet
-   conversion, **H3** server conversion (canary → `test1` → rest; hub replaces
-   `callback-serve`; runbook step for the critical-gap cutover), **H4** deletions (resolve
-   hook, manifest, multi-box serve, rsync deploy, hardcoded paths), **H5** knowledge audits
-   run, docs rewrite (`adding-a-box.md`, `deploy/README.md`, a real `README.md` with the
-   stranger's five-minute path).
+9. **H1** `box-packageify` migration script (scratch-clone tested) — **DONE**. **H2** laptop
+   fleet conversion — **DONE**. **H3** server conversion (canary → `test1` → rest; hub
+   replaces `callback-serve`; runbook step for the critical-gap cutover) — **DONE**, except
+   `test1` is deliberately left legacy-shape as the live resolve-hook canary (see Track H's
+   "H4 deletions" writeup). **H4** deletions — **PARTIAL**: hardcoded paths done; manifest,
+   multi-box serve, resolve hook, and rsync deploy all stay for now, each for its own
+   documented reason (Track H). **H5** knowledge audits run, docs rewrite (`adding-a-box.md`,
+   `deploy/README.md`, a real `README.md` with the stranger's five-minute path) — not started.
 
 Each numbered item is a commit-sized chunk on this worktree; the plan ships as one unit when
 H5 completes. No merge to main without the boxholder's explicit go.
