@@ -126,14 +126,26 @@ export default cardSchema("widget", {
 });
 `;
 
-const WIDGET_VIEW = `export const name = "Widget";
+// Deliberately exercises BOTH externalized runtime seams a real box hits:
+// JSX (react/jsx-runtime must resolve at the box root — react is a direct
+// scaffold dependency for exactly this) and the callback-box/view-widgets
+// import (typechecked via the shipped index.d.ts, resolved at render time
+// via the exports map). A cross-model review caught that the original
+// trivial view exercised neither.
+const WIDGET_VIEW = `import { CardLink } from "callback-box/view-widgets";
+
+export const name = "Widget";
 export const description = "Trivial smoke-test view.";
 export const dependencies: string[] = [];
 export const modes = ["page"];
 export const rendersCardTypes = ["widget"];
 
 export default function Widget({ boxSlug }: { boxSlug: string }) {
-  return <div>Widget view for {boxSlug}</div>;
+  return (
+    <div>
+      Widget view for {boxSlug} <CardLink cardRef="box/inbox">inbox</CardLink>
+    </div>
+  );
 }
 `;
 
@@ -229,6 +241,13 @@ async function validate(contentDir: string): Promise<void> {
   await step("cb validate --all", {
     file: "../node_modules/.bin/cb",
     args: ["validate", "--all"],
+    cwd: contentDir,
+  });
+  // Real node-target render: proves react/jsx-runtime AND the view-widgets
+  // bundle resolve at runtime in an installed (non-symlinked) box.
+  await step("cb view test widget (node-target render)", {
+    file: "../node_modules/.bin/cb",
+    args: ["view", "test", "widget"],
     cwd: contentDir,
   });
 }

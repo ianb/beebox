@@ -12,7 +12,7 @@
 // both files in, so a concurrent `cb` invocation (bin/cb self-heals on
 // staleness) never sees a half-written bundle.
 import { build } from "esbuild";
-import { rename, rm } from "node:fs/promises";
+import { copyFile, rename, rm } from "node:fs/promises";
 import { join } from "node:path";
 
 const root = join(import.meta.dirname, "..");
@@ -120,6 +120,14 @@ await build({
   sourcemap: true,
   logLevel: "warning",
 });
+
+// Ship the checked-in view-widgets type surface as the bundle's sibling
+// index.d.ts (plus the exports-map `types` condition) so external boxes can
+// typecheck their imports — the esbuild bundle itself emits no declarations.
+await copyFile(
+  join(root, "src/exports/view-widgets.d.ts"),
+  join(distDir, "view-widgets", "index.d.ts"),
+);
 
 const ms = Number(process.hrtime.bigint() - t) / 1e6;
 process.stderr.write(`built dist/cli.mjs in ${ms | 0}ms\n`);

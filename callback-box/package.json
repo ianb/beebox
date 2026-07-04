@@ -13,7 +13,10 @@
       "default": "./dist/exports/schema.js"
     },
     "./server": "./dist/exports/server.js",
-    "./view-widgets": "./dist/view-widgets/index.js",
+    "./view-widgets": {
+      "types": "./dist/view-widgets/index.d.ts",
+      "default": "./dist/view-widgets/index.js"
+    },
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
   "bin": {
@@ -36,6 +39,7 @@
     "build:cli": "node scripts/build-cli.mjs && tsc -p tsconfig.declarations.json",
     "release": "tsx scripts/release.ts",
     "smoke": "tsx scripts/smoke-external-box.ts",
+    "smoke:upgrade": "tsx scripts/smoke-upgrade.ts",
     "dev": "echo 'The dev server is the monorepo router. Run \\`pnpm dev\\` from the monorepo root.' && exit 1",
     "cb": "./bin/cb",
     "typecheck": "tsc --noEmit && cd src/frontend && pnpm exec tsc --noEmit",

@@ -149,7 +149,9 @@ pkg.type
 
 Object.keys(pkg.dependencies)
 => [
-  "callback-box"
+  "callback-box",
+  "react",
+  "react-dom"
 ]
 ```
 

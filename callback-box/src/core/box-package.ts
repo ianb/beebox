@@ -83,6 +83,9 @@ interface EngineVersions {
   typesNode: string;
   /** `@types/react`'s version range, read from the engine's frontend workspace member. */
   typesReact: string;
+  /** `react`/`react-dom` ranges, read from the engine's own `dependencies`. */
+  react: string;
+  reactDom: string;
 }
 
 /**
@@ -113,6 +116,8 @@ async function readEngineVersions(): Promise<EngineVersions> {
     typescript: engine.dependencies?.typescript ?? "^5.7.0",
     typesNode: engine.devDependencies?.["@types/node"] ?? "^22.0.0",
     typesReact: frontend.devDependencies?.["@types/react"] ?? "^18.3.0",
+    react: engine.dependencies?.react ?? "^18.3.1",
+    reactDom: engine.dependencies?.["react-dom"] ?? "^18.3.1",
   };
 }
 
@@ -171,7 +176,17 @@ export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
     name: path.basename(packageRoot),
     private: true,
     type: "module",
-    dependencies: { "callback-box": callbackBoxSpec },
+    // react/react-dom are DIRECT deps of the box, not left to hoisting:
+    // node-target compiled views externalize react/jsx-runtime, and pnpm's
+    // strict isolation does not place callback-box's transitive react at the
+    // box root — without these, `cb view test` and view-metadata import fail
+    // on any JSX view in a real (installed, non-symlinked) box. Ranges match
+    // the engine's so the single-React-instance invariant holds.
+    dependencies: {
+      "callback-box": callbackBoxSpec,
+      react: versions.react,
+      "react-dom": versions.reactDom,
+    },
     // typescript + the type packages the base tsconfig's `lib` needs
     // (`ES2023, DOM`) to typecheck box code (schemas and views) — pinned to
     // the same ranges this engine itself develops against, so `pnpm exec tsc`
