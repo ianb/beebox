@@ -179,8 +179,8 @@
       <h3>What you're composing</h3>
       <p>One value holding text + images + files + selections + audio, with an id
       that becomes the message id. Feeders write into it through one editor;
-      panels just render slices of it. <b>One <code>assemble()</code> function</b>
-      turns it into a payload — the dual typed/voice assembly paths die.</p>
+      panels just render slices of it. Submission ships it whole; <b>the target's
+      adapter assembles the payload</b> — the dual typed/voice assembly paths die.</p>
     </div>
     <div class="card">
       <span class="tag input">INPUT</span>
@@ -579,7 +579,7 @@
     <tr><td><code>useChatAttachments</code> / <code>useChatSelections</code></td>
         <td>EmissionEditor + panels rendering emission slices</td></tr>
     <tr><td><code>handleSend</code> and <code>buildSpeechMessage</code>/<code>runKeywordSend</code> (two assembly paths)</td>
-        <td>one <code>assemble()</code></td></tr>
+        <td>one assembly, inside the target adapter (<code>accept(emission)</code>)</td></tr>
     <tr><td><code>realtimeTranscriptionMachine</code> (+ actor + hook)</td>
         <td>VoiceFeeder, profile <code>streaming</code></td></tr>
     <tr><td><code>voiceRecorderMachine</code> (capture)</td>
@@ -634,7 +634,7 @@
   </div>
 
   <div class="note" style="margin-top:1.5rem"><b>Where this goes if accepted:</b>
-  staged implementation, first stage pure refactor (Emission + assemble(), doctests, no
+  staged implementation, first stage pure refactor (Emission + adapter assembly, doctests, no
   UI change), then the boundary, then targets/receipts/stop, then singleton persistence
   (the visible behavior change), capture-as-PlaceTarget last. Full spec:
   <code>callback-box/docs/plans/input-widget.md</code>.</div>
