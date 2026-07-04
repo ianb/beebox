@@ -18,6 +18,7 @@ import {
   validateCommand,
   createCommand,
   serveCommand,
+  hubCommand,
   answerCommand,
   wakeupCommand,
   trashCommand,
@@ -81,6 +82,7 @@ program.addCommand(statusCommand);
 program.addCommand(validateCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);
+program.addCommand(hubCommand);
 program.addCommand(answerCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(trashCommand);
