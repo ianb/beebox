@@ -1,6 +1,11 @@
 # Design Exploration: Boxes as Code Repositories
 
-**Status:** Draft for review.
+**Status:** SUPERSEDED by `docs/plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
+this design against the current codebase, corrects stale assumptions (cardworks removal,
+`cb boxes` manifest, `cb migrate`/template-sync machinery), and locks the boxholder's
+decisions. Kept for the reasoning record.
+
+**Original status:** Draft for review.
 **Author:** Conversation between Ian and Claude.
 **Question:** Should a box be a code repository that consumes `callback-box` as a library, instead of a pure data repository operated on by an external `callback-box` install?
 **Related:** [Box as Linux User Account spec](box-user-account-spec.md) — tightens this proposal by adopting the OS user account as the unit of box identity.
