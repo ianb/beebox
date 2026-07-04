@@ -38,13 +38,15 @@ export const CourseSchema: CardSchema = cardSchema("course", {
 
 A course is the **manifest** for one learning experience on a bounded topic. It binds a few components, mostly by reference:
 
-- an embedded **concept-map** (the knowledge graph) — \`{ ref: attach/<name>.concept-map.card }\`
-- an embedded **exposition-plan** (how to present the material) — \`{ ref: attach/<name>.exposition-plan.card }\`
-- an embedded **lesson-plan** (the ordered delivery flow — segments, live or material-backed) — \`{ ref: attach/<name>.lesson-plan.card }\`
+- an embedded **concept-map** (the knowledge graph) — \`{ ref: attach/<Course>_Concept_Map.concept-map.card }\`
+- an embedded **exposition-plan** (how to present the material) — \`{ ref: attach/<Course>_Exposition_Plan.exposition-plan.card }\`
+- an embedded **lesson-plan** (the ordered delivery flow — segments, live or material-backed) — \`{ ref: attach/<Course>_Lesson_Plan.lesson-plan.card }\`
 - **material** — a subdirectory of presentational cards (a path, e.g. \`attach/material\`), answer keys alongside
 - **progress** — a per-learner record, tracked *separately*; it may live in the course's attach scope or in its own tree (referenced by \`ref\`)
 
 The structured components (concept-map, exposition-plan, lesson-plan) live as attached cards in the course's \`<basename>.attach/\` scope, so they move and validate with the course. Reuse an existing component by \`ref\` rather than duplicating it.
+
+**Give each component a distinct basename** — \`<Course>_Concept_Map\`, \`<Course>_Exposition_Plan\`, \`<Course>_Lesson_Plan\`, and so on — never reuse the course's own basename for a sibling card. No two cards in the same directory may share a basename (lint error), and the course's basename is already spoken for by the attach scope itself (\`<Course>.attach/\`) and by the landmark that anchors it (\`<Course>.landmark.card\`, see the \`build-course\` skill).
 
 ## Frontmatter
 
@@ -54,11 +56,11 @@ goals:                          # the learner's deeper "why"; refined through pr
   - Build a working mental model of how acids and bases behave
 success-criteria:               # casual, personalized "what success looks like"; set EARLY
   - Can predict whether a reaction fizzes and explain why, without naming every ion
-concept-map: { ref: attach/Acids.concept-map.card }
-exposition-plan: { ref: attach/Acids.exposition-plan.card }
-lesson-plan: { ref: attach/Acids.lesson-plan.card }
+concept-map: { ref: attach/Acids_Bases_Concept_Map.concept-map.card }
+exposition-plan: { ref: attach/Acids_Bases_Exposition_Plan.exposition-plan.card }
+lesson-plan: { ref: attach/Acids_Bases_Lesson_Plan.lesson-plan.card }
 material: attach/material        # a subdirectory of presentational cards (+ answer keys)
-progress: { ref: /people/learner/Acids.progress.card }   # optional; may live elsewhere
+progress: { ref: /people/learner/Acids_Bases_Progress.progress.card }   # optional; may live elsewhere
 \`\`\`
 
 \`success-criteria\` is set **early** and is the lens for what belongs in the graph and the goals (backward design); it then judges advancement. Everything except the body is optional, so a half-built course still loads.

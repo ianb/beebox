@@ -466,11 +466,11 @@ CourseSchema.frontmatterSchema.safeParse({
   type: "course",
   goals: ["Understand acids and bases"],
   "success-criteria": ["Can predict whether a reaction fizzes and explain why"],
-  "concept-map": { ref: "attach/Acids.concept-map.card" },
-  "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
-  "lesson-plan": { ref: "attach/Acids.lesson-plan.card" },
+  "concept-map": { ref: "attach/Acids_Bases_Concept_Map.concept-map.card" },
+  "exposition-plan": { ref: "attach/Acids_Bases_Exposition_Plan.exposition-plan.card" },
+  "lesson-plan": { ref: "attach/Acids_Bases_Lesson_Plan.lesson-plan.card" },
   material: "attach/material",
-  progress: { ref: "/people/learner/Acids.progress.card" },
+  progress: { ref: "/people/learner/Acids_Bases_Progress.progress.card" },
 }).success
 => true
 
@@ -484,15 +484,15 @@ resolve:
 ```ts
 const parsed = CourseSchema.frontmatterSchema.parse({
   type: "course",
-  "concept-map": { ref: "attach/Acids.concept-map.card" },
-  "exposition-plan": { ref: "attach/Acids.exposition-plan.card" },
-  "lesson-plan": { ref: "attach/Acids.lesson-plan.card" },
+  "concept-map": { ref: "attach/Acids_Bases_Concept_Map.concept-map.card" },
+  "exposition-plan": { ref: "attach/Acids_Bases_Exposition_Plan.exposition-plan.card" },
+  "lesson-plan": { ref: "attach/Acids_Bases_Lesson_Plan.lesson-plan.card" },
 });
 extractRefs(parsed).map((r) => r.ref).sort()
 => [
-  "attach/Acids.concept-map.card",
-  "attach/Acids.exposition-plan.card",
-  "attach/Acids.lesson-plan.card"
+  "attach/Acids_Bases_Concept_Map.concept-map.card",
+  "attach/Acids_Bases_Exposition_Plan.exposition-plan.card",
+  "attach/Acids_Bases_Lesson_Plan.lesson-plan.card"
 ]
 ```
 
