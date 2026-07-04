@@ -8,6 +8,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
 import { initRepo, isRepo } from "../cli/lib/git.js";
+import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 import { MIGRATIONS } from "./migrations.js";
 import {
   installSchemasGuide,
@@ -20,6 +21,16 @@ export interface InitOptions {
   skipGit?: boolean | undefined;
   /** Initial branch name */
   branch?: string | undefined;
+  /**
+   * The `.cb-box` marker's `shapeVersion` to write on a fresh init. Defaults
+   * to 1 (legacy: `boxRoot` doubles as the package root) — every direct
+   * caller of `initBox` (test fixtures, connector doctests, `cb init` on an
+   * existing legacy box) wants that unless it's specifically scaffolding a
+   * v2 package layout. `cb init` on a genuinely new path passes 2; see
+   * `../core/box-package.js` `scaffoldPackageRoot`, which lays down the
+   * package half this marker's shape then depends on.
+   */
+  shapeVersion?: number | undefined;
 }
 
 export interface InitResult {
@@ -47,20 +58,30 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   const markerPath = path.join(resolvedRoot, BOX_MARKER);
   const isUpdate = await isValidBox(resolvedRoot);
 
-  // Create all standard directories (safe to re-run)
-  await ensureDirectories(resolvedRoot);
-
   if (!isUpdate) {
-    // Create marker file with metadata. shapeVersion 1 is the legacy
-    // layout this scaffold still creates (box root === package root); B2
-    // flips fresh scaffolds to shapeVersion 2 (see box-shape.ts).
+    // Create marker file with metadata. Callers that don't care about the
+    // package layout (nearly everyone — test fixtures, connector doctests,
+    // `cb init` refreshing an existing legacy box) get shapeVersion 1
+    // (legacy: box root === package root) by default; `cb init` on a
+    // genuinely new path passes shapeVersion 2 alongside scaffolding the
+    // package half (see `./box-package.js`).
     const marker = {
       version: "1.0.0",
-      shapeVersion: 1,
+      shapeVersion: options.shapeVersion ?? 1,
       created: new Date().toISOString(),
     };
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
+
+  // Create all standard directories (safe to re-run). Written after the
+  // marker so a fresh v2 box's shape is already on disk: `.claude`/
+  // `.claude/rules` (BOX_DIRS) only belong under a legacy box's root — a v2
+  // box's `.claude/` lives at the package root instead (generateRules/
+  // generateSkills/installValidationHooks write it there), so those two
+  // entries are skipped here for a v2 box rather than leaving a vestigial,
+  // always-empty `content/.claude/`.
+  const shape = await getBoxShapeOrLegacyFallback(resolvedRoot);
+  await ensureDirectories(resolvedRoot, { skipClaudeDir: shape.shapeVersion !== 1 });
 
   // Seed the migration manifest for fresh boxes with every known migration
   // marked applied — a brand-new box's data is created in the current
@@ -200,9 +221,18 @@ tmp/
  * Ensure all standard directories exist.
  *
  * @param boxRoot - The box root directory
+ * @param options.skipClaudeDir - Skip `BOX_DIRS.claude`/`BOX_DIRS.rules`
+ *   (`.claude/`, `.claude/rules/`) — set for a v2 box, whose `.claude/` lives
+ *   at the package root instead (see `initBox`'s caller).
  */
-export async function ensureDirectories(boxRoot: string): Promise<void> {
-  const dirs = Object.values(BOX_DIRS);
+export async function ensureDirectories(
+  boxRoot: string,
+  options?: { skipClaudeDir?: boolean }
+): Promise<void> {
+  const skip: Set<string> = options?.skipClaudeDir
+    ? new Set([BOX_DIRS.claude, BOX_DIRS.rules])
+    : new Set();
+  const dirs = Object.values(BOX_DIRS).filter((dir) => !skip.has(dir));
 
   for (const dir of dirs) {
     const fullPath = boxPath(boxRoot, dir);
@@ -275,20 +305,25 @@ export {
 } from "./box-defaults.js";
 
 /**
- * Ensure `.claude/memory/` exists in the box and symlink it from
- * `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory
- * is stored inside the git-tracked project directory.
+ * Ensure `.claude/memory/` exists (at the box's package root — `.claude/`
+ * lives there, not in `content/`; see "Where Claude Code runs" in
+ * `docs/plans/boxes-as-packages-v2.md`) and symlink it from
+ * `~/.claude/projects/<slug>/memory` so Claude Code's auto-memory is stored
+ * inside the git-tracked project directory.
  *
- * Claude Code derives the project slug by replacing `/` with `-`
- * in the absolute path. We compute the same slug and create a
- * symlink from the global location to the box-local directory.
+ * Claude Code derives the project slug from the OPERATING cwd — the box
+ * root (`boxRoot`; `content/` for a v2 box, since that's where every agent
+ * session actually runs), not the package root. We compute the same slug
+ * and create a symlink from the global location to the package-root-local
+ * directory.
  *
  * If memory files already exist in the global location, they are
  * moved into the box first.
  */
 export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const resolvedRoot = path.resolve(boxRoot);
-  const localMemoryDir = path.join(resolvedRoot, ".claude", "memory");
+  const { packageRoot } = await getBoxShapeOrLegacyFallback(resolvedRoot);
+  const localMemoryDir = path.join(packageRoot, ".claude", "memory");
   const slug = resolvedRoot.replaceAll("/", "-");
   const homeDir = process.env.HOME ?? process.env.USERPROFILE ?? "";
   const globalMemoryDir = path.join(homeDir, ".claude", "projects", slug, "memory");

@@ -52,9 +52,14 @@ function isTrashedCard(boxRelOrAbs: string): boolean {
 }
 
 async function listStagedCards(boxRoot: string): Promise<string[]> {
+  // `--relative` reports paths relative to cwd (and scoped to it) instead of
+  // the repo root — needed because a v2 box's `boxRoot` (`content/`) isn't
+  // the repo root (the package root is; see "THE TRAP" in
+  // `../../core/install-validation-hooks.js`). A no-op for a legacy box,
+  // where the two already coincide.
   const { stdout } = await execFileP(
     "git",
-    ["diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+    ["diff", "--cached", "--name-only", "--diff-filter=ACMR", "--relative"],
     { cwd: boxRoot, maxBuffer: 10 * 1024 * 1024 }
   );
   return stdout

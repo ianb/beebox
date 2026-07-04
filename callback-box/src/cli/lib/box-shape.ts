@@ -83,6 +83,26 @@ export async function getBoxShape(boxRoot: string): Promise<BoxShape> {
   return { shapeVersion, boxRoot: resolvedRoot, packageRoot };
 }
 
+/**
+ * Like `getBoxShape`, but tolerates a missing `.cb-box` marker by falling
+ * back to the legacy shape instead of throwing. A "boxRoot" reaching a
+ * shape-aware consumer isn't always a real, fully-initialized box — plenty
+ * of test fixtures and degenerate/nonexistent paths pass through code that
+ * has always tolerated that — so a bare missing-marker shouldn't newly
+ * crash what used to be a no-op. A genuine `BoxShapeError` (marker present,
+ * but a v2+ box whose parent package.json is broken, or an unknown future
+ * shapeVersion) is a real problem and still propagates.
+ */
+export async function getBoxShapeOrLegacyFallback(boxRoot: string): Promise<BoxShape> {
+  const resolvedRoot = path.resolve(boxRoot);
+  try {
+    return await getBoxShape(resolvedRoot);
+  } catch (e) {
+    if (e instanceof BoxShapeError) throw e;
+    return { shapeVersion: LEGACY_SHAPE_VERSION, boxRoot: resolvedRoot, packageRoot: resolvedRoot };
+  }
+}
+
 async function readBoxMarker(boxRoot: string): Promise<BoxMarker> {
   const markerPath = path.join(boxRoot, BOX_MARKER);
   const raw = await fs.readFile(markerPath, "utf-8");

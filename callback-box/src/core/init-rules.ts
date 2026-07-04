@@ -11,6 +11,7 @@
 import { join } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
+import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -60,10 +61,15 @@ Use \`cb calendar today\`, \`cb calendar upcoming\`, or \`cb calendar <timespan>
 /**
  * Generate rules files from schema instructions and connector rules.
  *
+ * `.claude/` lives at the box's package root (which equals `boxRoot` for a
+ * legacy box) — see "Where Claude Code runs" in
+ * `docs/plans/boxes-as-packages-v2.md`.
+ *
  * Called by `cb init`.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
-  const rulesDir = join(boxRoot, ".claude", "rules");
+  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const rulesDir = join(packageRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });
 
   // Clean up old generated rules (card-* and connector-*)

@@ -8,7 +8,52 @@ The on-disk shape of a callback box. This is the canonical reference for callbac
 
 A box is a directory marked by a `.cb-box` file. It's a git repository (`cb init` initialises one), and the working tree is the entire state of the system — there is no separate database. Boxes live outside this repo (typically `~/src/boxes/<name>/`) so agents operating inside a box don't inherit this repo's CLAUDE.md.
 
-## Top-level layout
+## Shape versions: legacy (v1) vs package (v2)
+
+`.cb-box`'s `shapeVersion` field selects the physical layout — see
+`getBoxShape`/`boxCodePaths` in `src/cli/lib/box-shape.ts`, and "The box
+repository" in `docs/plans/boxes-as-packages-v2.md` for the full design.
+
+- **shapeVersion 1 (legacy, the default when the field is absent)** — the box
+  root IS the package root. This is every box created before this plan and
+  everything documented below.
+- **shapeVersion 2 (package)** — `cb init` on a genuinely new path now
+  scaffolds this shape. The box root (still found by `.cb-box`, everywhere
+  called `boxRoot`) is a `content/` directory nested inside a coding-session
+  package (`packageRoot`, `content/`'s parent):
+
+  ```
+  <package-root>/              the package — coding surfaces live here
+  ├── package.json             { "dependencies": { "callback-box": "^x.y.z" } }, private
+  ├── tsconfig.json             extends "callback-box/tsconfig.base.json"
+  ├── node_modules/             gitignored; callback-box resolves here
+  ├── CLAUDE.md                 thin: "this is a box package; the box is content/"
+  ├── .claude/                  rules, skills, memory symlink, settings — HERE, not in content/
+  ├── src/
+  │   ├── schemas/               (was config/schemas/ in v1)
+  │   ├── views/                 (was views/ in v1)
+  │   └── tricks/                (was tricks/ in v1; keeps its own nested package.json)
+  └── content/                  THE BOX — everything below, minus the three code dirs
+  ```
+
+  `content/` is exactly the v1 layout below MINUS `.claude/`, `config/schemas/`,
+  `tricks/`, and `views/` (those moved up to the package root's `src/` and
+  `.claude/`). Every box-root-relative path an agent sees (URLs, card refs,
+  git trailers) is unaffected — only the three code dirs and `.claude/` moved.
+
+  **The git-hooks trap:** `.git` sits at the package root, but git always
+  invokes hooks with cwd = the package root regardless of where you ran `git
+  commit` — so the installed `pre-commit`/`post-commit` hooks `cd` into
+  `content/` before calling `cb` (see `src/core/install-validation-hooks.ts`).
+  The `.claude/settings.json` PostToolUse hook needs no such fix; Claude Code
+  invokes it with cwd = the operating agent's own cwd, which is already
+  `content/` (or a subdirectory).
+
+  Converting an *existing* legacy box to v2 is a later migration (Track H in
+  the plan), not something `cb init` does — re-running `cb init` on an
+  existing legacy box keeps it legacy.
+
+## Top-level layout (legacy / shapeVersion 1)
 
 ```
 <box-root>/

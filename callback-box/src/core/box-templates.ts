@@ -14,6 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "./install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "./template-stock-hashes.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -169,6 +170,14 @@ can't — and doesn't need to).
 - Test with \`cb validate\` after creating cards of the new type
 `;
 
+/**
+ * v2 (package-layout) variant of the schemas guide: schemas live at
+ * `src/schemas/` (the package root), not `config/schemas/` (the box root).
+ * Derived by substitution rather than duplicated by hand so the two stay in
+ * lockstep — everything else about writing a schema is identical.
+ */
+const SCHEMAS_CLAUDE_MD_V2 = SCHEMAS_CLAUDE_MD.replaceAll("config/schemas/", "src/schemas/");
+
 const TRICKS_PACKAGE_JSON = JSON.stringify(
   {
     name: "tricks",
@@ -261,6 +270,16 @@ import { helper } from "../../lib/helper.js";
 - The subprocess cwd is \`tricks/\`, so package resolution works naturally
 `;
 
+/**
+ * v2 (package-layout) variant of the tricks guide: tricks live at
+ * `src/tricks/` (the package root), not `tricks/` (the box root). Derived by
+ * substitution so the two stay in lockstep.
+ */
+const TRICKS_CLAUDE_MD_V2 = TRICKS_CLAUDE_MD
+  .replaceAll("tricks/", "src/tricks/")
+  .replace("cd tricks &&", "cd src/tricks &&")
+  .replace("into the tricks directory", "into the src/tricks directory");
+
 const VIEWS_CLAUDE_MD = `# Views Directory
 
 This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
@@ -290,27 +309,33 @@ Full documentation: \`docs/generated/views.md\`
 `;
 
 /**
- * Install tricks scaffold files (package.json, CLAUDE.md) if they don't exist.
+ * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
+ * exist. Shape-aware: a legacy box's tricks live at `boxRoot/tricks/`; a v2
+ * box's live at `packageRoot/src/tricks/` (`boxCodePaths` resolves either).
  */
 export async function installTricksFiles(boxRoot: string): Promise<void> {
-  const packageJsonPath = path.join(boxRoot, "tricks/package.json");
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const tricksDir = boxCodePaths(shape).tricksDir;
+  const claudeMdContent = shape.shapeVersion === 1 ? TRICKS_CLAUDE_MD : TRICKS_CLAUDE_MD_V2;
+
+  const packageJsonPath = path.join(tricksDir, "package.json");
   try {
     await fs.access(packageJsonPath);
   } catch (_e) {
     // No tricks package.json yet (fs.access throws ENOENT) — scaffold it.
     // The error carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "tricks"), { recursive: true });
+    await fs.mkdir(tricksDir, { recursive: true });
     await fs.writeFile(packageJsonPath, TRICKS_PACKAGE_JSON);
   }
 
-  const claudeMdPath = path.join(boxRoot, "tricks/scripts/CLAUDE.md");
+  const claudeMdPath = path.join(tricksDir, "scripts/CLAUDE.md");
   try {
     await fs.access(claudeMdPath);
   } catch (_e) {
     // No tricks CLAUDE.md yet (fs.access throws ENOENT) — scaffold it. The
     // error carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "tricks/scripts"), { recursive: true });
-    await fs.writeFile(claudeMdPath, TRICKS_CLAUDE_MD);
+    await fs.mkdir(path.join(tricksDir, "scripts"), { recursive: true });
+    await fs.writeFile(claudeMdPath, claudeMdContent);
   }
 }
 
@@ -332,31 +357,67 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
 ];
 
 /**
- * Install (or refresh) the box-local schemas guide. Uses the template tracker
- * so the stock guide is refreshed when unmodified and parked under
- * `config/_template-updates/` when the boxholder has customized it. Prior stock
- * hashes come from the ledger so a box on any shipped version overwrites cleanly.
+ * Install (or refresh) the box-local schemas guide.
+ *
+ * A legacy box uses the template tracker so the stock guide is refreshed
+ * when unmodified and parked under `config/_template-updates/` when the
+ * boxholder has customized it (prior stock hashes come from the ledger so a
+ * box on any shipped version overwrites cleanly). A v2 box has no existing
+ * install to diverge from at scaffold time, so it's a plain create-if-missing
+ * write to `src/schemas/CLAUDE.md` at the package root — the tracker's
+ * park-on-divergence machinery is for the fleet-migration/upgrade path
+ * (Tracks E/H), not `cb init` on a fresh box.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
-  await installTemplateFile({
-    boxRoot,
-    relPath: "config/schemas/CLAUDE.md",
-    templateContent: SCHEMAS_CLAUDE_MD,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"]!.superseded,
-  });
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  if (shape.shapeVersion === 1) {
+    await installTemplateFile({
+      boxRoot,
+      relPath: "config/schemas/CLAUDE.md",
+      templateContent: SCHEMAS_CLAUDE_MD,
+      priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"]!.superseded,
+    });
+    return;
+  }
+
+  const schemasDir = boxCodePaths(shape).schemasDir;
+  const claudeMdPath = path.join(schemasDir, "CLAUDE.md");
+  try {
+    await fs.access(claudeMdPath);
+  } catch (_e) {
+    // No schemas guide yet (fs.access throws ENOENT) — scaffold it. The
+    // error carries no actionable info; absence is the normal path.
+    await fs.mkdir(schemasDir, { recursive: true });
+    await fs.writeFile(claudeMdPath, SCHEMAS_CLAUDE_MD_V2);
+  }
 }
 
 /**
- * Install (or refresh) the box-local views guide. Uses the template tracker so
- * the stock guide is refreshed when unmodified and parked under
- * `_template-updates/` when the boxholder has customized it.
+ * Install (or refresh) the box-local views guide. Same legacy-vs-v2 split as
+ * `installSchemasGuide` above; the guide's text needs no path substitution
+ * for v2 (it never names its own directory).
  */
 export async function installViewsGuide(boxRoot: string): Promise<void> {
-  await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
-  await installTemplateFile({
-    boxRoot,
-    relPath: "views/CLAUDE.md",
-    templateContent: VIEWS_CLAUDE_MD,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"]!.superseded,
-  });
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  if (shape.shapeVersion === 1) {
+    await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
+    await installTemplateFile({
+      boxRoot,
+      relPath: "views/CLAUDE.md",
+      templateContent: VIEWS_CLAUDE_MD,
+      priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"]!.superseded,
+    });
+    return;
+  }
+
+  const viewsDir = boxCodePaths(shape).viewsDir;
+  const claudeMdPath = path.join(viewsDir, "CLAUDE.md");
+  try {
+    await fs.access(claudeMdPath);
+  } catch (_e) {
+    // No views guide yet (fs.access throws ENOENT) — scaffold it. The error
+    // carries no actionable info; absence is the normal path.
+    await fs.mkdir(viewsDir, { recursive: true });
+    await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
+  }
 }

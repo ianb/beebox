@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { getBoxShape, boxCodePaths, BoxShapeError, type BoxShape } from "../cli/lib/box-shape.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 import { type CardSchema } from "../cards/index.js";
 import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
 import { MemoSchema } from "./memo.js";
@@ -288,26 +288,6 @@ async function rebuildUntilStable(boxRoot: string): Promise<BoxSchemas> {
   }
 }
 
-/**
- * Resolve a box's shape, tolerating a missing `.cb-box` marker by falling
- * back to the legacy shape. A "boxRoot" reaching the schema loader isn't
- * always a real, fully-initialized box — some callers pass a nonexistent or
- * degenerate path (tests, a missing-ref lookup) — and schema loading has
- * always tolerated that (the readdir ENOENT catch below just returns "no
- * local schemas"), so a bare missing-marker shouldn't newly crash what used
- * to be a no-op. A genuine `BoxShapeError` (marker present, but a v2+ box
- * whose parent package.json is broken, or an unknown future shapeVersion)
- * is a real problem and still propagates.
- */
-async function resolveShapeOrLegacyFallback(boxRoot: string): Promise<BoxShape> {
-  try {
-    return await getBoxShape(boxRoot);
-  } catch (e) {
-    if (e instanceof BoxShapeError) throw e;
-    return { shapeVersion: 1, boxRoot, packageRoot: boxRoot };
-  }
-}
-
 async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const empty: BoxSchemas = { cardSchemas: [] };
 
@@ -317,7 +297,7 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   // its card types.
   unregisterBoxTemplates(boxRoot);
 
-  const shape = await resolveShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
   const schemasDir = boxCodePaths(shape).schemasDir;
   let files: string[];
   try {
