@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS } from "../cli/lib/paths.js";
 import { createInitialGuideTemplate } from "../schemas/guide.js";
-import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
+import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 import { createBriefingTemplate } from "../schemas/briefing.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../schemas/landmark.js";
@@ -299,6 +299,9 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       boxRoot,
       relPath: path.join("config/schedules", fileName),
       templateContent,
+      ...(ScheduledScriptSchema.templateMerge && {
+        boxOwnedFields: ScheduledScriptSchema.templateMerge.boxOwnedFields,
+      }),
     });
     const entry = describeInstall(result, fileName);
     if (entry !== null) installed.push(entry);

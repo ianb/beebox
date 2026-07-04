@@ -29,7 +29,7 @@ import {
   installSchedules,
 } from "./box.js";
 import { installSchemasGuide, installViewsGuide } from "./box-templates.js";
-import { pruneStaleTemplateUpdates } from "./install-template-file.js";
+import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "./install-template-file.js";
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
@@ -232,31 +232,6 @@ async function checkChatGuideMtimes(
       await check(join(connectorDir, slug, "chat.guide.card"));
     }
   }
-}
-
-/**
- * Paths that the `install*` and `generateRules` helpers own. Used by
- * `syncTemplatesFromSource` to commit just their output without sweeping
- * up user work in progress. Glob-style globs avoided: simple regex over
- * relative paths is enough for what we generate.
- */
-const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
-  /^config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
-  /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
-  /^config\/.+\.(?:guide|orig-guide)\.card$/,
-  /^config\/.+\.(?:personality|orig-personality)\.card$/,
-  /^config\/_template-updates\/.+$/,
-  /^config\/schemas\/CLAUDE\.md$/,
-  /^config\/cb-validate\.ignore$/,
-  /^views\/CLAUDE\.md$/,
-  /^briefing\.(?:briefing|orig-briefing)\.card$/,
-  /^briefing\.md$/,
-  /^\.claude\/rules\/.+\.md$/,
-  /^\.claude\/settings\.json$/,
-];
-
-function isTemplateManagedPath(relPath: string): boolean {
-  return TEMPLATE_MANAGED_PATTERNS.some((re) => re.test(relPath));
 }
 
 /**

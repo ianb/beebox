@@ -17,7 +17,6 @@ export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfi
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string().default("contains-backfill"),
     priority: z.enum(["normal", "low"]).default("low"),
     description: z.string(),
@@ -44,7 +43,6 @@ them; write a one-line \`contains:\` for each.
 });
 
 export function createContainsBackfillJobTemplate(options: {
-  created?: string;
   items: string[];
   remaining: number;
 }): string {
@@ -55,7 +53,6 @@ export function createContainsBackfillJobTemplate(options: {
       : "";
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: "contains-backfill",
     priority: "low",
     description: `Write the contains: field for ${String(count)} cards missing it.${remainingNote}`,

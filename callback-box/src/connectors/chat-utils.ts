@@ -228,7 +228,6 @@ export async function createChatJob(options: {
   const jobPath = path.join(jobsDir, jobFilename);
 
   const content = createChatJobTemplate({
-    created: getBoxTimeISO(boxRoot),
     description,
     threadRef,
     source,

@@ -19,6 +19,7 @@ export {
   type CardSchema,
   type CardCategory,
   type CardValidateInput,
+  type TemplateMergePolicy,
 } from "./schema.js";
 
 export {

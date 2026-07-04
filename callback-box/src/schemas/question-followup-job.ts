@@ -15,7 +15,6 @@ export const QuestionFollowupJobSchema: CardSchema = cardSchema("question-follow
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string().default("question-answer"),
     description: z.string(),
     "question-ref": z.object({ ref: z.string() }),
@@ -50,7 +49,6 @@ A user has answered a question. Your job is to act on their answer.
 export interface QuestionFollowupJobFields {
   type: "question-followup-job";
   status: string;
-  created: string;
   source: string;
   description: string;
   "question-ref": { ref: string };
@@ -63,11 +61,9 @@ export function createQuestionFollowupJobTemplate(options: {
   questionRef: string;
   directive: string;
   answer: string;
-  created?: string;
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: "question-answer",
     description: options.description,
     "question-ref": { ref: options.questionRef },
