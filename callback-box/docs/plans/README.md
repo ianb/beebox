@@ -56,8 +56,8 @@ actually shipped) is exactly what this convention prevents.
 Competitive/comparative research (OpenClaw, Hermes, Letta, PAI, gstack, and
 similar) is **not** a plan and does not live here — it lives in the
 monorepo-top-level `research/` directory (see `research/CLAUDE.md`). Findings
-worth pursuing get cross-linked into `docs/ideas.md` or promoted to an actual
-plan in this directory.
+worth pursuing get filed into the monorepo-root `issues/` tree or promoted to
+an actual plan in this directory.
 
 ## Wiring
 

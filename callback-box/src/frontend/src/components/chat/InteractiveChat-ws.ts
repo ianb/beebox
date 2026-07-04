@@ -17,7 +17,7 @@ import { alarm } from "../../lib/earcons";
 import { isTTSVoice } from "../../lib/speech-parsing";
 import { href } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
-import { fulfillLastAudioRequest } from "../../lib/last-audio-cache";
+import { fulfillLastAudioRequest } from "../../lib/last-audio";
 import { bumpFileVersion } from "../../lib/file-version";
 import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import type { ChatEvent } from "../../machines/chat-types";

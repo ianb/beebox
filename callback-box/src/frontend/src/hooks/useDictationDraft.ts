@@ -29,38 +29,55 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { draftKey, parseDraft, serializeDraft, type DictationDraft } from "../lib/dictation-draft";
+import { draftKey, parseDraft, serializeDraft, adoptLegacyDictationDrafts, type DictationDraft } from "../lib/dictation-draft";
 
 const PERSIST_DEBOUNCE_MS = 400;
 
 export interface DictationDraftApi {
-  /** The persisted draft for this session, or null when none is stored. */
+  /** The persisted draft for this box, or null when none is stored. */
   recoveredDraft: DictationDraft | null;
   /** Remove the stored draft (cancels any pending write). Call on send/discard. */
   clearDraft: () => void;
 }
 
-function readDraft(key: string): DictationDraft | null {
+/**
+ * Read the singleton draft, one-shot-adopting the most-recent legacy
+ * per-session draft the first time the singleton key is absent (see
+ * `adoptLegacyDictationDrafts`). Named behavior change: other sessions'
+ * stale dictation drafts are discarded, not merged — mirrors the composer's
+ * singleton-draft adoption.
+ */
+function readDraft(key: string, boxSlug: string | undefined): DictationDraft | null {
   if (typeof window === "undefined") return null;
-  return parseDraft(window.localStorage.getItem(key));
+  const existing = parseDraft(window.localStorage.getItem(key));
+  if (existing !== null) return existing;
+  const { adopted, discarded } = adoptLegacyDictationDrafts(window.localStorage, boxSlug);
+  if (adopted !== null) {
+    window.localStorage.setItem(key, serializeDraft(adopted));
+    console.info(
+      `[dictation-draft] adopted the most recent unsent dictation draft for this box (${discarded} other draft(s) discarded)`,
+    );
+  }
+  return adopted;
 }
 
 export function useDictationDraft(opts: {
   boxSlug: string | undefined;
-  sessionId: string | null;
   transcript: string;
   isTranscribing: boolean;
   narrationEnabled: boolean;
 }): DictationDraftApi {
-  const { boxSlug, sessionId, transcript, isTranscribing, narrationEnabled } = opts;
-  const key = draftKey({ boxSlug, sessionId });
+  const { boxSlug, transcript, isTranscribing, narrationEnabled } = opts;
+  const key = draftKey({ boxSlug });
 
-  // The recovery candidate: the draft present at mount (or when the session
-  // key changes). Deliberately NOT updated by live writes — see the file
-  // header for why surfacing live writes is a false-positive machine.
-  const [recoveredDraft, setRecoveredDraft] = useState<DictationDraft | null>(() => readDraft(key));
+  // The recovery candidate: the draft present at mount. Deliberately NOT
+  // updated by live writes — see the file header for why surfacing live
+  // writes is a false-positive machine. The key is a per-box singleton now
+  // (chunk 4), so — unlike the retired per-session key — it doesn't change
+  // across a session switch; only a different box changes it.
+  const [recoveredDraft, setRecoveredDraft] = useState<DictationDraft | null>(() => readDraft(key, boxSlug));
   const timerRef = useRef<number | null>(null);
-  // Whether the user has dictated anything this session. Once true, the
+  // Whether the user has dictated anything this mount. Once true, the
   // mount-time draft is superseded by live work and must not resurface.
   const startedRef = useRef(false);
 
@@ -84,18 +101,13 @@ export function useDictationDraft(opts: {
     setRecoveredDraft(null);
   }, [key, cancelPending]);
 
-  // Re-read when the storage key changes (a new chat gets its server session
-  // id, or the user switches sessions) so the widget reflects the right
-  // session's draft, and re-arm the "started this session" gate.
-  const prevKeyRef = useRef(key);
-  useEffect(() => {
-    if (prevKeyRef.current === key) return;
-    prevKeyRef.current = key;
-    startedRef.current = false;
-    setRecoveredDraft(readDraft(key));
-  }, [key]);
+  // No key-change effect: the key is a per-box singleton (chunk 4), so it no
+  // longer changes across a session switch the way the retired per-session
+  // key did — only a different box would change it, and that's a full route
+  // change (a fresh mount, which already re-reads via the `useState`
+  // initializer above).
 
-  // Once the user begins dictating this session, drop the mount-time draft so
+  // Once the user begins dictating this mount, drop the mount-time draft so
   // it can't reappear as "recovered" when the mic later pauses.
   useEffect(() => {
     if (isTranscribing && !startedRef.current) {

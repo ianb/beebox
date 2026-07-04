@@ -9,7 +9,17 @@
  * can't erase the whole in-progress transcript (the original feedback). On
  * recovery the text is surfaced in a dedicated widget — not auto-filled into
  * the composer — and submitted as a narration `<speech>` message.
+ *
+ * Since chunk 4 (docs/implemented-plans/input-extraction.md) the key is a singleton per
+ * box, not per session — matching the composer's singleton-draft decision:
+ * the mic is one instrument, not a per-conversation buffer. The one-shot
+ * `adoptLegacyDictationDrafts` mirrors `adoptLegacyComposerDrafts`
+ * (`input/emission-persist.ts`): the most-recently-updated legacy
+ * `cb-chat-draft:<box>:<session>` draft becomes the singleton value, and all
+ * of that box's legacy keys are removed either way.
  */
+
+import type { KeyValueStorage } from "../input/emission-persist";
 
 const KEY_PREFIX = "cb-chat-draft";
 
@@ -23,14 +33,48 @@ export interface DictationDraft {
 }
 
 /**
- * localStorage key for a session's draft. New chats (no server-assigned id
- * yet) share the `:new` slot; resumed sessions key on their id. The box slug
- * scopes drafts so two boxes open in different tabs don't collide.
+ * localStorage key for a box's dictation draft — one singleton slot per box,
+ * not per session (mirrors the composer's `emissionKey`). The box slug scopes
+ * drafts so two boxes open in different tabs don't collide.
  */
-export function draftKey(opts: { boxSlug: string | undefined; sessionId: string | null }): string {
+export function draftKey(opts: { boxSlug: string | undefined }): string {
   const box = opts.boxSlug ?? "default";
-  const session = opts.sessionId ?? "new";
-  return `${KEY_PREFIX}:${box}:${session}`;
+  return `${KEY_PREFIX}:${box}:singleton`;
+}
+
+/**
+ * One-shot adoption of the legacy per-session dictation drafts
+ * (`cb-chat-draft:<box>:<session>`): the most-recently-updated draft becomes
+ * the seed value; ALL of the box's legacy keys are removed. The singleton
+ * key itself is never a candidate — the new key shares the legacy prefix
+ * (unlike the composer's migration, which changed prefixes), and adoption
+ * must not be able to delete the very slot it writes to. Returns the
+ * adopted draft (or null) plus how many were discarded.
+ */
+export function adoptLegacyDictationDrafts(
+  storage: KeyValueStorage,
+  boxSlug: string | undefined,
+): { adopted: DictationDraft | null; discarded: number } {
+  const box = boxSlug ?? "default";
+  const prefix = `${KEY_PREFIX}:${box}:`;
+  const singleton = draftKey({ boxSlug });
+  const keys: string[] = [];
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (key !== null && key.startsWith(prefix) && key !== singleton) keys.push(key);
+  }
+
+  let best: DictationDraft | null = null;
+  let count = 0;
+  for (const key of keys) {
+    const draft = parseDraft(storage.getItem(key));
+    if (draft === null) continue;
+    count++;
+    if (best === null || draft.updatedAt > best.updatedAt) best = draft;
+  }
+  for (const key of keys) storage.removeItem(key);
+
+  return { adopted: best, discarded: best === null ? count : count - 1 };
 }
 
 /**

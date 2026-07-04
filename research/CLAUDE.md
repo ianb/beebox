@@ -25,10 +25,10 @@ later, each traced to a concrete callback-box specifics (a file, a design
 doc, a boxholder decision), not left as abstract praise or criticism of the
 other system. "Interesting" isn't a disposition.
 
-Findings worth actually pursuing get **cross-linked into
-`callback-box/docs/ideas.md`** (or a plan, if a finding is ready for one) —
-a good idea stranded only in `research/` doesn't reach the place where work
-actually gets picked up.
+Findings worth actually pursuing get **filed into the monorepo-root
+`issues/` tree** (or a plan, if a finding is ready for one) — a good idea
+stranded only in `research/` doesn't reach the place where work actually
+gets picked up.
 
 ## Lifecycle
 

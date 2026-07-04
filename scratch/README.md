@@ -23,9 +23,9 @@ ignored by git.
 
 - Anything that other contributors need to see → real docs / `docs/`.
 - Anything that's part of an actively-used workflow → real code / scripts.
-- Anything the agent needs to find in a future session → `docs/ideas.md`
-  or auto-memory (the memory system survives across sessions; scratch
-  files don't carry forward).
+- Anything the agent needs to find in a future session → the monorepo-root
+  `issues/` tree or auto-memory (the memory system survives across
+  sessions; scratch files don't carry forward).
 
 ## Lifecycle
 

@@ -17,11 +17,14 @@ import {
   type SessionContentBlock,
   type ChatImageAttachment,
 } from "../api";
+import type { ChatTurnStart } from "../api-chat";
 import { trpcClient } from "../lib/trpc";
+import { settleReceipt } from "../input/targets/receipts";
 import { buildStreamEntry } from "../lib/stream-entry";
 import type { ChatMessage } from "../../../core/chat-session-messages.js";
 import type { ActivityKind, CardStateDetails } from "../../../core/chat-card-activity";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES, logFsm, type ChatEvent, type SessionInput } from "./chat-types";
+import { runFakeStream } from "./chat-actors-fakestream";
 
 export const fetchInitialActor = fromPromise<
   { entries: SessionEntry[]; total: number; sessionId: string | null; running: boolean; busy: boolean },
@@ -79,65 +82,6 @@ function handleSystemInit(
   const assigned = msg.session_id;
   if (!assigned || assigned === ctx.sessionInput) return;
   ctx.sendBack({ type: "SESSION_ASSIGNED", sessionId: assigned });
-}
-
-/**
- * Dev-only stream stub. When a user message begins with `/fakestream`, the
- * machine plays a timed script of STREAM_TEXT events instead of hitting the
- * backend. Used to reproduce streaming-UI bugs (scroll, layout) deterministically.
- *
- * Syntax: `/fakestream [chunks] [intervalMs] [chunkLen]`
- *   chunks     — total STREAM_TEXT events to emit (default 200)
- *   intervalMs — delay between events (default 40)
- *   chunkLen   — approx chars per chunk (default 25)
- *
- * Emits a STREAM_TOOL event partway through so the live tool-list layout
- * (e.g. ordering relative to the throbber) is exercised too.
- */
-function runFakeStream(
-  message: string,
-  { sendBack, terminal }: {
-    sendBack: (event: ChatEvent) => void;
-    terminal: (event: ChatEvent) => void;
-  },
-): () => void {
-  const parts = message.trim().split(/\s+/);
-  const chunks = Number.parseInt(parts[1], 10) || 200;
-  const intervalMs = Number.parseInt(parts[2], 10) || 40;
-  const chunkLen = Number.parseInt(parts[3], 10) || 25;
-  const toolAt = Math.floor(chunks / 3);
-
-  const para = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ";
-  let body = "# Fakestream\n\n";
-  for (let i = 0; i < 12; i++) body += para + "\n\n";
-
-  let pos = 0;
-  let emitted = 0;
-  const handle = window.setInterval(() => {
-    if (emitted >= chunks) {
-      window.clearInterval(handle);
-      terminal({ type: "STREAM_RESULT" });
-      return;
-    }
-    if (emitted === toolAt) {
-      sendBack({
-        type: "STREAM_TOOL",
-        tool: {
-          type: "tool_use",
-          toolName: "Read",
-          toolId: "fakestream-tool-1",
-          input: { file_path: "/tmp/fakestream.txt" },
-          inputSummary: "Read",
-        },
-      });
-    }
-    const next = body.slice(pos, pos + chunkLen);
-    pos = (pos + chunkLen) % body.length;
-    sendBack({ type: "STREAM_TEXT", text: next });
-    emitted++;
-  }, intervalMs);
-
-  return () => window.clearInterval(handle);
 }
 
 /**
@@ -237,6 +181,28 @@ export function handleTurnMessage(
   }
 }
 
+/**
+ * Map a `startChatTurn` result onto a receipt settlement, shared by the
+ * idle-path send (`streamActor`) and the mid-turn queued send
+ * (`queueMessageToBackend`) — both report the same three shapes
+ * (deduplicated / queued / turnId) plus the no-turnId failure.
+ */
+function settleFromTurnStart(messageId: string, result: ChatTurnStart): void {
+  if (result.deduplicated) {
+    settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: true });
+    return;
+  }
+  if (result.queued) {
+    settleReceipt({ disposition: "queued", emissionId: messageId });
+    return;
+  }
+  if (result.turnId) {
+    settleReceipt({ disposition: "sent", emissionId: messageId, deduplicated: false });
+    return;
+  }
+  settleReceipt({ disposition: "rejected", emissionId: messageId, reason: "Send returned no turn id" });
+}
+
 /** A frame yielded by events.turnStream, possibly still inside a tracked envelope. */
 type TurnStreamWire =
   | { t: "msg"; msg: ChatMessage }
@@ -274,6 +240,10 @@ export const streamActor = fromCallback(
 
     const unwrapped = input.message.replace(/^<typed[^>]*>/, "").replace(/<\/typed>$/, "");
     if (unwrapped.startsWith("/fakestream")) {
+      // The fake stream never reaches startChatTurn, so settle the receipt
+      // here — otherwise it times out to `rejected` 30s in and the dispatcher
+      // "restores" the already-running prompt into the composer.
+      settleReceipt({ disposition: "sent", emissionId: input.messageId, deduplicated: false });
       return runFakeStream(unwrapped, { sendBack, terminal });
     }
 
@@ -293,6 +263,9 @@ export const streamActor = fromCallback(
     })
       .then((result) => {
         if (cancelled) return;
+        // Settle the receipt (acceptance-level, BEFORE the stream runs for a
+        // turnId result — see settleFromTurnStart) up front for every shape.
+        settleFromTurnStart(input.messageId, result);
         // Queued / deduplicated finish the turn without a stream — the chat
         // machine refreshes history from these terminal states.
         if (result.deduplicated) {
@@ -354,6 +327,7 @@ export const streamActor = fromCallback(
         const msg = err instanceof Error ? err.message : "Send failed";
         console.error(`[chat] send failed: ${msg}`);
         logFsm("stream-throw", { msg, msgCount });
+        settleReceipt({ disposition: "rejected", emissionId: input.messageId, reason: msg });
         sendBack({ type: "STREAM_FAILED", error: msg });
       });
 
@@ -379,9 +353,11 @@ export function rollupStreamToEntry(
 }
 
 /**
- * Fire-and-forget: send a message to the backend knowing it will be queued.
- * We don't track the outcome — the backend enqueues it and the chat-complete
- * event triggers a history refresh when the queued turn finishes.
+ * Fire-and-forget AT THE MACHINE LEVEL: no new machine events come out of
+ * this — the backend enqueues the turn and the chat-complete event triggers
+ * a history refresh when it finishes. The send OUTCOME is still reported to
+ * the receipt registry so the dispatcher's `Promise<Receipt>` settles for a
+ * mid-turn queued send, same as the idle-path send in `streamActor`.
  */
 export function queueMessageToBackend(opts: { session: string; message: string; messageId: string; images?: ChatImageAttachment[]; openCard?: string; cardActivity?: ActivityKind[]; cardState?: CardStateDetails }): void {
   const { session, message, messageId, images, openCard, cardActivity, cardState } = opts;
@@ -393,5 +369,10 @@ export function queueMessageToBackend(opts: { session: string; message: string; 
     ...(openCard !== undefined ? { openCard } : {}),
     ...(cardActivity && cardActivity.length > 0 ? { cardActivity } : {}),
     ...(cardState && Object.keys(cardState).length > 0 ? { cardState } : {}),
-  }).catch(() => {}); // fire-and-forget
+  })
+    .then((result) => settleFromTurnStart(messageId, result))
+    .catch((err: unknown) => {
+      const msg = err instanceof Error ? err.message : "Send failed";
+      settleReceipt({ disposition: "rejected", emissionId: messageId, reason: msg });
+    });
 }

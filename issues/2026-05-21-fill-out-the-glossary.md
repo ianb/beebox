@@ -1,0 +1,22 @@
+---
+area: docs
+---
+
+# Fill out the glossary
+
+`docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific meanings. The starter set covers box, card, attach scope, attachment, asset, asset manifest, wakeup cycle, connector, procedure, service, cardworks, inbox, archive, cb, cb attachments. Things to add:
+
+- **Card-related**: tagName, ref, ref graph, schema instructions, validation, virtual `attach/` prefix, basename, card title
+- **Layout**: store/, box/inbox/, box/jobs/, box/commands/, box/questions/, config/, .callback-box/, landmark
+- **Wakeup / agent loop**: command, question, job, dispatch, agent invocation, Claude Code harness
+- **Connectors / services**: sync, fake vs real, observable state, the service/connector boundary
+- **Procedures**: run, step, scenario
+- **Capture / intake**: capture session, scan-import, intake, source (the `<filename source>` enum)
+- **Frontend**: page, renderer, UI primitive, semantic palette, restrict-component-classes
+- **Persistence**: pre-commit hook, post-commit hook, deploy, trailer (git trailer), `cb commit`
+- **Testing**: doctest, makeTestServer, makeTmpBox, the three tiers
+- **Misc**: hunch, knowledge audit, landmark, file-lock
+
+Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write entries. Keep them short (one paragraph), link to deeper docs rather than restating. The glossary is for *naming the thing*, not explaining it in full.
+
+Worth treating as a single pass — partial glossaries are worse than none because readers stop trusting them as comprehensive.

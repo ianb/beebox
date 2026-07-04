@@ -208,7 +208,7 @@ export const CURATOR: CuratorSection[] = [
       { path: "docs/knowledge-taxonomy.md", note: "What the agent is expected to know, vs. what it knows. The accountability ledger." },
       { path: "docs/prompt-audits.md", note: "Catching stock-LLM phrases that crept into prompts." },
       { path: "docs/prompt-logging.md", note: "Log every agent invocation — what was sent, what came back." },
-      { path: "docs/ideas.md", note: "936-line idea graveyard. The good ones bubble up to actual docs eventually." },
+      { path: "issues/CLAUDE.md", note: "The idea/issue graveyard, promoted out of a single 936-line ideas.md into one file per item." },
       { path: "docs/plans/cli-restructure.md", note: "Proposed restructure, not yet started." },
     ],
   },
