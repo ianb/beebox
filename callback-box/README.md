@@ -1,6 +1,6 @@
 # callback-box
 
-callback-box is personal assistant infrastructure built on Claude Code. You
+callback-box is a personal assistant and operating system built on Claude Code. You
 give it inputs — voice memos, emails, web clippings, chat messages — an agent
 processes them, and the system takes actions or asks questions. There's no
 separate database: the filesystem is the state, Git is the history, and the

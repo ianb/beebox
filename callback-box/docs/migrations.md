@@ -262,7 +262,7 @@ Residual data fixes that were one-offs (won't apply to other boxes):
 
 ## See also
 
-- `docs/cards-as-markdown.md` — design rationale for the YAML-frontmatter format these migrators target
+- `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implemented-plans/cards-as-markdown-rfc.md` for the design rationale
 - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
 - `scripts/migrate/_warnings.ts` — the noisy-mode helper every migrator uses

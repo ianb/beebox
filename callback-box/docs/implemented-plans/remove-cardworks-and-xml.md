@@ -114,7 +114,7 @@ five schemas and removes the scaffolding. Concretely:
   `scripts/migrate/_warnings.ts` (`callback-box/CLAUDE.md:52`) which
   declares known attrs/children per element and surfaces anything
   outside the allow-list — it *"Surfaced real data loss during the
-  production migration"* (`docs/cards-as-markdown.md`). **Reuse:** the
+  production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
   five new migrators follow this exact pattern, including warnings mode.
 - **The XPath dependency.** Only two call sites:
   `src/core/landmark/resolve.ts:167` (expand-template placeholders) and
@@ -536,7 +536,7 @@ rollout.
   what the task needs; a general converter is more surface than the job
   requires (CLAUDE.md "don't add features beyond what the task
   requires").
-- **chat-thread `.jsonl` reformatting.** `docs/cards-as-markdown.md`
+- **chat-thread `.jsonl` reformatting.** `docs/implemented-plans/cards-as-markdown-rfc.md`
   floats storing chat-thread as JSONL; that's an independent idea, not
   blocked by XML removal (chat-thread is already a frontmatter schema).
 - **Changing the `{% quote %}`/`{% source %}` vocabulary.** Shipped and

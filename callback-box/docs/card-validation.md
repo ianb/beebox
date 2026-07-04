@@ -23,6 +23,6 @@ Three hooks are installed per box:
   synchronous lint never touches the network — only this pass does. See
   `docs/implemented-plans/external-url-validation.md`.
 
-Format design and migration history: `docs/cards-as-markdown.md`.
+Format reference: `docs/cards-as-markdown.md`; design history and migration phases: `docs/implemented-plans/cards-as-markdown-rfc.md`.
 Per-schema migrators: `scripts/migrate/*.ts` + `scripts/migrate/_warnings.ts`
 (noisy-mode field-loss detection).

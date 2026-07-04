@@ -2,7 +2,7 @@
 
 **Shipped differently than this draft describes.** The `.attach/` convention landed, but as part of the asset-manifest system rather than this XML/cardworks-era design (which predates the Markdown card format and the manifest's SHA-256 tracking). See `docs/asset-manifests.md` for the living doc.
 
-**Status:** Draft. Phase 1 of the cards-as-markdown RFC, but designed to ship independently of any body-format change.
+**Status:** Draft. Phase 1 of the [cards-as-markdown RFC](./cards-as-markdown-rfc.md), but designed to ship independently of any body-format change.
 
 **Goal:** Replace today's basename-pairing convention for card attachments (`Voice_Memo.memo.card` + sibling `Voice_Memo.m4a`) with explicit `Foo.attach/` directories. No change to the XML card format or to cardworks.
 

@@ -1,6 +1,6 @@
 # Callback Box
 
-A personal assistant infrastructure built on Claude Code. You give it inputs (voice memos, emails, web clippings), agents process them, and the system takes actions or asks questions. The filesystem is state, Git is history, the `cb` CLI is the universal interface.
+A personal assistant and operating system built on Claude Code. You give it inputs (voice memos, emails, web clippings), agents process them, and the system takes actions or asks questions. The filesystem is state, Git is history, the `cb` CLI is the universal interface.
 
 This is not an app — it's a system that Claude Code operates. The human teaches by setting up rules, answering questions, and correcting mistakes. All of that is captured in files and commits.
 
@@ -39,7 +39,7 @@ Body content as plain markdown.
 
 **Schemas can include `instructions`** — prose embedded in the schema that's injected into agent context when processing cards of that type.
 
-**Validation**: Cards validate on load; `cb validate` checks all cards, a file list, or `--staged`. `cb init` installs per-box hooks (agent-facing PostToolUse warning, commit-blocking pre-commit, background URL checks) — mechanics in `docs/card-validation.md`. Format design and migration history: `docs/cards-as-markdown.md`.
+**Validation**: Cards validate on load; `cb validate` checks all cards, a file list, or `--staged`. `cb init` installs per-box hooks (agent-facing PostToolUse warning, commit-blocking pre-commit, background URL checks) — mechanics in `docs/card-validation.md`. Format reference: `docs/cards-as-markdown.md`; full design history (why markdown over XML, migration phases): `docs/implemented-plans/cards-as-markdown-rfc.md`.
 
 ## Source Layout
 
@@ -115,7 +115,8 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Testing philosophy | `docs/testing.md` |
 | Doctest syntax | `.claude/rules/doctest.md`; deeper reference in the monorepo's `agent-doctest/docs/` |
 | Adding a card type | `docs/adding-schemas.md` |
-| Card format & migration history | `docs/cards-as-markdown.md` |
+| Card format reference | `docs/cards-as-markdown.md` |
+| Card format design history (RFC) | `docs/implemented-plans/cards-as-markdown-rfc.md` |
 | Box migration runbook | `docs/migrations.md` |
 | Card validation hooks | `docs/card-validation.md` |
 | Adding API endpoints | `docs/adding-api-endpoints.md` |
