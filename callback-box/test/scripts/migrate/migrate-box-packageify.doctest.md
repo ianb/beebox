@@ -293,3 +293,40 @@ Object.keys(revertOk).filter(function (k) { return !revertOk[k]; }).length
 ```ts cleanup
 await box.cleanup();
 ```
+
+## Preflight refuses a box with pre-existing validation errors — before touching anything
+
+The conversion's final commit runs the box's own pre-commit validate hook, so
+broken cards would otherwise fail the migration at the very last step (after
+all the work, forcing a revert). The preflight runs the same validation up
+front: the box is refused in seconds, completely untouched, with the file
+list in the error. Policy: fix the cards; the hook is never bypassed.
+
+```ts
+const badBox = await makeLegacyBox();
+await badBox.write("config/schedules/broken.scheduled-script.card", "---\ncron: 0 6 * * *\n---\n");
+badBox.commitAll("add a broken schedule card (missing runs:)");
+const headBefore = await getHead(badBox.root);
+
+let preflightErr = null;
+try {
+  await runBoxPackageify(badBox.root);
+} catch (e) {
+  preflightErr = e;
+}
+const preflightErrName = preflightErr === null ? "(no error)" : preflightErr.name;
+preflightErrName
+=> PreexistingValidationError
+
+preflightErr.message.includes("broken.scheduled-script.card")
+=> true
+
+(await getHead(badBox.root)) === headBefore
+=> true
+
+(await getStatus(badBox.root)).clean
+=> true
+
+JSON.parse(await fs.readFile(path.join(badBox.root, ".cb-box"), "utf-8")).shapeVersion ?? 1
+=> 1
+```

@@ -54,6 +54,23 @@ import { getStatus, isRepo, hasCommits, getHead, revertToSnapshot, stageAll, com
 import { detectBoxTarget, scaffoldPackageRoot, BoxPackageConflictError } from "../../src/core/box-package.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { encodeProjectDir, claudeProjectsRoot } from "../../src/cli/lib/session.js";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
+
+const execFileAsync = promisify(execFile);
+
+export class PreexistingValidationError extends Error {
+  constructor(boxRoot: string, validateOutput: string) {
+    super(
+      `${boxRoot} has pre-existing card validation errors -- box-packageify refuses to start ` +
+        "(the conversion's final commit runs the box's own pre-commit validate hook, which " +
+        "would reject these; fix the cards first rather than bypassing validation):\n\n" +
+        validateOutput
+    );
+    this.name = "PreexistingValidationError";
+  }
+}
 
 export class NotABoxError extends Error {
   constructor(boxRoot: string) {
@@ -339,6 +356,23 @@ export async function runBoxPackageify(boxRoot: string, deps?: BoxPackageifyDeps
   if (!(await hasCommits(resolvedRoot))) throw new NoCommitsError(resolvedRoot);
   const status = await getStatus(resolvedRoot);
   if (!status.clean) throw new DirtyTreeError(resolvedRoot);
+
+  // Preflight validate: the conversion's final commit runs the box's own
+  // pre-commit hook (cb validate --staged over the ENTIRE tree, since
+  // everything moves), so a box with pre-existing broken cards would fail
+  // at the last step and revert after doing all the work. Fail here
+  // instead -- seconds in, box untouched, same verdict the hook would
+  // give, with the actionable file list. Policy (boxholder, 2026-07-04):
+  // fix the cards; never bypass the hook with --no-verify.
+  try {
+    await execFileAsync(path.join(PACKAGE_ROOT, "bin", "cb"), ["validate", "--all"], {
+      cwd: resolvedRoot,
+    });
+  } catch (e) {
+    const err = e as { stdout?: string; stderr?: string };
+    const output = [err.stdout, err.stderr].filter(Boolean).join("\n").trim();
+    throw new PreexistingValidationError(resolvedRoot, output);
+  }
 
   // Precondition: no pre-existing package.json (BoxPackageConflictError's
   // usual home is scaffoldPackageRoot -- checked again here, BEFORE any
