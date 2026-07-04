@@ -5,6 +5,10 @@
  * in the same chat thread resume the existing session (skipping startup
  * and the Read-before-Edit gate).
  *
+ * Ids are minted locally (`randomUUID`) and handed to `createAgent`, whose
+ * first run passes them to the SDK as the create-with-id `sessionId` option —
+ * so the stored id names a real session that later `resume` runs can load.
+ *
  * Stored in `.callback-box/chat-sessions.json`, keyed by thread ref path.
  */
 

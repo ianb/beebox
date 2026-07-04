@@ -39,17 +39,19 @@ export {
 /**
  * Shared session-id callback used by both invoke variants: records the
  * SDK-assigned id and appends the session manifest entry exactly once.
+ * The SDK-reported id is authoritative — it overwrites whatever the agent
+ * was seeded with, so `agent.sessionId` only ever names a session that
+ * actually exists on the SDK side (resume and commit-retry depend on that).
  */
 function makeSessionIdHandler(state: {
   name: string;
   boxRoot: string;
-  getSessionId(): string | null;
   setSessionId(id: string): void;
   isManifestWritten(): boolean;
   markManifestWritten(): void;
 }): (id: string) => void {
   return (id) => {
-    if (state.getSessionId() === null) state.setSessionId(id);
+    state.setSessionId(id);
     if (!state.isManifestWritten()) {
       appendSessionManifest(state.boxRoot, {
         sessionId: id,
@@ -64,8 +66,10 @@ function makeSessionIdHandler(state: {
 /**
  * Create a real agent that runs Claude via the SDK.
  *
- * If `sessionId` is given (typically with `resume: true`), the first invoke
- * resumes that existing session.
+ * If `sessionId` is given with `resume: true`, the first invoke resumes that
+ * existing session. Without `resume`, the first invoke *creates* the session
+ * with that id (the SDK's create-with-id mode), so a caller-minted id — e.g.
+ * the chat reactor's per-thread session store — stays valid for later resumes.
  */
 export function createAgent(options: {
   name: string;
@@ -82,7 +86,6 @@ export function createAgent(options: {
     makeSessionIdHandler({
       name: options.name,
       boxRoot,
-      getSessionId: () => sessionId,
       setSessionId: (id) => {
         sessionId = id;
       },
@@ -107,6 +110,9 @@ export function createAgent(options: {
       cwd: opts.cwd,
       additionalDirectories: opts.additionalDirectories,
       resumeSessionId: isResume && sessionId !== null ? sessionId : undefined,
+      // Fresh session with a pre-minted id → create-with-id, so the id the
+      // caller stored is the id the SDK actually creates.
+      sessionId: !isResume && sessionId !== null ? sessionId : undefined,
       onSessionId: onSessionId(opts.boxRoot),
     };
   };

@@ -28,6 +28,13 @@ export interface RunAgentOptions {
   model?: string | undefined;
   /** Resume an existing session by id. */
   resumeSessionId?: string | undefined;
+  /**
+   * Create the session with this specific id (the SDK's create-with-id
+   * `sessionId` option; must be a valid UUID). Lets callers pre-mint an id
+   * (e.g. the chat reactor's per-thread session store) that stays valid for
+   * later `resumeSessionId` runs. Ignored when resuming.
+   */
+  sessionId?: string | undefined;
   /** Called once with the SDK-assigned session id (from the first system message). */
   onSessionId?: ((id: string) => void) | undefined;
   /**
@@ -66,6 +73,10 @@ function buildQueryOptions(
     ...(options.maxBudgetUsd !== undefined && { maxBudgetUsd: options.maxBudgetUsd }),
     ...(options.model !== undefined && { model: options.model }),
     ...(options.resumeSessionId !== undefined && { resume: options.resumeSessionId }),
+    // Create-with-id: only valid on a fresh session (the SDK rejects
+    // `sessionId` combined with `resume` unless forking).
+    ...(options.resumeSessionId === undefined &&
+      options.sessionId !== undefined && { sessionId: options.sessionId }),
     ...(options.outputSchema !== undefined && {
       outputFormat: { type: "json_schema" as const, schema: options.outputSchema },
     }),
@@ -196,7 +207,7 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       success: true,
       output: `[DRY RUN] Would run Claude via SDK with prompt:\n${prompt}`,
       exitCode: 0,
-      sessionId: options.resumeSessionId ?? "",
+      sessionId: options.resumeSessionId ?? options.sessionId ?? "",
     };
   }
 

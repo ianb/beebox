@@ -214,6 +214,8 @@ let agents = [];
 const agentFactory = (opts) => {
   const agent = createFakeAgent({
     name: opts.name,
+    sessionId: opts.sessionId,
+    resume: opts.resume,
     act: async ({ boxRoot }) => {
       await finishJob({ boxRoot, jobRelPath: "box/jobs/msg.chat.job.card" });
       return { success: true };
@@ -261,6 +263,8 @@ const agentFactory = (opts) => {
   const jobFile = agents.length === 0 ? "a.chat.job.card" : "b.chat.job.card";
   const agent = createFakeAgent({
     name: opts.name,
+    sessionId: opts.sessionId,
+    resume: opts.resume,
     act: async ({ boxRoot }) => {
       await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobFile}` });
       return { success: true };
@@ -282,6 +286,91 @@ result.jobsProcessed
 
 // Each chat job got its own agent
 agents.length
+=> 2
+
+await box.cleanup();
+```
+
+### Session resume across reactor cycles
+
+A second message in the same thread must resume the session the first
+cycle actually created. The fake agent enforces real SDK semantics via
+`knownSessions`: resuming an id no earlier agent created fails with
+"No conversation found" — so this test catches the store drifting from
+the ids the SDK really knows about.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
+await box.write("box/jobs/msg1.chat.job.card", chatJob("First message", "store/threads/conv1.card"));
+box.commitAll("Add first chat job");
+
+const knownSessions = new Set();
+let agents = [];
+let jobToFinish = "msg1.chat.job.card";
+const agentFactory = (opts) => {
+  const agent = createFakeAgent({
+    name: opts.name,
+    sessionId: opts.sessionId,
+    resume: opts.resume,
+    knownSessions,
+    act: async ({ boxRoot }) => {
+      await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobToFinish}` });
+      return { success: true };
+    },
+  });
+  agents.push(agent);
+  return agent;
+};
+
+const reactorOpts = {
+  boxRoot: box.root,
+  ...testOverrides,
+  createAgent: agentFactory,
+  type: "chat",
+};
+
+const cycle1 = await runReactor(reactorOpts);
+cycle1.success
+=> true
+
+// The stored session id is the id the agent actually created
+const stored1 = JSON.parse(
+  await fs.readFile(path.join(box.root, ".callback-box/chat-sessions.json"), "utf-8"),
+);
+stored1["store/threads/conv1.card"].sessionId === agents[0].sessionId
+=> true
+
+knownSessions.has(agents[0].sessionId)
+=> true
+
+// Second message in the same thread, next reactor cycle
+await box.write("box/jobs/msg2.chat.job.card", chatJob("Second message", "store/threads/conv1.card"));
+box.commitAll("Add second chat job");
+jobToFinish = "msg2.chat.job.card";
+
+const cycle2 = await runReactor(reactorOpts);
+cycle2.success
+=> true
+
+cycle2.jobsProcessed
+=> 1
+
+// Cycle 2 resumed the exact session cycle 1 created
+agents.length
+=> 2
+
+agents[1].sessionId === agents[0].sessionId
+=> true
+
+agents[1].invocations[0].resumed
+=> true
+
+// Session record survived and counted both messages
+const stored2 = JSON.parse(
+  await fs.readFile(path.join(box.root, ".callback-box/chat-sessions.json"), "utf-8"),
+);
+stored2["store/threads/conv1.card"].messageCount
 => 2
 
 await box.cleanup();
