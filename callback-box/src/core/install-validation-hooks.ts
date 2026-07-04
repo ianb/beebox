@@ -44,7 +44,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, type StdioOptions } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
@@ -65,7 +65,17 @@ import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 function resolveCbBin(): string {
   const local = path.join(PACKAGE_ROOT, "bin", "cb");
   try {
-    const opts = { cwd: PACKAGE_ROOT, encoding: "utf8" as const };
+    // stdio: pipe the failure-case stderr instead of letting execFileSync's
+    // default inherit it straight to our own stderr — a released package
+    // (no shipped `.git`) hits this catch on every `cb init`/hook install,
+    // and "not a git repository" leaking out unprompted for something we
+    // already handle gracefully is exactly the noise the monorepo's "quiet
+    // on success" rule bans.
+    const opts = {
+      cwd: PACKAGE_ROOT,
+      encoding: "utf8" as const,
+      stdio: ["ignore", "pipe", "ignore"] as StdioOptions,
+    };
     const top = execFileSync("git", ["rev-parse", "--show-toplevel"], opts).trim();
     const commonDir = execFileSync(
       "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts,

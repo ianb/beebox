@@ -100,8 +100,14 @@ await build({
 // specifier for <CardLink>/<CardRef>; `cb view test` resolves it via the
 // package `exports` map (the temp-dir node_modules/callback-box symlink in
 // src/cli/commands/view.ts), and wraps the rendered view in the bundle's
-// NodeViewHostProvider. React (incl. react/jsx-runtime) stays external so it
-// shares the one instance react-dom/server uses, exactly like the compiled view.
+// NodeViewHostProvider. Only React (incl. its runtime entry points) stays
+// external, so it shares the one instance react-dom/server uses — everything
+// else this graph touches (tailwind-merge, clsx, the UI primitives it pulls
+// in transitively via CardRef's <Badge>/<Text>) gets bundled in, because
+// those aren't `callback-box`'s own dependencies and a consuming box has no
+// reason to have them installed (a released tarball proved this: `packages:
+// "external"` here left `import "tailwind-merge"` unresolved for every
+// external box — see the F1 release smoke test).
 await build({
   entryPoints: [join(root, "src/frontend/src/components/view-widgets/node-entry.tsx")],
   outfile: join(distDir, "view-widgets", "index.js"),
@@ -110,7 +116,7 @@ await build({
   format: "esm",
   target: "node22",
   jsx: "automatic",
-  packages: "external",
+  external: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime"],
   sourcemap: true,
   logLevel: "warning",
 });

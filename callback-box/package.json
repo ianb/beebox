@@ -19,11 +19,23 @@
   "bin": {
     "cb": "./bin/cb"
   },
+  "files": [
+    "dist",
+    "bin",
+    "templates",
+    "src/frontend/dist",
+    "src/frontend/package.json",
+    "src/types",
+    "tsconfig.json",
+    "tsconfig.base.json"
+  ],
   "scripts": {
     "build": "tsc",
     "build:frontend": "cd src/frontend && pnpm build",
     "build:all": "pnpm build && pnpm build:frontend",
     "build:cli": "node scripts/build-cli.mjs && tsc -p tsconfig.declarations.json",
+    "release": "tsx scripts/release.ts",
+    "smoke": "tsx scripts/smoke-external-box.ts",
     "dev": "echo 'The dev server is the monorepo router. Run \\`pnpm dev\\` from the monorepo root.' && exit 1",
     "cb": "./bin/cb",
     "typecheck": "tsc --noEmit && cd src/frontend && pnpm exec tsc --noEmit",

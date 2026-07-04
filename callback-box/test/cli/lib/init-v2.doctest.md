@@ -153,6 +153,20 @@ Object.keys(pkg.dependencies)
 ]
 ```
 
+`devDependencies` carries `typescript`/`@types/node`/`@types/react` — the
+box's own `pnpm exec tsc` needs these to typecheck `src/` without a
+symlink-only install providing them (Track F's real `pnpm install` is what
+actually resolves them):
+
+```ts continue
+Object.keys(pkg.devDependencies).sort()
+=> [
+  "@types/node",
+  "@types/react",
+  "typescript"
+]
+```
+
 `tsconfig.json` extends the shipped base and includes `src`:
 
 ```ts continue

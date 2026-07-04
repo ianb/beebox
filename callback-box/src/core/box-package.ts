@@ -74,15 +74,46 @@ sees this directory's package machinery directly.
   Node package depends on a library.
 `;
 
+interface EngineVersions {
+  /** The engine's own package version, to pin the scaffolded `callback-box` dependency. */
+  engine: string;
+  /** `typescript`'s version range, read from the engine's own `dependencies`. */
+  typescript: string;
+  /** `@types/node`'s version range, read from the engine's own `devDependencies`. */
+  typesNode: string;
+  /** `@types/react`'s version range, read from the engine's frontend workspace member. */
+  typesReact: string;
+}
+
 /**
- * Read the running engine's own version (this checkout's package.json,
- * resolved via `PACKAGE_ROOT`) to pin the scaffolded box's `callback-box`
- * dependency.
+ * Read the versions the scaffolded box's `package.json` pins: the running
+ * engine's own version (for the `callback-box` dependency), plus
+ * `typescript`/`@types/node`/`@types/react` at the exact ranges this engine
+ * itself develops against (for the box's `devDependencies`, so `tsc` in the
+ * box behaves the same as `tsc` in the engine). `@types/react` lives in the
+ * frontend workspace member's `package.json`, not the engine's own — views
+ * are the only box code that needs DOM/JSX types. That file (metadata only,
+ * no `node_modules`) ships in the release tarball's `files` allowlist
+ * specifically so this read works from an installed package, not just a
+ * monorepo checkout.
  */
-async function engineVersion(): Promise<string> {
-  const raw = await fs.readFile(path.join(PACKAGE_ROOT, "package.json"), "utf-8");
-  const pkg = JSON.parse(raw) as { version?: string };
-  return pkg.version ?? "0.0.0";
+async function readEngineVersions(): Promise<EngineVersions> {
+  const [rawEngine, rawFrontend] = await Promise.all([
+    fs.readFile(path.join(PACKAGE_ROOT, "package.json"), "utf-8"),
+    fs.readFile(path.join(PACKAGE_ROOT, "src/frontend/package.json"), "utf-8"),
+  ]);
+  const engine = JSON.parse(rawEngine) as {
+    version?: string;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+  };
+  const frontend = JSON.parse(rawFrontend) as { devDependencies?: Record<string, string> };
+  return {
+    engine: engine.version ?? "0.0.0",
+    typescript: engine.dependencies?.typescript ?? "^5.7.0",
+    typesNode: engine.devDependencies?.["@types/node"] ?? "^22.0.0",
+    typesReact: frontend.devDependencies?.["@types/react"] ?? "^18.3.0",
+  };
 }
 
 /**
@@ -124,12 +155,49 @@ export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
     );
   }
 
-  const version = await engineVersion();
+  const versions = await readEngineVersions();
+  // The dependency spec for `callback-box` itself. Defaults to a bare semver
+  // range against the running engine's own version — meaningless to resolve
+  // via a real install today (there's no registry; Track F's "Now" channel
+  // is a tarball, not `npm publish` — see "Distribution (decision 2)" in
+  // docs/plans/boxes-as-packages-v2.md), but harmless, since scaffolding
+  // immediately symlinks `node_modules/callback-box` at the running engine
+  // instead of installing anything. A release/install tool that DOES want a
+  // real `pnpm install` to resolve this dependency (pinning a tarball path
+  // or URL, e.g. the release smoke test) overrides it via
+  // `CB_INIT_CALLBACK_BOX_SPEC` before calling `cb init`.
+  const callbackBoxSpec = process.env.CB_INIT_CALLBACK_BOX_SPEC ?? `^${versions.engine}`;
   const packageJson = {
     name: path.basename(packageRoot),
     private: true,
     type: "module",
-    dependencies: { "callback-box": `^${version}` },
+    dependencies: { "callback-box": callbackBoxSpec },
+    // typescript + the type packages the base tsconfig's `lib` needs
+    // (`ES2023, DOM`) to typecheck box code (schemas and views) — pinned to
+    // the same ranges this engine itself develops against, so `pnpm exec tsc`
+    // in the box behaves the same as it does here. `cb init` writes these
+    // once at scaffold time; nothing keeps them in sync afterward (a stale
+    // box devDependency is the box owner's `cb upgrade` to fix, same as any
+    // other dependency drift).
+    devDependencies: {
+      typescript: versions.typescript,
+      "@types/node": versions.typesNode,
+      "@types/react": versions.typesReact,
+    },
+    // pnpm 10 refuses to run any dependency's postinstall/install script by
+    // default (a supply-chain guard) — without this, a fresh `pnpm install`
+    // silently leaves better-sqlite3 (event bus storage) and the others
+    // below without their compiled native/generated bits, and the box fails
+    // at first boot with an opaque "Could not locate the bindings file"
+    // error nowhere near where the dependency was declared. The engine's own
+    // monorepo allowlists the same packages workspace-wide (`onlyBuiltDependencies`
+    // in the root `pnpm-workspace.yaml`); a standalone box has no workspace
+    // file to inherit that from, so it needs its own copy. Found by the F1
+    // release smoke test's `cb serve` step, which failed exactly this way
+    // against a real fresh install.
+    pnpm: {
+      onlyBuiltDependencies: ["better-sqlite3", "@google/genai", "esbuild", "protobufjs"],
+    },
   };
   await fs.writeFile(packageJsonPath, JSON.stringify(packageJson, null, 2) + "\n");
 
