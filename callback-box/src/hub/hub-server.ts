@@ -173,10 +173,13 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // @fastify/cookie's request decoration, same as a standalone box server.
   await app.register(fastifyCookie);
 
-  // The hub proxies request bodies through unread -- registering a
-  // catch-all content-type parser that never touches `payload` stops
-  // Fastify's default JSON/urlencoded parsers from draining the raw
-  // request stream before `proxy.web` can pipe it to the child.
+  // The hub proxies request bodies through unread -- the catch-all
+  // content-type parser below never touches `payload`, so `proxy.web` can
+  // pipe the raw request stream to the child. The built-in parsers must go
+  // first: Fastify's own application/json and text/plain parsers take
+  // precedence over a catch-all "*", and they drain the stream, which left
+  // every JSON webhook POST (e.g. Telegram) hanging behind the hub.
+  app.removeAllContentTypeParsers();
   // eslint-disable-next-line max-params -- Fastify's addContentTypeParser callback signature is (request, payload, done)
   app.addContentTypeParser("*", (_request, _payload, done) => {
     done(null);
