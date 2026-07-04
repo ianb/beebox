@@ -247,7 +247,7 @@
       <text class="soft" x="362" y="270">retain(audio, id)</text>
       <!-- assemble/submit -->
       <path d="M512 160 H 590" stroke="#9a9084" stroke-width="1.6" marker-end="url(#arr)" fill="none"/>
-      <text class="soft" x="516" y="150">assemble()</text>
+      <text class="soft" x="514" y="150">serialized</text>
       <rect x="560" y="140" width="76" height="40" rx="8" fill="#fff" stroke="#d8cdba"/>
       <text x="571" y="164">submit()</text>
       <!-- target -->
@@ -259,7 +259,7 @@
       <text class="soft" x="718" y="204">owns its queue and</text>
       <text class="soft" x="718" y="218">its stop control</text>
       <path d="M636 160 H 698" stroke="#4a6b3f" stroke-width="1.8" marker-end="url(#arrg)" fill="none"/>
-      <text class="soft" x="640" y="150">accept()</text>
+      <text class="soft" x="632" y="150">accept(emission)</text>
       <path d="M698 200 H 650 Q 636 200 636 214 V 214" stroke="#4a6b3f" stroke-width="1.4"
             marker-end="url(#arrg)" fill="none" stroke-dasharray="4 3"/>
       <text class="soft" x="600" y="232">receipt</text>
@@ -285,10 +285,15 @@
     </svg>
   </div>
   <p>Read it left to right: <b>feeders</b> write into the <b>emission</b> through one
-  editor; <code>submit()</code> assembles the emission and hands it to the aimed
-  <b>target</b>, which answers with a receipt. Two back-channels flow the other way:
-  the target's <i>status</i> (shown on the submit button before you press it) and the
-  agent's <i>original-audio</i> requests served from retention.</p>
+  editor; <code>submit()</code> hands the <i>serialized emission</i> to the aimed
+  <b>target</b>, whose adapter <b>assembles the payload</b> (the ⟨typed⟩/⟨speech⟩
+  wrappers, selection folding, attachment blocks live with the target that defines
+  them) and answers with a receipt. Two back-channels flow the other way: the
+  target's <i>status</i> (shown on the submit button before you press it) and the
+  agent's <i>original-audio</i> requests served from retention. Everything crossing
+  the input boundary is <b>serializable</b> — no React or DOM types, blobs by handle
+  — because on a future mobile port the input is the part that goes native while the
+  rest stays HTML.</p>
 
   <h2 id="flows">The flows, step by step</h2>
   <p>Click through each scenario — every step is one message crossing one boundary.
@@ -455,7 +460,7 @@
   clear(): <span class="hl-t">void</span>;
 }
 
-<span class="hl-k">function</span> assemble(e: <span class="hl-t">Emission</span>, ctx): <span class="hl-t">AssembledPayload</span>;</code></pre>
+<span class="hl-c">// assembly lives in the TARGET adapter: accept(emission)</span></code></pre>
     <aside>
       <p><b>The id is load-bearing.</b> It's generated at compose time, becomes the
       <code>messageId</code> the chat already uses, and is the key under which the
@@ -464,10 +469,10 @@
       <p><b>One editor.</b> Feeders call it; the attachment panel, selection chips and
       dictation-recovery widget become plain renderings of emission slices. This
       replaces six root-owned hooks and the 40-prop bag.</p>
-      <p><b>One <code>assemble()</code>.</b> <code>origin</code> picks the
+      <p><b>Assembly is the adapter's first act.</b> <code>origin</code> picks the
       <code>&lt;typed&gt;</code>/<code>&lt;speech&gt;</code> wrapper; selection folding
-      happens in exactly one place. The typed and voice send paths stop being two
-      programs.</p>
+      happens in exactly one place — inside the target that defines the format. The
+      input ships the noun; the typed and voice send paths stop being two programs.</p>
     </aside>
   </div>
 
@@ -521,7 +526,8 @@
   <span class="hl-k">readonly</span> pending: <span class="hl-t">Observable</span>&lt;<span class="hl-t">PendingEmission</span>[]&gt;;
   <span class="hl-k">readonly</span> controls: <span class="hl-t">TargetControl</span>[];  <span class="hl-c">// ← stop lives here</span>
   <span class="hl-k">readonly</span> speaking?: <span class="hl-t">Observable</span>&lt;<span class="hl-t">SpeechState</span>&gt;;
-  accept(payload): <span class="hl-t">Promise</span>&lt;<span class="hl-t">Receipt</span>&gt;;
+  accept(emission: <span class="hl-t">SerializedEmission</span>): <span class="hl-t">Promise</span>&lt;<span class="hl-t">Receipt</span>&gt;;
+    <span class="hl-c">// the adapter assembles — payload rules live here</span>
 }
 
 <span class="hl-k">type</span> <span class="hl-t">Receipt</span> =
@@ -618,6 +624,13 @@
       <p>Target speech pauses the mic (barge-in / turn-taking) via
       <code>coordinate()</code>. <b>Trade:</b> the boundary isn't perfectly airtight.
       Chosen because pretending otherwise would just hide the wire.</p></div>
+    <div class="card"><h3>Native-ready boundary</h3>
+      <p>On a future mobile port, <b>the input goes native</b> (mic, camera, pickers,
+      share sheet) while the rest stays HTML. So: everything crossing the input
+      boundary is serializable — no React/DOM types, blobs by handle — and assembly
+      lives in the target adapter so native ships one noun, not N payload formats.
+      <b>Trade:</b> a stricter API discipline today. The success test: you could
+      stand a native input on the same bridge without touching an adapter.</p></div>
   </div>
 
   <div class="note" style="margin-top:1.5rem"><b>Where this goes if accepted:</b>
@@ -641,10 +654,10 @@ const SCENARIOS = [
         note:"The agent is mid-turn. The <b>acceptor broadcasts its state</b> — the send button now reads <b>“Queue”</b>. Pre-submit truth, not a surprise afterward." },
       { f:0, t:1, label:"press ⏎  → submit()",
         note:"You submit knowingly. The input asks the emission to assemble." },
-      { f:1, t:2, label:"assemble()",
-        note:"<b>One function</b> builds the payload: &lt;typed&gt; wrapper, selections folded in, attachments block appended. The old dual typed/voice paths are gone." },
-      { f:1, t:3, label:"accept(payload)",
-        note:"The only forward channel between input and target." },
+      { f:1, t:2, label:"serialize emission",
+        note:"The emission crosses the boundary as <b>plain data</b> — the same shape a future native input would ship over the bridge." },
+      { f:1, t:3, label:"accept(emission)",
+        note:"The only forward channel between input and target. <b>The adapter assembles</b>: &lt;typed&gt; wrapper, selections folded, attachments block — payload rules live with the target that defines them. The old dual typed/voice paths are gone." },
       { f:3, t:4, label:"enqueue behind turn",
         note:"The ChatTarget adapter owns the relationship with the chat machine — including merging witness context (open card, activity) that the composer never saw." },
       { f:3, t:1, label:"receipt: queued (behind: turn)",
@@ -669,8 +682,8 @@ const SCENARIOS = [
         note:"The recording is attached to the emission itself: the audio and the message it became share an id." },
       { f:1, t:3, label:"intent: submit",
         note:"<b>Feeders signal intents; the input decides.</b> “Send it”, “cancel”, “mic off”, “erase” are the whole intent vocabulary." },
-      { f:3, t:4, label:"accept(assemble → ⟨speech⟩)",
-        note:"Same assemble() as typing — origin: voice just selects the ⟨speech⟩ wrapper." },
+      { f:3, t:4, label:"accept(emission) → ⟨speech⟩",
+        note:"Same adapter assembly as typing — origin: voice just selects the ⟨speech⟩ wrapper." },
       { f:4, t:3, label:"receipt: delivered",
         note:"Immediate this time — the target was ready." },
       { f:3, t:3, label:"retain(audio, id) · clear()",
@@ -693,8 +706,8 @@ const SCENARIOS = [
         note:"Re-aiming across <b>target kinds</b>: from an interlocutor to a place. Capture stops being a separate app — it's the same instrument pointed at a directory." },
       { f:0, t:1, label:"submit()",
         note:"Same button, different acceptor." },
-      { f:1, t:4, label:"accept(deposit)",
-        note:"The PlaceTarget wraps today's capture apparatus — session, upload, finalize." },
+      { f:1, t:4, label:"accept(emission)",
+        note:"The PlaceTarget's adapter assembles the deposit and wraps today's capture apparatus — session, upload, finalize." },
       { f:4, t:1, label:"receipt: deposited { cardPath }",
         note:"<b>A deposit's receipt is a card address</b> — box/inbox/….capture-session.card. The toast links straight to it. Interface-as-cards and the input meet here." },
     ],
