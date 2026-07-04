@@ -1,6 +1,6 @@
 # Design reconciliation — adjudication list
 
-**Status:** active — adjudication list awaiting boxholder rulings
+**Status:** active — rulings recorded 2026-07-04; rewrite phase pending
 
 The design documents disagree with each other and with the code, and none of them
 can be presumed right: the boxholder's design preferences have been developing
@@ -48,7 +48,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      among several" (consistent with §16's nothing-is-privileged — see item 6).
   3. Adopt the interface-as-cards framing as the canonical answer: surfaces
      are cards too, so the dichotomy is retired.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Both, now. The web UI is the main UI, and
+  it's really a focus. Conversation and chat are important. The documents are
+  the result, and are main method of record.
 
 ### 2. One boxholder, or a shared household box?
 
@@ -69,7 +71,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      saying multi-member is aspirational, not designed.
   3. Split: shared *data and chat* is in-scope, per-member identity/permissions
      is explicitly out-of-scope for now.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Shared. Sometimes one, but can be
+  multiple. A "box" has one granularity of sharing, so if you have different
+  groups or subgroups then you need different boxes.
 
 ### 3. The one-sentence identity: OS, appliance, or assistant?
 
@@ -91,7 +95,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      identity and treat "assistant" as merely the most visible feature.
   3. Write the identity fresh (it has genuinely evolved: assistant + shared
      repository + buildable place), and make every narrative doc open with it.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** The ambition is OS.
 
 ### 4. Local-first-avoid-the-cloud vs. the hosted fleet
 
@@ -106,7 +110,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   1. Update design.md §12 to describe the actual posture: local dev boxes +
      first-class hosted multi-box serving, with the stranger-in-minutes goal.
   2. Retire §12 entirely — it was a phase note, not a design position.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** There's a kind of cloud option, but only
+  a cloud server. It won't ever run on AWS Lambda for instance. So it can run
+  "remotely" but always on a full computer.
 
 ---
 
@@ -131,7 +137,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Declare §15's "not a chatbot" superseded: the box *is* conversational
      first (per the vignettes), and idleness is an implementation property,
      not an identity claim.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** I WANT there to be more proactivity and
+  stuff, but it's definitely ALSO a chatbot.
 
 ### 6. "Nothing else is particularly privileged" vs. chat's special machinery
 
@@ -151,7 +158,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Hold the original line as a design constraint (chat should be
      re-plumbable as "just another connector," e.g. Telegram vs web parity)
      and treat current chat specialness as accepted tech debt.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** The web has become privileged, or at
+  least the richest surface and main focus.
 
 ### 7. Web UI: debug viewer or product surface?
 
@@ -169,7 +177,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      permission boundary (Admin/OAuth out of cards, everything else in).
   2. Keep a "full transparency" clause as a live value (see-the-gears,
      spirit.md:21-29) while dropping the "later it may split" prediction.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Web UI as debug viewer is fully out of
+  date.
 
 ### 8. What does "wakeup" name now?
 
@@ -189,7 +198,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. "Wakeup cycle" stays the umbrella name for one full reactor cycle
      (sync → jobs → finalize), and the reactor is documented as the wakeup
      cycle's engine; `cb wakeup` the command gets renamed or footnoted.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** I think that's roughly right, but you
+  could research to make it more accurate. There's no big change to wakeup
+  planned as far as I can remember.
 
 ---
 
@@ -217,7 +228,10 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      open a design item (e.g. authorization fields on outbound cards like
      `email-outbound`).
   3. Defer: park in `docs/ideas.md` with a pointer from the rewritten section.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** No. The schemas are actually part of
+  that, including fields that must be filled in not because they are
+  essential information, but because they are essential process for the
+  agent to go through.
 
 ### 10. Three trust vocabularies
 
@@ -238,7 +252,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Rule them genuinely different things (action-permission vs.
      classification-confidence vs. belief-confidence) that should *not* share
      vocabulary — document the distinction once.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Not well filled out in the
+  implementation, but it's not incorrect as a design.
 
 ### 11. §19 ("possibly the most important design area") vs. what actually shipped
 
@@ -258,7 +273,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      not configuring" framing (design.md:453) which still reads current.
   2. Same, plus explicitly rule proposal cards dead (the retro question-card
      path covers "wants user buy-in") — or park them in ideas.md.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Also more ambition than reality, but
+  still important. Not central though, clearly.
 
 ### 12. Question loop: resume-a-session or spawn-a-job?
 
@@ -277,7 +293,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Rule that resume-the-session is still the *desired* semantics for
      long-running interrupted work (distinct from quick directives) and open
      a design item.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Just not filled out well enough to have
+  a clear answer.
 
 ### 13. "Git is the state engine / to do something, commit it"
 
@@ -297,7 +314,10 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      historical framing.
   2. Keep "git as state engine" for one narrow surviving sense (commits as
      the durable checkpoints agents reason from) and say exactly that.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Yes, and it does do this in many cases.
+  Not everything (e.g., chat messages aren't handled like this), but a lot,
+  and it's an active and true guidance. Committing something makes it durable
+  and real.
 
 ### 14. Provenance: invariant or aspiration?
 
@@ -318,7 +338,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Re-badge §7 as an aspiration with a statement of the current guarantee
      (commits + per-card source where schemas require it), so no doc
      over-claims.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Aspirational, but `{% source %}` and
+  `{% quote %}` do make attempts. Always can be better.
 
 ---
 
@@ -341,7 +362,10 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      (fail-closed), and looseness is a *schema design* choice (designated
      ad hoc/notes fields), never a parsing choice. Cite it from both docs.
   2. Rule that one emphasis wins and edit the other doc's phrasing.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** The escape valves should be clear and
+  discussed (with me) and serve clear purposes. I think we've avoided too
+  many escape valves. The Markdown body of a card is a kind of escape valve,
+  being very freeform.
 
 ### 16. "A card is one idea" vs. instrument/husk/infrastructure cards
 
@@ -363,7 +387,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      body stays empty … should have stayed virtual") as the guardrail.
   2. Rule §24 scoped to *domain* cards and give infrastructure cards their
      own stated justification (addressability, margin, config surface).
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** True, cards serve other purposes. But
+  like a chat husk is still an idea (the idea of that chat session). There's
+  tensions, but this is also kind of correct.
 
 ### 17. Three definitions of "landmark"
 
@@ -384,7 +410,10 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      interface-as-cards' open question.
   2. Rule the dissolution direction likely enough that docs should describe
      landmark as transitional vocabulary.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** I think we resolved some of this tension
+  with the current implementation. The current implementation is by best
+  effort for the moment (though I'm sure there will be more to be done), so
+  describing it as the intended design would be correct.
 
 ---
 
@@ -414,7 +443,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Rule that the vision has genuinely shifted and write a fresh
      extensibility statement around the box-package boundary
      (`callback-box/{cards,schema,view-widgets}` imports only).
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** Yes, this is actively my plan, but
+  neither knowledge (wiki-style) nor plugins exist yet.
 
 ### 19. "Modes" as user-facing vocabulary
 
@@ -437,7 +467,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Keep "narration mode" as the *user-facing* name for that feature bundle
      (it's how the boxholder talks about it) while the docs describe it as
      composed features underneath.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** They don't surface to users, and I'm
+  not sure this is the best phrasing. But then I also just added an idea
+  (that I like!) about Listening Mode, so it's also kind of true.
 
 ---
 
@@ -462,7 +494,8 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   2. Keep it scoped as the narrative series' compass; extract any principles
      the *engineering* docs should obey into design.md's successor, and
      soften spirit.md:5 to match its actual jurisdiction.
-- **Ruling:**
+- **Ruling (boxholder, 2026-07-04):** I wrote it and meant it, but then forgot
+  it even existed!
 
 ---
 
@@ -508,7 +541,10 @@ Cross-linking either way: whatever survives as DESIGN's successor and the
 architecture series should each open with a one-line pointer to the other
 ("narrative → architecture/; rationale → design/").
 
-**Ruling (roles):**
+**Ruling (roles, boxholder 2026-07-04):** Approved as proposed — split
+design.md into `docs/design/` rewritten per the rulings above, retire
+implementation.md (after salvage) and design-vision.md (after harvest),
+architecture/ carries the onboarding narrative.
 
 ---
 
