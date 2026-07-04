@@ -2,6 +2,8 @@
 
 This directory contains architecture documentation told through the story of a fictional family (the Lund-Vegas). The docs are a mix of narrative, technical explanation, and design exploration.
 
+**Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale lives in `../design/` (one file per topic; peer of `../stack-decisions.md`). When writing new chapters, follow the recorded boxholder rulings in `../plans/design-reconciliation.md` (audience, identity, chat's status, spirit.md's authority, etc.) rather than re-deriving those questions.
+
 The user-facing chapters themselves start with **`01-what-is-this.md`** and **`02-cards-and-memory.md`**.
 
 ## Steering docs (not user-facing)

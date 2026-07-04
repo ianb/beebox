@@ -97,6 +97,6 @@ every PAI mechanism has a cb counterpart that is smaller and enforced in code:
 **Reject:**
 - The Algorithm as universal doctrine; tier ISC count floors (E4 ≥128 criteria);
   mandatory visual output formats; closed "thinking capability" enumerations;
-  pack-style distribution (cb's design-vision explicitly chose knowledge-first
-  composition over plugins); lightweight satisfaction-signal capture (Ian prefers
+  pack-style distribution (cb explicitly chose knowledge-first
+  composition over plugins — `callback-box/docs/design/extensibility.md`); lightweight satisfaction-signal capture (Ian prefers
   qualitative feedback; cb retro already mines transcripts qualitatively).

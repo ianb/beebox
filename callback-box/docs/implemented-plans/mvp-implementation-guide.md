@@ -1,11 +1,22 @@
-> **Note:** Several sections are now historical:
-> - References to "command cards", `box/commands/`, `cb do`, and `cb execute-commands` — the command card system has been removed; external actions are handled through the reactor/jobs model.
-> - References to a single "triage" agent / "triage" run-mode / `--agent triage` predate both the reactor and the new sorting pipeline. The current sorting pipeline (intake → triage → handle) is documented in `docs/triage.md`; legacy inbox processing runs through reactor jobs.
-> - Card format: most schemas are now YAML frontmatter + markdown body, not XML. Anywhere this doc shows an XML envelope or root tag, see the live schema in `src/schemas/` or `docs/cards-as-markdown.md` for the current shape.
+> **Status:** superseded — the MVP-era build plan, retained as history
+> (retired 2026-07-04 per `../plans/design-reconciliation.md`). Everything
+> still true in it is documented better in CLAUDE.md and the reference docs
+> that postdate it; current design rationale is `../design/README.md`. Known
+> wholesale-stale content: command cards / `cb do` / `cb exec` (removed —
+> reactor jobs + `cb finalize` now), the XML card format (YAML frontmatter +
+> markdown now, `../cards-as-markdown.md`), the "tailing phase" / `cb tail`
+> (never built — scheduling is `cb tick`, `../scheduler.md`), `agents.json` +
+> `claude --print` invocation (Agent SDK now), Signal as the DM channel
+> (Telegram shipped), the cardworks dependency (absorbed into `src/cards/`),
+> the single "triage" agent / run-modes (reactor batch/chat + the
+> intake→triage→handle pipeline now, `../triage.md`), and the
+> **"Git as the State Engine" opening** — superseded per ruling 13; the
+> surviving formulation is commit-as-durability,
+> `../design/durability-and-provenance.md`.
 
-# Callback Box: Implementation Guide
+# Callback Box: Implementation Guide (MVP era)
 
-This document describes how to build Callback Box, complementing design.md with concrete implementation details.
+This document describes how to build Callback Box, complementing the original design.md (since split into `docs/design/`) with concrete implementation details.
 
 ## Core Principle: Git as the State Engine
 
@@ -274,7 +285,7 @@ Each connector has a config card in `/config/connectors/`:
 /config/connectors/voice.connector.card
 ```
 
-Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's available but typically don't modify them. See [connectors.md](./connectors.md) for connector card examples.
+Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's available but typically don't modify them. See [connectors.md](../connectors.md) for connector card examples.
 
 ### How connectors work
 
@@ -398,7 +409,7 @@ Different command types require different authorization. For example:
 
 This structure lets agents document their reasoning, and lets humans (or validation rules) verify that commands are properly justified before execution.
 
-See [adding-schemas.md](./adding-schemas.md) for concrete card examples.
+See [adding-schemas.md](../adding-schemas.md) for concrete card examples.
 
 ### Dry run
 
@@ -495,7 +506,7 @@ Schemas define valid card structures using Zod (via cardworks).
 
 Schemas must be explicitly registered in `registry.ts`. A linter checks that all schemas are registered and that all card types have corresponding schemas.
 
-See [adding-schemas.md](./adding-schemas.md) for schema examples.
+See [adding-schemas.md](../adding-schemas.md) for schema examples.
 
 ### Validation and the agent loop
 
@@ -516,7 +527,7 @@ When an agent can't proceed, it creates a question card.
 
 ### Question card structure
 
-See [adding-schemas.md](./adding-schemas.md) for question card examples.
+See [adding-schemas.md](../adding-schemas.md) for question card examples.
 
 ### Input types
 

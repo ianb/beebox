@@ -22,9 +22,13 @@ current truth.
   one-off analyses. Filenames are date-stamped (`<topic>-YYYY-MM-DD.md`)
   because a report describes a moment, not an evolving truth — don't update
   one in place to reflect later reality; write a new one.
+- **`docs/design/`** — the engineering-rationale reference: why the system is
+  shaped this way, one small file per topic (split from the former
+  `design.md`, reconciled to boxholder rulings 2026-07-04). Peer of
+  `stack-decisions.md`; answers *why*, never *how to*.
 - **`docs/architecture/`** — the onboarding narrative series: longform,
   human-facing "what is this thing" writing. Not required reading, not a
-  design-rationale reference.
+  design-rationale reference (that's `docs/design/`).
 - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
   cross-reference index and narrative showcase. Regenerate with
   `pnpm doc-graph` after moving or renaming docs; never hand-edit.

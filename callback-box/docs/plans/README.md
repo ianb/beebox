@@ -90,7 +90,10 @@ discussion" and was never actually implemented; its earlier placement in
   reference-vs-proposal before moving: `activities-design.md`,
   `event-bus.md`, `photo-storage-investigation.md`. Left in place
   (some read more like vision/reference than active proposals — `design.md`,
-  `design-vision.md`, `stack-decisions.md` are reference and stay).
+  `design-vision.md`, `stack-decisions.md` were judged reference and stayed
+  at the time; on 2026-07-04 the design-reconciliation execution split
+  `design.md` into `docs/design/` and retired `design-vision.md` to
+  `unimplemented-plans/design-vision-superseded.md`).
   `design-card-views.md` has since moved to `unimplemented-plans/`
   (superseded by the shipped renderer registry, now
   `design-card-views-superseded.md`), `attach-implementation.md`

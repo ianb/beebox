@@ -338,9 +338,11 @@ design sections are written)*
    nothing enforces: candidate = a commit-time (or maintenance-cadence)
    check that a new doc has ≥1 inbound reference and no broken links;
    also fix doc-graph's `.claude/` blind spot so skill references count.
-8. **Long-doc splits** — NOT STARTED, gated on track 5 rulings
-   (DESIGN.md sections, ideas.md, moving cards-as-markdown's resolved
-   RFC body to implemented-plans with a short reference kept).
+8. **Long-doc splits** — the design.md split executes under track 5;
+   remaining item: move cards-as-markdown.md's resolved RFC body to
+   implemented-plans/ keeping a short format reference. ideas.md is
+   EXCLUDED by boxholder ruling (2026-07-04): it's a task tracker, a
+   separate kind of thing from reference docs — leave it alone.
 
 ## Open design questions
 

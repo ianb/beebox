@@ -80,7 +80,7 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 
 ## Key Concepts
 
-**Wakeup cycle** — `cb wakeup` syncs connectors → processes inbox → executes commands → archives → schedules next wakeup.
+**Wakeup cycle** — `cb wakeup` preprocesses inbox items → runs housekeeping + on-wakeup scripts → syncs connectors (creating job cards) → runs one reactor cycle over pending jobs → pushes to the box's git remote. The reactor (`src/core/reactor/DESIGN.md`) is the engine: find jobs → agent processing (batch or per-thread chat) → `cb finalize` flushes outbound. Recurring wakeups come from `cb tick` (`docs/scheduler.md`), not from wakeup itself.
 
 **Services** — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have observable state for testing. See `src/services/CLAUDE.md`.
 
@@ -110,8 +110,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 
 | Topic | Location |
 |-------|----------|
-| Design rationale | `docs/design.md` |
-| Implementation guide | `docs/implementation.md` |
+| Design rationale | `docs/design/README.md` |
 | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |
 | Doctest syntax | `.claude/rules/doctest.md`; deeper reference in the monorepo's `agent-doctest/docs/` |

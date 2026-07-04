@@ -31,7 +31,9 @@ Keep entries short. One paragraph max. Link to deeper docs rather than restating
 
 ## System concepts
 
-**wakeup cycle** — `cb wakeup` runs connectors → processes inbox → executes commands → archives → schedules next wakeup. The agent's main loop.
+**wakeup cycle** — One full sync-and-process pass. `cb wakeup` preprocesses inbox items → housekeeping + on-wakeup scripts → runs connectors (creating job cards) → one reactor cycle over pending jobs → pushes to the box's git remote. Recurring wakeups are fired by `cb tick` (`docs/scheduler.md`); outbound cards are flushed by `cb finalize`, not by an "execute commands" step. See `docs/design/processing.md`.
+
+**reactor** — The main processing loop (`src/core/reactor/DESIGN.md`): find job cards in `box/jobs/` → agent processing (batch jobs in one session; chat jobs with per-thread resumable sessions) → `cb finalize`. The wakeup cycle's engine.
 
 **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Connector.sync()`. See `src/connectors/CLAUDE.md`.
 

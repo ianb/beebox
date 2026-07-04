@@ -1,5 +1,17 @@
 # Callback Box: Design Vision and Architecture
 
+> **Status:** superseded by `../design/` (2026-07-04, rulings in
+> `../plans/design-reconciliation.md`). Harvest map: the OS vision →
+> `../design/identity.md` (ruling 3); landmarks — the shipped role-bearing-card
+> definition is the intended design, this doc's "activity centers" phrasing is
+> retired (ruling 17; `../landmarks.md`); extensibility-through-knowledge →
+> `../design/extensibility.md` (ruling 18 — active plan, neither knowledge nor
+> plugins exist yet); modes / "chat instructions" → `../design/extensibility.md`
+> (ruling 19 — not user-facing vocabulary; concepts ship as composed features);
+> categories → implemented as the triage pipeline (`../triage.md`). Whisper/
+> Foxtel is stale (transcription direction is Mistral Voxtral,
+> `../stack-decisions.md` Decision 18).
+
 Callback Box is a personal automation and content management system built on git as the coordination layer, with Claude Code as the development environment. The system is organized around several core concepts and interaction modes that work together coherently.
 
 ## Core Organizational Concepts

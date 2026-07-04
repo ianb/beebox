@@ -7,6 +7,18 @@
 - **SSR lint rule.** Consider a lint rule forcing `useSSRMachine` over `@xstate/react`'s `useMachine` in frontend components, so SSR safety isn't convention-only.
 - **Knip exports enforcement.** `knip.json` excludes the `exports` check; removing the exclusion surfaces ~277 unused exports (measured 2026-07). Burn down the backlog, then re-enable so "only export what's needed" is machine-enforced.
 
+## Git-replay testing
+
+(Salvaged 2026-07-04 from the retired MVP implementation guide,
+`implemented-plans/mvp-implementation-guide.md`.) Git gives the box time
+travel: every state change is a commit, so a debugging/testing mode could
+check out any historical commit and re-run processing from that state, or run
+twice from the same starting point and diff the results — commits as the unit
+of "what happened." Scenario fixtures (`src/scenario/`) cover the synthetic
+side; this is the replay-real-history complement. Open sub-question from the
+same doc: verbose logs would need to live outside the replayed timeline so a
+checkout doesn't mix logs from two histories.
+
 ## MAP.md for docs/generated/
 
 The per-box `docs/generated/` tree is fully templated from this repo by `cb init` / `generateDocs` — every box gets the same contents. The recursive box-side MAP generator hides this subtree (it's not box-specific information), so agents working in a box currently have no index of what's in `docs/generated/`.
@@ -614,7 +626,7 @@ Consider a `docs/cli-design.md` that codifies these so new commands have a check
 2. `cb agent-context` — machine-readable JSON describing the full command surface, versioned with a `schema_version` field so a consuming agent can detect breaking shape changes. Flags, types, enums, defaults, required/optional — everything an agent needs to form a valid invocation without a trial-and-error loop.
 3. Skill manifests (`SKILL.md` or equivalent) — long-form prose describing *workflows*, not commands: how to compose operations into useful sequences, what to reach for in which situation.
 
-`cb` currently has only layer 1. Layer 2 would be straightforward to generate from the existing command definitions (yargs schema → JSON). Layer 3 is essentially what `docs/implementation.md` and `.claude/rules/` already do for the Claude Code context — the question is whether to also surface them in a form a non-Claude agent could consume. Both layers 2 and 3 should be kept in sync with the implementation by the same generation step, not maintained by hand.
+`cb` currently has only layer 1. Layer 2 would be straightforward to generate from the existing command definitions (yargs schema → JSON). Layer 3 is essentially what CLAUDE.md, `docs/`, and `.claude/rules/` already do for the Claude Code context — the question is whether to also surface them in a form a non-Claude agent could consume. Both layers 2 and 3 should be kept in sync with the implementation by the same generation step, not maintained by hand.
 
 **Vocabulary consistency** is the highest-leverage item and the hardest to maintain through review alone. Agents don't relearn each CLI from scratch — they generalize from every CLI they've seen, so a command that uses `info` instead of `get`, or `--format=json` instead of `--json`, costs extra retries across every agent invocation, not just the first one. The fix isn't better reviewers; it's a prescriptive vocabulary document that defines the permitted verbs and flags, and a static check that fails on deviations. The `cb` command family is small enough that the vocabulary could be enumerated explicitly: `get`, `list`, `create`, `update`, `delete`; `--json`, `--force`, `--dry-run`, `--limit`, `--cursor`. Any new command picks from this menu. Additions to the menu require updating the doc, not ad hoc review.
 

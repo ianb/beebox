@@ -1,6 +1,6 @@
 # Design reconciliation — adjudication list
 
-**Status:** active — rulings recorded 2026-07-04; rewrite phase pending
+**Status:** implemented 2026-07 — rulings recorded and executed; see docs/design/
 
 The design documents disagree with each other and with the code, and none of them
 can be presumed right: the boxholder's design preferences have been developing
@@ -500,6 +500,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 ---
 
 ## The two-narratives question: proposed roles
+
+Executed 2026-07-04 — see docs/design/. (Citations below are the historical
+record; the paths they name have since moved.)
 
 The docs-reorg survey flagged "two competing 'what is this system' narratives
 … never cross-referenced" (docs/plans/docs-reorg.md:195-199) and

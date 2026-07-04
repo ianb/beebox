@@ -18,3 +18,4 @@ Contrast with the siblings:
 | `design-card-views-superseded.md` | Superseded by the shipped renderer system: `src/frontend/src/renderers/` + the file-types registry, keyed off frontmatter `type` rather than this doc's XML `tagName`-based plugin registry. |
 | `query-cards.md` | Parked 2026-07-03; vocabulary explored but not planned for implementation. Parent design lives on in `../plans/interface-as-cards.md`. |
 | `capture-pipeline-redesign.md` | Parked 2026-03 — direction (simpler capture pipeline) may still be relevant; OCR vendor pricing in body is stale. |
+| `design-vision-superseded.md` | Superseded by `../design/` (2026-07-04) — each section adjudicated in `../plans/design-reconciliation.md` (rulings 3, 17, 18, 19); survivors harvested into `../design/identity.md`, `../design/extensibility.md`, `../design/representation.md`. |
