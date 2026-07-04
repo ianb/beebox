@@ -145,6 +145,7 @@
   <nav class="toc">
     <a href="#why">Why</a> <a href="#nouns">The three nouns</a>
     <a href="#map">System map</a> <a href="#flows">Flows, step by step</a>
+    <a href="#stances">Two stances</a>
     <a href="#ifaces">The interfaces</a> <a href="#mapping">Today → tomorrow</a>
     <a href="#decisions">Decisions</a>
   </nav>
@@ -303,6 +304,94 @@
       <button id="restart">Restart</button>
       <span class="pos" id="pos"></span>
     </div>
+  </div>
+
+  <h2 id="stances">Two stances: conversation and listening</h2>
+  <p>Everything above assumes one interaction stance — <b>conversation</b>: mic hot,
+  turn-taking active, speech ephemeral. There is a second, motivated by real friction
+  (trying to <i>learn</i> from a long spoken answer while a hot mic keeps hearing the
+  room as "interruptions," with no way back to a missed sentence).</p>
+  <div class="cols">
+    <div class="card">
+      <h3>Conversation</h3>
+      <p><b>Mic hot.</b> Barge-in active — your speech pauses the agent's (the one
+      sanctioned crossing). Speech output is ephemeral; the exchange is the point.
+      Everything specified above, unchanged.</p>
+    </div>
+    <div class="card">
+      <h3>Listening</h3>
+      <p><b>Mic cold.</b> Podcast posture: a long generation plays through a
+      <b>seekable Player</b> — pause, rewind 15s, scrub the synced transcript, set
+      the rate. Ambient sound <i>cannot</i> interrupt, because nothing is listening.
+      Received speech is <b>retained</b> (audio + transcript), so rewind is a fetch,
+      not a regret.</p>
+    </div>
+  </div>
+  <div class="map">
+    <svg viewBox="0 0 900 210" role="img" aria-label="Stance transitions">
+      <defs><marker id="sa" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+        <path d="M0 0 L10 5 L0 10 z" fill="#6b6257"/></marker></defs>
+      <rect x="20"  y="60" width="230" height="80" rx="12" fill="#e2edf0" stroke="#a9c4cc"/>
+      <text class="lbl" x="40" y="88">LISTENING · playing</text>
+      <text x="40" y="110">mic cold · seekable</text>
+      <text class="soft" x="40" y="128">input parked</text>
+      <rect x="340" y="60" width="230" height="80" rx="12" fill="#f4ecd4" stroke="#d8c88a"/>
+      <text class="lbl" x="360" y="88">LISTENING · paused</text>
+      <text x="360" y="110">still mic cold</text>
+      <text class="soft" x="360" y="128">pause is about the room</text>
+      <rect x="660" y="60" width="220" height="80" rx="12" fill="#f6e3d8" stroke="#d9a88b"/>
+      <text class="lbl" x="680" y="88">CONVERSATION</text>
+      <text x="680" y="110">mic hot · barge-in</text>
+      <text class="soft" x="680" y="128">playback marker rides in</text>
+      <g stroke="#6b6257" stroke-width="1.6" fill="none" marker-end="url(#sa)">
+        <path d="M250 85 H 338"/>
+        <path d="M338 115 H 260"/>
+        <path d="M570 85 H 658"/>
+        <path d="M660 150 Q 640 190 460 190 H 200 Q 135 190 135 145"/>
+        <path d="M135 58 Q 135 20 300 20 H 590 Q 700 20 720 56"/>
+      </g>
+      <text class="soft" x="272" y="78">pause</text>
+      <text class="soft" x="278" y="132">resume</text>
+      <text class="soft" x="576" y="78">“talk” — explicit</text>
+      <text class="soft" x="380" y="182">return · position kept</text>
+      <text class="soft" x="330" y="14">pause-and-talk: one explicit gesture, straight from playing</text>
+    </svg>
+  </div>
+  <div class="note"><b>Pause is just pause.</b> In listening posture, a pause most
+  likely means the room interrupted <i>you</i> — the doorbell, not a question. So
+  pausing never arms the mic; entering conversation is always an <b>explicit act</b>
+  (from paused, or the one-gesture pause-and-talk). And when you do cross over,
+  <b>where-you-were rides along as a selection</b>: the playback marker enters the
+  emission through the same <code>addSelection</code> path a card selection uses —
+  <code>ref</code> = the retained utterance, <code>text</code> = the last words
+  before the pause, <code>position</code> = the timestamp. Your "wait, what did you
+  mean there?" arrives carrying its own context.</div>
+
+  <div class="iface" style="margin-top:1.25rem">
+<pre><code><span class="hl-k">type</span> <span class="hl-t">InteractionMode</span> = <span class="hl-s">"conversation"</span> | <span class="hl-s">"listening"</span>;
+
+<span class="hl-k">interface</span> <span class="hl-t">Player</span> {  <span class="hl-c">// the target's long-form speech, seekable</span>
+  <span class="hl-k">readonly</span> state: <span class="hl-t">Observable</span>&lt;{
+    status: <span class="hl-s">"playing"</span> | <span class="hl-s">"paused"</span> | <span class="hl-s">"ended"</span>;
+    position: <span class="hl-t">number</span>; duration: <span class="hl-t">number</span> | <span class="hl-t">null</span>;
+  }&gt;;
+  play(); pause();
+  seek(to); nudge(seconds); setRate(rate);
+  <span class="hl-k">readonly</span> transcript:
+    <span class="hl-t">Observable</span>&lt;<span class="hl-k">readonly</span> <span class="hl-t">TranscriptSegment</span>[]&gt;;
+}</code></pre>
+    <aside>
+      <p><b>The Player hangs off the target</b> — it's the target's output surface,
+      sibling to the status strip. The input stays untouched; in listening mode the
+      voice feeder isn't "coordinated," it's <b>off</b>.</p>
+      <p><b>One wire flips the mode.</b> The barge-in crossing
+      (<code>coordinate()</code>) was already the right seam — listening mode is that
+      crossing suspended, not a new architecture. <code>InteractionMode</code> is
+      frame state, like everything ephemeral.</p>
+      <p><b>Retention symmetry.</b> Your audio is retained by emission id; the
+      agent's long utterances get the same treatment — which is what playback
+      markers point at, and what makes rewind possible at all.</p>
+    </aside>
   </div>
 
   <h2>The emission's lifecycle</h2>
@@ -608,6 +697,30 @@ const SCENARIOS = [
         note:"The PlaceTarget wraps today's capture apparatus — session, upload, finalize." },
       { f:4, t:1, label:"receipt: deposited { cardPath }",
         note:"<b>A deposit's receipt is a card address</b> — box/inbox/….capture-session.card. The toast links straight to it. Interface-as-cards and the input meet here." },
+    ],
+  },
+  {
+    name: "Listening: rewind, pause, ask",
+    actors: ["You", "Player", "Input", "Emission", "ChatTarget"],
+    steps: [
+      { f:0, t:4, label:"“teach me about transformers”",
+        note:"A brief conversational ask — then the answer comes back <b>long-form</b>, and the frame drops into <b>listening mode</b>." },
+      { f:4, t:1, label:"long generation → seekable playback",
+        note:"<b>Mic goes cold.</b> The voice feeder isn't coordinated — it's off. The room can cough, the doorbell can ring: nothing is listening, so nothing interrupts." },
+      { f:0, t:1, label:"missed that — rewind 15s",
+        note:"Received speech is <b>retained</b> (audio + synced transcript), so rewind is a fetch, not a regret. Scrub, re-listen, change the rate." },
+      { f:0, t:1, label:"doorbell → pause",
+        note:"<b>Pause is just pause.</b> In listening posture a pause most likely means the room interrupted you. The mic stays cold; nothing changes mode." },
+      { f:0, t:1, label:"resume",
+        note:"Back to the lecture, exactly where you were." },
+      { f:0, t:1, label:"pause-and-talk (explicit)",
+        note:"Entering conversation is always a <b>deliberate act</b> — one gesture from playing, or “talk” from paused. Never automatic." },
+      { f:1, t:3, label:"playback marker → addSelection",
+        note:"<b>Where-you-were is selection-shaped</b>: ref = the retained utterance, text = the last words before the pause, position = 12:34. Same path a card selection takes into the emission." },
+      { f:0, t:2, label:"“wait — the second reason?” → submit",
+        note:"Your question carries its own context. The agent knows exactly which sentence you're asking about without you re-explaining." },
+      { f:4, t:1, label:"answer → return, position kept",
+        note:"Conversation resolves; listening resumes where the marker was. The player yielded, it never lost your place." },
     ],
   },
   {
