@@ -39,7 +39,7 @@ import type { Socket } from "node:net";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import httpProxy from "http-proxy-3";
-import type { EndpointProvider } from "./endpoints.js";
+import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import type { BoxRuntimeStatus } from "./supervisor.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
@@ -102,6 +102,26 @@ function isWebhookPath(reqPath: string): boolean {
 
 function slugForPath(reqPath: string): string | null {
   return isWebhookPath(reqPath) ? parseWebhookSlug(reqPath) : parseSlug(reqPath);
+}
+
+/**
+ * The single resolve path EVERY proxied HTTP route (the catch-all below and
+ * the dedicated `/auth/google-services/callback` route) must use. A lazy
+ * provider's `ensureRunning` already both cold-starts a stopped box AND
+ * refreshes its idle timer when it's already running (`Supervisor.
+ * ensureRunning`'s `touch()` call on the "running" branch) -- so routing
+ * `get()`-then-`ensureRunning()`-on-miss (the pre-fix shape) only cold-starts
+ * but never refreshes activity for a box that's already up, letting an
+ * actively-used box's idle timer expire out from under live traffic. Always
+ * preferring `ensureRunning` when the provider offers it fixes that with no
+ * new provider surface; a provider without it (e.g. a test's
+ * `staticEndpointProvider`) falls back to plain `get()`, unchanged from
+ * before. WS upgrades deliberately do NOT go through this helper -- see the
+ * "upgrade" handler below for why.
+ */
+async function resolveEndpoint(slug: string, endpoints: EndpointProvider): Promise<Endpoint | undefined> {
+  if (endpoints.ensureRunning) return endpoints.ensureRunning(slug);
+  return endpoints.get(slug);
 }
 
 const HUB_HEADER_PREFIX = "x-cb-";
@@ -244,7 +264,17 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const { state } = request.query as { state?: string };
     const colonIdx = (state ?? "").indexOf(":");
     const boxSlug = colonIdx !== -1 ? (state ?? "").slice(0, colonIdx) : (state ?? "");
-    const endpoint = boxSlug ? endpoints.get(boxSlug) : undefined;
+    // Routed through the same `resolveEndpoint` helper as every other
+    // proxied route (P2 review fix): a lazy hub's box may have been
+    // idle-collected while the user was slow on Google's consent screen --
+    // without this, the callback 400s as "unknown_box" even though the box
+    // is configured, just not currently running.
+    let endpoint: Endpoint | undefined;
+    try {
+      endpoint = boxSlug ? await resolveEndpoint(boxSlug, endpoints) : undefined;
+    } catch (e) {
+      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
+    }
     if (!endpoint) {
       return reply.status(400).send({ error: "unknown_box", message: `Unknown box in OAuth state: ${JSON.stringify(boxSlug)}` });
     }
@@ -302,17 +332,18 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const slug = slugForPath(reqPath);
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,
-    // same as bin/router.ts's ensureRunning does for a whole worktree. A
-    // non-lazy Supervisor's ensureRunning is just get() under the hood, so
-    // this one call covers both hub flavors; a provider without the method
-    // at all (e.g. a test's staticEndpointProvider) falls back to plain get().
-    let endpoint = slug ? endpoints.get(slug) : undefined;
-    if (!endpoint && slug && endpoints.ensureRunning) {
-      try {
-        endpoint = await endpoints.ensureRunning(slug);
-      } catch (e) {
-        return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
-      }
+    // same as bin/router.ts's ensureRunning does for a whole worktree, AND
+    // (unlike a plain get()) refreshes the idle timer when the box is
+    // already running -- see resolveEndpoint's doc comment for why this
+    // must be the ONLY resolve path every HTTP route uses. A non-lazy
+    // Supervisor's ensureRunning is just get() under the hood, so this one
+    // call covers both hub flavors; a provider without the method at all
+    // (e.g. a test's staticEndpointProvider) falls back to plain get().
+    let endpoint: Endpoint | undefined;
+    try {
+      endpoint = slug ? await resolveEndpoint(slug, endpoints) : undefined;
+    } catch (e) {
+      return reply.status(502).send({ error: "bad_gateway", message: describeHubError(e) });
     }
     if (!endpoint) {
       return reply.status(404).send({ error: "not_found", message: `No running box for ${JSON.stringify(reqPath)}` });

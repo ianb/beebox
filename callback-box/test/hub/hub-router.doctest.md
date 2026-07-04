@@ -243,6 +243,22 @@ lazyProvider.ensureCalls
 => 1
 ```
 
+A SECOND request while the box is still running goes through `ensureRunning`
+again too, not a plain `get()` (P1 review fix) -- this is what lets a real
+`Supervisor.ensureRunning` refresh its idle timer on every request, not just
+the cold-starting one. Without this, an actively-polled box's idle timer set
+at cold-start would never be touched again and it would get SIGTERM'd out
+from under live traffic:
+
+```ts continue
+const warmResponse = await fetch(`${lazyHub.base}/lazybox/browse/y`);
+warmResponse.status
+=> 200
+
+lazyProvider.ensureCalls
+=> 2
+```
+
 A WebSocket upgrade to that same slug once it's stopped again gets a 503
 (known slug, not running) -- never a 404, and `ensureRunning` is NOT called
 (an abandoned tab's WS reconnect must not resurrect the box):
@@ -254,7 +270,7 @@ idleUpgrade.startsWith("HTTP/1.1 503")
 => true
 
 lazyProvider.ensureCalls
-=> 1
+=> 2
 ```
 
 ```ts continue
@@ -349,6 +365,34 @@ delete process.env.CB_SESSION_SECRET;
 for (const socket of authedHub.sockets) socket.destroy();
 await new Promise((resolve) => authedHub.server.close(resolve));
 await ownedBox.cleanup();
+```
+
+## The Google-services callback also cold-starts an idle-collected box (P2 review fix)
+
+A user slow on Google's consent screen may come back after the target box
+was idle-collected. The callback route must resolve through the SAME
+`ensureRunning`-preferring helper as the catch-all, not a plain `get()` that
+would 400 as `unknown_box` even though the box is configured.
+
+```ts continue
+const oauthLazyProvider = makeLazyProvider({ slug: "oauthlazybox", origin: box.origin });
+const oauthLazyHub = await startHub(oauthLazyProvider, { boxes: [{ slug: "oauthlazybox", boxRoot: "/nonexistent/oauthlazybox" }] });
+
+const oauthColdResponse = await fetch(`${oauthLazyHub.base}/auth/google-services/callback?code=abc123&state=oauthlazybox:admin`);
+oauthColdResponse.status
+=> 200
+
+oauthLazyProvider.ensureCalls
+=> 1
+
+const oauthColdBody = await oauthColdResponse.json();
+oauthColdBody.url
+=> /auth/google-services/callback?code=abc123&state=oauthlazybox:admin
+```
+
+```ts continue
+for (const socket of oauthLazyHub.sockets) socket.destroy();
+await new Promise((resolve) => oauthLazyHub.server.close(resolve));
 ```
 
 ## `/api/boxes` is hub-owned, matching the standalone server's shape
