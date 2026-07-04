@@ -240,3 +240,17 @@ Three distinct philosophies:
    by design), wake-word/telephony (no native-device story to hang it on), and
    explicit cache-boundary engineering (Claude Code owns the prompt lifecycle;
    revisit only if CBX ever leaves the preset).
+
+## Addendum (2026-07-04): OpenClaw CLI command groups, enumerated
+
+Boxholder asked to see the actual groups behind "large lazy-registered CLI (~20 groups)" — undercounted: `docs/cli/` documents **58 top-level command groups**. Grouped by theme:
+
+- **Core agent/chat:** `agent` (run a turn), `agents` (multi-agent CRUD + bindings), `tui` (terminal chat UI), `message` (send/broadcast outbound), `sessions`, `transcripts`, `infer` (one-shot LLM call), `models` (list/status/failover config)
+- **Proactivity:** `cron`, `commitments`, `tasks`, `workboard`, `flows`
+- **Channels/devices:** `channels` (login/status/probe per platform), `pairing`, `devices`, `nodes` + `node` (companion-device control), `qr`, `voicecall`, `webhooks`, `message`
+- **Gateway/ops:** `gateway` (start/stop/status), `daemon`, `proxy`, `dns`, `dashboard` (control UI), `logs`, `status`, `health`, `doctor` (diagnose + `--fix` config migrations), `backup`, `migrate` (import from Claude/Hermes), `reset`, `uninstall`, `update`, `system`
+- **Extensibility:** `plugins`, `skills`, `mcp`, `hooks`, `acp`, `browser` (agent browser automation), `memory` (index/search/status), `attach`
+- **Config/security:** `config` (get/set/unset), `configure`/`setup`/`onboard` (wizards), `approvals` (exec-approval policy), `sandbox`, `secrets`, `security` (audit), `policy`, `path`, `directory`
+- **Misc:** `completion`, `docs`, `wiki`, `clawbot` (legacy alias), `crestodian` (their mascot/easter-egg maintenance persona)
+
+Contrast with `cb`: this is the cost side of the daemon/gateway architecture — a large share of these groups (gateway, daemon, proxy, dns, pairing, devices, nodes, doctor-fix, channels-login) exist to *operate the always-on service and its device fleet*, a surface CBX doesn't have because boxes are directories and the router/worktree layer is dev-side. The groups that map to real CBX functionality (agent, cron, skills, memory, config, validate-ish doctor) are a small subset.
