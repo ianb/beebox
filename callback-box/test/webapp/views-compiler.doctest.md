@@ -235,10 +235,13 @@ errorJs.includes("export default")
 
 ## Listing views
 
-`listViews` scans a box's `views/` directory:
+`listViews` resolves the views directory from the box's shape (via
+`getBoxShape`/`boxCodePaths`), so it needs a `.cb-box` marker — an empty one
+is shape 1 (legacy), whose views directory is `boxRoot/views`:
 
 ```ts
 const tmp3 = await mkdtemp(join(tmpdir(), "views-test-"));
+await writeFile(join(tmp3, ".cb-box"), "");
 
 // No views/ directory — returns empty
 const empty = await listViews(tmp3);
@@ -281,10 +284,11 @@ JSON.stringify(names)
 => ["Dashboard","Summary"]
 ```
 
-A view that fails to compile still reports its regex-extracted `rendersCardTypes`
-(and name), flagged `description: "Failed to compile"` — so a card bound to a
-view with a transient compile error keeps its custom renderer (which shows the
-inline compile error) instead of silently falling back to the built-in renderer.
+A view that fails to compile still appears in the listing — degraded to its
+filename and a `description: "Failed to compile"` marker — rather than
+silently vanishing. Metadata now comes from importing the real module, so a
+view that can't even compile has no metadata to import; `rendersCardTypes`
+degrades to empty rather than being preserved (unlike the old regex fallback):
 
 ```ts continue
 await writeFile(join(viewsDir3, "broken.tsx"), `
@@ -299,5 +303,22 @@ export default function Broken() {
 const withBroken = await listViews(tmp3);
 const broken = withBroken.find(v => v.slug === "broken");
 JSON.stringify([broken.name, broken.rendersCardTypes, broken.description])
-=> ["Broken View",["broken-type"],"Failed to compile"]
+=> ["broken",[],"Failed to compile"]
+```
+
+A view whose module never finishes evaluating (an infinite loop at module
+scope) can't hang the lister — the subprocess import is timeout-bounded, so
+it degrades the same way a compile failure does:
+
+```ts continue
+await writeFile(join(viewsDir3, "hangs.tsx"), `
+export const name = "Hangs";
+while (true) {}
+export default function Hangs() { return null; }
+`);
+
+const withHang = await listViews(tmp3);
+const hung = withHang.find(v => v.slug === "hangs");
+JSON.stringify([hung.name, hung.description])
+=> ["hangs","Failed to compile"]
 ```

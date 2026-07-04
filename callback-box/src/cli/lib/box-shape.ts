@@ -121,3 +121,69 @@ async function requireCallbackBoxDependency(packageRoot: string, boxRoot: string
 function describeError(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
 }
+
+/** The three code directories a box's engine-facing loaders read: schemas, views, tricks. */
+export interface BoxCodePaths {
+  schemasDir: string;
+  viewsDir: string;
+  tricksDir: string;
+}
+
+/**
+ * Resolve a box's code directories from its shape. Legacy (shapeVersion 1)
+ * boxes keep code inside the operational root (`boxRoot`); shapeVersion 2
+ * boxes moved code out to the package root's `src/` (see "The box
+ * repository" in `docs/plans/boxes-as-packages-v2.md`) — everything else
+ * left in `boxRoot` is operational data.
+ */
+/**
+ * For a v2 box, `config/schemas/` inside the operational root (`boxRoot`) is
+ * a legacy location — schemas now live in `src/schemas/` at the package
+ * root (`boxCodePaths`' `schemasDir`). A stray `*.ts` file left there is
+ * invisible to the schema loader (which only reads the v2 path) and to the
+ * PostToolUse validate hook (`config/schemas/*.ts` isn't a card path, so the
+ * hook exits 0 silently) — without this check a misplaced schema never
+ * loads and nothing says why. Returns the misplaced file names (empty for a
+ * v1 box, or when nothing is misplaced).
+ */
+export async function findLegacySchemaFiles(shape: BoxShape): Promise<string[]> {
+  if (shape.shapeVersion === LEGACY_SHAPE_VERSION) return [];
+  const legacyDir = path.join(shape.boxRoot, "config/schemas");
+  let entries: string[];
+  try {
+    entries = await fs.readdir(legacyDir);
+  } catch (_e) {
+    // Missing (or unreadable) legacy dir is the expected, common case for a
+    // v2 box that never had one — nothing actionable to log.
+    return [];
+  }
+  return entries.filter((f) => f.endsWith(".ts") && !f.startsWith(".")).toSorted();
+}
+
+/**
+ * Human-readable error for `findLegacySchemaFiles` results — shared by `cb
+ * validate` and `cb status` so the two surfaces say exactly the same thing.
+ */
+export function describeLegacySchemaFiles(shape: BoxShape, files: string[]): string {
+  const list = files.map((f) => `config/schemas/${f}`).join(", ");
+  return (
+    `Found ${String(files.length)} schema file(s) in the legacy location: ${list}. ` +
+    "This box uses the package layout — schemas live in src/schemas/ at the " +
+    `package root now (${shape.packageRoot}). Move them there.`
+  );
+}
+
+export function boxCodePaths(shape: BoxShape): BoxCodePaths {
+  if (shape.shapeVersion === LEGACY_SHAPE_VERSION) {
+    return {
+      schemasDir: path.join(shape.boxRoot, "config/schemas"),
+      viewsDir: path.join(shape.boxRoot, "views"),
+      tricksDir: path.join(shape.boxRoot, "tricks"),
+    };
+  }
+  return {
+    schemasDir: path.join(shape.packageRoot, "src/schemas"),
+    viewsDir: path.join(shape.packageRoot, "src/views"),
+    tricksDir: path.join(shape.packageRoot, "src/tricks"),
+  };
+}

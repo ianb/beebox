@@ -6,6 +6,9 @@ import { Command } from "commander";
 import { getSystemState, type CardInfo } from "../../core/state.js";
 import { listParkedTemplateUpdates } from "../../core/install-template-file.js";
 import { requireBoxRoot } from "../lib/paths.js";
+import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../lib/box-shape.js";
+import { loadBoxSchemas } from "../../schemas/registry.js";
+import { listSchemaLoadFailures } from "../../schemas/schema-load-status.js";
 
 export const statusCommand = new Command("status")
   .description("Show current state summary")
@@ -65,6 +68,31 @@ export const statusCommand = new Command("status")
           }
           console.log("  Accept one by copying config/_template-updates/<path> over config/<path>, or discard the parked copy.");
         }
+      }
+
+      // Box-local schema load failures: keep-last-good means a broken save
+      // doesn't blank the type, but the failure itself needs to be seen.
+      // loadBoxSchemas populates listSchemaLoadFailures for THIS process, so
+      // trigger a load before reading it — a fresh `cb status` invocation
+      // otherwise starts with an empty in-memory map.
+      await loadBoxSchemas(boxRoot);
+      const schemaFailures = listSchemaLoadFailures(boxRoot);
+      if (schemaFailures.length > 0) {
+        console.log(`Schema load failures: ${schemaFailures.length}`);
+        if (options.verbose) {
+          for (const failure of schemaFailures) {
+            console.log(`  - ${failure.file}: ${failure.message}`);
+          }
+        }
+      }
+
+      // Legacy schema path: a v2 box with stray *.ts files under
+      // config/schemas/ (the pre-package location) — invisible to the loader
+      // and to the validate hook, so call it out explicitly.
+      const shape = await getBoxShape(boxRoot);
+      const legacySchemaFiles = await findLegacySchemaFiles(shape);
+      if (legacySchemaFiles.length > 0) {
+        console.log(describeLegacySchemaFiles(shape, legacySchemaFiles));
       }
 
       // Recent activity

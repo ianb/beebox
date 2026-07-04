@@ -9,12 +9,24 @@ fail-closed so box-owned code never silently resolves against the wrong
 `node_modules`.
 
 ```ts setup
-import { getBoxShape, BoxShapeError } from "../src/cli/lib/box-shape.js";
+import * as path from "node:path";
+import { getBoxShape, boxCodePaths, BoxShapeError } from "../src/cli/lib/box-shape.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const tryGetBoxShape = async (boxRoot) => {
   try { await getBoxShape(boxRoot); return null; }
   catch (e) { return e; }
+};
+
+// Paths relative to the box's temp root, so temp dir names never appear in
+// expected output.
+const relCodePaths = (box, shape) => {
+  const paths = boxCodePaths(shape);
+  return {
+    schemasDir: path.relative(box.root, paths.schemasDir),
+    viewsDir: path.relative(box.root, paths.viewsDir),
+    tricksDir: path.relative(box.root, paths.tricksDir),
+  };
 };
 ```
 
@@ -112,6 +124,34 @@ await box.write(".cb-box", JSON.stringify({ shapeVersion: 3 }));
 const err = await tryGetBoxShape(box.root);
 JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, needsNewer: err.message.includes("newer callback-box") })
 => {"isBoxShapeError":true,"needsNewer":true}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `boxCodePaths` for a legacy (shape 1) box: code lives inside the box root
+
+```ts
+const box = await makeTmpBox();
+const shape = await getBoxShape(box.root);
+JSON.stringify(relCodePaths(box, shape))
+=> {"schemasDir":"config/schemas","viewsDir":"views","tricksDir":"tricks"}
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `boxCodePaths` for a shape 2 box: code lives at the package root's `src/`
+
+```ts
+const box = await makeTmpBox();
+await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
+await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": "0.1.0" } }));
+const shape = await getBoxShape(box.path("content"));
+JSON.stringify(relCodePaths(box, shape))
+=> {"schemasDir":"src/schemas","viewsDir":"src/views","tricksDir":"src/tricks"}
 ```
 
 ```ts cleanup

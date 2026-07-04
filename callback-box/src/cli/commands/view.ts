@@ -25,18 +25,15 @@
 
 import { Command } from "commander";
 import * as path from "node:path";
-import * as os from "node:os";
 import { promises as fs } from "node:fs";
-import { pathToFileURL } from "node:url";
-import { createRequire } from "node:module";
-import { randomUUID } from "node:crypto";
 import { spawn } from "node:child_process";
 import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../lib/paths.js";
-import { compileView, listViews } from "../../webapp/views/compiler.js";
+import { compileView, listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
+import { writeNodeViewModule } from "../../webapp/views/node-view-runtime.js";
 import { viewLintCommand } from "./view-lint.js";
 import { loadViewCards } from "../../core/view-cards.js";
 import { typecheckViews } from "./view-typecheck.js";
@@ -125,7 +122,8 @@ interface RenderViewOptions {
  */
 async function renderView(options: RenderViewOptions): Promise<number> {
   const { boxRoot, slug, focusPath, raw, allowInvalidCards } = options;
-  const viewPath = path.join(boxRoot, "views", `${slug}.tsx`);
+  const { viewsDir, boxShape } = await resolveViewsDir(boxRoot);
+  const viewPath = path.join(viewsDir, `${slug}.tsx`);
   try {
     await fs.access(viewPath);
   } catch (_e) {
@@ -133,7 +131,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
   }
 
   // Compile for Node (real React) and load the same data the app passes.
-  const { output, meta } = await compileView(viewPath, { target: "node" });
+  const { output, meta } = await compileView(viewPath, { target: "node", boxShape });
   const { cards, files, skipped } = await loadViewCards(boxRoot, meta.dependencies);
 
   // --path sets params.path (it does NOT filter cards — the running app
@@ -152,36 +150,13 @@ async function renderView(options: RenderViewOptions): Promise<number> {
 
   // The compiled module imports `react`/`react/jsx-runtime` as bare specifiers
   // and must resolve them to the SAME instance the host react-dom/server uses
-  // (single instance — hooks work, no dispatcher mismatch). Node resolves bare
-  // imports by walking up `node_modules`, so the temp file needs a node_modules
-  // with react next to it. We use an OS-temp dir (writable everywhere — on prod
-  // /opt/callback is read-only to the box user, so the old node_modules/.cache
-  // location failed with EACCES) and symlink in the package's node_modules;
-  // Node dedupes by realpath, so react resolves to the one host copy.
-  // The node_modules that actually contains react — hoisted to the workspace
-  // root in dev, /opt/callback/node_modules on prod — resolved at runtime so the
-  // symlink points at the real copy regardless of layout.
-  const reactNodeModules = path.dirname(
-    path.dirname(
-      createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
-    ),
-  );
-  // The view module sits one level below tmpDir so module resolution walks two
-  // node_modules: the inner one resolves `callback-box/view-widgets` (a symlink
-  // to the package root → its `exports` map → dist/view-widgets/index.js), and
-  // the outer one resolves bare `react`/`react/jsx-runtime`/`tailwind-merge` to
-  // the one host copy (dedup by realpath). The inner can't go in the outer
-  // node_modules because that's a symlink into the shared workspace tree.
-  const tmpDir = path.join(os.tmpdir(), `cb-view-${randomUUID()}`);
-  const innerDir = path.join(tmpDir, "view");
-  await fs.mkdir(path.join(innerDir, "node_modules"), { recursive: true });
-  const tmpFile = path.join(innerDir, "view.mjs");
+  // (single instance — hooks work, no dispatcher mismatch). writeNodeViewModule
+  // sets up a temp node_modules for the box's shape: a legacy box has no real
+  // node_modules of its own, so it resolves through the running callback-box's
+  // copies; a package box carries a real node_modules/callback-box (and react
+  // beside it), so it resolves through THAT directly.
+  const mod = await writeNodeViewModule(output, boxShape);
   try {
-    // Inside the try so a partial setup (e.g. disk full) is still cleaned up by
-    // the finally; fs.rm(recursive, force) is a no-op if nothing was created.
-    await fs.symlink(reactNodeModules, path.join(tmpDir, "node_modules"), "dir");
-    await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "callback-box"), "dir");
-    await fs.writeFile(tmpFile, output, "utf-8");
     process.setSourceMapsEnabled(true);
 
     // Import (module evaluation) and render share one diagnostic block so a
@@ -189,7 +164,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     // throw does — both are the same class of authoring bug.
     let html: string;
     try {
-      const mod = (await import(pathToFileURL(tmpFile).href)) as LoadedViewModule;
+      const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
       const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
       // Wrap in the node view host so the card widgets (<CardLink>/<CardRef>)
       // resolve their context. NodeViewHostProvider comes from the same
@@ -197,7 +172,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
       // the package's exports map), so the ViewHostContext identity matches.
       const { NodeViewHostProvider } = await import("callback-box/view-widgets");
       html = renderToString(
-        createElement(NodeViewHostProvider, null, createElement(mod.default, props)),
+        createElement(NodeViewHostProvider, null, createElement(viewMod.default, props)),
       );
     } catch (e) {
       const err = e instanceof Error ? e : new Error(String(e));
@@ -220,7 +195,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     }
     return 0;
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true });
+    await mod.cleanup();
   }
 }
 

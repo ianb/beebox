@@ -12,6 +12,7 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { listParkedTemplateUpdates } from "../core/install-template-file.js";
+import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxConfig } from "./box-config.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
@@ -146,11 +147,25 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
         templateDriftTotal += parked.length;
       }
     }
+    // Box-local schema load failures: keep-last-good means a broken save
+    // doesn't blank the type, but the failure itself needs to be seen.
+    // Reads the in-process map populated by the server's own box-registration
+    // schema loads — no extra load here, unlike `cb status`'s fresh process.
+    const schemaFailuresByBox: Record<string, number> = {};
+    let schemaFailureTotal = 0;
+    for (const box of boxes) {
+      const failures = listSchemaLoadFailures(box.boxRoot);
+      if (failures.length > 0) {
+        schemaFailuresByBox[box.slug] = failures.length;
+        schemaFailureTotal += failures.length;
+      }
+    }
     return {
       status: "ok",
       boxCount: boxes.length,
       version,
       templateDrift: { total: templateDriftTotal, byBox },
+      schemaLoadFailures: { total: schemaFailureTotal, byBox: schemaFailuresByBox },
     };
   });
 

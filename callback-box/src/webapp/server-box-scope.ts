@@ -108,7 +108,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   // run whether or not a UI is connected (a headless server still serves cards
   // that need up-to-date box schemas), so start it here at registration. Close
   // both on shutdown.
-  ensureSchemaWatcher(box.boxRoot);
+  await ensureSchemaWatcher(box.boxRoot);
   instance.addHook("onClose", async () => {
     await closeBoxWatcher(box.boxRoot);
     await closeSchemaWatcher(box.boxRoot);

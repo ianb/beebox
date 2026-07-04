@@ -12,7 +12,7 @@ import { promises as fs } from "node:fs";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import * as ts from "typescript";
-import { listViews } from "../../webapp/views/compiler.js";
+import { listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 /** Per-view outcome from `cb view typecheck`. */
@@ -102,9 +102,10 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
  */
 export async function typecheckViews(boxRoot: string): Promise<{ ok: boolean; views: ViewTypecheckResult[] }> {
   const metas = await listViews(boxRoot);
+  const { viewsDir } = await resolveViewsDir(boxRoot);
   const views: ViewTypecheckResult[] = [];
   for (const meta of metas) {
-    const viewPath = path.join(boxRoot, "views", `${meta.slug}.tsx`);
+    const viewPath = path.join(viewsDir, `${meta.slug}.tsx`);
     views.push(await typecheckOneView({ viewPath, slug: meta.slug }));
   }
   return { ok: views.every((v) => v.ok), views };
