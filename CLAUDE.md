@@ -38,6 +38,8 @@ Orphan resistance: PID files at `~/.cache/callback-mono/pids/<name>.json` (singl
 
 **Husky lives at the monorepo root.** A single `.husky/` directory at the monorepo top level holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; post-checkout/post-merge/pre-push wrap git-lfs). Subprojects no longer have their own husky setup — they each `prepare: ":"` to opt out. Running `pnpm install` at the monorepo root is what wires up `core.hooksPath`.
 
+**Issue queue — `issues/` at the repo root.** One markdown file per idea/issue; conventions in `issues/CLAUDE.md`. If you notice something worth keeping that's outside your current task, file it there (your discretion) rather than fixing it in place or letting it drop. Items are tensions, not mandates — being filed is not license to implement.
+
 **Subagents are your discretion.** Start subagents (the Agent tool) whenever it helps — parallel or independent work, fan-out searches, or keeping a noisy sub-task out of the main thread — you don't need to ask first. Choose the subagent's model to fit the task; Sonnet 5 is good at subagent work.
 
 **Per-edit lint hook reports can be transient mid-batch.** The PostToolUse hook lints after every single Edit/Write. When a change spans coordinated edits (e.g. add an import in one edit, use it in the next), the intermediate report may show errors the rest of the batch resolves — typically unused-var. Don't react to each intermediate report; finish the batch, then trust the next clean report or verify with a direct `pnpm exec eslint <files>`. A report that survives the full batch is real.
