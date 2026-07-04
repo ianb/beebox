@@ -1,6 +1,6 @@
 # Code Style
 
-General coding conventions for backend and frontend. UI palette and primitive reference live in FRONTEND.md.
+General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md.
 
 ## Type Checking and Linting
 

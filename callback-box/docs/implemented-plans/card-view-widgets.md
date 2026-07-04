@@ -19,11 +19,11 @@ to a host-supplied view-host context rather than hardcoding a navigation target.
   surface (compiled box code) — don't widen what views can do beyond
   card-viewing"* (paraphrased from the idea brief; reinforced by the views
   compiler externalizing only React today).
-- `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional
+- `callback-box/code-style.md` — no default parameters, max 2 positional
   params (named-params object beyond that), no `any`, no bare `as` in `.tsx`.
-- `callback-box/FRONTEND.md:34` — *"Reach for a primitive from
+- `callback-box/frontend.md:34` — *"Reach for a primitive from
   `src/frontend/src/components/ui/` before writing appearance classes inline"*;
-  the `className`-only-for-outer-layout rule (FRONTEND.md:81-83). Widgets are
+  the `className`-only-for-outer-layout rule (frontend.md:81-83). Widgets are
   host components and must obey the palette + primitives.
 - Most recent precedent: the chat-header landmark menu
   (`src/frontend/src/components/LandmarkLinksButton.tsx`, commit `7d5cd93e`) —
@@ -321,7 +321,7 @@ existing `/views/<slug>/cards` route uses, ViewRenderer.tsx:132-141; mirroring
 backs it with the preloaded card map. Missing target → a muted "(missing)" marker
 like LandmarkLinksButton.tsx:88-90, never a dead link. Render a near-bare anchor
 (underline-on-hover, inherits surrounding text color — light enough to live in
-prose, but still a real link per FRONTEND.md's primitive/`className` rules) and
+prose, but still a real link per frontend.md's primitive/`className` rules) and
 `preventDefault` → `openCard`.
 
 **Vocabulary lock-ins.** Attribute name `cardRef`; optional `view` (→
@@ -337,7 +337,7 @@ exercise the widget in a test-box view across chat/browse/page.
 ### Track 4 — `<CardRef>` (the styled reference: follow + expand-inline)
 
 **What.** The richer, **styled** reference: it presents the target card as a
-compact reference (title + type, styled per FRONTEND.md primitives) and offers
+compact reference (title + type, styled per frontend.md primitives) and offers
 two controls on that one reference — **follow** (`openCard` → open in the current
 surface) and **expand-inline** (render the card in place). The styled default
 presentation *is* the compact form; there is no separate "small" affordance.
@@ -349,8 +349,8 @@ follow/expand-inline options."*
 
 **Direction.**
 - **Presentation** — a styled chip/row built from `useResolvedRef(cardRef)`
-  (title + type `Badge`, FRONTEND.md:61, + `StatusBadge` if relevant,
-  FRONTEND.md:62), using UI primitives and the semantic palette. Missing target →
+  (title + type `Badge`, frontend.md:61, + `StatusBadge` if relevant,
+  frontend.md:62), using UI primitives and the semantic palette. Missing target →
   "(missing)".
 - **follow** — a control that calls Track 1's `openCard` (same behavior as
   CardLink, surfaced as an explicit affordance on the chip).

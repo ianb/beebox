@@ -1,6 +1,6 @@
 # Frontend Conventions
 
-UI palette, primitives, and the `className` rule. Backend code never needs to load this; CODE-STYLE.md covers conventions that apply to both halves.
+UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers conventions that apply to both halves.
 
 ## Data Source Tagging
 
@@ -110,4 +110,4 @@ What fails lint:
 2. Is the pattern used 3+ times with uniform look? If so, extract a primitive.
 3. Is it genuinely a one-off in a specific context (inside `components/`)? Then keep it local — don't force abstraction.
 
-New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in FRONTEND.md.
+New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic role in frontend.md.

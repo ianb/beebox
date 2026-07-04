@@ -39,8 +39,8 @@ implementation diverged from the proposal below:
 - **`callback-box/CLAUDE.md`** — project conventions; doctests are the primary
   test format (`callback-box/CLAUDE.md:101`: *"Doctests are the primary test
   format."*).
-- **`callback-box/CODE-STYLE.md`** — style preferences; the centralise-a-cast
-  pattern (`callback-box/CODE-STYLE.md:55`: *"centralize the cast in a single
+- **`callback-box/code-style.md`** — style preferences; the centralise-a-cast
+  pattern (`callback-box/code-style.md:55`: *"centralize the cast in a single
   well-named typed helper … that does it once and is reused"*) is the same
   instinct that justifies consolidating a genuinely-duplicated helper.
 - **`.claude/skills/cb-codehealth/SKILL.md`** — the health philosophy this

@@ -28,7 +28,7 @@ repaired through `cb mv` adoption rather than a one-time scripted rewrite.
 - User-global rule (project CLAUDE.md) — *"NEVER disable or weaken a lint rule to
   make code pass."* The entire bug is a disabled rule; the fix is to turn it
   **on** and fix the code, never to keep it off or degrade it.
-- `callback-box/CODE-STYLE.md` — no `any`, double quotes, semicolons, max 2
+- `callback-box/code-style.md` — no `any`, double quotes, semicolons, max 2
   positional params (named-params object beyond that), `as` only at parse
   boundaries with justification. The `params.config` read in the rule is exactly
   such a boundary.
@@ -139,7 +139,7 @@ factory):
   const cfg = params.config as { boxRoot?: string };
   const boxRoot = cfg.boxRoot;
   ```
-  (`as` allowed as a parse-boundary cast per CODE-STYLE.md; add the mandated
+  (`as` allowed as a parse-boundary cast per code-style.md; add the mandated
   `// eslint-disable-next-line no-restricted-syntax -- parse boundary` only if the
   lint config flags it.)
 - **boxRoot is required.** If it's missing, that's a programming error — the rule

@@ -3,7 +3,7 @@ tests:
   #
   # Status (2026-07-03): 2/3 pass. REAL GAP: find-memo-cards — agent answers
   # `cb ls --kind memo` (hallucinated; `cb ls` has no --kind) instead of the
-  # `*.memo.card` glob. See docs/knowledge-audit-rerun-2026-07-03.md.
+  # `*.memo.card` glob. See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: box-structure-inbox
     prompt: "Where would you look for unprocessed incoming items?"
@@ -94,7 +94,7 @@ tests:
   # XML checks were obsolete. schema-validate-hook had regressed to a Zod
   # `.refine()` answer; FIXED by a corrective in agent-guide/cards.ts ("rules Zod
   # can't express go in the schema's `validate` hook, not a `.refine()`"). See
-  # docs/knowledge-audit-rerun-2026-07-03.md.
+  # docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-card-types
     prompt: "What card types do you know about? List them all."
@@ -179,7 +179,7 @@ tests:
   # max_turns 10→20 (agent reaches script-env.ts but over-explores; needed room).
   # NEEDS DECISION: cb-session-exists — agent answers "past chat" via chat-thread
   # cards (interface-as-cards) rather than `cb session` (which still exists and
-  # cb-session-how-to-use passes). See docs/knowledge-audit-rerun-2026-07-03.md.
+  # cb-session-how-to-use passes). See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-cb-commands
     prompt: "What cb commands are available to you? List the ones you'd use most."
@@ -310,7 +310,7 @@ tests:
   # DOES NOT EXIST in the code (the reactor dispatches only batch/chat agent jobs;
   # the stale engine.ts comment was misleading). Reframed to test the real triggers
   # (`cb procedure run` + the triage handler) and fixed the comments. See
-  # docs/knowledge-audit-rerun-2026-07-03.md.
+  # docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-procedures
     prompt: "What procedures are configured in this box?"
@@ -450,7 +450,7 @@ tests:
   # cooking-guide-awareness + cooking-follow-recipe-pattern should_read a
   # docs/generated/cooking-guide.md that no longer exists in test1 (no
   # cooking.guide.card configured) — restore the guide or retire these two.
-  # See docs/knowledge-audit-rerun-2026-07-03.md.
+  # See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: list-guides
     prompt: "What guides exist in this box and what do they do?"
@@ -634,7 +634,7 @@ tests:
   # chat-thread-seen-note had reached for `cb chat self-note`; FIXED by a
   # corrective in agent-guide/commands.ts (self-note is the live chat session; a
   # note while processing a chat-thread goes in the kind: seen entry's text:) plus
-  # scoping the audit prompt to thread processing. See docs/knowledge-audit-rerun-2026-07-03.md.
+  # scoping the audit prompt to thread processing. See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: chat-thread-structure
     prompt: "Show me the structure of a chat-thread card."
@@ -1217,7 +1217,7 @@ tests:
   # <ack kind="edited">restating text</ack> for an obvious action instead of the
   # canonical bare <ack kind="appended" .../>. FIXED by sharpening the ack section
   # (chat-session-prompts.ts): adding a note is `appended` not `edited`, and a bare
-  # ack when you did exactly what was asked. See docs/knowledge-audit-rerun-2026-07-03.md.
+  # ack when you did exactly what was asked. See docs/reports/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-05-13): All 8 pass. Agent has clean direct knowledge of
   # all three tags — names the snapshot purpose, emits the right mutation
@@ -1345,7 +1345,7 @@ tests:
   # "voice-in implies voice-out" reflex beat the narration override. FIXED by
   # hardening NARRATION_OVERLAY (chat-session-prompts.ts) to state the reflex is
   # suspended and NOT to reply with <speech> even when the user spoke. See
-  # docs/knowledge-audit-rerun-2026-07-03.md.
+  # docs/reports/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-05-13): Both pass after the narration overlay was
   # sharpened with concrete don't-do examples ("don't reply to musings",
@@ -1448,7 +1448,7 @@ tests:
   # drive-understand-formulas need a synced .gsheet fixture in test1 to exercise
   # (edit a value / read the formula JSON), but store/drive/ is empty — the agent
   # correctly reports none exist. Restore a drive fixture or accept they can't run.
-  # See docs/knowledge-audit-rerun-2026-07-03.md.
+  # See docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   - id: drive-find-spreadsheet
     prompt: "Where would I find spreadsheet data that's been synced from Google Drive?"
@@ -1531,7 +1531,7 @@ tests:
   # box/output/ instead of the source thread's .attach/ (loses Gmail threading).
   # FIXED by a corrective on the box/output/ row (agent-guide/box-shape.ts) noting
   # email drafts are the exception, plus a pointer in email-message.tsx. See
-  # docs/knowledge-audit-rerun-2026-07-03.md.
+  # docs/reports/knowledge-audit-rerun-2026-07-03.md.
   #
   # Status (2026-04-28): split from email-message after the unified design
   # caused the wakeup intake to triage drafts as incoming mail. Cold
@@ -3187,7 +3187,7 @@ tests:
       views/CLAUDE.md to TEMPLATE_MANAGED_PATTERNS (so the refresh commits + ships).
       Check accepts either the literal `rendersCardTypes` (when the agent reads the
       guide) or the attach-to-a-card concept (when it answers directly). See
-      docs/knowledge-audit-rerun-2026-07-03.md.
+      docs/reports/knowledge-audit-rerun-2026-07-03.md.
 
   # === Courseware (course / concept-map / exposition-plan / lesson-plan / progress + build-course skill) ===
   #

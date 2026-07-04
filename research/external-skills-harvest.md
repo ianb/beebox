@@ -11,7 +11,7 @@ Surveyed repos: `obra/superpowers`, `anthropics/skills`, `mattpocock/skills`,
 **Harvest philosophy (from the survey):** these repos overlap each other and
 overlap our existing setup heavily — every one ships its own TDD / debugging /
 review / planning / "use-skills" / "write-skills" skill. We already encode most
-of that in CLAUDE.md, CODE-STYLE.md, FRONTEND.md, the Laws, and our skills
+of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 (cb-plan, codex, finish, launch-worktree-session, browse, deep-research,
 code-review, simplify). So the default is **harvest a specific idea**, not adopt
 a parallel methodology that fights our conventions.
@@ -35,7 +35,7 @@ one-line why). Mark status as you go.
   cb-plan, not a grounded convention.) Nothing portable survives the altitude gap.
 - [x] **A2 — addyosmani `spec-driven-development` vs cb-plan. DONE → `fold-in`
   (routed to F2).** Its 6-area spec template duplicates CLAUDE.md / CODE-STYLE /
-  FRONTEND.md (which cb-plan points at via "Stated preferences"). Two portable
+  frontend.md (which cb-plan points at via "Stated preferences"). Two portable
   nuggets: (1) "reframe vague reqs as testable success criteria" — **DONE**,
   folded into cb-plan's test posture as part of X1; (2) its "Common
   Rationalizations" + "Red Flags" tables — which *are* the bulletproofing
@@ -111,9 +111,9 @@ one-line why). Mark status as you go.
   standalone API skill — the seam/contract discipline lives where modules get
   reshaped.)
 
-## E. Frontend / design (vs FRONTEND.md)
+## E. Frontend / design (vs frontend.md)
 
-- [x] **E1 — ui-ux-pro-max ckm skills vs FRONTEND.md/cb-frontend. DONE →
+- [x] **E1 — ui-ux-pro-max ckm skills vs frontend.md/cb-frontend. DONE →
   `skip` ckm:ui-styling; `fold-in` four tidbits from `ui-ux-pro-max`.** Surveyed
   the whole `nextlevelbuilder/ui-ux-pro-max-skill` repo:
   - `ckm:ui-styling` → **skip** (pure conflict): shadcn/ui + Radix + raw-Tailwind
@@ -142,9 +142,9 @@ one-line why). Mark status as you go.
     three-states section). Rejected the rest as mobile/native-specific or
     conflicting with our one design system. Closes E1 + the I5 design-DB question.
 - [x] **E2 — write-new: a behavioral frontend skill. DONE → `write-new`:
-  `cb-frontend`.** Boxholder's split: FRONTEND.md **stays as the reference
+  `cb-frontend`.** Boxholder's split: frontend.md **stays as the reference
   catalog** (palette, primitive index, the `className` rule); the new skill is
-  the *behavioral* half it can't enforce, and points at FRONTEND.md rather than
+  the *behavioral* half it can't enforce, and points at frontend.md rather than
   duplicating it. Built `.claude/skills/cb-frontend/SKILL.md` (smallish, as
   asked), harvesting the portable discipline from addyosmani
   `frontend-ui-engineering`: reach-for-primitives-first + semantic-palette-only
@@ -165,7 +165,7 @@ one-line why). Mark status as you go.
   boxholder's recollection: ~55 lines of greenfield *visual-design* process
   (pick fonts, establish a palette, set up tokens from scratch) for a project
   with no design system. callback-box already has one (semantic palette +
-  primitives + FRONTEND.md), so the whole skill is N/A — nothing portable that
+  primitives + frontend.md), so the whole skill is N/A — nothing portable that
   cb-frontend doesn't already cover behaviorally.
 
 ## F. Skill infrastructure / meta
@@ -279,7 +279,7 @@ one-line why). Mark status as you go.
   over MCP.
 - [ ] **I5 — anthropic `web-artifacts-builder` / ui-ux-pro-max core DB.** Both
   long-shots: artifact bundling (claude.ai-scoped) and a searchable design DB
-  (conflicts with FRONTEND.md). Decide: near-certain skip; note why.
+  (conflicts with frontend.md). Decide: near-certain skip; note why.
 
 ---
 
@@ -304,7 +304,7 @@ one-line why). Mark status as you go.
 3. **Planning cluster:** A1/A2/A3 + B1 — compare against cb-plan / finish /
    spin-off in one pass.
 4. **Codebase-health cluster:** D1 (the felt need) + D2/D3.
-5. **New-skill design:** E2 + F3 + G1 (the docs-index / context / FRONTEND.md
+5. **New-skill design:** E2 + F3 + G1 (the docs-index / context / frontend.md
    skill ideas — likely design together).
 6. **As-needed:** C1 (debugging), H1 (security/clerk), I2/I3.
 

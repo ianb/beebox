@@ -119,7 +119,7 @@ extension.
 - **`callback-box/CLAUDE.md`** — *"Keep source and docs generic — never
   hardcode personal names."* Destination rules, schema instructions, and the
   extension UI copy stay generic ("the boxholder").
-- **`callback-box/CODE-STYLE.md`** — no `any`; no default parameters; max 2
+- **`callback-box/code-style.md`** — no `any`; no default parameters; max 2
   positional params (named-params object beyond that); `as` is `unsafe`-grade.
   The new payload builders and the destinations endpoint follow this.
 - **callback-clerk `CLAUDE.md`** — *"domain code never imports React, WXT, or

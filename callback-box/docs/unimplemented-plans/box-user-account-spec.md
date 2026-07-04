@@ -1,7 +1,7 @@
 # Spec: Box as Linux User Account
 
 **Status:** Draft.
-**Relationship to other docs:** Builds on the [boxes-as-packages design exploration](boxes-as-packages.md), which proposed Option C (each box is its own code repo + process under its own OS user). This spec tightens that proposal by adopting **the OS user account as the unit of box identity**: there is no separate "box" entity maintained by callback-box; the OS user *is* the box.
+**Relationship to other docs:** Builds on the [boxes-as-packages design exploration](boxes-as-packages-v1-superseded.md), which proposed Option C (each box is its own code repo + process under its own OS user). This spec tightens that proposal by adopting **the OS user account as the unit of box identity**: there is no separate "box" entity maintained by callback-box; the OS user *is* the box.
 
 ---
 
@@ -70,7 +70,7 @@ Permissions:
 - `.env` and `.credentials.json` mode `0600`.
 - `box-repo/` mode `0700` (the box owns its data; nothing else on the system reads it directly).
 
-The `src/` ↔ `data/` split inside the box repo is the layout adopted in [boxes-as-packages.md §2.3](boxes-as-packages.md). Code on one side, the box's actual content on the other.
+The `src/` ↔ `data/` split inside the box repo is the layout adopted in [boxes-as-packages-v1-superseded.md §2.3](boxes-as-packages-v1-superseded.md). Code on one side, the box's actual content on the other.
 
 ---
 
@@ -116,7 +116,7 @@ Setup at provision time:
 1. Add `www-data` to the `cb-<boxname>` group.
 2. The backend opens its socket with `chmod 0660` and `chown :www-data` after binding (handled in `cb serve --socket`).
 
-**Authentication flow:** oauth2-proxy sits in front of the per-box backends, handling Google OAuth and session cookies. nginx uses `auth_request` to delegate authentication to oauth2-proxy and injects `X-Authenticated-Email` into the upstream request. See [boxes-as-packages.md §3.5](boxes-as-packages.md) for the rationale on using oauth2-proxy rather than rolling our own.
+**Authentication flow:** oauth2-proxy sits in front of the per-box backends, handling Google OAuth and session cookies. nginx uses `auth_request` to delegate authentication to oauth2-proxy and injects `X-Authenticated-Email` into the upstream request. See [boxes-as-packages-v1-superseded.md §3.5](boxes-as-packages-v1-superseded.md) for the rationale on using oauth2-proxy rather than rolling our own.
 
 ```nginx
 # /etc/nginx/sites-available/box.example.com.d/<boxname>.conf
@@ -191,7 +191,7 @@ Pull (to receive agent-authored commits made on the server):
 git pull prod main
 ```
 
-The hook's restart-on-`src/`-change behaviour is Stance A from [boxes-as-packages.md §7.4](boxes-as-packages.md). Under Stance B (recommended start), plugin file changes (views, schemas, tricks) trigger an in-process hot reload rather than a systemd restart — the hook would skip the restart for changes confined to `src/views/`, `src/schemas/`, `src/tricks/`.
+The hook's restart-on-`src/`-change behaviour is Stance A from [boxes-as-packages-v1-superseded.md §7.4](boxes-as-packages-v1-superseded.md). Under Stance B (recommended start), plugin file changes (views, schemas, tricks) trigger an in-process hot reload rather than a systemd restart — the hook would skip the restart for changes confined to `src/views/`, `src/schemas/`, `src/tricks/`.
 
 ---
 
@@ -382,7 +382,7 @@ After all 8 are migrated:
 - **Multi-tenant / public hosting.** This spec is single-operator. Hosting other people's boxes adds: stronger isolation (containers), per-user resource accounting/billing, abuse handling, an account-creation flow. Out of scope.
 - **Per-box network egress policy.** Possible via nftables `--gid-owner` rules; deferred.
 - **Cross-server replication.** A box is one server's user account; if you want a box to span servers, you need a sync layer that doesn't exist today. Out of scope.
-- **Data migration during library updates.** See [boxes-as-packages.md §7.7](boxes-as-packages.md) — deferred to its own design pass.
+- **Data migration during library updates.** See [boxes-as-packages-v1-superseded.md §7.7](boxes-as-packages-v1-superseded.md) — deferred to its own design pass.
 
 ---
 

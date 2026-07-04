@@ -1,6 +1,6 @@
 # Shared Frontend/Backend Code — Subplan
 
-A subplan of `markdoc-tags-design.md`. The Markdoc work needs the same
+A subplan of `markdoc-tags-plan.md`. The Markdoc work needs the same
 tag schemas on both sides of the frontend/backend split: the React
 renderer (`Markdown.tsx`) on the frontend, and the new server-side
 Markdoc → markdown emitter (Track 2's `compileBriefing` rewrite) on
@@ -15,7 +15,7 @@ sides import it.
   satisfy both module-resolution regimes (NodeNext for backend,
   bundler for frontend).
 - **Single repo-wide Markdoc vocabulary.** Asserted by
-  `docs/implemented-plans/markdoc-tags-design.md:9-13`. The vocabulary is one shape per
+  `docs/implemented-plans/markdoc-tags-plan.md:9-13`. The vocabulary is one shape per
   tag name across every schema; that constraint becomes a structural
   fact (not just a maintenance promise) when frontend and backend
   share a single config object.
@@ -310,7 +310,7 @@ backend emitter.
 ## Rollout shape
 
 The subplan ships as part of the parent plan
-(`markdoc-tags-design.md`). No standalone ship. Knowledge audits
+(`markdoc-tags-plan.md`). No standalone ship. Knowledge audits
 deferred (none needed). Doctests deferred (no new code paths;
 existing tests verify resolution).
 

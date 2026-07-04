@@ -90,9 +90,9 @@ carried my blind spots) found more:
   removed."* This plan makes that sentence's promise good. Also the "don't
   add features beyond what the task requires" rule — we copy in only the
   primitives that are actually imported, deleting the rest.
-- **`callback-box/CODE-STYLE.md`** — `CODE-STYLE.md:25` (no `any`),
-  `CODE-STYLE.md:55` (`as` is like Rust `unsafe`; centralize at parse
-  boundaries), `CODE-STYLE.md` files ≤300 lines. The copied-in primitives
+- **`callback-box/code-style.md`** — `code-style.md:25` (no `any`),
+  `code-style.md:55` (`as` is like Rust `unsafe`; centralize at parse
+  boundaries), `code-style.md` files ≤300 lines. The copied-in primitives
   already obey these (they're cardworks' own clean modules).
 - **The migration precedent** — `remove-cardworks-and-xml.md` shipped six
   schema migrations using TypeScript's typecheck as the completeness check

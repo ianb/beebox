@@ -41,11 +41,11 @@ implementation corrected three points. As shipped:
   one; the only net-new surface is an `isStreaming` branch inside an existing
   component.
 - `callback-box/CLAUDE.md` — *"Frontend uses UI primitives and a semantic
-  palette. Read FRONTEND.md before writing UI"* and the
+  palette. Read frontend.md before writing UI"* and the
   `restrict-component-classes` rule (chat is under `components/`, so exempt).
 - `~/.claude` memory `feedback_components_own_a11y` — the streaming cursor is an
   element rendered by `AssistantMessage` itself, not a wrapper bolted on.
-- `callback-box/CODE-STYLE.md:37` — max 2 positional params; new/changed
+- `callback-box/code-style.md:37` — max 2 positional params; new/changed
   signatures take a named options object. `:58` — files ≤300 lines, functions
   ≤150 (`ChatMessages.tsx` is at 229 and `AssistantMessage` is ~100 lines — the
   `isStreaming` additions must not push the function past 150; extract a helper
@@ -253,7 +253,7 @@ group + unified render, then keying, then the `isStreaming` polish.
     fires. Pass the real `speechPlayback`/`activeIndex` through (today
     `StreamingMessage` hardcodes `activeIndex={null}` at `:85`).
   - Keep `AssistantMessage` under 150 lines — extract the streaming-cursor/empty
-    branch into a small helper if needed (`CODE-STYLE.md:58`).
+    branch into a small helper if needed (`code-style.md:58`).
 - **Vocabulary lock-ins.** `isStreaming` option name on `AssistantMessage`.
 - **First implementation chunk.** Add `isStreaming` (cursor + empty-throbber),
   pass it for the provisional group, and thread real speech state; verify the
@@ -325,7 +325,7 @@ scenarios are N/A by construction; listed rather than omitted:
 - **Inline cursor treatment** (caret glyph vs. `::after` pseudo-element vs. a
   faded dot). *Lean:* a pseudo-element on the last text node so it occupies no
   line box (no reflow on removal). A pure-appearance choice settled in
-  implementation with FRONTEND.md primitives.
+  implementation with frontend.md primitives.
 - *(Resolved)* Same-component-same-key vs. minimize-the-delta — the research is
   unambiguous; this plan does same-component-same-key.
 

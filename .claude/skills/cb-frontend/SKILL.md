@@ -7,7 +7,7 @@ allowed-tools: Bash, Read, Edit, Write, Grep, Glob
 # cb-frontend
 
 The **behavioral** half of frontend work. The catalog — every primitive, the
-semantic palette, the `className` rule — lives in **`callback-box/FRONTEND.md`**;
+semantic palette, the `className` rule — lives in **`callback-box/frontend.md`**;
 read it before writing UI (`CLAUDE.md` already says so). This skill is the
 *habits* that catalog can't enforce: compose from primitives, separate data from
 presentation, ship the empty/error/loading states, keep it accessible, and
@@ -17,15 +17,15 @@ verify in a real browser before calling it done.
 
 - **Primitives over inline classes.** A `<Button>`, `<Text>`, `<Stack>`,
   `<Card>`, `<Badge>`, `<TextField>`… almost certainly already owns the look you
-  want — `FRONTEND.md` is the index. Writing appearance classes inline is the
+  want — `frontend.md` is the index. Writing appearance classes inline is the
   signal you skipped it. `restrict-component-classes` enforces this outside
   `components/`: `className` is **outer layout only** (margin, flex-self,
   sizing, position) — never color/border/shadow.
 - **Semantic palette, never raw Tailwind colors.** `intent="destructive"`, not
   `bg-red-500`; `tone="muted"`, not `text-gray-400`. A role that doesn't fit is
   a sign you need a *new semantic role* — discuss, don't invent a one-off
-  (FRONTEND.md "Frontend Color Palette").
-- **Before adding a primitive**, run FRONTEND.md's three-question test (extend
+  (frontend.md "Frontend Color Palette").
+- **Before adding a primitive**, run frontend.md's three-question test (extend
   an existing prop? used 3+ times? genuinely one-off → keep it local). Don't
   abstract on the first occurrence.
 
@@ -34,7 +34,7 @@ verify in a real browser before calling it done.
 - **Compose, don't over-configure.** `<Card><CardHeader>…</CardHeader></Card>`
   beats `<Card title=… headerVariant=… content=… />`. Slots and children scale;
   a wall of variant props doesn't.
-- **One job per component.** A component near the 300-line cap (CODE-STYLE.md)
+- **One job per component.** A component near the 300-line cap (code-style.md)
   is usually two components. Split by responsibility, not to game the line count.
 - **One primary action per area.** Our screens are usually a mishmash of
   regions (a dashboard panel, a card, a form) — each *area* gets a single
@@ -184,12 +184,12 @@ Built UI is unverified until you've *looked* at it. Use the `browse` skill
 
 | Excuse | Reality |
 |--------|---------|
-| "I'll just write the className inline." | If it's appearance, a primitive already owns it and lint will reject it outside `components/`. Reach for the primitive (FRONTEND.md). |
+| "I'll just write the className inline." | If it's appearance, a primitive already owns it and lint will reject it outside `components/`. Reach for the primitive (frontend.md). |
 | "`bg-red-500` is close enough." | Raw Tailwind colors aren't the brand palette. Use the semantic role; if none fits, propose a new role — don't one-off it. |
 | "Accessibility later." | A `<div onClick>` and an unlabeled icon button are bugs now, not polish. Use the real element; the typed primitives already enforce labels. |
 | "Empty/error states later." | They reveal layout problems real data hides, and a blank screen is a shipped bug. Build the three states with the container. |
 | "It renders, I'm done." | Rendering isn't verifying. Open it in `bin/browse`, Tab through it, check the console — *then* done. |
-| "I'll add a new primitive for this." | Not on the first use. Extend a prop, or keep it local in `pages/<x>/components/`. Abstract at 3+ (FRONTEND.md). |
+| "I'll add a new primitive for this." | Not on the first use. Extend a prop, or keep it local in `pages/<x>/components/`. Abstract at 3+ (frontend.md). |
 | "Responsive is a separate pass." | Retrofitting responsive is far harder than building it in. We already have a two-pane mobile layout to honor. |
 
 ## Red flags — stop

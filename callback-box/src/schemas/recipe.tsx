@@ -6,7 +6,7 @@
  * image), structure in the body via the recipe Markdoc vocabulary
  * (`{% ingredient %}`, `{% step %}`, `{% yield %}`,
  * `{% substitution %}`, `{% subrecipe %}`, `{% recipe-section %}`). See
- * `markdoc-tags-design.md` Track 1 for the migration rationale.
+ * `markdoc-tags-plan.md` Track 1 for the migration rationale.
  *
  * The frontend renderer (`RecipeView`) wraps the body in a container
  * that provides scaling context + CSS step-counter resets; otherwise

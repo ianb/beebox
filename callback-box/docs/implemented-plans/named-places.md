@@ -50,7 +50,7 @@ Direction, not open questions:
 - `callback-box/CLAUDE.md` (Cards) — the don't-build-beyond-the-task rule. v1 is
   define + match; geofence events, statistical radius fitting, and a places UI
   are out of scope.
-- `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional params,
+- `callback-box/code-style.md` — no default parameters, max 2 positional params,
   no `any`, no bare `catch {}`, custom error classes, files < 300 lines.
 - Precedent: `src/schemas/person.tsx` — the closest existing schema (a
   reference-entity card with structured frontmatter + freeform body +

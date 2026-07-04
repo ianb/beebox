@@ -57,10 +57,10 @@ they are direction, not open questions:
 - `callback-box/CLAUDE.md` (Cards) — the don't-build-beyond-the-task
   rule. v1 is coords + get only; geocoding, history, and per-user keying
   are explicitly out of scope.
-- `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional
+- `callback-box/code-style.md` — no default parameters, max 2 positional
   params (named object beyond that), no `any`, no bare `catch {}`,
   custom error classes, files < 300 lines.
-- `callback-box/FRONTEND.md` — UI primitives + the `className`-only-for-
+- `callback-box/frontend.md` — UI primitives + the `className`-only-for-
   outer-layout rule (`restrict-component-classes`). The toggle reuses
   the `Toggle` primitive.
 - Privacy as a first-class design constraint (this plan's own framing):

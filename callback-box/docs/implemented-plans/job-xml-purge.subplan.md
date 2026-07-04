@@ -32,7 +32,7 @@ subplan supersedes it.
   (Phase 2). Every schema is frontmatter; the legacy XML card format, its loader,
   and the `cardworks` package have been removed." The job-card XML remnant
   directly contradicts this stated reality.
-- `callback-box/CODE-STYLE.md` — no `any`, max-2 positional params, named-error
+- `callback-box/code-style.md` — no `any`, max-2 positional params, named-error
   catches; files ≤300 lines.
 - *bias-toward-strict* (user memory) — parse frontmatter with the real card
   loader (`parseCardText`), not regex; fail-closed on a job we can't parse rather

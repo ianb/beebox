@@ -73,7 +73,7 @@ link-vs-image distinction doesn't already express.
   personal names."** Instruction rewrites use "the user"/"the box"; the
   migration touches real boxes (ledger-copy) but writes no personal names into
   shared source.
-- **`callback-box/CODE-STYLE.md:` no default parameters; max 2 positional
+- **`callback-box/code-style.md:` no default parameters; max 2 positional
   params; no `as` in `.tsx`.** New resolution/embed helpers follow these.
 - **`callback-box/docs/testing.md`** — tests as a design tool; doctest the
   substantial new codepaths (the parser/resolver), not every line.

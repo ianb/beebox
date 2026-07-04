@@ -15,7 +15,7 @@ Scope: genuine design-preference divergences — framing, vocabulary, intent.
 Simple factual staleness (dead paths, removed features already covered by
 banners) is collected at the end as a no-ruling-needed appendix.
 
-Sources compared: `docs/DESIGN.md`, `docs/IMPLEMENTATION.md`,
+Sources compared: `docs/design.md`, `docs/implementation.md`,
 `docs/design-vision.md`, the `docs/architecture/` vignette series
 (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 chat, connectors, hub), and recent decisions (`docs/glossary.md`,
@@ -29,19 +29,19 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 1. Is the interface documents, or conversation?
 
-- **Claim** — DESIGN.md:14: "A file-based environment where the main interface
-  is **documents and command files**, not a UI." Reinforced at DESIGN.md:16-20
+- **Claim** — design.md:14: "A file-based environment where the main interface
+  is **documents and command files**, not a UI." Reinforced at design.md:16-20
   ("The 'innards' are not meant to be the attraction").
 - **Reality/tension** — architecture/01-what-is-this.md:11: "This group chat is
   the primary surface: a conversation where the box is one of the participants.
   Not a dashboard everyone logs into separately. Not an app with a home
   screen." The code agrees with the vignette: chat is the central page, plus
-  capture, dashboard, views, and a real design system (FRONTEND.md).
+  capture, dashboard, views, and a real design system (frontend.md).
   `docs/plans/interface-as-cards.md` (current direction) goes further and makes
   the UI itself card material — dissolving the files-vs-UI dichotomy rather
   than picking a side.
 - **Options** —
-  1. Rewrite DESIGN.md §1: the filesystem is the *state*, conversation +
+  1. Rewrite design.md §1: the filesystem is the *state*, conversation +
      generated surfaces are the *interface*; "documents not UI" was a
      statement about where truth lives, not where interaction happens.
   2. Keep documents-first as the identity and demote chat to "one surface
@@ -54,7 +54,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 - **Claim** — glossary.md:18: "**box** — A single user's working directory";
   glossary.md:20: "**boxholder** — The human a box belongs to."
-  IMPLEMENTATION.md:1015 still lists as open: "Multi-user: Is this single-user
+  implementation.md:1015 still lists as open: "Multi-user: Is this single-user
   only, or could multiple people share a box?"
 - **Reality/tension** — the entire architecture series is premised on a
   five-person shared box (01-what-is-this.md:5: "They share a *box* — a system
@@ -75,7 +75,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 - **Claim** — design-vision.md:56: "Callback Box functions as a personal
   operating system where Claude Code becomes the development environment."
-  DESIGN.md:22: "It's not meant to feel like a 'work tool,' even if it could
+  design.md:22: "It's not meant to feel like a 'work tool,' even if it could
   be used professionally."
 - **Reality/tension** — CLAUDE.md:1 (the sentence agents actually load): "A
   personal assistant infrastructure built on Claude Code." And
@@ -86,7 +86,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - **Options** —
   1. Bless CLAUDE.md's "personal assistant infrastructure" as the canonical
      identity; "personal OS" survives only as a historical aspiration inside
-     whatever DESIGN.md becomes.
+     whatever design.md becomes.
   2. Keep "operating system / place you inhabit" (spirit.md's framing) as the
      identity and treat "assistant" as merely the most visible feature.
   3. Write the identity fresh (it has genuinely evolved: assistant + shared
@@ -95,7 +95,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 4. Local-first-avoid-the-cloud vs. the hosted fleet
 
-- **Claim** — DESIGN.md:304-307: "do not worry about configuration/environment
+- **Claim** — design.md:304-307: "do not worry about configuration/environment
   setup for cloud / execute directly on the computer locally."
 - **Reality/tension** — there is a production server fleet with a resident
   `cb hub`, auto-deploy, health-check runbooks; boxes-as-packages-v2 made the
@@ -103,7 +103,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   (docs/implemented-plans/boxes-as-packages-v2.md:31-33). Local-first was a
   sequencing decision that has been executed past.
 - **Options** —
-  1. Update DESIGN.md §12 to describe the actual posture: local dev boxes +
+  1. Update design.md §12 to describe the actual posture: local dev boxes +
      first-class hosted multi-box serving, with the stranger-in-minutes goal.
   2. Retire §12 entirely — it was a phase note, not a design position.
 - **Ruling:**
@@ -114,7 +114,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 5. "Not a chatbot" vs. the standing witness
 
-- **Claim** — DESIGN.md:348: "The system is **not a chatbot**. It doesn't sit
+- **Claim** — design.md:348: "The system is **not a chatbot**. It doesn't sit
   waiting for interaction." (§15, "Idle by default".)
 - **Reality/tension** — chat is now a continuous, session-resuming presence:
   the reactor gives chat jobs per-thread sessions with resume
@@ -135,7 +135,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 6. "Nothing else is particularly privileged" vs. chat's special machinery
 
-- **Claim** — DESIGN.md:375: "Connectors are first-class. Nothing else is
+- **Claim** — design.md:375: "Connectors are first-class. Nothing else is
   particularly privileged—not voice, not web, not any particular UI. They're
   all just different connectors or ways to feed the inbox."
 - **Reality/tension** — chat is architecturally privileged everywhere: the
@@ -155,7 +155,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 7. Web UI: debug viewer or product surface?
 
-- **Claim** — IMPLEMENTATION.md:542: "Initially this is a debugging/viewer
+- **Claim** — implementation.md:542: "Initially this is a debugging/viewer
   interface - full transparency into the system state. Later it may split
   into a cleaner user-facing view and a debug backend."
 - **Reality/tension** — the web app is the primary product surface
@@ -197,12 +197,12 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 9. Did the paperwork/authorization idea die with command cards?
 
-- **Claim** — DESIGN.md:243-249 (§9): "For actions, you want the system to
+- **Claim** — design.md:243-249 (§9): "For actions, you want the system to
   include a kind of 'paperwork': What is the impact of the action? What
   confirmation exists that the user really wanted it done this way?" and
-  DESIGN.md:381-394 (§17): command cards carry "**authorization fields**
+  design.md:381-394 (§17): command cards carry "**authorization fields**
   alongside the payload: Source … User intent … Risk/impact assessment …"
-- **Reality/tension** — command cards are gone (DESIGN.md banner, line 2);
+- **Reality/tension** — command cards are gone (design.md banner, line 2);
   their successor, reactor job cards, carry only
   `status/source/priority/description/items`
   (src/core/reactor/DESIGN.md, "Job Lifecycle") — no impact, intent, or risk
@@ -212,7 +212,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - **Options** —
   1. Rule the paperwork idea retired: trust now comes from the question system
      + see-the-gears history, not per-action justification records. Note that
-     in DESIGN.md §9/§17's replacement text.
+     in design.md §9/§17's replacement text.
   2. Rule it a standing requirement the jobs/outbound model still owes —
      open a design item (e.g. authorization fields on outbound cards like
      `email-outbound`).
@@ -221,7 +221,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 10. Three trust vocabularies
 
-- **Claim** — DESIGN.md:495-497 (§21): "1. **Question** … 2. **Confirmation**
+- **Claim** — design.md:495-497 (§21): "1. **Question** … 2. **Confirmation**
   … 3. **Automatic** — the system's relationship with the user evolves"
   with escalations recorded in `/.claude/` rules.
 - **Reality/tension** — two other trust scales shipped independently:
@@ -242,29 +242,29 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 11. §19 ("possibly the most important design area") vs. what actually shipped
 
-- **Claim** — DESIGN.md:414: "**This is a major design area—possibly the most
+- **Claim** — design.md:414: "**This is a major design area—possibly the most
   important one.**" §19 then enumerates speculative mechanisms — "Preference
   cards … Proposal cards — system creates a card saying 'I think we should do
-  X' and waits for approval/rejection" (DESIGN.md:446-449).
+  X' and waits for approval/rejection" (design.md:446-449).
 - **Reality/tension** — the teaching relationship shipped, but through a
   different stack: personality/guide cards with `source: inferred` beliefs,
   the retro procedure (glossary.md:44), briefing cards, category rules on
   landmarks (docs/triage-design.md:51-57). There is no proposal-card schema
-  (nothing in src/schemas/); "proposal" as a confidence tier (DESIGN.md:485)
+  (nothing in src/schemas/); "proposal" as a confidence tier (design.md:485)
   never materialized.
 - **Options** —
   1. Rewrite §19 as the *rationale* for the shipped teaching stack
      (retro/personality/briefings/category-rules), preserving the "teaching,
-     not configuring" framing (DESIGN.md:453) which still reads current.
+     not configuring" framing (design.md:453) which still reads current.
   2. Same, plus explicitly rule proposal cards dead (the retro question-card
      path covers "wants user buy-in") — or park them in ideas.md.
 - **Ruling:**
 
 ### 12. Question loop: resume-a-session or spawn-a-job?
 
-- **Claim** — DESIGN.md:199-201 (§8): the question goes to `/box/questions/`
+- **Claim** — design.md:199-201 (§8): the question goes to `/box/questions/`
   "with a reference to the agent session — when it's answered with enough
-  info, Claude Code can resume the session and proceed." IMPLEMENTATION.md:536
+  info, Claude Code can resume the session and proceed." implementation.md:536
   likewise: "The session reference in the question card tells wakeup which
   agent session to resume."
 - **Reality/tension** — answered questions produce a *follow-up job*, not a
@@ -273,7 +273,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   Session-resume exists but is chat's mechanism, not the question loop's.
 - **Options** —
   1. Rule the job model canonical; rewrite §8 (context-refs and roles at
-     DESIGN.md:206-214 survive — they describe the question card well).
+     design.md:206-214 survive — they describe the question card well).
   2. Rule that resume-the-session is still the *desired* semantics for
      long-running interrupted work (distinct from quick directives) and open
      a design item.
@@ -281,9 +281,9 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 13. "Git is the state engine / to do something, commit it"
 
-- **Claim** — IMPLEMENTATION.md:12: "The filesystem is the interface, but
-  **Git is the state engine**"; IMPLEMENTATION.md:322: "The fundamental
-  pattern: **to do something, commit it**." Echoed at DESIGN.md:171.
+- **Claim** — implementation.md:12: "The filesystem is the interface, but
+  **Git is the state engine**"; implementation.md:322: "The fundamental
+  pattern: **to do something, commit it**." Echoed at design.md:171.
 - **Reality/tension** — the architecture series deliberately reformulates:
   "The **filesystem** is the canonical store … **Git** is the canonical
   history" (02-cards-and-memory.md:96; also 02:72-77, 83-91). The code agrees
@@ -301,7 +301,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 14. Provenance: invariant or aspiration?
 
-- **Claim** — DESIGN.md:176-184 (§7): "Provenance as a first-class invariant …
+- **Claim** — design.md:176-184 (§7): "Provenance as a first-class invariant …
   artifacts should retain **provenance** as they move through the system."
   02-cards-and-memory.md:50 leans on it: "we can require that every card
   records where its data came from … the agent is compelled to fill it in."
@@ -326,7 +326,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 15. Strict schemas vs. escape valves
 
-- **Claim** — DESIGN.md:123-131 (§4): "Schemas should be **strict** … strict
+- **Claim** — design.md:123-131 (§4): "Schemas should be **strict** … strict
   validation rather than 'best effort' loose parsing."
 - **Reality/tension** — spirit.md:81: "Cards are validated against schemas —
   we do want them structurally sound — but schemas include escape valves,
@@ -345,7 +345,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 
 ### 16. "A card is one idea" vs. instrument/husk/infrastructure cards
 
-- **Claim** — DESIGN.md:559-560 (§24): "**A card is one idea.** The unit of
+- **Claim** — design.md:559-560 (§24): "**A card is one idea.** The unit of
   the record is a discrete thing — a bank account, a person, a memo, a
   decision — because that's the unit of thought."
 - **Reality/tension** — the current direction populates the tree with cards
@@ -450,7 +450,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
   compass, not the map."
 - **Reality/tension** — architecture/CLAUDE.md scopes spirit.md as a steering
   doc for *writing the vignette series* ("Steering docs (not user-facing)");
-  DESIGN.md, CLAUDE.md, and the glossary never cite it. Yet its content
+  design.md, CLAUDE.md, and the glossary never cite it. Yet its content
   (see-the-gears, messy-is-expected, best-stuff-comes-from-the-people,
   no-deficiency-model, it-should-feel-possible) is the closest thing to a
   values document the project has, and several rulings above (7, 14, 15)
@@ -460,7 +460,7 @@ chat, connectors, hub), and recent decisions (`docs/glossary.md`,
      `architecture/`, link from CLAUDE.md's Guides table); its supremacy
      claim then means what it says.
   2. Keep it scoped as the narrative series' compass; extract any principles
-     the *engineering* docs should obey into DESIGN.md's successor, and
+     the *engineering* docs should obey into design.md's successor, and
      soften spirit.md:5 to match its actual jurisdiction.
 - **Ruling:**
 
@@ -478,11 +478,11 @@ design-vision.md as "a thinner, staler sibling of DESIGN.md — merge or retire"
   set that reflects the current interaction model (item 1) and it already
   marks aspiration vs. working. Rulings needed from section A/F above before
   writing more chapters (audience, item 2; spirit's authority, item 20).
-- **`DESIGN.md` → the engineering-rationale reference, split into a
+- **`design.md` → the engineering-rationale reference, split into a
   subdirectory.** Per the docs-reorg Direction principle — "Long docs can
   become subdirectories of small files … split when the doc is a collection
   of separable topics (DESIGN.md's 24 sections…)" (docs-reorg.md:264-269) —
-  DESIGN.md becomes `docs/design/` with one file per surviving topic. Each
+  design.md becomes `docs/design/` with one file per surviving topic. Each
   section is disposed by the rulings above: rewritten to current preference
   (§1, §12, §15, §16, §17, §19, §21), replaced by a pointer to the canonical
   doc (§2→triage-design, §6→calendar.md, §18→scheduler.md), or retired into
@@ -490,11 +490,11 @@ design-vision.md as "a thinner, staler sibling of DESIGN.md — merge or retire"
   written). §24 (representation mirrors the idea) is current, load-bearing,
   and a good anchor file for the new directory. Peer of stack-decisions.md:
   it answers *why*, never *how to*.
-- **`IMPLEMENTATION.md` → retire into history.** It is the MVP-era build
+- **`implementation.md` → retire into history.** It is the MVP-era build
   plan — its banner already treats it as historical, and everything still
   true in it (wakeup, connectors, schemas, questions, testing) is documented
   better in CLAUDE.md + the reference docs it predates. Salvage first: the
-  filesystem-is-the-index framing (IMPLEMENTATION.md:168), the git-replay
+  filesystem-is-the-index framing (implementation.md:168), the git-replay
   testing idea (:946-953), and the open questions worth keeping (:1010-1017)
   go to reference docs or ideas.md; then move the file to the retired-plans
   home (same treatment the boxes-as-packages v1 and activities docs got).
@@ -517,48 +517,48 @@ architecture series should each open with a one-line pointer to the other
 Factual staleness to fix in whatever text survives the rulings — listed here
 so the items above stay design-only.
 
-1. **XML residue.** DESIGN.md §3 (XML envelope, :76-104), IMPLEMENTATION.md's
+1. **XML residue.** design.md §3 (XML envelope, :76-104), implementation.md's
    XML examples (:200-227, :685-698), and outline.md:38 ("XML is the format
    but that's an implementation detail") — cards are YAML frontmatter +
    markdown (banners already say so; body text still teaches XML).
-2. **Command-card machinery in body text.** DESIGN.md §6/§9/§20 and
-   IMPLEMENTATION.md §4/§5/§6 still teach `box/commands/`, `cb do`,
+2. **Command-card machinery in body text.** design.md §6/§9/§20 and
+   implementation.md §4/§5/§6 still teach `box/commands/`, `cb do`,
    `cb exec`, dry-run lifecycle — removed; reactor/jobs + `cb finalize` is
    the action path.
-3. **cardworks references.** IMPLEMENTATION.md:101, :254, :831, :928
+3. **cardworks references.** implementation.md:101, :254, :831, :928
    ("cardworks library at `~/src/cardworks`") — package removed; primitives
    live in `src/cards/` (glossary.md:42).
-4. **Tailing phase / `cb tail`.** IMPLEMENTATION.md:179-194, :459,
-   DESIGN.md:406 — no `cb tail` exists; scheduling is `cb tick` +
+4. **Tailing phase / `cb tail`.** implementation.md:179-194, :459,
+   design.md:406 — no `cb tail` exists; scheduling is `cb tick` +
    `<schedule>` tags (docs/scheduler.md, docs/chat-schedules.md).
 5. **`agents.json` subagent config and `claude --print` invocation.**
-   IMPLEMENTATION.md:585-631 — agent invocation is the Agent SDK
+   implementation.md:585-631 — agent invocation is the Agent SDK
    (stack-decisions Decision 12); no `agents.json`.
-6. **Signal as the MVP DM channel.** IMPLEMENTATION.md:737-754 — Telegram
+6. **Signal as the MVP DM channel.** implementation.md:737-754 — Telegram
    shipped instead; Signal never built.
-7. **Schema location.** IMPLEMENTATION.md:485-496 (`/config/schemas/*.schema.ts`
+7. **Schema location.** implementation.md:485-496 (`/config/schemas/*.schema.ts`
    with registry in the box) — schemas live in `src/schemas/` with box-local
    additions under `config/schemas/` importing `callback-box/cards`.
-8. **Branch strategy.** IMPLEMENTATION.md:337-344 (`connector/*`, `agent/*`
+8. **Branch strategy.** implementation.md:337-344 (`connector/*`, `agent/*`
    branches) — everything is on main; open question resolved by practice.
-9. **Run modes.** IMPLEMENTATION.md:234-239 (Triage/Process/Execute/React
+9. **Run modes.** implementation.md:234-239 (Triage/Process/Execute/React
    agents) — superseded by reactor batch/chat paths + triage pipeline.
-10. **Combined webapp-runner.** IMPLEMENTATION.md:802-832 — now `cb serve`
+10. **Combined webapp-runner.** implementation.md:802-832 — now `cb serve`
     per box under `cb hub`; the runner is the reactor + scheduler.
 11. **Whisper/Foxtel.** design-vision.md:17 — transcription direction is
     Mistral (Voxtral, stack-decisions Decision 18).
-12. **Directory table drift.** IMPLEMENTATION.md:85-97 (`/box/commands/`,
+12. **Directory table drift.** implementation.md:85-97 (`/box/commands/`,
     `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
     (v2 package layout, `content/` root).
-13. **Questions directory.** DESIGN.md:199 `/box/questions/` — verify against
+13. **Questions directory.** design.md:199 `/box/questions/` — verify against
     current question-card location/lifecycle before reuse in rewritten text.
-14. **Trash.** DESIGN.md §2's trash-bin sketch is implemented (`cb trash`,
+14. **Trash.** design.md §2's trash-bin sketch is implemented (`cb trash`,
     store/trash) — the rewritten section can simply cite it.
-15. **Scheduling section.** DESIGN.md §18 (RRULE schedule cards + "tailing
+15. **Scheduling section.** design.md §18 (RRULE schedule cards + "tailing
     phase") — point at docs/scheduler.md and docs/chat-schedules.md.
-16. **Meta-processes marked "future."** DESIGN.md §23 — behavior review /
+16. **Meta-processes marked "future."** design.md §23 — behavior review /
     instruction distillation exists as the retro system (glossary.md:44);
     mark implemented and point.
-17. **Sessions open question.** DESIGN.md §22 — resolved by practice:
+17. **Sessions open question.** design.md §22 — resolved by practice:
     per-thread resumable chat sessions + fresh reactor batch sessions +
     retro as the meta-review; update or retire alongside item 12's ruling.

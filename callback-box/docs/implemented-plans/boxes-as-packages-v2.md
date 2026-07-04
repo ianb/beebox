@@ -5,7 +5,7 @@ package layout, the server runs `cb hub` in place of shared `callback-serve`, an
 runs one `cb hub` per worktree. Deferred/loose ends — the deploy provisioning scripts not yet
 codifying the hub units, npm publish, and per-box OS isolation — live in "Post-cutover state"
 above and the isolation-hardening subplan, not tracked as open items on this plan.
-**Supersedes:** `docs/unimplemented-plans/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
+**Supersedes:** `docs/unimplemented-plans/boxes-as-packages-v1-superseded.md` (2025 design exploration). This plan re-derives that
 design from the current codebase, corrects what has gone stale, and locks the decisions the
 boxholder made on 2026-07-03. (Session working notes — an independent re-derivation and a
 reconciliation against the old plan — lived in the untracked monorepo `scratch/` dir; their
@@ -45,7 +45,7 @@ These are inputs to this plan, not open questions:
 - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
   references. This plan relocates the box's *code* surfaces out of the operational root
   rather than adding more code into it.
-- `callback-box/CODE-STYLE.md`: strict types, no `any`, custom error classes — the new
+- `callback-box/code-style.md`: strict types, no `any`, custom error classes — the new
   public library surface is typed and versioned; failures during upgrade/hub supervision are
   logged, never silent (see Failure modes).
 - Boxholder standing preferences: bias toward strict (fail-closed defaults), consolidate

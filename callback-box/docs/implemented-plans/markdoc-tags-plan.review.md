@@ -1,8 +1,8 @@
 # Plan Engineering Review — Markdoc Tags Design
 
-Review of `markdoc-tags-design.md` following the `cb-plan-review` skill's
+Review of `markdoc-tags-plan.md` following the `cb-plan-review` skill's
 review-mode template. Findings cite `file:line` in the plan and in
-source. Trace each to a stated preference in CLAUDE.md / CODE-STYLE.md
+source. Trace each to a stated preference in CLAUDE.md / code-style.md
 or to the `{% quote %}` precedent the plan invokes.
 
 ## What already exists
@@ -47,12 +47,12 @@ or to the `{% quote %}` precedent the plan invokes.
   `src/schemas/memo.ts:40` (`source` string), `src/schemas/record.tsx:53`
   (`sources: array of {ref, time?, note?}`),
   `src/schemas/feedback.tsx:44` (`source: text|voice`). Plan's
-  description at `markdoc-tags-design.md:190-193` is accurate.
+  description at `markdoc-tags-plan.md:190-193` is accurate.
 
 ## Stated preferences this plan trades against
 
 - **`{% quote %}` precedent: minimum first step, dogfood, then tweak.**
-  Plan invokes this explicitly at `markdoc-tags-design.md:3-6`.
+  Plan invokes this explicitly at `markdoc-tags-plan.md:3-6`.
 - **"Read before writing. Don't guess file formats"** — `callback-box/CLAUDE.md`:
   *"Read before writing. Don't guess file formats, XML structures, or
   API shapes."* Tag-authoring agents need enough schema-level guidance
@@ -63,13 +63,13 @@ or to the `{% quote %}` precedent the plan invokes.
   PostToolUse hook and `Markdoc.validate(ast, config)` (per the
   comment at `src/frontend/src/lib/markdoc-config.ts:21-22`).
 - **No optional chaining, no default parameters, max 2 positional
-  params, no `any`** — `callback-box/CODE-STYLE.md:36-45`. Renderers
+  params, no `any`** — `callback-box/code-style.md:36-45`. Renderers
   and the new server-side Markdoc→markdown emitter inherit these.
 - **"Don't add features beyond what the task requires"** — Plan's own
   framing ("each track sized to be implemented small, dogfooded, then
   tweaked").
 - **Single repo-wide Markdoc vocabulary, one shape per tag name** —
-  `markdoc-tags-design.md:7-13`. Self-asserted, load-bearing across
+  `markdoc-tags-plan.md:7-13`. Self-asserted, load-bearing across
   every track.
 
 ## Failure modes
@@ -82,7 +82,7 @@ exists? clear-or-silent?
   nothing (archived, renamed, never existed).
 - **Test exists?** No.
 - **Handling exists?** Plan addresses it
-  (`markdoc-tags-design.md:273-274`): "chip still renders but click is
+  (`markdoc-tags-plan.md:273-274`): "chip still renders but click is
   a noop with a console warning."
 - **Clear-or-silent?** **Silent in the agent's compiled view.** The
   PostToolUse hook validates *attributes*, not ref existence; `cb
@@ -92,7 +92,7 @@ exists? clear-or-silent?
   long as Track 4 ships **before or with** `{% source %}` so the
   warning fires; if `{% source %}` ships first, broken refs go
   completely silent for a window. The plan's rollout order
-  (`markdoc-tags-design.md:354-358`) actually puts `{% source %}`
+  (`markdoc-tags-plan.md:354-358`) actually puts `{% source %}`
   first as the "first exerciser of Track 4's ref tracking" — that
   reads like the two ship together, but the plan does not say "block
   `{% source %}` ship until Track 4 lands." See findings.
@@ -107,7 +107,7 @@ exists? clear-or-silent?
 - **Handling exists?** Not specified.
 - **Clear-or-silent?** **Silent.** Compiled CLAUDE.md include loses
   content with no signal. The plan says
-  (`markdoc-tags-design.md:172-175`): "twenty lines walking the
+  (`markdoc-tags-plan.md:172-175`): "twenty lines walking the
   renderable tree, plus one mini-emitter per tag in the briefing
   vocabulary." Unknown tags need a default; the plan doesn't pick one.
 
@@ -118,7 +118,7 @@ exists? clear-or-silent?
   silently changes.
 - **Test exists?** No.
 - **Handling exists?** Plan's minimum first step
-  (`markdoc-tags-design.md:179-184`): "verify the compiled CLAUDE.md
+  (`markdoc-tags-plan.md:179-184`): "verify the compiled CLAUDE.md
   include matches what the old `compileBriefing()` produced" — verified
   by hand on one briefing. Per-briefing-atomic migration means there's
   no bilingual-state-conflict gap (an improvement over the prior trial
@@ -128,7 +128,7 @@ exists? clear-or-silent?
 
 ### Recipe `{% ingredient %}` scaling math (Track 1)
 - **Failure:** Plan promises "no change to the scaling code"
-  (`markdoc-tags-design.md:66-67`). The current scaling code lives in
+  (`markdoc-tags-plan.md:66-67`). The current scaling code lives in
   the frontend recipe renderer and reads `<ing amount="...">` from the
   XML tree; the new shape is `{% ingredient amount="..." %}` in
   Markdoc. "No change" is only literal if the scaling logic already
@@ -148,7 +148,7 @@ exists? clear-or-silent?
   something *other* than a card-ref (unlikely but possible — e.g., a
   CSS-style ref), the extractor over-reports.
 - **Test exists?** Plan defers tests
-  (`markdoc-tags-design.md:351-352`): "dogfooding precedes tests."
+  (`markdoc-tags-plan.md:351-352`): "dogfooding precedes tests."
 - **Handling exists?** Warning-not-error policy
   (`card-lint.ts:97-103`) absorbs false positives; only noise, not
   blockage.
@@ -156,7 +156,7 @@ exists? clear-or-silent?
 
 ### `move.ts` body-tag `ref=` rewrite (Track 4)
 - **Failure:** Plan says "Extend `move.ts`'s rewrite pass to update
-  body-tag `ref=` attributes too" (`markdoc-tags-design.md:303-304`).
+  body-tag `ref=` attributes too" (`markdoc-tags-plan.md:303-304`).
   The current pass at `src/core/commands/move.ts:209-238` is a
   substring `replaceAll`. A naive substring of the old card path
   inside a body works for full paths but mis-handles tags whose `ref`
@@ -172,9 +172,9 @@ exists? clear-or-silent?
 
 - **Wrong tag / wrong field** — `{% quote %}` vs `{% source %}` vs
   `{% source ref=... as=verbatim %}{% quote %}...{% /quote %}{% /source %}`.
-  Plan addresses (`markdoc-tags-design.md:237-247`) with the
+  Plan addresses (`markdoc-tags-plan.md:237-247`) with the
   composition example. **ADDRESSED**, though the agent guide entry
-  noted in `markdoc-tags-design.md:280` is the load-bearing piece and
+  noted in `markdoc-tags-plan.md:280` is the load-bearing piece and
   is one bullet, not drafted.
 - **Stale ref** — covered above. **ADDRESSED but deferred** to Track 4.
   The order-of-shipping interlock is the open gap; see findings.
@@ -191,9 +191,9 @@ exists? clear-or-silent?
   agent-facing error messaging; the schema-instructions blurb is the
   mitigation.
 - **Fabricated free-form value** — `as="..."` is freeform natural
-  language (`markdoc-tags-design.md:209-230`). The plan trades enum
+  language (`markdoc-tags-plan.md:209-230`). The plan trades enum
   precision for honest description. **ADDRESSED** explicitly; the
-  rationale at `markdoc-tags-design.md:222-227` is the right one.
+  rationale at `markdoc-tags-plan.md:222-227` is the right one.
 - **Validation error UX** — Markdoc validation messages are terse
   ("Attribute 'ref' is required"). Plan inherits whatever Markdoc
   emits; the existing PostToolUse hook surfaces it to the agent. No
@@ -201,15 +201,15 @@ exists? clear-or-silent?
   first ship.
 - **Partial migration / transition state** — recipe (Track 1) and
   briefing (Track 2). Briefing: per-card-atomic migration explicit
-  (`markdoc-tags-design.md:148-151`), no bilingual reading. Recipe:
+  (`markdoc-tags-plan.md:148-151`), no bilingual reading. Recipe:
   plan does NOT say how recipes-in-flight behave during the recipe
   schema swap. **GAP** for Track 1 transition state; see findings.
 
 ## Findings
 
 ### Critical gap: Track 4 / Track 3 ship-order interlock
-**Location in plan:** `markdoc-tags-design.md:316-319` (Track 4 minimum
-first step) and `markdoc-tags-design.md:354-358` (rollout order).
+**Location in plan:** `markdoc-tags-plan.md:316-319` (Track 4 minimum
+first step) and `markdoc-tags-plan.md:354-358` (rollout order).
 **Citation (plan):** *"Implement once, exercised by `{% source %}`'s
 `ref` since that's the first universal-vocabulary tag with one."* and
 *"`{% source %}` first (universal but additive, and the first
@@ -232,7 +232,7 @@ doesn't make the dependency explicit.
 **Traces to preference:** Validation-on-load (CLAUDE.md).
 
 ### Gap: server-side Markdoc → markdown renderer — unknown-tag fallback
-**Location in plan:** `markdoc-tags-design.md:167-175`.
+**Location in plan:** `markdoc-tags-plan.md:167-175`.
 **Citation (plan):** *"roughly twenty lines walking the renderable
 tree, plus one mini-emitter per tag in the briefing vocabulary."*
 **Issue:** No default behaviour stated for tags the briefing
@@ -252,11 +252,11 @@ correctness floor).
 
 ### Gap: Track 1 transition state for in-flight recipes
 **Location in plan:** Track 1 entire section
-(`markdoc-tags-design.md:35-99`).
+(`markdoc-tags-plan.md:35-99`).
 **Citation (plan):** No mention of what happens to existing XML
 recipe cards once the Markdoc shape lands.
 **Issue:** Briefing migration is explicitly per-card-atomic
-(`markdoc-tags-design.md:148-151`). Recipe migration says nothing.
+(`markdoc-tags-plan.md:148-151`). Recipe migration says nothing.
 Two options: bilingual loader (XML recipes still parse; new ones use
 Markdoc body) or atomic migration (all recipes migrate at flag-day).
 The recipe schema is a `cardSchema` vs `element` choice — they're
@@ -287,10 +287,10 @@ it."* This plan does all three.
 substituting for a numeric scope limit. Without it the plan hasn't
 bounded itself. Candidates that probably belong there: per-tag
 accept-list machinery (mentioned at
-`markdoc-tags-design.md:18-21` as deferred but not formalised),
-migration scripts (`markdoc-tags-design.md:148-151`), bilingual
-reading for briefings (`markdoc-tags-design.md:151`), enum promotion
-for `as=` (`markdoc-tags-design.md:223-227`), recipe transition
+`markdoc-tags-plan.md:18-21` as deferred but not formalised),
+migration scripts (`markdoc-tags-plan.md:148-151`), bilingual
+reading for briefings (`markdoc-tags-plan.md:151`), enum promotion
+for `as=` (`markdoc-tags-plan.md:223-227`), recipe transition
 behaviour, agent-guide draft text.
 **Suggested action:** Add a "NOT in scope" section with one-line
 rationale per deferral.
@@ -304,8 +304,8 @@ table-of-codepaths the template asks for.
 **Issue:** The skill names this "the load-bearing section"
 (`.claude/skills/cb-plan-review/SKILL.md:103`). The plan's Open
 Design Questions and Rollout cover some of the ground (the renderer
-density question at `markdoc-tags-design.md:335-338`, broken-ref
-behaviour at `markdoc-tags-design.md:273-274`), but the systematic
+density question at `markdoc-tags-plan.md:335-338`, broken-ref
+behaviour at `markdoc-tags-plan.md:273-274`), but the systematic
 codepath-by-codepath table is not there.
 **Why it matters:** The Failure-Modes section is where critical-gap
 flagging happens. Without it the reader has to do the
@@ -330,8 +330,8 @@ principles the plan is constrained by.
 nothing to trace back to. The "Why" paragraphs in each track are
 problem-statements, not principle-citations.
 **Suggested action:** Add a section near the top citing CLAUDE.md
-conventions, CODE-STYLE.md rules, and the `{% quote %}` precedent
-explicitly. The header of `markdoc-tags-design.md:1-6` invokes the
+conventions, code-style.md rules, and the `{% quote %}` precedent
+explicitly. The header of `markdoc-tags-plan.md:1-6` invokes the
 precedent in passing; promote it to a structured section.
 **Traces to preference:** Skill's "Trace to a stated preference" rule
 (*"every recommendation ends with one sentence connecting it to a
@@ -362,7 +362,7 @@ a head start; consolidate.
 *"Read before writing. Don't guess file formats."*
 
 ### Finding: agent guide entry for `{% source %}` is one sentence
-**Location in plan:** `markdoc-tags-design.md:279-281`.
+**Location in plan:** `markdoc-tags-plan.md:279-281`.
 **Citation (plan):** *"A 2-3-sentence pointer added to the agent
 guide's 'Direct Quotes' section explaining the complement."*
 **Issue:** The `{% quote %}` precedent landed with a dedicated file at
@@ -385,7 +385,7 @@ formats."* — the agent-facing analogue is "give agents enough to write
 without guessing."
 
 ### Finding: server-side Markdoc emitter location is unspecified
-**Location in plan:** `markdoc-tags-design.md:170-175`.
+**Location in plan:** `markdoc-tags-plan.md:170-175`.
 **Citation (plan):** *"the codebase needs a server-side Markdoc →
 markdown renderer, parallel to the React renderer on the frontend."*
 **Issue:** The React renderer lives at
@@ -407,10 +407,10 @@ rather than a structural fact.
 (probably `src/lib/` or `cardworks/`) and call it out as part of
 Track 2's direction. Note the tsconfig implication.
 **Traces to preference:** Vocabulary lock-in (plan's own constraint at
-`markdoc-tags-design.md:7-13`); CLAUDE.md two-tsconfig rule.
+`markdoc-tags-plan.md:7-13`); CLAUDE.md two-tsconfig rule.
 
 ### Finding: `move.ts` body-tag rewrite mechanism is ambiguous
-**Location in plan:** `markdoc-tags-design.md:302-304`.
+**Location in plan:** `markdoc-tags-plan.md:302-304`.
 **Citation (plan):** *"Extend `move.ts`'s rewrite pass to update
 body-tag `ref=` attributes too."*
 **Issue:** The current `move.ts` rewrite at
@@ -427,13 +427,13 @@ attributes, or document the substring approach with a known
 limitation. The same call has to handle the cardworks-symlink
 question (does this extension live in cardworks where the existing
 `walkForRefs` is, or in callback-box where `move.ts` is?).
-**Traces to preference:** CODE-STYLE.md *"No optional chaining: use
+**Traces to preference:** code-style.md *"No optional chaining: use
 explicit null checks for clarity"* — the principle generalises to "be
 explicit about what your code does," which substring-as-AST-rewrite
 is not.
 
 ### Finding: vocabulary constraint is universal but accept-list machinery is absent
-**Location in plan:** `markdoc-tags-design.md:15-21`.
+**Location in plan:** `markdoc-tags-plan.md:15-21`.
 **Citation (plan):** *"Schemas may restrict which tags are allowed in
 their body... Accept-list machinery is not yet implemented in the
 Markdoc config; the first schema that wants to restrict triggers
@@ -485,11 +485,11 @@ NOT-in-scope finding above.
   against the body — each is defined exactly once. No shape conflicts
   within the plan itself.
 - **Free-form `as=` rationale.** Argument at
-  `markdoc-tags-design.md:222-227` is well-formed (enum closeness
+  `markdoc-tags-plan.md:222-227` is well-formed (enum closeness
   vs honesty) and traces to "Fabricated free-form value" edge case
   cleanly.
 - **`source` vs `from` naming-collision analysis.**
-  `markdoc-tags-design.md:249-256` correctly identifies that
+  `markdoc-tags-plan.md:249-256` correctly identifies that
   `{% quote from="..." %}` and `{% from %}` would conflict, and the
   rename to `{% source %}` resolves it. Verified `{% quote %}`'s
   attribute is `from` at `markdoc-config.ts:29`.
@@ -500,5 +500,5 @@ NOT-in-scope finding above.
 - **Per-card-atomic briefing migration eliminates the prior trial
   review's "critical gap"** (bilingual `compileBriefing` deduping
   frontmatter and body `{% correction %}` entries). Plan explicitly
-  rules out bilingual reading at `markdoc-tags-design.md:148-151`.
+  rules out bilingual reading at `markdoc-tags-plan.md:148-151`.
   Confirmed: no path produces double-counted corrections.

@@ -32,7 +32,7 @@ The applicable principle docs and the specific principles each finding traces to
   - *"don't add features beyond what the task requires"* (the "Improving These Instructions" / scope discipline throughout) — bounds the context we assemble for the model and the retry knobs we add.
   - *"Treat noisy command output as a bug"* (monorepo `CLAUDE.md`) — model calls and retries must stay quiet on the happy path.
   - *"Keep source and docs generic — never hardcode personal names."*
-- **`callback-box/CODE-STYLE.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); custom error classes, not `new Error()`; files ≤300 lines, functions ≤150; only export what's used.
+- **`callback-box/code-style.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); custom error classes, not `new Error()`; files ≤300 lines, functions ≤150; only export what's used.
 - **`docs/testing.md`** — tests come first as a design tool; cover substantial codepaths, not coverage-for-its-own-sake.
 - **Most recent shipped precedent: the retro integration** (`src/core/retro/`) and the project stance the briefing names — *"Arrange context, don't automate judgment"* (`memory/feedback_arrange_context_not_automate_judgment.md`): judgment stays in the model; the engine only assembles inputs. Do **not** try to make instruction validation deterministic.
 - **Schema-doc-accuracy precedent**: `src/schemas/procedure.ts:81-85` and the procedure guide generator currently document these as *not implemented*. Whatever we implement, those docs flip from accurate to wrong unless updated in the same change.

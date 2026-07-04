@@ -97,7 +97,7 @@ the primary entry point and must be reliably invokable — **confirmed: box-leve
   agent context when processing cards of that type."** — the card-rules surface; **and
   "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
   must not emit `type:`.
-- `callback-box/CODE-STYLE.md` → **"No default parameters"**, **"Max 2 positional
+- `callback-box/code-style.md` → **"No default parameters"**, **"Max 2 positional
   parameters"**, **"NEVER use `any`"**, double quotes, semicolons.
 - `callback-box/CLAUDE.md` → **"don't add features beyond what the task requires."** — the
   qualitative, prose-first stances are the scope guardrail; the *new* required fields

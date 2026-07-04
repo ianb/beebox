@@ -93,7 +93,7 @@ against. Today these live across:
 - `callback-box/CLAUDE.md` — project conventions, validation contract,
   Phase-2 cards format, the "don't add features beyond what the task
   requires" rule.
-- `callback-box/CODE-STYLE.md` — explicit style preferences (no
+- `callback-box/code-style.md` — explicit style preferences (no
   optional chaining, no default parameters, max 2 positional params, no
   `any`).
 - The most recent shipped precedent (e.g. `{% quote %}` if you're
@@ -394,7 +394,7 @@ fought the way work actually happens here.
   the real gate; size by itself is not.
 - **No cargo-culted "Cognitive Patterns" checklist.** Generic eng-
   management aphorisms read as ritual, not guidance. Principles live in
-  CLAUDE.md / CODE-STYLE.md / engineering-principles.md (when it lands)
+  CLAUDE.md / code-style.md / engineering-principles.md (when it lands)
   and are project-specific.
 - **No ASCII coverage diagrams.** Prose covers the same ground without
   the diagram-maintenance burden.

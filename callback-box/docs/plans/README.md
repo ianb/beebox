@@ -68,8 +68,8 @@ plan in this directory.
 
 The first backlog batch was migrated and all `docs/…` references rewritten:
 
-- → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-design.md`
-  (+ `.review.md`, `.gstack-trial-review.md`), `markdoc-format-investigation.md`,
+- → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
+  (+ `.review.md`, `.review-adapted-trial.md`), `markdoc-format-investigation.md`,
   `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
   (feature shipped, despite the doc's stale "proposal" header — later
   found to be inaccurate; see 2026-07-04 below).
@@ -89,9 +89,11 @@ discussion" and was never actually implemented; its earlier placement in
 - A few more plan-shaped docs remain in `docs/` and need a judgment call on
   reference-vs-proposal before moving: `activities-design.md`,
   `event-bus.md`, `photo-storage-investigation.md`. Left in place
-  (some read more like vision/reference than active proposals — `DESIGN.md`,
+  (some read more like vision/reference than active proposals — `design.md`,
   `design-vision.md`, `stack-decisions.md` are reference and stay).
   `design-card-views.md` has since moved to `unimplemented-plans/`
-  (superseded by the shipped renderer registry), `attach-implementation.md`
-  to `implemented-plans/` (superseded by `docs/asset-manifests.md`), and
+  (superseded by the shipped renderer registry, now
+  `design-card-views-superseded.md`), `attach-implementation.md`
+  to `implemented-plans/` (superseded by `docs/asset-manifests.md`, now
+  `attach-directories-superseded.md`), and
   `capture-pipeline-redesign.md` to `unimplemented-plans/` (parked 2026-03).

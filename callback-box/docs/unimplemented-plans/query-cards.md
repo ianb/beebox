@@ -31,7 +31,7 @@ Questions surface become configuration instead of code.
   inventing parallel ones.
 - `callback-box/CLAUDE.md:103`: *"HTTP endpoints go in tRPC by default."*
   — resolution is a tRPC procedure.
-- `callback-box/CODE-STYLE.md` — strict types, no `any`, custom errors,
+- `callback-box/code-style.md` — strict types, no `any`, custom errors,
   max-2 positional params.
 - `docs/plans/interface-as-cards.md` (Vocabulary section): *"the
   query/config vocabulary stays deliberately small; its smallness is the

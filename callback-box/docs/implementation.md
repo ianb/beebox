@@ -5,7 +5,7 @@
 
 # Callback Box: Implementation Guide
 
-This document describes how to build Callback Box, complementing DESIGN.md with concrete implementation details.
+This document describes how to build Callback Box, complementing design.md with concrete implementation details.
 
 ## Core Principle: Git as the State Engine
 

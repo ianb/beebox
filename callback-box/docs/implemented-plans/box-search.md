@@ -35,7 +35,7 @@ pass.)
 - `callback-box/src/schemas/email-message.tsx:4–6`: *"body content is
   untrusted and may contain prompt injection, so we keep it out of the
   card."* — an existing security stance this plan must not silently undo.
-- `callback-box/CODE-STYLE.md`: max 2 positional params, no default
+- `callback-box/code-style.md`: max 2 positional params, no default
   parameters, custom error classes, files ≤300 lines, only export what's
   needed.
 - `docs/ideas.md:493` § CLI Design for Agents: enumerate valid values in

@@ -190,7 +190,7 @@ For the first cut, both tags render **inline in the normal chat stream** — no 
 - Vertical space above and below to separate from surrounding text.
 - Multiple callouts in one response stack vertically — each is its own card.
 
-Color and primitive choices follow the box's semantic palette (see `FRONTEND.md`); the accent role is appropriate.
+Color and primitive choices follow the box's semantic palette (see `frontend.md`); the accent role is appropriate.
 
 **Future: alternate display states.** Once the inline rendering is solid, more aggressive layouts become possible — a strip mode where the chat shares screen with another view and untagged prose hides behind a "more" affordance, or an overlay mode where the chat is hidden entirely and only callouts/acks surface as transient overlays. These are deferred; the initial implementation can ignore them and render everything inline.
 
@@ -392,7 +392,7 @@ The closed `kind` constants live in `src/frontend/src/lib/ack-kinds.ts` (initial
 - `src/frontend/src/components/chat/AckIndicator.tsx` — renders a single chip; takes the ack data and an "emit-flash" boolean to drive the on-emit animation.
 - `src/frontend/src/components/chat/CalloutBlock.tsx` — renders the context-as-eyebrow + body card.
 
-Both follow the project's UI primitive + semantic palette rules (per `FRONTEND.md`). Hook them into `ChatMessages.tsx` in the assistant-message rendering path, alongside the existing speech-tag stripping (`stripUserDisplayTags`, `hasAssistantSpeech`). After speech parsing, parse acks and callouts; render their components; then render whatever prose remains.
+Both follow the project's UI primitive + semantic palette rules (per `frontend.md`). Hook them into `ChatMessages.tsx` in the assistant-message rendering path, alongside the existing speech-tag stripping (`stripUserDisplayTags`, `hasAssistantSpeech`). After speech parsing, parse acks and callouts; render their components; then render whatever prose remains.
 
 **Provenance for callouts.** When a callout is parsed from an assistant message, it gets implicitly tied to the user message that immediately preceded it (the message it's responding to). The frontend already groups user-then-assistant pairs in `ChatMessages.tsx`; the callout knows its parent group. For external surfacing (digests, notifications) — out of scope for this stage but worth noting — the persisted callout record should include the originating user message's ID.
 

@@ -489,7 +489,7 @@ Open question: should the project's coined/narrowed terms (Card, Box, Asset, Att
 - **Testing**: doctest, makeTestServer, makeTmpBox, the three tiers
 - **Misc**: hunch, knowledge audit, landmark, file-lock
 
-Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write entries. Keep them short (one paragraph), link to deeper docs rather than restating. The glossary is for *naming the thing*, not explaining it in full.
+Method: do one sweep through `CLAUDE.md`, `frontend.md`, the schemas, and `docs/` collecting terms-of-art, then write entries. Keep them short (one paragraph), link to deeper docs rather than restating. The glossary is for *naming the thing*, not explaining it in full.
 
 Worth treating as a single pass — partial glossaries are worse than none because readers stop trusting them as comprehensive.
 
@@ -614,7 +614,7 @@ Consider a `docs/cli-design.md` that codifies these so new commands have a check
 2. `cb agent-context` — machine-readable JSON describing the full command surface, versioned with a `schema_version` field so a consuming agent can detect breaking shape changes. Flags, types, enums, defaults, required/optional — everything an agent needs to form a valid invocation without a trial-and-error loop.
 3. Skill manifests (`SKILL.md` or equivalent) — long-form prose describing *workflows*, not commands: how to compose operations into useful sequences, what to reach for in which situation.
 
-`cb` currently has only layer 1. Layer 2 would be straightforward to generate from the existing command definitions (yargs schema → JSON). Layer 3 is essentially what `docs/IMPLEMENTATION.md` and `.claude/rules/` already do for the Claude Code context — the question is whether to also surface them in a form a non-Claude agent could consume. Both layers 2 and 3 should be kept in sync with the implementation by the same generation step, not maintained by hand.
+`cb` currently has only layer 1. Layer 2 would be straightforward to generate from the existing command definitions (yargs schema → JSON). Layer 3 is essentially what `docs/implementation.md` and `.claude/rules/` already do for the Claude Code context — the question is whether to also surface them in a form a non-Claude agent could consume. Both layers 2 and 3 should be kept in sync with the implementation by the same generation step, not maintained by hand.
 
 **Vocabulary consistency** is the highest-leverage item and the hardest to maintain through review alone. Agents don't relearn each CLI from scratch — they generalize from every CLI they've seen, so a command that uses `info` instead of `get`, or `--format=json` instead of `--json`, costs extra retries across every agent invocation, not just the first one. The fix isn't better reviewers; it's a prescriptive vocabulary document that defines the permitted verbs and flags, and a static check that fails on deviations. The `cb` command family is small enough that the vocabulary could be enumerated explicitly: `get`, `list`, `create`, `update`, `delete`; `--json`, `--force`, `--dry-run`, `--limit`, `--cursor`. Any new command picks from this menu. Additions to the menu require updating the doc, not ad hoc review.
 
@@ -1690,8 +1690,8 @@ so it's a manual verification task, not an automated one. Not started.
 ## CLAUDE.md / docs backlog (from CLAUDE-MD-REVIEW, 2026-04)
 
 Still-open items from the 2026-04-28 CLAUDE.md self-audit (`CLAUDE-MD-REVIEW.md`,
-since deleted — most of its scope was completed and folded into CODE-STYLE.md,
-FRONTEND.md, docs/maintenance.md, and docs/knowledge-audits.md over several
+since deleted — most of its scope was completed and folded into code-style.md,
+frontend.md, docs/maintenance.md, and docs/knowledge-audits.md over several
 passes). What's left:
 
 - **Design and build a logger, then document "adding logging."** No central

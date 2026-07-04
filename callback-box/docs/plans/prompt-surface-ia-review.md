@@ -372,7 +372,7 @@ Everything else below is still future work.
   by default (types, validation, fail-closed). Drives the schema-field
   redesigns: `person.contact:` → structured `email:`/`phone:`/`address:`;
   `recipe.source:`/`hero-image:` → typed `ref`/`href`, not freeform.
-- **`callback-box/CODE-STYLE.md`** — no default params, ≤2 positional params, no
+- **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
   bare `as`, files ≤300 lines. Relevant to every `.ts`/`.tsx` edit, especially
   the string→template-literal normalization and the schema changes.
 - **Shipped precedent: `laws.ts` Laws 1–3 + the `{% quote %}` work.** The

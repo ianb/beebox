@@ -25,7 +25,7 @@ real violation data); flipping to enforcing is a gated follow-up.
   general no-regressions posture — a CSP that breaks figures/box-views/dictation
   in prod would be exactly the kind of silent breakage this repo treats as
   unacceptable; the Report-Only-first rollout is the mitigation.
-- `callback-box/CODE-STYLE.md:` no `any`, max 2 positional params, custom error
+- `callback-box/code-style.md:` no `any`, max 2 positional params, custom error
   classes, `// eslint-disable-next-line` only with justification — applies to
   the new CSP-policy module and report route.
 - Precedent: the existing `FROZEN_CSP` (`api-files.ts:40`) and the

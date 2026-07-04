@@ -39,7 +39,7 @@ each `commentary` card via `defaultHref`.
   (CLAUDE.md exempts *"per-box config, throwaway replies, and personal
   memory"*), so a `file:/Users/...` literal in an extfile card is fine; no
   literal path enters shared source.
-- `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional params
+- `callback-box/code-style.md` — no default parameters, max 2 positional params
   (named-params object beyond that), no `any`, no bare `catch {}`, custom error
   classes, files ≤300 lines.
 - **Precedent — the commentary surface** (`docs/plans/box-commentary-surface.md`,

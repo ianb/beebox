@@ -69,7 +69,7 @@ multiplexing.
   requires"* — the resilience bar is "at least as good as today"; we add a
   per-turn resume buffer because today's transport already degrades to a
   history-refetch backstop, and we must not regress that.
-- `callback-box/CODE-STYLE.md:` no `any`, no default params, max 2 positional
+- `callback-box/code-style.md:` no `any`, no default params, max 2 positional
   params, custom error classes, files ≤300 lines / functions ≤150.
 - `callback-box/CLAUDE.md:` *"Treat noisy command output as a bug."* — a WS
   reconnect storm or per-frame logging would violate this; logging is bounded.

@@ -206,26 +206,26 @@ async function main() {
     created.push("Added lint hook to .claude/settings.json");
   }
 
-  // 8. Copy CONVENTIONS.md and add @CONVENTIONS.md to CLAUDE.md
+  // 8. Copy conventions.md and add @conventions.md to CLAUDE.md
   const selfDir = dirname(fileURLToPath(import.meta.url));
-  const srcConventions = join(selfDir, "..", "CONVENTIONS.md");
-  const destConventions = join(cwd, "CONVENTIONS.md");
+  const srcConventions = join(selfDir, "..", "conventions.md");
+  const destConventions = join(cwd, "conventions.md");
   if (!existsSync(destConventions)) {
     copyFileSync(srcConventions, destConventions);
-    created.push("Copied CONVENTIONS.md into project");
+    created.push("Copied conventions.md into project");
   }
   const claudeMdPath = join(cwd, "CLAUDE.md");
   const claudeMdContent = existsSync(claudeMdPath)
     ? readFileSync(claudeMdPath, "utf-8")
     : "";
-  if (!claudeMdContent.includes("@CONVENTIONS.md")) {
+  if (!claudeMdContent.includes("@conventions.md")) {
     const separator = claudeMdContent.length > 0 && !claudeMdContent.endsWith("\n")
       ? "\n\n"
       : claudeMdContent.length > 0
         ? "\n"
         : "";
-    writeFileSync(claudeMdPath, claudeMdContent + separator + "@CONVENTIONS.md\n");
-    created.push("Added @CONVENTIONS.md to CLAUDE.md");
+    writeFileSync(claudeMdPath, claudeMdContent + separator + "@conventions.md\n");
+    created.push("Added @conventions.md to CLAUDE.md");
   }
 
   // 9. Summary

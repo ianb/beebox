@@ -44,7 +44,7 @@ Concrete outputs, so you can evaluate whether to accept them:
 7. Installs as devDependencies: `eslint@^9 prettier oxlint knip madge husky lint-staged`.
 8. Runs `npx husky init` and writes `.husky/pre-commit` with `npx lint-staged` + `npm run typecheck`.
 9. Adds a `PostToolUse` hook (`matcher: "Edit|Write"`, command: `npx vibe-check lint --hook`) to `.claude/settings.json`.
-10. Copies `CONVENTIONS.md` into the project root and appends `@CONVENTIONS.md` to `CLAUDE.md` (creating CLAUDE.md if absent).
+10. Copies `conventions.md` into the project root and appends `@conventions.md` to `CLAUDE.md` (creating CLAUDE.md if absent).
 
 ## When to go manual
 
@@ -77,7 +77,7 @@ export default vibeCheck({
 
 Optional advanced options:
 - `ignores: ["dist/**", "generated/**"]` — extra glob patterns to ignore
-- `restrictComponentClasses: { components: ["./components/ui/**"] }` — enable the `restrict-component-classes` rule for UI-component `className` hygiene (see `CONVENTIONS.md`)
+- `restrictComponentClasses: { components: ["./components/ui/**"] }` — enable the `restrict-component-classes` rule for UI-component `className` hygiene (see `conventions.md`)
 
 ### 3. Create `prettier.config.mjs`
 
@@ -169,13 +169,13 @@ Create `.claude/` if it doesn't exist. Merge with existing hook config — do no
 
 ### 8. Install conventions
 
-The package ships `CONVENTIONS.md` — prose rules that ESLint cannot enforce (naming, error-handling patterns, file-size guidelines, etc.). Downstream agents should see them:
+The package ships `conventions.md` — prose rules that ESLint cannot enforce (naming, error-handling patterns, file-size guidelines, etc.). Downstream agents should see them:
 
 ```bash
-cp node_modules/@ianbicking/personal-vibe-check/CONVENTIONS.md ./CONVENTIONS.md
+cp node_modules/@ianbicking/personal-vibe-check/conventions.md ./conventions.md
 ```
 
-Then append `@CONVENTIONS.md` to the project's `CLAUDE.md` (create it if absent) so Claude Code loads it automatically.
+Then append `@conventions.md` to the project's `CLAUDE.md` (create it if absent) so Claude Code loads it automatically.
 
 ## Verification
 

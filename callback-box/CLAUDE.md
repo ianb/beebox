@@ -55,7 +55,7 @@ src/frontend/     React UI (Vite, separate tsconfig)
   src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
                       Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/landmarks/LandmarksPage.tsx` + `pages/landmarks/components/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
   src/components/     Reusable feature components (Sidebar, CommitTimeline, FileView, dashboard/, ...) — shared across pages
-  src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see FRONTEND.md
+  src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see frontend.md
   src/renderers/      File-type renderers (markdown, image, sheet, recipe, directory, ...)
   src/machines/       XState state machines
   src/hooks/          Shared React hooks
@@ -94,7 +94,7 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 - **Doctests are the primary test format.** They're markdown files with executable code blocks. Read `.claude/rules/doctest.md` before writing tests. Common mistakes: using JS object notation instead of JSON in expected output, forgetting `continue` blocks share scope.
 - **Two TypeScript configs.** Backend uses the root tsconfig, frontend uses `src/frontend/tsconfig.json`. Both must pass for `pnpm typecheck`.
 - **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Real-time/streaming also lives in tRPC now — **subscriptions over the WebSocket** (`useWSS` on the per-box plugin; `events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; client routes subscriptions through `wsLink` via the `splitLink` in `lib/trpc.ts`). Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: file upload/download, OAuth redirects, webhooks, and the `/chat/send` POST (it needs the request's user + the session registry). Older raw routes are tech debt — migrate when you touch the area.
-- **Frontend uses UI primitives and a semantic palette.** Read FRONTEND.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
+- **Frontend uses UI primitives and a semantic palette.** Read frontend.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Commits go through plain `git commit`; the per-box `.git/hooks/pre-commit` (installed by `cb init`) runs `cb validate --staged` and blocks invalid card commits.
 - **Time discipline.** Get timestamps via `getBoxTime`/`getBoxTimeISO` (`src/cli/lib/time.ts`), not plain `new Date()` — it honors `CB_TIME`/scenario-frozen time for tests. Long-running timeouts must count only awake time via `startAwakeTimeout` (`src/lib/awake-timeout.ts`) — a plain `setTimeout` fires instantly on wake because its underlying clock advances during macOS sleep.
 - **All cross-process locks go through `src/lib/file-lock.ts`.** Don't roll your own with `proper-lockfile` or hand-built `.lock` files — the primitive handles PID liveness, sleep, and crash recovery. In-process async serialization (e.g. a `Map<id, Promise>` chain) is a different problem and stays separate.
@@ -104,14 +104,14 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 
 ## Improving These Instructions
 
-When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, CODE-STYLE.md, FRONTEND.md, `.claude/rules/`, or `docs/` so the next agent doesn't repeat the mistake. One-line additions preferred.
+When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, frontend.md, `.claude/rules/`, or `docs/` so the next agent doesn't repeat the mistake. One-line additions preferred.
 
 ## Guides
 
 | Topic | Location |
 |-------|----------|
-| Design rationale | `docs/DESIGN.md` |
-| Implementation guide | `docs/IMPLEMENTATION.md` |
+| Design rationale | `docs/design.md` |
+| Implementation guide | `docs/implementation.md` |
 | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |
 | Doctest syntax | `.claude/rules/doctest.md`; deeper reference in the monorepo's `agent-doctest/docs/` |
@@ -145,4 +145,4 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | OpenClaw/Hermes comparison & idea triage | `research/openclaw-hermes/README.md` |
 | Glossary | `docs/glossary.md` |
 
-@CODE-STYLE.md
+@code-style.md

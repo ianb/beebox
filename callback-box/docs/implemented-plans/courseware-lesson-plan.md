@@ -20,7 +20,7 @@ the material convention (proper presentational cards, not a stray `README.md`).
   is the *plan*, not the Phase-2 tutoring runner; keep the line.
 - `callback-box/CLAUDE.md` — **"Keep source and docs generic — never hardcode personal names…"**
   Instructions stay generic; neutral pronouns (the courseware convention).
-- `callback-box/CODE-STYLE.md` — no `any`, no default params, max 2 positional params, files ≤300
+- `callback-box/code-style.md` — no `any`, no default params, max 2 positional params, files ≤300
   lines (the reason courseware templates live in `templates-courseware.ts`, not `templates-builtins.ts`).
 - The denser precedents are the **courseware cards themselves**: `concept-map.ts` (closed-enum
   fields + self-contained `validate`), `course.ts` (ComponentRef manifest), `progress.ts` (sparse,

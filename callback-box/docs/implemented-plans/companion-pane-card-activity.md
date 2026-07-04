@@ -33,7 +33,7 @@ A cross-model (Codex) review of an earlier draft is folded in — see
 - `callback-box/CLAUDE.md:104` — the new per-send fields ride the existing
   `/chat/send` raw route (already the documented tRPC exception), not a new
   endpoint.
-- `callback-box/CODE-STYLE.md` — files ≤300 lines, no default parameters, max 2
+- `callback-box/code-style.md` — files ≤300 lines, no default parameters, max 2
   positional params, no `any`, only export what's used. New helpers go in
   sibling modules, not inline (the `chatMachine.ts`/`git.ts` line caps already
   bit related work this cycle).

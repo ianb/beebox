@@ -40,7 +40,7 @@ flagged the `webapp/routes/*` ⇄ `webapp/trpc/routers/*` parallel implementatio
   request/response shape: file upload/download, OAuth redirects, webhooks, and
   the `/chat/send` POST … Older raw routes are tech debt — migrate when you
   touch the area."* This plan is that migration; tRPC wins every JSON endpoint.
-- **`callback-box/CODE-STYLE.md`** — Zod-validated inputs, `only export what's
+- **`callback-box/code-style.md`** — Zod-validated inputs, `only export what's
   used` (deleting raw handlers must delete their now-unused helpers/exports too).
 - **Fail-closed / strict bias** (the boxholder's standing preference) — the
   owner-auth parity gate below is non-negotiable: a migration that drops an

@@ -4,7 +4,7 @@
 
 **Chapters:** [agent core](compare-agent-core.md) · [context/memory](compare-context-memory.md) · [skills/tools](compare-skills-tools.md) · [scheduling](compare-scheduling.md) · [channels](compare-channels.md) · [storage](compare-storage.md) · [security](compare-security.md) · [UX/prompt](compare-ux-prompt.md)
 
-**Letta** (added 2026-07-04, non-memory focus): [comparison chapter](compare-letta.md) · dives: [server/loop](letta-server-loop.md) · [tools/rules](letta-tools-rules.md) · [multi-agent/sleeptime](letta-multiagent-sleeptime.md) · [letta-code](letta-code.md)
+**Letta** (added 2026-07-04, non-memory focus): [comparison chapter](compare-letta.md) · dives: [server/loop](deep-letta-server-loop.md) · [tools/rules](deep-letta-tools-rules.md) · [multi-agent/sleeptime](deep-letta-multiagent-sleeptime.md) · [letta-code](deep-letta-code.md)
 
 **Comparables roundup** (2026-07-04): [roundup chapter](scout-roundup.md) · scouts: [Claude Code Channels](scout-claude-code-channels.md) · [Khoj](scout-khoj.md) · [Goose](scout-goose.md) · [Agent Zero](scout-agent-zero.md) · [nanobot](scout-nanobot.md)
 

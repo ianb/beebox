@@ -3,7 +3,7 @@
  *
  * Six tags moved from the XML recipe schema's children (`<ing>`, `<step>`,
  * `<yield>`, `<section>`) plus two new concepts (`{% substitution %}`,
- * `{% subrecipe %}`) — see `markdoc-tags-design.md` Track 1.
+ * `{% subrecipe %}`) — see `markdoc-tags-plan.md` Track 1.
  *
  * **Scaling lives here**, not in the recipe view. The recipe view
  * provides a `RecipeScaleContext` with the current multiplier; each

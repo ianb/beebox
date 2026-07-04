@@ -1,6 +1,6 @@
 # Letta (MemGPT) vs Callback Box — non-memory architecture
 
-*Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does the rest look like, and do they have clever ideas?" Sources: dives against clones of `letta-ai/letta` (Python server) and `letta-ai/letta-code` (TS/Bun CLI): [server/loop](letta-server-loop.md), [tools/rules](letta-tools-rules.md), [multi-agent/sleeptime](letta-multiagent-sleeptime.md), [letta-code](letta-code.md).*
+*Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does the rest look like, and do they have clever ideas?" Sources: dives against clones of `letta-ai/letta` (Python server) and `letta-ai/letta-code` (TS/Bun CLI): [server/loop](deep-letta-server-loop.md), [tools/rules](deep-letta-tools-rules.md), [multi-agent/sleeptime](deep-letta-multiagent-sleeptime.md), [letta-code](deep-letta-code.md).*
 
 ## The shape
 

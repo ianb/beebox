@@ -45,7 +45,7 @@ deep-link from that plan are unchanged and reused here.
   agent vocabulary). It earns its place only because the captured page has
   distinct provenance/immutability/rendering that `doc`+frontmatter would
   fake; this plan must justify the type, not assume it.
-- `callback-box/CODE-STYLE.md` — no optional chaining, no default params,
+- `callback-box/code-style.md` — no optional chaining, no default params,
   ≤2 positional params, no `any`. Applies to the schema, the migrator, and
   the renderer split.
 - **Most recent shipped precedent:** the `<destination for="…">` role +
