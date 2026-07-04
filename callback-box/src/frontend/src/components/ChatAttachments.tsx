@@ -13,18 +13,15 @@
 import { Image } from "./ui/Image";
 import { useLightbox } from "./LightboxProvider";
 import { formatBytes } from "../lib/format-bytes";
+import type { ImageItem, FileItem } from "../input/emission-store";
 
-/** UI-side attachment record (pairs ChatImageAttachment payload with preview metadata). */
-export interface AttachmentItem {
-  id: number;
-  mimeType: string;
-  /** base64 payload (no data: prefix) — sent as-is to backend. */
-  dataBase64: string;
-  /** Object URL for thumbnail/lightbox preview. */
-  objectUrl: string;
-  /** Approximate byte size of the encoded image, for tooltip display. */
-  byteLength: number;
-}
+/**
+ * UI-side attachment record (pairs ChatImageAttachment payload with preview
+ * metadata). Defined in `input/emission-store.ts` (the ONE emission-draft
+ * store, chunk 2 of docs/plans/input-extraction.md); re-exported here under
+ * its historical name so this component's own prop types read naturally.
+ */
+export type AttachmentItem = ImageItem;
 
 export function AttachmentPanel({
   attachments,
@@ -125,18 +122,11 @@ function ThumbTile({
 }
 
 /**
- * UI-side record for a chat file attachment. Pairs the token id, the saved
- * path returned by the upload endpoint, and the metadata needed to render
- * the chip.
+ * UI-side record for a chat file attachment (token id, saved path, and the
+ * metadata needed to render the chip). Defined in `input/emission-store.ts`;
+ * re-exported under its historical name.
  */
-export interface FileAttachmentItem {
-  id: number;
-  /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
-  path: string;
-  originalName: string;
-  size: number;
-  mimetype: string;
-}
+export type FileAttachmentItem = FileItem;
 
 export function FileAttachmentPanel({
   attachments,

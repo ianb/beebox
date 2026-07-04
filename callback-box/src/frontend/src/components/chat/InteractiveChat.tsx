@@ -89,7 +89,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   // Composer text lives in an external store, not React state, so a keystroke
   // re-renders only the composer textareas — not the message history or the
   // companion view pane (see input-store.ts and components/chat/CLAUDE.md).
-  const inputStore = useInputStoreInstance();
+  const { inputStore, emissionStore } = useInputStoreInstance();
   // Persist the unsent composer text so a remount (e.g. the router re-reading
   // search params on wake-from-sleep) or a reload doesn't silently discard it.
   useComposerDraft({ boxSlug, sessionId, inputStore });
@@ -121,8 +121,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages,
   });
 
-  const attach = useChatAttachments({ inputStore, textareaRef });
-  const selections = useChatSelections({ inputStore, textareaRef });
+  const attach = useChatAttachments({ emissionStore, textareaRef });
+  const selections = useChatSelections({ emissionStore, textareaRef });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
