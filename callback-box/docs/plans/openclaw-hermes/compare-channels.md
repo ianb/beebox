@@ -356,3 +356,11 @@ chat platform.
    surface is half-built on a different protocol. Lowest priority only
    because CBX doesn't currently have a second interactive surface in
    progress — but cheap to note as a constraint for whoever builds one.
+
+## Addendum (2026-07-04): what OpenClaw's multi-agent routing is *for*
+
+Boxholder question: why isn't there just one agent? Answer from their docs (`docs/concepts/multi-agent.md`): by default there IS one agent (`agentId: main`); multi-agent is opt-in for running several distinct relationships/personas out of one gateway process (`openclaw agents add work|coding|social`). An "agent" = full scope: workspace (SOUL.md persona, AGENTS.md, USER.md), per-agent auth profiles/credentials, session store, skill allowlist. Bindings route channel accounts to agents (two WhatsApp numbers → two agents; a Discord guild of strangers → a restricted agent).
+
+Why one agent can't serve them: (1) other people reach the bot — memory accumulates per relationship, and personas must not leak across contexts (privacy, not organization); (2) credential blast radius — per-agent auth; (3) persona coherence — their instruction/memory files are global per agent; (4) trust tiers via skill allowlists.
+
+**CBX reframe: this is our multiple-boxes feature at a different granularity.** They need in-process multi-agent because their runtime is a singleton daemon; separation must be built inside it (the 9-tier router, per-agent dirs, allowlists). CBX's isolation unit is the box — separate directory/git/config — with *stronger* isolation than theirs (their workspaces are default-cwd, not a boundary; absolute paths escape unless sandboxed). The only piece of their story not structurally ours: **channel bindings into different boxes** (e.g. two Telegram accounts → family box vs work box) — only relevant if boxes multiply and each wants its own chat ingress.
