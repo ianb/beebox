@@ -19,10 +19,11 @@ import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
 import { detectKeyword, appendSendKeywordTag } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
-import { setLastMessageAudio } from "../../lib/last-audio-cache";
+import { retainVoiceAudio } from "../../lib/last-audio";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
 import { joinTranscript } from "./InteractiveChat-helpers";
-import { createVoiceEmission, type Emission } from "../../input/emission";
+import { type Emission } from "../../input/emission";
+import { buildVoiceSubmitEmission, type VoiceIntent } from "../../input/voice-intent";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection-serialize";
 import type { SpeechSegment } from "../../lib/speech-parsing";
@@ -58,16 +59,8 @@ interface VoiceDevices {
  * Module-level so the hook body stays under the per-function line budget.
  */
 function runKeywordSend(opts: {
-  text: string;
-  /** Trigger phrase the realtime pass matched (e.g. "send message"). */
-  matchedPhrase: string;
-  audioBlob: Blob | null;
-  /**
-   * "Send and close": after the message commits, leave the mic closed instead
-   * of restarting it. Sends STOP_DICTATION so the post-response re-arm
-   * (gated on `turnTaking`) is suppressed too.
-   */
-  closeMic: boolean;
+  /** The realtime keyword spotter's "submit" intent (docs/plans/input-extraction.md, chunk 5). */
+  intent: Extract<VoiceIntent, { kind: "submit" }>;
   transcription: { start: () => void };
   stopTickRef: React.MutableRefObject<(() => void) | null>;
   composerSend: (event: ComposerEvent) => void;
@@ -80,7 +73,8 @@ function runKeywordSend(opts: {
   /** Composer text store; the latest text is prepended at fire time so it isn't dropped. */
   inputStore: InputStore;
 }) {
-  const { text, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore } = opts;
+  const { intent, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore } = opts;
+  const { text, matchedPhrase, audioBlob, closeMic } = intent;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
   // post-response re-arm too). Called at every exit below.
@@ -114,11 +108,13 @@ function runKeywordSend(opts: {
     // fold the prior composer text back in at submit time. The frozen
     // selections snapshot rides the emission — additions during the HQ
     // window belong to the next message.
-    const full = joinTranscript(priorInput, finalText);
-    dispatchEmission(createVoiceEmission({ text: full, selections: selectionsSnapshot, diarized }));
-    // Keep the original recording around (after dispatch, which clears the
-    // cache) so the agent can fetch it via `cb chat get-last-audio`.
-    if (audioBlob) setLastMessageAudio({ blob: audioBlob, text: full });
+    const emission = buildVoiceSubmitEmission({ priorInput, finalText, selectionsSnapshot, diarized });
+    dispatchEmission(emission);
+    // Keep the original recording around, keyed by this emission's id, so the
+    // agent can fetch it via `cb chat get-last-audio` — retention is
+    // per-emission (docs/plans/input-extraction.md, chunk 5), so nothing
+    // ever needs to clear it on a later send.
+    if (audioBlob) retainVoiceAudio(emission.id, { blob: audioBlob, text: emission.text });
     // The segment is committed — drop any persisted draft so the recovery
     // widget doesn't resurface the text we just sent.
     clearDraftRef.current();
@@ -214,29 +210,37 @@ export function useChatVoice(opts: {
     // enabled, and every voice send caches it for `cb chat get-last-audio`.
     // No latency cost — the actor finalizes the blob synchronously on STOP.
     wantAudioBlob: () => true,
-    onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob, closeMic }) => runKeywordSend({
-      text: processedTranscript, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId,
-      narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore,
-    }),
-    onKeywordCancel: () => {
-      transcription.cancel();
-      // "Cancel the message" discards the whole in-progress message, not
-      // just the live segment: prior utterances may already sit in the
-      // composer input, and the dictation draft holds the persisted copy.
-      inputStore.set("");
-      clearDraftRef.current();
-    },
-    onKeywordMicOff: () => {
-      composerSend({ type: "STOP_DICTATION" });
-      recordingStop.play();
-    },
-    onKeywordErase: () => {
-      // The hook clears the machine's live transcript, but "erase the
-      // message" / "start over" means the whole accumulated message —
-      // composer input (prior utterances folded back or typed) and the
-      // persisted dictation draft included.
-      inputStore.set("");
-      clearDraftRef.current();
+    // One handler for the whole VoiceIntent stream (docs/plans/
+    // input-extraction.md, chunk 5) instead of four separate callbacks.
+    onVoiceIntent: (intent) => {
+      switch (intent.kind) {
+        case "submit":
+          runKeywordSend({
+            intent, transcription, stopTickRef, composerSend, sessionId,
+            narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore,
+          });
+          break;
+        case "cancel":
+          transcription.cancel();
+          // "Cancel the message" discards the whole in-progress message, not
+          // just the live segment: prior utterances may already sit in the
+          // composer input, and the dictation draft holds the persisted copy.
+          inputStore.set("");
+          clearDraftRef.current();
+          break;
+        case "mic-off":
+          composerSend({ type: "STOP_DICTATION" });
+          recordingStop.play();
+          break;
+        case "erase":
+          // The hook clears the machine's live transcript, but "erase the
+          // message" / "start over" means the whole accumulated message —
+          // composer input (prior utterances folded back or typed) and the
+          // persisted dictation draft included.
+          inputStore.set("");
+          clearDraftRef.current();
+          break;
+      }
     },
     onUnconsumedTranscript: (text) => {
       // Recording ended without a send or a manual stop (transport death, mic

@@ -130,12 +130,12 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   // The one user-send funnel: every send site builds an Emission and lands
   // in dispatchEmission (docs/plans/input-extraction.md chunk 1); assembly
   // and witness capture live in InteractiveChat-dispatch.ts.
-  const { dispatchEmission, sendVoiceSegment } = useEmissionDispatch({
-    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
-  });
-
   const attach = useChatAttachments({ emissionStore, textareaRef });
   const selections = useChatSelections({ emissionStore, textareaRef });
+  const { dispatchEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
+    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
+    selections: selections.selections, resetSelections: selections.resetSelections,
+  });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
@@ -247,7 +247,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       setTypingMode={setTypingMode}
       typingLocked={typingLocked}
       setTypingLocked={setTypingLocked}
-      onVoiceSegmentSend={sendVoiceSegment}
+      onVoiceSegmentSend={sendStopSend}
       send={send}
       reportCardActivity={cardSend.report}
       />

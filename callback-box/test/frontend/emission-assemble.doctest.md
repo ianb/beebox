@@ -82,18 +82,29 @@ out.message === legacy
 => true
 ```
 
-## Sites 3+4 — desktop/mobile stop-and-send: raw speech, no folding
+## Sites 3+4 — desktop/mobile stop-and-send: now fold selections (chunk 5, DECIDED)
 
-Historical builders hand-built
-`<speech local-time="…"…>${text}</speech>` with NO selection folding
-(`InteractiveChat-composer.tsx`, `InteractiveChat-mobile-row.tsx`) —
-reproduced by an emission with empty selections (identity fold). Aligning
-these paths to fold selections is a named chunk-5 decision, not part of
-this refactor.
+Historical builders hand-built `<speech local-time="…"…>${text}</speech>`
+with NO selection folding (`InteractiveChat-composer.tsx`,
+`InteractiveChat-mobile-row.tsx`) — an accident of hand-built payloads, not
+a design. Chunk 5 decided (named, boxholder-visible): ALIGN these two
+paths with every other send path and fold the live selections snapshot in
+(`InteractiveChat-dispatch.ts`'s `sendStopSend`), for consistency — every
+other send path already folds.
 
 ```ts
-const e = createVoiceEmission({ text: "quick thought before I go", selections: [], diarized: false });
-assembleChatMessage(e, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message
+const sel = [{ id: 3, ref: "/store/notes/Bread.doc.card", text: "let it rise", position: "body" }];
+const e = createVoiceEmission({ text: "quick thought before I go", selections: sel, diarized: false });
+JSON.stringify(assembleChatMessage(e, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message)
+=> "<speech local-time=\"23:59\" time-passed=\"8h\">quick thought before I go\n<user-selection ref=\"/store/notes/Bread.doc.card\" pos=\"body\">let it rise</user-selection></speech>"
+```
+
+With no selections pending (the common case), the fold is the identity —
+still byte-identical to the old, permanently-unfolded behavior:
+
+```ts
+const e2 = createVoiceEmission({ text: "quick thought before I go", selections: [], diarized: false });
+assembleChatMessage(e2, { localTime: "23:59", zoomedView: null, timePassed: "8h" }).message
 => <speech local-time="23:59" time-passed="8h">quick thought before I go</speech>
 ```
 

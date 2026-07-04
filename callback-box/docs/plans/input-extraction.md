@@ -161,7 +161,11 @@ selection tokens, diarized attr, and the stop-send buttons' current
 no-selection-folding behavior, reproduced via explicit empty selections)
 before the refactor lands. Aligning the stop-send paths to fold
 selections is a NAMED follow-up decision deferred to chunk 5, not
-smuggled into the refactor.
+smuggled into the refactor. **Decided in chunk 5: aligned** — every other
+send path folds selections, so the stop-send paths' no-fold behavior was
+an accident of hand-built payloads, not a design; consistency wins and
+they now fold the live selections snapshot too (`InteractiveChat-dispatch.ts`'s
+`sendStopSend`).
 
 **Why.** The two assembly paths + two dispatchers are the core of
 "implied and spread out"; every payload rule exists twice.
@@ -264,25 +268,41 @@ Doctest: serialization round-trip + migration adoption logic
 ### Chunk 5 — voice intents + emission-keyed retention
 
 **What.** The keyword callbacks (`onKeywordSend/Cancel/MicOff/Erase`)
-re-shape into a `VoiceIntent` stream consumed by the input (submit →
-`input.submit()`; the feeder never sends). **Freeze boundary preserved**
-(codex finding): today's keyword send snapshots `priorInput` and
-`selections` at keyword time and clears them immediately — selections
-added during the async HQ window deliberately belong to the NEXT message
-(`InteractiveChat-voice.ts:92-118, 126-149`). The intent flow keeps this:
-submit consumes a point-in-time emission SNAPSHOT (emissions are values),
-the live emission clears at once, and HQ-window additions accumulate in
-the fresh emission. This chunk also decides (named, boxholder-visible)
-whether the stop-send buttons align to fold selections like every other
-path, or keep their historical no-fold behavior. `RetentionStore`
+re-shape into one `VoiceIntent` stream (`input/voice-intent.ts`,
+`kind: submit | cancel | mic-off | erase`) that `useRealtimeTranscription`
+emits through a single `onVoiceIntent` handler instead of four separate
+callbacks; `InteractiveChat-voice.ts` switches on `kind` and maps each
+intent to its action (submit → `runKeywordSend`, unchanged otherwise;
+cancel/mic-off/erase → their existing bodies, moved as-is). **Freeze
+boundary preserved** (codex finding): today's keyword send snapshots
+`priorInput` and `selections` at keyword time and clears them immediately
+— selections added during the async HQ window deliberately belong to the
+NEXT message (`InteractiveChat-voice.ts:92-118, 126-149`). The intent flow
+keeps this exactly: the pure `buildVoiceSubmitEmission` (`input/voice-intent.ts`)
+takes the frozen `priorInput`/`selectionsSnapshot` plus the final committed
+text (post-HQ, if narration ran) and returns the Emission; the mapper
+(still `runKeywordSend`) takes the snapshot and clears the live selections
+before the HQ round-trip starts, same as before. **Decided in this chunk**
+(named, boxholder-visible): the stop-send buttons ALIGN to fold selections
+like every other path (see chunk 1's section above) — consistency wins,
+the no-fold behavior was an accident of hand-built payloads. `RetentionStore`
 (`input/retention.ts`): audio keyed by emission id, N most recent
-in-memory (v1 N=5), `latest()` = most recent *with audio*;
-`fulfillLastAudioRequest` reads it. The loopback protocol, routes, and
-`cb chat get-last-audio` are untouched. Fixes the typed-path clear wart
-by construction (sends never clear retention; "latest" is well-defined).
+in-memory (v1 N=5), `latest()` = most recent entry; `fulfillLastAudioRequest`
+(`lib/last-audio.ts`, replacing `lib/last-audio-cache.ts`) reads it. The
+loopback protocol, routes, and `cb chat get-last-audio` are untouched.
+Fixes the typed-path clear wart by construction (sends never clear
+retention; "latest" is well-defined).
+
+Also added: a `?fakemic=<script>` / `localStorage["fakemic"]` debug seam
+(`lib/fake-mic.ts`, wired into `machines/transcription-mic.ts`'s two
+`getUserMedia` call sites) scripting mic behaviors a real device can't
+reproduce on demand — `delay:<ms>`, `deny`, `end` (track-ended mid-use) —
+dead code with the flag unset.
 
 Doctest: retention keying/eviction/latest
-(`test/frontend/lib/retention.doctest.md`).
+(`test/frontend/lib/retention.doctest.md`); the pure submit-to-emission
+mapping (`test/frontend/voice-intent.doctest.md`); updated stop-send pins
+in `test/frontend/emission-assemble.doctest.md`.
 
 ## Subplans
 

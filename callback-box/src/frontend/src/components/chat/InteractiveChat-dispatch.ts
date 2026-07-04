@@ -10,12 +10,12 @@ import { useCallback } from "react";
 import type { SessionEntry } from "../../api";
 import { serializeViewUrl } from "../../lib/view-url";
 import { refreshLocationIfStale } from "../../lib/location-share";
-import { clearLastMessageAudio } from "../../lib/last-audio-cache";
 import { createVoiceEmission, type Emission } from "../../input/emission";
 import type { ChatWitness } from "../../input/targets/chat-assemble";
 import { acceptEmission, planRestore, applyRestorePlan } from "../../input/targets/chat-target";
 import type { Receipt } from "../../input/targets/receipts";
 import type { EmissionStore } from "../../input/emission-store";
+import type { SelectionItem } from "../../lib/selection-serialize";
 import { localTime, formatTimePassed } from "./InteractiveChat-helpers";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { CardSendFields } from "./InteractiveChat-card-hooks";
@@ -28,8 +28,11 @@ export function useEmissionDispatch(opts: {
   activeView: { target: ViewTarget } | null;
   messages: SessionEntry[];
   emissionStore: EmissionStore;
+  /** Live composer selections, for the stop-and-send buttons (see sendStopSend). */
+  selections: SelectionItem[];
+  resetSelections: () => void;
 }) {
-  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore } = opts;
+  const { send, captureCardSend, boxSlug, activeView, messages, emissionStore, selections, resetSelections } = opts;
 
   // Frame state at the moment of sending, as plain values — consumed by the
   // chat-target assembler (input/targets/chat-assemble.ts).
@@ -57,11 +60,6 @@ export function useEmissionDispatch(opts: {
   // input-extraction.md chunk 3).
   const dispatchEmission = useCallback(
     (emission: Emission): Promise<Receipt> => {
-      // Historical behavior, preserved exactly: only the voice funnel cleared
-      // the cached recording (a voice send re-caches its own right after —
-      // see runKeywordSend). Typed sends never cleared it. Chunk 5 replaces
-      // this cache with emission-keyed retention and the asymmetry goes away.
-      if (emission.origin === "voice") clearLastMessageAudio();
       void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
       const cardFields = captureCardSend();
       return acceptEmission(emission, { witness: getWitness(), cardFields, send }).then((receipt) => {
@@ -78,8 +76,10 @@ export function useEmissionDispatch(opts: {
     [send, captureCardSend, boxSlug, getWitness, emissionStore]
   );
 
-  // Voice segment without keyword machinery: the stop-and-send buttons and
-  // dictation recovery — plain <speech>, no selections, not diarized.
+  // Recovered dictation: a segment that survived a page drop (screen sleep,
+  // tab eviction, reload) with no live composer state around it to fold in —
+  // plain <speech>, no selections, not diarized (historical shape, pinned by
+  // emission-assemble.doctest.md's "site 5").
   const sendVoiceSegment = useCallback(
     (text: string) => {
       dispatchEmission(createVoiceEmission({ text, selections: [], diarized: false }));
@@ -87,5 +87,19 @@ export function useEmissionDispatch(opts: {
     [dispatchEmission]
   );
 
-  return { dispatchEmission, sendVoiceSegment };
+  // The desktop/mobile stop-and-send buttons: chunk 5's named decision is to
+  // ALIGN these with every other send path and fold the live selections
+  // snapshot in (they historically sent plain <speech> with none — an
+  // accident of hand-built payloads, not a design; see docs/plans/
+  // input-extraction.md). Selections reset after send, same as
+  // runKeywordSend's freeze-and-clear.
+  const sendStopSend = useCallback(
+    (text: string) => {
+      dispatchEmission(createVoiceEmission({ text, selections, diarized: false }));
+      resetSelections();
+    },
+    [dispatchEmission, selections, resetSelections]
+  );
+
+  return { dispatchEmission, sendVoiceSegment, sendStopSend };
 }
