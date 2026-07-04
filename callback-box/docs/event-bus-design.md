@@ -24,13 +24,13 @@ The system also had two separate `broadcastEvent` instances per box (one for the
 | `cards-changed` | Telegram creates/processes cards | `routes/telegram.ts` |
 | `command-complete` | CLI command execution | `routes/commands.ts`, `trpc/routers/commands.ts` |
 
-### Consumers (listen via SSE)
+### Consumers (listen via the `events.subscribe` tRPC subscription)
 
 | Page | Events consumed | Action |
 |------|-----------------|--------|
 | DashboardPage | `file-change`, `question-answered`, `card-created`, `wakeup-complete` | Invalidate tRPC queries |
 | QuestionsPage | `question-answered`, `card-created`, `file-change` | Invalidate questions query |
-| ChatPage | `schedule-fired`, `chat-history` | Alarm/TTS, update messages |
+| ChatPage (`InteractiveChat-ws.ts`) | `schedule-fired`, `chat-history` | Alarm/TTS, update messages |
 
 ## Implementation
 
@@ -130,12 +130,15 @@ Events are ephemeral notifications, not an audit log. 24 hours is generous — m
 
 `emitTransient()` uses negative IDs and skips SQLite — for high-frequency ephemeral events like `file-change` that don't need replay on reconnect.
 
+## Superseded: SSE transport → tRPC WebSocket subscription
+
+The SSE integration described above (`routes/sse.ts`, `GET /api/events`, `EventSource`/`Last-Event-ID`) has been replaced by a tRPC subscription over the shared WebSocket: `events.subscribe` in `src/webapp/trpc/routers/events.ts`. It bridges the same SQLite-backed `EventBus` into an async generator — persistent events are `tracked()` by bus id so a reconnect replays exactly what was missed (client resends `lastEventId`, the bus replays from `afterId`), and transient (negative-id) events are yielded plain, matching the prior SSE behavior. `events.turnStream` is a second, resumable subscription for per-turn agent output. The `EventBus` core itself (SQLite schema, `emit`/`subscribe`/`readSince`/`emitTransient`, one bus per box) is unchanged by this; only the delivery mechanism to the browser moved off SSE.
+
 ## Key decisions
 
 - **One EventBus per box, not per server** — isolates boxes, each gets its own SQLite file
 - **`emitTransient()` for file-change events** — avoids SQLite churn for high-frequency events that don't need replay
-- **`Last-Event-ID` is the replay mechanism** — standard SSE, no custom protocol needed
+- **Replay by last-seen id** — the WebSocket subscription resends `lastEventId` on reconnect the same way SSE's `Last-Event-ID` did; no custom protocol needed
 - **EventBus is a plain object, not a class** — follows the project's functional style (see `createEventBus()`)
 - **SQLite DB at `.callback-box/events.db`** — gitignored, ephemeral, rebuildable (same pattern as `usage.db`)
 - **Cross-process polling** — when `pollInterval` is set, the bus checks SQLite for events from other processes (CLI, background agents)
-- **SSE machine uses parent state for invoke** — the `sseActor` (EventSource) is invoked in an `active` parent state that encompasses both `connecting` and `connected` sub-states, so the connection isn't torn down on state transition

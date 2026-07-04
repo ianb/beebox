@@ -40,21 +40,17 @@ The text content inside the tag is context passed back to the agent when the sch
 
 ### Frontend display
 
-- `SchedulePill` components show active schedules with live countdown
-- Schedules are fetched from `GET /api/chat/schedules` on mount and after each turn
-- User can cancel schedules via the × button on each pill
+- `SchedulePill` components (in `InteractiveChat-layout.tsx`/`InteractiveChat-controls.tsx`) show active schedules with live countdown
+- Schedules are fetched via the `chat.schedules` tRPC query on mount and after each turn
+- User can cancel schedules via the × button on each pill, which calls the `chat.cancelSchedule` tRPC mutation
 
 ### Frontend receives the agent's response
 
-Two mechanisms deliver the agent's schedule-fired response to the UI:
-
-**SSE push**: Server broadcasts `schedule-fired` (triggers alarm/TTS) and `chat-history` (full message list) via Server-Sent Events. The frontend's `useSSE` hook feeds these into the chat state machine via `SET_MESSAGES`.
-
-**Polling fallback**: As defense-in-depth, when `SchedulePill`'s countdown reaches zero, it calls `onFired` (plays alarm/TTS locally) and a `setInterval` polls `GET /api/chat/history` every 3 seconds until new messages appear. The SSE push via EventBus is now reliable (previous issues were due to the SSE state machine tearing down the EventSource on state transition — fixed by restructuring the XState machine), but the polling fallback remains.
+The agent's schedule-fired response reaches the UI over the shared WebSocket: the server broadcasts `schedule-fired` (triggers alarm/TTS) and `chat-history` on the box's event-bus stream, and `InteractiveChat-ws.ts` subscribes to that stream via tRPC's `events.subscribe`.
 
 ### Hidden system messages
 
-The `<schedule-fired>` message sent to the agent is a user-type message wrapped in XML tags. `ChatMessages.tsx` strips these tags for display — if a user message is empty after stripping, it's hidden entirely (visible only in debug view).
+The `<schedule-fired>` message sent to the agent is a user-type message wrapped in XML tags. `stripUserDisplayTags()` (`src/frontend/src/components/chat/message-parsing.ts`) strips these tags for display — if a user message is empty after stripping, it's hidden entirely (visible only in debug view).
 
 ### Telegram threads
 
@@ -77,17 +73,17 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 | `src/core/chat-session.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
 | `src/core/chat-session-pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
 | `src/core/chat-thread-session.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
-| `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text, onFire handler, REST endpoints |
-| `src/frontend/src/components/ChatPage.tsx` | `SchedulePill`, polling fallback, SSE event handling, alarm/TTS |
-| `src/frontend/src/components/ChatMessages.tsx` | `stripUserDisplayTags()`, hidden schedule-fired messages |
+| `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text, onFire handler, wires the schedule manager into `webapp/chat-runtime.ts` |
+| `src/webapp/trpc/routers/chat-control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
+| `src/frontend/src/components/chat/InteractiveChat-layout.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
+| `src/frontend/src/components/chat/InteractiveChat-ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |
+| `src/frontend/src/components/chat/message-parsing.ts` | `stripUserDisplayTags()`, hidden schedule-fired messages |
 
-## API Endpoints
+## API
 
-- `GET /api/chat/schedules` — List active schedules
-- `POST /api/chat/schedules/cancel` — Cancel by label (`{ label: string }`)
+- `trpc.chat.schedules` (query) — List active schedules
+- `trpc.chat.cancelSchedule` (mutation, `{ label: string }`) — Cancel by label
 
 ## Known Issues / Future Work
 
-- **Dual delivery is wasteful**: Both SSE push and polling can deliver the same update. The EventBus now handles reliable delivery, but the polling fallback remains as defense-in-depth.
-- **XState complication**: The `chatMachine` state machine only allows `REFRESH` from `idle` state. `SET_MESSAGES` was added as a global handler to bypass this, but it's a workaround — the machine wasn't designed for server-push updates.
 - **Telegram schedule delivery on restart**: If the server restarts, schedule timers are re-armed from disk but the `deliverResponse` callback (which sends to Telegram) is lost. The schedule fires but the response only goes to the session log, not to Telegram. This is acceptable for short-term timers.

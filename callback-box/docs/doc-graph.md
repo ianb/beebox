@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-04T01:31:13Z
-Total documents: 144
+Generated: 2026-07-04T20:00:22Z
+Total documents: 177
 
 ## Issues
 
@@ -11,8 +11,7 @@ These documents are not referenced by any other document.
 
 - **docs/architecture/01-what-is-this.md** — "What Is This Thing?" (66 lines)
 - **docs/architecture/02-cards-and-memory.md** — "Cards and Memory" (99 lines)
-- **docs/attach-implementation.md** — "Implementation spec: `.attach/` directories" (344 lines)
-- **docs/chat-schedules.md** — "Chat Schedules" (94 lines)
+- **docs/chat-schedules.md** — "Chat Schedules" (90 lines)
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (544 lines)
 - **docs/implemented-plans/box-migration.subplan.md** — "Box migration to frontmatter (subplan of remove-cardworks-package)" (282 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (354 lines)
@@ -36,9 +35,10 @@ These documents are not referenced by any other document.
 - **docs/knowledge-audit-rerun-2026-07-03.md** — "Knowledge-audit full rerun — 2026-07-03" (465 lines)
 - **docs/plans/courseware-phase1.md** — "Courseware Phase 1 — the course: cards, rules, and the authoring skill" (510 lines)
 - **docs/plans/external-skills-harvest.md** — "External skills harvest — evaluation backlog" (314 lines)
-- **docs/telegram-setup.md** — "Telegram Connector Setup" (136 lines)
+- **docs/plans/input-widget.md** — "The input — interface design" (608 lines)
+- **docs/telegram-setup.md** — "Telegram Connector Setup" (133 lines)
 - **docs/todo-security.md** — "Security TODOs" (25 lines)
-- **docs/unimplemented-plans/README.md** — "Unimplemented plans" (18 lines)
+- **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (21 lines)
 
@@ -68,7 +68,7 @@ These references point to files that don't exist.
 Title: "CLAUDE.md Review — 2026-04-28" | 448 lines
 
 Referenced by:
-- docs/cli-restructure.md:162 (mention) — Once the migration is complete and the review (`CLAUDE-MD-REVIEW.md`) is also gone, delete this file. The state of the C
+- docs/cli-restructure.md:169 (mention) — Once the migration is complete and the review (`CLAUDE-MD-REVIEW.md`) is also gone, delete this file. The state of the C
 
 References:
 - → CLAUDE.md (mention)
@@ -94,24 +94,25 @@ References:
 
 #### CLAUDE.md
 
-Title: "Callback Box" | 148 lines
+Title: "Callback Box" | 150 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:1 (mention) — # CLAUDE.md Review — 2026-04-28
-- CLAUDE.md:14 (mention) — Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns the same two processes (Vite, Fastify) directly 
+- CLAUDE.md:14 (mention) — Overmind and Procfile.dev are gone. The router (`bin/router.ts`) spawns Vite and the hub directly as its children — flat
+- README.md:36 (mention) — `CLAUDE.md`) and the box itself under `content/` — directories, default
 - docs/EXAMPLE_FILES.md:55 (mention) — ├── CLAUDE.md
 - docs/IMPLEMENTATION.md:671 (mention) — CLAUDE.md              # Base instructions for all agents
 - docs/activities-design.md:46 (mention) — Live at `<box>/activities/<name>/src/`. The `src/` subdirectory is deliberate — the activity directory isn't just code, 
 - docs/activities-retrospective.md:21 (mention) — Each "activity-shaped" use case turned out to be better served by adding the specific capability (a card type, a schedul
 - docs/adding-schemas.md:266 (mention) — 5. The agent guide is `@`-included in `CLAUDE.md`, so agents always see the card type list
 - docs/agent-knowledge.md:7 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
-- docs/attach-implementation.md:154 (mention) — Throughout prompts, generated docs, agent instructions, and `CLAUDE.md` mentions, the user-facing terminology is "card a
 - docs/box-layout.md:9 (mention) — A box is a directory marked by a `.cb-box` file. It's a git repository (`cb init` initialises one), and the working tree
 - docs/cards-as-markdown.md:231 (mention) — The explanation-length test (see Test results section) confirms this is modest, not dramatic: the full Cards section in 
 - docs/design-vision.md:49 (mention) — - Small additions like a `CLAUDE.md` file with custom prompts are preferred to elaborate new structures
 - docs/glossary.md:20 (mention) — **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "u
 - docs/ideas.md:38 (mention) — *instructions* (akin to CLAUDE.md), where should it land? Today the only home
 - docs/implemented-plans/app-wide-csp.md:217 (mention) — `mode`. Lives in `src/lib/` per CLAUDE.md ("Cross-cutting helpers").
+- docs/implemented-plans/attach-implementation.md:156 (mention) — Throughout prompts, generated docs, agent instructions, and `CLAUDE.md` mentions, the user-facing terminology is "card a
 - docs/implemented-plans/box-retrospectives.md:46 (mention) — - "Treat noisy command output as a bug" (monorepo CLAUDE.md) — `cb retro`
 - docs/implemented-plans/box-search.md:47 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — search and
 - docs/implemented-plans/card-view-widgets.md:542 (mention) — CLAUDE.md's "don't add features beyond what the task requires."
@@ -139,9 +140,21 @@ Referenced by:
 - docs/knowledge-audits.md:19 (mention) — - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
 - docs/maintenance.md:7 (mention) — The system carries a lot of agent-facing surface: CLAUDE.md and rule files, schemas with embedded `instructions`, prompt
 - docs/plans/box-commentary-surface.md:375 (mention) — (CLAUDE.md exempts "per-box config, throwaway replies, and personal memory"),
-- docs/plans/boxes-as-packages-v2.md:49 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — scaffold/upgrade commands
+- docs/plans/boxes-as-packages-v2.md:54 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — scaffold/upgrade commands
 - docs/plans/courseware-phase1.md:96 (mention) — "filename supplies the type — there is no `type:` field"** (`CLAUDE.md:39`), so templates
 - docs/plans/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, CODE-STYLE.md, FRONTEND.md, the Laws, and our skills
+- docs/plans/openclaw-hermes-comparison.md:28 (mention) — 4. **Layered, budgeted instruction files.** OpenClaw: 8 bootstrap files with per-file (20k) and total (60k) char budgets
+- docs/plans/openclaw-hermes/compare-agent-core.md:126 (mention) — execution, permission modes, transcript persistence, CLAUDE.md auto-loading) to add this,
+- docs/plans/openclaw-hermes/compare-channels.md:178 (mention) — `CLAUDE.md`/agent-guide, own connector configs, own chat-session state) — CBX
+- docs/plans/openclaw-hermes/compare-context-memory.md:14 (mention) — | Mechanism | Claude Code CLI auto-loads `CLAUDE.md` (walked up from cwd) + `.claude/rules/*.md` (path-conditional) + `.
+- docs/plans/openclaw-hermes/compare-letta.md:9 (mention) — `letta-code` is Claude Code re-imagined against that server: thin SSE client, projects don't own agents (pinned agents +
+- docs/plans/openclaw-hermes/compare-skills-tools.md:33 (mention) — tool call, not a governed slash-command/index mechanism. Directory `CLAUDE.md` is the other
+- docs/plans/openclaw-hermes/compare-ux-prompt.md:17 (mention) — | **Builder** | No single builder. Layers: Claude Code preset prompt + auto-loaded box `CLAUDE.md` (`@`-includes `agent-
+- docs/plans/openclaw-hermes/deep-cbx-retro.md:398 (mention) — (per `CLAUDE.md`, only `src/lib/file-lock.ts`-based locks are sanctioned,
+- docs/plans/openclaw-hermes/letta-code.md:16 (mention) — - **`LocalBackend`** (`src/backend/local/local-backend.ts:287`) — experimental, gated by `LETTA_LOCAL_BACKEND_EXPERIMENT
+- docs/plans/openclaw-hermes/scout-agent-zero.md:66 (mention) — - **Different, worth noting but not necessarily adopting:** (a) the entire framework directory is agent-writable with no
+- docs/plans/openclaw-hermes/scout-goose.md:279 (mention) — `load_hints.rs:27-97`), similar to nested `CLAUDE.md`. This is pure static
+- docs/plans/openclaw-hermes/scout-nanobot.md:37 (mention) — - **Memory architecture is the single most CBX-relevant finding**: nanobot converged on the same shape CBX already uses 
 - docs/plans/pai-review/README.md:17 (mention) — | [prompts.md](./prompts.md) | The actual prompt text — system prompt, CLAUDE.md, Algorithm doctrine — quoted and annota
 - docs/plans/pai-review/information-layout.md:17 (mention) — CLAUDE.md:
 - docs/plans/pai-review/prompts.md:20 (mention) — > layer. CLAUDE.md defines operational procedures and format templates.
@@ -156,9 +169,11 @@ Referenced by:
 
 References:
 - → CLAUDE.md (mention)
+- → deploy/README.md (mention)
 - → docs/implemented-plans/external-url-validation.md (mention)
 - → docs/cards-as-markdown.md (mention)
 - → FRONTEND.md (mention)
+- → docs/box-layout.md (mention)
 - → src/services/CLAUDE.md (mention)
 - → src/connectors/CLAUDE.md (mention)
 - → docs/client-debug-log.md (mention)
@@ -172,10 +187,8 @@ References:
 - → docs/adding-api-endpoints.md (mention)
 - → docs/connectors.md (mention)
 - → docs/procedure-implementation.md (mention)
-- → deploy/README.md (mention)
 - → docs/server-operations.md (mention)
 - → docs/adding-a-box.md (mention)
-- → docs/box-layout.md (mention)
 - → docs/landmarks.md (mention)
 - → docs/content-security-policy.md (mention)
 - → docs/maintenance.md (mention)
@@ -186,6 +199,7 @@ References:
 - → docs/plans/source-editor.md (mention)
 - → docs/plans/interface-as-cards.md (mention)
 - → docs/ideas.md (mention)
+- → docs/plans/openclaw-hermes-comparison.md (mention)
 - → docs/glossary.md (mention)
 - → CODE-STYLE.md (at-include)
 
@@ -196,8 +210,8 @@ Title: "Code Style" | 60 lines
 Referenced by:
 - CLAUDE-MD-REVIEW.md:39 (mention) — 5. **Split CONVENTIONS.md** into `CODE-STYLE.md` (general — typecheck/lint,
 - CLAUDE-MD-REVIEW.md:445 (at-include) — 14. Verify `@CODE-STYLE.md` import syntax does what's intended.
-- CLAUDE.md:113 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, CODE-STYLE.md, FR
-- CLAUDE.md:147 (at-include) — @CODE-STYLE.md
+- CLAUDE.md:114 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, CODE-STYLE.md, FR
+- CLAUDE.md:149 (at-include) — @CODE-STYLE.md
 - FRONTEND.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; CODE-STYLE.md covers convention
 - docs/implemented-plans/agent-applied-migrations.md:84 (mention) — - `callback-box/CODE-STYLE.md` — max 2 positional params (named options), no
 - docs/implemented-plans/app-wide-csp.md:28 (mention) — - `callback-box/CODE-STYLE.md:` no `any`, max 2 positional params, custom error
@@ -231,7 +245,7 @@ Referenced by:
 - docs/implemented-plans/webpage-card-and-commentary.md:48 (mention) — - `callback-box/CODE-STYLE.md` — no optional chaining, no default params,
 - docs/implemented-plans/websocket-chat-transport.md:72 (mention) — - `callback-box/CODE-STYLE.md:` no `any`, no default params, max 2 positional
 - docs/plans/box-commentary-surface.md:92 (mention) — - `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional
-- docs/plans/boxes-as-packages-v2.md:43 (mention) — - `callback-box/CODE-STYLE.md`: strict types, no `any`, custom error classes — the new
+- docs/plans/boxes-as-packages-v2.md:48 (mention) — - `callback-box/CODE-STYLE.md`: strict types, no `any`, custom error classes — the new
 - docs/plans/courseware-phase1.md:98 (mention) — - `callback-box/CODE-STYLE.md` → **"No default parameters"**, **"Max 2 positional
 - docs/plans/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, CODE-STYLE.md, FRONTEND.md, the Laws, and our skills
 - docs/plans/prompt-surface-ia-review.md:373 (mention) — - **`callback-box/CODE-STYLE.md`** — no default params, ≤2 positional params, no
@@ -247,10 +261,10 @@ Title: "Frontend Conventions" | 109 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:40 (mention) — error handling, code style; ~58 lines) and `FRONTEND.md` (data-source
-- CLAUDE.md:68 (mention) — src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see FRONTEND.md
+- CLAUDE.md:69 (mention) — src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see FRONTEND.md
 - CODE-STYLE.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in FRONTEND.md.
 - FRONTEND.md:108 (mention) — New primitives live in `components/ui/<Name>.tsx`, accept `className`, merge via `cn()`, and document their semantic rol
-- docs/ideas.md:455 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
+- docs/ideas.md:485 (mention) — Method: do one sweep through `CLAUDE.md`, `FRONTEND.md`, the schemas, and `docs/` collecting terms-of-art, then write en
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/FRONTEND.md:34` — *"Reach for a primitive from
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read FRONTEND.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read FRONTEND.md before writing UI"* and the
@@ -268,12 +282,25 @@ References:
 
 #### README.md
 
-Title: "callback-box" | 2 lines
+Title: "callback-box" | 84 lines
 
 Referenced by:
+- docs/adding-a-box.md:20 (link) — see the root [`README.md`](../README.md) for that path. This doc is about
 - docs/cards-as-markdown.md:72 (mention) — - `README.md` — plain markdown, not a card
-- docs/design-card-views.md:46 (mention) — README.md               → [Source]
 - docs/implemented-plans/courseware-lesson-plan.md:13 (mention) — the material convention (proper presentational cards, not a stray `README.md`).
+- docs/plans/openclaw-hermes/letta-code.md:5 (mention) — **What it is:** a Claude-Code-shaped CLI where the agent is not a process you start but a **persistent server-side entit
+- docs/plans/openclaw-hermes/scout-agent-zero.md:7 (mention) — Agent Zero bills itself as "a full Linux system for your AI agent" (`README.md:6-8`): one Docker container ships a full 
+- docs/plans/openclaw-hermes/scout-khoj.md:7 (mention) — Khoj bills itself as "Your AI second brain" (`README.md:15`) — a personal-knowledge chat assistant that layers retrieval
+- docs/plans/openclaw-hermes/scout-nanobot.md:7 (mention) — - Self-description: "an open-source, ultra-lightweight personal AI agent you can truly own" — WebUI, chat channels, tool
+
+References:
+- → docs/plans/boxes-as-packages-v2.md (link)
+- → CLAUDE.md (mention)
+- → docs/box-layout.md (link)
+- → docs/cards-as-markdown.md (link)
+- → docs/adding-schemas.md (link)
+- → docs/adding-a-box.md (link)
+- → docs/migrations.md (link)
 
 #### THINKING_CLAUDE.md
 
@@ -297,13 +324,18 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 190 lines
+Title: "Deploy" | 242 lines
 
 Referenced by:
-- CLAUDE.md:130 (mention) — | Deployment | `deploy/README.md` |
+- CLAUDE.md:24 (mention) — **Deploy** — Post-commit hook auto-deploys via `deploy/deploy.sh` (rsync to server) **only when HEAD is `main`**. Worktr
 - deploy/CLAUDE.md:3 (mention) — Server provisioning and deployment scripts for Hetzner cloud. See `deploy/README.md` for full setup guide.
-- docs/plans/boxes-as-packages-v2.md:71 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | `src/webapp/` auth preHandler, `deploy/README.md:144-173`
+- docs/adding-a-box.md:102 (link) — [`deploy/README.md`](../deploy/README.md) for the full provisioning story,
+- docs/plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see 
+
+References:
+- → docs/plans/boxes-as-packages-v2.md (mention)
+- → docs/adding-a-box.md (link)
 
 ### docs/
 
@@ -327,6 +359,7 @@ Title: "Activities — Retrospective" | 44 lines
 Referenced by:
 - docs/activities-design.md:3 (link) — > **Status: removed.** The Activities system was built and then removed in May 2026 in favor of piecemeal opt-in feature
 - docs/implemented-plans/narration-mode-design.md:5 (link) — > Note: this doc references the Activities system as a coordinate ("the infrastructure that makes activities being phase
+- docs/plans/openclaw-hermes/deep-cbx-retro.md:11 (mention) — line-by-line below). Note: `callback-box/docs/activities-retrospective.md` is an
 
 References:
 - → docs/activities-design.md (link)
@@ -337,20 +370,29 @@ References:
 
 #### docs/adding-a-box.md
 
-Title: "Adding a New Box" | 134 lines
+Title: "Adding a Box" | 125 lines
 
 Referenced by:
-- CLAUDE.md:132 (mention) — | Adding a box | `docs/adding-a-box.md` |
-- docs/ideas.md:520 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md` step 7.
-- docs/plans/boxes-as-packages-v2.md:517 (mention) — run, docs rewrite (`adding-a-box.md`, `deploy/README.md`, a real `README.md` with the
-- docs/server-operations.md:180 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
+- CLAUDE.md:133 (mention) — | Adding a box | `docs/adding-a-box.md` |
+- README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
+- deploy/README.md:80 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
+- docs/cli-restructure.md:126 (mention) — (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
+- docs/ideas.md:550 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
+- docs/plans/boxes-as-packages-v2.md:497 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
+- docs/server-operations.md:184 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
+
+References:
+- → docs/plans/boxes-as-packages-v2.md (link)
+- → docs/box-layout.md (link)
+- → README.md (link)
+- → deploy/README.md (link)
 
 #### docs/adding-api-endpoints.md
 
-Title: "Adding API Endpoints" | 247 lines
+Title: "Adding API Endpoints" | 237 lines
 
 Referenced by:
-- CLAUDE.md:127 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
+- CLAUDE.md:128 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
 
 #### docs/adding-schemas.md
 
@@ -358,16 +400,17 @@ Title: "Adding a New Card Schema" | 280 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:241 (mention) — - `src/schemas/` — `docs/adding-schemas.md` exists; might just need a one-line
-- CLAUDE.md:124 (mention) — | Adding a card type | `docs/adding-schemas.md` |
+- CLAUDE.md:125 (mention) — | Adding a card type | `docs/adding-schemas.md` |
+- README.md:80 (link) — - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
 - docs/EXAMPLE_FILES.md:4 (mention) — > - **Schema authoring**: For how to add a new schema today, see `docs/adding-schemas.md`.
-- docs/glossary.md:22 (mention) — **card** — A typed file validated by a cardworks schema. The atomic unit of data in a box. Named `Title.type.card` (e.g.
+- docs/glossary.md:22 (mention) — **card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.
 - docs/implemented-plans/box-schema-reload.md:247 (mention) — - Mirror in `docs/adding-schemas.md` if it implies `cb init` re-registers.
 - docs/implemented-plans/box-search.md:45 (mention) — - `docs/adding-schemas.md`: the checklist any schema-surface change follows
 - docs/implemented-plans/remove-cardworks-and-xml.md:417 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
 - docs/implemented-plans/remove-cardworks-deletion.md:455 (mention) — `CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
 - docs/implemented-plans/remove-cardworks-package.md:323 (mention) — `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:4 (mention) — > convention lives in `docs/adding-schemas.md`, the box-local schema guide
-- docs/migrations.md:230 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
+- docs/migrations.md:267 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
 - docs/user-stories.md:764 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
 
 References:
@@ -379,8 +422,10 @@ Title: "Agent Knowledge Audit: What It Should Know and How to Verify" | 493 line
 
 Referenced by:
 - docs/implemented-plans/card-view-widgets.md:574 (mention) — **Altitude.** Per `docs/agent-knowledge.md:307` view authoring sits at
+- docs/plans/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** CBX's always-loaded/conditionally-loaded/referenced-but-n
+- docs/plans/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/agent-knowledge.md`). There is no plugin manifest, no
 - docs/plans/pai-review/information-layout.md:9 (mention) — cb's comparable thinking is `docs/agent-knowledge.md` (the knows-directly /
-- docs/testing.md:375 (link) — See [agent-knowledge.md](agent-knowledge.md) for the full knowledge taxonomy and test prompt guide.
+- docs/testing.md:377 (link) — See [agent-knowledge.md](agent-knowledge.md) for the full knowledge taxonomy and test prompt guide.
 
 References:
 - → CLAUDE.md (mention)
@@ -394,39 +439,37 @@ Title: "Asset Manifests" | 274 lines
 
 Referenced by:
 - docs/glossary.md:30 (mention) — **asset manifest** — `manifest.json` inside each `.attach/` directory recording every asset's size, mtime, and sha256. C
-- docs/ideas.md:461 (mention) — The asset-manifest hook (`docs/asset-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside att
+- docs/ideas.md:491 (mention) — The asset-manifest hook (`docs/asset-manifests.md`) scopes its discipline to `**/*.attach/**` only. Binaries outside att
+- docs/implemented-plans/attach-implementation.md:3 (mention) — **Shipped differently than this draft describes.** The `.attach/` convention landed, but as part of the asset-manifest s
+- docs/plans/README.md:62 (mention) — (superseded by `docs/asset-manifests.md`).
 - docs/plans/pdf-intake-design.md:80 (link) — All the binaries are assets — tracked via the asset manifest, not committed to git. The card itself, the manifest, and t
 - docs/user-stories.md:713 (mention) — 1. **Pre-commit hook integration missing**: The design doc (docs/asset-manifests.md) says "A pre-commit hook keeps the m
 
 References:
 - → docs/ideas.md (mention)
 
-#### docs/attach-implementation.md **[ORPHAN]**
-
-Title: "Implementation spec: `.attach/` directories" | 344 lines
-
-References:
-- → CLAUDE.md (mention)
-- → docs/box-layout.md (mention)
-
 #### docs/box-layout.md
 
-Title: "Box Layout" | 150 lines
+Title: "Box Layout" | 192 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:215 (mention) — `docs/box-layout.md`. Covers marker files, `box/`, `store/`, `config/`,
-- CLAUDE.md:133 (mention) — | Box layout reference | `docs/box-layout.md` |
-- docs/attach-implementation.md:161 (mention) — - `docs/box-layout.md`
+- CLAUDE.md:87 (mention) — **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the
+- README.md:70 (link) — writes, and moves as it works. See [`docs/box-layout.md`](docs/box-layout.md)
+- docs/adding-a-box.md:12 (link) — a `content/` directory inside it — see [`docs/box-layout.md`](box-layout.md)
+- docs/glossary.md:18 (mention) — **box** — A single user's working directory under `~/src/boxes/` (or `/home/callback/boxes/` on the server). Contains th
+- docs/implemented-plans/attach-implementation.md:163 (mention) — - `docs/box-layout.md`
 - docs/implemented-plans/box-retrospectives.md:413 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/implemented-plans/named-places.md:175 (mention) — but no `places`), keeping `docs/box-layout.md` and the box-shape agent guide
 - docs/implemented-plans/user-location.md:74 (mention) — at `docs/box-layout.md:18-22`. State files there are never committed.
-- docs/plans/boxes-as-packages-v2.md:40 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
+- docs/plans/boxes-as-packages-v2.md:45 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/plans/pai-review/information-layout.md:10 (mention) — knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 - docs/plans/prompt-surface-ia-review.md:144 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
 - docs/user-stories.md:4927 (mention) — The user story is accurately implemented across both claimed files. `/Users/ianbicking/src/callback-worktrees/user-stori
 
 References:
 - → CLAUDE.md (mention)
+- → docs/plans/boxes-as-packages-v2.md (mention)
 - → docs/plans/triage-design.md (mention)
 - → docs/client-debug-log.md (mention)
 
@@ -435,7 +478,7 @@ References:
 Title: "Calendar Integration" | 89 lines
 
 Referenced by:
-- CLAUDE.md:140 (mention) — | Calendar integration | `docs/calendar.md` |
+- CLAUDE.md:141 (mention) — | Calendar integration | `docs/calendar.md` |
 - docs/EXAMPLE_FILES.md:60 (mention) — └── calendar.md
 - docs/IMPLEMENTATION.md:675 (mention) — calendar.md          # Rules for calendar operations
 - docs/plans/user-story-audit-followups.md:31 (mention) — `docs/calendar.md` updated ([46]).
@@ -446,7 +489,7 @@ Referenced by:
 Title: "Capture Pipeline Redesign" | 128 lines
 
 Referenced by:
-- docs/plans/README.md:56 (mention) — `capture-pipeline-redesign.md`, `event-bus-design.md`, `design-card-views.md`,
+- docs/plans/README.md:56 (mention) — `capture-pipeline-redesign.md`, `event-bus-design.md`,
 
 #### docs/cards-as-markdown.md
 
@@ -454,12 +497,13 @@ Title: "RFC: Cards as Markdown + YAML Frontmatter" | 2553 lines
 
 Referenced by:
 - CLAUDE.md:53 (mention) — See `src/core/install-validation-hooks.ts`. The hook commands embed the absolute path to the installing `bin/cb` so they
+- README.md:79 (link) — - [`docs/cards-as-markdown.md`](docs/cards-as-markdown.md) — the card format
 - docs/DESIGN.md:4 (mention) — > - §3–§4 describe an XML envelope as the canonical card format. As of May 2026, most schemas are YAML frontmatter + mar
 - docs/EXAMPLE_FILES.md:2 (mention) — > - **Card format**: Most schemas are now YAML frontmatter + markdown body, not XML. The XML examples below show the old
 - docs/IMPLEMENTATION.md:4 (mention) — > - Card format: most schemas are now YAML frontmatter + markdown body, not XML. Anywhere this doc shows an XML envelope
-- docs/glossary.md:22 (mention) — **card** — A typed file validated by a cardworks schema. The atomic unit of data in a box. Named `Title.type.card` (e.g.
+- docs/glossary.md:22 (mention) — **card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.
 - docs/implemented-plans/remove-cardworks-and-xml.md:117 (mention) — production migration"* (`docs/cards-as-markdown.md`). **Reuse:** the
-- docs/migrations.md:228 (mention) — - `docs/cards-as-markdown.md` — design rationale for the YAML-frontmatter format these migrators target
+- docs/migrations.md:265 (mention) — - `docs/cards-as-markdown.md` — design rationale for the YAML-frontmatter format these migrators target
 - docs/stack-decisions.md:18 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 
 References:
@@ -469,7 +513,7 @@ References:
 
 #### docs/chat-schedules.md **[ORPHAN]**
 
-Title: "Chat Schedules" | 94 lines
+Title: "Chat Schedules" | 90 lines
 
 No references in or out.
 
@@ -481,7 +525,7 @@ Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:140 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:16 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:364 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
-- docs/testing.md:513 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
+- docs/testing.md:515 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
 - src/frontend/src/components/chat/CLAUDE.md:31 (mention) — `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
 
 References:
@@ -489,7 +533,7 @@ References:
 
 #### docs/cli-restructure.md
 
-Title: "`cb` CLI Restructure — Plan" | 163 lines
+Title: "`cb` CLI Restructure — Plan" | 170 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:186 (mention) — `docs/cli-restructure.md`. Summary:
@@ -497,6 +541,7 @@ Referenced by:
 References:
 - → docs/plans/pai-review/prompts.md (mention)
 - → docs/plans/triage-design.md (mention)
+- → docs/adding-a-box.md (mention)
 - → docs/maintenance.md (mention)
 - → CLAUDE-MD-REVIEW.md (mention)
 
@@ -505,9 +550,9 @@ References:
 Title: "Client Debug Log" | 55 lines
 
 Referenced by:
-- CLAUDE.md:107 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
-- docs/box-layout.md:110 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
-- docs/server-operations.md:174 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
+- CLAUDE.md:108 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
+- docs/box-layout.md:152 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
+- docs/server-operations.md:178 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 
 #### docs/composer-input-machine.md
 
@@ -535,9 +580,9 @@ Title: "Connectors" | 87 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:255 (mention) — - Add a connector (`docs/connectors.md` exists — is it a how-to or a
-- CLAUDE.md:128 (mention) — | Connectors | `docs/connectors.md` |
+- CLAUDE.md:129 (mention) — | Connectors | `docs/connectors.md` |
 - docs/agent-knowledge.md:205 (mention) — - **Expected level: Discoverable** — the agent would need to look at `config/connectors/` and/or `docs/generated/connect
-- docs/ideas.md:908 (mention) — `src/connectors/gmail-gc.ts`, `docs/connectors.md`, and
+- docs/ideas.md:938 (mention) — `src/connectors/gmail-gc.ts`, `docs/connectors.md`, and
 - docs/implemented-plans/gmail-gc-unlabeled.md:5 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 
 References:
@@ -549,7 +594,7 @@ References:
 Title: "Content-Security-Policy" | 80 lines
 
 Referenced by:
-- CLAUDE.md:136 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
+- CLAUDE.md:137 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
 - src/dev/CLAUDE.md:13 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
@@ -564,16 +609,6 @@ Title: "Data Source Tagging Convention" | 89 lines
 Referenced by:
 - FRONTEND.md:7 (mention) — UI elements that display data from a known source (card, commit, session, etc.) must be tagged with `data-cb-source` att
 
-#### docs/design-card-views.md
-
-Title: "Card View Plugin System" | 876 lines
-
-Referenced by:
-- docs/plans/README.md:56 (mention) — `capture-pipeline-redesign.md`, `event-bus-design.md`, `design-card-views.md`,
-
-References:
-- → README.md (mention)
-
 #### docs/design-vision.md
 
 Title: "Callback Box: Design Vision and Architecture" | 68 lines
@@ -587,10 +622,10 @@ References:
 
 #### docs/DESIGN.md
 
-Title: "Callback Box: comprehensive design notes" | 531 lines
+Title: "Callback Box: comprehensive design notes" | 592 lines
 
 Referenced by:
-- CLAUDE.md:119 (mention) — | Design rationale | `docs/DESIGN.md` |
+- CLAUDE.md:120 (mention) — | Design rationale | `docs/DESIGN.md` |
 - docs/IMPLEMENTATION.md:8 (mention) — This document describes how to build Callback Box, complementing DESIGN.md with concrete implementation details.
 - docs/testing-gaps.md:93 (mention) — - **2026-03-03:** Reactor restructured from single 680-line file into `src/core/reactor/` directory (9 source files + DE
 
@@ -604,24 +639,24 @@ Title: "(no title)" | 1 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:46 (mention) — 6. **Regenerated `docs/doc-graph.md`** to reflect the split (doc went from
-- docs/ideas.md:811 (mention) — Implemented as `docs/doc-graph.md` (auto-generated cross-reference report). See CLAUDE.md Doc Map.
+- docs/ideas.md:841 (mention) — Implemented as `docs/doc-graph.md` (auto-generated cross-reference report). See CLAUDE.md Doc Map.
 - docs/maintenance.md:17 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
-- docs/testing.md:582 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
+- docs/testing.md:584 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:10 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 
 #### docs/event-bus-design.md
 
-Title: "Event Bus Design" | 142 lines
+Title: "Event Bus Design" | 145 lines
 
 Referenced by:
-- docs/plans/README.md:56 (mention) — `capture-pipeline-redesign.md`, `event-bus-design.md`, `design-card-views.md`,
+- docs/plans/README.md:56 (mention) — `capture-pipeline-redesign.md`, `event-bus-design.md`,
 
 #### docs/EXAMPLE_FILES.md
 
 Title: "Callback Box: Example Files" | 820 lines
 
 Referenced by:
-- CLAUDE.md:121 (mention) — | Card examples | `docs/EXAMPLE_FILES.md` |
+- CLAUDE.md:122 (mention) — | Card examples | `docs/EXAMPLE_FILES.md` |
 - docs/IMPLEMENTATION.md:228 (mention) — See EXAMPLE_FILES.md for RRULE examples and other card/schema samples.
 - docs/IMPLEMENTATION.md:277 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
 
@@ -636,13 +671,14 @@ References:
 Title: "Glossary" | 55 lines
 
 Referenced by:
-- CLAUDE.md:145 (mention) — | Glossary | `docs/glossary.md` |
-- docs/ideas.md:442 (mention) — `docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific mean
+- CLAUDE.md:147 (mention) — | Glossary | `docs/glossary.md` |
+- docs/ideas.md:472 (mention) — `docs/glossary.md` is scoped to Proper Nouns — names we coined and general words we've narrowed to project-specific mean
 - docs/plans/external-skills-harvest.md:93 (mention) — Markdown), the CONTEXT.md/ADR coupling (→ `docs/glossary.md` + git history +
 - docs/plans/pdf-intake-design.md:19 (link) — **Intake-time extraction.** When a PDF arrives (`cb import`, capture endpoint, email connector), the intake path runs do
 
 References:
 - → docs/ideas.md (mention)
+- → docs/box-layout.md (mention)
 - → CLAUDE.md (mention)
 - → docs/adding-schemas.md (mention)
 - → docs/cards-as-markdown.md (mention)
@@ -650,6 +686,7 @@ References:
 - → src/connectors/CLAUDE.md (mention)
 - → docs/procedure-implementation.md (mention)
 - → src/services/CLAUDE.md (mention)
+- → docs/implemented-plans/remove-cardworks-package.md (mention)
 - → docs/implemented-plans/box-retrospectives.md (mention)
 
 #### docs/gmail-setup.md
@@ -685,23 +722,25 @@ Referenced by:
 Title: "Health Checks" | 60 lines
 
 Referenced by:
-- docs/server-operations.md:159 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
+- docs/server-operations.md:163 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
 
 References:
 - → docs/server-operations.md (link)
 
 #### docs/ideas.md
 
-Title: "Ideas & Planned Features" | 1652 lines
+Title: "Ideas & Planned Features" | 1682 lines
 
 Referenced by:
-- CLAUDE.md:144 (mention) — | Feature ideas | `docs/ideas.md` |
+- CLAUDE.md:145 (mention) — | Feature ideas | `docs/ideas.md` |
 - docs/asset-manifests.md:266 (mention) — Noted in `docs/ideas.md`.
 - docs/glossary.md:14 (mention) — **Open question — capitalization.** Proper nouns in English are normally capitalized. We may want to write "Asset" and "
-- docs/ideas.md:1172 (mention) — This `ideas.md` plus scattered TODOs across the monorepo is the current state of issue tracking. It works for a single a
+- docs/ideas.md:1202 (mention) — This `ideas.md` plus scattered TODOs across the monorepo is the current state of issue tracking. It works for a single a
 - docs/implemented-plans/box-search.md:41 (mention) — - `docs/ideas.md:493` § CLI Design for Agents: enumerate valid values in
 - docs/implemented-plans/webpage-card-and-commentary.md:105 (mention) — - **Directory head-cards idea.** `docs/ideas.md:740-755` — the unifying frame:
+- docs/plans/boxes-as-packages-v2.md:498 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/plans/external-skills-harvest.md:21 (mention) — callback-box skill), `idea` (file in ideas.md for later), or `skip` (with a
+- docs/plans/input-widget.md:285 (mention) — apparatus). `unaddressed` (triage memo, ideas.md) is a declared kind
 - docs/plans/interface-as-cards.md:4 (mention) — "The interface itself as cards" entry in `docs/ideas.md`; this doc supersedes
 - docs/plans/user-story-audit-followups.md:40 (mention) — unbuilt bucket-D features are now parked as the backlog in `docs/ideas.md`
 - docs/prompt-audits.md:5 (link) — Many of the lenses here, and a number of the related entries in [ideas.md](ideas.md), originated from working through th
@@ -735,9 +774,9 @@ References:
 Title: "Callback Box: Implementation Guide" | 1018 lines
 
 Referenced by:
-- CLAUDE.md:120 (mention) — | Implementation guide | `docs/IMPLEMENTATION.md` |
+- CLAUDE.md:121 (mention) — | Implementation guide | `docs/IMPLEMENTATION.md` |
 - docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode-design.md`, `s
-- docs/ideas.md:580 (mention) — `cb` currently has only layer 1. Layer 2 would be straightforward to generate from the existing command definitions (yar
+- docs/ideas.md:610 (mention) — `cb` currently has only layer 1. Layer 2 would be straightforward to generate from the existing command definitions (yar
 
 References:
 - → docs/plans/triage-design.md (mention)
@@ -762,7 +801,7 @@ Title: "Knowledge Audits" | 89 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:439 (mention) — script to its full doc). Created `docs/knowledge-audits.md` for the
-- CLAUDE.md:138 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
+- CLAUDE.md:139 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/maintenance.md:31 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/user-stories.md:5670 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
@@ -778,6 +817,7 @@ Title: "Landmark Curation" | 48 lines
 
 Referenced by:
 - docs/knowledge-audit-rerun-2026-07-03.md:261 (mention) — (`docs/landmark-curation.md`, `docs/plans/triage-design.md`) that don't exist in
+- docs/plans/openclaw-hermes/compare-skills-tools.md:56 (mention) — by `docs/landmark-curation.md`). None of these have a formal create/edit/patch/delete tool
 
 References:
 - → docs/landmarks.md (mention)
@@ -787,8 +827,8 @@ References:
 Title: "Landmarks" | 164 lines
 
 Referenced by:
-- CLAUDE.md:134 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
-- docs/ideas.md:962 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
+- CLAUDE.md:135 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
+- docs/ideas.md:992 (mention) — Started as "a landmark-ish marker in the card itself" and resolved (2026-06-12 discussion) into a unification: **there i
 - docs/implemented-plans/open-chat-from-card.md:96 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
 - docs/landmark-curation.md:5 (mention) — For the design and schema of the card itself, see `docs/landmarks.md` and `docs/generated/card-landmark.md`.
 - docs/plans/query-cards.md:14 (mention) — planned in docs/landmarks.md long before this, useful for any list-shaped
@@ -804,11 +844,11 @@ Title: "Code Maintenance" | 97 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:403 (mention) — the first place; or a periodic sweep listed in `docs/maintenance.md`.
-- CLAUDE.md:137 (mention) — | Periodic maintenance | `docs/maintenance.md` |
-- docs/cli-restructure.md:127 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
+- CLAUDE.md:138 (mention) — | Periodic maintenance | `docs/maintenance.md` |
+- docs/cli-restructure.md:134 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
 - docs/implemented-plans/box-retrospectives.md:413 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
-- docs/migrations.md:229 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
+- docs/migrations.md:266 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
 
 References:
@@ -821,19 +861,21 @@ References:
 
 #### docs/migrations.md
 
-Title: "Box Migrations" | 243 lines
+Title: "Box Migrations" | 280 lines
 
 Referenced by:
-- CLAUDE.md:126 (mention) — | Box migration runbook | `docs/migrations.md` |
+- CLAUDE.md:127 (mention) — | Box migration runbook | `docs/migrations.md` |
+- README.md:82 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
 - docs/cards-as-markdown.md:44 (mention) — **Tracking which migrations have been applied per box** is handled by `cb migrate` against the per-box append-only manif
 - docs/implemented-plans/agent-applied-migrations.md:33 (mention) — `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
 - docs/implemented-plans/box-migration.subplan.md:48 (mention) — - **`docs/migrations.md`** — the established migration framework: `cb migrate`
 - docs/implemented-plans/remove-cardworks-deletion.md:456 (mention) — `docs/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:324 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
 - docs/maintenance.md:55 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
-- docs/plans/boxes-as-packages-v2.md:67 (mention) — | `cb migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/migratio
+- docs/plans/boxes-as-packages-v2.md:72 (mention) — | `cb migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/migratio
 
 References:
+- → docs/plans/boxes-as-packages-v2.md (mention)
 - → docs/cards-as-markdown.md (mention)
 - → docs/maintenance.md (mention)
 - → docs/adding-schemas.md (mention)
@@ -854,9 +896,9 @@ References:
 Title: "Procedures" | 215 lines
 
 Referenced by:
-- CLAUDE.md:129 (mention) — | Procedures | `docs/procedure-implementation.md` |
-- docs/glossary.md:38 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (currently still XML; one of the deferred Markdoc-
-- docs/ideas.md:1599 (mention) — `engine-orchestrate.ts`. See `docs/procedure-implementation.md`.
+- CLAUDE.md:130 (mention) — | Procedures | `docs/procedure-implementation.md` |
+- docs/glossary.md:38 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `config/pro
+- docs/ideas.md:1629 (mention) — `engine-orchestrate.ts`. See `docs/procedure-implementation.md`.
 - docs/implemented-plans/agent-applied-migrations.md:29 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/procedure-validation-completion.md:9 (mention) — > `docs/procedure-implementation.md` and the generated procedure guide. Two
 - docs/user-stories.md:5732 (mention) — **Verifier (flagged):** The code implements multi-phase procedure definitions and execution with progress tracking, but 
@@ -866,7 +908,7 @@ Referenced by:
 Title: "Prompt Audits" | 203 lines
 
 Referenced by:
-- docs/ideas.md:124 (mention) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
+- docs/ideas.md:154 (mention) — Universality is the point: the same rubric applies wherever the agent commits to something below fact level — hypotheses
 - docs/plans/box-commentary-surface.md:107 (mention) — - **Convention — `ref` for in-box targets** (`docs/prompt-audits.md:184`:
 - docs/prompt-audits.md:174 (mention) — **Useful: what-changed closers.** One or two sentences naming what changed and where: "Added the pre-tool-brevity audit 
 
@@ -895,26 +937,28 @@ Referenced by:
 
 #### docs/server-operations.md
 
-Title: "Server Operations" | 181 lines
+Title: "Server Operations" | 185 lines
 
 Referenced by:
-- CLAUDE.md:131 (mention) — | Server operations | `docs/server-operations.md` |
+- CLAUDE.md:132 (mention) — | Server operations | `docs/server-operations.md` |
 - docs/health-checks.md:9 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
+- docs/plans/boxes-as-packages-v2.md:498 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
 - docs/unimplemented-plans/boxes-as-packages.md:366 (mention) — - **`CB_DIAG_API_KEY` becomes per-box** (it lives in each box's `.env`). The bypass curl pattern in `server-operations.m
 
 References:
 - → deploy/README.md (link)
+- → docs/plans/boxes-as-packages-v2.md (mention)
 - → docs/health-checks.md (link)
 - → docs/client-debug-log.md (link)
 - → docs/adding-a-box.md (link)
 
 #### docs/ssr-render-testing.md
 
-Title: "SSR Render Testing (`cb render`)" | 177 lines
+Title: "SSR Render Testing (`cb render`)" | 179 lines
 
 Referenced by:
-- CLAUDE.md:139 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
+- CLAUDE.md:140 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 - docs/user-stories.md:4686 (mention) — All files exist and are properly implemented. Verified: (1) src/cli/commands/render.ts spawns render.tsx with full optio
 
 #### docs/stack-decisions.md
@@ -923,7 +967,7 @@ Title: "Stack Decisions" | 1201 lines
 
 Referenced by:
 - docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode-design.md`, `s
-- docs/plans/README.md:59 (mention) — `stack-decisions.md` are reference and stay).
+- docs/plans/README.md:59 (mention) — `stack-decisions.md` are reference and stay). `design-card-views.md` has
 - docs/user-stories.md:4801 (mention) — Feature is fully implemented with all claimed capabilities. Evidence: (1) /src/cli/commands/render.ts registers the `cb 
 
 References:
@@ -941,7 +985,7 @@ Referenced by:
 
 #### docs/telegram-setup.md **[ORPHAN]**
 
-Title: "Telegram Connector Setup" | 136 lines
+Title: "Telegram Connector Setup" | 133 lines
 
 No references in or out.
 
@@ -951,7 +995,7 @@ Title: "Testing Gaps — Working Document" | 95 lines
 
 Referenced by:
 - docs/stack-decisions.md:793 (mention) — Core doctest system is **done** and working well. See `docs/testing-gaps.md` for coverage status. The remaining items fr
-- docs/testing.md:596 (link) — See [testing-gaps.md](testing-gaps.md) for detailed plans. Key ideas:
+- docs/testing.md:598 (link) — See [testing-gaps.md](testing-gaps.md) for detailed plans. Key ideas:
 
 References:
 - → docs/DESIGN.md (mention)
@@ -959,13 +1003,13 @@ References:
 
 #### docs/testing.md
 
-Title: "Testing" | 602 lines
+Title: "Testing" | 604 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:372 (mention) — `docs/testing.md`). What's missing is the *practice*:
-- CLAUDE.md:122 (mention) — | Testing philosophy | `docs/testing.md` |
+- CLAUDE.md:123 (mention) — | Testing philosophy | `docs/testing.md` |
 - docs/chat-scroll-testing.md:5 (mention) — behavior that doctests can't exercise (`docs/testing.md` §6). This is the
-- docs/ideas.md:870 (mention) — Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques
+- docs/ideas.md:900 (mention) — Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Session Critiques
 - docs/implemented-plans/agent-applied-migrations.md:82 (mention) — - `callback-box/docs/testing.md` — tests-first as a design tool; the machine
 - docs/implemented-plans/card-view-widgets.md:636 (mention) — - **Test posture** (per `docs/testing.md` — tests first, as a design tool):
 - docs/implemented-plans/chat-scroll-redesign.md:55 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
@@ -983,6 +1027,7 @@ Referenced by:
 
 References:
 - → src/services/CLAUDE.md (mention)
+- → docs/plans/boxes-as-packages-v2.md (mention)
 - → docs/agent-knowledge.md (link)
 - → docs/chat-scroll-testing.md (link)
 - → docs/doc-graph.md (mention)
@@ -1107,12 +1152,24 @@ References:
 Title: "App-wide Content-Security-Policy" | 443 lines
 
 Referenced by:
-- docs/scheduled/csp-violation-review.md:91 (mention) — `docs/implemented-plans/app-wide-csp.md` (the design rationale, including why the
+- docs/scheduled/csp-violation-review.md:93 (mention) — `docs/implemented-plans/app-wide-csp.md` (the design rationale, including why the
 
 References:
 - → CODE-STYLE.md (mention)
 - → CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
+
+#### docs/implemented-plans/attach-implementation.md
+
+Title: "Implementation spec: `.attach/` directories" | 346 lines
+
+Referenced by:
+- docs/plans/README.md:61 (mention) — registry) and `attach-implementation.md` to `implemented-plans/`
+
+References:
+- → docs/asset-manifests.md (mention)
+- → CLAUDE.md (mention)
+- → docs/box-layout.md (mention)
 
 #### docs/implemented-plans/box-migration.subplan.md **[ORPHAN]**
 
@@ -1130,6 +1187,7 @@ Title: "Box Retrospectives" | 433 lines
 
 Referenced by:
 - docs/glossary.md:44 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `cb retro`): mines recent chat sessions for what th
+- docs/plans/openclaw-hermes/deep-cbx-retro.md:9 (mention) — `callback-box/docs/implemented-plans/box-retrospectives.md` (the original plan;
 
 References:
 - → CODE-STYLE.md (mention)
@@ -1150,7 +1208,7 @@ References:
 Title: "Box search (`cb search`) and the global `contains` field" | 567 lines
 
 Referenced by:
-- docs/ideas.md:916 (mention) — `docs/implemented-plans/box-search.md`. Embeddings/hybrid remain future
+- docs/ideas.md:946 (mention) — `docs/implemented-plans/box-search.md`. Embeddings/hybrid remain future
 
 References:
 - → CODE-STYLE.md (mention)
@@ -1255,7 +1313,7 @@ References:
 Title: "Plan: Garbage-collect unlabeled Gmail messages" | 197 lines
 
 Referenced by:
-- docs/ideas.md:909 (mention) — `docs/implemented-plans/gmail-gc-unlabeled.md`. (Chose full reconciliation over
+- docs/ideas.md:939 (mention) — `docs/implemented-plans/gmail-gc-unlabeled.md`. (Chose full reconciliation over
 
 References:
 - → docs/connectors.md (mention)
@@ -1340,7 +1398,7 @@ Title: "Narration Mode — Design" | 465 lines
 
 Referenced by:
 - docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode-design.md`, `s
-- docs/ideas.md:312 (link) — Conceptual inverse of narration mode (see [narration-mode-design.md](narration-mode-design.md)). Narration is user-talks
+- docs/ideas.md:342 (link) — Conceptual inverse of narration mode (see [narration-mode-design.md](narration-mode-design.md)). Narration is user-talks
 - docs/plans/README.md:46 (mention) — `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
 - docs/user-stories.md:1567 (mention) — The design doc (narration-mode-design.md line 240) explicitly states: "The chat has a `...` menu where settings live; th
 
@@ -1430,6 +1488,7 @@ References:
 Title: "Remove the cardworks package" | 503 lines
 
 Referenced by:
+- docs/glossary.md:42 (mention) — **cardworks** — A former standalone card library, now removed. Its card primitives (`cardSchema()` for YAML-frontmatter 
 - docs/implemented-plans/box-migration.subplan.md:4 (mention) — the gated box-local-XML removal (`remove-cardworks-package.md`, task #11) and
 - docs/implemented-plans/box-migration.subplan.md:8 (link) — Parent plan: [remove-cardworks-package.md](./remove-cardworks-package.md). Both
 - docs/implemented-plans/remove-cardworks-deletion.md:3 (mention) — The execution plan for the last phase of `remove-cardworks-package.md`: sever
@@ -1572,9 +1631,16 @@ References:
 
 #### docs/plans/boxes-as-packages-v2.md
 
-Title: "Boxes as Packages v2 — callback-box as a library" | 541 lines
+Title: "Boxes as Packages v2 — callback-box as a library" | 724 lines
 
 Referenced by:
+- README.md:25 (link) — live yet — see [`docs/plans/boxes-as-packages-v2.md`](docs/plans/boxes-as-packages-v2.md)
+- deploy/README.md:55 (mention) — `docs/plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+- docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/plans/boxes-as-packages-v2.md`](plans/boxes-as-packages-v2.md)
+- docs/box-layout.md:15 (mention) — repository" in `docs/plans/boxes-as-packages-v2.md` for the full design.
+- docs/migrations.md:204 (mention) — "The box repository" in `docs/plans/boxes-as-packages-v2.md`): `views/`,
+- docs/server-operations.md:38 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/plans/boxes-as-packages-v2.md`'s "
+- docs/testing.md:299 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages.md` | Superseded by `../plans/boxes-as-packages-v2.md` (2026-07-03), which re-derived the design ag
 - docs/unimplemented-plans/boxes-as-packages.md:3 (mention) — **Status:** SUPERSEDED by `docs/plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
 
@@ -1585,9 +1651,11 @@ References:
 - → CLAUDE.md (mention)
 - → docs/migrations.md (mention)
 - → deploy/README.md (mention)
-- → docs/unimplemented-plans/box-user-account-spec.md (mention)
-- → docs/adding-a-box.md (mention)
 - → docs/plans/README.md (mention)
+- → docs/adding-a-box.md (mention)
+- → docs/server-operations.md (mention)
+- → docs/ideas.md (mention)
+- → docs/unimplemented-plans/box-user-account-spec.md (mention)
 
 #### docs/plans/chat-husks.md
 
@@ -1604,7 +1672,7 @@ References:
 Title: "Courseware prior art — triaging dmccreary/claude-skills" | 304 lines
 
 Referenced by:
-- docs/ideas.md:1493 (mention) — `interactive-infographic-overlay`; see `docs/plans/courseware-external-skills-triage.md`).
+- docs/ideas.md:1523 (mention) — `interactive-infographic-overlay`; see `docs/plans/courseware-external-skills-triage.md`).
 
 #### docs/plans/courseware-phase1.md **[ORPHAN]**
 
@@ -1627,15 +1695,24 @@ References:
 - → docs/glossary.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/plans/input-widget.md **[ORPHAN]**
+
+Title: "The input — interface design" | 608 lines
+
+References:
+- → docs/plans/interface-as-cards.md (mention)
+- → docs/ideas.md (mention)
+
 #### docs/plans/interface-as-cards.md
 
-Title: "The interface as cards — design" | 437 lines
+Title: "The interface as cards — design" | 470 lines
 
 Referenced by:
-- CLAUDE.md:143 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
-- docs/ideas.md:586 (mention) — **Superseded by `docs/plans/interface-as-cards.md`** (2026-07 design
+- CLAUDE.md:144 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
+- docs/ideas.md:616 (mention) — **Superseded by `docs/plans/interface-as-cards.md`** (2026-07 design
 - docs/implemented-plans/nav-card.md:11 (mention) — First implementation slice of `docs/plans/interface-as-cards.md`. Small on
 - docs/plans/chat-husks.md:8 (mention) — `docs/plans/interface-as-cards.md` ("Chat / Husks").
+- docs/plans/input-widget.md:5 (mention) — the frame-model notes in `docs/plans/interface-as-cards.md` ("The input
 - docs/plans/query-cards.md:22 (mention) — species deferred from `docs/plans/interface-as-cards.md` — the piece that
 
 References:
@@ -1644,12 +1721,52 @@ References:
 - → docs/implemented-plans/nav-card.md (mention)
 - → docs/plans/chat-husks.md (mention)
 
+#### docs/plans/openclaw-hermes-comparison.md
+
+Title: "OpenClaw & Hermes vs Callback Box — Comparison & Idea Triage" | 114 lines
+
+Referenced by:
+- CLAUDE.md:146 (mention) — | OpenClaw/Hermes comparison & idea triage | `docs/plans/openclaw-hermes-comparison.md` |
+
+References:
+- → docs/plans/openclaw-hermes/compare-agent-core.md (link)
+- → docs/plans/openclaw-hermes/compare-context-memory.md (link)
+- → docs/plans/openclaw-hermes/compare-skills-tools.md (link)
+- → docs/plans/openclaw-hermes/compare-scheduling.md (link)
+- → docs/plans/openclaw-hermes/compare-channels.md (link)
+- → docs/plans/openclaw-hermes/compare-storage.md (link)
+- → docs/plans/openclaw-hermes/compare-security.md (link)
+- → docs/plans/openclaw-hermes/compare-ux-prompt.md (link)
+- → docs/plans/openclaw-hermes/compare-letta.md (link)
+- → docs/plans/openclaw-hermes/letta-server-loop.md (link)
+- → docs/plans/openclaw-hermes/letta-tools-rules.md (link)
+- → docs/plans/openclaw-hermes/letta-multiagent-sleeptime.md (link)
+- → docs/plans/openclaw-hermes/letta-code.md (link)
+- → docs/plans/openclaw-hermes/compare-comparables-roundup.md (link)
+- → docs/plans/openclaw-hermes/scout-claude-code-channels.md (link)
+- → docs/plans/openclaw-hermes/scout-khoj.md (link)
+- → docs/plans/openclaw-hermes/scout-goose.md (link)
+- → docs/plans/openclaw-hermes/scout-agent-zero.md (link)
+- → docs/plans/openclaw-hermes/scout-nanobot.md (link)
+- → docs/plans/openclaw-hermes/deep-dive-transcript-mining.md (link)
+- → docs/plans/openclaw-hermes/deep-cbx-retro.md (link)
+- → docs/plans/openclaw-hermes/deep-openclaw-dreaming.md (link)
+- → docs/plans/openclaw-hermes/deep-hermes-learning.md (link)
+- → docs/plans/openclaw-hermes/deep-openclaw-commitments.md (link)
+- → docs/plans/openclaw-hermes/deep-openclaw-canvas-a2ui.md (link)
+- → docs/plans/openclaw-hermes/deep-retrieval-internals.md (link)
+- → docs/plans/openclaw-hermes/deep-cbx-search.md (link)
+- → docs/plans/openclaw-hermes/deep-channel-affordances.md (link)
+- → CLAUDE.md (mention)
+- → docs/plans/openclaw-hermes/deep-dive-shared-protocol.md (link)
+- → docs/plans/openclaw-hermes/deep-dive-error-taxonomy.md (link)
+
 #### docs/plans/pdf-intake-design.md
 
 Title: "PDF Intake" | 179 lines
 
 Referenced by:
-- CLAUDE.md:141 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
+- CLAUDE.md:142 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/plans/README.md:49 (mention) — `pdf-intake-design.md` (not yet implemented), `source-editor.md`.
 - docs/plans/user-story-audit-followups.md:55 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 
@@ -1684,10 +1801,10 @@ References:
 
 #### docs/plans/README.md
 
-Title: "docs/plans/ — proposals and in-flight plans" | 60 lines
+Title: "docs/plans/ — proposals and in-flight plans" | 63 lines
 
 Referenced by:
-- docs/plans/boxes-as-packages-v2.md:517 (mention) — run, docs rewrite (`adding-a-box.md`, `deploy/README.md`, a real `README.md` with the
+- docs/plans/boxes-as-packages-v2.md:497 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 
 References:
 - → docs/implemented-plans/selection-commentary.md (mention)
@@ -1701,17 +1818,19 @@ References:
 - → docs/activities-design.md (mention)
 - → docs/capture-pipeline-redesign.md (mention)
 - → docs/event-bus-design.md (mention)
-- → docs/design-card-views.md (mention)
 - → docs/photo-storage-investigation.md (mention)
 - → docs/design-vision.md (mention)
 - → docs/stack-decisions.md (mention)
+- → docs/unimplemented-plans/design-card-views.md (mention)
+- → docs/implemented-plans/attach-implementation.md (mention)
+- → docs/asset-manifests.md (mention)
 
 #### docs/plans/source-editor.md
 
 Title: "Source Editor Plan" | 138 lines
 
 Referenced by:
-- CLAUDE.md:142 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
+- CLAUDE.md:143 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:49 (mention) — `pdf-intake-design.md` (not yet implemented), `source-editor.md`.
 
 #### docs/plans/triage-design.md
@@ -1722,11 +1841,11 @@ Referenced by:
 - docs/DESIGN.md:3 (mention) — > - §2 ("Input → Inbox → preprocessing/triage") talks about a single "triage" phase. The formal three-stage pipeline tha
 - docs/IMPLEMENTATION.md:3 (mention) — > - References to a single "triage" agent / "triage" run-mode / `--agent triage` predate both the reactor and the new so
 - docs/agent-knowledge.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
-- docs/box-layout.md:52 (mention) — | `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). See `docs/plans
+- docs/box-layout.md:97 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
 - docs/cli-restructure.md:88 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now oc
 - docs/connectors.md:84 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design-vision.md:9 (mention) — **Categories** form the triage stage for incoming items. Material arrives from multiple sources—document scans, voice in
-- docs/ideas.md:434 (mention) — - **Relation to landmarks/triage-design.** `docs/plans/triage-design.md` already sketches a typed-routing pipeline using
+- docs/ideas.md:464 (mention) — - **Relation to landmarks/triage-design.** `docs/plans/triage-design.md` already sketches a typed-routing pipeline using
 - docs/knowledge-audit-rerun-2026-07-03.md:245 (mention) — internals live in dev-repo source and `docs/plans/triage-design.md`, which is
 - docs/landmarks.md:33 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
 - docs/photo-storage-investigation.md:63 (mention) — This maps directly to the intake stage in the triage design (see `docs/plans/triage-design.md`). Canonical optimization 
@@ -1742,7 +1861,7 @@ References:
 Title: "User-story audit — follow-up plans" | 425 lines
 
 Referenced by:
-- docs/ideas.md:1537 (mention) — Surfaced by the user-story audit (`docs/plans/user-story-audit-followups.md` D9).
+- docs/ideas.md:1567 (mention) — Surfaced by the user-story audit (`docs/plans/user-story-audit-followups.md` D9).
 
 References:
 - → docs/user-stories.md (mention)
@@ -1761,6 +1880,284 @@ References:
 - → CODE-STYLE.md (mention)
 - → CLAUDE.md (mention)
 - → docs/landmarks.md (mention)
+
+### docs/plans/openclaw-hermes/
+
+#### docs/plans/openclaw-hermes/compare-agent-core.md
+
+Title: "Core Agent Loop & Model Layer — Comparison" | 276 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+References:
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/compare-channels.md
+
+Title: "Channels, Gateway, Connectors — CBX vs. OpenClaw vs. Hermes" | 369 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+References:
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/compare-comparables-roundup.md
+
+Title: "Comparables roundup — Claude Code Channels, Khoj, Goose, Agent Zero, nanobot" | 30 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:9 (link) — **Comparables roundup** (2026-07-04): [roundup chapter](openclaw-hermes/compare-comparables-roundup.md) · scouts: [Claud
+
+References:
+- → docs/plans/openclaw-hermes/scout-claude-code-channels.md (link)
+- → docs/plans/openclaw-hermes/scout-khoj.md (link)
+- → docs/plans/openclaw-hermes/scout-goose.md (link)
+- → docs/plans/openclaw-hermes/scout-agent-zero.md (link)
+- → docs/plans/openclaw-hermes/scout-nanobot.md (link)
+
+#### docs/plans/openclaw-hermes/compare-context-memory.md
+
+Title: "Context, Memory & Learning — CBX vs. OpenClaw vs. Hermes Agent" | 138 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+References:
+- → CLAUDE.md (mention)
+- → docs/plans/openclaw-hermes/deep-cbx-retro.md (mention)
+- → docs/agent-knowledge.md (mention)
+
+#### docs/plans/openclaw-hermes/compare-letta.md
+
+Title: "Letta (MemGPT) vs Callback Box — non-memory architecture" | 33 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:7 (link) — **Letta** (added 2026-07-04, non-memory focus): [comparison chapter](openclaw-hermes/compare-letta.md) · dives: [server/
+
+References:
+- → docs/plans/openclaw-hermes/letta-server-loop.md (link)
+- → docs/plans/openclaw-hermes/letta-tools-rules.md (link)
+- → docs/plans/openclaw-hermes/letta-multiagent-sleeptime.md (link)
+- → docs/plans/openclaw-hermes/letta-code.md (link)
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/compare-scheduling.md
+
+Title: "Scheduling & Proactivity: CBX vs. OpenClaw vs. Hermes Agent" | 163 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+#### docs/plans/openclaw-hermes/compare-security.md
+
+Title: "Security, permissions, and sandboxing — CBX vs OpenClaw vs Hermes Agent" | 208 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+#### docs/plans/openclaw-hermes/compare-skills-tools.md
+
+Title: "Skills, Tools, Plugins, Extensibility — CBX vs. OpenClaw vs. Hermes" | 367 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+References:
+- → CLAUDE.md (mention)
+- → docs/landmark-curation.md (mention)
+- → docs/agent-knowledge.md (mention)
+
+#### docs/plans/openclaw-hermes/compare-storage.md
+
+Title: "Comparison: Storage, Config, Data Model" | 166 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+#### docs/plans/openclaw-hermes/compare-ux-prompt.md
+
+Title: "Comparison: UX Surfaces & Prompt Surface" | 282 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:5 (link) — **Chapters:** [agent core](openclaw-hermes/compare-agent-core.md) · [context/memory](openclaw-hermes/compare-context-mem
+
+References:
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/deep-cbx-retro.md
+
+Title: "Deep dive: `cb retro` retrospective pipeline" | 475 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+- docs/plans/openclaw-hermes/compare-context-memory.md:45 (mention) — | Explicit human-taught path | Chat-time guide/personality edits when the boxholder states a preference (`source: user-s
+
+References:
+- → docs/implemented-plans/box-retrospectives.md (mention)
+- → docs/activities-retrospective.md (mention)
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/deep-cbx-search.md
+
+Title: "Search in Callback Box — a map of every search-shaped surface" | 298 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-channel-affordances.md
+
+Title: "Deep dive: channel capability asymmetry & unclear-input flow in OpenClaw and Hermes" | 219 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-dive-error-taxonomy.md
+
+Title: "Deep dive: error-classification taxonomies (Hermes vs. OpenClaw)" | 218 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:102 (link) — | 13 | **Error-classification taxonomy** for agent-run failures (Hermes maps ~20 categories → actions). Naming only, no 
+
+#### docs/plans/openclaw-hermes/deep-dive-shared-protocol.md
+
+Title: "Hermes "one protocol across surfaces" — deep implementation dive" | 215 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:101 (link) — | 12 | **One protocol across interactive surfaces** (Hermes: TUI/web/desktop all speak the same JSON-RPC). | later | Dee
+
+#### docs/plans/openclaw-hermes/deep-dive-transcript-mining.md
+
+Title: "Deep dive: background transcript mining — cb retro vs OpenClaw dreaming vs Hermes learning loop" | 59 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-hermes-learning.md
+
+Title: "Hermes Agent — Deep Dive: Background Review, Curator, Memory Consolidation, Nudges, Robustness" | 785 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-openclaw-canvas-a2ui.md
+
+Title: "Deep dive: OpenClaw Canvas / A2UI" | 258 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-openclaw-commitments.md
+
+Title: "OpenClaw "commitments" — deep implementation dive" | 237 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-openclaw-dreaming.md
+
+Title: "OpenClaw "Dreaming" — Deep Implementation Dive" | 321 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/deep-retrieval-internals.md
+
+Title: "Deep Retrieval Internals: OpenClaw memory-core vs Hermes session_search + memory providers" | 306 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:11 (link) — **Deep dives** (follow-ups on specific triage items): [transcript-mining synthesis](openclaw-hermes/deep-dive-transcript
+
+#### docs/plans/openclaw-hermes/letta-code.md
+
+Title: "letta-code — Deep Technical Dive" | 183 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:7 (link) — **Letta** (added 2026-07-04, non-memory focus): [comparison chapter](openclaw-hermes/compare-letta.md) · dives: [server/
+- docs/plans/openclaw-hermes/compare-letta.md:3 (link) — *Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does
+
+References:
+- → README.md (mention)
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/letta-multiagent-sleeptime.md
+
+Title: "Letta: multi-agent primitives and sleep-time architecture" | 422 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:7 (link) — **Letta** (added 2026-07-04, non-memory focus): [comparison chapter](openclaw-hermes/compare-letta.md) · dives: [server/
+- docs/plans/openclaw-hermes/compare-letta.md:3 (link) — *Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does
+
+#### docs/plans/openclaw-hermes/letta-server-loop.md
+
+Title: "Letta: Server & Agent-Loop Architecture — Deep Dive" | 221 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:7 (link) — **Letta** (added 2026-07-04, non-memory focus): [comparison chapter](openclaw-hermes/compare-letta.md) · dives: [server/
+- docs/plans/openclaw-hermes/compare-letta.md:3 (link) — *Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does
+
+#### docs/plans/openclaw-hermes/letta-tools-rules.md
+
+Title: "Letta Tool System — Technical Reference" | 1190 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:7 (link) — **Letta** (added 2026-07-04, non-memory focus): [comparison chapter](openclaw-hermes/compare-letta.md) · dives: [server/
+- docs/plans/openclaw-hermes/compare-letta.md:3 (link) — *Added 2026-07-04 at boxholder request: "I know it has a lot of memory stuff, but that's not really my focus — what does
+
+#### docs/plans/openclaw-hermes/scout-agent-zero.md
+
+Title: "Highlight Scout: Agent Zero" | 68 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:9 (link) — **Comparables roundup** (2026-07-04): [roundup chapter](openclaw-hermes/compare-comparables-roundup.md) · scouts: [Claud
+- docs/plans/openclaw-hermes/compare-comparables-roundup.md:3 (link) — *2026-07-04, second extension of the study (after Letta). Per-harness highlight scouts, not full dives: [scout-claude-co
+
+References:
+- → README.md (mention)
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/scout-claude-code-channels.md
+
+Title: "Claude Code Channels — official Anthropic channel ingress (research preview)" | 34 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:9 (link) — **Comparables roundup** (2026-07-04): [roundup chapter](openclaw-hermes/compare-comparables-roundup.md) · scouts: [Claud
+- docs/plans/openclaw-hermes/compare-comparables-roundup.md:3 (link) — *2026-07-04, second extension of the study (after Letta). Per-harness highlight scouts, not full dives: [scout-claude-co
+
+#### docs/plans/openclaw-hermes/scout-goose.md
+
+Title: "Highlight Scout: Goose (Block)" | 354 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:9 (link) — **Comparables roundup** (2026-07-04): [roundup chapter](openclaw-hermes/compare-comparables-roundup.md) · scouts: [Claud
+- docs/plans/openclaw-hermes/compare-comparables-roundup.md:3 (link) — *2026-07-04, second extension of the study (after Letta). Per-harness highlight scouts, not full dives: [scout-claude-co
+
+References:
+- → CLAUDE.md (mention)
+
+#### docs/plans/openclaw-hermes/scout-khoj.md
+
+Title: "Highlight-scout: Khoj" | 48 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:9 (link) — **Comparables roundup** (2026-07-04): [roundup chapter](openclaw-hermes/compare-comparables-roundup.md) · scouts: [Claud
+- docs/plans/openclaw-hermes/compare-comparables-roundup.md:3 (link) — *2026-07-04, second extension of the study (after Letta). Per-harness highlight scouts, not full dives: [scout-claude-co
+
+References:
+- → README.md (mention)
+
+#### docs/plans/openclaw-hermes/scout-nanobot.md
+
+Title: "nanobot (HKUDS) — Highlight Scout" | 42 lines
+
+Referenced by:
+- docs/plans/openclaw-hermes-comparison.md:9 (link) — **Comparables roundup** (2026-07-04): [roundup chapter](openclaw-hermes/compare-comparables-roundup.md) · scouts: [Claud
+- docs/plans/openclaw-hermes/compare-comparables-roundup.md:3 (link) — *2026-07-04, second extension of the study (after Letta). Per-harness highlight scouts, not full dives: [scout-claude-co
+
+References:
+- → README.md (mention)
+- → CLAUDE.md (mention)
 
 ### docs/plans/pai-review/
 
@@ -1795,7 +2192,7 @@ Title: "The actual prompts — quoted and annotated" | 358 lines
 Referenced by:
 - CLAUDE-MD-REVIEW.md:198 (mention) — in `prompt-report.ts` updated; `docs/prompts.md` regenerated).
 - docs/cli-restructure.md:22 (mention) — - **`cb init-rules` standalone removed.** File moved from `src/cli/commands/init-rules.ts` to `src/core/init-rules.ts` (
-- docs/ideas.md:866 (mention) — `pnpm prompt-report` generates `docs/prompts.md` — a full inventory of every prompt, instruction, and rule in the system
+- docs/ideas.md:896 (mention) — `pnpm prompt-report` generates `docs/prompts.md` — a full inventory of every prompt, instruction, and rule in the system
 - docs/maintenance.md:16 (mention) — | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 - docs/plans/pai-review/README.md:17 (link) — | [prompts.md](./prompts.md) | The actual prompt text — system prompt, CLAUDE.md, Algorithm doctrine — quoted and annota
 - docs/plans/pai-review/information-layout.md:64 (link) — (see [prompts.md](./prompts.md) §3) naturally sits.
@@ -1839,7 +2236,7 @@ References:
 
 #### docs/scheduled/csp-violation-review.md
 
-Title: "Scheduled routine: CSP violation review" | 93 lines
+Title: "Scheduled routine: CSP violation review" | 95 lines
 
 Referenced by:
 - docs/content-security-policy.md:76 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
@@ -1858,7 +2255,7 @@ References:
 Title: "Spec: Box as Linux User Account" | 402 lines
 
 Referenced by:
-- docs/plans/boxes-as-packages-v2.md:399 (mention) — - **Per-box OS users / socket permissions / secrets split** (`docs/unimplemented-plans/box-user-account-spec.md`
+- docs/plans/boxes-as-packages-v2.md:567 (mention) — - **Per-box OS users / socket permissions / secrets split** (`docs/unimplemented-plans/box-user-account-spec.md`
 - docs/unimplemented-plans/README.md:17 (mention) — | `box-user-account-spec.md` | Derivative of boxes-as-packages.md; the OS-user-as-box-identity idea is deferred to the i
 - docs/unimplemented-plans/boxes-as-packages.md:11 (link) — **Related:** [Box as Linux User Account spec](box-user-account-spec.md) — tightens this proposal by adopting the OS user
 
@@ -1870,7 +2267,7 @@ References:
 Title: "Design Exploration: Boxes as Code Repositories" | 706 lines
 
 Referenced by:
-- docs/plans/boxes-as-packages-v2.md:4 (mention) — **Supersedes:** `docs/unimplemented-plans/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
+- docs/plans/boxes-as-packages-v2.md:8 (mention) — **Supersedes:** `docs/unimplemented-plans/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages.md` | Superseded by `../plans/boxes-as-packages-v2.md` (2026-07-03), which re-derived the design ag
 - docs/unimplemented-plans/box-user-account-spec.md:4 (link) — **Relationship to other docs:** Builds on the [boxes-as-packages design exploration](boxes-as-packages.md), which propos
 
@@ -1881,14 +2278,29 @@ References:
 - → CLAUDE.md (mention)
 - → docs/ideas.md (link)
 
-#### docs/unimplemented-plans/README.md **[ORPHAN]**
+#### docs/unimplemented-plans/design-card-views.md
 
-Title: "Unimplemented plans" | 18 lines
+Title: "Card View Plugin System" | 878 lines
+
+Referenced by:
+- docs/plans/README.md:59 (mention) — `stack-decisions.md` are reference and stay). `design-card-views.md` has
+- docs/unimplemented-plans/README.md:18 (mention) — | `design-card-views.md` | Superseded by the shipped renderer system: `src/frontend/src/renderers/` + the file-types reg
+
+References:
+- → docs/unimplemented-plans/README.md (mention)
+
+#### docs/unimplemented-plans/README.md
+
+Title: "Unimplemented plans" | 19 lines
+
+Referenced by:
+- docs/unimplemented-plans/design-card-views.md:48 (mention) — README.md               → [Source]
 
 References:
 - → docs/unimplemented-plans/boxes-as-packages.md (mention)
 - → docs/plans/boxes-as-packages-v2.md (mention)
 - → docs/unimplemented-plans/box-user-account-spec.md (mention)
+- → docs/unimplemented-plans/design-card-views.md (mention)
 
 ### src/connectors/
 
@@ -1898,7 +2310,7 @@ Title: "Connectors" | 23 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:17 (mention) — - `src/connectors/CLAUDE.md` (25 lines)
-- CLAUDE.md:94 (mention) — **Connectors** — Sync external services with the box filesystem. Each implements `Connector.sync()`. See `src/connectors
+- CLAUDE.md:95 (mention) — **Connectors** — Sync external services with the box filesystem. Each implements `Connector.sync()`. See `src/connectors
 - docs/glossary.md:36 (mention) — **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Con
 
 References:
@@ -1946,6 +2358,14 @@ References:
 - → docs/content-security-policy.md (mention)
 - → docs/scheduled/csp-violation-review.md (mention)
 
+### src/frontend/dist/earcons/
+
+#### src/frontend/dist/earcons/SOURCES.md **[ORPHAN]**
+
+Title: "Earcon sources & attribution" | 13 lines
+
+No references in or out.
+
 ### src/frontend/public/earcons/
 
 #### src/frontend/public/earcons/SOURCES.md **[ORPHAN]**
@@ -1976,7 +2396,7 @@ Title: "Services" | 126 lines
 
 Referenced by:
 - CLAUDE-MD-REVIEW.md:20 (mention) — - `src/services/CLAUDE.md` (123 lines, after fix)
-- CLAUDE.md:92 (mention) — **Services** — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have ob
+- CLAUDE.md:93 (mention) — **Services** — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have ob
 - docs/connectors.md:68 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:40 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
 - docs/testing.md:123 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s

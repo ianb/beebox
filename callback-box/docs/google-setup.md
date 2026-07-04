@@ -86,13 +86,13 @@ If `googleServices` is missing, no Google services are enabled for that box (saf
 
 ```bash
 # Pull calendar events
-cb pull --connector google-calendar
+cb wakeup --connector google-calendar
 
 # View today's events
 cb calendar today
 
-# View upcoming events
-cb calendar upcoming
+# View upcoming events (default: next 7 days)
+cb calendar
 ```
 
 ## Scopes Authorized

@@ -499,7 +499,7 @@ A resource subscription service where a client says "I want this resource" and g
 2. A subscription that notifies when the resource changes, with the new content
 
 The server knows how to parse different file types into their typed representations:
-- **Cards** (`.card` files — YAML frontmatter or legacy XML) → structured JSON via cardworks `parseCardText` / `loadCardFile`
+- **Cards** (`.card` files — YAML frontmatter) → structured JSON via `parseCardText` / `loadCardFile` (`src/core/card-io.ts`)
 - **JSON files** → parsed JSON
 - **JSONL files** → array of parsed JSON lines
 - **Other files** → raw text or binary, depending on type
@@ -1109,7 +1109,7 @@ Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is
 | ~~**mobx, mobx-react-lite, mobx-state-tree**~~ | ✅ Removed. Decision 1 chose XState; these were evaluation remnants. |
 | ~~**zustand**~~ | ✅ Removed. Evaluation remnant from the state management comparison. |
 | ~~**react-router-dom**~~ | ✅ Removed (2026-05). Replaced by TanStack Router (Decision 4); had no remaining imports. |
-| **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly (no direct `src/` imports found — safe to drop). |
+| **xml2js** | The legacy XML card format (and cardworks, which parsed it) has since been removed entirely — cards are YAML frontmatter only. xml2js should not be used directly (no direct `src/` imports found — safe to drop). |
 | **chokidar** | Still the file-watch primitive. Decision 8 imagined migrating to @parcel/watcher, but that index was never built and @parcel/watcher was never installed — so chokidar stays for now. |
 | **html-entities** | Orphaned after the RSS/news connector was removed (no `src/` imports). Drop it. |
 | **highlight.js** | Decision 22's rehype-highlight plan is moot (no remark pipeline — see Decision 15). highlight.js is still installed but not directly imported in `src/frontend/src`; reassess whether it's needed at all under Markdoc. |

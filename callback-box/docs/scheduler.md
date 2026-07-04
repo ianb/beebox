@@ -5,9 +5,9 @@ The scheduler is a background daemon that runs `cb tick` for multiple boxes on a
 ## Quick Start
 
 ```bash
-# Add boxes to the scheduler
-cb scheduler add ~/src/boxes/test1
-cb scheduler add ~/src/boxes/hearthside
+# Add boxes to the scheduler's manifest
+cb boxes add ~/src/boxes/test1
+cb boxes add ~/src/boxes/hearthside
 
 # Install launchd plist (auto-starts at login)
 cb scheduler install
@@ -21,14 +21,14 @@ launchctl load ~/Library/LaunchAgents/com.callback.scheduler.plist
 The daemon runs `cb tick` every 60 seconds for each configured box. `cb tick` checks all `config/schedules/*.scheduled-script.card` files against their cron/at/rrule schedules and runs any that are due.
 
 Key behaviors:
-- **Config reload** — The box list is reloaded each cycle, so `cb scheduler add/remove` takes effect without restarting
+- **Config reload** — The box list is reloaded each cycle, so `cb boxes add/remove` takes effect without restarting
 - **Error isolation** — One box failing doesn't affect others
 - **Sleep recovery** — If the computer sleeps through a scheduled window, scripts fire on the next tick after wake (cron evaluation checks if the last scheduled time is after the last run)
 - **Auto-restart** — launchd `KeepAlive: true` restarts the daemon if it crashes
 
 ## Configuration
 
-Global config at `~/.config/cb/scheduler.json`:
+Global config at `~/.config/cb/boxes.json` (managed by `cb boxes add/remove/list` — `cb scheduler add/remove/list` still work but are deprecated aliases). This manifest now only feeds the scheduler; serving is routed by `cb hub` via its own `~/.config/cb/hub.json`:
 ```json
 {
   "boxes": [
@@ -62,9 +62,9 @@ The webapp also serves logs at `GET /api/scheduler/log` (filtered to the current
 
 ```
 cb scheduler start [--interval <s>]  # Run daemon foreground
-cb scheduler add <path>              # Add box
-cb scheduler remove <path>           # Remove box
-cb scheduler list                    # Show configured boxes
+cb boxes add <path>                  # Add box to the manifest
+cb boxes remove <path>               # Remove box
+cb boxes list                        # Show configured boxes
 cb scheduler status                  # Boxes + launchd status
 cb scheduler log [options]           # View logs
 cb scheduler install                 # Install launchd plist

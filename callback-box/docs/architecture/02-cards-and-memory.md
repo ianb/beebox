@@ -43,7 +43,7 @@ The view Diana sees isn't stored anywhere as a view. The box assembled it from t
      status: working -->
 ## What a card actually is
 
-A card is a file. Specifically, an XML file on disk with a name like `Tio_Raul_Birthday.audio.card` or `Costco_List.list.card`. The name has two parts that matter: a human-readable label and a type. The type — `audio`, `memo`, `list`, `question` — determines what the card can contain. Everything is in the filename: you know what a card is and roughly what it's about without opening it. This matters because the filename is human-readable and LLM-readable at the same time — an agent listing a directory already knows what it's looking at.
+A card is a file. Specifically, a file on disk — YAML frontmatter plus a markdown body — with a name like `Tio_Raul_Birthday.audio.card` or `Costco_List.list.card`. The name has two parts that matter: a human-readable label and a type. The type — `audio`, `memo`, `list`, `question` — determines what the card can contain. Everything is in the filename: you know what a card is and roughly what it's about without opening it. This matters because the filename is human-readable and LLM-readable at the same time — an agent listing a directory already knows what it's looking at.
 
 Each card type has a schema. The schema says what fields exist, what values are valid, what's required and what's optional. An audio card has a filename reference, a transcript, and a status. A memo card has content and a source — did this come from a voice recording, a text message, an email? An event card has a date, a time, a location.
 
@@ -58,7 +58,7 @@ Rosa's audio card is a good example. The recording comes in, the box transcribes
      status: sidecar audio=working, word-level transcription=working, layered story pipeline=aspirational -->
 ## Keeping the originals
 
-When the box processes Rosa's voice memo, it creates an audio card. The recording stays as an attachment — same name, different extension: `Tio_Raul_Birthday.audio.card` and `Tio_Raul_Birthday.webm`. The transcribed text goes inside the card. The word-level timing data sits alongside as a `.timing.json` sidecar, mapping timestamps to phrases.
+When the box processes Rosa's voice memo, it creates an audio card. The recording stays as an attachment in a sibling `.attach/` directory: `Tio_Raul_Birthday.audio.card` and `Tio_Raul_Birthday.attach/Tio_Raul_Birthday.webm`. The transcribed text goes inside the card. The word-level timing data sits alongside in the same attach scope, mapping timestamps to phrases.
 
 Later, when Rosa's procedure builds a story from several recordings, the story card is a new thing — `Raul_Stories.story.card` — that references the audio cards it drew from. The story has Rosa's words cleaned up and reorganized, but each audio card still has the raw transcript, and each raw transcript still has the recording behind it. Four layers: audio, raw transcript, cleaned-up text, finished story. Each one points back to where it came from. If something looks off at any layer, you can check the layer below.
 

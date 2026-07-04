@@ -1,5 +1,7 @@
 # Card View Plugin System
 
+**Not implemented as written.** Superseded by the shipped renderer system: `src/frontend/src/renderers/` + the file-types registry, keyed off frontmatter `type` rather than the XML `tagName`-based plugin registry this doc designs.
+
 Design for a generic card rendering system in `cb serve` — a pluggable architecture where any card type can register a custom renderer alongside the built-in tree/XML views.
 
 ## Goals
