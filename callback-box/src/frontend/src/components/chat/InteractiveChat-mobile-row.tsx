@@ -7,7 +7,7 @@
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
@@ -17,7 +17,7 @@ import type { TranscriptionHandle } from "./InteractiveChat-composer";
 export function MobileTextareaRow({
   isTranscribing, transcription,
   handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
+  onStopDictation, onVoiceSegmentSend,
   onPaste, onDrop,
 }: {
   isTranscribing: boolean;
@@ -27,9 +27,7 @@ export function MobileTextareaRow({
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
   clearDraft: () => void;
   onStopDictation: () => void;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  onVoiceSegmentSend: (text: string) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -90,7 +88,7 @@ export function MobileTextareaRow({
               const finalText = await transcription.stop();
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, finalText).trim();
-              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              if (text) onVoiceSegmentSend(text);
               setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();

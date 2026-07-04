@@ -9,16 +9,15 @@
 
 import { useEffect, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { getChatHistory, restartChatSubprocess, type SessionEntry, type ChatImageAttachment } from "../../api";
+import { getChatHistory, restartChatSubprocess, type SessionEntry } from "../../api";
 import { extractImageFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio-context";
-import { refreshLocationIfStale } from "../../lib/location-share";
 import { href } from "../../lib/routing";
-import { localTime, newMessageId } from "./InteractiveChat-helpers";
+import { newMessageId } from "./InteractiveChat-helpers";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
-import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
+import { type SelectionItem } from "../../lib/selection-serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import type { CardSendFields } from "./InteractiveChat-card-hooks";
+import { createTypedEmission, type Emission } from "../../input/emission";
 import type { InputStore } from "./input-store";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -46,9 +45,8 @@ interface ChatActionsOpts {
   typingLocked: boolean;
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
   setScrollToBottomTrigger: React.Dispatch<React.SetStateAction<number>>;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
-  captureCardSend: () => CardSendFields;
+  /** The one send funnel — assembly happens target-side (InteractiveChat-dispatch.ts). */
+  dispatchEmission: (emission: Emission) => void;
 }
 
 export function useChatActions(opts: ChatActionsOpts) {
@@ -56,26 +54,9 @@ export function useChatActions(opts: ChatActionsOpts) {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
     inputStore, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr, captureCardSend,
+    setScrollToBottomTrigger, dispatchEmission,
   } = opts;
   const navigate = useNavigate();
-
-  // doSend with attachments — used by handleSend below. Stamps the companion
-  // card state (open card + activity since last reply) onto every user turn.
-  const doSendWithImages = useCallback(
-    (wrapped: string, images: ChatImageAttachment[]) => {
-      // Best-effort: refresh a stale shared-location fix in the background (no-op unless opted in).
-      void refreshLocationIfStale(boxSlug);
-      const messageId = newMessageId();
-      const cardFields = captureCardSend();
-      if (images.length > 0) {
-        send({ type: "SEND", message: wrapped, messageId, images, ...cardFields });
-      } else {
-        send({ type: "SEND", message: wrapped, messageId, ...cardFields });
-      }
-    },
-    [send, captureCardSend, boxSlug]
-  );
 
   const handleSend = useCallback(() => {
     const text = inputStore.get().trim();
@@ -83,36 +64,23 @@ export function useChatActions(opts: ChatActionsOpts) {
     onSend();
     unlockAudioContext();
 
-    // Convert UI attachments to the wire-format images payload.
-    const images: ChatImageAttachment[] = attachments.map((a) => ({
-      id: a.id,
-      mimeType: a.mimeType,
-      dataBase64: a.dataBase64,
-    }));
-
-    // Fold attached selections in: `[selectionN]` tokens become inline
-    // <user-selection> elements; any without a surviving token are appended.
-    const body = applySelections(text, { selections });
-    const typed = `<typed local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${body}</typed>`;
-    // File attachments emit a sibling <attachments> block of markdown-style
-    // reference links so the agent sees the path each [fileN] token resolves
-    // to without us having to inline the file's bytes anywhere.
-    const attachmentsBlock = fileAttachments.length > 0
-      ? "\n<attachments>\n" +
-        fileAttachments.map((f) => `[file${f.id}]: ${f.path}`).join("\n") +
-        "\n</attachments>"
-      : "";
-    const wrapped = typed + attachmentsBlock;
+    const emission = createTypedEmission({
+      text,
+      // UI attachments become the wire-format images payload.
+      images: attachments.map((a) => ({ id: a.id, mimeType: a.mimeType, dataBase64: a.dataBase64 })),
+      files: fileAttachments.map((f) => ({ id: f.id, path: f.path })),
+      selections,
+    });
 
     resetAttachments();
     resetSelections();
     inputStore.set("");
-    doSendWithImages(wrapped, images);
+    dispatchEmission(emission);
     setScrollToBottomTrigger((n) => n + 1);
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [inputStore, attachments, fileAttachments, selections, doSendWithImages, zoomedViewAttr, timePassedAttr, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
+  }, [inputStore, attachments, fileAttachments, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const images = extractImageFiles(e.clipboardData);

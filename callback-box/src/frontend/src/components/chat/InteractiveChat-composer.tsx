@@ -11,7 +11,7 @@ import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
 import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 
@@ -34,7 +34,7 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
 function DesktopComposerRow({
   textareaRef, input, setInput, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
@@ -46,9 +46,7 @@ function DesktopComposerRow({
   handleCancelTranscription: () => void;
   clearDraft: () => void;
   onStopDictation: () => void;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  onVoiceSegmentSend: (text: string) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -101,7 +99,7 @@ function DesktopComposerRow({
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, transcription.transcript).trim();
               transcription.cancel();
-              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              if (text) onVoiceSegmentSend(text);
               setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
@@ -140,7 +138,7 @@ export function ChatInputArea({
   textareaRef, isTranscribing, transcription,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, speechPlaying, onStopSpeech,
-  isStreaming, onInterrupt, onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
+  isStreaming, onInterrupt, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
@@ -159,9 +157,7 @@ export function ChatInputArea({
   isStreaming: boolean;
   onInterrupt: () => void;
   onStopDictation: () => void;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  onVoiceSegmentSend: (text: string) => void;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
@@ -222,9 +218,7 @@ export function ChatInputArea({
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
           onStopDictation={onStopDictation}
-          doSend={doSend}
-          zoomedViewAttr={zoomedViewAttr}
-          timePassedAttr={timePassedAttr}
+          onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
         />

@@ -157,9 +157,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       isStreaming={spec.isStreaming}
       onInterrupt={noop}
       onStopDictation={noop}
-      doSend={noop}
-      zoomedViewAttr={() => ""}
-      timePassedAttr={() => ""}
+      onVoiceSegmentSend={noop}
       voicePaused={spec.voicePaused}
       onUnpause={noop}
       onAttachFiles={noop}
@@ -174,9 +172,7 @@ function StateBlock({ spec }: { spec: Spec }) {
       handleCancelTranscription={noop}
       clearDraft={noop}
       onStopDictation={noop}
-      doSend={noop}
-      zoomedViewAttr={() => ""}
-      timePassedAttr={() => ""}
+      onVoiceSegmentSend={noop}
     />
   );
   return (

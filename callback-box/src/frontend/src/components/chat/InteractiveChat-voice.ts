@@ -21,7 +21,8 @@ import { detectKeyword, appendSendKeywordTag } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
 import { setLastMessageAudio } from "../../lib/last-audio-cache";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
-import { localTime, buildSpeechMessage, joinTranscript } from "./InteractiveChat-helpers";
+import { joinTranscript } from "./InteractiveChat-helpers";
+import { createVoiceEmission, type Emission } from "../../input/emission";
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection-serialize";
 import type { SpeechSegment } from "../../lib/speech-parsing";
@@ -74,14 +75,12 @@ function runKeywordSend(opts: {
   narrationEnabledRef: React.MutableRefObject<boolean>;
   selectionsRef: React.MutableRefObject<SelectionItem[]>;
   resetSelections: () => void;
-  doSend: (wrapped: string) => void;
+  dispatchEmission: (emission: Emission) => void;
   clearDraftRef: React.MutableRefObject<() => void>;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
   /** Composer text store; the latest text is prepended at fire time so it isn't dropped. */
   inputStore: InputStore;
 }) {
-  const { text, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputStore } = opts;
+  const { text, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId, narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore } = opts;
   // Restart the mic for a continuous conversation, or — for "send and close" —
   // end dictation (STOP_DICTATION clears turnTaking, suppressing the
   // post-response re-arm too). Called at every exit below.
@@ -111,13 +110,14 @@ function runKeywordSend(opts: {
   stopTickRef.current = tick.repeatPlay(1000, 30000);
   const submit = (finalText: string, submitOpts?: { diarized?: boolean }) => {
     const diarized = submitOpts !== undefined && submitOpts.diarized === true;
-    const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
     // The HQ audio (and the realtime text) cover only the spoken segment, so
-    // fold the prior composer text back in at submit time.
+    // fold the prior composer text back in at submit time. The frozen
+    // selections snapshot rides the emission — additions during the HQ
+    // window belong to the next message.
     const full = joinTranscript(priorInput, finalText);
-    doSend(buildSpeechMessage({ text: full, diarized, selections: selectionsSnapshot, attrs }));
-    // Keep the original recording around (after doSend, which clears it) so
-    // the agent can fetch it on demand via `cb chat get-last-audio`.
+    dispatchEmission(createVoiceEmission({ text: full, selections: selectionsSnapshot, diarized }));
+    // Keep the original recording around (after dispatch, which clears the
+    // cache) so the agent can fetch it via `cb chat get-last-audio`.
     if (audioBlob) setLastMessageAudio({ blob: audioBlob, text: full });
     // The segment is committed — drop any persisted draft so the recovery
     // widget doesn't resurface the text we just sent.
@@ -167,11 +167,9 @@ export function useChatVoice(opts: {
   clearDraftRef: React.MutableRefObject<() => void>;
   /** Composer text store, so a voice-keyword send doesn't drop existing text. */
   inputStore: InputStore;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  dispatchEmission: (emission: Emission) => void;
 }) {
-  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, inputStore, doSend, zoomedViewAttr, timePassedAttr } = opts;
+  const { snapshot, sessionId, muted, narrationEnabled, selections, resetSelections, clearDraftRef, inputStore, dispatchEmission } = opts;
 
   // Live device handles, in a ref the command subscriber reads at emit time
   // (never during render). Effects below keep its fields current.
@@ -218,7 +216,7 @@ export function useChatVoice(opts: {
     wantAudioBlob: () => true,
     onKeywordSend: ({ processedTranscript, matchedPhrase, audioBlob, closeMic }) => runKeywordSend({
       text: processedTranscript, matchedPhrase, audioBlob, closeMic, transcription, stopTickRef, composerSend, sessionId,
-      narrationEnabledRef, selectionsRef, resetSelections, doSend, clearDraftRef, zoomedViewAttr, timePassedAttr, inputStore,
+      narrationEnabledRef, selectionsRef, resetSelections, dispatchEmission, clearDraftRef, inputStore,
     }),
     onKeywordCancel: () => {
       transcription.cancel();

@@ -15,13 +15,10 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { chatMachine } from "../../machines/chatMachine.js";
 import { groupMessages } from "../ChatMessages";
-import { serializeViewUrl } from "../../lib/view-url";
-import { clearLastMessageAudio } from "../../lib/last-audio-cache";
-import { refreshLocationIfStale } from "../../lib/location-share";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
-import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
+import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useComposerDraft } from "../../hooks/useComposerDraft";
 import { RecoveredDictation } from "./RecoveredDictation";
@@ -117,32 +114,12 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
-  // Both user-send funnels (`doSend`, `doSendWithImages` in useChatActions) call
-  // `cardSend.capture()` so every turn carries the open card + activity since the
-  // last reply; system sends (e.g. /compact) don't, leaving the accumulator be.
-  const doSend = useCallback(
-    (wrapped: string) => {
-      // Any send moves "the last message" past the cached voice recording.
-      // A voice send re-caches its own audio right after (see runKeywordSend).
-      clearLastMessageAudio();
-      void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
-      send({ type: "SEND", message: wrapped, messageId: newMessageId(), ...cardSend.capture() });
-    },
-    [send, cardSend, boxSlug]
-  );
-
-  const zoomedViewAttr = useCallback(() => {
-    if (!activeView) return "";
-    const uri = `view:${serializeViewUrl(activeView.target)}`;
-    return ` zoomed-view="${uri}"`;
-  }, [activeView]);
-
-  const timePassedAttr = useCallback(() => {
-    if (messages.length === 0) return "";
-    const last = messages[messages.length - 1];
-    const formatted = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
-    return formatted ? ` time-passed="${formatted}"` : "";
-  }, [messages]);
+  // The one user-send funnel: every send site builds an Emission and lands
+  // in dispatchEmission (docs/plans/input-extraction.md chunk 1); assembly
+  // and witness capture live in InteractiveChat-dispatch.ts.
+  const { dispatchEmission, sendVoiceSegment } = useEmissionDispatch({
+    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages,
+  });
 
   const attach = useChatAttachments({ inputStore, textareaRef });
   const selections = useChatSelections({ inputStore, textareaRef });
@@ -152,7 +129,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    clearDraftRef, inputStore, doSend, zoomedViewAttr, timePassedAttr,
+    clearDraftRef, inputStore, dispatchEmission,
   });
 
   // Persist the in-flight transcript so an interrupted session (screen sleep,
@@ -171,10 +148,9 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
     // No audio survives a drop, so the realtime text stands in for the HQ pass
     // (the design's documented HQ-failure fallback). Sent as a narration
     // <speech> message; the session's narration flag re-syncs from the server.
-    const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
-    doSend(buildSpeechMessage({ text: recoveredDraft.text, diarized: false, selections: [], attrs }));
+    sendVoiceSegment(recoveredDraft.text);
     clearDraft();
-  }, [recoveredDraft, zoomedViewAttr, timePassedAttr, doSend, clearDraft]);
+  }, [recoveredDraft, sendVoiceSegment, clearDraft]);
 
   // Surface the recovery widget only when idle: hidden while the mic is open
   // and while an HQ commit is in flight (the mic briefly idles between
@@ -202,7 +178,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
     addImageFiles: attach.addImageFiles,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr, captureCardSend: cardSend.capture,
+    setScrollToBottomTrigger, dispatchEmission,
   });
 
   if (isLoading) {
@@ -253,10 +229,8 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       setTypingMode={setTypingMode}
       typingLocked={typingLocked}
       setTypingLocked={setTypingLocked}
-      doSend={doSend}
+      onVoiceSegmentSend={sendVoiceSegment}
       send={send}
-      zoomedViewAttr={zoomedViewAttr}
-      timePassedAttr={timePassedAttr}
       reportCardActivity={cardSend.report}
       />
     </InputStoreProvider>

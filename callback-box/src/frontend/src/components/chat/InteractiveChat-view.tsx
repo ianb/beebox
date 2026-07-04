@@ -68,10 +68,8 @@ interface ChatBodyProps {
   setTypingMode: React.Dispatch<React.SetStateAction<boolean>>;
   typingLocked: boolean;
   setTypingLocked: React.Dispatch<React.SetStateAction<boolean>>;
-  doSend: (wrapped: string) => void;
+  onVoiceSegmentSend: (text: string) => void;
   send: (event: { type: "DISMISS_ERROR" }) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
   /** Report user activity on the open companion card (scrolled/navigated/…). */
   reportCardActivity: (kind: ActivityKind, detail?: string) => void;
 }
@@ -156,7 +154,7 @@ function MessageListRegion(props: ChatBodyProps) {
 function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, attach, selections, actions, isStreaming, textareaRef,
-    typingMode, setTypingMode, typingLocked, setTypingLocked, doSend, zoomedViewAttr, timePassedAttr,
+    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend,
   } = props;
   const { speechPlayback, transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleStopSpeech, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { attachments, pendingImageCount, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
@@ -196,9 +194,7 @@ function ComposerRegion(props: ChatBodyProps) {
           isStreaming={isStreaming}
           onInterrupt={handleInterrupt}
           onStopDictation={stopDictation}
-          doSend={doSend}
-          zoomedViewAttr={zoomedViewAttr}
-          timePassedAttr={timePassedAttr}
+          onVoiceSegmentSend={onVoiceSegmentSend}
           voicePaused={voicePaused}
           onUnpause={unpauseVoice}
           onPaste={handlePaste}
@@ -215,9 +211,7 @@ function ComposerRegion(props: ChatBodyProps) {
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
           onStopDictation={stopDictation}
-          doSend={doSend}
-          zoomedViewAttr={zoomedViewAttr}
-          timePassedAttr={timePassedAttr}
+          onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={handlePaste}
           onDrop={handleDrop}
         />
