@@ -63,9 +63,11 @@ await build({
 // Also build the public schema-deps layer (the `callback-box/schema` export):
 // z and yaml helpers re-exported so a box's only dependency is callback-box.
 // zod/yaml stay external (resolved from callback-box's node_modules at runtime).
+// Outfile matches the tsc tree's emit path (dist/exports/schema.js) so the
+// export map target is valid after EITHER build — same pattern as cards/.
 await build({
   entryPoints: [join(root, "src/exports/schema.ts")],
-  outfile: join(distDir, "schema", "index.js"),
+  outfile: join(distDir, "exports", "schema.js"),
   bundle: true,
   platform: "node",
   format: "esm",
@@ -79,9 +81,10 @@ await build({
 // programmatic createServer/startServer entry for the hub and embedders. The
 // graph is large (whole webapp) but it's the same graph already inside
 // dist/cli.mjs; bundling it separately keeps the export side-effect-free.
+// Same tsc-tree path alignment as schema above.
 await build({
   entryPoints: [join(root, "src/exports/server.ts")],
-  outfile: join(distDir, "server", "index.js"),
+  outfile: join(distDir, "exports", "server.js"),
   bundle: true,
   platform: "node",
   format: "esm",

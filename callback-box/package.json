@@ -10,9 +10,9 @@
     },
     "./schema": {
       "types": "./dist/exports/schema.d.ts",
-      "default": "./dist/schema/index.js"
+      "default": "./dist/exports/schema.js"
     },
-    "./server": "./dist/server/index.js",
+    "./server": "./dist/exports/server.js",
     "./view-widgets": "./dist/view-widgets/index.js",
     "./tsconfig.base.json": "./tsconfig.base.json"
   },
