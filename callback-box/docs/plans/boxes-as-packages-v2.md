@@ -1,7 +1,7 @@
 # Boxes as Packages v2 — callback-box as a library
 
 **Status:** Draft for review.
-**Supersedes:** `docs/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
+**Supersedes:** `docs/unimplemented-plans/boxes-as-packages.md` (2025 design exploration). This plan re-derives that
 design from the current codebase, corrects what has gone stale, and locks the decisions the
 boxholder made on 2026-07-03. Companion working notes: `scratch/cb-as-library-fresh-design.md`
 (independent re-derivation) and `scratch/cb-as-library-comparison.md` (reconciliation).
@@ -25,6 +25,8 @@ These are inputs to this plan, not open questions:
    users) can phase in later.
 4. **Versioning** — per-box pinning is the mechanism; the fleet staying current is policy
    (fleet script). Reconciles the old plan's "hard fleet update" with per-box independence.
+5. **Naming** — the operational directory is `content/` (Ghost precedent; "data" only says
+   not-code, "content" says what it is).
 
 ## Stated preferences this plan trades against
 
@@ -120,6 +122,27 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
   (https://docs.n8n.io/hosting/configuration/configuration-examples/user-folder/). Both
   validate "operational root owned by the user, package owned by the tool," and Ghost's
   layout is why the operational root, not the package root, is the unit users back up.
+- **Ghost-CLI lifecycle verbs** — `ghost update` keeps `versions/<n>/` dirs and swaps a
+  `current` symlink for atomic rollback (https://docs.ghost.org/ghost-cli); **rejected** —
+  our rollback unit is the box's git snapshot + lockfile, which covers data too (see Upgrade
+  lifecycle). `ghost doctor` as an *auto-run preflight gate* before any lifecycle verb —
+  **stolen** into `cb upgrade` step 0. Ghost's rollback bug (code reverted, DB left
+  migrated forward — https://github.com/TryGhost/Ghost-CLI/issues/699) is the concrete spec
+  for why code+data revert as one unit.
+- **Ghost content contract & gscan** — Ghost never migrates `content/`'s folder *shape*
+  across versions, only the data inside it; and validates the one user-code surface (themes)
+  with gscan at upload time, fatal errors blocking activation
+  (https://github.com/TryGhost/gscan). **Adopted in spirit**: the `content/` subfolder
+  contract stays near-permanent (upgrade complexity lives in card migrations), and our
+  existing `cb validate` + view compile-lint + the new box typecheck are the gscan-analog,
+  already wired at edit time via the PostToolUse hook. Theme `engines` compat ranges are
+  **rejected** — boxes pin an exact engine version, so a range field adds nothing.
+- **Mastodon's pre/post-deployment migration split** (`SKIP_POST_DEPLOYMENT_MIGRATIONS`,
+  https://docs.joinmastodon.org/admin/config/) — **rejected for now**: boxes migrate offline
+  during `cb upgrade` (the process is stopped), so zero-downtime migration phasing solves a
+  problem we don't have.
+- **Home Assistant's partial backup/restore** (per-add-on restore) — noted for the hub's
+  future: restoring one box without touching siblings is inherent in per-box git repos.
 - **`module.registerHooks`** — shipped stable in Node 22.15 as the durable synchronous
   successor to the now-deprecated async `module.register()` (DEP0205;
   https://nodejs.org/en/blog/release/v22.15.0,
@@ -136,16 +159,17 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
 ├── pnpm-lock.yaml
 ├── tsconfig.json                  extends a base shipped by callback-box
 ├── node_modules/                  gitignored; pnpm store-linked
-├── CLAUDE.md                      thin: "this is a box package; the box lives in data/"
+├── CLAUDE.md                      thin: "this is a box package; the box lives in content/"
+├── .claude/                       rules, skills, memory symlink, settings (project-scoped
+│                                   assets live at the git root — see "Where Claude Code runs")
 ├── src/
-│   ├── schemas/                   moved from  data-root config/schemas/   (code)
-│   ├── views/                     moved from  data-root views/            (code)
-│   └── tricks/                    moved from  data-root tricks/           (code; keeps its
+│   ├── schemas/                   moved from  box-root config/schemas/    (code)
+│   ├── views/                     moved from  box-root views/             (code)
+│   └── tricks/                    moved from  box-root tricks/            (code; keeps its
 │                                   own nested package.json for agent-installed deps)
-└── data/                          THE BOX — the operational root, no package.json inside
+└── content/                       THE BOX — the operational root, no package.json inside
     ├── .cb-box                    marker, + "shapeVersion": 2
     ├── CLAUDE.md                  the operating agent's context (agent cwd = here)
-    ├── .claude/                   rules, skills, memory symlink, settings
     ├── .callback-box/             runtime state (sqlite, logs, generated guide)
     ├── briefing.briefing.card, briefing.md, Box.landmark.card
     ├── box/  store/  config/  people/  places/  docs/  procedure/  tmp/
@@ -153,7 +177,7 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
 ```
 
 - One git repository at the repo root (the box's existing history, paths moved with `git mv`).
-- `boxRoot` (everywhere in the engine) = the `data/` directory. `findBoxRoot` still finds it
+- `boxRoot` (everywhere in the engine) = the `content/` directory. `findBoxRoot` still finds it
   by `.cb-box`. A new `boxPackageRoot(boxRoot)` = its parent when `../package.json` declares
   a `callback-box` dependency; a legacy (unconverted) box has `boxPackageRoot === boxRoot`
   minus the code dirs — this one predicate is the entire bilingual-transition switch.
@@ -165,9 +189,37 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
   delivers the "flatter" instinct from decision 1 — `config/` stays in the operational root
   because everything left in it (connectors, guides, procedures, schedules, box.json) is
   operational data, not code.
-- Two CLAUDE.md personas fall out naturally: the *operating agent* (cwd `data/`) never sees
+- Two CLAUDE.md personas fall out naturally: the *operating agent* (cwd `content/`) never sees
   the package machinery; a *coding session* opened at the repo root gets a thin CLAUDE.md
   pointing at `src/` and the library docs.
+
+### Where Claude Code runs
+
+Every Claude Code session type, and its cwd under the new layout:
+
+| Session | cwd today | cwd under v2 | Notes |
+|---|---|---|---|
+| Reactor / wakeup / scheduled runs | box root (`agent-run.ts:61`: `cwd: options.cwd ?? options.boxRoot`) | `content/` | unchanged mechanism — `boxRoot` just moves |
+| Root-bound chats | box root (`chat-thread-session.ts:197`) | `content/` | same |
+| Landmark ("in-directory") chats | `boxRoot/<contextDir>` with the box root added via `additionalDirectories` and a system-prompt scope note (`chat-session-start.ts:105-121`, `chat-session-options.ts:62-67`) | `content/<contextDir>`, `additionalDirectories: [content/]` | the hybrid survives verbatim — everything in it is boxRoot-relative |
+| Coding sessions (human-opened) | n/a (boxes had no code persona) | repo root | new persona; thin root CLAUDE.md |
+
+The subtlety is **project-scoped assets, not cwd**. Claude Code resolves the *project* (for
+`.claude/settings.json`, rules, skills) by walking up to the git root — today that's the box
+root, which is why landmark chats at `cwd = boxRoot/subdir` still get the box's rules and
+hooks. Under v2 the git root moves above `content/`, so `.claude/` must move to the repo
+root or every operating agent silently loses rules, skills, and the validation hook. Hence
+`.claude/` at the repo root in the layout above. Consequences, all acceptable:
+
+- `content/CLAUDE.md` still auto-loads for operating agents (CLAUDE.md loads from cwd and
+  its ancestors up to the project root), and the thin repo-root CLAUDE.md loads *alongside*
+  it — so the root CLAUDE.md must be written knowing both personas read it (a few lines:
+  what this repo is, where the box lives, that `src/` is coding-session territory).
+- The `.claude/memory` symlink is keyed by cwd (`~/.claude/projects/<munged-cwd>/`); the
+  operating cwd becomes `<repo>/content`, so the migration re-links it (already in Track H).
+- Verification lands with Track B's first chunk: a converted fixture box must show rules
+  firing and the PostToolUse validate hook running from a `content/`-cwd session before
+  anything else builds on the layout.
 
 ### The library surface
 
@@ -217,13 +269,28 @@ LSP/typecheck — today *"the view doesn't compile, but its metadata is regex-ex
 
 `cb upgrade [--to <version>]`, run at the box repo root:
 
-1. Bump the `callback-box` dependency; `pnpm install`.
-2. `cb migrate` — data migrations from the ordered registry (exists).
-3. Template sync — park-on-divergence machinery (exists).
-4. Regenerate rules, skills, generated docs, search index (the tail of `cb init`, exists).
-5. Typecheck the box's `src/` (new, cheap, catches library-surface breaks).
-6. Commit with trailer `Upgraded-To: callback-box@x.y.z`; on any failure, revert the bump,
-   reinstall the previous version, log to `.callback-box/logs/upgrade.log`, exit nonzero.
+0. **Preflight** (Ghost's `ghost doctor` pattern — auto-run, not optional): clean working
+   tree required, engine tarball reachable, disk space, box validates under the *current*
+   version. Refuse to start otherwise.
+1. **Snapshot**: record the pre-upgrade commit SHA. The box is a git repo and migrations
+   mutate tracked files, so this one SHA is the whole rollback point for code *and* data.
+2. Bump the `callback-box` dependency; `pnpm install`.
+3. `cb migrate` — data migrations from the ordered registry (exists).
+4. Template sync — park-on-divergence machinery (exists).
+5. Regenerate rules, skills, generated docs, search index (the tail of `cb init`, exists).
+6. Typecheck the box's `src/` (new, cheap, catches library-surface breaks).
+7. Commit with trailer `Upgraded-To: callback-box@x.y.z`. On any failure: `git reset --hard`
+   to the snapshot SHA (reverting migrations *and* the dep bump together), reinstall the
+   previous version, log to `.callback-box/logs/upgrade.log`, exit nonzero.
+
+Rollback covers code and data **as one unit** deliberately: Ghost shipped the bug this
+avoids — `ghost update --rollback` originally reverted only the code symlink while the
+database stayed migrated forward, silently corrupting data
+(https://github.com/TryGhost/Ghost-CLI/issues/699). Our equivalent (old engine reading
+forward-migrated cards) is prevented by making the git snapshot, not the dependency pin,
+the rollback unit. The sqlite files under `.callback-box/` are gitignored and not covered
+by the snapshot — engine sqlite schema changes must therefore stay
+backward-compatible-by-one-version (the old plan's §7.7 constraint, retained).
 
 `cb fleet upgrade` (server-side script) walks the hub config, runs `cb upgrade` per box,
 smoke-tests (service restart + `/healthz` within 10s), reverts on failure and records the
@@ -309,13 +376,13 @@ smoke script that scaffolds a fresh box against it in a temp dir and boots it.
 to a shared `server-main`; worktree box clones get a `pnpm.overrides` `link:` redirect to their
 sibling engine worktree (WorktreeCreate hook update); `.claude/memory` symlink re-pointing
 (see Failure modes — the Claude Code project key changes when the agent cwd moves to
-`data/`).
+`content/`).
 **Why:** Engine development against live boxes must stay zero-ceremony (edit → next request).
 **First chunk:** router change behind a v2-detection branch so main keeps working mid-plan.
 
 ### Track H — Fleet migration
 **What:** A standard migration `box-packageify` (registry entry + script): `git mv` code dirs
-into `src/`, everything else into `data/`, write wrapper files, re-point memory symlink,
+into `src/`, everything else into `content/`, write wrapper files, re-point memory symlink,
 `pnpm install`, `cb init`, commit. Then per-box server conversion (hub config entry +
 `cb@<box>.service`), canary first (`hearth-test`), `test1` second, then the rest.
 Deletions at the end: resolve hook, `boxes.json` manifest + `cb boxes`, multi-box serve path,
@@ -329,7 +396,7 @@ the top priority is the good end-state, not legacy accommodation.
 
 ## Subplans
 
-- **Per-box OS users / socket permissions / secrets split** (`box-user-account-spec.md`
+- **Per-box OS users / socket permissions / secrets split** (`docs/unimplemented-plans/box-user-account-spec.md`
   revisit) — deferred hardening phase per decision 3. It has its own decisions (UID ranges,
   credential sharing, egress) and does not gate anything here. To be planned when the fleet
   is converted and the hub is stable.
@@ -360,7 +427,7 @@ the top priority is the good end-state, not legacy accommodation.
 
 ## Agent-flow / user-flow edge cases
 
-- **Wrong location for new code** (agent writes a schema into `data/config/schemas/` out of
+- **Wrong location for new code** (agent writes a schema into `content/config/schemas/` out of
   habit) — **ADDRESSED**: legacy path absent in v2 boxes; `cb validate` + generated
   `.claude/rules` and the schemas/views CLAUDE.md scaffolds point at `src/`; knowledge audit
   below verifies recall.
@@ -400,11 +467,8 @@ the top priority is the good end-state, not legacy accommodation.
 
 ## Open design questions
 
-- **Name of the operational directory** — `data/` is the working name; candidates: `data/`,
-  `box/` (collides with the inner `box/` dir), `desk/`. Lean: `data/` (boring, honest,
-  matches Ghost's `content/` precedent). Decide before Track B's scaffold chunk.
 - **Does `docs/` stay in the operational root or split?** Box docs are agent/boxholder
-  content → lean: stays in `data/`.
+  content → lean: stays in `content/`.
 - **`cb deps add` verb for agent-driven dependency additions** (Stance B relief valve) —
   lean: defer until an agent actually needs a dep beyond `callback-box`; tricks already have
   their own escape hatch.

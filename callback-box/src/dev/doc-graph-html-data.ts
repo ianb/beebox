@@ -180,8 +180,8 @@ export const CURATOR: CuratorSection[] = [
     entries: [
       { path: "docs/design-card-views.md", note: "876 lines of plugin system that may or may not get built." },
       { path: "docs/event-bus-design.md", note: "An event bus, designed, awaiting motivation to exist." },
-      { path: "docs/boxes-as-packages.md", note: "What if every box were an npm package? Thought experiment." },
-      { path: "docs/box-user-account-spec.md", note: "What if every box were a Linux user? Also thought experiment." },
+      { path: "docs/unimplemented-plans/boxes-as-packages.md", note: "What if every box were an npm package? Thought experiment." },
+      { path: "docs/unimplemented-plans/box-user-account-spec.md", note: "What if every box were a Linux user? Also thought experiment." },
       { path: "docs/implemented-plans/narration-mode-design.md", note: "Speculative voice/narration mode for the agent." },
       { path: "docs/plans/triage-design.md", note: "How a triage subsystem could work, if built." },
       { path: "docs/plans/pdf-intake-design.md", note: "PDF processing path. Partly implemented." },
