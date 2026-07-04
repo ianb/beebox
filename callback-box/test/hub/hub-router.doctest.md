@@ -21,6 +21,8 @@ import net from "node:net";
 import crypto from "node:crypto";
 import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
+import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const WS_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 const HUB_SECRET = "test-hub-secret-for-router-doctest";
@@ -226,6 +228,66 @@ An unknown/missing box in `state` never reaches any endpoint:
 const unknownBoxResponse = await fetch(`${hub.base}/auth/google-services/callback?code=abc123&state=nope`);
 unknownBoxResponse.status
 => 400
+```
+
+## The Google-services callback also checks the target box's own access list, not just a valid session
+
+A valid fleet session isn't enough on its own -- the caller must also be
+allowed on the SPECIFIC box named in `state` (`canAccessBox`,
+`src/webapp/box-access.ts`), same fail-closed semantics used everywhere
+else identity gates a box. Needs hub auth actually ON (unlike the rest of
+this file) to have a session to check in the first place.
+
+```ts continue
+const ownedBox = await makeTmpBox();
+await ownedBox.write("config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
+
+process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
+process.env.CB_SESSION_SECRET = "test-session-secret-for-router-doctest";
+
+const authedHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
+  boxes: [{ slug: "test1", boxRoot: ownedBox.root }],
+});
+const requestsBeforeDenial = box.sockets.length;
+
+const strangerCookie = signSession({ email: "stranger@example.com", name: "Stranger" });
+const deniedResponse = await fetch(
+  `${authedHub.base}/auth/google-services/callback?code=abc123&state=test1:admin`,
+  { headers: { cookie: `${COOKIE_NAME}=${strangerCookie}` } },
+);
+deniedResponse.status
+=> 403
+```
+
+The denial never reaches the child -- no new connection to the fake box:
+
+```ts continue
+box.sockets.length === requestsBeforeDenial
+=> true
+```
+
+An email on the box's own `allowedEmails` is forwarded, same as any other authorized request:
+
+```ts continue
+const allowedCookie = signSession({ email: "owner@example.com", name: "Owner" });
+const allowedResponse = await fetch(
+  `${authedHub.base}/auth/google-services/callback?code=abc123&state=test1:admin`,
+  { headers: { cookie: `${COOKIE_NAME}=${allowedCookie}` } },
+);
+allowedResponse.status
+=> 200
+
+const allowedBody = await allowedResponse.json();
+JSON.stringify({ url: allowedBody.url, email: allowedBody.headers.xCbAuthenticatedEmail })
+=> {"url":"/auth/google-services/callback?code=abc123&state=test1:admin","email":"owner@example.com"}
+```
+
+```ts continue
+delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.CB_SESSION_SECRET;
+for (const socket of authedHub.sockets) socket.destroy();
+await new Promise((resolve) => authedHub.server.close(resolve));
+await ownedBox.cleanup();
 ```
 
 ## `/api/boxes` is hub-owned, matching the standalone server's shape

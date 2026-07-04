@@ -20,6 +20,7 @@ import { runBoxPackageify, throwInjectedTestFailure } from "../../../scripts/mig
 import { getBoxShape } from "../../../src/cli/lib/box-shape.js";
 import { getHead, getStatus } from "../../../src/cli/lib/git.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
+import { encodeProjectDir } from "../../../src/cli/lib/session.js";
 
 // `claudeProjectsRoot()` (src/cli/lib/session.ts) honors this override —
 // (via `runInit` → `symlinkClaudeMemory`) the migration's own `cb init`
@@ -75,9 +76,28 @@ async function makeLegacyBox() {
 ```ts
 const box = await makeLegacyBox();
 const preSha = await getHead(box.root);
+
+// Real pre-existing Claude Code session history at the box's old cwd key —
+// checked below to prove a successful migration never loses it, whichever
+// way `relocateClaudeProjectDir` resolves it (see
+// migrate-box-packageify-memory.doctest.md for that decision in isolation).
+const oldProjectKeyDir = path.join(process.env.CB_CLAUDE_PROJECTS_DIR, encodeProjectDir(box.root));
+await fs.mkdir(oldProjectKeyDir, { recursive: true });
+await fs.writeFile(path.join(oldProjectKeyDir, "session-1.jsonl"), "{}\n");
+
 const result = await runBoxPackageify(box.root);
 result.status
 => applied
+```
+
+Session history is never silently lost — it's either moved to the new key, or (the common case: `cb init`'s own tail already created something at the new key first) left in place at the old key untouched:
+
+```ts continue
+const contentProjectKeyDir = path.join(process.env.CB_CLAUDE_PROJECTS_DIR, encodeProjectDir(box.path("content")));
+const sessionAtOldKey = await exists(path.join(oldProjectKeyDir, "session-1.jsonl"));
+const sessionAtNewKey = await exists(path.join(contentProjectKeyDir, "session-1.jsonl"));
+sessionAtOldKey || sessionAtNewKey
+=> true
 ```
 
 ```ts continue
@@ -133,6 +153,55 @@ preCommitHook.includes('cd "content"')
 await box.cleanup();
 ```
 
+## A legacy box whose own data dir is already named `content/` converts cleanly
+
+The generic top-level mover computes `<box>/content/<entry>` for every
+entry it relocates — for an entry literally named `content`, that's
+`<box>/content/content`, i.e. renaming the directory onto a path nested
+inside itself, which fails outright. `moveEverythingElseToContent` special-
+cases this by shuffling the legacy `content/` dir through a temp name
+first, so its cards end up at `content/content/` (one level deeper, same
+as any other legacy dir) instead of breaking the whole conversion.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(".cb-box", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
+await box.write("CLAUDE.md", "# Test Box\n\nBoxholder-specific notes.\n");
+await box.write("content/Note.memo.card", "---\nstatus: new\ncreated: 2026-01-01T00:00:00.000Z\n---\nA memo.\n");
+await box.write("content/nested/Other.memo.card", "---\nstatus: new\ncreated: 2026-01-01T00:00:00.000Z\n---\nAnother memo.\n");
+box.commitAll("seed legacy box with its own top-level content/ dir");
+
+const result = await runBoxPackageify(box.root);
+result.status
+=> applied
+```
+
+The legacy `content/`'s own cards now live under `content/content/`, and the top-level `content/` is the new v2 root (holding the relocated `.cb-box`, `CLAUDE.md`, etc.), exactly as for any other legacy top-level dir:
+
+```ts continue
+const checks = {
+  cardNestedOneLevelDeeper: await exists(box.path("content/content/Note.memo.card")),
+  nestedSubdirPreserved: await exists(box.path("content/content/nested/Other.memo.card")),
+  v2MarkerAtNewRoot: await exists(box.path("content/.cb-box")),
+  v2ClaudeMdAtNewRoot: await exists(box.path("content/CLAUDE.md")),
+  oldFlatCardGone: !(await exists(box.path("content/Note.memo.card"))),
+};
+Object.keys(checks).filter(function (k) { return !checks[k]; }).length
+=> 0
+```
+
+History follows the card across both the outer `content/` shuffle and the move into `content/content/`:
+
+```ts continue
+const followLog = await simpleGit(box.root).raw(["log", "--follow", "--oneline", "--", "content/content/Note.memo.card"]);
+followLog.split("\n").filter(Boolean).length >= 2
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## Running it again on an already-converted box is a no-op
 
 ```ts
@@ -150,15 +219,22 @@ await box.cleanup();
 ## A mid-transform failure restores the box to its pre-migration state, byte for byte
 
 Everything through `scaffoldPackageRoot` (code/content moves, the marker
-stamp, memory relocation, the package.json/tsconfig/CLAUDE.md/.gitignore
-scaffold) succeeds first — the injected failure fires right after that,
-before `cb init`'s tail — a genuine mid-transform failure, not a
-precondition check, exercising the same `revertToSnapshot` path a real
-`pnpm`/`cb init` crash would hit. `injectFailureAfterScaffold` is a
-test-only seam (mirrors `cb upgrade`'s `CommandRunner` injection point) —
-see its doc comment in `box-packageify.ts` for why this doctest doesn't use
-a filesystem-permission trick (chmod-ing a directory mid-run turned out to
+stamp, the package.json/tsconfig/CLAUDE.md/.gitignore scaffold) succeeds
+first — the injected failure fires right after that, before `cb init`'s
+tail — a genuine mid-transform failure, not a precondition check,
+exercising the same `revertToSnapshot` path a real `pnpm`/`cb init` crash
+would hit. `injectFailureAfterScaffold` is a test-only seam (mirrors `cb
+upgrade`'s `CommandRunner` injection point) — see its doc comment in
+`box-packageify.ts` for why this doctest doesn't use a
+filesystem-permission trick (chmod-ing a directory mid-run turned out to
 interact badly with the test runner's own instrumentation).
+
+`relocateClaudeProjectDir` (the `~/.claude/projects` session-continuity
+step, covered on its own in `migrate-box-packageify-memory.doctest.md`)
+runs AFTER the final commit, not here — a failure this early in the
+transform must never touch it, since that untracked filesystem state can't
+be undone by `revertToSnapshot` the way the box's own git-tracked content
+can.
 
 ```ts
 const box = await makeLegacyBox();
@@ -167,6 +243,13 @@ const preSha = await getHead(box.root);
 // itself) are bookkeeping, not box content — excluded from the "byte
 // identical" comparison below, same as `node_modules/` (see next).
 const trackedList = (await box.list()).split("\n").filter(function (p) { return !p.startsWith(".git"); });
+
+// Real pre-existing Claude Code session history at the box's old cwd key —
+// proves below that a failure this early never touches it (relocation
+// only runs after a successful commit).
+const oldProjectKeyDir = path.join(process.env.CB_CLAUDE_PROJECTS_DIR, encodeProjectDir(box.root));
+await fs.mkdir(oldProjectKeyDir, { recursive: true });
+await fs.writeFile(path.join(oldProjectKeyDir, "session-1.jsonl"), "{}\n");
 
 const failAfterScaffold = { injectFailureAfterScaffold: throwInjectedTestFailure };
 let threw = false;
@@ -177,6 +260,16 @@ try {
 }
 const injectedFailureCaught = threw;
 injectedFailureCaught
+=> true
+```
+
+Session history at the old key is completely untouched — no relocation was even attempted:
+
+```ts continue
+const contentProjectKeyDir = path.join(process.env.CB_CLAUDE_PROJECTS_DIR, encodeProjectDir(box.path("content")));
+const sessionUntouched = await exists(path.join(oldProjectKeyDir, "session-1.jsonl"));
+const noContentKeyCreated = !(await exists(contentProjectKeyDir));
+sessionUntouched && noContentKeyCreated
 => true
 ```
 

@@ -153,19 +153,54 @@ async function extractCodeDirs(boxRoot: string): Promise<string[]> {
  * to the operating agent (whose cwd becomes `content/`). `.git` and
  * `.claude/` are the only exceptions -- both belong at the package root
  * under the new layout.
+ *
+ * A legacy box that happens to already have its own top-level `content/`
+ * directory (its actual data dir is just named "content") is a special
+ * case: `from` and the v2 `contentRoot` we're building are the SAME path,
+ * so renaming it straight to `path.join(contentRoot, entry)` would mean
+ * renaming that directory onto a path nested inside itself, which fails.
+ * Shuffle it through a temp name instead: move it aside, create the
+ * (now-empty) v2 `content/` root, then move the temp dir back in as
+ * `content/content` -- everything else about the box is unaffected, the
+ * box's own data dir just ends up one level deeper, same as it would if it
+ * had been named anything else.
  */
 async function moveEverythingElseToContent(boxRoot: string, contentRoot: string): Promise<string[]> {
   const moved: string[] = [];
   const entries = await fs.readdir(boxRoot);
+
+  // Handle a pre-existing top-level `content/` FIRST, before touching
+  // anything else: `contentRoot` (`<boxRoot>/content`) and this entry's
+  // path are the SAME directory, so once any other entry's plain `mkdir` +
+  // `rename` below runs, it would silently mkdir-no-op onto that same
+  // existing legacy directory and start dumping unrelated top-level files
+  // into it -- contaminating the legacy data before we ever get a chance
+  // to shuffle it aside. Move it out of the way under a temp name up
+  // front, so `contentRoot` starts the main loop as a path with nothing
+  // there yet, then fold the temp dir back in as `content/content` last.
+  const hasOwnContentDir = entries.includes("content");
+  const tmpContentDir = path.join(boxRoot, ".box-packageify-tmp-content");
+  if (hasOwnContentDir) {
+    await fs.rename(path.join(boxRoot, "content"), tmpContentDir);
+  }
+
   for (const entry of entries) {
     if (STAYS_AT_PACKAGE_ROOT.has(entry)) continue;
     if (entry === "src") continue; // just-created by extractCodeDirs
+    if (entry === "content" && hasOwnContentDir) continue; // handled below
     const from = path.join(boxRoot, entry);
     const to = path.join(contentRoot, entry);
     await fs.mkdir(contentRoot, { recursive: true });
     await fs.rename(from, to);
     moved.push(entry);
   }
+
+  if (hasOwnContentDir) {
+    await fs.mkdir(contentRoot, { recursive: true });
+    await fs.rename(tmpContentDir, path.join(contentRoot, "content"));
+    moved.push("content");
+  }
+
   return moved;
 }
 
@@ -197,15 +232,24 @@ export interface ClaudeProjectRelocationResult {
  * this exact rename is a named failure mode in
  * `docs/plans/boxes-as-packages-v2.md` ("Failure modes" table) -- hence
  * this runs as part of the migration itself, not left to the runbook.
+ * Callers decide whether/how to surface a non-`"moved"` outcome (this
+ * function itself never logs) since `runBoxPackageify` -- the only caller --
+ * runs it AFTER its own commit and wants that context in the message.
  *
  * - No directory at the old key: nothing to do (`noop`).
- * - Nothing at the new key: plain rename (`moved`) -- the common case.
- * - Something ALREADY at the new key (e.g. a coding session was opened at
- *   `content/` before migration): never clobber it. Both directories are
- *   left in place (`conflict`, logged as a warning, non-fatal), and a
- *   symlink named `<old-key>.moved-to` is left beside the old directory
- *   pointing at the new (authoritative) one, so a human or tool that goes
- *   looking from the old location can still find where history moved.
+ * - Nothing at the new key: plain rename (`moved`) -- the common case when
+ *   called in isolation, before anything else has touched the new key.
+ * - Something ALREADY at the new key: never clobber it. Both directories are
+ *   left in place (`conflict`), and a symlink named `<old-key>.moved-to` is
+ *   left beside the old directory pointing at the new (authoritative) one,
+ *   so a human or tool that goes looking from the old location can still
+ *   find where history moved. `runBoxPackageify` calls this LAST, after its
+ *   own `cb init` tail has already run `symlinkClaudeMemory` (which creates
+ *   an empty directory at the new key to hold the memory symlink) -- so in
+ *   practice a fresh box-packageify run almost always lands here, not on
+ *   `"moved"`. That's fine: the old directory is untouched either way, only
+ *   the (comparatively minor) session-transcript merge becomes a manual
+ *   step instead of an automatic one.
  */
 export async function relocateClaudeProjectDir(args: {
   oldCwd: string;
@@ -226,10 +270,6 @@ export async function relocateClaudeProjectDir(args: {
       // Nothing there to clear -- expected on a first conflict.
     }
     await fs.symlink(newDir, marker);
-    console.warn(
-      `box-packageify: both ${oldDir} and ${newDir} exist in ~/.claude/projects -- leaving both untouched ` +
-        `and marking ${marker} -> ${newDir} as authoritative. Review manually.`
-    );
     return { outcome: "conflict", oldDir, newDir };
   }
 
@@ -319,11 +359,6 @@ export async function runBoxPackageify(boxRoot: string, deps?: BoxPackageifyDeps
     await moveEverythingElseToContent(resolvedRoot, contentRoot);
     await stampShapeVersion2(contentRoot);
 
-    // Memory continuity BEFORE scaffolding/cb init, so symlinkClaudeMemory
-    // (called by runInit below) sees any relocated memory/ files already
-    // sitting at the new project-dir key.
-    await relocateClaudeProjectDir({ oldCwd: resolvedRoot, newCwd: contentRoot });
-
     // Reuses scaffoldPackageRoot wholesale: package.json/tsconfig.json/
     // thin root CLAUDE.md/.gitignore, and the node_modules-symlink-to-
     // running-engine policy -- see box-package.ts. Do not hand-roll any of
@@ -343,6 +378,38 @@ export async function runBoxPackageify(boxRoot: string, deps?: BoxPackageifyDeps
       message: "migrate: box-packageify",
       trailers: { Migration: "box-packageify" },
     });
+
+    // Session continuity (~/.claude/projects/<old-cwd-key> -> <content-key>)
+    // runs LAST, after the commit above has made this migration
+    // irreversible -- not mid-transform. It touches filesystem state
+    // OUTSIDE git, so it can never be undone by `revertToSnapshot`; doing it
+    // earlier meant a LATER failure (e.g. in `runInit` or `commit` itself)
+    // would revert the box's tracked content back to legacy while leaving
+    // session history stranded under the v2 key it never reached -- a
+    // silent violation of this migration's all-or-nothing guarantee. Once
+    // the commit has landed there's nothing left to revert TO, so a
+    // relocation failure here is just a housekeeping miss, not a data-loss
+    // risk: the directory is still sitting, fully intact, at the old key,
+    // and `relocateClaudeProjectDir`'s own never-clobber behavior (see its
+    // doc comment) means it's always safe to run by hand afterward too.
+    try {
+      const relocation = await relocateClaudeProjectDir({ oldCwd: resolvedRoot, newCwd: contentRoot });
+      if (relocation.outcome === "conflict") {
+        console.warn(
+          `box-packageify: migration committed (${commitHash}), but Claude Code session history ` +
+            `at ${relocation.oldDir} could not be auto-merged into ${relocation.newDir} (both exist). ` +
+            "Nothing was lost -- merge it by hand, e.g.:\n" +
+            `  mv ${relocation.oldDir}/*.jsonl ${relocation.newDir}/`
+        );
+      }
+    } catch (e) {
+      console.warn(
+        `box-packageify: migration committed (${commitHash}), but relocating Claude Code session ` +
+          `history from ${resolvedRoot} to ${contentRoot} in ~/.claude/projects failed: ` +
+          `${(e as Error).message}. Nothing was lost -- the old session directory is untouched; ` +
+          "move it by hand if you want continuity in future sessions."
+      );
+    }
 
     return { status: "applied", packageRoot: resolvedRoot, contentRoot, commitHash };
   } catch (e) {

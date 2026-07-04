@@ -45,11 +45,13 @@ import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
+import { canAccessBox } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import {
   isAuthEnabled,
   getSessionUser,
   getSessionUserFromCookieHeader,
+  getOwnerEmail,
   HUB_SECRET_HEADER,
   HUB_EMAIL_HEADER,
   HUB_AUTH_OFF_HEADER,
@@ -165,6 +167,7 @@ function decideHubAuth({
 export async function createHubServer(options: HubServerOptions): Promise<http.Server> {
   const { endpoints, getHealth, hubSecret, boxes, baseUrl } = options;
   const app: FastifyInstance = Fastify({ logger: false, trustProxy: true });
+  const boxRootBySlug = new Map(boxes.map((box) => [box.slug, box.boxRoot]));
 
   // The hub's login routes (routes/auth.ts) read the session cookie via
   // @fastify/cookie's request decoration, same as a standalone box server.
@@ -247,6 +250,29 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook: false, hubSecret });
     if (!decision.authorized) {
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
+    }
+
+    // This route is a per-box connector callback picked purely from the
+    // untrusted `state` query param, so unlike the generic catch-all below
+    // (which lands inside the TARGET box's own scope and re-checks
+    // `canAccessBox` there via `addBoxAuthHook`), nothing downstream ever
+    // verifies the caller may access `boxSlug` -- the child's callback
+    // handler is registered at server ROOT, ahead of any per-box auth hook
+    // (see module doc). Any signed-in fleet user could otherwise complete a
+    // Google token grant for someone else's box. Check here, same
+    // fail-closed `canAccessBox` semantics as everywhere else. When hub auth
+    // is off, `decideHubAuth` already authorized above with no email to
+    // check -- pass-through stands (single-operator open mode).
+    const email = decision.headersToSet[HUB_EMAIL_HEADER];
+    if (email) {
+      const boxRoot = boxRootBySlug.get(boxSlug);
+      const allowed = boxRoot ? await canAccessBox({ boxRoot, email, ownerEmail: getOwnerEmail() }) : false;
+      if (!allowed) {
+        return reply.status(403).send({
+          error: "forbidden",
+          message: `${email} may not access box ${JSON.stringify(boxSlug)}`,
+        });
+      }
     }
     Object.assign(request.raw.headers, decision.headersToSet);
 
