@@ -59,6 +59,27 @@ function fakeSilentStream(): MediaStream {
   const destination = ctx.createMediaStreamDestination();
   oscillator.connect(gain).connect(destination);
   oscillator.start();
+  // The consumer only sees the stream, so the context would outlive it —
+  // repeated fake sessions would accumulate running AudioContexts. Tear the
+  // graph down when the track stops (consumer cleanup) or ends (the `end`
+  // script); track.stop() doesn't fire `ended`, so both hooks are needed.
+  let closed = false;
+  const close = (): void => {
+    if (closed) return;
+    closed = true;
+    oscillator.stop();
+    ctx.close().catch((e: unknown) => {
+      console.warn(`[fake-mic] AudioContext close failed: ${e instanceof Error ? e.message : String(e)}`);
+    });
+  };
+  for (const track of destination.stream.getTracks()) {
+    track.addEventListener("ended", close);
+    const realStop = track.stop.bind(track);
+    track.stop = () => {
+      realStop();
+      close();
+    };
+  }
   return destination.stream;
 }
 
@@ -92,6 +113,10 @@ async function runScript(script: string): Promise<MediaStream> {
  * otherwise this is the real call, unmodified.
  */
 export async function getMicStream(): Promise<MediaStream> {
+  // Dev builds only: in production the flag isn't even consulted, so a
+  // crafted `?fakemic=deny` URL or a stale localStorage key can't alter
+  // real mic behavior (and the branch tree-shakes out of the bundle).
+  if (!import.meta.env.DEV) return navigator.mediaDevices.getUserMedia({ audio: true });
   const script = readScript();
   if (!script) return navigator.mediaDevices.getUserMedia({ audio: true });
   return runScript(script);

@@ -19,7 +19,7 @@ import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { composerMachine, type ComposerEvent } from "../../machines/composerMachine";
 import { detectKeyword, appendSendKeywordTag } from "../../lib/speech-keywords";
 import { postAudioForHqTranscription } from "../../api";
-import { retainVoiceAudio } from "../../lib/last-audio";
+import { retainVoiceAudio, markVoiceAudioAbsent } from "../../lib/last-audio";
 import { sendSound, tick, recordingStop } from "../../lib/earcons";
 import { joinTranscript } from "./InteractiveChat-helpers";
 import { type Emission } from "../../input/emission";
@@ -113,8 +113,10 @@ function runKeywordSend(opts: {
     // Keep the original recording around, keyed by this emission's id, so the
     // agent can fetch it via `cb chat get-last-audio` — retention is
     // per-emission (docs/plans/input-extraction.md, chunk 5), so nothing
-    // ever needs to clear it on a later send.
+    // ever needs to clear it on a later send. No recording -> an explicit
+    // tombstone, so get-last-audio answers none instead of an older message's.
     if (audioBlob) retainVoiceAudio(emission.id, { blob: audioBlob, text: emission.text });
+    else markVoiceAudioAbsent(emission.id);
     // The segment is committed — drop any persisted draft so the recovery
     // widget doesn't resurface the text we just sent.
     clearDraftRef.current();

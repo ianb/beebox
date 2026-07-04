@@ -85,3 +85,21 @@ empty.latest()
 empty.size()
 => 0
 ```
+
+## Null payloads are first-class entries (the no-audio tombstone)
+
+`lib/last-audio.ts` instantiates the store with `VoiceAudioPayload | null`:
+a voice send with no recording retains `null` under its emission id, so it
+OCCUPIES the latest slot — `get-last-audio` then answers none instead of
+serving an older message's recording as if it were the latest.
+
+```ts
+const tomb = createRetentionStore<string | null>({ capacity: 5 });
+tomb.retain("voice-with-audio", "recording-A");
+tomb.retain("voice-without-audio", null);
+JSON.stringify(tomb.latest())
+=> {"emissionId":"voice-without-audio","audio":null}
+
+tomb.get("voice-with-audio")
+=> recording-A
+```

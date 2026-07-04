@@ -288,7 +288,12 @@ like every other path (see chunk 1's section above) — consistency wins,
 the no-fold behavior was an accident of hand-built payloads. `RetentionStore`
 (`input/retention.ts`): audio keyed by emission id, N most recent
 in-memory (v1 N=5), `latest()` = most recent entry; `fulfillLastAudioRequest`
-(`lib/last-audio.ts`, replacing `lib/last-audio-cache.ts`) reads it. The
+(`lib/last-audio.ts`, replacing `lib/last-audio-cache.ts`) reads it. A
+voice send with NO recording (stop-and-send, recovered dictation, keyword
+send with capture off) retains an explicit `null` tombstone under its
+emission id, so `get-last-audio` answers none rather than serving an
+older message's recording as if it were the latest (codex chunk-5
+finding; matches the old cache's clear-on-voice-send behavior). The
 loopback protocol, routes, and `cb chat get-last-audio` are untouched.
 Fixes the typed-path clear wart by construction (sends never clear
 retention; "latest" is well-defined).
@@ -297,7 +302,8 @@ Also added: a `?fakemic=<script>` / `localStorage["fakemic"]` debug seam
 (`lib/fake-mic.ts`, wired into `machines/transcription-mic.ts`'s two
 `getUserMedia` call sites) scripting mic behaviors a real device can't
 reproduce on demand — `delay:<ms>`, `deny`, `end` (track-ended mid-use) —
-dead code with the flag unset.
+dev builds only (`import.meta.env.DEV`; production never consults the
+flag), dead code with the flag unset.
 
 Doctest: retention keying/eviction/latest
 (`test/frontend/lib/retention.doctest.md`); the pure submit-to-emission

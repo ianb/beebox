@@ -11,6 +11,7 @@ import type { SessionEntry } from "../../api";
 import { serializeViewUrl } from "../../lib/view-url";
 import { refreshLocationIfStale } from "../../lib/location-share";
 import { createVoiceEmission, type Emission } from "../../input/emission";
+import { markVoiceAudioAbsent } from "../../lib/last-audio";
 import type { ChatWitness } from "../../input/targets/chat-assemble";
 import { acceptEmission, planRestore, applyRestorePlan } from "../../input/targets/chat-target";
 import type { Receipt } from "../../input/targets/receipts";
@@ -82,7 +83,11 @@ export function useEmissionDispatch(opts: {
   // emission-assemble.doctest.md's "site 5").
   const sendVoiceSegment = useCallback(
     (text: string) => {
-      dispatchEmission(createVoiceEmission({ text, selections: [], diarized: false }));
+      const emission = createVoiceEmission({ text, selections: [], diarized: false });
+      // No recording exists for this voice send — tombstone it so
+      // get-last-audio answers none, not an older message's recording.
+      markVoiceAudioAbsent(emission.id);
+      dispatchEmission(emission);
     },
     [dispatchEmission]
   );
@@ -95,7 +100,10 @@ export function useEmissionDispatch(opts: {
   // runKeywordSend's freeze-and-clear.
   const sendStopSend = useCallback(
     (text: string) => {
-      dispatchEmission(createVoiceEmission({ text, selections, diarized: false }));
+      const emission = createVoiceEmission({ text, selections, diarized: false });
+      // Same tombstone as sendVoiceSegment: this path carries no recording.
+      markVoiceAudioAbsent(emission.id);
+      dispatchEmission(emission);
       resetSelections();
     },
     [dispatchEmission, selections, resetSelections]

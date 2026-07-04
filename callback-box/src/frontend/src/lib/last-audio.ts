@@ -32,11 +32,22 @@ const MAX_TEXT_CHARS = 1500;
 /** v1 policy (docs/plans/input-extraction.md, chunk 5): memory-only, 5 most recent. */
 const RETENTION_CAPACITY = 5;
 
-const retention = createRetentionStore<VoiceAudioPayload>({ capacity: RETENTION_CAPACITY });
+// `null` is a tombstone: a voice send that had NO recording (stop-and-send,
+// recovered dictation, keyword send with capture off/failed). It must occupy
+// the "latest" slot so `get-last-audio` answers none — serving an OLDER
+// message's recording as if it were the latest would mislead the agent
+// (codex chunk-5 finding; matches the old single-slot cache's clear-on-
+// voice-send behavior). Typed sends still never touch retention.
+const retention = createRetentionStore<VoiceAudioPayload | null>({ capacity: RETENTION_CAPACITY });
 
 /** Retain a committed voice segment's recording, keyed by its emission id. */
 export function retainVoiceAudio(emissionId: string, opts: { blob: Blob; text: string }): void {
   retention.retain(emissionId, { blob: opts.blob, text: opts.text, recordedAt: new Date().toISOString() });
+}
+
+/** Mark a voice emission that has no recording (see the tombstone note above). */
+export function markVoiceAudioAbsent(emissionId: string): void {
+  retention.retain(emissionId, null);
 }
 
 /** Answer one agent request: upload the most recently retained recording, or report none. */
@@ -45,7 +56,7 @@ export async function fulfillLastAudioRequest(requestId: string): Promise<void> 
   const entry = retention.latest();
   try {
     let res: Response;
-    if (entry === undefined) {
+    if (entry === undefined || entry.audio === null) {
       res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
