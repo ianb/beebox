@@ -149,18 +149,25 @@ Searched during planning (2026-07-03). One-line findings; empty results stated a
   --channel stable|beta|dev`, minimal `~/.openclaw/openclaw.json`, single gateway daemon
   over many channel workspaces, ClawHub skill registry. **Adapt**: onboarding-wizard +
   doctor + channels are the same lifecycle-verb family as `cb init`/preflight/`cb upgrade`
-  (channels optional for our tarball feed). **Scoping ammunition**: OpenClaw explicitly does
-  *not* claim a hard multi-tenant security boundary — one gateway, N *trusted* workspaces —
-  which matches the hub's stance (isolate trusted boxes; adversarial tenancy stays out of
-  scope).
-- **Hermes Agent** (NousResearch, https://github.com/NousResearch/hermes-agent) — verified:
-  curl-pipe-bash installer that bundles the toolchain, state under `~/.hermes/`, secrets
-  (`.env`) shipped separate from config (`cli-config.yaml`), and a `hermes claw migrate`
-  competitor-import verb. **Already-have**: secrets/config separation
-  (`config/connectors/*.secret.json`, gitignored). Two attractive ideas surfaced but
-  **unverified** against its docs (do not build on without checking): named profiles as
-  fully isolated state trees, and a config version bumped *only* when a real migration is
-  needed (additive keys deep-merged silently) — the latter matches how our template-sync
+  (channels optional for our tarball feed). **Scoping note**: OpenClaw explicitly does
+  *not* claim a hard multi-tenant security boundary — one gateway, N *trusted* workspaces.
+  Our stance is stronger by design: the hub stays trusted, and per-box isolation is a
+  layerable dial (see "Isolation is layered," below).
+- **Hermes Agent** (NousResearch, https://github.com/NousResearch/hermes-agent) — verified
+  layout (https://hermes-agent.nousresearch.com/docs/getting-started/installation): the
+  **data dir owns the code** — `~/.hermes/` (or `$HERMES_HOME`) is the root, and the
+  installer puts the full checkout + managed venv *inside it* at `~/.hermes/hermes-agent/`,
+  binary symlinked to `~/.local/bin/hermes`; `hermes update` operates on that checkout.
+  Multiple isolated instances = multiple `$HERMES_HOME` trees, each with its own checkout;
+  service mode = a dedicated unprivileged user per instance. Config (`cli-config.yaml`)
+  ships separate from secrets (`.env`); sessions in SQLite FTS5. This is the mirror image
+  of our layout (their state dir contains the app; our package contains the state dir) —
+  but the instance unit is the same: one directory tree owning both code version and data,
+  which is exactly what makes per-instance version pinning and per-instance isolation
+  (their unprivileged user, our future chroot/VM) composable. **Already-have**:
+  secrets/config separation (`config/connectors/*.secret.json`, gitignored). Still
+  **unverified** (researcher claim, not found in docs): a config version bumped only on
+  real migrations with additive keys deep-merged — attractive, but our template-sync
   already avoids ceremony for additive changes.
 - **`module.registerHooks`** — shipped stable in Node 22.15 as the durable synchronous
   successor to the now-deprecated async `module.register()` (DEP0205;
@@ -284,6 +291,20 @@ LSP/typecheck — today *"the view doesn't compile, but its metadata is regex-ex
 - The legacy multi-box `cb serve <dir>...` form survives the transition window only, then is
   removed along with the manifest.
 
+**Isolation is layered — a stated goal, not just a deferral.** The trust model is: the hub
+is trusted (it authenticates and routes correctly); boxes do **not** have to trust each
+other. How strongly boxes are isolated from one another is a dial the architecture must
+keep turnable without redesign: same-user processes (this plan) → per-box OS users →
+chroot/jail → VMs. Two design consequences land *now* so the later layers stay cheap:
+
+- The hub separates **supervision** from **routing**: a box entry resolves to an endpoint
+  (spawned child process today; a socket or URL owned by a chroot'd process or VM
+  tomorrow), and the routing/auth layer only ever sees endpoints. Swapping the isolation
+  backend never touches routing or login.
+- Nothing may assume boxes share files. The pnpm shared store hard-links across boxes —
+  fine between trusted boxes, replaced by per-box stores under stronger isolation; noted
+  in the hardening subplan, not a constraint on the hub.
+
 ### Upgrade lifecycle (decision 4)
 
 `cb upgrade [--to <version>]`, run at the box repo root:
@@ -365,7 +386,9 @@ doctested against a fixture v2 box.
 ### Track D — The hub
 **What:** `cb hub`: config, child supervision (spawn per-box `cb serve` via the box's own
 bin), prefix routing + WebSocket passthrough, login extraction + trusted header, per-box ACL
-retained in children, box picker, health, crash backoff.
+retained in children, box picker, health, crash backoff. Supervision and routing stay
+internally separate: routing consumes *endpoints*, of which "child process the hub spawned"
+is merely the first implementation ("Isolation is layered," above).
 **Why:** Decision 3; per-box engine versions require per-box processes; login can't live in N
 per-box processes.
 **Direction:** Start from the dev router's mechanics but as engine code with tests, not a
@@ -417,8 +440,11 @@ the top priority is the good end-state, not legacy accommodation.
 
 - **Per-box OS users / socket permissions / secrets split** (`docs/unimplemented-plans/box-user-account-spec.md`
   revisit) — deferred hardening phase per decision 3. It has its own decisions (UID ranges,
-  credential sharing, egress) and does not gate anything here. To be planned when the fleet
-  is converted and the hub is stable.
+  credential sharing, egress, per-box pnpm stores instead of the shared one) and does not
+  gate anything here. Its end state is the "Isolation is layered" goal: trusted hub,
+  mutually untrusting boxes, isolation dial turned as far as the threat model warrants
+  (OS users → chroot → VMs). To be planned when the fleet is converted and the hub is
+  stable.
 - **npm publish + `create-callback-box`** — the "later" of decision 2. Publishing cadence,
   semver policy, and the create-package are their own small plan once the surface has
   soaked.
@@ -475,7 +501,10 @@ the top priority is the good end-state, not legacy accommodation.
   after conversion; the hub gives process isolation now, user isolation later.
 - **Subdomains per box** — the old plan's deferral stands: breaks URLs/webhooks/OAuth
   callbacks, needs wildcard TLS; path prefixes preserved.
-- **Containers/namespaces** — threat model doesn't require them (single operator).
+- **Containers / chroot / VMs** — not built now, but explicitly *layerable later* without
+  redesign: the hub's endpoint abstraction and the no-shared-files rule (see "Isolation is
+  layered" in Serving) are the load-bearing prep. Adversarial tenancy is a goal the
+  architecture keeps open, not a non-goal.
 - **Cross-box features** — boxes stay self-contained (`docs/box-layout.md:139-143`).
 - **Sharing plugin packages between boxes** (`pnpm add some-box-plugin`) — the layout enables
   it; building any actual shared package is not this plan.
