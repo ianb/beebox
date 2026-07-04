@@ -1,6 +1,11 @@
 # Design Exploration: Boxes as Code Repositories
 
-**Status:** Draft for review.
+**Status:** SUPERSEDED by `docs/plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
+this design against the current codebase, corrects stale assumptions (cardworks removal,
+`cb boxes` manifest, `cb migrate`/template-sync machinery), and locks the boxholder's
+decisions. Kept for the reasoning record.
+
+**Original status:** Draft for review.
 **Author:** Conversation between Ian and Claude.
 **Question:** Should a box be a code repository that consumes `callback-box` as a library, instead of a pure data repository operated on by an external `callback-box` install?
 **Related:** [Box as Linux User Account spec](box-user-account-spec.md) — tightens this proposal by adopting the OS user account as the unit of box identity.
@@ -694,7 +699,7 @@ Trade-off: today is one push, tomorrow is two-or-three commands depending on wha
 - **Smoke test scope.** Recommendation is typecheck + boot + `/health`. Is that enough to catch the failures that matter? Should we add a quick `cb validate` of a few representative cards, a smoke render of the dashboard, or run a tiny subset of the box's own tests?
 - **Cross-box communication, if any.** Today there is none. Per-process isolation enforces this naturally. If we ever want cross-box features (shared people directory, federated chat), it has to go through an explicit API, not shared filesystem.
 - **`cb` CLI distribution.** The CLI inside the workspace resolves to local source; inside a real box it resolves to that box's installed callback-box. Is there ever a context where the developer wants a *globally installed* `cb` that points at "the system default"? Probably not, but worth confirming.
-- **Interaction with the [Markdown cards idea](ideas.md#markdown-cards-replacing-xml).** Both touch the schema-definition surface. Probably independent; markdown-cards is about on-disk format, this is about who runs the schema validator and where. Decide before locking the schema-helper export surface.
+- **Interaction with the [Markdown cards idea](../ideas.md#markdown-cards-replacing-xml).** Both touch the schema-definition surface. Probably independent; markdown-cards is about on-disk format, this is about who runs the schema validator and where. Decide before locking the schema-helper export surface.
 - **Scheduler ownership.** Today `cb tick` is shared. Per-box ticks are simpler but lose any cross-box scheduling intelligence (e.g., don't run two heavy wakeups simultaneously). Probably fine — each box can rate-limit on its own.
 - **Test box (`test1`) as the canary.** Worth pulling forward as the first real exercise of the library shape, before anything else changes.
 - **Shared Claude Code credentials.** Currently one credential at `/home/callback/.claude/.credentials.json` serves all 8 boxes. Under per-OS-user, each box would need its own credential and its own auth flow — or the credential file is bind-mounted read-only into each box's home. The Claude Code account isn't a meaningful per-box security boundary, so bind-mount is probably fine. Decide explicitly.
