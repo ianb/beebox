@@ -177,6 +177,48 @@ logText.includes("boom: migration blew up")
 await fs.rm(packageRoot, { recursive: true, force: true });
 ```
 
+## Revert removes untracked files a failed step left behind
+
+`git reset --hard` alone only reverts TRACKED changes. If the failing step
+(here `cb-migrate`) also scaffolds a new, never-tracked file before failing —
+the shape a real template/migration write would take — the revert must also
+remove it, or "box restored to pre-upgrade state" is false.
+
+```ts
+const packageRoot = await makeV2Fixture();
+const calls = [];
+const runCommand = async ({ label }) => {
+  calls.push(label);
+  if (label === "cb-migrate") {
+    await fs.writeFile(path.join(packageRoot, "content/untracked-scaffold.txt"), "junk");
+    return { code: 1, output: "boom: migration blew up" };
+  }
+  if (label === "pnpm-install") await writeInstalledVersion(packageRoot, NEW_VERSION);
+  if (label === "pnpm-install-restore") await writeInstalledVersion(packageRoot, OLD_VERSION);
+  return { code: 0, output: "" };
+};
+const thrown = await tryUpgrade(packageRoot, runCommand);
+thrown instanceof UpgradeStepFailedError
+=> true
+```
+
+The untracked file is gone, and the working tree reads clean again — not
+just "no tracked diff", but genuinely restored:
+
+```ts continue
+const scaffoldExists = await fs.access(path.join(packageRoot, "content/untracked-scaffold.txt")).then(() => true, () => false);
+scaffoldExists
+=> false
+
+const status = await getStatus(packageRoot);
+status.clean
+=> true
+```
+
+```ts cleanup
+await fs.rm(packageRoot, { recursive: true, force: true });
+```
+
 ## A step failing AFTER a successful revert-relevant step still reverts everything
 
 Same as above, but the failure happens at `tsc` (after migrate and init both

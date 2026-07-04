@@ -8,7 +8,7 @@
  * Called by `cb init` and at the start of `cb reactor`.
  */
 
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { promisify } from "node:util";
@@ -271,6 +271,33 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
 }
 
 /**
+ * Normalize a path as `getStatus` reports it (relative to `packageRoot`,
+ * since `commitTemplateSyncChanges` runs git there — see its doc comment)
+ * into the box-root-relative convention `isTemplateManagedPath` matches
+ * against (`install-template-file.ts`'s `relPath`: normally relative to
+ * `boxRoot`, with a `../...` prefix for the handful of templates a v2 box
+ * owns at the package root, e.g. `src/schemas/CLAUDE.md`).
+ *
+ * For a legacy box `packageRoot === boxRoot`, so `contentPrefix` is empty
+ * and every path passes through unchanged — v1 behavior is bit-for-bit the
+ * same as before this function existed. For a v2 box, strip the box's
+ * content-dir prefix (`content/`, but read from the shape rather than
+ * hardcoded) from paths inside it, and rewrite paths outside it — which can
+ * only be one level up, at the package root itself, per the "v2
+ * (package-layout) boxes" note in `install-template-file.ts` — as `../...`.
+ * Without this, every v2 git-status path retained its `content/` (or
+ * `../src/...`) prefix, `isTemplateManagedPath` matched nothing, and the
+ * selective sync commit silently committed nothing.
+ */
+function toBoxRelativePath(gitPath: string, shape: { packageRoot: string; boxRoot: string }): string {
+  const contentPrefix = relative(shape.packageRoot, shape.boxRoot);
+  if (contentPrefix === "") return gitPath;
+  const prefix = `${contentPrefix}/`;
+  if (gitPath.startsWith(prefix)) return gitPath.slice(prefix.length);
+  return `../${gitPath}`;
+}
+
+/**
  * Commit any template-managed paths the install/generateRules helpers
  * dirtied, leaving user work in progress (in other paths) alone.
  *
@@ -284,9 +311,16 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
  * Found via `cb upgrade`'s end-to-end smoke run: the `.claude/settings.json`
  * hook install landed here, staging fatally errored with "pathspec did not
  * match any files" before this fix.
+ *
+ * Exported (rather than only reachable through `generateDocs`) so doctests
+ * can exercise the git-status normalization directly against a minimal
+ * fixture, without also going through `installValidationHooks` + a real,
+ * executable `.git/hooks/pre-commit` that shells out to a `cb` binary — an
+ * unrelated hazard in a repo-in-a-repo dev/test environment.
  */
-async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
-  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot } = shape;
   if (!(await isRepo(packageRoot))) return;
   if (!(await hasCommits(packageRoot))) return;
 
@@ -296,7 +330,11 @@ async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
     ...status.modified,
     ...status.untracked,
   ];
-  const toCommit = candidates.filter(isTemplateManagedPath);
+  // Filter against the box-root-relative form (what isTemplateManagedPath's
+  // patterns are written against), but keep the original git-reported paths
+  // in `toCommit` — stageFiles/commitPaths run with cwd=packageRoot, so they
+  // need the packageRoot-relative form git itself understands.
+  const toCommit = candidates.filter((p) => isTemplateManagedPath(toBoxRelativePath(p, shape)));
   if (toCommit.length === 0) return;
 
   // Stage explicitly so untracked files are picked up by `commit -- <paths>`.

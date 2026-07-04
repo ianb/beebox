@@ -75,15 +75,15 @@ const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
   /^views\/CLAUDE\.md$/,
   // v2 (package-layout) equivalents of the two guides above — see the
   // "v2 (package-layout) boxes" note on `InstallTemplateOptions.relPath`.
-  // NOTE: this list is matched against `git status` output relative to the
-  // *repo* root (see `commitTemplateSyncChanges` in generate-docs.ts), which
-  // for a v2 box is the package root, not `boxRoot` (`content/`) — a plain
-  // `content/...` prefix, not `../...`. `installTemplateFile`'s own relPath
-  // convention (this file) and `isTemplateManagedPath`'s candidates (git's)
-  // are different path spaces that happen to coincide for a legacy box
-  // (where boxRoot IS the repo root); this pre-existing mismatch for v2
-  // boxes is not fixed here — `cb upgrade`'s own commit step stages
-  // everything (`git add -A`) rather than relying on this selective list.
+  // These patterns are written in `installTemplateFile`'s own relPath
+  // convention (this file): normally boxRoot-relative, `../...` for the
+  // package-root-level templates below. `isTemplateManagedPath`'s callers
+  // see `git status` output relative to the *repo* root instead — for a v2
+  // box that's the package root, not `boxRoot` (`content/`) — so
+  // `commitTemplateSyncChanges` (generate-docs.ts) normalizes each
+  // git-reported path into this same boxRoot-relative convention before
+  // filtering. `cb upgrade`'s own commit step still stages everything (`git
+  // add -A`) rather than relying on this selective list.
   /^\.\.\/src\/schemas\/CLAUDE\.md$/,
   /^\.\.\/src\/views\/CLAUDE\.md$/,
   /^\.\.\/src\/tricks\/scripts\/CLAUDE\.md$/,

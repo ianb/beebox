@@ -34,7 +34,7 @@ import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { getStatus, getHead, resetHard, stageAll, commit } from "../lib/git.js";
+import { getStatus, getHead, resetHard, clean, stageAll, commit } from "../lib/git.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const OLD_ENGINE_CB_BIN = path.join(PACKAGE_ROOT, "bin", "cb");
@@ -199,6 +199,16 @@ async function revertUpgrade(args: {
 }): Promise<void> {
   const { packageRoot, boxRoot, snapshotSha, runCommand, failure } = args;
   await resetHard(packageRoot, snapshotSha);
+  // `git reset --hard` only reverts TRACKED changes; a failed `cb
+  // migrate`/`cb init` step can have written new files (a scaffolded
+  // template, a generated migration artifact) that were never tracked, and
+  // those survive the reset untouched. `git clean -fd` at the package root
+  // is safe HERE because (a) preflight already required a clean tree
+  // (`git status --porcelain` empty), so any untracked non-ignored file
+  // found now must have been created by the failed upgrade, and (b)
+  // without `-x` it spares gitignored paths (node_modules, .callback-box
+  // runtime state).
+  await clean(packageRoot, { directories: true });
   const restore = await runCommand({
     label: UPGRADE_STEPS.pnpmInstallRestore,
     command: "pnpm",
