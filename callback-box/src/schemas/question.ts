@@ -5,8 +5,7 @@
  * They can have different input types (select, text, confirm).
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const QuestionStatus = z.enum(["pending", "answered", "expired"]);
@@ -106,7 +105,7 @@ export function createSelectQuestionTemplate(
     input: { type: "select", options: params.options },
   };
   if (params.directive !== undefined) fields["directive"] = params.directive;
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }
 
 interface CreateQuestionTemplateParams {
@@ -123,7 +122,7 @@ export function createTextQuestionTemplate(params: CreateQuestionTemplateParams)
     input: { type: "text" },
   };
   if (params.directive !== undefined) fields["directive"] = params.directive;
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }
 
 export function createConfirmQuestionTemplate(params: CreateQuestionTemplateParams): string {
@@ -134,5 +133,5 @@ export function createConfirmQuestionTemplate(params: CreateQuestionTemplatePara
     input: { type: "confirm" },
   };
   if (params.directive !== undefined) fields["directive"] = params.directive;
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

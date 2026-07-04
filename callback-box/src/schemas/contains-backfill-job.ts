@@ -7,8 +7,7 @@
  * `cb contains list --missing` is empty. Processed by the reactor agent.
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfill-job", {
@@ -58,5 +57,5 @@ export function createContainsBackfillJobTemplate(options: {
     description: `Write the contains: field for ${String(count)} cards missing it.${remainingNote}`,
     items: options.items.map((ref) => ({ ref })),
   };
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

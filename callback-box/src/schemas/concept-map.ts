@@ -12,8 +12,7 @@
  * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../cards/index.js";
 import { z } from "zod";
 
 /** Knowledge-component type — a strong hint to *how* a node is taught. */
@@ -229,7 +228,6 @@ export function createConceptMapTemplate(options: { title?: string | undefined }
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyText = "Describe what this map covers and how the concepts spiral together.\n";
-  return `---\n${yamlText}---\n${bodyText}`;
+  return renderFrontmatterBlock(fields, bodyText);
 }

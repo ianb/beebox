@@ -11,8 +11,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import sanitize from "sanitize-filename";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import {
   createChatThreadTemplate,
   createMessageEntry,
@@ -45,7 +45,7 @@ async function readThreadFields(absPath: string): Promise<ChatThreadFields> {
 }
 
 async function writeThreadFields(absPath: string, fields: ChatThreadFields): Promise<void> {
-  await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n`);
+  await fs.writeFile(absPath, renderFrontmatterBlock(fields));
 }
 
 /**
@@ -342,6 +342,6 @@ async function refreshPersonCardName(cardPath: string, name: string): Promise<bo
   const fields: Record<string, unknown> = { ...parsed };
   if (fields["name"] === name) return false;
   fields["name"] = name;
-  await fs.writeFile(cardPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
+  await fs.writeFile(cardPath, renderFrontmatterBlock(fields, split.body));
   return true;
 }

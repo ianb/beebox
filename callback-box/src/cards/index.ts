@@ -24,6 +24,7 @@ export {
 
 export {
   splitCardContent,
+  renderFrontmatterBlock,
   type SplitCardContent,
 } from "./frontmatter.js";
 

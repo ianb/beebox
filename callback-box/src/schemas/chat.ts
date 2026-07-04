@@ -11,8 +11,7 @@
  */
 
 import { z } from "zod";
-import { stringify as stringifyYaml } from "yaml";
-import { cardSchema, body, type CardSchema } from "../cards/index.js";
+import { cardSchema, body, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 
 const chatFields = {
   /** Claude Agent SDK session id — the pointer to the live session/transcript. */
@@ -45,5 +44,5 @@ export function createChatHuskTemplate(options: {
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

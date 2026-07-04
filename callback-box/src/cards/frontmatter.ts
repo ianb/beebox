@@ -1,5 +1,5 @@
 /**
- * Frontmatter stripping for .card files.
+ * Frontmatter stripping (and composing) for .card files.
  *
  * Cards may optionally begin with a YAML frontmatter block delimited by
  * `---` fences. This module only locates the body and reports a line
@@ -16,6 +16,8 @@
  * (Absorbed from the former `cardworks` package — see
  * docs/implemented-plans/remove-cardworks-package.md.)
  */
+
+import { stringify as stringifyYaml } from "yaml";
 
 /**
  * Result of splitting a card's text into frontmatter prefix and body.
@@ -63,4 +65,15 @@ export function splitCardContent(content: string): SplitCardContent {
     lineOffset,
     hasFrontmatter: true,
   };
+}
+
+/**
+ * Render a frontmatter block (plus optional body) as `.card` file text —
+ * the inverse of `splitCardContent`. `lineWidth: 0` disables yaml's default
+ * ~80-column scalar wrapping: frontmatter/YAML output must never fold a long
+ * line, since folded scalars change the on-disk representation (and diff)
+ * of a value without changing its meaning.
+ */
+export function renderFrontmatterBlock(fields: object, body?: string): string {
+  return `---\n${stringifyYaml(fields, { lineWidth: 0 })}---\n${body ?? ""}`;
 }

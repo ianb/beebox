@@ -61,7 +61,7 @@ function findMarkdownFiles(): string[] {
 // outgoing refs count toward callback-box docs' incoming (so a doc cited only
 // from a skill or the root CLAUDE.md is not an orphan), but they are not
 // documents in the graph themselves. Paths relative to the monorepo root.
-const EXTERNAL_SOURCE_ROOTS = ["CLAUDE.md", "bin", "dev", "research", ".claude"];
+const EXTERNAL_SOURCE_ROOTS = ["CLAUDE.md", "bin", "dev", "research", "issues", ".claude"];
 
 function findExternalSourceFiles(monoRoot: string): string[] {
   const results: string[] = [];

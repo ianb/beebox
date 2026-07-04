@@ -9,8 +9,8 @@
  */
 
 import * as fs from "node:fs/promises";
-import { splitCardContent } from "../../cards/index.js";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { parse as parseYaml } from "yaml";
 import type { ParsedProcedure, StepUpdate } from "./engine-types.js";
 
 /** Raised when a run card can't be read as YAML frontmatter. */
@@ -55,7 +55,7 @@ interface MutableRunCard {
 }
 
 function serializeRunCard(card: MutableRunCard): string {
-  return `---\n${stringifyYaml(card)}---\n`;
+  return renderFrontmatterBlock(card);
 }
 
 async function readRunCard(runCardPath: string): Promise<MutableRunCard> {

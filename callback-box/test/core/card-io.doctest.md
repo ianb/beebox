@@ -111,6 +111,33 @@ JSON.stringify(parsed.fields)
 => {"type":"doc","drive-id":"drv-42","title":"Round-trip","body":"Hello, world.\n"}
 ```
 
+## A long scalar never folds across lines
+
+YAML's `stringify` defaults to wrapping long scalars at ~80 columns; that
+would silently rewrite a long `title` (or any other string field) across
+multiple lines, changing the on-disk representation without changing the
+value. `serializeCardText` disables wrapping, so a long value stays on one
+line and the frontmatter block has exactly three lines (open fence, the one
+`title:` line, close fence).
+
+```ts
+const longTitle = "A".repeat(150);
+const fields = {
+  type: "doc",
+  "drive-id": "drv-long",
+  title: longTitle,
+  body: "Body.\n",
+};
+const text = serializeCardText({ schema: docSchema, fields });
+const frontmatter = text.slice(0, text.indexOf("Body."));
+frontmatter.split("\n").length
+=> 5
+
+const parsed = parseCardText(text, { source: "long.doc.card", schemas });
+parsed.fields["title"] === longTitle
+=> true
+```
+
 ## Frontmatter-only schemas reject body content
 
 ```ts setup

@@ -26,8 +26,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import { getBoxDir } from "../cli/lib/paths.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
@@ -139,7 +139,7 @@ async function pruneJobRefs(boxRoot: string, removedRefs: string[]): Promise<str
       continue;
     }
     fm["items"] = kept;
-    await fs.writeFile(abs, `---\n${stringifyYaml(fm)}---\n${split.body}`);
+    await fs.writeFile(abs, renderFrontmatterBlock(fm, split.body));
     staged.push(path.relative(boxRoot, abs));
   }
   return staged;

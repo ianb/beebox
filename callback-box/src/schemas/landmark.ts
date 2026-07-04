@@ -25,8 +25,8 @@
  * See docs/landmarks.md and docs/triage.md.
  */
 
-import { splitCardContent, cardSchema, type CardSchema } from "../cards/index.js";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { splitCardContent, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 
 /** Sort order for `expand` fan-out results. */
@@ -219,6 +219,5 @@ export function createLandmarkTemplate(options: {
   } else if (typeof options.symbol === "string" && options.symbol !== "") {
     navigation.symbol = options.symbol;
   }
-  const yamlText = stringifyYaml({ navigation });
-  return `---\n${yamlText}---\n`;
+  return renderFrontmatterBlock({ navigation });
 }

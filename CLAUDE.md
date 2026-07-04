@@ -7,7 +7,7 @@ Four projects live in one git repository (previously independent repos, merged 2
 - **agent-doctest/** — Doctest framework extracted from callback-box.
 - **personal-vibe-check/** — The shared ESLint/TS/Prettier preset (`@ianbicking/personal-vibe-check`), consumed by the other packages via `workspace:*`. Edit it HERE — the old standalone checkout at `~/src/personal-vibe-check` is stale and no longer what anything resolves to.
 
-Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `dev/` — per-worktree pages served at `/<worktree>/dev/`; `bin/` — the dev router and worktree tooling (see `bin/CLAUDE.md`).
+Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `dev/` — per-worktree pages served at `/<worktree>/dev/`; `bin/` — the dev router and worktree tooling (see `bin/CLAUDE.md`); `issues/` — dated task/decision notes (`YYYY-MM-DD-slug.md`), the parking lot for known problems that aren't scheduled work yet.
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box; each worktree gets its own clone at `~/src/box-worktrees/<name>/test1/`.
 

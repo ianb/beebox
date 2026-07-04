@@ -49,8 +49,8 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 
 const VERSIONS_FILE = "config/template-versions.json";
 const TEMPLATE_UPDATES_DIR = "config/_template-updates";
@@ -172,7 +172,7 @@ function parseCard(content: string): { fm: Record<string, unknown>; body: string
 }
 
 function serializeCard(fm: Record<string, unknown>, body: string): string {
-  return `---\n${stringifyYaml(fm)}---\n${body}`;
+  return renderFrontmatterBlock(fm, body);
 }
 
 /**

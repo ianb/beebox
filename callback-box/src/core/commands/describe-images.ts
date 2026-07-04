@@ -14,7 +14,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock } from "../../cards/index.js";
 import {
   registerCommand,
   type CommandContext,
@@ -165,7 +165,7 @@ async function createImageCard(ctx: CommandContext, imagePath: string): Promise<
       source: "camera-environment",
     },
   };
-  await fs.writeFile(cardPath, `---\n${stringifyYaml(fields)}---\n`);
+  await fs.writeFile(cardPath, renderFrontmatterBlock(fields));
   ctx.writeLine(`  Created card: ${path.relative(ctx.boxRoot, cardPath)}`);
   return cardPath;
 }

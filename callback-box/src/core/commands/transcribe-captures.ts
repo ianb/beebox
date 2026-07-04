@@ -13,7 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock } from "../../cards/index.js";
 import { registerCommand } from "../command-runner.js";
 import { getBoxDir } from "../../cli/lib/paths.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
@@ -39,7 +39,7 @@ async function loadAudioCard(cardPath: string): Promise<AudioFields> {
 }
 
 async function saveAudioCard(cardPath: string, fields: AudioFields): Promise<void> {
-  const parsed = parseCardText(`---\n${stringifyYaml(fields)}---\n`, {
+  const parsed = parseCardText(renderFrontmatterBlock(fields), {
     source: cardPath,
     schemas: await createCardSchemaMap(),
   });

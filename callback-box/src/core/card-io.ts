@@ -17,8 +17,8 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent, type CardSchema } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent, type CardSchema } from "../cards/index.js";
 import { parseCardFileName } from "../shared/card-name.js";
 
 /**
@@ -294,9 +294,7 @@ export function serializeCardText(input: {
     if (value === undefined) continue;
     frontmatter[name] = value;
   }
-  const yamlText = stringifyYaml(frontmatter);
-  // YAML.stringify ends with \n already
-  return `---\n${yamlText}---\n${body}`;
+  return renderFrontmatterBlock(frontmatter, body);
 }
 
 /**

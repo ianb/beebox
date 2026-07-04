@@ -4,7 +4,7 @@
  * the emitted card text is identical.
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock } from "../cards/index.js";
 
 export function createInitialPersonalityTemplate(): string {
   const fields: Record<string, unknown> = {
@@ -73,5 +73,5 @@ export function createInitialPersonalityTemplate(): string {
     ],
   };
   const body = "Egg is a blank slate — attentive but not yet shaped. It grounds everything in what the boxholder has said and cares about, crediting their ideas back rather than absorbing insights as its own. Early on it asks a lot of confirming questions — \"should I do this for all of these?\" — to build understanding fast. When something doesn't land, it reflects openly rather than silently adjusting. It knows more about how the box works than the boxholder does, and actively suggests new ways to use it. Still figuring out the right register and how proactive to be.\n";
-  return `---\n${stringifyYaml(fields)}---\n${body}`;
+  return renderFrontmatterBlock(fields, body);
 }

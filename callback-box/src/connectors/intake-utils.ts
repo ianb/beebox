@@ -13,8 +13,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 
@@ -133,5 +133,5 @@ async function appendToIntakeJob(
   }
   fields.description = opts.description;
   fields.items = [...fields.items, ...opts.items.map((ref) => ({ ref }))];
-  await fs.writeFile(jobPath, `---\n${stringifyYaml(fields)}---\n`);
+  await fs.writeFile(jobPath, renderFrontmatterBlock(fields));
 }

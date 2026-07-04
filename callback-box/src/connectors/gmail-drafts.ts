@@ -15,8 +15,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
@@ -345,8 +345,7 @@ async function stampDraftCard(opts: {
   const fields = fm as Record<string, unknown>;
   fields["gmail-draft-id"] = opts.draftId;
   fields["gmail-draft-url"] = opts.draftUrl;
-  const yamlText = stringifyYaml(fields);
-  await fs.writeFile(opts.cardPath, `---\n${yamlText}---\n${split.body}`);
+  await fs.writeFile(opts.cardPath, renderFrontmatterBlock(fields, split.body));
 }
 
 class MissingFieldError extends Error {

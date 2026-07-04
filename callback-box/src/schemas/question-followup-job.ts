@@ -5,8 +5,7 @@
  * agent acts on the directive with the user's answer.
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const QuestionFollowupJobSchema: CardSchema = cardSchema("question-followup-job", {
@@ -70,5 +69,5 @@ export function createQuestionFollowupJobTemplate(options: {
     directive: options.directive,
     answer: options.answer,
   };
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

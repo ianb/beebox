@@ -6,8 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
@@ -142,11 +141,10 @@ function buildMemoCard(input: {
     if (input.context.text !== undefined) ctx["text"] = input.context.text;
     if (Object.keys(ctx).length > 0) fields["context"] = ctx;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyTail = input.content === ""
     ? ""
     : `${input.content}${input.content.endsWith("\n") ? "" : "\n"}`;
-  return `---\n${yamlText}---\n${bodyTail}`;
+  return renderFrontmatterBlock(fields, bodyTail);
 }
 
 export function createMemoTemplate(content: string, source?: string): string {

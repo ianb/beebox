@@ -106,8 +106,17 @@ update it before merging:
 - **Partially implemented** → edit prose to mark which parts are real (link to
   where they live) vs still future. Don't leave "we will introduce X" when X
   exists.
-- **Filenames matter** — a historical file still named `plan-foo.md` misleads;
-  `foo-implementation.md` / `foo.md` doesn't.
+- **Abandoned/superseded** → `git mv` to `docs/unimplemented-plans/` and add a
+  row to that directory's README disposition table saying what superseded or
+  shelved it.
+- **Status headers** — whatever stays or moves gets the first-line status
+  convention from `docs/plans/README.md` (`**Status:** implemented YYYY-MM …`).
+- **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
+  historical file still named `plan-foo.md` or `foo-design.md` misleads once
+  the thing exists; superseded docs get `-superseded`.
+- After any move/rename: `pnpm doc-graph` from `callback-box/` to regenerate
+  the index (the pre-commit `doc-check` will fail the commit on any reference
+  you missed — fix, don't bypass).
 
 Skip if no planning-style docs were touched. Unsure if a doc is a "plan" vs a
 reference? Read its opening paragraph (future tense + "will/proposes/we should"

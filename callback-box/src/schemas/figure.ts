@@ -11,8 +11,7 @@
  * See docs/plans/figure-card-type.md for the full design.
  */
 
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const FigureRuntime = z.enum(["p5js", "three", "d3"]);
@@ -263,7 +262,6 @@ export function createFigureTemplate(input: { runtime: FigureRuntimeType; title?
   if (input.title !== undefined && input.title !== "") {
     fields["title"] = input.title;
   }
-  const yamlText = stringifyYaml(fields);
   const description = `A ${RUNTIME_LABEL[input.runtime]} figure. Describe what it demonstrates here; the runnable code lives in \`attach/sketch.ts\`.\n`;
-  return `---\n${yamlText}---\n${description}`;
+  return renderFrontmatterBlock(fields, description);
 }

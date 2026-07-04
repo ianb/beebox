@@ -59,10 +59,15 @@ monorepo-top-level `research/` directory (see `research/CLAUDE.md`). Findings
 worth pursuing get cross-linked into `docs/ideas.md` or promoted to an actual
 plan in this directory.
 
-## Wiring (pending)
+## Wiring
 
-- **`finish`** should `git mv docs/plans/<topic>.md docs/implemented-plans/` as
-  part of the merge close-out, so shipping a plan files it automatically.
+- **`finish`** files shipped plans automatically: step 5 of
+  `.claude/agents/finish.md` ("Reconcile planning docs with reality")
+  moves implemented plans to `docs/implemented-plans/`, parks abandoned
+  ones in `docs/unimplemented-plans/` with a README disposition row, and
+  applies the naming conventions (`docs/README.md`). The 2026-07-04
+  docs-reorg cleared the backlog that accumulated before this was
+  wired.
 
 ## Migration (done)
 

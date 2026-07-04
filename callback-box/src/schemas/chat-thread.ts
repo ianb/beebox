@@ -8,8 +8,7 @@
  * message (its reply) or seen-marker (acknowledge without replying).
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 const ParticipantEntry = z.object({
@@ -127,7 +126,7 @@ export function createChatThreadTemplate(options: {
     fields["participants"] = options.participants.map((ref) => ({ ref }));
   }
   fields["entries"] = [];
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }
 
 /**

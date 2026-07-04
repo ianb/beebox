@@ -8,7 +8,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock } from "../../cards/index.js";
 import { type CommandContext } from "../command-runner.js";
 import { parseCardName } from "../../cli/lib/paths.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
@@ -26,7 +26,7 @@ async function loadImageCard(cardPath: string): Promise<ImageFields> {
 }
 
 async function saveImageCard(cardPath: string, fields: ImageFields): Promise<void> {
-  const parsed = parseCardText(`---\n${stringifyYaml(fields)}---\n`, {
+  const parsed = parseCardText(renderFrontmatterBlock(fields), {
     source: cardPath,
     schemas: await createCardSchemaMap(),
   });

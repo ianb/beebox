@@ -8,8 +8,8 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { splitCardContent } from "../../cards/index.js";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { parse as parseYaml } from "yaml";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { buildLoadContext } from "../load-context.js";
 import { cardTypeFromPath } from "./walk.js";
@@ -106,7 +106,7 @@ export async function updateContainsField(
   const unchanged = fields["contains"] === text;
   if (!unchanged) {
     fields["contains"] = text;
-    await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
+    await fs.writeFile(absPath, renderFrontmatterBlock(fields, split.body));
   }
 
   const ctx = await buildLoadContext(boxRoot);

@@ -13,7 +13,7 @@
  */
 
 import { writeFile } from "node:fs/promises";
-import { stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock } from "../../cards/index.js";
 import type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 import { loadCardFile } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
@@ -103,7 +103,7 @@ async function buildContext(input: {
 
 async function persistContext(ctx: PreActionContext): Promise<void> {
   // Rewrite the file with the (possibly mutated) fields.
-  await writeFile(ctx.cardPath, `---\n${stringifyYaml(ctx.frontmatter.fields)}---\n`);
+  await writeFile(ctx.cardPath, renderFrontmatterBlock(ctx.frontmatter.fields));
 }
 
 registerPreAction(transcribePreAction);
