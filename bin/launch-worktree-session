@@ -43,7 +43,7 @@ if [ $# -ge 1 ]; then
   esac
 fi
 
-MONO="$HOME/src/callback-mono"
+MONO="$HOME/src/callback-box"
 if [ ! -d "$MONO" ]; then
   echo "launch-worktree-session: $MONO not found" >&2
   exit 1

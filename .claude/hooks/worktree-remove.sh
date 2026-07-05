@@ -17,8 +17,8 @@ set -euo pipefail
 exec 1>&2  # everything to stderr; no stdout expected
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-mono"
-printf '%s\n' "$input" > "$HOME/.cache/callback-mono/last-worktree-remove-input.json"
+mkdir -p "$HOME/.cache/callback-box"
+printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-remove-input.json"
 
 name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
 path_from_input=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
@@ -46,7 +46,7 @@ fi
 if [ -d "$BOX_DEST" ]; then
   # Rename-then-background-delete: boxes run 100MB+; a synchronous rm here
   # risks the hook timeout killing us mid-delete (see session-end.sh).
-  TRASH="$HOME/.cache/callback-mono/trash"
+  TRASH="$HOME/.cache/callback-box/trash"
   mkdir -p "$TRASH"
   echo "[worktree-remove] trashing box $BOX_DEST"
   mv "$BOX_DEST" "$TRASH/box-$NAME-$(date +%s)"
@@ -58,7 +58,7 @@ fi
 
 # Per-worktree agent-browser state (Chrome profile, daemon socket dir).
 # Can grow to hundreds of MB once the browser has been used.
-BROWSE_DIR="$HOME/.cache/callback-mono/browse/$NAME"
+BROWSE_DIR="$HOME/.cache/callback-box/browse/$NAME"
 if [ -d "$BROWSE_DIR" ]; then
   echo "[worktree-remove] removing browse state $BROWSE_DIR"
   rm -rf "$BROWSE_DIR"
@@ -66,7 +66,7 @@ fi
 
 # Router log + PID file. These survive `bin/worktrees panic` and similar
 # cleanups since neither targets cache state directly.
-LOG_FILE="$HOME/.cache/callback-mono/logs/$NAME.log"
-PID_FILE="$HOME/.cache/callback-mono/pids/$NAME.json"
+LOG_FILE="$HOME/.cache/callback-box/logs/$NAME.log"
+PID_FILE="$HOME/.cache/callback-box/pids/$NAME.json"
 [ -f "$LOG_FILE" ] && rm -f "$LOG_FILE" && echo "[worktree-remove] removed $LOG_FILE"
 [ -f "$PID_FILE" ] && rm -f "$PID_FILE" && echo "[worktree-remove] removed $PID_FILE"

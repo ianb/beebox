@@ -465,7 +465,7 @@ Six personality tests run against the default "Egg" template.
 | Describe your personality | Knows directly | **Pass** | Paraphrased description paragraph into bullet points. All content grounded in the actual card. |
 | How would I change your personality or tone? | Knows about | **Pass** | Identified `config/main.personality.card`, mentioned `cb validate` and `cb init`. |
 | What tone instructions do you follow? | Discoverable | **Guessed** | Answered from description paragraph, reformatting it as tone instructions. Did NOT read the personality card to find actual `<tone>` elements. Sounds right but isn't surfacing the real data. |
-| Who is your boxholder? | Knows directly (partial) | **Mixed** | Correctly knew the "boxholder" concept. Acknowledged personality card doesn't have a name. But then inferred "Ian Bicking" from the filesystem path — clever but not personality-card-sourced. |
+| Who is your boxholder? | Knows directly (partial) | **Mixed** | Correctly knew the "boxholder" concept. Acknowledged personality card doesn't have a name. But then inferred "Priya Marlowe" from the filesystem path — clever but not personality-card-sourced. |
 
 ### Observations (initial run, before fixes)
 
@@ -475,18 +475,18 @@ Six personality tests run against the default "Egg" template.
 
 **Tone instructions were a blind spot.** Initially, all default tone instructions were low confidence and filtered from compiled output. The agent didn't know they existed and improvised from the description.
 
-**Boxholder inference from filesystem.** Without a name in the personality card, the agent inferred "Ian Bicking" from the Unix username. Resourceful but not personality-card-sourced.
+**Boxholder inference from filesystem.** Without a name in the personality card, the agent inferred "Priya Marlowe" from the Unix username. Resourceful but not personality-card-sourced.
 
 ### Fixes applied
 
 **Relaxed confidence filter.** Changed compilation to only filter out `hypothesis` confidence level (not `low`). Rationale: if you put something in the card, it should compile. Low confidence means "not sure yet" — it's still a real instruction. Only hypothesis ("pure guess, not yet tested") should be excluded. Applied to both tone instructions and boxholder relationships.
 
-**Added boxholder name to test box.** Filled in `<full-name>Ian Bicking</full-name>` and `<called>Ian</called>` in the test box's personality card.
+**Added boxholder name to test box.** Filled in `<full-name>Priya Marlowe</full-name>` and `<called>Priya</called>` in the test box's personality card.
 
 ### Re-run results (after fixes)
 
 | Test | Result | Notes |
 |------|--------|-------|
 | What tone instructions do you follow? | **Pass** | All three tone instructions surfaced directly. Agent correctly cited the personality card as source. |
-| Who is your boxholder? | **Pass** | Immediate answer: "Ian Bicking (Ian)" with relationship note. Sourced from personality card. |
+| Who is your boxholder? | **Pass** | Immediate answer: "Priya Marlowe (Priya)" with relationship note. Sourced from personality card. |
 | "What should I have for dinner?" reasoning test | **Pass** | Personality traits visibly shaped reasoning: grounded suggestions in boxholder's saved data, asked clarifying questions, credited ideas back, admitted limits ("I'm not a food expert — I'm an information aide"), and imagined a long-term version with more signal. |

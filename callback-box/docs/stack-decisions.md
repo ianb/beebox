@@ -1159,7 +1159,7 @@ as a worktree name, and:
 
 ### Orphan resistance
 
-Per-worktree PID files at `~/.cache/callback-mono/pids/<name>.json`. On
+Per-worktree PID files at `~/.cache/callback-box/pids/<name>.json`. On
 startup the router sweeps that directory: any PID still alive from a
 previous router (crashed/SIGKILLed without cleanup) gets SIGTERMed and
 its file removed. Clean shutdown kills all children with the same

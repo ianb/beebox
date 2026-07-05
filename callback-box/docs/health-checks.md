@@ -11,7 +11,7 @@ The server runs `claude update` nightly via `claude-update.timer` → `claude-up
 ### Run this
 
 ```bash
-ssh root@$(cat ~/src/callback-mono/callback-box/deploy/server-ip) 'bash -s' <<'EOF'
+ssh root@$(cat ~/src/callback-box/callback-box/deploy/server-ip) 'bash -s' <<'EOF'
   echo "=== wrapper log (last 40 lines) ==="
   tail -n 40 /home/callback/claude-update.log
   echo

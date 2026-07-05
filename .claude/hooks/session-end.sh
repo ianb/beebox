@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Claude Code SessionEnd hook.
 #
-# When a session ends, if we're in a callback-mono worktree AND the worktree
+# When a session ends, if we're in a callback-box worktree AND the worktree
 # branch is fully merged into main (no commits ahead, no uncommitted
 # changes), automatically remove the worktree + branch + cloned box + any
 # router state for it. Claude Code's built-in auto-cleanup only fires when
@@ -18,8 +18,8 @@ set -euo pipefail
 exec 1>&2
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-mono"
-printf '%s\n' "$input" > "$HOME/.cache/callback-mono/last-session-end-input.json"
+mkdir -p "$HOME/.cache/callback-box"
+printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 
@@ -78,10 +78,10 @@ fi
 # IMPORTANT: derive the name from $worktree_path, not $cwd. When the
 # session ends with cwd = main (the original bug that motivated the
 # transcript-path fallback above), $cwd is the main checkout, so
-# basename($cwd) = "callback-mono" — wrong name, wrong target for the
+# basename($cwd) = "callback-box" — wrong name, wrong target for the
 # removal step below.
 name=$(basename "$worktree_path")
-MONO="$HOME/src/callback-mono"
+MONO="$HOME/src/callback-box"
 
 echo "[session-end] worktree '$branch' is fully merged into main and clean — cleaning up"
 
@@ -97,7 +97,7 @@ fi
 # rename everything into a trash dir (instant), do the cheap git bookkeeping,
 # and let a detached background process do the slow delete — it survives
 # both this hook and the session.
-TRASH="$HOME/.cache/callback-mono/trash"
+TRASH="$HOME/.cache/callback-box/trash"
 mkdir -p "$TRASH"
 ts=$(date +%s)
 
@@ -129,9 +129,9 @@ disown 2>/dev/null || true
 # Cache state: browse profile + socket dir, router log, pid file.
 # These don't show up in any UI, but they accumulate, and if the session
 # ended cleanly there's no reason to leave them behind.
-BROWSE_DIR="$HOME/.cache/callback-mono/browse/$name"
-LOG_FILE="$HOME/.cache/callback-mono/logs/$name.log"
-PID_FILE="$HOME/.cache/callback-mono/pids/$name.json"
+BROWSE_DIR="$HOME/.cache/callback-box/browse/$name"
+LOG_FILE="$HOME/.cache/callback-box/logs/$name.log"
+PID_FILE="$HOME/.cache/callback-box/pids/$name.json"
 [ -d "$BROWSE_DIR" ] && rm -rf "$BROWSE_DIR" && echo "[session-end]   removed $BROWSE_DIR"
 [ -f "$LOG_FILE" ]   && rm -f  "$LOG_FILE"   && echo "[session-end]   removed $LOG_FILE"
 [ -f "$PID_FILE" ]   && rm -f  "$PID_FILE"   && echo "[session-end]   removed $PID_FILE"

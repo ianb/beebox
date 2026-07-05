@@ -2,6 +2,7 @@
   "name": "agent-browser-typed",
   "version": "0.0.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "description": "Typed TypeScript interface to the agent-browser CLI binary. One function per subcommand, mirroring upstream args. Help files in help/ are checked-in snapshots of `agent-browser <cmd> --help`; scripts/verify-help.ts diffs them against the current binary and reports drift.",
   "main": "src/index.ts",

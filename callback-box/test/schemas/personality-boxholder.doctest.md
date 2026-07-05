@@ -17,16 +17,16 @@ const base = { type: "personality", version: "1.0.0", body: "" } as const;
 ## One boxholder — name and called
 
 ```ts
-const md = compilePersonality({ ...base }, { boxholders: [{ name: "Ian Bicking", called: "Dad" }] });
-md.includes("Your boxholder is **Ian Bicking** (Dad).")
+const md = compilePersonality({ ...base }, { boxholders: [{ name: "Priya Marlowe", called: "Priya" }] });
+md.includes("Your boxholder is **Priya Marlowe** (Priya).")
 => true
 ```
 
 ## A boxholder with no alias omits the parenthetical
 
 ```ts
-const md = compilePersonality({ ...base }, { boxholders: [{ name: "Ian Bicking" }] });
-md.includes("Your boxholder is **Ian Bicking**.")
+const md = compilePersonality({ ...base }, { boxholders: [{ name: "Priya Marlowe" }] });
+md.includes("Your boxholder is **Priya Marlowe**.")
 => true
 ```
 
@@ -55,11 +55,11 @@ JSON.stringify([md.includes("Your boxholder"), md.includes("Prefers terse replie
 
 ```ts
 const box = await makeTmpBox();
-await box.write("people/Ian_Bicking.person.card", "---\nstatus: active\nname: Ian Bicking\naliases:\n  - Dad\nboxholder: true\n---\n");
+await box.write("people/Priya_Marlowe.person.card", "---\nstatus: active\nname: Priya Marlowe\naliases:\n  - Priya\nboxholder: true\n---\n");
 await box.write("people/Jo_Smith.person.card", "---\nstatus: archived\nname: Jo Smith\nboxholder: true\n---\n");
 await box.write("people/Pat_Lee.person.card", "---\nstatus: active\nname: Pat Lee\n---\n");
 JSON.stringify(await loadBoxholders(box.root))
-=> [{"name":"Ian Bicking","called":"Dad"}]
+=> [{"name":"Priya Marlowe","called":"Priya"}]
 ```
 
 ```ts cleanup

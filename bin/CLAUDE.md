@@ -35,7 +35,7 @@ reload + history) when refocused.
 
 ## Orphan resistance
 
-PID files at `~/.cache/callback-mono/pids/<name>.json` (single-slot —
+PID files at `~/.cache/callback-box/pids/<name>.json` (single-slot —
 current generation only); router sweeps and kills survivors on startup;
 clean SIGTERM/SIGINT kills children with SIGKILL fallback after 2
 seconds. Because pidfiles can't see leaked older generations or

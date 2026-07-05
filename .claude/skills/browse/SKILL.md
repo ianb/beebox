@@ -9,7 +9,7 @@ allowed-tools: Bash(bin/browse:*), Bash(pnpm verify-help:*)
 `bin/browse` is this monorepo's wrapper around the upstream `agent-browser` Chromium CLI. It adds:
 
 - **Worktree-aware URL rewriting** — `bin/browse open /dashboard` resolves to `http://localhost:3210/<this-worktree>/<box>/dashboard`.
-- **Per-worktree isolated daemons** — each worktree runs its own `agent-browser` daemon with its own Chrome profile (cookies, history, login state). No cross-worktree leakage. Backed by `AGENT_BROWSER_SOCKET_DIR` and `AGENT_BROWSER_PROFILE` env vars rooted at `~/.cache/callback-mono/browse/<worktree>/`.
+- **Per-worktree isolated daemons** — each worktree runs its own `agent-browser` daemon with its own Chrome profile (cookies, history, login state). No cross-worktree leakage. Backed by `AGENT_BROWSER_SOCKET_DIR` and `AGENT_BROWSER_PROFILE` env vars rooted at `~/.cache/callback-box/browse/<worktree>/`.
 - **Per-worktree dashboard** — the dev router auto-starts an `agent-browser dashboard` per worktree on its own port. Find the URL via `bin/worktrees status` (`.worktrees[<wt>].dashboardUrl`) or the "dashboard ↗" link on the router home page at `http://localhost:3210/`.
 - **Self-describing screenshots** — `bin/browse screenshot` writes a sidecar `<image>.json` with the URL/title/timestamp/worktree so the file alone tells you what it captured.
 - **Indexed default path** — `bin/browse screenshot` with no path saves to `.claude/screenshots/NNNN-<slug>.png` in the worktree (gitignored).

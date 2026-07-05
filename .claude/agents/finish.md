@@ -128,7 +128,7 @@ Only if the caller named a `cb feedback` item this work resolves, AND the fix is
 verified (tests green). The tool:
 
 ```bash
-cd ~/src/callback-mono/feedback-review
+cd ~/src/callback-box/feedback-review
 pnpm dlx tsx collect.ts --resolve <feedback-file-basename>.md
 ```
 
@@ -144,7 +144,7 @@ Skip entirely if the work wasn't tied to a feedback item.
 You're INSIDE the worktree, so operate on the main checkout with `-C`:
 
 ```bash
-MONO=~/src/callback-mono
+MONO=~/src/callback-box
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 git -C "$MONO" merge "$BRANCH"
 ```
@@ -156,7 +156,7 @@ off (step 3 should have caught them) — **return BLOCKED**.
 ### 8. Report
 
 ```bash
-git -C ~/src/callback-mono log --oneline -3
+git -C ~/src/callback-box log --oneline -3
 ```
 
 Return a report whose language matches the truth. Be straight about: **scope**

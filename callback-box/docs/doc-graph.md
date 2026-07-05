@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-04T23:33:41Z
-Total documents: 152
+Generated: 2026-07-05T19:46:43Z
+Total documents: 155
 
 ## Issues
 
@@ -11,7 +11,6 @@ These documents are not referenced by any other document.
 
 - **deploy/CLAUDE.md** — "Deploy" (26 lines)
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (544 lines)
-- **docs/implemented-plans/box-migration.subplan.md** — "Box migration to frontmatter (subplan of remove-cardworks-package)" (282 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (354 lines)
 - **docs/implemented-plans/card-view-widgets.md** — "Card-aware widgets for box-authored views" (662 lines)
 - **docs/implemented-plans/chat-composer-rerender.md** — "Plan: stop composer keystrokes from re-rendering chat history" (154 lines)
@@ -30,6 +29,7 @@ These documents are not referenced by any other document.
 - **docs/implemented-plans/remove-cardworks-deletion.md** — "Remove cardworks — final deletion phase" (621 lines)
 - **docs/implemented-plans/schema-validate-hook.md** — "Schema `validate` hook — co-locate non-Zod card validation with its schema" (373 lines)
 - **docs/implemented-plans/view-render-testing.md** — "Plan: testing agent-authored views" (544 lines)
+- **docs/plans/source-available-release.md** — "Source-available release of callback-box" (497 lines)
 - **src/frontend/dist/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **src/frontend/public/earcons/SOURCES.md** — "Earcon sources & attribution" (13 lines)
 - **test/manual/README.md** — "Manual tests" (21 lines)
@@ -51,7 +51,7 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Callback Box" | 149 lines
+Title: "Callback Box" | 150 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
@@ -94,6 +94,7 @@ Referenced by:
 - docs/implemented-plans/shared-frontend-backend-code.subplan.md:23 (mention) — `CLAUDE.md`. We share what Track 2 forces us to share. We do not
 - docs/implemented-plans/user-location.md:255 (mention) — CLAUDE.md default; the raw-route carve-out doesn't apply. (An earlier
 - docs/implemented-plans/view-render-testing.md:258 (mention) — of the orphan-prone dev machinery in CLAUDE.md — no router, no Vite, no Fastify,
+- docs/implemented-plans/web-push-notifications.md:192 (mention) — prune both write it; CLAUDE.md *"All cross-process locks go through ...file-lock.ts"*).
 - docs/implemented-plans/websocket-chat-transport.md:230 (mention) — and it reuses the framework we're already deep in (CLAUDE.md's "tRPC by
 - docs/knowledge-audits.md:19 (mention) — - After touching CLAUDE.md, schemas, prompts, or anything that changes what an agent should know.
 - docs/knowledge-taxonomy.md:7 (mention) — 1. **Knows directly** — Can answer without investigation. The information is directly in the agent's loaded context: `CL
@@ -103,6 +104,7 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:36 (mention) — `setTimeout` counts macOS sleep. CLAUDE.md covers the analogous
 - docs/plans/docs-reorg.md:5 (mention) — convention docs → CLAUDE.md slimming → cb-guide-* skills → design
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
+- docs/plans/source-available-release.md:371 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
 - docs/reports/user-stories-audit-2026-06-26.md:1474 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
 - docs/stack-decisions.md:1183 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
@@ -133,6 +135,7 @@ Referenced by:
 - ../issues/2026-07-04-fake-agent-single-export-split.md:12 (mention) — Do NOT weaken the rule to avoid this (root CLAUDE.md lint policy).
 - ../issues/2026-07-04-instruction-surface-size-budget.md:11 (mention) — Give each instruction surface (agent guide, box CLAUDE.md, guide cards,
 - ../issues/2026-07-04-logging-consolidation.md:19 (mention) — Related: the noisy-output policy in the root CLAUDE.md (routine-success
+- ../issues/2026-07-05-writing-skill.md:10 (mention) — Scope: prose, usually exposition — READMEs, docs, `CLAUDE.md`s, issue bodies,
 - ../issues/closed/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 - ../research/gstack/README.md:21 (mention) — 3. When something becomes a real change to our project, link out to where it landed (CLAUDE.md, a skill of our own, etc.
@@ -175,6 +178,7 @@ References:
 - → src/services/CLAUDE.md (mention)
 - → src/connectors/CLAUDE.md (mention)
 - → docs/client-debug-log.md (mention)
+- → docs/example-names.md (mention)
 - → code-style.md (mention)
 - → docs/design/README.md (mention)
 - → docs/adding-schemas.md (mention)
@@ -206,7 +210,7 @@ Title: "Code Style" | 60 lines
 
 Referenced by:
 - CLAUDE.md:107 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:148 (at-include) — @code-style.md
+- CLAUDE.md:149 (at-include) — @code-style.md
 - docs/implemented-plans/agent-applied-migrations.md:84 (mention) — - `callback-box/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/app-wide-csp.md:28 (mention) — - `callback-box/code-style.md:` no `any`, max 2 positional params, custom error
 - docs/implemented-plans/box-retrospectives.md:39 (mention) — - `callback-box/code-style.md` — custom error classes; no silent error
@@ -243,12 +247,14 @@ Referenced by:
 - docs/implemented-plans/websocket-chat-transport.md:72 (mention) — - `callback-box/code-style.md:` no `any`, no default params, max 2 positional
 - docs/plans/box-commentary-surface.md:94 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional
 - docs/plans/prompt-surface-ia-review.md:375 (mention) — - **`callback-box/code-style.md`** — no default params, ≤2 positional params, no
+- docs/plans/source-available-release.md:44 (mention) — - `callback-box/code-style.md` — style rules for any code touched by deploy
 - docs/unimplemented-plans/query-cards.md:34 (mention) — - `callback-box/code-style.md` — strict types, no `any`, custom errors,
 - frontend.md:3 (mention) — UI palette, primitives, and the `className` rule. Backend code never needs to load this; code-style.md covers convention
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:96 (mention) — - `callback-box/code-style.md` — explicit style preferences (no
-- ../CLAUDE.md:34 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../CLAUDE.md:36 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
 - ../issues/2026-07-04-claude-md-review-docs-backlog.md:7 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
+- ../issues/2026-07-05-writing-skill.md:13 (mention) — code style (that's `code-style.md`).
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -317,15 +323,17 @@ References:
 
 #### deploy/README.md
 
-Title: "Deploy" | 242 lines
+Title: "Deploy" | 265 lines
 
 Referenced by:
 - CLAUDE.md:19 (mention) — **Deploy** — auto-deploys on `main` commits only (root CLAUDE.md). Prod runs a resident `cb hub` routing `/<slug>/...` t
 - deploy/CLAUDE.md:3 (mention) — Server provisioning and deployment scripts for Hetzner cloud. See `deploy/README.md` for full setup guide.
 - docs/adding-a-box.md:106 (link) — [`deploy/README.md`](../deploy/README.md) for the full provisioning story,
 - docs/implemented-plans/boxes-as-packages-v2.md:76 (mention) — | In-process Google OAuth gate + per-box `allowedEmails` ACL | preHandler + ACL in `src/webapp/server-box-scope.ts:59-80
+- docs/implemented-plans/web-push-notifications.md:183 (mention) — in the dev shell env. Document in `deploy/README.md`.
 - docs/plans/docs-reorg.md:131 (mention) — internals (already covered by `deploy/README.md`). Its dev-server section
 - docs/server-operations.md:3 (link) — Reference for the running callback-box server (production at `box.example.com`). For initial provisioning scripts see 
+- ../issues/2026-07-04-web-push-followup-testing.md:20 (mention) — Documented in `callback-box/deploy/README.md` → "Web Push (VAPID) keys". Until
 
 References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
@@ -377,6 +385,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:497 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
 - docs/plans/cli-restructure.md:128 (mention) — (see `docs/adding-a-box.md`), `cb upgrade` is the per-box engine-upgrade
 - docs/plans/docs-reorg.gap-analysis.md:135 (mention) — `docs/adding-a-box.md`.
+- docs/plans/source-available-release.md:62 (mention) — - **The generic-vs-personal boundary is already annotated** — `docs/adding-a-box.md:6-8`
 - docs/server-operations.md:184 (link) — - [`adding-a-box.md`](./adding-a-box.md) — per-box setup (secrets, connectors, box directory layout).
 - ../issues/2026-03-15-per-box-secret-management.md:16 (mention) — For now: manually copy secret files to new boxes. See `docs/adding-a-box.md`'s "Connector secrets" section.
 - ../issues/2026-07-04-box-registry-manifests.md:29 (mention) — Refs: `callback-box/docs/scheduler.md`, `callback-box/docs/adding-a-box.md`,
@@ -457,11 +466,14 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:45 (mention) — - `docs/box-layout.md:139-143`: boxes contain no app code, no global secrets, no cross-box
 - docs/implemented-plans/named-places.md:175 (mention) — but no `places`), keeping `docs/box-layout.md` and the box-shape agent guide
 - docs/implemented-plans/user-location.md:74 (mention) — at `docs/box-layout.md:18-22`. State files there are never committed.
+- docs/implemented-plans/web-push-notifications.md:58 (mention) — `web-push` card + connector (Track C). `docs/box-layout.md:57` already lists
+- docs/implemented-plans/web-push-notifications.review-codex.md:35 (mention) — for delivery (push notifications, replies)" (`docs/box-layout.md:57`), Telegram cards
 - docs/plans/design-reconciliation.md:590 (mention) — `/store/archive/done|failed/`) — reconcile against `docs/box-layout.md`
 - docs/plans/docs-reorg.gap-analysis.md:41 (mention) — `docs/box-layout.md`.
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/plans/prompt-surface-ia-review.md:146 (mention) — (`box-layout.md`) and the `box.doctest.md` created-tree assertion updated to
-- docs/reports/user-stories-audit-2026-06-26.md:4927 (mention) — The user story is accurately implemented across both claimed files. `/Users/ianbicking/src/callback-worktrees/user-stori
+- docs/plans/source-available-release.md:60 (mention) — and documented at `callback-box/docs/box-layout.md:194`. No credential values
+- docs/reports/user-stories-audit-2026-06-26.md:4927 (mention) — The user story is accurately implemented across both claimed files. `callback-box/src/cli/commands/init.ts` provides the
 - ../research/pai/information-layout.md:10 (mention) — knows-about / discoverable layering) and `docs/box-layout.md`. The two systems
 
 References:
@@ -645,6 +657,14 @@ Referenced by:
 - docs/plans/README.md:96 (mention) — `event-bus.md`, `photo-storage-investigation.md`. Left in place
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 
+#### docs/example-names.md
+
+Title: "Example names" | 53 lines
+
+Referenced by:
+- CLAUDE.md:103 (mention) — - **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by an
+- docs/plans/source-available-release.md:65 (mention) — - **Fictional example roster — reuse.** `docs/example-names.md` and
+
 #### docs/glossary.md
 
 Title: "Glossary" | 57 lines
@@ -757,6 +777,7 @@ Title: "Agent Knowledge Audit: What It Should Know and How to Verify" | 493 line
 Referenced by:
 - docs/implemented-plans/card-view-widgets.md:574 (mention) — **Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
+- docs/plans/source-available-release.md:158 (mention) — test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
 - docs/testing.md:382 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
 - ../research/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** CBX's always-loaded/conditionally-loaded/referenced-but-n
 - ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/knowledge-taxonomy.md`). There is no plugin manifest, no
@@ -845,17 +866,6 @@ References:
 - → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
 - → docs/maintenance.md (mention)
 - → docs/adding-schemas.md (mention)
-
-#### docs/photo-storage-investigation.md
-
-Title: "Photo storage investigation: the ledger box is 20G" | 187 lines
-
-Referenced by:
-- docs/plans/README.md:96 (mention) — `event-bus.md`, `photo-storage-investigation.md`. Left in place
-- docs/triage.md:153 (mention) — **Photo and PDF canonicalization is an intake step.** Raw phone images (HEIC/JPEG) arrive in `inbox/intake/`, get transc
-
-References:
-- → docs/triage.md (mention)
 
 #### docs/procedure-implementation.md
 
@@ -1021,6 +1031,7 @@ Referenced by:
 - docs/implemented-plans/rest-to-trpc-consolidation.md:383 (mention) — - **Test posture** (`docs/testing.md` — tests as design tool, not coverage): a
 - docs/implemented-plans/slopo-codehealth-adoption.md:56 (mention) — - **`docs/testing.md`** — tests are not for coverage (`docs/testing.md:11`:
 - docs/implemented-plans/view-render-testing.md:31 (mention) — - `callback-box/docs/testing.md` — tests as a design tool; doctests are the
+- docs/implemented-plans/web-push-notifications.md:482 (mention) — - **Test posture.** Doctests as a design tool (`docs/testing.md`): the load-bearing
 - docs/plans/docs-reorg.gap-analysis.md:53 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - ../.claude/skills/cb-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
@@ -1061,7 +1072,6 @@ Referenced by:
 - docs/implemented-plans/mvp-implementation-guide.md:12 (mention) — > intake→triage→handle pipeline now, `../triage.md`), and the
 - docs/knowledge-taxonomy.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/landmarks.md:33 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
-- docs/photo-storage-investigation.md:63 (mention) — This maps directly to the intake stage in the triage design (see `docs/triage.md`). Canonical optimization (AVIF transco
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/cli-restructure.md:90 (mention) — > **Namespace note (2026-05-20):** This group was originally proposed as `cb intake`, but the bare `cb intake` is now oc
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
@@ -1069,9 +1079,6 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
-
-References:
-- → docs/photo-storage-investigation.md (mention)
 
 ### docs/architecture/
 
@@ -1118,6 +1125,7 @@ Title: "The Lund-Vega Family" | 95 lines
 Referenced by:
 - docs/architecture/CLAUDE.md:14 (mention) — - **`family.md`** — Character reference for the Lund-Vega family used in all examples. Detailed bios, relationships, hou
 - docs/architecture/outline.md:5 (mention) — Supporting docs (not user-facing): `spirit.md` (values compass), `family.md` (character reference), `image-gen.yaml` (il
+- docs/plans/source-available-release.md:66 (mention) — `docs/architecture/family.md` (Lund-Vega roster) are the sanctioned
 
 #### docs/architecture/outline.md
 
@@ -1337,9 +1345,12 @@ References:
 - → CLAUDE.md (mention)
 - → docs/box-layout.md (mention)
 
-#### docs/implemented-plans/box-migration.subplan.md **[ORPHAN]**
+#### docs/implemented-plans/box-migration.subplan.md
 
 Title: "Box migration to frontmatter (subplan of remove-cardworks-package)" | 282 lines
+
+Referenced by:
+- docs/plans/source-available-release.md:179 (mention) — `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments
 
 References:
 - → docs/implemented-plans/remove-cardworks-package.md (mention)
@@ -1395,6 +1406,7 @@ Referenced by:
 - docs/migrations.md:204 (mention) — "The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`): `views/`,
 - docs/plans/design-reconciliation.md:23 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`,
 - docs/plans/docs-reorg.md:51 (mention) — - **At least 5 plans are done-but-never-moved**: `boxes-as-packages-v2.md`
+- docs/plans/source-available-release.md:370 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server-operations.md:38 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
 - docs/testing.md:304 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
@@ -1554,7 +1566,7 @@ References:
 Title: "Figure card type" | 426 lines
 
 Referenced by:
-- docs/reports/user-stories-audit-2026-06-26.md:4230 (mention) — 7. **Documentation**: Complete plan documented in `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/do
+- docs/reports/user-stories-audit-2026-06-26.md:4230 (mention) — 7. **Documentation**: Complete plan documented in `callback-box/docs/implemented-plans/figure-card-type.md` (marked as i
 
 References:
 - → code-style.md (mention)
@@ -1894,6 +1906,34 @@ References:
 - → docs/testing.md (mention)
 - → CLAUDE.md (mention)
 
+#### docs/implemented-plans/web-push-notifications.md
+
+Title: "Web Push notifications" | 508 lines
+
+Referenced by:
+- docs/implemented-plans/web-push-notifications.review-codex.md:1 (mention) — # Codex review — web-push-notifications.md
+- ../issues/2026-07-04-web-push-followup-testing.md:3 (mention) — design: ../callback-box/docs/implemented-plans/web-push-notifications.md
+
+References:
+- → docs/box-layout.md (mention)
+- → docs/implemented-plans/web-push-notifications.review-codex.md (mention)
+- → deploy/README.md (mention)
+- → CLAUDE.md (mention)
+- → src/services/CLAUDE.md (mention)
+- → docs/testing.md (mention)
+- → src/connectors/CLAUDE.md (mention)
+
+#### docs/implemented-plans/web-push-notifications.review-codex.md
+
+Title: "Codex review — web-push-notifications.md" | 102 lines
+
+Referenced by:
+- docs/implemented-plans/web-push-notifications.md:122 (mention) — (`web-push-notifications.review-codex.md` findings #1, #2): **(1)** push
+
+References:
+- → docs/implemented-plans/web-push-notifications.md (mention)
+- → docs/box-layout.md (mention)
+
 #### docs/implemented-plans/webpage-card-and-commentary.md
 
 Title: "`.webpage.card` + commentary-as-attachment" | 458 lines
@@ -2168,6 +2208,7 @@ Title: "docs/plans/ — proposals and in-flight plans" | 108 lines
 
 Referenced by:
 - docs/README.md:13 (mention) — opens with a `**Status:**` line; see `docs/plans/README.md` for the full
+- docs/plans/source-available-release.md:70 (mention) — (`README.md:24`: *"npm publish is planned but not live yet"*). The
 - ../.claude/agents/finish.md:103 (mention) — `callback-box/docs/plans/README.md`), then either fold durable "how it works
 - ../.claude/skills/cb-plan/SKILL.md:76 (mention) — live there, separate from reference docs (see `docs/plans/README.md`).
 
@@ -2183,13 +2224,29 @@ References:
 - → docs/plans/narration-mode.md (mention)
 - → docs/activities-design.md (mention)
 - → docs/event-bus.md (mention)
-- → docs/photo-storage-investigation.md (mention)
 - → docs/stack-decisions.md (mention)
 - → docs/unimplemented-plans/design-vision-superseded.md (mention)
 - → docs/unimplemented-plans/design-card-views-superseded.md (mention)
 - → docs/asset-manifests.md (mention)
 - → docs/implemented-plans/attach-directories-superseded.md (mention)
 - → docs/unimplemented-plans/capture-pipeline-redesign.md (mention)
+
+#### docs/plans/source-available-release.md **[ORPHAN]**
+
+Title: "Source-available release of callback-box" | 497 lines
+
+References:
+- → code-style.md (mention)
+- → docs/box-layout.md (mention)
+- → docs/adding-a-box.md (mention)
+- → docs/example-names.md (mention)
+- → docs/architecture/family.md (mention)
+- → docs/plans/README.md (mention)
+- → docs/knowledge-taxonomy.md (mention)
+- → docs/reports/user-stories-audit-2026-06-26.md (mention)
+- → docs/implemented-plans/box-migration.subplan.md (mention)
+- → docs/implemented-plans/boxes-as-packages-v2.md (mention)
+- → CLAUDE.md (mention)
 
 #### docs/plans/source-editor.md
 
@@ -2220,6 +2277,7 @@ Title: "callback-box — User Stories" | 5768 lines
 
 Referenced by:
 - docs/implemented-plans/user-story-audit-followups.md:5 (mention) — This plan triages the 95 `IAN:` comments left on `docs/reports/user-stories-audit-2026-06-26.md` (the
+- docs/plans/source-available-release.md:159 (mention) — name), `docs/reports/user-stories-audit-2026-06-26.md:671` (real email).
 - docs/reports/user-stories-audit-2026-06-26.md:2509 (mention) — **Verifier (flagged):** The story is partially accurate. Core features (markdown export, lossy detection, warning displa
 
 References:
@@ -2372,6 +2430,7 @@ Title: "Connectors" | 27 lines
 Referenced by:
 - CLAUDE.md:87 (mention) — **Connectors** — Sync external services with the box filesystem. Each implements `Connector.sync()`. See `src/connectors
 - docs/glossary.md:38 (mention) — **connector** — Code that syncs an external service (Gmail, RSS, Telegram, ...) with the box filesystem. Implements `Con
+- docs/implemented-plans/web-push-notifications.md:484 (mention) — (service-injection pattern, `src/services/CLAUDE.md` / `src/connectors/CLAUDE.md`)
 - docs/plans/docs-reorg.gap-analysis.md:20 (mention) — module's own comment — not in `src/connectors/CLAUDE.md` or
 - ../.claude/skills/cb-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or
 
@@ -2478,6 +2537,7 @@ Referenced by:
 - CLAUDE.md:85 (mention) — **Services** — Every external dependency is wrapped in a typed interface with real + fake implementations. Fakes have ob
 - docs/connectors.md:70 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation.
 - docs/glossary.md:42 (mention) — **service** — A typed interface wrapping an external dependency, with real and fake implementations. Fakes have observab
+- docs/implemented-plans/web-push-notifications.md:194 (mention) — `src/services/CLAUDE.md`): `sendNotification(subscription, payload)` →
 - docs/testing.md:123 (mention) — External dependencies (APIs, CLIs) are wrapped in typed service interfaces with fake implementations for testing. Full s
 - src/connectors/CLAUDE.md:15 (mention) — See `src/services/CLAUDE.md` for the full service layer documentation: interfaces, fakes, call logging, and testing patt
 - ../.claude/skills/cb-codehealth/SKILL.md:30 (mention) — `src/services/CLAUDE.md`, `src/connectors/CLAUDE.md`), so a caller — human or

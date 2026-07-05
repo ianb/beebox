@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Shared, project-scoped process reclamation for the callback-mono dev router.
+// Shared, project-scoped process reclamation for the callback-box dev router.
 //
 // The router's pidfiles only ever record the *current* generation of each
 // worktree (single-slot `<name>.json`), so older leaked generations and
@@ -42,14 +42,14 @@ import { execa } from "execa";
 
 // Mirror bin/router.ts's roots (including the CALLBACK_MAIN_ROOT override) so
 // scoping stays identical. WORKTREES_ROOT is fixed by convention.
-const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-mono");
+const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-box");
 const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
 
 // Per-worktree agent-browser socket dirs, mirroring `bin/browse`
-// (`${HOME}/.cache/callback-mono/browse/<worktree>/socket`). Each dir's
+// (`${HOME}/.cache/callback-box/browse/<worktree>/socket`). Each dir's
 // `*.pid` files (default.pid, dashboard.pid, <session>.pid) name the only
 // agent-browser processes that are actually live for that worktree.
-const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "callback-mono", "browse");
+const BROWSE_CACHE_ROOT = path.join(os.homedir(), ".cache", "callback-box", "browse");
 
 const KILL_GRACE_MS = 2000;
 

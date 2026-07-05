@@ -39,8 +39,8 @@ trap 'rc=$?; echo "[worktree-create] FAILED at line $LINENO (exit $rc). Worktree
 exec 3>&1 1>&2
 
 input=$(cat)
-mkdir -p "$HOME/.cache/callback-mono"
-printf '%s\n' "$input" > "$HOME/.cache/callback-mono/last-worktree-create-input.json"
+mkdir -p "$HOME/.cache/callback-box"
+printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-create-input.json"
 
 requested_path=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
 base_ref=$(printf '%s'       "$input" | jq -r '.base_ref // .baseRef // "main"')
@@ -52,7 +52,7 @@ elif [ -n "$requested_path" ]; then
   NAME=$(basename "$requested_path")
 else
   echo "[worktree-create] FATAL: stdin lacks worktree_path/worktreePath/path/name. Raw input:" >&2
-  cat "$HOME/.cache/callback-mono/last-worktree-create-input.json" >&2
+  cat "$HOME/.cache/callback-box/last-worktree-create-input.json" >&2
   exit 1
 fi
 

@@ -458,7 +458,7 @@ object.
   type: commentary
   defaultHref: file:/Users/.../callback-box/docs/plans/box-commentary-surface.md  # default target (xor defaultRef)
   targets:                               # optional; additional URLs to render for compare
-    - file:/Users/.../callback-mono/callback-box/docs/plans/box-commentary-surface.md
+    - file:/Users/.../callback-box/callback-box/docs/plans/box-commentary-surface.md
   ---
   ```
   `defaultHref` **xor** `defaultRef` (Zod refinement rejects both). **No

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CLI for the callback-mono dev router and worktrees.
+# CLI for the callback-box dev router and worktrees.
 #
 # Commands:
 #   serve              Run the router in the foreground.
@@ -16,7 +16,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-STATE_DIR="$HOME/.cache/callback-mono"
+STATE_DIR="$HOME/.cache/callback-box"
 ROUTER_PID_FILE="$STATE_DIR/router.pid"
 PID_DIR="$STATE_DIR/pids"
 ROUTER_PORT="${ROUTER_PORT:-3210}"

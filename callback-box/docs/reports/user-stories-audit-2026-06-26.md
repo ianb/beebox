@@ -39,7 +39,7 @@ Files: `src/frontend/src/pages/DashboardPage.tsx`, `src/frontend/src/components/
 
 <details><summary>verification note</summary>
 
-All five claimed files exist and are properly integrated into a working dashboard. DashboardPage.tsx (/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/DashboardPage.tsx) imports and renders HealthWarnings, AttentionCards, ScheduleOverview, and RecentActivity components. All components query the correct tRPC endpoints (health.check, status.status, status.questions, status.activity, scheduler.schedules, scheduler.log) which are fully implemented in the backend routers. AttentionCards.tsx displays pending questions and inbox items; HealthWarnings.tsx shows health check failures; ScheduleOverview.tsx shows a schedule table with enable/disable and trigger controls; RecentActivity.tsx interleaves commits and scheduler ticks. The implementation fully matches the story's requirement to show all five dashboard elements.
+All five claimed files exist and are properly integrated into a working dashboard. DashboardPage.tsx (callback-box/src/frontend/src/pages/DashboardPage.tsx) imports and renders HealthWarnings, AttentionCards, ScheduleOverview, and RecentActivity components. All components query the correct tRPC endpoints (health.check, status.status, status.questions, status.activity, scheduler.schedules, scheduler.log) which are fully implemented in the backend routers. AttentionCards.tsx displays pending questions and inbox items; HealthWarnings.tsx shows health check failures; ScheduleOverview.tsx shows a schedule table with enable/disable and trigger controls; RecentActivity.tsx interleaves commits and scheduler ticks. The implementation fully matches the story's requirement to show all five dashboard elements.
 
 </details>
 
@@ -93,7 +93,7 @@ Files: `src/frontend/src/pages/BrowsePage.tsx`, `src/frontend/src/components/bro
 
 <details><summary>verification note</summary>
 
-All three claimed files exist and fully implement the story. BrowsePage.tsx (277 lines) orchestrates directory browsing and file selection; BrowseSidebarList.tsx (157 lines) renders directory listings with cards and files; BrowseDetailPanel.tsx (102 lines) displays file content and metadata. Supporting infrastructure includes BrowseContextMenu for right-click delete, BrowseBreadcrumbs for navigation, tRPC status.browse endpoint for directory queries, and DELETE /api/files/* for file deletion with Git integration. All functionality described in the story is present: directory browsing (breadcrumbs, nested folders), card/file viewing (FileView with multiple renderers, metadata display), and file management (context menu delete, detail panel delete button). Evidence: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/BrowsePage.tsx, /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/browse/BrowseSidebarList.tsx, /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/browse/BrowseDetailPanel.tsx
+All three claimed files exist and fully implement the story. BrowsePage.tsx (277 lines) orchestrates directory browsing and file selection; BrowseSidebarList.tsx (157 lines) renders directory listings with cards and files; BrowseDetailPanel.tsx (102 lines) displays file content and metadata. Supporting infrastructure includes BrowseContextMenu for right-click delete, BrowseBreadcrumbs for navigation, tRPC status.browse endpoint for directory queries, and DELETE /api/files/* for file deletion with Git integration. All functionality described in the story is present: directory browsing (breadcrumbs, nested folders), card/file viewing (FileView with multiple renderers, metadata display), and file management (context menu delete, detail panel delete button). Evidence: callback-box/src/frontend/src/pages/BrowsePage.tsx, callback-box/src/frontend/src/components/browse/BrowseSidebarList.tsx, callback-box/src/frontend/src/components/browse/BrowseDetailPanel.tsx
 
 </details>
 
@@ -135,7 +135,7 @@ The user story "View and filter agent activity history" is fully and accurately 
 
 Files: `src/frontend/src/pages/QuestionsPage.tsx`, `src/frontend/src/components/QuestionForm.tsx`
 
-**Verifier (flagged):** The implementation allows users to view and answer pending questions with both text and multiple-choice options (story requirements are functionally met), but there is a backend bug in answer data storage: when users answer select-type (multiple-choice) questions via the web UI, the selectedId is stored as a letter (a, b, c) instead of the actual option ID. This occurs because QuestionForm sends both answer (label) and selectedId (letter), but the answer command only resolves the letter to a real ID when selectedId is undefined (answer.ts line 163). With selectedId present, the resolution is skipped and the letter is stored directly in the card's answer.selected field, violating the schema requirement that selected should be the option id. Evidence: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/QuestionForm.tsx lines 42-46 compute and send selectedId as letter; /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/commands/answer.ts lines 154-172 show resolveAnswer only calls ID resolution when !args.selectedId.
+**Verifier (flagged):** The implementation allows users to view and answer pending questions with both text and multiple-choice options (story requirements are functionally met), but there is a backend bug in answer data storage: when users answer select-type (multiple-choice) questions via the web UI, the selectedId is stored as a letter (a, b, c) instead of the actual option ID. This occurs because QuestionForm sends both answer (label) and selectedId (letter), but the answer command only resolves the letter to a real ID when selectedId is undefined (answer.ts line 163). With selectedId present, the resolution is skipped and the letter is stored directly in the card's answer.selected field, violating the schema requirement that selected should be the option id. Evidence: callback-box/src/frontend/src/components/QuestionForm.tsx lines 42-46 compute and send selectedId as letter; callback-box/src/core/commands/answer.ts lines 154-172 show resolveAnswer only calls ID resolution when !args.selectedId.
 
 **Browser check:** Route /questions loads successfully and displays pending questions with a functional form interface. The visual UI and basic form submission work as described. However, there is an implementation bug: confirm-type questions (yes/no) are being rendered as freetext textareas instead of multiple-choice radio buttons, causing submission validation to fail. The component supports multiple-choice rendering (RadioGroup) but the backend doesn't provide options for confirm questions without explicit options arrays, so the form falls back to text input. This prevents the described functionality (answering with text OR multiple-choice) from working correctly for confirm-type questions.
 
@@ -248,7 +248,7 @@ Files: `src/frontend/src/components/dashboard/ScheduleOverview.tsx`
 
 <details><summary>verification note</summary>
 
-The user story is accurately implemented. All three capabilities exist: (1) EnableToggle component in ScheduleOverview.tsx with trpc.scheduler.setEnabled mutation, (2) TriggerButton component with trpc.scheduler.trigger mutation, (3) Full integration in DashboardPage.tsx. Backend mutations in src/webapp/trpc/routers/scheduler.ts (lines 96-134 for setEnabled, 136-158 for trigger) provide proper validation and execution. File: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/dashboard/ScheduleOverview.tsx (lines 53-70, 72-96).
+The user story is accurately implemented. All three capabilities exist: (1) EnableToggle component in ScheduleOverview.tsx with trpc.scheduler.setEnabled mutation, (2) TriggerButton component with trpc.scheduler.trigger mutation, (3) Full integration in DashboardPage.tsx. Backend mutations in src/webapp/trpc/routers/scheduler.ts (lines 96-134 for setEnabled, 136-158 for trigger) provide proper validation and execution. File: callback-box/src/frontend/src/components/dashboard/ScheduleOverview.tsx (lines 53-70, 72-96).
 
 </details>
 
@@ -261,7 +261,7 @@ Files: `src/frontend/src/components/dashboard/HealthWarnings.tsx`
 
 <details><summary>verification note</summary>
 
-File exists at claimed path: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/dashboard/HealthWarnings.tsx. Component is fully implemented and integrated. It fetches real health checks via trpc.health.check endpoint (src/webapp/trpc/routers/health.ts), displays failures on DashboardPage with severity-based styling, and performs 10 health checks covering file permissions and API key configuration. All CSS classes are valid (Tailwind config verified). Component properly handles all edge cases (null data, healthy status, no failures). Type-safe throughout the implementation.
+File exists at claimed path: callback-box/src/frontend/src/components/dashboard/HealthWarnings.tsx. Component is fully implemented and integrated. It fetches real health checks via trpc.health.check endpoint (src/webapp/trpc/routers/health.ts), displays failures on DashboardPage with severity-based styling, and performs 10 health checks covering file permissions and API key configuration. All CSS classes are valid (Tailwind config verified). Component properly handles all edge cases (null data, healthy status, no failures). Type-safe throughout the implementation.
 
 </details>
 
@@ -274,7 +274,7 @@ Files: `src/frontend/src/components/dashboard/HeaderStrip.tsx`
 
 <details><summary>verification note</summary>
 
-File /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/dashboard/HeaderStrip.tsx fully implements the story. The GitStatus object from the backend (via getStatus in /src/cli/lib/git.ts) provides clean/dirty status and file arrays. HeaderStrip displays a colored button in the header showing status (line 82-85), and a clickable popover (GitStatusPopover, lines 17-46) shows categorized changed files. Used in DashboardPage (lines 60-64). Type-safe via RouterOutput inference.
+File callback-box/src/frontend/src/components/dashboard/HeaderStrip.tsx fully implements the story. The GitStatus object from the backend (via getStatus in /src/cli/lib/git.ts) provides clean/dirty status and file arrays. HeaderStrip displays a colored button in the header showing status (line 82-85), and a clickable popover (GitStatusPopover, lines 17-46) shows categorized changed files. Used in DashboardPage (lines 60-64). Type-safe via RouterOutput inference.
 
 </details>
 
@@ -287,7 +287,7 @@ Files: `src/frontend/src/pages/card/CardViewPage.tsx`, `src/frontend/src/pages/c
 
 <details><summary>verification note</summary>
 
-All claimed files exist and are properly integrated. OpenChatControl provides both resume-recent and new-session affordances via two buttons, calling chat.openForCard tRPC to resolve the landmark directory and fetch the most-recent session. The card is passed through ChatPage to InteractiveChat and displayed in the companion pane. Implementation exactly matches the story requirements: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/card/CardViewPage.tsx (renders OpenChatControl), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/card/components/OpenChatControl.tsx (implements chat/new buttons), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/chat.ts (openForCard procedure)
+All claimed files exist and are properly integrated. OpenChatControl provides both resume-recent and new-session affordances via two buttons, calling chat.openForCard tRPC to resolve the landmark directory and fetch the most-recent session. The card is passed through ChatPage to InteractiveChat and displayed in the companion pane. Implementation exactly matches the story requirements: callback-box/src/frontend/src/pages/card/CardViewPage.tsx (renders OpenChatControl), callback-box/src/frontend/src/pages/card/components/OpenChatControl.tsx (implements chat/new buttons), callback-box/src/webapp/trpc/routers/chat.ts (openForCard procedure)
 
 </details>
 
@@ -313,7 +313,7 @@ Files: `src/frontend/src/components/admin/ClaudeCodeSection.tsx`
 
 <details><summary>verification note</summary>
 
-The story is fully and accurately implemented. ClaudeCodeSection.tsx (at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/admin/ClaudeCodeSection.tsx) provides all three capabilities: (1) Login via "Authenticate Claude Code" button sending LOGIN event, (2) Logout via "Log Out" button sending LOGOUT event, (3) Refresh via "Refresh" button sending REFRESH event. Component uses claudeAuthMachine state machine connected to backend API endpoints (/api/admin/claude-status, /api/admin/claude-login, /api/admin/claude-logout) that call the Claude CLI service. Full test coverage exists in routes-admin.doctest.md. Component is integrated into AdminPage and shows proper status display with email when authenticated.
+The story is fully and accurately implemented. ClaudeCodeSection.tsx (at callback-box/src/frontend/src/components/admin/ClaudeCodeSection.tsx) provides all three capabilities: (1) Login via "Authenticate Claude Code" button sending LOGIN event, (2) Logout via "Log Out" button sending LOGOUT event, (3) Refresh via "Refresh" button sending REFRESH event. Component uses claudeAuthMachine state machine connected to backend API endpoints (/api/admin/claude-status, /api/admin/claude-login, /api/admin/claude-logout) that call the Claude CLI service. Full test coverage exists in routes-admin.doctest.md. Component is integrated into AdminPage and shows proper status display with email when authenticated.
 
 </details>
 
@@ -626,7 +626,7 @@ User story is ACCURATE and fully implemented.
 VERIFICATION RESULTS:
 
 ✓ CLAIMED FILE EXISTS:
-  - /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/admin/AllowedEmailsSection.tsx exists and is complete
+  - callback-box/src/frontend/src/components/admin/AllowedEmailsSection.tsx exists and is complete
 
 ✓ FRONTEND COMPONENT COMPLETE:
   - Loads allowed emails on mount via GET /api/admin/box-config
@@ -668,7 +668,7 @@ No gaps or incomplete implementation found.
 
 </details>
 
-**Browser check:** Route loaded: http://localhost:3210/user-stories/test1/admin. UI verified: Heading "Allowed Users" present with correct description. Remove button successfully tested and works (removed ianbicking@gmail.com, state updated to show "No restrictions" message). Input field and Add button rendered correctly. Component renders as described in the user story - admin can add/remove allowed emails for box access. All core elements are present and functional in the live app.
+**Browser check:** Route loaded: http://localhost:3210/user-stories/test1/admin. UI verified: Heading "Allowed Users" present with correct description. Remove button successfully tested and works (removed priya@example.com, state updated to show "No restrictions" message). Input field and Add button rendered correctly. Component renders as described in the user story - admin can add/remove allowed emails for box access. All core elements are present and functional in the live app.
 
 ## Cards
 
@@ -718,7 +718,7 @@ Files: `src/core/asset-manifest.ts`, `src/core/asset-manifest-scan.ts`
 
 4. **No explicit "attach" functionality**: While files live in .attach/ directories and can be scanned/tracked, there's no explicit API/UI method to "attach" a file to a card. The story says "attach binary files to cards" but the implementation is purely a manifest-tracking system for files already in .attach/ directories.
 
-Evidence: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/asset-manifest.ts (lines 1-14 explain scope), src/core/asset-manifest-scan.ts (line 3-6 say pre-commit hook integration), src/core/install-validation-hooks.ts (line 2-9 shows hook only runs `cb validate`), docs/asset-manifests.md (lines 1-3 status, design discusses pre-commit but code doesn't do it).
+Evidence: callback-box/src/core/asset-manifest.ts (lines 1-14 explain scope), src/core/asset-manifest-scan.ts (line 3-6 say pre-commit hook integration), src/core/install-validation-hooks.ts (line 2-9 shows hook only runs `cb validate`), docs/asset-manifests.md (lines 1-3 status, design discusses pre-commit but code doesn't do it).
 
 ### Query card field values by path  
 ✅ verified
@@ -990,7 +990,7 @@ Both claimed files exist and accurately implement the described functionality. v
 
 Files: `src/core/procedure/engine-run-card.ts`
 
-**Verifier (flagged):** File: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/procedure/engine-run-card.ts exists and implements create/update of procedure-run cards with status/output/completion tracking as described. However, the story's critical claim — "users can...resume long-running automations" — is NOT implemented. The code only supports starting fresh runs (startProcedure always creates new runs with fresh status), monitoring status (procedureStatus command), and optionally running only specific steps in a new execution (--step flag). There is no resume/retry/recovery capability: no resumeProcedure function, no ability to continue from a failed step, and validation retry is explicitly marked "not implemented" (TODO in engine-phase.ts line 102-104). Documentation mentions "re-running resumes" via a manual checklist pattern, but that's manual re-execution, not automatic resume.
+**Verifier (flagged):** File: callback-box/src/core/procedure/engine-run-card.ts exists and implements create/update of procedure-run cards with status/output/completion tracking as described. However, the story's critical claim — "users can...resume long-running automations" — is NOT implemented. The code only supports starting fresh runs (startProcedure always creates new runs with fresh status), monitoring status (procedureStatus command), and optionally running only specific steps in a new execution (--step flag). There is no resume/retry/recovery capability: no resumeProcedure function, no ability to continue from a failed step, and validation retry is explicitly marked "not implemented" (TODO in engine-phase.ts line 102-104). Documentation mentions "re-running resumes" via a manual checklist pattern, but that's manual re-execution, not automatic resume.
 
 ### Run agent with custom prompt and configuration  
 ✅ verified
@@ -1042,7 +1042,7 @@ Files: `src/core/agent-json.ts`, `src/core/agent-types.ts`
 
 All story claims verified. The core files exist and implement exactly what's described:
 
-1. **Agent.invokeStructured<T>()** method in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/agent.ts (lines 122-136) takes a Zod schema and returns StructuredAgentResult<T> with parsed data.
+1. **Agent.invokeStructured<T>()** method in callback-box/src/core/agent.ts (lines 122-136) takes a Zod schema and returns StructuredAgentResult<T> with parsed data.
 
 2. **validateStructuredResult()** in agent-json.ts (lines 90-118) implements automatic validation using schema.safeParse() and proper error handling.
 
@@ -1061,7 +1061,7 @@ All story claims verified. The core files exist and implement exactly what's des
 
 Files: `src/core/audio-question.ts`, `src/services/openai-audio.ts`
 
-**Verifier (flagged):** The story claims users can "ask Claude questions" about audio tone, pronunciation, and language identification. However, the actual implementation uses Gemini (gemini-2.5-flash), not Claude, for audio analysis. This is documented explicitly in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/audio-question.ts lines 1-6: "Claude has no audio input modality, so anything beyond transcription...goes through Gemini". Transcription via OpenAI Whisper (openai-audio.ts) is implemented as described, but the audio analysis component requiring audio listening (tone, pronunciation, language ID) uses Gemini exclusively, not Claude. See also chat-audio.ts line 10-11: "Claude cannot listen to audio; Gemini can".
+**Verifier (flagged):** The story claims users can "ask Claude questions" about audio tone, pronunciation, and language identification. However, the actual implementation uses Gemini (gemini-2.5-flash), not Claude, for audio analysis. This is documented explicitly in callback-box/src/core/audio-question.ts lines 1-6: "Claude has no audio input modality, so anything beyond transcription...goes through Gemini". Transcription via OpenAI Whisper (openai-audio.ts) is implemented as described, but the audio analysis component requiring audio listening (tone, pronunciation, language ID) uses Gemini exclusively, not Claude. See also chat-audio.ts line 10-11: "Claude cannot listen to audio; Gemini can".
 
 ### Control agent output with chat feature flags  
 ✅ verified
@@ -1120,7 +1120,7 @@ Files: `src/core/boxes-config.ts`
 
 <details><summary>verification note</summary>
 
-All story claims verified in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/boxes-config.ts: (1) manifest at ~/.config/cb/boxes.json (lines 26-27), (2) addBoxToManifest() function (lines 70-76, CLI at boxes.ts:22-38), (3) removeBoxFromManifest() function (lines 82-89, CLI at boxes.ts:40-53), (4) loadBoxesConfig() function (lines 46-59), (5) both serve.ts:67 and scheduler.ts load from same manifest, (6) deduplication check on line 72. Story accurately describes implemented functionality.
+All story claims verified in callback-box/src/core/boxes-config.ts: (1) manifest at ~/.config/cb/boxes.json (lines 26-27), (2) addBoxToManifest() function (lines 70-76, CLI at boxes.ts:22-38), (3) removeBoxFromManifest() function (lines 82-89, CLI at boxes.ts:40-53), (4) loadBoxesConfig() function (lines 46-59), (5) both serve.ts:67 and scheduler.ts load from same manifest, (6) deduplication check on line 72. Story accurately describes implemented functionality.
 
 </details>
 
@@ -1229,7 +1229,7 @@ Files: `src/core/chat-schedules.ts`
 
 <details><summary>verification note</summary>
 
-File exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/chat-schedules.ts (304 lines). Implements ChatScheduleManager for managing schedules, parseScheduleTags() to extract <schedule> tags from agent responses, persistent storage to .callback-box/chat-schedules.json, and re-arming on restart. Integration confirmed in chat.ts lines 96-106 (parse tags from agent response) and 140-185 (onFire callback injects <schedule-fired> message back into session). System prompt (chat-session-prompts.ts:149-159) instructs agents to use <schedule in="duration" label="..." alarm="1" announce="text">content</schedule> tags. Comprehensive doctests in test/core/chat-schedules.doctest.md validate all functionality. All story requirements met: agents emit tags, set reminders/timers/follow-ups, fire back into chat, manage continuity without external tools.
+File exists at callback-box/src/core/chat-schedules.ts (304 lines). Implements ChatScheduleManager for managing schedules, parseScheduleTags() to extract <schedule> tags from agent responses, persistent storage to .callback-box/chat-schedules.json, and re-arming on restart. Integration confirmed in chat.ts lines 96-106 (parse tags from agent response) and 140-185 (onFire callback injects <schedule-fired> message back into session). System prompt (chat-session-prompts.ts:149-159) instructs agents to use <schedule in="duration" label="..." alarm="1" announce="text">content</schedule> tags. Comprehensive doctests in test/core/chat-schedules.doctest.md validate all functionality. All story requirements met: agents emit tags, set reminders/timers/follow-ups, fire back into chat, manage continuity without external tools.
 
 </details>
 
@@ -1242,7 +1242,7 @@ Files: `src/core/agent-manifest.ts`
 
 <details><summary>verification note</summary>
 
-File exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/agent-manifest.ts. Implements append-only JSONL manifest with sessionId and task attributes. Integrated into createAgent() (agent.ts lines 54-58) which records manifest entry once per session. Used by syncUsage() (usage.ts line 190) to correlate sessions with task names, enabling token tracking when joined with Claude Code logs. The manifest enables the exact capability described: correlating agent sessions with task names in an append-only log for usage tracking.
+File exists at callback-box/src/core/agent-manifest.ts. Implements append-only JSONL manifest with sessionId and task attributes. Integrated into createAgent() (agent.ts lines 54-58) which records manifest entry once per session. Used by syncUsage() (usage.ts line 190) to correlate sessions with task names, enabling token tracking when joined with Claude Code logs. The manifest enables the exact capability described: correlating agent sessions with task names in an append-only log for usage tracking.
 
 </details>
 
@@ -1267,8 +1267,8 @@ Files: `src/core/chat-card-activity.ts`, `src/core/chat-session-prompts.ts`
 The user story is fully and accurately implemented. Verification of all components:
 
 **Files exist and contain claimed functionality:**
-1. `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/chat-card-activity.ts` - Defines vocabulary for 4 activity kinds (scrolled, navigated, explored, modified) with rendering and merging functions
-2. `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/chat-session-prompts.ts` - System prompt (lines 109-116) documents how agent receives card-activity hints
+1. `callback-box/src/core/chat-card-activity.ts` - Defines vocabulary for 4 activity kinds (scrolled, navigated, explored, modified) with rendering and merging functions
+2. `callback-box/src/core/chat-session-prompts.ts` - System prompt (lines 109-116) documents how agent receives card-activity hints
 
 **Complete implementation chain:**
 
@@ -1303,8 +1303,8 @@ Files: `src/core/agent-prompt-logger.ts`, `src/core/agent-run.ts`
 The user story is accurately implemented. Verification:
 
 1. **Files exist**: Both claimed files exist:
-   - `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/agent-prompt-logger.ts` ✓
-   - `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/agent-run.ts` ✓
+   - `callback-box/src/core/agent-prompt-logger.ts` ✓
+   - `callback-box/src/core/agent-run.ts` ✓
 
 2. **CB_LOG_PROMPTS=1 check**: Line 166 in agent-run.ts checks `process.env.CB_LOG_PROMPTS === "1"`
 
@@ -1375,7 +1375,7 @@ The code accurately implements support for mid-turn resume via: TurnBuffer with 
 
 Files: `src/core/agent-commit.ts`, `src/core/agent-types.ts`
 
-**Verifier (flagged):** The code implements session resume + nudge correctly, but "falling back to a tagged commit" is inaccurate. The implementation creates commits with `Fallback: "true"` trailers in the message body, not git tags. Lines 82-87 of /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/agent-commit.ts show: `await commit(boxRoot, { message: fallbackMessage, trailers: { ...fallbackTrailers, Fallback: "true" } });` — no git tag is created. The story uses incorrect Git terminology for the actual mechanism.
+**Verifier (flagged):** The code implements session resume + nudge correctly, but "falling back to a tagged commit" is inaccurate. The implementation creates commits with `Fallback: "true"` trailers in the message body, not git tags. Lines 82-87 of callback-box/src/core/agent-commit.ts show: `await commit(boxRoot, { message: fallbackMessage, trailers: { ...fallbackTrailers, Fallback: "true" } });` — no git tag is created. The story uses incorrect Git terminology for the actual mechanism.
 
 ### Analyze images and auto-extract metadata into cards  
 ✅ verified
@@ -1425,7 +1425,7 @@ Files: `src/core/chat-reactor-sessions.ts`
 
 <details><summary>verification note</summary>
 
-The file /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/chat-reactor-sessions.ts correctly implements session rotation. Constants defined at lines 17-20: MAX_MESSAGES=50, MAX_AGE_MS=86.4M ms (24 hours). Core rotation logic at lines 55-79 (getOrCreateSession function) checks both conditions and creates new session if messageCount >= 50 OR age >= 24 hours. Integration confirmed in chat-jobs.ts lines 44, 83-87, 91: getOrCreateSession checks before agent run, markSessionUsed increments on success, resetSession on failure, sessions persisted to disk. The implementation accurately rotates sessions at message 51 (when count exceeds 50) and when 24+ hours old, preventing unbounded context growth.
+The file callback-box/src/core/chat-reactor-sessions.ts correctly implements session rotation. Constants defined at lines 17-20: MAX_MESSAGES=50, MAX_AGE_MS=86.4M ms (24 hours). Core rotation logic at lines 55-79 (getOrCreateSession function) checks both conditions and creates new session if messageCount >= 50 OR age >= 24 hours. Integration confirmed in chat-jobs.ts lines 44, 83-87, 91: getOrCreateSession checks before agent run, markSessionUsed increments on success, resetSession on failure, sessions persisted to disk. The implementation accurately rotates sessions at message 51 (when count exceeds 50) and when 24+ hours old, preventing unbounded context growth.
 
 </details>
 
@@ -1451,7 +1451,7 @@ Files: `src/core/audio-question.ts`
 
 <details><summary>verification note</summary>
 
-The implementation at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/audio-question.ts fully implements the described capability. Verified: (1) askAudioQuestion() function accepts audio buffer + mimeType and sends to gemini-2.5-flash with base64 encoding; (2) buildAudioQuestionPrompt() constructs prompt with question, optional context, and optional fallible transcript; (3) transcript comparison explicitly instructs model to flag discrepancies (lines 49-54); (4) Integrated into cb chat ask-about-audio CLI command with proper option handling; (5) Supports flexible analysis types (pronunciation, tone, speaker identification, content, non-linguistic properties) via question-based approach. Documentation at lines 2-9 explicitly lists these capabilities. Command examples at line 178 demonstrate "pronunciation critique, what's said, background sounds."
+The implementation at callback-box/src/core/audio-question.ts fully implements the described capability. Verified: (1) askAudioQuestion() function accepts audio buffer + mimeType and sends to gemini-2.5-flash with base64 encoding; (2) buildAudioQuestionPrompt() constructs prompt with question, optional context, and optional fallible transcript; (3) transcript comparison explicitly instructs model to flag discrepancies (lines 49-54); (4) Integrated into cb chat ask-about-audio CLI command with proper option handling; (5) Supports flexible analysis types (pronunciation, tone, speaker identification, content, non-linguistic properties) via question-based approach. Documentation at lines 2-9 explicitly lists these capabilities. Command examples at line 178 demonstrate "pronunciation critique, what's said, background sounds."
 
 </details>
 
@@ -1499,7 +1499,7 @@ Files: `src/core/install-template-file.ts`, `src/core/box.ts`
 
 <details><summary>verification note</summary>
 
-The auto-prune functionality is fully implemented and correctly integrated. Evidence: (1) pruneStaleTemplateUpdates() function in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/install-template-file.ts (lines 198-245) deletes files older than STALE_TEMPLATE_UPDATE_MS (30 days = line 188). (2) The function is called from syncTemplatesFromSource() in generate-docs.ts (line 256), which is invoked from generateDocs() (line 406) during automatic startup of chat sessions and reactor engine. (3) Implementation correctly compares file mtimeMs to 30-day threshold, unlinks stale files, and cleans empty directories. The story's claim is accurate and properly implemented.
+The auto-prune functionality is fully implemented and correctly integrated. Evidence: (1) pruneStaleTemplateUpdates() function in callback-box/src/core/install-template-file.ts (lines 198-245) deletes files older than STALE_TEMPLATE_UPDATE_MS (30 days = line 188). (2) The function is called from syncTemplatesFromSource() in generate-docs.ts (line 256), which is invoked from generateDocs() (line 406) during automatic startup of chat sessions and reactor engine. (3) Implementation correctly compares file mtimeMs to 30-day threshold, unlinks stale files, and cleans empty directories. The story's claim is accurate and properly implemented.
 
 </details>
 
@@ -1512,7 +1512,7 @@ Files: `src/core/rewrite-card-refs.ts`
 
 <details><summary>verification note</summary>
 
-The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/rewrite-card-refs.ts and contains a mature, fully-tested implementation that does exactly what the user story describes: automatically rewrites all card references (in frontmatter, body tags, and markdown links) when cards are moved, preserving whether they were box-root-absolute or relative to the original location. The feature is actively integrated into the `cb mv` command and has comprehensive doctest coverage.
+The claimed file exists at callback-box/src/core/rewrite-card-refs.ts and contains a mature, fully-tested implementation that does exactly what the user story describes: automatically rewrites all card references (in frontmatter, body tags, and markdown links) when cards are moved, preserving whether they were box-root-absolute or relative to the original location. The feature is actively integrated into the `cb mv` command and has comprehensive doctest coverage.
 
 </details>
 
@@ -1525,7 +1525,7 @@ Files: `src/core/audio-question.ts`
 
 <details><summary>verification note</summary>
 
-File exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/audio-question.ts and implements the story accurately. The askAudioQuestion() function sends raw audio to gemini-2.5-flash with user questions. The buildAudioQuestionPrompt() constructs prompts for analyzing tone, pronunciation, background noise, and other non-linguistic audio properties. CLI command cb chat ask-about-audio fully integrates this with --context and --transcript options. Tests confirm implementation works as described. All claimed capabilities (background noise analysis, stress detection, tone/pronunciation critique) are supported.
+File exists at callback-box/src/core/audio-question.ts and implements the story accurately. The askAudioQuestion() function sends raw audio to gemini-2.5-flash with user questions. The buildAudioQuestionPrompt() constructs prompts for analyzing tone, pronunciation, background noise, and other non-linguistic audio properties. CLI command cb chat ask-about-audio fully integrates this with --context and --transcript options. Tests confirm implementation works as described. All claimed capabilities (background noise analysis, stress detection, tone/pronunciation critique) are supported.
 
 </details>
 
@@ -1630,7 +1630,7 @@ Files: `src/core/triage-routing.ts`
 
 <details><summary>verification note</summary>
 
-VERIFIED: The user story is completely accurate and fully implemented. The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/triage-routing.ts with all required functionality.
+VERIFIED: The user story is completely accurate and fully implemented. The claimed file exists at callback-box/src/core/triage-routing.ts with all required functionality.
 
 **Implementation verified against story claims:**
 
@@ -1653,7 +1653,7 @@ VERIFIED: The user story is completely accurate and fully implemented. The claim
    - `probable` items have `.probable.txt` marker (txt file, minimal friction)
    - Only `guess` items block pipeline pending user response via question card
 
-**Test coverage:** Fully tested in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/test/core/triage.doctest.md with comprehensive scenarios for all three confidence levels.
+**Test coverage:** Fully tested in callback-box/test/core/triage.doctest.md with comprehensive scenarios for all three confidence levels.
 
 **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including the review marker for probable and question card for guess.
 
@@ -1730,7 +1730,7 @@ All claims in the user story are accurate and fully implemented in the codebase.
 
 VERIFIED FINDINGS:
 
-1. **File exists at claimed location**: `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/lint-node-refs.ts` ✓
+1. **File exists at claimed location**: `callback-box/src/core/lint-node-refs.ts` ✓
 
 2. **Both claimed functions are present and exported**:
    - `lintProgressNodeRefs` (line 58): Validates progress card entries[].node against concept-map node IDs
@@ -1856,7 +1856,7 @@ Files: `src/core/lint-node-refs.ts`
 
 <details><summary>verification note</summary>
 
-The user story is fully accurate. The claimed file `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/lint-node-refs.ts` exists and implements the exact functionality described. 
+The user story is fully accurate. The claimed file `callback-box/src/core/lint-node-refs.ts` exists and implements the exact functionality described. 
 
 VERIFICATION SUMMARY:
 
@@ -2037,8 +2037,8 @@ Files: `src/connectors/gmail-pull.ts`, `src/connectors/gmail.ts`
 <details><summary>verification note</summary>
 
 Implementation confirmed in:
-- /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail-pull.ts lines 125-137 (labelsAdded history processing)
-- /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail.ts lines 56, 258 (integration with listCandidates)
+- callback-box/src/connectors/gmail-pull.ts lines 125-137 (labelsAdded history processing)
+- callback-box/src/connectors/gmail.ts lines 56, 258 (integration with listCandidates)
 - test/connectors/connector-gmail-pull.doctest.md lines 139-159 (explicit test of label-based routing)
 - docs/gmail-setup.md lines 37-41 (user documentation with examples)
 
@@ -2112,7 +2112,7 @@ Files: `src/connectors/intake-utils.ts`
 
 <details><summary>verification note</summary>
 
-The story implementation is complete and accurate. File `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/intake-utils.ts` provides `createOrAppendIntakeJob()` and `createNewIntakeJob()` functions that batch items into intake job cards with proper YAML frontmatter. The intake-job schema (`src/schemas/intake-job.tsx`) defines the card structure with review/triage instructions. The wakeup cycle (src/cli/commands/wakeup.ts Steps 4-5) creates and processes these jobs via the reactor engine. Integration verified through: job-discovery.ts scans for intake jobs, batch-jobs.ts processes them, intake job schema has explicit triage instructions, and doctest validation confirms batching behavior.
+The story implementation is complete and accurate. File `callback-box/src/connectors/intake-utils.ts` provides `createOrAppendIntakeJob()` and `createNewIntakeJob()` functions that batch items into intake job cards with proper YAML frontmatter. The intake-job schema (`src/schemas/intake-job.tsx`) defines the card structure with review/triage instructions. The wakeup cycle (src/cli/commands/wakeup.ts Steps 4-5) creates and processes these jobs via the reactor engine. Integration verified through: job-discovery.ts scans for intake jobs, batch-jobs.ts processes them, intake job schema has explicit triage instructions, and doctest validation confirms batching behavior.
 
 </details>
 
@@ -2131,7 +2131,7 @@ Files: `src/connectors/gmail-drafts.ts`, `src/schemas/email-outbound.ts`
 
 <details><summary>verification note</summary>
 
-The capability is fully implemented. File /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail-drafts.ts reads in-reply-to refs from email-outbound cards, resolves them to source email-message cards, extracts message-id and thread-id, and sets RFC 2822 In-Reply-To/References headers to maintain Gmail threading. The schema file is email-outbound.tsx (not .ts as claimed) but implements the expected fields and instructions. Comprehensive tests in test/connectors/connector-gmail-drafts.doctest.md validate the threading behavior, including failure modes for unresolvable refs.
+The capability is fully implemented. File callback-box/src/connectors/gmail-drafts.ts reads in-reply-to refs from email-outbound cards, resolves them to source email-message cards, extracts message-id and thread-id, and sets RFC 2822 In-Reply-To/References headers to maintain Gmail threading. The schema file is email-outbound.tsx (not .ts as claimed) but implements the expected fields and instructions. Comprehensive tests in test/connectors/connector-gmail-drafts.doctest.md validate the threading behavior, including failure modes for unresolvable refs.
 
 </details>
 
@@ -2231,7 +2231,7 @@ Files: `src/connectors/gmail-pull.ts`, `src/services/google-gmail.ts`
 
 <details><summary>verification note</summary>
 
-The code fully implements the story. Users can configure `config/connectors/gmail.json` with a `query` field using Gmail search syntax. The query is correctly passed through GmailPullConfig → listCandidates() → GoogleGmailService.listMessages() to the Gmail REST API. Supported: custom search queries, sender filtering (from:), subject filtering, date filtering (after:), labels (label:), and complex combined queries. Real implementation verified at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/google-gmail.ts:161 where opts.q is passed to Gmail API. Configuration loading verified at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail.ts:100-110. Documentation at docs/gmail-setup.md confirms user-facing configuration.
+The code fully implements the story. Users can configure `config/connectors/gmail.json` with a `query` field using Gmail search syntax. The query is correctly passed through GmailPullConfig → listCandidates() → GoogleGmailService.listMessages() to the Gmail REST API. Supported: custom search queries, sender filtering (from:), subject filtering, date filtering (after:), labels (label:), and complex combined queries. Real implementation verified at callback-box/src/services/google-gmail.ts:161 where opts.q is passed to Gmail API. Configuration loading verified at callback-box/src/connectors/gmail.ts:100-110. Documentation at docs/gmail-setup.md confirms user-facing configuration.
 
 </details>
 
@@ -2363,7 +2363,7 @@ ACCURATE: The user story is fully supported by the implementation.
 
 **Verification findings:**
 
-1. **Claimed file exists:** /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail-pull.ts - VERIFIED
+1. **Claimed file exists:** callback-box/src/connectors/gmail-pull.ts - VERIFIED
 
 2. **Core implementation (gmail-pull.ts lines 1-15):** 
    - Explicitly states labeling-as-routing is supported: "labeling an old message produces a labelsAdded history record regardless of the message's received date"
@@ -2408,7 +2408,7 @@ Files: `src/connectors/gmail.ts`
 
 <details><summary>verification note</summary>
 
-The user story accurately describes the implemented feature in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail.ts. The baseline sync skip (lines 266-275) marks all current inbox messages as seen without importing on first sync, allowing only new mail to flow in. The feature is correctly conditional on bare-inbox default (no custom labels) and first sync (no prior historyId). Behavior is tested in connector-gmail-pull.doctest.md.
+The user story accurately describes the implemented feature in callback-box/src/connectors/gmail.ts. The baseline sync skip (lines 266-275) marks all current inbox messages as seen without importing on first sync, allowing only new mail to flow in. The feature is correctly conditional on bare-inbox default (no custom labels) and first sync (no prior historyId). Behavior is tested in connector-gmail-pull.doctest.md.
 
 </details>
 
@@ -2421,7 +2421,7 @@ Files: `src/connectors/google-calendar-push.ts`
 
 <details><summary>verification note</summary>
 
-User story is ACCURATE. Claimed file `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/google-calendar-push.ts` exists and fully implements the described feature.
+User story is ACCURATE. Claimed file `callback-box/src/connectors/google-calendar-push.ts` exists and fully implements the described feature.
 
 VERIFICATION SUMMARY:
 
@@ -2495,7 +2495,7 @@ Files: `src/connectors/preserve-agent-fields.ts`
 
 <details><summary>verification note</summary>
 
-The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/preserve-agent-fields.ts and correctly implements the feature described in the user story. The `contains` field is preserved from existing connector-managed cards during syncs, preventing loss of agent enrichment when cards are rebuilt from templates. The implementation is actively used in three production connectors (Gmail threads, Google Sheets, Google Docs) and is fully tested with passing doctests.
+The claimed file exists at callback-box/src/connectors/preserve-agent-fields.ts and correctly implements the feature described in the user story. The `contains` field is preserved from existing connector-managed cards during syncs, preventing loss of agent enrichment when cards are rebuilt from templates. The implementation is actively used in three production connectors (Gmail threads, Google Sheets, Google Docs) and is fully tested with passing doctests.
 
 </details>
 
@@ -2532,7 +2532,7 @@ Files: `src/connectors/drive-handler-docs.ts`
 
 The user story is ACCURATE and the implementation is complete. 
 
-File `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/drive-handler-docs.ts` (lines 162-355) implements exactly what the story describes:
+File `callback-box/src/connectors/drive-handler-docs.ts` (lines 162-355) implements exactly what the story describes:
 
 **Conflict Detection (lines 220-225, 320-333):**
 - Stores `headRevisionId` and `modifiedTime` after each successful pull
@@ -2594,7 +2594,7 @@ Files: `src/connectors/google-calendar-sync.ts`
 The user story title "Detect and resolve concurrent calendar event edits" is misleading about scope.
 
 **What the code actually does:**
-The implementation in `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/google-calendar-sync.ts` detects LOCAL-ONLY edits via content hash (line 196: `contentHash(localContent) !== storedHash`) and attempts to push them back to Google via `tryPushLocalEdit()` (lines 92-129). It does NOT detect concurrent edits (when both local and remote have changed).
+The implementation in `callback-box/src/connectors/google-calendar-sync.ts` detects LOCAL-ONLY edits via content hash (line 196: `contentHash(localContent) !== storedHash`) and attempts to push them back to Google via `tryPushLocalEdit()` (lines 92-129). It does NOT detect concurrent edits (when both local and remote have changed).
 
 **Evidence of incomplete implementation:**
 1. **google-calendar-state.ts (lines 22-27)**: EventFileEntry stores only `contentHash` for detecting local edits. It does NOT store remote metadata (etag, updated timestamp) needed to detect if the remote event was modified since last sync.
@@ -2686,7 +2686,7 @@ Files: `src/connectors/chat-utils.ts`
 
 <details><summary>verification note</summary>
 
-The user story's claimed functionality is fully implemented and working. The two functions findExistingChatJob() and createChatJob() in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/chat-utils.ts correctly implement exactly-once-per-thread semantics for pending chat jobs. The feature is actively used by the Telegram connector across all three job creation code paths (polling, webhooks, and callback timers). No gaps or discrepancies found.
+The user story's claimed functionality is fully implemented and working. The two functions findExistingChatJob() and createChatJob() in callback-box/src/connectors/chat-utils.ts correctly implement exactly-once-per-thread semantics for pending chat jobs. The feature is actively used by the Telegram connector across all three job creation code paths (polling, webhooks, and callback timers). No gaps or discrepancies found.
 
 </details>
 
@@ -2853,7 +2853,7 @@ The user story is accurately implemented in the claimed file. The feature valida
 
 Files: `src/connectors/gmail-pull.ts`
 
-**Verifier (flagged):** The story claims "I want the option to skip importing the entire inbox backlog on initial sync," implying user choice. The code does skip backlog on first sync with default config, BUT provides this as automatic behavior with no configuration option. Users cannot choose whether to skip or import - it's determined entirely by whether they configure labels (skip if labels are configured later, auto-skip if using bare default). The core feature exists but is materially different from what the story describes: it's automatic/implicit, not optional/user-controlled. Files exist at: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/gmail-pull.ts and gmail.ts. Evidence: GmailPullConfig has no skipBacklog option (lines 24-29); baseline:true logic is hardcoded (line 183); usage in gmail.ts shows automatic skipping with no user control (lines 266-275).
+**Verifier (flagged):** The story claims "I want the option to skip importing the entire inbox backlog on initial sync," implying user choice. The code does skip backlog on first sync with default config, BUT provides this as automatic behavior with no configuration option. Users cannot choose whether to skip or import - it's determined entirely by whether they configure labels (skip if labels are configured later, auto-skip if using bare default). The core feature exists but is materially different from what the story describes: it's automatic/implicit, not optional/user-controlled. Files exist at: callback-box/src/connectors/gmail-pull.ts and gmail.ts. Evidence: GmailPullConfig has no skipBacklog option (lines 24-29); baseline:true logic is hardcoded (line 183); usage in gmail.ts shows automatic skipping with no user control (lines 266-275).
 
 ### Import emails triggered by label changes without full re-list  
 ✅ verified
@@ -3009,7 +3009,7 @@ Files: `src/services/google-drive.ts`, `src/connectors/google-drive.ts`, `src/co
 
 <details><summary>verification note</summary>
 
-All four claimed files exist and fully implement the story. /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/google-drive.ts provides the service interface with real API calls and fakes. /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/google-drive.ts implements the sync connector that discovers files, calls handlers, and automatically stages/commits changes via Git (lines 193-200). /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/drive-handler-sheets.ts exports Sheets as JSON with bidirectional sync. /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/drive-handler-docs.ts exports Docs as Markdown with conflict detection. The CLI (`src/cli/commands/drive.ts`) provides user-facing commands: inspect, add, sync, status, list. Sheets sync as JSON; Docs as Markdown (with lossy feature tracking); both are auto-committed to Git. The story accurately describes the capability without overstating it.
+All four claimed files exist and fully implement the story. callback-box/src/services/google-drive.ts provides the service interface with real API calls and fakes. callback-box/src/connectors/google-drive.ts implements the sync connector that discovers files, calls handlers, and automatically stages/commits changes via Git (lines 193-200). callback-box/src/connectors/drive-handler-sheets.ts exports Sheets as JSON with bidirectional sync. callback-box/src/connectors/drive-handler-docs.ts exports Docs as Markdown with conflict detection. The CLI (`src/cli/commands/drive.ts`) provides user-facing commands: inspect, add, sync, status, list. Sheets sync as JSON; Docs as Markdown (with lossy feature tracking); both are auto-committed to Git. The story accurately describes the capability without overstating it.
 
 </details>
 
@@ -3160,7 +3160,7 @@ Files: `src/services/google-drive.ts`
 
 <details><summary>verification note</summary>
 
-The listSpreadsheets() method is fully implemented in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/google-drive.ts (lines 175-192). It queries the Google Drive API for all files with MIME type 'application/vnd.google-apps.spreadsheet', handles pagination to retrieve all results, and returns DriveFile metadata. The feature is integrated into both the tRPC API (drive.ts line 44) and CLI command (drive.ts line 274). A fake implementation exists for testing (google-drive-fake.ts lines 84-88). The capability matches the story's requirements for discovering spreadsheets as data sources for syncing.
+The listSpreadsheets() method is fully implemented in callback-box/src/services/google-drive.ts (lines 175-192). It queries the Google Drive API for all files with MIME type 'application/vnd.google-apps.spreadsheet', handles pagination to retrieve all results, and returns DriveFile metadata. The feature is integrated into both the tRPC API (drive.ts line 44) and CLI command (drive.ts line 274). A fake implementation exists for testing (google-drive-fake.ts lines 84-88). The capability matches the story's requirements for discovering spreadsheets as data sources for syncing.
 
 </details>
 
@@ -3210,8 +3210,8 @@ Files: `src/services/google-calendar.ts`, `src/connectors/google-calendar-push.t
 **Verifier (flagged):** The user story claims "Create calendar events locally in .ics files and push them to Google Calendar" but the code implementation is materially incomplete.
 
 **What EXISTS:**
-- `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/google-calendar.ts` - Service interface to the Google Calendar API (insertEvent, patchEvent, deleteEvent methods)
-- `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/connectors/google-calendar-push.ts` - Connector that pushes untracked .ics files to Google Calendar during sync
+- `callback-box/src/services/google-calendar.ts` - Service interface to the Google Calendar API (insertEvent, patchEvent, deleteEvent methods)
+- `callback-box/src/connectors/google-calendar-push.ts` - Connector that pushes untracked .ics files to Google Calendar during sync
 
 **What is MISSING:**
 - NO UI endpoint, tRPC procedure, or CLI command to create new .ics event files
@@ -3294,7 +3294,7 @@ Files: `src/services/google-drive.ts`
 **What actually exists:**
 
 1. **Partial implementation for Docs only:**
-   - Service method `listComments(fileId)` exists at `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/google-drive.ts:249-265`
+   - Service method `listComments(fileId)` exists at `callback-box/src/services/google-drive.ts:249-265`
    - Called in drive-handler-docs.ts (lines 148, 180) during inspect/pull
    - Comments are fetched from the Google Drive API
    - BUT: Only comment **count** is stored (in `lossy.comments` field)
@@ -3340,7 +3340,7 @@ Files: `src/services/google-calendar.ts`
 
 Files: `src/services/telegram.ts`
 
-**Verifier (flagged):** The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/telegram.ts, but the feature described in the user story is NOT implemented. 
+**Verifier (flagged):** The claimed file exists at callback-box/src/services/telegram.ts, but the feature described in the user story is NOT implemented. 
 
 **The story claims:** "I want to configure which Telegram update types my webhook receives" — implying user/operator configurability.
 
@@ -3463,7 +3463,7 @@ Files: `src/webapp/trpc/routers/events.ts`
 
 <details><summary>verification note</summary>
 
-File /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/events.ts implements two tRPC subscriptions: (1) `subscribe` for global event-bus streaming with resumable replay, and (2) `turnStream` for per-turn agent output with sequence-numbered resumable frames. Both are routed to WebSocket by trpc.ts splitLink. Supporting code: box-file-watcher.ts emits file-change events, chat-turn-buffer.ts buffers messages, event-bus.ts provides SQLite-backed persistence with in-memory live dispatch. Frontend hooks useBusSubscription and chat-actors actively consume both subscription types. The implementation fully supports the story's claims about real-time file changes, per-turn agent output, WebSocket subscriptions, and resumable streams.
+File callback-box/src/webapp/trpc/routers/events.ts implements two tRPC subscriptions: (1) `subscribe` for global event-bus streaming with resumable replay, and (2) `turnStream` for per-turn agent output with sequence-numbered resumable frames. Both are routed to WebSocket by trpc.ts splitLink. Supporting code: box-file-watcher.ts emits file-change events, chat-turn-buffer.ts buffers messages, event-bus.ts provides SQLite-backed persistence with in-memory live dispatch. Frontend hooks useBusSubscription and chat-actors actively consume both subscription types. The implementation fully supports the story's claims about real-time file changes, per-turn agent output, WebSocket subscriptions, and resumable streams.
 
 </details>
 
@@ -3476,7 +3476,7 @@ Files: `src/webapp/trpc/routers/card.ts`
 
 <details><summary>verification note</summary>
 
-The story is accurately implemented. The cardRouter.get procedure in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/card.ts provides a complete API for reading card frontmatter, body content, and validating card structure. It returns a FrontmatterCardResponse with parsed frontmatter, body, and validationError fields. The implementation is robust, handling both valid cards and gracefully degrading for malformed cards. The API is actively used across the frontend codebase.
+The story is accurately implemented. The cardRouter.get procedure in callback-box/src/webapp/trpc/routers/card.ts provides a complete API for reading card frontmatter, body content, and validating card structure. It returns a FrontmatterCardResponse with parsed frontmatter, body, and validationError fields. The implementation is robust, handling both valid cards and gracefully degrading for malformed cards. The API is actively used across the frontend codebase.
 
 </details>
 
@@ -3502,7 +3502,7 @@ Files: `src/webapp/trpc/routers/todos.ts`
 
 <details><summary>verification note</summary>
 
-The API endpoint at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/todos.ts line 46-91 implements the updateItem mutation that accepts all four statuses (pending, done, cancelled, deferred) as specified in the story. The input validation (line 50) uses z.enum(["pending", "done", "cancelled", "deferred"]), matching TodoItemStatusType from the schema (src/schemas/todo-list.ts line 13-14). Completion tracking is implemented via the completed timestamp field (lines 31-35). The implementation persists changes to the todo-list file and commits them via git. All story requirements are satisfied.
+The API endpoint at callback-box/src/webapp/trpc/routers/todos.ts line 46-91 implements the updateItem mutation that accepts all four statuses (pending, done, cancelled, deferred) as specified in the story. The input validation (line 50) uses z.enum(["pending", "done", "cancelled", "deferred"]), matching TodoItemStatusType from the schema (src/schemas/todo-list.ts line 13-14). Completion tracking is implemented via the completed timestamp field (lines 31-35). The implementation persists changes to the todo-list file and commits them via git. All story requirements are satisfied.
 
 </details>
 
@@ -3515,7 +3515,7 @@ Files: `src/webapp/trpc/routers/history.ts`
 
 <details><summary>verification note</summary>
 
-File confirmed at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/history.ts. The tRPC router implements the complete history filtering feature with connectors, workflows, sessions, and feedback filters. The buildGreps function (lines 25-52) constructs git grep patterns for each filter axis. The list procedure (lines 65-86) applies these filters via getLogPaginated. Frontend components HistoryPage.tsx and HistoryFilterBar.tsx provide the filtering UI. Supporting infrastructure in git-trailers.ts defines the trailer key constants that structure the filters. All required capabilities are present and functional.
+File confirmed at callback-box/src/webapp/trpc/routers/history.ts. The tRPC router implements the complete history filtering feature with connectors, workflows, sessions, and feedback filters. The buildGreps function (lines 25-52) constructs git grep patterns for each filter axis. The list procedure (lines 65-86) applies these filters via getLogPaginated. Frontend components HistoryPage.tsx and HistoryFilterBar.tsx provide the filtering UI. Supporting infrastructure in git-trailers.ts defines the trailer key constants that structure the filters. All required capabilities are present and functional.
 
 </details>
 
@@ -3563,7 +3563,7 @@ Files: `src/webapp/routes/api-browse.ts`
 
 <details><summary>verification note</summary>
 
-The api-browse.ts file at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/api-browse.ts implements the user story exactly as described. It provides a GET /api/browse/* endpoint that returns directory listings with cards that include name, type, status (from frontmatter), and hasAttachments (boolean). The implementation is tested in test/webapp/routes/routes-api.doctest.md lines 72-100, and the data structure is used by the frontend directory renderer (directory.tsx) to display cards with status badges and attachment indicators.
+The api-browse.ts file at callback-box/src/webapp/routes/api-browse.ts implements the user story exactly as described. It provides a GET /api/browse/* endpoint that returns directory listings with cards that include name, type, status (from frontmatter), and hasAttachments (boolean). The implementation is tested in test/webapp/routes/routes-api.doctest.md lines 72-100, and the data structure is used by the frontend directory renderer (directory.tsx) to display cards with status badges and attachment indicators.
 
 </details>
 
@@ -3576,7 +3576,7 @@ Files: `src/webapp/routes/admin.ts`
 
 <details><summary>verification note</summary>
 
-Verified implementation in: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/admin.ts (lines 69-91 for backend routes), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/services/claude-cli.ts (lines 20-108 for service), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/machines/claudeAuthMachine.ts (complete auth flow machine), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/admin/ClaudeCodeSection.tsx (complete UI component with login, logout, status, and refresh), and /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/AdminPage.tsx (integration into admin page). All three claimed capabilities (login, logout, status check) are fully implemented and accessible from the web UI with proper owner-only access control.
+Verified implementation in: callback-box/src/webapp/routes/admin.ts (lines 69-91 for backend routes), callback-box/src/services/claude-cli.ts (lines 20-108 for service), callback-box/src/frontend/src/machines/claudeAuthMachine.ts (complete auth flow machine), callback-box/src/frontend/src/components/admin/ClaudeCodeSection.tsx (complete UI component with login, logout, status, and refresh), and callback-box/src/frontend/src/pages/AdminPage.tsx (integration into admin page). All three claimed capabilities (login, logout, status check) are fully implemented and accessible from the web UI with proper owner-only access control.
 
 </details>
 
@@ -3651,7 +3651,7 @@ Files: `src/webapp/routes/chat-session-routes.ts`
 <details><summary>verification note</summary>
 
 Verified full implementation across backend, API client, and UI:
-- Backend route: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/chat-session-routes.ts (lines 73-107, 122)
+- Backend route: callback-box/src/webapp/routes/chat-session-routes.ts (lines 73-107, 122)
 - Metadata extraction: src/cli/lib/session.ts getSessionMetadata() + session-text.ts extractSnippet()
 - Frontend API: src/frontend/src/api-chat.ts (ChatSessionInfo interface, getChatSessions function)
 - UI component: src/frontend/src/components/SessionListButton.tsx (displays list, shows label/lastUsedAt/isActive, links navigate to switch)
@@ -3674,7 +3674,7 @@ All story requirements are implemented:
 
 Files: `src/webapp/routes/chat-session-routes.ts`
 
-**Verifier (flagged):** The `/api/chat/set-model` endpoint (lines 175-206 in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/chat-session-routes.ts) DOES support changing the model for a chat session, BUT it requires restarting the subprocess. The code explicitly states (lines 179-181) that "the `set_model` control_request to a live subprocess isn't honored by Claude Code, so without a restart the live proc stays pinned to the `--model` it was spawned with." The implementation calls target.restart() (line 200) or defers it if busy (line 197). While the session ID and conversation context are preserved, the user story claim "without restarting it" is inaccurate—the subprocess is always restarted for the model change to take effect. The ChatSession.restart() method (lines 421-428 in chat-session.ts) closes the existing run and lets the close handler drain queued messages into a fresh run.
+**Verifier (flagged):** The `/api/chat/set-model` endpoint (lines 175-206 in callback-box/src/webapp/routes/chat-session-routes.ts) DOES support changing the model for a chat session, BUT it requires restarting the subprocess. The code explicitly states (lines 179-181) that "the `set_model` control_request to a live subprocess isn't honored by Claude Code, so without a restart the live proc stays pinned to the `--model` it was spawned with." The implementation calls target.restart() (line 200) or defers it if busy (line 197). While the session ID and conversation context are preserved, the user story claim "without restarting it" is inaccurate—the subprocess is always restarted for the model change to take effect. The ChatSession.restart() method (lines 421-428 in chat-session.ts) closes the existing run and lets the close handler drain queued messages into a fresh run.
 
 ### View and cancel active chat schedules  
 ✅ verified
@@ -3698,7 +3698,7 @@ Files: `src/webapp/routes/chat-send-routes.ts`
 
 <details><summary>verification note</summary>
 
-Verified in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/chat-send-routes.ts (lines 259-299): POST /api/chat/self-note endpoint. Confirmed via chat-helpers.ts (SelfNoteBody interface with body, ref?, commit?, session?), chat.ts (CLI command implementation), ChatMessages.tsx (frontend rendering), and comprehensive doctests in self-note.doctest.md. The feature fully implements the ability to inject self-notes with optional references and commit hashes into chat transcripts.
+Verified in callback-box/src/webapp/routes/chat-send-routes.ts (lines 259-299): POST /api/chat/self-note endpoint. Confirmed via chat-helpers.ts (SelfNoteBody interface with body, ref?, commit?, session?), chat.ts (CLI command implementation), ChatMessages.tsx (frontend rendering), and comprehensive doctests in self-note.doctest.md. The feature fully implements the ability to inject self-notes with optional references and commit hashes into chat transcripts.
 
 </details>
 
@@ -3759,7 +3759,7 @@ Files: `src/webapp/routes/api-image.ts`
 
 <details><summary>verification note</summary>
 
-The implementation in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/api-image.ts fully implements the claimed capability. It provides a unified /api/image/* endpoint that serves both raw image files (supported extensions: jpg, jpeg, png, gif, webp, bmp, svg) and .image.card files. Image cards are resolved by extracting the filename.ref field from YAML frontmatter, which points to attachments in the <cardStem>.attach/ directory. HTTP caching is implemented with ETag (weak etag based on mtime/size), Last-Modified headers, Cache-Control: no-cache directive, and proper 304 Not Modified responses for conditional requests. The route is properly registered in api.ts and includes security checks for path traversal, hidden files, and file type validation.
+The implementation in callback-box/src/webapp/routes/api-image.ts fully implements the claimed capability. It provides a unified /api/image/* endpoint that serves both raw image files (supported extensions: jpg, jpeg, png, gif, webp, bmp, svg) and .image.card files. Image cards are resolved by extracting the filename.ref field from YAML frontmatter, which points to attachments in the <cardStem>.attach/ directory. HTTP caching is implemented with ETag (weak etag based on mtime/size), Last-Modified headers, Cache-Control: no-cache directive, and proper 304 Not Modified responses for conditional requests. The route is properly registered in api.ts and includes security checks for path traversal, hidden files, and file type validation.
 
 </details>
 
@@ -3786,7 +3786,7 @@ Files: `src/webapp/trpc/routers/drive.ts`
 
 **Verifier (flagged):** The user story claims "As a user, I want to configure which Google Drive folders are mounted to which local box paths" but the actual implementation is incomplete and doesn't provide a user-facing way to do this.
 
-What EXISTS in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/drive.ts:
+What EXISTS in callback-box/src/webapp/trpc/routers/drive.ts:
 - A TRPC `updateConfig` mutation (lines 81-96) that accepts folder mount configuration
 - The mutation calls `saveDriveConfig()` and commits to git
 
@@ -3810,7 +3810,7 @@ Files: `src/webapp/trpc/routers/landmarks.ts`
 
 <details><summary>verification note</summary>
 
-All story requirements are fully implemented and integrated. The landmarks.list tRPC procedure correctly returns all landmark cards with their symbols (text/image), resolved navigation links (with ref, label, title, exists properties), and nesting depth. The frontend LandmarksPage uses this data to render a hierarchical list with symbol display, resolved link tiles, and depth-based indentation. Files: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/landmarks.ts (backend API), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/landmarks/LandmarksPage.tsx (page component), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/pages/landmarks/components/LandmarkSection.tsx (render logic).
+All story requirements are fully implemented and integrated. The landmarks.list tRPC procedure correctly returns all landmark cards with their symbols (text/image), resolved navigation links (with ref, label, title, exists properties), and nesting depth. The frontend LandmarksPage uses this data to render a hierarchical list with symbol display, resolved link tiles, and depth-based indentation. Files: callback-box/src/webapp/trpc/routers/landmarks.ts (backend API), callback-box/src/frontend/src/pages/landmarks/LandmarksPage.tsx (page component), callback-box/src/frontend/src/pages/landmarks/components/LandmarkSection.tsx (render logic).
 
 </details>
 
@@ -3823,7 +3823,7 @@ Files: `src/webapp/trpc/routers/events.ts`
 
 <details><summary>verification note</summary>
 
-File /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/events.ts exists and fully implements the story. The `subscribe` procedure (lines 49-99) is a tRPC WebSocket subscription backed by an SQLite event bus, with resumable history via lastEventId and tracked() events. The companion `turnStream` (lines 105-139) provides resumable per-turn agent output. Frontend evidence: useBusSubscription hook in src/frontend/src/hooks/useBusSubscription.ts and usage in DashboardPage.tsx shows reactive event handling that keeps UI in sync. All event types mentioned (file-change, card-created) are emitted throughout the codebase.
+File callback-box/src/webapp/trpc/routers/events.ts exists and fully implements the story. The `subscribe` procedure (lines 49-99) is a tRPC WebSocket subscription backed by an SQLite event bus, with resumable history via lastEventId and tracked() events. The companion `turnStream` (lines 105-139) provides resumable per-turn agent output. Frontend evidence: useBusSubscription hook in src/frontend/src/hooks/useBusSubscription.ts and usage in DashboardPage.tsx shows reactive event handling that keeps UI in sync. All event types mentioned (file-change, card-created) are emitted throughout the codebase.
 
 </details>
 
@@ -3836,7 +3836,7 @@ Files: `src/webapp/trpc/routers/events.ts`
 
 <details><summary>verification note</summary>
 
-All components of the user story are implemented as described. The per-turn stream (events.turnStream in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/events.ts) accepts turnId and lastEventId, replays buffered frames using a monotonic sequence number, detects eviction gaps with resync signals, and uses tRPC's tracked() mechanism for automatic resume on connection drops. The buffer is populated by chat-send-routes.ts which captures all turn messages. The frontend (chat-actors.ts) subscribes to the stream and wsLink provides auto-reconnection with lastEventId resume.
+All components of the user story are implemented as described. The per-turn stream (events.turnStream in callback-box/src/webapp/trpc/routers/events.ts) accepts turnId and lastEventId, replays buffered frames using a monotonic sequence number, detects eviction gaps with resync signals, and uses tRPC's tracked() mechanism for automatic resume on connection drops. The buffer is populated by chat-send-routes.ts which captures all turn messages. The frontend (chat-actors.ts) subscribes to the stream and wsLink provides auto-reconnection with lastEventId resume.
 
 </details>
 
@@ -3849,7 +3849,7 @@ Files: `src/webapp/routes/history.ts`
 
 <details><summary>verification note</summary>
 
-CONFIRMED: The user story is accurately implemented. File /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/history.ts exists and provides the backend API. Pagination works via getLogPaginated() with count/offset parameters, supports cursor-based infinite queries, and renders a "Load more" button in CommitTimeline. Trailers are fully parsed (including multi-value support), displayed as interactive chips in CommitDetail and phase badges in CommitTimeline. Filtering is comprehensive—supporting connectors, workflows, touchpoint, feedback, and session with both multi-select dropdowns and clickable chips. All filters apply server-side via git grep patterns with --all-match AND logic.
+CONFIRMED: The user story is accurately implemented. File callback-box/src/webapp/routes/history.ts exists and provides the backend API. Pagination works via getLogPaginated() with count/offset parameters, supports cursor-based infinite queries, and renders a "Load more" button in CommitTimeline. Trailers are fully parsed (including multi-value support), displayed as interactive chips in CommitDetail and phase badges in CommitTimeline. Filtering is comprehensive—supporting connectors, workflows, touchpoint, feedback, and session with both multi-select dropdowns and clickable chips. All filters apply server-side via git grep patterns with --all-match AND logic.
 
 </details>
 
@@ -3862,7 +3862,7 @@ Files: `src/webapp/routes/history.ts`
 
 <details><summary>verification note</summary>
 
-All claimed functionality is implemented: (1) `/api/history/diff/:hash` route with `getCommitDiff()` backend function; (2) `/api/history/blob/:hash/*` route for retrieving historical file content; (3) tRPC procedures `history.diff` and integrated frontend components (CommitDetail.tsx, CommitDetail-tabs.tsx) that fetch and display diffs and historical files; (4) Tests confirm diff endpoint works. Files: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/history.ts, /src/cli/lib/git.ts (getCommitDiff), /src/webapp/trpc/routers/history.ts, /src/frontend/src/components/CommitDetail.tsx
+All claimed functionality is implemented: (1) `/api/history/diff/:hash` route with `getCommitDiff()` backend function; (2) `/api/history/blob/:hash/*` route for retrieving historical file content; (3) tRPC procedures `history.diff` and integrated frontend components (CommitDetail.tsx, CommitDetail-tabs.tsx) that fetch and display diffs and historical files; (4) Tests confirm diff endpoint works. Files: callback-box/src/webapp/routes/history.ts, /src/cli/lib/git.ts (getCommitDiff), /src/webapp/trpc/routers/history.ts, /src/frontend/src/components/CommitDetail.tsx
 
 </details>
 
@@ -3939,7 +3939,7 @@ All implementation details match the user story perfectly. Files exist at claime
 
 Files: `src/webapp/trpc/routers/drive.ts`
 
-**Verifier (flagged):** The file exists (/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/drive.ts) and the backend infrastructure for folder syncing works, but the user story is misleading about completeness. The tRPC `updateConfig` mutation exists (lines 81-96) but is never called by any UI code. The frontend DriveSection.tsx explicitly states mounting is "done via CLI" but no CLI command exists to add folder mounts. Users must manually edit config/connectors/google-drive.json. The story's promise ("As a box owner, I want to specify...") is not supported by an actual user-facing feature—only by partial backend infrastructure that requires manual JSON editing to use.
+**Verifier (flagged):** The file exists (callback-box/src/webapp/trpc/routers/drive.ts) and the backend infrastructure for folder syncing works, but the user story is misleading about completeness. The tRPC `updateConfig` mutation exists (lines 81-96) but is never called by any UI code. The frontend DriveSection.tsx explicitly states mounting is "done via CLI" but no CLI command exists to add folder mounts. Users must manually edit config/connectors/google-drive.json. The story's promise ("As a box owner, I want to specify...") is not supported by an actual user-facing feature—only by partial backend infrastructure that requires manual JSON editing to use.
 
 ### Execute box commands synchronously from web UI  
 ✅ verified
@@ -3950,7 +3950,7 @@ Files: `src/webapp/trpc/routers/commands.ts`, `src/webapp/routes/commands.ts`
 
 <details><summary>verification note</summary>
 
-Both claimed files fully implement synchronous command execution from the web UI as described. TRPC router at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/trpc/routers/commands.ts (lines 33-69) provides executeSync mutation; HTTP routes at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/commands.ts (lines 156-210) provide POST /api/commands/execute-sync endpoint. Both execute commands synchronously, capture output, and return results. Frontend integration via CommandRunner.tsx and HTTP API client enables users to run commands and view results from the web interface.
+Both claimed files fully implement synchronous command execution from the web UI as described. TRPC router at callback-box/src/webapp/trpc/routers/commands.ts (lines 33-69) provides executeSync mutation; HTTP routes at callback-box/src/webapp/routes/commands.ts (lines 156-210) provide POST /api/commands/execute-sync endpoint. Both execute commands synchronously, capture output, and return results. Frontend integration via CommandRunner.tsx and HTTP API client enables users to run commands and view results from the web interface.
 
 </details>
 
@@ -4017,9 +4017,9 @@ Files: `src/webapp/routes/clerk.ts`, `src/webapp/routes/api-files.ts`
 
 **Evidence of discrepancy:**
 
-1. **Frozen HTML contains image URL references, not embedded data**: The test in `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/test/webapp/routes/frozen-serve.doctest.md` (line 13) shows the frozen HTML template as `<img src="https://example.com/a.png">` — an external URL reference, not a data URI.
+1. **Frozen HTML contains image URL references, not embedded data**: The test in `callback-box/test/webapp/routes/frozen-serve.doctest.md` (line 13) shows the frozen HTML template as `<img src="https://example.com/a.png">` — an external URL reference, not a data URI.
 
-2. **Images are not embedded**: The comment in `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/api-files.ts` (line 38) explicitly states: "Styles/fonts/images stay unrestricted so the page renders and images hot-link." This contradicts the "without external resources" claim.
+2. **Images are not embedded**: The comment in `callback-box/src/webapp/routes/api-files.ts` (line 38) explicitly states: "Styles/fonts/images stay unrestricted so the page renders and images hot-link." This contradicts the "without external resources" claim.
 
 3. **Fallback proxy is not embedding — it's a retry mechanism**: The FROZEN_FALLBACK_SCRIPT (lines 26-30 in api-files.ts) is injected to retry failed image loads through the box's proxy (`/api/proxy-image`). This assumes images are URL references that might fail, not embedded resources.
 
@@ -4099,8 +4099,8 @@ Files: `src/webapp/routes/scheduler.ts`, `src/schemas/scheduled-script.ts`
 VERIFIED: Budget-aware scheduler script execution is fully implemented. The user story accurately reflects working functionality.
 
 CLAIMED FILES:
-- /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/scheduler.ts ✓ EXISTS
-- /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/schemas/scheduled-script.ts ✗ WRONG EXTENSION - Actually scheduled-script.tsx
+- callback-box/src/webapp/routes/scheduler.ts ✓ EXISTS
+- callback-box/src/schemas/scheduled-script.ts ✗ WRONG EXTENSION - Actually scheduled-script.tsx
 
 IMPLEMENTATION VERIFIED:
 1. Budget field in schema (scheduled-script.tsx:59) accepts "LIMIT/WINDOW" format
@@ -4177,7 +4177,7 @@ Files: `src/webapp/routes/history.ts`
 
 <details><summary>verification note</summary>
 
-Implementation verified: Git LFS pointer resolution is fully implemented in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/history.ts lines 117-124. The /api/history/blob/:hash/* endpoint detects Git LFS pointers and resolves them via 'git lfs smudge'. Frontend components actively use this endpoint to display historical images and audio. Code passes typecheck. Only gap is lack of test coverage.
+Implementation verified: Git LFS pointer resolution is fully implemented in callback-box/src/webapp/routes/history.ts lines 117-124. The /api/history/blob/:hash/* endpoint detects Git LFS pointers and resolves them via 'git lfs smudge'. Frontend components actively use this endpoint to display historical images and audio. Code passes typecheck. Only gap is lack of test coverage.
 
 </details>
 
@@ -4212,13 +4212,13 @@ Files: `src/webapp/routes/figure.ts`
 The user story is ACCURATE and FULLY IMPLEMENTED. Users can write TypeScript-based figure cards that render interactive visualizations using p5.js, three.js, or D3.js.
 
 VERIFICATION:
-1. **Schema**: `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/schemas/figure.ts` defines the complete figure card type with runtime selection (p5js|three|d3), TypeScript entry point, parameters, and data configuration.
+1. **Schema**: `callback-box/src/schemas/figure.ts` defines the complete figure card type with runtime selection (p5js|three|d3), TypeScript entry point, parameters, and data configuration.
 
-2. **Backend Route**: `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/webapp/routes/figure.ts` compiles TypeScript source code using esbuild with p5/three/d3 externalized.
+2. **Backend Route**: `callback-box/src/webapp/routes/figure.ts` compiles TypeScript source code using esbuild with p5/three/d3 externalized.
 
-3. **Frontend Renderer**: `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/src/components/FigureView.tsx` and `FigureMount.tsx` handle dynamic imports, mounting, and lifecycle management.
+3. **Frontend Renderer**: `callback-box/src/frontend/src/components/FigureView.tsx` and `FigureMount.tsx` handle dynamic imports, mounting, and lifecycle management.
 
-4. **Runtime Libraries**: All three libraries ARE installed in `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/frontend/package.json`:
+4. **Runtime Libraries**: All three libraries ARE installed in `callback-box/src/frontend/package.json`:
    - p5@2.3.0 (line 31)
    - three@0.184.0 (line 38)
    - d3@7.9.0 (line 26)
@@ -4227,7 +4227,7 @@ VERIFICATION:
 
 6. **Tests**: All 2358 tests pass, including 6 figure-route tests and 7 figure-params tests
 
-7. **Documentation**: Complete plan documented in `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/docs/implemented-plans/figure-card-type.md` (marked as implemented June 2026)
+7. **Documentation**: Complete plan documented in `callback-box/docs/implemented-plans/figure-card-type.md` (marked as implemented June 2026)
 
 8. **Templates**: Runnable starter sketches for each runtime embedded in the schema with full working examples
 
@@ -4491,7 +4491,7 @@ Files: `src/cli/commands/prompt.ts`, `src/cli/index.ts`
 
 <details><summary>verification note</summary>
 
-The story is accurately implemented. /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/prompt.ts defines the command with argument parsing, boxRoot resolution, and agent invocation. /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/index.ts imports and registers it (line 97). The agent's SDK usage (agent-run.ts) confirms CLAUDE.md and .claude/rules/ are auto-loaded via the preset system prompt with default settingSources. Execution is non-interactive—one call to agent.invoke() followed by explicit process.exit().
+The story is accurately implemented. callback-box/src/cli/commands/prompt.ts defines the command with argument parsing, boxRoot resolution, and agent invocation. callback-box/src/cli/index.ts imports and registers it (line 97). The agent's SDK usage (agent-run.ts) confirms CLAUDE.md and .claude/rules/ are auto-loaded via the preset system prompt with default settingSources. Execution is non-interactive—one call to agent.invoke() followed by explicit process.exit().
 
 </details>
 
@@ -4504,11 +4504,11 @@ Files: `src/cli/commands/retro.ts`, `src/cli/index.ts`
 
 **Verifier (flagged):** The code does implement the `cb retro scan` command and it does analyze chat sessions to extract teaching moments. However, the user story's claim that "personality and guide cards get updated" is inaccurate.
 
-Critical evidence from /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/retro/scan.ts (lines 1-8):
+Critical evidence from callback-box/src/core/retro/scan.ts (lines 1-8):
 
 "The retrospective scan — orchestrates one run: discover qualifying chat sessions, render and observe each, dedupe against the ledger, persist walker state, and write the per-run report. **Integration (turning ledgered observations into card edits) is a separate procedure step; the scan only looks and records.**"
 
-And from /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/retro/report.ts (lines 5-6):
+And from callback-box/src/core/retro/report.ts (lines 5-6):
 
 "Each `cb retro scan` writes `store/reviews/retro/<runId>.md` recording exactly what was looked at, what was noticed, and **(once the integrator has run) what was done about it.**"
 
@@ -4618,7 +4618,7 @@ Files: `src/cli/commands/describe-images.ts`
 
 <details><summary>verification note</summary>
 
-File exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/describe-images.ts. Core implementation spans describe-images.ts, describe-images-helpers.ts, describe-images-card.ts, and describe-images-batch.ts in src/core/commands/. The command uses model: "gemini-2.5-flash" (describe-images-helpers.ts:250), extracts text via text_blocks array and has_text boolean (schema lines 182-232), generates descriptions (line 224), generates titles (line 228), and renames cards automatically (describe-images.ts:225-227, describe-images-card.ts:133-161). All story requirements are implemented.
+File exists at callback-box/src/cli/commands/describe-images.ts. Core implementation spans describe-images.ts, describe-images-helpers.ts, describe-images-card.ts, and describe-images-batch.ts in src/core/commands/. The command uses model: "gemini-2.5-flash" (describe-images-helpers.ts:250), extracts text via text_blocks array and has_text boolean (schema lines 182-232), generates descriptions (line 224), generates titles (line 228), and renames cards automatically (describe-images.ts:225-227, describe-images-card.ts:133-161). All story requirements are implemented.
 
 </details>
 
@@ -4644,7 +4644,7 @@ Files: `src/cli/commands/contains.ts`
 
 <details><summary>verification note</summary>
 
-File /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/contains.ts implements the complete user story. The command provides: (1) `cb contains list [--missing|--stale] [--json]` for listing missing/stale contains fields via functions listMissing() and listStale() in contains-state.ts; (2) `cb contains update <card> --text` for updating fields via updateContainsField() in contains-update.ts. Staleness is tracked in .callback-box/contains-state.json sidecar by computing content basis hashes. Doctest at test/core/search/contains-state.doctest.md confirms all functionality works as described.
+File callback-box/src/cli/commands/contains.ts implements the complete user story. The command provides: (1) `cb contains list [--missing|--stale] [--json]` for listing missing/stale contains fields via functions listMissing() and listStale() in contains-state.ts; (2) `cb contains update <card> --text` for updating fields via updateContainsField() in contains-update.ts. Staleness is tracked in .callback-box/contains-state.json sidecar by computing content basis hashes. Doctest at test/core/search/contains-state.doctest.md confirms all functionality works as described.
 
 </details>
 
@@ -4657,7 +4657,7 @@ Files: `src/cli/commands/attachments.ts`
 
 <details><summary>verification note</summary>
 
-All claimed capabilities are fully implemented. Verified in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/attachments.ts (CLI dispatch layer) and /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/commands/attachments.ts (core implementation). The verify, migrate, overwrite, and add functions are all present (lines 79-102, 110-145, 151-176, 182-217). Supporting gitignore commands (init-gitignore, untrack-assets) are implemented in attachments-gitignore.ts. Manifest structure with SHA256, size, and mtime tracking is in asset-manifest.ts. Scan/verify logic with rename detection and error reporting is in asset-manifest-scan.ts.
+All claimed capabilities are fully implemented. Verified in callback-box/src/cli/commands/attachments.ts (CLI dispatch layer) and callback-box/src/core/commands/attachments.ts (core implementation). The verify, migrate, overwrite, and add functions are all present (lines 79-102, 110-145, 151-176, 182-217). Supporting gitignore commands (init-gitignore, untrack-assets) are implemented in attachments-gitignore.ts. Manifest structure with SHA256, size, and mtime tracking is in asset-manifest.ts. Scan/verify logic with rename detection and error reporting is in asset-manifest-scan.ts.
 
 </details>
 
@@ -4694,7 +4694,7 @@ All files exist and are properly implemented. Verified: (1) src/cli/commands/ren
 
 Files: `src/cli/commands/feedback.ts`
 
-**Verifier (flagged):** The file exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/feedback.ts and is integrated into the CLI. It records observations to config/feedback/ and commits them. However, it DOES NOT implement the "silently record" requirement of the story. Line 149 writes to stdout: `process.stdout.write(`Feedback recorded: ${relPath}\n`);` which is an interruption. Additionally, error handling (lines 152-153) writes to stderr and calls `process.exit(1)`, which blocks the task. The story explicitly requires "silently record" and "without interrupting my current task," both of which are violated by the implementation. The agent-guide documentation (src/core/agent-guide/commands.ts:24) falsely claims "Silent," contradicting the actual behavior.
+**Verifier (flagged):** The file exists at callback-box/src/cli/commands/feedback.ts and is integrated into the CLI. It records observations to config/feedback/ and commits them. However, it DOES NOT implement the "silently record" requirement of the story. Line 149 writes to stdout: `process.stdout.write(`Feedback recorded: ${relPath}\n`);` which is an interruption. Additionally, error handling (lines 152-153) writes to stderr and calls `process.exit(1)`, which blocks the task. The story explicitly requires "silently record" and "without interrupting my current task," both of which are violated by the implementation. The agent-guide documentation (src/core/agent-guide/commands.ts:24) falsely claims "Silent," contradicting the actual behavior.
 
 ### Run multi-step end-to-end test scenarios  
 ✅ verified
@@ -4705,7 +4705,7 @@ Files: `src/cli/commands/scenario.ts`
 
 <details><summary>verification note</summary>
 
-Full implementation verified in: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/scenario.ts (CLI layer), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/scenario/runner.ts (execution engine), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/scenario/loader.ts (discovery), /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/scenario/types.ts (type definitions). All claimed features present: list (line 10-21), run with --from checkpoint (line 26, runner.ts 283-287), --dry-run (line 27, runner.ts 154-162), multi-step execution with validations, state isolation in dry-run mode.
+Full implementation verified in: callback-box/src/cli/commands/scenario.ts (CLI layer), callback-box/src/scenario/runner.ts (execution engine), callback-box/src/scenario/loader.ts (discovery), callback-box/src/scenario/types.ts (type definitions). All claimed features present: list (line 10-21), run with --from checkpoint (line 26, runner.ts 283-287), --dry-run (line 27, runner.ts 154-162), multi-step execution with validations, state isolation in dry-run mode.
 
 </details>
 
@@ -4718,7 +4718,7 @@ Files: `src/cli/commands/health.ts`
 
 <details><summary>verification note</summary>
 
-The health command is fully implemented and wired into the CLI. File: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/health.ts
+The health command is fully implemented and wired into the CLI. File: callback-box/src/cli/commands/health.ts
 
 Verification:
 1. **Failing scripts** - Detected via consecutiveFailures >= 1 (schedule-health.ts line 111)
@@ -4728,7 +4728,7 @@ Verification:
 5. **CLI integration** - healthCommand properly registered in src/cli/index.ts line 94
 6. **Output formats** - Both human-readable (with status glyphs ✓, ✗, ◷, -) and JSON supported
 7. **Exit code** - Returns 1 when tasks are unhealthy or scheduler is stale, enabling scripting (health.ts line 98-100)
-8. **Comprehensive tests** - Behavior verified in /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/test/core/schedule-health.doctest.md with extensive test cases for all statuses and edge cases
+8. **Comprehensive tests** - Behavior verified in callback-box/test/core/schedule-health.doctest.md with extensive test cases for all statuses and edge cases
 
 </details>
 
@@ -4741,7 +4741,7 @@ Files: `src/cli/commands/session.ts`
 
 <details><summary>verification note</summary>
 
-All capabilities described in the story are fully implemented. File `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/session.ts` is the main command file (144 lines), supported by `session-format.ts`, `session-modes.ts`, and `session-render.ts` for formatting/rendering/mode-handling. Core library at `src/cli/lib/session.ts` provides session parsing (parseSessionLog line 322, getSessionMetadata line 216, listSessions line 80). Report generation at `src/dev/lib/session-report.ts` (generateSessionReport function, lines 273-301) produces markdown reports with full Bash command output. All options verified: --since (duration/ISO), --dialogue-only (strips tool calls), --tool-report (critique report with output), --latest, --list, --full, --raw. Command registered in CLI at src/cli/index.ts.
+All capabilities described in the story are fully implemented. File `callback-box/src/cli/commands/session.ts` is the main command file (144 lines), supported by `session-format.ts`, `session-modes.ts`, and `session-render.ts` for formatting/rendering/mode-handling. Core library at `src/cli/lib/session.ts` provides session parsing (parseSessionLog line 322, getSessionMetadata line 216, listSessions line 80). Report generation at `src/dev/lib/session-report.ts` (generateSessionReport function, lines 273-301) produces markdown reports with full Bash command output. All options verified: --since (duration/ISO), --dialogue-only (strips tool calls), --tool-report (critique report with output), --latest, --list, --full, --raw. Command registered in CLI at src/cli/index.ts.
 
 </details>
 
@@ -4911,7 +4911,7 @@ Files: `src/cli/commands/contains.ts`
 
 <details><summary>verification note</summary>
 
-File exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/contains.ts and implements both required capabilities: (1) `cb contains list [--missing|--stale]` - lists searchable cards with missing or stale contains fields using listMissing() and listStale() from contains-state.ts; (2) `cb contains update <card> --text "..."` - updates contains field with summary text after validating searchability via getSearchableTypes(). The contains field is defined in src/cards/schema.ts as "one sentence stating what can be found inside this card; the prime retrieval field for search and listings" and is extracted into SearchDoc at src/core/search/extract.ts:110 for search discoverability. Staleness tracking via contains-state.ts ensures summaries stay up-to-date by comparing content basis hashes. Tests confirm functionality (test/cli/commands/contains-backfill.doctest.md and test/core/search/contains-state.doctest.md both pass).
+File exists at callback-box/src/cli/commands/contains.ts and implements both required capabilities: (1) `cb contains list [--missing|--stale]` - lists searchable cards with missing or stale contains fields using listMissing() and listStale() from contains-state.ts; (2) `cb contains update <card> --text "..."` - updates contains field with summary text after validating searchability via getSearchableTypes(). The contains field is defined in src/cards/schema.ts as "one sentence stating what can be found inside this card; the prime retrieval field for search and listings" and is extracted into SearchDoc at src/core/search/extract.ts:110 for search discoverability. Staleness tracking via contains-state.ts ensures summaries stay up-to-date by comparing content basis hashes. Tests confirm functionality (test/cli/commands/contains-backfill.doctest.md and test/core/search/contains-state.doctest.md both pass).
 
 </details>
 
@@ -4924,7 +4924,7 @@ Files: `src/cli/commands/init.ts`, `src/core/generate-docs.ts`
 
 <details><summary>verification note</summary>
 
-The user story is accurately implemented across both claimed files. `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/init.ts` provides the CLI option and calls setDocIdDebug(). `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/generate-docs.ts` implements marker persistence, checking, and passes the debug flag to withDocId() for all generated docs. The withDocId() function in generate-docs-shared.ts correctly prepends HTML comments with relative paths when enabled. The feature is documented in box-layout.md line 112 and prompt-logging.md.
+The user story is accurately implemented across both claimed files. `callback-box/src/cli/commands/init.ts` provides the CLI option and calls setDocIdDebug(). `callback-box/src/core/generate-docs.ts` implements marker persistence, checking, and passes the debug flag to withDocId() for all generated docs. The withDocId() function in generate-docs-shared.ts correctly prepends HTML comments with relative paths when enabled. The feature is documented in box-layout.md line 112 and prompt-logging.md.
 
 </details>
 
@@ -4953,9 +4953,9 @@ Files: `src/cli/commands/scheduler.ts`, `src/cli/commands/health.ts`
 The claimed files exist and fully implement the user story. The scheduler daemon is a working, production-deployed system with comprehensive functionality:
 
 **Files verified (exact paths)**:
-- `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/scheduler.ts` — 268 lines implementing daemon install/start/stop/status/log/uninstall commands
-- `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/health.ts` — 102 lines showing task health and scheduler status
-- Supporting: `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/core/scheduler.ts` — 234 lines implementing the daemon loop
+- `callback-box/src/cli/commands/scheduler.ts` — 268 lines implementing daemon install/start/stop/status/log/uninstall commands
+- `callback-box/src/cli/commands/health.ts` — 102 lines showing task health and scheduler status
+- Supporting: `callback-box/src/core/scheduler.ts` — 234 lines implementing the daemon loop
 
 **What the implementation provides**:
 1. Background daemon via `cb scheduler start` that runs indefinitely, polling configured boxes on a configurable interval (default 60s)
@@ -4981,7 +4981,7 @@ Files: `src/cli/commands/drive.ts`
 
 <details><summary>verification note</summary>
 
-The user story is fully accurate. The claimed file /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/drive.ts exists and implements complete bidirectional synchronization of Google Sheets (as JSON) and Google Docs (as Markdown) as local cards with Git version control. All story requirements are implemented: mounting, synchronization, version control, transformation, and integration with the callback system.
+The user story is fully accurate. The claimed file callback-box/src/cli/commands/drive.ts exists and implements complete bidirectional synchronization of Google Sheets (as JSON) and Google Docs (as Markdown) as local cards with Git version control. All story requirements are implemented: mounting, synchronization, version control, transformation, and integration with the callback system.
 
 </details>
 
@@ -5081,7 +5081,7 @@ Files: `src/cli/commands/chat.ts`
 
 <details><summary>verification note</summary>
 
-Verified the user story is completely accurate. The claimed file /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/chat.ts exists and contains a fully implemented feature for posting agent self-notes. The implementation includes: (1) CLI command `postSelfNote()` function, (2) server-side POST /api/chat/self-note endpoint that wraps notes in XML tags, (3) explicit system prompt guidance preventing conversational responses ("Default behavior is to produce nothing"), (4) comprehensive passing tests, and (5) no known issues. The feature works exactly as described in the story.
+Verified the user story is completely accurate. The claimed file callback-box/src/cli/commands/chat.ts exists and contains a fully implemented feature for posting agent self-notes. The implementation includes: (1) CLI command `postSelfNote()` function, (2) server-side POST /api/chat/self-note endpoint that wraps notes in XML tags, (3) explicit system prompt guidance preventing conversational responses ("Default behavior is to produce nothing"), (4) comprehensive passing tests, and (5) no known issues. The feature works exactly as described in the story.
 
 </details>
 
@@ -5105,7 +5105,7 @@ User story is accurate. File exists at claimed path with complete, working imple
 
 Files: `src/cli/commands/chat-audio.ts`
 
-**Verifier (flagged):** **Claimed file exists**: YES - /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/chat-audio.ts
+**Verifier (flagged):** **Claimed file exists**: YES - callback-box/src/cli/commands/chat-audio.ts
 
 **Story claim vs. implementation gap:**
 
@@ -5198,7 +5198,7 @@ Files: `src/cli/commands/assemble-timeline.ts`
 
 <details><summary>verification note</summary>
 
-The user story is accurate. The claimed file exists at `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/assemble-timeline.ts` and implements exactly what the story describes.
+The user story is accurate. The claimed file exists at `callback-box/src/cli/commands/assemble-timeline.ts` and implements exactly what the story describes.
 
 The implementation:
 1. **Loads capture session cards** from the inbox with attached audio and image cards
@@ -5323,7 +5323,7 @@ Files: `src/cli/commands/refresh-maps.ts`
 
 <details><summary>verification note</summary>
 
-The claimed file `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/refresh-maps.ts` exists and implements exactly what the user story claims.
+The claimed file `callback-box/src/cli/commands/refresh-maps.ts` exists and implements exactly what the user story claims.
 
 VERIFICATION SUMMARY:
 
@@ -5359,7 +5359,7 @@ Files: `src/cli/commands/trick.ts`
 
 <details><summary>verification note</summary>
 
-The user story "Run custom TypeScript automation logic authored by the agent" is accurately implemented. All claimed capabilities are present: custom TypeScript trick execution via `cb trick <name>`, agent-authored scripts at tricks/scripts/<name>/index.ts, and explicitly supported npm dependencies through tricks/package.json with proper subprocess cwd setup (cwd: boxRoot/tricks). The file /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/trick.ts exists and contains complete, working implementation with all features documented and integrated into the CLI.
+The user story "Run custom TypeScript automation logic authored by the agent" is accurately implemented. All claimed capabilities are present: custom TypeScript trick execution via `cb trick <name>`, agent-authored scripts at tricks/scripts/<name>/index.ts, and explicitly supported npm dependencies through tricks/package.json with proper subprocess cwd setup (cwd: boxRoot/tricks). The file callback-box/src/cli/commands/trick.ts exists and contains complete, working implementation with all features documented and integrated into the CLI.
 
 </details>
 
@@ -5409,7 +5409,7 @@ The user story is accurately implemented. The claimed file exists and all descri
 
 Files: `src/cli/commands/validate.ts`
 
-**Verifier (flagged):** The claimed file exists at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/validate.ts and the PostToolUse hook integration IS implemented. However, there is a material discrepancy with the story's claims:
+**Verifier (flagged):** The claimed file exists at callback-box/src/cli/commands/validate.ts and the PostToolUse hook integration IS implemented. However, there is a material discrepancy with the story's claims:
 
 STORY CLAIMS: "validate cards/markdown/attachments in multiple scopes with a PostToolUse hook that gives real-time feedback during authoring"
 
@@ -5466,7 +5466,7 @@ The user story accurately describes the implemented functionality. All claimed f
 
 Files: `src/cli/commands/health.ts`
 
-**Verifier (flagged):** MATERIAL GAP FOUND: The claimed file `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/health.ts` exists and the command does implement 3 of 4 claimed features correctly, but one critical feature is completely missing.
+**Verifier (flagged):** MATERIAL GAP FOUND: The claimed file `callback-box/src/cli/commands/health.ts` exists and the command does implement 3 of 4 claimed features correctly, but one critical feature is completely missing.
 
 **What IS implemented:**
 1. Consecutive-failure counts: Yes - displays "failing ×N" for tasks (line 37 in health.ts)
@@ -5491,7 +5491,7 @@ Files: `src/cli/commands/contains.ts`
 
 <details><summary>verification note</summary>
 
-The user story accurately describes the implemented functionality. Verified evidence: (1) File exists at claimed path `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/contains.ts`. (2) Implementation matches story requirements: `cb contains list [--missing|--stale]` lists cards missing or stale contains: fields, and `cb contains update <card> --text "..."` updates or confirms values with staleness re-basing. (3) Doctest coverage confirms all key behaviors: stale detection triggers when content changes but contains: doesn't; confirming unchanged text re-bases the staleness marker; operational field flips (status changes) don't falsely flag staleness; described images satisfy contains without separate fields. (4) Design achieves stated goal: `.callback-box/contains-state.json` sidecar keeps staleness metadata separate from cards themselves, enabling manual curation without constant rewrites. (5) Basis calculation excludes contains/title/type/status fields so only real content changes matter.
+The user story accurately describes the implemented functionality. Verified evidence: (1) File exists at claimed path `callback-box/src/cli/commands/contains.ts`. (2) Implementation matches story requirements: `cb contains list [--missing|--stale]` lists cards missing or stale contains: fields, and `cb contains update <card> --text "..."` updates or confirms values with staleness re-basing. (3) Doctest coverage confirms all key behaviors: stale detection triggers when content changes but contains: doesn't; confirming unchanged text re-bases the staleness marker; operational field flips (status changes) don't falsely flag staleness; described images satisfy contains without separate fields. (4) Design achieves stated goal: `.callback-box/contains-state.json` sidecar keeps staleness metadata separate from cards themselves, enabling manual curation without constant rewrites. (5) Basis calculation excludes contains/title/type/status fields so only real content changes matter.
 
 </details>
 
@@ -5548,7 +5548,7 @@ Files: `src/cli/commands/session.ts`
 
 <details><summary>verification note</summary>
 
-Verified complete implementation. The claimed file `/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/cli/commands/session.ts` exists and correctly implements code-review report generation via the --tool-report flag. Core logic in src/dev/lib/session-report.ts parses JSONL session logs, extracts tool calls paired with their outputs, and renders markdown reports with: (1) tool use details (toolName, toolId, input, output), (2) full Bash command + output text, (3) summaries of file operations, (4) turn counts and statistics. Feature is production-ready with no TODO/FIXME markers. Accessible via `cb session <id> --tool-report` or `cb session --latest --tool-report`.
+Verified complete implementation. The claimed file `callback-box/src/cli/commands/session.ts` exists and correctly implements code-review report generation via the --tool-report flag. Core logic in src/dev/lib/session-report.ts parses JSONL session logs, extracts tool calls paired with their outputs, and renders markdown reports with: (1) tool use details (toolName, toolId, input, output), (2) full Bash command + output text, (3) summaries of file operations, (4) turn counts and statistics. Feature is production-ready with no TODO/FIXME markers. Accessible via `cb session <id> --tool-report` or `cb session --latest --tool-report`.
 
 </details>
 
@@ -5628,7 +5628,7 @@ Files: `src/dev/prompt-report.ts`
 
 <details><summary>verification note</summary>
 
-The implementation fully supports the story's core requirement: generating a comprehensive single-document inventory of system prompts, schema instructions (39 schemas), connector rules (1 rule), and procedure templates (5 templates), each with usage context (Scope field), word/line counts, and total instruction surface. File verified at /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/dev/prompt-report.ts, successfully executed generating 51 items with ~21,342 words. Minor notes: 'track changes over time' relies on Git's version control rather than built-in diff features, and 'optimize token usage' provides word counts for estimation but no automated optimization suggestions—both are enablers rather than turnkey features, which is reasonable for this type of tool.
+The implementation fully supports the story's core requirement: generating a comprehensive single-document inventory of system prompts, schema instructions (39 schemas), connector rules (1 rule), and procedure templates (5 templates), each with usage context (Scope field), word/line counts, and total instruction surface. File verified at callback-box/src/dev/prompt-report.ts, successfully executed generating 51 items with ~21,342 words. Minor notes: 'track changes over time' relies on Git's version control rather than built-in diff features, and 'optimize token usage' provides word counts for estimation but no automated optimization suggestions—both are enablers rather than turnkey features, which is reasonable for this type of tool.
 
 </details>
 
@@ -5654,7 +5654,7 @@ Files: `src/dev/doc-graph-html.ts`, `src/dev/doc-graph-html-data.ts`, `src/dev/d
 
 <details><summary>verification note</summary>
 
-All four claimed files exist and implement the story as described. The system generates an interactive HTML page (docs/doc-graph.html) that visualizes: (1) documentation layered in 5 concentric rings based on link distance from root, with names like "Always in the room" and "Out in the field"; (2) 8 topic pillars (Cards, Connectors, Reactor, Procedures, Frontend, Testing, Boxes, Deploy) each with entry doc, supporting materials, code dirs, and per-pillar colors; (3) curator's sections for additional docs, and health checks for orphans/broken links. The rendering is a narrative-focused HTML showcase explicitly designed for agent onboarding. Files: /Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/dev/{doc-graph-html.ts, doc-graph-html-data.ts, doc-graph-html-render.ts, doc-graph-html-css.ts}
+All four claimed files exist and implement the story as described. The system generates an interactive HTML page (docs/doc-graph.html) that visualizes: (1) documentation layered in 5 concentric rings based on link distance from root, with names like "Always in the room" and "Out in the field"; (2) 8 topic pillars (Cards, Connectors, Reactor, Procedures, Frontend, Testing, Boxes, Deploy) each with entry doc, supporting materials, code dirs, and per-pillar colors; (3) curator's sections for additional docs, and health checks for orphans/broken links. The rendering is a narrative-focused HTML showcase explicitly designed for agent onboarding. Files: callback-box/src/dev/{doc-graph-html.ts, doc-graph-html-data.ts, doc-graph-html-render.ts, doc-graph-html-css.ts}
 
 </details>
 

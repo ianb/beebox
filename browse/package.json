@@ -2,6 +2,7 @@
   "name": "browse",
   "version": "0.0.0",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "type": "module",
   "description": "Worktree-aware browser CLI for this monorepo. Wraps agent-browser with URL translation, screenshot metadata, and a typed sub-package for the upstream CLI surface. Access point: bin/browse at the monorepo root.",
   "scripts": {

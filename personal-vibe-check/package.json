@@ -52,7 +52,7 @@
   "devDependencies": {
     "husky": "^9.1.7"
   },
-  "license": "ISC",
+  "license": "MIT",
   "author": "Ian Bicking",
   "scripts": {
     "typecheck": "tsc --noEmit",

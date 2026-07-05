@@ -21,7 +21,11 @@ export function escapeHtml(s: string): string {
 }
 
 function vsLink(p: string): string {
-  return `vscode://file${path.join(ROOT, p)}`;
+  // Keep the link repo-relative so the committed HTML carries no machine-absolute
+  // path (it's a shared/checked-in artifact). A local `vscode://file` open needs
+  // an absolute path; that convenience is traded away to keep the file portable
+  // and free of the author's home directory. `p` is already repo-relative.
+  return `vscode://file/${p}`;
 }
 
 function chip(doc: DocInfo, pillar: Pillar | undefined): string {

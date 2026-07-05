@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Dev router for the callback-mono monorepo.
+// Dev router for the callback-box monorepo.
 //
 // Listens on a single user-facing port (default 3210) and lazily spawns a
 // Vite + Fastify pair for each worktree on first request to that worktree's
@@ -16,7 +16,7 @@
 // bypassing this router entirely.
 //
 // Orphan resistance:
-//   - Each spawned child is recorded in ~/.cache/callback-mono/pids/<name>.json
+//   - Each spawned child is recorded in ~/.cache/callback-box/pids/<name>.json
 //   - On router startup, that directory is swept: any PID still alive is
 //     killed (it's from a previous router that crashed); any dead PID's
 //     file is removed.
@@ -56,12 +56,12 @@ const REPO_ROOT = path.resolve(new URL(".", import.meta.url).pathname, "..");
 // router started from a worktree (e.g. while iterating on router.ts itself)
 // still serves real-main at /main/, not the worktree's stale snapshot of main.
 // Override with CALLBACK_MAIN_ROOT for non-standard layouts.
-const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-mono");
+const MAIN_ROOT = process.env.CALLBACK_MAIN_ROOT || path.join(os.homedir(), "src", "callback-box");
 const WORKTREES_ROOT = path.join(os.homedir(), "src", "callback-worktrees");
 const BOXES_ROOT = path.join(os.homedir(), "src", "box-worktrees");
 // Overridable so a second router can run isolated (tests, dev on the router
 // itself) without fighting the live one over pid files and port state.
-const STATE_DIR = process.env.CALLBACK_STATE_DIR || path.join(os.homedir(), ".cache", "callback-mono");
+const STATE_DIR = process.env.CALLBACK_STATE_DIR || path.join(os.homedir(), ".cache", "callback-box");
 const LOG_DIR = path.join(STATE_DIR, "logs");
 const PID_DIR = path.join(STATE_DIR, "pids");
 const BROWSE_DIR = path.join(STATE_DIR, "browse");
@@ -845,7 +845,7 @@ async function renderIndex(): Promise<string> {
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>callback-mono dev router</title>
+<title>callback-box dev router</title>
 <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAADCUlEQVR4nOyazWsTQRjG3+xOPpsQsa21pAcpeGipIAUp1YNi8aJ4EL17Ebz6J/RP8CoI4kkFxZN6qjcpIhTFYhFBPDRKbCMN+f7Yxic72+lm89F8707Z3yGZTWbmfZ53JzNDdli1WqUWpOKFve185m8xnypXCvs0WlhACUa94VP+EzPBaCzQqpqnqYHEVvrPZrqQKpMzCES90wuRqblI41dWA9nd0q/1f+lEkZxHZMp/Zvnk2ITP/GGdgeTP7I/3u+Rszl6dGJ8dE5dMlKRQD7hI4UHhbxg5UqjnQCoE87JhAOOepEIIrhnAnOPMX20bIBiyiRvAjEkSwmUzrFbOme+7ArIhnmGtJWmBeIadAkkLxLO8nOOHA/Fs9Lu0AQLxzHwdYlt4nfS/OvxE/cYLOW3eKFTmeCGrzYtyn/C4YEwPl22I1QbPlyfvuGihtVtyB052irc7byWSdWRcnjseQnjjoLln78VFGig5052x5NJ8h3vOl4XBGxgxCkmOa8BuXAN24xqwG9eA3bgG7KZuO72pzhgFFrPUW6jEa6/aNg0BEbeHEIw3fuZf0juKtaxo+kNyQYuf08PAVQ+WOox4ZBT0g048l98+p74xB6NmWUQw3NWvuvR2aeog0EGHRieDMWAj7ixkN64Bu3EN2I1rwG5cA3ZzvLbTaj5sFHJ1D/W1kPEQTQtmaDhYQncekfGW3uS0mgu3quRNnjZfaqHMvt4vwvRsScTVRYc7jEgmb7y55/rD79Q3jQGaGoNoJFjRpbfJV1cwGgRQIwRZkjds3FnIbo6BAVXix6wQr/i8OZIWiFemglKe9OBAvLIc85O0QLxyd+WS6pNyFEE2xNdmocXJJEkIl22cWrz16FOpECV58AVSr+9fILEO3DuvklQIwYaBG0uL12Z/kyRAKgTz8uFK/ODmFSk8QCSkikvr0eM3Hzcef9ac+XvAuMfIEbnnND/8vfpybWNnXCuFyBlgxsScs3pnpfErT5vj90/XPqzHi4l8pFQOkealEaOWsVPAWovVCvN9q1r/AQAA//+5h+wYAAAABklEQVQDANbzYY8DPoT1AAAAAElFTkSuQmCC">
 <style>
   body { font: 14px/1.5 system-ui, sans-serif; max-width: 640px; margin: 2em auto; padding: 0 1em; color: #222; }
@@ -874,7 +874,7 @@ async function renderIndex(): Promise<string> {
 </style>
 </head>
 <body>
-<h1>callback-mono dev router</h1>
+<h1>callback-box dev router</h1>
 <p class="sub">Click a worktree to open it. Cold worktrees start on first request (~4s); running ones idle-shut-down after ${Math.round(IDLE_TIMEOUT_MS / 1000)}s. <strong>dev ↗</strong> opens that worktree's visualizations &amp; doc browser (served from disk, no start).</p>
 <ul>${rows}</ul>
 
@@ -882,11 +882,11 @@ async function renderIndex(): Promise<string> {
   <h2>If something looks wedged</h2>
   <p>
     Run <code>bin/worktrees panic</code> from a terminal — this kills the
-    router plus every child it knows about, wipes <code>~/.cache/callback-mono</code>
+    router plus every child it knows about, wipes <code>~/.cache/callback-box</code>
     state, and frees port ${ROUTER_PORT}. Then start fresh with <code>pnpm dev</code>.
   </p>
   <p>
-    Per-worktree logs are at <code>~/.cache/callback-mono/logs/&lt;name&gt;.log</code>.
+    Per-worktree logs are at <code>~/.cache/callback-box/logs/&lt;name&gt;.log</code>.
   </p>
   <h2>If the list is too long</h2>
   <p>
@@ -1685,7 +1685,7 @@ const server = http.createServer(async (req, res) => {
     }
     if (!entry.dashboardUrl) {
       res.writeHead(502, { "content-type": "text/plain" });
-      res.end(`Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/callback-mono/logs/${name}.log\n`);
+      res.end(`Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/callback-box/logs/${name}.log\n`);
       return;
     }
     res.writeHead(302, { location: entry.dashboardUrl });

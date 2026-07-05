@@ -1,6 +1,6 @@
 # Search in Callback Box — a map of every search-shaped surface
 
-Root: `/Users/ianbicking/src/callback-worktrees/compare-openclaw-hermes/callback-box`
+Root: `callback-box`
 
 Bottom line: there is **one real search engine** (`src/core/search/`, an Orama
 full-text index over cards), exposed through **two thin surfaces** (CLI +

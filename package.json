@@ -1,8 +1,9 @@
 {
-  "name": "callback-mono",
+  "name": "callback-box",
   "version": "0.0.0",
   "private": true,
-  "description": "Monorepo root. Holds shared dev infrastructure (husky hooks, the dev router). Individual packages live in callback-box/, cardworks/, personal-vibe-check/, agent-doctest/, callback-clerk/.",
+  "license": "GPL-3.0-or-later",
+  "description": "Monorepo root. Holds shared dev infrastructure (husky hooks, the dev router). Individual packages live in callback-box/, personal-vibe-check/, agent-doctest/, callback-clerk/, browse/.",
   "type": "module",
   "scripts": {
     "prepare": "husky",

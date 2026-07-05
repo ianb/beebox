@@ -31,7 +31,7 @@ else
   worktree="main"
 fi
 
-browse_base="${HOME}/.cache/callback-mono/browse/${worktree}"
+browse_base="${HOME}/.cache/callback-box/browse/${worktree}"
 mkdir -p "${browse_base}/socket" "${browse_base}/profile"
 
 export BROWSE_REPO_DIR="$REPO_DIR"
