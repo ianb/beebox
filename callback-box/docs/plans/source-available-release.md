@@ -397,10 +397,13 @@ introduces none, so they don't apply. The two that do:
 - **Track D: add three LICENSE files vs. reword the README claim.** RESOLVED
   (2026-07-05): reworded `README.md` to state GPLv3 covers callback-box/
   callback-clerk/browse and the two MIT packages each carry their own LICENSE —
-  unambiguous, no duplicate GPL copies. Remaining Track D items: preserve
-  `agent-browser`'s Apache NOTICE, and read `skill-creator/LICENSE.txt`.
-- **`.claude/skills/skill-creator/LICENSE.txt`** — read it; if incompatible or
-  ambiguous, exclude that skill dir from the public repo. Unresolved until read.
+  unambiguous, no duplicate GPL copies. `skill-creator/LICENSE.txt` read and
+  cleared (Apache-2.0, © Anthropic PBC, GPLv3-compatible, ships as-is). Remaining
+  Track D item: preserve `agent-browser`'s Apache NOTICE on repackage.
+- **`.claude/skills/skill-creator/LICENSE.txt`** — RESOLVED (2026-07-05, read):
+  Apache-2.0, © Anthropic PBC (Anthropic's own skill, bundled as-is). One-way
+  compatible into GPLv3, no `NOTICE` file, unmodified — the `LICENSE.txt` next to
+  it satisfies the only real obligation. Ships fine; no action.
 - **Path leaks — FIXED (2026-07-05; reports KEPT).** Investigated and resolved.
   The ~168 `/Users/<user>/...` leaks were almost entirely *generated
   artifacts*, not source (`src/schemas/extfile.tsx` uses `me`/`you` placeholders
