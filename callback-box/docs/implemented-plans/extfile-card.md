@@ -219,7 +219,7 @@ attach-commentary pattern.
   ```
   ---
   type: extfile
-  href: file:/Users/ianbicking/src/callback-box/callback-box/src/core/agent-guide/source.ts
+  href: file:/Users/me/src/callback-box/callback-box/src/core/agent-guide/source.ts
   title: agent-guide source.ts        # optional human label
   version: "sha256:9f3a1c2b git:7ffeae4"   # stamped; drift primary
   size: 4096                          # optional, informational

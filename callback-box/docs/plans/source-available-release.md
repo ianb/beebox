@@ -402,11 +402,11 @@ introduces none, so they don't apply. The two that do:
 - **`.claude/skills/skill-creator/LICENSE.txt`** — read it; if incompatible or
   ambiguous, exclude that skill dir from the public repo. Unresolved until read.
 - **Path leaks — FIXED (2026-07-05; reports KEPT).** Investigated and resolved.
-  The ~168 `/Users/ianbicking/...` leaks were almost entirely *generated
+  The ~168 `/Users/<user>/...` leaks were almost entirely *generated
   artifacts*, not source (`src/schemas/extfile.tsx` uses `me`/`you` placeholders
   on purpose). Fixes applied:
   - **Reports kept, paths relativized.** Stripped the
-    `/Users/ianbicking/src/callback-worktrees/<wt>/callback-box/` prefix in
+    `/Users/<user>/src/callback-worktrees/<wt>/callback-box/` prefix in
     `user-stories-audit-2026-06-26.md` and `research/…/deep-cbx-search.md` →
     monorepo-relative `callback-box/...`.
   - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
@@ -428,7 +428,7 @@ introduces none, so they don't apply. The two that do:
   - Still open: whether `research/` and `notes/vision/` ship (lean: keep `issues/`).
 - **A tracked `settings.local.json` leaked a home path — FIXED (2026-07-05).**
   `personal-vibe-check/.claude/settings.local.json` was committed (against this
-  package's own commit-hygiene rule) with the stale `/Users/ianbicking/src/personal-vibe-check`
+  package's own commit-hygiene rule) with the stale `/Users/<user>/src/personal-vibe-check`
   path in Bash permission entries. `git rm --cached`'d it; the existing
   `.claude/settings.local.json` ignore rule now covers it. It's still on disk
   locally, just untracked.

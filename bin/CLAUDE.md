@@ -1,8 +1,21 @@
 # Dev infrastructure: router, worktrees, process lifecycle
 
 Detail for the tooling in this directory (`router.ts`, `worktrees`,
-`process-cleanup.ts`, `browse`, `box-entry.ts`). The always-relevant
-summary lives in the root CLAUDE.md; this file is the mechanism.
+`process-cleanup.ts`, `browse`, `box-entry.ts`, `path-leak-check.ts`). The
+always-relevant summary lives in the root CLAUDE.md; this file is the mechanism.
+
+## Home-directory leak guard (`path-leak-check.ts`)
+
+`pnpm path-leak-check` fails if any tracked file contains a real personal home
+path (`/Users/<name>/…` or `/home/<name>/…`); the pre-commit hook runs it on
+every commit. It's the durable backstop for a source-available repo: audit
+reports and docs kept leaking the author's home because agents paste whatever
+the ambient environment hands them (Read needs absolute paths; a worktree cwd
+is absolute). Fail-closed — `ALLOWED_NAMES` lists the hardcoded deploy service-account homes
+(`callback`, `cb-test1`) and placeholders (`me`, `you`, `user`, `x`) that
+aren't personal-identity leaks; any other username trips it. Fix a hit with a repo-relative or
+`~/…` path, not by widening the allowlist. Background:
+`issues/closed/2026-07-05-report-workflows-emit-relative-paths.md`.
 
 ## Router architecture
 

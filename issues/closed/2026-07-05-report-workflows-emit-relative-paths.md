@@ -2,14 +2,26 @@
 area: docs
 filed-by: agent
 discovered-in: main session — cleaning path leaks for the source-available release
+resolution: implemented
 ---
 
 # Report-generating workflows should emit repo-relative paths
 
+**Closed (2026-07-05).** Resolved not with a workflow convention but with a
+generator-agnostic backstop: `bin/path-leak-check.ts` (`pnpm path-leak-check`)
+fails on any tracked file containing a real personal home path, and the
+monorepo pre-commit hook runs it on every commit. A prompt convention had no
+durable home — the leaking report came from an ad-hoc Workflow that committed
+no generator, so the next such workflow would start from a blank slate; the
+guard catches the leak regardless of how a report is produced. The one committed
+report generator (`knowledge-audit.ts`) was already clean, and `bin/browse`
+screenshot output — briefly suspected — turned out to be gitignored and never
+reaches committed docs. See `bin/CLAUDE.md`.
+
 Auto-generated audit reports leaked the author's home directory. The
 2026-06-26 user-stories audit (`callback-box/docs/reports/`) carried ~105
 absolute `Evidence:` paths like
-`/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/...`,
+`/Users/<user>/src/callback-worktrees/<wt>/callback-box/src/...`,
 even though the report's own header claims "paths are relative to
 `callback-box/`". The verifier agents pasted whatever `bin/browse` and file
 reads handed them — absolute paths — and nothing relativized them.

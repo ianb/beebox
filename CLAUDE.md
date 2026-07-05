@@ -21,7 +21,7 @@ Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `de
 
 **Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
 
-**Commit docs WITH hooks.** Docs-only commits run only a fast `doc-check` (broken doc references + orphans; ~1s — typecheck/lint are skipped automatically), so don't `--no-verify` them: doc moves/renames are exactly what the check catches. If it fails, fix the links or see `callback-box/docs/README.md` for conventions.
+**Commit docs WITH hooks.** Docs-only commits run only two fast checks (~1s — typecheck/lint are skipped automatically), so don't `--no-verify` them: `doc-check` (broken doc references + orphans) and `path-leak-check` (rejects real home-dir paths like `/Users/<name>/…` in any tracked file — docs are the main leak surface). If doc-check fails, fix the links or see `callback-box/docs/README.md`. If path-leak-check fails, use a repo-relative or `~/…` path (`bin/CLAUDE.md`).
 
 **Husky lives at the monorepo root.** One `.husky/` directory holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; the rest wrap git-lfs); subprojects opt out via `prepare: ":"`. Root `pnpm install` wires up `core.hooksPath`.
 

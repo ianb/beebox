@@ -9,6 +9,7 @@
     "prepare": "husky",
     "postinstall": "patch-package",
     "dev": "bin/worktrees serve",
+    "path-leak-check": "node --import tsx bin/path-leak-check.ts",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test bin/*.test.ts"
   },
