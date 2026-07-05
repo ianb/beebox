@@ -1,4 +1,0 @@
-test/fixtures/**/*.jpg filter=lfs diff=lfs merge=lfs -text
-test/fixtures/**/*.webm filter=lfs diff=lfs merge=lfs -text
-test/fixtures/**/*.m4a filter=lfs diff=lfs merge=lfs -text
-test/fixtures/**/*.png filter=lfs diff=lfs merge=lfs -text
