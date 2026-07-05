@@ -50,11 +50,11 @@ A cross-model (codex) review ran against the real source. What changed, and why:
 - `callback-box/CLAUDE.md` ("don't add features beyond what the task requires"). The
   user chose navigate-to-chat over a second sidebar surface specifically to avoid net-new
   layout; the plan honors that — no new panel component.
-- `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional params (the new
+- `callback-box/code-style.md` — no default parameters, max 2 positional params (the new
   resolver takes `(boxRoot, { cardPath })`), `as never` only at the TanStack router
   boundary (the established pattern, `InteractiveChat-card-hooks.ts:66`,
   `LandmarkSection.tsx:87`).
-- `callback-box/FRONTEND.md` — UI primitives + semantic palette, `className` only for
+- `callback-box/frontend.md` — UI primitives + semantic palette, `className` only for
   outer layout. The new control reuses the `ChatButton` styling already in
   `LandmarkSection.tsx:100-108`.
 - Most recent precedent: `LandmarkSection.tsx`'s `ChatButton` (the landmark→chat

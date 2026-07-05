@@ -1,14 +1,15 @@
 /**
- * REST routes for agent-generated views.
+ * Raw routes for agent-generated views — these serve non-JSON payloads, so they
+ * stay raw. The JSON view *list* moved to the `views.list` tRPC procedure.
  *
- * - GET /api/views — list all views
- * - GET /api/views/:slug/module.js — compiled JS module
+ * - GET /api/views/:slug/module.js — compiled JS module (JavaScript body)
  * - GET /api/views/:slug/cards — cards matching view dependencies
  */
 
 import type { FastifyInstance } from "fastify";
+import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { compileView, listViews, buildErrorModule } from "../views/compiler.js";
+import { bundleView, getViewMeta, buildErrorModule, resolveViewsDir } from "../views/compiler.js";
 import { loadViewCards } from "../../core/view-cards.js";
 
 interface RegisterViewRoutesOptions {
@@ -18,32 +19,30 @@ interface RegisterViewRoutesOptions {
 
 /**
  * Resolve a view slug to its `.tsx` path, rejecting anything that would escape
- * the box's `views/` directory (path separators, `..`, absolute paths). Returns
- * null for an invalid slug.
+ * the box's views directory (path separators, `..`, absolute paths). Returns
+ * null for an invalid slug. The views directory itself is shape-aware
+ * (`boxRoot/views` for a legacy box, `packageRoot/src/views` for a package
+ * box) — see `resolveViewsDir`.
  */
-function resolveViewPath(boxRoot: string, slug: string): string | null {
+function resolveViewPath(viewsDir: string, slug: string): string | null {
   if (!slug || /[/\\]/.test(slug) || slug.includes("..")) return null;
-  const viewsDir = path.resolve(boxRoot, "views");
-  const viewPath = path.resolve(viewsDir, `${slug}.tsx`);
-  if (viewPath !== path.join(viewsDir, `${slug}.tsx`)) return null;
-  if (!viewPath.startsWith(viewsDir + path.sep)) return null;
+  const resolvedViewsDir = path.resolve(viewsDir);
+  const viewPath = path.resolve(resolvedViewsDir, `${slug}.tsx`);
+  if (viewPath !== path.join(resolvedViewsDir, `${slug}.tsx`)) return null;
+  if (!viewPath.startsWith(resolvedViewsDir + path.sep)) return null;
   return viewPath;
 }
 
 export async function registerViewRoutes(options: RegisterViewRoutesOptions): Promise<void> {
   const { server, boxRoot } = options;
 
-  // GET /api/views — list all views
-  server.get("/api/views", async () => {
-    return listViews(boxRoot);
-  });
-
   // GET /api/views/:slug/module.js — compiled JS module
   server.get<{ Params: { slug: string } }>(
     "/api/views/:slug/module.js",
     async (request, reply) => {
       const { slug } = request.params;
-      const viewPath = resolveViewPath(boxRoot, slug);
+      const { viewsDir } = await resolveViewsDir(boxRoot);
+      const viewPath = resolveViewPath(viewsDir, slug);
       if (!viewPath) {
         return reply
           .header("Content-Type", "application/javascript")
@@ -52,7 +51,7 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
       }
 
       try {
-        const { output } = await compileView(viewPath);
+        const { output } = await bundleView(viewPath);
         return reply
           .header("Content-Type", "application/javascript")
           .header("Cache-Control", "no-cache")
@@ -72,22 +71,26 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
     "/api/views/:slug/cards",
     async (request, reply) => {
       const { slug } = request.params;
-      const viewPath = resolveViewPath(boxRoot, slug);
+      const { viewsDir, boxShape } = await resolveViewsDir(boxRoot);
+      const viewPath = resolveViewPath(viewsDir, slug);
       if (!viewPath) {
         return reply.status(404).send({ error: "View not found" });
       }
 
-      let dependencies: string[];
       try {
-        const { meta } = await compileView(viewPath);
-        dependencies = meta.dependencies;
+        await fs.access(viewPath);
       } catch (_e) {
         return reply.status(404).send({ error: "View not found" });
       }
 
+      // getViewMeta never throws (a broken view degrades to empty
+      // dependencies, matching "no cards selected" rather than a hard error —
+      // the module.js endpoint above is where a compile failure surfaces).
+      const meta = await getViewMeta(viewPath, { boxShape });
+
       // A live page silently omits cards that fail to load, so the `skipped`
       // diagnostics are dropped here; `cb view test` surfaces them instead.
-      const { cards, files } = await loadViewCards(boxRoot, dependencies);
+      const { cards, files } = await loadViewCards(boxRoot, meta.dependencies);
       return { cards, files };
     }
   );

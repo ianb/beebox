@@ -9,11 +9,10 @@
  * The graph is loose and deliberately allows cycles: two concepts that must be
  * learned together (a spiral) are an honest `complements` cycle, not an error.
  *
- * See docs/plans/courseware-phase1.md.
+ * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema, type LintIssue } from "../cards/index.js";
 import { z } from "zod";
 
 /** Knowledge-component type — a strong hint to *how* a node is taught. */
@@ -125,6 +124,8 @@ export function conceptMapShapeWarnings(fields: Record<string, unknown>): LintIs
 }
 
 export const ConceptMapSchema: CardSchema = cardSchema("concept-map", {
+  description: "A module-scale knowledge graph for one bounded topic — concepts as in-card nodes with typed edges; a course component",
+  category: "authored",
   validate: ({ fields }) => conceptMapErrors(fields),
   fields: {
     concepts: z.array(ConceptNode),
@@ -227,7 +228,6 @@ export function createConceptMapTemplate(options: { title?: string | undefined }
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyText = "Describe what this map covers and how the concepts spiral together.\n";
-  return `---\n${yamlText}---\n${bodyText}`;
+  return renderFrontmatterBlock(fields, bodyText);
 }

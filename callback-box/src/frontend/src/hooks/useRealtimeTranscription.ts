@@ -20,6 +20,7 @@ import {
 import { detectKeyword, type KeywordResult } from "../lib/speech-keywords";
 import { stillListening, recordingStart } from "../lib/earcons";
 import { claimMicAcrossTabs } from "../lib/mic-tab-lock";
+import type { VoiceIntent } from "../input/voice-intent";
 
 const STILL_LISTENING_DELAY_MS = 10000;
 
@@ -27,22 +28,16 @@ export type { TranscriptionState };
 
 export interface UseRealtimeTranscriptionOptions {
   /**
-   * Called when a send keyword fires. Receives the processed transcript,
-   * the trigger phrase the realtime pass matched (so a later transcription
-   * pass that drops it can re-inject), and (if `wantAudioBlob` returned
-   * true and the segment captured any audio) a WAV blob the caller can use
-   * for narration mode's HQ pass.
+   * The four spoken commands the keyword spotter recognizes, as one
+   * `VoiceIntent` stream (docs/implemented-plans/input-extraction.md, chunk 5) instead
+   * of four separate callbacks. `submit`'s `text` is the processed
+   * transcript, `matchedPhrase` the trigger phrase the realtime pass
+   * matched (so a later transcription pass that drops it can re-inject),
+   * and `audioBlob` — when `wantAudioBlob` returned true and the segment
+   * captured any audio — a WAV blob the caller can use for narration
+   * mode's HQ pass.
    */
-  onKeywordSend?: (send: {
-    processedTranscript: string;
-    matchedPhrase: string;
-    audioBlob: Blob | null;
-    /** "send and close" variant: send, then leave the mic closed (no re-arm). */
-    closeMic: boolean;
-  }) => void;
-  onKeywordCancel?: () => void;
-  onKeywordMicOff?: () => void;
-  onKeywordErase?: () => void;
+  onVoiceIntent?: (intent: VoiceIntent) => void;
   /**
    * Called when a segment ends with transcript text nobody took: no stop()
    * promise was awaiting it and no send keyword fired — a mid-recording
@@ -156,6 +151,67 @@ function useKeywordSpotting(opts: {
   return { reset };
 }
 
+/**
+ * Turn a spotted keyword into the right machine event(s) plus a
+ * `VoiceIntent`. Module-level (not a hook body closure) so
+ * `useRealtimeTranscription`'s own body stays under the per-function line
+ * budget; takes the machine's `send`, the live-options ref, and the
+ * slow-path parking ref as explicit context instead of closing over hook
+ * internals.
+ */
+function dispatchKeyword(
+  keyword: KeywordResult,
+  ctx: {
+    send: (event: { type: "STOP" | "CANCEL" | "START" }) => void;
+    optionsRef: React.MutableRefObject<UseRealtimeTranscriptionOptions | undefined>;
+    pendingSendRef: React.MutableRefObject<{ processedTranscript: string; matchedPhrase: string; closeMic: boolean } | null>;
+  }
+): void {
+  const { send, optionsRef, pendingSendRef } = ctx;
+  if (keyword.action === "send" || keyword.action === "sendClose") {
+    // Both variants run the same send path; the only difference is whether
+    // the mic re-arms afterward, which the chat layer decides off `closeMic`.
+    const closeMic = keyword.action === "sendClose";
+    const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
+    if (wantBlob) {
+      // Slow path: park the text and STOP so the machine finalizes and
+      // emits the segment's audio blob. The idle-transition effect fires the
+      // "submit" intent with both text and blob once the machine settles.
+      // Used by narration mode to get the HQ-quality transcript.
+      pendingSendRef.current = {
+        processedTranscript: keyword.processedTranscript,
+        matchedPhrase: keyword.matchedPhrase,
+        closeMic,
+      };
+      send({ type: "STOP" });
+    } else {
+      // Fast path: drop the in-flight stream and fire immediately so the
+      // message commits with the realtime text — no waiting on WS
+      // finalization (which adds 1-2s of dead air).
+      send({ type: "CANCEL" });
+      optionsRef.current?.onVoiceIntent?.({
+        kind: "submit",
+        text: keyword.processedTranscript,
+        matchedPhrase: keyword.matchedPhrase,
+        audioBlob: null,
+        closeMic,
+      });
+    }
+  } else if (keyword.action === "micOff") {
+    send({ type: "CANCEL" });
+    optionsRef.current?.onVoiceIntent?.({ kind: "mic-off" });
+  } else if (keyword.action === "cancel") {
+    optionsRef.current?.onVoiceIntent?.({ kind: "cancel" });
+  } else if (keyword.action === "erase") {
+    send({ type: "CANCEL" });
+    send({ type: "START" });
+    // Notify the consumer: the machine restart only clears the live
+    // segment; the chat layer holds the rest of the in-progress message
+    // (composer input, persisted draft) and must erase it too.
+    optionsRef.current?.onVoiceIntent?.({ kind: "erase" });
+  }
+}
+
 export function useRealtimeTranscription(
   options?: UseRealtimeTranscriptionOptions
 ): UseRealtimeTranscriptionResult {
@@ -210,59 +266,26 @@ export function useRealtimeTranscription(
   // is available — mic-active alone doesn't capture the TTS-playback
   // window where the mic is intentionally paused.
 
-  const fireKeyword = useCallback((keyword: KeywordResult) => {
-    if (keyword.action === "send" || keyword.action === "sendClose") {
-      // Both variants run the same send path; the only difference is whether
-      // the mic re-arms afterward, which the chat layer decides off `closeMic`.
-      const closeMic = keyword.action === "sendClose";
-      const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
-      if (wantBlob) {
-        // Slow path: park the text and STOP so the machine finalizes and
-        // emits the segment's audio blob. The idle-transition effect below
-        // fires onKeywordSend with both text and blob once the machine
-        // settles. Used by narration mode to get the HQ-quality transcript.
-        pendingSendRef.current = {
-          processedTranscript: keyword.processedTranscript,
-          matchedPhrase: keyword.matchedPhrase,
-          closeMic,
-        };
-        send({ type: "STOP" });
-      } else {
-        // Fast path: drop the in-flight stream and fire immediately so
-        // the message commits with the realtime text — no waiting on WS
-        // finalization (which adds 1-2s of dead air).
-        send({ type: "CANCEL" });
-        optionsRef.current?.onKeywordSend?.({
-          processedTranscript: keyword.processedTranscript,
-          matchedPhrase: keyword.matchedPhrase,
-          audioBlob: null,
-          closeMic,
-        });
-      }
-    } else if (keyword.action === "micOff") {
-      send({ type: "CANCEL" });
-      optionsRef.current?.onKeywordMicOff?.();
-    } else if (keyword.action === "cancel") {
-      optionsRef.current?.onKeywordCancel?.();
-    } else if (keyword.action === "erase") {
-      send({ type: "CANCEL" });
-      send({ type: "START" });
-      // Notify the consumer: the machine restart only clears the live
-      // segment; the chat layer holds the rest of the in-progress message
-      // (composer input, persisted draft) and must erase it too.
-      optionsRef.current?.onKeywordErase?.();
-    }
-  }, [send]);
+  const fireKeyword = useCallback(
+    (keyword: KeywordResult) => dispatchKeyword(keyword, { send, optionsRef, pendingSendRef }),
+    [send]
+  );
 
-  // Slow-path completion: fire onKeywordSend after the machine has finalized
-  // and the audio blob is in context. Triggered by the state transition back
-  // to idle. No-op when the fast path was taken (ref is null).
+  // Slow-path completion: fire the "submit" intent after the machine has
+  // finalized and the audio blob is in context. Triggered by the state
+  // transition back to idle. No-op when the fast path was taken (ref is null).
   useEffect(() => {
     if (state !== "idle" || pendingSendRef.current === null) return;
     const pending = pendingSendRef.current;
     pendingSendRef.current = null;
     consumedRef.current = true;
-    optionsRef.current?.onKeywordSend?.({ ...pending, audioBlob: snapshot.context.audioBlob });
+    optionsRef.current?.onVoiceIntent?.({
+      kind: "submit",
+      text: pending.processedTranscript,
+      matchedPhrase: pending.matchedPhrase,
+      closeMic: pending.closeMic,
+      audioBlob: snapshot.context.audioBlob,
+    });
   }, [state, snapshot.context.audioBlob]);
 
   const keywordSpotting = useKeywordSpotting({ state, finalTranscript, interimTranscript, fireKeyword });

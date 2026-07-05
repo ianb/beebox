@@ -13,17 +13,18 @@ export {
   extractRefs,
   isBodyField,
   GLOBAL_CARD_FIELDS,
-  type BodyKind,
   type BodyField,
-  type BodyFieldOptions,
   type FieldDecl,
   type CardSchemaConfig,
   type CardSchema,
+  type CardCategory,
   type CardValidateInput,
+  type TemplateMergePolicy,
 } from "./schema.js";
 
 export {
   splitCardContent,
+  renderFrontmatterBlock,
   type SplitCardContent,
 } from "./frontmatter.js";
 

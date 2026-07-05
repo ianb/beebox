@@ -159,8 +159,8 @@ await box.write("box/people/dana.person.card", "---\ntype: person\nname: Dana\n-
 await box.write(
   "box/notes/Mtg.doc.card",
   '---\ntype: doc\ntitle: Mtg\n---\n' +
-    'Abs: {% source ref="/box/people/dana.person.card" as="x" %}a{% /source %}\n' +
-    'Rel: {% source ref="../people/dana.person.card" as="y" %}b{% /source %}\n',
+    'Abs: {% source ref="/box/people/dana.person.card" usage="x" %}a{% /source %}\n' +
+    'Rel: {% source ref="../people/dana.person.card" usage="y" %}b{% /source %}\n',
 );
 
 await mv(box, { from: "box/people/dana.person.card", to: "store/people/dana.person.card" });
@@ -170,8 +170,8 @@ await box.read("box/notes/Mtg.doc.card")
 type: doc
 title: Mtg
 ---
-Abs: {% source ref="/store/people/dana.person.card" as="x" %}a{% /source %}
-Rel: {% source ref="../../store/people/dana.person.card" as="y" %}b{% /source %}
+Abs: {% source ref="/store/people/dana.person.card" usage="x" %}a{% /source %}
+Rel: {% source ref="../../store/people/dana.person.card" usage="y" %}b{% /source %}
 ```
 
 ## Frontmatter `ref:` / `refs:` rewritten (relative + absolute)

@@ -97,7 +97,7 @@ falsified several claims; folded in throughout. The load-bearing ones:
 - **`callback-box/CLAUDE.md` "don't add features beyond what the task
   requires"** — we delete the XML loader/serializer/XPath rather than port
   them; they have no consumer.
-- **`callback-box/CODE-STYLE.md:25`** (no `any`), **`:55`** (`as` is like Rust
+- **`callback-box/code-style.md:25`** (no `any`), **`:55`** (`as` is like Rust
   `unsafe`; centralize at parse boundaries — relevant to the ref-resolver
   replacement and the `ElementNode` removals), files ≤300 lines.
 - **The schema-migration precedent** (`remove-cardworks-and-xml.md`):

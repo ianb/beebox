@@ -10,11 +10,10 @@
  * It is a present-state snapshot, NOT a decay/forgetting model. The running
  * session log lives as a plain file in the card's `<basename>.attach/` scope.
  *
- * See docs/plans/courseware-phase1.md.
+ * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 /** Qualitative status for a node — judged against the course's success-criteria. */
@@ -49,6 +48,8 @@ const progressFields = {
 };
 
 export const ProgressSchema: CardSchema = cardSchema("progress", {
+  description: "A per-learner, evidence-backed record of understanding against a course's concept-map nodes",
+  category: "authored",
   fields: progressFields,
   instructions: `# Progress Cards
 
@@ -107,7 +108,6 @@ export function createProgressTemplate(options: { title?: string | undefined }):
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyText = "A short running summary of where the learner is. The blow-by-blow session log is an attachment.\n";
-  return `---\n${yamlText}---\n${bodyText}`;
+  return renderFrontmatterBlock(fields, bodyText);
 }

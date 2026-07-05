@@ -35,7 +35,6 @@ const NoteEntry = z.object({
 export const MyThingSchema: CardSchema = cardSchema("my-thing", {
   fields: {
     status: MyThingStatus.default("draft"),
-    title: z.string(),
     notes: z.array(NoteEntry).optional(),
     body: body(z.string()),  // omit this line if the card has no prose body
   },
@@ -54,7 +53,6 @@ Include:
 export interface MyThingFields {
   type: "my-thing";
   status: MyThingStatusType;
-  title: string;
   notes?: Array<{ text: string; added?: string }>;
   body: string;  // omit if no body
 }
@@ -71,6 +69,7 @@ export function createMyThingTemplate(options: { title: string }): string {
 
 Key patterns:
 - `cardSchema(type, { fields, instructions? })` is the entry point. `fields` is a flat object of Zod validators; nest with `z.object` / `z.array` as needed.
+- Every schema automatically gets optional `title` and `contains` frontmatter fields (`GLOBAL_CARD_FIELDS` in `src/cards/schema.ts`) — don't redeclare them in `fields` or in your `*Fields` interface unless you need to override their default (e.g. making `title` required). `contains` is the field agents should populate: a one-sentence summary that's the prime retrieval field for search and listings (it's boosted in ranking — see `src/core/search/query.ts`). The worked example above still sets `title` in `createMyThingTemplate()`, which is fine — templates can populate a global field without the schema redeclaring it.
 - `body(z.string())` declares a markdown body field — it must be named `body` (enforced; one vocabulary across all card types). Omit to declare a body-less card (then any non-empty body errors on load).
 - The `type` field in YAML is the discriminator — the loader uses it to look up the schema. Templates must emit it.
 - Refs live in the YAML as either `{ref: "..."}` objects or strings in obvious places (e.g. `participants: [{ref: "people/..."}]`). The validator's ref-walker finds them by walking for `ref:` keys.
@@ -120,6 +119,50 @@ export const MyThingSchema: CardSchema = cardSchema("my-thing", {
 There is intentionally **no box-aware validate variant** today — if you find
 yourself wanting one (resolve a ref, inspect another card), raise it rather than
 smuggling box access in; the self-contained shape is the deliberate contract.
+
+#### Box-owned state on *template* cards — the `templateMerge` policy
+
+Only relevant if your card type is one callback-box **ships and updates as a
+template** (procedures, guides, schedules — the things `cb init` installs and
+later re-syncs). Box-local schemas and ordinary authored cards never install as
+templates, so they don't need this.
+
+The default sync rule is strict: when an upstream template changes, a box gets
+the new version only if its copy is unmodified stock; if the box edited the
+card **at all**, the update is parked in `config/_template-updates/` for review
+rather than clobbering the edit. That's usually right — but some fields are
+per-box **state**, not part of the definition, and a change to one shouldn't
+freeze the box on old content. The canonical case is a schedule's `enabled`: a
+box turning a schedule off for itself should still receive later definition
+updates (new cron, runs, description), not have the whole card park forever.
+
+Declare those keys as box-owned with `templateMerge`:
+
+```ts
+export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", {
+  fields: { /* ... enabled: z.boolean().optional(), ... */ },
+  templateMerge: { boxOwnedFields: ["enabled"] },
+});
+```
+
+Effect on the sync:
+
+- The owned keys are **stripped before** the customised-or-not comparison, so a
+  box differing from stock *only* in them still reads as unmodified and takes
+  the update.
+- The box's own values for those keys are **carried onto** the new version when
+  it's written (the schedule stays disabled).
+- Divergence in **any other key or the body** still parks — a retimed `cron` or
+  edited `runs` is a real customization and is never overwritten.
+
+It is deliberately a **field list, not a `merge(box, upstream)` callback**. The
+judgement that matters — "is this box on unmodified old stock, or did the
+boxholder edit the definition?" — needs the last-shipped hash, which lives in
+the version tracker (`config/template-versions.json`), not in the two card
+texts. A free callback couldn't see that and would have to either clobber real
+edits or freeze old stock. Naming which keys are *state* lets the tracker keep
+making that call correctly. (Implementation: `boxOwnedFields` on
+`installTemplateFile`, `src/core/install-template-file.ts`.)
 
 ### 2. Register in `src/schemas/registry.ts`
 

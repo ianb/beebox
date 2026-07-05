@@ -18,6 +18,8 @@ import { z } from "zod";
 import { body, cardSchema, type CardSchema } from "../cards/index.js";
 
 export const WebpageSchema: CardSchema = cardSchema("webpage", {
+  description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
+  category: "synced",
   fields: {
     title: z.string().optional(),
     // The original page URL the capture came from.

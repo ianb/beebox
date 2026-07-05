@@ -9,6 +9,7 @@
 import { promises as fs, type Dirent } from "node:fs";
 import path from "node:path";
 import { isInsideAttachScope } from "../../shared/attach-path.js";
+import { cardTypeFromName } from "../../shared/card-name.js";
 
 /** Directories never descended into. `store/trash` is handled by path. */
 const SKIP_DIRS = new Set([
@@ -81,11 +82,12 @@ export async function walkCardFiles(boxRoot: string): Promise<Map<string, CardSt
 }
 
 /**
- * Card type from a `Foo.<type>.card` filename, or undefined when the name
- * doesn't follow the convention.
+ * Card type from a card filename (nominal, positional, or job form), or
+ * undefined when the name doesn't follow the convention. Delegates to the
+ * canonical grammar so search kinds match schema registration (job cards
+ * now resolve to `<kind>-job` instead of the literal `job` — invisible in
+ * practice since all job schemas are `searchable: false`).
  */
 export function cardTypeFromPath(relPath: string): string | undefined {
-  const base = relPath.split("/").pop() ?? relPath;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match ? match[1] : undefined;
+  return cardTypeFromName(relPath);
 }

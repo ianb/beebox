@@ -11,8 +11,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import sanitize from "sanitize-filename";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import {
   createChatThreadTemplate,
   createMessageEntry,
@@ -45,7 +45,7 @@ async function readThreadFields(absPath: string): Promise<ChatThreadFields> {
 }
 
 async function writeThreadFields(absPath: string, fields: ChatThreadFields): Promise<void> {
-  await fs.writeFile(absPath, `---\n${stringifyYaml(fields)}---\n`);
+  await fs.writeFile(absPath, renderFrontmatterBlock(fields));
 }
 
 /**
@@ -228,7 +228,6 @@ export async function createChatJob(options: {
   const jobPath = path.join(jobsDir, jobFilename);
 
   const content = createChatJobTemplate({
-    created: getBoxTimeISO(boxRoot),
     description,
     threadRef,
     source,
@@ -260,8 +259,8 @@ export interface UpdatePersonResult {
  * Telegram correspondent triggers a broken-reference at validate time.
  *
  * With `force: true`, an existing person card has its connector-derived
- * identity (`name`) refreshed in place — agent-owned fields (status, contact,
- * role, aliases, contains, body, …) are preserved untouched. Username and
+ * identity (`name`) refreshed in place — agent-owned fields (status, email,
+ * phone, address, role, aliases, contains, body, …) are preserved untouched. Username and
  * numeric ids have no field in the person-card schema; they live in the
  * sibling `<connector>.json` metadata, which is always kept current.
  */
@@ -343,6 +342,6 @@ async function refreshPersonCardName(cardPath: string, name: string): Promise<bo
   const fields: Record<string, unknown> = { ...parsed };
   if (fields["name"] === name) return false;
   fields["name"] = name;
-  await fs.writeFile(cardPath, `---\n${stringifyYaml(fields)}---\n${split.body}`);
+  await fs.writeFile(cardPath, renderFrontmatterBlock(fields, split.body));
   return true;
 }

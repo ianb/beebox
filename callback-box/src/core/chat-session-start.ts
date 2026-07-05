@@ -8,11 +8,12 @@
  * value back, leaving the instance to store it.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import * as path from "node:path";
 import { getDirectoryForSession } from "./chat-session-history.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
-import { composeSendSnapshot } from "./session-context.js";
+import { composeSendSnapshot, type HealthGate } from "./session-context.js";
 import { renderActivityChildren } from "./chat-card-activity.js";
 import {
   CHAT_SYSTEM_PROMPT,
@@ -28,9 +29,7 @@ import type { FeatureStore } from "./chat-session-features.js";
 import type { ChatBackendStartOptions, ChatContentBlock } from "../services/claude-chat.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSession:${context}]`, ...args);
-}
+const log = makeLog("ChatSession");
 
 /** The pieces of ChatSession state these helpers read or update. */
 interface StartContext {
@@ -133,10 +132,11 @@ export async function buildBackendStartOptions(
  */
 export async function composeTurnContent(
   boxRoot: string,
-  { rawInput, features, sessionStart }: {
+  { rawInput, features, sessionStart, healthGate }: {
     rawInput: ChatSendInput;
     features: FeatureStore;
     sessionStart: boolean;
+    healthGate?: HealthGate;
   },
 ): Promise<ChatContentBlock[]> {
   await features.ensureLoaded();
@@ -157,6 +157,7 @@ export async function composeTurnContent(
     ...(rawInput.channel !== undefined ? { channel: rawInput.channel } : {}),
     ...(openCard !== undefined ? { openCard } : {}),
     ...(activityChildren !== "" ? { activityChildren } : {}),
+    ...(healthGate !== undefined ? { healthGate } : {}),
   });
   const input: ChatSendInput = {
     ...rawInput,

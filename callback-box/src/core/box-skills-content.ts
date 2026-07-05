@@ -5,7 +5,7 @@
  * the same pattern as schema `instructions`.
  *
  * NOTE: this is agent-facing prose under review — the boxholder reviews the
- * skill before it ships. See docs/plans/courseware-phase1.md (Track 5).
+ * skill before it ships. See docs/implemented-plans/courseware-phase1.md (Track 5).
  */
 
 /** The `build-course` skill: the pedagogical process for building a course. */
@@ -239,4 +239,213 @@ moment; it does **not** write a \`progress\` status (that comes from real dialog
 \`d3-force\`) use the same export shape; pick the runtime that fits the content
 (\`runtime: three\` / \`runtime: d3\` in the card). See the figure card-rule for the
 full field reference.
+`;
+
+/**
+ * The `calendar` skill: authoring `.ics` events for two-way Google Calendar
+ * sync. Generated per-box so the example carries the box's real timezone and a
+ * correct VTIMEZONE block the agent can copy verbatim (hand-writing DST rules
+ * is exactly the error this prevents). The caller (box-skills.ts) resolves
+ * both.
+ */
+export function calendarSkill({ timezone, vtimezone }: { timezone: string; vtimezone: string }): string {
+  return `---
+name: calendar
+description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in store/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
+---
+
+# Calendar
+
+Calendar events live as \`.ics\` files in \`store/calendar/\`. Sync with Google Calendar is **two-way**:
+
+- **View events:** \`cb calendar\` shows upcoming events (\`cb calendar today\`, \`cb calendar 2w\`, …).
+- **Create an event:** write a new \`.ics\` file in \`store/calendar/\`. The next sync pushes it to Google Calendar.
+  - Include \`X-CB-CALENDAR-ID:<calendar-id>\` to target a specific calendar (defaults to primary).
+  - Optionally include \`X-CB-REASON:<why>\` and \`X-CB-REF:<path>\` for tracking.
+- **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
+- **Delete an event:** add an \`X-CB-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
+
+**Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected. This box's timezone is \`${timezone}\`; the example below carries its correct VTIMEZONE block — copy it as-is.
+
+Example minimal \`.ics\` for a new event:
+
+\`\`\`
+BEGIN:VCALENDAR
+VERSION:2.0
+PRODID:-//Callback Box//EN
+${vtimezone.trim()}
+BEGIN:VEVENT
+UID:unique-id-here
+SUMMARY:Dentist appointment
+DTSTART;TZID=${timezone}:20260401T140000
+DTEND;TZID=${timezone}:20260401T150000
+X-CB-REASON:confirmed in the reschedule email
+X-CB-REF:/store/archive/Dentist_Reschedule.email-message.card
+END:VEVENT
+END:VCALENDAR
+\`\`\`
+`;
+}
+
+/** The `drive` skill: reading/editing/syncing Google Drive sheets and docs. */
+export const DRIVE_SKILL = `---
+name: drive
+description: Work with Google Drive files synced into the box — read, edit, or sync spreadsheets (.gsheet.card) and documents (.gdoc.card), or run cb drive commands. Use when a task involves a Drive-synced spreadsheet or Google Doc.
+---
+
+# Google Drive
+
+Google Drive content syncs **two-way** into \`store/drive/\` (or wherever you place the card). A Drive card keeps all its data in its own **attach scope** (\`<basename>.attach/\`), so \`cb mv\` moves the card and everything with it in one step — the \`drive-id\` in the card keeps the upstream link. Don't move the pieces by hand.
+
+## Spreadsheets (\`.gsheet.card\`)
+
+- **Find:** the card lists the title, Google link, and its tabs.
+- **Read:** each tab is a JSON file in the card's attach scope (referenced from the card). Plain cells are bare values; formula cells are \`{"f": "=SUM(A1:B1)", "v": "$42.00"}\` — both the formula and the computed result.
+- **Edit:** edit the tab's JSON and commit (for a formula cell, edit the \`f\` field). The next sync pushes to Google Sheets.
+- **Comments:** if the spreadsheet has comments, a \`<basename>.comments.json\` sidecar in the attach scope holds the full thread (referenced by \`comments.ref:\`). Read-only context.
+
+## Documents (\`.gdoc.card\`)
+
+- **Find:** the card carries only metadata; the document body is markdown at \`attach/<basename>.md\` in its attach scope.
+- **Read / edit:** open and edit \`attach/<basename>.md\`, then commit. The next sync converts the markdown to Doc format and pushes it.
+- **Comments:** collaborative feedback is captured read-only as a \`<basename>.comments.json\` sidecar in the attach scope (content, author, timestamps, resolved status, anchored text, replies). Editing/pushing the \`.md\` does NOT write comments back upstream — a push may even orphan the upstream anchors. Read it to understand reviewer feedback; don't expect it to round-trip.
+- **Lossy content:** the card's \`lossy:\` frontmatter lists upstream features that don't survive markdown export (footnotes, embedded images, equations, suggestions, complex tables). When it's non-empty, pushing local edits will destroy them — surface the loss to the user before encouraging a push.
+- **Conflicts:** if both local and remote changed since the last sync, the card status flips to \`conflict\` and the upstream content is written to \`attach/<basename>.remote.md\`. Resolve by merging the two, deleting \`.remote.md\`, and committing.
+
+CLI: \`cb drive inspect <url>\`, \`cb drive add <url> <path>\`, \`cb drive sync\`, \`cb drive status\`.
+`;
+
+/**
+ * The `email` skill: the doorway from "email someone" to an email-outbound
+ * card. The field-level reference (headers, threading, lifecycle) lives in the
+ * email-outbound schema's own instructions, which load via the card rule when
+ * the card exists — this skill covers the intent, where the card goes, and how
+ * to write it, then hands off.
+ */
+export const EMAIL_SKILL = `---
+name: email
+description: Draft or reply to an email for the user to review and send. Use when asked to email someone, reply to a message, follow up by email, or send anything that isn't a chat or Telegram reply.
+---
+
+# Email
+
+You don't send email directly — you **draft** it, and the user reviews and sends. A draft is an \`email-outbound\` card; the Gmail connector picks it up on the next sync and creates a Gmail draft.
+
+## Create the draft
+
+- **Replying** to a thread: put the draft inside that thread's attach scope, beside the message you're answering — e.g. \`box/inbox/email/<thread>.attach/draft-001.email-outbound.card\` — and set \`in-reply-to.ref:\` to the source \`.email-message.card\` (a path relative to the draft, usually just the sibling filename) so Gmail threads it correctly.
+- **A new email** (no thread): a fresh card under \`box/inbox/email/\`.
+
+\`cb create <path> -t email-outbound\` scaffolds one. The field details — required headers, threading, lifecycle — are in the \`email-outbound\` card's own instructions, which load when you create or open it. Follow them.
+
+## How to write it
+
+- It's a draft on purpose: the user has the last word before anything leaves the box. Compose the *whole* message — don't hand them a half-written stub to finish.
+- Match the user's voice and their relationship to the recipient (read the person card if there is one). A note to a sibling isn't a note to a landlord.
+- Only real recipients — never invent an address. If you don't have one, say so or raise a question card.
+
+If the user only wants to *know* about an email they received, that's \`cb search --kind email-message\`, not a draft.
+`;
+
+/**
+ * The `location` skill: the box's on-demand location surface (reading the
+ * user's shared device location + teaching named places). Moved out of the
+ * always-loaded guide — location never appears in context automatically, so
+ * an agent only needs this when a task actually turns on where the user is.
+ */
+export const LOCATION_SKILL = `---
+name: location
+description: Find where the user is, or teach the box a named place (Home, Office). Use when a task needs the user's current whereabouts, or to record or recognize a location by name.
+---
+
+# User location
+
+The boxholder can share their device location from the web UI. It is **on-demand only** — it never appears in your context automatically, so query it when the conversation needs it. It comes from the browser, so it stays \`unknown\` on Telegram and other channels.
+
+- **Read it:** \`cb location get\` prints the last-known fix as \`lat,lng (±accuracy, captured <age> ago, web)\`, prefixed with the place name (\`Home — …\`) when the fix is inside a known place. Add \`--json\` for structured output (\`place\`, \`lat\`, \`lng\`, \`accuracy\`, \`capturedAt\`, \`ageMs\`, \`stale\`).
+- **Not shared:** prints \`unknown\` when the boxholder hasn't shared location. Don't guess or fabricate a location — report that it's unknown.
+- **Staleness:** an old fix is flagged \`[stale]\` (and \`stale: true\` in JSON); treat it as approximate.
+
+## Named places
+
+Place cards (\`places/<Name>.place.card\`) let the box recognize a location by name — so \`cb location get\` can say "Home" instead of bare coordinates.
+
+- **Record a place (card first, then mark):** create the card describing the place — \`cb create places/Home.place.card name=Home address="…"\` — with a body explaining what it is and why it matters. Then, while the boxholder is physically there, run \`cb location mark places/Home.place.card\` to stamp the current location into it. Don't hand-type \`lat\`/\`lng\` — \`mark\` writes them from the live fix and reports the fix's age so you can judge whether it's current.
+- **Outside the radius:** if the boxholder is now outside a place's radius, \`mark\` won't change it; re-run with \`--expand\` to grow the radius to include the new spot.
+`;
+
+/**
+ * The `schedules` skill: authoring a scheduled-script card so the box does
+ * something later or on a cadence. The description is the discovery surface —
+ * an agent forms the "come back to this later" intent from it — while the card
+ * format lives in the scheduled-script card's own docs.
+ */
+export const SCHEDULES_SKILL = `---
+name: schedules
+description: Have the box do something later or on a cadence — a reminder, a recheck, a periodic job that runs on its own. Use when you want to return to something after this turn, revisit a decision at intervals, or run a command on a schedule.
+---
+
+# Schedules
+
+A scheduled script — a \`.scheduled-script.card\` in \`config/schedules/\` — runs a \`cb\` command on a recurring schedule, or once at a future time. The built-in ones are mechanical (connector syncs, maintenance); the ones **you** create serve the user: checking something on a cadence, revisiting a decision at intervals, or a one-off further out than a chat \`<schedule>\` can reach. Keep them practical, not dramatic.
+
+\`\`\`
+---
+cron: 0 8 * * 1              # Mondays at 8am
+not-before: 3d              # skip if it already ran within 3 days
+runs: cb procedure run weekly-digest
+description: Monday digest of the week's still-open threads
+source: Boxholder wanted a summary to start the week
+---
+\`\`\`
+
+They run in the background automatically; \`cb scheduled\` lists them. Use \`at:\` (a future timestamp) instead of \`cron:\` for a one-shot. Full format — cron/at/rrule, \`not-before\` throttling, \`create-after-success\` chaining — is in \`docs/generated/card-scheduled-script.md\`.
+
+(This is for durable, box-level schedules. A quick in-session follow-up while chatting — "remind me in 20 minutes" — is the chat \`<schedule>\` tag, not a card.)
+`;
+
+/**
+ * The `tricks` skill: formalizing a repeated operation as a reusable script.
+ * The trigger is *self-noticing* ("I keep doing this"), so the description
+ * carries that instinct — nothing else in context plants it once this leaves
+ * the always-loaded guide.
+ */
+export const TRICKS_SKILL = `---
+name: tricks
+description: Formalize a repeated operation as a reusable script you can rerun with cb trick. Use when you notice you're doing the same multi-step task by hand more than once (a particular fetch, an export, a search-and-summarize) and want to package it.
+---
+
+# Tricks
+
+A **trick** is a reusable script — you package a useful operation once and rerun it with \`cb trick <name>\`, instead of redoing it by hand each time. The signal to make one is *repetition*: the second time you find yourself running the same multi-step task, that's when it's worth formalizing.
+
+Each trick lives in \`tricks/scripts/<name>/\` with an \`index.ts\`. Read \`tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one.
+
+Tricks are box-local by default, but the operation itself needn't be box-specific — a general utility (an image generation, a format conversion) is a fine trick if it's something this box does repeatedly.
+`;
+
+/**
+ * v2 (package-layout) variant of the tricks skill: tricks live at
+ * `src/tricks/` (the package root), not `tricks/` (the box root). Derived by
+ * substitution — same pattern as `TRICKS_CLAUDE_MD_V2` in `box-templates.ts`
+ * — so the two paths named here can't drift out of lockstep by hand-editing
+ * only one.
+ */
+export const TRICKS_SKILL_V2 = TRICKS_SKILL.replaceAll("tricks/scripts/", "src/tricks/scripts/");
+
+/**
+ * The `views` skill: authoring a .tsx view. Rare, mechanics-heavy box-building
+ * work — out of the always-loaded guide, reached when a card type needs a
+ * richer interface than the default renderer.
+ */
+export const VIEWS_SKILL = `---
+name: views
+description: Give a card type a custom interface — a React component that renders a card in the browser. Use when a card type needs a richer display than its default renderer.
+---
+
+# Views
+
+Views are React (\`.tsx\`) components that render box data in the browser. **Read \`docs/generated/views.md\` before creating or modifying one** — it carries the full API, the view-host context, and how to test a view.
+
+A view always gives a **card type** a custom interface: a view exporting \`rendersCardTypes = ["<type>"]\` becomes that type's UI on card pages, peeks, and chat embeds, and is selected on a card's path with \`?view=name\`. Every view is attached to a card type this way — there is no card-less standalone view.
 `;

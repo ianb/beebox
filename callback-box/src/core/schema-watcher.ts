@@ -22,8 +22,8 @@
  */
 
 import { watch, type FSWatcher } from "chokidar";
-import { join } from "node:path";
 import { invalidateBoxSchemas } from "../schemas/registry.js";
+import { getBoxShape, boxCodePaths } from "../cli/lib/box-shape.js";
 
 const watchers = new Map<string, FSWatcher>();
 
@@ -31,10 +31,12 @@ const watchers = new Map<string, FSWatcher>();
  * Ensure a schema watcher is running for `boxRoot`. Idempotent — repeat calls
  * for the same root are no-ops.
  */
-export function ensureSchemaWatcher(boxRoot: string): void {
+export async function ensureSchemaWatcher(boxRoot: string): Promise<void> {
   if (watchers.has(boxRoot)) return;
 
-  const schemasDir = join(boxRoot, "config/schemas");
+  const shape = await getBoxShape(boxRoot);
+  const schemasDir = boxCodePaths(shape).schemasDir;
+  if (watchers.has(boxRoot)) return; // re-check: an await above allows a concurrent caller to win the race.
   const watcher = watch(schemasDir, {
     persistent: true,
     ignoreInitial: true,

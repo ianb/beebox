@@ -13,6 +13,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "./install-template-file.js";
+import { TEMPLATE_STOCK_HASHES } from "./template-stock-hashes.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -168,6 +170,32 @@ can't — and doesn't need to).
 - Test with \`cb validate\` after creating cards of the new type
 `;
 
+/**
+ * v2 (package-layout) variant of the schemas guide: schemas live at
+ * `src/schemas/` (the package root), not `config/schemas/` (the box root).
+ * Derived by substitution rather than duplicated by hand so the two stay in
+ * lockstep — everything else about writing a schema is identical.
+ *
+ * A v2 box's schemas dir gets no resolve-hook fakery (see
+ * `registry.ts`'s `ensureResolveHooks` doc) — only `callback-box/*`
+ * specifiers resolve there, via the package's own `node_modules`. The v1
+ * guide's `import ... from "zod"` / `from "yaml"` examples would fail to
+ * load in a v2 box, so those lines and the "Available Imports" section are
+ * rewritten to the `callback-box/schema` re-export instead.
+ */
+const SCHEMAS_CLAUDE_MD_V2 = SCHEMAS_CLAUDE_MD.replaceAll("config/schemas/", "src/schemas/")
+  .replaceAll("import { z } from \"zod\";", "import { z } from \"callback-box/schema\";")
+  .replace(
+    "import { stringify as stringifyYaml } from \"yaml\";\nimport { z } from \"callback-box/schema\";",
+    "import { stringifyYaml, z } from \"callback-box/schema\";"
+  )
+  .replace(
+    "From `zod`:\n- `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)",
+    "From `callback-box/schema`:\n" +
+      "- `z` — Zod schema builder (z.string(), z.enum(), z.array(), etc.)\n" +
+      "- `parseYaml`/`stringifyYaml` — YAML (de)serialization, e.g. for a `template.generate`"
+  );
+
 const TRICKS_PACKAGE_JSON = JSON.stringify(
   {
     name: "tricks",
@@ -260,9 +288,19 @@ import { helper } from "../../lib/helper.js";
 - The subprocess cwd is \`tricks/\`, so package resolution works naturally
 `;
 
+/**
+ * v2 (package-layout) variant of the tricks guide: tricks live at
+ * `src/tricks/` (the package root), not `tricks/` (the box root). Derived by
+ * substitution so the two stay in lockstep.
+ */
+const TRICKS_CLAUDE_MD_V2 = TRICKS_CLAUDE_MD
+  .replaceAll("tricks/", "src/tricks/")
+  .replace("cd tricks &&", "cd src/tricks &&")
+  .replace("into the tricks directory", "into the src/tricks directory");
+
 const VIEWS_CLAUDE_MD = `# Views Directory
 
-This directory contains agent-generated React components (.tsx files) that render in the browser.
+This directory contains agent-generated React components (.tsx files) that render in the browser. **Every view is attached to a card type** via \`rendersCardTypes\` — it becomes that type's interface on card pages, in chat embeds, and in the companion pane. There is no card-less standalone view.
 
 **IMPORTANT: Read \`docs/generated/views.md\` before creating or modifying views.** It documents the required file format, the ViewProps API, dependency globs, and embedding syntax. Do not guess the format — read the doc.
 
@@ -273,9 +311,14 @@ Each view must export:
 - \`description\` (string) — what the view shows
 - \`dependencies\` (string[]) — glob patterns for cards that affect rendering
 - \`modes\` (string[]) — \`"page"\`, \`"chat"\`, or both
-- \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\`
+- \`rendersCardTypes\` (string[]) — the card type(s) this view renders
+- \`default\` function component receiving \`{ cards, navigate, boxSlug, params }\` (\`params.path\` is the card being rendered)
 
 React is provided automatically — do not import it.
+
+To link or embed another card, import \`CardLink\`/\`CardRef\` from
+\`callback-box/view-widgets\` (point at cards with \`cardRef="/store/…"\`, not a
+hand-rolled \`<a>\`) — see the "Card-aware widgets" section in the doc.
 
 After writing or changing a view, render-test it: \`cb view test <slug>\` (loads
 the real cards, renders once, prints the output or a source-mapped error).
@@ -284,66 +327,124 @@ Full documentation: \`docs/generated/views.md\`
 `;
 
 /**
- * Install tricks scaffold files (package.json, CLAUDE.md) if they don't exist.
+ * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
+ * exist. Shape-aware: a legacy box's tricks live at `boxRoot/tricks/`; a v2
+ * box's live at `packageRoot/src/tricks/` (`boxCodePaths` resolves either).
  */
-export async function installTricksFiles(boxRoot: string): Promise<void> {
-  const packageJsonPath = path.join(boxRoot, "tricks/package.json");
+/** Write `content` to `filePath` only if nothing is there yet (ENOENT is the
+ *  expected, silent "scaffold it" case — the error itself carries no
+ *  actionable info). */
+async function writeFileIfMissing(filePath: string, content: string): Promise<void> {
   try {
-    await fs.access(packageJsonPath);
+    await fs.access(filePath);
   } catch (_e) {
-    // No tricks package.json yet (fs.access throws ENOENT) — scaffold it.
-    // The error carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "tricks"), { recursive: true });
-    await fs.writeFile(packageJsonPath, TRICKS_PACKAGE_JSON);
-  }
-
-  const claudeMdPath = path.join(boxRoot, "tricks/scripts/CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No tricks CLAUDE.md yet (fs.access throws ENOENT) — scaffold it. The
-    // error carries no actionable info; absence is the normal path.
-    await fs.mkdir(path.join(boxRoot, "tricks/scripts"), { recursive: true });
-    await fs.writeFile(claudeMdPath, TRICKS_CLAUDE_MD);
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, content);
   }
 }
 
-/**
- * sha256 of the pre-frontmatter, XML-only schemas guide shipped before the
- * guide adopted the template tracker. Every box installed by an older
- * callback-box has this exact file; recognizing it lets the new
- * frontmatter-first guide overwrite the stale one (which actively steers box
- * agents toward `element()`/XML) while still parking any guide a boxholder
- * has actually edited.
- */
-const OLD_XML_SCHEMAS_GUIDE_SHA256 =
-  "127bdcaa2598ad8664037bd01659e8f23d4fcd5af493788102b9387b090b5452";
+export async function installTricksFiles(boxRoot: string): Promise<void> {
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const tricksDir = boxCodePaths(shape).tricksDir;
 
-/**
- * Install (or refresh) the box-local schemas guide. Uses the template tracker
- * so the stock guide is refreshed when unmodified and parked under
- * `config/_template-updates/` when the boxholder has customized it.
- */
-export async function installSchemasGuide(boxRoot: string): Promise<void> {
+  await writeFileIfMissing(path.join(tricksDir, "package.json"), TRICKS_PACKAGE_JSON);
+
+  // The CLAUDE.md guide: legacy stays a plain create-if-missing write; a v2
+  // box's copy goes through the template tracker like the schemas/views
+  // guides above, so `cb upgrade` can roll out future guide changes without
+  // clobbering a customized copy.
+  if (shape.shapeVersion === 1) {
+    await writeFileIfMissing(path.join(tricksDir, "scripts/CLAUDE.md"), TRICKS_CLAUDE_MD);
+    return;
+  }
+
   await installTemplateFile({
     boxRoot,
-    relPath: "config/schemas/CLAUDE.md",
-    templateContent: SCHEMAS_CLAUDE_MD,
-    priorStockHashes: [OLD_XML_SCHEMAS_GUIDE_SHA256],
+    relPath: "../src/tricks/scripts/CLAUDE.md",
+    templateContent: TRICKS_CLAUDE_MD_V2,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["tricks-guide-v2"]!.superseded,
   });
 }
 
 /**
- * Install views CLAUDE.md guide if it doesn't exist.
+ * The template files that ship with a `priorStockHashes` allowlist — the
+ * box-local CLAUDE.md guides an agent reads. Each maps a ledger key
+ * (`TEMPLATE_STOCK_HASHES`) to its live content. Kept as a registry so the
+ * forcing-function test and `pnpm template-stock:update` can iterate them: the
+ * test fails if any content's hash drifts from the ledger's `current`, which is
+ * what keeps every superseded hash recorded (and thus rollouts non-parking).
+ */
+export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
+  name: keyof typeof TEMPLATE_STOCK_HASHES;
+  relPath: string;
+  content: string;
+}> = [
+  { name: "schemas-guide", relPath: "config/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD },
+  { name: "views-guide", relPath: "views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  // v2 (package-layout) counterparts — same tracker, but the file lives one
+  // level up at the package root (`src/...`), reached via a `../`-prefixed
+  // relPath (see the "v2 (package-layout) boxes" note in
+  // install-template-file.ts). Separate ledger entries so a future divergence
+  // in any one guide never has to be threaded through a shared entry.
+  { name: "schemas-guide-v2", relPath: "../src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
+  { name: "views-guide-v2", relPath: "../src/views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
+  { name: "tricks-guide-v2", relPath: "../src/tricks/scripts/CLAUDE.md", content: TRICKS_CLAUDE_MD_V2 },
+];
+
+/**
+ * Install (or refresh) the box-local schemas guide.
+ *
+ * Both shapes go through the template tracker: refreshed when unmodified,
+ * parked under `config/_template-updates/` when the boxholder has customized
+ * it (prior stock hashes come from the ledger so a box on any shipped
+ * version overwrites cleanly). A v2 box's copy lives at the package root
+ * (`src/schemas/CLAUDE.md`), reached via the `../`-prefixed relPath
+ * convention (see install-template-file.ts) — tracker coverage from a fresh
+ * `cb init` is what lets `cb upgrade` (Track E) roll out guide updates later
+ * without clobbering a customized copy.
+ */
+export async function installSchemasGuide(boxRoot: string): Promise<void> {
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  if (shape.shapeVersion === 1) {
+    await installTemplateFile({
+      boxRoot,
+      relPath: "config/schemas/CLAUDE.md",
+      templateContent: SCHEMAS_CLAUDE_MD,
+      priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"]!.superseded,
+    });
+    return;
+  }
+
+  await installTemplateFile({
+    boxRoot,
+    relPath: "../src/schemas/CLAUDE.md",
+    templateContent: SCHEMAS_CLAUDE_MD_V2,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide-v2"]!.superseded,
+  });
+}
+
+/**
+ * Install (or refresh) the box-local views guide. Same legacy-vs-v2 split as
+ * `installSchemasGuide` above; the guide's text needs no path substitution
+ * for v2 (it never names its own directory).
  */
 export async function installViewsGuide(boxRoot: string): Promise<void> {
-  const claudeMdPath = path.join(boxRoot, "views/CLAUDE.md");
-  try {
-    await fs.access(claudeMdPath);
-  } catch (_e) {
-    // No views guide yet (fs.access throws ENOENT) — install it. The error
-    // carries no actionable info; absence is the normal path.
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  if (shape.shapeVersion === 1) {
     await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
-    await fs.writeFile(claudeMdPath, VIEWS_CLAUDE_MD);
+    await installTemplateFile({
+      boxRoot,
+      relPath: "views/CLAUDE.md",
+      templateContent: VIEWS_CLAUDE_MD,
+      priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"]!.superseded,
+    });
+    return;
   }
+
+  await installTemplateFile({
+    boxRoot,
+    relPath: "../src/views/CLAUDE.md",
+    templateContent: VIEWS_CLAUDE_MD,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"]!.superseded,
+  });
 }

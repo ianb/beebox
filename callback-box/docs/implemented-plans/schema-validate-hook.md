@@ -24,12 +24,12 @@ loader) stays centralized in `card-lint.ts`.
   schema-authoring doc (`docs/adding-schemas.md`) and schema-module headers are
   the canonical places a future agent learns "where does validation go"; this
   plan must update them or it leaves false guidance behind.
-- `cardworks/CONVENTIONS.md` — *"Only export what's needed"* (knip-enforced),
+- `cardworks/conventions.md` — *"Only export what's needed"* (knip-enforced),
   *"Max 2 positional parameters"*, *"No optional chaining"* (explicit null
   checks), *"Use custom error classes"*, files ≤300 / functions ≤150 lines.
   The new hook type and the validators that move into schema modules follow
   these.
-- `callback-box/CODE-STYLE.md` — *"as type assertions are like Rust's
+- `callback-box/code-style.md` — *"as type assertions are like Rust's
   unsafe"*; *"No default parameters"*; max-2-positional. The dispatch rewrite
   and the moved validators must not introduce bare `as` or default params.
 - `callback-box/CLAUDE.md` (Behavioral Notes) — *"don't add features beyond
@@ -151,8 +151,8 @@ small and cohesive enough that splitting into named tracks would be ceremony.
     : [];
   ```
 
-  (Explicit-conditional form, not `?.() ?? []` — `CODE-STYLE.md` /
-  `CONVENTIONS.md` forbid optional chaining.)
+  (Explicit-conditional form, not `?.() ?? []` — `code-style.md` /
+  `conventions.md` forbid optional chaining.)
 
   Schema modules supply the hook. extfile (`extfile.tsx`):
 
@@ -200,7 +200,7 @@ Direction and Open questions rather than spun into a subplan.
 | A schema's `validate` throws (e.g. Markdoc internal error on a pathological body) at the `card-lint.ts` call site | No — add | **Gap today too:** `commentaryErrors` already calls Markdoc inside the existing dispatch with no try/catch; `validateMarkdocBody` catches `markdocParse` failure (`card-lint.ts:269-272`) but not `markdocValidate`. The refactor preserves this exactly. | Would surface as a thrown error → `lintOne` has no catch around `lintFrontmatterCard`'s post-parse section, so it propagates to `lintCardsDispatch`'s loop (uncaught). Same as today. |
 | `parsed.fields["body"]` is not a string when commentary's `validate` reads it (body-less commentary, or future body-kind change) | Covered by the `typeof body === "string" ? body : ""` narrow in the moved hook | Yes — narrow is in the hook | Clear: empty-string body → `commentaryErrors` returns `[]` (`card-lint.ts:267`) |
 | A new schema author forgets `validate` and expects a rule to fire | Audit (see Knowledge audits) nudges discovery | N/A — absence of a hook means no extra rules, which is the correct default | Silent by design (no hook = no extra validation), but documented in `adding-schemas.md` |
-| `import type { LintIssue }` introduces a module cycle cardworks' madge rejects | `pnpm lint:circular` in cardworks | Type-only import — madge accepts type-only cycles (`CONVENTIONS.md`) | Clear (build/lint catches it) |
+| `import type { LintIssue }` introduces a module cycle cardworks' madge rejects | `pnpm lint:circular` in cardworks | Type-only import — madge accepts type-only cycles (`conventions.md`) | Clear (build/lint catches it) |
 | Moved `extfileErrors`/`commentaryErrors` left exported and unused-elsewhere | `pnpm lint:knip` | Make them module-private | Clear (knip errors) |
 
 **Critical gap:** none. The one pre-existing thin spot (an unguarded
@@ -270,7 +270,7 @@ not part of this refactor (it would change behavior, not just relocate it).
 - **Should `CardValidateInput` be an object given it has one field today?**
   Lean: **yes, keep it an object.** A bare positional `fields` would force a
   breaking change the day a second self-contained datum is wanted, and the
-  named-params-object convention (`CODE-STYLE.md`) favors it. Settled enough to
+  named-params-object convention (`code-style.md`) favors it. Settled enough to
   be in Direction, noted here for the reviewer's eye.
 
 ## Knowledge audits

@@ -2,30 +2,29 @@
  * Schema module - exports all schemas and registry utilities.
  */
 
-// Re-export everything from the registry
-export {
-  getCardTypes,
-  isKnownCardType,
-  MemoSchema,
-  QuestionSchema,
-  FeedbackSchema,
-  ImageSchema,
-  AudioSchema,
-  FileSchema,
-  CaptureSessionSchema,
-  RecordSchema,
-  RecipeSchema,
-  IntakeJobSchema,
-  QuestionFollowupJobSchema,
-  GuideSchema,
-  ScheduledScriptSchema,
-  TelegramMessageSchema,
-  ChatThreadSchema,
-  ChatJobSchema,
-  TodoListSchema,
-  SheetSchema,
-  LandmarkSchema,
-} from "./registry.js";
+// Registry utilities
+export { getCardTypes, isKnownCardType } from "./registry.js";
+
+// Individual schemas, from their own modules
+export { MemoSchema } from "./memo.js";
+export { QuestionSchema } from "./question.js";
+export { FeedbackSchema } from "./feedback.js";
+export { ImageSchema } from "./image.js";
+export { AudioSchema } from "./audio.js";
+export { FileSchema } from "./file.js";
+export { CaptureSessionSchema } from "./capture-session.js";
+export { RecordSchema } from "./record.js";
+export { RecipeSchema } from "./recipe.js";
+export { IntakeJobSchema } from "./intake-job.js";
+export { QuestionFollowupJobSchema } from "./question-followup-job.js";
+export { GuideSchema } from "./guide.js";
+export { ScheduledScriptSchema } from "./scheduled-script.js";
+export { TelegramMessageSchema } from "./telegram-message.js";
+export { ChatThreadSchema } from "./chat-thread.js";
+export { ChatJobSchema } from "./chat-job.js";
+export { TodoListSchema } from "./todo-list.js";
+export { GsheetSchema } from "./gsheet.js";
+export { LandmarkSchema } from "./landmark.js";
 
 // Re-export individual schema types
 export type { MemoFields, MemoStatusType } from "./memo.js";
@@ -45,7 +44,7 @@ export type { TelegramMessageFields } from "./telegram-message.js";
 export type { ChatThreadFields, ChatThreadEntry, ChatThreadMessage, ChatThreadSeen } from "./chat-thread.js";
 export type { ChatJobFields } from "./chat-job.js";
 export type { TodoListFields, TodoItem, TodoItemStatusType } from "./todo-list.js";
-export type { SheetFields } from "./sheet.js";
+export type { GsheetFields } from "./gsheet.js";
 export type { DocFields } from "./doc.js";
 export type { GdocFields, GdocLossyType } from "./gdoc.js";
 export type { Landmark } from "./landmark.js";
@@ -69,7 +68,7 @@ export { createTelegramMessageTemplate } from "./telegram-message.js";
 export { createChatThreadTemplate, createMessageEntry } from "./chat-thread.js";
 export { createChatJobTemplate } from "./chat-job.js";
 export { createTodoListTemplate } from "./todo-list.js";
-export { createSheetTemplate } from "./sheet.js";
+export { createGsheetTemplate } from "./gsheet.js";
 export { createLandmarkTemplate, parseLandmarkFields } from "./landmark.js";
 export type {
   LandmarkFields,

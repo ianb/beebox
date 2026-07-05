@@ -32,6 +32,8 @@ import { z } from "zod";
 import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const EmailMessageSchema: CardSchema = cardSchema("email-message", {
+  description: "One received email's metadata inside a thread's attach scope; untrusted body text lives in a separate .txt file",
+  category: "synced",
   fields: {
     "message-id": z.string(),
     "thread-id": z.string(),
@@ -64,7 +66,8 @@ specifically needed and after appropriate vetting.
 
 Attachments live in this message's attach scope too. To **draft** an
 email (reply or new message), don't edit this card — write an
-\`email-outbound\` card instead.`,
+\`email-outbound\` card instead, placed in this thread's directory
+(next to this message), not in \`box/output/\`.`,
 });
 
 export interface EmailMessageFields {

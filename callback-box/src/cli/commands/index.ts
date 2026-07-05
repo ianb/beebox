@@ -6,15 +6,18 @@
 
 export { initCommand } from "./init.js";
 export { migrateCommand } from "./migrate.js";
+export { upgradeCommand } from "./upgrade.js";
 export { statusCommand } from "./status.js";
 export { validateCommand } from "./validate.js";
 export { createCommand } from "./create.js";
 export { serveCommand } from "./serve.js";
+export { hubCommand } from "./hub.js";
 export { answerCommand } from "./answer.js";
 export { wakeupCommand } from "./wakeup.js";
 export { trashCommand } from "./trash.js";
 export { moveCommand } from "./move.js";
 export { relinkCommand } from "./relink.js";
+export { migrateViewLinksCommand } from "./migrate-view-links.js";
 export { procedureCommand } from "./procedure.js";
 export { transcribeCapturesCommand } from "./transcribe-captures.js";
 export { assembleTimelineCommand } from "./assemble-timeline.js";

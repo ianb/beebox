@@ -14,7 +14,7 @@ const GOOGLE_SERVICE_LABELS: Record<string, string> = {
   drive: "Drive",
 };
 
-export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
+export function GoogleServicesSection() {
   const {
     status,
     loading,
@@ -26,7 +26,7 @@ export function GoogleServicesSection({ apiBase }: { apiBase: string }) {
     handleAuthorize,
     handleDisconnect,
     handleServiceToggle,
-  } = useGoogleServices(apiBase);
+  } = useGoogleServices();
 
   if (loading) {
     return (

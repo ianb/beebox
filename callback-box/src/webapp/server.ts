@@ -12,9 +12,9 @@ import fastifyCookie from "@fastify/cookie";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { createEventBus } from "../core/event-bus.js";
-import { registerAuthRoutes } from "./routes/auth.js";
-import { registerSystemAdminRoutes, registerGoogleServicesCallback } from "./routes/admin.js";
-import { isAuthEnabled } from "./auth.js";
+import { registerAuthSurface } from "./routes/auth.js";
+import { registerGoogleServicesCallback } from "./routes/admin.js";
+import { isHubMode } from "./auth.js";
 import { registerBoxPublicUrl } from "../core/script-env.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import type { ServerOptions } from "./server-types.js";
@@ -22,10 +22,13 @@ import { resolveBoxes, killPreviousServer } from "./server-lifecycle.js";
 import { registerBox } from "./server-box-scope.js";
 import {
   registerChromeExtensionCors,
+  registerCspReportingHeaders,
   registerRootInfoRoutes,
   registerSpaFallback,
   registerUnbuiltFrontendRoot,
 } from "./server-root.js";
+import { registerCspReportRoute } from "./routes/api-csp-report.js";
+import { PROD_CSP_REPORT_PATH } from "../lib/csp.js";
 
 export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
 
@@ -55,6 +58,17 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
 
   registerChromeExtensionCors(server);
 
+  // Attach the Content-Security-Policy (Report-Only) + Reporting-Endpoints
+  // headers to HTML document responses. Registered early so its onSend runs on
+  // every response; it yields to routes that set their own CSP (frozen pages).
+  // Prod is the only place Fastify serves HTML (dev serves it from Vite, which
+  // sets its own dev policy); the mode keeps script/style strictness correct
+  // either way. The report route is root-level (PROD_CSP_REPORT_PATH).
+  registerCspReportingHeaders(server, {
+    mode: process.env.NODE_ENV === "production" ? "prod" : "dev",
+    reportPath: PROD_CSP_REPORT_PATH,
+  });
+
   // Register cookie support (used for auth sessions)
   await server.register(fastifyCookie);
 
@@ -68,27 +82,41 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   // Register WebSocket support (used by realtime transcription proxy)
   await server.register(fastifyWebsocket);
 
-  // Register auth routes (login, callback, logout, me) when auth is enabled
-  if (isAuthEnabled()) {
-    await server.register(registerAuthRoutes, { boxes });
-  } else {
-    // Auth disabled (no GOOGLE_OAUTH_CLIENT_ID — e.g. local dev): answer the
-    // client's /auth/me probe with `200 null` instead of letting it 404 and
-    // spam the browser console. There's no session, so there's no user.
-    server.get("/auth/me", async (_request, reply) => {
-      return reply.type("application/json").send("null");
+  // Register the login surface (login, callback, logout, me) — UNLESS this
+  // box is running behind a hub, in which case the hub owns login (Track D,
+  // chunk D2) and the box's own /auth/* is dead surface: 404, not a stub,
+  // since a child never redirects to its own /auth/login in hub mode (see
+  // server-box-scope.ts's addBoxAuthHook). This wildcard is registered
+  // BEFORE the Google-services callback below on purpose to document intent
+  // (login is dead here), but it doesn't actually shadow that static route —
+  // Fastify's router (find-my-way) always prefers a static route over a
+  // wildcard regardless of registration order, so `/auth/google-services
+  // /callback` still reaches its handler even in hub mode: the hub proxies
+  // that one path straight through to this box (see `src/hub/hub-server.ts`)
+  // because it's the box's own connector setup, not login.
+  if (isHubMode()) {
+    server.all("/auth/*", async (_request, reply) => {
+      return reply.status(404).send({
+        error: "not_found",
+        message: "This box is served behind a hub; login lives at the hub, not this box.",
+      });
     });
+  } else {
+    await registerAuthSurface(server, { boxes });
   }
-  // System-wide admin routes (Claude Code auth)
-  await server.register(async (instance) => {
-    await registerSystemAdminRoutes(instance, options.services ?? {});
-  });
   // Root-level Google Services OAuth callback (single redirect URI for all boxes)
   await server.register(async (instance) => {
     await registerGoogleServicesCallback(instance, { boxes });
   });
 
   registerRootInfoRoutes(server, boxes);
+
+  // CSP violation report sink. The report-uri/report-to directives point here.
+  // Root-level (a report has no box context); stored under the primary box for
+  // lack of a server-level state dir. No-op if no boxes are mounted.
+  if (boxes.length > 0) {
+    registerCspReportRoute({ server, logDir: boxes[0]!.boxRoot });
+  }
 
   // Resolve from the package root (bundle-safe) rather than a fixed depth off
   // import.meta.dirname: the prod bundle lives at dist/cli.mjs (one level down)
@@ -153,7 +181,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
   }
 
   // Shutdown handler — force-close all connections immediately so
-  // --watch restarts don't hang on open SSE/WebSocket sockets.
+  // --watch restarts don't hang on open WebSocket sockets.
   const shutdown = async (signal: string) => {
     console.log(`\nReceived ${signal}, shutting down...`);
     for (const pf of pidFiles) {

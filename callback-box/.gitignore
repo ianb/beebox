@@ -1,5 +1,7 @@
 node_modules/
 dist/
+dist-release/
+src/frontend/dist/
 *.log
 .DS_Store
 .env
@@ -20,3 +22,8 @@ docs/prompts.md
 # Scratch work area — gitignored except its README (see scratch/README.md)
 scratch/*
 !scratch/README.md
+
+# slopo near-duplicate detector — index + report are generated; only the
+# config and the reviewed ignore list are committed (see tools/slopo/).
+tools/slopo/slopo.db
+tools/slopo/slopo-report/

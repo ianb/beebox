@@ -58,9 +58,6 @@ export function isNothingToCommitError(err: unknown): boolean {
   return message.includes("nothing to commit");
 }
 
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
 
 /**
  * A housekeeping `git add -A` must never sweep a large blob into the box

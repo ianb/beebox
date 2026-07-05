@@ -3,7 +3,7 @@
  * `<ack>` (transient action indications) and `<callout>` (durable,
  * self-contained content). Both are rendered separately from the prose
  * markdown — see `AckIndicator` and `CalloutBlock` components, and the
- * design doc `docs/implemented-plans/narration-mode-design.md`.
+ * design doc `docs/plans/narration-mode.md`.
  *
  * Parsing is regex-based and tolerant: unknown ack kinds and callouts
  * missing a `context` attribute are dropped with a console warning
@@ -11,6 +11,7 @@
  */
 
 import { stripChatAppTags } from "../../../core/chat-features";
+import { decodeXmlAttr } from "../../../core/self-note";
 
 export interface AckKindDescriptor {
   /** Stable identifier used as the `kind` attribute value. */
@@ -54,13 +55,6 @@ export interface CalloutData {
   body: string;
 }
 
-function decodeXmlAttr(v: string): string {
-  return v
-    .replace(/&quot;/g, "\"")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
-}
 
 function parseAttrs(raw: string): Map<string, string> {
   const out = new Map<string, string>();

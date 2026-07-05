@@ -85,7 +85,7 @@ reuses.
 
 The principles this plan must be evaluated against, in priority order:
 
-- `callback-box/CODE-STYLE.md:36` — *"**No default parameters**: handle
+- `callback-box/code-style.md:36` — *"**No default parameters**: handle
   defaults explicitly"*; `:37–45` *"**Max 2 positional parameters**"*; `:17`
   NEVER `any`; `:56` *"**`as` type assertions are like Rust's `unsafe`**
   (banned in `.tsx` by lint…)"*. The new selection-capture, position, and
@@ -100,7 +100,7 @@ The principles this plan must be evaluated against, in priority order:
   shape traces to the existing `<typed>`/`<speech>`/`<attachments>`/`<ack>`
   conventions, not invented defaults.
 - `callback-box/CLAUDE.md:105` — *"**Frontend uses UI primitives and a
-  semantic palette.** Read FRONTEND.md before writing UI."* The pill and
+  semantic palette.** Read frontend.md before writing UI."* The pill and
   the floating "+" use existing primitives and the `components/`-directory
   exemption from `restrict-component-classes`.
 - `callback-box/CLAUDE.md` "don't add features beyond what the task

@@ -9,11 +9,14 @@
  * {@link ChatRoutesContext} (registry, schedule manager, event bus, dedup map):
  *
  * - chat-send-routes.ts    — POST /api/chat/send, /api/chat/self-note
- * - chat-session-routes.ts — history, sessions, interrupt, restart, status,
- *                            default, set-model, features, set-feature, schedules
  * - chat-audio-routes.ts   — transcribe-audio, voice-config, tts, transcribe-ws
  *
- * This module owns the wiring that those handlers share: registry lifecycle,
+ * Session controls (history, sessions, status, set-model, set-feature,
+ * interrupt, restart, schedules) moved to the chat **tRPC** router; they reach
+ * the live registry/schedule manager through `webapp/chat-runtime.ts`, which
+ * this module populates.
+ *
+ * This module owns the wiring that the raw handlers share: registry lifecycle,
  * per-session event bridging to the bus, and the schedule manager that fires
  * timers into the most-active session.
  */
@@ -25,6 +28,7 @@ import {
   getMostActive,
   runBackfillIfNeeded,
 } from "../../core/chat-session-history.js";
+import { backfillChatHusks } from "../../core/chat-husk.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import {
@@ -34,8 +38,8 @@ import {
 } from "../../core/chat-schedules.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
 import type { ChatRoutesContext } from "./chat-context.js";
+import { setChatRuntime, clearChatRuntime } from "../chat-runtime.js";
 import { registerChatSendRoutes, loadProcessedMessageIds } from "./chat-send-routes.js";
-import { registerChatSessionRoutes } from "./chat-session-routes.js";
 import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
 
@@ -68,6 +72,12 @@ export async function registerChatRoutes(
   // Idempotent — returns early on subsequent boots.
   void runBackfillIfNeeded(boxRoot).catch((e: unknown) => {
     console.error("[chat] backfill failed:", e instanceof Error ? e.message : e);
+  });
+
+  // One-shot husk-card backfill for pre-husk sessions (marker-gated; ghosts
+  // whose transcript is gone are skipped). See docs/plans/chat-husks.md.
+  void backfillChatHusks(boxRoot).catch((e: unknown) => {
+    console.error("[chat] husk backfill failed:", e instanceof Error ? e.message : e);
   });
 
   // Per-box registry of ChatSession instances, keyed by sessionId.
@@ -199,8 +209,11 @@ export async function registerChatRoutes(
     processedMessageIds: loadProcessedMessageIds(boxRoot),
   };
 
+  // Expose the live registry + schedule manager to the chat tRPC procedures
+  // (session controls live in tRPC; see webapp/chat-runtime.ts).
+  setChatRuntime(boxRoot, { registry, scheduleManager, wireSession });
+
   registerChatSendRoutes(ctx);
-  registerChatSessionRoutes(ctx);
   registerChatAudioRoutes(ctx);
   registerChatLastAudioRoutes(ctx);
 
@@ -212,6 +225,7 @@ export async function registerChatRoutes(
 
   // Tear down the registry on server close so subprocesses don't linger.
   server.addHook("onClose", async () => {
+    clearChatRuntime(boxRoot);
     registry.shutdown();
   });
 }

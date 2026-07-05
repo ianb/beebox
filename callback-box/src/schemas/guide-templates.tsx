@@ -38,7 +38,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Keep for Reading",
         when: "Item is worth reading later but not urgent",
-        instructions: "Move to box/pool/ for later processing",
+        instructions: "Move to a suitable location under store/ (e.g. store/reading/) with cb mv",
       },
       {
         name: "Trash",
@@ -120,7 +120,7 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
       {
         name: "Read Spreadsheet",
         when: "User asks about data in a synced spreadsheet",
-        instructions: "Find the .sheet.card file to understand structure (tabs, title). Then read the JSON tab file(s) in the matching subdirectory. Plain cells are bare values; formula cells are {\"f\": formula, \"v\": computed_result}.",
+        instructions: "Find the .gsheet.card file to understand structure (tabs, title). Then read the JSON tab file(s) in the matching subdirectory. Plain cells are bare values; formula cells are {\"f\": formula, \"v\": computed_result}.",
       },
       {
         name: "Edit Spreadsheet",
@@ -183,7 +183,6 @@ const DOMAIN_SEEDS: Record<string, GuideSeed> = {
  */
 export function createInitialGuideTemplate(options: { name: string }): string {
   const seed = DOMAIN_SEEDS[options.name];
-  const now = new Date().toISOString();
   const fields: Record<string, unknown> = { version: "1.0.0" };
 
   if (!seed) {
@@ -200,7 +199,6 @@ export function createInitialGuideTemplate(options: { name: string }): string {
       {
         id: "exp-initial",
         status: "active",
-        "created-at": now,
         hypothesis: "Initial rules need calibration through feedback",
         approach: "Start conservative, learn from user responses",
       },
@@ -224,7 +222,6 @@ export function createInitialGuideTemplate(options: { name: string }): string {
     {
       id: seed.experiment.id,
       status: "active",
-      "created-at": now,
       hypothesis: seed.experiment.hypothesis,
       approach: seed.experiment.approach,
     },

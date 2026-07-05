@@ -25,11 +25,11 @@ import {
 } from "./google-calendar-notes.js";
 import {
   getFilename,
-  contentHash,
   patchEventViaApi,
   fetchEvents,
   type CalendarState,
 } from "./google-calendar-state.js";
+import { contentHash } from "../lib/content-hash.js";
 
 interface IcsOpts { calendarId: string; calendarName?: string; calendarRole?: string }
 

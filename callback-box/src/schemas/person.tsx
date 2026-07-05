@@ -17,11 +17,16 @@ export const PersonStatus = z.enum(["active", "inactive", "archived"]);
 export type PersonStatusType = z.infer<typeof PersonStatus>;
 
 export const PersonSchema: CardSchema = cardSchema("person", {
+  description: "A key person — identity, aliases, role, contact info, and freeform notes; referenced from briefings' key-people",
+  category: "authored",
   fields: {
     status: PersonStatus.default("active"),
     ...namedEntityFields,
     role: z.string().optional(),
-    contact: z.string().optional(),
+    boxholder: z.boolean().optional(),
+    email: z.string().optional(),
+    phone: z.string().optional(),
+    address: z.string().optional(),
     body: body(z.string()),
   },
   instructions: `# Person Cards
@@ -29,8 +34,8 @@ export const PersonSchema: CardSchema = cardSchema("person", {
 Person cards track key people referenced in briefings and throughout
 the box.
 
-They live at \`people/First_Last.person.card\`. The filename uses the
-person's name with underscores.
+They live at \`people/First_Last.person.card\` — the person's actual
+name in the \`First_Last\` form ABOUT_CARDS describes, not a slug or alias.
 
 **Frontmatter:**
 - \`name:\` — Full name. Required.
@@ -38,19 +43,23 @@ person's name with underscores.
   uses these names (e.g., ["Dad", "Papa"]).
 - \`role:\` — Relationship or function (e.g., "Ledger subject —
   boxholder's father", "Financial advisor").
-- \`contact:\` — Freeform contact info (phone, email, address).
+- \`boxholder:\` — set \`true\` when this person is a boxholder: one of the
+  principals the box serves and acts on behalf of. A box can have several
+  (a family, an ledger run by siblings); omit the field for everyone else
+  (people merely referenced, connector correspondents).
+- \`email:\`, \`phone:\`, \`address:\` — contact details, each optional.
+  One value apiece; put a second email, a fax, or any other channel in
+  the body notes.
 - \`status:\` — \`active\` (default), \`inactive\`, or \`archived\`.
 
-**Body (markdown):** freeform notes / context about the person.
+**Body (markdown):** freeform notes / context about the person — and the
+home for contact details that don't fit the three fields above.
 
 **When to create a person card:**
 - When adding someone to a briefing's \`key-people:\` — always create
   the person card if it doesn't exist.
 - When a person keeps coming up and you need a place to consolidate
-  info about them.
-
-**Filename convention:** \`people/First_Last.person.card\` — use the
-person's actual name, not a slug or alias.`,
+  info about them.`,
 });
 
 export interface PersonFields {
@@ -59,7 +68,10 @@ export interface PersonFields {
   name: string;
   aliases?: string[];
   role?: string;
-  contact?: string;
+  boxholder?: boolean;
+  email?: string;
+  phone?: string;
+  address?: string;
   body: string;
 }
 

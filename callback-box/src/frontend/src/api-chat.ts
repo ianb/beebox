@@ -6,7 +6,8 @@
  */
 
 import { RequestError } from "./lib/errors";
-import { fetchJson, getApiBase } from "./api-core";
+import { getApiBase } from "./api-core";
+import { trpcClient } from "./lib/trpc";
 import type { ActivityKind, CardStateDetails } from "../../core/chat-card-activity";
 
 export interface SessionContentBlock {
@@ -56,30 +57,23 @@ export interface SessionEntry {
 }
 
 export async function getChatStatus(params: { sessionId: string | null }): Promise<{ sessionId: string | null; running: boolean; busy: boolean; model: string | null }> {
-  const qs = params.sessionId ? `?session=${encodeURIComponent(params.sessionId)}` : "";
-  return fetchJson(`${getApiBase()}/chat/status${qs}`);
+  return trpcClient.chat.status.query({ session: params.sessionId ?? undefined });
 }
 
 export async function getDefaultChatSession(): Promise<{ sessionId: string | null }> {
-  return fetchJson(`${getApiBase()}/chat/default`);
+  return trpcClient.chat.defaultSession.query();
 }
 
 export async function setChatModel(params: { sessionId: string; model: string | null }): Promise<{ ok: boolean; model: string | null }> {
-  return fetchJson(`${getApiBase()}/chat/set-model`, {
-    method: "POST",
-    body: JSON.stringify({ session: params.sessionId, model: params.model }),
-  });
+  return trpcClient.chat.setModel.mutate({ session: params.sessionId, model: params.model });
 }
 
 export async function getChatFeatures(params: { sessionId: string }): Promise<{ features: Record<string, string> }> {
-  return fetchJson(`${getApiBase()}/chat/features?session=${encodeURIComponent(params.sessionId)}`);
+  return trpcClient.chat.features.query({ session: params.sessionId });
 }
 
 export async function setChatFeature(params: { sessionId: string; feature: string; value: string }): Promise<{ ok: boolean; features: Record<string, string> }> {
-  return fetchJson(`${getApiBase()}/chat/set-feature`, {
-    method: "POST",
-    body: JSON.stringify({ session: params.sessionId, feature: params.feature, value: params.value }),
-  });
+  return trpcClient.chat.setFeature.mutate({ session: params.sessionId, feature: params.feature, value: params.value });
 }
 
 /**
@@ -121,13 +115,13 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
 }
 
 export async function getChatHistory(params: { sessionId: string; tail?: number; offset?: number; limit?: number; minRealUserMessages?: number }): Promise<{ sessionId: string | null; entries: SessionEntry[]; total: number }> {
-  const searchParams = new URLSearchParams();
-  searchParams.set("session", params.sessionId);
-  if (params.tail) searchParams.set("tail", String(params.tail));
-  if (params.offset != null) searchParams.set("offset", String(params.offset));
-  if (params.limit) searchParams.set("limit", String(params.limit));
-  if (params.minRealUserMessages) searchParams.set("minRealUserMessages", String(params.minRealUserMessages));
-  return fetchJson(`${getApiBase()}/chat/history?${searchParams.toString()}`);
+  return trpcClient.chat.history.query({
+    session: params.sessionId,
+    tail: params.tail,
+    offset: params.offset,
+    limit: params.limit,
+    minRealUserMessages: params.minRealUserMessages,
+  });
 }
 
 export interface ChatSessionInfo {
@@ -139,14 +133,11 @@ export interface ChatSessionInfo {
 }
 
 export async function getChatSessions(): Promise<{ sessions: ChatSessionInfo[] }> {
-  return fetchJson(`${getApiBase()}/chat/sessions`);
+  return trpcClient.chat.sessions.query();
 }
 
 export async function interruptChat(params: { sessionId: string }): Promise<{ ok: boolean }> {
-  return fetchJson(`${getApiBase()}/chat/interrupt`, {
-    method: "POST",
-    body: JSON.stringify({ session: params.sessionId }),
-  });
+  return trpcClient.chat.interrupt.mutate({ session: params.sessionId });
 }
 
 /**
@@ -155,10 +146,7 @@ export async function interruptChat(params: { sessionId: string }): Promise<{ ok
  * unstick a wedged chat.
  */
 export async function restartChatSubprocess(params: { sessionId: string }): Promise<{ ok: boolean }> {
-  return fetchJson(`${getApiBase()}/chat/restart`, {
-    method: "POST",
-    body: JSON.stringify({ session: params.sessionId }),
-  });
+  return trpcClient.chat.restart.mutate({ session: params.sessionId });
 }
 
 /** Outcome of starting a chat turn — see {@link startChatTurn}. */

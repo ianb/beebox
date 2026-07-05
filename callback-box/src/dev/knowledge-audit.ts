@@ -74,7 +74,7 @@ program
     // the monorepo) would have those hit the enclosing repo and discard
     // uncommitted work. Fail with guidance instead.
     try {
-      assertStandaloneBox(resolvedBox);
+      await assertStandaloneBox(resolvedBox);
     } catch (e) {
       if (e instanceof UnsafeAuditBoxError) {
         console.error(formatUnsafeAuditBox(e));

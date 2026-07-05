@@ -52,6 +52,39 @@ you could delete by smearing its job across callers was shallow.
 - Files near the 300-line cap / functions near 150 — pressure to split *by
   responsibility* (things that change together live together), not by layer.
 
+**Optional deep-scan — near-duplicate detection (slopo).** For a duplication
+pass over a whole package (the "same thing written twice under different names"
+drift that knip/oxlint can't see), run `slopo` — an embedding-based
+near-duplicate detector. It's opt-in and package-scoped, **never a CI gate**
+(≈⅓ of its raw output is idiomatic-one-liner noise that needs a judgment pass).
+Prereqs: `uv tool install slopo` and an OpenAI embeddings key; if no key is
+available, skip this scan. Run it from its pinned config dir so the cluster
+hashes stay stable (~$0.02, ~1 min):
+
+```bash
+cd callback-box/tools/slopo
+SLOPO_EMBEDDING_API_KEY=$THINKING_OPENAI_API_KEY slopo index && slopo embed && slopo analyze
+```
+
+Read the ranked report at `slopo-report/index.md` and triage top-down, by this
+filter (it exists because mechanical dedup fights depth — a shared `utils`
+grab-bag is *anti*-health):
+
+1. **Drifted duplicates first** — same function, diverged bodies. These are
+   latent bugs, the highest-value find.
+2. **Systemic duplication second** — many clusters pointing at one seam (e.g.
+   the parallel `webapp/routes/*` ⇄ `webapp/trpc/routers/*` handlers) is an
+   architecture conversation, not N edits. Take it to `cb-plan`.
+3. **Trivial one-liners, within-file repetition, and semantic false positives**
+   (embeddings rate *opposite* predicates as similar) → **dismiss**: add the
+   cluster hash to `tools/slopo/slopo.ignore.txt` (committed) with a one-line
+   why, and re-run `slopo analyze` to confirm it drops. Dismissed clusters stay
+   quiet on future runs, so signal improves over time. Leave real-but-unaddressed
+   duplicates *out* of the ignore list so they stay visible.
+
+When you do consolidate, it's a normal deepening (below): give the shared helper
+a real home, don't just hoist it into a junk drawer.
+
 **Then explore organically** — use `Agent` (`subagent_type=Explore`) over the
 suspect subsystems; don't follow rigid heuristics, note where *you* feel
 friction:

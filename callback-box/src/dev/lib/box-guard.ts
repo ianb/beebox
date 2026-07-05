@@ -13,6 +13,7 @@
 import * as path from "node:path";
 import { realpathSync } from "node:fs";
 import { execSync } from "node:child_process";
+import { getBoxShapeOrLegacyFallback } from "../../cli/lib/box-shape.js";
 
 /** Base for the cases where a box is unsafe to run audits against. */
 export class UnsafeAuditBoxError extends Error {
@@ -55,8 +56,18 @@ export function formatUnsafeAuditBox(err: UnsafeAuditBoxError): string {
   return err.message;
 }
 
-/** Require boxRoot to be the top level of its own git repo, or throw. */
-export function assertStandaloneBox(boxRoot: string): void {
+/**
+ * Require boxRoot to be the top level of its own git repo, or throw.
+ *
+ * A package-layout (shapeVersion 2+) box nests its operational root
+ * (`content/`) one level inside the git repo, whose top level is the
+ * package root — that's by design (`docs/implemented-plans/boxes-as-packages-v2.md`,
+ * "The box repository": one git repo at the repo root, `boxRoot` is
+ * `content/`). So the expected top level is the box's `packageRoot`
+ * (`boxCodePaths`' predicate), not `boxRoot` itself; a legacy box has
+ * `packageRoot === boxRoot`, so this subsumes the old check.
+ */
+export async function assertStandaloneBox(boxRoot: string): Promise<void> {
   const resolved = path.resolve(boxRoot);
   let toplevel: string;
   try {
@@ -64,11 +75,12 @@ export function assertStandaloneBox(boxRoot: string): void {
   } catch (_e) {
     throw new AuditBoxNotGitRepoError(resolved);
   }
-  // git returns the real (symlink-resolved) path; realpath the box too so a
-  // legit box under a symlinked prefix (e.g. macOS /var → /private/var) isn't
-  // falsely flagged as nested.
-  const realBox = realpathSync(resolved);
-  if (path.resolve(toplevel) !== realBox) {
-    throw new AuditBoxInsideRepoError(realBox, path.resolve(toplevel));
+  const shape = await getBoxShapeOrLegacyFallback(resolved);
+  // git returns the real (symlink-resolved) path; realpath the expected root
+  // too so a legit box under a symlinked prefix (e.g. macOS /var →
+  // /private/var) isn't falsely flagged as nested.
+  const expectedRoot = realpathSync(shape.packageRoot);
+  if (path.resolve(toplevel) !== expectedRoot) {
+    throw new AuditBoxInsideRepoError(realpathSync(resolved), path.resolve(toplevel));
   }
 }

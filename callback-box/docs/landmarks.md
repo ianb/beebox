@@ -30,7 +30,7 @@ Both can coexist in the same directory.
 
 ## Card schema
 
-A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/plans/triage-design.md` for the destination role.
+A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fields; each `destinations` entry carries category rules and a handler procedure (its `for` list names the kinds it accepts, e.g. `triage`). A landmark can carry one or both; everything below describes the navigation role. See `docs/triage.md` for the destination role.
 
 ```yaml
 ---
@@ -102,9 +102,15 @@ Optional `order` on an `expand` entry:
 
 The enum can grow without breaking existing cards.
 
+### Group (collapsible submenu)
+
+An `expand` carrying a `group: <title>` keeps its matches **grouped under that title** instead of flattening them into the flat link list. Collapsed, the group shows its title and a child count (e.g. `Images · 134`); expanded, it reveals the matched links. Use it for broad "all the X" globs (e.g. `group: Images` over `**/*.image.card`) that would otherwise flood the flat grid. An `expand` without `group` flattens inline as before.
+
+Both surfaces — the Landmarks page grid and the chat-header landmark menu — render a group as a collapsed-by-default disclosure; on the header menu the children open in the companion sidebar just like flat links. Group children resolve server-side, capped at 50 (the collapsed `count` stays exact); a larger group renders its first 50 with a "+N more" note.
+
 ### Dedup
 
-A card appearing both in a hand-listed `links` entry and in an `expand` result shows once: hand-listed links come first and win. This lets a landmark hoist a few items to the top with custom labels and let the rest fill in via expand below, without doubling.
+A card appearing both in a hand-listed `links` entry and in an unnamed `expand` result shows once: hand-listed links come first and win. This lets a landmark hoist a few items to the top with custom labels and let the rest fill in via expand below, without doubling. Named `group` expands are independent — they dedup within themselves only, not against the flat list or each other.
 
 ## Rendering
 

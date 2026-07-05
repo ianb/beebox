@@ -9,11 +9,16 @@ import type { FastifyInstance } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { isAuthEnabled, getSessionEmail, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
+import { isAuthEnabled, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
-import { loadBoxConfig } from "./box-config.js";
 import { transferEndpoint } from "../core/push-subscriptions.js";
+import { listParkedTemplateUpdates } from "../core/install-template-file.js";
+import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
+import { loadBoxSchemas } from "../schemas/registry.js";
+import { getEngineVersionReport } from "../core/engine-version.js";
+import { filterAccessibleBoxes } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
+import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -22,6 +27,25 @@ const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|
  * onSend CORS reflection hook and the preflight handler for /api/boxes.
  */
 export function registerChromeExtensionCors(server: FastifyInstance): void {
+  // Answer the browser's CORS preflight for extension-origin requests before
+  // routing, so it short-circuits Fastify's auto-generated OPTIONS (which omits
+  // the ACAO reflection). Needed for the extension's `application/json` POST to
+  // the clerk tRPC procedures. Only fires for chrome-extension origins; every
+  // other OPTIONS falls through to normal handling.
+  server.addHook("onRequest", async (request, reply) => {
+    const origin = request.headers.origin;
+    if (request.method === "OPTIONS" && origin && origin.startsWith("chrome-extension://")) {
+      return reply
+        .header("Access-Control-Allow-Origin", origin)
+        .header("Access-Control-Allow-Credentials", "true")
+        .header("Vary", "Origin")
+        .header("Access-Control-Allow-Headers", "Content-Type")
+        .header("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        .status(204)
+        .send();
+    }
+  });
+
   // eslint-disable-next-line max-params -- Fastify onSend hook requires 4 params
   server.addHook("onSend", (request, reply, payload, done) => {
     const origin = request.headers.origin;
@@ -46,22 +70,48 @@ export function registerChromeExtensionCors(server: FastifyInstance): void {
   });
 }
 
-/** Build the box list visible to the requesting user (auth-filtered). */
-async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
+/**
+ * Attach the Content-Security-Policy (Report-Only) and its companion
+ * `Reporting-Endpoints` header to HTML document responses. Only documents carry
+ * a CSP, so the hook keys on `text/html` and leaves API/asset/script responses
+ * alone. It also yields to any route that already set a CSP — notably the frozen
+ * captured-page route's strict `sandbox` policy — so that stays authoritative.
+ *
+ * `mode` selects the strict (prod) or relaxed (dev) script/style directives; in
+ * practice prod is the only place Fastify serves HTML, but the param keeps the
+ * choice explicit and testable. Report-Only never blocks a resource — promotion
+ * to the enforcing header is a separate, gated step.
+ */
+export function registerCspReportingHeaders(
+  server: FastifyInstance,
+  { mode, reportPath }: { mode: CspMode; reportPath: string },
+): void {
+  const policy = buildCspPolicy({ mode, reportPath });
+  const reportingEndpoints = reportingEndpointsHeader({ reportPath });
+  // eslint-disable-next-line max-params -- Fastify onSend hook requires 4 params
+  server.addHook("onSend", (_request, reply, payload, done) => {
+    const contentType = String(reply.getHeader("content-type") ?? "");
+    const alreadyHasCsp =
+      reply.getHeader("content-security-policy") !== undefined ||
+      reply.getHeader("content-security-policy-report-only") !== undefined;
+    if (contentType.includes("text/html") && !alreadyHasCsp) {
+      reply.header("Content-Security-Policy-Report-Only", policy);
+      reply.header("Reporting-Endpoints", reportingEndpoints);
+    }
+    done(null, payload);
+  });
+}
+
+/**
+ * Build the box list visible to the requesting user (auth-filtered) in the
+ * `/api/boxes` response shape. Exported so the hub's own `/api/boxes`
+ * (`src/hub/hub-server.ts`) returns the identical shape from the identical
+ * filter, instead of a second copy that could drift.
+ */
+export async function listAccessibleBoxes(boxes: BoxSpec[], email: string): Promise<Array<{ slug: string; name: string }>> {
   const ownerEmail = getOwnerEmail();
-  const accessible: Array<{ slug: string; name: string }> = [];
-  for (const b of boxes) {
-    if (email === ownerEmail) {
-      accessible.push({ slug: b.slug, name: b.slug });
-      continue;
-    }
-    const config = await loadBoxConfig(b.boxRoot);
-    // Only show boxes where user is explicitly allowed
-    if (config.allowedEmails?.length && config.allowedEmails.includes(email)) {
-      accessible.push({ slug: b.slug, name: b.slug });
-    }
-  }
-  return accessible;
+  const accessible = await filterAccessibleBoxes({ boxes, email, ownerEmail });
+  return accessible.map((b) => ({ slug: b.slug, name: b.slug }));
 }
 
 /**
@@ -82,7 +132,56 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       return reply.status(401).send({ status: "unauthorized" });
     }
     const version = await readVersionInfo();
-    return { status: "ok", boxCount: boxes.length, version };
+    // Template drift: stock templates whose upstream update is parked because
+    // the box copy diverged. Surfaced here so an uptime monitor can alarm on
+    // drift server-wide instead of it being found only by SSHing into a box.
+    const byBox: Record<string, number> = {};
+    let templateDriftTotal = 0;
+    for (const box of boxes) {
+      const parked = await listParkedTemplateUpdates(box.boxRoot);
+      if (parked.length > 0) {
+        byBox[box.slug] = parked.length;
+        templateDriftTotal += parked.length;
+      }
+    }
+    // Box-local schema load failures: keep-last-good means a broken save
+    // doesn't blank the type, but the failure itself needs to be seen.
+    // `loadBoxSchemas` populates the in-process failure map as a side effect
+    // (same as `cb status`) — box registration itself never calls it (only
+    // starts the schema *watcher*, which doesn't load), so without this a
+    // fresh restart would report zero failures until unrelated card traffic
+    // happened to trigger a load. Cheap after the first call: it's cached
+    // per box and only re-scans a file whose content hash changed.
+    const schemaFailuresByBox: Record<string, number> = {};
+    let schemaFailureTotal = 0;
+    for (const box of boxes) {
+      await loadBoxSchemas(box.boxRoot);
+      const failures = listSchemaLoadFailures(box.boxRoot);
+      if (failures.length > 0) {
+        schemaFailuresByBox[box.slug] = failures.length;
+        schemaFailureTotal += failures.length;
+      }
+    }
+    // Engine version per box: a v2 box pins its own callback-box dependency,
+    // which can drift from the engine serving it (future-normal once the
+    // hub serves per-box engines — Track D; for now just flagged, same
+    // treatment as the drift signals above). Legacy boxes report nothing —
+    // they have no separate installed engine.
+    const engineMismatchByBox: Record<string, { serving: string | null; installed: string }> = {};
+    for (const box of boxes) {
+      const report = await getEngineVersionReport(box.boxRoot);
+      if (report.mismatch && report.installed !== null) {
+        engineMismatchByBox[box.slug] = { serving: report.serving, installed: report.installed };
+      }
+    }
+    return {
+      status: "ok",
+      boxCount: boxes.length,
+      version,
+      templateDrift: { total: templateDriftTotal, byBox },
+      schemaLoadFailures: { total: schemaFailureTotal, byBox: schemaFailuresByBox },
+      engineVersionMismatch: { total: Object.keys(engineMismatchByBox).length, byBox: engineMismatchByBox },
+    };
   });
 
   // Build info — written by deploy.sh, shows what's deployed
@@ -159,11 +258,21 @@ export function registerSpaFallback(server: FastifyInstance, frontendPath: strin
       return reply.status(404).send({ error: "Not found" });
     }
 
-    // Auth wall: if auth is enabled and user isn't logged in, redirect to login
-    // (except for root "/" which shows its own login UI, and /auth/* routes)
-    if (isAuthEnabled() && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
-      const email = getSessionEmail(request);
-      if (!email) {
+    // Auth wall: if auth is enabled (or this box is behind a hub) and the
+    // user isn't identified, gate the navigation (except for root "/" which
+    // shows its own login UI, and /auth/* routes).
+    if ((isAuthEnabled() || isHubMode()) && url !== "/" && !url.startsWith("/auth/") && !url.startsWith("/share")) {
+      const identity = resolveRequestIdentity(request);
+      if (identity.source === "open") {
+        // Hub-wide auth is off — fall through to the SPA below.
+      } else if (!identity.email) {
+        if (isHubMode()) {
+          // See addBoxAuthHook's doc comment: a child never redirects to its
+          // own /auth/login in hub mode — the hub gates navigation before
+          // proxying, so reaching here unauthenticated means the request
+          // bypassed the hub (spoof or misconfiguration).
+          return reply.status(401).send({ error: "Not authenticated (hub mode)" });
+        }
         return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(url)}`);
       }
     }

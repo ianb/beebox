@@ -18,14 +18,16 @@ A connector's `sync()` method:
 
 Returns a `SyncResult` with `{ success, created, updated, pushed?, jobs?, error? }`.
 
+Sync rebuilds a connector-managed card's content wholesale from its template; any agent-added field the template doesn't know about is lost unless it's one of the few fields `preserve-agent-fields.ts` explicitly carries forward (currently just `contains`).
+
 ## Connector inventory
 
-| Connector | File | Card types | Direction | Service-injected |
-|-----------|------|-----------|-----------|-----------------|
-| Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes |
-| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Not yet wired |
-| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes |
-| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes |
+| Connector | File | Card types | Direction | Service-injected | Setup doc |
+|-----------|------|-----------|-----------|-----------------|-----------|
+| Telegram | `telegram.ts` | `chat-thread` | Two-way | Yes | [telegram-setup.md](telegram-setup.md) |
+| Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
+| Gmail | `gmail.ts` | `email-thread`, `email-message`, `email-outbound` | Two-way (pull + draft upload) | Yes | [gmail-setup.md](gmail-setup.md) |
+| Google Drive | `google-drive.ts` | `sheet` | Two-way | Yes | [google-drive.md](google-drive.md) |
 
 ## Lifecycle
 
@@ -81,6 +83,6 @@ See `src/services/CLAUDE.md` for the full service layer documentation.
 
 - `chat-utils.ts` — Thread file management: `ensureThreadFile()`, `appendMessageToThread()`, `findUnsentAgentMessages()`, `stampSentMessage()`, `safeFilename()`, `updatePersonEntry()`
 - `calendar-utils.ts` — ICS parsing, event formatting, timespan parsing
-- `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, distinct from the new intake → triage → handle pipeline in `docs/plans/triage-design.md`)
+- `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, distinct from the new intake → triage → handle pipeline in `docs/triage.md`)
 - `transient-state.ts` — `loadTransientState()` / `saveTransientState()` for non-committed state
 - `calendar-config.ts` — Calendar sync configuration management

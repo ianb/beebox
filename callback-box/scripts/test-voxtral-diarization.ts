@@ -1,4 +1,4 @@
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Generate a two-speaker sample via OpenAI TTS, then send it to Voxtral
  * with diarization=true and dump the raw response. Used to confirm
@@ -16,6 +16,41 @@ import { writeFile, readFile, access, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
+
+class TtsRequestError extends Error {
+  readonly voice: string;
+  readonly status: number;
+  readonly body: string;
+  constructor(params: { voice: string; status: number; body: string }) {
+    super("OpenAI TTS request failed");
+    this.name = "TtsRequestError";
+    this.voice = params.voice;
+    this.status = params.status;
+    this.body = params.body;
+  }
+}
+
+class SubprocessError extends Error {
+  readonly cmd: string;
+  readonly code: number | null;
+  constructor(params: { cmd: string; code: number | null }) {
+    super("Subprocess exited with a non-zero code");
+    this.name = "SubprocessError";
+    this.cmd = params.cmd;
+    this.code = params.code;
+  }
+}
+
+class VoxtralRequestError extends Error {
+  readonly status: number;
+  readonly body: string;
+  constructor(params: { status: number; body: string }) {
+    super("Voxtral transcription request failed");
+    this.name = "VoxtralRequestError";
+    this.status = params.status;
+    this.body = params.body;
+  }
+}
 
 const OPENAI_KEY = process.env["THINKING_OPENAI_API_KEY"];
 const MISTRAL_KEY = process.env["CALLBACK_MISTRAL_API_KEY"];
@@ -45,7 +80,7 @@ async function fileExists(p: string): Promise<boolean> {
   try {
     await access(p);
     return true;
-  } catch {
+  } catch (_e) {
     return false;
   }
 }
@@ -65,7 +100,7 @@ async function ttsToMp3(voice: string, text: string): Promise<Buffer> {
     }),
   });
   if (!res.ok) {
-    throw new Error(`TTS ${voice}: ${res.status} ${await res.text()}`);
+    throw new TtsRequestError({ voice, status: res.status, body: await res.text() });
   }
   return Buffer.from(await res.arrayBuffer());
 }
@@ -75,7 +110,7 @@ function run(cmd: string, args: string[]): Promise<void> {
     const p = spawn(cmd, args, { stdio: "inherit" });
     p.on("exit", (code) => {
       if (code === 0) resolve();
-      else reject(new Error(`${cmd} exited ${code}`));
+      else reject(new SubprocessError({ cmd, code }));
     });
   });
 }
@@ -89,8 +124,8 @@ async function generateSample(): Promise<Buffer> {
   const dir = path.join(os.tmpdir(), `voxtral-test-${Date.now()}`);
   await mkdir(dir, { recursive: true });
   const parts: string[] = [];
-  for (let i = 0; i < LINES.length; i++) {
-    const line = LINES[i]!;
+  for (const [i, LINE] of LINES.entries()) {
+    const line = LINE!;
     console.log(`  [${i}] ${line.voice}: ${line.text}`);
     const mp3 = await ttsToMp3(line.voice, line.text);
     const f = path.join(dir, `line-${i}.mp3`);
@@ -122,14 +157,14 @@ async function callVoxtral(
   const parts: Buffer[] = [];
   parts.push(Buffer.from(
     `--${boundary}\r\n` +
-    `Content-Disposition: form-data; name="file"; filename="sample.wav"\r\n` +
-    `Content-Type: audio/wav\r\n\r\n`,
+    "Content-Disposition: form-data; name=\"file\"; filename=\"sample.wav\"\r\n" +
+    "Content-Type: audio/wav\r\n\r\n",
   ));
   parts.push(audio);
   parts.push(Buffer.from("\r\n"));
   parts.push(Buffer.from(
     `--${boundary}\r\n` +
-    `Content-Disposition: form-data; name="model"\r\n\r\n` +
+    "Content-Disposition: form-data; name=\"model\"\r\n\r\n" +
     `${model}\r\n`,
   ));
   for (const [name, value] of Object.entries(extraFields)) {
@@ -151,7 +186,7 @@ async function callVoxtral(
   });
   const text = await res.text();
   if (!res.ok) {
-    throw new Error(`Voxtral ${res.status}: ${text}`);
+    throw new VoxtralRequestError({ status: res.status, body: text });
   }
   return JSON.parse(text);
 }

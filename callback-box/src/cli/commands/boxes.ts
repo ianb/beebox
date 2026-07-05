@@ -1,10 +1,12 @@
 /**
  * cb boxes - Manage the box manifest at ~/.config/cb/boxes.json.
  *
- * Both `cb serve` (when invoked without explicit box arguments) and
- * `cb scheduler start` read from this manifest, so adding a box here
- * makes it visible to both the webapp and the schedule runner without
- * having to touch the systemd unit or run separate commands.
+ * `cb scheduler start` reads from this manifest, so adding a box here
+ * makes it visible to the schedule runner without having to touch the
+ * systemd unit or run a separate command. `cb serve` never reads this
+ * manifest (see `commands/serve.ts`'s module comment) -- serving several
+ * boxes behind one process is `cb hub`'s job, which has its own manifest
+ * (`hub.json`).
  */
 
 import * as path from "node:path";

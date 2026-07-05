@@ -1,10 +1,17 @@
 /**
  * Scenario loader — discovers and parses scenario definitions.
  *
- * Scenarios live at ~/src/boxes/scenarios/<name>/ with:
+ * Scenarios live under a scenarios root, one subdirectory per scenario:
  *   scenario.yaml — step definitions
  *   stubs.yaml — optional time/http stubs
  *   box/ — the git repo (the actual box)
+ *
+ * The root is `CB_SCENARIOS_DIR` if set, else `~/src/boxes/scenarios` --
+ * the historical default from before `callback-box` became a standalone
+ * package (see `docs/implemented-plans/boxes-as-packages-v2.md` Track H). Kept as a
+ * documented default, not a bare hardcoded constant, so a checkout outside
+ * `~/src` (or with boxes living elsewhere) can point scenarios at the right
+ * place without editing engine source.
  */
 
 import * as fs from "node:fs/promises";
@@ -13,7 +20,9 @@ import * as os from "node:os";
 import { parse as parseYaml } from "yaml";
 import type { ScenarioDefinition, StubsDefinition } from "./types.js";
 
-const SCENARIOS_DIR = path.join(os.homedir(), "src/boxes/scenarios");
+function scenariosDir(): string {
+  return process.env["CB_SCENARIOS_DIR"] || path.join(os.homedir(), "src/boxes/scenarios");
+}
 
 class InvalidScenarioStepsError extends Error {
   readonly scenarioName: string;
@@ -28,35 +37,36 @@ class InvalidScenarioStepsError extends Error {
  * Get the root scenarios directory.
  */
 export function getScenariosDir(): string {
-  return SCENARIOS_DIR;
+  return scenariosDir();
 }
 
 /**
  * Get the directory for a specific scenario.
  */
 export function getScenarioDir(name: string): string {
-  return path.join(SCENARIOS_DIR, name);
+  return path.join(scenariosDir(), name);
 }
 
 /**
  * Get the box root for a specific scenario.
  */
 export function getBoxRoot(name: string): string {
-  return path.join(SCENARIOS_DIR, name, "box");
+  return path.join(scenariosDir(), name, "box");
 }
 
 /**
  * List available scenario names.
  */
 export async function listScenarios(): Promise<string[]> {
+  const root = scenariosDir();
   try {
-    const entries = await fs.readdir(SCENARIOS_DIR, { withFileTypes: true });
+    const entries = await fs.readdir(root, { withFileTypes: true });
     const names: string[] = [];
     for (const entry of entries) {
       if (!entry.isDirectory()) continue;
       // Must have a scenario.yaml
       try {
-        await fs.access(path.join(SCENARIOS_DIR, entry.name, "scenario.yaml"));
+        await fs.access(path.join(root, entry.name, "scenario.yaml"));
         names.push(entry.name);
       } catch (_e) {
         // No scenario.yaml — this directory isn't a scenario. Expected.

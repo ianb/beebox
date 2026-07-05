@@ -6,8 +6,7 @@
  * on success or stamps it with an error on failure.
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const TelegramMessageStatus = z.enum(["pending", "sent", "failed"]);
@@ -19,6 +18,8 @@ const TelegramResponse = z.object({
 });
 
 export const TelegramMessageSchema: CardSchema = cardSchema("telegram-message", {
+  description: "An outbound Telegram message queued in box/output/ — the connector sends it on sync and deletes the card on success",
+  category: "synced",
   fields: {
     status: TelegramMessageStatus.default("pending"),
     "chat-id": z.string(),
@@ -62,5 +63,5 @@ export function createTelegramMessageTemplate(options: {
     "chat-id": options.chatId,
     text: options.text,
   };
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

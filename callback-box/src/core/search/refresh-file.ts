@@ -19,7 +19,8 @@ import {
 } from "./extract.js";
 import type { CardStat } from "./walk.js";
 import type { SearchManifest, ManifestFileEntry, InputFileEntry } from "./manifest.js";
-import { hashContent, type SearchIndex } from "./search-store.js";
+import { type SearchIndex } from "./search-store.js";
+import { contentHash as computeContentHash } from "../../lib/content-hash.js";
 import {
   computeContainsBasis,
   observeCard,
@@ -67,7 +68,7 @@ export async function refreshOneCard(
     warnings.push(`${relPath}: unreadable (${(e as Error).message})`);
     return "none";
   }
-  const contentHash = hashContent(content);
+  const contentHash = computeContentHash(content);
   if (entry !== undefined && !inputsChanged && entry.contentHash === contentHash) {
     // Touched but unchanged (e.g. git checkout): refresh stat bookkeeping only.
     manifest.files[relPath] = { ...entry, mtimeMs: stat.mtimeMs, size: stat.size };
@@ -141,7 +142,7 @@ export async function refreshOneMarkdownFile(
     warnings.push(`${relPath}: unreadable (${(e as Error).message})`);
     return "none";
   }
-  const contentHash = hashContent(content);
+  const contentHash = computeContentHash(content);
   if (entry !== undefined && entry.contentHash === contentHash) {
     manifest.files[relPath] = { ...entry, mtimeMs: stat.mtimeMs, size: stat.size };
     return "manifest";
@@ -200,7 +201,7 @@ async function readInputFiles(
       entries[relPath] = {
         mtimeMs: st.mtimeMs,
         size: st.size,
-        contentHash: hashContent(content),
+        contentHash: computeContentHash(content),
       };
     } catch (e) {
       warnings.push(`${relPath}: input file unreadable (${(e as Error).message})`);

@@ -8,7 +8,7 @@
  * Called by `cb init` and at the start of `cb reactor`.
  */
 
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { promisify } from "node:util";
@@ -28,15 +28,17 @@ import {
   installBriefing,
   installSchedules,
 } from "./box.js";
-import { installSchemasGuide } from "./box-templates.js";
-import { pruneStaleTemplateUpdates } from "./install-template-file.js";
+import { installSchemasGuide, installViewsGuide } from "./box-templates.js";
+import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "./install-template-file.js";
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
+import { getBoxShapeOrLegacyFallback, type BoxShape } from "../cli/lib/box-shape.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./generate-docs-shared.js";
 import { generateCbCommands } from "./generate-docs-cb-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "./generate-docs-content.js";
 import { generateProcedureGuide } from "./generate-docs-procedure-guide.js";
+import { generateTriageGuide } from "./generate-docs-triage.js";
 import {
   scanProcedures,
   compileBriefings,
@@ -68,19 +70,44 @@ const GENERATE_MARKER = ".callback-box/docs-generated-at";
 const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
 
 /**
- * Get the current git commit hash of the callback-box repo.
- * Returns null if git is unavailable or this isn't a git repo.
+ * Version signal for the running callback-box code, used to invalidate the
+ * doc-generation cache (the `.callback-box/docs-generated-at` marker). It
+ * combines two sources so it advances whenever the *executing* code changes, in
+ * every environment — if either moves, the combined string flips and
+ * regeneration fires; a stale component never pins it:
+ *
+ *  - **deploy stamp** (prod): `deploy-info.json` at PACKAGE_ROOT carries the
+ *    build's commit hash. Prod runs the bundled `dist/cli.mjs`, and the deploy
+ *    does NOT advance the server's source git HEAD — so the deploy hash is the
+ *    ONLY thing that moves per deploy. Keying solely on git HEAD (the old bug)
+ *    meant generated docs never refreshed on existing boxes after a deploy.
+ *  - **source git HEAD** (dev): no `deploy-info.json` when running from source
+ *    via tsx, so git HEAD is the running code and advances per commit.
+ *
+ * Returns null only when neither is available.
  */
-async function getCallbackBoxCommit(): Promise<string | null> {
+async function getCallbackBoxVersion(): Promise<string | null> {
+  const parts: string[] = [];
   try {
-    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], {
-      cwd: PACKAGE_ROOT,
-    });
-    return stdout.trim();
-  } catch (e) {
-    console.warn("[generate-docs] git rev-parse HEAD failed; treating commit as unknown:", e);
+    const raw = await readFile(join(PACKAGE_ROOT, "deploy-info.json"), "utf-8");
+    // Parse boundary: deploy-info.json is written by deploy.sh, untyped here.
+    const info = JSON.parse(raw) as { commits?: { "callback-box"?: { hash?: string } } };
+    const hash = info.commits?.["callback-box"]?.hash;
+    if (typeof hash === "string" && hash !== "") parts.push(`deploy:${hash}`);
+  } catch (_e) {
+    // No deploy-info.json (dev) or unreadable — fall through to git HEAD.
+  }
+  try {
+    const { stdout } = await execFileAsync("git", ["rev-parse", "HEAD"], { cwd: PACKAGE_ROOT });
+    parts.push(`git:${stdout.trim()}`);
+  } catch (_e) {
+    // Not a git repo / git unavailable — the deploy stamp alone may still pin it.
+  }
+  if (parts.length === 0) {
+    console.warn("[generate-docs] no deploy stamp and git rev-parse failed; treating version as unknown");
     return null;
   }
+  return parts.join("|");
 }
 
 export interface GenerateDocsOptions {
@@ -166,6 +193,10 @@ async function newestInputMtime(boxRoot: string): Promise<number> {
   // Briefing cards (root + any subdirectory)
   await check(join(boxRoot, "briefing.briefing.card"));
 
+  // Person cards — a `boxholder: true` flag feeds the compiled personality's
+  // boxholder identity line, so editing one must invalidate the doc cache.
+  await checkDir(join(boxRoot, "people"), /\.person\.card$/);
+
   // Per-chat guide cards
   await checkChatGuideMtimes(boxRoot, check);
 
@@ -205,29 +236,6 @@ async function checkChatGuideMtimes(
 }
 
 /**
- * Paths that the `install*` and `generateRules` helpers own. Used by
- * `syncTemplatesFromSource` to commit just their output without sweeping
- * up user work in progress. Glob-style globs avoided: simple regex over
- * relative paths is enough for what we generate.
- */
-const TEMPLATE_MANAGED_PATTERNS: readonly RegExp[] = [
-  /^config\/procedures\/.+\.(?:procedure|orig-procedure)\.card$/,
-  /^config\/schedules\/.+\.(?:scheduled-script|orig-scheduled-script)\.card$/,
-  /^config\/.+\.(?:guide|orig-guide)\.card$/,
-  /^config\/.+\.(?:personality|orig-personality)\.card$/,
-  /^config\/_template-updates\/.+$/,
-  /^config\/schemas\/CLAUDE\.md$/,
-  /^briefing\.(?:briefing|orig-briefing)\.card$/,
-  /^briefing\.md$/,
-  /^\.claude\/rules\/.+\.md$/,
-  /^\.claude\/settings\.json$/,
-];
-
-function isTemplateManagedPath(relPath: string): boolean {
-  return TEMPLATE_MANAGED_PATTERNS.some((re) => re.test(relPath));
-}
-
-/**
  * Re-install upstream templates (procedures, guides, schedules, personality,
  * briefing, card rules) into the box. Each install* helper is idempotent and
  * only writes when the upstream template differs from the box's copy. Runs
@@ -251,6 +259,10 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
   // just on an explicit `cb init`). Tracker-based, so user-edited guides are
   // parked, not clobbered.
   await installSchemasGuide(boxRoot);
+  // Same tracker treatment for the views guide, so boxes carrying the old
+  // standalone-view guide pick up the attach-to-cards rewrite on the normal
+  // cycle (not just an explicit `cb init`); user-edited guides are parked.
+  await installViewsGuide(boxRoot);
   await generateRules(boxRoot);
   await installValidationHooks(boxRoot);
   await pruneStaleTemplateUpdates(boxRoot);
@@ -259,25 +271,75 @@ async function syncTemplatesFromSource(boxRoot: string): Promise<void> {
 }
 
 /**
+ * Normalize a path as `getStatus` reports it (relative to `packageRoot`,
+ * since `commitTemplateSyncChanges` runs git there — see its doc comment)
+ * into the box-root-relative convention `isTemplateManagedPath` matches
+ * against (`install-template-file.ts`'s `relPath`: normally relative to
+ * `boxRoot`, with a `../...` prefix for the handful of templates a v2 box
+ * owns at the package root, e.g. `src/schemas/CLAUDE.md`).
+ *
+ * For a legacy box `packageRoot === boxRoot`, so `contentPrefix` is empty
+ * and every path passes through unchanged — v1 behavior is bit-for-bit the
+ * same as before this function existed. For a v2 box, strip the box's
+ * content-dir prefix (`content/`, but read from the shape rather than
+ * hardcoded) from paths inside it, and rewrite paths outside it — which can
+ * only be one level up, at the package root itself, per the "v2
+ * (package-layout) boxes" note in `install-template-file.ts` — as `../...`.
+ * Without this, every v2 git-status path retained its `content/` (or
+ * `../src/...`) prefix, `isTemplateManagedPath` matched nothing, and the
+ * selective sync commit silently committed nothing.
+ */
+function toBoxRelativePath(gitPath: string, shape: { packageRoot: string; boxRoot: string }): string {
+  const contentPrefix = relative(shape.packageRoot, shape.boxRoot);
+  if (contentPrefix === "") return gitPath;
+  const prefix = `${contentPrefix}/`;
+  if (gitPath.startsWith(prefix)) return gitPath.slice(prefix.length);
+  return `../${gitPath}`;
+}
+
+/**
  * Commit any template-managed paths the install/generateRules helpers
  * dirtied, leaving user work in progress (in other paths) alone.
+ *
+ * Runs at the REPO ROOT, not `boxRoot`. `getStatus`/`stageFiles`/`commitPaths`
+ * all shell out to `git`, which reports and accepts pathspecs relative to
+ * wherever it's invoked from — for a v2 box `boxRoot` (`content/`) is nested
+ * one level under the actual repo root (the package root), so a path like
+ * `.claude/settings.json` (which git status reports relative to the repo
+ * root it found) would resolve to the wrong file (or nothing) if staged with
+ * cwd=`boxRoot`. Legacy boxes are unaffected — their repo root IS `boxRoot`.
+ * Found via `cb upgrade`'s end-to-end smoke run: the `.claude/settings.json`
+ * hook install landed here, staging fatally errored with "pathspec did not
+ * match any files" before this fix.
+ *
+ * Exported (rather than only reachable through `generateDocs`) so doctests
+ * can exercise the git-status normalization directly against a minimal
+ * fixture, without also going through `installValidationHooks` + a real,
+ * executable `.git/hooks/pre-commit` that shells out to a `cb` binary — an
+ * unrelated hazard in a repo-in-a-repo dev/test environment.
  */
-async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
-  if (!(await isRepo(boxRoot))) return;
-  if (!(await hasCommits(boxRoot))) return;
+export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot } = shape;
+  if (!(await isRepo(packageRoot))) return;
+  if (!(await hasCommits(packageRoot))) return;
 
-  const status = await getStatus(boxRoot);
+  const status = await getStatus(packageRoot);
   const candidates = [
     ...status.staged,
     ...status.modified,
     ...status.untracked,
   ];
-  const toCommit = candidates.filter(isTemplateManagedPath);
+  // Filter against the box-root-relative form (what isTemplateManagedPath's
+  // patterns are written against), but keep the original git-reported paths
+  // in `toCommit` — stageFiles/commitPaths run with cwd=packageRoot, so they
+  // need the packageRoot-relative form git itself understands.
+  const toCommit = candidates.filter((p) => isTemplateManagedPath(toBoxRelativePath(p, shape)));
   if (toCommit.length === 0) return;
 
   // Stage explicitly so untracked files are picked up by `commit -- <paths>`.
-  await stageFiles(boxRoot, toCommit);
-  await commitPaths(boxRoot, {
+  await stageFiles(packageRoot, toCommit);
+  await commitPaths(packageRoot, {
     paths: toCommit,
     message: "Sync templates from upstream",
     trailers: { "Triggered-By": "generateDocs" },
@@ -286,8 +348,9 @@ async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
 
 /**
  * Decide whether doc generation can be skipped because nothing changed.
- * Returns true only when the input mtimes and source commit both match the
- * marker written by the previous run. Always false when force is set.
+ * Returns true only when the input mtimes and the callback-box version signal
+ * (see getCallbackBoxVersion — deploy stamp ‖ git HEAD) both match the marker
+ * written by the previous run. Always false when force is set.
  */
 async function canSkipGeneration(params: {
   markerPath: string;
@@ -316,6 +379,7 @@ interface DocWritePlan {
   procedures: ProcedureSummary[];
   allCardSchemas: typeof cardSchemas;
   personalitySection: string | undefined;
+  shape: BoxShape;
 }
 
 /**
@@ -323,10 +387,10 @@ interface DocWritePlan {
  * connectors, views, voice, per-card-type, etc.) in parallel.
  */
 async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
-  const { boxRoot, debug, procedures, allCardSchemas, personalitySection } = plan;
+  const { boxRoot, debug, procedures, allCardSchemas, personalitySection, shape } = plan;
   await Promise.all([
     writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection }), debug })),
+      withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, shape }), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "cb-commands.md"),
       withDocId({ relativePath: `${DOCS_DIR}/cb-commands.md`, content: generateCbCommands(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "connectors.md"),
@@ -341,6 +405,8 @@ async function writeStaticDocs(plan: DocWritePlan): Promise<void> {
       withDocId({ relativePath: `${DOCS_DIR}/reducing-claude-md.md`, content: generateReducingClaudeMdDoc(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "procedures.md"),
       withDocId({ relativePath: `${DOCS_DIR}/procedures.md`, content: generateProcedureGuide(), debug })),
+    writeFile(join(boxRoot, DOCS_DIR, "triage.md"),
+      withDocId({ relativePath: `${DOCS_DIR}/triage.md`, content: generateTriageGuide(), debug })),
     writeFile(join(boxRoot, DOCS_DIR, "python-tools.md"),
       withDocId({ relativePath: `${DOCS_DIR}/python-tools.md`, content: generatePythonToolsDoc(), debug })),
     // Per-schema generated docs: each frontmatter schema with an optional
@@ -394,7 +460,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   // Skipped entirely when force is set — see GenerateDocsOptions.force for why.
   const markerPath = join(boxRoot, GENERATE_MARKER);
   const inputMtime = await newestInputMtime(boxRoot);
-  const currentCommit = await getCallbackBoxCommit();
+  const currentCommit = await getCallbackBoxVersion();
   if (await canSkipGeneration({ markerPath, inputMtime, currentCommit, force: options.force ?? false })) {
     return; // Nothing changed — skip regeneration
   }
@@ -416,10 +482,14 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
   const boxSchemas = await loadBoxSchemas(boxRoot);
   const allCardSchemas = [...cardSchemas, ...boxSchemas.cardSchemas];
 
+  // Determines whether the agent guide teaches the package-layout code
+  // location rules — see "boxCodeLocationSection" in agent-guide/box-shape.ts.
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot, debug);
 
-  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, personalitySection });
+  await writeStaticDocs({ boxRoot, debug, procedures, allCardSchemas, personalitySection, shape });
 
   // Compile guides and generate job-type rules
   const guides = await compileGuides(boxRoot, debug);
@@ -429,7 +499,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Rewrite agent guide now that we have guide summaries
   await writeFile(join(boxRoot, AGENT_GUIDE_DIR, AGENT_GUIDE_FILE),
-    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides }), debug }));
+    withDocId({ relativePath: `${AGENT_GUIDE_DIR}/${AGENT_GUIDE_FILE}`, content: generateAgentGuide({ procedures, allCardSchemas, personalitySection, guides, shape }), debug }));
 
   // Compile briefing cards to .md files
   const briefingPaths = await compileBriefings(boxRoot, debug);

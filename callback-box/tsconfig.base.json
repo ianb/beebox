@@ -1,0 +1,27 @@
+{
+  // Base tsconfig for BOX packages (exported as callback-box/tsconfig.base.json;
+  // the box scaffold writes `"extends": "callback-box/tsconfig.base.json"`).
+  // Typecheck-only: boxes never tsc-emit — schemas run under native type
+  // stripping, views are esbuild-bundled by the engine. `bundler` resolution
+  // matches that reality (no .js extension ceremony in box code).
+  // Box devDependencies supply typescript and @types/react (scaffolded by
+  // `cb init`); views need the DOM lib, schemas don't mind it.
+  "compilerOptions": {
+    "target": "ES2023",
+    "module": "preserve",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "exactOptionalPropertyTypes": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true,
+    "lib": ["ES2023", "DOM", "DOM.Iterable"]
+  }
+}

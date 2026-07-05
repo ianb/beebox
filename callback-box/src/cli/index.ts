@@ -13,15 +13,18 @@ import { Command } from "commander";
 import {
   initCommand,
   migrateCommand,
+  upgradeCommand,
   statusCommand,
   validateCommand,
   createCommand,
   serveCommand,
+  hubCommand,
   answerCommand,
   wakeupCommand,
   trashCommand,
   moveCommand,
   relinkCommand,
+  migrateViewLinksCommand,
   procedureCommand,
   transcribeCapturesCommand,
   assembleTimelineCommand,
@@ -75,15 +78,18 @@ program
 
 program.addCommand(initCommand);
 program.addCommand(migrateCommand);
+program.addCommand(upgradeCommand);
 program.addCommand(statusCommand);
 program.addCommand(validateCommand);
 program.addCommand(createCommand);
 program.addCommand(serveCommand);
+program.addCommand(hubCommand);
 program.addCommand(answerCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(trashCommand);
 program.addCommand(moveCommand);
 program.addCommand(relinkCommand);
+program.addCommand(migrateViewLinksCommand);
 program.addCommand(procedureCommand);
 program.addCommand(transcribeCapturesCommand);
 program.addCommand(assembleTimelineCommand);

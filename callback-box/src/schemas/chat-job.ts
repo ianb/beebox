@@ -7,15 +7,15 @@
  * response or acknowledgment.
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const ChatJobSchema: CardSchema = cardSchema("chat-job", {
+  description: "A system job to process new messages (or a callback timer) in a chat thread; created by messaging connectors",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string(),
     description: z.string(),
     thread: z.object({ ref: z.string() }),
@@ -33,23 +33,23 @@ jobs without picking up unrelated work.
 
 1. The job content and thread content are provided in the prompt — do
    NOT re-read them
-2. Find new messages: scan backward from the end for the last
-   \`<seen>\` or \`<message sender="agent">\` — everything after that
-   is new
-3. If there are no new messages, check the last \`<seen>\` for a
-   note-to-self about what to do
+2. Find new messages: scan backward from the end of the thread's
+   \`entries:\` array for the last \`kind: seen\` or
+   \`kind: message, sender: agent\` — everything after that is new
+3. If there are no new messages, check the last \`kind: seen\` entry's
+   \`text:\` for a note-to-self about what to do
 4. Decide whether to respond or acknowledge:
-   - **Respond**: append \`<message sender="agent">Your response</message>\`
-     at the end
-   - **Acknowledge**: append \`<seen />\` (optionally with
-     \`callback-in\` and/or a note-to-self)
+   - **Respond**: append an entry \`{kind: message, sender: agent,
+     text: "Your response"}\`
+   - **Acknowledge**: append an entry \`{kind: seen}\` (optionally with
+     \`callback-in\` and/or a note-to-self \`text:\`)
 5. Commit the thread file
 6. Run \`cb finish {thisJobFile}\` to complete the job
 
 ## Important
 
-- Only append ONE element at the end of the thread
-- Do NOT modify existing messages
+- Only append ONE entry at the end of \`entries:\`
+- Do NOT modify existing entries
 - Do NOT fill in \`sent\` or \`id\` on agent messages — the connector
   handles delivery
 - Commit the thread file before finishing the job`,
@@ -58,24 +58,21 @@ jobs without picking up unrelated work.
 export interface ChatJobFields {
   type: "chat-job";
   status: string;
-  created: string;
   source: string;
   description: string;
   thread: { ref: string };
 }
 
 export function createChatJobTemplate(options: {
-  created?: string;
   description: string;
   threadRef: string;
   source: string;
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: options.source,
     description: options.description,
     thread: { ref: options.threadRef },
   };
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

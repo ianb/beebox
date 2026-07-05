@@ -46,8 +46,8 @@ schedulerCommand
   });
 
 // `cb scheduler {add,remove,list}` are deprecated aliases — the box
-// manifest is now shared with `cb serve`, so the canonical commands
-// live under `cb boxes`. Keep these working for scripts that already
+// manifest they manage now feeds only the scheduler, and its canonical
+// commands live under `cb boxes`. Keep these working for scripts that already
 // use them.
 
 function deprecationNotice(newCommand: string): void {

@@ -11,7 +11,8 @@ import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
-import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
+import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionState } from "../../hooks/useRealtimeTranscription";
 
 export interface TranscriptionHandle {
@@ -31,23 +32,23 @@ const SEND_PATH = "M5 10l7-7m0 0l7 7m-7-7v18";
  * buttons. Hidden below the `sm` breakpoint.
  */
 function DesktopComposerRow({
-  textareaRef, input, setInput, isTranscribing, transcription,
+  textareaRef, input, setInput, isTranscribing, transcription, targetBusy,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, doSend, zoomedViewAttr, timePassedAttr, onPaste, onDrop,
+  onStopDictation, onVoiceSegmentSend, onPaste, onDrop,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
+  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
+  targetBusy: boolean;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
   clearDraft: () => void;
   onStopDictation: () => void;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  onVoiceSegmentSend: (text: string) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
@@ -100,7 +101,7 @@ function DesktopComposerRow({
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, transcription.transcript).trim();
               transcription.cancel();
-              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              if (text) onVoiceSegmentSend(text);
               setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
@@ -119,7 +120,7 @@ function DesktopComposerRow({
           onClick={handleSend}
           disabled={!input.trim()}
           className={`${CIRCLE_BTN} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-          title="Send"
+          title={targetBusy ? "Queue message (agent is busy)" : "Send"}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d={SEND_PATH} />
@@ -136,18 +137,17 @@ function DesktopComposerRow({
  * On mobile: [capture] [camera] [spacer] [stop] [keyboard] [voice] — textarea appears below when typing.
  */
 export function ChatInputArea({
-  textareaRef, input, setInput, isTranscribing, transcription,
+  textareaRef, isTranscribing, transcription, targetBusy,
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
-  onKeyboard, onVoice, speechPlaying, onStopSpeech,
-  isStreaming, onInterrupt, onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
+  onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
   onPaste, onDrop, onAttachFiles, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
+  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
+  targetBusy: boolean;
   handleKeyDown: (e: React.KeyboardEvent) => void;
   handleSend: () => void;
   handleCancelTranscription: () => void;
@@ -155,14 +155,8 @@ export function ChatInputArea({
   clearDraft: () => void;
   onKeyboard: () => void;
   onVoice: () => void;
-  speechPlaying: boolean;
-  onStopSpeech: () => void;
-  isStreaming: boolean;
-  onInterrupt: () => void;
   onStopDictation: () => void;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  onVoiceSegmentSend: (text: string) => void;
   voicePaused: boolean;
   onUnpause: () => void;
   hideMobile?: boolean;
@@ -171,6 +165,10 @@ export function ChatInputArea({
   onAttachFiles: () => void;
   narrationEnabled: boolean;
 }) {
+  // Subscribing read of the composer text — this is the component a keystroke
+  // re-renders (and its small button-bar subtree), not the chat at large.
+  const input = useInputValue();
+  const setInput = useInputStore().set;
   return (
     <section aria-label="Compose message" className={`flex-shrink-0 border-t border-warm-300 bg-gradient-to-r from-warm-100 via-warm-100 to-warm-200 px-3 py-2${hideMobile ? " hidden sm:block" : ""}`}>
       <div className="relative flex items-center gap-2">
@@ -214,46 +212,19 @@ export function ChatInputArea({
           setInput={setInput}
           isTranscribing={isTranscribing}
           transcription={transcription}
+          targetBusy={targetBusy}
           handleKeyDown={handleKeyDown}
           handleSend={handleSend}
           handleCancelTranscription={handleCancelTranscription}
           clearDraft={clearDraft}
           onStopDictation={onStopDictation}
-          doSend={doSend}
-          zoomedViewAttr={zoomedViewAttr}
-          timePassedAttr={timePassedAttr}
+          onVoiceSegmentSend={onVoiceSegmentSend}
           onPaste={onPaste}
           onDrop={onDrop}
         />
 
         {/* Mobile: spacer */}
         <div className="flex-1 sm:hidden" />
-
-        {/* Shared: conditional stop buttons */}
-        {speechPlaying ? (
-          <button
-            onClick={onStopSpeech}
-            className={`${CIRCLE_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
-            title="Stop speaking"
-          >
-            {/* Speaker-x (audio), not the stop circle — that one stops the agent. */}
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5 6 9H3v6h3l5 4V5zM17 9l4 6m0-6-4 6" />
-            </svg>
-          </button>
-        ) : null}
-        {isStreaming ? (
-          <button
-            onClick={onInterrupt}
-            className={`${CIRCLE_BTN} bg-danger-100 text-danger hover:bg-danger-100 active:bg-danger-light`}
-            title="Stop agent"
-          >
-            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z" />
-            </svg>
-          </button>
-        ) : null}
 
         {/* Mobile-only: keyboard button */}
         <button

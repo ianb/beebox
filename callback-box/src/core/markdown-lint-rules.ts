@@ -2,35 +2,37 @@
  * Custom markdownlint rules for callback boxes.
  */
 
-import * as fs from "node:fs/promises";
+import { fileExists } from "../lib/file-exists.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
-// Matches [view:...] used as a reference link label (not as a URL in parentheses).
-// The invalid form agents write: [view:path/to/file]
-// The correct form:             [label](view:path/to/file)
-const VIEW_LABEL_RE = /\[view:[^\]]*](?!\()/g;
+// The retired `view:` scheme in any markdown link/image. Cards/files are now
+// referenced by a plain box path; a `view:` prefix produces a dead link. Forms
+// this catches (the ones agents and hand-edits still produce):
+//   [label](view:path)   ![alt](view:path)   [view:path]
+// The fix is always: drop `view:` and reference the plain path.
+const LEGACY_VIEW_RE = /]\(\s*view:[^)]*\)|\[view:[^\]]*]/g;
 
 // Matches inline links: [text](url) — captures the url part.
 const INLINE_LINK_RE = /\[[^\]]*]\(([^)]+)\)/g;
 
-const noViewLabelLinks: Rule = {
-  names: ["CB001", "no-view-label-links"],
-  description: "view: belongs in the URL, not the link label — use [label](view:path) not [view:path]",
+export const noLegacyViewLinks: Rule = {
+  names: ["CB001", "no-legacy-view-links"],
+  description: "The retired `view:` scheme — drop the prefix and reference the plain box path, e.g. [label](store/x.card) or ![alt](store/x.card)",
   tags: ["links"],
   parser: "none",
   function: (params: Parameters<Rule["function"]>[0], onError: RuleOnError): void => {
     for (let i = 0; i < params.lines.length; i++) {
       const line = params.lines[i]!;
-      VIEW_LABEL_RE.lastIndex = 0;
-      let match = VIEW_LABEL_RE.exec(line);
+      LEGACY_VIEW_RE.lastIndex = 0;
+      let match = LEGACY_VIEW_RE.exec(line);
       while (match !== null) {
         onError({
           lineNumber: i + 1,
-          detail: `Use [label](view:path) instead of ${match[0]}`,
+          detail: `Drop the \`view:\` prefix — reference the plain box path instead of ${match[0]}`,
           range: [match.index + 1, match[0].length],
         });
-        match = VIEW_LABEL_RE.exec(line);
+        match = LEGACY_VIEW_RE.exec(line);
       }
     }
   },
@@ -146,7 +148,7 @@ export function resolveInternalLink(
 }
 
 /** CB001 + CB002 — the box's custom markdown link rules, registered together. */
-export const customLinkRules: Rule[] = [noViewLabelLinks, noBrokenInternalLinks];
+export const customLinkRules: Rule[] = [noLegacyViewLinks, noBrokenInternalLinks];
 
 /**
  * markdownlint config fragment that enables CB001/CB002 **by name** (not by the
@@ -158,7 +160,7 @@ export const customLinkRules: Rule[] = [noViewLabelLinks, noBrokenInternalLinks]
  */
 export function linkRuleConfig(boxRoot: string): Record<string, unknown> {
   return {
-    "no-view-label-links": true,
+    "no-legacy-view-links": true,
     "no-broken-internal-links": { boxRoot },
   };
 }
@@ -169,12 +171,3 @@ function isRelativePath(url: string): boolean {
   return true;
 }
 
-export async function fileExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath);
-    return true;
-  } catch (_e) {
-    // access() throwing IS the answer here: the file is absent/unreadable.
-    return false;
-  }
-}

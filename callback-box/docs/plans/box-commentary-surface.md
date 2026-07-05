@@ -1,5 +1,7 @@
 # In-box Commentary Surface for Out-of-Box Files
 
+**Status:** partially implemented 2026-06 — see "Implementation status" below for what's landed vs. remaining
+
 A Callback Box capability for viewing, selecting, and commenting on files
 that live **outside** the box — repo docs and source, including the same
 logical file across multiple git worktrees — from inside a dedicated box.
@@ -89,7 +91,7 @@ sources:
   requires."* This plan is large; the **NOT in scope** section is where it
   earns its bound (fuzzy re-anchoring, prod exposure, diff view, prefix/suffix
   selectors all deferred).
-- `callback-box/CODE-STYLE.md` — no default parameters, max 2 positional
+- `callback-box/code-style.md` — no default parameters, max 2 positional
   params (named-params object beyond that), no `any`, no bare `catch {}`,
   custom error classes, files ≤300 lines.
 - **Precedent — `{% quote %}` / `{% source %}` work.** The shipped

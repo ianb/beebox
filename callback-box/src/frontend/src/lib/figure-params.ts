@@ -9,6 +9,8 @@
  * fallback runs).
  */
 
+import { isRecord } from "./is-record";
+
 export type FigureParamType = "string" | "number" | "boolean";
 export type FigureParamValue = string | number | boolean;
 
@@ -18,9 +20,6 @@ export interface FigureParamDecl {
   default?: FigureParamValue;
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null && !Array.isArray(value);
-}
 
 /**
  * Parse a card's frontmatter `params` (untyped) into a list of declarations,

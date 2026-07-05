@@ -3,7 +3,8 @@
  *
  * Loads a procedure definition card, creates a run directory with a run card,
  * executes steps sequentially, records results, and maintains git-clean state
- * between steps.
+ * between steps. Run orchestration (runSteps/finalizeRun) lives in
+ * engine-orchestrate.ts; read-only queries in engine-query.ts.
  */
 
 import * as fs from "node:fs/promises";
@@ -15,8 +16,8 @@ import type { CommandContext, CommandResult } from "../command-runner.js";
 import { type ProcedureOptions, type ParsedProcedure } from "./engine-types.js";
 import { loadProcedureDefinition } from "./engine-parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
-import { computeRunExpires } from "./run-expiry.js";
-import { executeStep } from "./engine-step.js";
+import { runSteps, finalizeRun } from "./engine-orchestrate.js";
+import { resolveRunDir } from "./engine-query.js";
 
 export type { AgentFactory } from "./engine-types.js";
 export type { ProcedureOptions } from "./engine-types.js";
@@ -78,47 +79,6 @@ function printDryRun(args: {
       `  ${fmt.strong(step.id)}: ${step.description} ${fmt.dim(`[${runType}${hasPrecheck ? ", precheck" : ""}${hasValidate ? ", validate" : ""}]`)}`
     );
   }
-}
-
-/**
- * Run a procedure's steps in sequence, returning the failed step id if any.
- */
-async function runSteps(args: {
-  ctx: CommandContext;
-  boxRoot: string;
-  procedure: ParsedProcedure;
-  procedureCardPath: string;
-  runCardPath: string;
-  relProcedurePath: string;
-  options: ProcedureOptions;
-  ensureMaterialized: () => Promise<void>;
-}): Promise<{ allSucceeded: boolean; failedStepId: string | null }> {
-  const { ctx, boxRoot, procedure, procedureCardPath, runCardPath, relProcedurePath, options } =
-    args;
-  const stepsToRun = options.step
-    ? procedure.steps.filter((s) => s.id === options.step)
-    : procedure.steps;
-
-  for (const step of stepsToRun) {
-    const result = await executeStep({
-      ctx,
-      boxRoot,
-      step,
-      procedure,
-      procedureCardPath,
-      runCardPath,
-      relProcedurePath,
-      ensureMaterialized: args.ensureMaterialized,
-      ...(options.directive && { directive: options.directive }),
-      ...(options.createAgent && { createAgent: options.createAgent }),
-    });
-
-    if (result === "failed") {
-      return { allSucceeded: false, failedStepId: step.id };
-    }
-  }
-
-  return { allSucceeded: true, failedStepId: null };
 }
 
 /**
@@ -213,141 +173,115 @@ export async function startProcedure(
     ensureMaterialized,
   });
 
-  if (!materialized) {
-    // No-op run: every executed step skipped, nothing was ever committed.
-    await fs.rm(runDir, { recursive: true, force: true });
-    ctx.writeLine(fmt.dim(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`));
-    return { success: true };
-  }
-
-  // Final run card update
-  const completedAt = new Date().toISOString();
-  const status = allSucceeded ? "completed" : "failed";
-  await updateRunCardStatus({
+  return finalizeRun({
+    ctx,
+    boxRoot,
+    procedure,
+    runDir,
     runCardPath,
-    status,
-    completedAt,
-    expires: computeRunExpires({ status, completedAt, procedure }),
+    result: { allSucceeded, failedStepId },
+    materialized,
   });
-  await stageAll(boxRoot);
-  await commit(boxRoot, {
-    message: `${allSucceeded ? "Complete" : "Failed"} procedure: ${procedureName}`,
-    trailers: { Procedure: procedureName },
-  });
-
-  if (allSucceeded) {
-    ctx.writeLine(fmt.ok(`Procedure completed: ${procedureName}`));
-  } else {
-    ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
-  }
-
-  return {
-    success: allSucceeded,
-    ...(!allSucceeded && { error: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}` }),
-  };
 }
 
 /**
- * List available procedure definitions.
+ * Resume a failed (or interrupted) procedure run from its first
+ * not-yet-completed step, reusing the existing run dir and card. Earlier
+ * completed/skipped steps are not re-run.
  */
-export async function listProcedures(
-  ctx: CommandContext
-): Promise<CommandResult> {
-  const procedureDir = path.join(ctx.boxRoot, "config/procedures");
-
-  try {
-    const files = await fs.readdir(procedureDir);
-    const cards = files.filter((f) => f.endsWith(".procedure.card"));
-
-    if (cards.length === 0) {
-      ctx.writeLine(fmt.dim("No procedure definitions found."));
-      return { success: true, data: [] };
-    }
-
-    for (const card of cards) {
-      const name = card.replace(".procedure.card", "");
-      ctx.writeLine(`  ${fmt.strong(name)} ${fmt.dim(card)}`);
-    }
-
-    return { success: true, data: cards };
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`Could not read procedures directory ${procedureDir}:`, e);
-    }
-    ctx.writeLine(fmt.dim("No config/procedures/ directory."));
-    return { success: true, data: [] };
-  }
-}
-
-/**
- * Show status of a procedure run.
- */
-export async function procedureStatus(
-  ctx: CommandContext,
-  runDir?: string
-): Promise<CommandResult> {
+export async function resumeProcedure(params: {
+  ctx: CommandContext;
+  runDir?: string;
+  options?: ProcedureOptions;
+}): Promise<CommandResult> {
+  const { ctx, options = {} } = params;
   const { boxRoot } = ctx;
 
-  // If no run dir specified, find the latest
-  if (!runDir) {
-    const runsDir = path.join(boxRoot, "procedure/runs");
-    try {
-      const dirs = await fs.readdir(runsDir);
-      const sorted = dirs.toSorted().toReversed();
-      if (sorted.length === 0) {
-        ctx.writeLine(fmt.dim("No procedure runs found."));
-        return { success: true };
-      }
-      runDir = path.join(runsDir, sorted[0]!);
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.warn(`Could not read runs directory ${runsDir}:`, e);
-      }
-      ctx.writeLine(fmt.dim("No procedure/runs/ directory."));
-      return { success: true };
-    }
+  const runDir = await resolveRunDir(boxRoot, params.runDir);
+  if (runDir === null) {
+    return { success: false, error: "No procedure run found to resume." };
+  }
+  const runCardPath = path.join(runDir, "run.procedure-run.card");
+
+  let run;
+  try {
+    run = parseProcedureRun(await fs.readFile(runCardPath, "utf-8"));
+  } catch (e) {
+    return { success: false, error: `Could not read run card: ${(e as Error).message}` };
+  }
+  if (run === null) {
+    return { success: false, error: `Could not parse run card: ${runCardPath}` };
   }
 
-  const runCardPath = path.join(
-    runDir.startsWith("/") ? runDir : path.join(boxRoot, runDir),
-    "run.procedure-run.card"
-  );
-
-  try {
-    const content = await fs.readFile(runCardPath, "utf-8");
-    const run = parseProcedureRun(content);
-    if (run === null) {
-      return { success: false, error: `Could not read run card: ${runCardPath}` };
-    }
-
-    ctx.writeLine(fmt.header(`Procedure Run: ${run.procedure}`));
-    ctx.writeLine(fmt.kv("Status", fmt.status(run.status)));
-    ctx.writeLine(fmt.kv("Started", run["started-at"]));
-    if (run["completed-at"] !== undefined) {
-      ctx.writeLine(fmt.kv("Completed", run["completed-at"]));
-    }
-    ctx.writeLine("");
-
-    for (const step of run.steps) {
-      const status = step.status;
-      const icon =
-        status === "completed"
-          ? fmt.success("✓")
-          : status === "skipped"
-            ? fmt.dim("○")
-            : status === "failed"
-              ? fmt.error("✗")
-              : status === "running"
-                ? fmt.warn("▸")
-                : fmt.dim("·");
-      ctx.writeLine(`  ${icon} ${fmt.strong(step.id)} ${fmt.dim(`(${status})`)}`);
-    }
-
+  const relRunDir = path.relative(boxRoot, runDir);
+  if (run.status === "completed") {
+    ctx.writeLine(fmt.ok(`Run already completed: ${relRunDir} — nothing to resume`));
     return { success: true };
-  } catch (error) {
+  }
+
+  // Resume index: the first step that is neither completed nor skipped (both
+  // are terminal-success and never re-run). Since execution halts at the first
+  // failure, this is the failed step, and everything after it is pending.
+  const resumeStep = run.steps.find((s) => s.status !== "completed" && s.status !== "skipped");
+  if (resumeStep === undefined) {
+    ctx.writeLine(fmt.ok(`All steps already completed: ${relRunDir} — nothing to resume`));
+    return { success: true };
+  }
+
+  // Load the procedure definition the run was created from.
+  const procedureCardPath = path.isAbsolute(run.procedure)
+    ? run.procedure
+    : path.join(boxRoot, run.procedure);
+  try {
+    await fs.access(procedureCardPath);
+  } catch (e) {
+    console.warn(`Procedure definition not accessible at ${procedureCardPath}:`, e);
+    return { success: false, error: `Procedure definition not found: ${procedureCardPath}` };
+  }
+  const procedure = await loadProcedureDefinition(procedureCardPath);
+
+  // The resume step must still exist in the (possibly edited) definition.
+  if (!procedure.steps.some((s) => s.id === resumeStep.id)) {
     return {
       success: false,
-      error: `Could not read run card: ${(error as Error).message}`,
+      error: `Step "${resumeStep.id}" no longer exists in procedure definition: ${run.procedure}`,
     };
   }
+
+  // Re-open the run: it's active again (the on-disk "running" signal).
+  await updateRunCardStatus({ runCardPath, status: "running" });
+
+  ctx.writeLine(fmt.header(`Resuming procedure: ${procedure.name}`));
+  ctx.writeLine(fmt.dim(`Run: ${relRunDir}`));
+  ctx.writeLine(fmt.dim(`From step: ${resumeStep.id}`));
+  ctx.writeLine("");
+
+  // The run dir already has commits, so materialization is a no-op.
+  const ensureMaterialized = (): Promise<void> => Promise.resolve();
+
+  const resumeOptions: ProcedureOptions = { ...options, fromStep: resumeStep.id };
+  if (run.directive !== undefined && resumeOptions.directive === undefined) {
+    resumeOptions.directive = run.directive;
+  }
+
+  const { allSucceeded, failedStepId } = await runSteps({
+    ctx,
+    boxRoot,
+    procedure,
+    procedureCardPath,
+    runCardPath,
+    relProcedurePath: run.procedure,
+    options: resumeOptions,
+    ensureMaterialized,
+  });
+
+  return finalizeRun({
+    ctx,
+    boxRoot,
+    procedure,
+    runDir,
+    runCardPath,
+    result: { allSucceeded, failedStepId },
+    materialized: true,
+  });
 }

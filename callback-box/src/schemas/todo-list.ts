@@ -6,8 +6,7 @@
  * notes. Everything is structured frontmatter — no markdown body.
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const TodoItemStatus = z.enum(["pending", "done", "cancelled", "deferred"]);
@@ -34,6 +33,8 @@ export interface TodoItem {
 }
 
 export const TodoListSchema: CardSchema = cardSchema("todo-list", {
+  description: "Human-oriented action items grouped by topic, nestable — tracks things people need to do, not agent jobs",
+  category: "authored",
   fields: {
     name: z.string(),
     details: z.string().optional(),
@@ -112,5 +113,5 @@ export function createTodoListTemplate(options: {
       status: it.status === undefined ? "pending" : it.status,
     }));
   }
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

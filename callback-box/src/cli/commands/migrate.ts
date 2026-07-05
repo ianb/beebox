@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
+import { detectBoxTarget } from "../../core/box-package.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,
@@ -24,6 +25,7 @@ import {
 } from "../../core/migrations.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { getStatus, stageAll, commit } from "../lib/git.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -86,6 +88,30 @@ function computePending(applied: ManifestEntry[]): Migration[] {
   return MIGRATIONS.filter((m) => !seen.has(m.name));
 }
 
+export type MarkAppliedResult =
+  | { status: "marked" }
+  | { status: "already-applied" }
+  | { status: "unknown-migration" }
+  | { status: "no-manifest" };
+
+/**
+ * Record a single migration as applied WITHOUT running it. The escape hatch for
+ * a box that's already in a migration's post-state but never got the manifest
+ * entry — e.g. a retired migrator (`bill`) that can no longer run, or a box that
+ * had a migration's effect applied out-of-band. Unlike `--mark-all-applied`
+ * (which seeds a whole missing manifest) this touches one entry on a box that
+ * already has a manifest. Refuses an unknown name or a missing manifest; a
+ * no-op if the migration is already recorded.
+ */
+export async function markMigrationApplied(args: { boxRoot: string; name: string }): Promise<MarkAppliedResult> {
+  if (!MIGRATIONS.some((m) => m.name === args.name)) return { status: "unknown-migration" };
+  const existing = await readManifest(args.boxRoot);
+  if (existing === null) return { status: "no-manifest" };
+  if (existing.some((e) => e.name === args.name)) return { status: "already-applied" };
+  await appendManifestEntry(args.boxRoot, { name: args.name, "applied-at": new Date().toISOString() });
+  return { status: "marked" };
+}
+
 function runScript(args: { script: string; boxRoot: string }): Promise<number> {
   return new Promise((resolve, reject) => {
     const scriptPath = path.join(CALLBACK_BOX_ROOT, args.script);
@@ -114,6 +140,15 @@ async function assertProcedureHasGate(args: { procedure: string; boxRoot: string
       (s) => s.validate?.severity === "abort" && (s.validate.shells?.length ?? 0) > 0,
     ) ?? false;
   if (!hasGate) throw new ProcedureGateError(args.procedure);
+}
+
+/** Fully provision the box (`cb init`) before migrating. */
+function runInit(boxRoot: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(CB_BIN, ["init", boxRoot], { cwd: boxRoot, stdio: "inherit" });
+    child.on("error", reject);
+    child.on("close", (code) => resolve(code ?? 1));
+  });
 }
 
 /** Run an agent-applied (procedure) migration by delegating to `cb procedure run`. */
@@ -148,6 +183,7 @@ interface MigrateOptions {
   apply?: boolean;
   status?: boolean;
   markAllApplied?: boolean;
+  markApplied?: string;
 }
 
 export const migrateCommand = new Command("migrate")
@@ -155,8 +191,37 @@ export const migrateCommand = new Command("migrate")
   .option("--apply", "Run all pending migrations in order")
   .option("--status", "Show applied + pending lists (default when no flag given)")
   .option("--mark-all-applied", "Seed the manifest as if every known migration ran. Use only for legacy boxes that were already fully migrated before this command existed; new boxes get their manifest seeded automatically by `cb init`.")
+  .option("--mark-applied <name>", "Record a single migration as applied WITHOUT running it. For a box already in that migration's post-state (e.g. a retired migrator) that never got the manifest entry. Refuses an unknown name or a manifest-less box.")
   .action(async (options: MigrateOptions) => {
-    const boxRoot = await requireBoxRoot();
+    // `topPath` is the stable top-level directory `requireBoxRoot` found —
+    // it never moves. `boxRoot` (the operational root) DOES move, exactly
+    // once, if the `box-packageify` migration runs in this pass (legacy →
+    // v2 nests it under `topPath/content`); see the re-resolution after
+    // each migration in the apply loop below.
+    const topPath = await requireBoxRoot();
+    let boxRoot = topPath;
+
+    if (options.markApplied !== undefined) {
+      const name = options.markApplied;
+      const result = await markMigrationApplied({ boxRoot, name });
+      switch (result.status) {
+        case "unknown-migration":
+          console.error(`Unknown migration "${name}". It must match a name in src/core/migrations.ts (see \`cb migrate --status\`).`);
+          process.exit(1);
+        // falls through to exit — process.exit returns never
+        case "no-manifest":
+          console.error(`No migration manifest at ${MANIFEST_PATH}. Seed it with \`cb migrate --mark-all-applied\` (or \`cb init\`) first, then mark individual migrations.`);
+          process.exit(1);
+        // falls through to exit — process.exit returns never
+        case "already-applied":
+          console.log(`"${name}" is already recorded as applied in ${MANIFEST_PATH}; nothing to do.`);
+          break;
+        case "marked":
+          console.log(`Marked "${name}" as applied in ${MANIFEST_PATH} (did NOT run it). Review the manifest change and commit it.`);
+          break;
+      }
+      return;
+    }
 
     if (options.markAllApplied) {
       const existing = await readManifest(boxRoot);
@@ -195,6 +260,45 @@ export const migrateCommand = new Command("migrate")
       return;
     }
 
+    // Require a clean tree before migrating. `cb init` (below) commits its
+    // provisioning output so the queue starts clean, and several migrators
+    // (e.g. `attachments`) refuse to run against a dirty tree. Checking up
+    // front means init's commit captures exactly what init produced — not any
+    // of the user's uncommitted work — and keeps the migration's own changes
+    // reviewable rather than tangled with pre-existing edits.
+    const startStatus = await getStatus(boxRoot);
+    if (!startStatus.clean) {
+      console.error("Working tree is not clean. Commit or stash your changes before migrating.");
+      process.exit(1);
+    }
+
+    // Fully provision the box before migrating. A migration can depend on any
+    // provisioned state — a procedure-kind migration needs its procedure card in
+    // config/procedures/, but updated rules, guides, schemas, or briefing may
+    // matter too — and running one against a partially-updated box risks the
+    // silent-inconsistency class this whole discipline guards against. `cb init`
+    // is the canonical, complete provisioning (idempotent — a current box is a
+    // near-no-op). Its template-sync commit is its own; the migration's data
+    // changes still land uncommitted for review.
+    console.log("Provisioning the box (cb init) before migrating…\n");
+    const initCode = await runInit(boxRoot);
+    if (initCode !== 0) {
+      console.error(`\ncb init failed (exit ${String(initCode)}); not migrating. Fix provisioning first.`);
+      process.exit(1);
+    }
+    console.log("");
+
+    // Commit init's provisioning output so the queue starts from a clean tree.
+    // The tree was clean before init (checked above), so this commits exactly
+    // what init produced. The migrations' own data changes still land
+    // uncommitted afterward, for review.
+    const afterInit = await getStatus(boxRoot);
+    if (!afterInit.clean) {
+      await stageAll(boxRoot);
+      await commit(boxRoot, { message: "cb init provisioning (before migration)" });
+      console.log("Committed provisioning changes.\n");
+    }
+
     console.log(`Running ${String(pending.length)} pending migration(s) in order:\n`);
     // Exit-code convention shared by the harness and every migrator: 2 means
     // the migration ran but some individual cards couldn't be converted (left
@@ -223,6 +327,12 @@ export const migrateCommand = new Command("migrate")
         console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
         process.exit(code);
       }
+      // A script can have just converted the box from legacy to v2 layout
+      // (`box-packageify`) — re-derive the operational root from the
+      // stable top-level path before touching the manifest, so the entry
+      // (and any FURTHER migration in this same pass) targets the box's
+      // current location, not its pre-migration one.
+      boxRoot = (await detectBoxTarget(topPath)).boxRoot;
       await appendManifestEntry(boxRoot, { name: m.name, "applied-at": new Date().toISOString() });
       if (code === 2) {
         softFailures.push(m.name);

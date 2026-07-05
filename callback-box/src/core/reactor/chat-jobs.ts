@@ -21,6 +21,7 @@ import {
 } from "../chat-reactor-sessions.js";
 import { buildReactorSystemPrompt } from "./prompts.js";
 import { buildJobDescription } from "./batch-jobs.js";
+import { readCardFrontmatter, isRecord } from "../card-io.js";
 import { fmt } from "../../cli/lib/format.js";
 import type { ProcessJobsOptions } from "./types.js";
 
@@ -93,10 +94,12 @@ export async function processChatJobs(opts: ProcessJobsOptions): Promise<boolean
 }
 
 /**
- * Extract the thread ref from a job card's XML content.
- * Looks for <thread ref="..."> element.
+ * Extract the thread ref from a chat job card's frontmatter (`thread: {ref}`).
+ * Returns null for a job with no parseable thread ref — the caller falls back
+ * to the job path as the session key.
  */
-function extractThreadRef(xmlContent: string): string | null {
-  const match = xmlContent.match(/<thread\s[^>]*ref="([^"]+)"/);
-  return match ? match[1]! : null;
+function extractThreadRef(content: string): string | null {
+  const thread = readCardFrontmatter(content)?.["thread"];
+  if (isRecord(thread) && typeof thread["ref"] === "string") return thread["ref"];
+  return null;
 }

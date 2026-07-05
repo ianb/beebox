@@ -6,8 +6,8 @@ import { createReadStream } from "node:fs";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { boxLogFile } from "../../../core/scheduler.js";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../../../cards/index.js";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../../../cards/index.js";
 import {
   parseScheduledScript,
   type ScheduledScriptFields,
@@ -121,7 +121,7 @@ export const schedulerRouter = router({
       } else {
         fm["enabled"] = false;
       }
-      await fs.writeFile(fullPath, `---\n${stringifyYaml(fm)}---\n${split.body}`);
+      await fs.writeFile(fullPath, renderFrontmatterBlock(fm, split.body));
 
       const action = input.enabled ? "Enable" : "Disable";
       await stageFiles(ctx.boxRoot, [relPath]);

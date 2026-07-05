@@ -28,6 +28,9 @@ import { ChatInputArea, type TranscriptionHandle } from "../../../components/cha
 import { MobileTextareaRow } from "../../../components/chat/InteractiveChat-mobile-row";
 import { ChatComposerSection } from "../../../components/chat/InteractiveChat-layout";
 import { NarrationStatusBadge, MuteButton } from "../../../components/chat/InteractiveChat-controls";
+import { TargetStrip } from "../../../components/chat/TargetStrip";
+import { chatTargetStatus } from "../../../input/targets/chat-target";
+import { InputStoreProvider, type InputStore } from "../../../components/chat/input-store";
 
 // --- Axes ---
 
@@ -129,6 +132,9 @@ function noop() {}
 function StateBlock({ spec }: { spec: Spec }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Static store for the gallery: the value never changes (set is a no-op,
+  // nothing ever subscribes), it just feeds the fabricated `input` text in.
+  const inputStore: InputStore = { get: () => spec.input, set: noop, subscribe: () => noop };
   const transcription: TranscriptionHandle = {
     state: spec.isTranscribing ? "recording" : "idle",
     transcript: spec.transcript,
@@ -136,28 +142,22 @@ function StateBlock({ spec }: { spec: Spec }) {
     stop: () => Promise.resolve(spec.transcript),
     cancel: noop,
   };
+  const targetBusy = chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false }).state === "busy";
   const inputArea = (
     <ChatInputArea
       hideMobile={spec.typingMode}
       textareaRef={textareaRef}
-      input={spec.input}
-      setInput={noop}
       isTranscribing={spec.isTranscribing}
       transcription={transcription}
+      targetBusy={targetBusy}
       handleKeyDown={noop}
       handleSend={noop}
       handleCancelTranscription={noop}
       clearDraft={noop}
       onKeyboard={noop}
       onVoice={noop}
-      speechPlaying={spec.speechPlaying}
-      onStopSpeech={noop}
-      isStreaming={spec.isStreaming}
-      onInterrupt={noop}
       onStopDictation={noop}
-      doSend={noop}
-      zoomedViewAttr={() => ""}
-      timePassedAttr={() => ""}
+      onVoiceSegmentSend={noop}
       voicePaused={spec.voicePaused}
       onUnpause={noop}
       onAttachFiles={noop}
@@ -166,28 +166,37 @@ function StateBlock({ spec }: { spec: Spec }) {
   );
   const mobileRow = (
     <MobileTextareaRow
-      input={spec.input}
-      setInput={noop}
       isTranscribing={spec.isTranscribing}
       transcription={transcription}
+      targetBusy={targetBusy}
       handleSend={noop}
       handleCancelTranscription={noop}
       clearDraft={noop}
       onStopDictation={noop}
-      doSend={noop}
-      zoomedViewAttr={() => ""}
-      timePassedAttr={() => ""}
+      onVoiceSegmentSend={noop}
+    />
+  );
+  const targetStrip = (
+    <TargetStrip
+      status={chatTargetStatus({ isStreaming: spec.isStreaming, processBusy: false })}
+      pendingCount={0}
+      isStreaming={spec.isStreaming}
+      onInterrupt={noop}
+      speechPlaying={spec.speechPlaying}
+      onStopSpeech={noop}
     />
   );
   return (
+    <InputStoreProvider value={inputStore}>
     <div className="w-full max-w-5xl mx-auto">
       {/* Faux header strip so narration badge / mute icon read in context. */}
       <header className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
         <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
-        <NarrationStatusBadge enabled={spec.badge} hqInFlight={false} onTurnOff={noop} />
+        <NarrationStatusBadge enabled={spec.badge} hqInFlight={false} onToggle={noop} />
         <div className="flex-1" />
         <MuteButton muted={spec.muted} onToggle={noop} />
       </header>
+      {targetStrip}
       <ChatComposerSection
         attachments={[]}
         pendingImageCount={0}
@@ -204,10 +213,12 @@ function StateBlock({ spec }: { spec: Spec }) {
         setTypingLocked={noop}
         isTranscribing={spec.isTranscribing}
         recoveredDictation={null}
+        expiredAttachmentsNotice={null}
         inputArea={inputArea}
         mobileRow={mobileRow}
       />
     </div>
+    </InputStoreProvider>
   );
 }
 

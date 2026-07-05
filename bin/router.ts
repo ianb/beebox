@@ -34,6 +34,7 @@ import { execa, type ResultPromise } from "execa";
 import getPort from "get-port";
 import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
+import { resolveBoxEntries, boxEntryToArg, type ResolvedBoxEntry } from "./box-entry.js";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
 
@@ -100,6 +101,21 @@ function browseDirsFor(name: string): { base: string; socketDir: string; profile
 
 const IDLE_TIMEOUT_MS = Number(process.env.ROUTER_IDLE_MS) || 5 * 60 * 1000;
 const KILL_GRACE_MS = 2000;
+
+// Boxholder directive (2026-07-04): each worktree's backend is now a
+// per-worktree `cb hub` (lazy: true, idleMs matching IDLE_TIMEOUT_MS above)
+// instead of one `server-main.ts` Fastify process serving every box in the
+// worktree's BOXES list. This gives each BOX its own process, lazily
+// started and idle-collected — the same semantics this router already gives
+// whole worktrees — composing cleanly with the router's own lazy/idle
+// worktree layer: the router still lazy-starts/idle-stops the WORKTREE
+// (vite + hub), and the hub now separately lazy-starts/idle-stops each BOX
+// within it. One release of insurance while this beds in: CB_DEV_NO_HUB=1
+// reverts to spawning server-main.ts directly, the old one-process-many-
+// boxes shape (Track G's prior escape hatch). Delete this flag once the
+// hub path has proven itself — tracked in docs/implemented-plans/boxes-as-packages-v2.md.
+const DEV_NO_HUB = process.env.CB_DEV_NO_HUB === "1";
+const HUB_CONFIG_DIR = path.join(STATE_DIR, "hub-configs");
 
 const MAIN_BOX_DEFAULTS = [
   path.join(os.homedir(), "src", "boxes", "hearthside"),
@@ -369,6 +385,43 @@ async function ensureRunning(name: string): Promise<WorktreeEntry> {
   return placeholder.startPromise;
 }
 
+/**
+ * Generate this worktree's `hub.json`, written fresh on every (re)start
+ * (single-slot per worktree, like the pidfile) so a `BOXES=` edit in the
+ * worktree's `.env` or a resolved-slug change always takes effect on the
+ * next cold start. `port` is the worktree's own dynamically-assigned
+ * `backendPort` — Vite's `vite.config.ts` proxies `/<box>/api/...` etc. to
+ * `http://localhost:BACKEND_PORT`, and the hub's own routing (unprefixed,
+ * first-path-segment slug matching — see `src/hub/hub-server.ts`) composes
+ * with that unchanged: Vite already stripped the worktree's own `/<name>`
+ * prefix before proxying, so the hub sees exactly `/<slug>/...`, the same
+ * shape it expects from a production request. `lazy: true` + `idleMs:
+ * IDLE_TIMEOUT_MS` give each BOX the same lazy-start/idle-collect semantics
+ * this router already gives each WORKTREE. No `GOOGLE_OAUTH_CLIENT_ID` is
+ * set here (this config carries no auth fields at all) — the hub's own
+ * `isAuthEnabled()` reads it from the hub PROCESS's inherited env, exactly
+ * as `server-main.ts` always did directly, so dev's "open on localhost
+ * unless you've configured OAuth" behavior is unchanged; a hub-mode box
+ * child never re-checks its OWN `GOOGLE_OAUTH_CLIENT_ID` for identity
+ * either way (`resolveRequestIdentity` short-circuits on `isHubMode()`).
+ */
+async function writeWorktreeHubConfig(params: {
+  name: string;
+  backendPort: number;
+  resolvedBoxes: ResolvedBoxEntry[];
+}): Promise<string> {
+  const { name, backendPort, resolvedBoxes } = params;
+  await fs.mkdir(HUB_CONFIG_DIR, { recursive: true });
+  const configPath = path.join(HUB_CONFIG_DIR, `${name}.json`);
+  const boxes: Record<string, { path: string }> = {};
+  for (const { slug, contentDir } of resolvedBoxes) boxes[slug] = { path: contentDir };
+  await fs.writeFile(
+    configPath,
+    JSON.stringify({ port: backendPort, host: "127.0.0.1", lazy: true, idleMs: IDLE_TIMEOUT_MS, boxes }, null, 2),
+  );
+  return configPath;
+}
+
 let touch = (entry: WorktreeEntry): void => {
   entry.lastActivity = Date.now();
   if (entry.idleTimer) clearTimeout(entry.idleTimer);
@@ -425,15 +478,21 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
 
   log(`[${name}] frontend=${frontendPort} backend=${backendPort} dashboard=${dashboardPort} base=${baseUrl}`);
 
+  // Each of wt.boxes may be a legacy box dir, a v2 package root, or a v2
+  // content dir (see box-entry.ts) — resolve to {contentDir, slug} before
+  // handing off to the backend, which no longer guesses the slug itself.
+  const resolvedBoxes = await resolveBoxEntries(wt.boxes);
+  const backendArgs = DEV_NO_HUB
+    ? ["./src/webapp/server-main.ts", ...resolvedBoxes.map(boxEntryToArg)]
+    : [
+        "./src/cli/index.ts",
+        "hub",
+        "--config",
+        await writeWorktreeHubConfig({ name, backendPort, resolvedBoxes }),
+      ];
   const fastify = execa(
     "node",
-    [
-      "--import=./tsx-preload.mjs",
-      "--import",
-      "tsx",
-      "./src/webapp/server-main.ts",
-      ...wt.boxes,
-    ],
+    ["--import=./tsx-preload.mjs", "--import", "tsx", ...backendArgs],
     {
       cwd: wt.backendCwd,
       env: childEnv,
@@ -1069,7 +1128,14 @@ ${artifactsHtml}`;
 
 async function listRepoMarkdown(repoRoot: string): Promise<string[]> {
   try {
-    const { stdout } = await execa("git", ["ls-files", "*.md", "**/*.md"], { cwd: repoRoot });
+    // --cached (tracked) + --others (untracked) so in-progress, never-committed
+    // docs show up too; --exclude-standard keeps .gitignored trees out (e.g.
+    // node_modules, docs/generated/).
+    const { stdout } = await execa(
+      "git",
+      ["ls-files", "--cached", "--others", "--exclude-standard", "*.md", "**/*.md"],
+      { cwd: repoRoot },
+    );
     return Array.from(new Set(stdout.split("\n").filter(Boolean))).sort();
   } catch {
     return [];
@@ -1079,7 +1145,7 @@ async function listRepoMarkdown(repoRoot: string): Promise<string[]> {
 // Last-commit unix time per .md file (one history walk; first occurrence wins,
 // since `git log` is newest-first). Filesystem mtime is useless in a worktree —
 // every file shares the clone time — so we use git for "recently edited".
-async function mdLastModified(repoRoot: string): Promise<Map<string, number>> {
+async function mdLastModified(repoRoot: string, files: string[]): Promise<Map<string, number>> {
   const times = new Map<string, number>();
   try {
     const { stdout } = await execa("git", ["log", "--format=%ct", "--name-only", "--", "*.md", "**/*.md"], { cwd: repoRoot });
@@ -1090,6 +1156,20 @@ async function mdLastModified(repoRoot: string): Promise<Map<string, number>> {
       if (!times.has(line)) times.set(line, cur);
     }
   } catch { /* leave empty */ }
+  // Untracked (never-committed) files have no git time. Their filesystem mtime
+  // IS meaningful here — they were created after the worktree clone, not shared
+  // at clone time like tracked files — so fall back to it, which floats
+  // in-progress docs to the top of the "recent" sort.
+  await Promise.all(
+    files
+      .filter((f) => !times.has(f))
+      .map(async (f) => {
+        try {
+          const st = await fs.stat(path.resolve(repoRoot, f));
+          times.set(f, Math.floor(st.mtimeMs / 1000));
+        } catch { /* unreadable — skip */ }
+      }),
+  );
   return times;
 }
 
@@ -1179,13 +1259,194 @@ const DOC_BROWSER_CSS = `
   aside.docnav ul.flat .date { color: #aaa; font-size: 0.8em; white-space: nowrap; }
   main.doccontent { flex: 1 1 auto; min-width: 0; max-width: 820px; padding: 0.5em 2em 5em; }
   main.doccontent .placeholder { color: #888; margin-top: 3em; }
+  .qo-hint { position: fixed; bottom: 0.7em; right: 1em; font: 11px ui-monospace, monospace; color: #bbb; user-select: none; }
+  .qo-hint kbd { background: #f0f0f0; border: 1px solid #ddd; border-bottom-width: 2px; border-radius: 4px; padding: 0.05em 0.35em; color: #666; }
+  .qo-backdrop { position: fixed; inset: 0; background: rgba(20,20,25,0.28); display: flex; align-items: flex-start; justify-content: center; z-index: 1000; }
+  .qo-backdrop[hidden] { display: none; }
+  .qo-panel { margin-top: 12vh; width: min(620px, 92vw); background: #fff; border: 1px solid #ccc; border-radius: 10px; box-shadow: 0 12px 48px rgba(0,0,0,0.25); overflow: hidden; }
+  .qo-panel input { width: 100%; box-sizing: border-box; border: 0; border-bottom: 1px solid #eee; padding: 0.8em 1em; font: 15px system-ui, sans-serif; outline: none; }
+  .qo-results { list-style: none; margin: 0; padding: 0.3em 0; max-height: 52vh; overflow-y: auto; font: 13px ui-monospace, Menlo, monospace; }
+  .qo-results li { padding: 0.35em 1em; cursor: pointer; display: flex; align-items: baseline; gap: 0.55em; white-space: nowrap; overflow: hidden; }
+  .qo-results li.sel { background: #eef3fb; }
+  .qo-results .qo-name { color: #222; text-overflow: ellipsis; overflow: hidden; }
+  .qo-results li.sel .qo-name { color: #a2380a; }
+  .qo-results .qo-dir { color: #aaa; font-size: 0.86em; text-overflow: ellipsis; overflow: hidden; }
+  .qo-results mark { background: none; color: #2255aa; font-weight: 700; }
+  .qo-results li.sel mark { color: #a2380a; }
+  .qo-empty { padding: 0.7em 1em; color: #999; font: 13px ui-monospace, monospace; }
 `;
+
+// VS-Code-style Cmd-P / Ctrl-P quick-open over the full doc list. Self-contained
+// vanilla overlay: the file list ships as JSON, a compact subsequence fuzzy
+// scorer ranks matches (basename + contiguous runs favoured), keyboard-first.
+// `files` are already collected server-side; `base` is like "/main/dev".
+function renderDocQuickOpen(base: string, files: string[]): string {
+  // Serialize for a <script> context: neutralize "</script>" and JS line
+  // separators so the array survives inline embedding.
+  const filesJson = JSON.stringify(files)
+    .replace(/</g, "\\u003c")
+    .replace(/\u2028/g, "\\u2028")
+    .replace(/\u2029/g, "\\u2029");
+  const baseJson = JSON.stringify(base).replace(/</g, "\\u003c");
+  return `<div class="qo-hint"><kbd id="qo-hint-key">Ctrl-P</kbd> quick open</div>
+<div class="qo-backdrop" id="qo" hidden role="dialog" aria-modal="true" aria-label="Quick open document">
+  <div class="qo-panel">
+    <input id="qo-input" type="text" placeholder="Go to doc…" autocomplete="off" spellcheck="false" role="combobox" aria-expanded="true" aria-controls="qo-results" aria-autocomplete="list">
+    <ul class="qo-results" id="qo-results" role="listbox"></ul>
+  </div>
+</div>
+<script>
+(function () {
+  var FILES = ${filesJson};
+  var BASE = ${baseJson};
+  var LIMIT = 50;
+  var backdrop = document.getElementById("qo");
+  var input = document.getElementById("qo-input");
+  var list = document.getElementById("qo-results");
+  var matches = [];
+  var sel = 0;
+  var lastFocus = null;
+  var isMac = /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent);
+  var hintKey = document.getElementById("qo-hint-key");
+  if (isMac && hintKey) hintKey.textContent = "⌘P";
+
+  function esc(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  // Greedy leftmost subsequence match with positional scoring. Returns
+  // {score, pos:[indices]} or null when q is not a subsequence of target.
+  function score(q, target) {
+    if (!q) return { score: 0, pos: [] };
+    var t = target.toLowerCase();
+    var ql = q.toLowerCase();
+    var slash = target.lastIndexOf("/");
+    var pos = [];
+    var total = 0;
+    var ti = 0;
+    var prev = -2;
+    for (var qi = 0; qi < ql.length; qi++) {
+      var found = -1;
+      for (var j = ti; j < t.length; j++) { if (t[j] === ql[qi]) { found = j; break; } }
+      if (found === -1) return null;
+      var s = 1;
+      if (found === prev + 1) s += 5;                                  // contiguous run
+      var pc = found > 0 ? t[found - 1] : "/";
+      if (pc === "/" || pc === "-" || pc === "_" || pc === "." || pc === " ") s += 3; // word start
+      if (found > slash) s += 4;                                       // inside basename
+      if (found === slash + 1) s += 3;                                 // at basename start
+      total += s;
+      pos.push(found);
+      prev = found;
+      ti = found + 1;
+    }
+    total -= target.length * 0.02;                                     // mild shortness bias
+    return { score: total, pos: pos };
+  }
+
+  function compute(q) {
+    var out = [];
+    for (var i = 0; i < FILES.length; i++) {
+      var r = score(q, FILES[i]);
+      if (r) out.push({ file: FILES[i], score: r.score, pos: r.pos, i: i });
+    }
+    out.sort(function (a, b) { return b.score - a.score || a.file.localeCompare(b.file); });
+    return out.slice(0, LIMIT);
+  }
+
+  // Render one path with matched chars marked, basename vs dir split visually.
+  function markup(file, pos) {
+    var set = {};
+    for (var k = 0; k < pos.length; k++) set[pos[k]] = true;
+    var slash = file.lastIndexOf("/");
+    var dir = slash >= 0 ? file.slice(0, slash + 1) : "";
+    var html = "";
+    for (var c = 0; c < file.length; c++) {
+      var ch = esc(file[c]);
+      html += set[c] ? "<mark>" + ch + "</mark>" : ch;
+      if (c === slash) html = '<span class="qo-dir">' + html + '</span><span class="qo-name">';
+    }
+    if (slash >= 0) html += "</span>";
+    else html = '<span class="qo-name">' + html + "</span>";
+    return html;
+  }
+
+  function render() {
+    if (!matches.length) {
+      list.innerHTML = '<li class="qo-empty" role="option">No matching docs</li>';
+      return;
+    }
+    var h = "";
+    for (var i = 0; i < matches.length; i++) {
+      h += '<li role="option" data-i="' + i + '"' + (i === sel ? ' class="sel" aria-selected="true"' : "") + ">" + markup(matches[i].file, matches[i].pos) + "</li>";
+    }
+    list.innerHTML = h;
+    var selEl = list.querySelector("li.sel");
+    if (selEl) selEl.scrollIntoView({ block: "nearest" });
+  }
+
+  function refresh() {
+    matches = compute(input.value.trim());
+    sel = 0;
+    render();
+  }
+
+  function open() {
+    if (!backdrop.hidden) return;
+    lastFocus = document.activeElement;
+    backdrop.hidden = false;
+    input.value = "";
+    refresh();
+    input.focus();
+  }
+
+  function close() {
+    if (backdrop.hidden) return;
+    backdrop.hidden = true;
+    if (lastFocus && lastFocus.focus) lastFocus.focus();
+  }
+
+  function go() {
+    var m = matches[sel];
+    if (!m) return;
+    var url = BASE + "/docs/" + m.file.split("/").map(encodeURIComponent).join("/");
+    location.href = url;
+  }
+
+  document.addEventListener("keydown", function (e) {
+    // Cmd-P (mac) / Ctrl-P — intercept the browser print shortcut.
+    if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && (e.key === "p" || e.key === "P")) {
+      e.preventDefault();
+      if (backdrop.hidden) open(); else close();
+      return;
+    }
+    if (backdrop.hidden) return;
+    if (e.key === "Escape") { e.preventDefault(); close(); }
+    else if (e.key === "ArrowDown") { e.preventDefault(); if (matches.length) { sel = (sel + 1) % matches.length; render(); } }
+    else if (e.key === "ArrowUp") { e.preventDefault(); if (matches.length) { sel = (sel - 1 + matches.length) % matches.length; render(); } }
+    else if (e.key === "Enter") { e.preventDefault(); go(); }
+    else if (e.key === "Tab") { e.preventDefault(); } // trap focus in the dialog
+  });
+
+  input.addEventListener("input", refresh);
+  list.addEventListener("mousemove", function (e) {
+    var li = e.target.closest("li[data-i]");
+    if (li) { var i = Number(li.getAttribute("data-i")); if (i !== sel) { sel = i; render(); } }
+  });
+  list.addEventListener("click", function (e) {
+    var li = e.target.closest("li[data-i]");
+    if (li) { sel = Number(li.getAttribute("data-i")); go(); }
+  });
+  backdrop.addEventListener("mousedown", function (e) { if (e.target === backdrop) close(); });
+})();
+</script>`;
+}
 
 async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort: string, res: http.ServerResponse): Promise<void> {
   // rel is the part after "/docs", e.g. "" | "/" | "/callback-box/CLAUDE.md"
   const fileRel = rel.replace(/^\//, "");
   const files = await listRepoMarkdown(repoRoot);
-  const times = sort === "recent" ? await mdLastModified(repoRoot) : new Map<string, number>();
+  const times = sort === "recent" ? await mdLastModified(repoRoot, files) : new Map<string, number>();
 
   let contentHtml: string;
   let title = "doc browser";
@@ -1209,7 +1470,7 @@ async function serveDocBrowser(base: string, repoRoot: string, rel: string, sort
     contentHtml = `<div class="placeholder"><h1>Markdown doc browser</h1><p>${files.length} <code>.md</code> files. Pick one from the left.</p></div>`;
   }
 
-  const body = `<div class="docwrap">${renderDocSidebar(base, files, fileRel, sort, times)}<main class="doccontent">${contentHtml}</main></div>`;
+  const body = `<div class="docwrap">${renderDocSidebar(base, files, fileRel, sort, times)}<main class="doccontent">${contentHtml}</main></div>${renderDocQuickOpen(base, files)}`;
   res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
   res.end(renderDevShell(title, devBreadcrumbs(base, fileRel ? `docs/${fileRel}` : "docs"), body, DOC_BROWSER_CSS));
 }

@@ -14,9 +14,9 @@ import { execSync } from "node:child_process";
 import { assertStandaloneBox } from "../../../src/dev/lib/box-guard.js";
 
 // Run the guard, returning the thrown error's class name, or "ok".
-function guard(p) {
+async function guard(p) {
   try {
-    assertStandaloneBox(p);
+    await assertStandaloneBox(p);
     return "ok";
   } catch (e) {
     return e.constructor.name;
@@ -29,7 +29,7 @@ function guard(p) {
 ```ts
 const root = await fs.mkdtemp(path.join(os.tmpdir(), "cb-guard-"));
 execSync("git init -q", { cwd: root });
-guard(root)
+await guard(root)
 => ok
 ```
 
@@ -38,7 +38,7 @@ guard(root)
 ```ts continue
 const sub = path.join(root, "nested");
 await fs.mkdir(sub);
-guard(sub)
+await guard(sub)
 => AuditBoxInsideRepoError
 ```
 
@@ -46,11 +46,31 @@ guard(sub)
 
 ```ts continue
 const plain = await fs.mkdtemp(path.join(os.tmpdir(), "cb-guard-plain-"));
-guard(plain)
+await guard(plain)
 => AuditBoxNotGitRepoError
 ```
 
 ```ts continue
 await fs.rm(root, { recursive: true, force: true });
 await fs.rm(plain, { recursive: true, force: true });
+```
+
+## A package-layout (v2) box's `content/` passes — its own repo top level is the package root, not `content/` itself
+
+```ts continue
+const pkgRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-guard-pkg-"));
+execSync("git init -q", { cwd: pkgRoot });
+await fs.writeFile(
+  path.join(pkgRoot, "package.json"),
+  JSON.stringify({ name: "my-box", dependencies: { "callback-box": "^0.1.0" } })
+);
+const contentDir = path.join(pkgRoot, "content");
+await fs.mkdir(contentDir);
+await fs.writeFile(path.join(contentDir, ".cb-box"), JSON.stringify({ shapeVersion: 2 }));
+await guard(contentDir)
+=> ok
+```
+
+```ts continue
+await fs.rm(pkgRoot, { recursive: true, force: true });
 ```

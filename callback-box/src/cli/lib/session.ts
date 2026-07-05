@@ -30,6 +30,7 @@ export {
   type SelfNoteInfo,
   parseSelfNote,
   parseSelfNotes,
+  entrySelfNotes,
   stripSpeechWrappers,
 } from "./session-text.js";
 export { type SessionEntry } from "./session-entry.js";
@@ -41,7 +42,7 @@ export { type SessionEntry } from "./session-entry.js";
  * Match that here, otherwise `getSessionLogPath` mis-resolves for any
  * cwd containing non-`/` separators (e.g. landmark-session audits).
  */
-function encodeProjectDir(cwd: string): string {
+export function encodeProjectDir(cwd: string): string {
   return cwd.replace(/[^\dA-Za-z]/g, "-");
 }
 
@@ -51,7 +52,7 @@ function encodeProjectDir(cwd: string): string {
  * installs) can point session discovery at a fixture directory instead
  * of the real `~/.claude/projects`.
  */
-function claudeProjectsRoot(): string {
+export function claudeProjectsRoot(): string {
   const override = process.env["CB_CLAUDE_PROJECTS_DIR"];
   if (override) return override;
   return path.join(os.homedir(), ".claude", "projects");

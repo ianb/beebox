@@ -3,7 +3,8 @@
 `extractBodyRefs(body)` walks a card's markdown body for refs carried by
 Markdoc tag attributes literally named `ref`. Cardworks' frontmatter ref
 walker doesn't see into body strings, so this complements it for refs that
-live in body tags like `{% source ref="…" %}` or `{% key-person ref="…" %}`.
+live in body tags like `{% source ref="…" %}` — any body tag whose
+attribute is literally named `ref`.
 
 ```ts setup
 import { extractBodyRefs } from "../../src/core/body-refs.js";
@@ -15,7 +16,7 @@ The ref value and a `body:<line>:<tag>.<attr>` path are returned.
 
 ```ts
 JSON.stringify(
-  extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" as="verbatim" %}ship Friday{% /source %}'),
+  extractBodyRefs('Dana said: {% source ref="/box/people/dana.person.card" usage="verbatim" %}ship Friday{% /source %}'),
   null,
   2,
 )
@@ -31,7 +32,7 @@ JSON.stringify(
 Only the `ref` attribute is a ref — `as` and other attributes are opaque.
 
 ```ts
-extractBodyRefs('{% source ref="a/b.doc.card" as="summary" %}x{% /source %}').length
+extractBodyRefs('{% source ref="a/b.doc.card" usage="summary" %}x{% /source %}').length
 => 1
 ```
 
@@ -45,7 +46,7 @@ const body = [
   "",
   '{% source ref="/box/a.doc.card" %}first{% /source %}',
   "",
-  '{% key-person ref="people/dana" %}Dana{% /key-person %}',
+  '{% subrecipe ref="/box/sauce.recipe.card" %}Sauce{% /subrecipe %}',
 ].join("\n");
 JSON.stringify(extractBodyRefs(body), null, 2)
 =>
@@ -55,8 +56,8 @@ JSON.stringify(extractBodyRefs(body), null, 2)
     "ref": "/box/a.doc.card"
   },
   {
-    "path": "body:5:key-person.ref",
-    "ref": "people/dana"
+    "path": "body:5:subrecipe.ref",
+    "ref": "/box/sauce.recipe.card"
   }
 ]
 ```
@@ -68,7 +69,7 @@ nothing.
 
 ```ts
 JSON.stringify(
-  extractBodyRefs('{% source ref="/box/m.memo.card" as="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
+  extractBodyRefs('{% source ref="/box/m.memo.card" usage="verbatim" %}{% quote %}exact words{% /quote %}{% /source %}'),
   null,
   2,
 )

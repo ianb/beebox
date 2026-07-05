@@ -1,26 +1,56 @@
 # Composer input machine — design note
 
-**Status:** implemented, as the overlay decomposition described in the note below
-(`src/frontend/src/machines/composerMachine.ts`, wired in `InteractiveChat-voice.ts`, doctested
-in `test/frontend/composer-machine.doctest.md`). Audience: us. The companion doc `composer-states.md`
-enumerates the rendered states with screenshots; this doc records the design of the machine
-behind them, and keeps the five-state child-invoke version as the target end-state.
+**Status:** implemented, as the overlay decomposition described in "Current implementation
+(shipped)" below (`src/frontend/src/machines/composerMachine.ts`, wired in
+`InteractiveChat-voice.ts`, doctested in `test/frontend/composer-machine.doctest.md`). Audience:
+us. The companion doc `composer-states.md` enumerates the rendered states with screenshots; this
+doc records the design of the machine behind them. The shipped overlay comes first below; the
+originally-designed five-state child-invoke version follows under "Future direction (not yet
+built)", kept as a target end-state / historical record.
 
-> **Implementation note (overlay decomposition).** The body below works up to a five-state voice
-> region (`idle | dictating | committing | speaking | pausedForSpeech`). That is the *idealized*
-> model — but `dictating`/`committing` duplicate `realtimeTranscriptionMachine`, and owning them
-> in a sibling React hook needs a race-prone mirror (a mid-tick keyword restart can fire a stale
-> "mic went idle" and kill the just-restarted mic). Owning them *cleanly* requires the composer
-> machine to **invoke** the transcription machine as a child actor — a larger rewrite of the
-> transcription stack, deferred.
->
-> The **shipped machine** (`composerMachine.ts`) is therefore the *overlay* only: the three
-> speech-coordination states `idle | speaking | pausedForSpeech` that no existing machine owns,
-> plus the `hq` and `keyboard` regions. "Recording" stays in the transcription machine and is
-> mirrored in as the `recording` context flag; the mic-button "recording" look still reads
-> `transcription.state`. This kills `voicePaused`/`voicePausedRef` and makes the
-> suppress/pause/resume coordination declarative, with no React mirror and no races. The
-> five-state version below is kept as the target end-state should we later do the child-invoke.
+## Current implementation (shipped)
+
+The **shipped machine** (`composerMachine.ts`) models the `voice` region as **three** states:
+`idle | speaking | pausedForSpeech`. That is the speech-coordination overlay only — the three
+speech-coordination states that no existing machine owns — plus the `hq` and `keyboard` regions.
+
+The body further below works up to a five-state voice region
+(`idle | dictating | committing | speaking | pausedForSpeech`). That is the *idealized* model —
+but `dictating`/`committing` duplicate `realtimeTranscriptionMachine`, and owning them in a
+sibling React hook needs a race-prone mirror (a mid-tick keyword restart can fire a stale "mic
+went idle" and kill the just-restarted mic). Owning them *cleanly* requires the composer machine
+to **invoke** the transcription machine as a child actor — a larger rewrite of the transcription
+stack, deferred.
+
+"Recording" therefore stays in the transcription machine and is mirrored in as the `recording`
+context flag; the mic-button "recording" look still reads `transcription.state`. This kills
+`voicePaused`/`voicePausedRef` and makes the suppress/pause/resume coordination declarative,
+with no React mirror and no races. The five-state version described later in this document is
+kept as the target end-state should we later do the child-invoke.
+
+### `hq` region (parallel)
+
+`idle ↔ inFlight`. Entered on the narration HQ round-trip raised by `committing`; the header
+`🎙️ narration · transcribing…` badge reads `hq.inFlight`. Orthogonal to `voice` because the
+mic has usually re-armed (`dictating`) while the HQ request is in flight.
+
+### `keyboard` region (parallel, mobile) — **in scope**
+
+Models `typingMode`/`typingLocked`:
+
+```
+keyboard (initial: closed)
+  closed:        on OPEN_KEYBOARD → open
+  open (initial: unlocked):
+    on CLOSE_KEYBOARD → closed
+    unlocked:    on TOGGLE_LOCK → locked · on MESSAGE_SENT → closed   // auto-close after send
+    locked:      on TOGGLE_LOCK → unlocked                            // stays open after send
+```
+
+It coordinates with the voice region in exactly one rendering rule: the mobile textarea row is
+visible when **`keyboard != closed` OR `voice == dictating`** (today: `typingMode ||
+isTranscribing` in `ChatComposerSection`). That's a selector reading both regions, not a
+transition — so the two regions stay independent, which is why this is a clean parallel region.
 
 ## The problem
 
@@ -51,7 +81,15 @@ three sources; `voicePaused` is consumed as `voicePaused && speechPlaying` in
 segments — a latent flicker); and the SpeechMenu "Stop resumes the mic" fix had to be a
 hand-written `if (voicePausedRef.current)` branch in `handleStopSpeech`.
 
-## The core reframe
+## Future direction (not yet built)
+
+Everything below this point describes the **idealized five-state design** — the target end-state
+if the transcription stack is later rewritten so the composer machine can invoke it as a child
+actor (see "Current implementation (shipped)" above for why that hasn't happened, and what
+shipped instead). None of this section is implemented; it is retained as the design rationale and
+plan for a future rewrite.
+
+### The core reframe
 
 Most of the pain is **modeling mutually-exclusive things as independent booleans.** You cannot
 be dictating while TTS plays — TTS *pauses* the mic. So `isTranscribing`, `speechPlaying`, and
@@ -165,30 +203,6 @@ machines and read their sub-states for display — the parent never re-enumerate
   - `RESUME` → **dictating** (stop playback)
   - `STOP_SPEECH` → **dictating** (stop playback) ← the SpeechMenu Stop fix, now free
   - `SPEECH_QUEUED` → internal (enqueue)
-
-### `hq` region (parallel)
-
-`idle ↔ inFlight`. Entered on the narration HQ round-trip raised by `committing`; the header
-`🎙️ narration · transcribing…` badge reads `hq.inFlight`. Orthogonal to `voice` because the
-mic has usually re-armed (`dictating`) while the HQ request is in flight.
-
-### `keyboard` region (parallel, mobile) — **in scope**
-
-Models `typingMode`/`typingLocked`:
-
-```
-keyboard (initial: closed)
-  closed:        on OPEN_KEYBOARD → open
-  open (initial: unlocked):
-    on CLOSE_KEYBOARD → closed
-    unlocked:    on TOGGLE_LOCK → locked · on MESSAGE_SENT → closed   // auto-close after send
-    locked:      on TOGGLE_LOCK → unlocked                            // stays open after send
-```
-
-It coordinates with the voice region in exactly one rendering rule: the mobile textarea row is
-visible when **`keyboard != closed` OR `voice == dictating`** (today: `typingMode ||
-isTranscribing` in `ChatComposerSection`). That's a selector reading both regions, not a
-transition — so the two regions stay independent, which is why this is a clean parallel region.
 
 ### The two couplings that matter (and the one that doesn't)
 

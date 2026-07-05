@@ -3,6 +3,8 @@
  * Permissive parser for XML-like tags in assistant responses.
  */
 
+import { parseAttrs } from "../../../core/parse-attrs";
+
 export interface TagType {
   type: string;
   attrs: Record<string, string>;
@@ -114,14 +116,6 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
   return [];
 }
 
-function parseAttrs(s: string): Record<string, string> {
-  if (!s?.trim()) return {};
-  const attrs: Record<string, string> = {};
-  for (const match of s.trim().matchAll(/([^\s=]+)="([^"]*)"/g)) {
-    attrs[match[1].trim()] = match[2];
-  }
-  return attrs;
-}
 
 function cleanUpTags(tags: TagType[]): TagType[] {
   for (const tag of tags) {

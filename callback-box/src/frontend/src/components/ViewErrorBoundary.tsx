@@ -11,6 +11,14 @@ import { Pre } from "./ui/Pre";
 interface Props {
   children: React.ReactNode;
   onRetry?: () => void;
+  /**
+   * Bumped by the host each time it reloads the view module. A change clears a
+   * latched error so the freshly-reloaded module (e.g. a view the box just
+   * fixed) gets a chance to render. Without it, a view that threw once stays
+   * stuck on the stale error until the user clicks Retry — React boundaries
+   * don't re-render their children after catching.
+   */
+  resetKey?: number;
 }
 
 interface State {
@@ -26,6 +34,12 @@ export class ViewErrorBoundary extends React.Component<Props, State> {
 
   componentDidCatch(error: Error, info: React.ErrorInfo): void {
     console.error("View render error:", error, info.componentStack);
+  }
+
+  componentDidUpdate(prevProps: Props): void {
+    if (this.state.error && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
   }
 
   handleReset = (): void => {

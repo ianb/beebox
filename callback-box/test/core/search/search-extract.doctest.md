@@ -170,7 +170,7 @@ docs.length
 
 ```ts
 const docs = await docsFor(
-  "store/drive/Budget.sheet.card",
+  "store/drive/Budget.gsheet.card",
   "---\ndrive-id: d2\ntitle: Family Budget\nmodified: 2026-05-01\nlink: https://docs.google.com/spreadsheets/d/d2/edit\nowner: o@example.com\nsheets:\n  - ref: attach/tab-0.json\n    title: Monthly Spending\n    gid: \"0\"\n---\n"
 );
 docs[0].content

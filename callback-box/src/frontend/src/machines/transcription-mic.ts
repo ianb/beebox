@@ -24,6 +24,7 @@
 import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { delay, jitteredBackoff } from "./transcription-backoff";
 import { setMicLevelSource, clearMicLevelSource } from "../lib/mic-level";
+import { getMicStream } from "../lib/fake-mic";
 
 /**
  * How long the mic track may sit muted before we treat it as taken away.
@@ -92,7 +93,7 @@ export class MicCapture {
    * teardown).
    */
   async start({ step }: { step: (name: string) => void }) {
-    this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    this.stream = await getMicStream();
     if (this.stopped) return;
     step("getUserMedia");
 
@@ -143,7 +144,7 @@ export class MicCapture {
 
   /** One attempt to swap a fresh mic stream into the existing audio graph. */
   private async reacquire() {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const stream = await getMicStream();
     const track = stream.getAudioTracks()[0];
     if (this.stopped || !this.audioContext || !this.workletNode || !track || track.muted) {
       for (const t of stream.getTracks()) t.stop();

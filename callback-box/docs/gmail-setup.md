@@ -45,13 +45,13 @@ If both are set, `query` wins.
 ## 3. Pull emails
 
 ```bash
-cb pull --connector gmail
+cb wakeup --connector gmail
 ```
 
-Or pull from all connectors:
+Or sync all connectors as part of the full wakeup cycle:
 
 ```bash
-cb pull
+cb wakeup
 ```
 
 ## What gets created

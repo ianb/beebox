@@ -9,8 +9,12 @@
 import * as esbuild from "esbuild";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { createHash } from "node:crypto";
 import { glob } from "glob";
-import type { ViewMeta, ViewMode } from "../../types/views.js";
+import type { ViewMeta } from "../../types/views.js";
+import { getBoxShape, boxCodePaths, type BoxShape } from "../../cli/lib/box-shape.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { importViewMetadata } from "./view-meta-import.js";
 
 /**
  * Where the compiled view will run:
@@ -27,7 +31,14 @@ export type ViewCompileTarget = "browser" | "node";
 interface CacheEntry {
   mtime: number;
   output: string;
-  meta: ViewMeta;
+}
+
+/** Cached metadata, keyed by the view file's own path, invalidated by a
+ * content hash rather than mtime — a touch that doesn't change the source
+ * (e.g. a git checkout) shouldn't force a re-import. */
+interface MetaCacheEntry {
+  hash: string;
+  meta: Omit<ViewMeta, "lastModified">;
 }
 
 class EmptyEsbuildOutputError extends Error {
@@ -40,6 +51,15 @@ class EmptyEsbuildOutputError extends Error {
 }
 
 const cache = new Map<string, CacheEntry>();
+const metaCache = new Map<string, MetaCacheEntry>();
+
+/** A shape assumed for callers that don't know (or care about) the box's real
+ * shape — every existing call site that doesn't pass `boxShape` predates the
+ * boxes-as-packages plan and only ever ran against the engine's own
+ * `node_modules` (the v1 story), so that's the default. */
+function defaultBoxShape(viewPath: string): BoxShape {
+  return { shapeVersion: 1, boxRoot: path.dirname(viewPath), packageRoot: PACKAGE_ROOT };
+}
 
 const reactExternalPlugin: esbuild.Plugin = {
   name: "react-external",
@@ -50,11 +70,26 @@ const reactExternalPlugin: esbuild.Plugin = {
     }));
     build.onLoad({ filter: /.*/, namespace: "react-shim" }, (args) => {
       if (args.path === "react/jsx-runtime" || args.path === "react/jsx-dev-runtime") {
+        // Translate the automatic-runtime calling convention to createElement:
+        // jsx/jsxs/jsxDEV pass children *inside* props and `key` as a separate
+        // arg, while createElement reads children from its rest params and `key`
+        // from config. Aliasing them directly (the old shim) passed a static
+        // children array as a single child — triggering React's spurious
+        // "unique key" dev warning for every multi-child view — and dropped
+        // `key`. Spreading the children array as positional args restores both.
         return {
           contents: `const React = window.__cbReact;
-export const jsx = React.createElement;
-export const jsxs = React.createElement;
-export const jsxDEV = React.createElement;
+function jsx(type, props, key) {
+  const { children, ...rest } = props;
+  if (key !== undefined) rest.key = key;
+  if (children === undefined) return React.createElement(type, rest);
+  return Array.isArray(children)
+    ? React.createElement(type, rest, ...children)
+    : React.createElement(type, rest, children);
+}
+export { jsx };
+export const jsxs = jsx;
+export const jsxDEV = jsx;
 export const Fragment = React.Fragment;`,
           loader: "js",
         };
@@ -69,54 +104,45 @@ export const { useState, useEffect, useMemo, useCallback, useRef, useContext, us
   },
 };
 
+/**
+ * Browser shim for the public `callback-box/view-widgets` specifier: resolve it
+ * to the host's `window.__cbViewWidgets` registry, mirroring the React shim.
+ * The host (ViewRenderer) installs that global before any view loads. Node
+ * builds externalize the bare specifier instead (resolved via the package
+ * `exports` map — see compileView and `cb view test`).
+ */
+const viewWidgetsExternalPlugin: esbuild.Plugin = {
+  name: "view-widgets-external",
+  setup(build) {
+    build.onResolve({ filter: /^callback-box\/view-widgets$/ }, (args) => ({
+      path: args.path,
+      namespace: "view-widgets-shim",
+    }));
+    build.onLoad({ filter: /.*/, namespace: "view-widgets-shim" }, () => ({
+      contents: `const W = window.__cbViewWidgets;
+export const CardLink = W.CardLink;
+export const CardRef = W.CardRef;`,
+      loader: "js",
+    }));
+  },
+};
+
 function slugFromFilename(filename: string): string {
   return path.basename(filename, ".tsx");
 }
 
 /**
- * Extract metadata from view source via regex on export const declarations.
+ * Bundle a single view file with esbuild. Returns the compiled output or
+ * throws — no metadata involved, so callers that only need JS (serving
+ * `module.js`, the edit-time lint check, a figure sketch) don't pay for a
+ * metadata import they don't use. `target` selects React resolution (browser
+ * shim vs bare Node specifiers) — see {@link ViewCompileTarget}; defaults to
+ * "browser".
  */
-function extractMeta(source: string, { slug, mtime }: { slug: string; mtime: string }): ViewMeta {
-  function extractString(key: string): string {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- key is only ever a hardcoded metadata field name (see callers below), never user input.
-    const match = source.match(new RegExp(`export\\s+const\\s+${key}\\s*=\\s*["'\`]([^"'\`]*)["'\`]`));
-    return match && match[1] !== undefined ? match[1] : "";
-  }
-
-  function extractStringArray(key: string): string[] {
-    // eslint-disable-next-line security/detect-non-literal-regexp -- key is only ever a hardcoded metadata field name (see callers below), never user input.
-    const match = source.match(new RegExp(`export\\s+const\\s+${key}\\s*=\\s*\\[([^\\]]*)\\]`));
-    if (!match || match[1] === undefined) return [];
-    const arrayContent = match[1];
-    const items: string[] = [];
-    const re = /["'`]([^"'`]*)["'`]/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(arrayContent)) !== null) {
-      if (m[1] !== undefined) items.push(m[1]);
-    }
-    return items;
-  }
-
-  return {
-    name: extractString("name") || slug,
-    slug,
-    description: extractString("description") || "",
-    dependencies: extractStringArray("dependencies"),
-    modes: extractStringArray("modes") as ViewMode[] || ["page"],
-    rendersCardTypes: extractStringArray("rendersCardTypes"),
-    lastModified: mtime,
-  };
-}
-
-/**
- * Compile a single view file. Returns { output, meta } or throws.
- * `target` selects React resolution (browser shim vs bare Node specifiers) —
- * see {@link ViewCompileTarget}; defaults to "browser".
- */
-export async function compileView(
+export async function bundleView(
   viewPath: string,
   opts?: { target?: ViewCompileTarget; external?: string[] }
-): Promise<{ output: string; meta: ViewMeta }> {
+): Promise<{ output: string }> {
   const target = opts?.target ?? "browser";
   // Extra bare specifiers to leave unbundled. Figure sketches receive their
   // runtime library (p5/three/d3) as an argument from the harness; marking
@@ -125,7 +151,6 @@ export async function compileView(
   const extraExternal = opts?.external ?? [];
   const stat = await fs.stat(viewPath);
   const mtime = stat.mtimeMs;
-  const slug = slugFromFilename(viewPath);
 
   // Key the cache by target too: the browser and node builds of the same file
   // produce incompatible output (window shim vs bare imports), so sharing one
@@ -134,19 +159,29 @@ export async function compileView(
   const cacheKey = `${target}:${extraExternal.join(",")}:${viewPath}`;
   const cached = cache.get(cacheKey);
   if (cached && cached.mtime === mtime) {
-    return { output: cached.output, meta: cached.meta };
+    return { output: cached.output };
   }
 
   const source = await fs.readFile(viewPath, "utf-8");
-  const meta = extractMeta(source, { slug, mtime: stat.mtime.toISOString() });
 
   // Node target: externalize React to bare specifiers and emit an inline source
   // map named by the box-relative path (views/<slug>.tsx), so a render-time
   // throw maps to the real source line. Browser target: the window-shim plugin.
   const reactConfig: Pick<esbuild.BuildOptions, "plugins" | "external" | "sourcemap"> =
     target === "node"
-      ? { external: ["react", "react/jsx-runtime", "react/jsx-dev-runtime", ...extraExternal], sourcemap: "inline" }
-      : { plugins: [reactExternalPlugin], external: extraExternal };
+      ? {
+          external: [
+            "react",
+            "react/jsx-runtime",
+            "react/jsx-dev-runtime",
+            // Resolved from a real node_modules (v2 boxes) or the engine's own
+            // (v1, via a temp symlink) — see node-view-runtime.ts.
+            "callback-box/view-widgets",
+            ...extraExternal,
+          ],
+          sourcemap: "inline",
+        }
+      : { plugins: [reactExternalPlugin, viewWidgetsExternalPlugin], external: extraExternal };
   const sourcefile = target === "node" ? path.join("views", path.basename(viewPath)) : path.basename(viewPath);
 
   const result = await esbuild.build({
@@ -173,21 +208,111 @@ export async function compileView(
     throw new EmptyEsbuildOutputError(viewPath);
   }
   const output = outputFile.text;
-  cache.set(cacheKey, { mtime, output, meta });
+  cache.set(cacheKey, { mtime, output });
+  return { output };
+}
+
+/**
+ * Get a view's metadata: name, description, dependencies, modes,
+ * rendersCardTypes. Compiles the view for the node target and imports the
+ * real module in a subprocess (see `view-meta-import.ts`) rather than
+ * regexing source text, so metadata reflects what the view actually exports
+ * (computed values, not just string literals). Cached by a hash of the
+ * view's source content, so repeated calls (e.g. `listViews` on every
+ * `views.list` tRPC request) don't recompile/reimport an unchanged view.
+ *
+ * Never throws: a view that fails to compile or import degrades to a
+ * filename + "Failed to compile" marker (see `listViews`) rather than
+ * vanishing from the listing.
+ */
+export async function getViewMeta(viewPath: string, opts?: { boxShape?: BoxShape }): Promise<ViewMeta> {
+  const boxShape = opts?.boxShape ?? defaultBoxShape(viewPath);
+  const slug = slugFromFilename(viewPath);
+  const fallback: Omit<ViewMeta, "lastModified"> = {
+    name: slug,
+    slug,
+    description: "Failed to compile",
+    dependencies: [],
+    modes: ["page"],
+    rendersCardTypes: [],
+  };
+
+  let mtimeIso: string;
+  let source: string;
+  try {
+    const stat = await fs.stat(viewPath);
+    mtimeIso = stat.mtime.toISOString();
+    source = await fs.readFile(viewPath, "utf-8");
+  } catch (_e) {
+    // The file vanished (a race with glob/delete) or was never readable —
+    // nothing to hash or compile; degrade without touching the cache.
+    return { ...fallback, lastModified: new Date().toISOString() };
+  }
+
+  const hash = createHash("sha256").update(source).digest("hex");
+  const cached = metaCache.get(viewPath);
+  if (cached && cached.hash === hash) {
+    return { ...cached.meta, lastModified: mtimeIso };
+  }
+
+  let meta: Omit<ViewMeta, "lastModified">;
+  try {
+    const { output } = await bundleView(viewPath, { target: "node" });
+    const imported = await importViewMetadata(output, boxShape);
+    meta = imported
+      ? {
+          name: imported.name ?? slug,
+          slug,
+          description: imported.description ?? "",
+          dependencies: imported.dependencies ?? [],
+          modes: imported.modes ?? ["page"],
+          rendersCardTypes: imported.rendersCardTypes ?? [],
+        }
+      : fallback;
+  } catch (_e) {
+    // Compiling for the node target failed (e.g. a syntax error) — same
+    // degrade-to-marker fallback as an import failure.
+    meta = fallback;
+  }
+
+  metaCache.set(viewPath, { hash, meta });
+  return { ...meta, lastModified: mtimeIso };
+}
+
+/**
+ * Compile a single view file for serving/rendering and get its metadata.
+ * Returns { output, meta } or throws if bundling for `target` fails —
+ * callers that only need metadata (not the bundled output) should call
+ * {@link getViewMeta} directly instead, which never throws.
+ */
+export async function compileView(
+  viewPath: string,
+  opts?: { target?: ViewCompileTarget; external?: string[]; boxShape?: BoxShape }
+): Promise<{ output: string; meta: ViewMeta }> {
+  const bundleOpts: { target?: ViewCompileTarget; external?: string[] } = {};
+  if (opts?.target !== undefined) bundleOpts.target = opts.target;
+  if (opts?.external !== undefined) bundleOpts.external = opts.external;
+  const { output } = await bundleView(viewPath, bundleOpts);
+
+  const metaOpts: { boxShape?: BoxShape } = {};
+  if (opts?.boxShape !== undefined) metaOpts.boxShape = opts.boxShape;
+  const meta = await getViewMeta(viewPath, metaOpts);
+
   return { output, meta };
 }
 
 /**
  * Edit-time compile check for the validation hooks: returns null if the view
  * compiles, or a human-readable error message otherwise. Compile only — no
- * execution, no type-check (the deeper signal is `cb view test`). Shared by the
- * shell `cb validate --hook` and the in-process `cardValidatorHook` so both
- * surface the same error. Uses the default browser target — the exact compile
- * the running app does.
+ * execution, no type-check (the deeper signal is `cb view test`), and no
+ * metadata import (a syntax-checking hook shouldn't pay for a subprocess
+ * import). Shared by the shell `cb validate --hook` and the in-process
+ * `cardValidatorHook` so both surface the same error. Uses the default
+ * browser target — the exact compile the running app does.
  */
 export async function lintViewFile(viewPath: string): Promise<string | null> {
   try {
-    await compileView(viewPath);
+    await bundleView(viewPath);
     return null;
   } catch (e) {
     return e instanceof Error ? e.message : String(e);
@@ -210,14 +335,31 @@ export const modes = ["page", "chat"];
 }
 
 /**
- * List all views in a box's views/ directory.
+ * Resolve a box's views directory for its shape: `boxRoot/views` for a
+ * legacy (shapeVersion 1) box, `packageRoot/src/views` for a package
+ * (shapeVersion 2+) box. Delegates to `boxCodePaths`, the one place that
+ * predicate is defined (`src/cli/lib/box-shape.ts`).
+ */
+export async function resolveViewsDir(boxRoot: string): Promise<{ viewsDir: string; boxShape: BoxShape }> {
+  const boxShape = await getBoxShape(boxRoot);
+  return { viewsDir: boxCodePaths(boxShape).viewsDir, boxShape };
+}
+
+/**
+ * List all views in a box, resolving the views directory from the box's
+ * shape (v1: `boxRoot/views`; v2: `packageRoot/src/views`).
+ *
+ * A view that fails to compile or fails to import (including a subprocess
+ * timeout — see `view-meta-import.ts`) still appears here, degraded to a
+ * filename + "Failed to compile" marker (via `getViewMeta`, which never
+ * throws) — never silently vanishes from the listing.
  */
 export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
-  const viewsDir = path.join(boxRoot, "views");
+  const { viewsDir, boxShape } = await resolveViewsDir(boxRoot);
   try {
     await fs.access(viewsDir);
   } catch (_e) {
-    // fs.access throwing means the box has no views/ directory — a box with no
+    // fs.access throwing means the box has no views dir — a box with no
     // views is normal, so return an empty list. The error carries no
     // actionable info beyond "directory absent".
     return [];
@@ -225,34 +367,20 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
 
   const files = await glob("*.tsx", { cwd: viewsDir });
   const metas: ViewMeta[] = [];
-
   for (const file of files) {
     const viewPath = path.join(viewsDir, file);
-    try {
-      const { meta } = await compileView(viewPath);
-      metas.push(meta);
-    } catch (_e) {
-      const slug = slugFromFilename(file);
-      const stat = await fs.stat(viewPath);
-      metas.push({
-        name: slug,
-        slug,
-        description: "Failed to compile",
-        dependencies: [],
-        modes: ["page"],
-        rendersCardTypes: [],
-        lastModified: stat.mtime.toISOString(),
-      });
-    }
+    metas.push(await getViewMeta(viewPath, { boxShape }));
   }
-
   return metas;
 }
 
 /**
- * Invalidate cache for a specific view file (all compile targets).
+ * Invalidate cache for a specific view file (both compile targets, no
+ * externals — the only cache keys any current caller other than the figure
+ * route produces — and its metadata).
  */
 export function invalidateView(viewPath: string): void {
-  cache.delete(`browser:${viewPath}`);
-  cache.delete(`node:${viewPath}`);
+  cache.delete(`browser::${viewPath}`);
+  cache.delete(`node::${viewPath}`);
+  metaCache.delete(viewPath);
 }

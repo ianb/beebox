@@ -49,9 +49,6 @@ const text = "---\ntype: email-thread\nthread-id: abc123\nsubject: Re Weekend pl
 const card = parseCardText(text, { source: "thread.email-thread.card", schemas });
 JSON.stringify(card.fields)
 => {"type":"email-thread","thread-id":"abc123","subject":"Re Weekend plans","participants":["alice@example.com","bob@example.com"]}
-
-card.contentType === undefined
-=> true
 ```
 
 ## A card with a markdown body parses both halves
@@ -66,7 +63,26 @@ JSON.stringify(card.fields["body"])
 => "# Project Notes\n\nBody content goes here.\n"
 ```
 
+## Positional naming: bare `<type>.card` takes its type from the stem
+
+A positional card ("the ‹type› of this directory" — landmarks, briefings,
+nav) has no name segment; the whole stem is the type.
+
+```ts
+const text = "---\ndrive-id: drv-9\ntitle: Directory Doc\n---\nPositional body.\n";
+const card = parseCardText(text, { source: "doc.card", schemas });
+card.schema.type
+=> doc
+
+card.fields["title"]
+=> Directory Doc
+```
+
 ## Missing `type` field surfaces a clear error
+
+A single-dot filename is positional, so its "type" is the stem — unknown
+stems fail schema lookup rather than name parsing. A name that fits neither
+form reports the naming convention.
 
 ```ts
 const tryParse = (text: string, source: string): string => {
@@ -74,7 +90,10 @@ const tryParse = (text: string, source: string): string => {
   catch (e) { return (e as Error).message; }
 };
 tryParse("---\nsubject: nope\n---\n", "broken.card")
-=> broken.card: cannot determine card type — filename must match Foo.<type>.card
+=> broken.card: no schema registered for type "broken"
+
+tryParse("---\nsubject: nope\n---\n", "not-a-card")
+=> not-a-card: cannot determine card type — filename must match Foo.<type>.card or <type>.card
 ```
 
 ## Round-trip: serialize then parse returns the same fields
@@ -90,6 +109,33 @@ const text = serializeCardText({ schema: docSchema, fields });
 const parsed = parseCardText(text, { source: "rt.doc.card", schemas });
 JSON.stringify(parsed.fields)
 => {"type":"doc","drive-id":"drv-42","title":"Round-trip","body":"Hello, world.\n"}
+```
+
+## A long scalar never folds across lines
+
+YAML's `stringify` defaults to wrapping long scalars at ~80 columns; that
+would silently rewrite a long `title` (or any other string field) across
+multiple lines, changing the on-disk representation without changing the
+value. `serializeCardText` disables wrapping, so a long value stays on one
+line and the frontmatter block has exactly three lines (open fence, the one
+`title:` line, close fence).
+
+```ts
+const longTitle = "A".repeat(150);
+const fields = {
+  type: "doc",
+  "drive-id": "drv-long",
+  title: longTitle,
+  body: "Body.\n",
+};
+const text = serializeCardText({ schema: docSchema, fields });
+const frontmatter = text.slice(0, text.indexOf("Body."));
+frontmatter.split("\n").length
+=> 5
+
+const parsed = parseCardText(text, { source: "long.doc.card", schemas });
+parsed.fields["title"] === longTitle
+=> true
 ```
 
 ## Frontmatter-only schemas reject body content
@@ -117,15 +163,6 @@ lint *warning* — see `card-lint.doctest.md` — so it gets cleaned off disk.)
 const drifted = parseCardText("---\ntype: doc\ndrive-id: d1\ntitle: T\nbogus-field: oops\n---\n", { source: "typo.doc.card", schemas });
 JSON.stringify(drifted.fields)
 => {"type":"doc","drive-id":"d1","title":"T","body":""}
-```
-
-The `content-type` marker is a global field, so a card carrying it keeps it
-through the parse.
-
-```ts
-const ct = parseCardText("---\ntype: email-thread\nthread-id: t1\nsubject: hi\ncontent-type: text/plain\nparticipants:\n  - a@x\n---\n", { source: "ct.email-thread.card", schemas });
-ct.fields["content-type"]
-=> text/plain
 ```
 
 ## Loader dispatch parses recognized frontmatter cards

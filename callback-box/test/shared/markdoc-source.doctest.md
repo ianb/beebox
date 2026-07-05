@@ -37,7 +37,7 @@ valid
 ## An in-box anchor (ref only) still validates — backward compatible
 
 ```ts
-check('{% source ref="/store/notes/Bread.doc.card" as="summary" %}\nshe went back and forth on the kitchen\n{% /source %}')
+check('{% source ref="/store/notes/Bread.doc.card" usage="summary" %}\nshe went back and forth on the kitchen\n{% /source %}')
 =>
 valid
 ```

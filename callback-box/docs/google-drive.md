@@ -31,11 +31,11 @@ cb drive list
 
 ### File Layout
 
-Each synced spreadsheet creates a card file and a directory of JSON files:
+Each synced spreadsheet creates a card file and an attach scope of JSON files:
 
 ```
-store/drive/Budget.sheet.card     # metadata (title, Drive ID, link, tabs)
-store/drive/Budget/
+store/drive/Budget.gsheet.card     # frontmatter metadata (title, Drive ID, link, tabs)
+store/drive/Budget.attach/
   Summary.json                          # one JSON per sheet tab
   Expenses.json
   Income.json
@@ -43,13 +43,13 @@ store/drive/Budget/
 
 ### The Card is the Config
 
-The `.sheet.card` file contains the `drive-id` attribute that links to Google Drive. Moving the card (and its data directory) to a new location is safe -- the link is maintained. No separate config file is needed for individual files.
+The `.gsheet.card` file's frontmatter carries a `drive-id` field that links to Google Drive, plus a `sheets:` list of `{ref, title, gid}` objects pointing at each tab file in `Budget.attach/` via the `attach/` virtual prefix. Moving the card (and its `.attach/` scope) to a new location with `cb mv` is safe -- the link is maintained. No separate config file is needed for individual files.
 
 ### Sync Flow
 
 On `cb wakeup` or `cb drive sync`:
 
-1. The connector finds all `.sheet.card` files anywhere in the box
+1. The connector finds all `.gsheet.card` files anywhere in the box
 2. For each card, reads the `drive-id` attribute
 3. Compares local JSON content hashes with stored hashes:
    - **Local file unchanged** -- pull remote changes (overwrite JSON)
@@ -77,7 +77,7 @@ Each tab is a JSON file with one row per line:
 
 Edit the JSON file directly and commit. For plain cells, change the value. For formula cells, edit the `f` field. On next sync, the connector detects the change (via content hash) and pushes it to Google Sheets.
 
-**Do NOT edit the card XML** -- it is managed by the connector.
+**Do NOT hand-edit the `.gsheet.card` frontmatter** -- it is managed by the connector.
 
 ## CLI Commands
 

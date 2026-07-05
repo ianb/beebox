@@ -22,6 +22,16 @@ run_in() {
   (cd "$REPO_DIR/$dir" && "$@")
 }
 
+# Any commit touching markdown runs the fast doc reference/orphan check.
+if echo "$staged" | grep -q '\.md$'; then
+  run_in callback-box pnpm doc-check
+fi
+
+# Docs-only commits need nothing further — typecheck/lint add nothing.
+if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
+  exit 0
+fi
+
 if echo "$staged" | grep -q '^callback-box/'; then
   run_in callback-box pnpm exec lint-staged
   run_in callback-box pnpm typecheck

@@ -46,6 +46,8 @@ const RequiresField = z.object({
 });
 
 export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", {
+  description: "Declarative scheduling for a command — cron/at/rrule plus budgets, locks, and wakeup opportunism",
+  category: "authored",
   searchable: false,
   fields: {
     cron: z.string().optional(),
@@ -79,7 +81,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - **on-wakeup**: If \`true\`, also run opportunistically during \`cb wakeup\`, subject to not-before.
 - **once**: If \`true\`, the card is deleted after successful execution.
 - **until**: ISO datetime after which this schedule expires.
-- **enabled**: Set to \`false\` to disable without deleting.
+- **enabled**: Set to \`false\` to disable without deleting. This is per-box state, not part of the shipped definition — a disabled schedule still receives upstream definition updates (new cron/runs/description) while staying disabled.
 - **budget**: Max cumulative runtime within a window. Format: \`"LIMIT/WINDOW"\` (e.g., \`"10m/5h"\` = max 10 minutes of runtime in any 5-hour window). Scripts exceeding their budget are skipped until the window clears.
 - **lock-group**: Named concurrency group. Scripts sharing a lock-group won't run concurrently — if one is already running, others in the same group are skipped.
 - **timeout**: Max runtime for a single run, as a duration string (e.g. \`25m\`). Counts only awake time (machine sleep doesn't eat the budget). Default: \`10m\`. The run is killed when it exceeds this.
@@ -93,6 +95,13 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 - Set reasonable not-before values to prevent hammering external services.
 - Use on-wakeup for things that should happen whenever the agent is active.
 - For one-shot future tasks, combine \`at\` with \`once: true\`.`,
+  // `enabled` is per-box state, not part of the shipped definition: a box turns
+  // a schedule on or off for itself. Declaring it box-owned means a box that
+  // only toggled `enabled` still receives upstream definition updates (new
+  // cron/runs/description), with its own enabled state carried onto them,
+  // instead of the whole card parking as "edited." Any edit beyond `enabled`
+  // (retimed cron, changed runs) still parks for review.
+  templateMerge: { boxOwnedFields: ["enabled"] },
 });
 
 // ============================================

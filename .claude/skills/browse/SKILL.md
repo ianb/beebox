@@ -86,7 +86,7 @@ bin/browse close --all                          # close every session
 - Box defaults to `test1`. Override per command: `BROWSE_BOX=other-box bin/browse open /`.
 - Port defaults to `3210`. Override: `ROUTER_PORT=4000 bin/browse open /`.
 
-First request to a worktree spins up Vite + Fastify (~4s cold). Subsequent calls are fast. The dev router lazy-shuts idle worktrees after 5 minutes.
+First request to a worktree spins up Vite + a `cb hub` (~4s cold); the hub then lazy-starts the specific box's `cb serve` child on its first request. Subsequent calls are fast. The dev router lazy-shuts idle worktrees after 5 minutes.
 
 ## Screenshots — what the sidecar buys
 

@@ -5,7 +5,7 @@
  * Detects local edits via content hash and pushes changes back.
  */
 
-import * as crypto from "node:crypto";
+import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { safeFilename } from "./chat-utils.js";
@@ -23,17 +23,14 @@ import type {
 } from "./drive-types.js";
 import { registerDriveHandler } from "./drive-types.js";
 import type { GoogleDriveService, DriveFile } from "../services/google-drive.js";
-import { createSheetTemplate } from "../schemas/sheet.js";
+import { createGsheetTemplate } from "../schemas/gsheet.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
 import { reconcileCommentsSidecar } from "./drive-comments-sidecar.js";
 
-function contentHash(content: string): string {
-  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
-}
 
 const sheetsHandler: DriveTypeHandler = {
   mimeTypes: ["application/vnd.google-apps.spreadsheet"],
-  cardType: "sheet",
+  cardType: "gsheet",
 
   async inspect(file: DriveFile, service: GoogleDriveService): Promise<InspectResult> {
     const [spreadsheet, comments] = await Promise.all([
@@ -159,7 +156,7 @@ const sheetsHandler: DriveTypeHandler = {
 
     // Capture collaborative feedback as a read-only sidecar in the attach
     // scope. Regenerated every pull, never pushed back.
-    const cardBasename = path.basename(cardPath, ".sheet.card");
+    const cardBasename = path.basename(cardPath, ".gsheet.card");
     const sidecar = await reconcileCommentsSidecar({
       localDir,
       basename: cardBasename,
@@ -172,7 +169,7 @@ const sheetsHandler: DriveTypeHandler = {
     // Write/update card
     const owner = file.owners?.[0]?.emailAddress ?? "unknown";
     const link = file.webViewLink ?? `https://docs.google.com/spreadsheets/d/${file.id}/edit`;
-    const cardContent = createSheetTemplate({
+    const cardContent = createGsheetTemplate({
       driveId: file.id,
       title: spreadsheet.properties.title,
       modified: file.modifiedTime,

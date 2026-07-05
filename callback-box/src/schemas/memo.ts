@@ -6,8 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
@@ -34,6 +33,8 @@ const TranscriptionError = z.object({
 });
 
 export const MemoSchema: CardSchema = cardSchema("memo", {
+  description: "A captured text or voice note from the user — generic inbox input awaiting processing",
+  category: "authored",
   fields: {
     status: MemoStatus.default("new"),
     created: z.string().datetime({ offset: true }),
@@ -64,23 +65,12 @@ If \`source: voice\` with no \`transcription:\` and no
 \`transcription-error:\`, the memo hasn't been transcribed yet —
 don't treat the empty body as empty content.
 
-## Voice-memo audio: attach scope
+## Voice-memo audio
 
-The recorded audio file for a voice memo lives in the memo's
-**attach scope** — a sibling directory named \`<basename>.attach/\`
-(where \`<basename>\` is the card's filename minus the \`.memo.card\`
-suffix). Not a flat sibling, not a separate \`audio/\` directory.
-
-Layout:
-
-\`\`\`
-box/inbox/Voice_2026-05-24T18-22-10.memo.card
-box/inbox/Voice_2026-05-24T18-22-10.attach/recording.m4a
-\`\`\`
-
-The card itself doesn't need an explicit pointer to the audio file —
-the transcribe pre-action finds it inside the scope. Moving the card
-moves the audio with it.
+The recorded audio file lives in the memo's attach scope (e.g.
+\`Voice_2026-05-24.attach/recording.m4a\`) — see the agent guide's
+ABOUT_CARDS. The card needs no explicit pointer to it; the transcribe
+pre-action finds it inside the scope.
 
 Status: \`new\` → \`processing\` → \`processed\`.`,
 });
@@ -151,11 +141,10 @@ function buildMemoCard(input: {
     if (input.context.text !== undefined) ctx["text"] = input.context.text;
     if (Object.keys(ctx).length > 0) fields["context"] = ctx;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyTail = input.content === ""
     ? ""
     : `${input.content}${input.content.endsWith("\n") ? "" : "\n"}`;
-  return `---\n${yamlText}---\n${bodyTail}`;
+  return renderFrontmatterBlock(fields, bodyTail);
 }
 
 export function createMemoTemplate(content: string, source?: string): string {

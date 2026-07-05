@@ -1,9 +1,12 @@
 /**
  * Procedure-run garbage collection — deletes run dirs whose expiry has
- * passed. Deliberately dumb: the policy lives on each run card's `expires`
- * attribute (stamped by the engine at completion, editable by anyone to pin
- * a run); this just sweeps what's due. Git history retains every committed
- * run, so deletion loses nothing.
+ * passed, and caps each procedure at MAX_RUNS_PER_PROCEDURE retained dirs
+ * regardless of expiry (a backstop against a procedure that fails/completes
+ * every tick and would otherwise accrete faster than the age clock reclaims).
+ * Deliberately dumb: the policy lives on each run card's `expires` attribute
+ * (stamped by the engine at completion, editable by anyone to pin a run); this
+ * sweeps what's due and trims the per-procedure overflow. Git history retains
+ * every committed run, so deletion loses nothing.
  */
 
 import * as fs from "node:fs/promises";
@@ -14,7 +17,7 @@ import { fmt } from "../../cli/lib/format.js";
 import { parseDuration } from "../../schemas/scheduled-script-duration.js";
 import { loadRunningProcedures } from "../schedule-state.js";
 import type { CommandContext, CommandResult } from "../command-runner.js";
-import { COMPLETED_RUN_EXPIRY, FAILED_RUN_EXPIRY } from "./run-expiry.js";
+import { COMPLETED_RUN_EXPIRY, FAILED_RUN_EXPIRY, MAX_RUNS_PER_PROCEDURE } from "./run-expiry.js";
 
 const RUN_DIR_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{4}$/;
 
@@ -67,8 +70,9 @@ async function resolveExpiry(runDir: string): Promise<number | "never" | "invali
 }
 
 /**
- * Delete expired run dirs under procedure/runs/. Always keeps the newest
- * run per procedure (`cb procedure status` reads it) and anything still
+ * Delete expired run dirs under procedure/runs/, plus per-procedure overflow
+ * past MAX_RUNS_PER_PROCEDURE (oldest first). Always keeps the newest run per
+ * procedure (`cb procedure status` reads it), pinned runs, and anything still
  * running. Commits once when it deleted something; silent when not.
  */
 export async function gcProcedureRuns(ctx: CommandContext): Promise<CommandResult> {
@@ -87,32 +91,53 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<CommandResul
   }
 
   const running = new Set(await loadRunningProcedures(boxRoot));
-  const newestPerProcedure = new Map<string, string>();
+
+  // Group by procedure so both "keep newest" and the per-procedure cap can be
+  // evaluated per group, newest first (dir names end in a sortable timestamp).
+  const byProcedure = new Map<string, string[]>();
   for (const dirName of dirNames) {
     const procName = procedureNameOf(dirName);
-    const newest = newestPerProcedure.get(procName);
-    if (!newest || dirName > newest) {
-      newestPerProcedure.set(procName, dirName);
-    }
+    const list = byProcedure.get(procName);
+    if (list) list.push(dirName);
+    else byProcedure.set(procName, [dirName]);
   }
 
   const now = Date.now();
   const removed: string[] = [];
-  for (const dirName of dirNames) {
-    if (running.has(dirName)) continue;
-    if (newestPerProcedure.get(procedureNameOf(dirName)) === dirName) continue;
-
-    const runDir = path.join(runsDir, dirName);
-    const expiry = await resolveExpiry(runDir);
-    if (expiry === "never") continue;
-    if (expiry === "invalid") {
-      ctx.writeLine(fmt.warn(`Unparseable expires on ${dirName} — keeping`));
-      continue;
+  for (const dirs of byProcedure.values()) {
+    dirs.sort((a, b) => (a > b ? -1 : a < b ? 1 : 0)); // newest first
+    // Count of dirs this procedure keeps so far; a run is cap-evicted once the
+    // group is already holding MAX_RUNS_PER_PROCEDURE, oldest first.
+    let kept = 0;
+    for (const [i, dirName] of dirs.entries()) {
+      if (running.has(dirName)) {
+        kept++;
+        continue;
+      }
+      if (i === 0) {
+        kept++; // newest per procedure is always kept (cb procedure status reads it)
+        continue;
+      }
+      const runDir = path.join(runsDir, dirName);
+      const expiry = await resolveExpiry(runDir);
+      if (expiry === "never") {
+        kept++;
+        continue;
+      }
+      if (expiry === "invalid") {
+        ctx.writeLine(fmt.warn(`Unparseable expires on ${dirName} — keeping`));
+        kept++;
+        continue;
+      }
+      const expired = expiry <= now;
+      const overCap = kept >= MAX_RUNS_PER_PROCEDURE;
+      if (!expired && !overCap) {
+        kept++;
+        continue;
+      }
+      await fs.rm(runDir, { recursive: true, force: true });
+      removed.push(dirName);
     }
-    if (expiry > now) continue;
-
-    await fs.rm(runDir, { recursive: true, force: true });
-    removed.push(dirName);
   }
 
   if (removed.length > 0) {

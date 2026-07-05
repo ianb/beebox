@@ -34,7 +34,7 @@ measurable pass/fail so the redesign is decided by evidence, not argument.
   file formats … read the existing code, read the test patterns."* The harness
   track (Track 1) is the embodiment of this: reproduce-then-change.
 - `callback-box/CLAUDE.md` — *"Frontend uses UI primitives and a semantic
-  palette. Read FRONTEND.md before writing UI … the `className`-only-for-outer-layout
+  palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
   rule (enforced by `restrict-component-classes`)."* The list rewrite and the
   scroll-to-bottom button keep appearance in `components/`-scoped code.
 - `callback-box/CLAUDE.md` — *"don't add features beyond what the task requires."*
@@ -43,13 +43,13 @@ measurable pass/fail so the redesign is decided by evidence, not argument.
 - `~/.claude` memory `feedback_components_own_a11y` — the scroll-to-bottom button is
   its own component that renders its own `<button aria-label=…>`; it is not a bare
   icon wrapped by a parent landmark.
-- `callback-box/CODE-STYLE.md:36-37` — no default parameters; max 2 positional
+- `callback-box/code-style.md:36-37` — no default parameters; max 2 positional
   params (named params object beyond that). The controller hook's signature obeys
   this.
-- `callback-box/CODE-STYLE.md:55` — `as` assertions are `unsafe`-grade. Scroll code
+- `callback-box/code-style.md:55` — `as` assertions are `unsafe`-grade. Scroll code
   reads DOM geometry; any narrowing uses an `instanceof` guard (the current code
   already does — `InteractiveChat-messages.tsx:129`).
-- `callback-box/CODE-STYLE.md:58` — files max 300 lines, functions max 150. The
+- `callback-box/code-style.md:58` — files max 300 lines, functions max 150. The
   current `InteractiveChat-messages.tsx` is 340 lines; the rewrite splits the
   controller into its own `lib/` hook to stay under the limit.
 - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
@@ -308,7 +308,7 @@ of mobile. Track 5 (mobile) is last.
     `hasUnseenContent` — i.e. text arrived since the user left the bottom; **default
     (subtle)** appearance when scrolled up but nothing new arrived.
   - **Click** → `scrollToBottom({ behavior: "smooth" })`.
-  - Appearance lives in the component (FRONTEND.md `className`-only-for-outer-layout;
+  - Appearance lives in the component (frontend.md `className`-only-for-outer-layout;
     component owns its a11y per `feedback_components_own_a11y`).
 - **Vocabulary lock-ins.** Hook name + `{ isPinned, hasUnseenContent, scrollToBottom }`
   return shape (consumed by the button + send action).
@@ -432,7 +432,7 @@ scenarios are **N/A by construction**, listed rather than omitted:
 - **Button emphasis treatment** (color shift vs. bg-opacity vs. a count/dot). *Lean:*
   start with a bg-opacity/color shift + a small dot; no unread *count* in v1 (we don't
   cheaply know message count delta, only "something arrived"). A pure appearance
-  choice — settle in implementation with FRONTEND.md primitives.
+  choice — settle in implementation with frontend.md primitives.
 - *(Resolved)* Controller approach: in-repo, not a dependency ladder (codex #1).
 
 ## Knowledge audits

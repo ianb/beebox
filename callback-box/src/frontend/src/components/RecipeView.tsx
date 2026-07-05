@@ -3,7 +3,7 @@
  *
  * Recipe schema migrated from XML (`<ing>`, `<step>`, …) to a Phase-2
  * frontmatter + Markdoc body (`{% ingredient %}`, `{% step %}`, …) in
- * `markdoc-tags-design.md` Track 1. This view:
+ * `markdoc-tags-plan.md` Track 1. This view:
  *
  * - reads `title` / `description` / `source` / `tags` / `hero-image`
  *   from the frontmatter;

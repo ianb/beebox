@@ -76,7 +76,7 @@ await box.write(
 );
 await box.write(
   "box/inbox/email/thread-x.attach/msg-001.email-message.card",
-  "---\ncontent-type: application/x-card+xml\n---\n<email-message message-id=\"m1\" thread-id=\"t1\"><from>a@x</from><date>2026-02-15T10:00:00Z</date><subject>hi</subject><body-file>attach/msg-001.body.txt</body-file></email-message>\n",
+  "---\nmessage-id: m1\nthread-id: t1\nfrom: a@x\ndate: 2026-02-15T10:00:00Z\nsubject: hi\nbody-file:\n  ref: attach/msg-001.body.txt\n---\n",
 );
 const result = await lintCardsDispatch(
   [box.path("box/inbox/email/thread-x.email-thread.card")],
@@ -202,7 +202,7 @@ instructions); bare paths are resolved relative to the source card.
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Meeting.doc.card",
-  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" as=\"verbatim\" %}{% /source %}\n",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana made the call: {% source ref=\"/box/people/missing.person.card\" usage=\"verbatim\" %}{% /source %}\n",
 );
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
@@ -231,7 +231,7 @@ await box.write(
 );
 await box.write(
   "box/notes/Meeting.doc.card",
-  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" as=\"verbatim\" %}ship Friday{% /source %}\n",
+  "---\ntype: doc\ntitle: Meeting Notes\n---\nDana said: {% source ref=\"/box/people/dana.person.card\" usage=\"verbatim\" %}ship Friday{% /source %}\n",
 );
 const result = await lintCardsDispatch(
   [box.path("box/notes/Meeting.doc.card")],
@@ -251,7 +251,7 @@ attach scope is clean; a missing one in the same scope warns:
 const box = await makeTmpBox();
 await box.write(
   "box/notes/Note.doc.card",
-  "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" as=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" as=\"b\" %}{% /source %}\n",
+  "---\ntype: doc\ntitle: N\n---\nok {% source ref=\"attach/photo.jpg\" usage=\"a\" %}{% /source %} bad {% source ref=\"attach/missing.jpg\" usage=\"b\" %}{% /source %}\n",
 );
 await box.write("box/notes/Note.attach/photo.jpg", "JPG");
 const result = await lintCardsDispatch(
@@ -500,15 +500,15 @@ id the map doesn't define is a **warning** naming the segment that holds it:
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/Acids.attach/Acids.concept-map.card",
+  "store/Acids.attach/Acids_Concept_Map.concept-map.card",
   "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
 );
 await box.write(
-  "store/Acids.attach/Acids.lesson-plan.card",
+  "store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
   "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Name a node the map lacks\n    mode: interactive\n    concepts: [ghost]\n---\nFlow.\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  [box.path("store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalWarnings
@@ -527,15 +527,15 @@ A `material` segment that has neither a `material` ref nor `status: planned` is 
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/Acids.attach/Acids.concept-map.card",
+  "store/Acids.attach/Acids_Concept_Map.concept-map.card",
   "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n---\nMap.\n",
 );
 await box.write(
-  "store/Acids.attach/Acids.lesson-plan.card",
+  "store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
   "---\nsegments:\n  - do: Hand them a doc\n    mode: material\n---\nFlow.\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  [box.path("store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalWarnings
@@ -551,16 +551,16 @@ with a resolvable ref or explicitly `planned` — is silent:
 ```ts
 const box = await makeTmpBox();
 await box.write(
-  "store/Acids.attach/Acids.concept-map.card",
+  "store/Acids.attach/Acids_Concept_Map.concept-map.card",
   "---\nconcepts:\n  - id: acids\n    name: Acids\n    kind: concept\n  - id: bases\n    name: Bases\n    kind: concept\n---\nMap.\n",
 );
 await box.write("store/Acids.attach/Recap.doc.card", "---\ntitle: Recap\n---\nRecap.\n");
 await box.write(
-  "store/Acids.attach/Acids.lesson-plan.card",
+  "store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card",
   "---\nsegments:\n  - do: Elicit their model\n    mode: interactive\n    concepts: [acids]\n  - do: Read the recap\n    mode: material\n    status: ready\n    concepts: [bases]\n    material: { ref: Recap.doc.card }\n  - do: A future figure, not built yet\n    mode: material\n    status: planned\n---\nFlow.\n",
 );
 const result = await lintCardsDispatch(
-  [box.path("store/Acids.attach/Acids.lesson-plan.card")],
+  [box.path("store/Acids.attach/Acids_Lesson_Plan.lesson-plan.card")],
   { boxRoot: box.root, ctx },
 );
 result.totalWarnings

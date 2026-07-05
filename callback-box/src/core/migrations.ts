@@ -81,6 +81,23 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   { name: "normalize-ref-keys", script: "scripts/migrate/normalize-ref-keys.ts" },
   // Rename the person card `called` field to the standard `aliases`.
   { name: "person-aliases",    script: "scripts/migrate/person-aliases.ts" },
+  // Retype recipe `source`/`hero-image` from freeform strings to typed objects.
+  { name: "recipe-source-shape", script: "scripts/migrate/recipe-source-shape.ts" },
+  // Split the person card's freeform `contact:` into email/phone/address.
+  { name: "person-contact-split", script: "scripts/migrate/person-contact-split.ts" },
+  // Rename the `sheet` card type to `gsheet` (.sheet.card → .gsheet.card + refs).
+  { name: "gsheet-rename",       script: "scripts/migrate/gsheet-rename.ts" },
+  // Move inline personality boxholder identity onto `boxholder: true` person cards.
+  { name: "boxholder-person",    script: "scripts/migrate/boxholder-person.ts" },
+  // Strip file-metadata timestamps (created-at/updated-at/added-at) from guide +
+  // personality cards — git is the record; they were also a template-churn source.
+  { name: "strip-entry-timestamps", script: "scripts/migrate/strip-entry-timestamps.ts" },
+  // Convert a legacy (shapeVersion 1) box in place into the v2 package
+  // layout (Track H, docs/implemented-plans/boxes-as-packages-v2.md). Unlike every
+  // migration above, this one commits its own change (see the module doc
+  // comment in the script) — a half-converted box is unsafe, not just
+  // incomplete.
+  { name: "box-packageify", script: "scripts/migrate/box-packageify.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

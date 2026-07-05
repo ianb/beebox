@@ -105,7 +105,12 @@ function emitUniversalTag(ctx: TagCtx): boolean {
   }
 }
 
-/** Briefing-vocabulary tags: purpose, key-person, correction, property, project-phase. */
+/**
+ * Briefing-vocabulary body tags: `purpose`, `correction`. The structured
+ * records (`key-person` → `key-people:`, `property` → `properties:`) moved
+ * to briefing frontmatter and are emitted by `compileBriefing`, not here;
+ * `project-phase` was retired.
+ */
 function emitBriefingTag(ctx: TagCtx): boolean {
   const { node, out } = ctx;
   const attrs = node.attributes;
@@ -113,43 +118,11 @@ function emitBriefingTag(ctx: TagCtx): boolean {
     case "purpose":
       out.push(`**Purpose:** ${childText(ctx)}\n\n`);
       return true;
-    case "key-person": {
-      const ref = str(attrs, "ref");
-      const called = str(attrs, "called");
-      const role = str(attrs, "role");
-      const name = called !== "" ? called : displayFromRef(ref);
-      const desc = childText(ctx);
-      const refStr = ref === "" ? "" : ` [→ ${ref}]`;
-      const roleStr = role === "" ? "" : ` — ${role}`;
-      const descStr = desc === "" ? "" : ` — ${desc}`;
-      out.push(`**Key Person:** **${name}**${roleStr}${refStr}${descStr}\n\n`);
-      return true;
-    }
     case "correction": {
       const test = str(attrs, "test");
       const text = childText(ctx);
       const testStr = test === "" ? "" : ` _(test: ${test})_`;
       out.push(`**Correction:** ${text}${testStr}\n\n`);
-      return true;
-    }
-    case "property": {
-      const name = str(attrs, "name");
-      const address = str(attrs, "address");
-      const uncertain = attrs["address-uncertain"] === true;
-      const heading = name !== "" ? name : (address !== "" ? address : "(unnamed)");
-      const addrStr = address !== "" && address !== name
-        ? ` — ${address}${uncertain ? " (uncertain)" : ""}`
-        : "";
-      const desc = childText(ctx);
-      const descStr = desc === "" ? "" : ` — ${desc}`;
-      out.push(`**Property:** **${heading}**${addrStr}${descStr}\n\n`);
-      return true;
-    }
-    case "project-phase": {
-      const date = str(attrs, "date");
-      const text = childText(ctx);
-      const dateStr = date === "" ? "" : ` (${date})`;
-      out.push(`**Current Phase**${dateStr}: ${text}\n\n`);
       return true;
     }
     default:

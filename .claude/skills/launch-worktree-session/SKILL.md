@@ -128,10 +128,10 @@ labels get added retroactively to old mail. Together we figured out:
 - The connector uses both a seenMessageIds cap (5000) AND a Gmail
   `after:` date filter. Labeling an old message doesn't pull it in
   unless the box explicitly configured `labels` or `query`.
-- ideas.md "Gmail sync improvements" already captures three options:
-  drop the seenMessageIds cap, widen the `after:` window, or use the
-  Gmail history API. The history API is the right long-term answer
-  but is a bigger change.
+- issues/ already has a filed item ("Gmail sync improvements") capturing
+  three options: drop the seenMessageIds cap, widen the `after:` window,
+  or use the Gmail history API. The history API is the right long-term
+  answer but is a bigger change.
 - For this session we want to start with whichever option turns out
   to be cleanest in the actual code — that may not be obvious until
   you look at how buildQuery + seenMessageIds interact today.
@@ -142,7 +142,7 @@ we'll decide together.
 ```
 
 Notice: it conveys what we *understood* together, points at the relevant
-prior thinking (ideas.md entry), and explicitly invites the new agent to
+prior thinking (an issues/ entry), and explicitly invites the new agent to
 think first, not act.
 
 ## Common mistakes to avoid

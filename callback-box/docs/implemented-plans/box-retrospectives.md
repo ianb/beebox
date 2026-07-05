@@ -36,7 +36,7 @@ Converged with the boxholder before this plan was written:
 - `callback-box/CLAUDE.md` Key Concepts (Services) — *"Every external
   dependency is wrapped in a typed interface with real + fake
   implementations. Fakes have observable state for testing."*
-- `callback-box/CODE-STYLE.md` — custom error classes; no silent error
+- `callback-box/code-style.md` — custom error classes; no silent error
   swallowing; max 2 positional params; files ≤300 lines.
 - Shipped precedents (denser than docs): `cb feedback`
   (`src/cli/commands/feedback.ts`) for session-context capture from a CLI

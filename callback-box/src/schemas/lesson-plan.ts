@@ -22,8 +22,7 @@
  * See docs/plans/courseware-lesson-plan.md.
  */
 
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 /** Whether a segment plays out live in chat or leans on a pre-made material card. */
@@ -48,6 +47,8 @@ const lessonPlanFields = {
 };
 
 export const LessonPlanSchema: CardSchema = cardSchema("lesson-plan", {
+  description: "A course's ordered delivery flow — segments tagged interactive (live in chat) or material (pre-made card), tied to concept-map nodes",
+  category: "authored",
   fields: lessonPlanFields,
   instructions: `# Lesson-Plan Cards
 
@@ -126,7 +127,6 @@ export function createLessonPlanTemplate(options: { title?: string | undefined }
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyText = "The arc of the course: where it goes live vs material-backed, and why. Use neutral pronouns for the learner.\n";
-  return `---\n${yamlText}---\n${bodyText}`;
+  return renderFrontmatterBlock(fields, bodyText);
 }

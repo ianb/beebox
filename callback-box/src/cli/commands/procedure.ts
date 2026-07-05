@@ -3,6 +3,7 @@
  *
  * Subcommands:
  *   cb procedure run <name>      Start a new procedure run
+ *   cb procedure resume [dir]    Resume a failed run from its first incomplete step
  *   cb procedure list            List available procedure definitions
  *   cb procedure status [dir]    Show status of a procedure run
  *   cb procedure gc              Delete expired run directories
@@ -35,6 +36,35 @@ procedureCommand
           dryRun: options.dryRun,
           force: options.force,
           step: options.step,
+          directive: options.directive,
+        },
+        ctx,
+      });
+
+      if (!result.success) {
+        console.error(`Error: ${result.error}`);
+        process.exit(1);
+      }
+    } catch (error) {
+      console.error(`Error: ${(error as Error).message}`);
+      process.exit(1);
+    }
+  });
+
+procedureCommand
+  .command("resume")
+  .description("Resume a failed procedure run from its first incomplete step")
+  .argument("[run-dir]", "Run directory to resume (defaults to the latest run)")
+  .option("--directive <text>", "Directive string passed to procedure agents")
+  .action(async (runDir: string | undefined, options: { directive?: string }) => {
+    try {
+      const boxRoot = await requireBoxRoot();
+      const ctx = createCliContext(boxRoot);
+
+      const result = await runCommand({
+        name: "procedure-resume",
+        args: {
+          runDir,
           directive: options.directive,
         },
         ctx,

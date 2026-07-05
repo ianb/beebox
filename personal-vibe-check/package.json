@@ -20,8 +20,8 @@
     "prettier.config.mjs",
     "tsconfig.base.json",
     "knip-base.json",
-    "CONVENTIONS.md",
-    "INSTALL.md",
+    "conventions.md",
+    "install.md",
     "bin/",
     "hooks/",
     "rules/"

@@ -6,16 +6,23 @@
  */
 
 import * as path from "node:path";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 
-// Set TSX_TSCONFIG_PATH so tsx finds the correct tsconfig.json
-// regardless of working directory. This is needed because tsx uses
-// cwd to find tsconfig by default, but the CLI may be run from a
-// callback-box directory (e.g., ~/my-box) rather than the source directory.
+// Set TSX_TSCONFIG_PATH so tsx finds the correct tsconfig.json regardless of
+// working directory (the CLI may run from a box dir like ~/my-box) AND
+// regardless of source layout. Resolve it via PACKAGE_ROOT, never a hardcoded
+// `../..` off import.meta.dirname: under tsx this module lives at `src/cli/`
+// (two up = repo root) but in the esbuild bundle it lives at `dist/` (two up =
+// one level ABOVE the package root — a tsconfig that doesn't exist), which made
+// every tsx subprocess the CLI spawned (e.g. `cb migrate`'s per-migration
+// scripts) inherit a broken TSX_TSCONFIG_PATH and crash. PACKAGE_ROOT walks up
+// to the callback-box package.json, landing correctly in both layouts.
+// (package-root.ts is JSX-free, so importing it here — before the JSX guard
+// below — is safe.)
 //
 // NOTE: This must happen BEFORE any JSX-using modules are imported.
 // Once tsx compiles a module, changing this env var won't help.
-const __dirname = import.meta.dirname;
-process.env.TSX_TSCONFIG_PATH = path.resolve(__dirname, "../../tsconfig.json");
+process.env.TSX_TSCONFIG_PATH = path.join(PACKAGE_ROOT, "tsconfig.json");
 
 // Force Claude (CLI and SDK) to use subscription auth, never an API key.
 // Stripping it here means downstream code, the SDK, and any spawned

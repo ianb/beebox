@@ -10,9 +10,29 @@ import {
 import { finishJob } from "../../src/core/finish-job.js";
 import { createFakeAgent } from "../helpers/fake-agent.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
+import { createChatJobTemplate } from "../../src/schemas/chat-job.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
+
+// Job cards are YAML frontmatter; build them with the real producer templates
+// so these integration tests exercise the same shapes connectors write.
+const intakeJob = (description, opts) =>
+  createIntakeJobTemplate({
+    created: "2026-07-01T00:00:00Z",
+    source: "test",
+    description,
+    items: [],
+    ...(opts ?? {}),
+  });
+const chatJob = (description, threadRef) =>
+  createChatJobTemplate({
+    created: "2026-07-01T00:00:00Z",
+    source: "telegram",
+    description,
+    threadRef,
+  });
 
 // Override the reactor's slow real subsystems with no-ops. None of these
 // tests assert on their effects, but each does real, expensive work per run:
@@ -33,7 +53,7 @@ const testOverrides = {
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task.job.card", `<job><description>Write a haiku</description></job>`);
+await box.write("box/jobs/task.intake.job.card", intakeJob("Write a haiku"));
 box.commitAll("Add job");
 
 let fakeAgent;
@@ -41,7 +61,7 @@ const agentFactory = (opts) => {
   fakeAgent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "box/jobs/task.intake.job.card" });
       return { success: true };
     },
   });
@@ -82,8 +102,8 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task1.job.card", `<job><description>Task one</description></job>`);
-await box.write("box/jobs/task2.job.card", `<job><description>Task two</description></job>`);
+await box.write("box/jobs/task1.intake.job.card", intakeJob("Task one"));
+await box.write("box/jobs/task2.intake.job.card", intakeJob("Task two"));
 box.commitAll("Add jobs");
 
 let fakeAgent;
@@ -92,8 +112,8 @@ const agentFactory = (opts) => {
     name: opts.name,
     act: async ({ boxRoot }) => {
       // Finish both jobs
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task1.job.card" });
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task2.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "box/jobs/task1.intake.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "box/jobs/task2.intake.job.card" });
       return { success: true };
     },
   });
@@ -126,7 +146,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task.job.card", `<job><description>Should not run</description></job>`);
+await box.write("box/jobs/task.intake.job.card", intakeJob("Should not run"));
 box.commitAll("Add job");
 
 let agentCreated = false;
@@ -155,7 +175,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/digest.job.card", `<job priority="low"><description>Daily digest</description></job>`);
+await box.write("box/jobs/digest.intake.job.card", intakeJob("Daily digest", { priority: "low" }));
 box.commitAll("Add low-pri job");
 
 let agentCreated = false;
@@ -186,14 +206,16 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/threads/conv1.card", `<thread><message role="user">Hi there</message></thread>`);
-await box.write("box/jobs/msg.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/conv1.card" /><description>Reply to user</description></chat-job>`);
+await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
+await box.write("box/jobs/msg.chat.job.card", chatJob("Reply to user", "store/threads/conv1.card"));
 box.commitAll("Add chat job");
 
 let agents = [];
 const agentFactory = (opts) => {
   const agent = createFakeAgent({
     name: opts.name,
+    sessionId: opts.sessionId,
+    resume: opts.resume,
     act: async ({ boxRoot }) => {
       await finishJob({ boxRoot, jobRelPath: "box/jobs/msg.chat.job.card" });
       return { success: true };
@@ -230,10 +252,10 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("store/threads/a.card", `<thread><message>Thread A</message></thread>`);
-await box.write("store/threads/b.card", `<thread><message>Thread B</message></thread>`);
-await box.write("box/jobs/a.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/a.card" /><description>Reply A</description></chat-job>`);
-await box.write("box/jobs/b.chat.job.card", `<chat-job source="telegram"><thread ref="store/threads/b.card" /><description>Reply B</description></chat-job>`);
+await box.write("store/threads/a.card", `---\nstatus: new\n---\nThread A`);
+await box.write("store/threads/b.card", `---\nstatus: new\n---\nThread B`);
+await box.write("box/jobs/a.chat.job.card", chatJob("Reply A", "store/threads/a.card"));
+await box.write("box/jobs/b.chat.job.card", chatJob("Reply B", "store/threads/b.card"));
 box.commitAll("Add chat jobs");
 
 let agents = [];
@@ -241,6 +263,8 @@ const agentFactory = (opts) => {
   const jobFile = agents.length === 0 ? "a.chat.job.card" : "b.chat.job.card";
   const agent = createFakeAgent({
     name: opts.name,
+    sessionId: opts.sessionId,
+    resume: opts.resume,
     act: async ({ boxRoot }) => {
       await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobFile}` });
       return { success: true };
@@ -262,6 +286,91 @@ result.jobsProcessed
 
 // Each chat job got its own agent
 agents.length
+=> 2
+
+await box.cleanup();
+```
+
+### Session resume across reactor cycles
+
+A second message in the same thread must resume the session the first
+cycle actually created. The fake agent enforces real SDK semantics via
+`knownSessions`: resuming an id no earlier agent created fails with
+"No conversation found" — so this test catches the store drifting from
+the ids the SDK really knows about.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("store/threads/conv1.card", `---\nstatus: new\n---\nHi there`);
+await box.write("box/jobs/msg1.chat.job.card", chatJob("First message", "store/threads/conv1.card"));
+box.commitAll("Add first chat job");
+
+const knownSessions = new Set();
+let agents = [];
+let jobToFinish = "msg1.chat.job.card";
+const agentFactory = (opts) => {
+  const agent = createFakeAgent({
+    name: opts.name,
+    sessionId: opts.sessionId,
+    resume: opts.resume,
+    knownSessions,
+    act: async ({ boxRoot }) => {
+      await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobToFinish}` });
+      return { success: true };
+    },
+  });
+  agents.push(agent);
+  return agent;
+};
+
+const reactorOpts = {
+  boxRoot: box.root,
+  ...testOverrides,
+  createAgent: agentFactory,
+  type: "chat",
+};
+
+const cycle1 = await runReactor(reactorOpts);
+cycle1.success
+=> true
+
+// The stored session id is the id the agent actually created
+const stored1 = JSON.parse(
+  await fs.readFile(path.join(box.root, ".callback-box/chat-sessions.json"), "utf-8"),
+);
+stored1["store/threads/conv1.card"].sessionId === agents[0].sessionId
+=> true
+
+knownSessions.has(agents[0].sessionId)
+=> true
+
+// Second message in the same thread, next reactor cycle
+await box.write("box/jobs/msg2.chat.job.card", chatJob("Second message", "store/threads/conv1.card"));
+box.commitAll("Add second chat job");
+jobToFinish = "msg2.chat.job.card";
+
+const cycle2 = await runReactor(reactorOpts);
+cycle2.success
+=> true
+
+cycle2.jobsProcessed
+=> 1
+
+// Cycle 2 resumed the exact session cycle 1 created
+agents.length
+=> 2
+
+agents[1].sessionId === agents[0].sessionId
+=> true
+
+agents[1].invocations[0].resumed
+=> true
+
+// Session record survived and counted both messages
+const stored2 = JSON.parse(
+  await fs.readFile(path.join(box.root, ".callback-box/chat-sessions.json"), "utf-8"),
+);
+stored2["store/threads/conv1.card"].messageCount
 => 2
 
 await box.cleanup();
@@ -315,7 +424,7 @@ const deadHolder = {
 };
 await fs.writeFile(lockFile, JSON.stringify(deadHolder));
 
-await box.write("box/jobs/task.job.card", `<job><description>After stale lock</description></job>`);
+await box.write("box/jobs/task.intake.job.card", intakeJob("After stale lock"));
 box.commitAll("Add job");
 
 let fakeAgent;
@@ -323,7 +432,7 @@ const agentFactory = (opts) => {
   fakeAgent = createFakeAgent({
     name: opts.name,
     act: async ({ boxRoot }) => {
-      await finishJob({ boxRoot, jobRelPath: "box/jobs/task.job.card" });
+      await finishJob({ boxRoot, jobRelPath: "box/jobs/task.intake.job.card" });
       return { success: true };
     },
   });
@@ -352,8 +461,8 @@ The reactor loops when jobs remain after a cycle. Here we start with
 
 ```ts
 const box = await makeTmpBox({ git: true });
-await box.write("box/jobs/task1.job.card", `<job><description>First task</description></job>`);
-await box.write("box/jobs/task2.job.card", `<job><description>Second task</description></job>`);
+await box.write("box/jobs/task1.intake.job.card", intakeJob("First task"));
+await box.write("box/jobs/task2.intake.job.card", intakeJob("Second task"));
 box.commitAll("Add jobs");
 
 let cycle = 0;
@@ -363,7 +472,7 @@ const agentFactory = (opts) => {
     name: opts.name,
     act: async ({ boxRoot }) => {
       // Each cycle finishes only one job
-      const jobFile = currentCycle === 0 ? "task1.job.card" : "task2.job.card";
+      const jobFile = currentCycle === 0 ? "task1.intake.job.card" : "task2.intake.job.card";
       await finishJob({ boxRoot, jobRelPath: `box/jobs/${jobFile}` });
       return { success: true };
     },

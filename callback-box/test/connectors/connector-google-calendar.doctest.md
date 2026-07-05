@@ -15,6 +15,12 @@ import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { initBox } from "../../src/core/box.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar.js";
+
+// Freeze the connector's clock so the sync time-window is deterministic: the
+// fixed-date fixtures below (2026-06-0X) stay inside the 30-day-back window no
+// matter when the suite runs. Without this the tests age out (a June fixture
+// falls off the window ~30 days later).
+const NOW = () => new Date("2026-06-15T12:00:00Z");
 ```
 
 ## A timezone-bearing event round-trips through ICS
@@ -45,7 +51,7 @@ const calendar = createFakeGoogleCalendar({
   ],
 });
 
-const connector = createGoogleCalendarConnector(box.root, calendar);
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 const result = await connector.sync();
 result.success
 => true
@@ -129,7 +135,7 @@ const calendar = createFakeGoogleCalendar({
   ],
 });
 
-const connector = createGoogleCalendarConnector(box.root, calendar);
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 const result = await connector.sync();
 result.pushed?.length
 => 1
@@ -172,7 +178,7 @@ const calendar = createFakeGoogleCalendar({
   ],
 });
 
-const connector = createGoogleCalendarConnector(box.root, calendar);
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 const dir = join(box.root, "store/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";
@@ -228,7 +234,7 @@ const calendar = createFakeGoogleCalendar({
   ],
 });
 
-const connector = createGoogleCalendarConnector(box.root, calendar);
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
 await connector.sync();
 const dir = join(box.root, "store/calendar");
 const file = (await readdir(dir)).filter((f) => f.endsWith(".ics"))[0] ?? "";

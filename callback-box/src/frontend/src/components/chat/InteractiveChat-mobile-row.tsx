@@ -7,33 +7,34 @@
 import { useRef } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
-import { composerTextareaClasses, joinTranscript, localTime } from "./InteractiveChat-helpers";
+import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
+import { useInputValue, useInputStore } from "./input-store";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 
 /**
  * Mobile-only textarea row shown below the button bar when typing or transcribing.
  */
 export function MobileTextareaRow({
-  input, setInput, isTranscribing, transcription,
+  isTranscribing, transcription, targetBusy,
   handleSend, handleCancelTranscription, clearDraft,
-  onStopDictation, doSend, zoomedViewAttr, timePassedAttr,
+  onStopDictation, onVoiceSegmentSend,
   onPaste, onDrop,
 }: {
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
   isTranscribing: boolean;
   transcription: TranscriptionHandle;
+  /** Chat target status is busy (streaming/refreshing) — a send will queue, not run immediately. */
+  targetBusy: boolean;
   handleSend: () => void;
   handleCancelTranscription: () => void;
   /** Drops the persisted dictation draft when transcript is moved to input or sent. */
   clearDraft: () => void;
   onStopDictation: () => void;
-  doSend: (wrapped: string) => void;
-  zoomedViewAttr: () => string;
-  timePassedAttr: () => string;
+  onVoiceSegmentSend: (text: string) => void;
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
 }) {
+  const input = useInputValue();
+  const setInput = useInputStore().set;
   const circleBtn = "flex items-center justify-center w-12 h-12 rounded-full flex-shrink-0";
 
   // This textarea is separate from the desktop composer's (which has its own
@@ -89,7 +90,7 @@ export function MobileTextareaRow({
               const finalText = await transcription.stop();
               // Continue from any prior composer text so it isn't dropped.
               const text = joinTranscript(input, finalText).trim();
-              if (text) doSend(`<speech local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}>${text}</speech>`);
+              if (text) onVoiceSegmentSend(text);
               setInput("");
               // Segment committed — drop the persisted dictation draft.
               clearDraft();
@@ -108,7 +109,7 @@ export function MobileTextareaRow({
           onClick={handleSend}
           disabled={!input.trim()}
           className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}
-          title="Send"
+          title={targetBusy ? "Queue message (agent is busy)" : "Send"}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />

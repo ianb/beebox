@@ -11,10 +11,11 @@ import { z } from "zod";
 import { cardSchema, type CardSchema } from "../cards/index.js";
 
 export const IntakeJobSchema: CardSchema = cardSchema("intake-job", {
+  description: "A system job to triage newly arrived inbox items; created by connectors and cb wakeup",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string(),
     priority: z.enum(["normal", "low"]).default("normal"),
     description: z.string(),
@@ -33,8 +34,8 @@ An intake job means new items have arrived in the inbox and need triage.
 3. Read each referenced item to understand what it is
 4. For each item, follow the guide's triage rules and actions. Without
    a guide:
-   - **Move** to a permanent location (e.g., \`store/\` or
-     \`box/pool/\`) if it's worth keeping
+   - **Move** to a permanent location under \`store/\` if it's worth
+     keeping
    - **Trash** with \`cb rm <path>\` if it's not useful
    - **Ask** the user a question if you need guidance (create a
      question card)
@@ -52,7 +53,6 @@ An intake job means new items have arrived in the inbox and need triage.
 export interface IntakeJobFields {
   type: "intake-job";
   status: string;
-  created: string;
   source: string;
   priority: "normal" | "low";
   description: string;
@@ -60,7 +60,6 @@ export interface IntakeJobFields {
 }
 
 export function createIntakeJobTemplate(options: {
-  created?: string;
   source: string;
   description: string;
   items: string[];
@@ -68,7 +67,6 @@ export function createIntakeJobTemplate(options: {
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: options.source,
     priority: options.priority ?? "normal",
     description: options.description,

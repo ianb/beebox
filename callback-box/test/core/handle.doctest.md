@@ -5,7 +5,7 @@ finds the category's landmark, and invokes its handler procedure with
 the bucket of items passed via `TRIAGE_ITEMS`. Tests inject a stubbed
 procedure runner so we don't exercise the live procedure engine.
 
-See `docs/triage-design.md` §Handle (stage 3) and `src/core/handle.ts`.
+See `docs/triage.md` §Handle (stage 3) and `src/core/handle.ts`.
 
 ```ts setup
 import { runHandle, TRIAGE_ITEMS_ENV } from "../../src/core/handle.js";

@@ -16,6 +16,7 @@
  * id is appended to `chat-session-history.json`.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./chat-session.js";
 import {
@@ -23,6 +24,7 @@ import {
   setMostActive,
   updateFeaturesForSession,
 } from "./chat-session-history.js";
+import { ensureChatHusk } from "./chat-husk.js";
 import { createChatBackend, type ChatBackend } from "../services/claude-chat.js";
 
 interface RegistryEntry {
@@ -70,9 +72,7 @@ const DEFAULT_MAX_LIVE = 2;
 const DEFAULT_IDLE_TIMEOUT_MS = 10 * 60 * 1000;
 const DEFAULT_CLEANUP_INTERVAL_MS = 60 * 1000;
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSessionRegistry:${context}]`, ...args);
-}
+const log = makeLog("ChatSessionRegistry");
 
 export class ChatSessionRegistry extends EventEmitter {
   private readonly boxRoot: string;
@@ -267,6 +267,17 @@ export class ChatSessionRegistry extends EventEmitter {
         await setMostActive(this.boxRoot, sessionId);
       } catch (e) {
         log("on-assigned", `History/most-active write failed: ${e instanceof Error ? e.message : e}`);
+      }
+
+      // Husk card for the session (docs/plans/chat-husks.md) — the box-side
+      // noun for this chat. Its own catch: a husk failure never blocks chat.
+      try {
+        await ensureChatHusk(this.boxRoot, {
+          sessionId,
+          ...(contextDir !== undefined ? { contextDir } : {}),
+        });
+      } catch (e) {
+        log("on-assigned", `Chat husk write failed: ${e instanceof Error ? e.message : e}`);
       }
 
       // Re-key pending "new" sessions into the entries map under the real id.

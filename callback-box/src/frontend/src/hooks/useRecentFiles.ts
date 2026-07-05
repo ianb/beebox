@@ -12,6 +12,8 @@ import type { SessionEntry, SessionContentBlock } from "../api";
 import { trpc } from "../lib/trpc";
 import type { FileSummary } from "../../../core/file-summary";
 import { parseAcks } from "../lib/structured-output-parsing";
+import { boxRelativePath } from "../../../shared/box-path.js";
+import { isExternalUrl } from "../lib/view-url";
 
 // Tool-input keys we treat as "agent touched this file". Deliberately
 // excludes generic `path` (used by Grep/Glob/LS for the search *scope*,
@@ -23,14 +25,25 @@ const TOOL_PATH_KEYS = [
   "source_file",
 ];
 
+// Legacy `view:` refs in older chat history (pre-migration).
 const VIEW_LINK_RE = /\bview:([^\s"#')<>?]+)/g;
+// Markdown link/image targets: [x](target) or ![x](target). Post-migration,
+// cards/files are referenced by plain box path, so harvest those box-path
+// targets (external URLs and anchors are skipped).
+const MD_TARGET_RE = /!?\[[^\]]*]\(([^\s)]+)(?:\s+"[^"]*")?\)/g;
 
 function extractFromText(text: string, out: string[]): void {
   let m: RegExpExecArray | null;
   VIEW_LINK_RE.lastIndex = 0;
   while ((m = VIEW_LINK_RE.exec(text)) !== null) {
     const raw = m[1];
-    if (raw) out.push(raw);
+    if (raw) out.push(boxRelativePath(raw.split(/[#?]/, 1)[0]!));
+  }
+  MD_TARGET_RE.lastIndex = 0;
+  while ((m = MD_TARGET_RE.exec(text)) !== null) {
+    const target = m[1];
+    if (!target || isExternalUrl(target) || target.startsWith("#")) continue;
+    out.push(boxRelativePath(target.split(/[#?]/, 1)[0]!));
   }
   // <ack ref="…"> tags also indicate the agent touched a file — surface
   // those in recent-files too. Reuses the same parser the badge UI uses.

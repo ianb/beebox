@@ -77,12 +77,18 @@ export interface ScanOptions {
   dryRun?: boolean;
 }
 
-/** Directories that should never be descended into when finding attach scopes. */
+/**
+ * Directories that should never be descended into when finding attach
+ * scopes. Matched against a directory's basename (`Dirent.name`), never a
+ * path, so a single `"node_modules"` entry already covers a trick's nested
+ * `node_modules/` regardless of where it lives (`boxRoot/tricks/` for a
+ * legacy box, `packageRoot/src/tricks/` for a package box) — no
+ * shape-specific entry is needed here.
+ */
 const SKIP_DIRS = new Set([
   ".git",
   "node_modules",
   ".callback-box",
-  "tricks/node_modules",
   ".scan-archive",
   ".scan-api",
 ]);
@@ -263,7 +269,7 @@ export async function scanAttachScope(
         kind: "hash-mismatch",
         attachDir: scope.relPath,
         name,
-        message: `${scope.relPath}/${name} was modified out of band. Run 'cb overwrite ${scope.relPath}/${name} < ...' to accept the new content, or restore from backup.`,
+        message: `${scope.relPath}/${name} was modified out of band. Run 'cb attachments overwrite ${scope.relPath}/${name} < ...' to accept the new content, or restore from backup.`,
       });
     }
   }
@@ -275,7 +281,7 @@ export async function scanAttachScope(
       kind: "missing-file",
       attachDir: scope.relPath,
       name: orphan,
-      message: `${scope.relPath}/${orphan} is listed in the manifest but missing from disk. Run 'cb rm ${scope.relPath}/${orphan}' to remove the entry, or restore the file.`,
+      message: `${scope.relPath}/${orphan} is listed in the manifest but missing from disk. Restore the file, or remove its entry from ${scope.relPath}/manifest.json by hand.`,
     });
   }
 

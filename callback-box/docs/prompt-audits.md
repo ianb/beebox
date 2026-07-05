@@ -1,8 +1,8 @@
 # Prompt Audits
 
-Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each useful at different times.
+Things to look for when reviewing prompts across the system. Not a checklist to run all at once — a menu of lenses, each useful at different times. The `cb-prompt-review` skill is the entry point for actually running a review pass (rendering assembled context stacks, review order); this doc is its lens catalog.
 
-Many of the lenses here, and a number of the related entries in [ideas.md](ideas.md), originated from working through this Reddit post: [100 tips & tricks for building your own personal AI](https://old.reddit.com/r/ClaudeAI/comments/1thi6nh/100_tips_tricks_for_building_your_own_personal_ai/). The post's specific prescriptions are mostly not adopted as-is — the value was in using them as prompts to articulate what *should* hold for callback-box, which often differs from what the post recommends.
+Many of the lenses here, and a number of the related entries in [issues/](../../issues/), originated from working through this Reddit post: [100 tips & tricks for building your own personal AI](https://old.reddit.com/r/ClaudeAI/comments/1thi6nh/100_tips_tricks_for_building_your_own_personal_ai/). The post's specific prescriptions are mostly not adopted as-is — the value was in using them as prompts to articulate what *should* hold for callback-box, which often differs from what the post recommends.
 
 ## Reasons, not just rules
 
@@ -44,7 +44,7 @@ Generic warnings ("avoid hallucination," "be accurate") are too vague to act on.
 
 ## Tone leakage
 
-Stock LLM phrases ("Great question!", "Let me unpack that," "That's a real tension") often come from prompt language that invites them. If the prompt says "be thoughtful and engaging," expect thoughtful-and-engaging boilerplate. Prompts that model the desired tone in their *own* writing get closer to that tone in output. See [tone-design.md](tone-design.md) for the broader problem.
+Stock LLM phrases ("Great question!", "Let me unpack that," "That's a real tension") often come from prompt language that invites them. If the prompt says "be thoughtful and engaging," expect thoughtful-and-engaging boilerplate. Prompts that model the desired tone in their *own* writing get closer to that tone in output. See [tone-design.md](../../.claude/memory/tone-design.md) for the broader problem.
 
 ## Cache freshness, surfaced conditionally
 

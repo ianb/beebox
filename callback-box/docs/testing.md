@@ -19,7 +19,7 @@ What tests are NOT for: validating types (the type system does that), achieving 
 ## 1. Doctests
 
 **Location:** `test/*.doctest.md`
-**Runner:** TAP with a custom Node.js loader (`src/test-lib/doctest-hooks.mjs`)
+**Runner:** TAP with a custom Node.js loader (the monorepo's `agent-doctest` package — loader hook at `agent-doctest/src/doctest-hooks.mjs`, exposed via the `agent-doctest/hooks` export)
 **Run:** `pnpm test` (runs alongside traditional tests)
 
 Doctest files are executable markdown documents. The prose explains behavior; fenced code blocks contain examples that are run as tests. A Node.js loader hook transforms them into TAP tests at runtime.
@@ -77,7 +77,7 @@ When `print()` isn't called, behavior is unchanged — the expression result is 
 
 **Shared helpers:**
 - `test/helpers/doctest-helpers.ts` — `makeTmpBox()` for filesystem tests. Returns `.root`, `.list()`, `.read()`, `.write()`, `.cleanup()`. All output is relative paths (no temp dir names in expected output).
-- `test/helpers/doctest-server.ts` — `makeTestServer()` for route tests. Returns `.inject()` (string for check), `.request()` (parsed object), `.seed()`, `.read()`, `.commitAll()`, `.cleanup()`. Uses Fastify `inject()` internally — no socket server.
+- `test/helpers/doctest-server.ts` — `makeTestServer()` for route tests. Returns `.inject()` (string for check), `.request()` (parsed object), `.seed()`, `.read()`, `.commitAll()`, `.cleanup()`. Uses Fastify `inject()` internally — no socket server. `.request()`/`.inject()` prefix URLs with the test box slug (`/test`); use `.rootRequest()` to hit a root-level route without that prefix.
 
 **Current doctest files:**
 
@@ -235,7 +235,7 @@ steps:
   - name: sync
     run: cb wakeup
     time: "2026-01-20T15:00:00Z"     # sets CB_TIME for this step onward
-    checkpoint: after-sync            # git tag for --from resumption
+    checkpoint: after-sync            # git tag on the step's commit, for manual inspection
     validate:
       - committed: true               # working tree must be clean
       - script: "ls box/jobs/*.intake.job.card | wc -l | grep -q 2"
@@ -281,8 +281,13 @@ HTTP stubs intercept `fetch()` calls. Patterns can use `*` suffix wildcards. Whe
 4. Runs steps sequentially; failed step skips remaining steps
 5. On completion, checks out `main` (test branch preserved for inspection)
 
-Resume from a checkpoint: `cb scenario run <name> --from <checkpoint>`
 Dry run: `cb scenario run <name> --dry-run`
+
+Scenarios always run every step from the beginning — there is no flag to
+resume from a checkpoint. `checkpoint:` on a step still tags the commit
+(`scenario/<name>/<checkpoint>`) for manual inspection with `git checkout`,
+but nothing restores state from it; a prior `--from <checkpoint>` flag that
+only skipped steps without restoring their state was removed.
 
 ### Available Scenarios
 
@@ -296,7 +301,7 @@ Dry run: `cb scenario run <name> --dry-run`
 
 Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/` with its own git repo as the test box.
 
-**Directory structure:**
+**Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an operational `content/` subdirectory — see `docs/implemented-plans/boxes-as-packages-v2.md`), so a freshly-created scenario's `box/` looks like:
 ```
 ~/src/boxes/scenarios/my-scenario/
   scenario.yaml      # step definitions (required)
@@ -305,11 +310,13 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
     feed.xml
     article.html
   setup.md           # human-readable description of what this tests
-  box/               # the git repo — a real box initialized with cb init
-    box/inbox/       # pre-seeded test data
-    config/          # connector configs, schedules, etc.
+  box/               # the git repo (package root) — a real box initialized with cb init
+    content/
+      box/inbox/     # pre-seeded test data
+      config/        # connector configs, schedules, etc.
     ...
 ```
+The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still legacy-shape (`box/inbox/`, `config/` directly under `box/`, no `content/` nesting) — they haven't needed conversion, so both shapes are in use. `cb wakeup`/`cb reactor`/etc. resolve either shape fine from `box/`'s cwd; `script:` validations (which run with cwd `box/`) need to match whichever shape the scenario's box actually has.
 
 **Steps to create:**
 
@@ -321,7 +328,7 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
    cb init .
    ```
 
-2. **Seed the box with test data.** Put cards in `box/inbox/`, configure connectors in `config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
+2. **Seed the box with test data.** Put cards in `content/box/inbox/`, configure connectors in `content/config/connectors/`, add scheduled scripts, etc. Commit everything — the scenario runner requires a clean `main` branch as starting state.
 
 3. **Write `scenario.yaml`** with steps. Each step runs a shell command (usually a `cb` command) and validates the result. See the format description above.
 
@@ -340,7 +347,7 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
 - **Each scenario tests one pipeline or behavior.** Don't combine unrelated features. `intake-basic` tests intake jobs only; `tick-basic` tests scheduled-script behavior only.
 - **Seed the minimal data needed.** The `intake-basic` box has just 2 memos in inbox — enough to verify the behavior, not so much that agent processing is slow or unpredictable.
 - **Use `--skip-*` flags** on `cb wakeup` to isolate phases when you don't need the full wakeup cycle.
-- **Use checkpoints** on steps that are expensive (agent runs). This lets you re-run later steps without re-running expensive earlier ones: `cb scenario run my-scenario --from after-wakeup`.
+- **Use checkpoints** on steps that are expensive (agent runs) to tag the resulting commit for manual inspection later. Scenarios always run from the beginning, so a checkpoint doesn't let you skip re-running earlier steps.
 - **Prefer `script:` validations** for structural checks (files exist, XML contains expected content). Use `prompt:` validations only for things that require judgment (quality of generated text, correct interpretation of ambiguous input).
 - **`prompt:` validations cost money.** Each one invokes a Claude agent with up to 5 turns / $0.50. Use them sparingly.
 
@@ -372,7 +379,7 @@ Knowledge audits test what the agent _knows_ rather than what the system _does_.
 
 **When to use:** Verifying that documentation, agent guides, and conditional rules are working — that the agent has the right information at the right time. Not for testing system behavior.
 
-See [agent-knowledge.md](agent-knowledge.md) for the full knowledge taxonomy and test prompt guide.
+See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
 
 ### Test Definition
 
@@ -467,7 +474,7 @@ Not every session has problems. If the critique comes back clean, that's a posit
 **Location:** `src/core/sdk-hooks.ts` (`cardValidatorHook`)
 **Trigger:** Runs automatically during agent sessions on `PostToolUse` of `Write`/`Edit`
 
-Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the hook calls cardworks' `lintCards` in-process and feeds any issues back as `additionalContext`. This catches XML/schema issues during agent work rather than after.
+Not a test you run manually, but a live validation hook. When an agent writes or edits a `.card` file, the hook calls the card linter (`src/core/card-lint.ts`, built on the card primitives absorbed from the former `cardworks` package into `src/cards/`) in-process and feeds any issues back as `additionalContext`. This catches frontmatter/schema issues during agent work rather than after.
 
 Also enforces directory structure rules (e.g., trick scripts must be in subdirectories of `tricks/scripts/`).
 
@@ -476,8 +483,8 @@ Also enforces directory structure rules (e.g., trick scripts must be in subdirec
 Some frontend bugs only manifest against real layout and measurement — scroll
 behavior, virtualization, streaming-driven reflow — and can't be reproduced in a
 doctest. For these, drive the running app with `bin/browse` (see
-`.claude/skills/agent-browser/SKILL.md`) and use a dev stub to make the input
-deterministic instead of depending on a live agent response.
+`.claude/skills/browse/SKILL.md`, monorepo root) and use a dev stub to make the
+input deterministic instead of depending on a live agent response.
 
 ### `/fakestream` — deterministic chat streaming
 
@@ -593,7 +600,7 @@ pnpm lint:circular  # Value-import circular dependencies (type-only cycles are O
 
 ## Future Directions
 
-See [testing-gaps.md](testing-gaps.md) for detailed plans. Key ideas:
+Key ideas not yet implemented:
 
 - **Self-describing services** — Services export `description`, `examples`, and `properties` alongside their functions. Tests get generated from these.
 - **Property testing** — Semantically meaningful invariants (like `parse(serialize(card)) === card`), not random fuzzing.

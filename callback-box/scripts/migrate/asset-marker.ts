@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable security/detect-non-literal-fs-filename */
+
 /**
  * Rewrite the `.gitignore` marker line that scopes the asset block
  * (formerly "attach-binaries"). Old marker:
@@ -34,8 +34,8 @@ const NEW_COMMENT_BLOCK = `# Assets inside .attach/ scopes are tracked via per-d
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const boxRoot = positional[0];
+  const positional = args.find((a) => !a.startsWith("--"));
+  const boxRoot = positional;
   if (boxRoot === undefined) {
     console.error("Usage: asset-marker.ts <boxRoot> [--apply]");
     process.exit(1);

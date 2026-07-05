@@ -40,7 +40,7 @@ config/connectors/google-calendar-state.json   # sync cursor, event-file mapping
 | `cb calendar add <id>` | Add a calendar to the sync set. |
 | `cb calendar remove <id>` | Remove a calendar from the sync set. |
 
-Sync itself runs through the normal connector path (`cb connector sync google-calendar` or as part of `cb wakeup`).
+Sync itself runs through the normal connector path (`cb wakeup --connector google-calendar` or as part of a full `cb wakeup`).
 
 ## Connector shape
 

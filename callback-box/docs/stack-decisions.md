@@ -142,7 +142,7 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 
 ### Stately ecosystem pieces we'll use
 
-- **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is overkill. Same `send()` API, so upgrading to a full machine later is smooth.
+- **@xstate/store** — Under 1KB event-driven store for simple pages (Settings, Admin) where a full state machine is overkill. Same `send()` API, so upgrading to a full machine later is smooth. (recorded as adopted but never installed as of 2026-07 — unresolved; see docs/plans/docs-reorg.md open questions)
 - **@xstate/graph** — Exhaustive state exploration and test path generation. Core to the testing strategy.
 - **@statelyai/inspect** — Runtime debugging via `inspect` callback on `createActor()`. Sees every event and transition. Will wire this into a debug panel / event logger.
 - **@statelyai/agent** — Not a dependency, but the *pattern* of using Zod schemas as event validators for external input (LLM actions, user events, API responses) is directly relevant. Borrow the pattern, don't import the library.
@@ -154,7 +154,7 @@ MST scored higher on typing (runtime type validation, Zod-like `validate()`) and
 
 ### Implementation notes
 
-Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
+Evaluation prototypes (history-xstate.ts, HistoryPageXState.tsx, state-fixtures.ts, render-page.tsx) have been deleted. The comparison document (`docs/implemented-plans/state-management-comparison.md`) still exists. Zustand and MST were removed from package.json.
 
 ### Machines
 
@@ -499,7 +499,7 @@ A resource subscription service where a client says "I want this resource" and g
 2. A subscription that notifies when the resource changes, with the new content
 
 The server knows how to parse different file types into their typed representations:
-- **Cards** (`.card` files — YAML frontmatter or legacy XML) → structured JSON via cardworks `parseCardText` / `loadCardFile`
+- **Cards** (`.card` files — YAML frontmatter) → structured JSON via `parseCardText` / `loadCardFile` (`src/core/card-io.ts`)
 - **JSON files** → parsed JSON
 - **JSONL files** → array of parsed JSON lines
 - **Other files** → raw text or binary, depending on type
@@ -790,7 +790,7 @@ Mocking is built into the code through explicit dependency injection, not bolted
 
 ### Implementation notes
 
-Core doctest system is **done** and working well. See `docs/testing-gaps.md` for coverage status. The remaining items from the original vision are future enhancements, not blockers.
+Core doctest system is **done** and working well. The remaining items from the original vision are future enhancements, not blockers.
 
 ---
 
@@ -802,7 +802,7 @@ Core doctest system is **done** and working well. See `docs/testing-gaps.md` for
 **Previously:** remark/unified via react-markdown + remark-gfm
 **Also considered (2026-03):** marked, markdown-it, micromark, MDX
 
-> **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Markdoc (`parse → transform → renderers.react`), with built-in node renders mapped to our components (`Link`, `Img`, `Para`, …) and custom block/inline tags like `{% quote %}` and `{% transcription %}`. `react-markdown` and `remark-gfm` are no longer dependencies. The driver was the card-format migration: cards became Markdown body + YAML frontmatter + **Markdoc inline tags** (validated per-type), so using Markdoc for rendering too means one tag system end-to-end rather than card-body tags in one dialect and rendering in another. Full rationale: **`docs/cards-as-markdown.md`**.
+> **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Markdoc (`parse → transform → renderers.react`), with built-in node renders mapped to our components (`Link`, `Img`, `Para`, …) and custom block/inline tags like `{% quote %}` and `{% transcription %}`. `react-markdown` and `remark-gfm` are no longer dependencies. The driver was the card-format migration: cards became Markdown body + YAML frontmatter + **Markdoc inline tags** (validated per-type), so using Markdoc for rendering too means one tag system end-to-end rather than card-body tags in one dialect and rendering in another. Full rationale: **`docs/implemented-plans/cards-as-markdown-rfc.md`**.
 >
 > The remark-specific rationale below is retained as history. Note its load-bearing claims for *other* decisions have shifted: the markdown pipeline that Decision 22 (syntax highlighting) and the source-position-tracing ideas assumed no longer exists in that form — Markdoc has its own AST with source locations, but the rehype-highlight plan in particular is moot.
 
@@ -837,7 +837,7 @@ Position tracking is needed for:
 
 **Frontend rendering — migrated to Markdoc (2026-05).** The frontend now renders markdown through `@markdoc/markdoc`. The driver is the shared `<Markdown>` component at `src/frontend/src/components/Markdown.tsx`; the Markdoc config and the custom `{% quote %}` tag live in `src/frontend/src/lib/markdoc-config.ts`; node overrides (link, image, paragraph, document → React components) and the Quote tag implementation (`src/frontend/src/components/Quote.tsx`) hang off that pipeline. All ~8 consumer sites (`MarkdownCardView`, `RecipeView`, `ChatMessages`, `CommitDetail`, `CardTreeView`, `CalloutBlock`, `renderers/markdown.tsx`, `renderers/image.tsx`) still go through `<Markdown>` — the swap was transparent to them. `react-markdown`, `remark-gfm`, `rehype-raw`, and the custom `remark-comments` / `rehype-strip-ref` plugins are gone from `package.json` and from `src/`.
 
-Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. See `docs/cards-as-markdown.md` for the fuller rationale (cards moved to the same Markdoc tag system).
+Why the switch: Markdoc's tag syntax (`{% quote from="people/dana" %}…{% /quote %}`) gives us first-class custom content types with attributes, validated at parse time, without bolting on rehype plugins to invent syntax inside HTML comments. See `docs/implemented-plans/cards-as-markdown-rfc.md` for the fuller rationale (cards moved to the same Markdoc tag system).
 
 **Doctest loader.** A separate concern, unaffected by the render swap. It extracts fenced code blocks from `.doctest.md` files with plain regex (`agent-doctest/src/doctest-hooks.mjs`), not an AST — so the remark/unified-based source-position story this decision originally imagined never actually got built, and remark/unified is no longer a dependency anywhere in the repo.
 
@@ -1109,7 +1109,7 @@ Both are modern fetch wrappers with retry support. ky is ~3KB gzipped (ofetch is
 | ~~**mobx, mobx-react-lite, mobx-state-tree**~~ | ✅ Removed. Decision 1 chose XState; these were evaluation remnants. |
 | ~~**zustand**~~ | ✅ Removed. Evaluation remnant from the state management comparison. |
 | ~~**react-router-dom**~~ | ✅ Removed (2026-05). Replaced by TanStack Router (Decision 4); had no remaining imports. |
-| **xml2js** | Cardworks handles all XML card parsing. xml2js should not be used directly (no direct `src/` imports found — safe to drop). |
+| **xml2js** | The legacy XML card format (and cardworks, which parsed it) has since been removed entirely — cards are YAML frontmatter only. xml2js should not be used directly (no direct `src/` imports found — safe to drop). |
 | **chokidar** | Still the file-watch primitive. Decision 8 imagined migrating to @parcel/watcher, but that index was never built and @parcel/watcher was never installed — so chokidar stays for now. |
 | **html-entities** | Orphaned after the RSS/news connector was removed (no `src/` imports). Drop it. |
 | **highlight.js** | Decision 22's rehype-highlight plan is moot (no remark pipeline — see Decision 15). highlight.js is still installed but not directly imported in `src/frontend/src`; reassess whether it's needed at all under Markdoc. |

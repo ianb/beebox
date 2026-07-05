@@ -73,20 +73,24 @@ async function scanDir(ctx: ScanContext, absDir: string): Promise<void> {
   const insideScope = relDir.length > 0 && isInsideAttachScope(relDir);
 
   // Collect basenames of cards in this directory to detect collisions.
-  const basenamesSeen = new Map<string, string[]>();
+  // Keyed case-insensitively — macOS/Windows filesystems are case-insensitive,
+  // so "Foo.memo.card" and "foo.memo.card" collide on disk even though their
+  // basenames differ in case. The first-seen casing is kept for the message.
+  const basenamesSeen = new Map<string, { base: string; names: string[] }>();
   for (const entry of entries) {
     if (!entry.isFile()) continue;
     if (!entry.name.endsWith(".card")) continue;
     const base = cardBasename(entry.name);
     if (base === entry.name) continue; // didn't parse cleanly
-    const list = basenamesSeen.get(base);
-    if (list) {
-      list.push(entry.name);
+    const key = base.toLowerCase();
+    const existing = basenamesSeen.get(key);
+    if (existing) {
+      existing.names.push(entry.name);
     } else {
-      basenamesSeen.set(base, [entry.name]);
+      basenamesSeen.set(key, { base, names: [entry.name] });
     }
   }
-  for (const [base, cardNames] of basenamesSeen) {
+  for (const { base, names: cardNames } of basenamesSeen.values()) {
     if (cardNames.length < 2) continue;
     for (const name of cardNames) {
       const rel = path.relative(ctx.boxRoot, path.join(absDir, name));

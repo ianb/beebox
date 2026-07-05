@@ -1,6 +1,8 @@
 # Deploy
 
-Scripts for provisioning and managing a Hetzner cloud server running callback-box.
+Scripts for provisioning and managing a Hetzner cloud server running callback-box. This doc
+describes one example deployment (`box.example.com`) — the paths, domain, and service names
+below are specific to it, not something callback-box requires.
 
 ## Prerequisites
 
@@ -43,12 +45,20 @@ Installs everything on Ubuntu 24.04:
 - Clones and builds: callback-box
 - Symlinks `cb` CLI to `/usr/local/bin/`
 - Installs Claude Code CLI (native installer — auto-updates in background)
-- Creates systemd services for web server and scheduler
-- Configures nginx reverse proxy (port 80 → 3210)
+- Creates systemd services for the box server and scheduler
+- Configures nginx reverse proxy (port 80 → the box server's port)
+
+**Known gap:** this script still generates the pre-hub `callback-serve` unit
+(one process serving every box off `~/.config/cb/boxes.json`), not `cb hub` +
+per-box `cb@<box>.service` units. The live server has since been switched
+over to the hub by hand (see "Systemd units" below and
+`docs/implemented-plans/boxes-as-packages-v2.md`'s "Post-cutover state" section); a fresh
+`create-server.sh` run today would need the same by-hand steps repeated
+until this script catches up.
 
 ### `add-box.sh` — Add a box to the server
 
-Clones a box repo, registers it with the scheduler, and updates the serve service.
+Clones a box repo, registers it, and restarts the serving process.
 
 ```bash
 # Using owner/repo shorthand
@@ -62,6 +72,14 @@ Clones a box repo, registers it with the scheduler, and updates the serve servic
 ```
 
 Each box is served at `https://box.example.com/<box-name>/`.
+
+**Known gap:** this script still targets the pre-hub shape — it clones the
+box, runs `cb init`, writes `config/box.json`, and restarts
+`callback-serve`/`callback-scheduler`. On the live hub-based server, adding a
+box additionally means writing an entry to `hub.json` and restarting the hub
+(see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
+do that yet. Until it's updated, add a box by hand: clone + `cb init` as this
+script does, then edit `hub.json` and restart the hub.
 
 ### `rebuild.sh` — Pull latest code and rebuild
 
@@ -78,7 +96,7 @@ Pulls callback-box, rebuilds, and restarts services.
 ./deploy/ssh-server.sh
 
 # Run a command
-./deploy/ssh-server.sh systemctl status callback-serve
+./deploy/ssh-server.sh systemctl status cb-hub
 ```
 
 Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations on the server.
@@ -91,29 +109,56 @@ Uses agent forwarding (`-A`) so your local SSH key works for GitHub operations o
 /home/callback/boxes/       # Box data (each is a git repo)
   test1/
   hearth/
+/home/callback/.config/cb/hub.json   # Hub routing table (slug -> box path)
 /home/callback/.env         # Environment variables (API keys)
 /home/callback/.local/bin/claude  # Claude Code (native install, auto-updates)
 /usr/local/bin/cb           # CLI symlink
 /usr/local/bin/cb-rebuild   # Rebuild shortcut
 ```
 
-## Systemd services
+## Systemd units
 
-- `callback-serve` — Web server serving all boxes in `/home/callback/boxes/`
-- `callback-scheduler` — Scheduler daemon for periodic tasks
+The live server runs `cb hub` (see `src/cli/commands/hub.ts`) in place of the
+old single shared `callback-serve` process — one hub process routes
+`/<slug>/...` to per-box children, each spawned via that box's own `cb serve`
+(so each box can pin its own engine version independently). The scheduler is
+unaffected by this change and still runs as a separate unit.
+
+- `cb-hub` — the hub: reads `hub.json`, spawns/routes/health-checks each
+  box's own `cb serve` child.
+- `callback-scheduler` — scheduler daemon for periodic tasks (still reads
+  `~/.config/cb/boxes.json`, the older manifest — see
+  `docs/implemented-plans/boxes-as-packages-v2.md`'s "H4 deletions" for why retiring that
+  manifest is deferred, not forgotten).
 
 ```bash
 # Check status
-systemctl status callback-serve
+systemctl status cb-hub
 systemctl status callback-scheduler
 
 # View logs
-journalctl -u callback-serve -f
+journalctl -u cb-hub -f
 journalctl -u callback-scheduler -f
 
-# Restart after config changes
-systemctl restart callback-serve callback-scheduler
+# Restart after config changes (hub.json doesn't hot-reload — a box add/remove needs this)
+systemctl restart cb-hub
 ```
+
+**Rollback lever:** the old `callback-serve.service` unit is stopped and
+disabled, not deleted — it stays on disk as `callback-serve-disabled-on-disk`
+(masked, not purged) so a bad hub rollout can be rolled back with
+`systemctl disable --now cb-hub && systemctl enable --now callback-serve`.
+**Never run both at once** — two engines serving the same box against its
+one `events.db` is a corrupting state, not just a wasteful one (the plan's
+Failure modes section calls this out as an accepted, operator-driven risk
+during any cutover window).
+
+**`CB_CLI_PREBUILT` loose end:** `bin/cb` skips its dev-mode staleness
+rebuild check when this env var is set — the old `callback-serve` and
+scheduler units set it so they never pay (or risk failing) a tsx rebuild at
+boot. The per-box `cb@<box>`-style units the hub spawns need the same
+treatment, and `setup-server.sh` needs to actually generate them with it set;
+neither has been verified end-to-end yet.
 
 ## Environment variables (`/home/callback/.env`)
 
@@ -146,7 +191,7 @@ THINKING_OPENAI_API_KEY=sk-...
 CALLBACK_MISTRAL_API_KEY=...
 ```
 
-After editing `.env`, restart services: `systemctl restart callback-serve callback-scheduler`
+After editing `.env`, restart services: `systemctl restart cb-hub callback-scheduler`
 
 ### Web Push (VAPID) keys
 
@@ -166,7 +211,11 @@ page; on iOS the app must first be added to the Home Screen.
 
 ## Authentication (Google OAuth)
 
-Auth is opt-in. When `GOOGLE_OAUTH_CLIENT_ID` is set, all box access requires login.
+Auth is opt-in. When `GOOGLE_OAUTH_CLIENT_ID` is set, all box access requires login. The hub
+terminates login and forwards the authenticated identity to each box child over a trusted
+internal header (`x-cb-authenticated-email`, verified by a per-boot secret — see
+`src/webapp/auth.ts`); each box still runs its own per-box authorization check independently
+(next section).
 
 ### Setup
 
@@ -179,7 +228,7 @@ Auth is opt-in. When `GOOGLE_OAUTH_CLIENT_ID` is set, all box access requires lo
    GOOGLE_OAUTH_CLIENT_SECRET=...
    CB_PUBLIC_URL=https://box.example.com
    ```
-5. Restart services: `systemctl restart callback-serve`
+5. Restart services: `systemctl restart cb-hub`
 
 ### Per-box access control
 
@@ -191,7 +240,10 @@ Each box can restrict access to specific email addresses via `config/box.json`:
 }
 ```
 
-If `allowedEmails` is empty or missing, any authenticated user can access the box.
+**This is fail-closed, not open**: a missing or empty `allowedEmails` means *owner-only*
+access — **not** "any authenticated user can access the box." (`src/webapp/box-access.ts` is
+the source of truth; the owner is always allowed and is never listed here.) To open a box to
+someone beyond the owner, list their email explicitly.
 
 Webhooks (`/webhook/<box>/`) remain unauthenticated so external services (Telegram, etc.) still work.
 

@@ -64,6 +64,25 @@ export interface FakeAgent extends Agent {
 export interface FakeAgentOptions {
   name: string;
   /**
+   * Pre-minted session id (mirrors `createAgent`). Without `resume`, the
+   * fake "creates" its session with this id; with `resume`, it's the
+   * session to resume.
+   */
+  sessionId?: string;
+  /**
+   * If true, the first invoke() resumes `sessionId` — and, like the real
+   * SDK, fails with "No conversation found" unless that id is present in
+   * `knownSessions`.
+   */
+  resume?: boolean;
+  /**
+   * Registry of session ids "created" by earlier fake agents. Share one
+   * Set across a `createAgent` factory to model cross-cycle session
+   * resume: fresh sessions register their id here on first invoke, and a
+   * `resume: true` agent whose id is missing fails like the real SDK.
+   */
+  knownSessions?: Set<string>;
+  /**
    * Called when invoke() is hit. Performs the "agent's work" —
    * file moves, edits, commits, etc. Returns partial AgentResult
    * (defaults filled in for success/exitCode/output/sessionId).
@@ -91,7 +110,8 @@ export interface FakeAgentOptions {
 }
 
 export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
-  const sessionId = `fake-${randomUUID().slice(0, 8)}`;
+  const sessionId =
+    options.sessionId !== undefined ? options.sessionId : `fake-${randomUUID().slice(0, 8)}`;
   const invocations: FakeAgentInvocation[] = [];
 
   return {
@@ -101,7 +121,30 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
 
     async invoke(opts: AgentInvokeOptions): Promise<AgentResult> {
       const invocationIndex = invocations.length;
-      const resumed = invocationIndex > 0;
+      const resumed = options.resume === true || invocationIndex > 0;
+
+      if (invocationIndex === 0) {
+        if (options.resume === true) {
+          // Real-SDK semantics: resuming a session id that was never
+          // created fails before the agent does any work.
+          const known = options.knownSessions !== undefined && options.knownSessions.has(sessionId);
+          if (!known) {
+            const result: AgentResult = {
+              success: false,
+              output: "",
+              exitCode: 1,
+              error: `No conversation found with session ID: ${sessionId}`,
+              sessionId,
+            };
+            invocations.push({ systemPrompt: null, prompt: opts.prompt, resumed, options: opts, result });
+            return result;
+          }
+        } else {
+          // Fresh session — register its id as created (create-with-id
+          // when the caller pre-minted one, auto-generated otherwise).
+          options.knownSessions?.add(sessionId);
+        }
+      }
 
       const partial = await options.act({
         boxRoot: opts.boxRoot,

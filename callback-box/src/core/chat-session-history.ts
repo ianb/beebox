@@ -20,6 +20,7 @@
  * which is what bare `/chat` (no session param) resolves to.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
@@ -51,9 +52,7 @@ interface MostActiveFile {
   savedAt: string;
 }
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[chat-history:${context}]`, ...args);
-}
+const log = makeLog("chat-history");
 
 /**
  * Narrow a single entry from the persisted JSON into a SessionHistoryEntry.

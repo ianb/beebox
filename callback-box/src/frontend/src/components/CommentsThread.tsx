@@ -11,6 +11,7 @@
  * live feedback stands out without losing the record of what was settled.
  */
 
+import { isRecord } from "../lib/is-record";
 import { Stack } from "./ui/Stack";
 import { Row } from "./ui/Row";
 import { Card } from "./ui/Card";
@@ -35,9 +36,6 @@ export interface ThreadComment extends ThreadReply {
   replies: ThreadReply[];
 }
 
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null && !Array.isArray(v);
-}
 function str(v: unknown): string {
   return typeof v === "string" ? v : "";
 }

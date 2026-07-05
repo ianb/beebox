@@ -1,6 +1,7 @@
 import { resolve as resolvePath } from "node:path";
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
+import { buildCspPolicy, reportingEndpointsHeader } from "../lib/csp.js";
 
 const FRONTEND_PORT = Number(process.env.FRONTEND_PORT) || 3210;
 const BACKEND_PORT = Number(process.env.BACKEND_PORT) || 3211;
@@ -23,6 +24,17 @@ const REACT_COMPILER = process.env.REACT_COMPILER !== "0";
 
 const VITE_BASE = process.env.VITE_BASE || "/";
 const BASE_PREFIX = VITE_BASE.replace(/\/$/, ""); // "" when base is "/", "/main" otherwise
+
+// Dev CSP (Report-Only). Vite serves the dev HTML, so the dev policy is set
+// here rather than by Fastify. The report path must carry the base prefix so the
+// router→Vite proxy (`^<base>/api`) forwards it to the backend's root-level
+// /api/csp-report. The policy is built from the same shared module as prod, so
+// the two can't drift; dev relaxes script/style for Vite's inline HMR bits.
+const DEV_CSP_REPORT_PATH = `${BASE_PREFIX}/api/csp-report`;
+const DEV_CSP_HEADERS = {
+  "Content-Security-Policy-Report-Only": buildCspPolicy({ mode: "dev", reportPath: DEV_CSP_REPORT_PATH }),
+  "Reporting-Endpoints": reportingEndpointsHeader({ reportPath: DEV_CSP_REPORT_PATH }),
+};
 
 // Build proxy patterns relative to BASE_PREFIX so /main/<box>/api/... is
 // rewritten to /<box>/api/... before reaching the backend. Backend routes
@@ -71,6 +83,9 @@ export default defineConfig({
     // reach us. Vite's default localhost-resolution sometimes lands on ::1
     // only, which the router doesn't follow.
     host: "127.0.0.1",
+    // Report-Only CSP on every dev response (incl. the HTML document), so dev
+    // exercises the policy and surfaces external-origin mistakes early.
+    headers: DEV_CSP_HEADERS,
     proxy: {
       // Root-level API (box list, admin, etc.). Must be listed before the
       // per-box rule so /<base>/api/* doesn't get caught by /<base>/<box>/api/*.

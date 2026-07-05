@@ -9,8 +9,8 @@
  */
 
 import { promises as fs } from "node:fs";
-import { splitCardContent } from "../cards/index.js";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
 
 /** Fields agents own on connector-managed cards. */
 const AGENT_FIELDS = ["contains"] as const;
@@ -46,7 +46,7 @@ export async function preserveAgentFields(
     changed = true;
   }
   if (!changed) return cardText;
-  return `---\n${stringifyYaml(nextFields)}---\n${next.body}`;
+  return renderFrontmatterBlock(nextFields, next.body);
 }
 
 function frontmatterFields(cardText: string): Record<string, unknown> | null {

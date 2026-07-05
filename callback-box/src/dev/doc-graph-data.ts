@@ -57,6 +57,70 @@ function findMarkdownFiles(): string[] {
   return results.toSorted();
 }
 
+// Monorepo-level locations whose .md files are reference SOURCES: their
+// outgoing refs count toward callback-box docs' incoming (so a doc cited only
+// from a skill or the root CLAUDE.md is not an orphan), but they are not
+// documents in the graph themselves. Paths relative to the monorepo root.
+const EXTERNAL_SOURCE_ROOTS = ["CLAUDE.md", "bin", "dev", "research", "issues", ".claude"];
+
+function findExternalSourceFiles(monoRoot: string): string[] {
+  const results: string[] = [];
+  function walk(dir: string) {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) {
+        if (entry.name === "node_modules") continue;
+        walk(path.join(dir, entry.name));
+      } else if (entry.name.endsWith(".md") && !EXCLUDE_PATTERNS.some((p) => p.test(entry.name))) {
+        results.push(path.relative(monoRoot, path.join(dir, entry.name)));
+      }
+    }
+  }
+  for (const root of EXTERNAL_SOURCE_ROOTS) {
+    const abs = path.join(monoRoot, root);
+    if (!fs.existsSync(abs)) continue;
+    if (fs.statSync(abs).isDirectory()) walk(abs);
+    else results.push(root);
+  }
+  return results.toSorted();
+}
+
+// Refs written outside callback-box name their targets callback-box-relative
+// ("docs/testing.md"), monorepo-relative ("callback-box/docs/testing.md",
+// "bin/CLAUDE.md"), or relative to the citing file. Internal resolutions
+// return the ROOT-relative path (so incoming counts attach); external
+// resolutions return "../<monorepo-relative>" and just mean "not broken".
+interface ExternalResolveContext {
+  fromFile: string;
+  internalFiles: string[];
+  externalFiles: string[];
+  internalBasenames: Map<string, string[]>;
+  externalBasenames: Map<string, string[]>;
+}
+
+function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [string, boolean] {
+  const cleaned = ref.replace(/#.*$/, "").trim().replace(/^\.\//, "");
+  if (!cleaned.endsWith(".md")) return [ref, false];
+
+  const asInternal = path.normalize(cleaned.replace(/^callback-box\//, ""));
+  if (ctx.internalFiles.includes(asInternal)) return [asInternal, true];
+
+  if (ctx.externalFiles.includes(path.normalize(cleaned))) return ["../" + path.normalize(cleaned), true];
+
+  const fromDir = path.dirname(ctx.fromFile);
+  const asRelative = path.normalize(path.join(fromDir, cleaned));
+  if (ctx.externalFiles.includes(asRelative)) return ["../" + asRelative, true];
+  const relativeInternal = asRelative.replace(/^callback-box\//, "");
+  if (ctx.internalFiles.includes(relativeInternal)) return [relativeInternal, true];
+
+  const base = path.basename(cleaned);
+  const internal = ctx.internalBasenames.get(base);
+  if (internal && internal.length === 1) return [internal[0] as string, true];
+  const external = ctx.externalBasenames.get(base);
+  if (external && external.length === 1) return ["../" + (external[0] as string), true];
+
+  return [cleaned, false];
+}
+
 function extractTitle(content: string): string {
   const match = content.match(/^#\s+(.+)/m);
   return match && match[1] ? match[1].trim() : "(no title)";
@@ -82,6 +146,11 @@ interface ResolveContext {
   basenameLookup: Map<string, string[]>;
 }
 
+// URI-scheme targets (https://..., view:...) are not file references.
+function hasUriScheme(ref: string): boolean {
+  return /^[a-z][\d+.a-z-]*:/i.test(ref);
+}
+
 function resolveRef(ref: string, { fromFile, allFiles, basenameLookup }: ResolveContext): [string, boolean] {
   const cleaned = ref.replace(/#.*$/, "").trim();
   if (!cleaned) return [ref, false];
@@ -94,6 +163,16 @@ function resolveRef(ref: string, { fromFile, allFiles, basenameLookup }: Resolve
   const asRoot = path.normalize(cleaned.replace(/^\.\//, ""));
   if (allFiles.includes(asRoot)) return [asRoot, true];
 
+  // A ../-relative path may legitimately leave callback-box for a
+  // monorepo-level file (a skill, memory, research); resolve on disk.
+  if (cleaned.startsWith("../")) {
+    const monoRoot = path.dirname(ROOT);
+    const abs = path.normalize(path.join(ROOT, fromDir, cleaned));
+    if (abs.startsWith(monoRoot + path.sep) && fs.existsSync(abs)) {
+      return ["../" + path.relative(monoRoot, abs), true];
+    }
+  }
+
   const base = path.basename(cleaned);
   const matches = basenameLookup.get(base);
   const first = matches && matches.length === 1 ? matches[0] : null;
@@ -104,11 +183,22 @@ function resolveRef(ref: string, { fromFile, allFiles, basenameLookup }: Resolve
 
 function extractReferences(
   filePath: string,
-  { content, allFiles, basenameLookup }: { content: string; allFiles: string[]; basenameLookup: Map<string, string[]> },
+  {
+    content,
+    allFiles,
+    basenameLookup,
+    resolve,
+  }: {
+    content: string;
+    allFiles: string[];
+    basenameLookup: Map<string, string[]>;
+    resolve?: (ref: string) => [string, boolean];
+  },
 ): Reference[] {
   const refs: Reference[] = [];
   const lines = content.split("\n");
   const seen = new Set<string>();
+  const doResolve = resolve ?? ((ref: string) => resolveRef(ref, { fromFile: filePath, allFiles, basenameLookup }));
 
   for (const [i, line] of lines.entries()) {
     const lineNum = i + 1;
@@ -117,7 +207,8 @@ function extractReferences(
     let match;
     while ((match = linkRegex.exec(line)) !== null) {
       const rawTarget = match[2] as string;
-      const [target, resolved] = resolveRef(rawTarget, { fromFile: filePath, allFiles, basenameLookup });
+      if (hasUriScheme(rawTarget)) continue;
+      const [target, resolved] = doResolve(rawTarget);
       const key = `${filePath}:${target}:link`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -128,7 +219,7 @@ function extractReferences(
     const atRegex = /@([\w.-]+\.md)\b/g;
     while ((match = atRegex.exec(line)) !== null) {
       const rawTarget = match[1] as string;
-      const [target, resolved] = resolveRef(rawTarget, { fromFile: filePath, allFiles, basenameLookup });
+      const [target, resolved] = doResolve(rawTarget);
       const key = `${filePath}:${target}:at-include`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -139,7 +230,7 @@ function extractReferences(
     const mentionRegex = /(?:`|(?:^|[\s(]))(([\w./-]+\.md)(?:#[\w-]*)?)/g;
     while ((match = mentionRegex.exec(line)) !== null) {
       const rawTarget = match[2] as string;
-      const [target, resolved] = resolveRef(rawTarget, { fromFile: filePath, allFiles, basenameLookup });
+      const [target, resolved] = doResolve(rawTarget);
       const key = `${filePath}:${target}`;
       const alreadyCaptured = [...seen].some((s) => s.startsWith(key));
       if (!alreadyCaptured && resolved) {
@@ -152,7 +243,7 @@ function extractReferences(
   return refs;
 }
 
-export function buildGraph(): Map<string, DocInfo> {
+export function buildGraphExtended(): { docs: Map<string, DocInfo>; externalRefs: Reference[] } {
   const files = findMarkdownFiles();
   const basenameLookup = buildBasenameLookup(files);
   const docs = new Map<string, DocInfo>();
@@ -186,5 +277,39 @@ export function buildGraph(): Map<string, DocInfo> {
     }
   }
 
-  return docs;
+  // Monorepo-level sources (skills, root/bin CLAUDE.md, research/, dev/):
+  // their refs count toward incoming so skill-cited docs aren't orphans.
+  const externalRefs: Reference[] = [];
+  const monoRoot = path.dirname(ROOT);
+  if (fs.existsSync(path.join(monoRoot, "callback-box", "package.json"))) {
+    const externalFiles = findExternalSourceFiles(monoRoot);
+    const externalBasenames = buildBasenameLookup(externalFiles);
+    for (const rel of externalFiles) {
+      const content = fs.readFileSync(path.join(monoRoot, rel), "utf-8");
+      const from = "../" + rel;
+      const refs = extractReferences(from, {
+        content,
+        allFiles: files,
+        basenameLookup,
+        resolve: (ref) =>
+          resolveExternalRef(ref, {
+            fromFile: rel,
+            internalFiles: files,
+            externalFiles,
+            internalBasenames: basenameLookup,
+            externalBasenames,
+          }),
+      });
+      externalRefs.push(...refs);
+      for (const ref of refs) {
+        if (ref.resolved) docs.get(ref.target)?.incoming.push(ref);
+      }
+    }
+  }
+
+  return { docs, externalRefs };
+}
+
+export function buildGraph(): Map<string, DocInfo> {
+  return buildGraphExtended().docs;
 }

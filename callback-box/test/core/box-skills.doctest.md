@@ -17,7 +17,14 @@ const box = await makeTmpBox();
 const written = await generateSkills(box.root);
 written
 => [
-  "build-course"
+  "build-course",
+  "calendar",
+  "drive",
+  "email",
+  "location",
+  "schedules",
+  "tricks",
+  "views"
 ]
 ```
 
@@ -33,4 +40,33 @@ text.startsWith("---\nname: build-course\n")
 
 text.includes("description:") && text.includes("# Building a course")
 => true
+```
+
+The `calendar` and `drive` skills land the same way — a trigger `description` plus
+their body — so they load on demand instead of always-loaded guide sections:
+
+```ts
+const box = await makeTmpBox();
+await generateSkills(box.root);
+const cal = await readFile(box.path(".claude/skills/calendar/SKILL.md"), "utf8");
+cal.startsWith("---\nname: calendar\n") && cal.includes("description:") && cal.includes("# Calendar")
+=> true
+
+const drv = await readFile(box.path(".claude/skills/drive/SKILL.md"), "utf8");
+drv.startsWith("---\nname: drive\n") && drv.includes("description:") && drv.includes("# Google Drive")
+=> true
+```
+
+The guide-section extractions — `email`, `location`, `schedules`, `tricks`, `views` —
+install the same way. Each is a doorway to a capability the always-loaded guide no
+longer carries, discovered via its trigger `description`:
+
+```ts
+const box = await makeTmpBox();
+await generateSkills(box.root);
+const names = ["email", "location", "schedules", "tricks", "views"];
+const texts = await Promise.all(names.map((name) => readFile(box.path(".claude/skills/" + name + "/SKILL.md"), "utf8")));
+const bad = names.filter((name, i) => !(texts[i].startsWith("---\nname: " + name + "\n") && texts[i].includes("description:")));
+bad.join(",")
+=>
 ```

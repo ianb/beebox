@@ -25,7 +25,7 @@ syntax/JSX/import errors surface the moment a view `.tsx` is written.
   the task requires"* (paraphrased as the "Improving These Instructions" /
   scope-restraint posture throughout). v1 is synchronous render only; the
   heavier async/effect machinery is explicitly out of scope.
-- `callback-box/CODE-STYLE.md` — no `any`; custom error classes not
+- `callback-box/code-style.md` — no `any`; custom error classes not
   `new Error()`; max 2 positional params (named-params object beyond that); only
   export what's used (knip). The new loader/compiler/command code follows these.
 - `callback-box/docs/testing.md` — tests as a design tool; doctests are the

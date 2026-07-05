@@ -1,10 +1,10 @@
 /**
  * Box manifest — the canonical list of boxes on this machine.
  *
- * Lives at `~/.config/cb/boxes.json`. Both `cb serve` (when no positional
- * arguments are given) and `cb scheduler start` consult this manifest, so
- * the two stay in sync and a new box only needs to be registered in one
- * place.
+ * Lives at `~/.config/cb/boxes.json`. Only `cb scheduler start` (via
+ * `cb tick`) consults this manifest now — `cb serve` resolves its box(es)
+ * from argv or the cwd, and multi-box serving lives behind `cb hub`, which
+ * has its own manifest (`hub.json`). See `docs/scheduler.md`.
  *
  * Earlier versions stored just the scheduler's box list at
  * `~/.config/cb/scheduler.json`. We migrate it transparently on first
@@ -15,6 +15,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import { fileExists } from "../lib/file-exists.js";
 import * as path from "node:path";
 import * as os from "node:os";
 
@@ -27,16 +28,6 @@ const CONFIG_DIR = path.join(os.homedir(), ".config/cb");
 const CONFIG_FILE = path.join(CONFIG_DIR, "boxes.json");
 const LEGACY_CONFIG_FILE = path.join(CONFIG_DIR, "scheduler.json");
 
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    // access() throws when the path is absent or unreadable; for an
-    // existence probe, both mean "not there" — no info to log.
-    return false;
-  }
-}
 
 /**
  * Read the manifest. Falls back to the legacy scheduler.json on first

@@ -12,8 +12,10 @@ import * as path from "node:path";
 import { PACKAGE_ROOT } from "../../../lib/package-root.js";
 import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
+import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription.js";
+import { getBoxShapeOrLegacyFallback } from "../../../cli/lib/box-shape.js";
 
 export interface HealthCheck {
   name: string;
@@ -133,15 +135,20 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
     severity: "error",
   });
 
-  // .git/objects writable (git add/commit needs this)
-  const gitObjectsDir = path.join(boxRoot, ".git/objects");
+  // .git/objects writable (git add/commit needs this). For a legacy box the
+  // git repo (and its .git) lives at boxRoot; for a v2 box the git repo is
+  // the PACKAGE root one level up — content/ is a plain subdirectory with no
+  // .git of its own (see "One git repository at the repo root" in
+  // docs/implemented-plans/boxes-as-packages-v2.md).
+  const { packageRoot: gitRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const gitObjectsDir = path.join(gitRoot, ".git/objects");
   const gitWritable = await isWritable(gitObjectsDir);
   checks.push({
     name: "git-writable",
     ok: gitWritable,
     message: gitWritable
       ? ".git/objects is writable"
-      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + boxRoot + ")",
+      : ".git/objects is not writable — all commits will fail (run: chown -R callback:callback " + gitRoot + ")",
     severity: "error",
   });
 
@@ -168,6 +175,27 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
       : "store/archive/ is not writable — inbox processing will fail",
     severity: "error",
   });
+
+  // --- Interface card checks ---
+
+  // nav.card, when present, must validate and point at real targets. An
+  // absent card is fine (builtin nav); a broken one silently falls back to
+  // the builtin nav, so this warning is the only place the breakage shows.
+  const nav = await resolveNav(boxRoot);
+  if (nav.status !== "absent") {
+    const navProblem =
+      nav.status === "invalid"
+        ? `${NAV_CARD_PATH} is invalid (builtin nav in use): ${nav.error}`
+        : nav.problems.length > 0
+          ? `${NAV_CARD_PATH}: ${nav.problems.join("; ")}`
+          : null;
+    checks.push({
+      name: "nav-card",
+      ok: navProblem === null,
+      message: navProblem ?? `${NAV_CARD_PATH} is valid`,
+      severity: "warning",
+    });
+  }
 
   // --- API key checks ---
 

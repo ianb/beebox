@@ -10,8 +10,8 @@
  */
 
 import { readFile, writeFile } from "node:fs/promises";
-import { splitCardContent } from "../cards/index.js";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { parse as parseYaml } from "yaml";
 import { resolveExternalRef, buildExternalStamp, ExternalRefError } from "./external-ref.js";
 import { rootsForBox } from "./external-roots.js";
 
@@ -66,7 +66,7 @@ async function syncOne(input: { path: string; roots: string[] }): Promise<Extfil
   fm["version"] = stamp.version;
   fm["size"] = stamp.size;
   fm["mtime"] = stamp.mtime;
-  await writeFile(path, `---\n${stringifyYaml(fm)}---\n${split.body}`);
+  await writeFile(path, renderFrontmatterBlock(fm, split.body));
   return { path, status: "stamped" };
 }
 

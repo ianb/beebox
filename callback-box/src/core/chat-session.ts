@@ -8,6 +8,7 @@
  * `resume` option.
  */
 
+import { makeLog } from "./chat-session-log.js";
 import { EventEmitter } from "node:events";
 import { type FeatureMap } from "./chat-features.js";
 import { FeatureStore, applyAgentTurnDeltas } from "./chat-session-features.js";
@@ -54,17 +55,15 @@ import {
   composeTurnContent,
 } from "./chat-session-start.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
+import { createHealthGate } from "./session-context.js";
 
-export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY };
-export { buildContentBlocks };
+export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
 export type { ChatSessionOptions };
 
 const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
 
-function log(context: string, ...args: unknown[]): void {
-  console.log(`[ChatSession:${context}]`, ...args);
-}
+const log = makeLog("ChatSession");
 
 export class ChatSession extends EventEmitter {
   private run: ChatBackendRun | null = null;
@@ -74,6 +73,8 @@ export class ChatSession extends EventEmitter {
   /** Path of the chat-active lock held while a run is in flight, or null. */
   private chatLockPath: string | null = null;
   private turnText = "";
+  /** Per-session gate keeping schedule-health a rare reminder (see `admitHealth`). */
+  private readonly healthGate = createHealthGate();
   private messageQueue: ChatSendInput[] = [];
   private readonly options: ChatSessionOptions;
   private readonly sessionFile: string | null;
@@ -154,9 +155,11 @@ export class ChatSession extends EventEmitter {
       return;
     }
 
-    // Ensure agent docs are up to date (fast mtime-cached no-op if nothing changed)
+    // Ensure agent docs are up to date (fast mtime-cached no-op if unchanged).
+    // Best-effort: a regen/commit failure here (e.g. a git-permission hiccup in
+    // the template-sync commit) must not 500 the chat — log and proceed on-disk.
     if (this.options.skipBootstrap !== true) {
-      await generateDocs(this.boxRoot);
+      await generateDocs(this.boxRoot).catch((e: unknown) => log("start", `generateDocs failed (continuing): ${e}`));
     }
 
     log("start", "Starting SDK chat run");
@@ -320,6 +323,7 @@ export class ChatSession extends EventEmitter {
       rawInput,
       features: this.features,
       sessionStart: this.sessionId === null,
+      healthGate: this.healthGate,
     });
 
     if (this.run === null || this.run.closed) {

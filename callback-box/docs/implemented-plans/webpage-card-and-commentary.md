@@ -27,7 +27,7 @@ becomes a first-class artifact that `save-page` and `comment-on-page` both
 produce.
 
 This plan supersedes the capture-side data-shape decisions in
-[`web-page-commentary.md`](./web-page-commentary.md) (which is otherwise
+[`clerk-webpage-capture.md`](./clerk-webpage-capture.md) (which is otherwise
 implemented and verified live as of 2026-06-14); the landmark
 `<destination>` work, the extension capture pipeline, and the chat companion
 deep-link from that plan are unchanged and reused here.
@@ -45,7 +45,7 @@ deep-link from that plan are unchanged and reused here.
   agent vocabulary). It earns its place only because the captured page has
   distinct provenance/immutability/rendering that `doc`+frontmatter would
   fake; this plan must justify the type, not assume it.
-- `callback-box/CODE-STYLE.md` — no optional chaining, no default params,
+- `callback-box/code-style.md` — no optional chaining, no default params,
   ≤2 positional params, no `any`. Applies to the schema, the migrator, and
   the renderer split.
 - **Most recent shipped precedent:** the `<destination for="…">` role +
@@ -117,7 +117,7 @@ unchanged here:
 
 - **Text Fragments** — `text-fragments-polyfill`
   `processTextFragmentDirective` for in-pane jump; native `#:~:text=` for the
-  frozen snapshot. Settled in `web-page-commentary.md`; reused verbatim.
+  frozen snapshot. Settled in `clerk-webpage-capture.md`; reused verbatim.
 - **single-file-core lazy images** — bounded scroll+1s settle replaced the
   unbounded `loadDeferredImages` network-idle wait (committed `20ad9875`).
   Independent of this restructure.
@@ -324,7 +324,7 @@ net-new code, not an existing behavior to confirm.
   webpage body is freely editable, so it's a soft guard. Note as residual.
 - **Stale ref** — commentary's `defaultRef` points at a webpage card that was
   moved/archived. **DEFERRED** — same reverse-discovery gap as
-  `web-page-commentary.md`; `cb mv` updates refs for in-box moves, archive is
+  `clerk-webpage-capture.md`; `cb mv` updates refs for in-box moves, archive is
   the open edge. Cite Open questions.
 - **Two agents touching the same bundle** — chat agent edits commentary while
   a reactor touches the webpage card. **ADDRESSED** — they're now *separate

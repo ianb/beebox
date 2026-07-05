@@ -46,6 +46,8 @@ const MeasureEntry = z.object({
 });
 
 export const RecordSchema: CardSchema = cardSchema("record", {
+  description: "A discrete extracted unit (inventory item, archived document, contact) pulled from a capture session or other source",
+  category: "authored",
   fields: {
     status: RecordStatus.default("draft"),
     name: z.string(),
@@ -75,12 +77,11 @@ identifiable thing.
 - \`description:\` — About the thing — context, what it is, its
   condition, why it matters. This describes the record; it doesn't
   contain the content itself.
-- \`sources:\` — Array of \`{ref, time?, note?}\`. References to where
-  this record was extracted from. Use **absolute paths** for refs
-  (starting with /, e.g.
-  \`/box/inbox/capture-.../session.capture-session.card\`). The
-  optional \`time\` pinpoints a moment in a transcript. The \`note\`
-  explains why this source is relevant.
+- \`sources:\` — Array of \`{ref, time?, note?}\` pointing at where this
+  record was extracted from — usually a capture-session card elsewhere
+  in the box, so a box-root-absolute \`ref\` (leading \`/\`) reads clearest
+  here. The optional \`time\` pinpoints a moment in a transcript; the
+  \`note\` explains why this source is relevant.
 - \`dates:\` — Array of \`{value, note?}\`. Parseable date strings
   with context ("Year purchased", "Date of letter").
 - \`persons:\` — Array of \`{name, ref?, role?, notes?, note?}\`.

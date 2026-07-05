@@ -1,5 +1,5 @@
 #!/usr/bin/env tsx
-/* eslint-disable import/no-namespace, security/detect-non-literal-fs-filename */
+
 /**
  * Phase 1 of the markdown-card migration: ensure every `.card` file begins
  * with a YAML frontmatter block. Cards that already have a frontmatter block
@@ -79,8 +79,8 @@ async function applyMigration(toRewrite: string[]): Promise<void> {
 async function main(): Promise<void> {
   const args = process.argv.slice(2);
   const apply = args.includes("--apply");
-  const positional = args.filter((a) => !a.startsWith("--"));
-  const boxRoot = positional[0];
+  const positional = args.find((a) => !a.startsWith("--"));
+  const boxRoot = positional;
   if (boxRoot === undefined) {
     console.error("Usage: migrate-card-frontmatter <boxRoot> [--apply]");
     process.exit(1);

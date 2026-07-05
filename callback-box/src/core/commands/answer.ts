@@ -6,8 +6,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stringify as stringifyYaml } from "yaml";
-import { splitCardContent } from "../../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import {
   registerCommand,
   type CommandContext,
@@ -253,10 +252,7 @@ async function executeAnswer(
   fields["answered-via"] = via as "web" | "cli" | "api";
 
   const split = splitCardContent(content);
-  await fs.writeFile(
-    fullPath,
-    `---\n${stringifyYaml(fields)}---\n${split.body}`
-  );
+  await fs.writeFile(fullPath, renderFrontmatterBlock(fields, split.body));
 
   const relativePath = path.relative(ctx.boxRoot, fullPath);
   await stageFiles(ctx.boxRoot, [relativePath]);

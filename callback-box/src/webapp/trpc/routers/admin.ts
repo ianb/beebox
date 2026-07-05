@@ -3,23 +3,19 @@ import * as crypto from "node:crypto";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
-import { router, publicProcedure } from "../trpc.js";
+import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
-
-function baseServerUrl(publicUrl: string): string {
-  const url = new URL(publicUrl);
-  url.pathname = url.pathname.replace(/\/[^/]+\/?$/, "");
-  return url.origin + url.pathname;
-}
+import { baseServerUrl } from "../../base-server-url.js";
+import { googleAdminProcedures } from "./admin-google.js";
 
 /**
  * Per-box admin router (Telegram, box config).
  */
 export const adminRouter = router({
-  telegramStatus: publicProcedure.query(async ({ ctx }) => {
+  telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {
       let publicUrl: string | undefined;
@@ -59,7 +55,7 @@ export const adminRouter = router({
     }
   }),
 
-  telegramSetup: publicProcedure
+  telegramSetup: ownerProcedure
     .input(z.object({ botToken: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
       const tg = ctx.services.telegram ?? createTelegramService(input.botToken);
@@ -119,7 +115,7 @@ export const adminRouter = router({
       };
     }),
 
-  telegramDisconnect: publicProcedure.mutation(async ({ ctx }) => {
+  telegramDisconnect: ownerProcedure.mutation(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (config) {
       try {
@@ -140,7 +136,7 @@ export const adminRouter = router({
     return { success: true };
   }),
 
-  boxConfig: publicProcedure.query(async ({ ctx }) => {
+  boxConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/box.json");
     try {
       const raw = await fs.readFile(configPath, "utf-8");
@@ -149,6 +145,7 @@ export const adminRouter = router({
         boxSlug: ctx.boxSlug,
         allowedEmails: (config.allowedEmails ?? []) as string[],
         publicUrl: (config.publicUrl ?? null) as string | null,
+        ownerEmail: process.env.CB_OWNER_EMAIL || null,
         googleServices: (config.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
     } catch (e) {
@@ -159,12 +156,13 @@ export const adminRouter = router({
         boxSlug: ctx.boxSlug,
         allowedEmails: [] as string[],
         publicUrl: null as string | null,
+        ownerEmail: process.env.CB_OWNER_EMAIL || null,
         googleServices: {} as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
     }
   }),
 
-  gmailConfig: publicProcedure.query(async ({ ctx }) => {
+  gmailConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
     try {
       const raw = await fs.readFile(configPath, "utf-8");
@@ -183,7 +181,7 @@ export const adminRouter = router({
     }
   }),
 
-  updateGmailConfig: publicProcedure
+  updateGmailConfig: ownerProcedure
     .input(
       z.object({
         query: z.string(),
@@ -206,8 +204,17 @@ export const adminRouter = router({
       return { query: next.query ?? "", labels: next.labels ?? [] };
     }),
 
-  updateBoxConfig: publicProcedure
-    .input(z.object({ allowedEmails: z.array(z.string()) }))
+  updateBoxConfig: ownerProcedure
+    .input(
+      z
+        .object({
+          allowedEmails: z.array(z.string()).optional(),
+          googleServices: z.record(z.string(), z.boolean()).optional(),
+        })
+        .refine((v) => v.allowedEmails !== undefined || v.googleServices !== undefined, {
+          message: "At least one of allowedEmails or googleServices is required",
+        }),
+    )
     .mutation(async ({ input, ctx }) => {
       const configPath = path.join(ctx.boxRoot, "config/box.json");
       let existing: Record<string, unknown> = {};
@@ -219,21 +226,37 @@ export const adminRouter = router({
         }
       }
 
-      existing.allowedEmails = input.allowedEmails.filter(
-        (e) => typeof e === "string" && e.includes("@")
-      );
+      const changed: string[] = [];
+      if (input.allowedEmails) {
+        existing.allowedEmails = input.allowedEmails.filter(
+          (e) => typeof e === "string" && e.includes("@"),
+        );
+        changed.push("allowedEmails");
+      }
+      if (input.googleServices) {
+        existing.googleServices = input.googleServices;
+        changed.push("googleServices");
+      }
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
+      await stageFiles(ctx.boxRoot, ["config/box.json"]);
+      await commit(ctx.boxRoot, { message: `Update box config: ${changed.join(", ")}` });
 
-      return { success: true, allowedEmails: existing.allowedEmails as string[] };
+      return {
+        success: true,
+        allowedEmails: (existing.allowedEmails ?? []) as string[],
+        googleServices: (existing.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
+      };
     }),
 
-  claudeStatus: publicProcedure.query(async ({ ctx }) => {
+  ...googleAdminProcedures,
+
+  claudeStatus: ownerProcedure.query(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authStatus();
   }),
 
-  claudeLogin: publicProcedure.mutation(async ({ ctx }) => {
+  claudeLogin: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     const ownerEmail = process.env.CB_OWNER_EMAIL;
     const result = await claude.authLogin(ownerEmail);
@@ -246,7 +269,7 @@ export const adminRouter = router({
     });
   }),
 
-  claudeLogout: publicProcedure.mutation(async ({ ctx }) => {
+  claudeLogout: ownerProcedure.mutation(async ({ ctx }) => {
     const claude = ctx.services.claudeCli ?? createClaudeCliService();
     return claude.authLogout();
   }),

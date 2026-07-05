@@ -1,15 +1,21 @@
 /**
- * Composer attachment state + handlers for InteractiveChat: pasted/dropped
- * images (downscaled + base64-encoded client-side) and uploaded files (sent
- * to the box tmp/ dir). Each insert drops `[imageN]` / `[fileN]` tokens at
- * the textarea cursor; removal strips the matching tokens back out. Split
- * into its own hook so the component body stays readable.
+ * Composer attachment bindings for InteractiveChat: pasted/dropped images
+ * (downscaled + base64-encoded client-side) and uploaded files (sent to the
+ * box tmp/ dir). Each insert drops `[imageN]` / `[fileN]` tokens at the
+ * textarea cursor; removal strips the matching tokens back out.
+ *
+ * State itself lives in the emission store (`../../input/emission-store.ts`,
+ * docs/implemented-plans/input-extraction.md chunk 2) — this hook is a thin React
+ * binding: it subscribes to the images/pendingImages/files slices via
+ * `useSyncExternalStore` and calls `EmissionEditor` methods for every
+ * mutation. DOM-bound caret handling (`insertTokensAtCursor`) has no place
+ * in the framework-free store, so it stays here.
  */
 
-import { useState, useRef, useCallback } from "react";
+import { useRef, useCallback, useSyncExternalStore } from "react";
 import { processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
-import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
+import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-store";
 
 /**
  * Insert a token string (`[imageN]` / `[fileN] `) at the textarea cursor, or
@@ -48,73 +54,66 @@ export function insertTokensAtCursor(tokens: string, opts: {
 }
 
 export function useChatAttachments(opts: {
-  input: string;
-  setInput: React.Dispatch<React.SetStateAction<string>>;
+  emissionStore: EmissionStore;
   textareaRef: React.RefObject<HTMLTextAreaElement>;
 }) {
-  const { input, setInput, textareaRef } = opts;
-  const [attachments, setAttachments] = useState<AttachmentItem[]>([]);
-  // Number of pasted/dropped images still being downscaled + base64-encoded.
-  // Drives a placeholder tile so cmd-V → thumbnail isn't a silent dead beat.
-  const [pendingImageCount, setPendingImageCount] = useState(0);
-  const nextAttachmentIdRef = useRef(1);
-  const [fileAttachments, setFileAttachments] = useState<FileAttachmentItem[]>([]);
-  const nextFileAttachmentIdRef = useRef(1);
+  const { emissionStore, textareaRef } = opts;
+  const { editor } = emissionStore;
+  // Third argument (server snapshot) is required for SSR (`cb render` goes
+  // through renderToString) — same convention as useInputValue in input-store.ts.
+  const getImages = () => emissionStore.get().images;
+  const getPendingImages = () => emissionStore.get().pendingImages;
+  const getFiles = () => emissionStore.get().files;
+  const attachments = useSyncExternalStore(emissionStore.subscribe, getImages, getImages);
+  const pendingImageCount = useSyncExternalStore(emissionStore.subscribe, getPendingImages, getPendingImages);
+  const fileAttachments = useSyncExternalStore(emissionStore.subscribe, getFiles, getFiles);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addImageFiles = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
     // Show placeholder tiles immediately; each clears as its image finishes
     // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
-    setPendingImageCount((n) => n + files.length);
-    // Process images in parallel; collect results in original order.
+    editor.bumpPendingImages(files.length);
+    // Process images in parallel; a failure decrements its own pending slot
+    // immediately (nothing was added), while a success's slot is cleared by
+    // `addImage` itself once all results are in.
     const processed = await Promise.all(
       files.map(async (f) => {
         try {
           return await processImageBlob(f);
         } catch (e) {
           console.error("[chat] Failed to process pasted image:", e);
+          editor.bumpPendingImages(-1);
           return null;
-        } finally {
-          setPendingImageCount((n) => Math.max(0, n - 1));
         }
       })
     );
-    const newItems: AttachmentItem[] = [];
+    const newItems: ImageItem[] = [];
     for (const p of processed) {
       if (!p) continue;
-      newItems.push({
-        id: nextAttachmentIdRef.current++,
+      const item: ImageItem = {
+        id: editor.nextImageId(),
         mimeType: p.mimeType,
         dataBase64: p.dataBase64,
         objectUrl: p.objectUrl,
         byteLength: p.byteLength,
-      });
+      };
+      editor.addImage(item); // also decrements the pending count for this image
+      newItems.push(item);
     }
     if (newItems.length === 0) return;
-    setAttachments((prev) => [...prev, ...newItems]);
     const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
-    insertTokensAtCursor(tokens, { input, setInput, textareaRef, alwaysFocus: false });
-  }, [input, setInput, textareaRef]);
+    insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
+  }, [editor, emissionStore, textareaRef]);
 
   const removeAttachment = useCallback((id: number) => {
-    setAttachments((prev) => {
-      const target = prev.find((a) => a.id === id);
-      if (target) {
-        try { URL.revokeObjectURL(target.objectUrl); } catch (_e) { /* already revoked — harmless */ }
-      }
-      return prev.filter((a) => a.id !== id);
-    });
-    // Strip any `[imageN]` tokens for this id from the input (plus up to one
-    // leading/trailing whitespace char so we don't leave stray gaps).
-    setInput((prev) =>
-      prev
-        .replace(/\s?\[image(\d+)]\s?/g, (match, n: string) =>
-          parseInt(n, 10) === id ? " " : match
-        )
-        .replace(/ {2,}/g, " ")
-    );
-  }, [setInput]);
+    const target = emissionStore.get().images.find((a) => a.id === id);
+    if (target) {
+      try { URL.revokeObjectURL(target.objectUrl); } catch (_e) { /* already revoked — harmless */ }
+    }
+    // Strips the matching `[imageN]` token from the text too.
+    editor.removeImage(id);
+  }, [editor, emissionStore]);
 
   const addFileUploads = useCallback(async (files: File[]) => {
     if (files.length === 0) return;
@@ -128,25 +127,26 @@ export function useChatAttachments(opts: {
         }
       })
     );
-    const newItems: FileAttachmentItem[] = [];
+    const newItems: FileItem[] = [];
     for (const u of uploaded) {
       if (!u) continue;
-      newItems.push({
-        id: nextFileAttachmentIdRef.current++,
+      const item: FileItem = {
+        id: editor.nextFileId(),
         path: u.path,
         originalName: u.originalName,
         size: u.size,
         mimetype: u.mimetype,
-      });
+      };
+      editor.addFile(item);
+      newItems.push(item);
     }
     if (newItems.length === 0) return;
-    setFileAttachments((prev) => [...prev, ...newItems]);
     // Always focus the textarea — the upload is triggered from a menu, so
     // focus is on the menu button, not the composer. The helper pads a
     // trailing space so the user can keep typing after the token.
     const tokens = newItems.map((f) => `[file${f.id}]`).join(" ");
-    insertTokensAtCursor(tokens, { input, setInput, textareaRef, alwaysFocus: true });
-  }, [input, setInput, textareaRef]);
+    insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: true });
+  }, [editor, emissionStore, textareaRef]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files ?? []);
@@ -156,15 +156,9 @@ export function useChatAttachments(opts: {
   }, [addFileUploads]);
 
   const removeFileAttachment = useCallback((id: number) => {
-    setFileAttachments((prev) => prev.filter((f) => f.id !== id));
-    setInput((prev) =>
-      prev
-        .replace(/\s?\[file(\d+)]\s?/g, (match, n: string) =>
-          parseInt(n, 10) === id ? " " : match
-        )
-        .replace(/ {2,}/g, " ")
-    );
-  }, [setInput]);
+    // Strips the matching `[fileN]` token from the text too.
+    editor.removeFile(id);
+  }, [editor]);
 
   const handleAttachFiles = useCallback(() => {
     const el = fileInputRef.current;
@@ -172,18 +166,15 @@ export function useChatAttachments(opts: {
   }, []);
 
   const resetAttachments = useCallback(() => {
-    setAttachments((prev) => {
-      // Release the object URLs after send — the base64 payload is independent
-      // of the object URL, so dropping them doesn't affect the message.
-      for (const a of prev) {
-        try { URL.revokeObjectURL(a.objectUrl); } catch (_e) { /* already revoked — harmless */ }
-      }
-      return [];
-    });
-    nextAttachmentIdRef.current = 1;
-    setFileAttachments([]);
-    nextFileAttachmentIdRef.current = 1;
-  }, []);
+    // Release the object URLs after send — the base64 payload is independent
+    // of the object URL, so dropping them doesn't affect the message. The
+    // store hands the URLs back rather than revoking them itself (DOM APIs
+    // don't belong in the framework-free store).
+    const { removedImageObjectUrls } = editor.reset("attachments");
+    for (const url of removedImageObjectUrls) {
+      try { URL.revokeObjectURL(url); } catch (_e) { /* already revoked — harmless */ }
+    }
+  }, [editor]);
 
   return {
     attachments, pendingImageCount, fileAttachments, fileInputRef,

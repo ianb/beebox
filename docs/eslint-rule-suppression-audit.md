@@ -27,7 +27,7 @@ preset itself was updated (0.4.0) where rules were retired/adjusted.
   source — `personal-vibe-check` (bumped to 0.2.0, off via a global config entry
   so it also covers `.tsx` under `react:false`, which `disabledRules` doesn't
   reach). Removed the now-redundant frontend override and the "No optional
-  chaining" bullet from CODE-STYLE.md + vibe-check CONVENTIONS/README. Pruned all
+  chaining" bullet from code-style.md + vibe-check conventions.md/README. Pruned all
   302 backend suppressions. (vibe-check's own dev deps aren't installed in this
   worktree, so its self-tests weren't re-run; the change is config-only and both
   callback-box halves lint clean against it.)
@@ -38,7 +38,7 @@ preset itself was updated (0.4.0) where rules were retired/adjusted.
   `react:false` `.tsx` path; pruned its 44 suppressions. The `as`-cast ban (27,
   all parse-boundary casts in `guide.tsx`) is **kept** — `as` is treated like
   Rust's `unsafe`: allowed only when guarded by a justifying comment or
-  centralized in one typed helper (documented in CODE-STYLE.md / CONVENTIONS.md).
+  centralized in one typed helper (documented in code-style.md / conventions.md).
   Those 27 `as` + 1 default-switch remain as debt; the `as` cluster will dissolve
   when `guide.tsx` is split into typed parse helpers during the structural pass.
 - **2026-05-30 — `.tsx` size/complexity limits equalized with `.ts`.** The base
@@ -108,7 +108,7 @@ When `@ianbicking/personal-vibe-check` was integrated (2026-02-14), each
 project's `eslint.config.mjs` was given a block that turns **18 rules off**.
 Several of those are rules from personal-vibe-check itself (i.e. rules we
 deliberately authored), and several directly contradict the written rules in
-`callback-box/CODE-STYLE.md`. The suppression has been silent ever since — the
+`callback-box/code-style.md`. The suppression has been silent ever since — the
 preset says "enforce these," the project config says "never mind."
 
 This is **not** ongoing/creeping suppression: the block was added once, at
@@ -139,7 +139,7 @@ block (added with their own vibe-check integrations).
 
 Legend for **Owner**: `vibe` = a personal-vibe-check rule we wrote · `core` =
 ESLint core · `3p` = bundled third-party plugin.
-**Style?** = does it contradict `callback-box/CODE-STYLE.md`.
+**Style?** = does it contradict `callback-box/code-style.md`.
 
 ### callback-box backend (`eslint.config.mjs`) — ~1009 violations if restored
 
@@ -201,12 +201,12 @@ for exact figures before acting.
 
 The point of personal-vibe-check is that every rule is a deliberate choice.
 Disabling them globally — especially the `error/*`, `no-optional-chaining`,
-`no-default-params`, and `max-lines*` rules that `CODE-STYLE.md` *also* states
+`no-default-params`, and `max-lines*` rules that `code-style.md` *also* states
 in prose — means:
 
 - New code can freely use the patterns we say we don't use; nothing flags it.
-- `CODE-STYLE.md` is lying: it documents rules that aren't enforced.
-- Agents reading `CODE-STYLE.md` follow it; agents inferring style from lint
+- `code-style.md` is lying: it documents rules that aren't enforced.
+- Agents reading `code-style.md` follow it; agents inferring style from lint
   output do not — inconsistent behavior depending on which signal they trust.
 
 ## The debt is not auto-fixable

@@ -1,13 +1,14 @@
 /**
  * Source tag — provenance for content that wasn't your own synthesis.
  *
- * `{% source ref="..." as="..." %}content{% /source %}` marks a span as
- * derived from somewhere. Distinct from `{% quote %}` (which marks
- * verbatim words from a person): `source` answers *where*, optionally
- * *how* it was derived. The two compose — a `{% source %}` wrapping a
- * `{% quote %}` reads as "verbatim words from there." Bare `{% source %}`
- * without an inner `{% quote %}` is paraphrased / summarized / inferred
- * content with a cited origin.
+ * `{% source ref="..." usage="..." %}content{% /source %}` marks a span as
+ * from somewhere. Distinct from `{% quote %}` (which marks the *user's own*
+ * verbatim words): `source` answers *where*, optionally *how* it was
+ * derived. The two compose — a `{% source %}` wrapping a `{% quote %}`
+ * reads as "the user's verbatim words, from there." A bare `{% source %}`
+ * (no inner `{% quote %}`) holds content *from* the source in its body — a
+ * verbatim excerpt (e.g. a commentary anchor), a paraphrase, or a summary,
+ * per `usage`.
  *
  * Inline form: the wrapped span is rendered as-is followed by a small
  * citation chip `[→ Label]`. Block form: a styled figure with a caption
@@ -84,7 +85,7 @@ function sourceLabel(sourceRef: string): string {
  */
 function refToViewTarget(sourceRef: string, basePath: string | undefined): ViewTarget {
   const noFrag = sourceRef.split("#")[0] ?? sourceRef;
-  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {}, zoom: false };
+  return { path: resolveRelativePath(basePath, noFrag), viewer: null, params: {} };
 }
 
 /** Short label from an external `href` — basename of the file:/URL path. */
@@ -98,19 +99,19 @@ function externalLabel(href: string): string {
 /** Box-ref citation: a clickable chip that navigates to the in-box target. */
 function CitationChip({
   sourceRef,
-  as,
+  usage,
   quoteText,
   linkCtx,
 }: {
   sourceRef: string;
-  as: string | undefined;
+  usage: string | undefined;
   quoteText: string;
   linkCtx: SourceLinkContext;
 }): ReactNode {
   const label = sourceLabel(sourceRef);
-  const title = as === undefined || as === ""
+  const title = usage === undefined || usage === ""
     ? `Source: ${sourceRef}`
-    : `${as} — ${sourceRef}`;
+    : `${usage} — ${sourceRef}`;
   const navigate = (): void => linkCtx.onNavigate(refToViewTarget(sourceRef, linkCtx.basePath), { label });
   // Prefer jumping to the verbatim span in the sibling pane (commentary →
   // saved page); fall back to navigating to the target doc when there's no
@@ -132,7 +133,7 @@ function CitationChip({
       title={title}
       className="not-italic text-warm-500 hover:text-warm-700 underline-offset-2 hover:underline cursor-pointer text-xs ml-1"
     >
-      [→ {label}{as !== undefined && as !== "" ? <span className="italic">{`: ${as}`}</span> : null}]
+      [→ {label}{usage !== undefined && usage !== "" ? <span className="italic">{`: ${usage}`}</span> : null}]
     </button>
   );
 }
@@ -178,7 +179,7 @@ function ExternalChip({ href, version }: { href: string; version: string | undef
 interface SourceProps {
   sourceRef?: string;
   href?: string;
-  as?: string;
+  usage?: string;
   version?: string;
   pos?: string;
   placement?: string;
@@ -189,10 +190,10 @@ export function makeSourceComponents(linkCtx: SourceLinkContext): {
   SourceInline: (props: SourceProps) => ReactNode;
   SourceBlock: (props: SourceProps) => ReactNode;
 } {
-  function Citation({ sourceRef, href, as, version, children }: SourceProps): ReactNode {
+  function Citation({ sourceRef, href, usage, version, children }: SourceProps): ReactNode {
     const quoteText = flattenText(children);
     if (sourceRef !== undefined && sourceRef !== "") {
-      return <CitationChip sourceRef={sourceRef} as={as} quoteText={quoteText} linkCtx={linkCtx} />;
+      return <CitationChip sourceRef={sourceRef} usage={usage} quoteText={quoteText} linkCtx={linkCtx} />;
     }
     if (href !== undefined && href !== "") {
       return <ExternalChip href={href} version={version} />;

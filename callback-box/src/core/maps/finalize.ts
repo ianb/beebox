@@ -13,6 +13,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import { fileExists } from "../../lib/file-exists.js";
 import * as path from "node:path";
 import { getHead } from "../../cli/lib/git.js";
 import { loadMapState, saveMapState, type MapState } from "./state.js";
@@ -40,15 +41,6 @@ async function dirExists(absPath: string): Promise<boolean> {
   }
 }
 
-async function fileExists(absPath: string): Promise<boolean> {
-  try {
-    await fs.access(absPath);
-    return true;
-  } catch (_e) {
-    // access failure (typically ENOENT) means the file does not exist.
-    return false;
-  }
-}
 
 /**
  * Ensure `<dir>/CLAUDE.md` exists with an `@MAP.md` line. If the file

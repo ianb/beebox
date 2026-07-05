@@ -38,7 +38,19 @@ All pending non-chat jobs are described in a single prompt and processed by one 
 
 Each chat job gets its own agent invocation with session reuse across reactor cycles. This enables conversational context: the agent "remembers" prior messages in the same thread via Claude Code's `--resume` flag.
 
-Sessions are keyed by thread ref (extracted from `<thread ref="...">` in the job XML) and stored in `.callback-box/chat-sessions.json`. If a session fails, it's reset so the next message starts fresh rather than resuming a broken context.
+Sessions are keyed by thread ref (extracted from the job card's `thread: {ref: ...}` frontmatter field) and stored in `.callback-box/chat-sessions.json`. The minted id is passed to the SDK as the create-with-id `sessionId` option on the thread's first run, so later cycles resume it with `resume`. A chat job's frontmatter looks like:
+
+```
+---
+status: pending
+source: telegram
+description: New message from Alice
+thread:
+  ref: store/chat/telegram/Alice/thread.chat-thread.card
+---
+```
+
+If a session fails, it's reset so the next message starts fresh rather than resuming a broken context.
 
 **File:** `chat-jobs.ts`
 
@@ -48,14 +60,26 @@ Batch processing is natural for jobs that are independent tasks (e.g., "write a 
 
 ## Job Lifecycle
 
-1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're XML files with the `.job.card` suffix. Each root element carries a `source="..."` attribute naming the connector that owns it (e.g. `gmail`, `telegram`, `calendar`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`).
+1. **Creation:** Jobs appear in `box/jobs/` via connectors (sync phase), intake, or manual placement. They're YAML-frontmatter cards with the `.job.card` suffix (e.g. `2026-07-04T12-00-00-gmail.intake.job.card`). Each card's frontmatter carries a `source:` field naming the connector that owns it (e.g. `gmail`, `telegram`, `calendar`) or a cross-cutting bucket (`wakeup`, `feedback-sync`, `question-answer`):
+
+   ```
+   ---
+   status: pending
+   source: gmail
+   priority: normal
+   description: 3 new emails to triage
+   items:
+     - ref: box/inbox/2026-07-04T12-00-00-Invoice.email.card
+     - ref: box/inbox/2026-07-04T12-01-00-Newsletter.email.card
+   ---
+   ```
 2. **Discovery:** `findJobCards()` scans the directory, extracts priority and source, and sorts normal-priority first.
 3. **Processing:** The agent does the work, commits changes, and calls `cb finish <path>` to delete the job file.
 4. **Finalize:** After all cycles, `cb finalize` flushes any outbound cards created during processing.
 
 ## Source Filter
 
-`runReactor` accepts a `sourceFilter` option. When set, jobs whose root `source` attribute does not match are skipped — left in `box/jobs/` for a later run that does match them. This is how `cb wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source="gmail"` jobs, even if telegram or feedback jobs are also pending.
+`runReactor` accepts a `sourceFilter` option. When set, jobs whose `source:` frontmatter field does not match are skipped — left in `box/jobs/` for a later run that does match them. This is how `cb wakeup --connector X` keeps a partial sync from draining unrelated work: the gmail tick processes only `source: gmail` jobs, even if telegram or feedback jobs are also pending.
 
 Cross-cutting jobs (e.g. `feedback-sync` for guide revisions, `question-answer` for question follow-ups) carry sources that no connector matches, so they only run when the reactor is invoked with no filter (a full `cb wakeup`, or `cb reactor` directly).
 
@@ -63,11 +87,11 @@ Cross-cutting jobs (e.g. `feedback-sync` for guide revisions, `question-answer` 
 
 The reactor builds two prompts for the agent:
 
-- **System prompt** tells the agent what context it already has (job XML, referenced files, schema instructions, rules files) so it doesn't waste turns re-reading things. This is important because Claude Code auto-loads CLAUDE.md and rules files — the agent needs to know it already has this information.
+- **System prompt** tells the agent what context it already has (job card content, referenced files, schema instructions, rules files) so it doesn't waste turns re-reading things. This is important because Claude Code auto-loads CLAUDE.md and rules files — the agent needs to know it already has this information.
 
-- **User prompt** lists the actual jobs to process with their XML content, inlined referenced files (threads, items), and schema-specific processing instructions.
+- **User prompt** lists the actual jobs to process with their card content (frontmatter + body), inlined referenced files (threads, items), and schema-specific processing instructions.
 
-Job descriptions inline referenced files (from `<thread ref="...">` and `<item ref="...">` attributes) and look up schema-defined processing instructions for the job's root tag. This gives the agent everything it needs in the initial prompt.
+Job descriptions inline referenced files (from the job card's `thread.ref` field and each `items[].ref` entry) and look up schema-defined processing instructions for the job's card type. This gives the agent everything it needs in the initial prompt.
 
 **File:** `prompts.ts`
 
@@ -75,7 +99,7 @@ Job descriptions inline referenced files (from `<thread ref="...">` and `<item r
 
 Chat sessions are persisted in `.callback-box/chat-sessions.json` and managed by `chat-reactor-sessions.ts` (outside this directory — it's a general utility). Sessions rotate by message count and age to prevent context windows from growing unbounded.
 
-The `--reset-sessions` flag clears all sessions, useful when the system prompt changes or sessions get into a bad state.
+The `--reset-sessions` flag clears all sessions, useful when the system prompt changes or sessions get into a bad state. This matters because a resumed session never re-sends the system prompt, so an edit to the prompt surface is invisible to already-open threads until their session resets; conversely, the warm-pool subprocess backend only reuses a prewarmed process when the system prompt is byte-identical, so the prompt must stay time-invariant (no timestamps or other per-turn values) or every turn pays a cold-start.
 
 ## Locking
 

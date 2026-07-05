@@ -1,9 +1,11 @@
 /**
- * Central schema registration with cardworks.
+ * Central schema registration.
  *
  * All card schemas are registered here and exported for use
- * by the CardLoader factory. Box-local schemas from config/schemas/
- * are loaded dynamically at runtime.
+ * by the CardLoader factory. Box-local schemas are loaded dynamically at
+ * runtime from the box's schemas dir — `config/schemas/` for a legacy
+ * (shapeVersion 1) box, or `src/schemas/` at the package root for a
+ * shapeVersion 2 box (see `boxCodePaths` in `../cli/lib/box-shape.js`).
  */
 
 import { readdir, readFile } from "node:fs/promises";
@@ -12,7 +14,9 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 import { type CardSchema } from "../cards/index.js";
+import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
 import { MemoSchema } from "./memo.js";
 import { QuestionSchema } from "./question.js";
 import { FeedbackSchema } from "./feedback.js";
@@ -32,21 +36,25 @@ import { GuideSchema } from "./guide.js";
 import { ScheduledScriptSchema } from "./scheduled-script.js";
 import { TelegramMessageSchema } from "./telegram-message.js";
 import { WebPushSchema } from "./web-push.js";
+import { ChatSchema } from "./chat.js";
 import { ChatThreadSchema } from "./chat-thread.js";
 import { ChatJobSchema } from "./chat-job.js";
+import { ContainsBackfillJobSchema } from "./contains-backfill-job.js";
 import { PersonalitySchema } from "./personality.js";
 import { QuestionFollowupJobSchema } from "./question-followup-job.js";
 import { TodoListSchema } from "./todo-list.js";
 import { BriefingSchema } from "./briefing.js";
 import { PersonSchema } from "./person.js";
 import { PlaceSchema } from "./place.js";
-import { SheetSchema } from "./sheet.js";
+import { GsheetSchema } from "./gsheet.js";
 import { DocSchema } from "./doc.js";
 import { GdocSchema } from "./gdoc.js";
 import { CommentarySchema } from "./commentary.js";
 import { WebpageSchema } from "./webpage.js";
 import { ExtfileSchema } from "./extfile.js";
 import { LandmarkSchema } from "./landmark.js";
+import { NavSchema } from "./nav.js";
+import { ViewSchema } from "./view.js";
 import { FigureSchema } from "./figure.js";
 import { ConceptMapSchema } from "./concept-map.js";
 import { CourseSchema } from "./course.js";
@@ -58,48 +66,60 @@ import { registerBoxTemplate, unregisterBoxTemplates, type TemplateDefinition } 
 /**
  * Markdown-frontmatter card schemas. Loaded into a Map<type, CardSchema> by
  * createCardSchemaMap below.
+ *
+ * Order is presentational: the agent guide's CARD_TYPES catalogue renders
+ * groups (by each schema's `category`) in this order, so within each category
+ * the everyday, most-reached-for types come first.
  */
 export const cardSchemas: CardSchema[] = [
-  CaptureSessionSchema,
-  GuideSchema,
-  LandmarkSchema,
-  ProcedureSchema,
-  ProcedureRunSchema,
-  RecipeSchema,
-  EmailThreadSchema,
-  EmailMessageSchema,
-  EmailOutboundSchema,
-  BriefingSchema,
+  // authored — everyday recording types first
   DocSchema,
-  GdocSchema,
+  RecordSchema,
+  MemoSchema,
+  PersonSchema,
+  PlaceSchema,
+  TodoListSchema,
+  QuestionSchema,
+  RecipeSchema,
   CommentarySchema,
-  WebpageSchema,
-  FigureSchema,
-  ConceptMapSchema,
+  BriefingSchema,
+  GuideSchema,
+  PersonalitySchema,
+  LandmarkSchema,
+  NavSchema,
+  ViewSchema,
+  ProcedureSchema,
+  ScheduledScriptSchema,
+  EmailOutboundSchema,
+  // authored — the course family
   CourseSchema,
+  ConceptMapSchema,
   ExpositionPlanSchema,
   LessonPlanSchema,
   ProgressSchema,
-  ExtfileSchema,
-  SheetSchema,
-  FileSchema,
-  ImageSchema,
-  AudioSchema,
-  RecordSchema,
-  PersonSchema,
-  PlaceSchema,
-  MemoSchema,
-  TodoListSchema,
+  FigureSchema,
+  // synced & captured
+  EmailThreadSchema,
+  EmailMessageSchema,
   TelegramMessageSchema,
   WebPushSchema,
-  FeedbackSchema,
+  GdocSchema,
+  GsheetSchema,
+  WebpageSchema,
+  ExtfileSchema,
+  CaptureSessionSchema,
+  ImageSchema,
+  AudioSchema,
+  FileSchema,
+  // system bookkeeping
   IntakeJobSchema,
   ChatJobSchema,
+  ContainsBackfillJobSchema,
   QuestionFollowupJobSchema,
-  PersonalitySchema,
-  ScheduledScriptSchema,
-  QuestionSchema,
+  ProcedureRunSchema,
+  ChatSchema,
   ChatThreadSchema,
+  FeedbackSchema,
 ];
 
 /**
@@ -279,7 +299,8 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   // its card types.
   unregisterBoxTemplates(boxRoot);
 
-  const schemasDir = join(boxRoot, "config/schemas");
+  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const schemasDir = boxCodePaths(shape).schemasDir;
   let files: string[];
   try {
     files = await readdir(schemasDir);
@@ -288,29 +309,39 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
       console.warn(`Could not read box schemas dir ${schemasDir}, skipping box-local schemas:`, e);
     }
     boxFileRecords.delete(boxRoot);
+    setSchemaLoadFailures(boxRoot, []);
     return empty;
   }
 
   const tsFiles = files.filter(f => f.endsWith(".ts") && !f.startsWith("."));
   if (tsFiles.length === 0) {
     boxFileRecords.delete(boxRoot);
+    setSchemaLoadFailures(boxRoot, []);
     return empty;
   }
 
-  // Ensure package.json with "type": "module" so .ts files load as ESM,
-  // and register resolve hooks so bare specifiers (callback-box/cards, zod,
-  // yaml) resolve from callback-box's node_modules.
-  await ensureEsmPackageJson(schemasDir);
-  ensureResolveHooks();
+  // Legacy (v1) boxes need help to make bare specifiers resolve: a package.json
+  // with "type": "module" so .ts files load as ESM, plus resolve hooks so
+  // callback-box/cards, zod, and yaml resolve from callback-box's own
+  // node_modules. A v2 box's schemas dir sits inside the package root, whose
+  // own package.json is already "type": "module" and whose own
+  // node_modules/callback-box (installed like any other dependency) serves
+  // `callback-box/cards` and `callback-box/schema` via native resolution — no
+  // hook, and no bare `zod`/`yaml` (only the callback-box specifiers resolve).
+  if (shape.shapeVersion === 1) {
+    await ensureEsmPackageJson(schemasDir);
+    ensureResolveHooks();
+  }
 
   const records = boxFileRecords.get(boxRoot) ?? new Map<string, SchemaFileRecord>();
   const seen = new Set<string>();
   const loadedCard: CardSchema[] = [];
+  const failures: SchemaLoadFailure[] = [];
 
   for (const file of tsFiles) {
     const filePath = join(schemasDir, file);
     seen.add(filePath);
-    const card = await loadOneSchemaFile({ filePath, file, boxRoot, records });
+    const card = await loadOneSchemaFile({ filePath, file, boxRoot, records, failures });
     if (card) loadedCard.push(card);
   }
 
@@ -319,6 +350,7 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
     if (!seen.has(key)) records.delete(key);
   }
   boxFileRecords.set(boxRoot, records);
+  setSchemaLoadFailures(boxRoot, failures);
 
   return { cardSchemas: loadedCard };
 }
@@ -328,6 +360,8 @@ interface LoadOneOptions {
   file: string;
   boxRoot: string;
   records: Map<string, SchemaFileRecord>;
+  /** Failures for this rebuild accumulate here (see `schema-load-status.ts`). */
+  failures: SchemaLoadFailure[];
 }
 
 /**
@@ -335,15 +369,19 @@ interface LoadOneOptions {
  * Returns the CardSchema to include, or undefined to contribute nothing. Any
  * per-file failure (unreadable, throwing import, or no valid default export)
  * falls back to the file's last-good card when one exists — keep-last-good — so
- * an incomplete save never regresses a working type to "unknown".
+ * an incomplete save never regresses a working type to "unknown". Every
+ * failure is also pushed onto `failures` so it surfaces in `cb status` /
+ * `/healthz`, not just a `console.warn`.
  */
-async function loadOneSchemaFile({ filePath, file, boxRoot, records }: LoadOneOptions): Promise<CardSchema | undefined> {
+async function loadOneSchemaFile({ filePath, file, boxRoot, records, failures }: LoadOneOptions): Promise<CardSchema | undefined> {
   const prior = records.get(filePath);
 
   let source: string;
   try {
     source = await readFile(filePath, "utf8");
   } catch (err) {
+    const message = `failed to read: ${(err as Error).message}`;
+    failures.push({ file, message, at: new Date().toISOString() });
     if (prior) return reuse(prior, boxRoot);
     console.warn(`Warning: failed to read box schema ${file}: ${(err as Error).message}`);
     return undefined;
@@ -359,6 +397,8 @@ async function loadOneSchemaFile({ filePath, file, boxRoot, records }: LoadOneOp
     const mod = await import(pathToFileURL(filePath).href + `?v=${hash}`);
     const def: unknown = mod.default;
     if (!isCardSchema(def)) {
+      const message = "does not export a default cardSchema()";
+      failures.push({ file, message, at: new Date().toISOString() });
       console.warn(`Warning: ${file} does not export a default cardSchema(), skipping`);
       return prior ? reuse(prior, boxRoot) : undefined;
     }
@@ -367,7 +407,9 @@ async function loadOneSchemaFile({ filePath, file, boxRoot, records }: LoadOneOp
     records.set(filePath, { hash, card: def, template });
     return def;
   } catch (err) {
-    console.warn(`Warning: failed to load box schema ${file}: ${(err as Error).message}`);
+    const message = (err as Error).message;
+    failures.push({ file, message, at: new Date().toISOString() });
+    console.warn(`Warning: failed to load box schema ${file}: ${message}`);
     // Keep `prior` (its old hash) so a later fixed save is detected and retried.
     return prior ? reuse(prior, boxRoot) : undefined;
   }
@@ -434,37 +476,3 @@ export async function createCardSchemaMap(boxRoot?: string): Promise<Map<string,
   }
   return map;
 }
-
-// Re-export individual schemas for direct access
-export { MemoSchema } from "./memo.js";
-export { QuestionSchema } from "./question.js";
-export { FeedbackSchema } from "./feedback.js";
-export { ProcedureSchema } from "./procedure.js";
-export { ProcedureRunSchema } from "./procedure-run.js";
-export { ImageSchema } from "./image.js";
-export { AudioSchema } from "./audio.js";
-export { FileSchema } from "./file.js";
-export { CaptureSessionSchema } from "./capture-session.js";
-export { RecordSchema } from "./record.js";
-export { RecipeSchema } from "./recipe.js";
-export { EmailThreadSchema } from "./email-thread.js";
-export { EmailMessageSchema } from "./email-message.js";
-export { EmailOutboundSchema } from "./email-outbound.js";
-export { IntakeJobSchema } from "./intake-job.js";
-export { GuideSchema } from "./guide.js";
-export { ScheduledScriptSchema } from "./scheduled-script.js";
-export { TelegramMessageSchema } from "./telegram-message.js";
-export { WebPushSchema } from "./web-push.js";
-export { ChatThreadSchema } from "./chat-thread.js";
-export { ChatJobSchema } from "./chat-job.js";
-export { PersonalitySchema } from "./personality.js";
-export { QuestionFollowupJobSchema } from "./question-followup-job.js";
-export { TodoListSchema } from "./todo-list.js";
-export { BriefingSchema } from "./briefing.js";
-export { PersonSchema } from "./person.js";
-export { PlaceSchema } from "./place.js";
-export { SheetSchema } from "./sheet.js";
-export { DocSchema } from "./doc.js";
-export { GdocSchema } from "./gdoc.js";
-export { ExtfileSchema } from "./extfile.js";
-export { LandmarkSchema } from "./landmark.js";

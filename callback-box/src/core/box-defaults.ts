@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS } from "../cli/lib/paths.js";
 import { createInitialGuideTemplate } from "../schemas/guide.js";
-import { createScheduledScriptTemplate } from "../schemas/scheduled-script.js";
+import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";
 import { createBriefingTemplate } from "../schemas/briefing.js";
 import { createLandmarkTemplate, parseLandmarkFields } from "../schemas/landmark.js";
@@ -78,25 +78,14 @@ export async function installProcedures(boxRoot: string): Promise<string[]> {
 const GUIDE_DOMAINS = ["intake", "calendar"];
 
 /**
- * Strip ISO timestamps from guide content so we can compare
- * template output across runs (created-at changes each time).
- */
-function normalizeGuideForComparison(content: string): string {
-  return content.replace(
-    / (created-at|updated-at|added-at)="[^"]*"/g,
-    ""
-  );
-}
-
-/**
  * Install default guide cards into a box.
  *
  * On fresh install: writes default guide cards to config/.
- * On update: if the box's copy matches the template (ignoring timestamps),
- * overwrites it with the latest template. If the user has modified the guide,
- * parks the new template under `config/_template-updates/` for manual merging.
- *
- * Skips any domain where a guide already exists.
+ * On update: if the box's copy matches the template, overwrites it with the
+ * latest template. If the user has modified the guide, parks the new template
+ * under `config/_template-updates/` for manual merging. (Guide templates carry
+ * no timestamps, so an unmodified guide compares byte-equal across runs — the
+ * former created-at churn is gone.)
  *
  * @returns List of installed/updated guide names
  */
@@ -109,7 +98,6 @@ export async function installGuides(boxRoot: string): Promise<string[]> {
       boxRoot,
       relPath: path.join("config", fileName),
       templateContent,
-      normalize: normalizeGuideForComparison,
     });
     const entry = describeInstall(result, fileName);
     if (entry !== null) installed.push(entry);
@@ -311,6 +299,9 @@ export async function installSchedules(boxRoot: string): Promise<string[]> {
       boxRoot,
       relPath: path.join("config/schedules", fileName),
       templateContent,
+      ...(ScheduledScriptSchema.templateMerge && {
+        boxOwnedFields: ScheduledScriptSchema.templateMerge.boxOwnedFields,
+      }),
     });
     const entry = describeInstall(result, fileName);
     if (entry !== null) installed.push(entry);

@@ -55,7 +55,6 @@ export const SKELETON_HIDDEN_PATHS: readonly string[] = [
   "box/inbox/**",
   "box/jobs/**",
   "box/output/**",
-  "box/pool/**",
   "box/questions/**",
   "box/resources/**",
   "box/commands/**",

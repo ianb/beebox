@@ -4,7 +4,7 @@
 
 import { Command } from "commander";
 import chalk from "chalk";
-import { listScenarios } from "../../scenario/loader.js";
+import { listScenarios, getScenariosDir } from "../../scenario/loader.js";
 import { runScenario } from "../../scenario/runner.js";
 
 const listCommand = new Command("list")
@@ -12,7 +12,7 @@ const listCommand = new Command("list")
   .action(async () => {
     const scenarios = await listScenarios();
     if (scenarios.length === 0) {
-      console.log("No scenarios found in ~/src/boxes/scenarios/");
+      console.log(`No scenarios found in ${getScenariosDir()} (override with CB_SCENARIOS_DIR).`);
       return;
     }
     for (const name of scenarios) {
@@ -23,13 +23,11 @@ const listCommand = new Command("list")
 const runCommand = new Command("run")
   .description("Run a scenario")
   .argument("<name>", "Scenario name")
-  .option("--from <checkpoint>", "Start from a checkpoint")
   .option("--dry-run", "Show steps without executing")
-  .action(async (name: string, options: { from?: string; dryRun?: boolean }) => {
+  .action(async (name: string, options: { dryRun?: boolean }) => {
     try {
       const result = await runScenario({
         name,
-        from: options.from,
         dryRun: options.dryRun,
         onLog: (text) => console.log(text),
       });

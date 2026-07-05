@@ -6,7 +6,7 @@ against each feature's allowed set, composes the `<chat-app>` snapshot
 the server prepends to user messages, and parses agent-emitted
 `<chat-app>` mutation tags out of assistant responses.
 
-See `docs/narration-mode-design.md` for the bigger picture; this file
+See `docs/plans/narration-mode.md` for the bigger picture; this file
 covers the registry primitives.
 
 ```ts setup
@@ -138,14 +138,13 @@ JSON.stringify(mergeSeedFeatures({
 ## Snapshot composition
 
 The server prepends the `<chat-app>` snapshot to each user message.
-Attributes are emitted in registry order, with `time` last.
+Attributes are emitted in registry order.
 
 ```ts
 composeChatAppSnapshot({
   features: { narration: "on", prose: "off" },
-  time: "2026-05-13T10:00:00-05:00",
 })
-=> <chat-app narration="on" prose="off" time="2026-05-13T10:00:00-05:00"/>
+=> <chat-app narration="on" prose="off"/>
 ```
 
 Missing keys fall back to defaults — the snapshot always carries every
@@ -154,27 +153,24 @@ registered feature, never a partial map.
 ```ts
 composeChatAppSnapshot({
   features: {},
-  time: "2026-05-13T10:00:00-05:00",
 })
-=> <chat-app narration="off" prose="on" time="2026-05-13T10:00:00-05:00"/>
+=> <chat-app narration="off" prose="on"/>
 ```
 
 The optional context attributes (computed by `session-context.ts`)
-serialize after `time`, in a fixed order, and are simply omitted when
-absent — `local-time` and `channel` ride on every real send, while
-`last-activity` and `calendar` appear only on the first message of a
+serialize in a fixed order, and are simply omitted when absent —
+`local-time` and `channel` ride on every real send, while
+`last-activity` and `health` appear only on the first message of a
 brand-new session.
 
 ```ts
 composeChatAppSnapshot({
   features: {},
-  time: "2026-05-13T15:00:00Z",
   localTime: "Wednesday 2026-05-13 10:00 (morning)",
   channel: "web-mobile",
   lastActivity: "3 days ago",
-  calendar: "16:00-17:00 Dentist",
 })
-=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago" calendar="16:00-17:00 Dentist"/>
+=> <chat-app narration="off" prose="on" local-time="Wednesday 2026-05-13 10:00 (morning)" channel="web-mobile" last-activity="3 days ago"/>
 ```
 
 The companion-pane `open-card` attribute (box-relative path) rides on every send
@@ -185,10 +181,9 @@ dropping them.
 ```ts
 composeChatAppSnapshot({
   features: {},
-  time: "2026-05-13T15:00:00Z",
   openCard: "store/notes/Trip.memo.card",
 })
-=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" open-card="store/notes/Trip.memo.card"/>
+=> <chat-app narration="off" prose="on" open-card="store/notes/Trip.memo.card"/>
 ```
 
 Companion-pane activity rides as `<card-activity>` child elements (rendered by
@@ -198,11 +193,10 @@ rather than attributes so a detail can be long or multi-line.
 ```ts
 composeChatAppSnapshot({
   features: {},
-  time: "2026-05-13T15:00:00Z",
   openCard: "store/notes/Trip.memo.card",
   activityChildren: '<card-activity kind="scrolled"/>\n<card-activity kind="explored">boat-water+road -> boats</card-activity>',
 })
-=> <chat-app narration="off" prose="on" time="2026-05-13T15:00:00Z" open-card="store/notes/Trip.memo.card">
+=> <chat-app narration="off" prose="on" open-card="store/notes/Trip.memo.card">
 <card-activity kind="scrolled"/>
 <card-activity kind="explored">boat-water+road -> boats</card-activity>
 </chat-app>

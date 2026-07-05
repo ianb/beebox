@@ -69,11 +69,11 @@ added, figures (and views) would need gating then — captured under NOT in scop
   hardcode personal names."*
 - **`callback-box/CLAUDE.md` (Cards / "don't add features beyond what the task
   requires")** — drives the NOT-in-scope cuts.
-- **`callback-box/CODE-STYLE.md`** — *"No default parameters"*, *"Max 2 positional
+- **`callback-box/code-style.md`** — *"No default parameters"*, *"Max 2 positional
   parameters"*, *"NEVER use `any`"*, *"`as` … like Rust's `unsafe`"*. The
   compiled-module import is the one untyped boundary; centralize the cast in a
   single typed helper.
-- **`callback-box/FRONTEND.md`** — UI primitives + `className`-only-for-outer-
+- **`callback-box/frontend.md`** — UI primitives + `className`-only-for-outer-
   layout (`restrict-component-classes`).
 - **`docs/testing.md`** — tests as a design tool, on substantial codepaths.
 - **Densest precedents:** the `views/` system (`src/webapp/views/compiler.ts`,

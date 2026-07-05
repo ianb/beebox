@@ -177,6 +177,9 @@ importers:
       fastify:
         specifier: ^5.7.2
         version: 5.8.5
+      get-port:
+        specifier: ^7.2.0
+        version: 7.2.0
       glob:
         specifier: ^13.0.0
         version: 13.0.6
@@ -186,9 +189,15 @@ importers:
       grammy:
         specifier: ^1.40.1
         version: 1.43.0
+      http-proxy-3:
+        specifier: ^1.23.2
+        version: 1.23.2
       ical.js:
         specifier: ^2.2.1
         version: 2.2.1
+      ignore:
+        specifier: ^5.3.2
+        version: 5.3.2
       ky:
         specifier: ^1.14.3
         version: 1.14.3

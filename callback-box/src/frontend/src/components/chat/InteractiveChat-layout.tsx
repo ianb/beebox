@@ -12,6 +12,7 @@ import { SelectionPanel } from "../ChatSelections";
 import { type SelectionItem } from "../../lib/selection-serialize";
 import { SessionListButton } from "../SessionListButton";
 import { RecentFilesButton } from "../RecentFilesButton";
+import { LandmarkLinksButton } from "../LandmarkLinksButton";
 import { getTTSClient } from "../../lib/tts-client";
 import { alarm } from "../../lib/earcons";
 import { SchedulePill, NarrationStatusBadge, MuteButton, NewSessionButton, ChatContextLink } from "./InteractiveChat-controls";
@@ -42,13 +43,20 @@ export function ChatHeader(props: {
     <header className="flex-shrink-0 flex items-center gap-2 w-full max-w-5xl mx-auto px-4 py-2 bg-gradient-to-r from-accent via-coral to-primary">
       <h1 className="text-sm font-semibold text-white tracking-wide">Chat</h1>
       <ChatContextLink dir={effectiveContextDir} boxSlug={boxSlug ?? ""} />
-      <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onTurnOff={onToggleNarration} />
+      <NarrationStatusBadge enabled={narrationEnabled} hqInFlight={hqInFlight} onToggle={onToggleNarration} />
       <div className="flex-1" />
       <MuteButton muted={muted} onToggle={onToggleMute} />
+      <LandmarkLinksButton
+        contextDir={effectiveContextDir}
+        onPanel={(link) => onZoomView({
+          target: { path: link.ref, viewer: null, params: {} },
+          label: link.label ?? link.title,
+        })}
+      />
       <RecentFilesButton
         entries={messages}
         onPanel={(summary) => onZoomView({
-          target: { path: summary.path, viewer: null, params: {}, zoom: false },
+          target: { path: summary.path, viewer: null, params: {} },
           label: summary.title,
         })}
       />
@@ -65,11 +73,10 @@ export function ChatStatusBanners(props: {
   error: string | null | undefined;
   transcriptionError: string | null | undefined;
   onDismissError: () => void;
-  pendingCount: number;
   activeSchedules: ChatSchedule[];
   onCancelSchedule: (label: string) => void;
 }) {
-  const { error, transcriptionError, onDismissError, pendingCount, activeSchedules, onCancelSchedule } = props;
+  const { error, transcriptionError, onDismissError, activeSchedules, onCancelSchedule } = props;
   return (
     <>
       {/* Error display */}
@@ -87,15 +94,9 @@ export function ChatStatusBanners(props: {
         </div>
       ) : null}
 
-      {/* Queued-message indicator: visible whenever the agent is busy with
-          a previous turn and one or more user messages are sitting in the
-          backend queue waiting to be processed. Without this the UI looks
-          idle even though work is pending. */}
-      {pendingCount > 0 ? (
-        <div className="px-4 py-1.5 border-t border-info-light bg-info-50 text-info-dark text-xs">
-          Agent is busy — {pendingCount === 1 ? "your message is queued" : `${pendingCount} messages are queued`}
-        </div>
-      ) : null}
+      {/* Queued-message indicator + stop controls now live in TargetStrip
+          (docs/implemented-plans/input-extraction.md chunk 3) — the target's own status
+          row, rendered by InteractiveChat-view.tsx just after this. */}
 
       {/* Active schedules */}
       {activeSchedules.length > 0 ? (
@@ -119,6 +120,28 @@ export function ChatStatusBanners(props: {
   );
 }
 
+/**
+ * Dismissible notice for attachments dropped when a persisted emission was
+ * restored — their `tmp/…` upload no longer exists (housekeeping sweeps
+ * uploads after 7 days), so they're never restored silently-broken
+ * (docs/implemented-plans/input-extraction.md, chunk 4). Rendered in the composer
+ * region, above the attachment panels, alongside `RecoveredDictation`.
+ */
+export function ExpiredAttachmentsNotice(props: { names: string[]; onDismiss: () => void }) {
+  const { names, onDismiss } = props;
+  if (names.length === 0) return null;
+  return (
+    <div className="mx-3 mb-2 px-3 py-1.5 bg-warm-100 border border-warm-300 rounded-lg text-warm-700 text-xs flex items-center justify-between gap-2">
+      <span>
+        {names.length} expired attachment{names.length === 1 ? "" : "s"} removed: {names.join(", ")}
+      </span>
+      <button onClick={onDismiss} className="flex-shrink-0 text-warm-600 hover:text-warm-900 underline">
+        dismiss
+      </button>
+    </div>
+  );
+}
+
 export interface ComposerSectionProps {
   attachments: AttachmentItem[];
   pendingImageCount: number;
@@ -136,6 +159,8 @@ export interface ComposerSectionProps {
   isTranscribing: boolean;
   /** Interrupted-dictation recovery widget, rendered above the composer. */
   recoveredDictation: ReactNode;
+  /** Dismissible notice for attachments dropped on emission restore (swept `tmp/…` uploads), or null when none. */
+  expiredAttachmentsNotice: ReactNode;
   inputArea: ReactNode;
   mobileRow: ReactNode;
 }
@@ -144,12 +169,15 @@ export function ChatComposerSection(props: ComposerSectionProps) {
   const {
     attachments, pendingImageCount, fileAttachments, selections, onRemoveAttachment, onRemoveFileAttachment, onRemoveSelection,
     fileInputRef, onFileInputChange, typingMode, typingLocked, setTypingMode, setTypingLocked,
-    isTranscribing, recoveredDictation, inputArea, mobileRow,
+    isTranscribing, recoveredDictation, expiredAttachmentsNotice, inputArea, mobileRow,
   } = props;
   return (
     <>
       {/* Recovery widget for an interrupted dictation (above all composer panels) */}
       {recoveredDictation}
+
+      {/* Notice for attachments dropped on restore (swept before reload) */}
+      {expiredAttachmentsNotice}
 
       {/* Image attachment panel: shows thumbnails above the composer */}
       <AttachmentPanel attachments={attachments} pendingCount={pendingImageCount} onRemove={onRemoveAttachment} />

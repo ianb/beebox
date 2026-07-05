@@ -5,11 +5,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useNavigate } from "@tanstack/react-router";
+import { useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
-import { href } from "../lib/routing";
-import { serializeViewUrl, type ViewTarget } from "../lib/view-url";
+import { type ViewTarget } from "../lib/view-url";
 import { Sidebar } from "../components/Sidebar";
 import { trpc } from "../lib/trpc";
 import { BrowseSidebarList } from "../components/browse/BrowseSidebarList";
@@ -99,25 +98,35 @@ function useBrowseListLiveRefresh(dirPath: string): void {
   });
 }
 
+/**
+ * Query params on the browse URL, for the detail panel's renderer —
+ * runtime overrides on view-card params (the `view` key stays reserved
+ * for renderer selection, mirroring view: URL semantics).
+ */
+function useBrowseUrlParams(): Record<string, string> {
+  const searchStr = useRouterState({ select: (s) => s.location.searchStr });
+  return useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [key, value] of new URLSearchParams(searchStr)) {
+      if (key !== "view") out[key] = value;
+    }
+    return out;
+  }, [searchStr]);
+}
+
 export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePageProps) {
   const currentPath = currentPathArg ?? "";
   const { boxSlug } = useParams({ strict: false });
   const utils = trpc.useUtils();
-  const navigate = useNavigate();
+  const urlParams = useBrowseUrlParams();
 
   const handleLinkNavigate = useCallback(
     (target: ViewTarget) => {
-      // Zoom links escape out to the full view page so the target gets the
-      // whole viewport. Everything else stays in the browse layout —
-      // navigating to a new file path swaps the detail panel and updates
-      // the URL via onNavigate.
-      if (target.zoom) {
-        navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl({ ...target, zoom: false })}`) });
-        return;
-      }
+      // A link stays in the browse layout — navigating to a new file path swaps
+      // the detail panel and updates the URL via onNavigate.
       onNavigate(target.path);
     },
-    [boxSlug, navigate, onNavigate],
+    [onNavigate],
   );
 
   const pathIsFile = isFilePath(currentPath);
@@ -253,6 +262,7 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
             onBack={() => setSelectedFilePath(null)}
             onDelete={handleDelete}
             onNavigate={handleLinkNavigate}
+            params={urlParams}
             selectedCard={selectedCard}
             selectedFilePath={selectedFilePath}
             selectedRawFile={selectedRawFile}

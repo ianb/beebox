@@ -38,16 +38,8 @@ class UncommittedChangesError extends Error {
   }
 }
 
-class CheckpointNotFoundError extends Error {
-  constructor(checkpoint: string) {
-    super(`Checkpoint '${checkpoint}' not found in scenario steps`);
-    this.name = "CheckpointNotFoundError";
-  }
-}
-
 export interface RunScenarioOptions {
   name: string;
-  from?: string | undefined;
   dryRun?: boolean | undefined;
   onLog?: ((text: string) => void) | undefined;
 }
@@ -277,28 +269,12 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   process.env.CB_STRICT_FETCH = "1";
   installStrictFetch();
 
-  // Determine starting step (--from checkpoint support)
-  let startIndex = 0;
-  if (options.from) {
-    const idx = scenario.steps.findIndex((s) => s.checkpoint === options.from);
-    if (idx === -1) {
-      throw new CheckpointNotFoundError(options.from);
-    }
-    startIndex = idx + 1; // Start after the checkpoint step
-    log(options, `Starting from checkpoint: ${options.from} (step ${startIndex + 1})`);
-  }
-
   // Run steps
   const stepResults: StepResult[] = [];
   let failed = false;
 
   for (let i = 0; i < scenario.steps.length; i++) {
     const step = scenario.steps[i]!;
-
-    if (i < startIndex) {
-      stepResults.push({ name: step.name, status: "skipped", validations: [] });
-      continue;
-    }
 
     if (failed) {
       stepResults.push({ name: step.name, status: "skipped", validations: [] });

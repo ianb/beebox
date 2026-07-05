@@ -40,4 +40,4 @@ In other words: the unit of customization that emerged from real use was a featu
 - `activityRegistry` / `activityChatPool` from the server, tRPC context, SSR context, and `test/helpers/test-server.ts`
 - 8 `test/activities-*.doctest.md` files and `test/manual/activity-chat-live.ts`
 
-The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode-design.md`, `stack-decisions.md`, `IMPLEMENTATION.md`, etc.) are left in place as historical record with a banner pointing back here.
+The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-decisions.md`, the retired MVP implementation guide (`implemented-plans/mvp-implementation-guide.md`), etc.) are left in place as historical record with a banner pointing back here.

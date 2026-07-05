@@ -8,7 +8,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { getApiBase } from "../api";
+import { trpcClient } from "../lib/trpc";
 import { CloseButton } from "./ui/CloseButton";
 
 interface LogEntry {
@@ -32,11 +32,7 @@ function flushToServer() {
   const batch = sendBuffer;
   sendBuffer = [];
   sendTimer = null;
-  fetch(`${getApiBase()}/debug-log`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ entries: batch }),
-  }).catch(() => {});
+  trpcClient.debugLog.submit.mutate({ entries: batch }).catch(() => {});
 }
 
 function isNetworkNoise(message: string): boolean {

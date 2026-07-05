@@ -17,10 +17,9 @@
  */
 
 import { readFile } from "node:fs/promises";
-import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
-import { splitCardContent, type CardSchema } from "../cards/index.js";
-
-const CARD_XML_CONTENT_TYPE = "application/x-card+xml";
+import { parse as parseYaml } from "yaml";
+import { renderFrontmatterBlock, splitCardContent, type CardSchema } from "../cards/index.js";
+import { parseCardFileName } from "../shared/card-name.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
@@ -91,8 +90,6 @@ export interface ParsedCard<TFields extends Record<string, unknown> = Record<str
   fields: TFields;
   /** Body text exactly as it appeared in the file (empty string if none). */
   rawBody: string;
-  /** Optional content-type from frontmatter; undefined for markdown/empty bodies. */
-  contentType: string | undefined;
 }
 
 /**
@@ -135,9 +132,7 @@ export function parseCardText(
   }
   const fmFields = fmParse.data as Record<string, unknown>;
 
-  const contentType = typeof fm["content-type"] === "string" ? fm["content-type"] : undefined;
-
-  const bodyValue = validateCardBody({ schema, body: split.body, contentType, resolved, source });
+  const bodyValue = validateCardBody({ schema, body: split.body, resolved, source });
 
   const fields: Record<string, unknown> = { ...fmFields };
   if (schema.bodyFieldName !== null) {
@@ -148,8 +143,53 @@ export function parseCardText(
     schema,
     fields,
     rawBody: split.body,
-    contentType,
   };
+}
+
+/** Narrow an unknown to a plain (non-array) object. */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Collect every `{ ref: string }` reference reachable in a card's fields,
+ * regardless of the field it lives under. Job refs are always `{ ref }`
+ * objects (intake `items: [{ref}]`, chat `thread: {ref}`, question-followup
+ * `question-ref: {ref}`), so one recursive walk covers every job type
+ * without per-schema branching.
+ */
+export function collectRefs(fields: Record<string, unknown>): string[] {
+  const refs: string[] = [];
+  const walk = (value: unknown): void => {
+    if (Array.isArray(value)) {
+      for (const el of value) walk(el);
+    } else if (isRecord(value)) {
+      if (typeof value["ref"] === "string") refs.push(value["ref"]);
+      for (const key of Object.keys(value)) {
+        if (key !== "ref") walk(value[key]);
+      }
+    }
+  };
+  walk(fields);
+  return refs;
+}
+
+/**
+ * Loosely read a card's frontmatter as a plain mapping, without schema
+ * validation. Returns null when there is no frontmatter block or the YAML is
+ * unparseable. For best-effort reads (commit-message context, session keys)
+ * where a full `parseCardText` would be too strict — callers that need
+ * validated, typed fields should use `parseCardText`/`loadCardFile` instead.
+ */
+export function readCardFrontmatter(content: string): Record<string, unknown> | null {
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return null;
+  try {
+    return parseFrontmatterMapping(split.frontmatterText, "<frontmatter>");
+  } catch (e) {
+    if (e instanceof CardIOError) return null;
+    throw e;
+  }
 }
 
 /**
@@ -190,7 +230,7 @@ function resolveCardType(input: {
   if (resolved === undefined) {
     throw new CardIOError(
       source,
-      "cannot determine card type — filename must match Foo.<type>.card"
+      "cannot determine card type — filename must match Foo.<type>.card or <type>.card"
     );
   }
   if (type !== undefined && yamlType !== undefined && yamlType !== type) {
@@ -210,22 +250,15 @@ function resolveCardType(input: {
 function validateCardBody(input: {
   schema: CardSchema;
   body: string;
-  contentType: string | undefined;
   resolved: string;
   source: string;
 }): unknown {
-  const { schema, body, contentType, resolved, source } = input;
+  const { schema, body, resolved, source } = input;
   if (schema.bodyField === null || schema.bodyFieldName === null) {
     if (body.trim().length > 0) {
       throw new CardIOError(source, `schema "${resolved}" declares no body, but file has body content`);
     }
     return undefined;
-  }
-  if (schema.bodyField.kind === "xml" && contentType !== CARD_XML_CONTENT_TYPE) {
-    throw new CardIOError(
-      source,
-      `schema "${resolved}" expects an XML body but content-type is ${contentType === undefined ? "missing" : `"${contentType}"`}`
-    );
   }
   const bodyParse = schema.bodyField.schema.safeParse(body);
   if (!bodyParse.success) {
@@ -241,8 +274,7 @@ function validateCardBody(input: {
  * Serialize a parsed card back to its file representation.
  *
  * Splits the input fields object into frontmatter (everything but the body
- * field) + body, sets the appropriate content-type, and emits a fenced YAML
- * block followed by the body text.
+ * field) + body and emits a fenced YAML block followed by the body text.
  */
 export function serializeCardText(input: {
   schema: CardSchema;
@@ -256,20 +288,13 @@ export function serializeCardText(input: {
     if (name === "type") continue;
     if (schema.bodyFieldName === name) {
       if (schema.bodyField === null) continue;
-      if (schema.bodyField.kind === "markdown") {
-        body = typeof value === "string" ? value : String(value);
-      } else if (schema.bodyField.kind === "xml") {
-        body = typeof value === "string" ? value : String(value);
-        frontmatter["content-type"] = CARD_XML_CONTENT_TYPE;
-      }
+      body = typeof value === "string" ? value : String(value);
       continue;
     }
     if (value === undefined) continue;
     frontmatter[name] = value;
   }
-  const yamlText = stringifyYaml(frontmatter);
-  // YAML.stringify ends with \n already
-  return `---\n${yamlText}---\n${body}`;
+  return renderFrontmatterBlock(frontmatter, body);
 }
 
 /**
@@ -283,7 +308,6 @@ export interface FrontmatterLoadedCard {
   readonly path: string;
   readonly schema: CardSchema;
   readonly fields: Record<string, unknown>;
-  readonly contentType: string | undefined;
 }
 
 export interface LoadCardContext {
@@ -324,7 +348,6 @@ export function loadCardFromText(input: {
         path: source,
         schema: parsed.schema,
         fields: parsed.fields,
-        contentType: parsed.contentType,
       });
     }
   }
@@ -334,20 +357,15 @@ export function loadCardFromText(input: {
 }
 
 /**
- * Extract the card type from a filename matching `Foo.<type>.card`.
- * Job cards use the dotted convention `Foo.<kind>.job.card` (the reactor
- * discovers jobs by that suffix — see reactor/job-discovery.ts) while
- * their schemas are registered under hyphenated names, so e.g.
- * `Foo.intake.job.card` resolves to type `intake-job`.
- * Returns undefined when the source doesn't fit either pattern (e.g.
- * test fixtures with non-card paths).
+ * Extract the card type from a filename — nominal `Foo.<type>.card`,
+ * positional `<type>.card`, or the job convention `Foo.<kind>.job.card`
+ * (→ `<kind>-job`). Thin wrapper over the canonical grammar in
+ * src/shared/card-name.ts. Returns undefined when the source doesn't fit
+ * (e.g. test fixtures with non-card paths).
  */
 export function typeFromFilename(source: string): string | undefined {
   const base = source.split("/").pop() ?? source;
-  const jobMatch = base.match(/^.+\.([^.]+)\.job\.card$/);
-  if (jobMatch) return `${jobMatch[1]}-job`;
-  const match = base.match(/^.+\.([^.]+)\.card$/);
-  return match ? match[1] : undefined;
+  return parseCardFileName(base)?.type;
 }
 
 

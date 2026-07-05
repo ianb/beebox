@@ -14,7 +14,6 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { createHash } from "node:crypto";
 import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
 
@@ -96,7 +95,3 @@ export async function writeJsonAtomic(filePath: string, value: unknown): Promise
   await fs.rename(tmp, filePath);
 }
 
-/** Content hash used by the manifest and search documents. */
-export function hashContent(content: string): string {
-  return createHash("sha256").update(content).digest("hex").slice(0, 16);
-}

@@ -8,9 +8,10 @@
  * carries no target of its own (no `defaultHref`/`defaultRef`/`targets`).
  *
  * Body-bearing (like `doc`/`briefing`): the body is markdown commentary whose
- * `{% source %}` anchors quote the spans being commented on. Markdoc validation
- * of those tags is the schema's `validate` hook (see `commentaryErrors` below),
- * scoped to this card type.
+ * `{% source %}` anchors hold (in their body) the spans being commented on —
+ * not `{% quote %}`, which stays reserved for the user's own words. Markdoc
+ * validation of those tags is the schema's `validate` hook (see
+ * `commentaryErrors` below), scoped to this card type.
  */
 
 import Markdoc, { type Node as MarkdocNode } from "@markdoc/markdoc";
@@ -59,6 +60,8 @@ function validateMarkdocBody(body: string): string[] {
 }
 
 export const CommentarySchema: CardSchema = cardSchema("commentary", {
+  description: "Anchored remarks on a host card (extfile, webpage, or doc) — attach-only, anchor-then-remark body",
+  category: "authored",
   validate: ({ fields }) => {
     const body = fields["body"];
     return commentaryErrors(typeof body === "string" ? body : "");
@@ -91,22 +94,22 @@ A commentary card carries **no target of its own** — no \`defaultHref\`,
 \`defaultRef\`, or \`targets\`. The containing host card *is* the target, and bare
 \`{% source %}\` anchors point at it.
 
-## Body — quote-then-remark
+## Body — anchor-then-remark
 
 Each comment is a \`{% source %}\` anchor (the span being commented on) followed
 by your remark as ordinary prose:
 
 \`\`\`
 {% source pos="body; heading: Track A (#track-a); ~line 210"
-          version="sha256:9f3a1c2b git:7ffeae4" %}
-{% quote %}the exact span the user selected{% /quote %}
-{% /source %}
+          version="sha256:9f3a1c2b git:7ffeae4" %}the exact span the user selected{% /source %}
 
 This overstates it — placement is composer-only, so it isn't a clean superset.
 \`\`\`
 
-The \`{% source %}\` (with inner \`{% quote %}\`) holds the **selected span,
-verbatim**. Your comment is the prose *after* it, outside the tag.
+The \`{% source %}\` **body** holds the selected span, verbatim (escaped to valid
+Markdoc — see below). Your comment is the prose *after* the tag, outside it. Do
+**not** wrap the span in \`{% quote %}\`: that tag is reserved for the *user's own
+words* (THE LAW OF QUOTING), not a document excerpt you're pointing at.
 
 ## Turning a \`<user-selection>\` into an anchor
 

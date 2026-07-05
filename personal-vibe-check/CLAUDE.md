@@ -15,8 +15,8 @@ If you landed in this repo but the task is actually to **install or configure th
 
 Relevant files to read, in priority order:
 
-- [`INSTALL.md`](./INSTALL.md) — step-by-step instructions for installing the preset into a downstream project (preferred `vibe-init` path, manual path, hook setup, verification, common failure modes).
-- [`CONVENTIONS.md`](./CONVENTIONS.md) — the prose coding rules that get copied into the downstream project's `CLAUDE.md`.
+- [`install.md`](./install.md) — step-by-step instructions for installing the preset into a downstream project (preferred `vibe-init` path, manual path, hook setup, verification, common failure modes).
+- [`conventions.md`](./conventions.md) — the prose coding rules that get copied into the downstream project's `CLAUDE.md`.
 - [`README.md`](./README.md) — human-oriented overview of what's bundled and why.
 
 If a rule in this package isn't behaving the way you want for a downstream project, do not edit this repo to fix it — either disable the rule in the consuming project's eslint config, or (if the rule is wrong in general) return here under the **Changing the library** workflow.
@@ -33,7 +33,7 @@ Everything below is for contributors modifying this repo (adding rules, adjustin
 - `plugin.mjs` — ESLint plugin bundling this repo's own rules. Every rule in `rules/` must be registered here.
 - `rules/<rule-name>.mjs` — custom rule implementations. One rule per file.
 - `rules/test/<rule-name>.test.mjs` — tests for each rule. **Required**, not optional.
-- `CONVENTIONS.md` — downstream-facing conventions. Consuming projects paste relevant sections into their own CLAUDE.md / AGENTS.md.
+- `conventions.md` — downstream-facing conventions. Consuming projects paste relevant sections into their own CLAUDE.md / AGENTS.md.
 - `tsconfig.base.json`, `prettier.config.mjs`, `knip-base.json` — other shared configs.
 
 ### "Complete" for a new or changed rule
@@ -50,7 +50,7 @@ A rule change is not done until **all** of these hold:
    - Dynamic / unparseable input: explicit test that it's skipped (not errored on)
 3. **Registered** in `plugin.mjs` under the correct name.
 4. **Wired** in `eslint.config.mjs` — either always-on (rare) or opt-in via a new `vibeCheck()` option. If opt-in, the option name should match the rule name.
-5. **Documented** in `CONVENTIONS.md` with a usage snippet, the full options shape, and a Limitations subsection. Downstream authors read this file, not the source.
+5. **Documented** in `conventions.md` with a usage snippet, the full options shape, and a Limitations subsection. Downstream authors read this file, not the source.
 6. **`npm test` passes** and **`npm run lint` passes** (the repo lints itself).
 7. **Committed as its own commit** with a message explaining *why* the rule exists — the commit log is the historical record of why each rule was added.
 

@@ -30,30 +30,78 @@ docs. When a plan ships, either fold its durable "how it works" parts into
 reference docs **and** move the plan to `implemented-plans/`, or just move it if
 the reference material already lives elsewhere.
 
-## Wiring (pending)
+## Status-header convention
 
-- **`cb-plan`** should write new plans to `docs/plans/<topic>.md` (it currently
-  writes to `docs/<topic>.md`). Update the skill's "write the plan to…" line.
-- **`finish`** should `git mv docs/plans/<topic>.md docs/implemented-plans/` as
-  part of the merge close-out, so shipping a plan files it automatically.
+Every plan's first line (right under the title) must be a status line of the
+form:
+
+```
+**Status:** <active | implemented YYYY-MM | partially implemented YYYY-MM | parked YYYY-MM> — <one short clause>
+```
+
+- **active** — in `docs/plans/`, not yet (fully) shipped.
+- **implemented YYYY-MM** — shipped; the doc belongs in `implemented-plans/`.
+- **partially implemented YYYY-MM** — some of it shipped, some didn't; stays in
+  `docs/plans/` until the remainder lands or is dropped.
+- **parked YYYY-MM** — shelved without shipping; the doc belongs in
+  `unimplemented-plans/`.
+
+This is what lets an agent tell, from the first line, whether a plan
+describes the present or an intention — the drift that caused the 2026-07
+doc reorg (stale "in progress"/"unmerged branch" headers on plans that had
+actually shipped) is exactly what this convention prevents.
+
+## Research and competitive corpora live elsewhere
+
+Competitive/comparative research (OpenClaw, Hermes, Letta, PAI, gstack, and
+similar) is **not** a plan and does not live here — it lives in the
+monorepo-top-level `research/` directory (see `research/CLAUDE.md`). Findings
+worth pursuing get filed into the monorepo-root `issues/` tree or promoted to
+an actual plan in this directory.
+
+## Wiring
+
+- **`finish`** files shipped plans automatically: step 5 of
+  `.claude/agents/finish.md` ("Reconcile planning docs with reality")
+  moves implemented plans to `docs/implemented-plans/`, parks abandoned
+  ones in `docs/unimplemented-plans/` with a README disposition row, and
+  applies the naming conventions (`docs/README.md`). The 2026-07-04
+  docs-reorg cleared the backlog that accumulated before this was
+  wired.
 
 ## Migration (done)
 
 The first backlog batch was migrated and all `docs/…` references rewritten:
 
-- → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-design.md`
-  (+ `.review.md`, `.gstack-trial-review.md`), `markdoc-format-investigation.md`,
+- → `implemented-plans/`: `selection-commentary.md`, `markdoc-tags-plan.md`
+  (+ `.review.md`, `.review-adapted-trial.md`), `markdoc-format-investigation.md`,
   `shared-frontend-backend-code.subplan.md`, `narration-mode-design.md`
-  (feature shipped, despite the doc's stale "proposal" header).
-- → `plans/` (still open): `triage-design.md` (in progress),
-  `pdf-intake-design.md` (not yet implemented), `source-editor.md`.
+  (feature shipped, despite the doc's stale "proposal" header — later
+  found to be inaccurate; see 2026-07-04 below).
+- → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
+  `source-editor.md`. (`triage.md` later turned out to be fully built
+  and was promoted to `docs/triage.md` as a reference doc — see the
+  2026-07 doc reorg.)
+
+**2026-07-04:** `implemented-plans/narration-mode-design.md` was moved back
+to `plans/narration-mode.md` — the doc opens "Status: proposal, for
+discussion" and was never actually implemented; its earlier placement in
+`implemented-plans/` above was a misfiling, not a correction.
 
 **Follow-ups:**
 - Regenerate the doc graph (`pnpm doc-graph`) — it's generated and still shows
   the old paths; it self-heals on the next run.
 - A few more plan-shaped docs remain in `docs/` and need a judgment call on
   reference-vs-proposal before moving: `activities-design.md`,
-  `capture-pipeline-redesign.md`, `event-bus-design.md`, `design-card-views.md`,
-  `photo-storage-investigation.md`. Left in place (some read more like vision/
-  reference than active proposals — `DESIGN.md`, `design-vision.md`,
-  `stack-decisions.md` are reference and stay).
+  `event-bus.md`, `photo-storage-investigation.md`. Left in place
+  (some read more like vision/reference than active proposals — `design.md`,
+  `design-vision.md`, `stack-decisions.md` were judged reference and stayed
+  at the time; on 2026-07-04 the design-reconciliation execution split
+  `design.md` into `docs/design/` and retired `design-vision.md` to
+  `unimplemented-plans/design-vision-superseded.md`).
+  `design-card-views.md` has since moved to `unimplemented-plans/`
+  (superseded by the shipped renderer registry, now
+  `design-card-views-superseded.md`), `attach-implementation.md`
+  to `implemented-plans/` (superseded by `docs/asset-manifests.md`, now
+  `attach-directories-superseded.md`), and
+  `capture-pipeline-redesign.md` to `unimplemented-plans/` (parked 2026-03).

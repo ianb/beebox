@@ -29,32 +29,22 @@ class CardSchemaDeclarationError extends Error {
   }
 }
 
-/**
- * Supported body content kinds. Markdown bodies are plain UTF-8 text.
- */
-export type BodyKind = "markdown" | "xml";
-
-export interface BodyFieldOptions {
-  /** Body kind. Defaults to "markdown". */
-  kind?: BodyKind;
-}
-
 export interface BodyField<TSchema extends ZodType = ZodType> {
   readonly [BODY_FIELD_TAG]: true;
   readonly schema: TSchema;
-  readonly kind: BodyKind;
 }
 
 /**
  * Marks a field as living in the card's file body instead of the YAML
- * frontmatter. Each CardSchema may declare at most one body field.
+ * frontmatter. Each CardSchema may declare at most one body field. Bodies are
+ * markdown (plain UTF-8 text); if a non-markdown body encoding is ever needed
+ * again, reintroduce a `kind` discriminator here (and its `content-type`
+ * marker).
  */
 export function body<TSchema extends ZodType>(
-  schema: TSchema,
-  options?: BodyFieldOptions
+  schema: TSchema
 ): BodyField<TSchema> {
-  const kind = options === undefined || options.kind === undefined ? "markdown" : options.kind;
-  return { [BODY_FIELD_TAG]: true, schema, kind };
+  return { [BODY_FIELD_TAG]: true, schema };
 }
 
 export function isBodyField(value: unknown): value is BodyField {
@@ -80,14 +70,10 @@ export type FieldDecl = ZodType | BodyField;
  * - `title` — human-readable display title.
  * - `contains` — one sentence stating what can be found inside this card;
  *   the prime retrieval field for search and listings.
- * - `content-type` — body encoding marker the host reads to know how to parse
- *   the body. A structural field set by the serializer, not author data, so
- *   it is allowed on every card type rather than redeclared per schema.
  */
 export const GLOBAL_CARD_FIELDS: Record<string, ZodType> = {
   title: z.string().optional(),
   contains: z.string().optional(),
-  "content-type": z.string().optional(),
 };
 
 /**
@@ -106,11 +92,62 @@ export interface CardValidateInput {
 }
 
 /**
+ * Who creates cards of a type — drives how the agent guide groups the
+ * card-type catalogue:
+ * - `authored` — agents (and users via the UI) create and edit these; the
+ *   working vocabulary. Box-local schemas default here.
+ * - `synced` — created by connectors or capture; agents read and edit them
+ *   but rarely create one by hand.
+ * - `system` — created and consumed by the machinery (jobs, run records);
+ *   agents don't author these.
+ */
+export type CardCategory = "authored" | "synced" | "system";
+
+/**
+ * Policy for reconciling a box's edited copy of a *template* card (a
+ * procedure/guide/schedule/etc. that callback-box ships and updates) with a
+ * newer upstream version. The default behaviour, with no policy, is strict:
+ * ANY divergence between the box's copy and the last-shipped stock parks the
+ * update in `config/_template-updates/` for the boxholder to review, so an
+ * edit is never silently overwritten.
+ *
+ * A policy loosens that for fields the box legitimately OWNS as per-box state
+ * rather than template definition — the canonical case being a schedule's
+ * `enabled` toggle. It is deliberately declarative (a field list, not a free
+ * `merge(box, upstream)` function) because the judgement that actually matters
+ * — "is this box on unmodified old stock, or did the boxholder edit the
+ * definition?" — depends on the last-shipped hash, which lives in the version
+ * tracker, not in the two card texts. A free callback couldn't see that and so
+ * would have to either clobber real edits or freeze old stock. Declaring which
+ * keys are state lets the tracker keep making that call correctly: it strips
+ * the owned keys before comparing, so a box that differs ONLY in them still
+ * reads as unmodified stock and takes the update, with its own values for those
+ * keys carried onto the new version. Divergence in any other key or the body
+ * still parks.
+ */
+export interface TemplateMergePolicy {
+  /**
+   * Frontmatter keys the box owns (its state, not the template's definition).
+   * A box copy differing from upstream only in these keys is updated in place
+   * with the box's values for them preserved; divergence outside them parks.
+   */
+  readonly boxOwnedFields: readonly string[];
+}
+
+/**
  * Configuration for cardSchema().
  */
 export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
   /** All fields keyed by name. At most one may be body()-wrapped. */
   fields: TFields;
+  /**
+   * One line saying what a card of this type is / is for — shown in the agent
+   * guide's card-type catalogue. Optional only so box-local schemas keep
+   * loading without one; every built-in schema declares it.
+   */
+  description?: string;
+  /** Who creates cards of this type (see {@link CardCategory}). Defaults to "authored". */
+  category?: CardCategory;
   /** Handling instructions for agents working with this card type. */
   instructions?: string;
   /**
@@ -126,6 +163,12 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    * per-schema. Omit when Zod `fields` cover the type.
    */
   validate?: (input: CardValidateInput) => LintIssue[];
+  /**
+   * Reconciliation policy for template cards this schema covers (see
+   * {@link TemplateMergePolicy}). Only meaningful for card types callback-box
+   * ships and updates as templates; omit it and any edit parks the update.
+   */
+  templateMerge?: TemplateMergePolicy;
 }
 
 /**
@@ -138,6 +181,10 @@ export interface CardSchema<
 > {
   readonly type: TTag;
   readonly fields: TFields;
+  /** One-line catalogue description (see {@link CardSchemaConfig.description}). */
+  readonly description?: string;
+  /** Who creates cards of this type. Defaults to "authored". */
+  readonly category: CardCategory;
   /** Name of the single body field, or null if the card is frontmatter-only. */
   readonly bodyFieldName: string | null;
   /** Resolved body field (kind + schema), or null. */
@@ -152,6 +199,8 @@ export interface CardSchema<
   readonly instructions?: string;
   /** Self-contained validation hook (see {@link CardSchemaConfig.validate}). */
   readonly validate?: (input: CardValidateInput) => LintIssue[];
+  /** Template reconciliation policy (see {@link CardSchemaConfig.templateMerge}). */
+  readonly templateMerge?: TemplateMergePolicy;
 }
 
 /**
@@ -213,15 +262,22 @@ export function cardSchema<
     frontmatterSchema: z.object(frontmatterShape),
     globalFieldNames,
     searchable: config.searchable === undefined ? true : config.searchable,
+    category: config.category === undefined ? "authored" : config.category,
   };
   // Optional members are spread in only when present so a schema that declares
   // neither still produces the same object shape (exactOptionalPropertyTypes).
   let resolved: CardSchema<TTag, TFields> = schema;
+  if (config.description !== undefined) {
+    resolved = { ...resolved, description: config.description };
+  }
   if (config.instructions !== undefined) {
     resolved = { ...resolved, instructions: config.instructions };
   }
   if (config.validate !== undefined) {
     resolved = { ...resolved, validate: config.validate };
+  }
+  if (config.templateMerge !== undefined) {
+    resolved = { ...resolved, templateMerge: config.templateMerge };
   }
   return resolved;
 }

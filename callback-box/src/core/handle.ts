@@ -2,17 +2,17 @@
  * Handle stage — the third stage of the triage pipeline.
  *
  * For each category bucket in `inbox/triaged/<category>/`, find the
- * landmark that defines the category, read its `<triage-destination>
- * <procedure>` element, and invoke that procedure with the bucket of
+ * landmark that defines the category, read the matching `destinations:`
+ * entry's `procedure` ref, and invoke that procedure with the bucket of
  * items passed via the `TRIAGE_ITEMS` env var (null-delimited
  * box-relative paths).
  *
- * Inline procedures aren't supported yet — only `<procedure ref=…/>`
+ * Inline procedures aren't supported yet — only `procedure: { ref }`
  * pointing at a real `.procedure.card`. Inline-vs-ref carriage is an
  * open question in the design doc; we ship the ref form first because
  * the engine already runs procedure cards as-is.
  *
- * See `docs/plans/triage-design.md` §Handle (stage 3).
+ * See `docs/triage.md` §Handle (stage 3).
  */
 
 import * as fs from "node:fs/promises";

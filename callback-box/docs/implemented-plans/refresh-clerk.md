@@ -20,7 +20,7 @@ content into a box; the box does the thinking.
   dep makes `pnpm install` noisy enough that it was exiled from the workspace.
 - `callback-box/CLAUDE.md` — "don't add features beyond what the task
   requires"; read-before-write; validation contract.
-- `callback-box/CODE-STYLE.md` — no optional chaining, no default params, max
+- `callback-box/code-style.md` — no optional chaining, no default params, max
   2 positional params, no `any`.
 - Shipped precedent: `callback-box/eslint.config.mjs` is the densest statement
   of what a subproject's lint config should look like — `vibeCheck(...)` plus
@@ -293,7 +293,7 @@ domain-level test for payload shaping.
 
 **What.** Rewrite `callback-clerk/CLAUDE.md` (dormancy notice → living doc:
 architecture, how to load unpacked, how auth works), delete
-`CONVENTIONS.md`/`THINKING_CLAUDE.md` if obsolete (they predate the monorepo
+`conventions.md`/`THINKING_CLAUDE.md` if obsolete (they predate the monorepo
 conventions), README with a quickstart, and a manual verification pass against
 both local dev and the deployed instance.
 

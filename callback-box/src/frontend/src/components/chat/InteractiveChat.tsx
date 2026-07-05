@@ -15,25 +15,25 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { chatMachine } from "../../machines/chatMachine.js";
 import { groupMessages } from "../ChatMessages";
-import { serializeViewUrl } from "../../lib/view-url";
-import { clearLastMessageAudio } from "../../lib/last-audio-cache";
-import { refreshLocationIfStale } from "../../lib/location-share";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
-import { newMessageId, formatTimePassed, localTime, buildSpeechMessage } from "./InteractiveChat-helpers";
+import { useEmissionDispatch } from "./InteractiveChat-dispatch";
 import { useDictationDraft } from "../../hooks/useDictationDraft";
-import { useComposerDraft } from "../../hooks/useComposerDraft";
+import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
 import { RecoveredDictation } from "./RecoveredDictation";
+import { ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
 import { useChatAttachments } from "./InteractiveChat-attachments";
 import { useChatSelections } from "./InteractiveChat-selections";
 import { useChatVoice } from "./InteractiveChat-voice";
-import { useChatSse } from "./InteractiveChat-sse";
+import { useChatWs } from "./InteractiveChat-ws";
 import { useChatActions } from "./InteractiveChat-actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
+import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
+import type { EmissionStore } from "../../input/emission-store";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -74,9 +74,16 @@ interface InteractiveChatProps {
    * sync as the active card changes. Distinct from `companion` (one-shot).
    */
   card?: string;
+  /**
+   * The lifted emission store: created once in `ChatPage`, above this
+   * component's `key={keyState.epoch}` remount boundary, so the in-progress
+   * composition survives a session switch (docs/implemented-plans/input-extraction.md,
+   * chunk 4).
+   */
+  emissionStore: EmissionStore;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore }: InteractiveChatProps) {
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -88,10 +95,17 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   const { boxSlug } = useParams({ strict: false });
   const backgroundTasks = useBackgroundTasks();
 
-  const [input, setInput] = useState("");
-  // Persist the unsent composer text so a remount (e.g. the router re-reading
-  // search params on wake-from-sleep) or a reload doesn't silently discard it.
-  useComposerDraft({ boxSlug, sessionId, input, setInput });
+  // Composer text lives in an external store, not React state, so a keystroke
+  // re-renders only the composer textareas — not the message history or the
+  // companion view pane (see input-store.ts and components/chat/CLAUDE.md).
+  // The full emission store is a prop (see above); this derives the
+  // text-only view every render — cheap, and stable in identity as long as
+  // `emissionStore` is (it always is, across a session switch).
+  const inputStore = useMemo(() => createInputStoreAdapter(emissionStore), [emissionStore]);
+  // Persist the whole in-progress emission (text, images, files, selections)
+  // under one singleton key per box, so it survives a session switch AND a
+  // reload — the design's singleton-draft promise.
+  const { expiredAttachments, dismissExpiredAttachments } = useEmissionPersistence({ boxSlug, emissionStore });
   const [loadingOlder, setLoadingOlder] = useState(false);
   const [scrollToBottomTrigger, setScrollToBottomTrigger] = useState(0);
   const [debugView, setDebugView] = useState(false);
@@ -113,49 +127,29 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   useProcessingStatusPoll({ processBusy: Boolean(processBusy), isStreaming, sessionId, send });
   useChatStallRecovery({ isStreamingState: snapshot.matches("streaming"), sessionId, send });
 
-  // Both user-send funnels (`doSend`, `doSendWithImages` in useChatActions) call
-  // `cardSend.capture()` so every turn carries the open card + activity since the
-  // last reply; system sends (e.g. /compact) don't, leaving the accumulator be.
-  const doSend = useCallback(
-    (wrapped: string) => {
-      // Any send moves "the last message" past the cached voice recording.
-      // A voice send re-caches its own audio right after (see runKeywordSend).
-      clearLastMessageAudio();
-      void refreshLocationIfStale(boxSlug); // best-effort stale-fix refresh; no-op unless the user opted in
-      send({ type: "SEND", message: wrapped, messageId: newMessageId(), ...cardSend.capture() });
-    },
-    [send, cardSend, boxSlug]
-  );
-
-  const zoomedViewAttr = useCallback(() => {
-    if (!activeView) return "";
-    const uri = `view:${serializeViewUrl(activeView.target)}`;
-    return ` zoomed-view="${uri}"`;
-  }, [activeView]);
-
-  const timePassedAttr = useCallback(() => {
-    if (messages.length === 0) return "";
-    const last = messages[messages.length - 1];
-    const formatted = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
-    return formatted ? ` time-passed="${formatted}"` : "";
-  }, [messages]);
-
-  const attach = useChatAttachments({ input, setInput, textareaRef });
-  const selections = useChatSelections({ input, setInput, textareaRef });
+  // The one user-send funnel: every send site builds an Emission and lands
+  // in dispatchEmission (docs/implemented-plans/input-extraction.md chunk 1); assembly
+  // and witness capture live in InteractiveChat-dispatch.ts.
+  const attach = useChatAttachments({ emissionStore, textareaRef });
+  const selections = useChatSelections({ emissionStore, textareaRef });
+  const { dispatchEmission, sendVoiceSegment, sendStopSend } = useEmissionDispatch({
+    send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
+    selections: selections.selections, resetSelections: selections.resetSelections,
+  });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    clearDraftRef, input, setInput, doSend, zoomedViewAttr, timePassedAttr,
+    clearDraftRef, inputStore, dispatchEmission,
   });
 
   // Persist the in-flight transcript so an interrupted session (screen sleep,
   // tab eviction, reload) doesn't erase it. Recovery surfaces in a dedicated
   // widget above the composer rather than autofilling the field.
   const { recoveredDraft, clearDraft } = useDictationDraft({
-    boxSlug, sessionId,
+    boxSlug,
     transcript: voice.transcription.transcript,
     isTranscribing: voice.isTranscribing,
     narrationEnabled: model.narrationEnabled,
@@ -167,10 +161,9 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
     // No audio survives a drop, so the realtime text stands in for the HQ pass
     // (the design's documented HQ-failure fallback). Sent as a narration
     // <speech> message; the session's narration flag re-syncs from the server.
-    const attrs = ` local-time="${localTime()}"${zoomedViewAttr()}${timePassedAttr()}`;
-    doSend(buildSpeechMessage({ text: recoveredDraft.text, diarized: false, selections: [], attrs }));
+    sendVoiceSegment(recoveredDraft.text);
     clearDraft();
-  }, [recoveredDraft, zoomedViewAttr, timePassedAttr, doSend, clearDraft]);
+  }, [recoveredDraft, sendVoiceSegment, clearDraft]);
 
   // Surface the recovery widget only when idle: hidden while the mic is open
   // and while an HQ commit is in flight (the mic briefly idles between
@@ -184,7 +177,11 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
     />
   ) : null;
 
-  useChatSse({
+  const expiredAttachmentsNotice = (
+    <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />
+  );
+
+  useChatWs({
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
@@ -192,13 +189,13 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
 
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    input, setInput, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
+    inputStore, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     addImageFiles: attach.addImageFiles,
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, zoomedViewAttr, timePassedAttr, captureCardSend: cardSend.capture,
+    setScrollToBottomTrigger, dispatchEmission,
   });
 
   if (isLoading) {
@@ -210,12 +207,14 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
   }
 
   return (
-    <InteractiveChatBody
+    <InputStoreProvider value={inputStore}>
+      <InteractiveChatBody
       tabs={tabs}
       model={model}
       mute={mute}
       voice={voice}
       recoveredDictation={recoveredDictation}
+      expiredAttachmentsNotice={expiredAttachmentsNotice}
       attach={attach}
       selections={selections}
       actions={actions}
@@ -239,8 +238,6 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       loadingOlder={loadingOlder}
       scrollToBottomTrigger={scrollToBottomTrigger} liveTurnId={liveTurnId}
       snapshot={snapshot}
-      input={input}
-      setInput={setInput}
       textareaRef={textareaRef}
       debugView={debugView}
       setDebugView={setDebugView}
@@ -250,11 +247,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card }: I
       setTypingMode={setTypingMode}
       typingLocked={typingLocked}
       setTypingLocked={setTypingLocked}
-      doSend={doSend}
+      onVoiceSegmentSend={sendStopSend}
       send={send}
-      zoomedViewAttr={zoomedViewAttr}
-      timePassedAttr={timePassedAttr}
       reportCardActivity={cardSend.report}
-    />
+      />
+    </InputStoreProvider>
   );
 }

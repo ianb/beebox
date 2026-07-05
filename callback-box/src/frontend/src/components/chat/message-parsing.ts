@@ -5,64 +5,15 @@
  */
 
 import type { LightboxImage } from "../ImageLightbox";
-import { parseViewUrl, resolveImageSrc } from "../../lib/view-url";
+import { isExternalUrl, resolveImageSrc } from "../../lib/view-url";
 import { bustImageSrc } from "../../lib/file-version";
-import { getApiBase } from "../../api";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat-features";
+import { entrySelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
 
-/**
- * Parse a self-note block out of user-position text. Self-notes are
- * agent-authored messages wrapped in `<self-note ref="..." commit="...">...</self-note>`
- * (see `cb chat self-note`). Returns null if the text is not a self-note.
- */
-export interface SelfNoteInfo {
-  ref: string | null;
-  commit: string | null;
-  body: string;
-}
-
-function decodeXmlAttr(v: string): string {
-  return v
-    .replace(/&quot;/g, "\"")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&amp;/g, "&");
-}
-
-function parseSelfNotes(text: string): SelfNoteInfo[] | null {
-  const re = /<self-note\b([^>]*)>([\S\s]*?)<\/self-note>/g;
-  const notes: SelfNoteInfo[] = [];
-  let lastEnd = 0;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) {
-    const between = text.slice(lastEnd, m.index);
-    if (between.trim().length > 0) return null;
-    const attrs = m[1] || "";
-    const body = (m[2] || "").trim();
-    const refMatch = attrs.match(/\bref="([^"]*)"/);
-    const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
-    notes.push({
-      ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
-      commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
-      body,
-    });
-    lastEnd = m.index + m[0].length;
-  }
-  if (notes.length === 0) return null;
-  if (text.slice(lastEnd).trim().length > 0) return null;
-  return notes;
-}
-
-function entrySelfNotes(entry: SessionEntry): SelfNoteInfo[] | null {
-  if (entry.type !== "user") return null;
-  for (const block of entry.content) {
-    if (block.type !== "text") continue;
-    const notes = parseSelfNotes(block.text || "");
-    if (notes) return notes;
-  }
-  return null;
-}
+// Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
+// Re-exported so ChatMessages.tsx keeps importing the type from this module.
+export type { SelfNoteInfo };
 
 /**
  * Strip system-injected tags from user message text for display.
@@ -242,9 +193,12 @@ export function parseTaskNotification(text: string): TaskNotification | null {
 const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg", ".ico"]);
 
 export function isImagePath(path: string): boolean {
-  const dot = path.lastIndexOf(".");
+  // Strip any ?query / #hash before checking the extension, so a cache-busted
+  // image (`photo.png?v=1`) is still recognized as an image, not an embed.
+  const clean = path.split(/[#?]/, 1)[0]!;
+  const dot = clean.lastIndexOf(".");
   if (dot <= 0) return false;
-  return IMAGE_EXTS.has(path.slice(dot).toLowerCase());
+  return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
 }
 
 /**
@@ -260,7 +214,6 @@ export function imageBlockSrc(block: SessionContentBlock): string | null {
 }
 
 const MARKDOWN_IMAGE_RE = /!\[([^\]]*)]\(([^\s)]+)(?:\s+"[^"]*")?\)/g;
-const VIEW_LINK_RE = /\[([^\]]*)]\(view:([^\s)]+)\)/g;
 
 function extractImagesFromMarkdown(
   text: string,
@@ -269,23 +222,15 @@ function extractImagesFromMarkdown(
   for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
     const alt = match[1];
     const rawSrc = match[2];
-    if (rawSrc) {
+    // `![…](…)` is the embed syntax: an image src belongs in the lightbox, but a
+    // card/file embed (an in-box, non-image path) does not — skip it.
+    if (rawSrc && (isExternalUrl(rawSrc) || isImagePath(rawSrc))) {
       const src = bustImageSrc(resolveImageSrc(rawSrc, { boxSlug, basePath: undefined }));
       const trimmedAlt = alt.trim();
       out.push({
         src,
         alt,
         caption: trimmedAlt === "" ? undefined : alt,
-      });
-    }
-  }
-  for (const match of text.matchAll(VIEW_LINK_RE)) {
-    const label = match[1];
-    const target = parseViewUrl(`view:${match[2]}`);
-    if (isImagePath(target.path)) {
-      out.push({
-        src: bustImageSrc(`${getApiBase()}/files/${target.path}`),
-        alt: label,
       });
     }
   }

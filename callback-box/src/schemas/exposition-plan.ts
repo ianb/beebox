@@ -13,11 +13,10 @@
  * A single-file card, usually embedded in a course's attach scope. General
  * beyond courseware — any deliberate presentation could use it.
  *
- * See docs/plans/courseware-phase1.md.
+ * See docs/implemented-plans/courseware-phase1.md.
  */
 
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 /** One candidate way to present, with an honest rating of its fit here. */
@@ -35,6 +34,8 @@ const expositionPlanFields = {
 };
 
 export const ExpositionPlanSchema: CardSchema = cardSchema("exposition-plan", {
+  description: "A worked plan for how to present a subject — learner translation, rated approaches, and compiled presentation rules",
+  category: "authored",
   fields: expositionPlanFields,
   instructions: `# Exposition-Plan Cards
 
@@ -93,7 +94,6 @@ export function createExpositionPlanTemplate(options: { title?: string | undefin
   if (options.title !== undefined && options.title !== "") {
     fields["title"] = options.title;
   }
-  const yamlText = stringifyYaml(fields);
   const bodyText = "The reasoning behind the presentation choices, and how it should adapt. Use neutral pronouns for the learner.\n";
-  return `---\n${yamlText}---\n${bodyText}`;
+  return renderFrontmatterBlock(fields, bodyText);
 }

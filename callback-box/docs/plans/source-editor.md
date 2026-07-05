@@ -1,5 +1,7 @@
 # Source Editor Plan
 
+**Status:** active
+
 ## Overview
 
 A web-frontend editor that edits a file's raw text source. Surfaces alongside the existing "Plaintext" view as another renderer in the FileView toggle. Works for any text file in the box, including `.card` XML.

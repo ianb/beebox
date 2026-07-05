@@ -48,9 +48,9 @@ The docs this plan must be evaluated against:
   `callback-box/CLAUDE.md:101`: *"Read before writing. Don't guess file
   formats, XML structures, or API shapes."* — every migrator in this
   plan reads the real card before rewriting it.
-- **`callback-box/CODE-STYLE.md`** — `CODE-STYLE.md:25`: *"NEVER use
-  `any` type"*; `CODE-STYLE.md:36`: *"No default parameters"*;
-  `CODE-STYLE.md:37`: *"Max 2 positional parameters."* The new parsing
+- **`callback-box/code-style.md`** — `code-style.md:25`: *"NEVER use
+  `any` type"*; `code-style.md:36`: *"No default parameters"*;
+  `code-style.md:37`: *"Max 2 positional parameters."* The new parsing
   helpers (frontmatter + Markdoc body) follow these.
 - **The shipped Markdoc precedent.** `{% source %}` (committed
   `63141dce`) and `{% quote %}` are the densest preference for how a
@@ -103,18 +103,18 @@ five schemas and removes the scaffolding. Concretely:
   `RecipeTags.tsx`. **Reuse:** every new tag plugs into this pipeline;
   no new infrastructure.
 - **The four-track Markdoc design doc.**
-  `docs/implemented-plans/markdoc-tags-design.md`. Track 4 (ref tracking
+  `docs/implemented-plans/markdoc-tags-plan.md`. Track 4 (ref tracking
   in body tags) committed `39680dc1`; Track 3 (`{% source %}`) committed
-  `63141dce` (`markdoc-tags-design.md:473-478`). Track 2 (briefing) and
-  Track 1 (recipe) marked **pending** (`markdoc-tags-design.md:488-489`).
+  `63141dce` (`markdoc-tags-plan.md:473-478`). Track 2 (briefing) and
+  Track 1 (recipe) marked **pending** (`markdoc-tags-plan.md:488-489`).
   **Reuse:** the per-tag convention discovered there
-  (`markdoc-tags-design.md:35` — any tag with a `ref` attr renames it
+  (`markdoc-tags-plan.md:35` — any tag with a `ref` attr renames it
   before React render) is a hard constraint this plan inherits.
 - **The migrator harness.** `scripts/migrate/*.ts` per schema, plus
   `scripts/migrate/_warnings.ts` (`callback-box/CLAUDE.md:52`) which
   declares known attrs/children per element and surfaces anything
   outside the allow-list — it *"Surfaced real data loss during the
-  production migration"* (`docs/cards-as-markdown.md`). **Reuse:** the
+  production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
   five new migrators follow this exact pattern, including warnings mode.
 - **The XPath dependency.** Only two call sites:
   `src/core/landmark/resolve.ts:167` (expand-template placeholders) and
@@ -162,7 +162,7 @@ five schemas and removes the scaffolding. Concretely:
   migrators must *emit* canonical Markdoc (tool-generated, never
   round-trip hand-edited input through `format()`), and any later
   body-rewrite stays substring-based like `move.ts`
-  (`markdoc-tags-design.md:421`).
+  (`markdoc-tags-plan.md:421`).
 - **No external prior art for the XPath-in-templates feature.** The
   `${title}` / `${path}` expand-template placeholder is a callback-box
   invention; there is no library pattern to adopt. The replacement is
@@ -297,7 +297,7 @@ still carry indented shell/prompt text).
 `pass-output`), `run`, `validate` (attr `severity`: warn|review|abort),
 `shell`, `agent` (attrs `model`, `max-turns`), `instruction`, `why`.
 **Note collision risk:** `step` is already a recipe tag
-(`markdoc-config.ts`). Per `markdoc-tags-design.md` "no tag may exist
+(`markdoc-config.ts`). Per `markdoc-tags-plan.md` "no tag may exist
 with two different shapes," this must be resolved — see Open Questions.
 
 **First implementation chunk.** Add the procedure tag schemas (resolving
@@ -478,7 +478,7 @@ box surfaces rather than silently rendering `""`.
 
 **Critical gap: `{% step %}` tag collision** (Track 3 vs recipe). A
 procedure body `{% step %}` and a recipe body `{% step %}` would share
-one schema entry in `markdoc-config.ts`. `markdoc-tags-design.md` states
+one schema entry in `markdoc-config.ts`. `markdoc-tags-plan.md` states
 *"no tag may exist with two different shapes"*; recipe `step` takes no
 attributes, procedure `step` needs `id`. If both register the same name
 with different shapes, one silently wins. **Resolution required in the
@@ -536,13 +536,13 @@ rollout.
   what the task needs; a general converter is more surface than the job
   requires (CLAUDE.md "don't add features beyond what the task
   requires").
-- **chat-thread `.jsonl` reformatting.** `docs/cards-as-markdown.md`
+- **chat-thread `.jsonl` reformatting.** `docs/implemented-plans/cards-as-markdown-rfc.md`
   floats storing chat-thread as JSONL; that's an independent idea, not
   blocked by XML removal (chat-thread is already a frontmatter schema).
 - **Changing the `{% quote %}`/`{% source %}` vocabulary.** Shipped and
   stable; this plan only *adds* tags.
 - **Briefing Track 2.** Already its own pending track in
-  `markdoc-tags-design.md`; briefing is already a frontmatter schema, so
+  `markdoc-tags-plan.md`; briefing is already a frontmatter schema, so
   it is not part of XML removal.
 - **Touching boxes' git history / migrating archived runs.** procedure-run
   cards under expired/gc'd run dirs are deleted by `gc.ts` anyway; we

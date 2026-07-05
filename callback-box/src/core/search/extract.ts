@@ -231,7 +231,13 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
     case "person":
       return {
         title: str(fields["name"]),
-        extra: compact([str(fields["name"]), str(fields["role"]), str(fields["contact"])]),
+        extra: compact([
+          str(fields["name"]),
+          str(fields["role"]),
+          str(fields["email"]),
+          str(fields["phone"]),
+          str(fields["address"]),
+        ]),
       };
     case "record":
       return {
@@ -247,7 +253,7 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
       };
     case "file":
       return { extra: compact([str(fields["description"])]) };
-    case "sheet":
+    case "gsheet":
       return { extra: tabTitles(fields["sheets"]) };
     case "telegram-message":
       return { extra: compact([str(fields["text"])]) };

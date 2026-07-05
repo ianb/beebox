@@ -10,15 +10,16 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
+import { chatSessionProcedures } from "./chat-session-procedures.js";
+import { chatControlProcedures } from "./chat-control-procedures.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
-  loadHistoryEntries,
-  resolveSessionLogPath,
 } from "../../../core/chat-session-history.js";
+import { listChatHusks } from "../../../core/chat-husk.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
-import { getSessionMetadata } from "../../../cli/lib/session.js";
+import { getSessionLogPath, getSessionMetadata } from "../../../cli/lib/session.js";
 
 const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -26,6 +27,8 @@ export interface PickerSession {
   sessionId: string;
   label: string;
   lastActivity: string;
+  /** Box-relative path of the session's husk card. */
+  huskPath: string;
 }
 
 export interface PickerLandmark {
@@ -120,44 +123,57 @@ interface SessionRow {
   contextDir: string | undefined;
   mtime: Date;
   label: string;
+  /** Box-relative path of the session's husk card. */
+  huskPath: string;
 }
 
+/**
+ * Web chats, enumerated from husk cards (docs/plans/chat-husks.md) — the
+ * cards are the source of truth for which sessions exist and what they're
+ * called (deleting a husk is editorial removal from the picker; a husk
+ * `title` beats the transcript snippet). Activity stays runtime-derived:
+ * freshness is the transcript's mtime, and a husk whose transcript is
+ * gone is skipped here (nothing to resume) while staying browsable as a
+ * card.
+ */
 async function loadAllSessions(
   boxRoot: string,
 ): Promise<SessionRow[]> {
-  const entries = await loadHistoryEntries(boxRoot);
+  const husks = await listChatHusks(boxRoot);
   const rows: SessionRow[] = [];
-  for (const entry of entries) {
-    let logPath: string;
-    try {
-      logPath = await resolveSessionLogPath(boxRoot, entry.id);
-    } catch (e) {
-      console.warn(`Skipping session ${entry.id}: cannot resolve log path:`, e);
-      continue;
-    }
+  for (const husk of husks) {
+    // The husk's own binding locates the transcript (the SDK's cwd at
+    // session creation) — no history-file lookup.
+    const cwd = husk.contextDir !== undefined && husk.contextDir !== ""
+      ? path.join(boxRoot, husk.contextDir)
+      : boxRoot;
+    const logPath = getSessionLogPath(cwd, husk.session);
     let mtime: Date;
     try {
       const stat = await fs.stat(logPath);
       mtime = stat.mtime;
     } catch (_e) {
-      // log missing — session was cleaned up; nothing actionable, skip it
+      // log missing — session was cleaned up; nothing to resume, skip it
       continue;
     }
 
-    let label = entry.id.slice(0, 8);
-    try {
-      const meta = await getSessionMetadata({ sessionId: entry.id, logPath, snippetMaxLen: 400 });
-      if (meta.firstUserSnippet) label = meta.firstUserSnippet;
-    } catch (e) {
-      console.warn(`Could not read metadata for session ${entry.id}, using id-prefix label:`, e);
-      // keep the id-prefix fallback
+    let label = husk.title ?? husk.session.slice(0, 8);
+    if (husk.title === undefined) {
+      try {
+        const meta = await getSessionMetadata({ sessionId: husk.session, logPath, snippetMaxLen: 400 });
+        if (meta.firstUserSnippet) label = meta.firstUserSnippet;
+      } catch (e) {
+        console.warn(`Could not read metadata for session ${husk.session}, using id-prefix label:`, e);
+        // keep the id-prefix fallback
+      }
     }
 
     rows.push({
-      sessionId: entry.id,
-      contextDir: entry.contextDir,
+      sessionId: husk.session,
+      contextDir: husk.contextDir,
       mtime,
       label,
+      huskPath: husk.path,
     });
   }
   rows.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
@@ -165,6 +181,8 @@ async function loadAllSessions(
 }
 
 export const chatRouter = router({
+  ...chatSessionProcedures,
+  ...chatControlProcedures,
   /**
    * Most-recently-created session associated with a directory, or null
    * if no chat has been started for that directory.
@@ -243,6 +261,7 @@ export const chatRouter = router({
       sessionId: s.sessionId,
       label: s.label,
       lastActivity: s.mtime.toISOString(),
+      huskPath: s.huskPath,
     });
 
     const picker: PickerLandmark[] = landmarks.map((lm) => {

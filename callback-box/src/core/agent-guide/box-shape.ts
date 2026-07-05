@@ -2,66 +2,105 @@
  * Directory layout and intake mechanisms — the shape of the box and how
  * items get into it.
  *
- * This is the in-box agent-facing summary. The canonical directory list
- * lives in BOX_DIRS (src/cli/lib/paths.ts) and the developer-facing
- * reference is docs/box-layout.md. When you change directories here, keep
- * those two in sync — drift between them has caused confusion before.
+ * This is the in-box agent-facing summary — a curated subset of directories,
+ * some collapsed together (all of `store/archive/*` reads as one row here).
+ * Path and description text come from the single `BOX_LAYOUT` spec
+ * (`src/cli/lib/box-layout-spec.ts`); this file only owns which rows appear,
+ * in what order, and the `store/archive/` rollup row that spec doesn't
+ * itself model. Add, remove, or rename a directory in the spec, not here.
  */
 
-export function directoryLayoutSection(): string[] {
-  return [
-    "## Directory Layout",
-    "",
-    "Location is state — a card's directory determines its lifecycle stage:",
-    "",
-    "| Directory | Purpose |",
-    "|-----------|---------|",
-    "| `box/inbox/` | Incoming items to be triaged |",
-    "| `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). |",
-    "| `box/inbox/staged/` | Intake-complete; waiting for the triage agent. |",
-    "| `box/inbox/triaged/<category>/` | Categorized; awaiting the handler procedure. |",
-    "| `box/inbox/triaged/_unsure/` | Held low-confidence items, paired with a question card. |",
-    "| `box/inbox/unhandled/` | Items with no clear destination |",
-    "| `box/jobs/` | Pending job cards for the reactor to process |",
-    "| `box/questions/` | Pending questions for the user |",
-    "| `box/resources/` | Synced external state |",
-    "| `box/output/` | Outbound cards (telegram messages, etc.) — flushed by `cb finalize` |",
-    "| `box/pool/` | Items being actively worked on |",
-    "| `store/archive/` | Processed/completed items |",
-    "| `store/calendar/` | Calendar events (.ics files) — two-way sync with Google Calendar |",
-    "| `store/drive/` | Google Drive files (spreadsheets as JSON, docs as markdown) — two-way sync |",
-    "| `store/integrated/` | Feedback absorbed into guides |",
-    "| `store/recipes/` | Recipe collection (subdirectories for organization) |",
-    "| `store/reviews/retro/` | Retrospective run reports — what the retrospective observed in past chats and which belief edits it made |",
-    "| `store/todos/` | Active todo lists — human action items |",
-    "| `store/trash/` | Soft-deleted items |",
-    "| `people/` | Person cards — key people referenced from briefings |",
-    "| `places/` | Place cards — named locations the box recognizes (Home, Office) |",
-    "| `config/` | Box configuration |",
-    "",
-  ];
+import { boxLayoutEntry, type BoxDirs } from "../../cli/lib/paths.js";
+import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../cli/lib/box-shape.js";
+
+/** The shape version of every box created before the boxes-as-packages plan. */
+const LEGACY_SHAPE_VERSION = 1;
+
+/** One row of the agent-facing directory table: its spec path (unless `path` overrides it) and description. */
+function row(boxDirsKey: keyof BoxDirs, options?: { path: string }): string {
+  const entry = boxLayoutEntry(boxDirsKey);
+  const description = entry.agentDescription ?? entry.description;
+  const path = options ? options.path : entry.path;
+  return `| \`${path}/\` | ${description} |`;
 }
 
-export function howItemsEnterSection(): string[] {
-  return [
-    "## How Items Enter the Box",
-    "",
-    "You do NOT manually place items in directories. Items arrive through these mechanisms:",
-    "",
-    "- **Capture UI** — the user records voice memos, takes photos, or types text in the web interface. These are saved to `box/inbox/` automatically and processed via the `process-captures` procedure.",
-    "- **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during `cb wakeup`. Connectors create cards in `box/inbox/` and job cards in `box/jobs/` for processing.",
-    "- **`cb create`** — the CLI command creates cards from templates. Use this when YOU need to create a card (e.g., a question, todo, or record). Example: `cb create box/questions/Color.question.card -t question`",
-    "- **Chat** — users send messages through the chat UI, which creates/updates chat-thread cards.",
-    "- **Clerk browser extension** — the user's \"Comment on this page\" captures a web page as a `*.webpage.card`: the readable markdown rendering as its body, with `source`/`captured`/`frozen` frontmatter, plus a frozen self-contained snapshot at `attach/page.frozen`. The user's remarks live in a separate `*.commentary.card` *inside the webpage card's attach scope* (`<basename>.attach/`); the webpage view surfaces them inline, and bare `{% source %}` anchors there default to the containing page. \"Save page\" produces the same `*.webpage.card` without the commentary. It lands in the chosen `<destination for=\"commentary\">` landmark dir, or `box/inbox/` by default.",
-    "",
-    "Two parallel sorting paths process items that land in `box/inbox/`:",
-    "",
-    "- **Inbox jobs (legacy)** — the wakeup cycle creates job cards in `box/jobs/` for the reactor to process. This is the historical path; most current routing still goes through it.",
-    "- **The intake → triage → handle pipeline (new)** — see `docs/plans/triage-design.md`. Items move through `box/inbox/intake/` → `box/inbox/staged/` → `box/inbox/triaged/<category>/`, driven by `cb intake` / `cb triage` / `cb handle`. The two paths coexist; the new pipeline isn't wired into wakeup yet.",
-    "",
-    "You don't need to move items to the inbox yourself — connectors and capture handle arrivals.",
-    "",
-    "**Common mistake:** Do NOT tell users to \"put\" or \"place\" files in directories. Users interact through the web UI, chat, or external services. Only agents use `cb create` and `cb mv`.",
-    "",
-  ];
+export function directoryLayoutSection(): string {
+  const rows = [
+    row("inbox"),
+    row("inboxIntake"),
+    row("inboxStaged"),
+    row("inboxTriaged", { path: "box/inbox/triaged/<category>" }),
+    row("inboxTriagedUnsure"),
+    row("inboxUnhandled"),
+    row("jobs"),
+    row("questions"),
+    row("resources"),
+    row("output"),
+    "| `store/archive/` | Processed/completed items |",
+    row("calendar"),
+    row("drive"),
+    row("recipes"),
+    row("retroReports"),
+    row("todos"),
+    row("trash"),
+    row("people"),
+    row("places"),
+    row("config"),
+  ].join("\n");
+
+  return `## Directory Layout
+
+Location is state — a card's directory determines its lifecycle stage:
+
+| Directory | Purpose |
+|-----------|---------|
+${rows}`;
+}
+
+/**
+ * Where box-authored code lives, and what's editable, for a package (shape
+ * 2+) box. A legacy box keeps its schemas/views/tricks inside the box root
+ * itself — nothing to add, so this renders empty and is dropped by the guide
+ * assembler in `index.ts`, leaving legacy guide output byte-identical to
+ * before shape-awareness existed.
+ */
+export function boxCodeLocationSection(shape: BoxShape): string {
+  if (shape.shapeVersion === LEGACY_SHAPE_VERSION) return "";
+
+  const { schemasDir, viewsDir, tricksDir } = boxCodePathsRelativeToBoxRoot(shape);
+
+  return `## Box-Owned Code
+
+This box uses the package layout: your working directory (this box root) is a \`content/\` directory nested inside a package that also holds \`package.json\`, \`node_modules/\`, and the box's source code. Box-authored code — schemas, views, tricks — lives at the **package root**, not in this box root:
+
+| Code | Reached from here as |
+|------|------------------------|
+| Schemas | \`${schemasDir}/\` |
+| Views | \`${viewsDir}/\` |
+| Tricks | \`${tricksDir}/\` |
+
+**Editable, hot-reloaded — no restart needed.** Edit files under those three directories freely; the schema loader, view compiler, and trick runner all pick up changes without a restart.
+
+**Not yours to edit.** \`package.json\`, \`node_modules/\`, lockfiles, \`tsconfig.json\`, and anything else at the package root outside those three directories belong to the boxholder, not to you. Upgrading the engine — bumping the \`callback-box\` dependency and everything that comes with it — is done with \`cb upgrade\`, run by the boxholder from outside this session. Don't run \`cb upgrade\` yourself unless explicitly asked to.
+
+**Imports.** Box code may only import from the callback-box library surface: \`callback-box/cards\` (card/schema primitives), \`callback-box/schema\` (Zod and YAML, version-pinned to the engine), and \`callback-box/view-widgets\` (view components). Don't add other dependencies to \`package.json\` — that file isn't yours to edit.`;
+}
+
+export function howItemsEnterSection(): string {
+  return `## How Items Enter the Box
+
+Most items arrive on their own — you rarely need to place one by hand (though you do create and move cards with \`cb create\` / \`cb mv\` as part of your work). The arrival mechanisms:
+
+- **Capture UI** — the user records voice memos, takes photos, or types text in the web interface. These are saved to \`box/inbox/\` automatically and processed via the \`process-captures\` procedure.
+- **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during \`cb wakeup\`. Connectors create cards in \`box/inbox/\` and job cards in \`box/jobs/\` for processing.
+- **\`cb create\`** — the CLI command creates cards from templates. Use this when YOU need to create a card (e.g., a question, todo, or record). Example: \`cb create box/questions/Color.question.card -t question\`
+- **Chat** — users send messages through the chat UI, which creates/updates chat-thread cards.
+- **Clerk browser extension** — the user's "Comment on this page" captures a web page as a \`*.webpage.card\`: the readable markdown rendering as its body, with \`source\`/\`captured\`/\`frozen\` frontmatter, plus a frozen self-contained snapshot at \`attach/page.frozen\`. The user's remarks live in a separate \`*.commentary.card\` *inside the webpage card's attach scope* (\`<basename>.attach/\`); the webpage view surfaces them inline, and bare \`{% source %}\` anchors there default to the containing page. "Save page" produces the same \`*.webpage.card\` without the commentary. It lands in the chosen \`[commentary]\` destination landmark dir, or \`box/inbox/\` by default.
+
+Two sorting mechanisms process items that land in \`box/inbox/\`. Don't confuse a **job** (a card in \`box/jobs/\` that tells the reactor to do a unit of work) with a **triaged item** (an inbox item routed to a category to await its handler) — they're different things that happen to share the word "intake":
+
+- **Jobs → reactor** — the primary routing path: \`cb wakeup\` and the connectors create job cards in \`box/jobs/\`, and the reactor processes them one cycle per wakeup.
+- **The intake → triage → handle pipeline** — runs when invoked directly (\`cb intake\` / \`cb triage\` / \`cb handle\`), moving items through \`box/inbox/intake/\` → \`staged/\` → \`triaged/<category>/\`. See \`docs/generated/triage.md\` (confidence levels, handler \`TRIAGE_ITEMS\` contract).
+
+**Common mistake:** Do NOT tell users to "put" or "place" files in directories. Users interact through the web UI, chat, or external services. Only agents use \`cb create\` and \`cb mv\`.`;
 }

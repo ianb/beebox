@@ -125,7 +125,6 @@ export function cbCommandsScheduling(): string[] {
     "```bash",
     "cb scenario list                          # List available scenarios",
     "cb scenario run <name>                    # Run a scenario",
-    "cb scenario run <name> --from <checkpoint> # Start from checkpoint",
     "cb scenario run <name> --dry-run          # Preview steps",
     "```",
     "",

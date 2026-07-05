@@ -5,15 +5,15 @@
  * agent acts on the directive with the user's answer.
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
-import { stringify as stringifyYaml } from "yaml";
+import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const QuestionFollowupJobSchema: CardSchema = cardSchema("question-followup-job", {
+  description: "A system job created when the user answers a question — carries the directive and answer for an agent to act on",
+  category: "system",
   searchable: false,
   fields: {
     status: z.string().default("pending"),
-    created: z.string().datetime({ offset: true }),
     source: z.string().default("question-answer"),
     description: z.string(),
     "question-ref": z.object({ ref: z.string() }),
@@ -48,7 +48,6 @@ A user has answered a question. Your job is to act on their answer.
 export interface QuestionFollowupJobFields {
   type: "question-followup-job";
   status: string;
-  created: string;
   source: string;
   description: string;
   "question-ref": { ref: string };
@@ -61,16 +60,14 @@ export function createQuestionFollowupJobTemplate(options: {
   questionRef: string;
   directive: string;
   answer: string;
-  created?: string;
 }): string {
   const fields: Record<string, unknown> = {
     status: "pending",
-    created: options.created ?? new Date().toISOString(),
     source: "question-answer",
     description: options.description,
     "question-ref": { ref: options.questionRef },
     directive: options.directive,
     answer: options.answer,
   };
-  return `---\n${stringifyYaml(fields)}---\n`;
+  return renderFrontmatterBlock(fields);
 }

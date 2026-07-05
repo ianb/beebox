@@ -81,7 +81,7 @@ Outstanding (not yet done):
   key … never reordered, renamed, or removed."* The new kind honors this.
 - `callback-box/docs/testing.md` — tests-first as a design tool; the machine
   gate (`cb view check`) is the done-condition encoded as a runnable check.
-- `callback-box/CODE-STYLE.md` — max 2 positional params (named options), no
+- `callback-box/code-style.md` — max 2 positional params (named options), no
   `any`, custom error classes.
 - Densest precedents: the script-migration system (`cb migrate` +
   `migrations.jsonl`, May 2026 rollout `docs/migrations.md:125-138`) and the
