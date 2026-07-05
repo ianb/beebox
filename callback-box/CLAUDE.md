@@ -100,7 +100,7 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 - **All cross-process locks go through `src/lib/file-lock.ts`.** Don't roll your own with `proper-lockfile` or hand-built `.lock` files — the primitive handles PID liveness, sleep, and crash recovery. In-process async serialization (e.g. a `Map<id, Promise>` chain) is a different problem and stays separate.
 - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via the `debugLog.submit` tRPC mutation). Read them from the rolling file `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
 - **Leave the repo clean when committing.** Fix any lint/type/test errors you encounter (even pre-existing ones) and make enough commits that nothing half-done is left lying around.
-- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Refer to "the user" or "the boxholder" in shared text (source, prompts, schemas, docs, rules). Names are only fine in per-box config, throwaway replies, and personal memory.
+- **Keep source and docs generic — never hardcode personal names.** This is a generic tool; any box can be adopted by any user. Refer to "the user" or "the boxholder" in shared text (source, prompts, schemas, docs, rules). Names are only fine in per-box config, throwaway replies, and personal memory. When an example genuinely needs named people, boxes, or places, draw from the canonical fictional roster in `docs/example-names.md` rather than inventing one (which risks using a real name).
 
 ## Improving These Instructions
 
@@ -144,5 +144,6 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Feature ideas & open issues | `/issues/` (monorepo root) |
 | OpenClaw/Hermes comparison & idea triage | `research/openclaw-hermes/README.md` |
 | Glossary | `docs/glossary.md` |
+| Example names for docs/tests | `docs/example-names.md` |
 
 @code-style.md
