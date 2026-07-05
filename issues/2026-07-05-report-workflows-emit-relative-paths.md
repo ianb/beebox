@@ -9,7 +9,7 @@ discovered-in: main session — cleaning path leaks for the source-available rel
 Auto-generated audit reports leaked the author's home directory. The
 2026-06-26 user-stories audit (`callback-box/docs/reports/`) carried ~105
 absolute `Evidence:` paths like
-`/Users/ianbicking/src/callback-worktrees/user-stories/callback-box/src/...`,
+`/Users/you/src/callback-worktrees/<wt>/callback-box/src/...`,
 even though the report's own header claims "paths are relative to
 `callback-box/`". The verifier agents pasted whatever `bin/browse` and file
 reads handed them — absolute paths — and nothing relativized them.
