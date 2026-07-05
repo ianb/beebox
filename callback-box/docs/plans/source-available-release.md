@@ -130,7 +130,21 @@ Ordered by dependency then risk. Track A (history verification) gates public
 push and comes first because its outcome could change everything. Tracks B–E
 are independent and can land in any order once A clears.
 
-### Track A — Real-secret scan (history + tree)
+### Track A — Real-secret scan (history + tree) — **DONE / CLEAN (2026-07-05)**
+
+**Scan result: CLEAN — no live credential in the working tree or full git
+history. The gate passes.** Ran `gitleaks` (full history via `--log-opts=--all`,
+2,008 commits + working-tree `--no-git`) and `trufflehog git file://.` **with
+live verification** (28,621 chunks): **0 verified and 0 unverified secrets**.
+The only scanner hit was the RFC 6455 §1.3 sample `Sec-WebSocket-Key`
+(`dGhlIHNhbXBsZSBub25jZQ==` = "the sample nonce"), a fixed spec constant in the
+hub handshake doctests — allowlisted in `.gitleaks.toml`. Spot-checks confirmed
+no secret-value file was ever committed on any ref (the long-gone
+`callback-box/.env.example` held only dev ports/paths; `deploy/` scripts read
+from gitignored `.env`/`server-ip`; no `config/connectors/` secrets tracked).
+Boxholder name/`ianb@colorstudy.com` in commit metadata is accepted per the
+history decision. **No history surgery needed.** The repeatable gate is
+`gitleaks detect --log-opts=--all` (config: `.gitleaks.toml`).
 
 - **What.** Confirm no actual *secret* (API key, token, password, private key)
   exists in the working tree or git history before going public. Names and the
@@ -332,7 +346,7 @@ survives triage.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| A live credential sits in old history and ships public | No | `.gitignore` blocks *new* ones; doesn't scan old | Silent — the gating risk (Track A) |
+| A live credential sits in old history and ships public | **Yes — Track A scan, CLEAN 2026-07-05** | `.gitignore` blocks *new* ones; the `.gitleaks.toml` gate scans old | **Cleared** — gitleaks + trufflehog(verified) found none |
 | Deploy genericization breaks the author's live deployment | Partial (deploy is exercised on real deploys) | The author would notice on next deploy | Clear (deploy fails loudly) |
 | PII-scrub name change breaks a doctest asserting the old name | Yes (the doctests themselves) | Re-run after swap — done, 6/6 green | Clear (test fails) |
 | README license claim stays false after Track D wording drift | doc-check catches broken *links*, not false *claims* | No | Silent |
@@ -467,7 +481,9 @@ new audit entries in `src/dev/knowledge-audits.yaml`.
 
 ## Implementation order
 
-1. **Track A** real-secret scan (gates the public push; only a live credential escalates).
+1. **Track A** real-secret scan — **DONE / CLEAN (2026-07-05).** gitleaks +
+   trufflehog(verified) over full history + tree: 0 real credentials; only false
+   positive (RFC 6455 WebSocket nonce) allowlisted in `.gitleaks.toml`. Gate passes.
 2. **Track B** working-tree PII scrub — **DONE this session** (name/email → roster,
    doctest green; `settings.local.json` untracked). Remaining small cleanups:
    relativize the audit-report paths + regen `doc-graph`, and Track C's cheap half
