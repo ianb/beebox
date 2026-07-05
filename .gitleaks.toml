@@ -1,0 +1,13 @@
+# gitleaks config for the pre-publish secret gate (Track A of the
+# source-available release). Run:  gitleaks detect --log-opts=--all
+# The default ruleset, plus an allowlist for known-fine false positives.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Known-fine false positives, triaged in the Track A secret scan (2026-07-05)"
+regexes = [
+  # RFC 6455 §1.3 sample Sec-WebSocket-Key ("the sample nonce"), a fixed
+  # spec constant hardcoded in the hub handshake doctests — not a secret.
+  '''dGhlIHNhbXBsZSBub25jZQ==''',
+]
