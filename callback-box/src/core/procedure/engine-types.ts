@@ -6,6 +6,7 @@
  */
 
 import { type createAgent as realCreateAgent } from "../agent.js";
+import { MODEL_ID } from "../model-ids.js";
 import type { RunStepResult, ProcedureRunFields } from "../../schemas/procedure-run.js";
 import type { ProcedureStepDef } from "../../schemas/procedure.js";
 
@@ -72,11 +73,12 @@ export function isLegalRunStatusTransition(from: RunStatus, to: RunStatus): bool
   return RUN_STATUS_TRANSITIONS[from].includes(to);
 }
 
-/** Maps friendly model names to full model IDs */
+/** Maps friendly model names to full model IDs (from the canonical
+ *  {@link MODEL_ID} source shared with the frontend model picker). */
 export const MODEL_MAP: Record<string, string> = {
-  haiku: "claude-haiku-4-5-20251001",
-  sonnet: "claude-sonnet-4-6",
-  opus: "claude-opus-4-8",
+  haiku: MODEL_ID.haiku,
+  sonnet: MODEL_ID.sonnet,
+  opus: MODEL_ID.opus,
 };
 
 /** Agent factory type — matches createAgent() signature */
