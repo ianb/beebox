@@ -7,8 +7,8 @@
  */
 
 import type { ZodTypeAny } from "zod";
-import { getAllTemplates } from "../schemas/templates.js";
-import { cbCommandsScheduling } from "./generate-docs-cb-commands-scheduling.js";
+import { getAllTemplates } from "../../schemas/templates.js";
+import { cbCommandsScheduling } from "./cb-commands-scheduling.js";
 
 /**
  * Lead-in prose + `cb create` section for the cb command reference.

@@ -13,7 +13,7 @@ import { detectBoxTarget, scaffoldPackageRoot } from "../../core/box-package.js"
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateSkills } from "../../core/box-skills.js";
-import { generateDocs, setDocIdDebug } from "../../core/generate-docs.js";
+import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 

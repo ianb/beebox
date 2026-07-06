@@ -23,7 +23,7 @@ import {
   LockHeldError,
 } from "../../lib/file-lock.js";
 import { createAgent as realCreateAgent } from "../agent.js";
-import { generateDocs as realGenerateDocs } from "../generate-docs.js";
+import { generateDocs as realGenerateDocs } from "../docs-gen/index.js";
 import { fmt } from "../../lib/format.js";
 import {
   loadChatSessions,

@@ -8,7 +8,7 @@
  * authoring mechanics when it forms the intent to use them.
  */
 
-import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
+import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
 
 export function proceduresSection(procedures: ProcedureSummary[]): string {
   if (procedures.length === 0) return "";

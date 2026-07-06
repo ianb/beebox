@@ -7,7 +7,7 @@
  * (generate-docs-cb-commands.ts, generate-docs-procedure-guide.ts).
  */
 
-import { getTemplatesForCardType, describeTemplateArgs } from "../schemas/templates.js";
+import { getTemplatesForCardType, describeTemplateArgs } from "../../schemas/templates.js";
 
 /**
  * Static connector metadata. Connectors register at runtime with a boxRoot,

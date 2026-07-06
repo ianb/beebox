@@ -9,14 +9,14 @@
 
 import { join } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
-import { loadCardFrontmatter } from "./frontmatter-field.js";
-import { parseGuide, parseGuideCard, compileGuide } from "../schemas/guide.js";
-import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
-import { compileBriefing, BriefingSchema } from "../schemas/briefing.js";
-import { loadBoxholders } from "./boxholder-cards.js";
-import { cardFields, parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
-import { DOCS_DIR, withDocId } from "./generate-docs-shared.js";
+import { loadCardFrontmatter } from "../frontmatter-field.js";
+import { parseGuide, parseGuideCard, compileGuide } from "../../schemas/guide.js";
+import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../../schemas/personality.js";
+import { compileBriefing, BriefingSchema } from "../../schemas/briefing.js";
+import { loadBoxholders } from "../boxholder-cards.js";
+import { cardFields, parseCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { DOCS_DIR, withDocId } from "./shared.js";
 
 /**
  * Scan procedure cards and extract name + first-line description.

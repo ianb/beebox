@@ -17,7 +17,7 @@ import { loadTests, getTestsPath, runTest } from "./lib/test-runner.js";
 import { assertStandaloneBox, UnsafeAuditBoxError, formatUnsafeAuditBox } from "./lib/box-guard.js";
 import { generateReport } from "./lib/report.js";
 import { recordRun, loadHistory, type RunMeasurement } from "./lib/context-history.js";
-import { generateDocs } from "../core/generate-docs.js";
+import { generateDocs } from "../core/docs-gen/index.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 
 const DEFAULT_TESTS_DIR = path.join(PACKAGE_ROOT, "src", "dev");

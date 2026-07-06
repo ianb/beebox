@@ -8,7 +8,7 @@
 
 import { join } from "node:path";
 import { writeFile, readFile } from "node:fs/promises";
-import { AGENT_GUIDE_FILE } from "./generate-docs-shared.js";
+import { AGENT_GUIDE_FILE } from "./shared.js";
 
 /**
  * Ensure CLAUDE.md has the @-include for the agent guide and any compiled briefings.

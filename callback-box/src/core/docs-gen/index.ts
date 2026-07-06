@@ -10,46 +10,46 @@
 
 import { join, relative } from "node:path";
 import { execFile } from "node:child_process";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
-import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
-import { generateViewsDoc } from "./views-doc.js";
-import { generateChatVoiceDoc } from "./chat-voice-doc.js";
-import { generateNarrationModeDoc } from "./narration-mode-doc.js";
-import { generateReducingClaudeMdDoc } from "./reducing-claude-md-doc.js";
-import { generatePythonToolsDoc } from "./python-tools-doc.js";
-import { generateAgentGuide } from "./agent-guide/index.js";
-import { CONTAINS_DOC_APPENDIX } from "./agent-guide/search.js";
+import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
+import { generateViewsDoc } from "../views-doc.js";
+import { generateChatVoiceDoc } from "../chat-voice-doc.js";
+import { generateNarrationModeDoc } from "../narration-mode-doc.js";
+import { generateReducingClaudeMdDoc } from "../reducing-claude-md-doc.js";
+import { generatePythonToolsDoc } from "../python-tools-doc.js";
+import { generateAgentGuide } from "../agent-guide/index.js";
+import { CONTAINS_DOC_APPENDIX } from "../agent-guide/search.js";
 import {
   installProcedures,
   installGuides,
   installPersonality,
   installBriefing,
   installSchedules,
-} from "./box.js";
-import { installSchemasGuide, installViewsGuide } from "./box-templates.js";
-import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "./install-template-file.js";
-import { generateRules } from "./init-rules.js";
-import { installValidationHooks } from "./install-validation-hooks.js";
-import { getBoxShapeOrLegacyFallback, type BoxShape } from "../lib/box-shape.js";
-import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../lib/git.js";
-import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./generate-docs-shared.js";
-import { generateCbCommands } from "./generate-docs-cb-commands.js";
-import { generateCardDoc, generateConnectorsDocs } from "./generate-docs-content.js";
-import { generateProcedureGuide } from "./generate-docs-procedure-guide.js";
-import { generateTriageGuide } from "./generate-docs-triage.js";
+} from "../box.js";
+import { installSchemasGuide, installViewsGuide } from "../box-templates.js";
+import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
+import { generateRules } from "../init-rules.js";
+import { installValidationHooks } from "../install-validation-hooks.js";
+import { getBoxShapeOrLegacyFallback, type BoxShape } from "../../lib/box-shape.js";
+import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../../lib/git.js";
+import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
+import { generateCbCommands } from "./cb-commands.js";
+import { generateCardDoc, generateConnectorsDocs } from "./content.js";
+import { generateProcedureGuide } from "./procedure-guide.js";
+import { generateTriageGuide } from "./triage.js";
 import {
   scanProcedures,
   compileBriefings,
   compileGuides,
   compilePersonalities,
-} from "./generate-docs-compile.js";
-import type { ProcedureSummary } from "./generate-docs-compile.js";
-import { compileExpositionRules } from "./compile-exposition-rules.js";
-import { ensureClaudeMdIncludes } from "./generate-docs-claude-md.js";
+} from "./compile.js";
+import type { ProcedureSummary } from "./compile.js";
+import { compileExpositionRules } from "../compile-exposition-rules.js";
+import { ensureClaudeMdIncludes } from "./claude-md.js";
 
-export type { ProcedureSummary, GuideSummary } from "./generate-docs-compile.js";
+export type { ProcedureSummary, GuideSummary } from "./compile.js";
 
 const execFileAsync = promisify(execFile);
 

@@ -1,6 +1,6 @@
 # `generateDocs`'s template-sync commit — v2 path normalization
 
-`commitTemplateSyncChanges` (in `src/core/generate-docs.ts`) runs at the
+`commitTemplateSyncChanges` (in `src/core/docs-gen/index.ts`) runs at the
 package root and filters `git status` output through `isTemplateManagedPath`
 (`src/core/install-template-file.ts`) before committing — so only files the
 `install*`/`generateRules` helpers actually manage get swept up, leaving any
@@ -24,7 +24,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
-import { commitTemplateSyncChanges } from "../../src/core/generate-docs.js";
+import { commitTemplateSyncChanges } from "../../src/core/docs-gen/index.js";
 import { getStatus, getLog } from "../../src/lib/git.js";
 
 /** A real git repo shaped like a v2 box package root, matching

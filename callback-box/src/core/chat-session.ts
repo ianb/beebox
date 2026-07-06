@@ -16,7 +16,7 @@ import {
   loadSessionHistory,
   type SessionHistoryResult,
 } from "./chat-session-load-history.js";
-import { generateDocs } from "./generate-docs.js";
+import { generateDocs } from "./docs-gen/index.js";
 import {
   createChatBackend,
   type ChatBackend,

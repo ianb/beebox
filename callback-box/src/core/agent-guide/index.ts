@@ -10,7 +10,7 @@
 
 import type { CardSchema } from "../../cards/index.js";
 import { cardSchemas } from "../../schemas/registry.js";
-import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
+import type { ProcedureSummary, GuideSummary } from "../docs-gen/index.js";
 import type { BoxShape } from "../../lib/box-shape.js";
 
 import { directoryLayoutSection, howItemsEnterSection, boxCodeLocationSection } from "./box-shape.js";

@@ -9,7 +9,7 @@ regressed once: it parsed the cards with the XML `parseCard`, which throws on a
 frontmatter card, so every procedure was indexed as `"(could not parse)"`.
 
 ```ts setup
-import { scanProcedures } from "../../src/core/generate-docs-compile.js";
+import { scanProcedures } from "../../src/core/docs-gen/compile.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
