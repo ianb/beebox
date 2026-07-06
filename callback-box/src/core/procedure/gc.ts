@@ -16,7 +16,9 @@ import { commitPaths, pathsHaveChanges } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
 import { parseDuration } from "../../schemas/scheduled-script-duration.js";
 import { loadRunningProcedures } from "../schedule-state.js";
-import type { CommandContext, CommandResult } from "../command-runner.js";
+import { ok, type Result } from "../../lib/result.js";
+import type { CommandContext } from "../command-runner.js";
+import type { ProcedureError } from "./engine-types.js";
 import { COMPLETED_RUN_EXPIRY, FAILED_RUN_EXPIRY, MAX_RUNS_PER_PROCEDURE } from "./run-expiry.js";
 
 const RUN_DIR_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{4}$/;
@@ -75,7 +77,7 @@ async function resolveExpiry(runDir: string): Promise<number | "never" | "invali
  * procedure (`cb procedure status` reads it), pinned runs, and anything still
  * running. Commits once when it deleted something; silent when not.
  */
-export async function gcProcedureRuns(ctx: CommandContext): Promise<CommandResult> {
+export async function gcProcedureRuns(ctx: CommandContext): Promise<Result<{ removed: string[] }, ProcedureError>> {
   const { boxRoot } = ctx;
   const runsDir = path.join(boxRoot, "procedure/runs");
 
@@ -87,7 +89,7 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<CommandResul
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Could not read runs directory ${runsDir}:`, e);
     }
-    return { success: true, data: { removed: [] } };
+    return ok({ removed: [] });
   }
 
   const running = new Set(await loadRunningProcedures(boxRoot));
@@ -153,5 +155,5 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<CommandResul
     ctx.writeLine(fmt.ok(`Removed ${removed.length} expired run dir(s)`));
   }
 
-  return { success: true, data: { removed } };
+  return ok({ removed });
 }

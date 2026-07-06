@@ -64,7 +64,7 @@ const result = await startProcedure({
   procedureNameOrPath: "heal",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 print(`agent runs: ${runCount}`);
 print(`validate calls: ${validateCount}`);
 print(`retry got failure context: ${retryPrompt.includes("<validation-failure>")}`);
@@ -136,7 +136,7 @@ const result = await startProcedure({
   procedureNameOrPath: "stuck",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 // Initial run + MAX_REVIEW_RETRIES (1) retry = 2 agent runs.
 print(`agent runs: ${runCount}`);
 
@@ -202,7 +202,7 @@ const result = await startProcedure({
   procedureNameOrPath: "noagent",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 // Judged once; no retry attempted (nothing to resume).
 print(`validate calls: ${validateCount}`);
 
@@ -270,7 +270,7 @@ const result = await startProcedure({
   procedureNameOrPath: "once",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // The shell appended exactly one line despite the retry.
 const count = await box.read("box/output/count.txt");

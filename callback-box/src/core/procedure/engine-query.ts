@@ -7,7 +7,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { fmt } from "../../cli/lib/format.js";
-import type { CommandContext, CommandResult } from "../command-runner.js";
+import { ok, okVoid, err, type Result } from "../../lib/result.js";
+import type { CommandContext } from "../command-runner.js";
+import type { ProcedureError } from "./engine-types.js";
 
 /**
  * Resolve a run-dir argument to an absolute path. A bare name or relative
@@ -37,7 +39,7 @@ export async function resolveRunDir(
 /**
  * List available procedure definitions.
  */
-export async function listProcedures(ctx: CommandContext): Promise<CommandResult> {
+export async function listProcedures(ctx: CommandContext): Promise<Result<string[], ProcedureError>> {
   const procedureDir = path.join(ctx.boxRoot, "config/procedures");
 
   try {
@@ -46,7 +48,7 @@ export async function listProcedures(ctx: CommandContext): Promise<CommandResult
 
     if (cards.length === 0) {
       ctx.writeLine(fmt.dim("No procedure definitions found."));
-      return { success: true, data: [] };
+      return ok([]);
     }
 
     for (const card of cards) {
@@ -54,13 +56,13 @@ export async function listProcedures(ctx: CommandContext): Promise<CommandResult
       ctx.writeLine(`  ${fmt.strong(name)} ${fmt.dim(card)}`);
     }
 
-    return { success: true, data: cards };
+    return ok(cards);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Could not read procedures directory ${procedureDir}:`, e);
     }
     ctx.writeLine(fmt.dim("No config/procedures/ directory."));
-    return { success: true, data: [] };
+    return ok([]);
   }
 }
 
@@ -70,11 +72,11 @@ export async function listProcedures(ctx: CommandContext): Promise<CommandResult
 export async function procedureStatus(
   ctx: CommandContext,
   runDir?: string
-): Promise<CommandResult> {
+): Promise<Result<void, ProcedureError>> {
   const resolved = await resolveRunDir(ctx.boxRoot, runDir);
   if (resolved === null) {
     ctx.writeLine(fmt.dim("No procedure runs found."));
-    return { success: true };
+    return okVoid;
   }
 
   const runCardPath = path.join(resolved, "run.procedure-run.card");
@@ -83,7 +85,7 @@ export async function procedureStatus(
     const content = await fs.readFile(runCardPath, "utf-8");
     const run = parseProcedureRun(content);
     if (run === null) {
-      return { success: false, error: `Could not read run card: ${runCardPath}` };
+      return err({ cause: "parse", message: `Could not read run card: ${runCardPath}` });
     }
 
     ctx.writeLine(fmt.header(`Procedure Run: ${run.procedure}`));
@@ -109,11 +111,11 @@ export async function procedureStatus(
       ctx.writeLine(`  ${icon} ${fmt.strong(step.id)} ${fmt.dim(`(${status})`)}`);
     }
 
-    return { success: true };
+    return okVoid;
   } catch (error) {
-    return {
-      success: false,
-      error: `Could not read run card: ${(error as Error).message}`,
-    };
+    return err({
+      cause: "parse",
+      message: `Could not read run card: ${(error as Error).message}`,
+    });
   }
 }

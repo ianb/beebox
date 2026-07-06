@@ -12,15 +12,16 @@ import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
-import type { CommandContext, CommandResult } from "../command-runner.js";
-import { type ProcedureOptions, type ParsedProcedure } from "./engine-types.js";
+import { okVoid, err, type Result } from "../../lib/result.js";
+import type { CommandContext } from "../command-runner.js";
+import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
 import { loadProcedureDefinition } from "./engine-parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
 import { runSteps, finalizeRun } from "./engine-orchestrate.js";
 import { resolveRunDir } from "./engine-query.js";
 
 export type { AgentFactory } from "./engine-types.js";
-export type { ProcedureOptions } from "./engine-types.js";
+export type { ProcedureOptions, ProcedureError } from "./engine-types.js";
 
 /**
  * Parameters for startProcedure
@@ -86,7 +87,7 @@ function printDryRun(args: {
  */
 export async function startProcedure(
   params: StartProcedureParams
-): Promise<CommandResult> {
+): Promise<Result<void, ProcedureError>> {
   const { ctx, procedureNameOrPath, options = {} } = params;
   const { boxRoot } = ctx;
 
@@ -96,10 +97,10 @@ export async function startProcedure(
     await fs.access(procedureCardPath);
   } catch (e) {
     console.warn(`Procedure definition not accessible at ${procedureCardPath}:`, e);
-    return {
-      success: false,
-      error: `Procedure definition not found: ${procedureCardPath}`,
-    };
+    return err({
+      cause: "not-found",
+      message: `Procedure definition not found: ${procedureCardPath}`,
+    });
   }
 
   // Parse procedure definition
@@ -108,7 +109,7 @@ export async function startProcedure(
 
   if (options.dryRun) {
     printDryRun({ ctx, procedure, directive: options.directive });
-    return { success: true };
+    return okVoid;
   }
 
   // Validate --step if provided
@@ -116,10 +117,10 @@ export async function startProcedure(
     const found = procedure.steps.find((s) => s.id === options.step);
     if (!found) {
       const validIds = procedure.steps.map((s) => s.id).join(", ");
-      return {
-        success: false,
-        error: `Unknown step "${options.step}". Available steps: ${validIds}`,
-      };
+      return err({
+        cause: "not-found",
+        message: `Unknown step "${options.step}". Available steps: ${validIds}`,
+      });
     }
   }
 
@@ -193,13 +194,13 @@ export async function resumeProcedure(params: {
   ctx: CommandContext;
   runDir?: string;
   options?: ProcedureOptions;
-}): Promise<CommandResult> {
+}): Promise<Result<void, ProcedureError>> {
   const { ctx, options = {} } = params;
   const { boxRoot } = ctx;
 
   const runDir = await resolveRunDir(boxRoot, params.runDir);
   if (runDir === null) {
-    return { success: false, error: "No procedure run found to resume." };
+    return err({ cause: "resume", message: "No procedure run found to resume." });
   }
   const runCardPath = path.join(runDir, "run.procedure-run.card");
 
@@ -207,16 +208,16 @@ export async function resumeProcedure(params: {
   try {
     run = parseProcedureRun(await fs.readFile(runCardPath, "utf-8"));
   } catch (e) {
-    return { success: false, error: `Could not read run card: ${(e as Error).message}` };
+    return err({ cause: "parse", message: `Could not read run card: ${(e as Error).message}` });
   }
   if (run === null) {
-    return { success: false, error: `Could not parse run card: ${runCardPath}` };
+    return err({ cause: "parse", message: `Could not parse run card: ${runCardPath}` });
   }
 
   const relRunDir = path.relative(boxRoot, runDir);
   if (run.status === "completed") {
     ctx.writeLine(fmt.ok(`Run already completed: ${relRunDir} — nothing to resume`));
-    return { success: true };
+    return okVoid;
   }
 
   // Resume index: the first step that is neither completed nor skipped (both
@@ -225,7 +226,7 @@ export async function resumeProcedure(params: {
   const resumeStep = run.steps.find((s) => s.status !== "completed" && s.status !== "skipped");
   if (resumeStep === undefined) {
     ctx.writeLine(fmt.ok(`All steps already completed: ${relRunDir} — nothing to resume`));
-    return { success: true };
+    return okVoid;
   }
 
   // Load the procedure definition the run was created from.
@@ -236,16 +237,16 @@ export async function resumeProcedure(params: {
     await fs.access(procedureCardPath);
   } catch (e) {
     console.warn(`Procedure definition not accessible at ${procedureCardPath}:`, e);
-    return { success: false, error: `Procedure definition not found: ${procedureCardPath}` };
+    return err({ cause: "not-found", message: `Procedure definition not found: ${procedureCardPath}` });
   }
   const procedure = await loadProcedureDefinition(procedureCardPath);
 
   // The resume step must still exist in the (possibly edited) definition.
   if (!procedure.steps.some((s) => s.id === resumeStep.id)) {
-    return {
-      success: false,
-      error: `Step "${resumeStep.id}" no longer exists in procedure definition: ${run.procedure}`,
-    };
+    return err({
+      cause: "resume",
+      message: `Step "${resumeStep.id}" no longer exists in procedure definition: ${run.procedure}`,
+    });
   }
 
   // Re-open the run: it's active again (the on-disk "running" signal).

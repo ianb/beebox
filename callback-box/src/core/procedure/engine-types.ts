@@ -7,6 +7,23 @@
 
 import { type createAgent as realCreateAgent } from "../agent.js";
 
+/**
+ * Why a procedure operation failed, in the {@link Result} error arm returned by
+ * the engine's public functions. The cause lets callers dispatch (today they
+ * only surface `message`, but the tag keeps the distinctions the free-text
+ * strings used to blur):
+ * - `not-found` — a procedure definition or named step doesn't exist.
+ * - `parse` — a run card couldn't be read/parsed as valid frontmatter.
+ * - `resume` — a resume request can't proceed (no run, or the step is gone).
+ * - `step-failed` — the run executed but a step gated the procedure.
+ */
+export type ProcedureErrorCause = "not-found" | "parse" | "resume" | "step-failed";
+
+export interface ProcedureError {
+  cause: ProcedureErrorCause;
+  message: string;
+}
+
 /** Maps friendly model names to full model IDs */
 export const MODEL_MAP: Record<string, string> = {
   haiku: "claude-haiku-4-5-20251001",

@@ -7,8 +7,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
-import type { CommandContext, CommandResult } from "../command-runner.js";
-import { type ProcedureOptions, type ParsedProcedure } from "./engine-types.js";
+import { okVoid, err, type Result } from "../../lib/result.js";
+import type { CommandContext } from "../command-runner.js";
+import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
 import { updateRunCardStatus } from "./engine-run-card.js";
 import { computeRunExpires } from "./run-expiry.js";
 import { executeStep } from "./engine-step.js";
@@ -75,7 +76,7 @@ export async function finalizeRun(args: {
   /** Whether the run dir is committed. A fresh start where every step skipped
    *  is a no-op whose dir is removed; resume always passes true. */
   materialized: boolean;
-}): Promise<CommandResult> {
+}): Promise<Result<void, ProcedureError>> {
   const { ctx, boxRoot, procedure, runDir, runCardPath, result, materialized } = args;
   const { allSucceeded, failedStepId } = result;
   const procedureName = procedure.name;
@@ -84,7 +85,7 @@ export async function finalizeRun(args: {
     // No-op run: every executed step skipped, nothing was ever committed.
     await fs.rm(runDir, { recursive: true, force: true });
     ctx.writeLine(fmt.dim(`No-op run (all steps skipped) — removed ${path.relative(boxRoot, runDir)}`));
-    return { success: true };
+    return okVoid;
   }
 
   const completedAt = new Date().toISOString();
@@ -103,12 +104,12 @@ export async function finalizeRun(args: {
 
   if (allSucceeded) {
     ctx.writeLine(fmt.ok(`Procedure completed: ${procedureName}`));
-  } else {
-    ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
+    return okVoid;
   }
 
-  return {
-    success: allSucceeded,
-    ...(!allSucceeded && { error: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}` }),
-  };
+  ctx.writeLine(fmt.fail(`Procedure failed: ${procedureName}`));
+  return err({
+    cause: "step-failed",
+    message: `Procedure ${procedureName} failed at step: ${failedStepId ?? "unknown"}`,
+  });
 }

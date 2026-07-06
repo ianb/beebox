@@ -57,7 +57,7 @@ const result = await startProcedure({
   procedureNameOrPath: "agent-test",
   options: { createAgent: mockCreateAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // Agent was called exactly once
 print(`agent calls: ${fakeAgent.invocations.length}`);
@@ -169,7 +169,7 @@ const result = await startProcedure({
   procedureNameOrPath: "messy",
   options: { createAgent: mockCreateAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // The file is there — engine made a fallback commit
 const content = await box.read("box/output/uncommitted.txt");
@@ -230,7 +230,7 @@ const result = await startProcedure({
   procedureNameOrPath: "mixed",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 print(`agent ran: ${agentRan}`);
 
 const files = await box.list("box/output");

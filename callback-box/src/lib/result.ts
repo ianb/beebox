@@ -32,10 +32,13 @@ export type Result<T, E = string> =
   | { ok: true; value: T }
   | { ok: false; error: E };
 
-/** Construct a success arm. */
+/** Construct a success arm. For a value-less `Result<void>`, use {@link okVoid}. */
 export function ok<T>(value: T): { ok: true; value: T } {
   return { ok: true, value };
 }
+
+/** The `Result<void>` success value — a success that carries no data. */
+export const okVoid: { ok: true; value: void } = { ok: true, value: undefined };
 
 /** Construct a failure arm. */
 export function err<E>(error: E): { ok: false; error: E } {

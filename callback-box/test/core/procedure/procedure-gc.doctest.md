@@ -53,8 +53,9 @@ box.commitAll("Seed run history");
 const output = [];
 const ctx = { boxRoot: box.root, writeLine: (s) => output.push(s), write: () => {} };
 const result = await gcProcedureRuns(ctx);
-print(`success: ${result.success}`);
-print(`removed: ${result.data.removed.sort().join(", ")}`);
+if (!result.ok) throw new Error(result.error.message);
+print(`success: ${result.ok}`);
+print(`removed: ${result.value.removed.sort().join(", ")}`);
 
 const left = await box.list("procedure/runs");
 const dirs = left.split("\n").filter(f => !f.endsWith(".card")).map(f => f.replace("procedure/runs/", ""));
@@ -96,11 +97,12 @@ box.commitAll("Seed a runaway procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await gcProcedureRuns(ctx);
+if (!result.ok) throw new Error(result.error.message);
 
 const left = await box.list("procedure/runs");
 const kept = left.split("\n").filter(f => f.includes("loop_") && !f.endsWith(".card")).length;
-print(`removed count: ${result.data.removed.length}`);
-print(`oldest removed: ${result.data.removed.sort()[0]}`);
+print(`removed count: ${result.value.removed.length}`);
+print(`oldest removed: ${result.value.removed.sort()[0]}`);
 print(`kept equals cap: ${kept === MAX_RUNS_PER_PROCEDURE}`);
 =>
 removed count: 3
@@ -134,7 +136,8 @@ box.commitAll("Seed crashed run");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await gcProcedureRuns(ctx);
-print(`removed: ${result.data.removed.join(", ")}`);
+if (!result.ok) throw new Error(result.error.message);
+print(`removed: ${result.value.removed.join(", ")}`);
 =>
 removed: crash_2025-01-01T0000
 ```
@@ -159,7 +162,8 @@ box.commitAll("Seed live run");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await gcProcedureRuns(ctx);
-print(`removed: ${result.data.removed.length}`);
+if (!result.ok) throw new Error(result.error.message);
+print(`removed: ${result.value.removed.length}`);
 =>
 removed: 0
 ```
@@ -174,7 +178,8 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await gcProcedureRuns(ctx);
-print(`success: ${result.success}, removed: ${result.data.removed.length}`);
+if (!result.ok) throw new Error(result.error.message);
+print(`success: ${result.ok}, removed: ${result.value.removed.length}`);
 =>
 success: true, removed: 0
 ```

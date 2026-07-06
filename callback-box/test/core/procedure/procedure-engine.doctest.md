@@ -36,7 +36,7 @@ box.commitAll("Add greet procedure");
 const output = [];
 const ctx = { boxRoot: box.root, writeLine: (s) => output.push(s), write: (s) => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "greet" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // The greeting file was created by the shell step
 const greeting = await box.read("box/output/greeting.txt");
@@ -94,7 +94,7 @@ box.commitAll("Add maybe procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "maybe" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // The skipped step's shell never ran
 const files = await box.list("box/output");
@@ -158,7 +158,7 @@ box.commitAll("Add idle procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "idle" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // No run directory persists
 const runs = await box.list("procedure/runs");
@@ -211,7 +211,7 @@ box.commitAll("Add fail-early procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "fail-early" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // Neither step's run phase executed
 const files = await box.list("box/output");
@@ -262,7 +262,7 @@ box.commitAll("Add validate procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "validate" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // Both steps ran despite validation warning
 const files = await box.list("box/output");
@@ -319,7 +319,7 @@ box.commitAll("Add abort procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "abort" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const files = await box.list("box/output");
 print(`ran.txt: ${files.includes("ran.txt")}`);
@@ -368,8 +368,8 @@ box.commitAll("Add runfail procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "runfail" });
-print(`success: ${result.success}`);
-print(`error: ${result.error}`);
+print(`success: ${result.ok}`);
+print(`error: ${result.ok ? "" : result.error.message}`);
 
 // The later step never ran.
 const files = await box.list("box/output");
@@ -422,7 +422,7 @@ box.commitAll("Add nounset procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "nounset" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("nounset_"));
@@ -465,7 +465,7 @@ box.commitAll("Add pipe procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "pipe" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // The script stopped at the failing pipe — the later command never ran.
 const files = await box.list("box/output");
@@ -514,7 +514,7 @@ box.commitAll("Add precheck-err procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "precheck-err" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("precheck-err_"));
@@ -572,7 +572,7 @@ const result = await startProcedure({
   procedureNameOrPath: "preview",
   options: { dryRun: true },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // No side effects — box/output was never created
 const hasOutput = await box.list("box/output");
@@ -622,7 +622,7 @@ const result = await startProcedure({
   procedureNameOrPath: "multi",
   options: { step: "beta" },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const files = await box.list("box/output");
 print(`a.txt: ${files.includes("a.txt")}`);
@@ -643,8 +643,8 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "nonexistent" });
-print(`success: ${result.success}`);
-print(`has error: ${result.error?.includes("not found") ?? false}`);
+print(`success: ${result.ok}`);
+print(`has error: ${(result.ok ? undefined : result.error.message)?.includes("not found") ?? false}`);
 =>
 success: false
 has error: true
@@ -744,7 +744,7 @@ box.commitAll("Add keeper procedure");
 
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await startProcedure({ ctx, procedureNameOrPath: "keeper" });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const runs = (await box.list("procedure/runs")).split("\n");
 const runDir = runs.find(f => f.includes("keeper_"));
@@ -807,7 +807,7 @@ const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 
 // First run: halts at beta (sentinel missing).
 const first = await startProcedure({ ctx, procedureNameOrPath: "staged" });
-print(`first success: ${first.success}`);
+print(`first success: ${first.ok}`);
 
 const runs = await box.list("procedure/runs");
 const runDir = runs.split("\n").find(f => f.includes("staged_"));
@@ -821,7 +821,7 @@ print(`alpha ran once: ${(await box.read("box/output/alpha-runs.txt")).trim() ==
 await box.write("box/output/sentinel", "");
 box.commitAll("Add sentinel");
 const resumed = await resumeProcedure({ ctx, runDir });
-print(`resume success: ${resumed.success}`);
+print(`resume success: ${resumed.ok}`);
 
 run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`run status: ${run.status}`);
@@ -872,7 +872,7 @@ const runDir = runs.split("\n").find(f => f.includes("done_"));
 
 // Resuming an already-completed run changes nothing and reports success.
 const result = await resumeProcedure({ ctx, runDir });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 const run = parseProcedureRun(await box.read(runDir + "/run.procedure-run.card"));
 print(`status: ${run.status}`);
 =>
@@ -890,8 +890,8 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 const ctx = { boxRoot: box.root, writeLine: () => {}, write: () => {} };
 const result = await resumeProcedure({ ctx });
-print(`success: ${result.success}`);
-print(`error: ${result.error}`);
+print(`success: ${result.ok}`);
+print(`error: ${result.ok ? "" : result.error.message}`);
 =>
 success: false
 error: No procedure run found to resume.
@@ -925,8 +925,8 @@ const result = await startProcedure({
   procedureNameOrPath: "steps",
   options: { step: "fake" },
 });
-print(`success: ${result.success}`);
-print(`mentions available: ${result.error?.includes("real") ?? false}`);
+print(`success: ${result.ok}`);
+print(`mentions available: ${(result.ok ? undefined : result.error.message)?.includes("real") ?? false}`);
 =>
 success: false
 mentions available: true

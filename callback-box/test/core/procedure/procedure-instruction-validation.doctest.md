@@ -60,7 +60,7 @@ const result = await startProcedure({
   procedureNameOrPath: "instr",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 // The judge's diff spans BOTH agent commits, not just the last.
 print(`diff has commit 1: ${judgePrompt.includes("FIRST-CHANGE")}`);
@@ -129,7 +129,7 @@ const result = await startProcedure({
   procedureNameOrPath: "gate",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const files = await box.list("box/output");
 print(`nope.txt (second step) exists: ${files.includes("nope.txt")}`);
@@ -194,7 +194,7 @@ const result = await startProcedure({
   procedureNameOrPath: "soft",
   options: { createAgent },
 });
-print(`success: ${result.success}`);
+print(`success: ${result.ok}`);
 
 const files = await box.list("box/output");
 print(`after.txt exists: ${files.includes("after.txt")}`);

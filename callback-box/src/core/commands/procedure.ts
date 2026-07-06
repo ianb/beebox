@@ -4,11 +4,24 @@
  * Registers procedure-related commands with the command runner framework.
  */
 
-import { registerCommand } from "../command-runner.js";
+import { registerCommand, type CommandResult } from "../command-runner.js";
 import { startProcedure, resumeProcedure } from "../procedure/engine.js";
 import { listProcedures, procedureStatus } from "../procedure/engine-query.js";
 import { gcProcedureRuns } from "../procedure/gc.js";
-import type { ProcedureOptions } from "../procedure/engine.js";
+import type { ProcedureOptions, ProcedureError } from "../procedure/engine.js";
+import type { Result } from "../../lib/result.js";
+
+/**
+ * Adapt the engine's typed {@link Result} into the command-runner's
+ * {@link CommandResult} boundary shape: a value becomes `data`, the tagged
+ * error's `message` becomes the free-text `error` the CLI/web surface prints.
+ */
+function toCommandResult<T>(result: Result<T, ProcedureError>): CommandResult {
+  if (!result.ok) {
+    return { success: false, error: result.error.message };
+  }
+  return result.value === undefined ? { success: true } : { success: true, data: result.value };
+}
 
 registerCommand({
   name: "procedure-run",
@@ -63,7 +76,7 @@ registerCommand({
       options.directive = args["directive"] as string;
     }
 
-    return startProcedure({ ctx, procedureNameOrPath: name, options });
+    return toCommandResult(await startProcedure({ ctx, procedureNameOrPath: name, options }));
   },
 });
 
@@ -90,7 +103,7 @@ registerCommand({
       options.directive = args["directive"] as string;
     }
     const runDir = args["runDir"] as string | undefined;
-    return resumeProcedure({ ctx, options, ...(runDir && { runDir }) });
+    return toCommandResult(await resumeProcedure({ ctx, options, ...(runDir && { runDir }) }));
   },
 });
 
@@ -99,7 +112,7 @@ registerCommand({
   description: "List available procedure definitions",
   args: [],
   execute: async (ctx) => {
-    return listProcedures(ctx);
+    return toCommandResult(await listProcedures(ctx));
   },
 });
 
@@ -108,7 +121,7 @@ registerCommand({
   description: "Delete expired procedure run directories",
   args: [],
   execute: async (ctx) => {
-    return gcProcedureRuns(ctx);
+    return toCommandResult(await gcProcedureRuns(ctx));
   },
 });
 
@@ -125,6 +138,6 @@ registerCommand({
   ],
   execute: async (ctx, args) => {
     const runDir = args["runDir"] as string | undefined;
-    return procedureStatus(ctx, runDir);
+    return toCommandResult(await procedureStatus(ctx, runDir));
   },
 });

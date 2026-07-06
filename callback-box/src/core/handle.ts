@@ -67,8 +67,8 @@ const liveRunProcedure: ProcedureRunner = async ({ procedurePath, triageItems, c
       ctx,
       procedureNameOrPath: procedurePath,
     });
-    const output: RunProcedureOutput = { success: result.success };
-    if (result.error !== undefined) output.error = result.error;
+    const output: RunProcedureOutput = { success: result.ok };
+    if (!result.ok) output.error = result.error.message;
     return output;
   } finally {
     if (previous === undefined) delete process.env[TRIAGE_ITEMS_ENV];
