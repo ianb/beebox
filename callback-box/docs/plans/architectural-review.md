@@ -335,10 +335,23 @@ conventions.
 
 **Direction.** (1) `lib/result.ts` with the `MarkResult`-style two-arm shape;
 migrate `ok:`/`success:` families to it (mechanical, caller churn accepted per
-consolidate-over-blast-radius). (2) `ChatMessage` → 7-variant union keyed on
-`type` (its own adapters already switch exhaustively — Track A's lint rule
-then locks them). (3) `AgentResult` → success/failure union. (4) EventBus →
-typed `EventMap` with `emit<K extends keyof EventMap>`. (5) Literal-union the
+consolidate-over-blast-radius — codex's postpone-until-a-bug counsel noted
+and declined as a standing scope preference). Design caveat from codex
+(accepted): the existing shapes are not all pure Results — `AgentResult`
+carries transport fields (`output`, `exitCode`, `sessionId`) on BOTH arms;
+its union keeps those as common fields with only the success-correlated
+fields (`data`, `error`) split across arms, rather than forcing it into the
+bare two-arm shape. (2) `ChatMessage` → 7-variant union keyed on `type`
+(its own adapters already switch exhaustively — Track A's lint rule then
+locks them). (3) `AgentResult` → success/failure union per the caveat
+above. (4) EventBus → typed `EventMap` with `emit<K extends keyof
+EventMap>` — with the codex-flagged boundary honored: the bus is persisted
+and cross-process (`event-bus.ts:122` reads rows back through
+`JSON.parse`; the tRPC stream exposes `{event: string; data: unknown}`,
+`events.ts:26`), so a typed emit alone is decorative. Per rule 3, per-event
+zod schemas validate at the read/subscribe boundary with an unknown-event
+fallback (Track A's sentinel pattern) — or the EventMap is documented as
+producer-side ergonomics only, claiming no safety. (5) Literal-union the
 stringly fields the scans named: procedure `severity` (`warn|review|abort`),
 the two step-status vocabularies, procedure-run status enum reuse at the
 write boundary (`engine-run-card.ts:111`).
@@ -364,9 +377,16 @@ top boundary-validation finding (drift is invisible to compiler AND runtime)
 and the top code-style violation.
 
 **Direction.** (1) In each schema file: `type XFields = z.infer<typeof
-xFieldsSchema>` (delete the hand copy). (2) A `getCardFields(card, schema)`
-helper that `safeParse`s at the boundary — real validation, not just a
-prettier cast — with the Track B Result shape on failure. (3)
+xFieldsSchema>` (delete the hand copy). (2) Reframed per codex review: the
+`card.fields` casts are mostly *post-validation type-propagation debt*, not
+missing validation — `parseCardText` already zod-validates frontmatter and
+body (`card-io.ts:126,263`) before the cast sites run. So the primary fix
+is carrying generics through `parseCardText`/the schema registry so
+validated fields arrive typed and the casts disappear; a `safeParse`-ing
+`getCardFields(card, schema)` helper (with the Track B Result shape on
+failure) is reserved for the sites where fields genuinely arrive
+unvalidated (anything bypassing `parseCardText`). This makes the track
+cheaper, not weaker. (3)
 `parseCommandArgs(args, schema)` for the CLI shape. (4) Frontend: the 22
 `as never` casts at `navigate({search})` sites (ChatPage, HistoryPage,
 InteractiveChat-ws, landmarks, etc.) — the codebase already built the
@@ -389,11 +409,18 @@ cast sites; validates the pattern before the sweep.
 (`agent-json.ts`, `hub-config.ts`, `box-shape.ts`) already set.
 
 **Why/Direction (ranked).**
-1. **Chat uploads** (`webapp/routes/chat-uploads.ts:49`) — no extension/size
-   allowlist, later served same-origin with inferred Content-Type
-   (`api-files.ts:122`) under Report-Only CSP: a stored-XSS path against the
-   box's own session. Allowlist + `nosniff`/`Content-Disposition: attachment`
-   for uploads; consider enforcing CSP on serve paths.
+1. **Renderable-file serving** (revised per codex review — the original
+   upload-allowlist framing fixed the wrong boundary and overclaimed:
+   multipart uploads already have a 50MB cap, `server.ts:76`, and an
+   upload allowlist would break legitimate arbitrary-file attachments
+   while leaving hand-added box HTML exploitable). The real boundary is
+   `/api/files/*`: it serves any `.html` in the box as `text/html`
+   (`api-files.ts:68`) with no `nosniff`/attachment headers (`:197`)
+   under Report-Only CSP — a stored-XSS path regardless of how the file
+   got there. Fix at serve time: dangerous renderable types default to
+   `Content-Disposition: attachment` + `nosniff`, with an explicit
+   preview path for the trusted/frozen render modes that already have
+   their own sandbox CSP.
 2. **Connector inbound payloads** (Gmail/Calendar/Telegram) — zero runtime
    validation of third-party responses (we validate our *outbound* writes but
    not inbound). zod schemas at the `services/` layer, parsing raw responses
@@ -536,23 +563,31 @@ that item 1's regrouping would otherwise redo.
 **What.** In-process write locking for card read-modify-write paths, and a
 lock inventory doc.
 
-**Why.** `webapp/trpc/routers/todos.ts:57-88` (and clerk.ts, capture-finalize)
-do read→mutate→write with no lock; two concurrent updates silently drop one.
-The primitive already exists in-repo (`capture-session-store.ts`'s
-`withSessionLock` Map-chain pattern) and CLAUDE.md already mandates
-file-lock.ts for the cross-process case.
+**Why.** `webapp/trpc/routers/todos.ts:57-88` does read→mutate→write with no
+lock; two concurrent updates silently drop one. Scope narrowed per codex
+review: `clerk.ts` was misclassified (verified — it creates NEW timestamped
+card paths and handles commit races via `commitPaths` +
+`isNothingToCommitError`, `clerk.ts:152`), and capture sessions already
+hold a per-session promise lock (`capture-session-store.ts:59`). The lock
+applies to *same-file read-modify-write* mutations only. The primitive
+already exists in-repo (`withSessionLock`'s Map-chain pattern) and
+CLAUDE.md already mandates file-lock.ts for the cross-process case.
 
-**Direction.** A `withCardLock(path, fn)` helper (in-process Map-of-Promises,
-per file-lock.ts's own in-process/cross-process distinction) applied to every
-card-mutating route; audit tRPC mutations for other read-modify-write shapes.
-Bound the capture-session lock map (release tied to cleanup lifecycle). Add
-the lock-table doc to `file-lock.ts`'s module comment: every lock file, its
-scope, hold duration — so the next lock added has an ordering convention to
-consult.
+**Direction.** A `withCardLock(path, fn)` helper (in-process
+Map-of-Promises, per file-lock.ts's own in-process/cross-process
+distinction) applied to every same-file RMW mutation route — audit tRPC
+mutations for that specific shape, not for card-writing generally. Git
+commit/staging races (two concurrent `git commit`s racing on
+`.git/index.lock`) are a separate audit — clerk's `commitPaths` pattern is
+the model there. Bound the capture-session lock map (release tied to
+cleanup lifecycle). Add the lock-table doc to `file-lock.ts`'s module
+comment: every lock file, its scope, hold duration — so the next lock
+added has an ordering convention to consult.
 
 **Traces to:** rules 4, 9; CLAUDE.md's lock mandate.
 
-**First chunk.** `withCardLock` + todos.ts + clerk.ts.
+**First chunk.** `withCardLock` + todos.ts + the RMW-shape audit of the
+remaining tRPC mutations.
 
 ### Track I — Trusted/untrusted content marking + ref containment
 
@@ -581,8 +616,15 @@ the highest-risk boundary.
 
 **Direction.** (1) `resolveContainedRef(boxRoot, ref, fromPath):
 BoxRelativePath | null` — branded return type, `null` on escape, the ONLY
-producer; migrate all ref-resolution sites (`ref-exists.ts`,
-`batch-jobs.ts`, `rewrite-card-refs.ts`, `wakeup-steps.ts:132`). (2)
+producer. Migration list expanded per codex review (the original four-site
+list was under-scoped): `core/ref-exists.ts`, `core/reactor/batch-jobs.ts`,
+`core/rewrite-card-refs.ts`, `cli/commands/wakeup-steps.ts:132` (note:
+under cli/, not reactor/), `connectors/gmail-drafts.ts:260`,
+`core/nav.ts:93`, `webapp/trpc/routers/views.ts:68`,
+`core/lint-node-refs.ts:112` — and the real closure is typing the
+fs-read wrapper helpers to require `BoxRelativePath`, so the compiler
+finds the sites a grep list would miss, rather than trusting any
+enumerated list. (2)
 `fenceForPrompt(content): PromptSafeText` — picks a fence longer than any
 backtick run in the content; used everywhere untrusted text enters a prompt;
 extend the existing `escapeText` pattern to the `<typed>`/`<speech>`
@@ -659,20 +701,30 @@ seams universal and put tests where the churn is.
    (`engine-run-phase.ts:252`'s review-severity rule; registry refCount's
    `Math.max(0,…)`; search's write ordering). Apply surgically at
    internal should-never-happen sites only; user-facing checks stay error
-   results. Behavior per rule 4: throw always in dev/test; in prod,
-   long-lived-server contexts may log-loudly-and-degrade while CLI
-   contexts still throw — the helper takes that stance once so call sites
-   don't each decide (and tests that exercise degradation paths can opt
-   into prod behavior explicitly). `testing.md:608` already names this
-   direction.
-2. **Clock adoption sweep:** 223 direct `Date.now()`/`new Date()` backend
-   call sites bypass the existing stubbable abstraction
-   (`cli/lib/time.ts`, `CB_TIME`, stubs.yaml). Sweep the time-sensitive
-   modules first (procedure engine, chat-session cluster's 19 wall-clock
-   reads driving LRU/idle-sweep/busy-timeout — currently untestable
-   without real sleeps, calendar-state). Then propose a lint rule banning
-   bare wall-clock reads outside `lib/time.ts` (preset change — boxholder
-   sign-off, Track F).
+   results. Behavior (revised per codex review — an `asserts cond`
+   function that can return when the condition is false is unsound, it
+   lies to the type system): `invariant()` ALWAYS throws, in every
+   environment, keeping the `asserts cond` signature. Rule 4's
+   prod-degradation case gets a separate, non-asserting
+   `checkInvariant(cond, msg): boolean` that logs loudly and lets the
+   caller degrade explicitly — the type system never believes a check
+   that didn't happen. `testing.md:608`'s "soft assertions" note is a
+   testing idea, not a license to weaken `invariant`.
+2. **Clock adoption sweep — two clocks, not one** (revised per codex
+   review, which caught a real hazard: `cli/lib/time.ts` is *scenario*
+   time — `CB_TIME`/stubs frozen — and freezing deadline/liveness timers
+   with it causes hangs and non-eviction, e.g. the registry's idle/ref
+   timing at `chat-session-registry.ts:324`). The taxonomy: (a)
+   **domain/scenario time** — timestamps in cards, schedules, anything a
+   test wants deterministic → `getBoxTime`/`getBoxTimeISO`; (b)
+   **monotonic/deadline time** — idle sweeps, LRU eviction, busy
+   timeouts, retry backoff → stays on real time, made testable by an
+   *injected* clock/timer seam (the awake-timeout pattern), never by
+   `CB_TIME`. Sweep the 223 direct wall-clock sites by classifying each
+   into (a) or (b) — procedure engine and calendar-state are mostly (a);
+   the chat-session cluster's 19 reads are mostly (b). The eventual lint
+   rule bans bare wall-clock reads outside the two blessed modules
+   (preset change — boxholder sign-off, Track F).
 3. **DI stance (decided, not a gap):** external services get fakes (the
    existing triad), fs/git/clock stay concrete at thin adapters — the fix
    for untestable logic is extracting pure decision cores (Track J.3/J.4),
