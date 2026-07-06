@@ -163,6 +163,25 @@ export class CardTypeMismatchError extends Error {
 }
 
 /**
+ * Thrown when {@link cardFields} is asked to vouch for fields that were
+ * validated by a box-local schema OVERRIDE of the requested type, and those
+ * fields do not satisfy the requested (built-in) schema. Carries the type and
+ * the formatted zod issues for inspection.
+ */
+export class CardSchemaOverrideMismatchError extends Error {
+  readonly cardType: string;
+  readonly issues: string;
+  constructor(cardType: string, issues: string) {
+    super(
+      `fields validated by an overriding box schema do not satisfy the requested "${cardType}" schema:\n${issues}`
+    );
+    this.name = "CardSchemaOverrideMismatchError";
+    this.cardType = cardType;
+    this.issues = issues;
+  }
+}
+
+/**
  * Read a parsed/loaded card's `fields` as the schema's inferred field type.
  *
  * `parseCardText`/`loadCardFile` already Zod-validated the fields against this
@@ -180,9 +199,24 @@ export function cardFields<S extends CardSchema>(
   if (card.schema.type !== schema.type) {
     throw new CardTypeMismatchError(schema.type, card.schema.type);
   }
-  // Sound: parseCardText validated these fields against `schema` already; the
-  // guard above proves the card is that type. This is the single centralized
-  // cast that the per-site `as unknown as XFields` casts collapse into.
+  // Same type but a DIFFERENT schema object: a box-local schema overrode the
+  // built-in (createCardSchemaMap lets a box schema win by type), so the
+  // fields were validated by the override, not by `schema` — the type-name
+  // check alone can't vouch for the claimed shape. Re-validate against the
+  // requested schema before returning it as that type. Overrides that extend
+  // the built-in shape pass (the frontmatter schema is lenient about unknown
+  // keys); an override that dropped or retyped a built-in field fails loudly
+  // here instead of handing the caller mis-typed data.
+  if (card.schema !== schema) {
+    const check = schema.frontmatterSchema.safeParse(card.fields);
+    if (!check.success) {
+      throw new CardSchemaOverrideMismatchError(schema.type, formatZodIssues(check.error.issues));
+    }
+  }
+  // Sound: the fields were validated against `schema` — by parseCardText when
+  // the schema objects are identical, or by the re-parse above under a box
+  // override. This is the single centralized cast that the per-site
+  // `as unknown as XFields` casts collapse into.
   return card.fields as InferCardFields<S>;
 }
 

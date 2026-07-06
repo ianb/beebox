@@ -163,13 +163,26 @@ function resolveAnswer(
   const inputType = fields.input.type;
   const questionOptions = fields.input.options ?? [];
 
-  // The caller's guard guarantees answer OR selectedId. In the two branches
-  // below answer is always present (no selectedId ⇒ answer set); the `?? ""`
-  // fallbacks are unreachable there and only keep the type honest. In the
-  // passthrough, a select answered by selectedId alone yields an empty
-  // finalAnswer — previously `undefined` under the loosened cast.
+  // The caller's guard guarantees answer OR selectedId. In the branches that
+  // read `args.answer ?? ""`, answer is always present (no selectedId ⇒
+  // answer set) — the fallback only keeps the type honest.
   if (inputType === "select" && !args.selectedId) {
     return resolveSelectAnswer(args.answer ?? "", questionOptions);
+  }
+
+  // A select answered by selectedId alone (the web UI's normal path): resolve
+  // the id to its option label so the recorded answer text and the follow-up
+  // job carry the label, not an empty string. An unknown id is a caller
+  // error, reported like an invalid typed option.
+  if (inputType === "select" && args.answer === undefined) {
+    const option = questionOptions.find((o) => o.id === args.selectedId);
+    if (!option) {
+      return {
+        ok: false,
+        result: { success: false, error: `Unknown option id: ${args.selectedId ?? ""}` },
+      };
+    }
+    return { ok: true, finalAnswer: option.label, selectedId: option.id };
   }
 
   if (inputType === "confirm") {

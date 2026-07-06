@@ -48,6 +48,8 @@ const TrashArgsSchema = z.object({
   commit: z.boolean().optional(),
   /** Reason for trashing (recorded in commit message) */
   reason: z.string().optional(),
+  /** Show what would happen without doing it */
+  dryRun: z.boolean().optional(),
 });
 export type TrashArgs = z.infer<typeof TrashArgsSchema>;
 
@@ -164,6 +166,37 @@ async function executeTrash(
   }
   if (allPaths.length === 0) {
     return { success: false, error: "At least one path is required" };
+  }
+
+  // Dry run: validate each path and report what would move, mutating nothing.
+  // (`cb rm --dry-run` advertised this flag but the command never read it —
+  // a dry-run invocation actually trashed files.)
+  if (trashArgs.dryRun) {
+    const wouldTrash: string[] = [];
+    const dryErrors: string[] = [];
+    for (const cardPath of allPaths) {
+      const sourcePath = path.isAbsolute(cardPath) ? cardPath : boxPath(ctx.boxRoot, cardPath);
+      if (!isCardFile(sourcePath)) {
+        dryErrors.push(`Not a card file: ${cardPath}`);
+        continue;
+      }
+      try {
+        await fs.access(sourcePath);
+      } catch (_e) {
+        // access() only fails here when the card is missing/unreadable.
+        dryErrors.push(`Card not found: ${cardPath}`);
+        continue;
+      }
+      const relSourcePath = path.relative(ctx.boxRoot, sourcePath);
+      wouldTrash.push(relSourcePath);
+      ctx.writeLine(`Would trash: ${relSourcePath}`);
+    }
+    for (const err of dryErrors) ctx.writeLine(`Error: ${err}`);
+    ctx.writeLine("(dry run - no changes made)");
+    if (wouldTrash.length === 0) {
+      return { success: false, error: dryErrors.join("; ") };
+    }
+    return { success: true, data: { dryRun: true, wouldTrash, errors: dryErrors } };
   }
 
   const results: Array<{ sourcePath: string; destPath: string; relatedFiles: string[] }> = [];
