@@ -46,6 +46,32 @@ function injectFrozenFallback(html: string): string {
   return idx === -1 ? html + tag : html.slice(0, idx) + tag + html.slice(idx);
 }
 
+/**
+ * Extensions whose MIME type makes a browser parse (and potentially execute)
+ * the response as an active document rather than treating it as inert data,
+ * when navigated to directly or embedded — the boundary this route must
+ * defend, since it serves whatever raw files exist in the box regardless of
+ * how they got there (hand-added, agent-written, or an attachment upload).
+ * Rationale per entry:
+ *   - `.html`/`.htm` — `text/html`: full script execution, DOM, same-origin
+ *     fetch/cookie access.
+ *   - `.xhtml`/`.xht`/`.shtml` — also rendered as HTML-family documents by
+ *     browsers on direct navigation; same script surface as `.html` even
+ *     though nothing in this codebase currently produces them.
+ *   - `.svg` — `image/svg+xml`: an SVG document can embed `<script>` and
+ *     inline event-handler attributes that execute once the browser parses
+ *     it as a document (not merely rasterizes it), which happens on direct
+ *     navigation or certain embeds.
+ * Deliberately NOT included: `.pdf` (rendered by a sandboxed viewer, no
+ * same-origin script access), raster/audio/video formats, `.md`/`.txt`/
+ * `.csv`/`.json` (always parsed as inert text), Office formats (opened by a
+ * separate application, not the browser's HTML/script engine). `.frozen` is
+ * excluded from this set entirely — it's the one deliberate inline-preview
+ * path, and it already carries its own sandboxed CSP (below) instead of the
+ * attachment treatment.
+ */
+const DANGEROUS_RENDERABLE_EXTENSIONS = new Set([".html", ".htm", ".xhtml", ".xht", ".shtml", ".svg"]);
+
 const MIME_TYPES: Record<string, string> = {
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
@@ -130,6 +156,14 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         // games. Applied on every bodied response below.
         const isFrozen = ext === ".frozen";
 
+        // Dangerous renderable types default to attachment + nosniff (see the
+        // set's doc comment above); the frozen preview path is the only
+        // sanctioned exception, and it sets its own headers below.
+        const isDangerousRenderable = !isFrozen && DANGEROUS_RENDERABLE_EXTENSIONS.has(ext);
+        const contentDisposition = isDangerousRenderable
+          ? `attachment; filename="${path.basename(resolved).replace(/"/g, "")}"`
+          : null;
+
         // Conditional GET: build weak ETag from mtime + size, serve 304 when
         // the client already has the current version. `no-cache` means the
         // browser keeps the body but must revalidate every time, so an agent
@@ -169,15 +203,17 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           }
           if (range !== null) {
             const slice = await readSlice(resolved, range);
-            return reply
+            const rangeReply = reply
               .status(206)
               .header("Content-Type", contentType)
+              .header("X-Content-Type-Options", "nosniff")
               .header("Cache-Control", "no-cache")
               .header("ETag", etag)
               .header("Last-Modified", lastModified)
               .header("Accept-Ranges", "bytes")
-              .header("Content-Range", `bytes ${String(range.start)}-${String(range.end)}/${String(stat.size)}`)
-              .send(slice);
+              .header("Content-Range", `bytes ${String(range.start)}-${String(range.end)}/${String(stat.size)}`);
+            if (contentDisposition) rangeReply.header("Content-Disposition", contentDisposition);
+            return rangeReply.send(slice);
           }
           // Malformed Range headers fall through to a normal 200 (per spec).
         }
@@ -195,13 +231,15 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         }
 
         const content = await fs.readFile(resolved);
-        return reply
+        const plainReply = reply
           .header("Content-Type", contentType)
+          .header("X-Content-Type-Options", "nosniff")
           .header("Cache-Control", "no-cache")
           .header("ETag", etag)
           .header("Last-Modified", lastModified)
-          .header("Accept-Ranges", "bytes")
-          .send(content);
+          .header("Accept-Ranges", "bytes");
+        if (contentDisposition) plainReply.header("Content-Disposition", contentDisposition);
+        return plainReply.send(content);
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
           console.warn(`Could not stat/read file, returning 404: ${resolved}:`, e);
