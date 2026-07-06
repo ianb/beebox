@@ -17,6 +17,7 @@ import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
+import { resolveBoxRelativeRef } from "../../lib/box-containment.js";
 import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
@@ -128,8 +129,15 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
     // Check if ALL referenced files are gone
     let allMissing = true;
     for (const ref of refs) {
+      const contained = resolveBoxRelativeRef(boxRoot, ref);
+      if (contained === null) {
+        // An escaping ref points at no in-box file — treat it as missing
+        // (an out-of-box file must never keep a stale job alive), never silently.
+        console.warn(`  Job ${relPath} ref "${ref}" escapes the box; treating as missing`);
+        continue;
+      }
       try {
-        await fs.access(path.join(boxRoot, ref));
+        await fs.access(path.join(boxRoot, contained));
         allMissing = false;
         break;
       } catch (_e) {

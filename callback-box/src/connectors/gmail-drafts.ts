@@ -19,6 +19,7 @@ import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
+import { containWithinBox } from "../lib/box-containment.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 
 interface DraftFields {
@@ -149,6 +150,10 @@ async function uploadOneDraft(opts: {
       cardPath: opts.cardPath,
       ref: fields.inReplyToRef,
     });
+    if (sourcePath === null) {
+      console.warn(`gmail-drafts: in-reply-to ref "${fields.inReplyToRef}" in ${opts.cardPath} escapes the box`);
+      throw new UnresolvedInReplyToRefError(fields.inReplyToRef, "(escapes box)");
+    }
     const source = await readSourceMessage(sourcePath);
     if (!source) {
       throw new UnresolvedInReplyToRefError(fields.inReplyToRef, sourcePath);
@@ -261,20 +266,24 @@ function resolveCardRef(opts: {
   boxRoot: string;
   cardPath: string;
   ref: string;
-}): string {
+}): string | null {
   const ref = opts.ref;
+  let abs: string;
   if (ref.startsWith("/")) {
-    return path.join(opts.boxRoot, ref.slice(1));
-  }
-  if (
+    abs = path.join(opts.boxRoot, ref.slice(1));
+  } else if (
     ref.startsWith("box/") ||
     ref.startsWith("store/") ||
     ref.startsWith("config/") ||
     ref.startsWith("people/")
   ) {
-    return path.join(opts.boxRoot, ref);
+    abs = path.join(opts.boxRoot, ref);
+  } else {
+    abs = path.resolve(path.dirname(opts.cardPath), ref);
   }
-  return path.resolve(path.dirname(opts.cardPath), ref);
+  // Containment: a ref must not read a source message from outside the box.
+  // An escape resolves to null, which the caller surfaces as an unresolved ref.
+  return containWithinBox(opts.boxRoot, abs) === null ? null : abs;
 }
 
 interface BuildMimeOptions {

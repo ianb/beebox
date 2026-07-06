@@ -13,6 +13,7 @@ import { splitCardContent } from "../cards/index.js";
 import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
+import { resolveBoxRelativeRef } from "../lib/box-containment.js";
 
 export const NAV_CARD_PATH = "nav.card";
 
@@ -58,11 +59,6 @@ async function readCardTitle(absPath: string): Promise<string | null> {
   }
 }
 
-/** Reject refs that could escape the box (absolute or `..` segments). */
-function isBoxRelative(ref: string): boolean {
-  return !ref.startsWith("/") && !ref.split("/").includes("..");
-}
-
 export async function resolveNav(boxRoot: string): Promise<NavResolution> {
   let content: string;
   try {
@@ -90,11 +86,20 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
       });
       continue;
     }
-    if (!isBoxRelative(entry.ref)) {
-      problems.push(`ref "${entry.ref}" must be box-relative (no leading / or .. segments)`);
+    // Nav refs are box-relative only — a box-root-absolute (`/…`) nav target is
+    // rejected outright; anything that would escape the box via `..` is caught
+    // by the containment resolver.
+    if (entry.ref.startsWith("/")) {
+      problems.push(`ref "${entry.ref}" must be box-relative (no leading /)`);
       continue;
     }
-    const absPath = path.join(boxRoot, entry.ref);
+    const contained = resolveBoxRelativeRef(boxRoot, entry.ref);
+    if (contained === null) {
+      console.warn(`resolveNav: ref "${entry.ref}" escapes the box`);
+      problems.push(`ref "${entry.ref}" must be box-relative (must not escape the box via ..)`);
+      continue;
+    }
+    const absPath = path.join(boxRoot, contained);
     let exists = true;
     try {
       const stat = await fs.stat(absPath);

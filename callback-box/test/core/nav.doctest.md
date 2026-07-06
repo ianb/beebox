@@ -140,11 +140,12 @@ await box.write("nav.card", `---
 entries:
   - { href: / }
   - { ref: ../outside/Secret.memo.card }
+  - { ref: /store/Absolute.memo.card }
 ---
 `);
 const result = await resolveNav(box.root);
 JSON.stringify(result.status === "ok" ? result.problems : null)
-=> ["ref \"../outside/Secret.memo.card\" must be box-relative (no leading / or .. segments)"]
+=> ["ref \"../outside/Secret.memo.card\" must be box-relative (must not escape the box via ..)","ref \"/store/Absolute.memo.card\" must be box-relative (no leading /)"]
 
 result.status === "ok" ? result.entries.length : null
 => 1

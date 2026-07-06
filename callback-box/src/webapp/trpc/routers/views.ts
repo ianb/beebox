@@ -14,7 +14,7 @@ import { parse as parseYaml } from "yaml";
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { listViews } from "../../views/compiler.js";
-import { resolveRefToPath } from "../../../core/ref-exists.js";
+import { resolveContainedRef } from "../../../core/ref-exists.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { splitCardContent } from "../../../cards/frontmatter.js";
 import { titleFromFilename } from "../../../core/file-summary.js";
@@ -65,20 +65,21 @@ export const viewsRouter = router({
       const qIdx = input.ref.indexOf("?");
       const refPath = qIdx === -1 ? input.ref : input.ref.slice(0, qIdx);
 
-      // resolveRefToPath needs a *file* fromPath (it takes the dirname); a
+      // The resolver needs a *file* fromPath (it takes the dirname); a
       // placeholder basename under basePath's dir gives box-root resolution
       // when basePath is empty, and document-relative resolution otherwise.
+      // resolveContainedRef also does the containment guard: a `..`-laden ref
+      // must not let this endpoint stat (and report the existence of) files
+      // outside the box. An escape is treated as a missing target — the same
+      // surface a broken ref gets.
       const fromPath = path.join(ctx.boxRoot, input.basePath || "_");
-      const abs = resolveRefToPath({ ref: refPath, fromPath, boxRoot: ctx.boxRoot });
-      const relPath = path.relative(ctx.boxRoot, abs);
-
-      // Containment guard: a `..`-laden ref must not let this endpoint stat (and
-      // report the existence of) files outside the box. Treat an escape as a
-      // missing target — same surface a broken ref gets.
-      const escapes = relPath === ".." || relPath.startsWith(`..${path.sep}`) || path.isAbsolute(relPath);
-      if (escapes) {
+      const contained = resolveContainedRef({ ref: refPath, fromPath, boxRoot: ctx.boxRoot });
+      if (contained === null) {
+        console.warn(`views.resolveRef: ref "${refPath}" (base "${input.basePath}") escapes the box`);
         return { path: refPath, title: titleFromFilename(refPath), type: typeFromFilename(refPath) ?? "", exists: false };
       }
+      const abs = path.join(ctx.boxRoot, contained);
+      const relPath = contained;
 
       let exists = false;
       try {

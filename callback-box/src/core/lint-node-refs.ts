@@ -32,7 +32,7 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { splitCardContent, type LintIssue } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
-import { resolveRefToPath } from "./ref-exists.js";
+import { resolveContainedRef } from "./ref-exists.js";
 
 export interface NodeRefLintInput {
   /** Absolute path of the card being linted. */
@@ -109,13 +109,23 @@ async function conceptMapViaCourse(input: {
 }): Promise<Set<string> | null> {
   const { fromPath, courseRef, boxRoot } = input;
   if (courseRef === null) return null;
-  const coursePath = resolveRefToPath({ ref: courseRef, fromPath, boxRoot });
+  const containedCourse = resolveContainedRef({ ref: courseRef, fromPath, boxRoot });
+  if (containedCourse === null) {
+    console.warn(`conceptMapViaCourse: course ref "${courseRef}" in ${fromPath} escapes the box`);
+    return null;
+  }
+  const coursePath = join(boxRoot, containedCourse);
   const courseFields = await readCardYaml(coursePath);
   if (courseFields === null) return null;
 
   const mapRef = refValue(courseFields["concept-map"]);
   if (mapRef === null) return null;
-  const mapPath = resolveRefToPath({ ref: mapRef, fromPath: coursePath, boxRoot });
+  const containedMap = resolveContainedRef({ ref: mapRef, fromPath: coursePath, boxRoot });
+  if (containedMap === null) {
+    console.warn(`conceptMapViaCourse: concept-map ref "${mapRef}" in ${coursePath} escapes the box`);
+    return null;
+  }
+  const mapPath = join(boxRoot, containedMap);
   const mapFields = await readCardYaml(mapPath);
   if (mapFields === null) return null;
 

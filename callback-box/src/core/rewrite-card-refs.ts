@@ -29,6 +29,7 @@
 
 import * as path from "node:path";
 import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
+import { containWithinBox } from "../lib/box-containment.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns
@@ -57,14 +58,19 @@ function resolveRefToAbs(params: {
   const { boxRoot, cardAbsPath, pathPart } = params;
   if (pathPart === "") return null;
   if (pathPart.includes("://")) return null;
+  let abs: string;
   if (pathPart.startsWith("/")) {
-    return path.normalize(path.join(boxRoot, pathPart));
-  }
-  if (isAttachRef(pathPart)) {
+    abs = path.normalize(path.join(boxRoot, pathPart));
+  } else if (isAttachRef(pathPart)) {
     const resolved = resolveAttachRef(cardAbsPath, pathPart);
-    return resolved === null ? null : path.normalize(resolved);
+    if (resolved === null) return null;
+    abs = path.normalize(resolved);
+  } else {
+    abs = path.resolve(path.dirname(cardAbsPath), pathPart);
   }
-  return path.resolve(path.dirname(cardAbsPath), pathPart);
+  // Containment: a ref that escapes the box can't name an in-box moved card, so
+  // leaving it untouched (null → no rewrite) is both correct and safe.
+  return containWithinBox(boxRoot, abs) === null ? null : abs;
 }
 
 /**

@@ -6,8 +6,11 @@
  * calling `cb finish` after each. Efficient for small, independent jobs.
  */
 
-import * as path from "node:path";
-import * as fs from "node:fs/promises";
+import {
+  resolveBoxRelativeRef,
+  readContainedFile,
+  RefEscapesBoxError,
+} from "../../lib/box-containment.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { parseCardText, CardIOError, collectRefs } from "../card-io.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent.js";
@@ -98,13 +101,21 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
   let desc = `${header}\n\`\`\`\n${job.content.trim()}\n\`\`\``;
 
   for (const ref of collectRefs(parsed.fields)) {
-    const refPath = path.join(boxRoot, ref);
+    const contained = resolveBoxRelativeRef(boxRoot, ref);
+    if (contained === null) {
+      // An escaping ref inlined here would be an arbitrary local-file read into
+      // the agent's prompt. Treat it as broken (omit), but never silently.
+      console.warn(`buildJobDescription: ref "${ref}" in ${job.relPath} escapes the box; omitting`);
+      continue;
+    }
     try {
-      const refContent = await fs.readFile(refPath, "utf-8");
+      const refContent = await readContainedFile(boxRoot, contained);
       desc += `\n\n#### ${ref}\n\`\`\`\n${refContent.trim()}\n\`\`\``;
     } catch (e) {
-      // Referenced file doesn't exist — omit it; the agent will discover this.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (e instanceof RefEscapesBoxError) {
+        console.warn(`buildJobDescription: ref "${ref}" in ${job.relPath} resolves outside the box via symlink; omitting`);
+      } else if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        // Referenced file doesn't exist — omit it; the agent will discover this.
         console.debug(`Could not inline ref ${ref}:`, e);
       }
     }
