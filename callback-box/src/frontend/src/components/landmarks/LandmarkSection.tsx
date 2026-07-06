@@ -9,7 +9,7 @@
 
 import { useState } from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { apiFileUrl } from "../../lib/view-url";
 import { trpc } from "../../lib/trpc";
 import { Card } from "../ui/Card";
@@ -148,7 +148,7 @@ function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
         // navigation (not a user-facing failure) -- fire-and-forget.
         void navigate({
           to: href(`/${boxSlug}/chat`),
-          search: { session: sessionId } as never,
+          search: toSearch({ session: sessionId }),
         });
         return;
       }
@@ -157,7 +157,7 @@ function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
       // that directory; the association is persisted on session assignment.
       void navigate({
         to: href(`/${boxSlug}/chat`),
-        search: { session: "new", contextDir: dir } as never,
+        search: toSearch({ session: "new", contextDir: dir }),
       });
     } catch (e) {
       // User-initiated action (policy rule 5): no toast affordance on this

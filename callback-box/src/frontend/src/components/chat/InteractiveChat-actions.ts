@@ -12,7 +12,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { getChatHistory, restartChatSubprocess, type SessionEntry } from "../../api";
 import { extractImageFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio-context";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
 import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { type SelectionItem } from "../../lib/selection-serialize";
@@ -110,7 +110,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     // navigation (not a user-facing failure) -- fire-and-forget.
     void navigate({
       to: href(`/${boxSlug}/chat`),
-      search: search as never,
+      search: toSearch(search),
     });
   }, [navigate, boxSlug, effectiveContextDir]);
 

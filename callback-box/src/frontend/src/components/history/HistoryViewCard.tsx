@@ -18,7 +18,7 @@ import {
   HISTORY_VIEW_PARAMS,
   type ResolvedViewParams,
 } from "@shared/named-views";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { Card } from "../ui/Card";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
@@ -60,7 +60,7 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
     // navigate()'s promise only rejects on a superseded/redirected
     // navigation (not a user-facing failure) -- fire-and-forget.
     void navigate({
-      search: HISTORY_QUERY_CODEC.toQuery(overrides) as never,
+      search: toSearch(HISTORY_QUERY_CODEC.toQuery(overrides)),
       replace: false,
     });
   };
@@ -75,7 +75,7 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
               URL overrides: {overriddenKeys.join(", ")} ·{" "}
               <button
                 type="button"
-                onClick={() => void navigate({ search: {} as never, replace: false })}
+                onClick={() => void navigate({ search: toSearch({}), replace: false })}
                 className="text-info-dark hover:underline"
               >
                 reset
@@ -84,7 +84,7 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
           ) : null}
           <Link
             to={historyPath}
-            search={filterToSearch(filter) as never}
+            search={toSearch(filterToSearch(filter))}
             className="text-sm text-info-dark hover:underline"
           >
             Open in History →

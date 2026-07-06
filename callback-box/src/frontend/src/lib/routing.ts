@@ -12,3 +12,21 @@
 export function href(path: string): any {
   return path;
 }
+
+/**
+ * Sanctioned escape hatch for the `search` prop on `Link`/`navigate` calls
+ * whose `to` is a dynamically constructed {@link href} path. Because `href()`
+ * returns `any`, TanStack Router can't resolve the target route's search-param
+ * type, so `search` can't be checked against it. This helper centralizes what
+ * were ~19 scattered `{...} as never` casts into this one named place —
+ * greppable, documented, and the single spot to remove once navigations move
+ * to statically-typed route `to`/`params` (which would restore real search
+ * typing and make this unnecessary).
+ *
+ * Pass the fully-built search object (spread prior search in yourself if you're
+ * merging). Prefer real route types wherever the target route is statically
+ * known rather than href()-built.
+ */
+export function toSearch<T extends object>(params: T): never {
+  return params as never;
+}

@@ -13,7 +13,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { InteractiveChat } from "../components/chat/InteractiveChat";
 import { useEmissionStoreInstance } from "../components/chat/input-store";
 import { getDefaultChatSession } from "../api";
-import { href } from "../lib/routing";
+import { href, toSearch } from "../lib/routing";
 
 interface ChatSearch {
   session?: string;
@@ -65,7 +65,7 @@ export function ChatPage() {
         if (sessionId) {
           // navigate()'s promise only rejects on a superseded/redirected
           // navigation (not a user-facing failure) -- fire-and-forget.
-          void navigate({ to: href(`/${boxSlug}/chat`), search: { ...search, session: sessionId } as never, replace: true });
+          void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ ...search, session: sessionId }), replace: true });
         } else {
           setResolved("new");
         }

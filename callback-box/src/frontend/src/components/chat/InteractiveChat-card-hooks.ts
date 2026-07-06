@@ -7,7 +7,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
 import { ACTIVITY_KINDS, type ActivityKind, type CardStateDetails } from "../../../../core/chat-card-activity";
 import type { PanelTab } from "./InteractiveChat-controls";
@@ -56,14 +56,13 @@ function useCardUrlPersistence(opts: {
     // ever open it. Navigate only on a real change (serialize∘parse is stable,
     // so this can't loop); spread the previous search so other params survive;
     // `replace: true` keeps reload on the same card and doesn't spam history.
-    // `as never` is the router-boundary cast this loosely-typed `navigate`
-    // requires (same pattern as HistoryPage).
+    // toSearch() is the sanctioned router-boundary escape hatch (see routing.ts).
     if (!restoredRef.current) return;
     if (liveCard === currentCard) return;
     const next = { ...search };
     if (currentCard === undefined) delete next.card;
     else next.card = currentCard;
-    void navigate({ to: href(`/${boxSlug}/chat`), search: next as never, replace: true });
+    void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch(next), replace: true });
   }, [currentCard, liveCard, search, navigate, boxSlug]);
 }
 

@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
-import { href } from "../lib/routing";
+import { href, toSearch } from "../lib/routing";
 import { getChatSessions, type ChatSessionInfo } from "../api";
 import { cbSource } from "../lib/source-tag";
 
@@ -81,7 +81,7 @@ export function SessionListButton() {
                 <Link
                   key={s.sessionId}
                   to={href(`/${boxSlug}/chat`)}
-                  search={{ session: s.sessionId } as never}
+                  search={toSearch({ session: s.sessionId })}
                   onClick={() => setOpen(false)}
                   {...cbSource("session", s.sessionId)}
                   className={`block px-3 py-2 text-sm hover:bg-warm-100 ${isViewing ? "bg-warm-50" : ""}`}

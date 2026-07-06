@@ -6,7 +6,7 @@
 
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { apiFileUrl } from "../../lib/view-url";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
@@ -55,7 +55,7 @@ export function ChatsLandmarkCard({
           <div className="ml-auto">
             <Link
               to={href(`/${boxSlug}/chat`)}
-              search={{ session: "new", contextDir: landmark.dir } as never}
+              search={toSearch({ session: "new", contextDir: landmark.dir })}
               className="px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
             >
               New
@@ -136,7 +136,7 @@ function SessionRow({ session, boxSlug }: { session: PickerSession; boxSlug: str
     <div className="flex items-stretch gap-1">
       <Link
         to={href(`/${boxSlug}/chat`)}
-        search={{ session: session.sessionId } as never}
+        search={toSearch({ session: session.sessionId })}
         className="block flex-1 px-3 py-2 rounded border border-subtle hover:border-info-400 hover:bg-info-50/40 transition-colors"
       >
         <div className="flex items-start gap-3">

@@ -13,7 +13,7 @@ import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
 import type { ChatSchedule } from "../../../../core/chat-schedules";
 import type { ChatEvent } from "../../machines/chat-types";
@@ -94,11 +94,11 @@ export function useCompanionDeepLink(opts: {
     onZoomView({ target, label: target.path });
     void navigate({
       to: href(`/${boxSlug}/chat`),
-      search: ((prev: Record<string, unknown>) => {
+      search: toSearch((prev: Record<string, unknown>) => {
         const next = { ...prev };
         delete next["companion"];
         return next;
-      }) as never,
+      }),
       replace: true,
     });
   }, [companion, onZoomView, navigate, boxSlug]);

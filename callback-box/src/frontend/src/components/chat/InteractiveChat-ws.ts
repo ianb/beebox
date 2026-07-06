@@ -15,7 +15,7 @@ import { getApiBase, type SessionEntry } from "../../api";
 import { getTTSClient } from "../../lib/tts-client";
 import { alarm } from "../../lib/earcons";
 import { isTTSVoice } from "../../lib/speech-parsing";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
 import { fulfillLastAudioRequest } from "../../lib/last-audio";
 import { bumpFileVersion } from "../../lib/file-version";
@@ -160,13 +160,12 @@ export function useChatWs(opts: {
     if (!sessionId) return;
     // Spread the previous search so a live `?card=` (and any other param)
     // survives the id assignment — a fresh `{ session }` object would drop it.
-    // `as never` is the router-boundary cast this loosely-typed `navigate`
-    // requires (same pattern as HistoryPage/SessionListButton).
+    // toSearch() is the sanctioned router-boundary escape hatch (see routing.ts).
     // navigate()'s promise only rejects on a superseded/redirected
     // navigation (not a user-facing failure) -- fire-and-forget.
     void navigate({
       to: href(`/${boxSlug}/chat`),
-      search: { ...search, session: sessionId } as never,
+      search: toSearch({ ...search, session: sessionId }),
       replace: true,
     });
   }, [sessionInput, sessionId, navigate, boxSlug, search]);

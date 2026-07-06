@@ -23,6 +23,7 @@ import { createMemoryHistory, RouterProvider } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { load as cheerioLoad } from "cheerio";
 import { trpc } from "../lib/trpc";
+import { createSsrNoopTrpcClient } from "./noop-trpc";
 import { createAppRouter } from "../router";
 import { LightboxProvider } from "../components/LightboxProvider";
 import { SSRStateContext, type SSRStateMap } from "../hooks/useSSRMachine";
@@ -311,17 +312,15 @@ async function main() {
     queryClient.setQueryData(key, data);
   }
 
-  // Create a no-op tRPC client (all data is pre-populated in QueryClient)
-  const trpcClient = (trpc as unknown as { createClient: (opts: unknown) => unknown }).createClient({
-    links: [],
-  });
+  // No-op tRPC client (all data is pre-populated in QueryClient); see noop-trpc.
+  const trpcClient = createSsrNoopTrpcClient();
 
   const memoryHistory = createMemoryHistory({ initialEntries: [fullRoute] });
   const router = createAppRouter({ history: memoryHistory });
   await router.load();
 
   const html = renderToString(
-    <trpc.Provider client={trpcClient as never} queryClient={queryClient}>
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
       <QueryClientProvider client={queryClient}>
         <SSRStateContext.Provider value={ssrState}>
           <LightboxProvider>

@@ -16,7 +16,7 @@
 
 import { useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { href } from "../../../lib/routing";
+import { href, toSearch } from "../../../lib/routing";
 import { trpc } from "../../../lib/trpc";
 import { Button } from "../../../components/ui/Button";
 import { Row } from "../../../components/ui/Row";
@@ -38,12 +38,12 @@ export function OpenChatControl({ boxSlug, cardPath }: { boxSlug: string; cardPa
       // navigate()'s promise only rejects on a superseded/redirected
       // navigation (not a user-facing failure) -- fire-and-forget.
       if (mode === "recent" && sessionId) {
-        void navigate({ to: href(`/${boxSlug}/chat`), search: { session: sessionId, card } as never });
+        void navigate({ to: href(`/${boxSlug}/chat`), search: toSearch({ session: sessionId, card }) });
         return;
       }
       void navigate({
         to: href(`/${boxSlug}/chat`),
-        search: { session: "new", contextDir, card } as never,
+        search: toSearch({ session: "new", contextDir, card }),
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not open chat");

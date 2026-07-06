@@ -9,7 +9,7 @@
 
 import { useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearch } from "@tanstack/react-router";
-import { href } from "../lib/routing";
+import { href, toSearch } from "../lib/routing";
 import type { HistoryCommit } from "../api";
 import { HistoryBrowser } from "../components/history/HistoryBrowser";
 import {
@@ -34,7 +34,7 @@ export function HistoryPage() {
       // navigation (not a user-facing failure) -- fire-and-forget.
       void navigate({
         to: href(`/${boxSlug}/history/${commit.hash.substring(0, 8)}`),
-        search: search as never,
+        search: toSearch(search),
         replace: true,
       });
     },
@@ -43,7 +43,7 @@ export function HistoryPage() {
 
   const handleFilterChange = useCallback(
     (next: HistoryFilterState) => {
-      void navigate({ search: filterToSearch(next) as never, replace: false });
+      void navigate({ search: toSearch(filterToSearch(next)), replace: false });
     },
     [navigate]
   );

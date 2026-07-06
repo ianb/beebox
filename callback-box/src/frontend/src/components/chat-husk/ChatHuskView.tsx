@@ -6,7 +6,7 @@
  */
 
 import { Link, useParams } from "@tanstack/react-router";
-import { href } from "../../lib/routing";
+import { href, toSearch } from "../../lib/routing";
 import { Card } from "../ui/Card";
 import { Stack } from "../ui/Stack";
 import { Text } from "../ui/Text";
@@ -46,7 +46,7 @@ export function ChatHuskView({ data }: RendererProps) {
         ) : null}
         <Link
           to={href(`/${boxSlug}/chat`)}
-          search={{ session } as never}
+          search={toSearch({ session })}
           className="self-start px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
         >
           Open chat →
