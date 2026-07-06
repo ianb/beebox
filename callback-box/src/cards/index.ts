@@ -17,6 +17,7 @@ export {
   type FieldDecl,
   type CardSchemaConfig,
   type CardSchema,
+  type InferCardFields,
   type CardCategory,
   type CardValidateInput,
   type TemplateMergePolicy,

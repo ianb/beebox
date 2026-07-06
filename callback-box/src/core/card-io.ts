@@ -18,7 +18,7 @@
 
 import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent, type CardSchema } from "../cards/index.js";
+import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../cards/index.js";
 import { parseCardFileName } from "../shared/card-name.js";
 
 /**
@@ -144,6 +144,46 @@ export function parseCardText(
     fields,
     rawBody: split.body,
   };
+}
+
+/**
+ * Thrown when {@link cardFields} is asked to read a card as a schema type it
+ * doesn't match — a broken invariant, since callers pass the schema the card
+ * was loaded under. Named (not a bare `Error`) so the mismatch is inspectable.
+ */
+export class CardTypeMismatchError extends Error {
+  readonly expected: string;
+  readonly actual: string;
+  constructor(expected: string, actual: string) {
+    super(`expected a "${expected}" card but got "${actual}"`);
+    this.name = "CardTypeMismatchError";
+    this.expected = expected;
+    this.actual = actual;
+  }
+}
+
+/**
+ * Read a parsed/loaded card's `fields` as the schema's inferred field type.
+ *
+ * `parseCardText`/`loadCardFile` already Zod-validated the fields against this
+ * exact schema, so this carries that validated type through to the caller
+ * rather than re-parsing — replacing the `card.fields as unknown as XFields`
+ * casts. The one runtime guard is the type-identity invariant: passing a card
+ * of a different type is a programming error and throws (never a silent
+ * mis-typed read). Use {@link getCardFields} instead when the fields did NOT
+ * come from a validated parse.
+ */
+export function cardFields<S extends CardSchema>(
+  card: { schema: CardSchema; fields: Record<string, unknown> },
+  schema: S
+): InferCardFields<S> {
+  if (card.schema.type !== schema.type) {
+    throw new CardTypeMismatchError(schema.type, card.schema.type);
+  }
+  // Sound: parseCardText validated these fields against `schema` already; the
+  // guard above proves the card is that type. This is the single centralized
+  // cast that the per-site `as unknown as XFields` casts collapse into.
+  return card.fields as InferCardFields<S>;
 }
 
 /** Narrow an unknown to a plain (non-array) object. */

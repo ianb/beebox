@@ -9,9 +9,9 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
 import {
   parseScheduledScript,
-  type ScheduledScriptFields,
+  ScheduledScriptSchema,
 } from "../../schemas/scheduled-script.js";
-import { parseCardText } from "../../core/card-io.js";
+import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { loadScriptState, loadRunningScripts } from "../../core/schedule-state.js";
 import {
@@ -102,7 +102,7 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
     try {
       const content = await fs.readFile(cardPath, "utf-8");
       const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
-      parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
+      parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
     } catch (err) {
       if (!options.quiet) console.error(`  Error parsing ${file}: ${(err as Error).message}`);
       errorCount++;

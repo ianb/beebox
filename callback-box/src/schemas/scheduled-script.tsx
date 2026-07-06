@@ -12,7 +12,7 @@ import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { CronExpressionParser } from "cron-parser";
 import rrulePkg from "rrule";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { parseDuration, parseBudget } from "./scheduled-script-duration.js";
 const { rrulestr } = rrulePkg;
 
@@ -45,7 +45,7 @@ const RequiresField = z.object({
   connectors: z.array(z.string()).optional(),
 });
 
-export const ScheduledScriptSchema: CardSchema = cardSchema("scheduled-script", {
+export const ScheduledScriptSchema = cardSchema("scheduled-script", {
   description: "Declarative scheduling for a command — cron/at/rrule plus budgets, locks, and wakeup opportunism",
   category: "authored",
   searchable: false,
@@ -108,25 +108,7 @@ Scheduled scripts define commands to run on a schedule. They live in \`config/sc
 // Field types (raw frontmatter shape)
 // ============================================
 
-export interface ScheduledScriptFields {
-  type: "scheduled-script";
-  cron?: string;
-  at?: string;
-  rrule?: string;
-  until?: string;
-  "not-before"?: string;
-  "on-wakeup"?: boolean;
-  once?: boolean;
-  enabled?: boolean;
-  budget?: string;
-  "lock-group"?: string;
-  timeout?: string;
-  description?: string;
-  runs: string;
-  source?: string | { text?: string; ref?: string };
-  "create-after-success"?: Array<{ path: string; args?: Record<string, string> }>;
-  requires?: { connectors?: string[] };
-}
+export type ScheduledScriptFields = InferCardFields<typeof ScheduledScriptSchema>;
 
 // ============================================
 // Parsed scheduled script (computed/normalized)

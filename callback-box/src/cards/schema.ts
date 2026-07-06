@@ -204,6 +204,56 @@ export interface CardSchema<
 }
 
 /**
+ * The inferred value type of a single field declaration — the body-wrapped or
+ * bare Zod schema's `z.infer`. Body fields carry their inner schema's type.
+ */
+type InferFieldDecl<D extends FieldDecl> = D extends BodyField<infer S>
+  ? z.infer<S>
+  : D extends ZodType
+    ? z.infer<D>
+    : never;
+
+/**
+ * Keys whose inferred type admits `undefined` become optional (`.optional()`
+ * or an absent-friendly union); the rest are required. A `.default(...)` field
+ * infers a non-`undefined` output type, so it lands in the required set — which
+ * matches the parsed card, where the default has already been applied.
+ */
+type OptionalFieldKeys<TFields extends Record<string, FieldDecl>> = {
+  [K in keyof TFields]: undefined extends InferFieldDecl<TFields[K]> ? K : never;
+}[keyof TFields];
+
+type RequiredFieldKeys<TFields extends Record<string, FieldDecl>> = Exclude<
+  keyof TFields,
+  OptionalFieldKeys<TFields>
+>;
+
+type InferFieldsRecord<TFields extends Record<string, FieldDecl>> = {
+  [K in RequiredFieldKeys<TFields>]: InferFieldDecl<TFields[K]>;
+} & {
+  [K in OptionalFieldKeys<TFields>]?: InferFieldDecl<TFields[K]>;
+};
+
+/**
+ * The validated shape of a parsed card's `fields` object, derived from the
+ * schema itself: the injected `type` literal, the author-declared fields (with
+ * body unwrapped and `.optional()`/`.default()` optionality honoured), and the
+ * global fields ({@link GLOBAL_CARD_FIELDS}) that aren't already declared.
+ *
+ * This replaces the hand-written `XFields` interfaces that used to parallel
+ * each schema — one declaration is now the single source of truth for both the
+ * runtime validator and the compile-time type. Requires the schema constant to
+ * keep its precise generics (declare it as `export const XSchema = cardSchema(...)`
+ * WITHOUT a `: CardSchema` annotation, which would erase them).
+ */
+export type InferCardFields<S extends CardSchema> = S extends CardSchema<
+  infer TTag,
+  infer TFields
+>
+  ? { type: TTag } & InferFieldsRecord<TFields> & Omit<{ title?: string; contains?: string }, keyof TFields>
+  : never;
+
+/**
  * Declare a card schema. The result tells the loader/serializer which
  * fields are frontmatter and which is the body.
  *

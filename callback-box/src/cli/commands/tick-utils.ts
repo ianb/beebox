@@ -9,10 +9,10 @@ import {
   parseScheduledScript,
   isDueForWakeup,
   isWithinBudget,
-  type ScheduledScriptFields,
+  ScheduledScriptSchema,
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
-import { parseCardText } from "../../core/card-io.js";
+import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
@@ -69,7 +69,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     try {
       const content = await fs.readFile(cardPath, "utf-8");
       const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
-      parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
+      parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
     } catch (err) {
       console.error(`  Error parsing ${file}: ${(err as Error).message}`);
       continue;

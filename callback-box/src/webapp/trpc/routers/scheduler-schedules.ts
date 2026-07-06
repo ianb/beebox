@@ -3,9 +3,9 @@ import * as path from "node:path";
 import {
   parseScheduledScript,
   isWithinBudget,
-  type ScheduledScriptFields,
+  ScheduledScriptSchema,
 } from "../../../schemas/scheduled-script.js";
-import { parseCardText } from "../../../core/card-io.js";
+import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import {
@@ -142,7 +142,7 @@ export async function listSchedules(boxRoot: string): Promise<ScheduleEntry[]> {
     try {
       const content = await fs.readFile(cardPath, "utf-8");
       const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
-      parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
+      parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
     } catch (e) {
       console.warn(`Failed to parse schedule "${scriptName}", listing as parse error:`, e);
       schedules.push(parseErrorEntry(scriptName));

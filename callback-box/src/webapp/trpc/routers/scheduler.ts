@@ -10,9 +10,9 @@ import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../../../cards/index.js";
 import {
   parseScheduledScript,
-  type ScheduledScriptFields,
+  ScheduledScriptSchema,
 } from "../../../schemas/scheduled-script.js";
-import { parseCardText } from "../../../core/card-io.js";
+import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
@@ -155,7 +155,7 @@ export const schedulerRouter = router({
       }
 
       const card = parseCardText(content, { source: fileName, schemas: await createCardSchemaMap(ctx.boxRoot) });
-      const parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
+      const parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
 
       await checkTriggerPreconditions({ boxRoot: ctx.boxRoot, name: input.name, parsed });
 

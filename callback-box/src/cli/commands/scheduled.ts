@@ -9,9 +9,9 @@ import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
 import {
   parseScheduledScript,
-  type ScheduledScriptFields,
+  ScheduledScriptSchema,
 } from "../../schemas/scheduled-script.js";
-import { parseCardText } from "../../core/card-io.js";
+import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { loadScriptState } from "../../core/schedule-state.js";
 
@@ -51,7 +51,7 @@ export const scheduledCommand = new Command("scheduled")
       try {
         const content = await fs.readFile(cardPath, "utf-8");
         const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
-        parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
+        parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
       } catch (err) {
         console.log(`  ${scriptName.padEnd(22)} [parse error: ${(err as Error).message}]`);
         continue;

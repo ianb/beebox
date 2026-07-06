@@ -17,9 +17,9 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import {
   parseScheduledScript,
-  type ScheduledScriptFields,
+  ScheduledScriptSchema,
 } from "../schemas/scheduled-script.js";
-import { parseCardText } from "./card-io.js";
+import { cardFields, parseCardText } from "./card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { checkMissingConnectors } from "../connectors/requirements.js";
 import { loadScriptState } from "./schedule-state.js";
@@ -100,7 +100,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
       cardMtime = (await fs.stat(cardPath)).mtime;
       const content = await fs.readFile(cardPath, "utf-8");
       const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
-      const parsed = parseScheduledScript(card.fields as unknown as ScheduledScriptFields);
+      const parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
       const missingConnectors = parsed.requires
         ? await checkMissingConnectors(boxRoot, parsed.requires)
         : [];
