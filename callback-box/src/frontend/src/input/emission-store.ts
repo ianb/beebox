@@ -28,7 +28,7 @@
  * (components/chat/CLAUDE.md) depends on.
  */
 
-import type { SelectionItem } from "../lib/selection-serialize";
+import type { SelectionItem } from "../lib/selection/serialize";
 
 /** An image attachment as the store carries it (today: `AttachmentItem`). */
 export interface ImageItem {

@@ -1,4 +1,4 @@
-import { BadTagError, BadWordError } from "./patmatch-errors";
+import { BadTagError, BadWordError } from "./errors";
 
 export function tokenizePattern(
   src: string

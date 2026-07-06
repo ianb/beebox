@@ -1,5 +1,5 @@
-import { UnknownSeparatorError } from "./patmatch-errors";
-import { type InputWord, normalizeWord, wordsEqual } from "./patmatch-tokenize";
+import { UnknownSeparatorError } from "./errors";
+import { type InputWord, normalizeWord, wordsEqual } from "./tokenize";
 
 interface MatchResult {
   captured: InputWord[];

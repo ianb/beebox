@@ -10,7 +10,7 @@
  */
 
 import { useState } from "react";
-import { type SelectionItem } from "../lib/selection-serialize";
+import { type SelectionItem } from "../lib/selection/serialize";
 
 function docName(ref: string): string {
   const base = ref.split("/").pop();

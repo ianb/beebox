@@ -7,7 +7,7 @@ import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
 import { Pre } from "./ui/Pre";
 import type { SessionEntry } from "../api";
-import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../lib/speech-parsing";
+import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../lib/audio/speech-parsing";
 import { SpeechMenu } from "./chat/SpeechMenu";
 import { SpeechChunk } from "./chat/SpeechChunk";
 import { parseCallouts } from "../lib/structured-output-parsing";

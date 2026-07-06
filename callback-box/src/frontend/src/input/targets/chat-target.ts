@@ -16,7 +16,7 @@
 
 import type { ChatImageAttachment } from "../../api-chat";
 import type { Emission, EmissionFile } from "../emission";
-import type { SelectionItem } from "../../lib/selection-serialize";
+import type { SelectionItem } from "../../lib/selection/serialize";
 import type { EmissionDraft, EmissionEditor, ImageItem, FileItem } from "../emission-store";
 import type { ChatEvent } from "../../machines/chat-types";
 import { assembleChatMessage, type ChatWitness } from "./chat-assemble";

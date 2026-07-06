@@ -15,7 +15,7 @@ import { useParams } from "@tanstack/react-router";
 import { Markdown } from "./Markdown";
 import { AttachedComments } from "./AttachedComments";
 import { makeEmbedComponents } from "./FigureEmbed";
-import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/quote-extract";
+import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/selection/quote-extract";
 import { resolveRelativePath } from "../lib/view-url";
 import type { RendererProps } from "../renderers";
 import type { ReactNode } from "react";

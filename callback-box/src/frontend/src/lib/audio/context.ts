@@ -15,7 +15,7 @@
  *     this on iOS; use the HTMLAudioElement approach here.
  */
 
-import { withBase } from "../api";
+import { withBase } from "../../api";
 import { logSpeechEvent } from "./speech-test-log";
 
 let sharedAudio: HTMLAudioElement | null = null;

@@ -18,7 +18,7 @@
  */
 
 import type { ReactNode } from "react";
-import { isPersonRef, speakerDisplay } from "../lib/quote-extract";
+import { isPersonRef, speakerDisplay } from "../lib/selection/quote-extract";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
 
 interface QuoteLinkContext {

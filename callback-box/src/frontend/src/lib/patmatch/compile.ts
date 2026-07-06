@@ -4,15 +4,15 @@ import {
   TagsWithNoWordsError,
   UnexpectedTagsError,
   UnexpectedTokenError,
-} from "./patmatch-errors";
+} from "./errors";
 import {
   type Matcher,
   OptionalMatcher,
   OrMatcher,
   SequenceMatcher,
   WordMatcher,
-} from "./patmatch-matchers";
-import { normalizeWord } from "./patmatch-tokenize";
+} from "./matchers";
+import { normalizeWord } from "./tokenize";
 
 export class TokenStream {
   constructor(private tokens: (string | Record<string, string>)[]) {

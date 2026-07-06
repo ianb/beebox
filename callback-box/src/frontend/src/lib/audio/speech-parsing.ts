@@ -3,8 +3,8 @@
  * Uses parseTags for robust attribute extraction.
  */
 
-import { parseTags } from "./parseTags";
-import { VOICE_MODELS, type VoiceModel } from "../../../schemas/personality";
+import { parseTags } from "../parseTags";
+import { VOICE_MODELS, type VoiceModel } from "../../../../schemas/personality";
 
 export const VALID_VOICES = VOICE_MODELS;
 export type TTSVoice = VoiceModel;

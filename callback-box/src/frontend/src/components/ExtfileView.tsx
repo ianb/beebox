@@ -16,7 +16,7 @@ import { Text } from "./ui/Text";
 import { FriendlyDate } from "./ui/FriendlyDate";
 import { type RendererProps } from "../renderers";
 import { type NavigateHint, type ViewTarget } from "../lib/view-url";
-import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
+import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
 import { isBinaryPath } from "../lib/binary-files";
 import { ExternalDocument, useExternalTarget } from "./ExternalDocument";
 import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";

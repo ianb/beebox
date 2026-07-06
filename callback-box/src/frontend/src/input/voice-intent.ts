@@ -16,7 +16,7 @@
  * boundary either way.
  */
 
-import type { SelectionItem } from "../lib/selection-serialize";
+import type { SelectionItem } from "../lib/selection/serialize";
 import { joinTranscript } from "../components/chat/InteractiveChat-helpers";
 import { createVoiceEmission, type Emission } from "./emission";
 

@@ -9,7 +9,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import { useSpeechPlayback } from "../../hooks/useSpeechPlayback";
-import { parseAllSpeechTags } from "../../lib/speech-parsing";
+import { parseAllSpeechTags } from "../../lib/audio/speech-parsing";
 import type { ComposerEvent } from "../../machines/composerMachine";
 
 interface SnapshotLike {

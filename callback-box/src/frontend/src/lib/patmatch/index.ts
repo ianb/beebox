@@ -27,14 +27,14 @@ If you join leading+original+trailing then you'll get exactly the original strin
 
 */
 
-import { compileLines, TokenStream } from "./patmatch-compile";
-import { type Matcher } from "./patmatch-matchers";
+import { compileLines, TokenStream } from "./compile";
+import { type Matcher } from "./matchers";
 import {
   type InputWord,
   normalizeWord,
   tokenizeInput,
   tokenizePattern,
-} from "./patmatch-tokenize";
+} from "./tokenize";
 
 export class InputMatch {
   leading: InputWord[];

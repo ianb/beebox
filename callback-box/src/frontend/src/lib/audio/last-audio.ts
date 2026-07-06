@@ -12,8 +12,8 @@
  * answer as tentative, since another tab may still hold one.
  */
 
-import { getApiBase } from "../api-core";
-import { createRetentionStore } from "../input/retention";
+import { getApiBase } from "../../api-core";
+import { createRetentionStore } from "../../input/retention";
 
 export interface VoiceAudioPayload {
   blob: Blob;

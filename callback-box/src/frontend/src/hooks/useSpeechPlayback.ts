@@ -6,9 +6,9 @@
 import { useEffect, useCallback, useRef, useMemo } from "react";
 import { useSSRMachine } from "./useSSRMachine";
 import { speechPlaybackMachine } from "../machines/speechPlaybackMachine";
-import { getTTSClient } from "../lib/tts-client";
-import { logSpeechEvent } from "../lib/speech-test-log";
-import type { SpeechSegment } from "../lib/speech-parsing";
+import { getTTSClient } from "../lib/audio/tts-client";
+import { logSpeechEvent } from "../lib/audio/speech-test-log";
+import type { SpeechSegment } from "../lib/audio/speech-parsing";
 
 interface PlaySegmentsOptions {
   messageId: string;

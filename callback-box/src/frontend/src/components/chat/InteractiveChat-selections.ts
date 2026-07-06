@@ -14,8 +14,8 @@
 
 import { useCallback, useSyncExternalStore } from "react";
 import { insertTokensAtCursor } from "./InteractiveChat-attachments";
-import { type SelectionItem } from "../../lib/selection-serialize";
-import { type AddSelectionInput } from "../../lib/selection-position";
+import { type SelectionItem } from "../../lib/selection/serialize";
+import { type AddSelectionInput } from "../../lib/selection/position";
 import type { EmissionStore } from "../../input/emission-store";
 
 export function useChatSelections(opts: {

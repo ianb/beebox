@@ -1,6 +1,6 @@
 import ReactDOM from "react-dom/client";
 import { RouterProvider } from "@tanstack/react-router";
-import { TrpcProvider } from "./lib/trpc-provider";
+import { TrpcProvider } from "./lib/trpc/provider";
 import { createAppRouter } from "./router";
 import { LightboxProvider } from "./components/LightboxProvider";
 import "./index.css";

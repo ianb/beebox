@@ -2,7 +2,7 @@ import { createTRPCReact } from "@trpc/react-query";
 import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink, type TRPCLink } from "@trpc/client";
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
-import { getApiBase, getWebSocketUrl, withBase } from "../api.js";
+import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
 
 export const trpc = createTRPCReact<AppRouter>();
 

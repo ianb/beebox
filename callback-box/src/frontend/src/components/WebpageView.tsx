@@ -16,7 +16,7 @@ import { FriendlyDate } from "./ui/FriendlyDate";
 import { getApiBase } from "../api";
 import { type RendererProps } from "../renderers";
 import { resolveRelativePath } from "../lib/view-url";
-import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/quote-anchor";
+import { findQuoteRange, highlightRange, scrollRangeIntoView } from "../lib/selection/quote-anchor";
 import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";
 
 export function WebpageView({ data, onNavigate }: RendererProps) {

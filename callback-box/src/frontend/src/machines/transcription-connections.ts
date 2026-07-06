@@ -8,8 +8,8 @@
  */
 
 import { getApiBase } from "../api";
-import { deepgramKeyManager } from "../lib/deepgram-key";
-import { openaiRealtimeKeyManager } from "../lib/openai-realtime-key";
+import { deepgramKeyManager } from "../lib/audio/deepgram-key";
+import { openaiRealtimeKeyManager } from "../lib/audio/openai-realtime-key";
 
 export interface ConnectionHandle {
   ws: WebSocket;

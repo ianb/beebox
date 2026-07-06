@@ -14,7 +14,7 @@
  */
 
 import type { ChatImageAttachment } from "../../api-chat";
-import { applySelections } from "../../lib/selection-serialize";
+import { applySelections } from "../../lib/selection/serialize";
 import type { Emission } from "../emission";
 
 /**

@@ -33,7 +33,7 @@
  */
 
 import { setup, assign } from "xstate";
-import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/earcons";
+import { recordingStop, recordingError, recordingDropped, recordingResumed } from "../lib/audio/earcons";
 import { transcriptionActor } from "./transcription-actor";
 import { MachineActionError, type TranscriptionEvent, type DropCause } from "./transcription-events";
 

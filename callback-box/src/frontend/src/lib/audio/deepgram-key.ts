@@ -8,7 +8,7 @@
  * Adapted from the memory-atlas DeepgramKeyManager pattern.
  */
 
-import { trpcClient } from "./trpc";
+import { trpcClient } from "../trpc";
 
 const SAFETY_MARGIN_MS = 30 * 1000;
 

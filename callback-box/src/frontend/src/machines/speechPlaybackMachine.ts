@@ -16,9 +16,9 @@
  */
 
 import { setup, assign, fromPromise } from "xstate";
-import { shouldPrefetchSpeech } from "../lib/audio-context";
-import type { SpeechSegment } from "../lib/speech-parsing";
-import type { getTTSClient, PrefetchHandle } from "../lib/tts-client";
+import { shouldPrefetchSpeech } from "../lib/audio/context";
+import type { SpeechSegment } from "../lib/audio/speech-parsing";
+import type { getTTSClient, PrefetchHandle } from "../lib/audio/tts-client";
 
 type TTSClient = ReturnType<typeof getTTSClient>;
 

@@ -12,7 +12,7 @@
 
 import { useCallback, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { extractSelection } from "../lib/selection-position";
+import { extractSelection } from "../lib/selection/position";
 
 interface FloatingButton {
   left: number;

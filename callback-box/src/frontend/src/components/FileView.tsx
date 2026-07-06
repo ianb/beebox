@@ -34,7 +34,7 @@ import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
 import { SelectionCapture } from "./SelectionCapture";
-import type { AddSelectionInput } from "../lib/selection-position";
+import type { AddSelectionInput } from "../lib/selection/position";
 import { Pre } from "./ui/Pre";
 import { ViewRenderer } from "./ViewRenderer";
 import { useCardViewBinding } from "../lib/view-bindings";

@@ -7,7 +7,7 @@
  * briefly and re-mint per recording.
  */
 
-import { trpcClient } from "./trpc";
+import { trpcClient } from "../trpc";
 
 const SAFETY_MARGIN_MS = 10 * 1000;
 

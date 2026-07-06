@@ -9,12 +9,12 @@
 import { type ReactNode } from "react";
 import { AttachmentPanel, FileAttachmentPanel, type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
 import { SelectionPanel } from "../ChatSelections";
-import { type SelectionItem } from "../../lib/selection-serialize";
+import { type SelectionItem } from "../../lib/selection/serialize";
 import { SessionListButton } from "../SessionListButton";
 import { RecentFilesButton } from "../RecentFilesButton";
 import { LandmarkLinksButton } from "../LandmarkLinksButton";
-import { getTTSClient } from "../../lib/tts-client";
-import { alarm } from "../../lib/earcons";
+import { getTTSClient } from "../../lib/audio/tts-client";
+import { alarm } from "../../lib/audio/earcons";
 import { SchedulePill, NarrationStatusBadge, MuteButton, NewSessionButton, ChatContextLink } from "./InteractiveChat-controls";
 import { ChatDebugMenu } from "./InteractiveChat-debug-menu";
 import { ChatInputArea } from "./InteractiveChat-composer";

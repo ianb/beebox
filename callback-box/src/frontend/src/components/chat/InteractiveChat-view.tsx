@@ -10,8 +10,8 @@ import { useRef, useCallback, useEffect, type ReactNode } from "react";
 import { CompanionViewPanel } from "./InteractiveChat-controls";
 import { MessageList } from "./InteractiveChat-messages";
 import { ChatContextDirProvider } from "./chat-context-dir";
-import { lastWords, countWords } from "../../lib/selection-serialize";
-import type { AddSelectionInput } from "../../lib/selection-position";
+import { lastWords, countWords } from "../../lib/selection/serialize";
+import type { AddSelectionInput } from "../../lib/selection/position";
 import {
   ChatView, ChatHeader, ChatDebugMenu, ChatStatusBanners, ChatComposerSection, ChatInputArea, MobileTextareaRow,
 } from "./InteractiveChat-layout";

@@ -6,7 +6,7 @@
  * import cycle through the main component.
  */
 
-import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
+import { applySelections, type SelectionItem } from "../../lib/selection/serialize";
 import { MODEL_ID } from "../../../../core/model-ids";
 
 /**

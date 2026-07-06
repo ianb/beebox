@@ -12,12 +12,12 @@
  *     re-hit the backend. Only fully-downloaded audio is cached.
  */
 
-import { getApiBase } from "../api";
-import { playAudioBlob, playAudioStream, supportsMediaSource } from "./audio-context";
-import { getAudioCache, cacheKey } from "./audio-cache";
+import { getApiBase } from "../../api";
+import { playAudioBlob, playAudioStream, supportsMediaSource } from "./context";
+import { getAudioCache, cacheKey } from "./cache";
 import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
-import { RequestError } from "./errors";
+import { RequestError } from "../errors";
 
 /** Thrown when playback is stopped before/while a queued utterance plays. */
 class PlaybackStoppedError extends Error {

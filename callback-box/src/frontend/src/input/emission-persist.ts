@@ -25,7 +25,7 @@
  */
 
 import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
-import type { SelectionItem } from "../lib/selection-serialize";
+import type { SelectionItem } from "../lib/selection/serialize";
 
 /** The subset of Storage this module touches (fakeable in doctests). */
 export interface KeyValueStorage {

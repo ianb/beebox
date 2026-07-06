@@ -23,8 +23,8 @@
 
 import pcmProcessorUrl from "../audio/pcm-processor.worklet.js?url";
 import { delay, jitteredBackoff } from "./transcription-backoff";
-import { setMicLevelSource, clearMicLevelSource } from "../lib/mic-level";
-import { getMicStream } from "../lib/fake-mic";
+import { setMicLevelSource, clearMicLevelSource } from "../lib/audio/mic-level";
+import { getMicStream } from "../lib/audio/fake-mic";
 
 /**
  * How long the mic track may sit muted before we treat it as taken away.

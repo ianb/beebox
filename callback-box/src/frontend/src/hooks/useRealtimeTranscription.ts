@@ -17,9 +17,9 @@ import {
   realtimeTranscriptionMachine,
   type TranscriptionState,
 } from "../machines/realtimeTranscriptionMachine";
-import { detectKeyword, type KeywordResult } from "../lib/speech-keywords";
-import { stillListening, recordingStart } from "../lib/earcons";
-import { claimMicAcrossTabs } from "../lib/mic-tab-lock";
+import { detectKeyword, type KeywordResult } from "../lib/audio/speech-keywords";
+import { stillListening, recordingStart } from "../lib/audio/earcons";
+import { claimMicAcrossTabs } from "../lib/audio/mic-tab-lock";
 import type { VoiceIntent } from "../input/voice-intent";
 
 const STILL_LISTENING_DELAY_MS = 10000;

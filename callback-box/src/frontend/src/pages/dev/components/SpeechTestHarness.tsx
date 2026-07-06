@@ -15,9 +15,9 @@ import { Button } from "../../../components/ui/Button";
 import { SpeechMenu } from "../../../components/chat/SpeechMenu";
 import { SpeechChunk } from "../../../components/chat/SpeechChunk";
 import { useSpeechPlayback } from "../../../hooks/useSpeechPlayback";
-import { getTTSClient } from "../../../lib/tts-client";
-import { logSpeechEvent } from "../../../lib/speech-test-log";
-import type { SpeechSegment } from "../../../lib/speech-parsing";
+import { getTTSClient } from "../../../lib/audio/tts-client";
+import { logSpeechEvent } from "../../../lib/audio/speech-test-log";
+import type { SpeechSegment } from "../../../lib/audio/speech-parsing";
 
 // Distinct text per segment so the mock picks distinct fixtures and the test
 // log labels (first chars of text) are recognizable. Must NOT start with

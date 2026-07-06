@@ -4,8 +4,8 @@
  * Uses shared pre-unlocked Audio element for iOS Safari compatibility.
  */
 
-import { withBase } from "../api";
-import { playAudioUrl } from "./audio-context";
+import { withBase } from "../../api";
+import { playAudioUrl } from "./context";
 
 class EarCon {
   name: string;

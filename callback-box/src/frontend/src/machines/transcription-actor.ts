@@ -53,7 +53,7 @@
 import { fromCallback } from "xstate";
 import { trpcClient } from "../lib/trpc";
 import { MicCapture } from "./transcription-mic";
-import { encodePcmChunksAsWav } from "../lib/wav-encode";
+import { encodePcmChunksAsWav } from "../lib/audio/wav-encode";
 import {
   type ConnectionHandle,
   type ServiceCallbacks,

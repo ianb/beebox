@@ -5,7 +5,7 @@
  */
 
 import { MicrophoneIcon } from "../VoiceRecorder";
-import { unlockAudioContext } from "../../lib/audio-context";
+import { unlockAudioContext } from "../../lib/audio/context";
 import { NarrationMicIcon } from "./InteractiveChat-controls";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";
 

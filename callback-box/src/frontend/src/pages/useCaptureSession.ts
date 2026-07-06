@@ -5,7 +5,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ChunkedRecorder, type ChunkCallbackParams } from "../lib/recorder";
+import { ChunkedRecorder, type ChunkCallbackParams } from "../lib/audio/recorder";
 import {
   loadDevicePrefs,
   createCaptureSession,

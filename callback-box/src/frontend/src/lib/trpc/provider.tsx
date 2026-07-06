@@ -4,7 +4,7 @@ import { QueryClient, QueryClientProvider, useIsFetching, useIsMutating } from "
 // client instance restarts tRPC's per-client op numbering and collides
 // with the first on the shared WebSocket ("Duplicate id N"). See the
 // comment on trpcClient in trpc.ts before "simplifying" this.
-import { trpc, trpcClient } from "./trpc.js";
+import { trpc, trpcClient } from "./index.js";
 
 const queryClient = new QueryClient({
   defaultOptions: {

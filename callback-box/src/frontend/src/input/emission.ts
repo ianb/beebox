@@ -16,7 +16,7 @@
  */
 
 import type { ChatImageAttachment } from "../api-chat";
-import type { SelectionItem } from "../lib/selection-serialize";
+import type { SelectionItem } from "../lib/selection/serialize";
 import { newMessageId } from "../components/chat/InteractiveChat-helpers";
 
 /**
