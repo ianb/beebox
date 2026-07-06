@@ -55,6 +55,7 @@ export const eventsRouter = router({
       ensureBoxWatcher(opts.ctx.boxRoot, opts.ctx.eventBus);
       const afterId = opts.input?.lastEventId ? Number(opts.input.lastEventId) : 0;
       const queue: BusEvent[] = [];
+      let coalescedTransients = 0;
       let wake: (() => void) | null = null;
       const ping = (): void => {
         if (wake) {
@@ -73,7 +74,18 @@ export const eventsRouter = router({
           // persistent overflow is unrealistic at single-box event rates.)
           if (queue.length >= MAX_BUS_QUEUE) {
             const oldestTransient = queue.findIndex((q) => q.id < 0);
-            if (oldestTransient !== -1) queue.splice(oldestTransient, 1);
+            if (oldestTransient !== -1) {
+              queue.splice(oldestTransient, 1);
+              coalescedTransients++;
+              // Coalescing is by-design (transient events are idempotent UI
+              // hints), but it means a consumer is falling behind — surface the
+              // anomaly once per subscription rather than dropping silently.
+              if (coalescedTransients === 1) {
+                console.warn(
+                  `[events.subscribe] Subscriber queue hit ${MAX_BUS_QUEUE}; coalescing transient events (dropping oldest). A slow or backgrounded consumer is falling behind.`,
+                );
+              }
+            }
           }
           queue.push(ev);
           ping();
