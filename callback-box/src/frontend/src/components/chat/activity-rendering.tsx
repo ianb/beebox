@@ -6,6 +6,7 @@
 import { Pre } from "../ui/Pre";
 import { JsonView } from "../ui/JsonView";
 import type { SessionContentBlock } from "../../api";
+import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 
 /**
  * Human-readable description of a single tool call.
@@ -87,19 +88,21 @@ function summarizeActivity(parts: ActivityParts): string {
   return segments.join(", ") || "working";
 }
 
+/** Tool → display category, keyed on the shared tool vocabulary. */
+const TOOL_CATEGORIES = {
+  Read: "read",
+  Edit: "edit",
+  Write: "edit",
+  Bash: "command",
+  Grep: "search",
+  Glob: "search",
+  Agent: "task",
+  Task: "task",
+  TodoWrite: "todo",
+} satisfies Record<KnownToolName, string>;
+
 function toolCategory(name: string): string {
-  switch (name) {
-    case "Read": return "read";
-    case "Edit":
-    case "Write": return "edit";
-    case "Bash": return "command";
-    case "Grep":
-    case "Glob": return "search";
-    case "Agent":
-    case "Task": return "task";
-    case "TodoWrite": return "todo";
-    default: return "tool";
-  }
+  return isKnownTool(name) ? TOOL_CATEGORIES[name] : "tool";
 }
 
 function categorySingular(cat: string): string {

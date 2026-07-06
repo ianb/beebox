@@ -9,6 +9,7 @@ import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
 import { createAgent } from "../../core/agent.js";
+import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat-session.js";
 import {
   getSessionLogPath,
@@ -293,25 +294,34 @@ interface BehaviorAccumulator {
   bashRawCommands: string[];
 }
 
+interface ToolUseContext {
+  block: SessionContentBlock;
+  acc: BehaviorAccumulator;
+  summary: string;
+  name: string;
+}
+
+/** Per-tool behavior accumulators, keyed on the shared tool vocabulary. */
+const TOOL_USE_CATEGORIZERS: Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>> = {
+  Read: ({ summary, acc }) => {
+    if (summary) acc.filesRead.push(summary);
+  },
+  Grep: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
+  Glob: ({ name, summary, acc }) => acc.searches.push({ tool: name, summary }),
+  Bash: ({ block, summary, acc }) => {
+    if (summary) acc.bashCommands.push(summary);
+    if (block.input) {
+      const cmd = String(block.input.command ?? "");
+      if (cmd) acc.bashRawCommands.push(cmd);
+    }
+  },
+} satisfies Partial<Record<KnownToolName, (ctx: ToolUseContext) => void>>;
+
 function categorizeToolUse(block: SessionContentBlock, acc: BehaviorAccumulator): void {
   const name = block.toolName ?? "";
   const summary = block.inputSummary ?? "";
-
-  switch (name) {
-    case "Read":
-      if (summary) acc.filesRead.push(summary);
-      break;
-    case "Grep":
-    case "Glob":
-      acc.searches.push({ tool: name, summary });
-      break;
-    case "Bash":
-      if (summary) acc.bashCommands.push(summary);
-      if (block.input) {
-        const cmd = String(block.input.command ?? "");
-        if (cmd) acc.bashRawCommands.push(cmd);
-      }
-      break;
+  if (isKnownTool(name)) {
+    TOOL_USE_CATEGORIZERS[name]?.({ block, acc, summary, name });
   }
 }
 

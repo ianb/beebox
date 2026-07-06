@@ -140,7 +140,22 @@ function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       if (msg.subtype === "success") r.result = msg.result;
       return r;
     }
+    case "user":
+    case "stream_event":
+      // deliberately not handled on the thread path — see plan open question 2.
+      // (ChatSession's adapter DOES surface these; this narrowing is the known
+      // adaptSdkMessage drift, flagged for the boxholder.)
+      return null;
+    case "tool_progress":
+    case "auth_status":
+    case "tool_use_summary":
+    case "rate_limit_event":
+    case "prompt_suggestion":
+      // SDK-internal partials/status events; never surfaced to consumers.
+      return null;
     default:
+      // Exhaustive over the SDK's known message types; this default is a
+      // graceful catch for a future SDK version's unknown type at runtime.
       return null;
   }
 }

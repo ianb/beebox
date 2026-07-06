@@ -301,7 +301,17 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       if (msg.subtype === "success") r.result = msg.result;
       return r;
     }
+    case "tool_progress":
+    case "auth_status":
+    case "tool_use_summary":
+    case "rate_limit_event":
+    case "prompt_suggestion":
+      // SDK-internal partials/status events; not surfaced as ChatMessages.
+      return null;
     default:
+      // Exhaustive over the SDK's known message types (a new known type is a
+      // compile error above); this default only catches a future SDK version's
+      // unknown type at runtime, kept graceful rather than crashing the stream.
       return null;
   }
 }

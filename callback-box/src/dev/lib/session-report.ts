@@ -8,6 +8,7 @@
 
 import * as fs from "node:fs";
 import * as readline from "node:readline";
+import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 
 interface RawBlock {
   type: string;
@@ -167,27 +168,26 @@ function extractResultText(content: unknown): string {
   return "";
 }
 
+/** Per-tool call descriptions, keyed on the shared tool vocabulary. */
+const TOOL_CALL_DESCRIBERS: Partial<
+  Record<KnownToolName, (input: Record<string, unknown>) => string>
+> = {
+  Read: (input) => `Read ${input.file_path || ""}`,
+  Write: (input) => `Write ${input.file_path || ""} (${String(input.content || "").length} chars)`,
+  Edit: (input) => `Edit ${input.file_path || ""}`,
+  Bash: (input) => String(input.command || input.description || ""),
+  Glob: (input) => `Glob ${input.pattern || ""}`,
+  Grep: (input) => `Grep "${input.pattern || ""}" in ${input.path || "."}`,
+  TodoWrite: () => "TodoWrite",
+  Task: (input) => `Task: ${String(input.description || "").substring(0, 120)}`,
+};
+
 function describeToolCall(name: string, input: Record<string, unknown>): string {
-  switch (name) {
-    case "Read":
-      return `Read ${input.file_path || ""}`;
-    case "Write":
-      return `Write ${input.file_path || ""} (${String(input.content || "").length} chars)`;
-    case "Edit":
-      return `Edit ${input.file_path || ""}`;
-    case "Bash":
-      return String(input.command || input.description || "");
-    case "Glob":
-      return `Glob ${input.pattern || ""}`;
-    case "Grep":
-      return `Grep "${input.pattern || ""}" in ${input.path || "."}`;
-    case "TodoWrite":
-      return "TodoWrite";
-    case "Task":
-      return `Task: ${String(input.description || "").substring(0, 120)}`;
-    default:
-      return `${name}: ${JSON.stringify(input).substring(0, 150)}`;
+  if (isKnownTool(name)) {
+    const describe = TOOL_CALL_DESCRIBERS[name];
+    if (describe) return describe(input);
   }
+  return `${name}: ${JSON.stringify(input).substring(0, 150)}`;
 }
 
 /**

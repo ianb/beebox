@@ -5,6 +5,8 @@
  * those blocks. Split out of `session.ts` to keep that file under the line cap.
  */
 
+import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
+
 /**
  * Content block from a session log entry.
  */
@@ -26,6 +28,20 @@ export interface SessionContentBlock {
   imageUrl?: string;
 }
 
+/** Per-tool input summarizers, keyed on the shared tool vocabulary. */
+const TOOL_INPUT_SUMMARIZERS: Partial<
+  Record<KnownToolName, (input: Record<string, unknown>) => string>
+> = {
+  Read: (input) => String(input.file_path || ""),
+  Edit: (input) => String(input.file_path || ""),
+  Write: (input) => `${input.file_path} (${String(input.content || "").length} chars)`,
+  Bash: (input) => String(input.description || input.command || "").substring(0, 120),
+  Glob: (input) => String(input.pattern || ""),
+  Grep: (input) => `${input.pattern} in ${input.path || "."}`,
+  TodoWrite: () => "update todos",
+  Task: (input) => String(input.description || input.prompt || "").substring(0, 120),
+};
+
 /**
  * Summarize tool input for compact display.
  */
@@ -34,27 +50,11 @@ export function summarizeToolInput(
   input: Record<string, unknown>
 ): string {
   if (!input) return "";
-
-  switch (toolName) {
-    case "Read":
-      return String(input.file_path || "");
-    case "Edit":
-      return String(input.file_path || "");
-    case "Write":
-      return `${input.file_path} (${String(input.content || "").length} chars)`;
-    case "Bash":
-      return String(input.description || input.command || "").substring(0, 120);
-    case "Glob":
-      return String(input.pattern || "");
-    case "Grep":
-      return `${input.pattern} in ${input.path || "."}`;
-    case "TodoWrite":
-      return "update todos";
-    case "Task":
-      return String(input.description || input.prompt || "").substring(0, 120);
-    default:
-      return JSON.stringify(input).substring(0, 150);
+  if (isKnownTool(toolName)) {
+    const summarize = TOOL_INPUT_SUMMARIZERS[toolName];
+    if (summarize) return summarize(input);
   }
+  return JSON.stringify(input).substring(0, 150);
 }
 
 /**
