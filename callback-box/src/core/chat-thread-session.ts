@@ -15,7 +15,7 @@ import {
   type ChatMessageAssistant,
   type ChatMessageResult,
 } from "./chat-session-messages.js";
-import { buildTimezoneContext } from "../webapp/box-config.js";
+import { buildTimezoneContext } from "./box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import {
   createChatBackend,

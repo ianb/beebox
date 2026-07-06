@@ -16,7 +16,7 @@ import { glob } from "glob";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
-import { isGoogleServiceAllowed } from "../webapp/box-config.js";
+import { isGoogleServiceAllowed } from "../core/box-config.js";
 import { loadDriveConfig } from "./drive-config.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
 import { stageFiles, commit } from "../cli/lib/git.js";

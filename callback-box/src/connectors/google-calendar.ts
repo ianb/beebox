@@ -29,7 +29,7 @@ import {
   createGoogleCalendarService,
   type GoogleCalendarService,
 } from "../services/google-calendar.js";
-import { isGoogleServiceAllowed } from "../webapp/box-config.js";
+import { isGoogleServiceAllowed } from "../core/box-config.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,

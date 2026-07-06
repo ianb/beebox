@@ -10,7 +10,7 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { ownerProcedure } from "../trpc.js";
 import { loadGoogleTokens, getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
-import { loadBoxConfig } from "../../box-config.js";
+import { loadBoxConfig } from "../../../core/box-config.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 

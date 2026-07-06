@@ -13,7 +13,7 @@
  * prompt must stay time-invariant.
  */
 
-import { loadBoxTimezone } from "../webapp/box-config.js";
+import { loadBoxTimezone } from "./box-config.js";
 import { getMostActiveSavedAt } from "./chat-session-history.js";
 import { composeChatAppSnapshot, type FeatureMap } from "./chat-features.js";
 import {

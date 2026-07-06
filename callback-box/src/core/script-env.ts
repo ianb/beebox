@@ -20,7 +20,7 @@
  */
 
 import * as path from "node:path";
-import { loadBoxConfig } from "../webapp/box-config.js";
+import { loadBoxConfig } from "./box-config.js";
 import { getOrCreateAgentToken } from "./agent-token.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 

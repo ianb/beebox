@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
-import { isGoogleServiceAllowed } from "../../box-config.js";
+import { isGoogleServiceAllowed } from "../../../core/box-config.js";
 import { loadDriveConfig, saveDriveConfig } from "../../../connectors/drive-config.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
