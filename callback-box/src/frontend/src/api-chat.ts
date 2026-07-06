@@ -3,6 +3,25 @@
  * and feature toggles, and HQ audio transcription. Split out of api.ts to keep
  * that file under the line limit; api.ts re-exports everything here so callers
  * keep importing from "./api" unchanged.
+ *
+ * Deliberate-REST inventory (Track L.12e):
+ * - `startChatTurn` — POST /api/chat/send. Not a tRPC candidate: per
+ *   CLAUDE.md this route needs the raw request's authenticated user plus
+ *   the live per-box `ChatSessionRegistry`, and its result is delivered out
+ *   of band over the `events.turnStream` tRPC *subscription*, not the HTTP
+ *   response — a request/response procedure can't model that split.
+ * - `postAudioForHqTranscription` — POST /api/chat/transcribe-audio,
+ *   multipart audio upload. tRPC doesn't carry `multipart/form-data` bodies.
+ *
+ * Already-tRPC, kept as thin wrappers (NOT REST — no fetch(), no HTTP route):
+ * `getChatStatus`, `getDefaultChatSession`, `setChatModel`, `getChatFeatures`,
+ * `setChatFeature`, `getChatHistory`, `getChatSessions`, `interruptChat`,
+ * `restartChatSubprocess` all call `trpcClient.chat.*` directly. They exist
+ * because their callers (xstate actors in `machines/`) invoke them
+ * imperatively outside a React render — `trpc.chat.*.useQuery()` requires a
+ * component; the vanilla `trpcClient` is the correct escape hatch, and these
+ * wrappers just give it a stable, object-params call shape. There is no REST
+ * duplication left to migrate for this group.
  */
 
 import { RequestError } from "./lib/errors";

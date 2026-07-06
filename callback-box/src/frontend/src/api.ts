@@ -10,6 +10,19 @@
  *
  * Core primitives live in api-core.ts and the chat surface in api-chat.ts;
  * both are re-exported here so callers keep importing from "./api".
+ *
+ * Deliberate-REST inventory (Track L.12e — checked against
+ * src/webapp/trpc/routers/* for an equivalent; none exists for either, so
+ * neither is a migration candidate):
+ * - `createVoiceMemo` — POST /api/actions/create-voice-memo, multipart file
+ *   upload. tRPC doesn't carry `multipart/form-data` bodies.
+ * - `uploadFile` — POST /api/upload, multipart file upload (same reason).
+ *   Note: as of this pass it has no importers anywhere in the frontend —
+ *   flagged for Track K (dead-code cleanup), not touched here since this
+ *   pass is scoped to REST/tRPC duplication, not dead-export removal.
+ *
+ * `CardInfo`/`HistoryCommit` are plain type exports (no transport), kept
+ * here because components already import them from this path.
  */
 
 import { RequestError } from "./lib/errors";

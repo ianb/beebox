@@ -3,6 +3,27 @@
  *
  * Pure (non-React) logic split out of CapturePage.tsx: session lifecycle
  * fetches, the retrying upload routine, and localStorage device prefs.
+ *
+ * Deliberate-REST inventory (Track L.12e — no tRPC equivalent exists in
+ * src/webapp/trpc/routers/*; the backend has no capture-session router):
+ * - `uploadCaptureFile` — POST /api/capture/sessions/:id/upload. Multipart
+ *   body plus custom `X-Capture-*` headers (filename/source/timestamps),
+ *   an `AbortSignal.timeout` and manual retry/backoff loop. Not a tRPC
+ *   candidate on its own merits (multipart + non-JSON transport needs).
+ * - `createCaptureSession`, `finalizeCaptureSession`, `cancelCaptureSession`
+ *   — POST/POST/DELETE against the same `/api/capture/sessions[/:id...]`
+ *   family, each individually a plain JSON-ish call with no special
+ *   transport need. Kept as REST rather than split off to tRPC: all four
+ *   endpoints are one Fastify route file (`webapp/routes/capture.ts`)
+ *   coordinating through the same disk-backed, lock-protected session
+ *   store (`withSessionLock`); moving three of the four to a different
+ *   transport while the upload leg (which can't move) stays on Fastify
+ *   would split one cohesive session lifecycle across two request paths
+ *   for no functional gain. Revisit only alongside a real tRPC file-upload
+ *   story, not piecemeal.
+ *
+ * `loadDevicePrefs`/`saveDevicePrefs` are localStorage helpers — no network
+ * call, not part of this inventory.
  */
 
 import { getApiBase } from "../api";

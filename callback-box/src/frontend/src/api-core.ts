@@ -3,6 +3,17 @@
  * siblings: URL/base construction, a custom streaming error, and the shared
  * JSON fetch helper. Kept separate so api.ts and api-chat.ts can both use
  * them without an import cycle.
+ *
+ * None of these are REST endpoint wrappers — they're infra used by both the
+ * deliberate-REST callers (multipart uploads, SSE/`/chat/send`) and by
+ * lib/trpc.ts itself (`getApiBase`/`getWebSocketUrl` build the tRPC
+ * WebSocket URL; `withBase` prefixes hardcoded paths like `/auth/login`
+ * with the Vite base path). Nothing here migrates to tRPC — it's what tRPC
+ * is built on top of at this box-scoped-router layer.
+ *
+ * `fetchJson` currently has no callers (checked Track L.12e pass) — flagged
+ * for Track K (dead-code cleanup), not removed here since this pass is
+ * scoped to REST/tRPC duplication, not dead-export removal.
  */
 
 import { RequestError } from "./lib/errors";
