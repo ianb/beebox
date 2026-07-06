@@ -265,7 +265,9 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
     if (knownId !== null) {
       registry.touch(knownId, { subprocessUse: true });
       registry.enforceLiveCap(knownId);
-      void registry.markMostActive(knownId).catch((_e) => {});
+      void registry.markMostActive(knownId).catch((e: unknown) => {
+        console.error(`[chat] markMostActive(${knownId}) failed:`, e);
+      });
     }
     // Pin the session for the turn's lifetime so it survives the idle sweep and
     // a concurrent send's LRU eviction. pinSession works for a pending "new"
