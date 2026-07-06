@@ -16,10 +16,6 @@
  * neither is a migration candidate):
  * - `createVoiceMemo` — POST /api/actions/create-voice-memo, multipart file
  *   upload. tRPC doesn't carry `multipart/form-data` bodies.
- * - `uploadFile` — POST /api/upload, multipart file upload (same reason).
- *   Note: as of this pass it has no importers anywhere in the frontend —
- *   flagged for Track K (dead-code cleanup), not touched here since this
- *   pass is scoped to REST/tRPC duplication, not dead-export removal.
  *
  * `CardInfo`/`HistoryCommit` are plain type exports (no transport), kept
  * here because components already import them from this path.
@@ -96,29 +92,6 @@ export async function createVoiceMemo(
   if (!response.ok) {
     const error = await response.json().catch(() => ({ error: response.statusText }));
     throw new RequestError(error.error || error.message || "Request failed");
-  }
-
-  return response.json();
-}
-
-/**
- * Upload a file to temp storage and return the path.
- */
-export async function uploadFile(
-  blob: Blob,
-  filename?: string
-): Promise<{ success: boolean; path: string; mimetype: string; size: number }> {
-  const formData = new FormData();
-  formData.append("file", blob, filename ?? "upload");
-
-  const response = await fetch(`${getApiBase()}/upload`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new RequestError(error.error || error.message || "Upload failed");
   }
 
   return response.json();

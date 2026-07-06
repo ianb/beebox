@@ -1,8 +1,7 @@
 /**
  * Core API client primitives shared across the api.ts surface and its
- * siblings: URL/base construction, a custom streaming error, and the shared
- * JSON fetch helper. Kept separate so api.ts and api-chat.ts can both use
- * them without an import cycle.
+ * siblings: URL/base construction. Kept separate so api.ts and api-chat.ts
+ * can both use them without an import cycle.
  *
  * None of these are REST endpoint wrappers — they're infra used by both the
  * deliberate-REST callers (multipart uploads, SSE/`/chat/send`) and by
@@ -10,13 +9,7 @@
  * WebSocket URL; `withBase` prefixes hardcoded paths like `/auth/login`
  * with the Vite base path). Nothing here migrates to tRPC — it's what tRPC
  * is built on top of at this box-scoped-router layer.
- *
- * `fetchJson` currently has no callers (checked Track L.12e pass) — flagged
- * for Track K (dead-code cleanup), not removed here since this pass is
- * scoped to REST/tRPC duplication, not dead-export removal.
  */
-
-import { RequestError } from "./lib/errors";
 
 /** A streaming response arrived without a readable body. */
 export class NoResponseBodyError extends Error {
@@ -92,28 +85,3 @@ export function getWebSocketUrl(): string {
   return `${proto}//${window.location.host}${getApiBase()}/trpc`;
 }
 
-// --- Shared fetch helper ---
-
-export async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...options?.headers,
-    },
-  });
-
-  if (response.status === 401) {
-    const returnTo = encodeURIComponent(window.location.pathname + window.location.search);
-    window.location.href = withBase(`/auth/login?returnTo=${returnTo}`);
-    // Never resolves — page is navigating away
-    return new Promise(() => {});
-  }
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new RequestError(error.error || error.message || "Request failed");
-  }
-
-  return response.json();
-}
