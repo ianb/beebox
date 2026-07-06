@@ -155,10 +155,14 @@ export class ChatScheduleManager {
     this.saveToDisk();
     // The timer callback can't await delivery; onFire may be async (it
     // injects the message into a live chat session), so log a rejection
-    // instead of letting it become an unhandled rejection.
-    void Promise.resolve(this.onFire({ schedule })).catch((err: unknown) => {
-      console.error(`[ChatSchedules] onFire failed for "${schedule.label}":`, err);
-    });
+    // instead of letting it become an unhandled rejection. The .then()
+    // wrapper (rather than Promise.resolve(this.onFire(...))) also routes a
+    // SYNCHRONOUS throw from a sync ScheduleCallback into the same catch.
+    void Promise.resolve()
+      .then(() => this.onFire({ schedule }))
+      .catch((err: unknown) => {
+        console.error(`[ChatSchedules] onFire failed for "${schedule.label}":`, err);
+      });
   }
 
   private clearTimer(id: string): void {

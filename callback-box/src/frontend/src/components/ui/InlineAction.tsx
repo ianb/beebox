@@ -55,8 +55,11 @@ export function InlineAction({
         await result;
       } catch (err) {
         // Safety net for this shared primitive, same as Button.tsx: callers
-        // are expected to surface their own user-visible errors.
+        // are expected to surface their own user-visible errors. Return
+        // (after the finally resets pending) so a failed action never shows
+        // the success flash.
         console.error("[InlineAction] onClick handler threw:", err);
+        return;
       } finally {
         setPending(false);
       }

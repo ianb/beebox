@@ -246,7 +246,10 @@ export function Button(props: ButtonProps) {
         // native DOM handler (which can't propagate it anywhere) --
         // individual callers are expected to surface their own
         // user-visible errors; this is the last-resort log if they don't.
+        // Return (after the finally resets loading) so a failed action
+        // never shows the success flash.
         console.error("[Button] onClick handler threw:", err);
+        return;
       } finally {
         setAsyncLoading(false);
       }

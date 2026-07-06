@@ -213,8 +213,15 @@ export async function startServer(options?: ServerOptions): Promise<void> {
   // Fire-and-forget shutdown: signal handlers and the orphan-detection timer
   // are sync callbacks and can't await it. A failure here means the process
   // is already exiting one way or another, but log it and force-exit rather
-  // than let it become a silent unhandled rejection.
+  // than let it become a silent unhandled rejection. Idempotent: a second
+  // signal while the first shutdown is in flight (e.g. SIGTERM then SIGHUP,
+  // or a repeated Ctrl-C) must not start an overlapping shutdown whose
+  // double server.close() would reject and turn a graceful exit into
+  // exit(1).
+  let shuttingDown = false;
   const fireShutdown = (signal: string): void => {
+    if (shuttingDown) return;
+    shuttingDown = true;
     void shutdown(signal).catch((err: unknown) => {
       console.error(`Shutdown (${signal}) failed:`, err);
       process.exit(1);
