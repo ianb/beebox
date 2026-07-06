@@ -4,7 +4,7 @@
 
 import { Markdown } from "../components/Markdown";
 import { Text } from "../components/ui/Text";
-import { registerFileRenderer, type RendererProps } from "./index";
+import { registerFileType, type RendererProps } from "./index";
 
 function MarkdownRenderer({ data, onNavigate }: RendererProps) {
   if (data.content === undefined) {
@@ -19,7 +19,7 @@ function MarkdownRenderer({ data, onNavigate }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => path.endsWith(".md"),
-  { name: "Markdown", Component: MarkdownRenderer, priority: 50 },
+registerFileType(
+  { match: (path) => path.endsWith(".md") },
+  { renderer: { name: "Markdown", Component: MarkdownRenderer, priority: 50 } },
 );

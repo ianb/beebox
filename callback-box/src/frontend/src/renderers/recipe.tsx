@@ -6,10 +6,8 @@
  */
 
 import { RecipeView } from "../components/RecipeView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("recipe", {
-  name: "Recipe",
-  Component: RecipeView,
-  priority: 100,
+registerFileType({ type: "recipe" }, {
+  renderer: { name: "Recipe", Component: RecipeView, priority: 100 },
 });

@@ -6,10 +6,8 @@
  */
 
 import { CommentaryView } from "../components/CommentaryView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("commentary", {
-  name: "Commentary",
-  Component: CommentaryView,
-  priority: 100,
+registerFileType({ type: "commentary" }, {
+  renderer: { name: "Commentary", Component: CommentaryView, priority: 100 },
 });

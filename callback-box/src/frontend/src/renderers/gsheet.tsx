@@ -2,10 +2,8 @@
  * Sheet card renderer — read-only spreadsheet view with tabs.
  */
 
-import { isRecord } from "../lib/is-record";
 import { useState, useEffect } from "react";
-import type { RendererProps } from "./index";
-import { registerCardRenderer } from "./index";
+import { isRecord } from "../lib/is-record";
 import { getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";
@@ -15,6 +13,8 @@ import { ExternalLink } from "../components/ui/ExternalLink";
 import { SheetTable, type CellValue } from "../components/SheetTable";
 import { AttachedComments } from "../components/AttachedComments";
 import { resolveRelativePath } from "../lib/view-url";
+import type { RendererProps } from "./index";
+import { registerFileType } from "./index";
 
 // ─── Parsing ────────────────────────────────────────────────────────────────
 
@@ -137,8 +137,6 @@ function SheetView({ data }: RendererProps) {
 
 // ─── Registration ───────────────────────────────────────────────────────────
 
-registerCardRenderer("gsheet", {
-  name: "Spreadsheet",
-  Component: SheetView,
-  priority: 100,
+registerFileType({ type: "gsheet" }, {
+  renderer: { name: "Spreadsheet", Component: SheetView, priority: 100 },
 });

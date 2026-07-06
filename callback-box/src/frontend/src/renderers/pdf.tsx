@@ -5,7 +5,7 @@
 
 import { getApiBase } from "../api";
 import type { RendererProps } from "./index";
-import { registerFileRenderer } from "./index";
+import { registerFileType } from "./index";
 
 const PDF_EXT = /\.pdf$/i;
 
@@ -22,7 +22,7 @@ function PdfRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => PDF_EXT.test(path),
-  { name: "PDF", Component: PdfRenderer, priority: 30 },
+registerFileType(
+  { match: (path) => PDF_EXT.test(path) },
+  { renderer: { name: "PDF", Component: PdfRenderer, priority: 30 } },
 );

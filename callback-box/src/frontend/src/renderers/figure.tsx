@@ -6,10 +6,8 @@
  */
 
 import { FigureView } from "../components/FigureView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("figure", {
-  name: "Figure",
-  Component: FigureView,
-  priority: 100,
+registerFileType({ type: "figure" }, {
+  renderer: { name: "Figure", Component: FigureView, priority: 100 },
 });

@@ -5,10 +5,8 @@
  */
 
 import { ConceptMapView } from "../components/ConceptMapView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("concept-map", {
-  name: "Concept Map",
-  Component: ConceptMapView,
-  priority: 100,
+registerFileType({ type: "concept-map" }, {
+  renderer: { name: "Concept Map", Component: ConceptMapView, priority: 100 },
 });

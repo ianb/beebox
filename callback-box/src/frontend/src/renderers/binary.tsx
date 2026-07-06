@@ -8,11 +8,11 @@ import { useQuery } from "@tanstack/react-query";
 import { getApiBase } from "../api";
 import { isBinaryPath } from "../lib/binary-files";
 import { formatBytes } from "../lib/format-bytes";
-import { registerFileRenderer, type RendererProps } from "./index";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { RequestError } from "../lib/errors";
+import { registerFileType, type RendererProps } from "./index";
 
 function BinaryRenderer({ data }: RendererProps) {
   const apiBase = getApiBase();
@@ -53,7 +53,7 @@ function BinaryRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => isBinaryPath(path),
-  { name: "Download", Component: BinaryRenderer, priority: 2 },
+registerFileType(
+  { match: (path) => isBinaryPath(path) },
+  { renderer: { name: "Download", Component: BinaryRenderer, priority: 2 } },
 );

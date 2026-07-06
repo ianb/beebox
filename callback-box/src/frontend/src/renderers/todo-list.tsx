@@ -4,10 +4,8 @@
  */
 
 import { TodoListView } from "../components/TodoListView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("todo-list", {
-  name: "Todo List",
-  Component: TodoListView,
-  priority: 100,
+registerFileType({ type: "todo-list" }, {
+  renderer: { name: "Todo List", Component: TodoListView, priority: 100 },
 });

@@ -6,10 +6,8 @@
  */
 
 import { WebpageView } from "../components/WebpageView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("webpage", {
-  name: "Webpage",
-  Component: WebpageView,
-  priority: 100,
+registerFileType({ type: "webpage" }, {
+  renderer: { name: "Webpage", Component: WebpageView, priority: 100 },
 });

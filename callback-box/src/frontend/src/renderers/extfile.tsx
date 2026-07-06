@@ -6,10 +6,8 @@
  */
 
 import { ExtfileView } from "../components/ExtfileView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("extfile", {
-  name: "Extfile",
-  Component: ExtfileView,
-  priority: 100,
+registerFileType({ type: "extfile" }, {
+  renderer: { name: "Extfile", Component: ExtfileView, priority: 100 },
 });

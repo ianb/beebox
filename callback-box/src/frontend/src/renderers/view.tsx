@@ -20,7 +20,7 @@ import { QuestionsList } from "../components/questions/QuestionsList";
 import { HistoryViewCard } from "../components/history/HistoryViewCard";
 import { Card } from "../components/ui/Card";
 import { Text } from "../components/ui/Text";
-import { registerCardRenderer, type RendererProps } from "./index";
+import { registerFileType, type RendererProps } from "./index";
 
 /**
  * Params arrive pre-merged with provenance: card frontmatter (validated by
@@ -62,8 +62,6 @@ function ViewCard({ data, params }: RendererProps) {
   return <Component params={resolved} />;
 }
 
-registerCardRenderer("view", {
-  name: "View",
-  Component: ViewCard,
-  priority: 100,
+registerFileType({ type: "view" }, {
+  renderer: { name: "View", Component: ViewCard, priority: 100 },
 });

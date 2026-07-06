@@ -3,6 +3,8 @@
  * except for the image-card demo (added separately).
  */
 
+import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
+import type { ImageAttrs } from "../../../schemas/image";
 import { registerFileType } from "./registry";
 import {
   DocumentIcon,
@@ -13,8 +15,6 @@ import {
   JobIcon,
   QuestionIcon,
 } from "./icons";
-import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
-import type { ImageAttrs } from "../../../schemas/image";
 
 let registered = false;
 
@@ -22,35 +22,34 @@ export function registerBuiltinFileTypes(): void {
   if (registered) return;
   registered = true;
 
-  registerFileType({ type: "memo" }, { icon: DocumentIcon });
+  registerFileType({ type: "memo" }, { listUI: { icon: DocumentIcon } });
   registerFileType<ImageAttrs>({ type: "image" }, {
-    icon: ImageIcon,
-    ListComponent: ImageCardListEntry,
+    listUI: { icon: ImageIcon, ListComponent: ImageCardListEntry },
   });
-  registerFileType({ type: "audio" }, { icon: AudioIcon });
-  registerFileType({ type: "question" }, { icon: QuestionIcon });
-  registerFileType({ type: "email-message" }, { icon: DocumentIcon });
-  registerFileType({ type: "email-thread" }, { icon: DocumentIcon });
-  registerFileType({ type: "recipe" }, { icon: DocumentIcon });
-  registerFileType({ type: "record" }, { icon: CardIcon });
-  registerFileType({ type: "gsheet" }, { icon: CardIcon });
-  registerFileType({ type: "doc" }, { icon: DocumentIcon });
-  registerFileType({ type: "gdoc" }, { icon: DocumentIcon });
-  registerFileType({ type: "procedure" }, { icon: JobIcon });
-  registerFileType({ type: "procedure-run" }, { icon: JobIcon });
-  registerFileType({ type: "chat-job" }, { icon: JobIcon });
-  registerFileType({ type: "intake-job" }, { icon: JobIcon });
-  registerFileType({ type: "question-followup-job" }, { icon: JobIcon });
-  registerFileType({ type: "todo-list" }, { icon: CardIcon });
-  registerFileType({ type: "briefing" }, { icon: DocumentIcon });
-  registerFileType({ type: "person" }, { icon: CardIcon });
-  registerFileType({ type: "feedback" }, { icon: DocumentIcon });
-  registerFileType({ type: "guide" }, { icon: DocumentIcon });
-  registerFileType({ type: "file" }, { icon: DocumentIcon });
-  registerFileType({ type: "telegram-message" }, { icon: DocumentIcon });
+  registerFileType({ type: "audio" }, { listUI: { icon: AudioIcon } });
+  registerFileType({ type: "question" }, { listUI: { icon: QuestionIcon } });
+  registerFileType({ type: "email-message" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "email-thread" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "recipe" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "record" }, { listUI: { icon: CardIcon } });
+  registerFileType({ type: "gsheet" }, { listUI: { icon: CardIcon } });
+  registerFileType({ type: "doc" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "gdoc" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "procedure" }, { listUI: { icon: JobIcon } });
+  registerFileType({ type: "procedure-run" }, { listUI: { icon: JobIcon } });
+  registerFileType({ type: "chat-job" }, { listUI: { icon: JobIcon } });
+  registerFileType({ type: "intake-job" }, { listUI: { icon: JobIcon } });
+  registerFileType({ type: "question-followup-job" }, { listUI: { icon: JobIcon } });
+  registerFileType({ type: "todo-list" }, { listUI: { icon: CardIcon } });
+  registerFileType({ type: "briefing" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "person" }, { listUI: { icon: CardIcon } });
+  registerFileType({ type: "feedback" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "guide" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "file" }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ type: "telegram-message" }, { listUI: { icon: DocumentIcon } });
 
-  registerFileType({ match: (p: string) => p.endsWith(".md") }, { icon: DocumentIcon });
-  registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") }, { icon: ImageIcon });
-  registerFileType({ match: (p: string) => p.endsWith(".m4a") || p.endsWith(".mp3") || p.endsWith(".wav") || p.endsWith(".ogg") }, { icon: AudioIcon });
-  registerFileType({ match: (p: string) => p.endsWith("/") }, { icon: DirectoryIcon });
+  registerFileType({ match: (p: string) => p.endsWith(".md") }, { listUI: { icon: DocumentIcon } });
+  registerFileType({ match: (p: string) => p.endsWith(".jpg") || p.endsWith(".jpeg") || p.endsWith(".png") || p.endsWith(".gif") || p.endsWith(".webp") }, { listUI: { icon: ImageIcon } });
+  registerFileType({ match: (p: string) => p.endsWith(".m4a") || p.endsWith(".mp3") || p.endsWith(".wav") || p.endsWith(".ogg") }, { listUI: { icon: AudioIcon } });
+  registerFileType({ match: (p: string) => p.endsWith("/") }, { listUI: { icon: DirectoryIcon } });
 }

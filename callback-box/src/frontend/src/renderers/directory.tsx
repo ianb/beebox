@@ -6,6 +6,7 @@
  */
 
 import { useParams } from "@tanstack/react-router";
+import { attachDirFor } from "@shared/attach-path";
 import { trpc } from "../lib/trpc";
 import { href } from "../lib/routing";
 import { Accordion } from "../components/ui/Accordion";
@@ -14,8 +15,7 @@ import { Row } from "../components/ui/Row";
 import { Stack } from "../components/ui/Stack";
 import { Badge } from "../components/ui/Badge";
 import { TextLink } from "../components/ui/TextLink";
-import { attachDirFor } from "@shared/attach-path";
-import { getRenderers, registerFileRenderer, type FileData, type RendererProps } from "./index";
+import { getRenderers, registerFileType, type FileData, type RendererProps } from "./index";
 
 function CardAccordion({
   cardPath,
@@ -145,13 +145,15 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => {
-    // Directories: no file extension on the last segment, or trailing slash.
-    if (path.endsWith("/")) return true;
-    const base = path.split("/").pop();
-    if (!base) return true; // empty path = box root
-    return !base.includes(".");
+registerFileType(
+  {
+    match: (path) => {
+      // Directories: no file extension on the last segment, or trailing slash.
+      if (path.endsWith("/")) return true;
+      const base = path.split("/").pop();
+      if (!base) return true; // empty path = box root
+      return !base.includes(".");
+    },
   },
-  { name: "Directory", Component: DirectoryRenderer, priority: 60 },
+  { renderer: { name: "Directory", Component: DirectoryRenderer, priority: 60 } },
 );

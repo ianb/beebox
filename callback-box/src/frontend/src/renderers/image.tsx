@@ -3,8 +3,8 @@
  * rotation correction, description, and extracted text.
  */
 
-import { isRecord } from "../lib/is-record";
 import { useState } from "react";
+import { isRecord } from "../lib/is-record";
 import { Markdown } from "../components/Markdown";
 import { Image } from "../components/ui/Image";
 import { CheckboxField } from "../components/ui/fields";
@@ -14,9 +14,9 @@ import { Stack } from "../components/ui/Stack";
 import { Card } from "../components/ui/Card";
 import { BboxOverlay } from "../components/ui/BboxOverlay";
 import { getApiBase } from "../api";
-import type { RendererProps } from "./index";
-import { registerCardRenderer, registerFileRenderer } from "./index";
 import { resolveRelativePath } from "../lib/view-url";
+import type { RendererProps } from "./index";
+import { registerFileType } from "./index";
 
 function strOf(v: unknown): string | null {
   return typeof v === "string" ? v : null;
@@ -174,10 +174,8 @@ function ImageCardRenderer({ data, onNavigate, mode, caption }: RendererProps) {
   );
 }
 
-registerCardRenderer("image", {
-  name: "Image",
-  Component: ImageCardRenderer,
-  priority: 50,
+registerFileType({ type: "image" }, {
+  renderer: { name: "Image", Component: ImageCardRenderer, priority: 50 },
 });
 
 function RawImageRenderer({ data }: RendererProps) {
@@ -195,7 +193,7 @@ function RawImageRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => RAW_IMAGE_EXT.test(path),
-  { name: "Image", Component: RawImageRenderer, priority: 30 },
+registerFileType(
+  { match: (path) => RAW_IMAGE_EXT.test(path) },
+  { renderer: { name: "Image", Component: RawImageRenderer, priority: 30 } },
 );

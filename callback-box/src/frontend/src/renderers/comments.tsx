@@ -9,11 +9,11 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { getApiBase } from "../api";
-import { registerFileRenderer, type RendererProps } from "./index";
 import { CommentsThread, parseComments } from "../components/CommentsThread";
 import { Stack } from "../components/ui/Stack";
 import { Text } from "../components/ui/Text";
 import { RequestError } from "../lib/errors";
+import { registerFileType, type RendererProps } from "./index";
 
 function CommentsRenderer({ data }: RendererProps) {
   const url = `${getApiBase()}/files/${data.path}`;
@@ -47,7 +47,7 @@ function CommentsRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => path.endsWith(".comments.json"),
-  { name: "Comments", Component: CommentsRenderer, priority: 50 },
+registerFileType(
+  { match: (path) => path.endsWith(".comments.json") },
+  { renderer: { name: "Comments", Component: CommentsRenderer, priority: 50 } },
 );

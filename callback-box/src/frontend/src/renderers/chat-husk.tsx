@@ -4,10 +4,8 @@
  */
 
 import { ChatHuskView } from "../components/chat-husk/ChatHuskView";
-import { registerCardRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerCardRenderer("chat", {
-  name: "Chat",
-  Component: ChatHuskView,
-  priority: 100,
+registerFileType({ type: "chat" }, {
+  renderer: { name: "Chat", Component: ChatHuskView, priority: 100 },
 });

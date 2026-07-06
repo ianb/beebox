@@ -12,7 +12,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getApiBase } from "../api";
 import { formatBytes } from "../lib/format-bytes";
-import { registerFileRenderer, type RendererProps } from "./index";
 import { JsonView } from "../components/ui/JsonView";
 import { Stack } from "../components/ui/Stack";
 import { Row } from "../components/ui/Row";
@@ -21,6 +20,7 @@ import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { RequestError } from "../lib/errors";
+import { registerFileType, type RendererProps } from "./index";
 
 /** Above this size we don't auto-download/parse — show info + a load button. */
 const LARGE_THRESHOLD = 1024 * 1024; // 1 MiB
@@ -135,7 +135,7 @@ function JsonRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => path.endsWith(".json"),
-  { name: "JSON", Component: JsonRenderer, priority: 40 },
+registerFileType(
+  { match: (path) => path.endsWith(".json") },
+  { renderer: { name: "JSON", Component: JsonRenderer, priority: 40 } },
 );

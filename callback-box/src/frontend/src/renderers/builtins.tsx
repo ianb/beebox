@@ -8,7 +8,7 @@ import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
 import { RequestError } from "../lib/errors";
 import type { RendererProps } from "./index";
-import { registerFileRenderer } from "./index";
+import { registerFileType } from "./index";
 
 /**
  * Raw source view for frontmatter cards. Fetches the verbatim file text on
@@ -41,7 +41,7 @@ function SourceRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (_path, data) => data.kind === "frontmatter",
-  { name: "Source", Component: SourceRenderer, priority: 10 },
+registerFileType(
+  { match: (_path, data) => data?.kind === "frontmatter" },
+  { renderer: { name: "Source", Component: SourceRenderer, priority: 10 } },
 );

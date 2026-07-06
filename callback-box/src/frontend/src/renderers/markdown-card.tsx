@@ -7,9 +7,9 @@
  */
 
 import { MarkdownCardView } from "../components/MarkdownCardView";
-import { registerFileRenderer } from "./index";
+import { registerFileType } from "./index";
 
-registerFileRenderer(
-  (_path, data) => data.kind === "frontmatter",
-  { name: "Card", Component: MarkdownCardView, priority: 30 },
+registerFileType(
+  { match: (_path, data) => data?.kind === "frontmatter" },
+  { renderer: { name: "Card", Component: MarkdownCardView, priority: 30 } },
 );

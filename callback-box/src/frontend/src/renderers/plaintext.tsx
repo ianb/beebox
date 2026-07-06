@@ -6,10 +6,10 @@
  * matches. Binary files (images, audio, etc.) use their own renderers.
  */
 
-import { registerFileRenderer, type RendererProps } from "./index";
 import { isBinaryPath } from "../lib/binary-files";
 import { Pre } from "../components/ui/Pre";
 import { Text } from "../components/ui/Text";
+import { registerFileType, type RendererProps } from "./index";
 
 function PlaintextRenderer({ data }: RendererProps) {
   if (data.content === undefined) {
@@ -22,16 +22,18 @@ function PlaintextRenderer({ data }: RendererProps) {
   );
 }
 
-registerFileRenderer(
-  (path) => {
-    // Skip directories (no extension), card files, and known binary types.
-    const base = path.split("/").pop();
-    if (!base || !base.includes(".")) return false;
-    if (path.endsWith(".card")) return false;
-    // JSON has its own renderer that loads on its own terms (size-gated); the
-    // shell doesn't prefetch its text, so plaintext has nothing to show.
-    if (path.endsWith(".json")) return false;
-    return !isBinaryPath(path);
+registerFileType(
+  {
+    match: (path) => {
+      // Skip directories (no extension), card files, and known binary types.
+      const base = path.split("/").pop();
+      if (!base || !base.includes(".")) return false;
+      if (path.endsWith(".card")) return false;
+      // JSON has its own renderer that loads on its own terms (size-gated); the
+      // shell doesn't prefetch its text, so plaintext has nothing to show.
+      if (path.endsWith(".json")) return false;
+      return !isBinaryPath(path);
+    },
   },
-  { name: "Plaintext", Component: PlaintextRenderer, priority: 1 },
+  { renderer: { name: "Plaintext", Component: PlaintextRenderer, priority: 1 } },
 );
