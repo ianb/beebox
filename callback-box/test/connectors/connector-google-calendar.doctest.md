@@ -278,3 +278,80 @@ msg.includes("local edit discarded — event also changed remotely (remote wins)
 msg.includes("Pushed:")
 => false
 ```
+
+## Sync-token expiry triggers a full resync (410)
+
+Incremental syncs pass Google the stored sync token; when Google reports it
+expired (HTTP 410), the connector drops the token, refetches the full window,
+and continues — the sync still succeeds and a fresh token is recorded.
+
+```ts
+class FakeSyncTokenGoneError extends Error {
+  constructor() {
+    super("HTTP 410 Gone: sync token expired");
+    this.name = "FakeSyncTokenGoneError";
+  }
+}
+
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const inner = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-1",
+      status: "confirmed",
+      summary: "Planning",
+      start: { dateTime: "2026-06-03T10:00:00Z" },
+      end: { dateTime: "2026-06-03T11:00:00Z" },
+    },
+  ],
+});
+
+// Wrap the fake: any listEvents call that presents a sync token gets a 410,
+// as Google does for an expired token. Full-window calls pass through.
+let tokenRejections = 0;
+const calendar = {
+  ...inner,
+  listEvents: async (calendarId, opts) => {
+    if (opts?.syncToken) {
+      tokenRejections += 1;
+      throw new FakeSyncTokenGoneError();
+    }
+    return inner.listEvents(calendarId, opts);
+  },
+};
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+
+// First sync: full window (no token yet) — records "fake-sync-token".
+const first = await connector.sync();
+first.success
+=> true
+```
+
+The second sync presents the stored token, gets the 410, and recovers by
+falling back to a full sync in the same run:
+
+```ts continue
+const second = await connector.sync();
+JSON.stringify({ success: second.success, tokenRejections })
+=> {"success":true,"tokenRejections":1}
+```
+
+The full-resync path re-recorded a usable sync token in connector state
+(the 410 handler cleared the stale one before the refetch stored anew;
+sync tokens live in the gitignored transient state, so read via the loader):
+
+```ts continue
+const { loadCalendarState } = await import("../../src/connectors/google-calendar-state.js");
+const state = await loadCalendarState(box.root);
+state.syncTokens.primary
+=> fake-sync-token
+```
+
+```ts cleanup
+await box.cleanup();
+```

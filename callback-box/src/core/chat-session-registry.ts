@@ -67,6 +67,12 @@ export interface ChatSessionRegistryOptions {
    * Tests pass a fake backend here.
    */
   backend?: ChatBackend;
+  /**
+   * Clock for idle/LRU bookkeeping. Default: `Date.now`. This is DEADLINE
+   * time (the two-clock taxonomy) — it must never be frozen via `CB_TIME`;
+   * tests that exercise idle sweeps / LRU ordering inject a fake here.
+   */
+  now?: () => number;
 }
 
 const DEFAULT_MAX_LIVE = 2;
@@ -84,6 +90,8 @@ export class ChatSessionRegistry extends EventEmitter {
   private readonly buildSessionOptions: (sessionId: string | null) => ChatSessionOptions;
   private readonly backend: ChatBackend;
   private cleanupTimer: NodeJS.Timeout | null = null;
+  /** Deadline clock (never CB_TIME-frozen); injectable for tests. */
+  private readonly now: () => number;
   /**
    * Tracks pre-id "new" sessions whose Claude assignment hasn't arrived yet.
    * Once `onSessionIdAssigned` fires, they're moved into `entries` under
@@ -106,6 +114,7 @@ export class ChatSessionRegistry extends EventEmitter {
     this.cleanupIntervalMs = options.cleanupIntervalMs ?? DEFAULT_CLEANUP_INTERVAL_MS;
     this.buildSessionOptions = options.buildSessionOptions ?? ((_id) => ({}));
     this.backend = options.backend ?? createChatBackend();
+    this.now = options.now ?? Date.now;
   }
 
   /**
@@ -168,7 +177,7 @@ export class ChatSessionRegistry extends EventEmitter {
   get(sessionId: string): ChatSession | null {
     const entry = this.entries.get(sessionId);
     if (!entry) return null;
-    entry.lastActivity = Date.now();
+    entry.lastActivity = this.now();
     return entry.session;
   }
 
@@ -179,7 +188,7 @@ export class ChatSessionRegistry extends EventEmitter {
   getOrCreate(sessionId: string): ChatSession {
     const existing = this.entries.get(sessionId);
     if (existing) {
-      existing.lastActivity = Date.now();
+      existing.lastActivity = this.now();
       return existing.session;
     }
     const baseOpts = this.buildSessionOptions(sessionId);
@@ -195,8 +204,8 @@ export class ChatSessionRegistry extends EventEmitter {
     });
     this.entries.set(sessionId, {
       session,
-      lastActivity: Date.now(),
-      lastSubprocessUse: Date.now(),
+      lastActivity: this.now(),
+      lastSubprocessUse: this.now(),
       refCount: 0,
     });
     log("create", `Created entry for ${sessionId} (size=${this.entries.size})`);
@@ -299,8 +308,8 @@ export class ChatSessionRegistry extends EventEmitter {
           if (!this.entries.has(sessionId)) {
             this.entries.set(sessionId, {
               session: promoted,
-              lastActivity: Date.now(),
-              lastSubprocessUse: Date.now(),
+              lastActivity: this.now(),
+              lastSubprocessUse: this.now(),
               refCount: carriedPins,
             });
             log("promote", `Promoted pending session into registry as ${sessionId}`);
@@ -322,7 +331,7 @@ export class ChatSessionRegistry extends EventEmitter {
   touch(sessionId: string, opts?: { subprocessUse?: boolean }): void {
     const entry = this.entries.get(sessionId);
     if (!entry) return;
-    const now = Date.now();
+    const now = this.now();
     entry.lastActivity = now;
     if (opts?.subprocessUse) {
       entry.lastSubprocessUse = now;
@@ -420,10 +429,11 @@ export class ChatSessionRegistry extends EventEmitter {
 
   /**
    * Drop entries with no recent activity and no active SSE listeners.
-   * Their subprocesses are stopped and their entries removed.
+   * Their subprocesses are stopped and their entries removed. Public so the
+   * cleanup timer and tests (with an injected `now`) share one code path.
    */
-  private sweepIdle(): void {
-    const cutoff = Date.now() - this.idleTimeoutMs;
+  sweepIdle(): void {
+    const cutoff = this.now() - this.idleTimeoutMs;
     for (const [id, entry] of this.entries) {
       if (entry.lastActivity > cutoff) continue;
       if (entry.refCount > 0) continue;
