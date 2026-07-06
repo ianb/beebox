@@ -1184,10 +1184,11 @@ function docHref(base: string, f: string, sort: string): string {
 }
 
 function docGroupKey(f: string, bigTops: Set<string>): string {
-  const parts = f.split("/");
-  if (parts.length === 1) return "(root)";
-  if (bigTops.has(parts[0]) && parts.length >= 3) return `${parts[0]}/${parts[1]}`;
-  return parts[0];
+  const [top, ...rest] = f.split("/");
+  if (top === undefined || rest.length === 0) return "(root)";
+  const [second] = rest;
+  if (second !== undefined && rest.length >= 2 && bigTops.has(top)) return `${top}/${second}`;
+  return top;
 }
 
 /**
@@ -1546,7 +1547,7 @@ async function serveDev(name: string, rest: string, res: http.ServerResponse): P
   const base = `/${name}/dev`;
   const repoRoot = worktreeRoot(name);
   const devRoot = path.join(repoRoot, "dev");
-  const pathOnly = rest.split("?")[0];
+  const [pathOnly = ""] = rest.split("?");
   const rel = decodeURIComponent(pathOnly.slice("/dev".length)); // "" | "/" | "/docs/..." | "/foo.html"
 
   if (rel === "" || rel === "/") {
