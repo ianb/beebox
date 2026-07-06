@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
-import type { ViewMode } from "../../types/views.js";
+import type { ViewMode } from "../../core/view-types.js";
 import { writeNodeViewModule } from "./node-view-runtime.js";
 import type { BoxShape } from "../../lib/box-shape.js";
 

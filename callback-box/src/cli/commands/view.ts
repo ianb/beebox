@@ -38,7 +38,7 @@ import { viewLintCommand } from "./view-lint.js";
 import { loadViewCards } from "../../core/view-cards.js";
 import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import type { ViewProps } from "../../types/views.js";
+import type { ViewProps } from "../../core/view-types.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {

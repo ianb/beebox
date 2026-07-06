@@ -20,7 +20,7 @@ import { buildLoadContext } from "./load-context.js";
 import { getStatus, isRepo } from "../lib/git.js";
 import { fileEtag } from "../webapp/file-etag.js";
 import { attachDirFor } from "../shared/attach-path.js";
-import type { ViewCard, ViewFile } from "../types/views.js";
+import type { ViewCard, ViewFile } from "./view-types.js";
 
 /** A card whose dependency glob matched but that failed to load. */
 export interface SkippedCard {
