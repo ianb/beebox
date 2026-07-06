@@ -23,6 +23,9 @@ import {
   type SendBody,
   type SelfNoteBody,
   type WhatsChangedBody,
+  sendBodySchema,
+  selfNoteBodySchema,
+  whatsChangedBodySchema,
   classifyChannel,
   extractCardFields,
   escapeXmlAttr,
@@ -185,15 +188,12 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
 
   // POST /api/chat/send - Send a message and stream the response
   server.post<{ Body: SendBody }>("/api/chat/send", async (request, reply) => {
-    const body = request.body ?? ({} as Partial<SendBody>);
-    const { message, messageId, images, session: sessionParam, contextDir, seedFeatures } = body;
-
-    if (!message) {
-      return reply.status(400).send({ error: "message is required" });
+    const parsed = sendBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
     }
-    if (!sessionParam) {
-      return reply.status(400).send({ error: "session is required (id or 'new')" });
-    }
+    const { message, messageId, images, session: sessionParam, contextDir, seedFeatures } = parsed.data;
+    const body = parsed.data;
 
     if (images && images.length > 0) {
       const invalid = validateImages(images);
@@ -298,11 +298,11 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
 
   // POST /api/chat/self-note — inject a self-note into a session transcript.
   server.post<{ Body: SelfNoteBody }>("/api/chat/self-note", async (request, reply) => {
-    const { body, ref, commit, session: requestedSession } = request.body ?? ({} as Partial<SelfNoteBody>);
-
-    if (!body || !body.trim()) {
-      return reply.status(400).send({ error: "body is required" });
+    const parsed = selfNoteBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
     }
+    const { body, ref, commit, session: requestedSession } = parsed.data;
 
     // Resolve target session: explicit > most-active.
     const targetId = requestedSession ?? (await getMostActive(boxRoot));
@@ -344,7 +344,11 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   // working tree, optionally scoped to a card path. No registry liveness needed
   // — the marker is on disk, and a missing one yields the labeled fallback.
   server.post<{ Body: WhatsChangedBody }>("/api/chat/whats-changed", async (request, reply) => {
-    const { session: requestedSession, card } = request.body ?? ({} as Partial<WhatsChangedBody>);
+    const parsed = whatsChangedBodySchema.safeParse(request.body ?? {});
+    if (!parsed.success) {
+      return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
+    }
+    const { session: requestedSession, card } = parsed.data;
     const sessionId = requestedSession ?? (await getMostActive(boxRoot));
     const report = await summarizeWhatsChanged(boxRoot, {
       sessionId,
