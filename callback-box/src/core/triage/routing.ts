@@ -12,9 +12,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxDir } from "../lib/paths.js";
-import { createSelectQuestionTemplate } from "../schemas/question.js";
-import type { TriageCategory } from "./triage-instructions.js";
+import { getBoxDir } from "../../lib/paths.js";
+import { createSelectQuestionTemplate } from "../../schemas/question.js";
+import type { TriageCategory } from "./instructions.js";
 
 class TriageDestinationConflictError extends Error {
   readonly file: string;

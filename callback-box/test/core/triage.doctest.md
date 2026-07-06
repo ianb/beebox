@@ -8,8 +8,8 @@ into per-category holding spots. The subagent is stubbed below via
 See `docs/triage.md` §Triage (stage 2).
 
 ```ts setup
-import { compileTriageInstructions } from "../../src/core/triage-instructions.js";
-import { runTriage } from "../../src/core/triage.js";
+import { compileTriageInstructions } from "../../src/core/triage/index-instructions.js";
+import { runTriage } from "../../src/core/triage/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

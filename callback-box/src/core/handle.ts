@@ -22,7 +22,7 @@ import { getBoxDir } from "../lib/paths.js";
 import {
   compileTriageInstructions,
   type TriageCategory,
-} from "./triage-instructions.js";
+} from "./triage/instructions.js";
 import { startProcedure } from "./procedure/engine.js";
 import type { CommandContext } from "./command-runner.js";
 

@@ -6,7 +6,7 @@
  */
 
 import { registerCommand } from "../command-runner.js";
-import { runTriage } from "../triage.js";
+import { runTriage } from "../triage/index.js";
 
 registerCommand({
   name: "triage",

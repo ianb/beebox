@@ -10,8 +10,8 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
-import { parseLandmarkFields, type LandmarkFields } from "../schemas/landmark.js";
-import { findDestination } from "./landmark/destination.js";
+import { parseLandmarkFields, type LandmarkFields } from "../../schemas/landmark.js";
+import { findDestination } from "../landmark/destination.js";
 
 /**
  * One triage category, derived from a landmark with a `triage`
