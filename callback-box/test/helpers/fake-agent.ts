@@ -24,6 +24,7 @@ import type {
   Agent,
   AgentInvokeOptions,
   AgentResult,
+  AgentResultBase,
   StructuredAgentResult,
 } from "../../src/core/agent.js";
 
@@ -61,6 +62,21 @@ export interface FakeAgent extends Agent {
   printLog(): string;
 }
 
+/**
+ * The flat partial a scripted `act` returns — the fields it may set, with the
+ * fake filling in defaults. Kept flat (not `Partial<AgentResult>`, which is now
+ * a discriminated union) so a script can set any subset without committing to
+ * an arm; the fake assembles the real union from it.
+ */
+interface FakeActOutcome {
+  success?: boolean;
+  output?: string;
+  exitCode?: number;
+  error?: string;
+  structuredOutput?: unknown;
+  resultText?: string;
+}
+
 export interface FakeAgentOptions {
   name: string;
   /**
@@ -94,7 +110,7 @@ export interface FakeAgentOptions {
     boxRoot: string;
     prompt: string;
     invocation: number;
-  }) => Promise<Partial<AgentResult>>;
+  }) => Promise<FakeActOutcome>;
   /**
    * Called when invokeStructured() is hit — returns the scripted verdict
    * `data` (validated against the caller's schema). Return `null` to simulate
@@ -152,13 +168,17 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
         invocation: invocationIndex,
       });
 
-      const result: AgentResult = {
-        success: partial.success ?? true,
+      const base: AgentResultBase = {
         output: partial.output ?? "",
         exitCode: partial.exitCode ?? (partial.success === false ? 1 : 0),
         sessionId,
-        ...(partial.error && { error: partial.error }),
+        ...(partial.structuredOutput !== undefined && { structuredOutput: partial.structuredOutput }),
+        ...(partial.resultText !== undefined && { resultText: partial.resultText }),
       };
+      const result: AgentResult =
+        partial.success === false
+          ? { ...base, success: false, error: partial.error ?? "fake agent failure" }
+          : { ...base, success: true };
 
       invocations.push({
         systemPrompt: resumed ? null : (opts.systemPrompt ?? null),
@@ -192,17 +212,22 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       // the caller's schema exactly as the real invokeStructured does.
       const parsed = raw === null ? null : schema.safeParse(raw);
       const data: T | null = parsed === null ? null : parsed.success ? parsed.data : null;
-      const success = data !== null;
+      const structuredBase: AgentResultBase = { output: "", exitCode: data !== null ? 0 : 1, sessionId };
 
-      const result: StructuredAgentResult<T> = {
-        success,
-        output: "",
-        exitCode: success ? 0 : 1,
-        sessionId,
-        data,
-        ...(parsed !== null && !parsed.success && { error: parsed.error.message }),
-        ...(raw === null && { error: "fake structured failure" }),
-      };
+      const result: StructuredAgentResult<T> =
+        data !== null
+          ? { ...structuredBase, success: true, data }
+          : {
+              ...structuredBase,
+              success: false,
+              data: null,
+              error:
+                raw === null
+                  ? "fake structured failure"
+                  : parsed !== null && !parsed.success
+                    ? parsed.error.message
+                    : "fake structured failure",
+            };
 
       invocations.push({
         systemPrompt: resumed ? null : (opts.systemPrompt ?? null),

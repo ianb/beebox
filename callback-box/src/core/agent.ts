@@ -25,6 +25,7 @@ export type {
   Agent,
   StructuredAgentResult,
   AgentResult,
+  AgentResultBase,
 } from "./agent-types.js";
 
 export {

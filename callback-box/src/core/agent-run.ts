@@ -15,7 +15,7 @@ import { resolveClaudeCodeBinary } from "./sdk-binary-path.js";
 import { startPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./agent-stream.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
-import type { AgentResult } from "./agent-types.js";
+import type { AgentResult, AgentResultBase } from "./agent-types.js";
 
 export interface RunAgentOptions {
   boxRoot: string;
@@ -118,27 +118,28 @@ function buildAgentResult(outcome: RunStreamOutcome, resumeSessionId: string | u
   }
 
   const isError = resultMessage.is_error || resultMessage.subtype !== "success";
-  const result: AgentResult = {
-    success: !isError,
+  const base: AgentResultBase = {
     output: outputBuf,
     exitCode: isError ? 1 : 0,
     sessionId,
   };
   if (resultMessage.subtype === "success") {
     if ("structured_output" in resultMessage) {
-      result.structuredOutput = resultMessage.structured_output;
+      base.structuredOutput = resultMessage.structured_output;
     }
-    result.resultText = resultMessage.result;
+    base.resultText = resultMessage.result;
   }
-  if (isError) {
-    if (resultMessage.subtype !== "success") {
-      const errs = "errors" in resultMessage ? resultMessage.errors : [];
-      result.error = errs.length > 0 ? errs.join("\n") : resultMessage.subtype;
-    } else {
-      result.error = "result.is_error was true";
-    }
+  if (!isError) {
+    return { ...base, success: true };
   }
-  return result;
+  let error: string;
+  if (resultMessage.subtype !== "success") {
+    const errs = "errors" in resultMessage ? resultMessage.errors : [];
+    error = errs.length > 0 ? errs.join("\n") : resultMessage.subtype;
+  } else {
+    error = "result.is_error was true";
+  }
+  return { ...base, success: false, error };
 }
 
 /**

@@ -9,7 +9,7 @@
  *   DELETE /api/files/*         — remove a raw file and commit the deletion
  */
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
@@ -38,6 +38,24 @@ const FROZEN_SCRIPT_HASH = `sha256-${createHash("sha256").update(FROZEN_FALLBACK
 // still refused. Styles/fonts/images stay unrestricted so the page renders and
 // images hot-link.
 const FROZEN_CSP = `sandbox allow-scripts; script-src '${FROZEN_SCRIPT_HASH}'`;
+
+/**
+ * Apply the serving-hardening headers (nosniff always; the frozen sandbox
+ * CSP or the dangerous-renderable attachment disposition when applicable)
+ * to a reply. Shared by every bodied response below — including the 304
+ * branch, which must repeat these on revalidation or a client that cached
+ * the file before this hardening (or before an inline-preview exception
+ * changed) would keep reusing the old, unhardened cached response forever.
+ */
+function applyServingSecurityHeaders(
+  reply: FastifyReply,
+  { isFrozen, contentDisposition }: { isFrozen: boolean; contentDisposition: string | null }
+): FastifyReply {
+  reply.header("X-Content-Type-Options", "nosniff");
+  if (isFrozen) reply.header("Content-Security-Policy", FROZEN_CSP);
+  if (contentDisposition) reply.header("Content-Disposition", contentDisposition);
+  return reply;
+}
 
 /** Insert the fallback script just before </body> (or append if absent). */
 function injectFrozenFallback(html: string): string {
@@ -178,12 +196,11 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           Number.isFinite(Date.parse(ifModifiedSince)) &&
           Math.floor(Date.parse(ifModifiedSince) / 1000) >= Math.floor(stat.mtimeMs / 1000);
         if (etagMatches || mtimeMatches) {
-          return reply
-            .header("ETag", etag)
-            .header("Last-Modified", lastModified)
-            .header("Cache-Control", "no-cache")
-            .status(304)
-            .send();
+          const notModifiedReply = applyServingSecurityHeaders(
+            reply.header("ETag", etag).header("Last-Modified", lastModified).header("Cache-Control", "no-cache"),
+            { isFrozen, contentDisposition }
+          );
+          return notModifiedReply.status(304).send();
         }
 
         // Range support: views and agents tail large attachments (e.g. a
@@ -203,16 +220,17 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           }
           if (range !== null) {
             const slice = await readSlice(resolved, range);
-            const rangeReply = reply
-              .status(206)
-              .header("Content-Type", contentType)
-              .header("X-Content-Type-Options", "nosniff")
-              .header("Cache-Control", "no-cache")
-              .header("ETag", etag)
-              .header("Last-Modified", lastModified)
-              .header("Accept-Ranges", "bytes")
-              .header("Content-Range", `bytes ${String(range.start)}-${String(range.end)}/${String(stat.size)}`);
-            if (contentDisposition) rangeReply.header("Content-Disposition", contentDisposition);
+            const rangeReply = applyServingSecurityHeaders(
+              reply
+                .status(206)
+                .header("Content-Type", contentType)
+                .header("Cache-Control", "no-cache")
+                .header("ETag", etag)
+                .header("Last-Modified", lastModified)
+                .header("Accept-Ranges", "bytes")
+                .header("Content-Range", `bytes ${String(range.start)}-${String(range.end)}/${String(stat.size)}`),
+              { isFrozen, contentDisposition }
+            );
             return rangeReply.send(slice);
           }
           // Malformed Range headers fall through to a normal 200 (per spec).
@@ -220,25 +238,27 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
 
         if (isFrozen) {
           const html = injectFrozenFallback((await fs.readFile(resolved)).toString("utf8"));
-          return reply
-            .header("Content-Security-Policy", FROZEN_CSP)
-            .header("X-Content-Type-Options", "nosniff")
+          const frozenReply = applyServingSecurityHeaders(
+            reply
+              .header("Content-Type", contentType)
+              .header("Cache-Control", "no-cache")
+              .header("ETag", etag)
+              .header("Last-Modified", lastModified),
+            { isFrozen, contentDisposition }
+          );
+          return frozenReply.send(html);
+        }
+
+        const content = await fs.readFile(resolved);
+        const plainReply = applyServingSecurityHeaders(
+          reply
             .header("Content-Type", contentType)
             .header("Cache-Control", "no-cache")
             .header("ETag", etag)
             .header("Last-Modified", lastModified)
-            .send(html);
-        }
-
-        const content = await fs.readFile(resolved);
-        const plainReply = reply
-          .header("Content-Type", contentType)
-          .header("X-Content-Type-Options", "nosniff")
-          .header("Cache-Control", "no-cache")
-          .header("ETag", etag)
-          .header("Last-Modified", lastModified)
-          .header("Accept-Ranges", "bytes");
-        if (contentDisposition) plainReply.header("Content-Disposition", contentDisposition);
+            .header("Accept-Ranges", "bytes"),
+          { isFrozen, contentDisposition }
+        );
         return plainReply.send(content);
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
@@ -252,63 +272,76 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
   // DELETE /api/files/* - Remove a raw box file and commit the deletion
   server.delete<{ Params: { "*": string } }>(
     "/api/files/*",
-    async (request, reply) => {
-      const reqPath = boxRelativePath(request.params["*"] || "");
-      const resolved = path.resolve(path.join(boxRoot, reqPath));
-      const root = path.resolve(boxRoot);
-
-      if (resolved !== root && !resolved.startsWith(root + path.sep)) {
-        return reply.status(403).send({ error: "Access denied" });
-      }
-
-      if (reqPath === "" || path.basename(resolved).startsWith(".")) {
-        return reply.status(400).send({ error: "File path required" });
-      }
-
-      if (resolved.endsWith(".card")) {
-        return reply.status(403).send({ error: "Card deletion is not supported through this endpoint" });
-      }
-
-      try {
-        const stat = await fs.stat(resolved);
-        if (!stat.isFile()) {
-          return reply.status(404).send({ error: "Not found" });
-        }
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-          console.warn(`Could not stat file for delete, returning 404: ${resolved}:`, e);
-        }
-        return reply.status(404).send({ error: "Not found" });
-      }
-
-      if (await pathsHaveChanges(boxRoot, [reqPath])) {
-        await stageFiles(boxRoot, [reqPath]);
-        await commitPaths(boxRoot, {
-          paths: [reqPath],
-          message: `Saved before user delete: ${reqPath}`,
-        });
-      }
-
-      await fs.unlink(resolved);
-      await stageFiles(boxRoot, [reqPath]);
-      const commitHash = await commitPaths(boxRoot, {
-        paths: [reqPath],
-        message: `Deleted by user: ${reqPath}`,
-      });
-
-      eventBus.emitTransient("file-change", {
-        event: "unlink",
-        path: reqPath,
-        timestamp: new Date().toISOString(),
-      });
-
-      return {
-        ok: true,
-        path: reqPath,
-        commit: commitHash,
-      };
-    }
+    async (request, reply) => deleteBoxFile({ request, reply, boxRoot, eventBus })
   );
+}
+
+/** Handler body for `DELETE /api/files/*`, split out to keep the registration function under the line cap. */
+async function deleteBoxFile({
+  request,
+  reply,
+  boxRoot,
+  eventBus,
+}: {
+  request: { params: { "*": string } };
+  reply: FastifyReply;
+  boxRoot: string;
+  eventBus: EventBus;
+}): Promise<unknown> {
+  const reqPath = boxRelativePath(request.params["*"] || "");
+  const resolved = path.resolve(path.join(boxRoot, reqPath));
+  const root = path.resolve(boxRoot);
+
+  if (resolved !== root && !resolved.startsWith(root + path.sep)) {
+    return reply.status(403).send({ error: "Access denied" });
+  }
+
+  if (reqPath === "" || path.basename(resolved).startsWith(".")) {
+    return reply.status(400).send({ error: "File path required" });
+  }
+
+  if (resolved.endsWith(".card")) {
+    return reply.status(403).send({ error: "Card deletion is not supported through this endpoint" });
+  }
+
+  try {
+    const stat = await fs.stat(resolved);
+    if (!stat.isFile()) {
+      return reply.status(404).send({ error: "Not found" });
+    }
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`Could not stat file for delete, returning 404: ${resolved}:`, e);
+    }
+    return reply.status(404).send({ error: "Not found" });
+  }
+
+  if (await pathsHaveChanges(boxRoot, [reqPath])) {
+    await stageFiles(boxRoot, [reqPath]);
+    await commitPaths(boxRoot, {
+      paths: [reqPath],
+      message: `Saved before user delete: ${reqPath}`,
+    });
+  }
+
+  await fs.unlink(resolved);
+  await stageFiles(boxRoot, [reqPath]);
+  const commitHash = await commitPaths(boxRoot, {
+    paths: [reqPath],
+    message: `Deleted by user: ${reqPath}`,
+  });
+
+  eventBus.emitTransient("file-change", {
+    event: "unlink",
+    path: reqPath,
+    timestamp: new Date().toISOString(),
+  });
+
+  return {
+    ok: true,
+    path: reqPath,
+    commit: commitHash,
+  };
 }
 
 /**

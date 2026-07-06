@@ -1,6 +1,6 @@
-# `/api/api/files/*` serves dangerous renderable types as attachments
+# `/api/files/*` serves dangerous renderable types as attachments
 
-Track D.1 (architectural review): `/api/api/files/*` serves any raw box file by
+Track D.1 (architectural review): `/api/files/*` serves any raw box file by
 extension-inferred MIME type. A `.html` (or `.svg`) file served inline as
 `text/html`/`image/svg+xml` with no `nosniff`/`Content-Disposition` is a
 stored-XSS path regardless of how the file got into the box (hand-added,
@@ -45,6 +45,21 @@ await server.seed("snapshot.frozen", "<html><body>captured page</body></html>");
 const frozen = await server.rawRequest({ method: "GET", url: "/api/files/snapshot.frozen" });
 `${frozen.statusCode} ${frozen.headers["content-type"]} ${JSON.stringify(frozen.headers["content-disposition"] ?? null)} ${frozen.headers["x-content-type-options"]} ${frozen.headers["content-security-policy"]}`
 => 200 text/html null nosniff sandbox allow-scripts; script-src '«*»'
+```
+
+A `304 Not Modified` revalidation repeats the same hardening headers as the
+original `200` — a client that cached the file before this fix landed (or
+before the file's disposition changed) must not keep reusing a stale,
+unhardened cached response forever:
+
+```ts continue
+const notModified = await server.rawRequest({
+  method: "GET",
+  url: "/api/files/page.html",
+  headers: { "if-none-match": html.headers.etag },
+});
+`${notModified.statusCode} ${notModified.headers["content-disposition"]} ${notModified.headers["x-content-type-options"]}`
+=> 304 attachment; filename="page.html" nosniff
 ```
 
 An ordinary inert type (an image) still serves inline, but now also carries

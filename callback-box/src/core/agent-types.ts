@@ -45,10 +45,14 @@ export interface AgentInvokeOptions {
   additionalDirectories?: string[];
 }
 
-export interface AgentResult {
-  success: boolean;
+/**
+ * Transport fields present on every agent result, success or failure. These
+ * describe the run itself (its output, exit code, and session) independent of
+ * whether it succeeded, so they're common to both arms of {@link AgentResult}
+ * rather than split across them.
+ */
+export interface AgentResultBase {
   output: string;
-  error?: string;
   exitCode: number;
   sessionId: string;
   /** Populated when the underlying run was started with `outputSchema`. */
@@ -62,14 +66,25 @@ export interface AgentResult {
 }
 
 /**
- * Result of `Agent.invokeStructured`. Same fields as `AgentResult` plus
- * the parsed `data`. On structured-output failure (no result, schema
- * mismatch, agent error) `success` is false, `data` is null, and `error`
- * carries the cause.
+ * The outcome of an agent run. A discriminated union on `success`: the
+ * transport fields are shared, and only the failure arm carries `error` —
+ * making "a failure always has an error message, a success never claims one" a
+ * type-level guarantee rather than the doc-comment convention it used to be.
  */
-export interface StructuredAgentResult<T> extends AgentResult {
-  data: T | null;
-}
+export type AgentResult =
+  | (AgentResultBase & { success: true })
+  | (AgentResultBase & { success: false; error: string });
+
+/**
+ * Result of `Agent.invokeStructured`. The transport fields plus the parsed
+ * `data`, split so `success ⇔ data present`: on success `data` is the validated
+ * `T`; on failure `data` is `null` and `error` carries the cause (no result,
+ * schema mismatch, or agent error). The old `data: T | null` doc contract is
+ * now the type.
+ */
+export type StructuredAgentResult<T> =
+  | (AgentResultBase & { success: true; data: T })
+  | (AgentResultBase & { success: false; error: string; data: null });
 
 /**
  * A named agent with session lifecycle.
