@@ -45,8 +45,7 @@ import {
   type PersistedEmission,
 } from "../input/emission-persist";
 import { getApiBase } from "../api-core";
-
-const PERSIST_DEBOUNCE_MS = 400;
+import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
 
 // Restore is once per store LIFETIME, not per hook mount: the store is the
 // lifted singleton (ChatPage), but this hook remounts with InteractiveChat
@@ -88,16 +87,26 @@ export function useEmissionPersistence(opts: {
 }): EmissionPersistenceApi {
   const { boxSlug, emissionStore } = opts;
   const { editor } = emissionStore;
-  const timerRef = useRef<number | null>(null);
   const restoringRef = useRef(false);
   const [expiredAttachments, setExpiredAttachments] = useState<string[]>([]);
 
-  const cancelPending = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
+  const persistNow = useCallback(() => {
+    if (restoringRef.current) return;
+    savePersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
+  }, [boxSlug, emissionStore]);
+
+  // Flush synchronously when the tab hides (the sleep / app-switch moment),
+  // closing the debounce gap — same pattern as the retired useComposerDraft.
+  const flushOnHide = useCallback(
+    (cancel: () => void) => {
+      if (restoringRef.current) return;
+      cancel();
+      persistNow();
+    },
+    [persistNow],
+  );
+
+  const { schedule, cancel } = usePersistScheduler({ debounceMs: PERSIST_DEBOUNCE_MS, onHide: flushOnHide });
 
   const dismissExpiredAttachments = useCallback(() => {
     setExpiredAttachments([]);
@@ -182,35 +191,17 @@ export function useEmissionPersistence(opts: {
   // store directly, not via React state, so a keystroke never re-renders
   // this hook's owner.
   useEffect(() => {
-    function schedule(): void {
+    function scheduleWrite(): void {
       if (restoringRef.current) return;
-      cancelPending();
-      timerRef.current = window.setTimeout(() => {
-        timerRef.current = null;
-        if (restoringRef.current) return;
-        savePersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
-      }, PERSIST_DEBOUNCE_MS);
+      schedule(persistNow);
     }
-    const unsubscribe = emissionStore.subscribe(schedule);
-    schedule();
+    const unsubscribe = emissionStore.subscribe(scheduleWrite);
+    scheduleWrite();
     return () => {
       unsubscribe();
-      cancelPending();
+      cancel();
     };
-  }, [emissionStore, boxSlug, cancelPending]);
-
-  // Flush synchronously when the tab hides (the sleep / app-switch moment),
-  // closing the debounce gap — same pattern as the retired useComposerDraft.
-  useEffect(() => {
-    function onHide(): void {
-      if (document.visibilityState !== "hidden") return;
-      if (restoringRef.current) return;
-      cancelPending();
-      savePersistedEmission(window.localStorage, { boxSlug, draft: emissionStore.get(), updatedAt: Date.now() });
-    }
-    document.addEventListener("visibilitychange", onHide);
-    return () => document.removeEventListener("visibilitychange", onHide);
-  }, [emissionStore, boxSlug, cancelPending]);
+  }, [emissionStore, schedule, cancel, persistNow]);
 
   // The expired-attachments notice self-dismisses once the composer empties
   // out again (a send, or the user clearing everything) — the "next send"

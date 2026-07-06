@@ -30,8 +30,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { draftKey, parseDraft, serializeDraft, adoptLegacyDictationDrafts, type DictationDraft } from "../lib/dictation-draft";
-
-const PERSIST_DEBOUNCE_MS = 400;
+import { usePersistScheduler, PERSIST_DEBOUNCE_MS } from "./usePersistScheduler";
 
 export interface DictationDraftApi {
   /** The persisted draft for this box, or null when none is stored. */
@@ -76,17 +75,9 @@ export function useDictationDraft(opts: {
   // (chunk 4), so — unlike the retired per-session key — it doesn't change
   // across a session switch; only a different box changes it.
   const [recoveredDraft, setRecoveredDraft] = useState<DictationDraft | null>(() => readDraft(key, boxSlug));
-  const timerRef = useRef<number | null>(null);
   // Whether the user has dictated anything this mount. Once true, the
   // mount-time draft is superseded by live work and must not resurface.
   const startedRef = useRef(false);
-
-  const cancelPending = useCallback(() => {
-    if (timerRef.current !== null) {
-      window.clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  }, []);
 
   // Persist to storage only — never touches `recoveredDraft`, so a live
   // session can't surface its own in-progress transcript as "recovered".
@@ -95,11 +86,26 @@ export function useDictationDraft(opts: {
     window.localStorage.setItem(key, serializeDraft(draft));
   }, [key, narrationEnabled]);
 
+  // Insurance against the debounce gap: when the tab is hidden (iOS screen
+  // lock / app switch — the exact moment a session is most likely to drop),
+  // flush the current transcript synchronously. Empty stays unwritten.
+  const flushOnHide = useCallback(
+    (cancel: () => void) => {
+      const text = transcript.trim();
+      if (!text || !isTranscribing) return;
+      cancel();
+      writeDraft(text);
+    },
+    [transcript, isTranscribing, writeDraft],
+  );
+
+  const { schedule, cancel } = usePersistScheduler({ debounceMs: PERSIST_DEBOUNCE_MS, onHide: flushOnHide });
+
   const clearDraft = useCallback(() => {
-    cancelPending();
+    cancel();
     if (typeof window !== "undefined") window.localStorage.removeItem(key);
     setRecoveredDraft(null);
-  }, [key, cancelPending]);
+  }, [key, cancel]);
 
   // No key-change effect: the key is a per-box singleton (chunk 4), so it no
   // longer changes across a session switch the way the retired per-session
@@ -122,28 +128,9 @@ export function useDictationDraft(opts: {
   useEffect(() => {
     const text = transcript.trim();
     if (!text) return;
-    cancelPending();
-    timerRef.current = window.setTimeout(() => {
-      timerRef.current = null;
-      writeDraft(text);
-    }, PERSIST_DEBOUNCE_MS);
-    return cancelPending;
-  }, [transcript, writeDraft, cancelPending]);
-
-  // Insurance against the debounce gap: when the tab is hidden (iOS screen
-  // lock / app switch — the exact moment a session is most likely to drop),
-  // flush the current transcript synchronously. Empty stays unwritten.
-  useEffect(() => {
-    function onHide(): void {
-      if (document.visibilityState !== "hidden") return;
-      const text = transcript.trim();
-      if (!text || !isTranscribing) return;
-      cancelPending();
-      writeDraft(text);
-    }
-    document.addEventListener("visibilitychange", onHide);
-    return () => document.removeEventListener("visibilitychange", onHide);
-  }, [transcript, isTranscribing, writeDraft, cancelPending]);
+    schedule(() => writeDraft(text));
+    return cancel;
+  }, [transcript, writeDraft, schedule, cancel]);
 
   return { recoveredDraft, clearDraft };
 }
