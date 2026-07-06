@@ -12,6 +12,8 @@ import * as path from "node:path";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { validateIcsTimezone } from "./calendar-utils.js";
 import { icsToGoogleEvent } from "./google-calendar-ics.js";
+import { decideCalendarSync } from "./google-calendar-decide.js";
+import { invariant } from "../lib/invariant.js";
 import {
   formatEventDate,
   extractCbAnnotations,
@@ -152,15 +154,16 @@ export async function processLocalDeletes(
     const refMatch = content.match(/^x-cb-ref[:;](.*)$/im);
     const ref = refMatch?.[1]?.trim();
 
-    if (deleted.length >= MAX_DELETES) {
-      console.warn(`  Skipping delete of ${filename} — reached limit of ${MAX_DELETES} deletes per sync`);
+    const decision = decideCalendarSync({
+      source: "local-delete-marker",
+      hasCalendarId: calendarId !== undefined,
+      underDeleteCap: deleted.length < MAX_DELETES,
+    });
+    if (decision.kind === "noop") {
+      console.warn(`  Skipping delete of ${filename} — ${decision.reason}`);
       continue;
     }
-
-    if (!calendarId) {
-      console.warn(`  Skipping delete of ${filename} — no calendar ID in state`);
-      continue;
-    }
+    invariant(decision.kind === "delete" && calendarId !== undefined, "delete-marker decision must delete with a calendar id");
 
     console.log(`  Deleting ${filename}: ${reason}`);
     const success = await deleteEventViaApi(calendar, { calendarId, googleEventId });

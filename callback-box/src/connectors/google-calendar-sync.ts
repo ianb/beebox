@@ -30,6 +30,8 @@ import {
   type CalendarState,
 } from "./google-calendar-state.js";
 import { contentHash } from "../lib/content-hash.js";
+import { decideCalendarSync } from "./google-calendar-decide.js";
+import { invariant } from "../lib/invariant.js";
 
 interface IcsOpts { calendarId: string; calendarName?: string; calendarRole?: string }
 
@@ -47,7 +49,9 @@ async function handleCancelledEvent(
 ): Promise<void> {
   const { boxRoot, calDir, state, acc } = ctx;
   const existingEntry = state.eventFiles[event.id];
-  if (!existingEntry) return;
+  const decision = decideCalendarSync({ source: "remote-cancelled", tracked: existingEntry !== undefined });
+  if (decision.kind === "noop") return;
+  invariant(decision.kind === "delete" && existingEntry !== undefined, "cancelled tracked event must delete");
 
   const oldName = getFilename(existingEntry);
   const filePath = path.join(calDir, oldName);
@@ -177,38 +181,54 @@ async function reconcileEvent(
       // File missing — localContent stays undefined and we proceed to write the fresh ICS; the read is only for local-edit detection, not required.
     }
 
-    let remoteConflict = false;
-    if (localContent && storedHash && contentHash(localContent) !== storedHash) {
-      const storedRemoteUpdated = typeof existingEntry === "string" ? undefined : existingEntry.remoteUpdated;
-      const remoteChanged = storedRemoteUpdated !== undefined && event.updated !== undefined
-        && event.updated !== storedRemoteUpdated;
-      if (remoteChanged) {
-        // Conflict: the event changed both locally and remotely since the last
-        // pull. Remote wins — discard the local edit and fall through to the
-        // normal write path, which overwrites the local file with Google's ICS.
-        remoteConflict = true;
-        console.warn(
-          `  Local edit to ${filename} discarded — event also changed remotely (remote wins)`,
-        );
-        acc.notes.push({
-          action: "updated",
-          summary: event.summary || filename,
-          detail: "local edit discarded — event also changed remotely (remote wins)",
-          ref: relPath,
-        });
-      } else {
+    const localEdited = localContent !== undefined && storedHash !== undefined
+      && contentHash(localContent) !== storedHash;
+    const storedRemoteUpdated = typeof existingEntry === "string" ? undefined : existingEntry.remoteUpdated;
+    const remoteChanged = storedRemoteUpdated !== undefined && event.updated !== undefined
+      && event.updated !== storedRemoteUpdated;
+    const decision = decideCalendarSync({
+      source: "remote-event", tracked: true, localEdited, remoteChanged,
+    });
+
+    switch (decision.kind) {
+      case "local-wins": {
+        // localEdited && !remoteChanged: localContent is defined here.
+        invariant(localContent !== undefined, "local-wins requires local content");
         const handled = await tryPushLocalEdit(event, {
           calendar, icsOpts, filePath, relPath, filename, localContent,
           existingEntry, state, acc,
         });
         if (handled) return;
+        // Push failed — fall through to overwrite with Google's version (below).
+        recordUpsertNote(event, {
+          isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, acc,
+        });
+        break;
       }
-    }
-
-    if (!remoteConflict) {
-      recordUpsertNote(event, {
-        isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, acc,
-      });
+      case "remote-wins": {
+        if (localEdited) {
+          // Conflict: the event changed both locally and remotely since the last
+          // pull. Remote wins — discard the local edit; the write path below
+          // overwrites the local file with Google's ICS.
+          console.warn(
+            `  Local edit to ${filename} discarded — event also changed remotely (remote wins)`,
+          );
+          acc.notes.push({
+            action: "updated",
+            summary: event.summary || filename,
+            detail: "local edit discarded — event also changed remotely (remote wins)",
+            ref: relPath,
+          });
+        } else {
+          recordUpsertNote(event, {
+            isExisting: true, localContent, icsContent, filename, relPath, calendarId, icsOpts, acc,
+          });
+        }
+        break;
+      }
+      case "delete":
+      case "noop":
+        invariant(false, `unexpected ${decision.kind} decision for a tracked in-window remote event`);
     }
   } else {
     recordUpsertNote(event, {
