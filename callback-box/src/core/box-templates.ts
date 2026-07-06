@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "./install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "./template-stock-hashes.js";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 

@@ -40,7 +40,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
-import { getBoxShape } from "../src/cli/lib/box-shape.js";
+import { getBoxShape } from "../src/lib/box-shape.js";
 import { runBoxPackageify } from "./migrate/box-packageify.js";
 
 const REAL_TEST1 = path.join(os.homedir(), "src/boxes/test1");

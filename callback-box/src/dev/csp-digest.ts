@@ -25,7 +25,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 const CURSOR_FILE = "csp-digest-cursor.json";
 // The package root, not the operational root — a v2 box's log lives under

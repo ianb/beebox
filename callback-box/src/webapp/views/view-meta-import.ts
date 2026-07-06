@@ -17,7 +17,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import type { ViewMode } from "../../types/views.js";
 import { writeNodeViewModule } from "./node-view-runtime.js";
-import type { BoxShape } from "../../cli/lib/box-shape.js";
+import type { BoxShape } from "../../lib/box-shape.js";
 
 const RUNNER_FILENAME = "extract-meta-runner.mjs";
 const IMPORT_TIMEOUT_MS = 3_000;

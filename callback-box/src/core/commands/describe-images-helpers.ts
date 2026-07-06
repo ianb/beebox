@@ -8,7 +8,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
-import { parseCardName } from "../../cli/lib/paths.js";
+import { parseCardName } from "../../lib/paths.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 
 const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];

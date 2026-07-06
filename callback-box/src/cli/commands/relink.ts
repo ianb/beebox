@@ -3,7 +3,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { repairBoxLinks, type RepairReport } from "../../core/link-repair.js";
 
 function printReport(report: RepairReport, { dryRun }: { dryRun: boolean }): void {

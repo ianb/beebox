@@ -12,7 +12,7 @@
 import { Command } from "commander";
 import Fastify from "fastify";
 import open from "open";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import {
   loadGoogleTokens,
   saveGoogleTokens,

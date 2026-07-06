@@ -6,9 +6,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
+import { BOX_DIRS, BOX_MARKER, boxPath } from "../lib/paths.js";
 import { initRepo, isRepo } from "../lib/git.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { claudeProjectsRoot } from "../cli/lib/session.js";
 import { MIGRATIONS } from "./migrations.js";
 import {

@@ -8,7 +8,7 @@
 import { resolve, relative } from "node:path";
 import { Command } from "commander";
 import { glob } from "glob";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { syncExtfile } from "../../core/extfile-sync.js";
 
 async function findExtfileCards(boxRoot: string): Promise<string[]> {

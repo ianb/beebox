@@ -12,7 +12,7 @@ contributes nothing to its output.
 ```ts setup
 import { boxCodeLocationSection } from "../../src/core/agent-guide/box-shape.js";
 import { generateAgentGuide } from "../../src/core/agent-guide/index.js";
-import type { BoxShape } from "../../src/cli/lib/box-shape.js";
+import type { BoxShape } from "../../src/lib/box-shape.js";
 
 const legacyShape: BoxShape = { shapeVersion: 1, boxRoot: "/tmp/my-box", packageRoot: "/tmp/my-box" };
 const v2Shape: BoxShape = {

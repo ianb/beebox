@@ -28,7 +28,7 @@ import {
   HQ_TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
 } from "../../core/transcription.js";
-import { findBoxRoot } from "../lib/paths.js";
+import { findBoxRoot } from "../../lib/paths.js";
 
 /**
  * Request headers for loopback calls to the live server: JSON content type

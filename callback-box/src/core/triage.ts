@@ -13,7 +13,7 @@ import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
-import { getBoxDir } from "../cli/lib/paths.js";
+import { getBoxDir } from "../lib/paths.js";
 import { fenceForPrompt } from "../lib/prompt-fence.js";
 import { createAgent } from "./agent.js";
 import {

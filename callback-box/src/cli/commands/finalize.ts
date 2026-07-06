@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { createGmailConnector } from "../../connectors/gmail.js";
 import { createGoogleCalendarConnector } from "../../connectors/google-calendar.js";
 import { createTelegramConnector } from "../../connectors/telegram.js";

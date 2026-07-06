@@ -41,7 +41,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, type CspEntry } from "./csp-digest.js";
 
 const execFileP = promisify(execFile);

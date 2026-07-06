@@ -14,7 +14,7 @@ import type {
   LandmarkNavigationData,
   LandmarkOrderType,
 } from "../../schemas/landmark.js";
-import { isCardFile } from "../../cli/lib/paths.js";
+import { isCardFile } from "../../lib/paths.js";
 import { titleFromFilename } from "../file-summary.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
 

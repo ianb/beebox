@@ -24,7 +24,7 @@ import {
 } from "./box-skills-content.js";
 import { vtimezoneBlock } from "../connectors/google-calendar-ics.js";
 import { loadBoxTimezone } from "./box-config.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */

@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { BOX_MARKER } from "../cli/lib/paths.js";
+import { BOX_MARKER } from "../lib/paths.js";
 import { runTick, type TickResult } from "../cli/commands/tick.js";
 import { getStatus, isRepo } from "../lib/git.js";
 import { touchSchedulerHeartbeat } from "./schedule-health-box.js";

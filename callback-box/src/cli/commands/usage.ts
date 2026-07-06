@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { syncUsage, queryUsage, USAGE_SCHEMA_DESCRIPTION } from "../../core/usage.js";
 
 export const usageCommand = new Command("usage")

@@ -30,7 +30,7 @@ import {
   SCRIPT_TIMEOUT,
   type ExecTiming,
 } from "../../lib/exec-with-timeout.js";
-import { parseCardName } from "../lib/paths.js";
+import { parseCardName } from "../../lib/paths.js";
 import { getDefaultTemplate } from "../../schemas/templates.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 

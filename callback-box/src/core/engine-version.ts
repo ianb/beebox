@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 interface PackageJsonVersion {
   version?: string;

@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { glob } from "glob";
 import type { ViewMeta } from "../../types/views.js";
-import { getBoxShape, boxCodePaths, type BoxShape } from "../../cli/lib/box-shape.js";
+import { getBoxShape, boxCodePaths, type BoxShape } from "../../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { importViewMetadata } from "./view-meta-import.js";
 

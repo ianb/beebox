@@ -13,7 +13,7 @@
 import * as path from "node:path";
 import { realpathSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { getBoxShapeOrLegacyFallback } from "../../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
 
 /** Base for the cases where a box is unsafe to run audits against. */
 export class UnsafeAuditBoxError extends Error {

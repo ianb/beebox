@@ -14,7 +14,7 @@ import { join, dirname, relative } from "node:path";
 import { splitCardContent } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { listBoxCardFiles } from "./list-cards.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 const RULE_PREFIX = "exposition-";
 

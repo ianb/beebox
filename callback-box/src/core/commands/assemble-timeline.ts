@@ -15,7 +15,7 @@
  */
 
 import { registerCommand } from "../command-runner.js";
-import { getBoxDir } from "../../cli/lib/paths.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { assembleSession, readInboxEntries } from "./assemble-timeline-helpers.js";
 
 registerCommand({

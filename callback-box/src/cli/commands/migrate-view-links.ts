@@ -4,7 +4,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { migrateBoxViewLinks } from "../../core/view-link-migration.js";
 
 export const migrateViewLinksCommand = new Command("migrate-view-links")

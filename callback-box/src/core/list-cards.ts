@@ -7,7 +7,7 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"];
 

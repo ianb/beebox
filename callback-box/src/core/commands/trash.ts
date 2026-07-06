@@ -14,7 +14,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../cli/lib/paths.js";
+import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../lib/paths.js";
 import { stageFiles, commit } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";

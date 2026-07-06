@@ -10,7 +10,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { renderFrontmatterBlock } from "../../cards/index.js";
 import { type CommandContext } from "../command-runner.js";
-import { parseCardName } from "../../cli/lib/paths.js";
+import { parseCardName } from "../../lib/paths.js";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type ImageFields } from "../../schemas/image.js";

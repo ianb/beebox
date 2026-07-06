@@ -5,7 +5,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot, findBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot, findBoxRoot } from "../../lib/paths.js";
 import {
   runCommand,
   createCliContext,

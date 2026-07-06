@@ -6,7 +6,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 
 export const intakeCommand = new Command("intake")

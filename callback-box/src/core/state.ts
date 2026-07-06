@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxDir, parseCardName, requireBoxRoot } from "../cli/lib/paths.js";
+import { getBoxDir, parseCardName, requireBoxRoot } from "../lib/paths.js";
 import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git.js";
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";

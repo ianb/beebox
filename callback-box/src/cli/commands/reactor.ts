@@ -7,7 +7,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { runReactor } from "../../core/reactor/index.js";
 
 export const reactorCommand = new Command("reactor")

@@ -1,6 +1,6 @@
 # Box layout spec: single source for BOX_DIRS, the agent guide, and the docs
 
-`BOX_LAYOUT` (`src/cli/lib/box-layout-spec.ts`) is the one place the box
+`BOX_LAYOUT` (`src/lib/box-layout-spec.ts`) is the one place the box
 directory list, its paths, and its prose live. `BOX_DIRS` (`paths.ts`) and the
 in-box agent guide's directory table (`agent-guide/box-shape.ts`) both derive
 from it; this doctest checks the derivation, plus that `docs/box-layout.md`'s
@@ -10,8 +10,8 @@ whole-file generated) `docs/box-layout.md` mixes prose with tables.
 
 ```ts setup
 import * as fs from "node:fs/promises";
-import { BOX_LAYOUT } from "../../../src/cli/lib/box-layout-spec.js";
-import { BOX_DIRS, boxLayoutEntry, UnknownBoxDirsKeyError } from "../../../src/cli/lib/paths.js";
+import { BOX_LAYOUT } from "../../../src/lib/box-layout-spec.js";
+import { BOX_DIRS, boxLayoutEntry, UnknownBoxDirsKeyError } from "../../../src/lib/paths.js";
 import { directoryLayoutSection } from "../../../src/core/agent-guide/box-shape.js";
 
 const keyedEntries = BOX_LAYOUT.filter((entry) => entry.boxDirsKey !== undefined);

@@ -18,7 +18,7 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
-import { getBoxDir } from "../cli/lib/paths.js";
+import { getBoxDir } from "../lib/paths.js";
 import {
   compileTriageInstructions,
   type TriageCategory,

@@ -10,7 +10,7 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
-import { parseCardName } from "../../cli/lib/paths.js";
+import { parseCardName } from "../../lib/paths.js";
 
 interface BrowseCard {
   relativePath: string;

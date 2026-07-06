@@ -46,7 +46,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { execFileSync, type StdioOptions } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 
 /**

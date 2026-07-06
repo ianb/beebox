@@ -13,7 +13,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { parseCardName, isCardFile, boxPath } from "../../cli/lib/paths.js";
+import { parseCardName, isCardFile, boxPath } from "../../lib/paths.js";
 import { stageFiles, commit } from "../../lib/git.js";
 import {
   getTemplate,

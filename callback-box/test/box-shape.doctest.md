@@ -10,7 +10,7 @@ fail-closed so box-owned code never silently resolves against the wrong
 
 ```ts setup
 import * as path from "node:path";
-import { getBoxShape, boxCodePaths, BoxShapeError } from "../src/cli/lib/box-shape.js";
+import { getBoxShape, boxCodePaths, BoxShapeError } from "../src/lib/box-shape.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const tryGetBoxShape = async (boxRoot) => {

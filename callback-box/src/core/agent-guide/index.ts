@@ -11,7 +11,7 @@
 import type { CardSchema } from "../../cards/index.js";
 import { cardSchemas } from "../../schemas/registry.js";
 import type { ProcedureSummary, GuideSummary } from "../generate-docs.js";
-import type { BoxShape } from "../../cli/lib/box-shape.js";
+import type { BoxShape } from "../../lib/box-shape.js";
 
 import { directoryLayoutSection, howItemsEnterSection, boxCodeLocationSection } from "./box-shape.js";
 import { keyCommandsSection } from "./commands.js";

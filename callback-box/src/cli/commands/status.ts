@@ -5,8 +5,8 @@
 import { Command } from "commander";
 import { getSystemState, type CardInfo } from "../../core/state.js";
 import { listParkedTemplateUpdates } from "../../core/install-template-file.js";
-import { requireBoxRoot } from "../lib/paths.js";
-import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../lib/box-shape.js";
+import { requireBoxRoot } from "../../lib/paths.js";
+import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 import { loadBoxSchemas } from "../../schemas/registry.js";
 import { listSchemaLoadFailures } from "../../schemas/schema-load-status.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";

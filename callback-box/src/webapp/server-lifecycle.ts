@@ -5,7 +5,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs";
-import { requireBoxRoot } from "../cli/lib/paths.js";
+import { requireBoxRoot } from "../lib/paths.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
 
 /**

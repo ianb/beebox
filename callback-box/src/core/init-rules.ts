@@ -11,7 +11,7 @@
 import { join, relative } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
-import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */

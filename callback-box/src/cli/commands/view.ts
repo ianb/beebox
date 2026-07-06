@@ -31,7 +31,7 @@ import * as esbuild from "esbuild";
 import { createElement, type ComponentType } from "react";
 import { renderToString } from "react-dom/server";
 import { load as cheerioLoad } from "cheerio";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { compileView, listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
 import { writeNodeViewModule } from "../../webapp/views/node-view-runtime.js";
 import { viewLintCommand } from "./view-lint.js";

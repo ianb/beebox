@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { loadLocation } from "../../core/location-store.js";
 import { formatLocationLine, locationAge } from "../../core/location-format.js";
 import { loadPlaces } from "../../core/place-cards.js";

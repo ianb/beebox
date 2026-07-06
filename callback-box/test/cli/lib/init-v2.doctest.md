@@ -36,7 +36,7 @@ import { generateRules } from "../../../src/core/init-rules.js";
 import { generateSkills } from "../../../src/core/box-skills.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
 import { stageAll, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git.js";
-import { getBoxShape } from "../../../src/cli/lib/box-shape.js";
+import { getBoxShape } from "../../../src/lib/box-shape.js";
 import { loadBoxSchemas, invalidateBoxSchemas } from "../../../src/schemas/registry.js";
 
 const execFileP = promisify(execFile);

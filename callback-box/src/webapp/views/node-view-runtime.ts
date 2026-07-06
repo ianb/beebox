@@ -19,7 +19,7 @@ import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { pathToFileURL } from "node:url";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import type { BoxShape } from "../../cli/lib/box-shape.js";
+import type { BoxShape } from "../../lib/box-shape.js";
 
 export interface NodeViewModule {
   /** `file://` URL of the written compiled module — pass to `import()`. */

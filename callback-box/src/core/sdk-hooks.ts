@@ -17,7 +17,7 @@ import { lint as markdownlint } from "markdownlint/promise";
 import { customLinkRules, linkRuleConfig } from "./markdown-lint-rules.js";
 import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
-import { isViewFile, findBoxRoot } from "../cli/lib/paths.js";
+import { isViewFile, findBoxRoot } from "../lib/paths.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
 
 function markdownConfig(boxRoot: string): Record<string, unknown> {

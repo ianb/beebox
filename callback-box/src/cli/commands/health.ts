@@ -9,7 +9,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
 import { assertNever } from "../../lib/invariant.js";
 import {

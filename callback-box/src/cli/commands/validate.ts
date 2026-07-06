@@ -14,7 +14,7 @@ import {
   formatMarkdownResults,
   type MarkdownLintSummary,
 } from "./validate-markdown.js";
-import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
+import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../../lib/paths.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../core/view-refs.js";
 import { getStatus } from "../../lib/git.js";
@@ -25,7 +25,7 @@ import { buildLoadContext } from "../../core/load-context.js";
 import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external-url-check.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
-import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../lib/box-shape.js";
+import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
 
 const execFileP = promisify(execFile);
 

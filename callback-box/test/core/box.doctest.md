@@ -7,7 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { initBox, isValidBox, getBoxMetadata } from "../../src/core/box.js";
-import { findBoxRoot, BOX_MARKER } from "../../src/cli/lib/paths.js";
+import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "cb-doctest-"));

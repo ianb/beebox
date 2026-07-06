@@ -10,8 +10,8 @@
  * itself model. Add, remove, or rename a directory in the spec, not here.
  */
 
-import { boxLayoutEntry, type BoxDirs } from "../../cli/lib/paths.js";
-import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../cli/lib/box-shape.js";
+import { boxLayoutEntry, type BoxDirs } from "../../lib/paths.js";
+import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../lib/box-shape.js";
 
 /** The shape version of every box created before the boxes-as-packages plan. */
 const LEGACY_SHAPE_VERSION = 1;

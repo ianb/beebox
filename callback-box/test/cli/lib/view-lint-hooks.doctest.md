@@ -11,7 +11,7 @@ import { mkdtemp, mkdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
-import { isViewFile } from "../../../src/cli/lib/paths.js";
+import { isViewFile } from "../../../src/lib/paths.js";
 import { lintViewFile } from "../../../src/webapp/views/compiler.js";
 import { cardValidatorHook } from "../../../src/core/sdk-hooks.js";
 

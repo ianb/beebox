@@ -15,7 +15,7 @@ import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription.js";
-import { getBoxShapeOrLegacyFallback } from "../../../cli/lib/box-shape.js";
+import { getBoxShapeOrLegacyFallback } from "../../../lib/box-shape.js";
 
 export interface HealthCheck {
   name: string;

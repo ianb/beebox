@@ -5,7 +5,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { getSystemState } from "../../../core/state.js";
 import { generateContext } from "../../context.js";
 import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
-import { parseCardName } from "../../../cli/lib/paths.js";
+import { parseCardName } from "../../../lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
 

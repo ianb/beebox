@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { type CardSchema } from "../cards/index.js";
 import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
 import { MemoSchema } from "./memo.js";

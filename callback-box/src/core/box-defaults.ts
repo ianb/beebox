@@ -11,7 +11,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_DIRS } from "../cli/lib/paths.js";
+import { BOX_DIRS } from "../lib/paths.js";
 import { createInitialGuideTemplate } from "../schemas/guide.js";
 import { createScheduledScriptTemplate, ScheduledScriptSchema } from "../schemas/scheduled-script.js";
 import { createInitialPersonalityTemplate } from "../schemas/personality.js";

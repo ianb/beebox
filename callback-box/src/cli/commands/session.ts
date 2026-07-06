@@ -10,7 +10,7 @@
 
 import { Command } from "commander";
 import * as fs from "node:fs";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import {
   getSessionLogPath,
   listSessions,

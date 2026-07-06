@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { renderFrontmatterBlock } from "../../cards/index.js";
 import { registerCommand } from "../command-runner.js";
-import { getBoxDir } from "../../cli/lib/paths.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { cardFields, parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";

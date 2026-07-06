@@ -9,7 +9,7 @@
 import { Command } from "commander";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { stageFiles, commitPaths } from "../../lib/git.js";
 import { slugify } from "../../lib/filename.js";
 import {

@@ -17,7 +17,7 @@
 import * as path from "node:path";
 import { execa, type ResultPromise } from "execa";
 import getPorts from "get-port";
-import { getBoxShape, type BoxShape } from "../cli/lib/box-shape.js";
+import { getBoxShape, type BoxShape } from "../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { fileExists } from "../lib/file-exists.js";
 import type { HubConfig, BoxEntry } from "./hub-config.js";

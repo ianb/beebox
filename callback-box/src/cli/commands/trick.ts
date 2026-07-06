@@ -15,10 +15,10 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { createRequire } from "node:module";
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
-import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
 
 const require = createRequire(import.meta.url);
 

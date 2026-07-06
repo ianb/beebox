@@ -32,7 +32,7 @@ import {
   getBoxShape,
   findLegacySchemaFiles,
   describeLegacySchemaFiles,
-} from "../../src/cli/lib/box-shape.js";
+} from "../../src/lib/box-shape.js";
 
 /**
  * A v2 box fixture: `<root>/package.json` (declaring callback-box),

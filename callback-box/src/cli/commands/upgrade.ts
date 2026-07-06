@@ -32,8 +32,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { runCollectedChild } from "../../lib/run-child.js";
-import { requireBoxRoot } from "../lib/paths.js";
-import { getBoxShape } from "../lib/box-shape.js";
+import { requireBoxRoot } from "../../lib/paths.js";
+import { getBoxShape } from "../../lib/box-shape.js";
 import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 

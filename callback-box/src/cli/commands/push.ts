@@ -8,7 +8,7 @@
  */
 
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { sendPush } from "../../core/send-push.js";
 
 const testCommand = new Command("test")

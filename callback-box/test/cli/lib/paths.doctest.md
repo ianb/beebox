@@ -3,7 +3,7 @@
 Utilities for working with card filenames and callback box directory structure.
 
 ```ts setup
-import { parseCardName, buildCardName, isCardFile, BOX_DIRS } from "../../../src/cli/lib/paths.js";
+import { parseCardName, buildCardName, isCardFile, BOX_DIRS } from "../../../src/lib/paths.js";
 ```
 
 ## Card filenames

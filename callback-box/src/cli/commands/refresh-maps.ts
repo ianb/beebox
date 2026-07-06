@@ -22,7 +22,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { precheck, type MapBrief } from "../../core/maps/precheck.js";
 import { finalize } from "../../core/maps/finalize.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";

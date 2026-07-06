@@ -12,7 +12,7 @@
 
 import { Command } from "commander";
 
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import {
   discoverSessions,
   QUIESCENCE_MS,

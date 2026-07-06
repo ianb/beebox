@@ -7,7 +7,7 @@
 
 import { Command } from "commander";
 import path from "node:path";
-import { requireBoxRoot } from "../lib/paths.js";
+import { requireBoxRoot } from "../../lib/paths.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import {
   loadContainsState,

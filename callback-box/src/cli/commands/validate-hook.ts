@@ -13,7 +13,7 @@ import {
   formatMarkdownResults,
   isLintableMarkdown,
 } from "./validate-markdown.js";
-import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../lib/paths.js";
+import { requireBoxRoot, findBoxRoot, isCardFile, isViewFile } from "../../lib/paths.js";
 import { lintViewFile } from "../../webapp/views/compiler.js";
 import { lintViewRefs } from "../../core/view-refs.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";

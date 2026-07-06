@@ -19,8 +19,8 @@ import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
-import { findBoxRoot } from "../lib/paths.js";
+import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { findBoxRoot } from "../../lib/paths.js";
 
 /**
  * The slug a box gets when nothing overrides it. For a legacy (shapeVersion

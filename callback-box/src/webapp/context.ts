@@ -8,7 +8,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { requireBoxRoot } from "../cli/lib/paths.js";
+import { requireBoxRoot } from "../lib/paths.js";
 import { getSystemState } from "../core/state.js";
 import { cardFields, parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
