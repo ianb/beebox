@@ -26,15 +26,6 @@ export interface GoogleTokens {
   tokenExpiry?: string;
 }
 
-/**
- * Legacy per-box config format. Still supported for backward compat
- * (includes clientId/clientSecret that are now read from env vars).
- */
-export interface GoogleSecretConfig extends GoogleTokens {
-  clientId?: string;
-  clientSecret?: string;
-}
-
 const DEFAULT_REDIRECT_URI = "http://localhost:8976/oauth/callback";
 
 /** All scopes we request during auth */

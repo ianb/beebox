@@ -5,8 +5,8 @@
     "src/schemas/index.ts",
     "src/connectors/index.ts",
     "src/cli/index.ts",
-    "src/hub/hub-server.ts",
-    "src/webapp/server-main.ts"
+    "src/webapp/server-main.ts",
+    "src/dev/gen-image.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}",
