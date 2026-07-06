@@ -148,6 +148,9 @@ export async function saveGoogleTokens(
  * Get Google OAuth client credentials from env vars.
  */
 export function getGoogleClientCreds(): { clientId: string; clientSecret: string } | null {
+  // TODO(env-migration): GOOGLE_OAUTH_* are validated + redacted at startup
+  // (lib/env.ts server/hub schemas); reads stay direct — creds are read lazily
+  // per-connector and may be unset (auth simply disabled).
   const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID;
   const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
   if (clientId && clientSecret) return { clientId, clientSecret };

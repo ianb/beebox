@@ -8,6 +8,7 @@ import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
+import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { withCardLock } from "../../../lib/card-lock.js";
@@ -19,16 +20,7 @@ export const adminRouter = router({
   telegramStatus: ownerProcedure.query(async ({ ctx }) => {
     const config = await loadTelegramConfig(ctx.boxRoot);
     if (!config) {
-      let publicUrl: string | undefined;
-      try {
-        const boxJson = JSON.parse(await fs.readFile(path.join(ctx.boxRoot, "config/box.json"), "utf-8"));
-        if (boxJson.publicUrl) publicUrl = boxJson.publicUrl;
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-          console.warn("Could not read publicUrl from box.json, falling back to env:", e);
-        }
-      }
-      publicUrl = publicUrl ?? process.env.PUBLIC_URL ?? undefined;
+      const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
       return { configured: false, publicUrl, boxSlug: ctx.boxSlug };
     }
 
@@ -78,16 +70,7 @@ export const adminRouter = router({
         JSON.stringify({ botToken: input.botToken, webhookSecret }, null, 2) + "\n",
       );
 
-      let publicUrl: string | undefined;
-      try {
-        const boxJson = JSON.parse(await fs.readFile(path.join(ctx.boxRoot, "config/box.json"), "utf-8"));
-        if (boxJson.publicUrl) publicUrl = boxJson.publicUrl;
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-          console.warn("Could not read publicUrl from box.json, falling back to env:", e);
-        }
-      }
-      publicUrl = publicUrl ?? process.env.PUBLIC_URL ?? undefined;
+      const publicUrl = await resolveBoxPublicUrl(ctx.boxRoot);
 
       let webhookUrl: string | null = null;
       if (publicUrl) {

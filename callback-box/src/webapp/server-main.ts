@@ -17,10 +17,16 @@
  */
 import path from "node:path";
 import { startServer, type BoxSpec } from "./server.js";
+import { loadEnv, serverEnvSchema } from "../lib/env.js";
+
+// Validate + type the environment before anything reads it (Track D.8): a
+// malformed PORT/HOST/secret fails here, loudly and all-at-once, with secret
+// values redacted — not as a confusing downstream error.
+const env = loadEnv(serverEnvSchema);
 
 const boxArgs = process.argv.slice(2);
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : undefined;
-const host = process.env.HOST ? process.env.HOST : undefined;
+const port = env.PORT;
+const host = env.HOST;
 
 function parseBoxArg(arg: string): BoxSpec {
   const eq = arg.indexOf("=");

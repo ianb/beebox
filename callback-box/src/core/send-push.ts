@@ -47,6 +47,9 @@ export function vapidPublicKey(): string | null {
 }
 
 function realPushFromEnv(): PushService {
+  // TODO(env-migration): CB_VAPID_* are validated + redacted at startup
+  // (lib/env.ts serverEnvSchema); the reads stay here alongside the
+  // "throw if unconfigured" logic that a schema shouldn't own.
   const publicKey = process.env.CB_VAPID_PUBLIC_KEY;
   const privateKey = process.env.CB_VAPID_PRIVATE_KEY;
   if (!publicKey || !privateKey) throw new VapidNotConfiguredError();

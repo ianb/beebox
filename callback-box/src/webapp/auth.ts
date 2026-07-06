@@ -20,6 +20,9 @@ function getSessionSecret(): string {
   if (cachedSecret) return cachedSecret;
 
   // Prefer explicit env var
+  // TODO(env-migration): CB_SESSION_SECRET is validated + redacted at startup
+  // (lib/env.ts serverEnvSchema); this read stays direct because it carries a
+  // file-fallback + caching path that doesn't belong in a schema.
   if (process.env.CB_SESSION_SECRET) {
     cachedSecret = process.env.CB_SESSION_SECRET;
     return cachedSecret;

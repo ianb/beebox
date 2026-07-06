@@ -12,6 +12,7 @@ import { ownerProcedure } from "../trpc.js";
 import { loadGoogleTokens, getGoogleClientCreds, createOAuth2Client, GOOGLE_SCOPES } from "../../../connectors/google-auth.js";
 import { loadBoxConfig } from "../../box-config.js";
 import { baseServerUrl } from "../../base-server-url.js";
+import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 
 export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
@@ -40,18 +41,8 @@ export const googleAdminProcedures = {
         });
       }
       // Prefer the browser origin; fall back to box.json publicUrl, then env.
-      let publicUrl = input.origin;
-      if (!publicUrl) {
-        try {
-          const boxJson = JSON.parse(await fs.readFile(path.join(ctx.boxRoot, "config/box.json"), "utf-8"));
-          if (boxJson.publicUrl) publicUrl = boxJson.publicUrl;
-        } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-            console.warn("Could not read publicUrl from box.json, falling back to env:", e);
-          }
-        }
-        publicUrl = publicUrl ?? process.env.PUBLIC_URL ?? "http://localhost:3210";
-      }
+      const publicUrl =
+        input.origin || (await resolveBoxPublicUrl(ctx.boxRoot, { fallback: "http://localhost:3210" })) || "http://localhost:3210";
       const redirectUri = `${baseServerUrl(publicUrl)}/auth/google-services/callback`;
       const oauth2Client = createOAuth2Client({ clientId: creds.clientId, clientSecret: creds.clientSecret, redirectUri });
       const stateValue = input.returnPath ? `${ctx.boxSlug}:${input.returnPath}` : ctx.boxSlug;

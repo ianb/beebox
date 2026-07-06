@@ -10,6 +10,7 @@
 import "./bootstrap.js";
 
 import { Command } from "commander";
+import { loadEnv, cliEnvSchema } from "../lib/env.js";
 import {
   initCommand,
   migrateCommand,
@@ -64,6 +65,12 @@ import {
   locationCommand,
   pushCommand,
 } from "./commands/index.js";
+
+// Validate the environment before any command runs (Track D.8). The CLI
+// schema is permissive (every field optional) — this only rejects a genuinely
+// malformed value (e.g. a non-numeric PORT), never absence, so scenario/test
+// invocations that set only harness vars pass through untouched.
+loadEnv(cliEnvSchema);
 
 const program = new Command();
 

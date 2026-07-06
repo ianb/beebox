@@ -7,23 +7,10 @@
  * config) now lives in the `admin` tRPC router as owner-gated procedures.
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, type GoogleTokens } from "../../connectors/google-auth.js";
 import { baseServerUrl } from "../base-server-url.js";
-
-async function loadPublicUrl(boxRoot: string): Promise<string | undefined> {
-  try {
-    const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
-    if (boxJson.publicUrl) return boxJson.publicUrl;
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn("Could not read box.json publicUrl, falling back to PUBLIC_URL env:", e);
-    }
-  }
-  return process.env.PUBLIC_URL ?? undefined;
-}
+import { resolveBoxPublicUrl } from "../../lib/public-url.js";
 
 /**
  * Extract the base server URL from a box's publicUrl by stripping the
@@ -60,7 +47,7 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
     }
 
     // Use the server base URL (strip box slug from publicUrl)
-    const publicUrl = await loadPublicUrl(box.boxRoot) || `${request.protocol}://${request.hostname}`;
+    const publicUrl = (await resolveBoxPublicUrl(box.boxRoot)) || `${request.protocol}://${request.hostname}`;
     const baseUrl = baseServerUrl(publicUrl);
     const redirectUri = `${baseUrl}/auth/google-services/callback`;
     console.log("[google-oauth] Exchanging code, redirectUri:", redirectUri);

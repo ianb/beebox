@@ -12,6 +12,7 @@ import * as crypto from "node:crypto";
 import { loadHubConfig, defaultHubConfigPath, HubConfigError } from "../../hub/hub-config.js";
 import { Supervisor, resolveBoxRoot } from "../../hub/supervisor.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
+import { loadEnv, hubEnvSchema } from "../../lib/env.js";
 import type { BoxSpec } from "../../webapp/server-types.js";
 
 function describeError(e: unknown): string {
@@ -27,6 +28,10 @@ export const hubCommand = new Command("hub")
   .description("Start the hub: supervises per-box processes and routes /<slug>/... to them")
   .option("-c, --config <path>", "Path to hub.json (default: ~/.config/cb/hub.json)")
   .action(async (options: { config?: string }) => {
+    // Validate the hub's environment before it reads any of it (Track D.8):
+    // a malformed session secret / networking var fails loudly here, redacted.
+    loadEnv(hubEnvSchema);
+
     const configPath = options.config ?? defaultHubConfigPath();
 
     let config;
