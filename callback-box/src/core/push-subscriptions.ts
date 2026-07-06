@@ -17,6 +17,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
+import { z } from "zod";
 import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
 
@@ -25,11 +26,41 @@ interface SubscriptionRecord {
   /** Box slugs this endpoint wants notifications for. */
   boxes: string[];
   createdAt: string;
-  ua?: string;
+  ua?: string | undefined;
 }
 
 /** Endpoint → record. */
 type SubscriptionStore = Record<string, SubscriptionRecord>;
+
+const subscriptionRecordSchema = z.object({
+  keys: z.object({ p256dh: z.string(), auth: z.string() }),
+  boxes: z.array(z.string()),
+  createdAt: z.string(),
+  ua: z.string().optional(),
+});
+
+const subscriptionStoreSchema = z.record(z.string(), subscriptionRecordSchema);
+
+/**
+ * Thrown when the on-disk store fails to parse or validate. Distinct from
+ * "no store yet" (ENOENT, treated as an empty store): a corrupt store must
+ * ABORT the caller's read-modify-write rather than let it silently overwrite
+ * the corruption with a freshly-empty store, destroying every subscription
+ * (Track D.3).
+ */
+export class PushStoreCorruptError extends Error {
+  readonly storePath: string;
+  constructor(filePath: string, opts: { cause: unknown }) {
+    const reason = opts.cause instanceof Error ? opts.cause.message : String(opts.cause);
+    super(
+      `Push subscription store at ${filePath} is corrupt: ${reason}. ` +
+        "Refusing to load — fix or remove the file by hand; a stale write is not applied over it.",
+      { cause: opts.cause }
+    );
+    this.name = "PushStoreCorruptError";
+    this.storePath = filePath;
+  }
+}
 
 /**
  * Server-state dir. Overridable via CALLBACK_PUSH_STORE_DIR so tests (and the
@@ -44,15 +75,30 @@ function storePath(): string {
 }
 
 async function loadStore(): Promise<SubscriptionStore> {
+  let raw: string;
   try {
-    const raw = await fs.readFile(storePath(), "utf-8");
-    return JSON.parse(raw) as SubscriptionStore;
+    raw = await fs.readFile(storePath(), "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn("Could not read push-subscriptions store, treating as empty:", e);
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+      return {};
     }
-    return {};
+    // Not "missing" — some other read failure (permissions, I/O error). Treat
+    // the same as corruption: loud and load-aborting, not a silent empty store.
+    throw new PushStoreCorruptError(storePath(), { cause: e });
   }
+
+  let json: unknown;
+  try {
+    json = JSON.parse(raw);
+  } catch (e) {
+    throw new PushStoreCorruptError(storePath(), { cause: e });
+  }
+
+  const result = subscriptionStoreSchema.safeParse(json);
+  if (!result.success) {
+    throw new PushStoreCorruptError(storePath(), { cause: result.error });
+  }
+  return result.data;
 }
 
 async function saveStore(store: SubscriptionStore): Promise<void> {
