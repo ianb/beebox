@@ -92,7 +92,51 @@ pnpm typecheck
 pnpm lint
 ```
 
-### 5. Reconcile planning docs with reality
+### 5. Diff-scoped review pass (Track O)
+
+Review **only the changed lines** in this worktree's diff (`git diff main...HEAD`)
+against the checklist below — patterns the architectural review shows are still
+being *written* in new code, which lint can't (yet) express. This is a review
+tier, not a lint tier: anything a rule *can* catch belongs in the preset, and an
+item **graduates off this list** once its lint rule or helper lands.
+
+Already graduated (do NOT re-check — lint owns them now): switch/if-chain
+exhaustiveness (`switch-exhaustiveness-check` is live), and floating/misused
+promises (`no-floating-promises` + `no-misused-promises` are live). A clean
+`pnpm lint` is the check for those.
+
+Active checklist — for each new occurrence in the diff, the finding is "fix it or
+justify it in a comment"; a genuine violation you can't fix confidently is a
+BLOCKED reason only if it's a real defect (a silent-failure or containment gap),
+otherwise note it in the report:
+
+1. **New `as unknown as` or `JSON.parse(...) as`** outside the blessed helpers
+   (`cardFields`, `parseCommandArgs`) — requires the helper or a justifying
+   `eslint-disable` comment. (Also watch `as never`, which evades the `.tsx`
+   lint ban.)
+2. **New silent catch in any form** — `.catch(() => {})`, `catch {}`,
+   `.catch((_e) => {})` with an empty body — must log or carry a reason comment.
+3. **New helper that duplicates `lib/`** — existence checks, hashing, publicUrl,
+   mimetype maps, spawn-and-collect, duration parsing. The check is a question:
+   "did you grep `lib/` and `shared/` first?"
+4. **New raw Fastify route where tRPC would do** (the existing CLAUDE.md debt
+   rule, now checked at merge instead of remembered).
+5. **New `process.env` read outside `src/lib/env.ts`** (secrets/networking are
+   modeled there; long-tail vars carry a `// TODO(env-migration)` marker).
+6. **New ref-to-path resolution not via `resolveContainedRef`** (`core/ref-exists.ts`),
+   and **new card read-modify-write without `withCardLock`** (`lib/card-lock.ts`).
+7. **New interface hand-written parallel to a zod schema** instead of `z.infer`.
+8. **New type with 3+ optional fields whose validity co-varies** — prompt: should
+   this be a discriminated union?
+9. **Changed docs: prose-embedded file references still resolve** — the gap
+   `doc-check` doesn't cover (it validates links, not backticked paths in prose).
+
+**Tuning rule:** an item that never fires, or always false-positives, gets
+dropped — a checklist item that's noise is worse than absent (the
+noisy-output-is-a-bug rule applies to review checklists too). If you drop one,
+say so in the report so the list stays honest.
+
+### 6. Reconcile planning docs with reality
 
 If the worktree introduced/modified a planning doc (a design doc / RFC / "plan" /
 "proposal" — future-tense, aspirational verbs) for work that has now happened,
@@ -122,7 +166,7 @@ Skip if no planning-style docs were touched. Unsure if a doc is a "plan" vs a
 reference? Read its opening paragraph (future tense + "will/proposes/we should"
 is the tell) — resolve this yourself, it doesn't need the human.
 
-### 6. Resolve any feedback item this work addressed
+### 7. Resolve any feedback item this work addressed
 
 Only if the caller named a `cb feedback` item this work resolves, AND the fix is
 verified (tests green). The tool:
@@ -139,7 +183,7 @@ thread can do it post-merge). This step never blocks the merge; it's cleanup.
 
 Skip entirely if the work wasn't tied to a feedback item.
 
-### 7. Merge the worktree branch into main
+### 8. Merge the worktree branch into main
 
 You're INSIDE the worktree, so operate on the main checkout with `-C`:
 
@@ -153,7 +197,7 @@ This should fast-forward (you merged main in at step 3). The monorepo
 `post-merge` hook triggers the deploy. If git reports conflicts here, something's
 off (step 3 should have caught them) — **return BLOCKED**.
 
-### 8. Report
+### 9. Report
 
 ```bash
 git -C ~/src/callback-box log --oneline -3
@@ -181,4 +225,4 @@ End your final message with a status line the caller can act on:
   paths / failing test output / ambiguous uncommitted files / missing info /
   unclear feedback item), what you completed before stopping, and what the human
   needs to decide. **Nothing has been merged to main** if you return BLOCKED
-  before step 7 — say so.
+  before step 8 — say so.

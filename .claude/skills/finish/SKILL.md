@@ -21,7 +21,9 @@ only dispatches and relays the result. **Only invoke when the human asks for it.
 
 2. **Dispatch the `finish` subagent** (subagent_type `finish`, via your
    subagent-launch tool). It runs the whole merge procedure headless on Sonnet
-   and lives in `.claude/agents/finish.md`. Because it can't ask questions
+   and lives in `.claude/agents/finish.md` — including a diff-scoped review pass
+   (Track O) over the changed lines for the patterns lint can't yet catch (its
+   findings come back in the report). Because it can't ask questions
    mid-run, give it everything it needs up front in the prompt:
    - the **mode** (close-out vs checkpoint);
    - any **`cb feedback` item** this work resolves — its file basename and the
