@@ -13,10 +13,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { parseFrontmatterObject, renderFrontmatterBlock } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
-import { getBoxTimeISO } from "../cli/lib/time.js";
+import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
 
 class IntakeJobReadError extends Error {
   constructor(jobPath: string) {
@@ -55,11 +54,11 @@ export async function createOrAppendIntakeJob(
   }
 
   // Create a new job card
-  const timestamp = getBoxTimeISO(opts.boxRoot)
-    .replace(/[.:]/g, "-")
-    .slice(0, 19);
   const safeSource = opts.source.replace(/[^\dA-Za-z-]/g, "-");
-  const jobFilename = `${timestamp}-${safeSource}.intake.job.card`;
+  const jobFilename = timestampedJobFilename(opts.boxRoot, {
+    stem: safeSource,
+    extension: "intake.job.card",
+  });
   const jobPath = path.join(jobsDir, jobFilename);
 
   const templateOpts: Parameters<typeof createIntakeJobTemplate>[0] = {
@@ -74,50 +73,35 @@ export async function createOrAppendIntakeJob(
 }
 
 /**
- * Find an existing pending intake job card with a matching source.
+ * Find an existing pending intake job card with a matching source. Returns the
+ * absolute path wrapped in an object, or null when none exists.
  */
 async function findExistingIntakeJob(
   jobsDir: string,
   source: string
 ): Promise<{ path: string } | null> {
-  let entries: string[];
-  try {
-    entries = await fs.readdir(jobsDir);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`findExistingIntakeJob: could not read ${jobsDir}, assuming no existing job:`, e);
-    }
-    return null;
-  }
-
-  for (const entry of entries) {
-    if (!entry.endsWith(".intake.job.card")) continue;
-    const filePath = path.join(jobsDir, entry);
-    const fields = await readIntakeJobFields(filePath);
-    if (fields === null) continue;
-    if (fields.status === "pending" && fields.source === source) {
-      return { path: filePath };
-    }
-  }
-  return null;
+  const found = await findPendingJobCard({
+    jobsDir,
+    suffix: ".intake.job.card",
+    match: (fields) => fields["status"] === "pending" && fields["source"] === source,
+  });
+  return found === null ? null : { path: found };
 }
 
 async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | null> {
+  let content: string;
   try {
-    const content = await fs.readFile(filePath, "utf-8");
-    const split = splitCardContent(content);
-    if (!split.hasFrontmatter) return null;
-    const parsed = parseYaml(split.frontmatterText) as unknown;
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as IntakeJobFields;
+    content = await fs.readFile(filePath, "utf-8");
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`readIntakeJobFields: could not read or parse ${filePath}, skipping:`, e);
+      console.warn(`readIntakeJobFields: could not read ${filePath}, skipping:`, e);
     }
     return null;
   }
+  // Parse boundary: the loose frontmatter read yields a plain mapping, which we
+  // vouch for as IntakeJobFields (validated on load elsewhere; this is a
+  // best-effort append path).
+  return parseFrontmatterObject(content) as IntakeJobFields | null;
 }
 
 /**

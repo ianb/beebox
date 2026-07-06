@@ -19,10 +19,10 @@ import {
   type ChatThreadFields,
   type ChatThreadMessage,
 } from "../schemas/chat-thread.js";
-import { createChatJobTemplate, type ChatJobFields } from "../schemas/chat-job.js";
-import { getBoxTimeISO } from "../cli/lib/time.js";
+import { createChatJobTemplate } from "../schemas/chat-job.js";
 import { sanitizeFilenameStem } from "../lib/filename.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
 
 class MissingFrontmatterError extends Error {
   constructor(absPath: string) {
@@ -183,41 +183,28 @@ export async function stampSentMessage(options: {
 }
 
 /**
- * Find an existing pending chat job for a given thread ref.
+ * Find an existing pending chat job for a given thread ref. Returns the
+ * box-relative path, or null when none exists.
  */
 export async function findExistingChatJob(
   boxRoot: string,
   threadRef: string
 ): Promise<string | null> {
   const jobsDir = path.join(boxRoot, "box/jobs");
-  let entries: string[];
-  try {
-    entries = await fs.readdir(jobsDir);
-  } catch (_e) {
-    // No jobs directory means no existing chat jobs — nothing to find.
-    return null;
-  }
-
-  for (const entry of entries) {
-    if (!entry.endsWith(".chat.job.card")) continue;
-    const filePath = path.join(jobsDir, entry);
-    try {
-      const content = await fs.readFile(filePath, "utf-8");
-      const split = splitCardContent(content);
-      if (!split.hasFrontmatter) continue;
-      const fields = parseYaml(split.frontmatterText) as ChatJobFields;
-      if (fields.status !== "pending") continue;
-      if (fields.thread?.ref === threadRef) {
-        return path.relative(boxRoot, filePath);
-      }
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-        console.warn(`Skipping unreadable chat job file ${filePath}:`, e);
-      }
-      continue;
-    }
-  }
-  return null;
+  const found = await findPendingJobCard({
+    jobsDir,
+    suffix: ".chat.job.card",
+    match: (fields) => {
+      if (fields["status"] !== "pending") return false;
+      const thread = fields["thread"];
+      const ref =
+        thread !== null && typeof thread === "object" && !Array.isArray(thread)
+          ? (thread as Record<string, unknown>)["ref"]
+          : undefined;
+      return ref === threadRef;
+    },
+  });
+  return found === null ? null : path.relative(boxRoot, found);
 }
 
 /**
@@ -237,13 +224,13 @@ export async function createChatJob(options: {
   const jobsDir = path.join(boxRoot, "box/jobs");
   await fs.mkdir(jobsDir, { recursive: true });
 
-  const timestamp = getBoxTimeISO(boxRoot)
-    .replace(/[.:]/g, "-")
-    .slice(0, 19);
   const slug = threadRef
     .replace(/.*\//, "")
     .replace(/\.chat-thread\.card$/, "");
-  const jobFilename = `${timestamp}-chat-${safeFilename(slug)}.chat.job.card`;
+  const jobFilename = timestampedJobFilename(boxRoot, {
+    stem: `chat-${safeFilename(slug)}`,
+    extension: "chat.job.card",
+  });
   const jobPath = path.join(jobsDir, jobFilename);
 
   const content = createChatJobTemplate({
