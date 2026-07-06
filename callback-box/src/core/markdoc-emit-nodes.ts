@@ -15,6 +15,7 @@ import { emitTag } from "./markdoc-emit-tags.js";
 export function emitNode(node: Node, out: string[]): void {
   if (emitBlockNode(node, out)) return;
   if (emitInlineNode(node, out)) return;
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- deliberately partial walker over Markdoc's external NodeType union (28 members); unhandled node types (tables, html, comments, …) degrade to emitting children. A best-effort renderer must never crash on a new node type. Flagged as a P1-e design question: enumerate vendor node types for compile-time drift detection, or keep graceful degradation?
   switch (node.type) {
     case "inline":
       emitChildren(node, out);
@@ -34,6 +35,7 @@ export function emitNode(node: Node, out: string[]): void {
 
 /** Block-level node types. Returns true if handled. */
 function emitBlockNode(node: Node, out: string[]): boolean {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- partial predicate over Markdoc's external NodeType union; non-block node types intentionally return false so the caller tries the inline/tag handlers. See the emitNode design-question note.
   switch (node.type) {
     case "document":
       emitChildren(node, out);
@@ -78,6 +80,7 @@ function emitBlockNode(node: Node, out: string[]): boolean {
 
 /** Inline/span node types. Returns true if handled. */
 function emitInlineNode(node: Node, out: string[]): boolean {
+  // eslint-disable-next-line @typescript-eslint/switch-exhaustiveness-check -- partial predicate over Markdoc's external NodeType union; non-inline node types intentionally return false so the caller falls through to the graceful default. See the emitNode design-question note.
   switch (node.type) {
     case "text": {
       const content = node.attributes["content"];

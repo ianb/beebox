@@ -51,9 +51,11 @@ export function parseDuration(str: string): number {
       return value * 24 * 60 * 60 * 1000;
     case "w":
       return value * 7 * 24 * 60 * 60 * 1000;
+    default:
+      // `unit` is a bare string (not a closed union), so the rule requires a
+      // default; the regex above only admits [dhmsw], so this is unreachable.
+      throw new UnknownDurationUnitError(unit);
   }
-
-  throw new UnknownDurationUnitError(unit);
 }
 
 /**

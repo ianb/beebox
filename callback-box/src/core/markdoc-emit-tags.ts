@@ -74,7 +74,7 @@ export function emitTag(ctx: TagCtx): void {
 function emitUniversalTag(ctx: TagCtx): boolean {
   const { node, out } = ctx;
   const attrs = node.attributes;
-  switch (node.tag) {
+  switch (node.tag ?? "") {
     case "quote": {
       // Markdown blockquote. If a `from` attribute is present, append
       // attribution.
@@ -114,7 +114,7 @@ function emitUniversalTag(ctx: TagCtx): boolean {
 function emitBriefingTag(ctx: TagCtx): boolean {
   const { node, out } = ctx;
   const attrs = node.attributes;
-  switch (node.tag) {
+  switch (node.tag ?? "") {
     case "purpose":
       out.push(`**Purpose:** ${childText(ctx)}\n\n`);
       return true;
@@ -134,7 +134,7 @@ function emitBriefingTag(ctx: TagCtx): boolean {
 function emitRecipeTag(ctx: TagCtx): boolean {
   const { node, out } = ctx;
   const attrs = node.attributes;
-  switch (node.tag) {
+  switch (node.tag ?? "") {
     case "task": {
       // GFM task checkbox. The Markdoc transform injects this for `[ ]`/`[x]`
       // prefixes inside list items; in markdown the original form is exactly

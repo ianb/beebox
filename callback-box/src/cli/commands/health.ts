@@ -11,6 +11,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxTime } from "../lib/time.js";
+import { assertNever } from "../../lib/invariant.js";
 import {
   loadScheduleHealth,
   formatDurationShort,
@@ -38,8 +39,13 @@ function describeStatus(task: TaskHealth): string {
       return `failing ×${task.consecutiveFailures}`;
     case "overdue":
       return `overdue ${formatDurationShort(task.pendingMs ?? 0)}`;
-    default:
+    case "ok":
+    case "blocked":
+    case "invalid":
+    case "disabled":
       return task.status;
+    default:
+      return assertNever(task.status);
   }
 }
 

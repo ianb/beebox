@@ -99,7 +99,8 @@ export function parseDuration(dur: string): number | null {
   const match = dur.match(/^(\d+)\s*([dhms])$/);
   if (!match) return null;
   const value = parseInt(match[1]!, 10);
-  const unit = match[2];
+  // Group 2 is guaranteed by the regex match above (same as group 1).
+  const unit = match[2]!;
   switch (unit) {
     case "s":
       return value * 1000;

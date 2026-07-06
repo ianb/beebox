@@ -150,7 +150,7 @@ export async function transcribeAudioDeepgram(
 }
 
 function getContentType(ext: string | undefined): string {
-  switch (ext) {
+  switch (ext ?? "") {
     case "webm":
       return "audio/webm";
     case "mp3":
