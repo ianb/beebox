@@ -7,47 +7,47 @@
 
 import * as fs from "node:fs/promises";
 import { GoogleGenAI } from "@google/genai";
-import { getMimeType, GeminiEmptyResponseError } from "./describe-images-helpers.js";
+import { z } from "zod";
+import { getMimeType, GeminiEmptyResponseError, parseGeminiJsonArray } from "./describe-images-helpers.js";
 
 /**
- * Per-page output from the scan-mode analyzer. The model classifies each
- * page and (when applicable) names a partner page within the same batch.
- *
- * `index` is the GLOBAL page index in the PDF after we translate from the
- * model's batch-relative indices.
+ * Per-page output from the scan-mode analyzer, and the single source of
+ * truth for its shape (Track D.5: this shape used to be described three
+ * times — two hand-written TS interfaces that were literal duplicates of
+ * each other, a hand-written Gemini `responseSchema` object, and a bare
+ * `JSON.parse(...) as RawScanAnalysis[]` cast). The hand-written
+ * `SCAN_RESPONSE_SCHEMA` below stays hand-written (Gemini's schema dialect
+ * isn't something zod emits cheaply) but is colocated here so the pairing
+ * with this schema is visible.
  */
-export interface ScanPageAnalysis {
-  index: number;
-  kind: "photo" | "back" | "blank" | "unsure";
-  /** Global page index of the partner, or null. */
-  paired_with_index: number | null;
-  description: string;
-  title: string;
-  rotation: number;
-  subject_bbox: number[] | null;
-  has_text: boolean;
-  text_blocks: Array<{ source: string; text: string }>;
+export const rawScanAnalysisSchema = z.object({
+  index: z.number(),
+  kind: z.enum(["photo", "back", "blank", "unsure"]),
+  /** Index of the partner page within the same batch, or null. */
+  paired_with_index: z.number().nullable(),
+  description: z.string(),
+  title: z.string(),
+  rotation: z.number(),
+  subject_bbox: z.array(z.number()).nullable(),
+  has_text: z.boolean(),
+  text_blocks: z.array(z.object({ source: z.string(), text: z.string() })),
   /** Date hint extracted from a back, in document form (e.g. "May 1985"). */
-  date_hint: string | null;
+  date_hint: z.string().nullable(),
   /** True when the model has low confidence in classification or transcription. */
-  flag_for_review: boolean;
-  flag_reason: string | null;
-}
+  flag_for_review: z.boolean(),
+  flag_reason: z.string().nullable(),
+});
 
-export interface RawScanAnalysis {
-  index: number;
-  kind: "photo" | "back" | "blank" | "unsure";
-  paired_with_index: number | null;
-  description: string;
-  title: string;
-  rotation: number;
-  subject_bbox: number[] | null;
-  has_text: boolean;
-  text_blocks: Array<{ source: string; text: string }>;
-  date_hint: string | null;
-  flag_for_review: boolean;
-  flag_reason: string | null;
-}
+/** Batch-relative shape straight off the model (`index`/`paired_with_index` are 0..N-1 within the batch). */
+export type RawScanAnalysis = z.infer<typeof rawScanAnalysisSchema>;
+
+/**
+ * Same fields as {@link RawScanAnalysis} — kept as a distinct alias (not a
+ * duplicated schema) because only the *meaning* of `index`/`paired_with_index`
+ * changes across `translateIndices` (batch-relative → global PDF page
+ * index), not the shape.
+ */
+export type ScanPageAnalysis = RawScanAnalysis;
 
 export interface BatchUsage {
   prompt: number;
@@ -90,6 +90,10 @@ The pages you see are numbered 0..N-1 in the order they appear in this batch. Yo
 
 Important: paired_with_index is the index WITHIN THIS BATCH (0..N-1), not a global PDF page number. If the partner is not present in this batch, set it to null even if you suspect the partner exists elsewhere.`;
 
+// Hand-written pairing with `rawScanAnalysisSchema` above: this drives
+// Gemini's structured-output constraint; `rawScanAnalysisSchema` validates
+// what actually comes back and is the type's source of truth. Keep the two
+// in sync by hand when either changes.
 const SCAN_RESPONSE_SCHEMA = {
   type: "ARRAY",
   items: {
@@ -214,7 +218,7 @@ export async function analyzeScanBatchWithGemini(
     });
   }
 
-  const analyses: RawScanAnalysis[] = JSON.parse(text);
+  const analyses = parseGeminiJsonArray(text, { itemSchema: rawScanAnalysisSchema });
   const usage: BatchUsage | null = usageMeta
     ? {
         prompt: usageMeta.promptTokenCount || 0,

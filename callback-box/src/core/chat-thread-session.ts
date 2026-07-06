@@ -10,6 +10,11 @@
 import { EventEmitter } from "node:events";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
 import type { ChatMessage, ChatMessageContent } from "./chat-session.js";
+import {
+  unknownChatMessage,
+  type ChatMessageAssistant,
+  type ChatMessageResult,
+} from "./chat-session-messages.js";
 import { buildTimezoneContext } from "../webapp/box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import {
@@ -113,7 +118,7 @@ function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       return { type: "system", subtype: "init", session_id: msg.session_id };
     }
     case "assistant": {
-      const result: ChatMessage = {
+      const result: ChatMessageAssistant = {
         type: "assistant",
         session_id: msg.session_id,
         message: {
@@ -128,7 +133,7 @@ function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       return result;
     }
     case "result": {
-      const r: ChatMessage = {
+      const r: ChatMessageResult = {
         type: "result",
         subtype: msg.subtype,
         session_id: msg.session_id,
@@ -154,9 +159,9 @@ function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       // SDK-internal partials/status events; never surfaced to consumers.
       return null;
     default:
-      // Exhaustive over the SDK's known message types; this default is a
-      // graceful catch for a future SDK version's unknown type at runtime.
-      return null;
+      // A future SDK version's unrecognized type: surface the logged, counted
+      // wire-tolerance sentinel rather than dropping it silently.
+      return unknownChatMessage(msg);
   }
 }
 
@@ -243,8 +248,8 @@ export class ChatThreadSession extends EventEmitter {
   private handleMessage(msg: ChatMessage): void {
     log("msg", `type=${msg.type}${msg.type === "assistant" ? ` blocks=${msg.message?.content?.length ?? 0}` : ""}`);
 
-    // Capture session ID from first message
-    if (msg.session_id && !this.sessionId) {
+    // Capture session ID from first message (the `unknown` sentinel has none).
+    if (msg.type !== "unknown" && msg.session_id && !this.sessionId) {
       this.sessionId = msg.session_id;
       log("session", `Got session ID: ${this.sessionId}`);
       this.emit("session", this.sessionId);

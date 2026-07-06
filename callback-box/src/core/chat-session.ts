@@ -233,8 +233,9 @@ export class ChatSession extends EventEmitter {
   }
 
   private handleMessage(msg: ChatMessage): void {
-    // Capture session ID from first message
-    if (msg.session_id && !this.sessionId) {
+    // Capture session ID from first message (the `unknown` sentinel carries no
+    // session_id — only real SDK-derived variants do).
+    if (msg.type !== "unknown" && msg.session_id && !this.sessionId) {
       this.sessionId = msg.session_id;
       log("session", `Got session ID: ${this.sessionId}`);
       saveSessionId(this.boxRoot, { sessionFile: this.sessionFile, sessionId: this.sessionId });

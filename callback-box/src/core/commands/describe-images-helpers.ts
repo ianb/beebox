@@ -7,6 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { GoogleGenAI } from "@google/genai";
+import { z } from "zod";
 import { parseCardName } from "../../cli/lib/paths.js";
 
 const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
@@ -172,28 +173,92 @@ export class GeminiEmptyResponseError extends Error {
 }
 
 /**
- * Structured output schema for Gemini's response.
+ * Structured output schema for Gemini's per-image response, and the single
+ * source of truth for its shape (Track D.5: this used to be described three
+ * times — a hand-written TS interface, the hand-written `responseSchema`
+ * object below that drives Gemini's structured output, and a bare
+ * `JSON.parse(...) as ImageAnalysis[]` cast on the result). `ImageAnalysis`
+ * is now derived from this schema; the `responseSchema` JSON stays
+ * hand-written (Gemini's schema dialect — `"STRING"`/`"INTEGER"` string
+ * literals, no `additionalProperties`, `nullable` instead of optional — isn't
+ * something zod emits cheaply) but is colocated with this schema in
+ * `analyzeImagesWithGemini` below so the pairing is visible and reviewable
+ * as one unit.
  */
-export interface ImageAnalysis {
-  index: number;
-  description: string;
-  contains: string;
-  title: string;
-  has_text: boolean;
-  text_blocks: Array<{
-    source: string;
-    text: string;
-  }>;
-  invalid: boolean;
-  subject_bbox: number[] | null;
-  rotation: number;
-  is_document: boolean;
-  document_kind: string | null;
-  document_from: string | null;
-  document_dates: Array<{
-    label: string;
-    value: string;
-  }>;
+export const imageAnalysisSchema = z.object({
+  index: z.number(),
+  description: z.string(),
+  contains: z.string(),
+  title: z.string(),
+  has_text: z.boolean(),
+  text_blocks: z.array(z.object({ source: z.string(), text: z.string() })),
+  invalid: z.boolean(),
+  subject_bbox: z.array(z.number()).nullable(),
+  rotation: z.number(),
+  is_document: z.boolean(),
+  document_kind: z.string().nullable(),
+  document_from: z.string().nullable(),
+  document_dates: z.array(z.object({ label: z.string(), value: z.string() })),
+});
+
+export type ImageAnalysis = z.infer<typeof imageAnalysisSchema>;
+
+/**
+ * Thrown when a Gemini structured-output response isn't valid JSON, or isn't
+ * the array-of-objects shape the schema requires at the top level. Distinct
+ * from {@link GeminiEmptyResponseError} (an API-level failure — Gemini
+ * declined to answer) — this is a boundary-validation failure on content
+ * Gemini *did* return, so callers can tell "the API failed" apart from "the
+ * API answered but the shape was unusable."
+ */
+export class GeminiResponseShapeError extends Error {
+  constructor(reason: string) {
+    super(["Gemini response was not the expected shape", reason].join(": "));
+    this.name = "GeminiResponseShapeError";
+  }
+}
+
+/**
+ * Parse a Gemini structured-output response as a JSON array and validate
+ * each element against `itemSchema`. A malformed top-level shape (not JSON,
+ * or not an array) throws {@link GeminiResponseShapeError} — the whole
+ * response is unusable. Elements that fail per-item validation are dropped
+ * and logged individually (mirrors the existing out-of-range-index drop
+ * pattern in `scan-import-helpers.ts`'s `translateIndices`) rather than
+ * failing the whole batch over one bad element.
+ */
+export function parseGeminiJsonArray<T>(
+  text: string,
+  { itemSchema, log }: { itemSchema: z.ZodType<T>; log?: ((line: string) => void) | undefined }
+): T[] {
+  let warn: (line: string) => void;
+  if (log) {
+    warn = log;
+  } else {
+    warn = (line: string) => console.warn(line);
+  }
+  let raw: unknown;
+  try {
+    raw = JSON.parse(text);
+  } catch (e) {
+    const parseErrorMessage = e instanceof Error ? e.message : String(e);
+    const reason = ["invalid JSON", parseErrorMessage].join(": ");
+    throw new GeminiResponseShapeError(reason);
+  }
+  if (!Array.isArray(raw)) {
+    const reason = ["expected a JSON array, got", typeof raw].join(" ");
+    throw new GeminiResponseShapeError(reason);
+  }
+  const items: T[] = [];
+  for (const [i, entry] of raw.entries()) {
+    const result = itemSchema.safeParse(entry);
+    if (!result.success) {
+      warn(`Gemini response entry ${i} failed validation, dropping: ${result.error.issues.map((issue) => issue.message).join("; ")}`);
+      continue;
+    }
+    items.push(result.data);
+  }
+  return items;
 }
 
 /**
@@ -257,6 +322,12 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
       // without giving the model room to internally reproduce document text.
       thinkingConfig: { thinkingBudget: thinkingBudget ?? 2048 },
       responseMimeType: "application/json",
+      // Hand-written pairing with `imageAnalysisSchema` above: this drives
+      // Gemini's structured-output constraint (its own schema dialect —
+      // "STRING"/"INTEGER" string literals, `nullable` instead of optional —
+      // isn't something zod emits cheaply), while `imageAnalysisSchema`
+      // validates what actually comes back and is the type's source of
+      // truth. Keep the two in sync by hand when either changes.
       responseSchema: {
         type: "ARRAY",
         items: {
@@ -312,7 +383,7 @@ For each image (indexed 0 to ${imagePaths.length - 1}), provide:
     });
   }
 
-  const analyses: ImageAnalysis[] = JSON.parse(text);
+  const analyses = parseGeminiJsonArray(text, { itemSchema: imageAnalysisSchema });
   const usage = usageMeta ? {
     prompt: usageMeta.promptTokenCount || 0,
     output: usageMeta.candidatesTokenCount || 0,

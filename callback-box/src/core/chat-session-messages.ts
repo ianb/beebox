@@ -13,6 +13,7 @@ import {
   tailForMinUserMessages,
   type SessionEntry,
 } from "../cli/lib/session.js";
+import { assertNever } from "../lib/invariant.js";
 import type { ChatContentBlock } from "../services/claude-chat.js";
 import type { ActivityKind, CardStateDetails } from "./chat-card-activity.js";
 import type {
@@ -23,89 +24,46 @@ import type {
   SDKTaskUpdatedMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 
-/**
- * Content block in a chat message, for the wire shape consumed by the
- * frontend over SSE.
- */
-export interface ChatMessageContent {
-  type: string;
-  text?: string;
-  id?: string;
-  name?: string;
-  input?: Record<string, unknown>;
-  /** For image blocks */
-  source?: {
-    type: "base64" | "url";
-    media_type?: string;
-    data?: string;
-    url?: string;
-  };
-}
+import type {
+  ChatMessage,
+  ChatMessageAssistant,
+  ChatMessageResult,
+  ChatMessageStreamEvent,
+  ChatMessageUnknown,
+  ChatMessageUser,
+  ChatMessageContent,
+  TaskEvent,
+} from "./chat-message-types.js";
+
+// The wire types live in a leaf module; re-export so existing importers of this
+// file (and, transitively, chat-session.ts) are unaffected.
+export type {
+  ChatMessage,
+  ChatMessageContent,
+  ChatMessageSystem,
+  ChatMessageAssistant,
+  ChatMessageUser,
+  ChatMessageStreamEvent,
+  ChatMessageResult,
+  ChatMessageTask,
+  ChatMessageUnknown,
+  TaskEvent,
+} from "./chat-message-types.js";
+
+/** Count of unknown SDK messages surfaced as sentinels this process. */
+let unknownMessageCount = 0;
 
 /**
- * A background-task lifecycle event, normalized across the SDK's four
- * `task_*` system messages (`task_started`, `task_progress`, `task_updated`,
- * `task_notification`). The SDK reports a richer lifecycle than the settled
- * `<task-notification>` transcript marker alone; this carries the in-flight
- * states so the UI can show a task starting and progressing, not just its
- * terminal result.
+ * Produce the wire-tolerance sentinel for an SDK message whose `type` we don't
+ * recognize. Logs and counts every occurrence — a parser/SDK-version drift can
+ * degrade the stream but can never do so silently.
  */
-export interface TaskEvent {
-  /** Lifecycle phase this event represents. */
-  phase: "started" | "progress" | "updated" | "settled";
-  taskId: string;
-  /** Tool_use block that launched the task, when known. */
-  toolUseId?: string;
-  /** Human-readable label for the task (started/progress/updated). */
-  description?: string;
-  /** Short progress or settle summary. */
-  summary?: string;
-  /**
-   * Lifecycle status. Terminal values are `completed | failed | stopped |
-   * killed`; in-flight values are `pending | running`. Absent on bare
-   * progress ticks.
-   */
-  status?: "pending" | "running" | "completed" | "failed" | "stopped" | "killed";
-  /** Captured output file path, for settled tasks. */
-  outputFile?: string;
-  /** Elapsed wall time in ms (from the SDK `usage.duration_ms`). */
-  elapsedMs?: number;
-  /** Most recent tool the task ran (progress ticks only). */
-  lastToolName?: string;
-}
-
-/**
- * A message emitted by ChatSession to consumers (chat routes, activity
- * pool). Stable wire shape for the frontend.
- */
-export interface ChatMessage {
-  type:
-    | "system"
-    | "assistant"
-    | "user"
-    | "stream_event"
-    | "result"
-    | "task"
-    | "rate_limit_event";
-  subtype?: string;
-  session_id?: string;
-  uuid?: string;
-  message?: {
-    role: string;
-    content: ChatMessageContent[];
-    stop_reason?: string | null;
-  };
-  result?: string;
-  is_error?: boolean;
-  total_cost_usd?: number;
-  duration_ms?: number;
-  num_turns?: number;
-  /** For `stream_event` messages — the raw `BetaRawMessageStreamEvent` payload. */
-  event?: unknown;
-  /** For `stream_event` — link to the parent assistant turn (or null). */
-  parent_tool_use_id?: string | null;
-  /** For `task` messages — the normalized background-task lifecycle event. */
-  task?: TaskEvent;
+export function unknownChatMessage(msg: SDKMessage): ChatMessageUnknown {
+  unknownMessageCount++;
+  console.warn(
+    `[chat-session] Unrecognized SDK message type "${msg.type}" surfaced as an \`unknown\` sentinel (count=${unknownMessageCount}) — update adaptSdkMessage if this type should be handled.`,
+  );
+  return { type: "unknown", raw: msg };
 }
 
 /**
@@ -217,7 +175,8 @@ function adaptTaskMessage(
       return { ...base, task };
     }
     default:
-      return null;
+      // Exhaustive over the four task subtypes — a new one is a compile error.
+      return assertNever(msg);
   }
 }
 
@@ -250,7 +209,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       return null;
     }
     case "assistant": {
-      const result: ChatMessage = {
+      const result: ChatMessageAssistant = {
         type: "assistant",
         session_id: msg.session_id,
         message: {
@@ -268,7 +227,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       // SDK's SDKUserMessage carries content the assistant turn just consumed
       // (i.e., the user message we pushed in). Forward so the UI can echo it.
       const content = (msg.message as { content?: ChatMessageContent[] }).content;
-      const out: ChatMessage = {
+      const out: ChatMessageUser = {
         type: "user",
         message: {
           role: "user",
@@ -279,7 +238,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       return out;
     }
     case "stream_event": {
-      const out: ChatMessage = {
+      const out: ChatMessageStreamEvent = {
         type: "stream_event",
         session_id: msg.session_id,
         event: msg.event,
@@ -289,7 +248,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       return out;
     }
     case "result": {
-      const r: ChatMessage = {
+      const r: ChatMessageResult = {
         type: "result",
         subtype: msg.subtype,
         session_id: msg.session_id,
@@ -306,13 +265,13 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
     case "tool_use_summary":
     case "rate_limit_event":
     case "prompt_suggestion":
-      // SDK-internal partials/status events; not surfaced as ChatMessages.
+      // SDK-internal partials/status events; deliberately not surfaced (distinct
+      // from the `unknown` sentinel below, which catches types we don't know).
       return null;
     default:
-      // Exhaustive over the SDK's known message types (a new known type is a
-      // compile error above); this default only catches a future SDK version's
-      // unknown type at runtime, kept graceful rather than crashing the stream.
-      return null;
+      // A future SDK version's unrecognized type: surface it as the logged,
+      // counted wire-tolerance sentinel rather than dropping it silently.
+      return unknownChatMessage(msg);
   }
 }
 
@@ -327,7 +286,7 @@ function pushImageBlock(blocks: ChatMessageContent[], img: ChatImage): void {
       media_type: img.mimeType,
       data: img.dataBase64,
     },
-  } as ChatMessageContent);
+  });
 }
 
 /**
@@ -393,7 +352,7 @@ export function buildContentBlocks(
  * Used to build the full turn text for schedule / `<chat-app>` delta parsing.
  */
 export function accumulateAssistantText(prior: string, msg: ChatMessage): string {
-  if (msg.type !== "assistant" || !msg.message) return prior;
+  if (msg.type !== "assistant") return prior;
   let acc = prior;
   for (const block of msg.message.content) {
     if (block.type === "text" && block.text) {
@@ -411,12 +370,12 @@ export function accumulateAssistantText(prior: string, msg: ChatMessage): string
  * asserting one cause. Makes the failure recoverable from logs.
  */
 export function warnErroredTurn(
-  { sessionId, msg }: { sessionId: string | null; msg: ChatMessage },
+  { sessionId, msg }: { sessionId: string | null; msg: ChatMessageResult },
 ): void {
   const sid = sessionId === null ? "<unassigned>" : sessionId;
-  const subtype = msg.subtype === undefined ? "unknown" : msg.subtype;
-  const turns = msg.num_turns === undefined ? "?" : String(msg.num_turns);
-  const dur = msg.duration_ms === undefined ? "?" : String(msg.duration_ms);
+  const subtype = msg.subtype;
+  const turns = String(msg.num_turns);
+  const dur = String(msg.duration_ms);
   const detail = typeof msg.result === "string" && msg.result.trim()
     ? ` result=${JSON.stringify(msg.result.trim().slice(0, 300))}`
     : "";
