@@ -16,6 +16,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
+import { fileExists } from "../../lib/file-exists.js";
+import { invariant } from "../../lib/invariant.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
@@ -78,13 +80,48 @@ export async function restoreSearchIndex(boxRoot: string): Promise<SearchIndex |
   }
 }
 
-/** Persist the index atomically (write temp, rename). */
-export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Promise<void> {
+/**
+ * Proof that the on-disk search index at `boxRoot` is current — i.e. it already
+ * reflects the doc ids the manifest is about to record. `saveManifest` requires
+ * one, so the manifest can never be written ahead of the index (the crash-safety
+ * ordering documented at the top of this file becomes a compile-time guarantee,
+ * not a convention). Only {@link persistSearchIndex} (a fresh write) and
+ * {@link indexUnchanged} (a no-doc-change refresh) mint one — the brand key is
+ * module-private, so no other code can forge a receipt.
+ */
+const indexPersistedBrand = Symbol("IndexPersisted");
+export interface IndexPersisted {
+  readonly [indexPersistedBrand]: true;
+  readonly boxRoot: string;
+}
+
+function indexPersistedFor(boxRoot: string): IndexPersisted {
+  return { [indexPersistedBrand]: true, boxRoot };
+}
+
+/** Persist the index atomically (write temp, rename); returns the ordering receipt. */
+export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Promise<IndexPersisted> {
   const indexPath = searchIndexPath(boxRoot);
   await fs.mkdir(path.dirname(indexPath), { recursive: true });
   const tmp = `${indexPath}.tmp`;
   await persistToFile(db, "json", tmp);
   await fs.rename(tmp, indexPath);
+  return indexPersistedFor(boxRoot);
+}
+
+/**
+ * Mint an ordering receipt for a refresh that changed no documents (only the
+ * manifest's stat/mtime records), where the index on disk is already current.
+ * Asserts the index file actually exists, so a manifest-only save can never
+ * silently run against a missing index — a loud failure if the invariant the
+ * caller believes ("we restored a real index and touched no docs") is false.
+ */
+export async function indexUnchanged(boxRoot: string): Promise<IndexPersisted> {
+  invariant(
+    await fileExists(searchIndexPath(boxRoot)),
+    `search: manifest-only save but no persisted index at ${boxRoot}`,
+  );
+  return indexPersistedFor(boxRoot);
 }
 
 /** Write a JSON file atomically (write temp, rename). */

@@ -112,6 +112,12 @@ export async function refreshOneCard(
   }
 
   if (entry !== undefined) await removeDocs(db, entry.docIds);
+  // Also clear any docs already present under these ids before inserting. This
+  // is what makes crash recovery idempotent: a crash that persisted the index
+  // before the manifest (the documented ordering) can leave the restored index
+  // holding docs the older manifest doesn't list, so a plain insert would throw
+  // "already exists". The extra removes are no-ops in the normal path.
+  await removeDocs(db, docs.map((d) => d.id));
   await insertMultiple(db, docs);
   const newEntry: ManifestFileEntry = {
     mtimeMs: stat.mtimeMs,
@@ -150,6 +156,9 @@ export async function refreshOneMarkdownFile(
 
   const docs = extractMarkdownFileDocs({ path: relPath, content, contentHash });
   if (entry !== undefined) await removeDocs(db, entry.docIds);
+  // Idempotent against a restored index that's ahead of the manifest — see the
+  // matching note in refreshOneCard.
+  await removeDocs(db, docs.map((d) => d.id));
   await insertMultiple(db, docs);
   manifest.files[relPath] = {
     mtimeMs: stat.mtimeMs,

@@ -23,6 +23,7 @@ import {
   createSearchIndex,
   restoreSearchIndex,
   persistSearchIndex,
+  indexUnchanged,
   searchLockPath,
   type SearchIndex,
 } from "./search-store.js";
@@ -140,17 +141,22 @@ async function refreshUnderLock(
 
   if (dirtyIndex) {
     // Index first, manifest last: a crash between the two leaves an older
-    // manifest, and the affected files simply re-extract next refresh.
-    // A persist failure is downgraded to a warning — the in-memory index
-    // still answers this query; the next refresh rebuilds and retries.
+    // manifest, and the affected files simply re-extract next refresh. The
+    // ordering is enforced by the type system — saveManifest requires the
+    // receipt persistSearchIndex returns, so the manifest can't be written
+    // ahead of the index. A persist failure is downgraded to a warning — the
+    // in-memory index still answers this query; the next refresh retries.
     try {
-      await persistSearchIndex(db, boxRoot);
-      await saveManifest(boxRoot, manifest);
+      const indexProof = await persistSearchIndex(db, boxRoot);
+      await saveManifest(boxRoot, { manifest, indexProof });
     } catch (e) {
       warnings.push(`could not persist search index (${(e as Error).message}); results served from memory`);
     }
   } else if (dirtyManifest) {
-    await saveManifest(boxRoot, manifest);
+    // No document changed — only stat/mtime records moved. The restored index
+    // is already current, so a manifest-only write is safe (indexUnchanged
+    // asserts the index file is actually present).
+    await saveManifest(boxRoot, { manifest, indexProof: await indexUnchanged(boxRoot) });
   }
   if (JSON.stringify(containsState.cards) !== containsBefore) {
     await saveContainsState(boxRoot, containsState);

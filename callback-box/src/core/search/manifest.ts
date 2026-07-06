@@ -5,7 +5,8 @@
  */
 
 import { promises as fs } from "node:fs";
-import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic } from "./search-store.js";
+import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic, type IndexPersisted } from "./search-store.js";
+import { invariant } from "../../lib/invariant.js";
 
 /** Stat/hash record for a declared input file (e.g. a gdoc snapshot). */
 export interface InputFileEntry {
@@ -60,6 +61,20 @@ export async function loadManifest(boxRoot: string): Promise<SearchManifest> {
   }
 }
 
-export async function saveManifest(boxRoot: string, manifest: SearchManifest): Promise<void> {
+/**
+ * Persist the manifest. Requires an {@link IndexPersisted} receipt proving the
+ * on-disk index is already current for `boxRoot` — this is what enforces the
+ * index-before-manifest crash-safety ordering: there is no way to write the
+ * manifest without first holding proof the index write completed. The receipt's
+ * box is checked against `boxRoot` so a receipt from another box can't stand in.
+ */
+export async function saveManifest(
+  boxRoot: string,
+  { manifest, indexProof }: { manifest: SearchManifest; indexProof: IndexPersisted },
+): Promise<void> {
+  invariant(
+    indexProof.boxRoot === boxRoot,
+    `search: manifest save for ${boxRoot} with an index receipt for ${indexProof.boxRoot}`,
+  );
   await writeJsonAtomic(searchManifestPath(boxRoot), manifest);
 }
