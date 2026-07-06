@@ -68,6 +68,34 @@ JSON.stringify(collectInlineRefs(schema, fields))
 => ["a.card","b.card"]
 ```
 
+## Refs inside a union are collected (and not double-counted)
+
+A ref field typed as `cardRef() | z.object({ href })` still inlines the ref when
+the value is the ref arm; the non-ref arm no-ops rather than duplicating it.
+
+```ts
+const schema = cardSchema("union-job", {
+  fields: { target: z.union([cardRef(), z.object({ href: z.string() })]) },
+}).frontmatterSchema;
+
+JSON.stringify(collectInlineRefs(schema, { type: "union-job", target: { ref: "a.card" } }))
+=> ["a.card"]
+
+JSON.stringify(collectInlineRefs(schema, { type: "union-job", target: { href: "https://x" } }))
+=> []
+```
+
+## An opaque ref inside a union stays skipped (fail-closed)
+
+```ts
+const schema = cardSchema("uopaque-job", {
+  fields: { target: z.union([opaqueContentRef(), z.object({ href: z.string() })]) },
+}).frontmatterSchema;
+
+JSON.stringify(collectInlineRefs(schema, { type: "uopaque-job", target: { ref: "raw.txt" } }))
+=> []
+```
+
 ## buildJobDescription does not inline an opaque ref, but does inline a cardRef
 
 The end-to-end prompt boundary. A job schema with both an inline item and an

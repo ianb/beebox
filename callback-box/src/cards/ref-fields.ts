@@ -109,19 +109,29 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 export function collectInlineRefs(schema: ZodType, fields: Record<string, unknown>): string[] {
   const refs: string[] = [];
-  // Walk schema + value in lockstep. A `{ ref: string }` value is inlined
-  // unless its declaring schema is an opaqueContentRef; descend objects/arrays.
+  // Walk schema + value in lockstep. Collection is SCHEMA-driven: a value is a
+  // ref carrier only where its *schema* declares a `ref` key — so the walk skips
+  // opaqueContentRef fields and, in a union, never double-counts a value against
+  // a sibling option that doesn't declare `ref`. Descends objects, arrays, and
+  // unions (both z.union and z.discriminatedUnion — same internal `union` def).
   const walk = (node: ZodType, value: unknown): void => {
     const core = unwrap(node);
-    const def = core._zod.def as { type: string; shape?: Record<string, ZodType>; element?: ZodType };
+    const def = core._zod.def as {
+      type: string;
+      shape?: Record<string, ZodType>;
+      element?: ZodType;
+      options?: readonly ZodType[];
+    };
     if (def.type === "object") {
       if (!isRecord(value)) return;
-      if (typeof value["ref"] === "string" && refKindOf(core) !== "opaque") {
+      const declaresRef = def.shape?.["ref"] !== undefined;
+      // A declared `ref` field is inlined unless the schema marked it opaque.
+      if (declaresRef && refKindOf(core) !== "opaque" && typeof value["ref"] === "string") {
         refs.push(value["ref"]);
       }
       if (def.shape !== undefined) {
         for (const [key, childSchema] of Object.entries(def.shape)) {
-          if (key === "ref") continue; // the ref leaf, handled above
+          if (key === "ref" && declaresRef) continue; // the ref leaf, handled above
           walk(childSchema, value[key]);
         }
       }
@@ -132,7 +142,22 @@ export function collectInlineRefs(schema: ZodType, fields: Record<string, unknow
       for (const el of value) walk(def.element, el);
       return;
     }
-    // Scalars, enums, literals, unions we don't model: no refs to collect.
+    if (def.type === "union") {
+      // The value validated against ONE option; walk them all. Since collection
+      // is gated on a declared `ref` key, options that don't declare one no-op,
+      // so a `cardRef() | z.object({ href })` union still inlines the ref and
+      // doesn't double-count. (Mixing cardRef and opaqueContentRef in one union
+      // is undefined — don't.)
+      if (def.options !== undefined) {
+        for (const option of def.options) walk(option, value);
+      }
+      return;
+    }
+    // z.record/z.tuple/z.lazy and other containers are NOT modeled: no schema in
+    // the repo declares a ref inside one. This is deliberately fail-CLOSED — an
+    // opaque ref hidden in an unmodeled container is never inlined; the cost is
+    // that a (hypothetical) cardRef nested there wouldn't inline either. Declare
+    // ref fields plainly (object/array/union) so they're seen.
   };
   walk(schema, fields);
   return refs;
