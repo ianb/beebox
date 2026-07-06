@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
+import { getBoxTime, getBoxTimeISO } from "../../cli/lib/time.js";
 import { okVoid, err, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
 import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
@@ -124,8 +125,9 @@ export async function startProcedure(
     }
   }
 
-  // Create run directory
-  const timestamp = new Date()
+  // Create run directory. Domain time (getBoxTime) so a scenario test's frozen
+  // clock produces a deterministic run-dir name.
+  const timestamp = getBoxTime(boxRoot)
     .toISOString()
     .replace(/[.:]/g, "")
     .replace("T", "T")
@@ -137,7 +139,7 @@ export async function startProcedure(
   const runCardPath = path.join(runDir, "run.procedure-run.card");
 
   // Generate initial run card
-  const now = new Date().toISOString();
+  const now = getBoxTimeISO(boxRoot);
   const relProcedurePath = path.relative(boxRoot, procedureCardPath);
   const initialRunCard = buildInitialRunCard({ procedure, procedurePath: relProcedurePath, startedAt: now, ...(options.directive && { directive: options.directive }) });
   await fs.writeFile(runCardPath, initialRunCard);

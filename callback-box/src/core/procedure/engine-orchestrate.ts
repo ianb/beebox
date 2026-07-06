@@ -7,6 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
+import { getBoxTimeISO } from "../../cli/lib/time.js";
 import { okVoid, err, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
 import { type ProcedureOptions, type ParsedProcedure, type ProcedureError } from "./engine-types.js";
@@ -88,7 +89,7 @@ export async function finalizeRun(args: {
     return okVoid;
   }
 
-  const completedAt = new Date().toISOString();
+  const completedAt = getBoxTimeISO(boxRoot);
   const status = allSucceeded ? "completed" : "failed";
   await updateRunCardStatus({
     runCardPath,

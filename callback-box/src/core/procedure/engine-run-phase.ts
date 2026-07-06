@@ -106,6 +106,7 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
 
     const stepLineRange = await getStepLineRange(procedureCardPath, step.id);
     const contextBlock = buildContextBlock({
+      boxRoot,
       runCardPath: relRunCardPath,
       stepId: step.id,
       procedurePath: relProcedurePath,

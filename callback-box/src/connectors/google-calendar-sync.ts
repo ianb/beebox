@@ -30,6 +30,7 @@ import {
   type CalendarState,
 } from "./google-calendar-state.js";
 import { contentHash } from "../lib/content-hash.js";
+import { getBoxTime } from "../cli/lib/time.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
 import { invariant } from "../lib/invariant.js";
 
@@ -263,7 +264,7 @@ export async function syncCalendar(opts: {
   const acc: SyncAccumulator = { created: [], updated: [], deleted: [], notes: [] };
 
   const events = await fetchEvents({
-    calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state,
+    calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state, now: getBoxTime(boxRoot),
   });
 
   for (const event of events) {

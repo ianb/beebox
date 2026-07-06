@@ -136,14 +136,14 @@ export async function patchEventViaApi(
 }
 
 export async function fetchEvents(
-  opts: { calendar: GoogleCalendarService; calendarId: string; syncToken: string | undefined; syncDaysBack: number; syncDaysForward: number; state: CalendarState },
+  opts: { calendar: GoogleCalendarService; calendarId: string; syncToken: string | undefined; syncDaysBack: number; syncDaysForward: number; state: CalendarState; now: Date },
 ): Promise<GoogleCalendarEvent[]> {
-  const { calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state } = opts;
+  const { calendar, calendarId, syncToken, syncDaysBack, syncDaysForward, state, now } = opts;
   const allEvents: GoogleCalendarEvent[] = [];
   let pageToken: string | undefined;
 
-  // Compute time window for full sync (ignored when syncToken is set)
-  const now = new Date();
+  // Compute time window for full sync (ignored when syncToken is set). `now` is
+  // domain time (scenario-frozen) so the window is deterministic under a test.
   const timeMin = new Date(now);
   timeMin.setDate(timeMin.getDate() - syncDaysBack);
   const timeMax = new Date(now);

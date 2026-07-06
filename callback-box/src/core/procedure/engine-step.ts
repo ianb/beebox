@@ -5,6 +5,7 @@
 
 import { stageAll, commit } from "../../cli/lib/git.js";
 import { fmt } from "../../cli/lib/format.js";
+import { getBoxTimeISO } from "../../cli/lib/time.js";
 import type { CommandContext } from "../command-runner.js";
 import {
   type AgentFactory,
@@ -57,7 +58,7 @@ export async function executeStep(
     stepId: step.id,
     update: {
       status: "running",
-      startedAt: new Date().toISOString(),
+      startedAt: getBoxTimeISO(ctx.boxRoot),
     },
   });
 
@@ -140,7 +141,7 @@ async function runPrecheck(params: ExecuteStepParams): Promise<PrecheckOutcome> 
       update: {
         status: "failed",
         precheck: { status: "fail", stdout: precheckResult.stdout },
-        completedAt: new Date().toISOString(),
+        completedAt: getBoxTimeISO(boxRoot),
       },
     });
     await stageAll(boxRoot);
@@ -170,7 +171,7 @@ async function recordNoRunPhase(params: ExecuteStepParams): Promise<void> {
     stepId: step.id,
     update: {
       status: "completed",
-      completedAt: new Date().toISOString(),
+      completedAt: getBoxTimeISO(boxRoot),
     },
   });
   await stageAll(boxRoot);
@@ -212,7 +213,7 @@ async function recordStepResults(
     validateResult?.status === "fail" && step.validate?.severity === "abort";
   const stepUpdate: StepUpdate = {
     status: runFailure !== undefined || validationGated || reviewExhausted ? "failed" : "completed",
-    completedAt: new Date().toISOString(),
+    completedAt: getBoxTimeISO(boxRoot),
   };
 
   if (step.precheck) {

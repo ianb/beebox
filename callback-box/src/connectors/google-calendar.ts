@@ -24,6 +24,7 @@ import {
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
+import { getBoxTime } from "../cli/lib/time.js";
 import {
   createGoogleCalendarService,
   type GoogleCalendarService,
@@ -74,7 +75,9 @@ class GoogleCalendarConnector implements Connector {
   constructor(boxRoot: string, options?: GoogleCalendarConnectorOptions) {
     this.boxRoot = boxRoot;
     this.injectedService = options?.calendar;
-    this.now = options?.now ?? (() => new Date());
+    // Domain time by default (scenario-frozen via CB_TIME/stubs) — the sync
+    // window is deterministic under a frozen clock; tests can still inject `now`.
+    this.now = options?.now ?? (() => getBoxTime(this.boxRoot));
   }
 
   private async getCalendar(): Promise<GoogleCalendarService | null> {

@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { getStatus, stageAll, commit, getHead } from "../../cli/lib/git.js";
 import { getRangeDiff } from "../../cli/lib/git-range.js";
 import { fmt } from "../../cli/lib/format.js";
+import { getBoxTime } from "../../cli/lib/time.js";
 import { runShell, CHECK_SKIP_CODE } from "./shell.js";
 import { evaluateInstructions } from "./engine-validate-model.js";
 import type { CommandContext } from "../command-runner.js";
@@ -226,6 +227,8 @@ function buildFallbackSummary(files: string[]): string {
  * Parameters for buildContextBlock
  */
 export interface BuildContextBlockParams {
+  /** Box root, for the domain-time "Current date" the agent sees. */
+  boxRoot: string;
   runCardPath: string;
   stepId: string;
   procedurePath: string;
@@ -238,8 +241,8 @@ export interface BuildContextBlockParams {
  * Build the context block prepended to agent system prompts.
  */
 export function buildContextBlock(params: BuildContextBlockParams): string {
-  const { runCardPath, stepId, procedurePath, stepLineRange, precheckOutput, directive } = params;
-  const date = new Date().toISOString().slice(0, 10);
+  const { boxRoot, runCardPath, stepId, procedurePath, stepLineRange, precheckOutput, directive } = params;
+  const date = getBoxTime(boxRoot).toISOString().slice(0, 10);
   const stepRef = stepLineRange
     ? `${stepId} (defined at ${procedurePath} ${stepLineRange})`
     : stepId;

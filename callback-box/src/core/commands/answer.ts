@@ -15,6 +15,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { boxPath, isCardFile } from "../../cli/lib/paths.js";
+import { getBoxTimeISO } from "../../cli/lib/time.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";
@@ -284,7 +285,7 @@ async function executeAnswer(
         text: finalAnswer,
         ...(selectedId !== undefined && { selected: selectedId }),
       };
-      fields["answered-at"] = new Date().toISOString();
+      fields["answered-at"] = getBoxTimeISO(ctx.boxRoot);
       fields["answered-via"] = via as "web" | "cli" | "api";
 
       const split = splitCardContent(content);
