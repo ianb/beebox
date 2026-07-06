@@ -12,7 +12,7 @@ Technology choices for Callback Box. Each decision includes reasoning and altern
 | 3 | [TanStack Query (data fetching)](#decision-3-data-fetching--tanstack-query) | All tRPC-migrated components use TanStack Query via `@trpc/react-query` hooks. |
 | 5 | [Fastify (keep)](#decision-5-backend-server--fastify-keep) | Already in use, no change needed. |
 | 7 | [Zod (expand)](#decision-7-schema-validation--zod-keepexpand) | All tRPC input schemas use Zod (now zod v4). No manual validation in new API code. |
-| 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/cli/lib/git.ts` rewritten from execa to simple-git. |
+| 10 | [simple-git](#decision-10-git-operations--simple-git) | `src/lib/git.ts` rewritten from execa to simple-git. |
 | 12 | [Agent SDK](#decision-12-agent-invocation--anthropic-agent-sdk) | `@anthropic-ai/claude-agent-sdk` drives agent invocation: typed message stream, session resume, in-process hooks, structured output. MCP tools + file checkpointing not yet used. |
 | 14 | [Testing (TAP + doctest)](#decision-14-testing-strategy--tap--doctest--snapshot-testing) | Doctest system built (runner: `tap`). DI pattern established. |
 | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced react-markdown/remark in 2026-05) for custom tags like `{% quote %}`. See `docs/cards-as-markdown.md`. |
@@ -574,7 +574,7 @@ No new capability over the git CLI. It's a convenience layer: TypeScript types +
 
 ### Implementation notes
 
-Adopted. `src/cli/lib/git.ts` rewritten from execa shell-outs to simple-git. All exported types and function signatures preserved — no caller changes needed (~30 importing files). Eliminated manual `--format` string parsing for log/status. Trailer parsing retained since simple-git doesn't parse git trailers. One edge case: simple-git's `modified` excludes working-tree deletions (unlike porcelain `D` status), so `deleted` files are merged into `modified` to match original behavior.
+Adopted. `src/lib/git.ts` rewritten from execa shell-outs to simple-git. All exported types and function signatures preserved — no caller changes needed (~30 importing files). Eliminated manual `--format` string parsing for log/status. Trailer parsing retained since simple-git doesn't parse git trailers. One edge case: simple-git's `modified` excludes working-tree deletions (unlike porcelain `D` status), so `deleted` files are merged into `modified` to match original behavior.
 
 ---
 

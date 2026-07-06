@@ -220,7 +220,7 @@ generate: (args) => {
 
 ### 5. (Optional) Add a Storage Directory
 
-If the card type has its own storage location, add it to `BOX_DIRS` in `src/cli/lib/paths.ts`:
+If the card type has its own storage location, add it to `BOX_DIRS` in `src/lib/paths.ts`:
 
 ```ts
 export const BOX_DIRS = {

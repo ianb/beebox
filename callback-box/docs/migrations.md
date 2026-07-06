@@ -213,7 +213,7 @@ unlike every migrator above it, in three ways worth calling out:
   is neither a valid legacy box nor a valid v2 box, so the whole transform
   (moves, scaffold, `cb init`'s regen tail) lands as ONE commit, wrapped in a
   snapshot + `revertToSnapshot` (the same helper `cb upgrade` uses — factored
-  into `src/cli/lib/git.ts`) so any failure at any step restores the box
+  into `src/lib/git.ts`) so any failure at any step restores the box
   byte-for-byte. The manifest entry itself is still left uncommitted, same as
   always — `cb migrate`'s own bookkeeping, not the script's.
 - **It moves the box root out from under `cb migrate`'s own loop.** Because

@@ -2,7 +2,7 @@
 
 The on-disk shape of a callback box. This is the canonical reference for callback-box developers; agents working *inside* a box see a different summary in `.callback-box/agent-guide.md`.
 
-> **Keeping this in sync:** the canonical directory list is `BOX_LAYOUT` in `src/cli/lib/box-layout-spec.ts` — `BOX_DIRS` (`src/cli/lib/paths.ts`) and the in-box agent guide (`src/core/agent-guide/box-shape.ts`) both derive from it. When you add, remove, or rename a standard directory, edit `box-layout-spec.ts`, then update the `box/`/`store/`/`config`/`people-places`/`tricks`/`agent-config` tables below to match — `test/cli/lib/box-layout-spec.doctest.md` fails if this doc's tables drift from the spec.
+> **Keeping this in sync:** the canonical directory list is `BOX_LAYOUT` in `src/lib/box-layout-spec.ts` — `BOX_DIRS` (`src/lib/paths.ts`) and the in-box agent guide (`src/core/agent-guide/box-shape.ts`) both derive from it. When you add, remove, or rename a standard directory, edit `box-layout-spec.ts`, then update the `box/`/`store/`/`config`/`people-places`/`tricks`/`agent-config` tables below to match — `test/cli/lib/box-layout-spec.doctest.md` fails if this doc's tables drift from the spec.
 
 ## What a box is
 
@@ -11,7 +11,7 @@ A box is a directory marked by a `.cb-box` file. It's a git repository (`cb init
 ## Shape versions: legacy (v1) vs package (v2)
 
 `.cb-box`'s `shapeVersion` field selects the physical layout — see
-`getBoxShape`/`boxCodePaths` in `src/cli/lib/box-shape.ts`, and "The box
+`getBoxShape`/`boxCodePaths` in `src/lib/box-shape.ts`, and "The box
 repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full design.
 
 - **shapeVersion 1 (legacy, the default when the field is absent)** — the box

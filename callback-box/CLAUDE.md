@@ -45,7 +45,15 @@ Body content as plain markdown.
 
 ```
 src/cli/          CLI commands (wakeup, validate, execute-commands, etc.)
-src/core/         Wakeup cycle, agent invocation, state, procedure engine
+  lib/            CLI/session-domain helpers only (session-transcript parsing,
+                  fetch) — the generic utilities moved to src/lib/ (see below)
+src/core/         Wakeup cycle, agent invocation, state, procedure engine.
+                  Prefix-clusters are grouped into subdirs: agent/, box/,
+                  chat/ (+ chat/session/), docs-gen/, external/, markdoc/,
+                  schedule/, transcription/, triage/, views/ — plus the older
+                  agent-guide/, commands/, landmark/, maps/, preactions/,
+                  procedure/, reactor/, retro/, search/. Genuine singletons
+                  (event-bus, state, card-io, intake, nav, ...) stay loose.
 src/connectors/   External integrations (rss, gmail, telegram, etc.)
 src/webapp/       Fastify server, API routes, SSE
   routes/         HTTP route handlers
@@ -53,23 +61,28 @@ src/webapp/       Fastify server, API routes, SSE
 src/hub/          `cb hub`: routes /<slug>/... to per-box `cb serve` children (lazy start, idle-collect, health-check) — see src/hub/CLAUDE.md
 src/frontend/     React UI (Vite, separate tsconfig)
   src/pages/          Routed top-level pages (ChatPage, DashboardPage, AdminPage, ...) — subject to restrict-component-classes; can only use outer-layout classes
-                      Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/landmarks/LandmarksPage.tsx` + `pages/landmarks/components/...`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
-  src/components/     Reusable feature components (Sidebar, CommitTimeline, FileView, dashboard/, ...) — shared across pages
+                      Pages with their own supporting components live in a subdirectory that holds a `components/` child for them (e.g. `pages/landmarks/LandmarksPage.tsx` + `pages/landmarks/components/...`, `pages/browse/`, `pages/capture/`). Any directory named `components/` is exempt from the rule, so page-local appearance lives there.
+  src/components/     Reusable feature components, grouped by feature (chat/, history/, dashboard/, admin/, browse/, session-pickers/, view-widgets/, ...); shared shells (FileView, Markdown, AppNav) stay loose
   src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see frontend.md
   src/renderers/      File-type renderers (markdown, image, sheet, recipe, directory, ...)
   src/machines/       XState state machines
   src/hooks/          Shared React hooks
-  src/lib/            Helpers (cn, source-tag, view-url, trpc, audio-context, ...)
+  src/lib/            Helpers, grouped: audio/ (recorder, mic, tts, speech),
+                      patmatch/ (lexer/compiler), selection/, trpc/; plus loose
+                      helpers (cn, source-tag, view-url, ...)
   src/ssr/            Server-side rendering setup for `cb render`
 src/schemas/      Card type definitions (Zod + `cardSchema` from src/cards/)
 src/services/     Service interfaces, real + fake implementations
 src/scenario/     Scenario loader/runner (multi-step end-to-end fixtures)
 src/dev/          Dev tools (knowledge audits, doc image generation)
-src/lib/          Generic cross-cutting helpers — check here before writing your own
-                  (content-hash, mimetype, filename, file-exists, drop-undefined,
-                  public-url, awake-timeout, exec-with-timeout, sleep, ...)
-src/types/        Ambient type declarations
-test/             Doctest files
+src/lib/          THE single home for generic cross-cutting helpers (no core/
+                  deps) — check here before writing your own. content-hash,
+                  mimetype, filename, file-exists, public-url, awake-timeout,
+                  sleep, git*/paths/box-shape/box-layout* (promoted from
+                  cli/lib), time (getBoxTime), format (chalk), box-config.
+src/types/        Ambient type declarations only (.d.ts)
+test/             Doctest files (mirror src/ paths; a moved src file keeps its
+                  test at the old test/ path unless the test is moved too)
 deploy/           Server provisioning and deployment scripts
 plugins/          Claude Code plugins (card-validator hook)
 ```
@@ -96,7 +109,7 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 - **HTTP endpoints go in tRPC by default.** Add a procedure under `src/webapp/trpc/routers/`, validate input with Zod, call from the frontend via `trpc.<router>.<procedure>`. Real-time/streaming also lives in tRPC now — **subscriptions over the WebSocket** (`useWSS` on the per-box plugin; `events.subscribe` is the global event-bus stream, `events.turnStream` the resumable per-turn chat stream; client routes subscriptions through `wsLink` via the `splitLink` in `lib/trpc.ts`). Raw Fastify routes in `src/webapp/routes/` are only for things that don't fit the tRPC request/response shape: file upload/download, OAuth redirects, webhooks, and the `/chat/send` POST (it needs the request's user + the session registry). Older raw routes are tech debt — migrate when you touch the area.
 - **Frontend uses UI primitives and a semantic palette.** Read frontend.md before writing UI — covers the primitive reference, color roles, and the `className`-only-for-outer-layout rule (enforced by `restrict-component-classes`).
 - **Git trailers are structured metadata.** Commits use trailers like `Created-By: connector-name`. Commits go through plain `git commit`; the per-box `.git/hooks/pre-commit` (installed by `cb init`) runs `cb validate --staged` and blocks invalid card commits.
-- **Time discipline.** Get timestamps via `getBoxTime`/`getBoxTimeISO` (`src/cli/lib/time.ts`), not plain `new Date()` — it honors `CB_TIME`/scenario-frozen time for tests. Long-running timeouts must count only awake time via `startAwakeTimeout` (`src/lib/awake-timeout.ts`) — a plain `setTimeout` fires instantly on wake because its underlying clock advances during macOS sleep.
+- **Time discipline.** Get timestamps via `getBoxTime`/`getBoxTimeISO` (`src/lib/time.ts`), not plain `new Date()` — it honors `CB_TIME`/scenario-frozen time for tests. Long-running timeouts must count only awake time via `startAwakeTimeout` (`src/lib/awake-timeout.ts`) — a plain `setTimeout` fires instantly on wake because its underlying clock advances during macOS sleep.
 - **All cross-process locks go through `src/lib/file-lock.ts`.** Don't roll your own with `proper-lockfile` or hand-built `.lock` files — the primitive handles PID liveness, sleep, and crash recovery. In-process async serialization (e.g. a `Map<id, Promise>` chain) is a different problem and stays separate.
 - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via the `debugLog.submit` tRPC mutation). Read them from the rolling file `.callback-box/client-debug.log` in the box directory. See `docs/client-debug-log.md`.
 - **Leave the repo clean when committing.** Fix any lint/type/test errors you encounter (even pre-existing ones) and make enough commits that nothing half-done is left lying around.
@@ -111,6 +124,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Topic | Location |
 |-------|----------|
 | Engineering principles | `docs/engineering-principles.md` |
+| Module map (lib/shared/types boundary) | `docs/module-map.md` |
 | Design rationale | `docs/design/README.md` |
 | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |

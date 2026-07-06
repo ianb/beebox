@@ -21,7 +21,27 @@ This document is both the review's record and the plan for acting on it.
 >   documentation deliverables (Track M code-style additions,
 >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
 >   /finish review pass, the engine-dev knowledge audits) are landing now;
->   G reorganization, L consolidation, and the remaining F rules are in flight.
+>   L consolidation and the remaining F rules are in flight.
+>   **Track G (module reorganization): DONE** (2026-07-06). Layering moves
+>   (box-config→core, cli/lib generic utilities→lib, view-types out of
+>   types/), the full core/ prefix-cluster regroup into subdirs (agent/, box/,
+>   chat/+chat/session/, docs-gen/, external/, markdoc/, schedule/,
+>   transcription/, triage/, views/), the frontend lib/ extraction
+>   (audio/patmatch/selection/trpc), page-local subdirs (capture/, browse/),
+>   the ViewRenderer→AgentViewRenderer + chats→session-pickers renames, the
+>   single-feature loose-component fold, and the two dead REST exports all
+>   landed commit-per-cluster with typecheck/lint green between each. Circular
+>   count unchanged (15, documented leaf-splits only). Decisions: **no
+>   barrels** (would change export visibility / risk cycles for no
+>   discoverability gain the dir grouping doesn't already give); **prefix
+>   stripping applied** (files in a subdir drop the redundant prefix).
+>   Deferred (with reason): the frontend `@core`/`@schemas` import-boundary
+>   mechanism (aliases = build-config churn across tsconfig+vite+eslint;
+>   no-restricted-imports = preset change needing boxholder sign-off — pick
+>   one), the DebugLog `useSyncExternalStore` port and the
+>   FileView/AgentViewRenderer 300-line splits (behavior-sensitive surgery,
+>   out of the mechanical scope), and a `components/chat/interactive/` subdir
+>   for the ~20 `InteractiveChat-*` files.
 >
 > Genuinely-open decisions still needing a boxholder call: router remediation
 > depth (Q7), the clerk↔server contract (Q1), the chat-thread SDK-narrowing
