@@ -4,7 +4,7 @@
  * Supports serving multiple boxes, each at its own URL prefix (slug).
  */
 
-import Fastify, { type FastifyInstance } from "fastify";
+import Fastify, { type FastifyInstance, type FastifyError } from "fastify";
 import fastifyStatic from "@fastify/static";
 import fastifyMultipart from "@fastify/multipart";
 import fastifyWebsocket from "@fastify/websocket";
@@ -54,6 +54,23 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
     // CSS/images) that routinely exceed 1 MB. At the default, those 413'd and
     // the capture silently saved nothing. Matches the 50 MB multipart cap.
     bodyLimit: 50 * 1024 * 1024,
+  });
+
+  // Error boundary for raw (non-tRPC) routes. Without this, an uncaught
+  // error in a route handler leaves no server-side trace at all — the raw
+  // routes have no protocol-level hook the way tRPC's `onError` does (see
+  // server-box-scope.ts, whose comment documents a "Duplicate id N" bug
+  // that hid for days for exactly this reason). Always log with enough
+  // context to find the request; only echo the error message back to the
+  // client for expected (4xx) failures — a 5xx body stays generic so an
+  // unexpected internal error doesn't leak implementation detail.
+  // eslint-disable-next-line max-params -- Fastify's setErrorHandler callback signature is (error, request, reply)
+  server.setErrorHandler<FastifyError>((error, request, reply) => {
+    const statusCode = error.statusCode ?? 500;
+    console.error(`[http] ${request.method} ${request.url} failed (${statusCode}): ${error.message}`);
+    reply.status(statusCode).send({
+      error: statusCode < 500 ? error.message : "Internal server error",
+    });
   });
 
   registerChromeExtensionCors(server);
