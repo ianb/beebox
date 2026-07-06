@@ -41,8 +41,9 @@ const LEGACY_CONFIG_FILE = path.join(CONFIG_DIR, "scheduler.json");
  */
 export class BoxesConfigParseError extends Error {
   readonly configPath: string;
-  constructor(filePath: string, opts: { cause: unknown }) {
-    const reason = opts.cause instanceof Error ? opts.cause.message : String(opts.cause);
+  constructor(filePath: string, opts: { cause: unknown; reason?: string }) {
+    const reason =
+      opts.reason ?? (opts.cause instanceof Error ? opts.cause.message : String(opts.cause));
     super(`Box manifest at ${filePath} is invalid: ${reason}. Fix or delete the file by hand.`, {
       cause: opts.cause,
     });
@@ -61,7 +62,12 @@ async function readBoxesConfigFile(filePath: string): Promise<BoxesConfig> {
   }
   const result = boxesConfigSchema.safeParse(json);
   if (!result.success) {
-    throw new BoxesConfigParseError(filePath, { cause: result.error });
+    // Format issues into one readable line each (mirrors hub-config.ts)
+    // rather than dumping the raw ZodError JSON into the message.
+    const reason = result.error.issues
+      .map((issue) => `${issue.path.join(".") || "(root)"}: ${issue.message}`)
+      .join("; ");
+    throw new BoxesConfigParseError(filePath, { cause: result.error, reason });
   }
   return result.data;
 }
