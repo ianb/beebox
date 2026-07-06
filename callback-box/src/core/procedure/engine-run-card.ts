@@ -11,7 +11,14 @@
 import * as fs from "node:fs/promises";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import { parse as parseYaml } from "yaml";
-import type { ParsedProcedure, StepUpdate, RunStatus } from "./engine-types.js";
+import { invariant } from "../../lib/invariant.js";
+import {
+  isRunStatus,
+  isLegalRunStatusTransition,
+  type ParsedProcedure,
+  type StepUpdate,
+  type RunStatus,
+} from "./engine-types.js";
 
 /** Raised when a run card can't be read as YAML frontmatter. */
 export class RunCardParseError extends Error {
@@ -122,6 +129,15 @@ export interface UpdateRunCardStatusParams {
 export async function updateRunCardStatus(params: UpdateRunCardStatusParams): Promise<void> {
   const { runCardPath, status, completedAt, expires } = params;
   const card = await readRunCard(runCardPath);
+  // The run card is engine-written internal state, not user input: an illegal
+  // status transition means a caller bug, so fail loudly rather than persist a
+  // corrupt lifecycle (e.g. a terminal completed run flipped back to running).
+  const from = card.status;
+  invariant(isRunStatus(from), `Run card has unknown status "${from}": ${runCardPath}`);
+  invariant(
+    isLegalRunStatusTransition(from, status),
+    `Illegal procedure run status transition ${from} → ${status}: ${runCardPath}`
+  );
   card.status = status;
   if (completedAt !== undefined) card["completed-at"] = completedAt;
   if (expires !== undefined) card.expires = expires;

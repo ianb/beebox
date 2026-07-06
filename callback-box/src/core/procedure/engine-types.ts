@@ -39,6 +39,39 @@ export interface ProcedureError {
   message: string;
 }
 
+/**
+ * Legal run-status transitions, encoding the lifecycle the run-card schema
+ * documents (`pending → running → completed/failed`) plus the two moves the
+ * engine actually makes that the prose glosses over:
+ *
+ * - `running → running` — resuming a run interrupted mid-execution (its
+ *   on-disk status is still `running`); re-stamping it is idempotent.
+ * - `failed → running` — resuming a failed run re-opens it (engine.ts:253).
+ *   A `completed` run is never re-opened: `resumeProcedure` returns early
+ *   before writing, so `completed` is terminal here.
+ *
+ * Keyed by `RunStatus`, so adding a status to the schema enum fails to compile
+ * until its transitions are declared — the table can't silently drift from the
+ * vocabulary. `isLegalRunStatusTransition` is the pure predicate the write
+ * boundary (`updateRunCardStatus`) asserts against.
+ */
+const RUN_STATUS_TRANSITIONS: Record<RunStatus, readonly RunStatus[]> = {
+  pending: ["running"],
+  running: ["running", "completed", "failed"],
+  completed: [],
+  failed: ["running"],
+};
+
+/** Whether `s` is a known run status (a key of the transition table). */
+export function isRunStatus(s: string): s is RunStatus {
+  return Object.prototype.hasOwnProperty.call(RUN_STATUS_TRANSITIONS, s);
+}
+
+/** Whether the run may move from `from` to `to` per {@link RUN_STATUS_TRANSITIONS}. */
+export function isLegalRunStatusTransition(from: RunStatus, to: RunStatus): boolean {
+  return RUN_STATUS_TRANSITIONS[from].includes(to);
+}
+
 /** Maps friendly model names to full model IDs */
 export const MODEL_MAP: Record<string, string> = {
   haiku: "claude-haiku-4-5-20251001",
