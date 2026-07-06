@@ -120,9 +120,6 @@ importers:
       '@markdoc/markdoc':
         specifier: ^0.5.7
         version: 0.5.7(@types/react@18.3.29)(react@18.3.1)
-      '@modelcontextprotocol/sdk':
-        specifier: ^1.29.0
-        version: 1.29.0(zod@4.4.3)
       '@orama/orama':
         specifier: ^3.1.18
         version: 3.1.18
@@ -138,9 +135,6 @@ importers:
       '@types/better-sqlite3':
         specifier: ^7.6.13
         version: 7.6.13
-      '@types/turndown':
-        specifier: ^5.0.6
-        version: 5.0.6
       '@types/ws':
         specifier: ^8.18.1
         version: 8.18.1
@@ -222,18 +216,12 @@ importers:
       simple-git:
         specifier: ^3.32.3
         version: 3.36.0
-      turndown:
-        specifier: ^7.2.2
-        version: 7.2.4
       typescript:
         specifier: ^5.7.0
         version: 5.9.3
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
-      xml2js:
-        specifier: ^0.6.2
-        version: 0.6.2
       yaml:
         specifier: ^2.7.0
         version: 2.9.0
@@ -253,9 +241,6 @@ importers:
       '@types/web-push':
         specifier: ^3.6.4
         version: 3.6.4
-      '@types/xml2js':
-        specifier: ^0.4.14
-        version: 0.4.14
       agent-doctest:
         specifier: workspace:*
         version: link:../agent-doctest
@@ -2849,9 +2834,6 @@ packages:
 
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
-
-  '@types/xml2js@0.4.14':
-    resolution: {integrity: sha512-4YnrRemBShWRO2QjvUin8ESA41rH+9nQGLUGZV/1IDhi3SL9OhdpNC/MrulTWuptXKwhx/aDxE7toV0f/ypIXQ==}
 
   '@typescript-eslint/eslint-plugin@8.59.4':
     resolution: {integrity: sha512-PegsU+XfyJJNjd4+u/k6f9yTyp0lEXXiPopUNobZcIAUJFGICFLN+sP0Rb3JehVmiij1Ph0dFGYqODoRo/2+6A==}
@@ -10102,10 +10084,6 @@ snapshots:
   '@types/webxr@0.5.24': {}
 
   '@types/ws@8.18.1':
-    dependencies:
-      '@types/node': 22.19.19
-
-  '@types/xml2js@0.4.14':
     dependencies:
       '@types/node': 22.19.19
 
