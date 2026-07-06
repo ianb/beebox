@@ -1,27 +1,38 @@
 # Personal commit blocklist — TEMPLATE.
 #
 # Copy this to `.commit-blocklist` (which is gitignored) and put your own
-# sensitive strings there. A staged change that ADDS any entry blocks the
-# commit. Keep the real values only in `.commit-blocklist`, never in this
-# tracked template.
+# sensitive strings there. A staged change that ADDS matching content blocks the
+# commit. Keep real values only in `.commit-blocklist`, never in this template.
 #
-# Format:
-#   - Blank lines and lines starting with `#` are ignored.
-#   - An entry matches as a case-insensitive literal substring
-#     (dots in a domain or IP are literal, not regex).
-#   - Prefix an entry with `re:` for a case-insensitive regex — use this for
-#     word-bounded names so a short name doesn't over-match, e.g.
-#         re:\bJane Doe\b
+# Rule kinds (one per line; blank lines and `#` comments ignored):
+#
+#   foo             BLOCK — case-insensitive literal substring
+#                   (dots in a domain or IP are literal, not regex).
+#   re:<pattern>    BLOCK — case-insensitive regex. Use for word-bounded names
+#                   so a short name doesn't over-match:  re:\bJane Doe\b
+#   !foo  /  !re:…  ALLOW (gitignore-style `!`). Un-blocks a match whose span sits
+#                   inside the allow match's span — block broadly, carve out a
+#                   legit use:  block `Marlowe`, then `!@marlowe` to permit the
+#                   npm scope. A blocked term elsewhere on the line still fires
+#                   (you can't smuggle one in beside an allowed token).
+#   file:<glob>     IGNORE a whole file. `*` matches within a path segment, `**`
+#                   across `/`; a glob with no `/` matches by basename at any
+#                   depth, so `file:package.json` exempts every package.json.
+#                   COARSE — it blinds the guard to the entire file, so prefer a
+#                   `!` allow for a specific token when you can.
 #
 # Behavior:
-#   - No `.commit-blocklist` file => the guard is a silent no-op (opt-in).
+#   - No `.commit-blocklist` file => silent no-op (opt-in per person).
 #   - A malformed list (bad regex) => the commit fails closed.
-#   - The guard reports file:line and the blocklist ENTRY NUMBER, never the
-#     matched value — so it can't re-leak what you're blocking. Look the entry
-#     up with:  sed -n '<N>p' .commit-blocklist
-#   - `git commit --no-verify` bypasses it (it's convenience, not enforcement).
+#   - Only STAGED ADDITIONS are scanned, so pre-existing content never blocks you.
+#   - Reports file:line + the blocklist ENTRY NUMBER, never the matched value, so
+#     it can't re-leak what you block. Look an entry up with:
+#         sed -n '<N>p' .commit-blocklist
+#   - `git commit --no-verify` bypasses it (convenience, not enforcement).
 #
 # Example entries (illustrative — delete, and add your own in .commit-blocklist):
 #   example.internal.host
 #   203.0.113.10
 #   re:\bYour Name\b
+#   !@yourscope
+#   file:package.json
