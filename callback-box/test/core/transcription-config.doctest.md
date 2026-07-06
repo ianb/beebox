@@ -1,6 +1,6 @@
 # Transcription config: realtime + HQ
 
-`src/core/transcription.ts` owns the per-box transcription config. Two
+`src/core/transcription/index.ts` owns the per-box transcription config. Two
 independent settings: `service` (realtime/batch — voxtral/deepgram/whisper)
 and `hqService` (narration-mode checkpoint HQ pass — whisper/voxtral).
 Stored at `config/transcription.json`.
@@ -9,7 +9,7 @@ Stored at `config/transcription.json`.
 import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
-} from "../../src/core/transcription.js";
+} from "../../src/core/transcription/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

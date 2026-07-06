@@ -12,8 +12,8 @@ import type {
   TranscriptionResult,
   DetailedTranscriptionResult,
   TranscriptionError,
-} from "./transcription.js";
-import { getDeepgramCredentials } from "./deepgram-key.js";
+} from "./index.js";
+import { getDeepgramCredentials } from "../deepgram-key.js";
 
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
 const DEEPGRAM_MODEL = "nova-3";

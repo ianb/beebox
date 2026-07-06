@@ -9,13 +9,13 @@ import type {
   TranscribeAudioParams,
   TranscriptionResult,
   DetailedTranscriptionResult,
-} from "./transcription.js";
+} from "./index.js";
 import {
   buildDiarizedText,
   joinSegmentTexts,
   repairMissingSentenceSpaces,
-} from "./transcription-voxtral-text.js";
-import { buildMultipartForm, type MultipartPart } from "../lib/multipart.js";
+} from "./voxtral-text.js";
+import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
 
 const VOXTRAL_MODEL = "voxtral-mini-latest";
 

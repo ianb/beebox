@@ -23,7 +23,7 @@ import {
   transcribeAudio,
   type DetailedTranscriptionResult,
   type TranscriptionError,
-} from "../transcription.js";
+} from "../transcription/index.js";
 import {
   attachDirFor,
   resolveAttachRef,

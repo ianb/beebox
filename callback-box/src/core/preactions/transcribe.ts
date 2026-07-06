@@ -13,7 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { PreAction, PreActionContext } from "./types.js";
-import { transcribeAudio, type TranscriptionError } from "../transcription.js";
+import { transcribeAudio, type TranscriptionError } from "../transcription/index.js";
 
 /** Audio file extensions we can transcribe. */
 const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];

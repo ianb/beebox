@@ -15,12 +15,12 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky from "ky";
 import { WebSocket as WsWebSocket } from "ws";
-import { transcribeAudioHq } from "../../core/transcription.js";
+import { transcribeAudioHq } from "../../core/transcription/index.js";
 import {
   findLastSpeakerLetter,
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
-} from "../../core/transcription-voxtral.js";
+} from "../../core/transcription/voxtral.js";
 import { getMistralApiKey } from "../../core/mistral-key.js";
 import {
   VOICE_MODELS,

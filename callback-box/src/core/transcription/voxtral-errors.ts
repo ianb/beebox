@@ -4,7 +4,7 @@
  * (`permanent` + `code`) so callers can decide whether to retry.
  */
 
-import type { TranscriptionError } from "./transcription.js";
+import type { TranscriptionError } from "./index.js";
 
 export class MissingMistralKeyError extends Error implements TranscriptionError {
   readonly permanent = true;

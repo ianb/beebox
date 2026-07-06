@@ -27,7 +27,7 @@ import {
   transcribeAudioHq,
   HQ_TRANSCRIPTION_SERVICES,
   type HqTranscriptionService,
-} from "../../core/transcription.js";
+} from "../../core/transcription/index.js";
 import { findBoxRoot } from "../../lib/paths.js";
 
 /**

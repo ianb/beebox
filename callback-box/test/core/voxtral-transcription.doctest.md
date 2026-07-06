@@ -15,7 +15,7 @@ import {
   findLastSpeakerLetter,
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
-} from "../../src/core/transcription-voxtral.js";
+} from "../../src/core/transcription/index-voxtral.js";
 ```
 
 ## joinSegmentTexts — rebuild from segments

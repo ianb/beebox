@@ -14,7 +14,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
-import { loadTranscriptionConfig } from "../../../core/transcription.js";
+import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShapeOrLegacyFallback } from "../../../lib/box-shape.js";
 
 export interface HealthCheck {

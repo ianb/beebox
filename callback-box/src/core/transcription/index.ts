@@ -6,10 +6,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky, { type HTTPError } from "ky";
-import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
-import { transcribeAudioDeepgram } from "./transcription-deepgram.js";
-import { withCardLock } from "../lib/card-lock.js";
-import { buildMultipartForm, type MultipartPart } from "../lib/multipart.js";
+import { transcribeAudioVoxtral } from "./voxtral.js";
+import { transcribeAudioDeepgram } from "./deepgram.js";
+import { withCardLock } from "../../lib/card-lock.js";
+import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 

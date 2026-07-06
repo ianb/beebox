@@ -30,7 +30,7 @@ import {
   extractExif,
   type ImageAnalysis,
 } from "../src/core/commands/describe-images-helpers.js";
-import { transcribeAudio, type DetailedTranscriptionResult } from "../src/core/transcription.js";
+import { transcribeAudio, type DetailedTranscriptionResult } from "../src/core/transcription/index.js";
 import { createFixtureReplay } from "./helpers/fixture-replay.js";
 
 const FIXTURE_DIR = "test/fixtures/capture-session";

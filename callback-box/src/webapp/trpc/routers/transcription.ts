@@ -5,7 +5,7 @@ import { TRPCError } from "@trpc/server";
 import {
   loadTranscriptionConfig,
   updateTranscriptionConfig,
-} from "../../../core/transcription.js";
+} from "../../../core/transcription/index.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes

@@ -7,20 +7,20 @@ import type {
   TranscribeAudioParams,
   TranscriptionResult,
   DetailedTranscriptionResult,
-} from "./transcription.js";
-import { getMistralApiKey } from "./mistral-key.js";
+} from "./index.js";
+import { getMistralApiKey } from "../mistral-key.js";
 import {
   MissingMistralKeyError,
   VoxtralNetworkError,
   parseErrorResponse,
   isTranscriptionError,
-} from "./transcription-voxtral-errors.js";
+} from "./voxtral-errors.js";
 import {
   buildVoxtralRequestBody,
   warnIfDiarizationUnlabeled,
   shapeVoxtralResult,
   type VoxtralResponse,
-} from "./transcription-voxtral-request.js";
+} from "./voxtral-request.js";
 
 // Re-exported for callers (chat-audio-routes, doctests) that post-process
 // Voxtral output without going through transcribeAudioVoxtral.
@@ -30,7 +30,7 @@ export {
   findLastSpeakerLetter,
   nextSpeakerLetter,
   relabelDiarizedSpeakers,
-} from "./transcription-voxtral-text.js";
+} from "./voxtral-text.js";
 
 const VOXTRAL_ENDPOINT = "https://api.mistral.ai/v1/audio/transcriptions";
 
