@@ -9,7 +9,7 @@
  */
 
 import { useState } from "react";
-import { trpc } from "../lib/trpc";
+import { trpc } from "../../lib/trpc";
 
 interface ResolvedLink {
   ref: string;

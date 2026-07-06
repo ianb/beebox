@@ -17,7 +17,7 @@ import {
   filterToSearch,
   type HistorySearch,
 } from "../components/history/history-filter";
-import type { HistoryFilterState } from "../components/HistoryFilterBar";
+import type { HistoryFilterState } from "../components/history/HistoryFilterBar";
 
 export function HistoryPage() {
   const params = useParams({ strict: false }) as { hash?: string; boxSlug: string };

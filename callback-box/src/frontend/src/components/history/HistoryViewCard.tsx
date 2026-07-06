@@ -24,7 +24,7 @@ import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
 import { HistoryBrowser } from "./HistoryBrowser";
 import { describeFilter, filterToSearch, paramsToFilter } from "./history-filter";
-import type { HistoryFilterState } from "../HistoryFilterBar";
+import type { HistoryFilterState } from "./HistoryFilterBar";
 
 export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
   const { boxSlug } = useParams({ strict: false });

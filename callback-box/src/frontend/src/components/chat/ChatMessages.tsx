@@ -5,16 +5,16 @@
 import { useMemo } from "react";
 import { Grid } from "ldrs/react";
 import "ldrs/react/Grid.css";
-import { Pre } from "./ui/Pre";
-import type { SessionEntry } from "../api";
-import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../lib/audio/speech-parsing";
-import { SpeechMenu } from "./chat/SpeechMenu";
-import { SpeechChunk } from "./chat/SpeechChunk";
-import { parseCallouts } from "../lib/structured-output-parsing";
-import { CalloutStack } from "./chat/CalloutBlock";
-import { ActivityGroup, ThinkingCornerMark } from "./chat/activity-rendering";
-import { MarkdownContent, type OnZoomView } from "./chat/markdown-rendering";
-import { countSpeech, groupIntoParts, type SelfNoteInfo } from "./chat/message-parsing";
+import { Pre } from "../ui/Pre";
+import type { SessionEntry } from "../../api";
+import { hasAssistantSpeech, parseAllSpeechTags, splitSpeechParts, type SpeechSegment } from "../../lib/audio/speech-parsing";
+import { SpeechMenu } from "./SpeechMenu";
+import { SpeechChunk } from "./SpeechChunk";
+import { parseCallouts } from "../../lib/structured-output-parsing";
+import { CalloutStack } from "./CalloutBlock";
+import { ActivityGroup, ThinkingCornerMark } from "./activity-rendering";
+import { MarkdownContent, type OnZoomView } from "./markdown-rendering";
+import { countSpeech, groupIntoParts, type SelfNoteInfo } from "./message-parsing";
 
 export interface ReplaySpeechOptions {
   messageId: string;
@@ -251,8 +251,8 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
   );
 }
 
-export { UserMessage, UserMessageText } from "./chat/user-message";
-export { MarkdownContent } from "./chat/markdown-rendering";
-export { ToolList } from "./chat/activity-rendering";
-export { groupMessages, extractChatImages, type MessageGroup } from "./chat/message-parsing";
-export type { OnZoomView } from "./chat/markdown-rendering";
+export { UserMessage, UserMessageText } from "./user-message";
+export { MarkdownContent } from "./markdown-rendering";
+export { ToolList } from "./activity-rendering";
+export { groupMessages, extractChatImages, type MessageGroup } from "./message-parsing";
+export type { OnZoomView } from "./markdown-rendering";

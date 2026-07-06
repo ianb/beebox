@@ -2,9 +2,9 @@
  * CommitDetail — per-file tab views (changed / new / moved) and binary preview.
  */
 
-import { getApiBase } from "../api";
-import { Image } from "./ui/Image";
-import { Pre } from "./ui/Pre";
+import { getApiBase } from "../../api";
+import { Image } from "../ui/Image";
+import { Pre } from "../ui/Pre";
 import type { DiffFile } from "./CommitDetail-diff";
 import { extractNewFileContent } from "./CommitDetail-diff";
 

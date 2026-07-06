@@ -4,11 +4,11 @@
  */
 
 import { useState, useMemo } from "react";
-import type { HistoryCommit } from "../api";
-import { trpc } from "../lib/trpc";
-import { cbSource } from "../lib/source-tag";
+import type { HistoryCommit } from "../../api";
+import { trpc } from "../../lib/trpc";
+import { cbSource } from "../../lib/source-tag";
 import { SessionLog } from "./SessionLog";
-import { MobileBackButton } from "./ui/MobileBackButton";
+import { MobileBackButton } from "../ui/MobileBackButton";
 import { parseDiff } from "./CommitDetail-diff";
 import { CommitTab, stripTrailers, trailerString } from "./CommitDetail-commit";
 import { DiffTab, MovedTab, NewFilesTab } from "./CommitDetail-tabs";

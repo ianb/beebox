@@ -3,11 +3,11 @@
  */
 
 import { useState } from "react";
-import { trpc } from "../lib/trpc";
-import { cbSource } from "../lib/source-tag";
-import { RadioGroup, TextareaField } from "./ui/fields";
-import { Button } from "./ui/Button";
-import type { CardInfo } from "../api";
+import { trpc } from "../../lib/trpc";
+import { cbSource } from "../../lib/source-tag";
+import { RadioGroup, TextareaField } from "../ui/fields";
+import { Button } from "../ui/Button";
+import type { CardInfo } from "../../api";
 
 interface QuestionFormProps {
   question: CardInfo;

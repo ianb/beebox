@@ -27,7 +27,7 @@ import { buildVoiceSubmitEmission, type VoiceIntent } from "../../input/voice-in
 import { useSpeechDispatch } from "./InteractiveChat-speech";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import type { SpeechSegment } from "../../lib/audio/speech-parsing";
-import type { ReplaySpeechOptions } from "../ChatMessages";
+import type { ReplaySpeechOptions } from "./ChatMessages";
 import type { InputStore } from "./input-store";
 
 interface SnapshotLike {

@@ -12,7 +12,7 @@ import { trpcClient } from "../../lib/trpc";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES } from "../../machines/chatMachine.js";
 import { MODEL_OPTIONS, type ModelMarker } from "./InteractiveChat-helpers";
 import type { PanelTab } from "./InteractiveChat-controls";
-import type { OnZoomView } from "../ChatMessages";
+import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
 import type { ChatSchedule } from "../../../../core/chat/schedules.js";

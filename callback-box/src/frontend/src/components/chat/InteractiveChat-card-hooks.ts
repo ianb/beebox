@@ -11,7 +11,7 @@ import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
 import { ACTIVITY_KINDS, type ActivityKind, type CardStateDetails } from "../../../../core/chat/card-activity.js";
 import type { PanelTab } from "./InteractiveChat-controls";
-import type { OnZoomView } from "../ChatMessages";
+import type { OnZoomView } from "./ChatMessages";
 
 /**
  * Persist the live companion-pane card in the URL (`?card=`) so a reload

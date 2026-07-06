@@ -1,4 +1,4 @@
-import { VolumeIndicator } from "../VolumeIndicator";
+import { VolumeIndicator } from "./VolumeIndicator";
 import { KeywordHint } from "./KeywordHint";
 
 /**

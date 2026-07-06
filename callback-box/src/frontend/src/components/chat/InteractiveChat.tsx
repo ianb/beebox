@@ -14,7 +14,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 // search params read via window.location — avoids coupling to route definition
 import { useSSRMachine } from "../../hooks/useSSRMachine";
 import { chatMachine } from "../../machines/chatMachine.js";
-import { groupMessages } from "../ChatMessages";
+import { groupMessages } from "./ChatMessages";
 import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";

@@ -10,7 +10,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from "react";
 import { useParams } from "@tanstack/react-router";
 import type { SessionEntry, SessionContentBlock } from "../../api";
-import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "../ChatMessages";
+import { extractChatImages, type MessageGroup, type OnZoomView, type ReplaySpeechOptions } from "./ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import { useStickToBottom } from "./InteractiveChat-scroll";
 import {

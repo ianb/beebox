@@ -21,7 +21,7 @@ import { DebugLogPanel } from "../DebugLog";
 import { BackgroundTasks } from "./BackgroundTasks";
 import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
-import type { MessageGroup } from "../ChatMessages";
+import type { MessageGroup } from "./ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatVoice } from "./InteractiveChat-voice";

@@ -3,8 +3,8 @@
  */
 
 import { useState, useMemo } from "react";
-import type { SessionContentBlock } from "../api";
-import { trpc } from "../lib/trpc";
+import type { SessionContentBlock } from "../../api";
+import { trpc } from "../../lib/trpc";
 
 interface SessionLogProps {
   sessionId: string;

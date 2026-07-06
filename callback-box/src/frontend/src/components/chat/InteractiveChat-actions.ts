@@ -14,7 +14,7 @@ import { extractImageFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio/context";
 import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
-import { type AttachmentItem, type FileAttachmentItem } from "../ChatAttachments";
+import { type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { createTypedEmission, type Emission } from "../../input/emission";

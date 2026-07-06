@@ -9,7 +9,7 @@
 
 import { trpc } from "../../lib/trpc";
 import { useBusSubscription } from "../../hooks/useBusSubscription";
-import { QuestionForm } from "../QuestionForm";
+import { QuestionForm } from "./QuestionForm";
 import { cbSource } from "../../lib/source-tag";
 import { Stack } from "../ui/Stack";
 import { Card } from "../ui/Card";

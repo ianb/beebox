@@ -4,7 +4,7 @@
  * state. Shared by the desktop and mobile button bars (InteractiveChat-composer).
  */
 
-import { MicrophoneIcon } from "../VoiceRecorder";
+import { MicrophoneIcon } from "./VoiceRecorder";
 import { unlockAudioContext } from "../../lib/audio/context";
 import { NarrationMicIcon } from "./InteractiveChat-controls";
 import type { TranscriptionHandle } from "./InteractiveChat-composer";

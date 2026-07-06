@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { getMicLevel } from "../lib/audio/mic-level";
+import { getMicLevel } from "../../lib/audio/mic-level";
 
 const HISTORY_BARS = 3;
 const SAMPLE_MS = 100;

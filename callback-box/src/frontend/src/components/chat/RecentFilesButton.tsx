@@ -7,11 +7,11 @@
  */
 
 import { useState } from "react";
-import { useRecentFiles } from "../hooks/useRecentFiles";
-import type { SessionEntry } from "../api";
-import type { FileSummary } from "../../../core/file-summary";
-import { FileEntry } from "./ui/FileEntry";
-import { DirectoryIcon } from "../file-types/icons";
+import { useRecentFiles } from "../../hooks/useRecentFiles";
+import type { SessionEntry } from "../../api";
+import type { FileSummary } from "../../../../core/file-summary";
+import { FileEntry } from "../ui/FileEntry";
+import { DirectoryIcon } from "../../file-types/icons";
 
 interface RecentFilesButtonProps {
   entries: SessionEntry[];

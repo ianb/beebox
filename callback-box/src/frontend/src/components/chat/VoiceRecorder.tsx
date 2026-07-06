@@ -3,9 +3,9 @@
  */
 
 import { useCallback } from "react";
-import { createVoiceMemo } from "../api";
-import { useVoiceRecorder, type VoiceRecordingResult } from "../hooks/useVoiceRecorder";
-import { Button } from "./ui/Button";
+import { createVoiceMemo } from "../../api";
+import { useVoiceRecorder, type VoiceRecordingResult } from "../../hooks/useVoiceRecorder";
+import { Button } from "../ui/Button";
 
 interface VoiceRecorderProps {
   onCreated: () => void;

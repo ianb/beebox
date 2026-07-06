@@ -7,9 +7,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import { Link, useParams, useSearch } from "@tanstack/react-router";
-import { href, toSearch } from "../lib/routing";
-import { getChatSessions, type ChatSessionInfo } from "../api";
-import { cbSource } from "../lib/source-tag";
+import { href, toSearch } from "../../lib/routing";
+import { getChatSessions, type ChatSessionInfo } from "../../api";
+import { cbSource } from "../../lib/source-tag";
 
 /**
  * Format a date string as relative time (e.g., "2h ago", "3d ago").

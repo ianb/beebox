@@ -2,9 +2,9 @@
  * CommitDetail — commit-metadata tab and its trailer-chip building blocks.
  */
 
-import { Markdown } from "./Markdown";
-import type { HistoryCommit } from "../api";
-import { useViewNavigate } from "../hooks/useViewNavigate";
+import { Markdown } from "../Markdown";
+import type { HistoryCommit } from "../../api";
+import { useViewNavigate } from "../../hooks/useViewNavigate";
 
 const CONNECTOR_KEYS = [
   "Pulled-By",

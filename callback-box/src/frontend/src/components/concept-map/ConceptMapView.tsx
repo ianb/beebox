@@ -8,12 +8,12 @@
  */
 
 import { Suspense, lazy, useMemo } from "react";
-import type { RendererProps } from "../renderers/index";
-import { parseConcepts } from "./concept-map/concept-data";
-import { Markdown } from "./Markdown";
-import { Text } from "./ui/Text";
+import type { RendererProps } from "../../renderers/index";
+import { parseConcepts } from "./concept-data";
+import { Markdown } from "../Markdown";
+import { Text } from "../ui/Text";
 
-const ConceptGraph = lazy(() => import("./concept-map/ConceptGraph"));
+const ConceptGraph = lazy(() => import("./ConceptGraph"));
 
 export function ConceptMapView({ data, onNavigate }: RendererProps) {
   // Memoized so the lazy graph receives a stable `concepts` and doesn't re-layout

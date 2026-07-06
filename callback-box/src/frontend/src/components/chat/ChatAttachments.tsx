@@ -10,10 +10,10 @@
  * the composer references via `[fileN]` tokens.
  */
 
-import { Image } from "./ui/Image";
-import { useLightbox } from "./LightboxProvider";
-import { formatBytes } from "../lib/format-bytes";
-import type { ImageItem, FileItem } from "../input/emission-store";
+import { Image } from "../ui/Image";
+import { useLightbox } from "../LightboxProvider";
+import { formatBytes } from "../../lib/format-bytes";
+import type { ImageItem, FileItem } from "../../input/emission-store";
 
 /**
  * UI-side attachment record (pairs ChatImageAttachment payload with preview

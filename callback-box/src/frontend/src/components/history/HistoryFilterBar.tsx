@@ -7,9 +7,9 @@
  */
 
 import { useState, useRef, useEffect, type ReactNode } from "react";
-import { cn } from "../lib/cn";
-import { Badge } from "./ui/Badge";
-import { Toggle } from "./ui/Toggle";
+import { cn } from "../../lib/cn";
+import { Badge } from "../ui/Badge";
+import { Toggle } from "../ui/Toggle";
 
 export interface HistoryFilterState {
   connectors: string[];

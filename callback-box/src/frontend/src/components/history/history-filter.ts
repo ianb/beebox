@@ -6,7 +6,7 @@
  */
 
 import type { HistoryViewParams } from "@shared/named-views";
-import type { HistoryFilterState } from "../HistoryFilterBar";
+import type { HistoryFilterState } from "./HistoryFilterBar";
 
 export const EMPTY_FILTER: HistoryFilterState = {
   connectors: [],

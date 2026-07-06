@@ -4,7 +4,7 @@
  * code-split there so React Flow stays out of the main bundle.
  */
 
-import { ConceptMapView } from "../components/ConceptMapView";
+import { ConceptMapView } from "../components/concept-map/ConceptMapView";
 import { registerFileType } from "./index";
 
 registerFileType({ type: "concept-map" }, {

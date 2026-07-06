@@ -5,9 +5,9 @@
  * with phase badges, relative times, and duration between commits.
  */
 
-import { type HistoryCommit } from "../api";
-import { cbSource } from "../lib/source-tag";
-import { Badge, type BadgeTone } from "./ui/Badge";
+import { type HistoryCommit } from "../../api";
+import { cbSource } from "../../lib/source-tag";
+import { Badge, type BadgeTone } from "../ui/Badge";
 
 interface CommitTimelineProps {
   commits: HistoryCommit[];
