@@ -9,10 +9,10 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
-import { parseCardText, serializeCardText, typeFromFilename } from "../../../core/card-io.js";
+import { cardFields, parseCardText, serializeCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { withCardLock } from "../../../lib/card-lock.js";
-import { type TodoItem, type TodoItemStatusType, type TodoListFields } from "../../../schemas/todo-list.js";
+import { type TodoItem, type TodoItemStatusType, TodoListSchema } from "../../../schemas/todo-list.js";
 
 /**
  * Find the item named `itemName` anywhere in the (possibly nested) item
@@ -75,9 +75,7 @@ export const todosRouter = router({
           throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid todo list: ${(e as Error).message}` });
         }
 
-        // parseCardText validated the fields against TodoListSchema, so the
-        // shape conforms to TodoListFields — this is the parse boundary.
-        const fields = parsed.fields as unknown as TodoListFields;
+        const fields = cardFields(parsed, TodoListSchema);
         const found =
           fields.items !== undefined &&
           updateInItems({ items: fields.items, itemName: input.itemName, status: input.status });
