@@ -15,15 +15,73 @@
  * inserted by other processes and dispatches them to local listeners.
  *
  * DB lives at .callback-box/events.db (not git-tracked, ephemeral data).
+ *
+ * ## Typing scope (producer-side only)
+ *
+ * {@link EventMap} names every event and types its payload, so `emit`/
+ * `emitTransient` reject an unknown event name (typo drift) and a mistyped
+ * payload at the CALL site. This is producer-side ergonomics and claims NO
+ * read-side safety: events are persisted and cross-process, so a row read back
+ * through `JSON.parse` (see `parseRows`) or replayed to another process was
+ * NOT produced through this typed surface. The read boundary therefore still
+ * hands out `data: unknown` — a consumer must validate the payload itself.
+ * Per-event zod schemas validated at the read/subscribe boundary (with an
+ * unknown-event sentinel) are the tracked follow-up; see
+ * `issues/2026-07-06-event-bus-read-side-schemas.md`.
  */
 
 import Database from "better-sqlite3";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
+/**
+ * The events the bus carries, each mapped to its payload shape. Scalar fields
+ * are typed precisely; a few nested payloads stay `unknown` deliberately, so
+ * the bus stays decoupled from chat/domain types and no producer is forced to
+ * restructure — the event NAME and the well-understood fields are what this
+ * catches. Adding an event means adding a key here.
+ */
+export interface EventMap {
+  /** A watched file changed on disk (chokidar event name in `event`). */
+  "file-change": { event: string; path: string; timestamp: string };
+  /** A browser tab was asked to re-upload its last audio blob. */
+  "chat-last-audio-request": { requestId: string };
+  /** A card was created (optionally with a captured audio attachment). */
+  "card-created": { path: string; template: string; timestamp: string; audioPath?: string | undefined };
+  /** A `cb` command finished (success flag for consumers to react on). */
+  "command-complete": { command: string; success: boolean; timestamp: string };
+  /** A question card was answered via web/cli/api. */
+  "question-answered": { path: string; answer: unknown; selectedId: unknown; timestamp: string };
+  /** Cards in the box changed (coarse refresh signal). */
+  "cards-changed": { source: string };
+  /** A user message was sent into a chat session. */
+  "chat-user-message": {
+    sessionId: string | null;
+    message: string;
+    user: { email: unknown; name: unknown } | null;
+    timestamp: string;
+  };
+  /** A chat turn completed. */
+  "chat-complete": { sessionId: string | null; timestamp: string };
+  /** A background-task lifecycle event on a chat session (payload: TaskEvent). */
+  "chat-task": { sessionId: string | null; task: unknown };
+  /** A chat session's feature flags changed. */
+  "chat-features-changed": { sessionId: string; features: Record<string, string> };
+  /** A scheduled chat timer fired. */
+  "schedule-fired": { id: string; label: string; alarm: unknown; announce: unknown };
+  /** A chat session's history was (re)computed for delivery. */
+  "chat-history": { sessionId: string | null; entries: unknown[] };
+  /** A chat session id was assigned by the SDK. */
+  "chat-session-assigned": { sessionId: string };
+}
+
+/** A known event name. */
+export type BusEventName = keyof EventMap;
+
 export interface BusEvent {
   id: number;
   event: string;
+  /** Read-side payload is untyped — see the module header's typing-scope note. */
   data: unknown;
   createdAt: string;
 }
@@ -36,10 +94,10 @@ export interface Subscription {
 
 export interface EventBus {
   /** Persist an event and notify live subscribers. Returns the event ID. */
-  emit(event: string, data: unknown): number;
+  emit<K extends BusEventName>(event: K, data: EventMap[K]): number;
 
   /** Emit without persisting to SQLite. For high-frequency ephemeral events (file-change). */
-  emitTransient(event: string, data: unknown): void;
+  emitTransient<K extends BusEventName>(event: K, data: EventMap[K]): void;
 
   /** Read all persisted events after the given ID. */
   readSince(afterId: number): BusEvent[];
@@ -126,7 +184,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     }));
   }
 
-  function emit(event: string, data: unknown): number {
+  function emit<K extends BusEventName>(event: K, data: EventMap[K]): number {
     const payload = JSON.stringify(data);
     const result = insertStmt.run(event, payload);
     const id = Number(result.lastInsertRowid);
@@ -144,7 +202,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     return id;
   }
 
-  function emitTransient(event: string, data: unknown): void {
+  function emitTransient<K extends BusEventName>(event: K, data: EventMap[K]): void {
     transientCounter--;
     const busEvent: BusEvent = {
       id: transientCounter, // negative IDs for transient events
