@@ -4,13 +4,35 @@ A whole-monorepo architectural review (2026-07-05), run as ~17 parallel scan
 agents plus direct tooling (knip, madge), synthesized into an improvement plan.
 This document is both the review's record and the plan for acting on it.
 
-> **STATUS: COMPLETE DRAFT — all 17 scans + 4 external-research agents
-> synthesized (2026-07-05).** Load-bearing citations (ref containment, card
-> write races, push-subscriptions truncation, silent catches, dead REST
-> route, zero-assertNever, missing setErrorHandler, hand-written fields
-> interfaces, ChatMessage shape) verified directly against source. Other
-> citations are from scan reports — verify before acting on any specific
-> line number. Awaiting boxholder review; nothing implements until then.
+> **STATUS: IN IMPLEMENTATION (updated 2026-07-06).** Boxholder-approved;
+> implementing on the `architectural-review` worktree.
+>
+> - **Phase 1 — safety fixes + enforcement infrastructure: COMPLETE.** The
+>   `assertNever`/`invariant`/`checkInvariant` helpers (`src/lib/invariant.ts`),
+>   the Result convention (`src/lib/result.ts`), `withCardLock`
+>   (`src/lib/card-lock.ts`), containment (`src/lib/box-containment.ts` +
+>   `resolveContainedRef` in `core/ref-exists.ts`), the typed env boundary
+>   (`src/lib/env.ts`), and the preset's `switch-exhaustiveness-check` +
+>   `no-floating-promises`/`no-misused-promises` rules are all landed and live.
+> - **Phase 2 — type-structure retrofits: COMPLETE.** Cast helpers
+>   (`cardFields`, `parseCommandArgs`), `fenceForPrompt`
+>   (`src/lib/prompt-fence.ts`), and the boundary/union work built on Phase 1.
+> - **Phase 3 — wide/mechanical + documentation: IN PROGRESS.** The
+>   documentation deliverables (Track M code-style additions,
+>   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
+>   /finish review pass, the engine-dev knowledge audits) are landing now;
+>   G reorganization, L consolidation, and the remaining F rules are in flight.
+>
+> Genuinely-open decisions still needing a boxholder call: router remediation
+> depth (Q7), the clerk↔server contract (Q1), the chat-thread SDK-narrowing
+> intent (Q2), the markdoc walkers, and the barrels convention (Q4, pending
+> P3-d). The original synthesis record — all 17 scans + 4 external-research
+> agents, 2026-07-05, with load-bearing citations (ref containment, card write
+> races, push-subscriptions truncation, silent catches, dead REST route,
+> zero-assertNever, missing setErrorHandler, hand-written fields interfaces,
+> ChatMessage shape) verified directly against source — is preserved below;
+> scan-report citations should still be re-verified before acting on a
+> specific line number.
 
 ## Preface: the rules we're reviewing against
 
@@ -1079,10 +1101,12 @@ Plan-introduced failure modes:
    (Track A) — needs boxholder/domain answer.
 3. Extend the `as`-ban lint to `.ts` after Track C, or keep guidance-only?
 4. Barrels: adopt everywhere (3+ files) or drop the convention? Lean: adopt.
-5. Where do the **(new)** preface principles live — code-style.md, a new
-   `docs/engineering-principles.md` (cb-plan's template already anticipates
-   it), or split? Lean: engineering-principles.md for the principles,
-   code-style.md for the mechanical rules.
+5. ~~Where do the **(new)** preface principles live?~~ — RESOLVED (2026-07-06,
+   Track M): the twelve principles landed as `docs/engineering-principles.md`
+   (the durable *why*), the mechanical rules stayed in `code-style.md`
+   (logging levels, exhaustiveness idiom, defensiveness, suppression, the
+   `as`/cast conventions) — the split the lean anticipated. cb-plan's "until
+   it lands" pointer was updated to reference the doc.
 6. ~~`default:`-rejection strictness~~ — RESOLVED by research: strict
    (`considerDefaultExhaustiveForUnions: false`) with
    `default: assertNever(x)` permitted; wide/shallow unions use
