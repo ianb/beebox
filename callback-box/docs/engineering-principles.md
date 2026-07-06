@@ -24,10 +24,13 @@ a shape the compiler rejects is a shape the next session can't get wrong.
 
 Every dispatch over a closed set — a `switch`, an if-chain, a lookup object —
 must fail to compile when a member is added. The idioms are `assertNever(x)`
-in the `default`/final `else` ([`src/lib/invariant.ts`](../src/lib/invariant.ts)),
+in the `default`/final `else` of a backend `.ts` switch
+([`src/lib/invariant.ts`](../src/lib/invariant.ts)),
 a `Record<Union, Handler>` with `satisfies`, and the
 `@typescript-eslint/switch-exhaustiveness-check` lint rule (live in the
-preset, configured so a bare `default:` does *not* count as exhaustive). A
+preset, configured so a bare `default:` does *not* count as exhaustive).
+(Frontend `.tsx` bans `default:` cases outright, so a `.tsx` switch reaches
+exhaustiveness by listing every case with no default.) A
 `void`-returning switch with no terminator silently ignores a new union member
 — which is exactly the drift this principle exists to catch.
 

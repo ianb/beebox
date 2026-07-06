@@ -53,8 +53,8 @@ Existing call sites migrate opportunistically as you touch them, not in a sweep.
 
 Every dispatch over a closed union must fail to compile when a member is added — never rely on a `default:` to swallow the new case.
 
-- `@typescript-eslint/switch-exhaustiveness-check` is **live in the preset**, configured strict: a bare `default:` does NOT count as exhaustive (`considerDefaultExhaustiveForUnions: false`), so a union `switch` must list every case. `default: assertNever(x)` stays legal as the blessed terminator; a `switch` over `number`/`string` still needs a `default:`.
-- **`assertNever(x)`** (`src/lib/invariant.ts`) in the `default`/final `else` is the terminator for a `switch` or if-chain — it makes an unhandled new member a compile error, and throws if reached at runtime. The lint rule covers switches only; if-chains need `assertNever` in the final `else` by hand.
+- `@typescript-eslint/switch-exhaustiveness-check` is **live in the preset**, configured strict: a bare `default:` does NOT count as exhaustive (`considerDefaultExhaustiveForUnions: false`), so a union `switch` must list every case. `default: assertNever(x)` stays legal as the blessed terminator in **backend `.ts`**; a `switch` over `number`/`string` still needs a `default:`. (In frontend `.tsx` the React profile bans `default:` cases outright — a frontend switch reaches exhaustiveness by listing every case with no default, so `default: assertNever(x)` is a `.ts`-only form.)
+- **`assertNever(x)`** (`src/lib/invariant.ts`) in the `default`/final `else` is the terminator for a `.ts` `switch` or if-chain — it makes an unhandled new member a compile error, and throws if reached at runtime. The lint rule covers switches only; if-chains need `assertNever` in the final `else` by hand.
 - **`Record<Union, Handler>` with `satisfies`** is the idiom for a wide/shallow union where a long case list would be noise — use it for shared-signature dispatch. Fall back to `switch` + `assertNever` when handlers need per-variant argument types (a plain `Record` doesn't preserve them).
 
 ### Defensiveness
