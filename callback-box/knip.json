@@ -3,7 +3,10 @@
   "entry": [
     "src/webapp/server.ts",
     "src/schemas/index.ts",
-    "src/connectors/index.ts"
+    "src/connectors/index.ts",
+    "src/cli/index.ts",
+    "src/hub/hub-server.ts",
+    "src/webapp/server-main.ts"
   ],
   "project": [
     "src/**/*.{ts,tsx}",
