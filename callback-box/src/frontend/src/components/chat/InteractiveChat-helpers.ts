@@ -7,6 +7,7 @@
  */
 
 import { applySelections, type SelectionItem } from "../../lib/selection-serialize";
+import { MODEL_ID } from "../../../../core/model-ids";
 
 /**
  * Format the current local time as HH:MM for the typed/speech tag.
@@ -80,15 +81,21 @@ export function formatTimePassed(ms: number): string | null {
 /**
  * Model options surfaced in the chat debug menu. `null` = CLI default.
  * Ordered as presented to the user.
+ *
+ * The model-ID strings come from the canonical `MODEL_ID` source (`core/model-ids.ts`)
+ * that the procedure engine's MODEL_MAP also uses — one place to bump a model
+ * version. This UI list is a superset of MODEL_MAP's short names (it also
+ * offers fable and the 1M-context variants), so it stays its own list keyed on
+ * shared IDs rather than being derived from MODEL_MAP.
  */
 export const MODEL_OPTIONS: ReadonlyArray<{ label: string; model: string | null }> = [
   { label: "Default (Opus)", model: null },
-  { label: "Sonnet 4.6", model: "claude-sonnet-4-6" },
-  { label: "Opus 4.8", model: "claude-opus-4-8" },
-  { label: "Fable 5", model: "claude-fable-5" },
-  { label: "Haiku 4.5", model: "claude-haiku-4-5-20251001" },
-  { label: "Opus 4.8 (1M context)", model: "claude-opus-4-8[1m]" },
-  { label: "Fable 5 (1M context)", model: "claude-fable-5[1m]" },
+  { label: "Sonnet 4.6", model: MODEL_ID.sonnet },
+  { label: "Opus 4.8", model: MODEL_ID.opus },
+  { label: "Fable 5", model: MODEL_ID.fable },
+  { label: "Haiku 4.5", model: MODEL_ID.haiku },
+  { label: "Opus 4.8 (1M context)", model: MODEL_ID.opus1m },
+  { label: "Fable 5 (1M context)", model: MODEL_ID.fable1m },
 ];
 
 /**
