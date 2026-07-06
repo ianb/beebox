@@ -145,11 +145,25 @@ export const googleAuthCommand = new Command("google-auth")
             }
           );
 
-          server.listen({ port: 8976, host: "127.0.0.1" }).then(() => {
-            console.log("Listening on http://localhost:8976/oauth/callback");
-            console.log("Opening browser for Google authorization...\n");
-            open(authUrl);
-          });
+          server
+            .listen({ port: 8976, host: "127.0.0.1" })
+            .then(() => {
+              console.log("Listening on http://localhost:8976/oauth/callback");
+              console.log("Opening browser for Google authorization...\n");
+              // Fire-and-forget: failing to auto-open the browser isn't fatal,
+              // the user can still navigate to the URL manually, but log it
+              // so a silent failure doesn't look like a hang.
+              void open(authUrl).catch((err: unknown) => {
+                console.error("Failed to open browser automatically:", err);
+              });
+            })
+            .catch((err: unknown) => {
+              console.error("Failed to start OAuth callback server:", err);
+              resolve({
+                success: false,
+                error: `Failed to start server: ${(err as Error).message}`,
+              });
+            });
         }
       );
 

@@ -184,19 +184,25 @@ export async function getGoogleAuth(
       : null,
   });
 
-  // Auto-save refreshed tokens
-  client.on("tokens", async (newTokens) => {
-    const tokenUpdates: Partial<GoogleTokens> = {};
-    if (newTokens.access_token) {
-      tokenUpdates.accessToken = newTokens.access_token;
-    }
-    if (newTokens.expiry_date) {
-      tokenUpdates.tokenExpiry = new Date(newTokens.expiry_date).toISOString();
-    }
-    if (newTokens.refresh_token) {
-      tokenUpdates.refreshToken = newTokens.refresh_token;
-    }
-    await saveGoogleTokens(tokenUpdates, boxRoot ? { boxRoot } : {});
+  // Auto-save refreshed tokens. EventEmitter listeners must be void-returning,
+  // so the async save runs in a detached IIFE with its own catch -- a failed
+  // save here would otherwise be an unhandled rejection.
+  client.on("tokens", (newTokens) => {
+    void (async () => {
+      const tokenUpdates: Partial<GoogleTokens> = {};
+      if (newTokens.access_token) {
+        tokenUpdates.accessToken = newTokens.access_token;
+      }
+      if (newTokens.expiry_date) {
+        tokenUpdates.tokenExpiry = new Date(newTokens.expiry_date).toISOString();
+      }
+      if (newTokens.refresh_token) {
+        tokenUpdates.refreshToken = newTokens.refresh_token;
+      }
+      await saveGoogleTokens(tokenUpdates, boxRoot ? { boxRoot } : {});
+    })().catch((err: unknown) => {
+      console.error("Failed to save refreshed Google OAuth tokens:", err);
+    });
   });
 
   return client;

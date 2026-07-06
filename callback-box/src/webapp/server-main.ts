@@ -33,4 +33,7 @@ function parseBoxArg(arg: string): BoxSpec {
 
 const boxes: BoxSpec[] | undefined = boxArgs.length > 0 ? boxArgs.map(parseBoxArg) : undefined;
 
-startServer({ port, host, boxes });
+startServer({ port, host, boxes }).catch((err: unknown) => {
+  console.error("Failed to start server:", err);
+  process.exit(1);
+});

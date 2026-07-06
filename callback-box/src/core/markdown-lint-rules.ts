@@ -73,6 +73,13 @@ export const noBrokenInternalLinks: Rule = {
   tags: ["links"],
   parser: "none",
   asynchronous: true,
+  // markdownlint's own `RuleFunction` type is `(params, onError) => void`, but
+  // the runtime (lib/markdownlint.mjs) checks `rule.asynchronous` and awaits
+  // the returned promise when set -- the type doesn't reflect the documented
+  // async-rule feature we rely on. A sync wrapper would defeat the point (it
+  // would return before the async work runs, so link errors would be lost),
+  // so this is a genuine type/runtime mismatch, not a wiring bug.
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises -- markdownlint's RuleFunction type is void-only but the runtime awaits async rule functions when `asynchronous: true` (see lib/markdownlint.mjs); a sync wrapper would silently drop the async work.
   function: async (params: Parameters<Rule["function"]>[0], onError: RuleOnError): Promise<void> => {
     const boxRoot = readBoxRoot(params.config);
     const fileDir = path.dirname(params.name);

@@ -210,10 +210,21 @@ export async function startServer(options?: ServerOptions): Promise<void> {
     process.exit(0);
   };
 
+  // Fire-and-forget shutdown: signal handlers and the orphan-detection timer
+  // are sync callbacks and can't await it. A failure here means the process
+  // is already exiting one way or another, but log it and force-exit rather
+  // than let it become a silent unhandled rejection.
+  const fireShutdown = (signal: string): void => {
+    void shutdown(signal).catch((err: unknown) => {
+      console.error(`Shutdown (${signal}) failed:`, err);
+      process.exit(1);
+    });
+  };
+
   // Handle termination signals
-  process.on("SIGINT", () => shutdown("SIGINT"));
-  process.on("SIGTERM", () => shutdown("SIGTERM"));
-  process.on("SIGHUP", () => shutdown("SIGHUP"));
+  process.on("SIGINT", () => fireShutdown("SIGINT"));
+  process.on("SIGTERM", () => fireShutdown("SIGTERM"));
+  process.on("SIGHUP", () => fireShutdown("SIGHUP"));
 
   try {
     await server.listen({ port, host });
@@ -243,7 +254,7 @@ export async function startServer(options?: ServerOptions): Promise<void> {
       if (process.ppid !== initialPpid) {
         console.log(`Parent process died (was ${initialPpid}, now ${process.ppid}), shutting down.`);
         clearInterval(orphanCheck);
-        shutdown("orphan-detection");
+        fireShutdown("orphan-detection");
       }
     }, 2000);
     orphanCheck.unref();

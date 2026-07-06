@@ -28,7 +28,7 @@ interface ScheduleCallbackParams {
   schedule: ChatSchedule;
 }
 
-type ScheduleCallback = (params: ScheduleCallbackParams) => void;
+type ScheduleCallback = (params: ScheduleCallbackParams) => void | Promise<void>;
 
 const SCHEDULES_FILE = ".callback-box/chat-schedules.json";
 
@@ -153,7 +153,12 @@ export class ChatScheduleManager {
     this.timers.delete(schedule.id);
     this.schedules.delete(schedule.id);
     this.saveToDisk();
-    this.onFire({ schedule });
+    // The timer callback can't await delivery; onFire may be async (it
+    // injects the message into a live chat session), so log a rejection
+    // instead of letting it become an unhandled rejection.
+    void Promise.resolve(this.onFire({ schedule })).catch((err: unknown) => {
+      console.error(`[ChatSchedules] onFire failed for "${schedule.label}":`, err);
+    });
   }
 
   private clearTimer(id: string): void {

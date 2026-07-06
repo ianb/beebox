@@ -114,8 +114,16 @@ export class ChatSessionPool {
 
     const handleResponse = (text: string) => {
       responses.push(text);
-      // Deliver immediately — don't wait for the turn to complete
-      onResponse?.(text);
+      // Deliver immediately — don't wait for the turn to complete. Delivery
+      // can be async (DeliverResponse allows a Promise); a rejection here is
+      // genuine fire-and-forget (the turn already succeeded), but log it so
+      // a broken delivery path doesn't disappear silently.
+      const delivery = onResponse?.(text);
+      if (delivery) {
+        void delivery.catch((err: unknown) => {
+          console.error("[chat-session-pool] onResponse delivery failed:", err);
+        });
+      }
     };
     session.on("chat-response", handleResponse);
 

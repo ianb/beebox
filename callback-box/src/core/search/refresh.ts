@@ -113,7 +113,7 @@ async function refreshUnderLock(
   // Files that vanished (deleted or moved away).
   for (const relPath of Object.keys(manifest.files)) {
     if (current.has(relPath)) continue;
-    if (dropCard(state, relPath)) dirtyIndex = true;
+    if (await dropCard(state, relPath)) dirtyIndex = true;
   }
 
   for (const [relPath, stat] of current) {
@@ -124,7 +124,7 @@ async function refreshUnderLock(
       const kind = cardTypeFromPath(relPath);
       if (kind === undefined || !searchable.has(kind)) {
         // Includes types that left the searchable set: drop their docs.
-        if (dropCard(state, relPath)) dirtyIndex = true;
+        if (await dropCard(state, relPath)) dirtyIndex = true;
         continue;
       }
       effect = await refreshOneCard(state, { relPath, stat });

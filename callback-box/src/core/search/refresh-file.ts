@@ -40,11 +40,11 @@ export interface RefreshState {
 export type RefreshEffect = "none" | "manifest" | "index";
 
 /** Remove a card's docs + manifest entry. Returns true when anything was dropped. */
-export function dropCard(state: RefreshState, relPath: string): boolean {
+export async function dropCard(state: RefreshState, relPath: string): Promise<boolean> {
   const entry = state.manifest.files[relPath];
   dropCardState(state.containsState, relPath);
   if (entry === undefined) return false;
-  removeDocs(state.db, entry.docIds);
+  await removeDocs(state.db, entry.docIds);
   delete state.manifest.files[relPath];
   return true;
 }
@@ -100,7 +100,7 @@ export async function refreshOneCard(
     if (!(e instanceof CardIOError) && !(e instanceof ParseError)) throw e;
     const detail = e instanceof CardIOError ? e.detail : e.message;
     warnings.push(`${relPath}: skipped (${detail})`);
-    const hadDocs = dropCard(state, relPath);
+    const hadDocs = await dropCard(state, relPath);
     manifest.files[relPath] = {
       mtimeMs: stat.mtimeMs,
       size: stat.size,
@@ -111,7 +111,7 @@ export async function refreshOneCard(
     return hadDocs ? "index" : "manifest";
   }
 
-  if (entry !== undefined) removeDocs(db, entry.docIds);
+  if (entry !== undefined) await removeDocs(db, entry.docIds);
   await insertMultiple(db, docs);
   const newEntry: ManifestFileEntry = {
     mtimeMs: stat.mtimeMs,
@@ -149,7 +149,7 @@ export async function refreshOneMarkdownFile(
   }
 
   const docs = extractMarkdownFileDocs({ path: relPath, content, contentHash });
-  if (entry !== undefined) removeDocs(db, entry.docIds);
+  if (entry !== undefined) await removeDocs(db, entry.docIds);
   await insertMultiple(db, docs);
   manifest.files[relPath] = {
     mtimeMs: stat.mtimeMs,
@@ -160,9 +160,9 @@ export async function refreshOneMarkdownFile(
   return "index";
 }
 
-function removeDocs(db: SearchIndex, docIds: string[]): void {
+async function removeDocs(db: SearchIndex, docIds: string[]): Promise<void> {
   for (const id of docIds) {
-    remove(db, id);
+    await remove(db, id);
   }
 }
 
