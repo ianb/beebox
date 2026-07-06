@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { z } from "zod";
 import { parseCardName } from "../../cli/lib/paths.js";
+import { extensionToMimetype } from "../../lib/mimetype.js";
 
 const IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
 
@@ -22,15 +23,10 @@ export function isImageCard(filePath: string): boolean {
 }
 
 export function getMimeType(filePath: string): string {
+  // Only ever called on files that passed isImageFile (jpg/jpeg/png/webp/gif),
+  // so the fallback is a defensive default; image/jpeg per the original.
   const ext = path.extname(filePath).toLowerCase();
-  const mimes: Record<string, string> = {
-    ".jpg": "image/jpeg",
-    ".jpeg": "image/jpeg",
-    ".png": "image/png",
-    ".webp": "image/webp",
-    ".gif": "image/gif",
-  };
-  return mimes[ext] || "image/jpeg";
+  return extensionToMimetype(ext, { fallback: "image/jpeg" });
 }
 
 /**

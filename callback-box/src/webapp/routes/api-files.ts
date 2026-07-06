@@ -17,6 +17,8 @@ import { commitPaths, pathsHaveChanges, stageFiles } from "../../cli/lib/git.js"
 import type { EventBus } from "../../core/event-bus.js";
 import { fileEtag } from "../file-etag.js";
 import { boxRelativePath } from "../../shared/box-path.js";
+import { extensionToMimetype } from "../../lib/mimetype.js";
+import { dangerousRenderableDisposition } from "../serving-security.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -64,64 +66,6 @@ function injectFrozenFallback(html: string): string {
   return idx === -1 ? html + tag : html.slice(0, idx) + tag + html.slice(idx);
 }
 
-/**
- * Extensions whose MIME type makes a browser parse (and potentially execute)
- * the response as an active document rather than treating it as inert data,
- * when navigated to directly or embedded — the boundary this route must
- * defend, since it serves whatever raw files exist in the box regardless of
- * how they got there (hand-added, agent-written, or an attachment upload).
- * Rationale per entry:
- *   - `.html`/`.htm` — `text/html`: full script execution, DOM, same-origin
- *     fetch/cookie access.
- *   - `.xhtml`/`.xht`/`.shtml` — also rendered as HTML-family documents by
- *     browsers on direct navigation; same script surface as `.html` even
- *     though nothing in this codebase currently produces them.
- *   - `.svg` — `image/svg+xml`: an SVG document can embed `<script>` and
- *     inline event-handler attributes that execute once the browser parses
- *     it as a document (not merely rasterizes it), which happens on direct
- *     navigation or certain embeds.
- * Deliberately NOT included: `.pdf` (rendered by a sandboxed viewer, no
- * same-origin script access), raster/audio/video formats, `.md`/`.txt`/
- * `.csv`/`.json` (always parsed as inert text), Office formats (opened by a
- * separate application, not the browser's HTML/script engine). `.frozen` is
- * excluded from this set entirely — it's the one deliberate inline-preview
- * path, and it already carries its own sandboxed CSP (below) instead of the
- * attachment treatment.
- */
-const DANGEROUS_RENDERABLE_EXTENSIONS = new Set([".html", ".htm", ".xhtml", ".xht", ".shtml", ".svg"]);
-
-const MIME_TYPES: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".svg": "image/svg+xml",
-  ".webm": "audio/webm",
-  ".mp4": "video/mp4",
-  ".m4a": "audio/mp4",
-  ".mp3": "audio/mpeg",
-  ".wav": "audio/wav",
-  ".ogg": "audio/ogg",
-  ".pdf": "application/pdf",
-  ".json": "application/json",
-  ".md": "text/markdown",
-  ".card": "text/markdown",
-  ".txt": "text/plain",
-  ".csv": "text/csv",
-  ".html": "text/html",
-  // Frozen page captures (SingleFile output, scripts stripped) — serve as HTML
-  // so "open snapshot" renders the page instead of downloading it.
-  ".frozen": "text/html",
-  ".doc": "application/msword",
-  ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  ".xls": "application/vnd.ms-excel",
-  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  ".ppt": "application/vnd.ms-powerpoint",
-  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-  ".zip": "application/zip",
-};
-
 interface RegisterApiFilesRoutesOptions {
   server: FastifyInstance;
   boxRoot: string;
@@ -163,9 +107,12 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
           return reply.status(404).send({ error: "Not found" });
         }
 
-        // Infer MIME type from extension
+        // Infer MIME type from extension. `.frozen` is served as HTML for the
+        // sandboxed preview below; it's deliberately absent from the shared
+        // mimetype table (so no other route serves it inline), so map it here.
         const ext = path.extname(resolved).toLowerCase();
-        const contentType = MIME_TYPES[ext] || "application/octet-stream";
+        const contentType =
+          ext === ".frozen" ? "text/html" : extensionToMimetype(ext, { fallback: "application/octet-stream" });
 
         // Frozen page captures are untrusted, user-saved HTML. We serve them as
         // HTML so "open snapshot" renders, but isolate them: `sandbox` (no
@@ -177,10 +124,9 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         // Dangerous renderable types default to attachment + nosniff (see the
         // set's doc comment above); the frozen preview path is the only
         // sanctioned exception, and it sets its own headers below.
-        const isDangerousRenderable = !isFrozen && DANGEROUS_RENDERABLE_EXTENSIONS.has(ext);
-        const contentDisposition = isDangerousRenderable
-          ? `attachment; filename="${path.basename(resolved).replace(/"/g, "")}"`
-          : null;
+        const contentDisposition = isFrozen
+          ? null
+          : dangerousRenderableDisposition(ext, path.basename(resolved));
 
         // Conditional GET: build weak ETag from mtime + size, serve 304 when
         // the client already has the current version. `no-cache` means the

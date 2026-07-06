@@ -6,23 +6,10 @@
 
 import type { FastifyInstance } from "fastify";
 import { execFileSync } from "node:child_process";
+import * as path from "node:path";
 import { simpleGit } from "simple-git";
-
-const MIME_TYPES: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".svg": "image/svg+xml",
-  ".webm": "audio/webm",
-  ".m4a": "audio/mp4",
-  ".mp3": "audio/mpeg",
-  ".wav": "audio/wav",
-  ".ogg": "audio/ogg",
-  ".mp4": "video/mp4",
-  ".pdf": "application/pdf",
-};
+import { extensionToMimetype } from "../../lib/mimetype.js";
+import { applyRawFileServingHeaders } from "../serving-security.js";
 
 /**
  * Register history API routes.
@@ -59,12 +46,14 @@ export async function registerHistoryRoutes(
       }
 
       const ext = filePath.substring(filePath.lastIndexOf(".")).toLowerCase();
-      const contentType = MIME_TYPES[ext] || "application/octet-stream";
+      const contentType = extensionToMimetype(ext, { fallback: "application/octet-stream" });
 
-      return reply
-        .header("Content-Type", contentType)
-        .header("Cache-Control", "public, max-age=31536000, immutable")
-        .send(buffer);
+      return applyRawFileServingHeaders(
+        reply
+          .header("Content-Type", contentType)
+          .header("Cache-Control", "public, max-age=31536000, immutable"),
+        { ext, filename: path.basename(filePath) }
+      ).send(buffer);
     } catch (_e) {
       return reply.status(404).send({ error: "File not found in commit" });
     }

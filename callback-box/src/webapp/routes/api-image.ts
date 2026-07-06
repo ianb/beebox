@@ -18,18 +18,10 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { extensionToMimetype } from "../../lib/mimetype.js";
+import { applyRawFileServingHeaders } from "../serving-security.js";
 
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"]);
-
-const IMAGE_MIME: Record<string, string> = {
-  ".jpg": "image/jpeg",
-  ".jpeg": "image/jpeg",
-  ".png": "image/png",
-  ".gif": "image/gif",
-  ".webp": "image/webp",
-  ".bmp": "image/bmp",
-  ".svg": "image/svg+xml",
-};
 
 /**
  * Resolve an `.image.card`'s attached image to an absolute filesystem path.
@@ -129,7 +121,8 @@ export function registerApiImageRoutes({
         if (!stat.isFile()) return reply.status(404).send({ error: "Not found" });
 
         const ext = path.extname(imageAbs).toLowerCase();
-        const contentType = IMAGE_MIME[ext] ?? "application/octet-stream";
+        const contentType = extensionToMimetype(ext, { fallback: "application/octet-stream" });
+        const filename = path.basename(imageAbs);
         const etag = `W/"${stat.mtimeMs.toString(36)}-${stat.size.toString(36)}"`;
         const lastModified = stat.mtime.toUTCString();
 
@@ -142,21 +135,23 @@ export function registerApiImageRoutes({
           Math.floor(Date.parse(ifModifiedSince) / 1000) >= Math.floor(stat.mtimeMs / 1000);
 
         if (etagMatches || mtimeMatches) {
-          return reply
-            .header("ETag", etag)
-            .header("Last-Modified", lastModified)
-            .header("Cache-Control", "no-cache")
+          return applyRawFileServingHeaders(
+            reply.header("ETag", etag).header("Last-Modified", lastModified).header("Cache-Control", "no-cache"),
+            { ext, filename }
+          )
             .status(304)
             .send();
         }
 
         const content = await fs.readFile(imageAbs);
-        return reply
-          .header("Content-Type", contentType)
-          .header("Cache-Control", "no-cache")
-          .header("ETag", etag)
-          .header("Last-Modified", lastModified)
-          .send(content);
+        return applyRawFileServingHeaders(
+          reply
+            .header("Content-Type", contentType)
+            .header("Cache-Control", "no-cache")
+            .header("ETag", etag)
+            .header("Last-Modified", lastModified),
+          { ext, filename }
+        ).send(content);
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
           console.warn(`[api-image] could not serve ${imageAbs}:`, e);

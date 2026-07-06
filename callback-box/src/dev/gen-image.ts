@@ -29,6 +29,7 @@
 import { readFile, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { GoogleGenAI } from "@google/genai";
+import { extensionToMimetype } from "../lib/mimetype.js";
 
 const SELF = import.meta.filename;
 
@@ -113,14 +114,7 @@ async function printHelp(): Promise<void> {
 }
 
 function mimeFor(path: string): string {
-  const ext = extname(path).toLowerCase();
-  switch (ext) {
-    case ".png":               return "image/png";
-    case ".jpg": case ".jpeg": return "image/jpeg";
-    case ".webp":              return "image/webp";
-    case ".gif":               return "image/gif";
-    default:                   return "image/png";
-  }
+  return extensionToMimetype(extname(path).toLowerCase(), { fallback: "image/png" });
 }
 
 async function readPromptFromStdin(): Promise<string> {

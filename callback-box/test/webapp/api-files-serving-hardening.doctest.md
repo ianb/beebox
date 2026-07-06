@@ -72,6 +72,25 @@ const img = await server.rawRequest({ method: "GET", url: "/api/files/photo.jpg"
 => 200 image/jpeg null nosniff
 ```
 
+The sibling `/api/image/*` route serves the same box bytes by
+extension-inferred MIME type, so it shares the hardening: a `.svg` fetched
+through it is forced to download with `nosniff`, not rendered inline
+(closing the incomplete-coverage gap the codex review flagged):
+
+```ts continue
+const svgImage = await server.rawRequest({ method: "GET", url: "/api/image/mark.svg" });
+`${svgImage.statusCode} ${svgImage.headers["content-type"]} ${svgImage.headers["content-disposition"]} ${svgImage.headers["x-content-type-options"]}`
+=> 200 image/svg+xml attachment; filename="mark.svg" nosniff
+```
+
+An ordinary image through `/api/image/*` stays inline but gains `nosniff`:
+
+```ts continue
+const jpgImage = await server.rawRequest({ method: "GET", url: "/api/image/photo.jpg" });
+`${jpgImage.statusCode} ${jpgImage.headers["content-type"]} ${JSON.stringify(jpgImage.headers["content-disposition"] ?? null)} ${jpgImage.headers["x-content-type-options"]}`
+=> 200 image/jpeg null nosniff
+```
+
 ```ts cleanup
 await server.cleanup();
 ```
