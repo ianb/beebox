@@ -79,9 +79,13 @@ export function useCaptureCamera(options: CaptureCameraOptions): CaptureCamera {
 
   const flipCamera = useCallback(async () => {
     if (!cameraOn) return;
-    if (!isMobile && videoDevices.length > 1) { await cameraRef.current.cycleDevice(videoDevices); }
-    else { await cameraRef.current.flip(); }
-  }, [cameraOn, isMobile, videoDevices]);
+    try {
+      if (!isMobile && videoDevices.length > 1) { await cameraRef.current.cycleDevice(videoDevices); }
+      else { await cameraRef.current.flip(); }
+    } catch (err) {
+      setError(`Camera flip failed: ${err instanceof Error ? err.message : "unknown"}`);
+    }
+  }, [cameraOn, isMobile, videoDevices, setError]);
 
   const takePhoto = useCallback(() => cameraRef.current.takePhoto(), []);
 

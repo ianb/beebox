@@ -106,7 +106,9 @@ export function useChatActions(opts: ChatActionsOpts) {
     // so a fresh chat from a root-bound session stays root-bound rather
     // than becoming an unbound legacy chat.
     if (effectiveContextDir !== null) search.contextDir = effectiveContextDir;
-    navigate({
+    // navigate()'s promise only rejects on a superseded/redirected
+    // navigation (not a user-facing failure) -- fire-and-forget.
+    void navigate({
       to: href(`/${boxSlug}/chat`),
       search: search as never,
     });
@@ -118,7 +120,16 @@ export function useChatActions(opts: ChatActionsOpts) {
 
   const handleRestartProcess = useCallback(() => {
     if (!sessionId) return;
-    restartChatSubprocess({ sessionId }).catch(() => {});
+    // User-initiated action (policy rule 5): a silent no-op here used to
+    // leave the user thinking the restart happened. There's no generic
+    // action-error banner in this component today (the machine's `error`
+    // context is stream-specific and gated to the "streaming" state, so
+    // dispatching STREAM_ERROR here would silently no-op outside a live
+    // turn) -- log at error level as the interim signal until a real
+    // user-facing surfacing exists (see issues/ for the follow-up).
+    restartChatSubprocess({ sessionId }).catch((e: unknown) => {
+      console.error(`[chat] restart process failed for session ${sessionId}:`, e);
+    });
   }, [sessionId]);
 
   const handleCompactSession = useCallback(() => {
@@ -143,7 +154,9 @@ export function useChatActions(opts: ChatActionsOpts) {
       .then((result) => {
         send({ type: "PREPEND_MESSAGES", messages: result.entries });
       })
-      .catch(() => {})
+      .catch((e: unknown) => {
+        console.warn(`[chat] load-older history fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+      })
       .finally(() => setLoadingOlder(false));
   }, [loadingOlder, messages.length, totalEntries, send, sessionId, setLoadingOlder]);
 

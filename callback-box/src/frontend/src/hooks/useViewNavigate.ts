@@ -18,7 +18,9 @@ export function useViewNavigate(): (target: ViewTarget, hint?: NavigateHint) => 
   const navigate = useNavigate();
   return useCallback(
     (target: ViewTarget) => {
-      navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl(target)}`) });
+      // navigate()'s promise only rejects on a superseded/redirected
+      // navigation (not a user-facing failure) -- fire-and-forget.
+      void navigate({ to: href(`/${boxSlug}/views/${serializeViewUrl(target)}`) });
     },
     [boxSlug, navigate],
   );

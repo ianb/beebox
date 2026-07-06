@@ -47,15 +47,29 @@ export function AppLayout() {
   // Validate that the box in the URL actually exists. An unknown slug
   // (typical after copying a URL across worktrees) used to fall through
   // to the page components and crash on a missing API response.
-  const [boxesState, setBoxesState] = useState<{ boxes: KnownBox[]; loaded: boolean }>({
+  const [boxesState, setBoxesState] = useState<{
+    boxes: KnownBox[];
+    loaded: boolean;
+    error: boolean;
+  }>({
     boxes: [],
     loaded: false,
+    error: false,
   });
   useEffect(() => {
-    fetchBoxes().then((r) => setBoxesState({ boxes: r.boxes, loaded: true }));
+    fetchBoxes()
+      .then((r) => setBoxesState({ boxes: r.boxes, loaded: true, error: false }))
+      .catch((err: unknown) => {
+        // A silent failure here used to leave loaded:false forever, which
+        // rendered the box as "still checking" indefinitely (effectively
+        // treating an unknown box as existing). Surface it as a distinct
+        // error state instead of a permanent loading hang.
+        console.error("Failed to load box list:", err);
+        setBoxesState({ boxes: [], loaded: true, error: true });
+      });
   }, []);
   const boxExists =
-    !boxesState.loaded || boxesState.boxes.some((b) => b.slug === boxSlug);
+    !boxesState.loaded || boxesState.error || boxesState.boxes.some((b) => b.slug === boxSlug);
 
   // Advertise the validated box to the callback-clerk extension.
   useBoxIdentityMeta(boxesState.boxes.find((b) => b.slug === boxSlug) ?? null);
@@ -128,7 +142,9 @@ export function BrowsePageWrapper() {
     <BrowsePage
       currentPath={browsePath}
       onNavigate={(path) => {
-        navigate({ to: href(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`) });
+        // navigate()'s promise only rejects on a superseded/redirected
+        // navigation (not a user-facing failure) -- fire-and-forget.
+        void navigate({ to: href(path ? `/${boxSlug}/browse/${path}` : `/${boxSlug}/browse`) });
       }}
     />
   );

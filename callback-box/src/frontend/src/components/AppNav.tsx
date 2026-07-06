@@ -78,7 +78,11 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const currentUser = useCurrentUser();
 
   useEffect(() => {
-    fetchBoxes().then((result) => setBoxes(result.boxes));
+    fetchBoxes()
+      .then((result) => setBoxes(result.boxes))
+      .catch((err: unknown) => {
+        console.error("Failed to load box list for nav switcher:", err);
+      });
   }, []);
 
   useEffect(() => {

@@ -21,5 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
 );
 
 if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register(withBase("/sw.js"));
+  navigator.serviceWorker.register(withBase("/sw.js")).catch((e: unknown) => {
+    console.error("Service worker registration failed:", e);
+  });
 }

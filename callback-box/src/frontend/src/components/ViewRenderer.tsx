@@ -220,9 +220,17 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([loadModule(), loadCards()]).then(() => {
-      setLoading(false);
-    });
+    // Both loadModule/loadCards catch their own errors into `error` state, so
+    // this can't actually reject -- but if something unexpected did throw,
+    // failing to clear `loading` here would leave the spinner stuck forever.
+    Promise.all([loadModule(), loadCards()])
+      .then(() => {
+        setLoading(false);
+      })
+      .catch((e: unknown) => {
+        console.error("[ViewRenderer] unexpected load failure:", e);
+        setLoading(false);
+      });
   }, [loadModule, loadCards]);
 
 
@@ -235,7 +243,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
         const changedPath = data.path || "";
         // View source changed — reload module
         if (changedPath === `views/${slug}.tsx`) {
-          loadModule();
+          void loadModule();
         }
         // Card changed — reload data. Non-card files reload too when they
         // sit under a dependency glob's static prefix (e.g. an attach-scope
@@ -244,7 +252,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
           .map((d) => d.split("*")[0] ?? "")
           .filter((prefix) => prefix !== "");
         if (changedPath.endsWith(".card") || depPrefixes.some((prefix) => changedPath.startsWith(prefix))) {
-          loadCards();
+          void loadCards();
         }
       }
     }, [slug, loadModule, loadCards, mod]),
@@ -256,7 +264,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
         connectedOnceRef.current = true;
         return;
       }
-      loadCards();
+      void loadCards();
     }, [loadCards]),
   });
 
@@ -266,7 +274,9 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
 
   const viewNavigate = useCallback((path: string) => {
     if (boxSlug) {
-      navigate({ to: `/${boxSlug}/${path}` });
+      // navigate()'s promise only rejects on a superseded/redirected
+      // navigation (not a user-facing failure) -- fire-and-forget.
+      void navigate({ to: `/${boxSlug}/${path}` });
     }
   }, [boxSlug, navigate]);
 
@@ -303,7 +313,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
 
   return (
     <div className={containerClass}>
-      <ViewErrorBoundary onRetry={loadModule} resetKey={reloadSeq}>
+      <ViewErrorBoundary onRetry={() => void loadModule()} resetKey={reloadSeq}>
         <ViewHostProvider value={viewHost}>
           <Component
             cards={cards}

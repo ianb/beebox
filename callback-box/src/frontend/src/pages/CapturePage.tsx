@@ -55,9 +55,12 @@ export function CapturePage() {
         ref={videoRef}
         cameraOn={cameraOn}
         flashing={flashing}
-        onTap={cameraOn ? takePhoto : startCamera}
-        onToggleCamera={toggleCamera}
-        onFlipCamera={flipCamera}
+        // All four already surface failures via the page's `error` state
+        // (useCaptureCamera/useCaptureSession's own try/catch); voided here
+        // only to satisfy the sync attribute type.
+        onTap={() => void (cameraOn ? takePhoto() : startCamera())}
+        onToggleCamera={() => void toggleCamera()}
+        onFlipCamera={() => void flipCamera()}
       />
 
       {error ? <CaptureErrorBanner message={error} onDismiss={() => setError(null)} /> : null}
@@ -69,7 +72,7 @@ export function CapturePage() {
         sessionId={sessionId} recording={recording} uploadsInProgress={counts.uploadsInProgress} finalizing={finalizing}
         hasContent={counts.photoTotal > 0 || counts.audioTotal > 0 || counts.fileTotal > 0}
         photosFailed={counts.photosFailed} audioFailed={counts.audioFailed} filesFailed={counts.filesFailed}
-        onDone={handleDone} onCancel={handleCancel} onToggleRecording={toggleRecording} onRetryFailed={retryFailedUploads}
+        onDone={() => void handleDone()} onCancel={() => void handleCancel()} onToggleRecording={() => void toggleRecording()} onRetryFailed={retryFailedUploads}
       />
     </CaptureShell>
   );

@@ -27,7 +27,7 @@ export function QuestionForm({ question, onAnswered, sourcePath }: QuestionFormP
 
   const hasOptions = question.options && question.options.length > 0;
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
     const answer = hasOptions ? selectedOption : textAnswer;

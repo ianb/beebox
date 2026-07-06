@@ -144,7 +144,9 @@ class TTSClient {
   async speak(text: string, options?: SpeechOptions): Promise<void> {
     return new Promise((resolve, reject) => {
       this.queue.push({ text, options, resolve, reject });
-      this.processQueue();
+      // processQueue never rejects (its own try/catch routes failures to
+      // item.reject instead) -- fire-and-forget queue drain.
+      void this.processQueue();
     });
   }
 
@@ -228,7 +230,8 @@ class TTSClient {
       item.reject(error instanceof Error ? error : new PlaybackError(String(error)));
     } finally {
       this.setPlaying(false);
-      this.processQueue();
+      // Self-recursive drain of the next queued item; never rejects.
+      void this.processQueue();
     }
   }
 

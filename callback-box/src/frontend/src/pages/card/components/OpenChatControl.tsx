@@ -35,11 +35,13 @@ export function OpenChatControl({ boxSlug, cardPath }: { boxSlug: string; cardPa
       // path with no viewer/zoom/params returns the path), so it's a valid
       // `?card=` value as-is.
       const card = cardPath;
+      // navigate()'s promise only rejects on a superseded/redirected
+      // navigation (not a user-facing failure) -- fire-and-forget.
       if (mode === "recent" && sessionId) {
-        navigate({ to: href(`/${boxSlug}/chat`), search: { session: sessionId, card } as never });
+        void navigate({ to: href(`/${boxSlug}/chat`), search: { session: sessionId, card } as never });
         return;
       }
-      navigate({
+      void navigate({
         to: href(`/${boxSlug}/chat`),
         search: { session: "new", contextDir, card } as never,
       });

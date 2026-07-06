@@ -63,7 +63,9 @@ export function ChatPage() {
       .then(({ sessionId }) => {
         if (cancelled) return;
         if (sessionId) {
-          navigate({ to: href(`/${boxSlug}/chat`), search: { ...search, session: sessionId } as never, replace: true });
+          // navigate()'s promise only rejects on a superseded/redirected
+          // navigation (not a user-facing failure) -- fire-and-forget.
+          void navigate({ to: href(`/${boxSlug}/chat`), search: { ...search, session: sessionId } as never, replace: true });
         } else {
           setResolved("new");
         }

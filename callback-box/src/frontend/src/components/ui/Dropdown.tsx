@@ -235,10 +235,15 @@ export function MenuItem(props: MenuItemProps) {
       type="button"
       role="menuitem"
       disabled={disabled}
-      onClick={async () => {
+      onClick={() => {
         if (disabled || onClick === undefined) return;
         if (!keepOpen) close();
-        await onClick();
+        // Safety net for this shared primitive: individual callers are
+        // expected to surface their own user-visible errors; this is the
+        // last-resort log if an onClick's promise rejects uncaught.
+        void Promise.resolve(onClick()).catch((err: unknown) => {
+          console.error("[Dropdown] MenuItem onClick handler threw:", err);
+        });
       }}
       className={className}
     >

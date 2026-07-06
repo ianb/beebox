@@ -87,7 +87,11 @@ export function useEmissionDispatch(opts: {
       // No recording exists for this voice send — tombstone it so
       // get-last-audio answers none, not an older message's recording.
       markVoiceAudioAbsent(emission.id);
-      dispatchEmission(emission);
+      // dispatchEmission's own .then already handles the "rejected"
+      // disposition (restores the composer); the promise settles from
+      // in-memory machine bookkeeping (expectReceipt), not I/O, so there's
+      // nothing further to await or catch here.
+      void dispatchEmission(emission);
     },
     [dispatchEmission]
   );
@@ -103,7 +107,7 @@ export function useEmissionDispatch(opts: {
       const emission = createVoiceEmission({ text, selections, diarized: false });
       // Same tombstone as sendVoiceSegment: this path carries no recording.
       markVoiceAudioAbsent(emission.id);
-      dispatchEmission(emission);
+      void dispatchEmission(emission);
       resetSelections();
     },
     [dispatchEmission, selections, resetSelections]

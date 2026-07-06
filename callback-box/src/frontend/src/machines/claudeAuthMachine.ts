@@ -54,14 +54,21 @@ const doLogout = fromPromise<ClaudeStatus>(async () => {
 });
 
 const pollForLogin = fromCallback(({ sendBack }) => {
-  const id = setInterval(async () => {
-    try {
-      const status = await trpcClient.admin.claudeStatus.query();
-      sendBack({ type: "POLL_RESULT", status });
-    } catch (_e) {
-      // Transient poll failure (network/offline); the interval retries every
-      // 3s, so logging each miss would just spam.
-    }
+  const id = setInterval(() => {
+    trpcClient.admin.claudeStatus
+      .query()
+      .then((status) => {
+        sendBack({ type: "POLL_RESULT", status });
+      })
+      .catch((e: unknown) => {
+        // Transient poll failure (network/offline); the interval retries
+        // every 3s so this isn't fatal, but retry-resilience and
+        // observability are different properties -- log at debug level
+        // (routine, only forwarded to the client-debug-log when the debug
+        // panel is open) so a persistently failing poll is still visible
+        // without spamming the always-forwarded error/warn log.
+        console.debug("[claudeAuth] status poll failed:", e);
+      });
   }, 3000);
   return () => clearInterval(id);
 });

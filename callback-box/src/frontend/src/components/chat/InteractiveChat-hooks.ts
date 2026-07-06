@@ -126,7 +126,9 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
     if (!sessionId) return;
     getChatStatus({ sessionId })
       .then((status) => { setSelectedModel(status.model); })
-      .catch(() => {});
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] get-status (model) failed: ${e instanceof Error ? e.message : String(e)}`);
+      });
   }, [sessionId]);
 
   // Chat-feature flags synced via /api/chat/features on mount, then kept
@@ -135,7 +137,9 @@ export function useChatModelFeatures(opts: { sessionId: string | null; groupCoun
     if (!sessionId) return;
     getChatFeatures({ sessionId })
       .then((res) => { setChatFeatures(res.features); })
-      .catch(() => {});
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] get-features failed: ${e instanceof Error ? e.message : String(e)}`);
+      });
   }, [sessionId]);
 
   const narrationEnabled = chatFeatures.narration === "on";
@@ -236,7 +240,9 @@ export function useChatSchedules(opts: {
       .then((data) => {
         setActiveSchedules(data.schedules);
       })
-      .catch(() => {});
+      .catch((e: unknown) => {
+        console.warn(`[chatfsm] fetch-schedules failed: ${e instanceof Error ? e.message : String(e)}`);
+      });
   }, []);
 
   // Poll schedules on mount + after each turn completes
@@ -251,9 +257,14 @@ export function useChatSchedules(opts: {
   // rather than ported.
 
   const handleCancelSchedule = useCallback((label: string) => {
+    // User-initiated action (rule 5): log at error level, not warn -- the UI
+    // has no toast affordance here, so this is the only signal that the
+    // schedule wasn't actually cancelled.
     trpcClient.chat.cancelSchedule.mutate({ label })
       .then(() => fetchSchedules())
-      .catch(() => {});
+      .catch((e: unknown) => {
+        console.error(`[chatfsm] cancel-schedule "${label}" failed: ${e instanceof Error ? e.message : String(e)}`);
+      });
   }, [fetchSchedules]);
 
   return { activeSchedules, fetchSchedules, handleCancelSchedule };
@@ -278,7 +289,13 @@ export function usePendingMessagePoll(opts: {
         .then((data) => {
           send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
         })
-        .catch(() => {});
+        .catch((e: unknown) => {
+          // Poll retries on its own timer, but retry-resilience and
+          // observability are different properties (policy rule 4) -- log
+          // even though a dead backend would otherwise just look like a
+          // frozen UI.
+          console.warn(`[chatfsm] pending-message poll failed: ${e instanceof Error ? e.message : String(e)}`);
+        });
     };
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
@@ -314,7 +331,9 @@ export function useProcessingStatusPoll(opts: {
         .then((status) => {
           if (!status.busy) send({ type: "REFRESH" });
         })
-        .catch(() => {});
+        .catch((e: unknown) => {
+          console.warn(`[chatfsm] processing-status poll failed: ${e instanceof Error ? e.message : String(e)}`);
+        });
     };
     const id = setInterval(poll, 5000);
     return () => clearInterval(id);
@@ -356,7 +375,9 @@ export function useChatStallRecovery(opts: {
         .then((status) => {
           if (!status.busy) send({ type: "STREAM_RECOVER" });
         })
-        .catch(() => {});
+        .catch((e: unknown) => {
+          console.warn(`[chatfsm] stall-recovery status check failed: ${e instanceof Error ? e.message : String(e)}`);
+        });
     };
     document.addEventListener("visibilitychange", onVisible);
     return () => document.removeEventListener("visibilitychange", onVisible);

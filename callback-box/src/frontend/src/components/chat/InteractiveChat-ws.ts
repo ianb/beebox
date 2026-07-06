@@ -162,7 +162,9 @@ export function useChatWs(opts: {
     // survives the id assignment — a fresh `{ session }` object would drop it.
     // `as never` is the router-boundary cast this loosely-typed `navigate`
     // requires (same pattern as HistoryPage/SessionListButton).
-    navigate({
+    // navigate()'s promise only rejects on a superseded/redirected
+    // navigation (not a user-facing failure) -- fire-and-forget.
+    void navigate({
       to: href(`/${boxSlug}/chat`),
       search: { ...search, session: sessionId } as never,
       replace: true,

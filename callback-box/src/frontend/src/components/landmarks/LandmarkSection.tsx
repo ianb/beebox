@@ -141,27 +141,35 @@ function ChatButton({ dir, boxSlug }: { dir: string; boxSlug: string }) {
   const utils = trpc.useUtils();
 
   const onClick = async () => {
-    const { sessionId } = await utils.chat.lastSessionForDirectory.fetch({ contextDir: dir });
-    if (sessionId) {
-      navigate({
+    try {
+      const { sessionId } = await utils.chat.lastSessionForDirectory.fetch({ contextDir: dir });
+      if (sessionId) {
+        // navigate()'s promise only rejects on a superseded/redirected
+        // navigation (not a user-facing failure) -- fire-and-forget.
+        void navigate({
+          to: href(`/${boxSlug}/chat`),
+          search: { session: sessionId } as never,
+        });
+        return;
+      }
+      // No prior chat for this dir — start a new one. The backend reads
+      // `contextDir` off the first send and spawns the SDK with `cwd` at
+      // that directory; the association is persisted on session assignment.
+      void navigate({
         to: href(`/${boxSlug}/chat`),
-        search: { session: sessionId } as never,
+        search: { session: "new", contextDir: dir } as never,
       });
-      return;
+    } catch (e) {
+      // User-initiated action (policy rule 5): no toast affordance on this
+      // button today, so log at error level as the interim signal.
+      console.error(`[landmarks] failed to open chat for ${dir}:`, e);
     }
-    // No prior chat for this dir — start a new one. The backend reads
-    // `contextDir` off the first send and spawns the SDK with `cwd` at
-    // that directory; the association is persisted on session assignment.
-    navigate({
-      to: href(`/${boxSlug}/chat`),
-      search: { session: "new", contextDir: dir } as never,
-    });
   };
 
   return (
     <button
       type="button"
-      onClick={onClick}
+      onClick={() => void onClick()}
       className="px-3 py-1 rounded text-sm font-medium bg-info-50 text-info-dark border border-info-200 hover:bg-info-100 transition-colors"
     >
       Chat

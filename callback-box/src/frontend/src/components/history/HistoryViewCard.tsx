@@ -57,7 +57,9 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
   // out of the URL, so provenance never over-reports.
   const applyOverride = (next: HistoryFilterState) => {
     const overrides = diffAgainstCard(filterToParamsShape(next), params?.card ?? {});
-    navigate({
+    // navigate()'s promise only rejects on a superseded/redirected
+    // navigation (not a user-facing failure) -- fire-and-forget.
+    void navigate({
       search: HISTORY_QUERY_CODEC.toQuery(overrides) as never,
       replace: false,
     });
@@ -73,7 +75,7 @@ export function HistoryViewCard({ params }: { params?: ResolvedViewParams }) {
               URL overrides: {overriddenKeys.join(", ")} ·{" "}
               <button
                 type="button"
-                onClick={() => navigate({ search: {} as never, replace: false })}
+                onClick={() => void navigate({ search: {} as never, replace: false })}
                 className="text-info-dark hover:underline"
               >
                 reset

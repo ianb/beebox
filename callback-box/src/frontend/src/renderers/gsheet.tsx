@@ -86,7 +86,7 @@ function SheetView({ data }: RendererProps) {
       }
     }
 
-    loadTabs();
+    void loadTabs();
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.path]);

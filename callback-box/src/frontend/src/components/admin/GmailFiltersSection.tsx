@@ -57,7 +57,7 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
       const result = await updateMutation.mutateAsync({ query, labels });
       setQuery(result.query);
       setLabels(result.labels);
-      utils.admin.gmailConfig.invalidate();
+      void utils.admin.gmailConfig.invalidate();
       setSavedFlash(true);
       setTimeout(() => setSavedFlash(false), 2000);
     } catch (_e) {

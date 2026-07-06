@@ -73,9 +73,11 @@ export function SpeechTestHarness() {
   // Expose imperative hook handles so the driver can isolate playback logic
   // from the menu UI when debugging.
   useEffect(() => {
+    // Test-only harness: the external driver polls window.__speechState for
+    // status rather than awaiting these, so they're intentionally voided.
     window.__speechHarness = {
-      play: () => sp.playSegments({ messageId: MESSAGE_ID, segments: SEGMENTS }),
-      replay: (fromIndex: number) => sp.replay({ messageId: MESSAGE_ID, segments: SEGMENTS, fromIndex }),
+      play: () => { void sp.playSegments({ messageId: MESSAGE_ID, segments: SEGMENTS }); },
+      replay: (fromIndex: number) => { void sp.replay({ messageId: MESSAGE_ID, segments: SEGMENTS, fromIndex }); },
       skip: () => sp.skip(),
       stop: () => sp.stop(),
     };

@@ -240,6 +240,13 @@ export function Button(props: ButtonProps) {
       setAsyncLoading(true);
       try {
         await result;
+      } catch (err) {
+        // Safety net for this shared primitive: a caller's onClick throwing
+        // uncaught would otherwise be an unhandled rejection inside this
+        // native DOM handler (which can't propagate it anywhere) --
+        // individual callers are expected to surface their own
+        // user-visible errors; this is the last-resort log if they don't.
+        console.error("[Button] onClick handler threw:", err);
       } finally {
         setAsyncLoading(false);
       }
@@ -272,7 +279,7 @@ export function Button(props: ButtonProps) {
       aria-busy={loading || undefined}
       title={"title" in rest && rest.title !== undefined ? rest.title : titleFallback}
       className={buildClasses({ intent, shape, size, iconOnly, fullWidth, extra: className })}
-      onClick={handleClick}
+      onClick={(e) => void handleClick(e)}
     >
       {content}
     </button>

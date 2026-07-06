@@ -77,7 +77,7 @@ export function ChatDebugMenu({
     if (currentService === service) return;
     try {
       await setTranscriptionService.mutateAsync({ service });
-      utils.transcription.config.invalidate();
+      void utils.transcription.config.invalidate();
     } catch (e) {
       console.error("[chat] Failed to set transcription service", e);
     }
@@ -87,7 +87,7 @@ export function ChatDebugMenu({
     if (currentHqService === hqService) return;
     try {
       await setHqTranscriptionService.mutateAsync({ hqService });
-      utils.transcription.config.invalidate();
+      void utils.transcription.config.invalidate();
     } catch (e) {
       console.error("[chat] Failed to set HQ transcription service", e);
     }

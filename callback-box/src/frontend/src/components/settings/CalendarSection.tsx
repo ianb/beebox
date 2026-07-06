@@ -38,7 +38,7 @@ export function CalendarSection() {
     if (!config) return;
     try {
       await updateMutation.mutateAsync({ ...config, ...next });
-      utils.calendar.invalidate();
+      void utils.calendar.invalidate();
     } catch (_e) {
       // error surfaced to the user via the mutation's error state
     }
@@ -64,7 +64,7 @@ export function CalendarSection() {
 
     try {
       await updateMutation.mutateAsync({ ...config, calendars: newList });
-      utils.calendar.invalidate();
+      void utils.calendar.invalidate();
     } catch (_e) {
       // error surfaced to the user via the mutation's error state
     }
@@ -121,7 +121,7 @@ export function CalendarSection() {
                 </>
               }
               checked={cal.syncing}
-              onChange={() => toggleCalendar(cal)}
+              onChange={() => void toggleCalendar(cal)}
               disabled={updateMutation.isPending}
               className="flex-1 min-w-0"
             />
@@ -145,7 +145,7 @@ export function CalendarSection() {
           label="Days back"
           value={daysBack}
           onChange={setDaysBack}
-          onBlur={() => daysBack !== null && saveSyncWindow({ syncDaysBack: daysBack })}
+          onBlur={() => { if (daysBack !== null) void saveSyncWindow({ syncDaysBack: daysBack }); }}
           min={0}
           disabled={updateMutation.isPending}
           className="w-32"
@@ -154,7 +154,7 @@ export function CalendarSection() {
           label="Days forward"
           value={daysForward}
           onChange={setDaysForward}
-          onBlur={() => daysForward !== null && saveSyncWindow({ syncDaysForward: daysForward })}
+          onBlur={() => { if (daysForward !== null) void saveSyncWindow({ syncDaysForward: daysForward }); }}
           min={0}
           disabled={updateMutation.isPending}
           className="w-32"

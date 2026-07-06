@@ -54,7 +54,7 @@ export function useNavLinks({ base, freshCount }: { base: string; freshCount: nu
       (event: RealtimeEvent) => {
         if (event.event !== "file-change") return;
         if ((event.data as { path?: string }).path !== "nav.card") return;
-        utils.nav.get.invalidate();
+        void utils.nav.get.invalidate();
       },
       [utils],
     ),

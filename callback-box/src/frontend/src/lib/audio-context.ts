@@ -263,7 +263,7 @@ export function playAudioStream(
         return;
       }
 
-      (async () => {
+      void (async () => {
         try {
           for (;;) {
             const { done, value } = await reader.read();

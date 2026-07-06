@@ -74,7 +74,10 @@ export function MobileTextareaRow({
               onStopDictation();
               const text = transcription.transcript;
               if (text) setInput((existing) => (existing ? existing + " " + text : text));
-              transcription.stop();
+              // stop() only ever resolves (state-machine bookkeeping, no I/O
+              // that can fail) -- its resolved transcript isn't needed here
+              // since we already read `transcription.transcript` above.
+              void transcription.stop();
               // Now editable typed text, not voice — drop the dictation draft.
               clearDraft();
             }}
@@ -86,14 +89,18 @@ export function MobileTextareaRow({
             </svg>
           </button>
           <button
-            onClick={async () => {
-              const finalText = await transcription.stop();
-              // Continue from any prior composer text so it isn't dropped.
-              const text = joinTranscript(input, finalText).trim();
-              if (text) onVoiceSegmentSend(text);
-              setInput("");
-              // Segment committed — drop the persisted dictation draft.
-              clearDraft();
+            onClick={() => {
+              // transcription.stop() only ever resolves; nothing here can
+              // reject, so the wrapper just satisfies onClick's void type.
+              void (async () => {
+                const finalText = await transcription.stop();
+                // Continue from any prior composer text so it isn't dropped.
+                const text = joinTranscript(input, finalText).trim();
+                if (text) onVoiceSegmentSend(text);
+                setInput("");
+                // Segment committed — drop the persisted dictation draft.
+                clearDraft();
+              })();
             }}
             disabled={!joinTranscript(input, transcription.transcript).trim()}
             className={`${circleBtn} bg-accent text-white hover:bg-accent-dark disabled:bg-info-muted disabled:text-white/70 disabled:cursor-not-allowed`}

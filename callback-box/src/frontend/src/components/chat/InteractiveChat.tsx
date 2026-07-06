@@ -34,6 +34,7 @@ import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
 import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
+import type { Emission } from "../../input/emission";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -136,13 +137,21 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     send, captureCardSend: cardSend.capture, boxSlug, activeView, messages, emissionStore,
     selections: selections.selections, resetSelections: selections.resetSelections,
   });
+  // useChatVoice/useChatActions only ever fire-and-forget dispatchEmission
+  // (its Promise<Receipt> is for callers that want to await the outcome,
+  // per InteractiveChat-dispatch.ts) -- void it once here so both callees'
+  // option types can stay honestly void-returning.
+  const dispatchEmissionVoid = useCallback(
+    (emission: Emission) => { void dispatchEmission(emission); },
+    [dispatchEmission]
+  );
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
   const voice = useChatVoice({
     snapshot, sessionId, muted: mute.muted, narrationEnabled: model.narrationEnabled,
     selections: selections.selections, resetSelections: selections.resetSelections,
-    clearDraftRef, inputStore, dispatchEmission,
+    clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
 
   // Persist the in-flight transcript so an interrupted session (screen sleep,
@@ -192,10 +201,13 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     inputStore, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
-    addImageFiles: attach.addImageFiles,
+    // Both addImageFiles and dispatchEmission already catch their own
+    // errors internally; voided here so useChatActions' option types can
+    // stay honestly void-returning.
+    addImageFiles: (files) => { void attach.addImageFiles(files); },
     onSend: voice.notifySent, isTranscribing: voice.isTranscribing, textareaRef,
     transcriptTick: voice.transcription.transcript, typingMode, typingLocked, setTypingMode,
-    setScrollToBottomTrigger, dispatchEmission,
+    setScrollToBottomTrigger, dispatchEmission: dispatchEmissionVoid,
   });
 
   if (isLoading) {

@@ -143,7 +143,7 @@ export function HistoryBrowser({
           commits={commits}
           selectedHash={selectedCommit?.hash || null}
           onSelect={handleSelect}
-          onLoadMore={() => fetchNextPage()}
+          onLoadMore={() => void fetchNextPage()}
           onFilterSession={handleFilterSession}
           activeSession={filter.session}
           hasMore={hasNextPage ?? false}

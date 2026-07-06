@@ -33,7 +33,8 @@ export function AllowedEmailsSection() {
 
   useEffect(() => {
     setLoading(true);
-    fetchConfig().finally(() => setLoading(false));
+    // fetchConfig catches its own errors into `error` state.
+    void fetchConfig().finally(() => setLoading(false));
   }, [fetchConfig]);
 
 
@@ -59,11 +60,12 @@ export function AllowedEmailsSection() {
     }
     const updated = [...emails, email];
     setNewEmail("");
-    saveEmails(updated);
+    // saveEmails catches its own errors into `error` state.
+    void saveEmails(updated);
   };
 
   const handleRemove = (email: string) => {
-    saveEmails(emails.filter((e) => e !== email));
+    void saveEmails(emails.filter((e) => e !== email));
   };
 
   if (loading) {

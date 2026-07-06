@@ -34,7 +34,8 @@ export function TelegramSection() {
   // Mount-only fetch.
 
   useEffect(() => {
-    fetchStatus().finally(() => setLoading(false));
+    // fetchStatus catches its own errors into `error` state.
+    void fetchStatus().finally(() => setLoading(false));
   }, [fetchStatus]);
 
 
@@ -88,14 +89,14 @@ export function TelegramSection() {
         <TelegramConnectedView
           status={status}
           disconnecting={disconnecting}
-          onDisconnect={handleDisconnect}
+          onDisconnect={() => void handleDisconnect()}
         />
       ) : (
         <TelegramSetupView
           botToken={botToken}
           connecting={connecting}
           onBotTokenChange={setBotToken}
-          onConnect={handleConnect}
+          onConnect={() => void handleConnect()}
         />
       )}
 

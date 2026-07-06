@@ -86,14 +86,14 @@ function useBrowseListLiveRefresh(dirPath: string): void {
       if (typeof changed !== "string") return;
       const parent = changed.includes("/") ? changed.slice(0, changed.lastIndexOf("/")) : "";
       if (parent !== dirPath) return;
-      utils.status.browse.invalidate({ path: dirPath });
+      void utils.status.browse.invalidate({ path: dirPath });
     }, [dirPath, utils]),
     onConnect: useCallback(() => {
       if (!connectedOnceRef.current) {
         connectedOnceRef.current = true;
         return;
       }
-      utils.status.browse.invalidate({ path: dirPath });
+      void utils.status.browse.invalidate({ path: dirPath });
     }, [dirPath, utils]),
   });
 }

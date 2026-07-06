@@ -23,8 +23,8 @@ export function DashboardPage() {
   const questionsQuery = trpc.status.questions.useQuery();
 
   const invalidateAll = () => {
-    utils.status.invalidate();
-    utils.scheduler.invalidate();
+    void utils.status.invalidate();
+    void utils.scheduler.invalidate();
   };
 
   const { connected } = useBusSubscription({

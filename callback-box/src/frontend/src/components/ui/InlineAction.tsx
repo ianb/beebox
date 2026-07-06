@@ -53,6 +53,10 @@ export function InlineAction({
       setPending(true);
       try {
         await result;
+      } catch (err) {
+        // Safety net for this shared primitive, same as Button.tsx: callers
+        // are expected to surface their own user-visible errors.
+        console.error("[InlineAction] onClick handler threw:", err);
       } finally {
         setPending(false);
       }
@@ -69,7 +73,7 @@ export function InlineAction({
   return (
     <button
       type="button"
-      onClick={handleClick}
+      onClick={(e) => void handleClick(e)}
       disabled={isBusy}
       title={title}
       className={cn(

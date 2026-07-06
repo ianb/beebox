@@ -149,10 +149,12 @@ function useFileData(path: string): LoadResult {
   // otherwise leave the view stale until a manual reload.
   const utils = trpc.useUtils();
   const resync = useCallback(() => {
+    // Fire-and-forget: both are react-query refresh triggers whose failure
+    // surfaces through the query's own error/isError state, not here.
     if (isCard) {
-      utils.card.get.invalidate({ path });
+      void utils.card.get.invalidate({ path });
     } else if (fetchText) {
-      textQuery.refetch();
+      void textQuery.refetch();
     }
   }, [path, isCard, fetchText, utils, textQuery]);
   // Skip the very first connect — the queries already load on mount, so a resync

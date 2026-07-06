@@ -22,7 +22,7 @@ interface CaptureInputs {
   uploadRef: React.RefObject<HTMLInputElement>;
   pickFromGallery: () => void;
   pickFileToUpload: () => void;
-  handleGallerySelect: (e: React.ChangeEvent<HTMLInputElement>) => Promise<void>;
+  handleGallerySelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
   handleFileSelect: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
@@ -35,7 +35,7 @@ export function useCaptureInputs(options: CaptureInputsOptions): CaptureInputs {
   const pickFileToUpload = useCallback(() => { if (uploadRef.current) uploadRef.current.click(); }, []);
 
   const handleGallerySelect = useCallback(
-    async (e: React.ChangeEvent<HTMLInputElement>) => {
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!sessionId || !e.target.files) return;
       const files = Array.from(e.target.files);
       const baseIndex = photoTotal;

@@ -55,7 +55,8 @@ export function useGoogleServices(): GoogleServicesState {
   // Mount-only fetch.
 
   useEffect(() => {
-    fetchStatus().finally(() => setLoading(false));
+    // fetchStatus catches its own errors into `error` state.
+    void fetchStatus().finally(() => setLoading(false));
   }, [fetchStatus]);
 
 
@@ -68,7 +69,7 @@ export function useGoogleServices(): GoogleServicesState {
     if (googleParam === "connected") {
       setSuccessMessage("Google services connected successfully.");
       window.history.replaceState(null, "", window.location.pathname);
-      fetchStatus();
+      void fetchStatus();
     } else if (googleParam === "error") {
       const message = params.get("message") || "Authorization failed";
       setError(message);

@@ -35,16 +35,24 @@ export function BoxRedirect() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchBoxes().then((result) => {
-      setBoxes(result.boxes);
-      setAuthRequired(result.authRequired ?? false);
-      setLoading(false);
-    });
+    fetchBoxes()
+      .then((result) => {
+        setBoxes(result.boxes);
+        setAuthRequired(result.authRequired ?? false);
+        setLoading(false);
+      })
+      .catch((err: unknown) => {
+        // A silent failure here used to leave `loading` true forever.
+        console.error("Failed to load box list:", err);
+        setLoading(false);
+      });
   }, []);
 
   useEffect(() => {
     if (!loading && boxes.length === 1) {
-      navigate({ to: "/$boxSlug", params: { boxSlug: boxes[0]!.slug }, replace: true });
+      // navigate()'s promise only rejects on a superseded/redirected
+      // navigation (not a user-facing failure) -- fire-and-forget.
+      void navigate({ to: "/$boxSlug", params: { boxSlug: boxes[0]!.slug }, replace: true });
     }
   }, [loading, boxes, navigate]);
 

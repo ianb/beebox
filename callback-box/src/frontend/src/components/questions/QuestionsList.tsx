@@ -28,7 +28,7 @@ export function QuestionsList() {
         event.event === "card-created" ||
         event.event === "file-change"
       ) {
-        utils.status.questions.invalidate();
+        void utils.status.questions.invalidate();
       }
     },
   });
@@ -53,7 +53,7 @@ export function QuestionsList() {
               key={q.path}
               question={q}
               sourcePath={q.relativePath}
-              onAnswered={() => utils.status.questions.invalidate()}
+              onAnswered={() => void utils.status.questions.invalidate()}
             />
           ))}
         </Stack>

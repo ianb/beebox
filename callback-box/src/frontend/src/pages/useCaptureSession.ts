@@ -111,8 +111,8 @@ export function useCaptureSession() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement || e.target instanceof HTMLSelectElement) return;
-      if (e.key === " ") { e.preventDefault(); takePhoto(); }
-      else if (e.key === "r" || e.key === "R") { e.preventDefault(); toggleRecording(); }
+      if (e.key === " ") { e.preventDefault(); void takePhoto(); }
+      else if (e.key === "r" || e.key === "R") { e.preventDefault(); void toggleRecording(); }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);

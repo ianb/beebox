@@ -54,7 +54,7 @@ function EnableToggle({ name, enabled }: { name: string; enabled: boolean }) {
   const utils = trpc.useUtils();
   const mutation = trpc.scheduler.setEnabled.useMutation({
     onSuccess() {
-      utils.scheduler.schedules.invalidate();
+      void utils.scheduler.schedules.invalidate();
     },
   });
 
@@ -73,10 +73,10 @@ function TriggerButton({ name, enabled }: { name: string; enabled: boolean }) {
   const utils = trpc.useUtils();
   const mutation = trpc.scheduler.trigger.useMutation({
     onSuccess() {
-      utils.scheduler.schedules.invalidate();
+      void utils.scheduler.schedules.invalidate();
     },
     onError() {
-      utils.scheduler.schedules.invalidate();
+      void utils.scheduler.schedules.invalidate();
     },
   });
 

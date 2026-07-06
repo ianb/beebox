@@ -118,7 +118,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
   }
 
   const figureEl = (
-    <ViewErrorBoundary onRetry={loadModule}>
+    <ViewErrorBoundary onRetry={() => void loadModule()}>
       <FigureMount key={paramsKey} runtime={runtime} sketch={sketch} figure={figure} onError={setError} />
     </ViewErrorBoundary>
   );

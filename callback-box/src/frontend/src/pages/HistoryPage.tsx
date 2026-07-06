@@ -30,7 +30,9 @@ export function HistoryPage() {
 
   const handleSelectCommit = useCallback(
     (commit: HistoryCommit) => {
-      navigate({
+      // navigate()'s promise only rejects on a superseded/redirected
+      // navigation (not a user-facing failure) -- fire-and-forget.
+      void navigate({
         to: href(`/${boxSlug}/history/${commit.hash.substring(0, 8)}`),
         search: search as never,
         replace: true,
@@ -41,7 +43,7 @@ export function HistoryPage() {
 
   const handleFilterChange = useCallback(
     (next: HistoryFilterState) => {
-      navigate({ search: filterToSearch(next) as never, replace: false });
+      void navigate({ search: filterToSearch(next) as never, replace: false });
     },
     [navigate]
   );

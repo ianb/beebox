@@ -72,7 +72,7 @@ export function GoogleServicesSection() {
                   label={label}
                   checked={status.enabledServices[key] === true}
                   disabled={savingServices}
-                  onChange={(checked) => handleServiceToggle(key, checked)}
+                  onChange={(checked) => void handleServiceToggle(key, checked)}
                 />
               ))}
             </div>

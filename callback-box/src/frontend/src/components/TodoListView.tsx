@@ -221,7 +221,8 @@ export function TodoListView({ data }: RendererProps) {
   const utils = trpc.useUtils();
   const updateMutation = trpc.todos.updateItem.useMutation({
     onSuccess: () => {
-      utils.card.get.invalidate({ path: data.path });
+      // Fire-and-forget refresh trigger; failure surfaces via query error state.
+      void utils.card.get.invalidate({ path: data.path });
     },
   });
 
