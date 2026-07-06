@@ -7,6 +7,7 @@ See [DESIGN.md](DESIGN.md) for the full architecture, flow, and rationale.
 | File | Purpose |
 |------|---------|
 | `engine.ts` | Main loop: `runReactor()`, cycle management, locking, polling |
+| `cycle.ts` | One cycle as named stages: `runOneCycle()` → sync/refresh/discover/process |
 | `batch-jobs.ts` | Batch processing: all jobs in one agent session |
 | `chat-jobs.ts` | Chat processing: per-thread sessions with resume |
 | `job-discovery.ts` | Scan `box/jobs/` for pending job cards |

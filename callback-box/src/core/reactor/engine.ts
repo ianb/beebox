@@ -17,7 +17,6 @@
 
 import { sleep } from "../../lib/sleep.js";
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
 import {
   acquireLock as acquireFileLock,
   releaseLock as releaseFileLock,
@@ -31,11 +30,8 @@ import {
   saveChatSessions,
   resetAllSessions,
 } from "../chat-reactor-sessions.js";
-import { findJobCards } from "./job-discovery.js";
-import { processBatchJobs } from "./batch-jobs.js";
-import { processChatJobs } from "./chat-jobs.js";
+import { runOneCycle, type RunCycleParams } from "./cycle.js";
 import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
-import type { JobWithContent, ProcessJobsOptions } from "./types.js";
 
 export interface ReactorOptions {
   boxRoot: string;
@@ -232,139 +228,6 @@ function normalizeReactorOptions(options: ReactorOptions): NormalizedReactorOpti
     runFinalize: options.runFinalize ?? realRunFinalize,
     generateDocs: options.generateDocs ?? realGenerateDocs,
   };
-}
-
-// ─── Single cycle ─────────────────────────────────────────────────────
-
-interface RunCycleParams {
-  boxRoot: string;
-  dryRun: boolean;
-  sync: boolean;
-  skipLowPriority: boolean;
-  typeFilter: string | undefined;
-  sourceFilter: string | undefined;
-  onLog: ((text: string) => void) | undefined;
-  agentFactory: typeof realCreateAgent;
-  runSync: typeof realRunSync;
-  generateDocs: typeof realGenerateDocs;
-}
-
-/** Run sync + agent-doc refresh, then discover and process one batch of jobs. */
-async function runOneCycle(params: RunCycleParams): Promise<ReactorResult> {
-  const { boxRoot, dryRun, sync, skipLowPriority, typeFilter, sourceFilter, onLog, runSync, generateDocs } = params;
-
-  // Run sync if enabled
-  if (sync) {
-    onLog?.(fmt.header("[Sync]\n"));
-    const syncOk = await runSync(boxRoot, onLog);
-    if (!syncOk) {
-      onLog?.(fmt.warn("Sync failed, continuing with existing jobs...\n"));
-    }
-    onLog?.("\n");
-  }
-
-  // Refresh agent docs (fast no-op if inputs haven't changed)
-  onLog?.(fmt.dim("Refreshing agent docs...\n"));
-  await generateDocs(boxRoot);
-
-  // Find all job cards
-  const jobsDir = path.join(boxRoot, "box/jobs");
-  await fs.mkdir(jobsDir, { recursive: true });
-
-  const jobCards = await findJobCards(jobsDir, { typeFilter, sourceFilter });
-
-  if (jobCards.length === 0) {
-    onLog?.("No pending jobs.\n");
-    return { success: true, jobsProcessed: 0, jobsRemaining: 0 };
-  }
-
-  const hasNormalPriority = jobCards.some((j) => j.priority === "normal");
-
-  // Skip if only low-priority jobs and skipLowPriority is set
-  if (skipLowPriority && !hasNormalPriority) {
-    const count = jobCards.length;
-    onLog?.(fmt.dim(`Only ${count} low-priority job(s), skipping.\n`));
-    return { success: true, jobsProcessed: 0, jobsRemaining: count };
-  }
-
-  onLog?.(fmt.header(`Found ${jobCards.length} job(s):\n`));
-  for (const card of jobCards) {
-    const label = card.priority === "low" ? " (low priority)" : "";
-    onLog?.(`  - box/jobs/${card.file}${label}\n`);
-  }
-
-  // Read job cards; every job is handled by an agent.
-  const agentJobs = await readJobsWithContent({ jobCards, boxRoot });
-
-  if (dryRun && agentJobs.length === 0) {
-    return { success: true, jobsProcessed: 0, jobsRemaining: jobCards.length };
-  }
-
-  // Process remaining agent jobs
-  const cycleSuccess = await processAgentJobs({ agentJobs, params });
-
-  // Count remaining jobs
-  const remaining = await findJobCards(jobsDir, { typeFilter, sourceFilter });
-  const processed = jobCards.length - remaining.length;
-
-  onLog?.(fmt.dim(`\nCycle complete: ${processed} processed, ${remaining.length} remaining\n`));
-
-  return {
-    success: cycleSuccess,
-    jobsProcessed: processed,
-    jobsRemaining: remaining.length,
-  };
-}
-
-/**
- * Read each job card's content. Unreadable cards are queued with empty content
- * so the batch path reports "(could not read)" rather than crashing the cycle.
- */
-async function readJobsWithContent(opts: {
-  jobCards: Awaited<ReturnType<typeof findJobCards>>;
-  boxRoot: string;
-}): Promise<JobWithContent[]> {
-  const { jobCards, boxRoot } = opts;
-  const jobsWithContent: JobWithContent[] = [];
-  for (const card of jobCards) {
-    const jp = path.join("box/jobs", card.file);
-    const absPath = path.join(boxRoot, jp);
-    try {
-      const content = await fs.readFile(absPath, "utf-8");
-      jobsWithContent.push({ card, relPath: jp, content });
-    } catch (e) {
-      console.warn(`Could not read job card ${jp}:`, e);
-      jobsWithContent.push({ card, relPath: jp, content: "" });
-    }
-  }
-  return jobsWithContent;
-}
-
-/**
- * Process the agent jobs for one cycle. Chat jobs run individually with
- * per-thread session reuse; everything else batches into a single session.
- * Returns true when there are no agent jobs to run.
- */
-async function processAgentJobs(opts: {
-  agentJobs: JobWithContent[];
-  params: RunCycleParams;
-}): Promise<boolean> {
-  const { agentJobs, params } = opts;
-  if (agentJobs.length === 0) return true;
-
-  const { boxRoot, dryRun, typeFilter, onLog, agentFactory } = params;
-  const jobOpts: ProcessJobsOptions = {
-    jobs: agentJobs,
-    boxRoot,
-    dryRun,
-    typeFilter,
-    onLog,
-    createAgent: agentFactory,
-  };
-  if (typeFilter === "chat") {
-    return processChatJobs(jobOpts);
-  }
-  return processBatchJobs(jobOpts);
 }
 
 // ─── Reactor lock ─────────────────────────────────────────────────────
