@@ -576,6 +576,25 @@ export function vibeCheck(options) {
             allowThrowingUnknown: false,
           },
         ],
+        // Every switch over a closed union must handle every member — a new
+        // member makes the switch fail to compile until it's handled. Config
+        // per the exhaustiveness research (issues #10307, #3616):
+        //   considerDefaultExhaustiveForUnions: false — a bare `default:` does
+        //     NOT count as exhaustive, so unions must list every case (the
+        //     load-bearing option; `default: assertNever(x)` is the blessed
+        //     terminator, still legal via allowDefaultCaseForExhaustiveSwitch).
+        //   requireDefaultForNonUnion: true — switches over `number`/`string`
+        //     must carry a `default:` (they can't be proven exhaustive).
+        //   allowDefaultCaseForExhaustiveSwitch: true — keeps
+        //     `default: assertNever(x)` on an already-exhaustive union legal.
+        "@typescript-eslint/switch-exhaustiveness-check": [
+          "error",
+          {
+            considerDefaultExhaustiveForUnions: false,
+            requireDefaultForNonUnion: true,
+            allowDefaultCaseForExhaustiveSwitch: true,
+          },
+        ],
       },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict
