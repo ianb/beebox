@@ -32,8 +32,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -59,16 +61,17 @@ import {
   emitUnsureQuestion,
 } from "./scan-import-cards.js";
 
-export interface ScanImportArgs {
-  inputs: string[];
-  context?: string;
-}
+const ScanImportArgsSchema = z.object({
+  inputs: z.array(z.string()).optional(),
+  context: z.string().optional(),
+});
+export type ScanImportArgs = z.infer<typeof ScanImportArgsSchema>;
 
 async function executeScanImport(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { inputs, context: extraContext } = args as unknown as ScanImportArgs;
+  const { inputs, context: extraContext } = parseCommandArgs(args, ScanImportArgsSchema);
 
   if (!inputs || inputs.length === 0) {
     return { success: false, error: "inputs argument is required (at least one file)" };

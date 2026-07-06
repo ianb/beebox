@@ -6,8 +6,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -38,20 +40,21 @@ async function validateGeneratedCard(input: {
 /**
  * Arguments for the create command.
  */
-export interface CreateArgs {
+const CreateArgsSchema = z.object({
   /** Path for the new card (relative to box root or absolute) */
-  path: string;
+  path: z.string().optional(),
   /** Template to use (overrides type-based default) */
-  template?: string;
+  template: z.string().optional(),
   /** Template arguments as key=value pairs */
-  args?: Record<string, unknown>;
+  args: z.record(z.string(), z.unknown()).optional(),
   /** Whether to commit the new card */
-  commit?: boolean;
+  commit: z.boolean().optional(),
   /** Path to an attachment file (will be copied alongside the card) */
-  attachment?: string;
+  attachment: z.string().optional(),
   /** Mimetype of the attachment (used for determining extension) */
-  attachmentMimetype?: string;
-}
+  attachmentMimetype: z.string().optional(),
+});
+export type CreateArgs = z.infer<typeof CreateArgsSchema>;
 
 /**
  * Execute the create command.
@@ -60,7 +63,7 @@ async function executeCreate(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const createArgs = args as unknown as CreateArgs;
+  const createArgs = parseCommandArgs(args, CreateArgsSchema);
 
   if (!createArgs.path) {
     return { success: false, error: "Path is required" };

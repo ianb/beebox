@@ -21,8 +21,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -38,19 +40,21 @@ import {
   runUntrackAssets,
 } from "./attachments-gitignore.js";
 
-interface AttachmentsArgs {
-  subcommand: string;
+const AttachmentsArgsSchema = z.object({
+  // Always supplied by the dispatch (CLI positional / API caller); an absent
+  // subcommand fails validation rather than reaching the `default` arm.
+  subcommand: z.string(),
   /** Path argument for overwrite / add. Relative to box root. */
-  pathArg?: string;
+  pathArg: z.string().optional(),
   /** When set, write to disk; otherwise dry-run. Used by verify. */
-  apply?: boolean;
-}
+  apply: z.boolean().optional(),
+});
 
 async function executeAttachments(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { subcommand, pathArg, apply } = args as unknown as AttachmentsArgs;
+  const { subcommand, pathArg, apply } = parseCommandArgs(args, AttachmentsArgsSchema);
 
   switch (subcommand) {
     case "verify":

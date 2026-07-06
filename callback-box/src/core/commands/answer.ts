@@ -7,8 +7,10 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -20,12 +22,13 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type QuestionFields, QuestionSchema } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 
-export interface AnswerArgs {
-  question: string;
-  answer: string;
-  selectedId?: string;
-  via?: string;
-}
+const AnswerArgsSchema = z.object({
+  question: z.string().optional(),
+  answer: z.string().optional(),
+  selectedId: z.string().optional(),
+  via: z.string().optional(),
+});
+export type AnswerArgs = z.infer<typeof AnswerArgsSchema>;
 
 /**
  * Load, parse, and validate the question card at the given path.
@@ -153,22 +156,27 @@ function resolveConfirmAnswer(
  */
 function resolveAnswer(
   fields: QuestionFields,
-  args: { answer: string; selectedId: string | undefined }
+  args: { answer: string | undefined; selectedId: string | undefined }
 ):
   | { ok: true; finalAnswer: string; selectedId: string | undefined }
   | { ok: false; result: CommandResult } {
   const inputType = fields.input.type;
   const questionOptions = fields.input.options ?? [];
 
+  // The caller's guard guarantees answer OR selectedId. In the two branches
+  // below answer is always present (no selectedId ⇒ answer set); the `?? ""`
+  // fallbacks are unreachable there and only keep the type honest. In the
+  // passthrough, a select answered by selectedId alone yields an empty
+  // finalAnswer — previously `undefined` under the loosened cast.
   if (inputType === "select" && !args.selectedId) {
-    return resolveSelectAnswer(args.answer, questionOptions);
+    return resolveSelectAnswer(args.answer ?? "", questionOptions);
   }
 
   if (inputType === "confirm") {
-    return resolveConfirmAnswer(args.answer);
+    return resolveConfirmAnswer(args.answer ?? "");
   }
 
-  return { ok: true, finalAnswer: args.answer, selectedId: args.selectedId };
+  return { ok: true, finalAnswer: args.answer ?? "", selectedId: args.selectedId };
 }
 
 /**
@@ -207,7 +215,7 @@ async function executeAnswer(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const answerArgs = args as unknown as AnswerArgs;
+  const answerArgs = parseCommandArgs(args, AnswerArgsSchema);
 
   if (!answerArgs.question) {
     return { success: false, error: "Question path is required" };
@@ -229,6 +237,10 @@ async function executeAnswer(
     return { success: false, error: "Path must be a card file (*.card)" };
   }
 
+  // Narrowed once here so the withCardLock closure below (which loses the
+  // guard's narrowing across the function boundary) sees a plain string.
+  const question = answerArgs.question;
+
   // Serialize the read-modify-write on the question card so two concurrent
   // answers (e.g. web + CLI) can't both read the pending card and race their
   // writes. The whole read-through-commit runs under the lock; the follow-up
@@ -239,7 +251,7 @@ async function executeAnswer(
       | { ok: false; result: CommandResult }
       | { ok: true; relativePath: string; finalAnswer: string; selectedId?: string; fields: QuestionFields }
     > => {
-      const loaded = await loadPendingQuestion(fullPath, answerArgs.question);
+      const loaded = await loadPendingQuestion(fullPath, question);
       if (!loaded.ok) {
         return { ok: false, result: loaded.result };
       }
@@ -268,7 +280,7 @@ async function executeAnswer(
       const relativePath = path.relative(ctx.boxRoot, fullPath);
       await stageFiles(ctx.boxRoot, [relativePath]);
       await commit(ctx.boxRoot, {
-        message: `Answer question: ${path.basename(answerArgs.question, ".card")}`,
+        message: `Answer question: ${path.basename(question, ".card")}`,
         trailers: {
           "Answered-Via": via,
         },

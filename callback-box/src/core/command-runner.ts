@@ -5,6 +5,43 @@
  * This enables both CLI and web API to share the same command logic.
  */
 
+import type { z } from "zod";
+
+/**
+ * Thrown by {@link parseCommandArgs} when a command's args fail validation.
+ * `runCommand` catches it and returns a `{ success: false }` result, so a
+ * malformed programmatic call surfaces as a loud, localized failure instead of
+ * flowing past an `as unknown as` cast as mis-typed data.
+ */
+export class CommandArgsError extends Error {
+  readonly issues: string;
+  constructor(issues: string) {
+    super(`invalid command arguments: ${issues}`);
+    this.name = "CommandArgsError";
+    this.issues = issues;
+  }
+}
+
+/**
+ * Validate a command's untyped `args` bag against its colocated Zod schema,
+ * returning typed args. This is the command dispatch boundary (args arrive as
+ * `Record<string, unknown>` from the CLI wrapper, tRPC, and tests), so per
+ * rule 3 it validates exactly once here — replacing the per-command
+ * `args as unknown as XArgs` casts. Schemas mark a field optional wherever the
+ * command tolerates its absence and does its own presence-check, so validation
+ * catches wrong-typed fields without pre-empting a command's own error text.
+ */
+export function parseCommandArgs<T>(args: Record<string, unknown>, schema: z.ZodType<T>): T {
+  const result = schema.safeParse(args);
+  if (!result.success) {
+    const issues = result.error.issues
+      .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+      .join("; ");
+    throw new CommandArgsError(issues);
+  }
+  return result.data;
+}
+
 /**
  * Context provided to command execution.
  */

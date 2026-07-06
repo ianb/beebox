@@ -7,8 +7,10 @@
  * triage-pipeline stage; see docs/triage.md).
  */
 
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -17,10 +19,11 @@ import { getAllConnectors } from "../../connectors/index.js";
 /**
  * Arguments for the sync command.
  */
-export interface SyncArgs {
+const SyncArgsSchema = z.object({
   /** Only run specific connector */
-  connector?: string;
-}
+  connector: z.string().optional(),
+});
+export type SyncArgs = z.infer<typeof SyncArgsSchema>;
 
 /**
  * Execute the sync command.
@@ -29,7 +32,7 @@ async function executeSync(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const syncArgs = args as unknown as SyncArgs;
+  const syncArgs = parseCommandArgs(args, SyncArgsSchema);
 
   const connectors = getAllConnectors();
 

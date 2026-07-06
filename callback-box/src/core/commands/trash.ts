@@ -7,8 +7,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -38,15 +40,16 @@ class InvalidCardNameError extends Error {
 /**
  * Arguments for the trash command.
  */
-export interface TrashArgs {
+const TrashArgsSchema = z.object({
   /** Path(s) to the card(s) to trash (relative to box root or absolute) */
-  path?: string;
-  paths?: string[];
+  path: z.string().optional(),
+  paths: z.array(z.string()).optional(),
   /** Whether to commit the change */
-  commit?: boolean;
+  commit: z.boolean().optional(),
   /** Reason for trashing (recorded in commit message) */
-  reason?: string;
-}
+  reason: z.string().optional(),
+});
+export type TrashArgs = z.infer<typeof TrashArgsSchema>;
 
 /**
  * Trash a single card and its attachments. Returns info about what was moved.
@@ -149,7 +152,7 @@ async function executeTrash(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const trashArgs = args as unknown as TrashArgs;
+  const trashArgs = parseCommandArgs(args, TrashArgsSchema);
 
   // Collect all paths (support both single `path` and array `paths`)
   const allPaths: string[] = [];

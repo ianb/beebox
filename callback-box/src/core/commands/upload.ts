@@ -9,9 +9,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   registerCommand,
   runCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -28,14 +30,15 @@ import {
   type ScanGroup,
 } from "./upload-helpers.js";
 
-export interface UploadArgs {
-  files: string[];
-  kind: string;
-  force?: boolean;
-  context?: string;
+const UploadArgsSchema = z.object({
+  files: z.array(z.string()).optional(),
+  kind: z.string().optional(),
+  force: z.boolean().optional(),
+  context: z.string().optional(),
   /** Process at most this many files (after sort, before grouping). For smoke tests. */
-  limit?: number;
-}
+  limit: z.number().optional(),
+});
+export type UploadArgs = z.infer<typeof UploadArgsSchema>;
 
 const SUPPORTED_KINDS = ["scan"] as const;
 type UploadKind = (typeof SUPPORTED_KINDS)[number];
@@ -47,8 +50,8 @@ function isSupportedKind(kind: string): kind is UploadKind {
 /** Validate the raw upload args. Returns an error string, or the typed args. */
 function validateUploadArgs(
   args: Record<string, unknown>
-): { error: string } | { args: UploadArgs } {
-  const typed = args as unknown as UploadArgs;
+): { error: string } | { args: UploadArgs & { files: string[]; kind: UploadKind } } {
+  const typed = parseCommandArgs(args, UploadArgsSchema);
   const { files, kind } = typed;
 
   if (!files || files.length === 0) {
@@ -60,7 +63,10 @@ function validateUploadArgs(
   if (!isSupportedKind(kind)) {
     return { error: `Unknown kind '${kind}'. Supported: ${SUPPORTED_KINDS.join(", ")}` };
   }
-  return { args: typed };
+  // Return the presence-checked `files`/`kind` as non-optional so callers get
+  // the validated shape without re-checking (the schema keeps them optional so
+  // the messages above own the presence contract).
+  return { args: { ...typed, files, kind } };
 }
 
 /**

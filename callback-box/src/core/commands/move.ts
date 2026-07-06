@@ -15,8 +15,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -27,16 +29,17 @@ import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 /**
  * Arguments for the move command.
  */
-export interface MoveArgs {
+const MoveArgsSchema = z.object({
   /** Path(s) to the card(s) to move (relative to box root or absolute) */
-  from: string | string[];
+  from: z.union([z.string(), z.array(z.string())]).optional(),
   /** Destination path (relative to box root or absolute) */
-  to: string;
+  to: z.string().optional(),
   /** Whether to commit the change */
-  commit?: boolean;
+  commit: z.boolean().optional(),
   /** Show what would happen without doing it */
-  dryRun?: boolean;
-}
+  dryRun: z.boolean().optional(),
+});
+export type MoveArgs = z.infer<typeof MoveArgsSchema>;
 
 /**
  * Check if a destination path looks like a directory (not a specific card file).
@@ -235,7 +238,7 @@ async function executeMove(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const moveArgs = args as unknown as MoveArgs;
+  const moveArgs = parseCommandArgs(args, MoveArgsSchema);
 
   if (!moveArgs.from || !moveArgs.to) {
     return { success: false, error: "Both 'from' and 'to' paths are required" };
