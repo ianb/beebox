@@ -14,6 +14,7 @@ import {
   type SessionEntry,
 } from "../cli/lib/session.js";
 import { assertNever } from "../lib/invariant.js";
+import { buildChatContentBlocks } from "../shared/chat-content-blocks.js";
 import type { ChatContentBlock } from "../services/claude-chat.js";
 import type { ActivityKind, CardStateDetails } from "./chat-card-activity.js";
 import type {
@@ -276,75 +277,37 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
 }
 
 /**
- * Push the SDK image block for an attachment onto the output array.
- */
-function pushImageBlock(blocks: ChatMessageContent[], img: ChatImage): void {
-  blocks.push({
-    type: "image",
-    source: {
-      type: "base64",
-      media_type: img.mimeType,
-      data: img.dataBase64,
-    },
-  });
-}
-
-/**
  * Build the content array for a single compose (text + image attachments).
  *
  * `[imageN]` tokens in the text are replaced with the corresponding image
  * block. Attachments whose token is absent from the text are appended at
  * the end. Unknown tokens (id not in attachments) are left as literal text.
+ *
+ * Delegates the token-parsing algorithm to the shared
+ * `buildChatContentBlocks` (src/shared/chat-content-blocks.ts) so the
+ * frontend's optimistic-bubble builder can't drift from this one — it
+ * supplies the SDK-shaped image block and asks for the trailing-text-block
+ * guarantee this stored session log relies on (see that option's doc
+ * comment for why the frontend passes `false` instead).
  */
 export function buildContentBlocks(
   input: ChatSendInput
 ): ChatMessageContent[] {
   const { text, images } = input;
-  const attached = images ?? [];
-  if (attached.length === 0) {
-    return [{ type: "text", text }];
-  }
-
-  const byId = new Map<number, ChatImage>();
-  for (const img of attached) byId.set(img.id, img);
-  const used = new Set<number>();
-
-  const blocks: ChatMessageContent[] = [];
-  const tokenRe = /\[image(\d+)]/g;
-  let cursor = 0;
-  let match: RegExpExecArray | null;
-  while ((match = tokenRe.exec(text)) !== null) {
-    const idStr = match[1];
-    if (!idStr) continue;
-    const id = parseInt(idStr, 10);
-    const img = byId.get(id);
-    if (!img) continue; // leave orphan token as literal text in the next chunk
-    if (match.index > cursor) {
-      blocks.push({ type: "text", text: text.slice(cursor, match.index) });
-    }
-    pushImageBlock(blocks, img);
-    used.add(id);
-    cursor = match.index + match[0].length;
-  }
-  if (cursor < text.length) {
-    blocks.push({ type: "text", text: text.slice(cursor) });
-  }
-
-  // Append any unreferenced images at the end
-  for (const img of attached) {
-    if (used.has(img.id)) continue;
-    pushImageBlock(blocks, img);
-  }
-
-  // If only images were appended (no text at all), still include an empty
-  // text marker so downstream filters can tell this was a user turn (not
-  // PDF-plumbing). Shouldn't happen in practice since messages are wrapped
-  // in <typed>/<speech> tags by the caller, but defensive.
-  if (blocks.every((b) => b.type !== "text")) {
-    blocks.unshift({ type: "text", text: "" });
-  }
-
-  return blocks;
+  return buildChatContentBlocks<ChatMessageContent>({
+    text,
+    images: images ?? [],
+    makeTextBlock: (blockText): ChatMessageContent => ({ type: "text", text: blockText }),
+    makeImageBlock: (img): ChatMessageContent => ({
+      type: "image",
+      source: {
+        type: "base64",
+        media_type: img.mimeType,
+        data: img.dataBase64,
+      },
+    }),
+    ensureTrailingTextBlock: true,
+  });
 }
 
 /**

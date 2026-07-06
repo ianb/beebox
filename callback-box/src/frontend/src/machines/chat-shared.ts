@@ -3,6 +3,10 @@
  * concerns so machines can drop them in unchanged.
  */
 
+// Relative (not `@shared/…`): this file is imported directly by Node/tsx in
+// doctests (no Vite bundler in that path to resolve the aliased specifier),
+// same reasoning as components/view-widgets/node-entry.tsx.
+import { buildChatContentBlocks } from "../../../shared/chat-content-blocks";
 import type {
   SessionEntry,
   SessionContentBlock,
@@ -11,56 +15,29 @@ import type {
 
 /**
  * Build content blocks for the optimistic user message bubble displayed
- * before the server responds. Mirrors the server-side `buildContentBlocks`
- * in chat-session.ts so the local preview matches what gets stored in the
- * session log — `[imageN]` tokens become inline image blocks.
+ * before the server responds. Delegates the `[imageN]` token-parsing
+ * algorithm to the shared `buildChatContentBlocks` (src/shared/chat-content-
+ * blocks.ts) so this can't drift from the server-side `buildContentBlocks`
+ * in chat-session-messages.ts — the local preview matches what gets stored
+ * in the session log. Passes `ensureTrailingTextBlock: false`: the optimistic
+ * bubble is discarded once the real server entry arrives, so it doesn't need
+ * the stored log's "always has a text block" marker.
  */
 export function buildOptimisticContent(
   message: string,
   images?: ChatImageAttachment[],
 ): SessionContentBlock[] {
-  const attached = images === undefined ? [] : images;
-  if (attached.length === 0) {
-    return [{ type: "text", text: message }];
-  }
-
-  const byId = new Map<number, ChatImageAttachment>();
-  for (const img of attached) byId.set(img.id, img);
-  const used = new Set<number>();
-
-  const blocks: SessionContentBlock[] = [];
-  const tokenRe = /\[image(\d+)]/g;
-  let cursor = 0;
-  let match: RegExpExecArray | null;
-  while ((match = tokenRe.exec(message)) !== null) {
-    const idStr = match[1];
-    if (idStr === undefined) continue;
-    const id = parseInt(idStr, 10);
-    const img = byId.get(id);
-    if (img === undefined) continue;
-    if (match.index > cursor) {
-      blocks.push({ type: "text", text: message.slice(cursor, match.index) });
-    }
-    blocks.push({
+  return buildChatContentBlocks<SessionContentBlock>({
+    text: message,
+    images: images ?? [],
+    makeTextBlock: (text): SessionContentBlock => ({ type: "text", text }),
+    makeImageBlock: (img): SessionContentBlock => ({
       type: "image",
       mediaType: img.mimeType,
       dataBase64: img.dataBase64,
-    });
-    used.add(id);
-    cursor = match.index + match[0].length;
-  }
-  if (cursor < message.length) {
-    blocks.push({ type: "text", text: message.slice(cursor) });
-  }
-  for (const img of attached) {
-    if (used.has(img.id)) continue;
-    blocks.push({
-      type: "image",
-      mediaType: img.mimeType,
-      dataBase64: img.dataBase64,
-    });
-  }
-  return blocks;
+    }),
+    ensureTrailingTextBlock: false,
+  });
 }
 
 /** Extract the text content from a session entry. */
