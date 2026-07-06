@@ -12,16 +12,33 @@
 import * as fs from "node:fs";
 import { parseAttrs } from "./parse-attrs.js";
 import * as path from "node:path";
+import { z } from "zod";
 import { parseDuration } from "../schemas/scheduled-script.js";
 
-export interface ChatSchedule {
-  id: string;
-  label: string;
-  alarm: boolean;
-  announce: string | null;
-  content: string;
-  createdAt: string;
-  firesAt: string;
+// Zod schema per entry, mirroring location-store.ts's pattern (Track D.6):
+// the persisted shape is validated on load, an unparseable `firesAt` never
+// reaches a `new Date(...).getTime()` call (which would silently produce
+// `NaN` and fire the timer immediately — the bug this schema closes), and a
+// corrupt entry is skipped with a named warning rather than crashing the
+// whole load or silently vanishing.
+const chatScheduleSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  alarm: z.boolean(),
+  announce: z.string().nullable(),
+  content: z.string(),
+  createdAt: z.string().datetime(),
+  firesAt: z.string().datetime(),
+});
+
+export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
+
+/** Best-effort label for a schedule entry that failed validation, for the skip warning. */
+function describeEntry(entry: unknown, index: number): string {
+  if (typeof entry === "object" && entry !== null && "label" in entry && typeof entry.label === "string") {
+    return entry.label;
+  }
+  return `entry #${index}`;
 }
 
 interface ScheduleCallbackParams {
@@ -202,17 +219,42 @@ export class ChatScheduleManager {
 
   private loadFromDisk(): void {
     const filePath = path.join(this.boxRoot, this.schedulesFile);
+    if (!fs.existsSync(filePath)) return;
+
+    let raw: string;
     try {
-      if (fs.existsSync(filePath)) {
-        const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as ChatSchedule[];
-        for (const s of data) {
-          this.schedules.set(s.id, s);
-        }
-        log(`Loaded ${data.length} schedule(s) from disk`);
-      }
+      raw = fs.readFileSync(filePath, "utf-8");
     } catch (e) {
-      log(`Failed to load schedules: ${e}`);
+      log(`Failed to read schedules file, starting with no schedules: ${e}`);
+      return;
     }
+
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(raw);
+    } catch (e) {
+      log(`Malformed chat-schedules.json (not JSON), starting with no schedules: ${e}`);
+      return;
+    }
+    if (!Array.isArray(parsed)) {
+      log("Malformed chat-schedules.json (expected an array), starting with no schedules");
+      return;
+    }
+
+    let skipped = 0;
+    for (const [index, entry] of parsed.entries()) {
+      const result = chatScheduleSchema.safeParse(entry);
+      if (!result.success) {
+        const issues = result.error.issues.map((issue) => issue.message).join("; ");
+        log(`Skipping invalid schedule (${describeEntry(entry, index)}): ${issues}`);
+        skipped++;
+        continue;
+      }
+      this.schedules.set(result.data.id, result.data);
+    }
+
+    const skippedNote = skipped > 0 ? ` (${skipped} invalid entr${skipped === 1 ? "y" : "ies"} skipped)` : "";
+    log(`Loaded ${this.schedules.size} schedule(s) from disk${skippedNote}`);
   }
 
   private saveToDisk(): void {

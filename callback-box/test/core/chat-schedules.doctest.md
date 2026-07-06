@@ -188,6 +188,50 @@ fs.existsSync(filePath)
 manager.stopAll();
 ```
 
+## Corrupt persisted schedule is skipped, valid ones still load (Track D.6)
+
+`chat-schedules.ts:198`'s persisted shape used to be an unvalidated
+`JSON.parse(...) as ChatSchedule[]` cast — a hand-edited or corrupted
+`firesAt` would parse to `NaN` and the timer would fire immediately. Loading
+now validates each entry against a zod schema (mirroring
+`location-store.ts`'s pattern): an invalid entry is skipped with a named
+warning, never silently, and never crashes the whole load.
+
+```ts setup
+const capturedLogs: string[] = [];
+const originalConsoleLog = console.log;
+```
+
+```ts
+const box2 = await makeTmpBox();
+const schedulesPath = ".callback-box/schedules-corrupt-test.json";
+const absSchedulesPath = path.join(box2.root, schedulesPath);
+fs.mkdirSync(path.dirname(absSchedulesPath), { recursive: true });
+const farFuture = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+fs.writeFileSync(absSchedulesPath, JSON.stringify([
+  { id: "sch_good", label: "good one", alarm: false, announce: null, content: "hi", createdAt: "2026-01-01T00:00:00.000Z", firesAt: farFuture },
+  { id: "sch_bad", label: "corrupt entry", alarm: false, announce: null, content: "hi", createdAt: "2026-01-01T00:00:00.000Z", firesAt: "not-a-date" },
+]));
+
+console.log = function (...args: unknown[]): void { capturedLogs.push(args.join(" ")); };
+const manager2 = new ChatScheduleManager(box2.root, { schedulesFile: schedulesPath, onFire: () => {} });
+console.log = originalConsoleLog;
+
+JSON.stringify(manager2.getActive().map((s) => s.label))
+=> ["good one"]
+```
+
+The skip is logged by name, not silent:
+
+```ts continue
+capturedLogs.some((line) => line.includes("corrupt entry"))
+=> true
+```
+
+```ts cleanup
+manager2.stopAll();
+```
+
 ## Schedule tags in chat-response context
 
 Schedule tags that appear alongside `<chat-response>` tags in Telegram-style output are correctly parsed from the full turn text:
