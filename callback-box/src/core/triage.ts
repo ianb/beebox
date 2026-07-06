@@ -14,6 +14,7 @@ import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
 import { getBoxDir } from "../cli/lib/paths.js";
+import { fenceForPrompt } from "../lib/prompt-fence.js";
 import { createAgent } from "./agent.js";
 import {
   compileTriageInstructions,
@@ -106,9 +107,9 @@ function userPrompt(items: StagedItem[]): string {
   for (const item of items) {
     lines.push(`### \`${item.file}\``);
     lines.push("");
-    lines.push("```");
-    lines.push(item.content);
-    lines.push("```");
+    // Staged inbox content is untrusted (emails, clippings): fence it so a
+    // backtick run can't close the block and pose as triage instructions.
+    lines.push(fenceForPrompt(item.content));
     lines.push("");
   }
   lines.push(

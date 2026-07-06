@@ -11,8 +11,10 @@ import {
   readContainedFile,
   RefEscapesBoxError,
 } from "../../lib/box-containment.js";
+import { fenceForPrompt } from "../../lib/prompt-fence.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { parseCardText, CardIOError, collectRefs } from "../card-io.js";
+import { parseCardText, CardIOError } from "../card-io.js";
+import { collectInlineRefs } from "../../cards/index.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
@@ -75,11 +77,17 @@ export async function processBatchJobs(opts: ProcessJobsOptions): Promise<boolea
  * Build a formatted job description with inlined refs and schema instructions.
  *
  * The job card is a YAML-frontmatter card: we parse it with the real card
- * loader, inline every `{ref}` its frontmatter carries (intake `items:`,
- * chat `thread:`, question-followup `question-ref:`, …), and inject the
- * job type's schema instructions. A job we can't parse as a card (legacy
- * XML, a hand-edited or untyped job) is surfaced visibly with its raw
- * content rather than crashing the whole batch.
+ * loader, inline every inline-safe `{ref}` its frontmatter carries (intake
+ * `items:`, chat `thread:`, question-followup `question-ref:`, …), and inject
+ * the job type's schema instructions. "Inline-safe" is the schema's call:
+ * `collectInlineRefs` skips `opaqueContentRef()` fields (raw external content
+ * like an email body), so only `cardRef()`/un-migrated refs are read in. A job
+ * we can't parse as a card (legacy XML, a hand-edited or untyped job) is
+ * surfaced visibly with its raw content rather than crashing the whole batch.
+ *
+ * All embedded content — the job body, each inlined ref, the raw-content
+ * fallback — goes through `fenceForPrompt` so a backtick run inside it can't
+ * close the fence and masquerade as prompt structure.
  */
 export async function buildJobDescription(job: JobWithContent, boxRoot: string): Promise<string> {
   const priorityLabel = job.card.priority === "low" ? " *(low priority)*" : "";
@@ -93,14 +101,14 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
     if (e instanceof CardIOError) {
       // Not a recognized frontmatter card. Show the raw content so the agent
       // can still act, flagged so the failure isn't silent.
-      return `${header}\n_⚠️ Could not parse this job as a card (${e.detail}); showing raw content._\n\`\`\`\n${job.content.trim()}\n\`\`\``;
+      return `${header}\n_⚠️ Could not parse this job as a card (${e.detail}); showing raw content._\n${fenceForPrompt(job.content.trim())}`;
     }
     throw e;
   }
 
-  let desc = `${header}\n\`\`\`\n${job.content.trim()}\n\`\`\``;
+  let desc = `${header}\n${fenceForPrompt(job.content.trim())}`;
 
-  for (const ref of collectRefs(parsed.fields)) {
+  for (const ref of collectInlineRefs(parsed.schema.frontmatterSchema, parsed.fields)) {
     const contained = resolveBoxRelativeRef(boxRoot, ref);
     if (contained === null) {
       // An escaping ref inlined here would be an arbitrary local-file read into
@@ -110,7 +118,7 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
     }
     try {
       const refContent = await readContainedFile(boxRoot, contained);
-      desc += `\n\n#### ${ref}\n\`\`\`\n${refContent.trim()}\n\`\`\``;
+      desc += `\n\n#### ${ref}\n${fenceForPrompt(refContent.trim())}`;
     } catch (e) {
       if (e instanceof RefEscapesBoxError) {
         console.warn(`buildJobDescription: ref "${ref}" in ${job.relPath} resolves outside the box via symlink; omitting`);

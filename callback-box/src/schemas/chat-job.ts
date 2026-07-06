@@ -7,7 +7,7 @@
  * response or acknowledgment.
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
 export const ChatJobSchema = cardSchema("chat-job", {
@@ -18,7 +18,7 @@ export const ChatJobSchema = cardSchema("chat-job", {
     status: z.string().default("pending"),
     source: z.string(),
     description: z.string(),
-    thread: z.object({ ref: z.string() }),
+    thread: cardRef(),
   },
   instructions: `# Processing Chat Jobs
 

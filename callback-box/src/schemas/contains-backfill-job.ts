@@ -7,7 +7,7 @@
  * `cb contains list --missing` is empty. Processed by the reactor agent.
  */
 
-import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
 import { z } from "zod";
 
 export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfill-job", {
@@ -19,7 +19,7 @@ export const ContainsBackfillJobSchema: CardSchema = cardSchema("contains-backfi
     source: z.string().default("contains-backfill"),
     priority: z.enum(["normal", "low"]).default("low"),
     description: z.string(),
-    items: z.array(z.object({ ref: z.string() })),
+    items: z.array(cardRef()),
   },
   instructions: `# Processing Contains-Backfill Jobs
 

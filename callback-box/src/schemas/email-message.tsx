@@ -29,7 +29,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
+import { cardSchema, opaqueContentRef, type InferCardFields } from "../cards/index.js";
 
 export const EmailMessageSchema = cardSchema("email-message", {
   description: "One received email's metadata inside a thread's attach scope; untrusted body text lives in a separate .txt file",
@@ -43,7 +43,7 @@ export const EmailMessageSchema = cardSchema("email-message", {
     date: z.string().datetime({ offset: true }),
     subject: z.string(),
     snippet: z.string().optional(),
-    "body-file": z.object({ ref: z.string() }),
+    "body-file": opaqueContentRef(),
     attachments: z
       .array(
         z.object({

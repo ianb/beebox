@@ -24,6 +24,12 @@ export {
 } from "./schema.js";
 
 export {
+  cardRef,
+  opaqueContentRef,
+  collectInlineRefs,
+} from "./ref-fields.js";
+
+export {
   splitCardContent,
   renderFrontmatterBlock,
   type SplitCardContent,

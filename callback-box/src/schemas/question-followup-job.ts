@@ -5,7 +5,7 @@
  * agent acts on the directive with the user's answer.
  */
 
-import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
 export const QuestionFollowupJobSchema = cardSchema("question-followup-job", {
@@ -16,7 +16,7 @@ export const QuestionFollowupJobSchema = cardSchema("question-followup-job", {
     status: z.string().default("pending"),
     source: z.string().default("question-answer"),
     description: z.string(),
-    "question-ref": z.object({ ref: z.string() }),
+    "question-ref": cardRef(),
     directive: z.string(),
     answer: z.string(),
   },

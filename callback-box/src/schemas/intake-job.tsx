@@ -8,7 +8,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type InferCardFields } from "../cards/index.js";
+import { cardSchema, cardRef, type InferCardFields } from "../cards/index.js";
 
 export const IntakeJobSchema = cardSchema("intake-job", {
   description: "A system job to triage newly arrived inbox items; created by connectors and cb wakeup",
@@ -19,7 +19,7 @@ export const IntakeJobSchema = cardSchema("intake-job", {
     source: z.string(),
     priority: z.enum(["normal", "low"]).default("normal"),
     description: z.string(),
-    items: z.array(z.object({ ref: z.string() })),
+    items: z.array(cardRef()),
   },
   instructions: `# Processing Intake Jobs
 
