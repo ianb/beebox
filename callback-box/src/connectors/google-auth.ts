@@ -204,36 +204,6 @@ export async function getGoogleAuth(
   return client;
 }
 
-// --- Legacy API aliases (for callers that haven't migrated yet) ---
-
-/** @deprecated Use loadGoogleTokens instead */
-export async function loadGoogleSecret(boxRoot: string): Promise<GoogleSecretConfig | null> {
-  // For legacy callers that read clientId/clientSecret from the file
-  try {
-    const content = await fs.readFile(legacySecretPath(boxRoot), "utf-8");
-    return JSON.parse(content);
-  } catch (e) {
-    // No legacy secret file (or it's unreadable) — treat as "no config".
-    // Log at debug so a real read/parse error is still visible.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.debug("Could not read legacy Google secret file:", e);
-    }
-    return null;
-  }
-}
-
-/** @deprecated Use saveGoogleTokens instead */
-export async function saveGoogleSecret(
-  boxRoot: string,
-  updates: Partial<GoogleSecretConfig>,
-): Promise<void> {
-  const existing = (await loadGoogleSecret(boxRoot)) || {};
-  const merged = { ...existing, ...updates };
-  const dir = path.dirname(legacySecretPath(boxRoot));
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(legacySecretPath(boxRoot), JSON.stringify(merged, null, 2));
-}
-
 /**
  * Create a new OAuth2Client for the auth flow (before we have tokens).
  */

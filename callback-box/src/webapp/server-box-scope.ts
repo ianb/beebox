@@ -13,7 +13,6 @@ import { registerApiRoutes } from "./routes/api.js";
 import { registerActionRoutes } from "./routes/actions.js";
 import { registerCommandRoutes } from "./routes/commands.js";
 import { registerHistoryRoutes } from "./routes/history.js";
-import { registerSchedulerRoutes } from "./routes/scheduler.js";
 import { registerChatRoutes } from "./routes/chat.js";
 import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
@@ -193,7 +192,6 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerActionRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
-  await registerSchedulerRoutes(instance, box.boxRoot);
   await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
   // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route

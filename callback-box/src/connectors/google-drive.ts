@@ -12,7 +12,6 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as crypto from "node:crypto";
 import { glob } from "glob";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
@@ -319,11 +318,4 @@ export function createGoogleDriveConnector(
   const connector = new GoogleDriveConnector(boxRoot, service);
   registerConnector(connector);
   return connector;
-}
-
-/**
- * Content hash utility — exposed for CLI status command.
- */
-export function driveContentHash(content: string): string {
-  return crypto.createHash("sha256").update(content).digest("hex").slice(0, 16);
 }
