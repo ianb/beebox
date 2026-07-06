@@ -95,13 +95,23 @@ const optionalString = z.string().min(1).optional();
 /**
  * Vars every entrypoint may see. Kept deliberately small — only what's read
  * across CLI, server, and hub alike.
+ *
+ * Deliberately permissive (codex review finding): the CLI schema runs on
+ * EVERY `cb` invocation, including in shells exporting ambient values the
+ * command never acts on. `NODE_ENV` is a plain string because the runtime
+ * only ever compares it against `"production"` — an ambient `staging` must
+ * not crash `cb status`. The public-URL pair are plain strings here because
+ * every CLI read path already tolerates unparseable values (`script-env.ts`
+ * warns and treats them as absent). The server/hub schemas override them
+ * with strict URL validation — there a malformed value is a boot-stopping
+ * misconfig an operator should see immediately.
  */
 export const baseEnvSchema = z.object({
-  NODE_ENV: z.enum(["development", "production", "test"]).optional(),
+  NODE_ENV: optionalString,
   // Public base URL cascade (see lib/public-url.ts). Both are optional; the
   // resolver picks CB_PUBLIC_URL over PUBLIC_URL over a caller fallback.
-  CB_PUBLIC_URL: optionalUrl,
-  PUBLIC_URL: optionalUrl,
+  CB_PUBLIC_URL: optionalString,
+  PUBLIC_URL: optionalString,
 });
 
 /**
@@ -111,6 +121,8 @@ export const baseEnvSchema = z.object({
  * (and redacts values), it does not force any secret to be present.
  */
 export const serverEnvSchema = baseEnvSchema.extend({
+  CB_PUBLIC_URL: optionalUrl,
+  PUBLIC_URL: optionalUrl,
   PORT: optionalPort,
   HOST: optionalString,
   CB_SESSION_SECRET: optionalString,
@@ -129,6 +141,8 @@ export const serverEnvSchema = baseEnvSchema.extend({
  * mints its own per-boot `CB_HUB_SECRET`. Networking mirrors the server.
  */
 export const hubEnvSchema = baseEnvSchema.extend({
+  CB_PUBLIC_URL: optionalUrl,
+  PUBLIC_URL: optionalUrl,
   PORT: optionalPort,
   HOST: optionalString,
   CB_SESSION_SECRET: optionalString,
@@ -190,6 +204,9 @@ export function loadEnv<T extends z.ZodType>(schema: T, source?: NodeJS.ProcessE
 
   const problems = result.error.issues.map((issue) => {
     const name = typeof issue.path[0] === "string" ? issue.path[0] : String(issue.path[0] ?? "?");
+    // Fail-safe: for a secret, don't trust even zod's own message text (some
+    // issue kinds embed the received input) — emit a fixed redacted line.
+    if (SECRET_ENV_NAMES.has(name)) return `${name}: invalid value (received: <redacted>)`;
     return `${name}: ${issue.message}${valueHint(name, src)}`;
   });
   throw new EnvValidationError(problems);
