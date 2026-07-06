@@ -49,7 +49,7 @@ import { uploadPendingDrafts } from "./gmail-drafts.js";
 import { stageFiles, commit } from "../lib/git.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
 import { getGoogleAuth } from "./google-auth.js";
-import { isGoogleServiceAllowed } from "../core/box-config.js";
+import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import {
   createGoogleGmailService,

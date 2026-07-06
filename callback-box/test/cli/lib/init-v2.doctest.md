@@ -26,14 +26,14 @@ import {
   installGuides,
   installSchedules,
   installPersonality,
-} from "../../../src/core/box.js";
+} from "../../../src/core/box/index.js";
 import {
   detectBoxTarget,
   scaffoldPackageRoot,
   BoxPackageConflictError,
-} from "../../../src/core/box-package.js";
+} from "../../../src/core/box/package.js";
 import { generateRules } from "../../../src/core/init-rules.js";
-import { generateSkills } from "../../../src/core/box-skills.js";
+import { generateSkills } from "../../../src/core/box/skills.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
 import { stageAll, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";

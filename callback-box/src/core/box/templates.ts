@@ -12,9 +12,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { installTemplateFile } from "./install-template-file.js";
-import { TEMPLATE_STOCK_HASHES } from "./template-stock-hashes.js";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { installTemplateFile } from "../install-template-file.js";
+import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
+import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -276,7 +276,7 @@ These are available to all tricks via normal imports.
 Put reusable utilities in \`tricks/lib/\` and import them with relative paths:
 
 \`\`\`typescript
-import { helper } from "../../lib/helper.js";
+import { helper } from "../../../lib/helper.js";
 \`\`\`
 
 ## Tips

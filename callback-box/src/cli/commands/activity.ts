@@ -11,7 +11,7 @@
  */
 
 import { Command } from "commander";
-import { loadBoxesConfig } from "../../core/boxes-config.js";
+import { loadBoxesConfig } from "../../core/box/boxes-config.js";
 import { loadRunningScripts } from "../../core/schedule/state.js";
 import { findBusyBlockers } from "./tick-helpers.js";
 

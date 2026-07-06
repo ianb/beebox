@@ -6,7 +6,7 @@ Tests for the Google Drive connector using fake services.
 import { join } from "node:path";
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import { createFakeGoogleDrive } from "../../src/services/google-drive.js";
 import { createFakeGoogleAuth } from "../../src/services/google-auth.js";
 import { createGoogleDriveConnector } from "../../src/connectors/google-drive.js";

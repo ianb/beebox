@@ -19,7 +19,7 @@
  * Uses THIS checkout's own engine throughout (`PACKAGE_ROOT/bin/cb`) rather
  * than an installed release — `box-packageify` itself only ever symlinks
  * `node_modules/callback-box` at the running engine (see `scaffoldPackageRoot`
- * in `src/core/box-package.ts`); there is no `node_modules/.bin/cb` to shell
+ * in `src/core/box/package.ts`); there is no `node_modules/.bin/cb` to shell
  * out to without a real `pnpm install`, which this smoke test deliberately
  * doesn't do (real test1 is a large box; a full install adds minutes for no
  * signal beyond what `smoke-external-box.ts`/`smoke-upgrade.ts` already

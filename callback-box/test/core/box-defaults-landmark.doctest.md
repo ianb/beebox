@@ -6,7 +6,7 @@ real role — e.g. an un-migrated XML-body card), and leaves a real landmark
 alone.
 
 ```ts setup
-import { installRootLandmark } from "../../src/core/box-defaults.js";
+import { installRootLandmark } from "../../src/core/box/defaults.js";
 import { parseLandmarkFields } from "../../src/schemas/landmark.js";
 import { stageFiles, commitPaths } from "../../src/lib/git.js";
 import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";

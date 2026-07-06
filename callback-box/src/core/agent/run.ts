@@ -8,7 +8,7 @@
  */
 
 import { fmt } from "../../lib/format.js";
-import { buildTimezoneContext } from "../box-config.js";
+import { buildTimezoneContext } from "../box/config.js";
 import { buildScriptEnv } from "../script-env.js";
 import { cardValidatorHook, gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";

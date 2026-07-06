@@ -19,7 +19,7 @@
 import { createHash } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
 import * as path from "node:path";
-import { MANAGED_STOCK_TEMPLATES } from "../src/core/box-templates.js";
+import { MANAGED_STOCK_TEMPLATES } from "../src/core/box/templates.js";
 import {
   TEMPLATE_STOCK_HASHES,
   type TemplateStockEntry,

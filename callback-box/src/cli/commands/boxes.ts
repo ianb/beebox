@@ -15,7 +15,7 @@ import {
   loadBoxesConfig,
   addBoxToManifest,
   removeBoxFromManifest,
-} from "../../core/boxes-config.js";
+} from "../../core/box/boxes-config.js";
 import { isBox } from "../../core/schedule/scheduler.js";
 
 export const boxesCommand = new Command("boxes")

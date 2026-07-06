@@ -7,7 +7,7 @@ individual helper functions that do the filesystem work.
 import { join } from "node:path";
 import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { initBox } from "../../../src/core/box.js";
+import { initBox } from "../../../src/core/box/index.js";
 import { createIntakeJobsForUnjobbed, cleanupStaleJobs } from "../../../src/cli/commands/wakeup.js";
 ```
 

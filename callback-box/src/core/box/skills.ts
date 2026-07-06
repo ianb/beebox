@@ -21,10 +21,10 @@ import {
   TRICKS_SKILL,
   TRICKS_SKILL_V2,
   VIEWS_SKILL,
-} from "./box-skills-content.js";
-import { vtimezoneBlock } from "../connectors/google-calendar-ics.js";
-import { loadBoxTimezone } from "./box-config.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+} from "./skills-content.js";
+import { vtimezoneBlock } from "../../connectors/google-calendar-ics.js";
+import { loadBoxTimezone } from "./config.js";
+import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */

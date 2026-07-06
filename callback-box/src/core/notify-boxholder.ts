@@ -17,7 +17,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadBoxConfig } from "./box-config.js";
+import { loadBoxConfig } from "./box/config.js";
 import { createWebPushTemplate, type WebPushSeverityValue } from "../schemas/web-push.js";
 import { createTelegramMessageTemplate } from "../schemas/telegram-message.js";
 import { stageFiles, commit } from "../lib/git.js";

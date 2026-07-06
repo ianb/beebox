@@ -11,7 +11,7 @@
 
 import { watch, type FSWatcher } from "chokidar";
 import * as path from "node:path";
-import type { EventBus } from "./event-bus.js";
+import type { EventBus } from "../event-bus.js";
 
 const watchers = new Map<string, FSWatcher>();
 

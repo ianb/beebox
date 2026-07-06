@@ -7,7 +7,7 @@ import { join } from "node:path";
 import { execSync } from "node:child_process";
 import { readFile, access, unlink, writeFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import {
   createFakeGoogleDrive,
   type FakeDocument,

@@ -6,7 +6,7 @@ The Telegram connector syncs messages between Telegram and the box filesystem. I
 import { join } from "node:path";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
 import { createTelegramConnector, processWebhookUpdate, extractMessage } from "../../src/connectors/telegram.js";
 ```

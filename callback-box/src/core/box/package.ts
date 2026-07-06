@@ -9,8 +9,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { isValidBox } from "./box.js";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
+import { isValidBox } from "./index.js";
+import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 export type BoxInitMode = "fresh" | "update-legacy" | "update-v2";
 

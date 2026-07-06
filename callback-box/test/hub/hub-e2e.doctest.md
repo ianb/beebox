@@ -21,8 +21,8 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { detectBoxTarget, scaffoldPackageRoot } from "../../src/core/box-package.js";
-import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../src/core/box.js";
+import { detectBoxTarget, scaffoldPackageRoot } from "../../src/core/box/package.js";
+import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../src/core/box/index.js";
 import { PACKAGE_ROOT } from "../../src/lib/package-root.js";
 
 const execFileP = promisify(execFile);

@@ -11,7 +11,7 @@
 import { makeLog } from "./chat-session-log.js";
 import * as path from "node:path";
 import { getDirectoryForSession } from "./chat-session-history.js";
-import { buildTimezoneContext } from "./box-config.js";
+import { buildTimezoneContext } from "./box/config.js";
 import { buildScriptEnv } from "./script-env.js";
 import { composeSendSnapshot, type HealthGate } from "./session-context.js";
 import { renderActivityChildren } from "./chat-card-activity.js";

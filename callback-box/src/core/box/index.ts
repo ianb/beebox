@@ -6,16 +6,16 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { BOX_DIRS, BOX_MARKER, boxPath } from "../lib/paths.js";
-import { initRepo, isRepo } from "../lib/git.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
-import { claudeProjectsRoot } from "../cli/lib/session.js";
-import { MIGRATIONS } from "./migrations.js";
+import { BOX_DIRS, BOX_MARKER, boxPath } from "../../lib/paths.js";
+import { initRepo, isRepo } from "../../lib/git.js";
+import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { claudeProjectsRoot } from "../../cli/lib/session.js";
+import { MIGRATIONS } from "../migrations.js";
 import {
   installSchemasGuide,
   installTricksFiles,
   installViewsGuide,
-} from "./box-templates.js";
+} from "./templates.js";
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -305,7 +305,7 @@ export async function getBoxMetadata(
 
 // Default-card installers (procedures, guides, personality, landmark,
 // briefing, scheduled scripts) live in ./box-defaults and are re-exported
-// here so `cb init` and other callers can keep importing them from "./box".
+// here so `cb init` and other callers can keep importing them from "./index.js".
 export {
   installProcedures,
   installGuides,
@@ -313,7 +313,7 @@ export {
   installRootLandmark,
   installBriefing,
   installSchedules,
-} from "./box-defaults.js";
+} from "./defaults.js";
 
 /**
  * Ensure `.claude/memory/` exists (at the box's package root — `.claude/`

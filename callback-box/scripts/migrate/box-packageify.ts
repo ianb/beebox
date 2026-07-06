@@ -51,7 +51,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { getStatus, isRepo, hasCommits, getHead, revertToSnapshot, stageAll, commit } from "../../src/lib/git.js";
-import { detectBoxTarget, scaffoldPackageRoot, BoxPackageConflictError } from "../../src/core/box-package.js";
+import { detectBoxTarget, scaffoldPackageRoot, BoxPackageConflictError } from "../../src/core/box/package.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { encodeProjectDir, claudeProjectsRoot } from "../../src/cli/lib/session.js";
 import { execFile } from "node:child_process";

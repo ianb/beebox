@@ -12,7 +12,7 @@ import { readFile, readdir, writeFile } from "node:fs/promises";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import { createFakeGoogleCalendar } from "../../src/services/google-calendar.js";
 import { createGoogleCalendarConnector } from "../../src/connectors/google-calendar.js";
 

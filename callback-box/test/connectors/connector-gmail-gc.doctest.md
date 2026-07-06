@@ -16,7 +16,7 @@ import { join } from "node:path";
 import { readFile, readdir, rename, mkdir, access } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import { splitCardContent } from "../../src/cards/index.js";
 import {
   createFakeGoogleGmail,

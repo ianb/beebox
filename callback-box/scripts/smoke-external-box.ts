@@ -17,7 +17,7 @@
  * install, then a real `pnpm install` resolves the dependency `cb init`
  * wrote and replaces the dev-convenience `node_modules/callback-box` symlink
  * `scaffoldPackageRoot` created — see that function's doc in
- * `src/core/box-package.ts`).
+ * `src/core/box/package.ts`).
  *
  * Quiet on success (one summary line per step); full stdout+stderr from any
  * failed step surfaces immediately and the script exits nonzero.
@@ -33,7 +33,7 @@ import { PACKAGE_ROOT } from "../src/lib/package-root.js";
 /** Native-module deps whose install scripts a fresh `pnpm install`/`dlx` must
  *  be told to trust (pnpm 10 blocks all of them by default) — kept in sync
  *  with the `pnpm.onlyBuiltDependencies` list `scaffoldPackageRoot` writes
- *  into the box's own `package.json` (`src/core/box-package.ts`). The `dlx`
+ *  into the box's own `package.json` (`src/core/box/package.ts`). The `dlx`
  *  step below needs its own copy of this list because it runs BEFORE that
  *  package.json exists. */
 const BUILT_DEPENDENCIES = ["better-sqlite3", "esbuild", "@google/genai", "protobufjs"];
@@ -42,7 +42,7 @@ const BUILT_DEPENDENCIES = ["better-sqlite3", "esbuild", "@google/genai", "proto
  *  `detail` carries the full diagnostic (command line, stdout/stderr, or
  *  assertion context) — kept out of `message` so this satisfies the
  *  no-literal/template-error-message lint rule the same way
- *  `src/core/box-package.ts`'s `BoxPackageConflictError` does (string
+ *  `src/core/box/package.ts`'s `BoxPackageConflictError` does (string
  *  concatenation, not a template literal, at the throw site). */
 class SmokeStepError extends Error {
   readonly label: string;

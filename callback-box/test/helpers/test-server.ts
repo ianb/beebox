@@ -20,7 +20,7 @@ import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
 import type { FastifyInstance } from "fastify";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import { createServer } from "../../src/webapp/server.js";
 import type { Services } from "../../src/services/index.js";
 

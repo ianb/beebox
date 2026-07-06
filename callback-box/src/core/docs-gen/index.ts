@@ -27,8 +27,8 @@ import {
   installPersonality,
   installBriefing,
   installSchedules,
-} from "../box.js";
-import { installSchemasGuide, installViewsGuide } from "../box-templates.js";
+} from "../box/index.js";
+import { installSchemasGuide, installViewsGuide } from "../box/templates.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
 import { generateRules } from "../init-rules.js";
 import { installValidationHooks } from "../install-validation-hooks.js";

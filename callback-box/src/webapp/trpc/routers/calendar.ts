@@ -2,7 +2,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
-import { isGoogleServiceAllowed } from "../../../core/box-config.js";
+import { isGoogleServiceAllowed } from "../../../core/box/config.js";
 import { stageFiles, commit } from "../../../lib/git.js";
 import {
   loadCalendarConfig,

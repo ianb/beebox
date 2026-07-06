@@ -8,7 +8,7 @@ they become first-class in the same parse/validate path as built-in ones.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas/registry.js";
 import { getTemplate } from "../../src/schemas/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";

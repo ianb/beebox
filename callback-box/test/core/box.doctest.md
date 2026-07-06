@@ -6,7 +6,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { initBox, isValidBox, getBoxMetadata } from "../../src/core/box.js";
+import { initBox, isValidBox, getBoxMetadata } from "../../src/core/box/index.js";
 import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths.js";
 
 async function makeTmpDir() {

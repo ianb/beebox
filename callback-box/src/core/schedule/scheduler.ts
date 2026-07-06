@@ -17,7 +17,7 @@ import {
   loadBoxesConfig,
   saveBoxesConfig,
   type BoxesConfig,
-} from "../boxes-config.js";
+} from "../box/boxes-config.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
 export type SchedulerConfig = BoxesConfig;

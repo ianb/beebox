@@ -16,7 +16,7 @@ import * as path from "node:path";
 import {
   isGoogleServiceAllowed,
   type GoogleServiceName,
-} from "../core/box-config.js";
+} from "../core/box/config.js";
 import type { ScheduleRequirements } from "../schemas/scheduled-script.js";
 
 type Predicate = (boxRoot: string) => Promise<boolean>;

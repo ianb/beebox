@@ -4,7 +4,7 @@
 an unguarded `JSON.parse` on it — a typo crashed the CLI with a bare
 `SyntaxError` pointing at nothing useful. It's now validated through a zod
 schema with a named, loud `BoxesConfigParseError` that names the file and
-the problem. See `src/core/boxes-config.ts`.
+the problem. See `src/core/box/boxes-config.ts`.
 
 `loadBoxesConfig` takes an optional `configPath` override (tests only, mirrors
 `loadHubConfig`'s explicit-path style) so this test never touches the real
@@ -13,7 +13,7 @@ the problem. See `src/core/boxes-config.ts`.
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { loadBoxesConfig, BoxesConfigParseError } from "../../src/core/boxes-config.js";
+import { loadBoxesConfig, BoxesConfigParseError } from "../../src/core/box/boxes-config.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 async function tryLoad(configPath) {

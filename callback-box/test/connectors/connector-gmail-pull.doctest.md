@@ -15,7 +15,7 @@ the matching label.
 import { join } from "node:path";
 import { readFile } from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { initBox } from "../../src/core/box.js";
+import { initBox } from "../../src/core/box/index.js";
 import {
   createFakeGoogleGmail,
   type GmailMessage,

@@ -11,7 +11,7 @@ import { getBoxDir, parseCardName, requireBoxRoot } from "../lib/paths.js";
 import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git.js";
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
-import { getBoxMetadata } from "./box.js";
+import { getBoxMetadata } from "./box/index.js";
 
 class InvalidBoxError extends Error {
   constructor() {

@@ -20,7 +20,7 @@ that the doctest separator would trip over.)
 
 ```ts setup
 import { createHash } from "node:crypto";
-import { MANAGED_STOCK_TEMPLATES } from "../../src/core/box-templates.js";
+import { MANAGED_STOCK_TEMPLATES } from "../../src/core/box/templates.js";
 import { TEMPLATE_STOCK_HASHES } from "../../src/core/template-stock-hashes.js";
 
 function sha256(s: string): string {

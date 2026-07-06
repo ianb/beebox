@@ -8,7 +8,7 @@
  * (`server-root.ts`), and the hub's box picker (`src/hub/box-picker.ts`).
  */
 
-import { loadBoxConfig } from "../core/box-config.js";
+import { loadBoxConfig } from "../core/box/config.js";
 
 /**
  * True when `email` may access the box at `boxRoot`: always true for the

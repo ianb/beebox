@@ -30,7 +30,7 @@ import {
 import { verifyAgentBearer } from "../core/agent/token.js";
 import { canAccessBox } from "./box-access.js";
 import type { EventBus } from "../core/event-bus.js";
-import { closeBoxWatcher } from "../core/box-file-watcher.js";
+import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
 

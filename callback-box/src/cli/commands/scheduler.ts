@@ -18,7 +18,7 @@ import {
   loadBoxesConfig,
   addBoxToManifest,
   removeBoxFromManifest,
-} from "../../core/boxes-config.js";
+} from "../../core/box/boxes-config.js";
 import {
   resolveLogBoxes,
   readBoxEntries,

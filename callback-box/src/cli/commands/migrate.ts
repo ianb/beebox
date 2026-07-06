@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { detectBoxTarget } from "../../core/box-package.js";
+import { detectBoxTarget } from "../../core/box/package.js";
 import {
   MIGRATIONS,
   MANIFEST_PATH,

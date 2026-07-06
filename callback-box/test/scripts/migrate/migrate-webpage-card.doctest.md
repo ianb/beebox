@@ -8,7 +8,7 @@ harness drives; this doctest exercises it directly on fixture boxes.
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { initBox } from "../../../src/core/box.js";
+import { initBox } from "../../../src/core/box/index.js";
 import { buildLoadContext } from "../../../src/core/load-context.js";
 import { loadCardFromText } from "../../../src/core/card-io.js";
 import { convertFile } from "../../../scripts/migrate/webpage-card.js";

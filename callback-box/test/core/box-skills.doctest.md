@@ -6,7 +6,7 @@ project-level skills, so a freshly-installed skill is invocable.
 
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { generateSkills } from "../../src/core/box-skills.js";
+import { generateSkills } from "../../src/core/box/skills.js";
 import { readFile } from "node:fs/promises";
 ```
 
