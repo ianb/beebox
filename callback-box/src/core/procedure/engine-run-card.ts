@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import { parse as parseYaml } from "yaml";
-import type { ParsedProcedure, StepUpdate } from "./engine-types.js";
+import type { ParsedProcedure, StepUpdate, RunStatus } from "./engine-types.js";
 
 /** Raised when a run card can't be read as YAML frontmatter. */
 export class RunCardParseError extends Error {
@@ -110,7 +110,7 @@ export function buildInitialRunCard(params: BuildInitialRunCardParams): string {
  */
 export interface UpdateRunCardStatusParams {
   runCardPath: string;
-  status: string;
+  status: RunStatus;
   completedAt?: string;
   /** Expiry stamp ("never" or ISO datetime) — see run-expiry.ts */
   expires?: string;

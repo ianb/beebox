@@ -12,7 +12,7 @@ import { fmt } from "../../cli/lib/format.js";
 import { runShell, CHECK_SKIP_CODE } from "./shell.js";
 import { evaluateInstructions } from "./engine-validate-model.js";
 import type { CommandContext } from "../command-runner.js";
-import type { ParsedPhase, ParsedStep, AgentFactory } from "./engine-types.js";
+import type { ParsedPhase, ParsedStep, AgentFactory, ProcedureSeverity, ValidateStatus } from "./engine-types.js";
 
 export interface PhaseShellResult {
   exitCode: number;
@@ -68,7 +68,7 @@ export interface ExecuteValidationParams {
 }
 
 /** Map a failing check to a status given the phase severity. */
-function failStatus(severity: string): "warn" | "fail" {
+function failStatus(severity: ProcedureSeverity): "warn" | "fail" {
   return severity === "warn" ? "warn" : "fail";
 }
 
@@ -83,11 +83,11 @@ function failStatus(severity: string): "warn" | "fail" {
  */
 export async function executeValidation(
   params: ExecuteValidationParams
-): Promise<{ status: string; stdout?: string; review?: string }> {
+): Promise<{ status: ValidateStatus; stdout?: string; review?: string }> {
   const { ctx, boxRoot, step, procedureName } = params;
   const validate = step.validate!;
   const { phase, severity } = validate;
-  let status = "pass";
+  let status: ValidateStatus = "pass";
   let stdout = "";
   let review: string | undefined = undefined;
 
@@ -138,7 +138,7 @@ export async function executeValidation(
     }
   }
 
-  const result: { status: string; stdout?: string; review?: string } = { status };
+  const result: { status: ValidateStatus; stdout?: string; review?: string } = { status };
   if (stdout) {
     result.stdout = stdout;
   }

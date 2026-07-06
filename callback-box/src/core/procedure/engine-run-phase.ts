@@ -13,7 +13,7 @@ import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agen
 import { getHead } from "../../cli/lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { fmt } from "../../cli/lib/format.js";
-import { MODEL_MAP, type ParsedStep } from "./engine-types.js";
+import { MODEL_MAP, type ParsedStep, type ValidateStatus } from "./engine-types.js";
 import type { ExecuteStepParams } from "./engine-step.js";
 import {
   executePhaseShells,
@@ -31,7 +31,7 @@ const REVIEW_RETRY_BUDGET_USD = 2;
 
 /** The validation outcome shape carried between phases. */
 export interface ValidateOutcome {
-  status: string;
+  status: ValidateStatus;
   stdout?: string;
   review?: string;
 }

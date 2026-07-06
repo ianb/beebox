@@ -6,6 +6,21 @@
  */
 
 import { type createAgent as realCreateAgent } from "../agent.js";
+import type { RunStepResult, ProcedureRunFields } from "../../schemas/procedure-run.js";
+import type { ProcedureStepDef } from "../../schemas/procedure.js";
+
+// Status/severity vocabularies, derived from the card schemas' z.enums so the
+// engine's in-memory shapes can't drift from what validates on disk (Track B).
+/** The run's overall lifecycle status. */
+export type RunStatus = ProcedureRunFields["status"];
+/** A step's lifecycle status (pending → running → completed/skipped/failed). */
+export type StepStatus = RunStepResult["status"];
+/** A precheck phase's outcome (pass/fail/skip). */
+export type PrecheckStatus = NonNullable<RunStepResult["precheck"]>["status"];
+/** A validate phase's outcome (pass/fail/warn). */
+export type ValidateStatus = NonNullable<RunStepResult["validate"]>["status"];
+/** How a failing validation phase gates the step (warn/review/abort). */
+export type ProcedureSeverity = NonNullable<NonNullable<ProcedureStepDef["validate"]>["severity"]>;
 
 /**
  * Why a procedure operation failed, in the {@link Result} error arm returned by
@@ -61,7 +76,7 @@ export interface ParsedStep {
   description: string;
   precheck?: ParsedPhase & { passOutput?: boolean };
   run?: ParsedPhase;
-  validate?: { phase: ParsedPhase; severity: string; model?: string };
+  validate?: { phase: ParsedPhase; severity: ProcedureSeverity; model?: string };
 }
 
 export interface ParsedProcedure {
@@ -75,10 +90,10 @@ export interface ParsedProcedure {
 }
 
 export interface StepUpdate {
-  status: string;
+  status: StepStatus;
   startedAt?: string;
   completedAt?: string;
-  precheck?: { status: string; stdout?: string };
+  precheck?: { status: PrecheckStatus; stdout?: string };
   run?: { sessionId?: string; stdout?: string; gitRef?: string };
-  validate?: { status: string; stdout?: string; review?: string };
+  validate?: { status: ValidateStatus; stdout?: string; review?: string };
 }
