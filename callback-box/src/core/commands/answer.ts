@@ -15,9 +15,9 @@ import {
 import { boxPath, isCardFile } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
 import { withCardLock } from "../../lib/card-lock.js";
-import { parseCardText } from "../card-io.js";
+import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { type QuestionFields } from "../../schemas/question.js";
+import { type QuestionFields, QuestionSchema } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 
 export interface AnswerArgs {
@@ -60,7 +60,7 @@ async function loadPendingQuestion(
         result: { success: false, error: `Not a question card (got ${card.schema.type})` },
       };
     }
-    fields = card.fields as unknown as QuestionFields;
+    fields = cardFields(card, QuestionSchema);
   } catch (err) {
     return {
       ok: false,

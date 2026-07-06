@@ -12,7 +12,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
 export const ImageStatus = z.enum(["new", "analyzed", "invalid"]);
@@ -69,7 +69,7 @@ const DocumentMeta = z.object({
   dates: z.array(DocumentDate).optional(),
 });
 
-export const ImageSchema: CardSchema = cardSchema("image", {
+export const ImageSchema = cardSchema("image", {
   description: "A photo (typically from a capture session) — the image file lives in the attach scope; analysis fills description/OCR/EXIF",
   category: "synced",
   fields: {
@@ -131,20 +131,7 @@ Status: new (unanalyzed) → analyzed (description filled in) → invalid
 (accidental capture, too blurry, not useful).`,
 });
 
-export interface ImageFields {
-  type: "image";
-  status: ImageStatus;
-  "has-text"?: boolean;
-  rotation?: ImageRotation;
-  filename: { ref: string; captured: string; source: ImageSource };
-  description?: string;
-  contains?: string;
-  creation?: string;
-  text?: Array<{ source?: string; content: string }>;
-  exif?: { date?: string; camera?: string; gps?: string; width?: string; height?: string };
-  "subject-bbox"?: { y1: string; x1: string; y2: string; x2: string };
-  document?: { kind?: string; from?: string; dates?: Array<{ label: string; value: string }> };
-}
+export type ImageFields = InferCardFields<typeof ImageSchema>;
 
 /**
  * Loader summary used by the file viewer: derives a title from

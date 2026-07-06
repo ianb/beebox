@@ -9,9 +9,9 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { parseCardText, serializeCardText } from "../core/card-io.js";
+import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
-import type { TelegramMessageFields } from "../schemas/telegram-message.js";
+import { TelegramMessageSchema } from "../schemas/telegram-message.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
 import type { TelegramService } from "../services/telegram.js";
 
@@ -50,8 +50,7 @@ export async function sendOutputCards(ctx: OutputCardsContext): Promise<string[]
     try {
       const content = await fs.readFile(absPath, "utf-8");
       const card = parseCardText(content, { source: relPath, schemas: await createCardSchemaMap(boxRoot) });
-      // Parse boundary: parseCardText validated against the schema.
-      const fields = card.fields as unknown as TelegramMessageFields;
+      const fields = cardFields(card, TelegramMessageSchema);
       if (fields.status !== "pending") continue;
       try {
         await tg.sendMessage(fields["chat-id"], fields.text);

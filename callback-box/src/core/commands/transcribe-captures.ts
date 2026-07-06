@@ -16,9 +16,9 @@ import * as path from "node:path";
 import { renderFrontmatterBlock } from "../../cards/index.js";
 import { registerCommand } from "../command-runner.js";
 import { getBoxDir } from "../../cli/lib/paths.js";
-import { parseCardText, serializeCardText } from "../card-io.js";
+import { cardFields, parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { type AudioFields } from "../../schemas/audio.js";
+import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
 import {
   transcribeAudio,
   type DetailedTranscriptionResult,
@@ -35,7 +35,7 @@ async function loadAudioCard(cardPath: string): Promise<AudioFields> {
     source: cardPath,
     schemas: await createCardSchemaMap(),
   });
-  return parsed.fields as unknown as AudioFields;
+  return cardFields(parsed, AudioSchema);
 }
 
 async function saveAudioCard(cardPath: string, fields: AudioFields): Promise<void> {
@@ -45,7 +45,7 @@ async function saveAudioCard(cardPath: string, fields: AudioFields): Promise<voi
   });
   await fs.writeFile(cardPath, serializeCardText({
     schema: parsed.schema,
-    fields: fields as unknown as Record<string, unknown>,
+    fields: parsed.fields,
   }));
 }
 

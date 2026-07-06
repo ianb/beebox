@@ -20,7 +20,7 @@
  */
 
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 import { emitBodyAsMarkdown } from "../core/markdoc-emit.js";
 import { displayFromRef } from "../core/markdoc-emit-tags.js";
 
@@ -38,7 +38,7 @@ const PropertyEntry = z.object({
   notes: z.string().optional(),
 });
 
-export const BriefingSchema: CardSchema = cardSchema("briefing", {
+export const BriefingSchema = cardSchema("briefing", {
   description: "Core situational context for the box or a directory — what every agent needs to know; one per directory",
   category: "authored",
   fields: {
@@ -118,26 +118,10 @@ The ledger is in probate. Settled creditors include...
 - Communication style preferences (those go in the personality card).`,
 });
 
-export interface KeyPersonRecord {
-  ref?: string;
-  called?: string;
-  role?: string;
-  notes?: string;
-}
+export type KeyPersonRecord = NonNullable<BriefingFields["key-people"]>[number];
+export type PropertyRecord = NonNullable<BriefingFields["properties"]>[number];
 
-export interface PropertyRecord {
-  name?: string;
-  address?: string;
-  "address-uncertain"?: boolean;
-  notes?: string;
-}
-
-export interface BriefingFields {
-  type: "briefing";
-  "key-people"?: KeyPersonRecord[];
-  properties?: PropertyRecord[];
-  body: string;
-}
+export type BriefingFields = InferCardFields<typeof BriefingSchema>;
 
 /** Emit one `**Key Person:** …` line, mirroring the retired body-tag shape. */
 function keyPersonLine(entry: KeyPersonRecord): string {

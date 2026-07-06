@@ -12,7 +12,7 @@
  * See docs/plans/web-push-notifications.md (Track C).
  */
 
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 
@@ -22,7 +22,7 @@ export type WebPushStatusValue = z.infer<typeof WebPushStatus>;
 export const WebPushSeverity = z.enum(["info", "alert"]);
 export type WebPushSeverityValue = z.infer<typeof WebPushSeverity>;
 
-export const WebPushSchema: CardSchema = cardSchema("web-push", {
+export const WebPushSchema = cardSchema("web-push", {
   fields: {
     status: WebPushStatus.default("pending"),
     title: z.string(),
@@ -58,16 +58,7 @@ create a card in \`box/output/\` with the \`.web-push.card\` extension.
    an \`error\` field is added. Failed cards are not retried — fix or delete.`,
 });
 
-export interface WebPushFields {
-  type: "web-push";
-  status: WebPushStatusValue;
-  title: string;
-  body: string;
-  url: string;
-  severity: WebPushSeverityValue;
-  tag?: string;
-  error?: string;
-}
+export type WebPushFields = InferCardFields<typeof WebPushSchema>;
 
 export function createWebPushTemplate(options: {
   title: string;

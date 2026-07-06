@@ -10,9 +10,9 @@
 import * as fs from "node:fs/promises";
 import { requireBoxRoot } from "../cli/lib/paths.js";
 import { getSystemState } from "../core/state.js";
-import { parseCardText } from "../core/card-io.js";
+import { cardFields, parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
-import type { QuestionFields } from "../schemas/question.js";
+import { QuestionSchema } from "../schemas/question.js";
 
 export interface PendingQuestion {
   path: string;
@@ -39,7 +39,7 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
     try {
       const content = await fs.readFile(q.path, "utf-8");
       const card = parseCardText(content, { source: q.path, schemas });
-      const fields = card.fields as unknown as QuestionFields;
+      const fields = cardFields(card, QuestionSchema);
       const options = fields.input.options?.map((o) => o.label);
       pendingQuestions.push({
         path: q.relativePath,

@@ -13,9 +13,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { registerConnector, type Connector, type SyncResult } from "./index.js";
-import { parseCardText, serializeCardText } from "../core/card-io.js";
+import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
-import type { WebPushFields } from "../schemas/web-push.js";
+import { WebPushSchema } from "../schemas/web-push.js";
 import { sendPush, VapidNotConfiguredError } from "../core/send-push.js";
 import type { PushService } from "../services/push.js";
 import { stageFiles, commit } from "../cli/lib/git.js";
@@ -78,8 +78,7 @@ export async function sendOutputPushCards(ctx: {
     try {
       const content = await fs.readFile(absPath, "utf-8");
       const card = parseCardText(content, { source: relPath, schemas });
-      // Parse boundary: parseCardText validated against the schema.
-      const fields = card.fields as unknown as WebPushFields;
+      const fields = cardFields(card, WebPushSchema);
       if (fields.status !== "pending") continue;
 
       let failure: string | null = null;

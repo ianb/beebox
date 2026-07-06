@@ -11,7 +11,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const AudioStatus = z.enum(["new", "transcribed"]);
 export type AudioStatus = z.infer<typeof AudioStatus>;
@@ -30,7 +30,7 @@ const TranscriptionError = z.object({
   message: z.string(),
 });
 
-export const AudioSchema: CardSchema = cardSchema("audio", {
+export const AudioSchema = cardSchema("audio", {
   description: "A recorded speech clip from a capture session — audio file in the attach scope, transcript and summary filled on transcription",
   category: "synced",
   fields: {
@@ -62,24 +62,7 @@ If status is "new" with no \`transcript:\`, the audio hasn't been
 transcribed yet — don't treat it as empty content.`,
 });
 
-export interface AudioFields {
-  type: "audio";
-  status: AudioStatus;
-  filename: {
-    ref: string;
-    recorded: string;
-    source: string;
-    duration?: string;
-  };
-  summary?: string;
-  transcript?: string;
-  "transcription-error"?: {
-    permanent: boolean;
-    code?: string;
-    "attempted-at"?: string;
-    message: string;
-  };
-}
+export type AudioFields = InferCardFields<typeof AudioSchema>;
 
 export function createAudioTemplate(options: {
   recordedAt: string;

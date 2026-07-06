@@ -6,7 +6,7 @@
  * on success or stamps it with an error on failure.
  */
 
-import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
 export const TelegramMessageStatus = z.enum(["pending", "sent", "failed"]);
@@ -17,7 +17,7 @@ const TelegramResponse = z.object({
   "message-id": z.string(),
 });
 
-export const TelegramMessageSchema: CardSchema = cardSchema("telegram-message", {
+export const TelegramMessageSchema = cardSchema("telegram-message", {
   description: "An outbound Telegram message queued in box/output/ — the connector sends it on sync and deletes the card on success",
   category: "synced",
   fields: {
@@ -45,14 +45,7 @@ To send a message to a Telegram chat, create a card in
    Failed cards are not retried — fix or delete them.`,
 });
 
-export interface TelegramMessageFields {
-  type: "telegram-message";
-  status: TelegramMessageStatusValue;
-  "chat-id": string;
-  text: string;
-  response?: { "sent-at": string; "message-id": string };
-  error?: string;
-}
+export type TelegramMessageFields = InferCardFields<typeof TelegramMessageSchema>;
 
 export function createTelegramMessageTemplate(options: {
   chatId: string;

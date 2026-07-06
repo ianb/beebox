@@ -6,7 +6,7 @@
  * notes. Everything is structured frontmatter — no markdown body.
  */
 
-import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
 export const TodoItemStatus = z.enum(["pending", "done", "cancelled", "deferred"]);
@@ -32,7 +32,7 @@ export interface TodoItem {
   items?: TodoItem[] | undefined;
 }
 
-export const TodoListSchema: CardSchema = cardSchema("todo-list", {
+export const TodoListSchema = cardSchema("todo-list", {
   description: "Human-oriented action items grouped by topic, nestable — tracks things people need to do, not agent jobs",
   category: "authored",
   fields: {
@@ -88,13 +88,7 @@ Active todo lists live in \`store/todos/\`. Filename:
   related items into lists by topic`,
 });
 
-export interface TodoListFields {
-  type: "todo-list";
-  name: string;
-  details?: string;
-  "agent-notes"?: string;
-  items?: TodoItem[];
-}
+export type TodoListFields = InferCardFields<typeof TodoListSchema>;
 
 export function createTodoListTemplate(options: {
   name: string;

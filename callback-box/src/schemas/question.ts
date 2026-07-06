@@ -5,7 +5,7 @@
  * They can have different input types (select, text, confirm).
  */
 
-import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
 export const QuestionStatus = z.enum(["pending", "answered", "expired"]);
@@ -34,7 +34,7 @@ const QuestionAnswer = z.object({
   selected: z.string().optional(),
 });
 
-export const QuestionSchema: CardSchema = cardSchema("question", {
+export const QuestionSchema = cardSchema("question", {
   description: "Asks the user something (select/text/confirm) and routes the answer back to an agent via its directive",
   category: "authored",
   fields: {
@@ -71,22 +71,7 @@ After the user answers, the system fills in:
 For select questions, make options mutually exclusive. For confirm questions, make the prompt unambiguous about what "yes" means.`,
 });
 
-export interface QuestionFields {
-  type: "question";
-  status: QuestionStatusType;
-  "answered-by"?: string;
-  memo?: string;
-  prompt: string;
-  input: {
-    type: QuestionInputTypeValue;
-    options?: Array<{ id: string; label: string }>;
-  };
-  directive?: string;
-  context?: Array<{ ref: string; text?: string }>;
-  answer?: { text?: string; selected?: string };
-  "answered-at"?: string;
-  "answered-via"?: "web" | "cli" | "api";
-}
+export type QuestionFields = InferCardFields<typeof QuestionSchema>;
 
 interface CreateSelectQuestionTemplateParams {
   memo: string;

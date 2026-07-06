@@ -3,10 +3,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { splitCardContent } from "../../cards/index.js";
-import { parseCardText } from "../card-io.js";
+import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import type { ImageFields } from "../../schemas/image.js";
-import type { AudioFields } from "../../schemas/audio.js";
+import { type ImageFields, ImageSchema } from "../../schemas/image.js";
+import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 
 async function readImageCard(cardPath: string): Promise<ImageFields | null> {
@@ -16,7 +16,7 @@ async function readImageCard(cardPath: string): Promise<ImageFields | null> {
       source: cardPath,
       schemas: await createCardSchemaMap(),
     });
-    return parsed.fields as unknown as ImageFields;
+    return cardFields(parsed, ImageSchema);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Failed to read image card ${cardPath}, treating as unavailable:`, e);
@@ -32,7 +32,7 @@ async function readAudioCard(cardPath: string): Promise<AudioFields | null> {
       source: cardPath,
       schemas: await createCardSchemaMap(),
     });
-    return parsed.fields as unknown as AudioFields;
+    return cardFields(parsed, AudioSchema);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Failed to read audio card ${cardPath}, treating as unavailable:`, e);

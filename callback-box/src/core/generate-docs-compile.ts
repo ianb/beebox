@@ -12,9 +12,9 @@ import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { loadCardFrontmatter } from "./frontmatter-field.js";
 import { parseGuide, parseGuideCard, compileGuide } from "../schemas/guide.js";
 import { compilePersonality, compileSpeakingVoice, type PersonalityFields } from "../schemas/personality.js";
-import { compileBriefing, type BriefingFields } from "../schemas/briefing.js";
+import { compileBriefing, BriefingSchema } from "../schemas/briefing.js";
 import { loadBoxholders } from "./boxholder-cards.js";
-import { parseCardText } from "./card-io.js";
+import { cardFields, parseCardText } from "./card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./generate-docs-shared.js";
 
@@ -81,7 +81,7 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
       source: "briefing.briefing.card",
       schemas: await createCardSchemaMap(boxRoot),
     });
-    const compiled = compileBriefing(parsed.fields as unknown as BriefingFields);
+    const compiled = compileBriefing(cardFields(parsed, BriefingSchema));
     const mdPath = join(boxRoot, "briefing.md");
     await writeFile(
       mdPath,
