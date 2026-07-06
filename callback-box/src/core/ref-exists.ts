@@ -17,6 +17,7 @@
 import { access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
+import { containWithinBox, type BoxRelativePath } from "../lib/box-containment.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
@@ -39,12 +40,31 @@ export function resolveRefToPath(input: RefExistsInput): string {
 }
 
 /**
+ * Resolve a card ref through the canonical three-form semantics
+ * (box-root-absolute `/…`, `attach/…`, else document-relative to `fromPath`)
+ * AND contain it: returns a branded box-relative path, or `null` if the ref
+ * escapes the box. The single producer of `BoxRelativePath` for
+ * canonically-resolved refs — an escaping ref must be treated exactly like a
+ * nonexistent one at every call site.
+ */
+export function resolveContainedRef(input: RefExistsInput): BoxRelativePath | null {
+  return containWithinBox(input.boxRoot, resolveRefToPath(input));
+}
+
+/**
  * Whether the card-to-card (or card-to-attachment) ref points at a file that
  * exists. A non-ENOENT access failure is logged and treated as "does not
  * exist" — the lint walk surfaces it as a broken-ref warning either way.
  */
 export async function resolveRefExists(input: RefExistsInput): Promise<boolean> {
-  const target = resolveRefToPath(input);
+  const contained = resolveContainedRef(input);
+  if (contained === null) {
+    // A ref that escapes the box points at no in-box file — treat it as broken
+    // (the lint walk surfaces it as a broken-ref warning), never resilient.
+    console.warn(`resolveRefExists: ref "${input.ref}" in ${input.fromPath} escapes the box`);
+    return false;
+  }
+  const target = resolve(input.boxRoot, contained);
   try {
     await access(target);
     return true;
