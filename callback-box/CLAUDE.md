@@ -110,6 +110,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 
 | Topic | Location |
 |-------|----------|
+| Engineering principles | `docs/engineering-principles.md` |
 | Design rationale | `docs/design/README.md` |
 | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |

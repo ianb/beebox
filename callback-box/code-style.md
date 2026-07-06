@@ -1,6 +1,6 @@
 # Code Style
 
-General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md.
+General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* behind these rules — the durable design principles they implement — lives in [`docs/engineering-principles.md`](docs/engineering-principles.md).
 
 ## Type Checking and Linting
 

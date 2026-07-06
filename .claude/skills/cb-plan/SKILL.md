@@ -88,20 +88,23 @@ no context.
 ### Stated preferences this plan trades against
 
 Pointers to the engineering principles the plan should be evaluated
-against. Today these live across:
+against. These live across:
 
+- `callback-box/docs/engineering-principles.md` — the twelve durable
+  design principles (types-are-structure, exhaustiveness, validate-at-
+  boundaries, resilient-not-silent, …); the *why* the mechanical rules
+  implement. Trace findings to these by number.
 - `callback-box/CLAUDE.md` — project conventions, validation contract,
   Phase-2 cards format, the "don't add features beyond what the task
   requires" rule.
-- `callback-box/code-style.md` — explicit style preferences (no
-  optional chaining, no default parameters, max 2 positional params, no
-  `any`).
+- `callback-box/code-style.md` — the checkable mechanical rules (no
+  default parameters, max 2 positional params, no `any`, the `as`/cast
+  and logging conventions).
 - The most recent shipped precedent (e.g. `{% quote %}` if you're
   doing Markdoc tag work). Precedents are denser preferences than docs.
 
-A future `callback-box/docs/engineering-principles.md` will consolidate
-these. Until it lands, list which of the existing docs apply and which
-specific principles you'll trace findings to.
+List which of these apply to the plan and which specific principles
+you'll trace findings to.
 
 Every finding in the Review section (and every design choice in the
 plan) must be traceable to one of these. If you can't trace, either
@@ -394,8 +397,8 @@ fought the way work actually happens here.
   the real gate; size by itself is not.
 - **No cargo-culted "Cognitive Patterns" checklist.** Generic eng-
   management aphorisms read as ritual, not guidance. Principles live in
-  CLAUDE.md / code-style.md / engineering-principles.md (when it lands)
-  and are project-specific.
+  CLAUDE.md / code-style.md / engineering-principles.md and are
+  project-specific.
 - **No ASCII coverage diagrams.** Prose covers the same ground without
   the diagram-maintenance burden.
 - **No dual effort scale (`human: ~2d / CC: ~15min`).** Doesn't change
