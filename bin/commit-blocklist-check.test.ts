@@ -7,31 +7,74 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { BlocklistError, findBlocked, parseAddedLines, parseBlocklist } from "./commit-blocklist-check.js";
 
-test("parseBlocklist skips blanks and comments, keeps file line numbers", () => {
-  const entries = parseBlocklist("# header\n\nfoo.example\n\n  # indented comment\nbar.example\n");
-  assert.equal(entries.length, 2);
-  assert.equal(entries[0]!.line, 3); // foo.example is on line 3 of the file
-  assert.equal(entries[1]!.line, 6);
+test("parseBlocklist classifies block / allow / ignore, skips blanks + comments, keeps line numbers", () => {
+  const entries = parseBlocklist("# header\n\nfoo\n!bar\nfile:*.md\n");
+  assert.deepEqual(
+    entries.map((e) => [e.line, e.kind]),
+    [
+      [3, "block"],
+      [4, "allow"],
+      [5, "ignore"],
+    ],
+  );
 });
 
-test("literal entries match case-insensitively as substrings; dots are literal", () => {
-  const [e] = parseBlocklist("box.internal");
-  assert.equal(e!.test("see https://BOX.INTERNAL/x here"), true);
-  assert.equal(e!.test("boxYinternal"), false); // the dot is literal, not regex `.`
+test("literal block matches case-insensitively as a substring; dots are literal", () => {
+  const entries = parseBlocklist("box.internal");
+  assert.equal(findBlocked([{ file: "x", lineno: 1, text: "see BOX.INTERNAL/x" }], entries).length, 1);
+  assert.equal(findBlocked([{ file: "x", lineno: 1, text: "boxYinternal" }], entries).length, 0);
 });
 
-test("re: entries are case-insensitive regex (e.g. word-bounded names)", () => {
-  const [e] = parseBlocklist("re:\\bJane Doe\\b");
-  assert.equal(e!.test("contact jane doe today"), true);
-  assert.equal(e!.test("Jane Doelan"), false); // word boundary blocks the substring
+test("re: block is a case-insensitive regex (word-bounded, no over-match)", () => {
+  const entries = parseBlocklist("re:\\bFoo\\b");
+  assert.equal(findBlocked([{ file: "x", lineno: 1, text: "the foo bar" }], entries).length, 1);
+  assert.equal(findBlocked([{ file: "x", lineno: 1, text: "a Football match" }], entries).length, 0);
 });
 
 test("an invalid regex fails closed via BlocklistError", () => {
   assert.throws(() => parseBlocklist("re:(unclosed"), BlocklistError);
 });
 
-test("an empty re: pattern is ignored, not a match-everything footgun", () => {
-  assert.deepEqual(parseBlocklist("re:"), []);
+test("empty re: and bare ! are ignored, not match-everything footguns", () => {
+  assert.deepEqual(parseBlocklist("re:\n!\n"), []);
+});
+
+test("an allow rule un-blocks a match whose span it covers", () => {
+  const entries = parseBlocklist("Marlowe\n!@marlowe\n");
+  const added = [{ file: "x", lineno: 1, text: "@marlowe/some-pkg" }];
+  assert.deepEqual(findBlocked(added, entries), []); // 'marlowe' sits inside '@marlowe' → suppressed
+});
+
+test("an allow rule does NOT un-block a match outside its span (no smuggling)", () => {
+  const entries = parseBlocklist("Marlowe\n!@marlowe\n");
+  const added = [{ file: "x", lineno: 1, text: "Priya Marlowe and @marlowe" }];
+  assert.equal(findBlocked(added, entries).length, 1); // standalone 'Marlowe' isn't covered
+});
+
+test("file: ignore skips a matching file entirely; others still checked", () => {
+  const entries = parseBlocklist("secret\nfile:package.json\n");
+  const added = [
+    { file: "callback-box/package.json", lineno: 1, text: "has a secret here" },
+    { file: "src/x.ts", lineno: 2, text: "has a secret here" },
+  ];
+  // no-slash glob matches package.json by basename at any depth; src/x.ts still blocks
+  assert.deepEqual(findBlocked(added, entries), [{ file: "src/x.ts", lineno: 2, entry: 1 }]);
+});
+
+test("file: glob with a slash matches the full path, ** crosses directories", () => {
+  const entries = parseBlocklist("secret\nfile:docs/**\n");
+  const added = [
+    { file: "docs/a/b.md", lineno: 1, text: "secret" },
+    { file: "src/docs.ts", lineno: 2, text: "secret" },
+  ];
+  assert.deepEqual(findBlocked(added, entries), [{ file: "src/docs.ts", lineno: 2, entry: 1 }]);
+});
+
+test("findBlocked reports file:line + entry line, never a value, one hit per line", () => {
+  const entries = parseBlocklist("alpha\nbeta\n");
+  const hits = findBlocked([{ file: "x.md", lineno: 7, text: "alpha and beta" }], entries);
+  assert.deepEqual(hits, [{ file: "x.md", lineno: 7, entry: 1 }]);
+  assert.equal("value" in hits[0]!, false);
 });
 
 test("parseAddedLines returns only + lines with correct new-file line numbers", () => {
@@ -40,7 +83,7 @@ test("parseAddedLines returns only + lines with correct new-file line numbers", 
     "index 111..222 100644",
     "--- a/docs/a.md",
     "+++ b/docs/a.md",
-    "@@ -4,0 +5,2 @@ some context",
+    "@@ -4,0 +5,2 @@ ctx",
     "+first added line",
     "+second added line",
     "@@ -10 +12 @@",
@@ -57,25 +100,4 @@ test("parseAddedLines returns only + lines with correct new-file line numbers", 
 test("parseAddedLines ignores deletions and /dev/null (deleted files)", () => {
   const diff = ["--- a/gone.txt", "+++ /dev/null", "@@ -1 +0,0 @@", "-was here"].join("\n");
   assert.deepEqual(parseAddedLines(diff), []);
-});
-
-test("findBlocked reports file:line + entry line, never the matched value", () => {
-  const entries = parseBlocklist("secret-term\n");
-  const added = [{ file: "x.md", lineno: 7, text: "this adds SECRET-TERM inline" }];
-  const hits = findBlocked(added, entries);
-  assert.deepEqual(hits, [{ file: "x.md", lineno: 7, entry: 1 }]);
-  // The Hit shape carries no value field — nothing to re-leak.
-  assert.equal("value" in hits[0]!, false);
-});
-
-test("findBlocked emits one hit per offending line (first matching entry wins)", () => {
-  const entries = parseBlocklist("alpha\nbeta\n");
-  const added = [{ file: "x", lineno: 1, text: "alpha and beta together" }];
-  assert.equal(findBlocked(added, entries).length, 1);
-});
-
-test("clean staged additions produce no hits", () => {
-  const entries = parseBlocklist("secret-term\n");
-  const added = [{ file: "x", lineno: 1, text: "nothing sensitive here" }];
-  assert.deepEqual(findBlocked(added, entries), []);
 });

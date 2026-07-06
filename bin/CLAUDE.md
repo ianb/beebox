@@ -28,15 +28,21 @@ never enter git. No `.commit-blocklist` → silent no-op (opt-in per person); a
 malformed list → fail closed; a *tracked* list → refused. Copy
 `.commit-blocklist.example` to start your own.
 
-Entries: one per line, `#` comments and blanks skipped, matched as
-case-insensitive literal substrings; a `re:` prefix makes one a case-insensitive
-regex (use `re:\bName\b` to word-bound a short name so it doesn't over-match). It
-scans only staged additions (`git diff --cached -U0`) — catching re-introduction,
-not pre-existing content — and reports `file:line` plus the blocklist entry
-number, **never the matched value** (printing it would re-leak exactly what
-you're purging; look it up with `sed -n '<N>p' .commit-blocklist`). Bypassable
-with `--no-verify`, so it's convenience not enforcement — pair with server-side
-push protection / a CI scan for a real gate. Companion to the home-path guard above.
+Rule kinds (one per line, `#` comments and blanks skipped): a bare entry is a
+case-insensitive literal **block** substring; `re:` makes it a case-insensitive
+regex (`re:\bName\b` word-bounds a short name); `!` is a gitignore-style
+**allow** that un-blocks a match whose span sits inside the allow's span (block
+`Marlowe`, then `!@marlowe` to permit the public npm scope — a blocked term
+elsewhere on the line still fires, so nothing smuggles through); `file:<glob>`
+**ignores** a whole file (`*` within a segment, `**` across `/`, a no-slash glob
+matches by basename, so `file:package.json` exempts every one — coarse, prefer a
+`!` allow for a single token). It scans only staged additions
+(`git diff --cached -U0`) — catching re-introduction, not pre-existing content —
+and reports `file:line` plus the blocklist entry number, **never the matched
+value** (printing it would re-leak exactly what you're purging; look it up with
+`sed -n '<N>p' .commit-blocklist`). Bypassable with `--no-verify`, so it's
+convenience not enforcement — pair with server-side push protection / a CI scan
+for a real gate. Companion to the home-path guard above.
 
 ## Router architecture
 
