@@ -8,8 +8,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
+import { readCardFrontmatter } from "./card-io.js";
 
 /**
  * Read a dotted field path out of a frontmatter mapping. `title` →
@@ -31,6 +30,15 @@ export function lookupField(frontmatter: Record<string, unknown>, expr: string):
  * Read + parse a card file's frontmatter mapping. Returns null when the file
  * can't be read, has no frontmatter block, or the frontmatter isn't a YAML
  * mapping (malformed YAML, an array, a scalar).
+ *
+ * Delegates the parse/guard to {@link readCardFrontmatter} (the single
+ * frontmatter-or-null implementation); this wrapper only adds the file read.
+ * Behavior note: an empty frontmatter block (`---\n---`) now reads as `{}`
+ * (parsed-but-empty) rather than `null` — readCardFrontmatter distinguishes
+ * "empty" from "unparseable", where the old inline copy conflated them. Only
+ * matters for the (real-card-free) empty-block edge case; callers that branch
+ * on `null` now see such a card as a normal, field-less card instead of
+ * "could not parse".
  */
 export async function loadCardFrontmatter(absPath: string): Promise<Record<string, unknown> | null> {
   let content: string;
@@ -39,14 +47,5 @@ export async function loadCardFrontmatter(absPath: string): Promise<Record<strin
   } catch (_e) {
     return null;
   }
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  let fm: unknown;
-  try {
-    fm = parseYaml(split.frontmatterText);
-  } catch (_e) {
-    return null;
-  }
-  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return null;
-  return fm as Record<string, unknown>;
+  return readCardFrontmatter(content);
 }

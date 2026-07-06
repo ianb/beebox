@@ -2,8 +2,10 @@
  * Frontmatter stripping (and composing) for .card files.
  *
  * Cards may optionally begin with a YAML frontmatter block delimited by
- * `---` fences. This module only locates the body and reports a line
- * offset; YAML parsing lives in `core/card-io.ts`.
+ * `---` fences. This module locates the body (`splitCardContent`) and
+ * provides a best-effort, validation-free frontmatter read
+ * (`parseFrontmatterObject`); the schema-validating YAML parse lives in
+ * `core/card-io.ts`.
  *
  *   ---
  *   status: new
@@ -17,7 +19,7 @@
  * docs/implemented-plans/remove-cardworks-package.md.)
  */
 
-import { stringify as stringifyYaml } from "yaml";
+import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
 /**
  * Result of splitting a card's text into frontmatter prefix and body.
@@ -65,6 +67,33 @@ export function splitCardContent(content: string): SplitCardContent {
     lineOffset,
     hasFrontmatter: true,
   };
+}
+
+/**
+ * Parse a card's frontmatter block into a plain mapping, best-effort.
+ *
+ * Returns `null` when there is no frontmatter block, the YAML is unparseable,
+ * or the frontmatter is not a mapping (an array, a scalar, or an empty/`null`
+ * block). This is the shared primitive behind the connectors' ad-hoc
+ * "peek at a card's fields without the schema machinery" reads — a loose,
+ * validation-free view. Callers that need validated, typed fields use
+ * `parseCardText`/`loadCardFile` (`core/card-io.ts`) instead; callers that
+ * want empty frontmatter to read as `{}` rather than `null` use
+ * `readCardFrontmatter` (`core/card-io.ts`).
+ */
+export function parseFrontmatterObject(content: string): Record<string, unknown> | null {
+  const split = splitCardContent(content);
+  if (!split.hasFrontmatter) return null;
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(split.frontmatterText);
+  } catch (_e) {
+    // Malformed YAML in a hand-editable card: treat as "no readable
+    // frontmatter" so scans skip the card rather than crashing.
+    return null;
+  }
+  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  return parsed as Record<string, unknown>;
 }
 
 /**

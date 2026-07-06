@@ -16,7 +16,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
 import { containWithinBox, realpathContained } from "../lib/box-containment.js";
@@ -108,7 +108,7 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
       const cardPath = path.join(threadDir, file);
       try {
         const content = await fs.readFile(cardPath, "utf-8");
-        const fm = peekFrontmatter(content);
+        const fm = parseFrontmatterObject(content);
         if (fm === null) continue;
         const status = typeof fm["status"] === "string" ? fm["status"] : "draft";
         const stamped = typeof fm["gmail-draft-id"] === "string";
@@ -205,28 +205,6 @@ function readDraftFields(fields: Record<string, unknown>): DraftFields {
   const missing = !to ? "to" : !subject ? "subject" : !body ? "body" : undefined;
   if (missing !== undefined) throw new MissingFieldError(missing);
   return { to, cc, bcc, subject, body, inReplyToRef };
-}
-
-/**
- * Pull the YAML frontmatter object out of a card file's text without
- * loading the whole schema machinery — just for the cheap status/stamped
- * check inside findDraftCards.
- */
-function peekFrontmatter(content: string): Record<string, unknown> | null {
-  const split = splitCardContent(content);
-  if (!split.hasFrontmatter) return null;
-  try {
-    const parsed = parseYaml(split.frontmatterText) as unknown;
-    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
-      return null;
-    }
-    return parsed as Record<string, unknown>;
-  } catch (e) {
-    // Malformed frontmatter YAML — treat as "no frontmatter" so the caller skips
-    // this card rather than crashing the whole scan.
-    console.warn("gmail-drafts: failed to parse card frontmatter YAML:", e);
-    return null;
-  }
 }
 
 async function readSourceMessage(

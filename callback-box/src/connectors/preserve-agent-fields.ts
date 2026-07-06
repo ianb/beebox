@@ -9,8 +9,7 @@
  */
 
 import { promises as fs } from "node:fs";
-import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
-import { parse as parseYaml } from "yaml";
+import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 
 /** Fields agents own on connector-managed cards. */
 const AGENT_FIELDS = ["contains"] as const;
@@ -30,11 +29,11 @@ export async function preserveAgentFields(
   } catch (_e) {
     return cardText; // new card — nothing to preserve
   }
-  const existingFields = frontmatterFields(existingRaw);
+  const existingFields = parseFrontmatterObject(existingRaw);
   if (existingFields === null) return cardText;
 
   const next = splitCardContent(cardText);
-  const nextFields = frontmatterFields(cardText);
+  const nextFields = parseFrontmatterObject(cardText);
   if (!next.hasFrontmatter || nextFields === null) return cardText;
 
   let changed = false;
@@ -47,18 +46,4 @@ export async function preserveAgentFields(
   }
   if (!changed) return cardText;
   return renderFrontmatterBlock(nextFields, next.body);
-}
-
-function frontmatterFields(cardText: string): Record<string, unknown> | null {
-  const split = splitCardContent(cardText);
-  if (!split.hasFrontmatter) return null;
-  try {
-    const parsed = parseYaml(split.frontmatterText) as unknown;
-    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return null;
-    return parsed as Record<string, unknown>;
-  } catch (_e) {
-    // A hand-mangled existing card shouldn't break sync; it simply
-    // contributes nothing to preserve.
-    return null;
-  }
 }
