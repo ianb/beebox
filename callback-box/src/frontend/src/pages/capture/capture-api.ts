@@ -26,8 +26,8 @@
  * call, not part of this inventory.
  */
 
-import { getApiBase } from "../api";
-import { RequestError } from "../lib/errors";
+import { getApiBase } from "../../api";
+import { RequestError } from "../../lib/errors";
 
 export type UploadState = "uploading" | "uploaded" | "failed";
 

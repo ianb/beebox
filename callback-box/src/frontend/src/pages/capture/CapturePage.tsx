@@ -11,12 +11,12 @@
  * useCaptureSession hook; cohesive logic lives in the sibling capture-* hooks.
  */
 
-import { CaptureShell } from "../components/capture/CaptureShell";
-import { StatusBar } from "../components/capture/StatusBar";
-import { DeviceSettings } from "../components/capture/DeviceSettings";
-import { CameraViewport } from "../components/capture/CameraViewport";
-import { CaptureErrorBanner } from "../components/capture/CaptureErrorBanner";
-import { CaptureControls } from "../components/capture/CaptureControls";
+import { CaptureShell } from "../../components/capture/CaptureShell";
+import { StatusBar } from "../../components/capture/StatusBar";
+import { DeviceSettings } from "../../components/capture/DeviceSettings";
+import { CameraViewport } from "../../components/capture/CameraViewport";
+import { CaptureErrorBanner } from "../../components/capture/CaptureErrorBanner";
+import { CaptureControls } from "../../components/capture/CaptureControls";
 import { useCaptureSession } from "./useCaptureSession";
 
 function formatTime(seconds: number): string {

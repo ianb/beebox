@@ -6,11 +6,11 @@
 
 import { Link } from "@tanstack/react-router";
 import { cardTypeFromName } from "@shared/card-name";
-import { href } from "../../lib/routing";
-import type { NavigateHint, ViewTarget } from "../../lib/view-url";
-import { FileView } from "../FileView";
-import { useCardViewBinding } from "../../lib/view-bindings";
-import { MobileBackButton } from "../ui/MobileBackButton";
+import { href } from "../../../lib/routing";
+import type { NavigateHint, ViewTarget } from "../../../lib/view-url";
+import { FileView } from "../../../components/FileView";
+import { useCardViewBinding } from "../../../lib/view-bindings";
+import { MobileBackButton } from "../../../components/ui/MobileBackButton";
 
 interface BrowseDetailPanelProps {
   boxSlug?: string;

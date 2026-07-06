@@ -14,7 +14,7 @@ import { DashboardPage } from "./pages/DashboardPage";
 import { ChatPage } from "./pages/ChatPage";
 import { QuestionsPage } from "./pages/QuestionsPage";
 import { HistoryPage } from "./pages/HistoryPage";
-import { CapturePage } from "./pages/CapturePage";
+import { CapturePage } from "./pages/capture/CapturePage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { AdminPage } from "./pages/AdminPage";
 import { AppLayout, BoxRedirect, BrowsePageWrapper } from "./app-shell";

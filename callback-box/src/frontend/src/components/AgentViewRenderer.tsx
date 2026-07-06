@@ -59,7 +59,7 @@ interface ViewProps extends ViewFileHelpers {
 
 /**
  * Wrap the file helpers so a successful write/append/commit reports
- * `"modified"` with the path. Only the companion-pane ViewRenderer passes a
+ * `"modified"` with the path. Only the companion-pane AgentViewRenderer passes a
  * real reporter, so inline/page views can write freely without polluting the
  * accumulator.
  */
@@ -90,7 +90,7 @@ if (!window.__cbReact) {
   window.__cbReact = React;
 }
 
-interface ViewRendererProps {
+interface AgentViewRendererProps {
   slug: string;
   mode: ViewMode;
   /** Query parameters passed to the view component and cards API. */
@@ -106,7 +106,7 @@ interface ViewRendererProps {
   onNavigate: (target: ViewTarget, hint?: NavigateHint) => void;
   /**
    * Render a card expanded in place — backs `<CardRef>`'s expand-inline. Injected
-   * by the mount site (which owns FileView) so ViewRenderer never imports
+   * by the mount site (which owns FileView) so AgentAgentViewRenderer never imports
    * FileView (that would form a value-import cycle). Omitted → expand is a no-op.
    */
   renderInline?: (cardPath: string) => ReactNode;
@@ -154,7 +154,7 @@ interface ViewModule {
   modes?: ViewMode[];
 }
 
-export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNavigate, renderInline }: ViewRendererProps) {
+export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNavigate, renderInline }: AgentViewRendererProps) {
   // Guard: strip any query string that leaked into the slug
   const qIdx = rawSlug.indexOf("?");
   const slug = qIdx !== -1 ? rawSlug.slice(0, qIdx) : rawSlug;
@@ -228,7 +228,7 @@ export function ViewRenderer({ slug: rawSlug, mode, params, reportActivity, onNa
         setLoading(false);
       })
       .catch((e: unknown) => {
-        console.error("[ViewRenderer] unexpected load failure:", e);
+        console.error("[AgentViewRenderer] unexpected load failure:", e);
         setLoading(false);
       });
   }, [loadModule, loadCards]);

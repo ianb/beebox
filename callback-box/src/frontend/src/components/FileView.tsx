@@ -36,7 +36,7 @@ import { RequestError } from "../lib/errors";
 import { SelectionCapture } from "./SelectionCapture";
 import type { AddSelectionInput } from "../lib/selection/position";
 import { Pre } from "./ui/Pre";
-import { ViewRenderer } from "./ViewRenderer";
+import { AgentViewRenderer } from "./AgentViewRenderer";
 import { useCardViewBinding } from "../lib/view-bindings";
 import { ExternalIconLink } from "./ui/ExternalIconLink";
 import { OpenInPanelButton } from "./ui/OpenInPanelButton";
@@ -324,7 +324,7 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
     const base = data ? getRenderers(path, data) : [];
     if (binding === null || !data) return base;
     const Bound = () => (
-      <ViewRenderer
+      <AgentViewRenderer
         slug={binding.slug}
         mode={mode === "chat" ? "chat" : "page"}
         // Link/embed query params (e.g. `?view=…&k=v`) reach the view; `path`

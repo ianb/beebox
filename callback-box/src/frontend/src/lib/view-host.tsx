@@ -2,7 +2,7 @@
  * View-host context — how a box-authored view's card widgets reach the
  * surrounding surface.
  *
- * Box views are compiled separately and dynamically imported (ViewRenderer),
+ * Box views are compiled separately and dynamically imported (AgentViewRenderer),
  * and a `<CardLink>`/`<CardRef>` can sit arbitrarily deep in author JSX, so a
  * threaded prop can't reach it — context is the delivery mechanism. It works
  * across the import boundary because compiled views share the host's React via
@@ -55,7 +55,7 @@ export interface ViewHost {
    * Render a card expanded in place (CardRef's expand-inline). Browser:
    * a frameless `<FileView mode="embed">`; node: a minimal title/type block.
    * Injected by the mount site so this module never imports FileView (which
-   * would form a value-import cycle through ViewRenderer).
+   * would form a value-import cycle through AgentViewRenderer).
    */
   renderInline: (cardRef: string) => ReactNode;
   /** The view's own box-relative path, for resolving relative refs ("" = root). */

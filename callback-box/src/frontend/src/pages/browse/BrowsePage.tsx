@@ -6,20 +6,20 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouterState } from "@tanstack/react-router";
-import { getApiBase } from "../api";
-import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
-import { type ViewTarget } from "../lib/view-url";
-import { Sidebar } from "../components/Sidebar";
-import { trpc } from "../lib/trpc";
-import { BrowseSidebarList } from "../components/browse/BrowseSidebarList";
-import { BrowseBreadcrumbs } from "../components/browse/BrowseBreadcrumbs";
-import { BrowseDetailPanel } from "../components/browse/BrowseDetailPanel";
-import { BrowseContextMenu } from "../components/browse/BrowseContextMenu";
-import { Row } from "../components/ui/Row";
-import { Column } from "../components/ui/Column";
-import { Text } from "../components/ui/Text";
-import { useDocumentTitle } from "../hooks/useDocumentTitle";
-import { RequestError } from "../lib/errors";
+import { getApiBase } from "../../api";
+import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { type ViewTarget } from "../../lib/view-url";
+import { Sidebar } from "../../components/Sidebar";
+import { trpc } from "../../lib/trpc";
+import { BrowseSidebarList } from "./components/BrowseSidebarList";
+import { BrowseBreadcrumbs } from "./components/BrowseBreadcrumbs";
+import { BrowseDetailPanel } from "./components/BrowseDetailPanel";
+import { BrowseContextMenu } from "./components/BrowseContextMenu";
+import { Row } from "../../components/ui/Row";
+import { Column } from "../../components/ui/Column";
+import { Text } from "../../components/ui/Text";
+import { useDocumentTitle } from "../../hooks/useDocumentTitle";
+import { RequestError } from "../../lib/errors";
 import { attachDirOwnerBasename, isAttachDirName } from "@shared/attach-path";
 
 /**

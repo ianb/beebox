@@ -4,10 +4,10 @@
  * chrome) so it lives in components/ rather than in the page.
  */
 
-import { cbSource } from "../../lib/source-tag";
-import { StatusBadge } from "../ui/StatusBadge";
-import type { RouterOutput } from "../../lib/trpc";
-import { getApiBase, withBase } from "../../api";
+import { cbSource } from "../../../lib/source-tag";
+import { StatusBadge } from "../../../components/ui/StatusBadge";
+import type { RouterOutput } from "../../../lib/trpc";
+import { getApiBase, withBase } from "../../../api";
 import { attachDirFor } from "@shared/attach-path";
 
 type BrowseData = RouterOutput["status"]["browse"];

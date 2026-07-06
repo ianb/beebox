@@ -15,7 +15,7 @@ import {
 } from "@shared/named-views";
 import { isRecord } from "../lib/is-record";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
-import { ChatsPicker } from "../components/chats/ChatsPicker";
+import { ChatsPicker } from "../components/session-pickers/ChatsPicker";
 import { QuestionsList } from "../components/questions/QuestionsList";
 import { HistoryViewCard } from "../components/history/HistoryViewCard";
 import { Card } from "../components/ui/Card";

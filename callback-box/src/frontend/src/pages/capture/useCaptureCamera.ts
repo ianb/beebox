@@ -5,8 +5,8 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { CameraCapture } from "../lib/camera";
-import { withBase } from "../api";
+import { CameraCapture } from "../../lib/camera";
+import { withBase } from "../../api";
 import { loadDevicePrefs } from "./capture-api";
 
 interface CaptureCameraOptions {

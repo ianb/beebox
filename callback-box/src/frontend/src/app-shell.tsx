@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from "react";
 import { Outlet, useParams, useNavigate } from "@tanstack/react-router";
-import { BrowsePage } from "./pages/BrowsePage";
+import { BrowsePage } from "./pages/browse/BrowsePage";
 import { enableDebugLogCapture, DebugLogPanel, clearErrorCount } from "./components/DebugLog";
 import { SourceViewOverlay, useSourceView } from "./components/SourceViewOverlay";
 import { AppNav } from "./components/AppNav";

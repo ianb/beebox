@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef, useCallback } from "react";
-import { sanitizeFilename } from "../../../lib/filename";
+import { sanitizeFilename } from "../../../../lib/filename";
 import { type UploadState, uploadCaptureFile } from "./capture-api";
 
 interface AudioChunkStatus {

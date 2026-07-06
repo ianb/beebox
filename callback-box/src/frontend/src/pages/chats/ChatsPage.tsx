@@ -8,7 +8,7 @@
 import { Column } from "../../components/ui/Column";
 import { Stack } from "../../components/ui/Stack";
 import { Text } from "../../components/ui/Text";
-import { ChatsPicker } from "../../components/chats/ChatsPicker";
+import { ChatsPicker } from "../../components/session-pickers/ChatsPicker";
 
 export function ChatsPage() {
   return (
