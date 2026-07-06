@@ -70,7 +70,7 @@ getMimeType("photo.webp")
 getMimeType("animation.gif")
 => image/gif
 
-getMimeType("unknown.bmp")
+getMimeType("scan.tiff")
 => image/jpeg
 ```
 
