@@ -6,6 +6,11 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { safeFilename } from "./chat-utils.js";
+import {
+  parseDuration as parseScheduledDuration,
+  InvalidDurationError,
+  UnknownDurationUnitError,
+} from "../schemas/scheduled-script-duration.js";
 import type {
   TelegramConfig,
   TelegramMessageObj,
@@ -93,24 +98,19 @@ export function extractMessage(update: TelegramUpdate): {
 }
 
 /**
- * Parse a human-friendly duration string like "5m", "1h", "30s" into milliseconds.
+ * Parse a human-friendly duration string like "5m", "1h", "30s" into
+ * milliseconds, or null when it doesn't parse.
+ *
+ * Delegates to the canonical scheduled-script duration parser (the superset:
+ * it also accepts weeks `w` and fractional values like `1.5h`, which this
+ * connector's old integer-only `[dhms]` regex rejected), translating its
+ * typed throws back into telegram's null sentinel at the boundary.
  */
 export function parseDuration(dur: string): number | null {
-  const match = dur.match(/^(\d+)\s*([dhms])$/);
-  if (!match) return null;
-  const value = parseInt(match[1]!, 10);
-  // Group 2 is guaranteed by the regex match above (same as group 1).
-  const unit = match[2]!;
-  switch (unit) {
-    case "s":
-      return value * 1000;
-    case "m":
-      return value * 60 * 1000;
-    case "h":
-      return value * 60 * 60 * 1000;
-    case "d":
-      return value * 24 * 60 * 60 * 1000;
-    default:
-      return null;
+  try {
+    return parseScheduledDuration(dur);
+  } catch (e) {
+    if (e instanceof InvalidDurationError || e instanceof UnknownDurationUnitError) return null;
+    throw e;
   }
 }

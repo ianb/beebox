@@ -17,6 +17,13 @@ class InvalidTimespanError extends Error {
   }
 }
 
+class UnknownTimespanUnitError extends Error {
+  constructor(unit: string) {
+    super(`Unknown timespan unit: "${unit}"`);
+    this.name = "UnknownTimespanUnitError";
+  }
+}
+
 export interface CalendarEvent {
   uid: string;
   summary: string;
@@ -341,6 +348,10 @@ export function parseTimespan(input: string): number {
     case "d": return n * DAY;
     case "w": return n * 7 * DAY;
     case "m": return n * 30 * DAY;
-    default: return n * DAY;
+    default:
+      // The regex above only admits d/w/m (empty defaulted to "d"), so this is
+      // unreachable — but throw rather than silently treat an unknown unit as
+      // days, matching the throwing duration parsers elsewhere.
+      throw new UnknownTimespanUnitError(unit);
   }
 }
