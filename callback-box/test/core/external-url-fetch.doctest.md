@@ -5,7 +5,7 @@ text, and decide which are worth a network check. Network (`checkUrl`) is not
 exercised here.
 
 ```ts setup
-import { extractExternalUrls, isCheckableUrl } from "../../src/core/external-url-fetch.js";
+import { extractExternalUrls, isCheckableUrl } from "../../src/core/external/url-fetch.js";
 ```
 
 `extractExternalUrls` pulls every distinct URL out of a blob, whether it's a

@@ -10,7 +10,7 @@ import {
   resolveExternalRef,
   buildVersionMarkers,
   ExternalRefError,
-} from "../../src/core/external-ref.js";
+} from "../../src/core/external/ref.js";
 import { mkdtempSync, writeFileSync, realpathSync } from "node:fs";
 import { execFileSync } from "node:child_process";
 import * as os from "node:os";

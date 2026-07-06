@@ -22,7 +22,7 @@ import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { lintAllClaudeMd } from "../../core/claude-md-lint.js";
 import { buildLoadContext } from "../../core/load-context.js";
-import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external-url-check.js";
+import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../core/external/url-check.js";
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";

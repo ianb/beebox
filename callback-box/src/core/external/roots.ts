@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
-import { loadBoxConfig } from "./box-config.js";
+import { loadBoxConfig } from "../box-config.js";
 
 /** Expand a leading `~` / `~/` to the home directory; other paths pass through. */
 function expandTilde(p: string): string {

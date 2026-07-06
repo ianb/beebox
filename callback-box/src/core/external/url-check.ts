@@ -16,8 +16,8 @@ import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
-import { listBoxCardFiles, listBoxMarkdownFiles } from "./list-cards.js";
-import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from "./external-url-fetch.js";
+import { listBoxCardFiles, listBoxMarkdownFiles } from "../list-cards.js";
+import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from "./url-fetch.js";
 
 const execFileP = promisify(execFile);
 

@@ -19,8 +19,8 @@ import {
   ExternalRefError,
   MalformedUrlError,
   NotFileUrlError,
-} from "../../core/external-ref.js";
-import { rootsForBox } from "../../core/external-roots.js";
+} from "../../core/external/ref.js";
+import { rootsForBox } from "../../core/external/roots.js";
 
 const CONTENT_TYPES: Record<string, string> = {
   ".md": "text/markdown",

@@ -6,9 +6,9 @@ injected here so the git detection + the gitignored verdict cache are exercised
 offline.
 
 ```ts setup
-import { checkExternalUrls } from "../../src/core/external-url-check.js";
+import { checkExternalUrls } from "../../src/core/external/url-check.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import type { UrlVerdict } from "../../src/core/external-url-fetch.js";
+import type { UrlVerdict } from "../../src/core/external/url-fetch.js";
 
 // A stub checker: records what it was asked to check, and reports any URL in
 // `broken` as a hard 404, everything else as ok.

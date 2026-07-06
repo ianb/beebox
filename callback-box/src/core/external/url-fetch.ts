@@ -7,7 +7,7 @@
  * and offline; only `checkUrl` touches the network.
  */
 
-import { assertPublicHttpUrl, UnsafeProxyUrlError } from "../webapp/routes/proxy-image.js";
+import { assertPublicHttpUrl, UnsafeProxyUrlError } from "../../webapp/routes/proxy-image.js";
 
 /**
  * Matches an http(s) URL in raw card/markdown text. Excludes whitespace and the
