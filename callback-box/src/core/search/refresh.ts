@@ -153,10 +153,10 @@ async function refreshUnderLock(
       warnings.push(`could not persist search index (${(e as Error).message}); results served from memory`);
     }
   } else if (dirtyManifest) {
-    // No document changed — only stat/mtime records moved. The restored index
-    // is already current, so a manifest-only write is safe (indexUnchanged
-    // asserts the index file is actually present).
-    await saveManifest(boxRoot, { manifest, indexProof: await indexUnchanged(boxRoot) });
+    // No document changed — only stat/mtime or skip records moved. The index
+    // (restored, or an empty fresh one) already reflects the manifest's doc ids,
+    // so a manifest-only write is safe; indexUnchanged mints the receipt.
+    await saveManifest(boxRoot, { manifest, indexProof: indexUnchanged(boxRoot) });
   }
   if (JSON.stringify(containsState.cards) !== containsBefore) {
     await saveContainsState(boxRoot, containsState);

@@ -16,8 +16,6 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
-import { fileExists } from "../../lib/file-exists.js";
-import { invariant } from "../../lib/invariant.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
@@ -110,17 +108,15 @@ export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Prom
 }
 
 /**
- * Mint an ordering receipt for a refresh that changed no documents (only the
- * manifest's stat/mtime records), where the index on disk is already current.
- * Asserts the index file actually exists, so a manifest-only save can never
- * silently run against a missing index — a loud failure if the invariant the
- * caller believes ("we restored a real index and touched no docs") is false.
+ * Mint an ordering receipt for a refresh that changed no documents — only the
+ * manifest's stat/mtime records, or skip records for cards that failed to parse
+ * (docIds `[]`). No index write is needed: the on-disk index (restored, or a
+ * fresh empty one when only skipped cards exist) already reflects the manifest's
+ * doc ids, so writing the manifest alone is safe. This receipt exists so
+ * `saveManifest` still can't be called with *no* proof — the ordering guarantee
+ * for doc-changing refreshes comes from {@link persistSearchIndex}.
  */
-export async function indexUnchanged(boxRoot: string): Promise<IndexPersisted> {
-  invariant(
-    await fileExists(searchIndexPath(boxRoot)),
-    `search: manifest-only save but no persisted index at ${boxRoot}`,
-  );
+export function indexUnchanged(boxRoot: string): IndexPersisted {
   return indexPersistedFor(boxRoot);
 }
 

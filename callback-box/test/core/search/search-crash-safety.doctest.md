@@ -92,6 +92,33 @@ await find(healed.db, "appointment")
 await box.cleanup();
 ```
 
+## A first refresh whose only change is a skipped card doesn't throw
+
+The very first refresh over a box whose sole indexable file fails to parse hits
+the manifest-only branch (a skip record, no docs) with no persisted index yet.
+That must complete and warn about the skip — not crash asserting a missing index.
+
+```ts
+const box = await makeTmpBox();
+await box.write("store/notes/Broken.memo.card", "---\ncreated: not-a-date\n---\nbroken body\n");
+const opened = await openSearchIndex(box.root);
+opened.warnings.length
+=> 1
+
+opened.warnings[0].startsWith("store/notes/Broken.memo.card: skipped")
+=> true
+
+// A valid card added later indexes fine on top of the recorded skip.
+await box.write("store/notes/Good.memo.card", MEMO("the garden tomatoes are ripe"));
+const withGood = await openSearchIndex(box.root);
+await find(withGood.db, "tomatoes")
+=> store/notes/Good.memo.card
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
 ## The receipt makes writing the manifest ahead of the index unrepresentable
 
 `saveManifest` cannot be called without an `IndexPersisted` receipt, and the
@@ -106,12 +133,14 @@ await throwName(() => saveManifest(boxA.root, { manifest: emptyManifest(), index
 => InvariantError
 ```
 
-`indexUnchanged` — the receipt for a no-document-change refresh — refuses to
-vouch for a box whose index file isn't actually on disk.
+`indexUnchanged` mints the receipt for a no-document-change refresh (only
+stat/mtime or skip records moved) — including a first refresh whose only
+"change" is a skipped card, where no index file exists yet. It is accepted by
+`saveManifest` for its own box.
 
 ```ts continue
-await throwName(() => indexUnchanged(boxA.root))
-=> InvariantError
+await saveManifest(boxA.root, { manifest: emptyManifest(), indexProof: indexUnchanged(boxA.root) })
+=> undefined
 ```
 
 ```ts cleanup

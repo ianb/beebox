@@ -29,7 +29,7 @@ contract the backend previously left implicit.
 | Phase | Meaning | `isRunning()` | `isBusy()` |
 |-------|---------|:---:|:---:|
 | `idle` | no SDK run; start state and where every run ends | no | no |
-| `starting` | `startRun()` in flight (docs refresh, lock, spawn); no run handle yet | no | no |
+| `starting` | `startRun()` in flight (docs refresh, lock, spawn); no run handle yet | no | yes |
 | `ready` | run open and idle, waiting for the next turn | yes | no |
 | `streaming` | a turn is in flight | yes | yes |
 | `stopping` | a graceful `stop()` closed the run; close handler will not drain | yes | `wasBusy` |
@@ -43,9 +43,12 @@ move (a caller bug over internal state — not a degradable condition).
 
 ## The contract
 
-- **Queue / drain (ChatSession).** A `send()` while `streaming` is rejected
-  (`isBusy()` → returns `false`); callers `enqueue()` instead. When the turn's
-  `result` lands (`streaming → ready`) the queue drains into the next turn.
+- **Queue / drain (ChatSession).** A `send()` while `streaming` — or while a run
+  is `starting` — is not accepted (`isBusy()` → `true`); callers `enqueue()`
+  instead. When the turn's `result` lands (`streaming → ready`) the queue drains
+  into the next turn. Queuing during `starting` matters for concurrency: a second
+  request arriving mid-`startRun` has no open run to send onto, so it enqueues
+  and rides the starting run's first turn rather than racing a second run.
   If the run dies unexpectedly with a non-empty queue, the close handler starts
   a fresh run and drains into it — so a wedged run doesn't lose queued messages.
 - **Stop vs restart.** `stop()` moves to `stopping` and clears the queue; the

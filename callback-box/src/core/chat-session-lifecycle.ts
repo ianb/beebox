@@ -101,13 +101,21 @@ export function lifecycleRun(state: ChatLifecycle): ChatBackendRun | null {
   }
 }
 
-/** Whether a turn is in flight, matching the old `busy` field's readings. */
+/**
+ * Whether a new send must queue rather than start a turn now. True while a turn
+ * is in flight (`streaming`) AND while a run is being created (`starting`):
+ * a concurrent send arriving mid-`startRun` has no open run to send onto, so it
+ * enqueues and drains once the starting run's first turn completes — rather than
+ * racing a second run onto the session (the old `busy=false`-during-startRun
+ * behavior double-started; a later refactor turned that into a dropped send).
+ * `ready` and `idle` are not busy: a send then (re)uses or starts the run.
+ */
 export function lifecycleBusy(state: ChatLifecycle): boolean {
   switch (state.phase) {
     case "idle":
-    case "starting":
     case "ready":
       return false;
+    case "starting":
     case "streaming":
       return true;
     case "stopping":

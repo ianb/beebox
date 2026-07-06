@@ -60,15 +60,16 @@ isLegalChatPhaseTransition("idle", "idle")
 
 ## `busy` and `run` readings match the phase
 
-`idle`, `starting`, and `ready` are not busy; only `streaming` (or a `stopping`
-that interrupted a turn) is. Only the run-carrying phases expose a handle.
+`idle` and `ready` accept a new send; `starting` and `streaming` are busy (queue
+the send), as is a `stopping` that interrupted a turn. Only the run-carrying
+phases expose a handle.
 
 ```ts
 lifecycleBusy(IDLE)
 => false
 
 lifecycleBusy({ phase: "starting" })
-=> false
+=> true
 
 lifecycleBusy({ phase: "streaming", run: {} as never })
 => true
