@@ -77,7 +77,7 @@ Questions surface become configuration instead of code.
   renderer registry)"* (docs/landmarks.md, implementation table) is built
   by this plan; landmark links currently hardcode a fallback tile
   (`LinkTile` in `components/landmarks/LandmarkSection.tsx`).
-- **Question rendering** — `src/frontend/src/components/QuestionForm.tsx`,
+- **Question rendering** — `src/frontend/src/components/questions/QuestionForm.tsx`,
   used by `components/questions/QuestionsList.tsx`. There is **no**
   registered `question` card renderer today (grep: no
   `registerCardRenderer("question"`) — the promotion is net-new and is

@@ -1,7 +1,7 @@
 # Chat husks — web chat sessions as cards (phase 1)
 
 **Status:** partially implemented 2026-07 — phase 1 shipped (schema `src/schemas/chat.ts`,
-core `src/core/chat-husk.ts`, assignment hook in
+core `src/core/chat/husk.ts`, assignment hook in
 `chat-session-registry.makeOnAssigned`, boot backfill in
 `webapp/routes/chat.ts`, renderer `components/chat-husk/ChatHuskView`);
 the Deferred section below is still future. Part of

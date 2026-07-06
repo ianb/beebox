@@ -28,7 +28,7 @@ Data-loss / corruption tier:
 3. **System prompt must stay time-invariant (warm-pool cache key), and
    resumed sessions never re-send it.** `src/core/session-context.ts:1-14`
    (time context only in per-message `<chat-app>` snapshots) and
-   `src/core/agent-run.ts:191-208` (resume omits systemPrompt entirely —
+   `src/core/agent/run.ts:191-208` (resume omits systemPrompt entirely —
    prompt edits are invisible to open threads until session reset; only
    hint today is `reactor/DESIGN.md:78`).
 4. **Timeouts must count awake time, not wall clock.**
@@ -45,7 +45,7 @@ Data-loss / corruption tier:
    its example redeclares `title`, hiding the mechanism — new card types
    end up invisible to search.
 7. **`bypassPermissions` is hardcoded for every SDK-spawned box agent.**
-   `src/core/agent-run.ts:63`; a box's `.claude/settings.json` does not
+   `src/core/agent/run.ts:63`; a box's `.claude/settings.json` does not
    gate engine-spawned agents. Discussed only inside the openclaw-hermes
    research corpus.
 8. **`makeTestServer` prefixes every URL with `/test`; `rootRequest()` is
@@ -101,7 +101,7 @@ answered — remain open questions in `docs-reorg.md`.
 4. **Is `getBoxTime` supposed to be the house clock?** Used in ~11 files;
    `new Date()` appears ~66× in core/cli incl. `created:` stamping — which
    ignores frozen scenario time. Intentional split or drift?
-5. **Is `makeLog` (`src/core/chat-session-log.ts`) the house logging
+5. **Is `makeLog` (`src/core/chat/session/log.ts`) the house logging
    style,** or cluster-local? ~900 raw `console.*` calls elsewhere.
 6. **YAML `stringify` never pins `lineWidth: 0`** — long scalars fold
    unpredictably, breaking naive substring edits. Pin it?

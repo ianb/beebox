@@ -68,14 +68,14 @@ async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Chat System Prompt",
-    source: "src/core/chat-session.ts → CHAT_SYSTEM_PROMPT",
+    source: "src/core/chat/session/index.ts → CHAT_SYSTEM_PROMPT",
     scope: "System prompt for the persistent web UI chat session. Active whenever the user is chatting via the main chat page.",
     text: CHAT_SYSTEM_PROMPT,
   });
 
   entries.push({
     title: "Chat Thread System Prompt",
-    source: "src/core/chat-thread-session.ts → buildThreadSystemPrompt()",
+    source: "src/core/chat/session/thread.ts → buildThreadSystemPrompt()",
     scope: "System prompt for per-thread chat sessions (e.g. Telegram threads). Each thread gets its own long-lived Claude process with this prompt.",
     text: buildThreadSystemPrompt({
       threadRef: "${threadRef}",
@@ -86,7 +86,7 @@ async function collectPrompts(): Promise<PromptEntry[]> {
 
   entries.push({
     title: "Commit Nudge Prompt",
-    source: "src/core/agent.ts → COMMIT_NUDGE_PROMPT",
+    source: "src/core/agent/index.ts → COMMIT_NUDGE_PROMPT",
     scope: "Sent as a follow-up user message when an agent session ends with uncommitted changes. Resumes the session to force a commit.",
     text: COMMIT_NUDGE_PROMPT,
   });

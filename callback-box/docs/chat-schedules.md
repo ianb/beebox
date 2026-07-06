@@ -69,10 +69,10 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 
 | File | Role |
 |------|------|
-| `src/core/chat-schedules.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
-| `src/core/chat-session.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
-| `src/core/chat-session-pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
-| `src/core/chat-thread-session.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
+| `src/core/chat/schedules.ts` | `ChatScheduleManager`, `parseScheduleTags()`, `parseCancelScheduleTags()`, schedule persistence |
+| `src/core/chat/session/index.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
+| `src/core/chat/session/pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
+| `src/core/chat/session/thread.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
 | `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text, onFire handler, wires the schedule manager into `webapp/chat-runtime.ts` |
 | `src/webapp/trpc/routers/chat-control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
 | `src/frontend/src/components/chat/InteractiveChat-layout.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |

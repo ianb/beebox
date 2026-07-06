@@ -296,7 +296,7 @@ TanStack Query integrates well with tRPC — `@trpc/react-query` provides typed 
 
 ### Implementation notes
 
-**Fully adopted** via `@trpc/react-query`. The `TrpcProvider` in `src/frontend/src/lib/trpc-provider.tsx` wraps the app with both QueryClientProvider and trpc.Provider.
+**Fully adopted** via `@trpc/react-query`. The `TrpcProvider` in `src/frontend/src/lib/trpc/provider.tsx` wraps the app with both QueryClientProvider and trpc.Provider.
 
 **Patterns in use:**
 - `useQuery` — most data fetching (status, inbox, card details, briefs, schedules, etc.)
@@ -654,7 +654,7 @@ No workflow orchestration, job queuing, state machines, or retry logic. Those re
 
 ### What got adopted
 
-- **Typed message stream.** `query()` from the SDK drives agent runs in `src/core/agent.ts` — no more stdout parsing.
+- **Typed message stream.** `query()` from the SDK drives agent runs in `src/core/agent/index.ts` — no more stdout parsing.
 - **Session resume.** `agent.ts` resumes a session via `resumeSessionId` (e.g. the "didn't commit → resume with a nudge" retry path).
 - **In-process hooks.** `src/core/sdk-hooks.ts` runs a `PostToolUse` hook inside the server process — it replaced the file-based `plugins/card-validator/` plugin, so card/markdown linting runs without per-tool-call shell startup and with structured logging.
 - **Structured output.** `outputFormat: { type: "json_schema", schema }` (agent.ts) enforces typed JSON results where a run needs them.
@@ -1075,7 +1075,7 @@ Not started. highlight.js is used directly. Moving it into the remark pipeline v
 Not yet done — a self-contained task to hand off:
 
 1. Add `date-fns` to `callback-box/package.json` (it formats dates only; no extra runtime deps).
-2. Replace ad-hoc/native date formatting with date-fns `format()` / `formatDistanceToNow()` etc. Current hand-rolled sites to convert (from a `toLocaleDateString`/`Intl`/manual `getMonth()` scan) include, on the backend: `src/connectors/google-calendar.ts`, `src/connectors/calendar-utils.ts`, `src/cli/commands/status.ts`, `src/dev/doc-graph-html.ts`, `src/dev/prompt-report.ts`; and on the frontend: `src/frontend/src/components/CommitTimeline.tsx`, `CommitDetail.tsx`, `SessionLog.tsx`, `dashboard/ScheduleOverview.tsx`, `dashboard/SystemInfo.tsx`, `settings/DriveSection.tsx`, `renderers/image.tsx`, `renderers/sheet.tsx`. (Re-grep before starting — the list drifts.)
+2. Replace ad-hoc/native date formatting with date-fns `format()` / `formatDistanceToNow()` etc. Current hand-rolled sites to convert (from a `toLocaleDateString`/`Intl`/manual `getMonth()` scan) include, on the backend: `src/connectors/google-calendar.ts`, `src/connectors/calendar-utils.ts`, `src/cli/commands/status.ts`, `src/dev/doc-graph-html.ts`, `src/dev/prompt-report.ts`; and on the frontend: `src/frontend/src/components/history/CommitTimeline.tsx`, `CommitDetail.tsx`, `SessionLog.tsx`, `dashboard/ScheduleOverview.tsx`, `dashboard/SystemInfo.tsx`, `settings/DriveSection.tsx`, `renderers/image.tsx`, `renderers/sheet.tsx`. (Re-grep before starting — the list drifts.)
 3. **Watch out for timezone semantics.** Calendar code (`google-calendar.ts`, `calendar-utils.ts`) is timezone-sensitive — verify against existing tests rather than mechanically swapping; date-fns formats in local time unless paired with `date-fns-tz`.
 4. Keep the project conventions: no default parameters, double quotes, explicit types. Add/adjust doctests for any user-visible format change.
 

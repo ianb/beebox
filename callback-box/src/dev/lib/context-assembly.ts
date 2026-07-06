@@ -132,7 +132,7 @@ async function systemPromptLayers(
     }
     return [{
       name: "Chat system prompt",
-      source: "src/core/chat-session-prompts.ts",
+      source: "src/core/chat/session/prompts.ts",
       loading: "always",
       text,
     }];
@@ -140,7 +140,7 @@ async function systemPromptLayers(
   if (situation === "chat-thread") {
     return [{
       name: "Chat-thread system prompt (placeholders unexpanded)",
-      source: "src/core/chat-thread-session.ts",
+      source: "src/core/chat/session/thread.ts",
       loading: "always",
       text: buildThreadSystemPrompt({
         threadRef: "${threadRef}",

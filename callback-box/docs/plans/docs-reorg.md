@@ -56,7 +56,7 @@ plus the open remainders of `box-commentary-surface.md` / `chat-husks.md`):
   and `user-story-audit-followups.md` (mostly done).
 - **Worst drift case: `triage-design.md`** — still opens with "early notes,
   design in progress" while the triage pipeline is fully built
-  (`src/core/triage.ts` etc.) and ~13 other docs cite this file as the
+  (`src/core/triage/index.ts` etc.) and ~13 other docs cite this file as the
   reference architecture. An agent landing there cold would badly misjudge
   whether the pipeline exists.
 - Root causes are known and self-documented: `plans/README.md`'s "Wiring

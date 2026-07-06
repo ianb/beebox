@@ -362,13 +362,13 @@ This section walks the design back into concrete code. Each stage below is deplo
 
 The control plane lands first because the other features want to read or write feature state.
 
-**Feature state.** Per-session map of `{ feature-name: "on" | "off" }`. Stored as a `features` field on `SessionHistoryEntry` (defined in `src/core/chat-session-history.ts`). Default is empty — empty means "default behavior, no features active." Server-side is the source of truth.
+**Feature state.** Per-session map of `{ feature-name: "on" | "off" }`. Stored as a `features` field on `SessionHistoryEntry` (defined in `src/core/chat/session/history.ts`). Default is empty — empty means "default behavior, no features active." Server-side is the source of truth.
 
-**Registry.** A small module — `src/core/chat-features.ts` (new) — exports the closed set of recognized feature names and their defaults. Initial entries: `narration`, `prose`. Any unknown attribute on a `<chat-app>` tag is ignored with a warning. This file is also where the `<chat-app>` snapshot serializer and the agent-delta parser live.
+**Registry.** A small module — `src/core/chat/features.ts` (new) — exports the closed set of recognized feature names and their defaults. Initial entries: `narration`, `prose`. Any unknown attribute on a `<chat-app>` tag is ignored with a warning. This file is also where the `<chat-app>` snapshot serializer and the agent-delta parser live.
 
-**Snapshot injection.** `ChatSession.send()` in `src/core/chat-session.ts` is the funnel for user messages. Before the existing `buildContentBlocks(input)` call (around line 882 per the recon), build a `<chat-app>` string from current feature state plus the current ISO timestamp, and prepend it to `input.text`. Existing `<speech>` and `<typed>` wrappers continue as today; the new prefix sits ahead of them. Result: every user message the agent sees starts with `<chat-app narration="…" prose="…" time="…"/>`.
+**Snapshot injection.** `ChatSession.send()` in `src/core/chat/session/index.ts` is the funnel for user messages. Before the existing `buildContentBlocks(input)` call (around line 882 per the recon), build a `<chat-app>` string from current feature state plus the current ISO timestamp, and prepend it to `input.text`. Existing `<speech>` and `<typed>` wrappers continue as today; the new prefix sits ahead of them. Result: every user message the agent sees starts with `<chat-app narration="…" prose="…" time="…"/>`.
 
-This replaces the timezone slot (`buildTimezoneContext()` in `src/webapp/box-config.ts`) for time-of-day awareness — time now refreshes per-turn instead of being baked into the system prompt at session start. Keep `buildTimezoneContext` around for non-chat contexts that still want a static TZ line.
+This replaces the timezone slot (`buildTimezoneContext()` in `src/core/box/config.ts`) for time-of-day awareness — time now refreshes per-turn instead of being baked into the system prompt at session start. Keep `buildTimezoneContext` around for non-chat contexts that still want a static TZ line.
 
 **Agent delta parsing.** The assistant message stream contains the agent's response, sometimes including `<chat-app>` mutation tags. Add a parser module `src/core/chat-app-parsing.ts` (new) — parses `<chat-app>` tags out of the assistant content and yields `{ feature, value }` mutations. The parser is called from `ChatSession` at end-of-assistant-turn (not mid-stream — avoid races with frontend syncing). Each mutation updates the session's `features` map and is persisted.
 
@@ -396,7 +396,7 @@ Both follow the project's UI primitive + semantic palette rules (per `frontend.m
 
 **Provenance for callouts.** When a callout is parsed from an assistant message, it gets implicitly tied to the user message that immediately preceded it (the message it's responding to). The frontend already groups user-then-assistant pairs in `ChatMessages.tsx`; the callout knows its parent group. For external surfacing (digests, notifications) — out of scope for this stage but worth noting — the persisted callout record should include the originating user message's ID.
 
-**Authoring rules in the system prompt.** Add a section to `CHAT_SYSTEM_PROMPT` in `src/core/chat-session.ts` describing `<ack>` (closed kind set, conservative use of inner text, don't shoehorn) and `<callout>` (durable, standalone, `context` answers "why are you telling me this"). This section is always present in the prompt — these tags work in any chat, not just narration.
+**Authoring rules in the system prompt.** Add a section to `CHAT_SYSTEM_PROMPT` in `src/core/chat/session/index.ts` describing `<ack>` (closed kind set, conservative use of inner text, don't shoehorn) and `<callout>` (durable, standalone, `context` answers "why are you telling me this"). This section is always present in the prompt — these tags work in any chat, not just narration.
 
 ### Stage C — Voice intake redesign
 
@@ -457,7 +457,7 @@ Add it to the `LandmarkSchema` children union. Cardworks/Zod handles the parsing
 
 **Logging.** `<chat-app>` mutations from the agent are interesting to log — they're the agent making decisions about its own behavior. Log them at info level alongside the existing chat session logging.
 
-**Where the schema-level constants live.** Both backend and frontend need to know the closed feature-name set and the closed ack `kind` set. Either define them once in `src/core/chat-features.ts` and `src/core/ack-kinds.ts` and re-export from the frontend (existing pattern in the project for shared schema), or copy-with-a-comment if cross-bundle imports become awkward. Prefer the import path if it works without bundler gymnastics.
+**Where the schema-level constants live.** Both backend and frontend need to know the closed feature-name set and the closed ack `kind` set. Either define them once in `src/core/chat/features.ts` and `src/core/ack-kinds.ts` and re-export from the frontend (existing pattern in the project for shared schema), or copy-with-a-comment if cross-bundle imports become awkward. Prefer the import path if it works without bundler gymnastics.
 
 ## Note: possible SCREAMING_SNAKE_CASE pass
 

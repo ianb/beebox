@@ -26,7 +26,7 @@ because one piece remains):
 
 - **Track A** — `{% source %}` gains `href`/`pos`/`version`/`placement` + the
   ref-xor-href validate; `position`→`pos` rename.
-- **Track B** — `src/core/external-ref.ts` (`resolveExternalRef`,
+- **Track B** — `src/core/external/ref.ts` (`resolveExternalRef`,
   `buildVersionMarkers`) + the dev-gated `GET /api/external` route.
 - **Track C** — `commentary` card schema + card-lint enforcement;
   `CommentaryView` renderer (single-target **and** multi-target compare),
@@ -125,11 +125,11 @@ sources:
   *mechanism* (this wrapper) is reused, but the pipeline below is `ref`-bound,
   so generalizing it to `href` is a real change — **not** free reuse (codex #4;
   see Track C "Selection → composer"). The serialized form is built at
-  `src/frontend/src/lib/selection-serialize.ts:69-73`: *"return
+  `src/frontend/src/lib/selection/serialize.ts:69-73`: *"return
   `<user-selection ref="${escapeAttr(selection.ref)}"${positionAttr}${placementAttr}>${escapeText(selection.text)}</user-selection>`"*
   — attributes `ref` (required), `position` (optional), `placement`
   (voice-only). The position grammar is assembled at
-  `src/frontend/src/lib/selection-position.ts:47-62` (`formatPosition`):
+  `src/frontend/src/lib/selection/position.ts:47-62` (`formatPosition`):
   clauses `section`, `heading: TEXT (#id)`, `paragraph N`, `~line N`, joined
   with `"; "`, all optional. **Reuse** this whole stack; Track A renames the
   emitted attribute to `pos` and lets `{% source %}` carry the same values.

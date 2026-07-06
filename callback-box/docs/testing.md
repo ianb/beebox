@@ -30,7 +30,7 @@ Doctest files are executable markdown documents. The prose explains behavior; fe
 
 ````markdown
 ```ts setup
-import { initBox, isValidBox } from "../src/core/box.js";
+import { initBox, isValidBox } from "../src/core/box/index.js";
 ```
 
 ## Creating a box

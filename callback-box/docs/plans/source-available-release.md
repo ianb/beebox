@@ -191,7 +191,7 @@ history decision. **No history surgery needed.** The repeatable gate is
   `deploy/setup-server.sh:5,40,56`, `deploy/add-box.sh:26-27`,
   `deploy/create-server.sh`, `deploy/migrate-to-callback-user.sh:77`; real IP in
   `docs/implemented-plans/box-migration.subplan.md:162`; domain in source comments
-  `src/connectors/telegram.ts:269`, `src/frontend/src/lib/mic-tab-lock.ts:10`,
+  `src/connectors/telegram.ts:269`, `src/frontend/src/lib/audio/mic-tab-lock.ts:10`,
   `src/webapp/routes/admin.ts:31`.
 - **Direction.** Move domain/host/user into deploy config (env or a
   gitignored `deploy/*.local` values file with a committed `.example`). Source
@@ -249,14 +249,14 @@ history decision. **No history surgery needed.** The repeatable gate is
     key but no Claude subscription cannot run a box** — and nothing says so.
   - **No failure guidance in the run path.** A missing/expired `~/.claude/`
     session surfaces as an opaque `success:false` from the SDK stream
-    (`src/core/agent-run.ts:100-146`) — no "run `claude auth login`" hint. The
+    (`src/core/agent/run.ts:100-146`) — no "run `claude auth login`" hint. The
     only proactive check is a health probe that is **skipped on macOS**
     (`src/webapp/trpc/routers/health.ts`), so local dev gets no signal at all.
     Real auth is never exercised in tests — everything runs on
     `createFakeClaudeCli` / `createFakeChatBackend`.
   - **STT/TTS/OpenAI keys are inconsistent and template-less.** OpenAI is
     env-only (`THINKING_OPENAI_API_KEY`, read at
-    `src/webapp/routes/chat-audio-routes.ts:129`, `src/core/transcription.ts:254`);
+    `src/webapp/routes/chat-audio-routes.ts:129`, `src/core/transcription/index.ts:254`);
     Deepgram/Mistral are secret-file-or-env (`src/core/deepgram-key.ts:22`,
     `src/core/mistral-key.ts:11`). There is **no `.env.example`, no
     `*.secret.json.example`**, no admin UI for any of them, and validation only

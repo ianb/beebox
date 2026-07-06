@@ -2,14 +2,14 @@
 
 The backend chat runs are long-lived SDK conversations wrapped by two classes:
 
-- **`ChatSession`** (`src/core/chat-session.ts`) — whole-box interactive chat.
+- **`ChatSession`** (`src/core/chat/session/index.ts`) — whole-box interactive chat.
   Queues messages that arrive mid-turn and drains them into the next turn.
-- **`ChatThreadSession`** (`src/core/chat-thread-session.ts`) — one per chat
+- **`ChatThreadSession`** (`src/core/chat/session/thread.ts`) — one per chat
   thread, orchestrated by `ChatSessionPool`. No queue; the pool parks/activates
   one session at a time.
 
 Both drive their SDK run through the same lifecycle, modelled as a discriminated
-union in `src/core/chat-session-lifecycle.ts`. This doc is the backend
+union in `src/core/chat/session/lifecycle.ts`. This doc is the backend
 counterpart to the frontend's state-machine docs — the park/drain/evict/queue
 contract the backend previously left implicit.
 
