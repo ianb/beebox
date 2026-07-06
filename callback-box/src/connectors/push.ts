@@ -10,17 +10,12 @@
  * (404/410) are pruned inside sendPush.
  */
 
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { registerConnector, type Connector, type SyncResult } from "./index.js";
-import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
-import { WebPushSchema } from "../schemas/web-push.js";
+import { WebPushSchema, type WebPushFields } from "../schemas/web-push.js";
 import { sendPush, VapidNotConfiguredError } from "../core/send-push.js";
 import type { PushService } from "../services/push.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { deliverPendingOutputCards } from "./output-cards.js";
 
-const OUTPUT_DIR = "box/output";
 const CARD_SUFFIX = ".web-push.card";
 
 class PushConnector implements Connector {
@@ -58,76 +53,30 @@ export async function sendOutputPushCards(ctx: {
   push: PushService | undefined;
 }): Promise<string[]> {
   const { boxRoot, triggeredBy, push } = ctx;
-  const outputDir = path.join(boxRoot, OUTPUT_DIR);
-  let files: string[];
-  try {
-    files = (await fs.readdir(outputDir)).filter((f) => f.endsWith(CARD_SUFFIX));
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.warn(`Could not read output directory ${outputDir}:`, e);
-    }
-    return [];
-  }
-
-  const sent: string[] = [];
-  const failed: string[] = [];
-  const schemas = await createCardSchemaMap(boxRoot);
-  for (const file of files.toSorted()) {
-    const relPath = path.join(OUTPUT_DIR, file);
-    const absPath = path.join(outputDir, file);
-    try {
-      const content = await fs.readFile(absPath, "utf-8");
-      const card = parseCardText(content, { source: relPath, schemas });
-      const fields = cardFields(card, WebPushSchema);
-      if (fields.status !== "pending") continue;
-
-      let failure: string | null = null;
+  return deliverPendingOutputCards<WebPushFields>({
+    boxRoot,
+    triggeredBy,
+    cardSuffix: CARD_SUFFIX,
+    schema: WebPushSchema,
+    failureVerb: "deliver",
+    outboxLabel: "Web push outbox",
+    pushedBy: "push-connector",
+    describeSent: (count) => `deliver ${count} push${count === 1 ? "" : "es"}`,
+    send: async (fields) => {
       try {
         const result = await sendPush(boxRoot, {
           payload: { title: fields.title, body: fields.body, url: fields.url, tag: fields.tag },
           push,
         });
         if (result.sent === 0) {
-          failure = `no devices received the push (sent 0, pruned ${result.pruned}, failed ${result.failed})`;
+          return `no devices received the push (sent 0, pruned ${result.pruned}, failed ${result.failed})`;
         }
+        return null;
       } catch (sendErr) {
-        failure = sendErr instanceof VapidNotConfiguredError
-          ? sendErr.message
-          : (sendErr as Error).message;
+        return sendErr instanceof VapidNotConfiguredError ? sendErr.message : (sendErr as Error).message;
       }
-
-      if (failure === null) {
-        await fs.unlink(absPath);
-        sent.push(relPath);
-      } else {
-        fields.status = "failed";
-        fields.error = failure;
-        await fs.writeFile(absPath, serializeCardText({ schema: card.schema, fields: { ...fields } }));
-        failed.push(relPath);
-        console.error(`Failed to deliver ${relPath}: ${failure}`);
-      }
-    } catch (err) {
-      // Unreadable/unparseable card: leave it for `cb validate` to flag.
-      console.error(`Skipping ${relPath}: ${(err as Error).message}`);
-    }
-  }
-
-  const changed = [...sent, ...failed];
-  if (changed.length > 0) {
-    await stageFiles(boxRoot, changed);
-    const summary = [
-      ...(sent.length > 0 ? [`deliver ${sent.length} push${sent.length === 1 ? "" : "es"}`] : []),
-      ...(failed.length > 0 ? [`${failed.length} failed`] : []),
-    ].join(", ");
-    await commit(boxRoot, {
-      message: `Web push outbox: ${summary}`,
-      trailers: {
-        "Pushed-By": "push-connector",
-        ...(triggeredBy ? { "Triggered-By": triggeredBy } : {}),
-      },
-    });
-  }
-  return sent;
+    },
+  });
 }
 
 export function createPushConnector(boxRoot: string, push?: PushService): Connector {
