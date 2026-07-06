@@ -1,0 +1,27 @@
+# Personal commit blocklist — TEMPLATE.
+#
+# Copy this to `.commit-blocklist` (which is gitignored) and put your own
+# sensitive strings there. A staged change that ADDS any entry blocks the
+# commit. Keep the real values only in `.commit-blocklist`, never in this
+# tracked template.
+#
+# Format:
+#   - Blank lines and lines starting with `#` are ignored.
+#   - An entry matches as a case-insensitive literal substring
+#     (dots in a domain or IP are literal, not regex).
+#   - Prefix an entry with `re:` for a case-insensitive regex — use this for
+#     word-bounded names so a short name doesn't over-match, e.g.
+#         re:\bJane Doe\b
+#
+# Behavior:
+#   - No `.commit-blocklist` file => the guard is a silent no-op (opt-in).
+#   - A malformed list (bad regex) => the commit fails closed.
+#   - The guard reports file:line and the blocklist ENTRY NUMBER, never the
+#     matched value — so it can't re-leak what you're blocking. Look the entry
+#     up with:  sed -n '<N>p' .commit-blocklist
+#   - `git commit --no-verify` bypasses it (it's convenience, not enforcement).
+#
+# Example entries (illustrative — delete, and add your own in .commit-blocklist):
+#   example.internal.host
+#   203.0.113.10
+#   re:\bYour Name\b

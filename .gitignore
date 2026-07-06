@@ -6,6 +6,10 @@ dist/
 .env
 .overmind.sock
 
+# Personal commit blocklist (the guard's strings live here, never in git).
+# The tracked .commit-blocklist.example documents the format.
+.commit-blocklist
+
 # Claude Code worktrees (the WorktreeCreate hook puts ours at
 # ~/src/callback-worktrees/ instead, but the default location would still
 # be created if the hook is somehow bypassed)

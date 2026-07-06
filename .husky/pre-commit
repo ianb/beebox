@@ -27,6 +27,13 @@ run_in() {
 echo "[pre-commit] .: pnpm path-leak-check"
 (cd "$REPO_DIR" && pnpm path-leak-check)
 
+# Every commit also runs the personal commit-blocklist guard: a no-op unless the
+# committer has a gitignored .commit-blocklist. Blocks staged additions that
+# re-introduce purged strings (a domain, an IP, names). Before the docs-only
+# exit — the blocked strings are just as likely in docs as in code.
+echo "[pre-commit] .: pnpm commit-blocklist-check"
+(cd "$REPO_DIR" && pnpm commit-blocklist-check)
+
 # Any commit touching markdown runs the fast doc reference/orphan check.
 if echo "$staged" | grep -q '\.md$'; then
   run_in callback-box pnpm doc-check

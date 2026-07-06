@@ -17,6 +17,27 @@ aren't personal-identity leaks; any other username trips it. Fix a hit with a re
 `~/…` path, not by widening the allowlist. Background:
 `issues/closed/2026-07-05-report-workflows-emit-relative-paths.md`.
 
+## Commit blocklist (`commit-blocklist-check.ts`)
+
+`pnpm commit-blocklist-check` blocks a commit whose staged *additions* contain
+any entry from a personal, gitignored `.commit-blocklist` at the repo root; the
+pre-commit hook runs it on every commit. Shared mechanism, personal list: the
+script is tracked so everyone has the guard, but the strings it blocks live in a
+gitignored file so the sensitive values (a purged domain, an IP, personal names)
+never enter git. No `.commit-blocklist` → silent no-op (opt-in per person); a
+malformed list → fail closed; a *tracked* list → refused. Copy
+`.commit-blocklist.example` to start your own.
+
+Entries: one per line, `#` comments and blanks skipped, matched as
+case-insensitive literal substrings; a `re:` prefix makes one a case-insensitive
+regex (use `re:\bName\b` to word-bound a short name so it doesn't over-match). It
+scans only staged additions (`git diff --cached -U0`) — catching re-introduction,
+not pre-existing content — and reports `file:line` plus the blocklist entry
+number, **never the matched value** (printing it would re-leak exactly what
+you're purging; look it up with `sed -n '<N>p' .commit-blocklist`). Bypassable
+with `--no-verify`, so it's convenience not enforcement — pair with server-side
+push protection / a CI scan for a real gate. Companion to the home-path guard above.
+
 ## Router architecture
 
 One router (`router.ts`, port 3210) serves the main checkout and every
