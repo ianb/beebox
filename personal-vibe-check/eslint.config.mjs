@@ -595,6 +595,23 @@ export function vibeCheck(options) {
             allowDefaultCaseForExhaustiveSwitch: true,
           },
         ],
+        // A Promise that's neither awaited, returned, `.then()`-chained, nor
+        // explicitly voided is a bug waiting to happen: unhandled rejections
+        // crash the process (Node) or vanish silently, and sequencing bugs
+        // (fire-and-forget where the caller assumed ordering) hide behind a
+        // clean-looking call. `void expr` is still the escape hatch for
+        // genuine fire-and-forget, but it's opt-in per call site, not the
+        // default for every promise-returning expression.
+        "@typescript-eslint/no-floating-promises": "error",
+        // Passing an async function where a sync callback is expected (Array
+        // .forEach, a sync event-handler prop, a non-Promise-returning
+        // interface member) silently drops the returned promise and any
+        // rejection inside it — the same failure mode as no-floating-promises
+        // but at the wiring level instead of the call level. Defaults (no
+        // options) flag all four categories: arguments, void-return-typed
+        // functions passed as attributes/handlers, inherited method mismatch,
+        // and conditionals like `if (asyncFn())`.
+        "@typescript-eslint/no-misused-promises": "error",
       },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict
