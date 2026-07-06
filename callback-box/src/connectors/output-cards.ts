@@ -6,7 +6,7 @@
  * card's failure never stops the rest.
  *
  * Extracted from telegram-output-cards.ts and push.ts (Track L item 7 of
- * docs/plans/architectural-review.md), which differed only in the send
+ * docs/implemented-plans/architectural-review.md), which differed only in the send
  * step, the schema/suffix being scanned, and some wording.
  */
 

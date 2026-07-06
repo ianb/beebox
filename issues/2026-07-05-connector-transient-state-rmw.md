@@ -11,4 +11,4 @@ pass over connector transient state, not a drive-by.
 The helper already exists (`src/lib/card-lock.ts`); the work is the audit +
 wrapping + possibly extracting the telegram state IO into its own module to
 stay under the line cap. Track D/connector territory in
-`docs/plans/architectural-review.md`.
+`docs/implemented-plans/architectural-review.md`.

@@ -1,6 +1,6 @@
 # Audit git stage→commit races across mutation sites
 
-Deferred from Track H (plan `docs/plans/architectural-review.md`): a card
+Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card
 mutation's `stageFiles` + `commit` are two non-atomic git ops sharing one
 `.git/index.lock`. Two mutations on *different* files (so `withCardLock`
 doesn't serialize them) can interleave staging into the shared index and get

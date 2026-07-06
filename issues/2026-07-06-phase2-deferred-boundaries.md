@@ -1,7 +1,7 @@
 # Phase-2 deferrals: remaining clock migrations + inbound schemas
 
 Deferred with reasons from the architectural-review implementation
-(`callback-box/docs/plans/architectural-review.md`, Tracks P.2/D.2):
+(`callback-box/docs/implemented-plans/architectural-review.md`, Tracks P.2/D.2):
 
 - **Four domain-time sites classified MIGRATE but deferred** — transcribe,
   todos, location, box-init each need `boxRoot` threaded through helper

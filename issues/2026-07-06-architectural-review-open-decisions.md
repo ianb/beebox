@@ -1,7 +1,7 @@
 # Architectural review — open boxholder decisions
 
 Parked judgment calls from the architectural review
-(`docs/plans/architectural-review.md`). All are safe in their current
+(`docs/implemented-plans/architectural-review.md`). All are safe in their current
 landed state — surfaced here into the active issue queue because the plan
 doc moves to `docs/implemented-plans/` on merge, where open questions get
 buried. None blocks the merge.
