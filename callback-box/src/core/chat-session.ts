@@ -41,14 +41,15 @@ import {
 import { createTurnDurabilityGate } from "./chat-session-transcript-sync.js";
 import { recordTurnMarkerForSession } from "./chat-turn-marker.js";
 import {
+  captureAssignedSessionId,
   combineQueuedInputs,
   deleteSessionFile,
   loadCurrentModel,
   loadSessionId,
   saveCurrentModel,
-  saveSessionId,
   DEFAULT_MODEL_FILE,
 } from "./chat-session-state.js";
+import { pumpChatRun } from "./chat-session-consume.js";
 import { acquireSessionRunLock, releaseSessionRunLock } from "./chat-session-run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
@@ -56,6 +57,7 @@ import {
 } from "./chat-session-start.js";
 import type { ChatSessionOptions } from "./chat-session-options.js";
 import { createHealthGate } from "./session-context.js";
+import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./chat-session-lifecycle.js";
 
 export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };
@@ -66,10 +68,10 @@ const DEFAULT_SESSION_FILE = ".callback-box/chat-session-id.json";
 const log = makeLog("ChatSession");
 
 export class ChatSession extends EventEmitter {
-  private run: ChatBackendRun | null = null;
+  /** The run lifecycle — replaces the old run/busy/intentionalStop cluster. */
+  private state: ChatLifecycle = IDLE;
   private sessionId: string | null = null;
   private boxRoot: string;
-  private busy = false;
   /** Path of the chat-active lock held while a run is in flight, or null. */
   private chatLockPath: string | null = null;
   private turnText = "";
@@ -83,9 +85,6 @@ export class ChatSession extends EventEmitter {
   private currentModel: string | null = null;
   /** Chat-feature flag state: lazy-loaded map plus persistence + change events. */
   private readonly features: FeatureStore;
-  /** Marker so the close listener can distinguish intentional shutdown
-   *  (which clears the queue) from unexpected death (which drains it). */
-  private intentionalStop = false;
   /**
    * Cached landmark binding. `undefined` = not resolved yet. `null` = resolved,
    * no binding. String = resolved binding. Set once on first `startRun` and
@@ -146,14 +145,28 @@ export class ChatSession extends EventEmitter {
     return startOpts;
   }
 
+  /** Move to a new lifecycle phase, asserting the transition is legal. */
+  private transition(next: ChatLifecycle): void { this.state = nextLifecycle(this.state, next); }
+
+  /** The current SDK run if one is open and not yet closed, else null. */
+  private liveRun(): ChatBackendRun | null {
+    const run = lifecycleRun(this.state);
+    return run !== null && !run.closed ? run : null;
+  }
+
   /**
    * Start a new SDK chat run.
    */
   private async startRun(): Promise<void> {
-    if (this.run !== null && !this.run.closed) {
-      log("start", "Run already active");
+    if (this.liveRun() !== null) { log("start", "Run already active"); return; }
+    if (this.state.phase !== "idle") {
+      // A run is closing (handle already closed) but its consumeMessages finally
+      // hasn't landed us in idle yet. Let that teardown complete rather than
+      // racing a second run onto the same session.
+      log("start", "Run is closing; not starting a second run");
       return;
     }
+    this.transition({ phase: "starting" });
 
     // Ensure agent docs are up to date (fast mtime-cached no-op if unchanged).
     // Best-effort: a regen/commit failure here (e.g. a git-permission hiccup in
@@ -176,8 +189,7 @@ export class ChatSession extends EventEmitter {
       resumeSessionId: this.sessionId ?? undefined,
       model: this.currentModel ?? undefined,
     });
-    this.run = run;
-    this.intentionalStop = false;
+    this.transition({ phase: "ready", run });
 
     // Background loop: pump SDK messages into handleMessage. Capture errors
     // and emit as "error" events.
@@ -196,11 +208,11 @@ export class ChatSession extends EventEmitter {
     this.chatLockPath = await releaseSessionRunLock(this.chatLockPath);
   }
 
-  private async consumeMessages(run: ChatBackendRun): Promise<void> {
-    try {
-      for await (const sdkMsg of run.messages) {
-        const msg = adaptSdkMessage(sdkMsg);
-        if (msg === null) continue;
+  private consumeMessages(run: ChatBackendRun): Promise<void> {
+    return pumpChatRun({
+      run,
+      adapt: adaptSdkMessage,
+      onMessage: async (msg) => {
         this.durability.observe(msg);
         // Hold `result` until the transcript is flushed: consumers refetch
         // history the moment a turn ends, and the CLI writes the final
@@ -211,39 +223,33 @@ export class ChatSession extends EventEmitter {
           if (this.sessionId) await recordTurnMarkerForSession(this.boxRoot, this.sessionId);
         }
         this.handleMessage(msg);
-      }
-    } catch (e) {
-      const err = e instanceof Error ? e : new Error(String(e));
-      log("error", `Run errored: ${err.message}`);
-      this.emit("error", err);
-    } finally {
-      log("close", "Run ended");
-      const wasIntentional = this.intentionalStop;
-      this.run = null;
-      this.busy = false;
-      await this.releaseRunLock();
-      this.emit("close", wasIntentional ? 0 : null);
-      // Drain any messages queued while the run was busy into a fresh run,
-      // unless this was an intentional stop (queue is already cleared).
-      if (!wasIntentional && this.messageQueue.length > 0) {
-        log("close", `Draining ${this.messageQueue.length} queued message(s) into fresh run`);
-        this.drainQueue();
-      }
-    }
+      },
+      onError: (err) => {
+        log("error", `Run errored: ${err.message}`);
+        this.emit("error", err);
+      },
+      onClose: async () => {
+        log("close", "Run ended");
+        const wasIntentional = this.state.phase === "stopping";
+        if (this.state.phase !== "idle") this.transition({ phase: "idle" });
+        await this.releaseRunLock();
+        this.emit("close", wasIntentional ? 0 : null);
+        // Drain any messages queued while the run was busy into a fresh run,
+        // unless this was an intentional stop (queue is already cleared).
+        if (!wasIntentional && this.messageQueue.length > 0) {
+          log("close", `Draining ${this.messageQueue.length} queued message(s) into fresh run`);
+          this.drainQueue();
+        }
+      },
+    });
   }
 
   private handleMessage(msg: ChatMessage): void {
-    // Capture session ID from first message (the `unknown` sentinel carries no
-    // session_id — only real SDK-derived variants do).
-    if (msg.type !== "unknown" && msg.session_id && !this.sessionId) {
-      this.sessionId = msg.session_id;
-      log("session", `Got session ID: ${this.sessionId}`);
-      saveSessionId(this.boxRoot, { sessionFile: this.sessionFile, sessionId: this.sessionId });
-      if (this.options.onSessionIdAssigned !== undefined) {
-        void Promise.resolve(this.options.onSessionIdAssigned(this.sessionId)).catch((e: unknown) => {
-          log("session", `onSessionIdAssigned error: ${e instanceof Error ? e.message : String(e)}`);
-        });
-      }
+    // Capture the SDK-assigned session id on the first message.
+    const assigned = captureAssignedSessionId({ msg, current: this.sessionId, sessionFile: this.sessionFile, boxRoot: this.boxRoot, onAssigned: this.options.onSessionIdAssigned });
+    if (assigned !== null) {
+      this.sessionId = assigned;
+      log("session", `Got session ID: ${assigned}`);
     }
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
@@ -255,12 +261,11 @@ export class ChatSession extends EventEmitter {
 
     if (msg.type === "result") {
       log("done", `Turn complete, is_error: ${msg.is_error}`);
-      if (msg.is_error === true) {
-        warnErroredTurn({ sessionId: this.sessionId, msg });
-      }
+      if (msg.is_error === true) warnErroredTurn({ sessionId: this.sessionId, msg });
       const completedText = this.turnText;
       this.turnText = "";
-      this.busy = false;
+      // Turn done: streaming → ready (run stays open, isBusy() flips false).
+      this.state = afterTurnResult(this.state);
       this.emit("done", msg);
       if (completedText) {
         this.emit("turn-text", completedText);
@@ -278,9 +283,7 @@ export class ChatSession extends EventEmitter {
    * Accepts either a plain string (back-compat) or a ChatSendInput with images.
    */
   enqueue(message: string | ChatSendInput): void {
-    const input: ChatSendInput = typeof message === "string"
-      ? { text: message }
-      : message;
+    const input: ChatSendInput = typeof message === "string" ? { text: message } : message;
     log("enqueue", `Queued message (${input.text.length} chars, ${(input.images ?? []).length} image(s), queue size: ${this.messageQueue.length + 1})`);
     this.messageQueue.push(input);
   }
@@ -307,14 +310,12 @@ export class ChatSession extends EventEmitter {
    * tokens in the text.
    */
   async send(message: string | ChatSendInput): Promise<boolean> {
-    if (this.busy) {
+    if (this.isBusy()) {
       log("send", "Rejected — busy");
       return false;
     }
 
-    const rawInput: ChatSendInput = typeof message === "string"
-      ? { text: message }
-      : message;
+    const rawInput: ChatSendInput = typeof message === "string" ? { text: message } : message;
 
     // Composed BEFORE the run starts (it does filesystem I/O), and awaited
     // before run creation: observers of "a run exists" (drain-path tests,
@@ -327,18 +328,20 @@ export class ChatSession extends EventEmitter {
       healthGate: this.healthGate,
     });
 
-    if (this.run === null || this.run.closed) {
+    if (this.liveRun() === null) {
       await this.startRun();
     }
 
-    if (this.run === null) {
+    const run = this.liveRun();
+    if (run === null) {
       log("error", "Run not ready after start");
       return false;
     }
 
-    this.busy = true;
+    // ready → streaming.
+    this.transition({ phase: "streaming", run });
     this.turnText = "";
-    this.run.send(content);
+    run.send(content);
     return true;
   }
 
@@ -346,12 +349,13 @@ export class ChatSession extends EventEmitter {
    * Interrupt the current turn.
    */
   interrupt(): void {
-    if (this.run === null || this.run.closed) {
+    const run = this.liveRun();
+    if (run === null) {
       log("interrupt", "No run to interrupt");
       return;
     }
     log("interrupt", "Sending interrupt");
-    void this.run.interrupt().catch((e: unknown) => {
+    void run.interrupt().catch((e: unknown) => {
       log("interrupt", `Interrupt failed: ${e instanceof Error ? e.message : String(e)}`);
     });
   }
@@ -397,11 +401,11 @@ export class ChatSession extends EventEmitter {
   }
 
   isRunning(): boolean {
-    return this.run !== null && !this.run.closed;
+    return this.liveRun() !== null;
   }
 
   isBusy(): boolean {
-    return this.busy;
+    return lifecycleBusy(this.state);
   }
 
   /**
@@ -409,11 +413,14 @@ export class ChatSession extends EventEmitter {
    * close handler won't auto-drain into a fresh run.
    */
   stop(): void {
-    if (this.run !== null && !this.run.closed) {
+    const run = this.liveRun();
+    if (run !== null && (this.state.phase === "ready" || this.state.phase === "streaming")) {
       log("stop", "Stopping run");
-      this.intentionalStop = true;
+      // → stopping: the close handler reads this phase as the intentional-stop
+      // signal and won't drain the queue.
+      this.transition({ phase: "stopping", run, wasBusy: lifecycleBusy(this.state) });
       this.messageQueue = [];
-      void this.run.close();
+      void run.close();
     }
   }
 
@@ -424,12 +431,15 @@ export class ChatSession extends EventEmitter {
    * without losing in-flight user messages.
    */
   restart(): void {
-    if (this.run === null || this.run.closed) {
+    const run = this.liveRun();
+    if (run === null) {
       log("restart", "No run to restart");
       return;
     }
+    // Leave the phase as-is (ready/streaming): the close handler sees it's not
+    // "stopping" and drains the queue into a fresh run.
     log("restart", "Closing run — close handler will drain any queued messages");
-    void this.run.close();
+    void run.close();
   }
 
   /**

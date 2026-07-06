@@ -16,7 +16,7 @@ import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule-state.j
 import { resolveSessionLogPath } from "./chat-session-history.js";
 import { parseSessionLog, type SessionEntry } from "../cli/lib/session.js";
 import { effectiveTailSize } from "./chat-session-messages.js";
-import type { ChatImage, ChatSendInput } from "./chat-session-messages.js";
+import type { ChatImage, ChatMessage, ChatSendInput } from "./chat-session-messages.js";
 import { unionActivityKinds, mergeCardStateDetails } from "./chat-card-activity.js";
 
 export interface SessionHistory {
@@ -189,6 +189,32 @@ export function onSessionIdAssigned(
  * Persist the session-id pointer. No-op when persistence is opted out
  * (`sessionFile === null`).
  */
+/**
+ * Capture the session id the SDK assigns on the first message of a run, if the
+ * session doesn't already have one. Persists it and fires the optional
+ * callback; returns the newly assigned id, or null when nothing changed. Pulled
+ * out of ChatSession.handleMessage so that method stays a thin dispatcher.
+ */
+export function captureAssignedSessionId(opts: {
+  msg: ChatMessage;
+  current: string | null;
+  sessionFile: string | null;
+  boxRoot: string;
+  onAssigned?: ((id: string) => void | Promise<void>) | undefined;
+}): string | null {
+  const { msg, current, sessionFile, boxRoot, onAssigned } = opts;
+  if (current !== null) return null;
+  if (msg.type === "unknown" || !msg.session_id) return null;
+  const sessionId = msg.session_id;
+  saveSessionId(boxRoot, { sessionFile, sessionId });
+  if (onAssigned !== undefined) {
+    void Promise.resolve(onAssigned(sessionId)).catch((e: unknown) => {
+      log("session", `onSessionIdAssigned error: ${e instanceof Error ? e.message : String(e)}`);
+    });
+  }
+  return sessionId;
+}
+
 export function saveSessionId(
   boxRoot: string,
   { sessionFile, sessionId }: { sessionFile: string | null; sessionId: string },

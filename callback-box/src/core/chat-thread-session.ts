@@ -22,16 +22,11 @@ import {
   type ChatBackend,
   type ChatBackendRun,
 } from "../services/claude-chat.js";
+import { pumpChatRun } from "./chat-session-consume.js";
+import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./chat-session-lifecycle.js";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);
-}
-
-class NonErrorThrownError extends Error {
-  constructor(value: string) {
-    super(value);
-    this.name = "NonErrorThrownError";
-  }
 }
 
 class SessionBusyError extends Error {
@@ -166,13 +161,15 @@ function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
 }
 
 export class ChatThreadSession extends EventEmitter {
-  private run: ChatBackendRun | null = null;
+  /** Run lifecycle — replaces the old run/busy pair. Never enters `stopping`:
+   *  a thread session has no queue to protect, so stop/park close straight
+   *  through to `idle`. */
+  private state: ChatLifecycle = IDLE;
   private sessionId: string | null;
   private boxRoot: string;
   private threadRef: string;
   private chatDescription: string;
   private sessionViewBaseUrl: string | undefined;
-  private busy = false;
   private turnResolve: (() => void) | null = null;
   /** Accumulated text from current assistant turn, for <chat-response> extraction */
   private turnText = "";
@@ -190,11 +187,16 @@ export class ChatThreadSession extends EventEmitter {
     this.backend = opts.backend ?? createChatBackend();
   }
 
+  /** The current SDK run if one is open and not yet closed, else null. */
+  private liveRun(): ChatBackendRun | null {
+    const run = lifecycleRun(this.state);
+    return run !== null && !run.closed ? run : null;
+  }
+
   private async startRun(): Promise<void> {
-    if (this.run !== null && !this.run.closed) {
-      log("start", "Run already active");
-      return;
-    }
+    if (this.liveRun() !== null) { log("start", "Run already active"); return; }
+    if (this.state.phase !== "idle") { log("start", "Run is closing; not starting a second run"); return; }
+    this.state = nextLifecycle(this.state, { phase: "starting" });
 
     let systemPrompt = "";
     if (!this.sessionId) {
@@ -213,35 +215,40 @@ export class ChatThreadSession extends EventEmitter {
 
     log("start", `Starting run for thread ${this.threadRef}${this.sessionId ? ` (resume ${this.sessionId})` : " (new)"}`);
 
-    this.run = this.backend.start({
+    const run = this.backend.start({
       cwd: this.boxRoot,
       systemPrompt,
       resumeSessionId: this.sessionId ?? undefined,
       env,
     });
+    this.state = nextLifecycle(this.state, { phase: "ready", run });
 
-    void this.consumeMessages(this.run);
+    void this.consumeMessages(run);
   }
 
-  private async consumeMessages(run: ChatBackendRun): Promise<void> {
-    try {
-      for await (const sdkMsg of run.messages) {
-        const msg = adaptSdkMessage(sdkMsg);
-        if (msg !== null) this.handleMessage(msg);
-      }
-    } catch (e) {
-      const err = e instanceof Error ? e : new NonErrorThrownError(String(e));
-      log("error", `Run errored: ${err.message}`);
-      this.emit("error", err);
-    } finally {
-      log("close", "Run ended");
-      this.run = null;
-      this.busy = false;
-      this.emit("close", null);
-      if (this.turnResolve) {
-        this.turnResolve();
-        this.turnResolve = null;
-      }
+  private consumeMessages(run: ChatBackendRun): Promise<void> {
+    return pumpChatRun({
+      run,
+      adapt: adaptSdkMessage,
+      onMessage: (msg) => this.handleMessage(msg),
+      onError: (err) => {
+        log("error", `Run errored: ${err.message}`);
+        this.emit("error", err);
+      },
+      onClose: () => {
+        log("close", "Run ended");
+        if (this.state.phase !== "idle") this.state = nextLifecycle(this.state, { phase: "idle" });
+        this.emit("close", null);
+        this.resolveTurn();
+      },
+    });
+  }
+
+  /** Resolve the pending send() promise, if any. */
+  private resolveTurn(): void {
+    if (this.turnResolve) {
+      this.turnResolve();
+      this.turnResolve = null;
     }
   }
 
@@ -272,13 +279,11 @@ export class ChatThreadSession extends EventEmitter {
       // Final check for any remaining responses in the accumulated text
       this.checkForResponses();
       log("done", `Turn complete, is_error: ${msg.is_error}, turnText length: ${this.turnText.length}${this.turnText.length > 0 ? `, text: ${this.turnText.slice(0, 200)}` : ""}`);
-      this.busy = false;
+      // Turn done: streaming → ready (run stays open, isBusy() flips false).
+      this.state = afterTurnResult(this.state);
       this.emit("turn-text", this.fullTurnText);
       this.emit("done", msg);
-      if (this.turnResolve) {
-        this.turnResolve();
-        this.turnResolve = null;
-      }
+      this.resolveTurn();
     }
   }
 
@@ -309,19 +314,21 @@ export class ChatThreadSession extends EventEmitter {
    * Returns a promise that resolves when the agent finishes its turn.
    */
   async send(message: string): Promise<void> {
-    if (this.busy) {
+    if (this.isBusy()) {
       throw new SessionBusyError();
     }
 
-    if (this.run === null || this.run.closed) {
+    if (this.liveRun() === null) {
       await this.startRun();
     }
 
-    if (this.run === null) {
+    const run = this.liveRun();
+    if (run === null) {
       return Promise.reject(new RunNotReadyError());
     }
 
-    this.busy = true;
+    // ready → streaming.
+    this.state = nextLifecycle(this.state, { phase: "streaming", run });
     this.turnText = "";
     this.fullTurnText = "";
 
@@ -337,7 +344,7 @@ export class ChatThreadSession extends EventEmitter {
     }
 
     log("send", `Sending message (${message.length} chars) to ${this.threadRef}`);
-    this.run.send([{ type: "text", text: fullMessage }]);
+    run.send([{ type: "text", text: fullMessage }]);
 
     return new Promise<void>((resolve) => {
       this.turnResolve = resolve;
@@ -346,12 +353,14 @@ export class ChatThreadSession extends EventEmitter {
 
   /**
    * Park the session: close the run but preserve the session ID for later resume.
+   * The close handler drives the phase back to `idle`.
    */
   park(): string | null {
     const sessionId = this.sessionId;
-    if (this.run !== null && !this.run.closed) {
+    const run = this.liveRun();
+    if (run !== null) {
       log("park", `Parking session ${sessionId}`);
-      void this.run.close();
+      void run.close();
     }
     return sessionId;
   }
@@ -360,9 +369,10 @@ export class ChatThreadSession extends EventEmitter {
    * Stop and clear the session entirely.
    */
   stop(): void {
-    if (this.run !== null && !this.run.closed) {
+    const run = this.liveRun();
+    if (run !== null) {
       log("stop", "Stopping run");
-      void this.run.close();
+      void run.close();
     }
     this.sessionId = null;
   }
@@ -376,10 +386,10 @@ export class ChatThreadSession extends EventEmitter {
   }
 
   isRunning(): boolean {
-    return this.run !== null && !this.run.closed;
+    return this.liveRun() !== null;
   }
 
   isBusy(): boolean {
-    return this.busy;
+    return lifecycleBusy(this.state);
   }
 }
