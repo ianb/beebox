@@ -19,11 +19,11 @@ import {
   loadRunningProcedures,
   loadActiveChats,
   DEFAULT_RUN_WINDOW_MS,
-} from "../../core/schedule-state.js";
+} from "../../core/schedule/state.js";
 import type {
   loadScriptState,
   loadRunningScripts,
-} from "../../core/schedule-state.js";
+} from "../../core/schedule/state.js";
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";

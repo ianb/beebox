@@ -21,8 +21,8 @@ import {
   isWithinBudget,
   parseDuration,
   type ParsedScheduledScript,
-} from "../schemas/scheduled-script.js";
-import type { ScriptState } from "./schedule-state.js";
+} from "../../schemas/scheduled-script.js";
+import type { ScriptState } from "./state.js";
 
 const { rrulestr } = rrulePkg;
 

@@ -16,9 +16,9 @@ import {
   loadScheduleHealth,
   formatDurationShort,
   type BoxScheduleHealth,
-} from "../../core/schedule-health-box.js";
-import type { TaskHealth } from "../../core/schedule-health.js";
-import { loadRunningScripts, type ScriptLock } from "../../core/schedule-state.js";
+} from "../../core/schedule/health-box.js";
+import type { TaskHealth } from "../../core/schedule/health.js";
+import { loadRunningScripts, type ScriptLock } from "../../core/schedule/state.js";
 
 const STATUS_GLYPHS: Record<TaskHealth["status"], string> = {
   ok: "✓",

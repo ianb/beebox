@@ -18,12 +18,12 @@ import * as path from "node:path";
 import {
   parseScheduledScript,
   ScheduledScriptSchema,
-} from "../schemas/scheduled-script.js";
-import { cardFields, parseCardText } from "./card-io.js";
-import { createCardSchemaMap } from "../schemas/registry.js";
-import { checkMissingConnectors } from "../connectors/requirements.js";
-import { loadScriptState } from "./schedule-state.js";
-import { evaluateTaskHealth, type TaskHealth } from "./schedule-health.js";
+} from "../../schemas/scheduled-script.js";
+import { cardFields, parseCardText } from "../card-io.js";
+import { createCardSchemaMap } from "../../schemas/registry.js";
+import { checkMissingConnectors } from "../../connectors/requirements.js";
+import { loadScriptState } from "./state.js";
+import { evaluateTaskHealth, type TaskHealth } from "./health.js";
 
 const HEARTBEAT_FILE = ".callback-box/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;

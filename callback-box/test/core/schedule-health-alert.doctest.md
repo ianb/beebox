@@ -14,12 +14,12 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { createFakeTelegram } from "../../src/services/telegram.js";
-import { checkHealthAndAlert } from "../../src/core/schedule-health-alert.js";
+import { checkHealthAndAlert } from "../../src/core/schedule/health-alert.js";
 import {
   loadScriptState,
   saveScriptState,
   recordOutcome,
-} from "../../src/core/schedule-state.js";
+} from "../../src/core/schedule/state.js";
 
 // Isolate the server-level push store so the push channel is deterministically
 // absent (telegram-only) in this test.

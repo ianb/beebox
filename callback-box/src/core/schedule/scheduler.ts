@@ -8,16 +8,16 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { BOX_MARKER } from "../lib/paths.js";
-import { runTick, type TickResult } from "../cli/commands/tick.js";
-import { getStatus, isRepo } from "../lib/git.js";
-import { touchSchedulerHeartbeat } from "./schedule-health-box.js";
-import { checkHealthAndAlert } from "./schedule-health-alert.js";
+import { BOX_MARKER } from "../../lib/paths.js";
+import { runTick, type TickResult } from "../../cli/commands/tick.js";
+import { getStatus, isRepo } from "../../lib/git.js";
+import { touchSchedulerHeartbeat } from "./health-box.js";
+import { checkHealthAndAlert } from "./health-alert.js";
 import {
   loadBoxesConfig,
   saveBoxesConfig,
   type BoxesConfig,
-} from "./boxes-config.js";
+} from "../boxes-config.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
 export type SchedulerConfig = BoxesConfig;

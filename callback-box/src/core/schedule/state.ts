@@ -12,7 +12,7 @@ import {
   releaseLock as releaseFileLock,
   scanLocks,
   LockHeldError,
-} from "../lib/file-lock.js";
+} from "../../lib/file-lock.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {

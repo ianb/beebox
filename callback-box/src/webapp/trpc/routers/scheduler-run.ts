@@ -8,7 +8,7 @@ import {
   releaseScriptLock,
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
-} from "../../../core/schedule-state.js";
+} from "../../../core/schedule/state.js";
 import { execWithTimeout, SCRIPT_TIMEOUT } from "../../../lib/exec-with-timeout.js";
 import { fallbackTiming, handleCreateAfterSuccess } from "../../../cli/commands/tick-utils.js";
 import { buildScriptEnv } from "../../../core/script-env.js";

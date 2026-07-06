@@ -12,7 +12,7 @@ import {
   loadSchedulerConfig,
   boxLogFile,
   type LogEntry,
-} from "../../core/scheduler.js";
+} from "../../core/schedule/scheduler.js";
 
 export interface LogFilters {
   errors?: boolean | undefined;

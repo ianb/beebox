@@ -19,12 +19,12 @@ import {
   loadScheduleHealth,
   selectAlertableTasks,
   describeUnhealthyTask,
-} from "./schedule-health-box.js";
-import type { TaskHealth } from "./schedule-health.js";
-import { loadScriptState, saveScriptState } from "./schedule-state.js";
-import type { TelegramService } from "../services/telegram.js";
-import type { PushService } from "../services/push.js";
-import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
+} from "./health-box.js";
+import type { TaskHealth } from "./health.js";
+import { loadScriptState, saveScriptState } from "./state.js";
+import type { TelegramService } from "../../services/telegram.js";
+import type { PushService } from "../../services/push.js";
+import { notifyBoxholder, notifyChannels } from "../notify-boxholder.js";
 
 export interface HealthAlertResult {
   /** Names of the tasks covered by the alert. */

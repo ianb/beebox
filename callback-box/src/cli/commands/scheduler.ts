@@ -13,7 +13,7 @@ import {
   runScheduler,
   LOG_DIR,
   type LogEntry,
-} from "../../core/scheduler.js";
+} from "../../core/schedule/scheduler.js";
 import {
   loadBoxesConfig,
   addBoxToManifest,

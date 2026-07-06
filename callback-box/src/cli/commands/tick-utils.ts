@@ -23,7 +23,7 @@ import {
   releaseScriptLock,
   loadRunningScripts,
   DEFAULT_RUN_WINDOW_MS,
-} from "../../core/schedule-state.js";
+} from "../../core/schedule/state.js";
 import {
   execWithTimeout,
   CommandError,

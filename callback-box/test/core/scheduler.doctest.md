@@ -4,7 +4,7 @@ Tests for scheduler utility functions — path computation and box
 validation.
 
 ```ts setup
-import { boxLogFile, isBox } from "../../src/core/scheduler.js";
+import { boxLogFile, isBox } from "../../src/core/schedule/scheduler.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

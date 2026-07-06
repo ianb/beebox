@@ -19,7 +19,7 @@ import { composeChatAppSnapshot, type FeatureMap } from "./chat-features.js";
 import {
   loadScheduleHealth,
   summarizeScheduleHealth,
-} from "./schedule-health-box.js";
+} from "./schedule/health-box.js";
 
 function phaseOfDay(hour: number): string {
   if (hour >= 5 && hour < 12) return "morning";

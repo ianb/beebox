@@ -11,7 +11,7 @@ import { checkMissingConnectors } from "../../../connectors/requirements.js";
 import {
   loadScriptState,
   loadRunningScripts,
-} from "../../../core/schedule-state.js";
+} from "../../../core/schedule/state.js";
 
 export interface ScheduleEntry {
   name: string;

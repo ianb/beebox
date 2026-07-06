@@ -13,7 +13,7 @@ import {
 } from "../../schemas/scheduled-script.js";
 import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { loadScriptState } from "../../core/schedule-state.js";
+import { loadScriptState } from "../../core/schedule/state.js";
 
 export const scheduledCommand = new Command("scheduled")
   .description("Show all scheduled scripts and their state")

@@ -6,14 +6,14 @@ The trust rule: a deliberate skip (budget, missing connector, disabled)
 must never be reported as overdue or failing.
 
 ```ts setup
-import { evaluateTaskHealth, findMissedOccurrence } from "../../src/core/schedule-health.js";
+import { evaluateTaskHealth, findMissedOccurrence } from "../../src/core/schedule/health.js";
 import { parseScheduledScript } from "../../src/schemas/scheduled-script.js";
-import { normalizeScriptState } from "../../src/core/schedule-state.js";
+import { normalizeScriptState } from "../../src/core/schedule/state.js";
 import {
   summarizeScheduleHealth,
   selectAlertableTasks,
   formatDurationShort,
-} from "../../src/core/schedule-health-box.js";
+} from "../../src/core/schedule/health-box.js";
 
 const NOW = new Date("2026-06-09T12:00:00Z");
 

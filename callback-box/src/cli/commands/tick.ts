@@ -13,7 +13,7 @@ import {
 } from "../../schemas/scheduled-script.js";
 import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { loadScriptState, loadRunningScripts } from "../../core/schedule-state.js";
+import { loadScriptState, loadRunningScripts } from "../../core/schedule/state.js";
 import {
   readScheduleFiles,
   findBusyBlockers,

@@ -15,7 +15,7 @@ import {
   releaseScriptLock,
   loadRunningScripts,
   loadRunningProcedures,
-} from "../../src/core/schedule-state.js";
+} from "../../src/core/schedule/state.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import { utimes } from "node:fs/promises";

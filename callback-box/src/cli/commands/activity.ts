@@ -12,7 +12,7 @@
 
 import { Command } from "commander";
 import { loadBoxesConfig } from "../../core/boxes-config.js";
-import { loadRunningScripts } from "../../core/schedule-state.js";
+import { loadRunningScripts } from "../../core/schedule/state.js";
 import { findBusyBlockers } from "./tick-helpers.js";
 
 export const activityCommand = new Command("activity")

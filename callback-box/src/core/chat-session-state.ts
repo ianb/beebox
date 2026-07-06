@@ -12,7 +12,7 @@ import { makeLog } from "./chat-session-log.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
-import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule-state.js";
+import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule/state.js";
 import { resolveSessionLogPath } from "./chat-session-history.js";
 import { parseSessionLog, type SessionEntry } from "../cli/lib/session.js";
 import { effectiveTailSize } from "./chat-session-messages.js";
