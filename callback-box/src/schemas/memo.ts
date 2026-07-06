@@ -6,7 +6,7 @@
  * transcription that ends up in the markdown body.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
 
@@ -32,7 +32,7 @@ const TranscriptionError = z.object({
   message: z.string(),
 });
 
-export const MemoSchema: CardSchema = cardSchema("memo", {
+export const MemoSchema = cardSchema("memo", {
   description: "A captured text or voice note from the user — generic inbox input awaiting processing",
   category: "authored",
   fields: {
@@ -75,21 +75,7 @@ pre-action finds it inside the scope.
 Status: \`new\` → \`processing\` → \`processed\`.`,
 });
 
-export interface MemoFields {
-  type: "memo";
-  status: MemoStatusType;
-  created: string;
-  source?: string;
-  context?: { url?: string; title?: string; text?: string };
-  transcription?: { text: string; language?: string; "transcribed-at"?: string };
-  "transcription-error"?: {
-    permanent: boolean;
-    code?: string;
-    "attempted-at"?: string;
-    message: string;
-  };
-  body: string;
-}
+export type MemoFields = InferCardFields<typeof MemoSchema>;
 
 export interface MemoAttrs {
   status: MemoStatusType;

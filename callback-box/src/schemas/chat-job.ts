@@ -7,10 +7,10 @@
  * response or acknowledgment.
  */
 
-import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
-export const ChatJobSchema: CardSchema = cardSchema("chat-job", {
+export const ChatJobSchema = cardSchema("chat-job", {
   description: "A system job to process new messages (or a callback timer) in a chat thread; created by messaging connectors",
   category: "system",
   searchable: false,
@@ -55,13 +55,7 @@ jobs without picking up unrelated work.
 - Commit the thread file before finishing the job`,
 });
 
-export interface ChatJobFields {
-  type: "chat-job";
-  status: string;
-  source: string;
-  description: string;
-  thread: { ref: string };
-}
+export type ChatJobFields = InferCardFields<typeof ChatJobSchema>;
 
 export function createChatJobTemplate(options: {
   description: string;

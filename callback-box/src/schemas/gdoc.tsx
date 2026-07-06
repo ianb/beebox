@@ -17,7 +17,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 
 const LossyType = z.enum([
   "comments",
@@ -35,7 +35,7 @@ const LossyItem = z.object({
   count: z.coerce.number(),
 });
 
-export const GdocSchema: CardSchema = cardSchema("gdoc", {
+export const GdocSchema = cardSchema("gdoc", {
   description: "A Google Doc synced by the drive connector — connector-managed metadata plus the document as an attached .md (unlike the in-box doc type)",
   category: "synced",
   fields: {
@@ -101,19 +101,7 @@ Moving the card moves its attach scope (and the \`.md\` inside)
 atomically — the \`drive-id\` field maintains the link to Google Drive.`,
 });
 
-export interface GdocFields {
-  type: "gdoc";
-  "drive-id": string;
-  status?: "synced" | "error" | "new" | "conflict";
-  title: string;
-  modified: string;
-  revision?: string;
-  link: string;
-  owner: string;
-  content: { ref: string };
-  comments?: { ref: string };
-  lossy?: Array<{ type: GdocLossyType; count: number }>;
-}
+export type GdocFields = InferCardFields<typeof GdocSchema>;
 
 export function createGdocTemplate(options: {
   driveId: string;

@@ -11,7 +11,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const RecordStatus = z.enum(["draft", "reviewed", "archived"]);
 export type RecordStatus = z.infer<typeof RecordStatus>;
@@ -45,7 +45,7 @@ const MeasureEntry = z.object({
   note: z.string().optional(),
 });
 
-export const RecordSchema: CardSchema = cardSchema("record", {
+export const RecordSchema = cardSchema("record", {
   description: "A discrete extracted unit (inventory item, archived document, contact) pulled from a capture session or other source",
   category: "authored",
   fields: {
@@ -116,21 +116,7 @@ Status lifecycle:
 - \`archived\` — Record is finalized and stored long-term.`,
 });
 
-export interface RecordFields {
-  type: "record";
-  status: RecordStatus;
-  name: string;
-  description?: string;
-  sources?: Array<{ ref: string; time?: string; note?: string }>;
-  dates?: Array<{ value: string; note?: string }>;
-  persons?: Array<{ name: string; ref?: string; role?: string; notes?: string; note?: string }>;
-  location?: { text?: string; ref?: string };
-  measures?: Array<{ value: string; note?: string }>;
-  language?: string;
-  triage?: string;
-  notes?: string;
-  body: string;
-}
+export type RecordFields = InferCardFields<typeof RecordSchema>;
 
 export function createRecordTemplate(options: {
   name: string;

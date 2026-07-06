@@ -15,7 +15,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
 /**
  * Where a recipe came from — at least one of: `label` (a freeform name, e.g.
@@ -46,7 +46,7 @@ export const RecipeHeroImage = z
     message: "hero-image needs exactly one of ref / href",
   });
 
-export const RecipeSchema: CardSchema = cardSchema("recipe", {
+export const RecipeSchema = cardSchema("recipe", {
   description: "A recipe with scaling-aware ingredients, steps, and substitutions via the recipe Markdoc tags",
   category: "authored",
   fields: {
@@ -107,15 +107,7 @@ alongside the tags for sections that don't need structure.
 \`store/recipes/Recipe_Name.recipe.card\``,
 });
 
-export interface RecipeFields {
-  type: "recipe";
-  title: string;
-  description?: string;
-  source?: z.infer<typeof RecipeSource>;
-  tags?: string[];
-  "hero-image"?: z.infer<typeof RecipeHeroImage>;
-  body: string;
-}
+export type RecipeFields = InferCardFields<typeof RecipeSchema>;
 
 /**
  * Template for creating a recipe card. Seeds yield + headings + a

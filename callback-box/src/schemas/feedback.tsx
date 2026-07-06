@@ -14,7 +14,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const FeedbackType = z.enum(["query-response", "comment", "brief"]);
 export type FeedbackTypeValue = z.infer<typeof FeedbackType>;
@@ -37,7 +37,7 @@ const TranscriptionError = z.object({
   message: z.string(),
 });
 
-export const FeedbackSchema: CardSchema = cardSchema("feedback", {
+export const FeedbackSchema = cardSchema("feedback", {
   description: "The user's response to something the box surfaced — an answer to a question it asked, or a comment on a card fragment; typed or voice",
   category: "system",
   fields: {
@@ -68,21 +68,7 @@ Body (markdown): the user's typed text. For voice feedback the body
 may be empty; \`transcription.text\` is the source of truth.`,
 });
 
-export interface FeedbackFields {
-  type: "feedback";
-  "type-of-feedback"?: FeedbackTypeValue;
-  target: { ref: string };
-  source: FeedbackSourceValue;
-  timestamp: string;
-  transcription?: { text: string; language?: string; "transcribed-at"?: string };
-  "transcription-error"?: {
-    permanent: boolean;
-    code?: string;
-    "attempted-at"?: string;
-    message: string;
-  };
-  body: string;
-}
+export type FeedbackFields = InferCardFields<typeof FeedbackSchema>;
 
 export function createFeedbackTemplate(options: {
   typeOfFeedback?: FeedbackTypeValue;

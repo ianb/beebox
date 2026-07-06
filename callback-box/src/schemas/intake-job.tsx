@@ -8,9 +8,9 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const IntakeJobSchema: CardSchema = cardSchema("intake-job", {
+export const IntakeJobSchema = cardSchema("intake-job", {
   description: "A system job to triage newly arrived inbox items; created by connectors and cb wakeup",
   category: "system",
   searchable: false,
@@ -50,14 +50,7 @@ An intake job means new items have arrived in the inbox and need triage.
 - Read items before deciding — don't judge by filename alone`,
 });
 
-export interface IntakeJobFields {
-  type: "intake-job";
-  status: string;
-  source: string;
-  priority: "normal" | "low";
-  description: string;
-  items: Array<{ ref: string }>;
-}
+export type IntakeJobFields = InferCardFields<typeof IntakeJobSchema>;
 
 export function createIntakeJobTemplate(options: {
   source: string;

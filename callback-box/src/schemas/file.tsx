@@ -13,7 +13,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 
 export const FileStatus = z.enum(["new", "processed", "invalid"]);
 export type FileStatus = z.infer<typeof FileStatus>;
@@ -27,7 +27,7 @@ const FilenameEntry = z.object({
   size: z.coerce.number().optional(),
 });
 
-export const FileSchema: CardSchema = cardSchema("file", {
+export const FileSchema = cardSchema("file", {
   description: "Metadata for an arbitrary uploaded file (PDF, archive, …) — the binary lives in the attach scope, awaiting agent handling",
   category: "synced",
   fields: {
@@ -58,19 +58,7 @@ they land in the capture session and are available for agent handling
 cannot be used.`,
 });
 
-export interface FileFields {
-  type: "file";
-  status: FileStatus;
-  filename: {
-    ref: string;
-    captured: string;
-    source: string;
-    "original-name"?: string;
-    "mime-type"?: string;
-    size?: number;
-  };
-  description?: string;
-}
+export type FileFields = InferCardFields<typeof FileSchema>;
 
 export function createFileTemplate(options: {
   capturedAt: string;

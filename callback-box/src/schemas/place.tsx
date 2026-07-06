@@ -14,13 +14,13 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 import { namedEntityFields } from "./named-entity-fields.js";
 
 export const PlaceStatus = z.enum(["active", "inactive", "archived"]);
 export type PlaceStatusType = z.infer<typeof PlaceStatus>;
 
-export const PlaceSchema: CardSchema = cardSchema("place", {
+export const PlaceSchema = cardSchema("place", {
   description: "A named location (Home, Office) with optional coordinates so location-aware context can recognize where the boxholder is",
   category: "authored",
   // Cross-field rule Zod's per-field shape can't express: coordinates are
@@ -85,17 +85,7 @@ within its radius.
 not a slug.`,
 });
 
-export interface PlaceFields {
-  type: "place";
-  status: PlaceStatusType;
-  name: string;
-  aliases?: string[];
-  address?: string;
-  lat?: number;
-  lng?: number;
-  radius?: number;
-  body: string;
-}
+export type PlaceFields = InferCardFields<typeof PlaceSchema>;
 
 export function createPlaceTemplate(options: {
   name: string;

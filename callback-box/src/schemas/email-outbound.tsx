@@ -33,9 +33,9 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const EmailOutboundSchema: CardSchema = cardSchema("email-outbound", {
+export const EmailOutboundSchema = cardSchema("email-outbound", {
   description: "An agent-composed outgoing email — uploaded to Gmail as a draft for the user to review and send",
   category: "authored",
   fields: {
@@ -104,18 +104,7 @@ The card's body is the email body. Markdown subset only:
 4. Don't set \`status\` explicitly — it defaults to \`draft\`.`,
 });
 
-export interface EmailOutboundFields {
-  type: "email-outbound";
-  status: "draft" | "sent";
-  to: string;
-  cc?: string;
-  bcc?: string;
-  subject: string;
-  "in-reply-to"?: { ref: string };
-  "gmail-draft-id"?: string;
-  "gmail-draft-url"?: string;
-  body: string;
-}
+export type EmailOutboundFields = InferCardFields<typeof EmailOutboundSchema>;
 
 /**
  * Build the file content for an outbound draft card.

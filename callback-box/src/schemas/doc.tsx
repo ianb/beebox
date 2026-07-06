@@ -12,9 +12,9 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const DocSchema: CardSchema = cardSchema("doc", {
+export const DocSchema = cardSchema("doc", {
   description: "A generic typed document (title + markdown body) — the default for agent-authored prose instead of a plain .md",
   category: "authored",
   fields: {
@@ -78,11 +78,7 @@ Never a top-level or shared \`images/\` directory.
   content in its own right — plain \`.md\` is fine.`,
 });
 
-export interface DocFields {
-  type: "doc";
-  title: string;
-  body: string;
-}
+export type DocFields = InferCardFields<typeof DocSchema>;
 
 export function createDocTemplate(options: { title: string; body?: string }): string {
   const fields: Record<string, unknown> = {

@@ -29,9 +29,9 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const EmailMessageSchema: CardSchema = cardSchema("email-message", {
+export const EmailMessageSchema = cardSchema("email-message", {
   description: "One received email's metadata inside a thread's attach scope; untrusted body text lives in a separate .txt file",
   category: "synced",
   fields: {
@@ -70,19 +70,7 @@ email (reply or new message), don't edit this card — write an
 (next to this message), not in \`box/output/\`.`,
 });
 
-export interface EmailMessageFields {
-  type: "email-message";
-  "message-id": string;
-  "thread-id": string;
-  from: string;
-  to?: string;
-  cc?: string;
-  date: string;
-  subject: string;
-  snippet?: string;
-  "body-file": { ref: string };
-  attachments?: Array<{ ref: string; "content-type": string; size?: number }>;
-}
+export type EmailMessageFields = InferCardFields<typeof EmailMessageSchema>;
 
 /**
  * Build the file content for an email-message card.

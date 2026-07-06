@@ -13,7 +13,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema } from "../cards/index.js";
+import { cardSchema, type InferCardFields } from "../cards/index.js";
 
 const SheetTab = z.object({
   ref: z.string(),
@@ -21,7 +21,7 @@ const SheetTab = z.object({
   gid: z.string(),
 });
 
-export const GsheetSchema: CardSchema = cardSchema("gsheet", {
+export const GsheetSchema = cardSchema("gsheet", {
   description: "A Google Sheets spreadsheet synced by the drive connector — tab data as attached JSON files, pushed back on sync",
   category: "synced",
   fields: {
@@ -77,17 +77,7 @@ Moving the card moves its attach scope (with the tab data inside)
 atomically — the \`drive-id\` field maintains the link to Google Drive.`,
 });
 
-export interface GsheetFields {
-  type: "gsheet";
-  "drive-id": string;
-  status?: "synced" | "error" | "new";
-  title: string;
-  modified: string;
-  link: string;
-  owner: string;
-  sheets: Array<{ ref: string; title: string; gid: string }>;
-  comments?: { ref: string };
-}
+export type GsheetFields = InferCardFields<typeof GsheetSchema>;
 
 export function createGsheetTemplate(options: {
   driveId: string;

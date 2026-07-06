@@ -15,9 +15,9 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 
-export const WebpageSchema: CardSchema = cardSchema("webpage", {
+export const WebpageSchema = cardSchema("webpage", {
   description: "A captured external web page — readable markdown body plus a frozen HTML snapshot in the attach scope",
   category: "synced",
   fields: {
@@ -77,17 +77,7 @@ box/inbox/My_Page.attach/My_Page.commentary.card   # remarks (optional)
 \`\`\``,
 });
 
-export interface WebpageFields {
-  type: "webpage";
-  title?: string;
-  source: string;
-  captured?: string;
-  siteName?: string;
-  byline?: string;
-  excerpt?: string;
-  frozen?: { ref: string };
-  body: string;
-}
+export type WebpageFields = InferCardFields<typeof WebpageSchema>;
 
 export function createWebpageTemplate(options: {
   title: string;

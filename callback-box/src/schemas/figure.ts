@@ -11,7 +11,7 @@
  * See docs/plans/figure-card-type.md for the full design.
  */
 
-import { body, cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
 export const FigureRuntime = z.enum(["p5js", "three", "d3"]);
@@ -25,7 +25,7 @@ const FigureParam = z.object({
   default: z.union([z.string(), z.number(), z.boolean()]).optional(),
 });
 
-export const FigureSchema: CardSchema = cardSchema("figure", {
+export const FigureSchema = cardSchema("figure", {
   description: "A small embeddable interactive graphic (p5.js/three.js/D3) demonstrating one thing; source lives in the attach scope",
   category: "authored",
   fields: {
@@ -114,21 +114,7 @@ The sketch reads those values from \`figure.params\`; the caption (alt text)
 shows beneath the figure.`,
 });
 
-export interface FigureFields {
-  type: "figure";
-  runtime: FigureRuntimeType;
-  entry: string;
-  data?: Record<string, unknown>;
-  params?: Array<{
-    name: string;
-    type: "string" | "number" | "boolean";
-    description?: string;
-    default?: string | number | boolean;
-  }>;
-  width?: number;
-  height?: number;
-  body: string;
-}
+export type FigureFields = InferCardFields<typeof FigureSchema>;
 
 /**
  * Runnable starter sketches per runtime. Each one is a complete, working

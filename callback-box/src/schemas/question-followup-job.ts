@@ -5,10 +5,10 @@
  * agent acts on the directive with the user's answer.
  */
 
-import { cardSchema, renderFrontmatterBlock, type CardSchema } from "../cards/index.js";
+import { cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 
-export const QuestionFollowupJobSchema: CardSchema = cardSchema("question-followup-job", {
+export const QuestionFollowupJobSchema = cardSchema("question-followup-job", {
   description: "A system job created when the user answers a question — carries the directive and answer for an agent to act on",
   category: "system",
   searchable: false,
@@ -45,15 +45,7 @@ A user has answered a question. Your job is to act on their answer.
 - Commit your work before running \`cb finish\``,
 });
 
-export interface QuestionFollowupJobFields {
-  type: "question-followup-job";
-  status: string;
-  source: string;
-  description: string;
-  "question-ref": { ref: string };
-  directive: string;
-  answer: string;
-}
+export type QuestionFollowupJobFields = InferCardFields<typeof QuestionFollowupJobSchema>;
 
 export function createQuestionFollowupJobTemplate(options: {
   description: string;

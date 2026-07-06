@@ -15,7 +15,7 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { cardSchema, type CardSchema, type LintIssue } from "../cards/index.js";
+import { cardSchema, type InferCardFields, type LintIssue } from "../cards/index.js";
 
 /**
  * Cross-field validation for extfile cards that Zod can't express: `href` must
@@ -65,7 +65,7 @@ function hasSha256Marker(version: string): boolean {
   return version.split(/\s+/).some((marker) => /^sha256:[\da-f]+$/.test(marker));
 }
 
-export const ExtfileSchema: CardSchema = cardSchema("extfile", {
+export const ExtfileSchema = cardSchema("extfile", {
   description: "An in-box pointer to a live external file (file: URL, no snapshot) with drift-detection stamps; host for review commentary",
   category: "synced",
   validate: ({ fields }) => extfileErrors(fields),
@@ -125,14 +125,7 @@ box/reviews/Foo_Source.attach/Foo_Source.commentary.card   # remarks (optional)
 \`\`\``,
 });
 
-export interface ExtfileFields {
-  type: "extfile";
-  href: string;
-  title?: string;
-  version?: string;
-  size?: number;
-  mtime?: string;
-}
+export type ExtfileFields = InferCardFields<typeof ExtfileSchema>;
 
 export function createExtfileTemplate(options: { href: string; title?: string | undefined }): string {
   const fields: Record<string, unknown> = { href: options.href };

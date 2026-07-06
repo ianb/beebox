@@ -10,13 +10,13 @@
 
 import { stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
-import { body, cardSchema, type CardSchema } from "../cards/index.js";
+import { body, cardSchema, type InferCardFields } from "../cards/index.js";
 import { namedEntityFields } from "./named-entity-fields.js";
 
 export const PersonStatus = z.enum(["active", "inactive", "archived"]);
 export type PersonStatusType = z.infer<typeof PersonStatus>;
 
-export const PersonSchema: CardSchema = cardSchema("person", {
+export const PersonSchema = cardSchema("person", {
   description: "A key person — identity, aliases, role, contact info, and freeform notes; referenced from briefings' key-people",
   category: "authored",
   fields: {
@@ -62,18 +62,7 @@ home for contact details that don't fit the three fields above.
   info about them.`,
 });
 
-export interface PersonFields {
-  type: "person";
-  status: PersonStatusType;
-  name: string;
-  aliases?: string[];
-  role?: string;
-  boxholder?: boolean;
-  email?: string;
-  phone?: string;
-  address?: string;
-  body: string;
-}
+export type PersonFields = InferCardFields<typeof PersonSchema>;
 
 export function createPersonTemplate(options: {
   name: string;
