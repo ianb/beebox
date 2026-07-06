@@ -18,30 +18,70 @@ import * as fs from "node:fs/promises";
 import { fileExists } from "../lib/file-exists.js";
 import * as path from "node:path";
 import * as os from "node:os";
+import { z } from "zod";
 
 export interface BoxesConfig {
   /** Absolute paths to box roots. Order is preserved as-written. */
   boxes: string[];
 }
 
+const boxesConfigSchema = z.strictObject({
+  boxes: z.array(z.string()),
+});
+
 const CONFIG_DIR = path.join(os.homedir(), ".config/cb");
 const CONFIG_FILE = path.join(CONFIG_DIR, "boxes.json");
 const LEGACY_CONFIG_FILE = path.join(CONFIG_DIR, "scheduler.json");
 
+/**
+ * Thrown when `boxes.json` (or the legacy `scheduler.json`) fails to parse
+ * or validate. This is a hand-editable file, so a typo shouldn't crash the
+ * CLI with a bare `SyntaxError` pointing nowhere — name the file and the
+ * problem (Track D.4).
+ */
+export class BoxesConfigParseError extends Error {
+  readonly configPath: string;
+  constructor(filePath: string, opts: { cause: unknown }) {
+    const reason = opts.cause instanceof Error ? opts.cause.message : String(opts.cause);
+    super(`Box manifest at ${filePath} is invalid: ${reason}. Fix or delete the file by hand.`, {
+      cause: opts.cause,
+    });
+    this.name = "BoxesConfigParseError";
+    this.configPath = filePath;
+  }
+}
+
+async function readBoxesConfigFile(filePath: string): Promise<BoxesConfig> {
+  const content = await fs.readFile(filePath, "utf-8");
+  let json: unknown;
+  try {
+    json = JSON.parse(content);
+  } catch (e) {
+    throw new BoxesConfigParseError(filePath, { cause: e });
+  }
+  const result = boxesConfigSchema.safeParse(json);
+  if (!result.success) {
+    throw new BoxesConfigParseError(filePath, { cause: result.error });
+  }
+  return result.data;
+}
 
 /**
  * Read the manifest. Falls back to the legacy scheduler.json on first
  * run after upgrade, rewriting it under the new filename so subsequent
  * loads are direct.
+ *
+ * `configPath` overrides the default `~/.config/cb/boxes.json` location
+ * (tests only — the legacy-migration fallback is skipped when given, since
+ * that path exists to test a single hand-editable file, not the migration).
  */
-export async function loadBoxesConfig(): Promise<BoxesConfig> {
-  if (await fileExists(CONFIG_FILE)) {
-    const content = await fs.readFile(CONFIG_FILE, "utf-8");
-    return JSON.parse(content) as BoxesConfig;
+export async function loadBoxesConfig(configPath?: string): Promise<BoxesConfig> {
+  const targetFile = configPath ?? CONFIG_FILE;
+  if (await fileExists(targetFile)) {
+    return await readBoxesConfigFile(targetFile);
   }
-  if (await fileExists(LEGACY_CONFIG_FILE)) {
-    const content = await fs.readFile(LEGACY_CONFIG_FILE, "utf-8");
-    const parsed = JSON.parse(content) as BoxesConfig;
+  if (configPath === undefined && (await fileExists(LEGACY_CONFIG_FILE))) {
+    const parsed = await readBoxesConfigFile(LEGACY_CONFIG_FILE);
     await fs.mkdir(CONFIG_DIR, { recursive: true });
     await fs.writeFile(CONFIG_FILE, JSON.stringify(parsed, null, 2) + "\n");
     return parsed;
