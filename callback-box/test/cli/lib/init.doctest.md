@@ -7,7 +7,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality } from "../../../src/core/box.js";
-import { stageAll, commit, getLog, getStatus, isRepo } from "../../../src/cli/lib/git.js";
+import { stageAll, commit, getLog, getStatus, isRepo } from "../../../src/lib/git.js";
 
 async function makeTmpDir() {
   return fs.mkdtemp(path.join(os.tmpdir(), "cb-init-test-"));

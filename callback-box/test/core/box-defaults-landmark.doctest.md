@@ -8,7 +8,7 @@ alone.
 ```ts setup
 import { installRootLandmark } from "../../src/core/box-defaults.js";
 import { parseLandmarkFields } from "../../src/schemas/landmark.js";
-import { stageFiles, commitPaths } from "../../src/cli/lib/git.js";
+import { stageFiles, commitPaths } from "../../src/lib/git.js";
 import { mkdtemp, writeFile, readFile, readdir } from "node:fs/promises";
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";

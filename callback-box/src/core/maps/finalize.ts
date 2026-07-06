@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import { fileExists } from "../../lib/file-exists.js";
 import * as path from "node:path";
-import { getHead } from "../../cli/lib/git.js";
+import { getHead } from "../../lib/git.js";
 import { loadMapState, saveMapState, type MapState } from "./state.js";
 import type { MapTask } from "./precheck.js";
 

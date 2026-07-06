@@ -18,7 +18,7 @@ import { simpleGit } from "simple-git";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { runBoxPackageify, throwInjectedTestFailure } from "../../../scripts/migrate/box-packageify.js";
 import { getBoxShape } from "../../../src/cli/lib/box-shape.js";
-import { getHead, getStatus } from "../../../src/cli/lib/git.js";
+import { getHead, getStatus } from "../../../src/lib/git.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { encodeProjectDir } from "../../../src/cli/lib/session.js";
 

@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import type { CardSchema } from "../cards/index.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit } from "../lib/git.js";
 
 const OUTPUT_DIR = "box/output";
 

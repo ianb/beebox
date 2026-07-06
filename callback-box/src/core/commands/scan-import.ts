@@ -40,7 +40,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { stageFiles, commit } from "../../cli/lib/git.js";
+import { stageFiles, commit } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import {

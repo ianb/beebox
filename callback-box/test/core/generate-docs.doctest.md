@@ -25,7 +25,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { commitTemplateSyncChanges } from "../../src/core/generate-docs.js";
-import { getStatus, getLog } from "../../src/cli/lib/git.js";
+import { getStatus, getLog } from "../../src/lib/git.js";
 
 /** A real git repo shaped like a v2 box package root, matching
  *  `getBoxShapeOrLegacyFallback`'s expectations: a `content/.cb-box`

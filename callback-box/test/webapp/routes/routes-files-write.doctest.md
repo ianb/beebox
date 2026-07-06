@@ -8,7 +8,7 @@ are chatty); git state rides on view metadata instead.
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
-import { getStatus } from "../../../src/cli/lib/git.js";
+import { getStatus } from "../../../src/lib/git.js";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 ```

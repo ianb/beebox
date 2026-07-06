@@ -8,7 +8,7 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { stageFiles, commit } from "../../../cli/lib/git.js";
+import { stageFiles, commit } from "../../../lib/git.js";
 import { cardFields, parseCardText, serializeCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { withCardLock } from "../../../lib/card-lock.js";

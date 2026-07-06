@@ -34,7 +34,7 @@ import { Command } from "commander";
 import { runCollectedChild } from "../../lib/run-child.js";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxShape } from "../lib/box-shape.js";
-import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../lib/git.js";
+import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const OLD_ENGINE_CB_BIN = path.join(PACKAGE_ROOT, "bin", "cb");

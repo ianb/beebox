@@ -25,7 +25,7 @@ import {
 } from "../../core/migrations.js";
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { getStatus, stageAll, commit } from "../lib/git.js";
+import { getStatus, stageAll, commit } from "../../lib/git.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");

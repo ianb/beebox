@@ -6,7 +6,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit } from "../lib/git.js";
 import { readCardFrontmatter } from "./card-io.js";
 
 class JobDeleteError extends Error {

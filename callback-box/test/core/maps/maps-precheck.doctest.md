@@ -6,7 +6,7 @@ identifies which `MAP.md` files need to be created or updated.
 ```ts setup
 import { precheck } from "../../../src/core/maps/precheck.js";
 import { saveMapState } from "../../../src/core/maps/state.js";
-import { getHead } from "../../../src/cli/lib/git.js";
+import { getHead } from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 

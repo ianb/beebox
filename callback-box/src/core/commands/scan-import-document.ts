@@ -8,7 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { type CommandContext, type CommandResult } from "../command-runner.js";
-import { stageFiles, commit } from "../../cli/lib/git.js";
+import { stageFiles, commit } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createFileTemplate } from "../../schemas/file.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";

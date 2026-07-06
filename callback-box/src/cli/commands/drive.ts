@@ -18,7 +18,7 @@ import { extractDriveFileId } from "../../connectors/drive-types.js";
 import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
-import { stageFiles, commit } from "../lib/git.js";
+import { stageFiles, commit } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { loadTransientState, saveTransientState } from "../../connectors/transient-state.js";
 

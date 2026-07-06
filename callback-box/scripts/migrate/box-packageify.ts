@@ -31,7 +31,7 @@
  * half-moved) — no engine build can serve it. So this script performs ONE
  * commit of the entire conversion at the end, wrapped in a snapshot + revert
  * (`revertToSnapshot`, factored out of `cb upgrade`'s revert path in
- * `src/cli/lib/git.ts`) so ANY failure at ANY step restores the box to a
+ * `src/lib/git.ts`) so ANY failure at ANY step restores the box to a
  * byte-identical pre-migration state — never a half-converted one.
  *
  * The migration *manifest* entry (`config/migrations.jsonl`) is NOT written
@@ -50,7 +50,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { pathToFileURL } from "node:url";
-import { getStatus, isRepo, hasCommits, getHead, revertToSnapshot, stageAll, commit } from "../../src/cli/lib/git.js";
+import { getStatus, isRepo, hasCommits, getHead, revertToSnapshot, stageAll, commit } from "../../src/lib/git.js";
 import { detectBoxTarget, scaffoldPackageRoot, BoxPackageConflictError } from "../../src/core/box-package.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { encodeProjectDir, claudeProjectsRoot } from "../../src/cli/lib/session.js";

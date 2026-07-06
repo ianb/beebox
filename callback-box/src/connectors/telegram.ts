@@ -22,7 +22,7 @@ import {
   type Connector,
   type SyncResult,
 } from "./index.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit } from "../lib/git.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";

@@ -17,7 +17,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
 import { runUpgrade, UpgradeStepFailedError, LegacyBoxUpgradeError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
-import { getStatus, getHead, getLog } from "../../../src/cli/lib/git.js";
+import { getStatus, getHead, getLog } from "../../../src/lib/git.js";
 
 const OLD_VERSION = "0.1.0";
 const NEW_VERSION = "0.2.0";

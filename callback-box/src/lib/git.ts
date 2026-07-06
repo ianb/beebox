@@ -6,7 +6,7 @@
  * The log-history/facet sub-feature lives in `git-log.ts`, trailer parsing +
  * the trailer-key vocabulary in `git-trailers.ts`, and shared error/retry
  * internals in `git-internal.ts`. This file re-exports the public surface of
- * those siblings so callers keep importing everything from "cli/lib/git".
+ * those siblings so callers keep importing everything from "lib/git".
  */
 
 import { simpleGit, CleanOptions } from "simple-git";
@@ -18,7 +18,7 @@ import {
   unstageOversizedBlobs,
   LOG_FORMAT,
 } from "./git-internal.js";
-import { sleep } from "../../lib/sleep.js";
+import { sleep } from "./sleep.js";
 import type { GitLogFormat } from "./git-internal.js";
 import { parseTrailers } from "./git-trailers.js";
 

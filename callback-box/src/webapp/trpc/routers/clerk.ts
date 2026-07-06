@@ -17,7 +17,7 @@ import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../../connectors/chat-utils.js";
-import { stageFiles, commitPaths, pathsHaveChanges, isNothingToCommitError } from "../../../cli/lib/git.js";
+import { stageFiles, commitPaths, pathsHaveChanges, isNothingToCommitError } from "../../../lib/git.js";
 
 const commentaryInput = z.object({
   url: z.string().url(),

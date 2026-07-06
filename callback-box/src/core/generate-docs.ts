@@ -33,7 +33,7 @@ import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "./install-temp
 import { generateRules } from "./init-rules.js";
 import { installValidationHooks } from "./install-validation-hooks.js";
 import { getBoxShapeOrLegacyFallback, type BoxShape } from "../cli/lib/box-shape.js";
-import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../cli/lib/git.js";
+import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./generate-docs-shared.js";
 import { generateCbCommands } from "./generate-docs-cb-commands.js";
 import { generateCardDoc, generateConnectorsDocs } from "./generate-docs-content.js";

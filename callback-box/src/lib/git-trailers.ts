@@ -4,7 +4,7 @@
  *
  * Leaf module: pure string parsing, no git/process dependency. The original
  * git.ts re-exports the public constants from here so callers keep importing
- * them from "cli/lib/git" unchanged.
+ * them from "lib/git" unchanged.
  */
 
 /**

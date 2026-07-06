@@ -7,7 +7,7 @@
  */
 
 import { fmt } from "../cli/lib/format.js";
-import { getStatus, stageAll, commit, type GitStatus } from "../cli/lib/git.js";
+import { getStatus, stageAll, commit, type GitStatus } from "../lib/git.js";
 import type { Agent } from "./agent-types.js";
 
 export const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:

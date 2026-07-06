@@ -23,7 +23,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { isCardFile, boxPath } from "../../cli/lib/paths.js";
-import { stageFiles, commit } from "../../cli/lib/git.js";
+import { stageFiles, commit } from "../../lib/git.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 
 /**

@@ -17,7 +17,7 @@ import { promises as fs } from "node:fs";
 import { glob } from "glob";
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
-import { getStatus, isRepo } from "../cli/lib/git.js";
+import { getStatus, isRepo } from "../lib/git.js";
 import { fileEtag } from "../webapp/file-etag.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import type { ViewCard, ViewFile } from "../types/views.js";

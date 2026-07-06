@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageFiles, commit } from "../../cli/lib/git.js";
+import { stageFiles, commit } from "../../lib/git.js";
 import { createAudioTemplate } from "../../schemas/audio.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createFileTemplate } from "../../schemas/file.js";

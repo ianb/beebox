@@ -7,7 +7,7 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import type { ChatThreadFields } from "../schemas/chat-thread.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit } from "../lib/git.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
 import { findUnsentAgentMessages, stampSentMessage } from "./chat-utils.js";
 import { parseDuration } from "./telegram-helpers.js";

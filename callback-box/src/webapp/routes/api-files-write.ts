@@ -19,7 +19,7 @@ import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import type { EventBus } from "../../core/event-bus.js";
 import { fileEtag } from "../file-etag.js";
-import { stageFiles, commitPaths, pathsHaveChanges } from "../../cli/lib/git.js";
+import { stageFiles, commitPaths, pathsHaveChanges } from "../../lib/git.js";
 import { boxRelativePath } from "../../shared/box-path.js";
 import {
   attachDirFor,

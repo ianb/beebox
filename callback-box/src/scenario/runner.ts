@@ -19,7 +19,7 @@ import {
   stageAll,
   getCurrentBranch,
   clean,
-} from "../cli/lib/git.js";
+} from "../lib/git.js";
 import { loadFetchStubs, clearFetchStubs, installStrictFetch, uninstallStrictFetch, type FetchStub } from "../cli/lib/fetch.js";
 import { loadScenario, loadStubs, getScenarioDir, getBoxRoot } from "./loader.js";
 import type { ScenarioStep, ValidationCheck } from "./types.js";

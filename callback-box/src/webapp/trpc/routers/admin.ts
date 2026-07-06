@@ -7,7 +7,7 @@ import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
-import { stageFiles, commit } from "../../../cli/lib/git.js";
+import { stageFiles, commit } from "../../../lib/git.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";

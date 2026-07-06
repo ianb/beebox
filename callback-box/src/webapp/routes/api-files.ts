@@ -13,7 +13,7 @@ import type { FastifyInstance, FastifyReply } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
-import { commitPaths, pathsHaveChanges, stageFiles } from "../../cli/lib/git.js";
+import { commitPaths, pathsHaveChanges, stageFiles } from "../../lib/git.js";
 import type { EventBus } from "../../core/event-bus.js";
 import { fileEtag } from "../file-etag.js";
 import { boxRelativePath } from "../../shared/box-path.js";

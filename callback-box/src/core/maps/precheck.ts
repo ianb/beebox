@@ -16,7 +16,7 @@
  */
 
 import * as path from "node:path";
-import { isRepo, getStatus, getHead, hasCommits } from "../../cli/lib/git.js";
+import { isRepo, getStatus, getHead, hasCommits } from "../../lib/git.js";
 import { loadMapState } from "./state.js";
 import {
   DEFAULT_IGNORE_PATTERNS,

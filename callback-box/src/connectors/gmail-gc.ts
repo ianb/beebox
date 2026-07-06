@@ -30,7 +30,7 @@ import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import { getBoxDir } from "../cli/lib/paths.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit } from "../lib/git.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 import { buildGmailQuery, listAllMatching, type GmailPullConfig } from "./gmail-pull.js";
 

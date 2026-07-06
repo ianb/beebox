@@ -11,7 +11,7 @@ and anything still running.
 import { gcProcedureRuns } from "../../../src/core/procedure/gc.js";
 import { MAX_RUNS_PER_PROCEDURE } from "../../../src/core/procedure/run-expiry.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-import { getLog } from "../../../src/cli/lib/git.js";
+import { getLog } from "../../../src/lib/git.js";
 import { utimes } from "node:fs/promises";
 
 // Builds a frontmatter run card from the legacy `key="value"` attr string

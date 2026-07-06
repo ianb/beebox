@@ -13,7 +13,7 @@ import * as path from "node:path";
 import { type Connector } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { getSystemState } from "../../core/state.js";
-import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
+import { stageAll, stageFiles, commit, getStatus } from "../../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";

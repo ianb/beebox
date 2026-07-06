@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageFiles } from "../cli/lib/git.js";
+import { stageFiles } from "../lib/git.js";
 import {
   safeFilename,
   ensureThreadFile,

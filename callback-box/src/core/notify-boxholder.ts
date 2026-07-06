@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { loadBoxConfig } from "./box-config.js";
 import { createWebPushTemplate, type WebPushSeverityValue } from "../schemas/web-push.js";
 import { createTelegramMessageTemplate } from "../schemas/telegram-message.js";
-import { stageFiles, commit } from "../cli/lib/git.js";
+import { stageFiles, commit } from "../lib/git.js";
 import { sendOutputCards } from "../connectors/telegram-output-cards.js";
 import { sendOutputPushCards } from "../connectors/push.js";
 import { loadTelegramConfig } from "../connectors/telegram-helpers.js";

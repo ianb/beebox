@@ -17,7 +17,7 @@ import {
 import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../lib/paths.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
 import { collectViewRefWarnings } from "../../core/view-refs.js";
-import { getStatus } from "../lib/git.js";
+import { getStatus } from "../../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";
 import { lintAllClaudeMd } from "../../core/claude-md-lint.js";

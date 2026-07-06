@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
 import { isGoogleServiceAllowed } from "../../../core/box-config.js";
 import { loadDriveConfig, saveDriveConfig } from "../../../connectors/drive-config.js";
-import { stageFiles, commit } from "../../../cli/lib/git.js";
+import { stageFiles, commit } from "../../../lib/git.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
 import { createGoogleDriveService } from "../../../services/google-drive.js";
 import type { GoogleDriveService } from "../../../services/google-drive.js";

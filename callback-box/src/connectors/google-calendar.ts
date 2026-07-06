@@ -36,7 +36,7 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
-import { stageFiles, commit, getStatus } from "../cli/lib/git.js";
+import { stageFiles, commit, getStatus } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
   type SyncNote,

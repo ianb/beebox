@@ -19,7 +19,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../lib/paths.js";
-import { getStatus, pushToRemote, stageFiles, commitPaths } from "../lib/git.js";
+import { getStatus, pushToRemote, stageFiles, commitPaths } from "../../lib/git.js";
 import { cleanupOldTmpUploads } from "../../core/housekeeping.js";
 import { installRootLandmark } from "../../core/box.js";
 import { getBoxTime } from "../lib/time.js";

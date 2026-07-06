@@ -7,7 +7,7 @@ import { generateContext } from "../../context.js";
 import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../cli/lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
-import { getLog } from "../../../cli/lib/git.js";
+import { getLog } from "../../../lib/git.js";
 
 export interface BrowseDir {
   name: string;

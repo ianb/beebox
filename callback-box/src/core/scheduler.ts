@@ -10,7 +10,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { BOX_MARKER } from "../cli/lib/paths.js";
 import { runTick, type TickResult } from "../cli/commands/tick.js";
-import { getStatus, isRepo } from "../cli/lib/git.js";
+import { getStatus, isRepo } from "../lib/git.js";
 import { touchSchedulerHeartbeat } from "./schedule-health-box.js";
 import { checkHealthAndAlert } from "./schedule-health-alert.js";
 import {

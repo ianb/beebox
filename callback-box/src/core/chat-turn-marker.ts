@@ -14,7 +14,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { getHeadSha } from "../cli/lib/git-range.js";
+import { getHeadSha } from "../lib/git-range.js";
 
 const MARKER_DIR = ".callback-box/chat-turn-marker";
 

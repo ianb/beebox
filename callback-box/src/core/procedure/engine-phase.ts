@@ -6,8 +6,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getStatus, stageAll, commit, getHead } from "../../cli/lib/git.js";
-import { getRangeDiff } from "../../cli/lib/git-range.js";
+import { getStatus, stageAll, commit, getHead } from "../../lib/git.js";
+import { getRangeDiff } from "../../lib/git-range.js";
 import { fmt } from "../../cli/lib/format.js";
 import { getBoxTime } from "../../cli/lib/time.js";
 import { runShell, CHECK_SKIP_CODE } from "./shell.js";

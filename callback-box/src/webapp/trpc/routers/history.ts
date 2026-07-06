@@ -8,7 +8,7 @@ import {
   getCommitDiff,
   getLogPaginated,
   getTrailerFacets,
-} from "../../../cli/lib/git.js";
+} from "../../../lib/git.js";
 import { parseSessionLog } from "../../../cli/lib/session.js";
 import { resolveSessionLogPath } from "../../../core/chat-session-history.js";
 

@@ -1,6 +1,6 @@
 # Git Utilities
 
-Tests for the git helper functions in `src/cli/lib/git.ts`.
+Tests for the git helper functions in `src/lib/git.ts`.
 
 ```ts setup
 import {
@@ -8,7 +8,7 @@ import {
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
   getCurrentBranch, hasCommits, createBranch, checkoutBranch,
   createTag, deleteTag, getHead, clean, isNothingToCommitError,
-} from "../../../src/cli/lib/git.js";
+} from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 

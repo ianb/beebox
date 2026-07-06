@@ -7,7 +7,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../cli/lib/paths.js";
-import { initRepo, isRepo } from "../cli/lib/git.js";
+import { initRepo, isRepo } from "../lib/git.js";
 import { getBoxShapeOrLegacyFallback } from "../cli/lib/box-shape.js";
 import { claudeProjectsRoot } from "../cli/lib/session.js";
 import { MIGRATIONS } from "./migrations.js";

@@ -67,7 +67,7 @@
  * | Search index | cross-proc | `<box>/.callback-box/<lock file>` | index refresh serialization | `search/refresh.ts` | one index rebuild |
  * | Capture session | in-proc (`withSessionLock`) | session id | per-`session.json` RMW (concurrent uploads) | capture upload route; entry dropped by `cleanupSession` | single RMW |
  * | Card write | in-proc (`withCardLock`) | `path.resolve(file)` | per-file card/config read-modify-write within one process | tRPC mutations (todos/scheduler/admin), connector thread writes, `answer`/`transcription` core; map self-drains | single RMW |
- * | Git index | git-owned | `<box>/.git/index.lock` | staging/commit | any `git commit` (not ours) | retried once on collision (`cli/lib/git.ts`) |
+ * | Git index | git-owned | `<box>/.git/index.lock` | staging/commit | any `git commit` (not ours) | retried once on collision (`lib/git.ts`) |
  *
  * Ordering notes. The cross-process and in-process tiers are orthogonal —
  * different failure models, no shared key space. In-process: `withCardLock`
