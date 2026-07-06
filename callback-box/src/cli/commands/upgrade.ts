@@ -30,8 +30,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { spawn } from "node:child_process";
 import { Command } from "commander";
+import { runCollectedChild } from "../../lib/run-child.js";
 import { requireBoxRoot } from "../lib/paths.js";
 import { getBoxShape } from "../lib/box-shape.js";
 import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../lib/git.js";
@@ -129,15 +129,7 @@ export interface RunCommandResult {
 export type CommandRunner = (args: RunCommandArgs) => Promise<RunCommandResult>;
 
 function defaultRunner(): CommandRunner {
-  return ({ command, args, cwd }) =>
-    new Promise((resolve, reject) => {
-      const child = spawn(command, args, { cwd });
-      let output = "";
-      child.stdout?.on("data", (chunk: Buffer) => { output += chunk.toString(); });
-      child.stderr?.on("data", (chunk: Buffer) => { output += chunk.toString(); });
-      child.on("error", reject);
-      child.on("close", (code) => { resolve({ code: code ?? 1, output }); });
-    });
+  return ({ command, args, cwd }) => runCollectedChild({ command, args, cwd });
 }
 
 /** A `--to` value that names a file rather than a semver range: an explicit
