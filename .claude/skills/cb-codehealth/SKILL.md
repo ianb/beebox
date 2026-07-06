@@ -85,6 +85,54 @@ grab-bag is *anti*-health):
 When you do consolidate, it's a normal deepening (below): give the shared helper
 a real home, don't just hoist it into a junk drawer.
 
+**Recurring-pattern checks (architectural-review regressions).** These are the
+patterns the 2026-07 architectural review found *regrowing in new code* — a
+one-time cleanup didn't hold, so they get a cheap recurring grep instead of a
+17-agent pass. Run them from `callback-box/`; each says what healthy looks like
+and what a regression looks like.
+
+- **Dead code — `pnpm lint:knip`.** Entries are now correct (a prior commit had
+  dropped `src/cli/index.ts`, inflating "unused files" to 144); healthy is ~3
+  genuine unused files, a regression is a jump back into the dozens (usually a
+  broken entry in `knip.json`, not real dead code) or a newly-orphaned file.
+- **Cycles — `pnpm lint:circular`** (madge). Healthy: only `import type` cycles.
+  A regression is any new value-import cycle.
+- **`as unknown as` trend — `grep -rn "as unknown as" src | wc -l`.** Healthy is
+  flat-or-declining across runs; a regression is the count climbing, or any new
+  site outside the two blessed helpers (`cardFields`, `parseCommandArgs`). Note
+  `as never` evades the count *and* the `.tsx` lint ban — grep it separately
+  (`grep -rn "as never" src`).
+- **Silent catches, all forms —**
+  `grep -rnE "\.catch\(\s*\(\s*_?\w*\s*\)\s*=>\s*\{\s*\}\s*\)|catch\s*\{\s*\}" src`.
+  The arrow form `.catch(() => {})` is the one that slips past the catch-must-log
+  convention. Healthy: zero, or each surviving hit carrying a `/* ignore: … */`
+  reason. A regression is a new empty catch on any poll, hot path, or
+  user-initiated action.
+- **Exhaustiveness inventory.** The `switch-exhaustiveness-check` lint rule
+  (live) covers `switch`; `pnpm lint` clean means switches are handled. If-chains
+  over a union aren't linted — scan for a union dispatch whose final `else` lacks
+  `assertNever`. Sanity gauge: `grep -rc "assertNever" src | ...` should trend
+  up, never back to zero.
+- **Regrown consolidated helpers.** Each of these was consolidated once and grew
+  hand-rolled copies back; grep for the *formula* reappearing outside its home:
+  - content-hash: `createHash("sha256")` outside `lib/content-hash.ts`.
+  - file-exists: an `access(...)`/`fs.access` existence probe (or
+    `.then(() => true).catch(() => false)`) outside `lib/file-exists.ts`.
+  - public-url: a `config/box.json` + `PUBLIC_URL`/`CB_PUBLIC_URL` cascade
+    outside `lib/public-url.ts` (a copy that bypasses it silently ignores
+    `CB_PUBLIC_URL`).
+  - mimetype: an extension→MIME map literal outside `lib/mimetype.ts`.
+  - multipart: a `multipart/form-data` boundary builder outside the shared one.
+
+  Healthy: the formula appears only in its home module. A regression is a fresh
+  copy — pair the re-consolidation with the enforcement hook where one is
+  feasible (that's the point of consolidating these specifically).
+- **Doc prose-ref staleness.** `doc-check` validates markdown *links* but not
+  file paths mentioned in prose (`` `src/foo/bar.ts` `` in running text). Extract
+  backticked `src/…` / `docs/…` paths from changed docs and confirm each still
+  resolves — a moved or deleted file leaves a stale prose pointer doc-check can't
+  see.
+
 **Then explore organically** — use `Agent` (`subagent_type=Explore`) over the
 suspect subsystems; don't follow rigid heuristics, note where *you* feel
 friction:
