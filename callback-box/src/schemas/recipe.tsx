@@ -124,7 +124,7 @@ export function createRecipeTemplate(options: {
   }
   const servings = options.servings ?? 4;
   const yamlText = stringifyYaml(fields);
-  const body = `{% yield amount="${servings}" %}${servings} servings{% /yield %}
+  const bodyText = `{% yield amount="${servings}" %}${servings} servings{% /yield %}
 
 ## Ingredients
 
@@ -134,5 +134,5 @@ export function createRecipeTemplate(options: {
 
 {% step %}First step here.{% /step %}
 `;
-  return `---\n${yamlText}---\n${body}`;
+  return `---\n${yamlText}---\n${bodyText}`;
 }

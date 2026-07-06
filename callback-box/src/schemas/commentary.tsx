@@ -38,19 +38,19 @@ const { parse: markdocParse, validate: markdocValidate } = Markdoc;
  * `defaultHref`/`defaultRef`/`targets` from the pre-attach era is caught by the
  * generic unknown-key warning (the fields are no longer in the schema).
  */
-function commentaryErrors(body: string): LintIssue[] {
+function commentaryErrors(bodyText: string): LintIssue[] {
   const errors: LintIssue[] = [];
-  for (const message of validateMarkdocBody(body)) {
+  for (const message of validateMarkdocBody(bodyText)) {
     errors.push({ type: "validation", severity: "error", message });
   }
   return errors;
 }
 
-function validateMarkdocBody(body: string): string[] {
-  if (body === "") return [];
+function validateMarkdocBody(bodyText: string): string[] {
+  if (bodyText === "") return [];
   let ast: MarkdocNode;
   try {
-    ast = markdocParse(body);
+    ast = markdocParse(bodyText);
   } catch (_e) {
     return ["commentary body is not parseable Markdoc"];
   }
@@ -63,8 +63,8 @@ export const CommentarySchema: CardSchema = cardSchema("commentary", {
   description: "Anchored remarks on a host card (extfile, webpage, or doc) — attach-only, anchor-then-remark body",
   category: "authored",
   validate: ({ fields }) => {
-    const body = fields["body"];
-    return commentaryErrors(typeof body === "string" ? body : "");
+    const bodyText = fields["body"];
+    return commentaryErrors(typeof bodyText === "string" ? bodyText : "");
   },
   fields: {
     title: z.string().optional(),

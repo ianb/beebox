@@ -166,8 +166,15 @@ const enabledRules = {
   "@typescript-eslint/consistent-type-assertions": "error",
   // Don't use new Symbol() (deprecated)
   "no-new-symbol": "error",
-  // No variable shadowing
-  "no-shadow": "error",
+  // No variable shadowing. The base `no-shadow` is disabled in favor of the
+  // type-aware `@typescript-eslint/no-shadow`: the TS version understands TS
+  // scoping (it won't false-positive on type-only vs value merging, enum
+  // members, or generic type params) and it DOES catch value shadows the base
+  // rule misses — e.g. a local `body` shadowing an imported `body` helper.
+  // typescript-eslint's own guidance is to replace the base rule with theirs
+  // in any TS project.
+  "no-shadow": "off",
+  "@typescript-eslint/no-shadow": "error",
   // Limit cyclomatic complexity — JSX render functions may disable this
   complexity: ["error", 25],
   // No trailing whitespace
@@ -632,6 +639,11 @@ export function vibeCheck(options) {
               "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
               "max-lines-per-function": ["error", { max: 150, skipBlankLines: true, skipComments: true }],
               "complexity": ["error", 25],
+              // The main enabledRules block only matches `.{ts,js}` when
+              // react:false, so `.tsx` (e.g. backend schema files) would
+              // otherwise escape no-shadow entirely. Re-assert it here.
+              "no-shadow": "off",
+              "@typescript-eslint/no-shadow": "error",
             },
           },
         ]),
