@@ -29,16 +29,22 @@ output of this plan is deciding where each new principle should live.
    set (switch, if-chain, lookup object) must fail to compile when a member is
    added. Idioms: `assertNever`, `Record<Union, Handler>` with `satisfies`,
    `@typescript-eslint/switch-exhaustiveness-check`. **(new)**
-3. **Parse, don't validate — at every trust boundary.** Disk reads, LLM
-   output, HTTP bodies, third-party API responses, config files, and env vars
-   each get parsed into typed data exactly once, with loud, localized failure.
-   `JSON.parse(...) as X` is the anti-pattern; `schema.safeParse` with an
-   explicit failure path is the pattern. Config is untrusted content too.
-4. **Resilient AND never silent.** Degradation is allowed; invisible
-   degradation is not. Every catch block either rethrows, returns a typed
-   failure, or logs — and "logs" means at a level someone will see, carrying
-   enough context (box, card, operation) to debug from the log line alone.
-   (code-style.md Error Handling, sharpened by boxholder during this review.)
+3. **Validate at boundaries and during parsing.** Disk reads, LLM output,
+   HTTP bodies, third-party API responses, config files, and env vars each
+   get validated into typed data exactly once, at the boundary, with loud,
+   localized failure. `JSON.parse(...) as X` is the anti-pattern (parsing
+   without validating); `schema.safeParse` with an explicit failure path is
+   the pattern. Config is untrusted content too.
+4. **Resilient AND never silent — and never resilient to the impossible.**
+   Degradation is allowed for failures that can genuinely happen; invisible
+   degradation is not, and *seemingly-impossible* states get hard failure,
+   not resilience — don't limp past a broken invariant. Every catch block
+   either rethrows, returns a typed failure, or logs — and "logs" means at
+   a level someone will see, carrying enough context (box, card, operation)
+   to debug from the log line alone. Dev/test fail hard where prod may
+   degrade (invariant checks strict in dev and tests, except in tests that
+   exercise the degradation path itself). (code-style.md Error Handling,
+   sharpened by boxholder during this review.)
 5. **Failure paths visible in signatures where callers branch.** When callers
    genuinely dispatch on failure kinds, return a discriminated Result
    (`{ok: true, ...} | {ok: false, reason: ...}`) instead of throwing. When
@@ -70,12 +76,21 @@ output of this plan is deciding where each new principle should live.
 10. **Testability is architectural, and deeper than usual taste.** Seams
     (clock injection, fs/agent injection points, pure cores extracted from
     IO shells) are built into production code deliberately, even where
-    conventional style would call it over-engineering.
-11. **Enforcement beats convention.** A rule that matters gets a lint rule or
-    a type, not a paragraph. A written rule that's widely violated is either
-    a dead letter (delete it) or a debt list (schedule it) — never ambient
-    guilt. (CLAUDE.md's never-weaken-lint-rules is the same principle from
-    the other side.)
+    conventional style would call it over-engineering. Test-only
+    affordances must not widen the prod security surface — gate them
+    behind an explicit process flag (the `CB_TIME`/stubs pattern) so a
+    seam is inert unless deliberately enabled.
+11. **Enforcement beats convention, and the preset is ours.** A rule that
+    matters gets a lint rule or a type, not a paragraph.
+    personal-vibe-check effectively belongs to this project — extending it
+    with new rules is normal work, not a special event. A written rule
+    that's widely violated is either a dead letter (delete it) or a debt
+    list (schedule it) — never ambient guilt. Suppression is sometimes
+    right: infrequent, signaled, line-level only (never file- or
+    rule-level), with a justification — and when a legitimate exception
+    recurs, encode it into the rule itself rather than accumulating
+    disables. Where lint can't express a rule, a review rule (Track O)
+    is the fallback enforcement tier.
 12. **The maintainer is usually an agent.** Structures that catch agent
     mistakes at compile time pay double here: an agent can't hold tribal
     knowledge between sessions, so anything enforced only by memory of past
@@ -163,36 +178,45 @@ that *introduce new mechanisms* get serious research before we build:
      (OWASP dual-LLM guidance).
    - **Serialization boundaries launder brands** (JSON round-trips silently
      re-cast) — each such crossing is a required re-validation point.
-2. **Result + branded types (Tracks B/C) — DONE.** Key results:
-   - **Result: lean hand-rolled.** The two library benefits (combinators,
-     ResultAsync) are exactly where the ecosystem-interop tax bites
-     (Harbor's writeup: DB rollback needs throw, Sentry expects uncaught,
-     auth middleware expects throw —
-     https://runharbor.com/blog/2025-11-24-why-we-dont-use-effect-ts);
-     must-use enforcement requires an unofficial third-party ESLint plugin
-     *regardless* of library. Spendesk's hand-rolled outcome pattern +
-     never-guard (https://engineering.spendesk.com/posts/ts-error-handling/)
-     matches our house style. Effect rejected (onboarding cost, ecosystem
-     mismatch); neverthrow is the defensible fallback if heavy chaining
-     emerges.
-   - **Where Results beat exceptions** (convergent guidance): expected,
-     caller-branches-on-it failures → Result; invariant violations →
-     throw/crash, never launder into Err (Resnick: absorbing them as data
-     lets the program "continue indefinitely in this broken state");
-     infrastructure failures → split opinion, we keep throw (matches our
-     boundary handlers). No TS-core movement on typed throws.
-   - **Branding:** zod `.brand()` for anything crossing a validation
-     boundary (unifies validation + nominal typing; internal unique
-     symbol); strict unique-symbol brand for pure in-memory brands;
-     flavored/weak branding only as a transitional state. Brands are
-     runtime-erased: JSON round-trips fine, re-establish via parse at
-     every deserialization (consistent with research item 1). Log lines
-     can't show brands — pair failures with named error classes.
-   - **Wire-protocol union migration: no direct prior art found** (flagged
-     as inference): discriminant as top-level field; transitional
-     `old | new` union only if frontend/backend deploy independently —
-     check our actual deploy coupling (single-deploy would skip the
-     transitional state entirely) — and time-boxed via issues/ if used.
+2. **Result + branded types (Tracks B/C) — DONE.** Decisions:
+   - **Result: hand-rolled, no library.** `lib/result.ts` is ~20 lines: the
+     `MarkResult`-shaped two-arm union + `ok()`/`err()` constructors and at
+     most 2-3 helpers, added only when a third caller wants them. Rationale:
+     every Result library pays an interop tax at each throw-based boundary
+     (DB rollback, Sentry, framework middleware all expect throw —
+     documented by teams running neverthrow in production:
+     https://runharbor.com/blog/2025-11-24-why-we-dont-use-effect-ts), and
+     the one thing a library would buy us — must-use enforcement — is an
+     unofficial third-party ESLint plugin regardless of which library, so
+     the dependency buys combinator sugar we don't want and nothing we
+     need. Effect rejected outright. Precedent for exactly this choice:
+     https://engineering.spendesk.com/posts/ts-error-handling/.
+   - **Result consumption is enforced by review, not lint** (no
+     first-party must-use rule exists): Track O checklist item — a
+     Result-returning call whose `.ok` is never read is a defect. Revisit
+     as a custom lint rule if it recurs.
+   - **The Result/exception boundary is a rule, not a vibe:** failures the
+     caller branches on → Result. Broken invariants → throw (rule 4's
+     hard-failure case; wrapping them in `err` lets the program "continue
+     indefinitely in this broken state" —
+     https://medium.com/@ethanresnick/fixing-error-handling-in-typescript-340873a31ecd).
+     Infrastructure failures → throw (matches our existing boundary
+     handlers). No TS-core movement on typed throws — this division is
+     permanent, not transitional.
+   - **Branding: zod `.brand()` wherever a zod boundary already exists**
+     (one declaration = validation + nominal type); strict unique-symbol
+     brands for the rest; weak/"flavored" branding never as an end state.
+     Brands are runtime-erased — JSON round-trips unchanged, and every
+     deserialization re-establishes the brand via the producer (same
+     conclusion as research item 1). Log lines can't show brands, so
+     brand-check failures throw named error classes.
+   - **Wire-protocol union migration** (no direct prior art found —
+     reasoned, not sourced): discriminant stays a top-level field. Before
+     Track B's ChatMessage change, check deploy coupling in deploy.sh —
+     frontend and backend ship together, so the transitional
+     `old | new` dual-shape state should be skipped entirely; if some skew
+     window exists after all, the transitional union is time-boxed via an
+     issues/ entry.
 3. **Env module (Track D.8) — DONE.** Key results:
    - **Hand-rolled zod, no library.** t3-env's specialty (client/server
      bundler split) doesn't apply; envalid = second validation vocabulary +
@@ -635,7 +659,12 @@ seams universal and put tests where the churn is.
    (`engine-run-phase.ts:252`'s review-severity rule; registry refCount's
    `Math.max(0,…)`; search's write ordering). Apply surgically at
    internal should-never-happen sites only; user-facing checks stay error
-   results. `testing.md:608` already names this direction.
+   results. Behavior per rule 4: throw always in dev/test; in prod,
+   long-lived-server contexts may log-loudly-and-degrade while CLI
+   contexts still throw — the helper takes that stance once so call sites
+   don't each decide (and tests that exercise degradation paths can opt
+   into prod behavior explicitly). `testing.md:608` already names this
+   direction.
 2. **Clock adoption sweep:** 223 direct `Date.now()`/`new Date()` backend
    call sites bypass the existing stubbable abstraction
    (`cli/lib/time.ts`, `CB_TIME`, stubs.yaml). Sweep the time-sensitive
@@ -651,7 +680,10 @@ seams universal and put tests where the churn is.
 4. **Module-level mutable singletons** (`schema-watcher.ts:28`,
    `chat-turn-buffer.ts:119`, `box-file-watcher.ts:16`, `script-env.ts:45`,
    `command-runner.ts:73`): per-singleton `resetForTest()` or fold into an
-   owning class.
+   owning class. Per rule 10, test affordances are flag-gated: a
+   `resetForTest()` that isn't inert in prod (throws or no-ops unless the
+   test flag is set, following the `CB_TIME`/stubs pattern) is surface
+   area we don't ship.
 5. **Coverage priorities** (the shape is leaf-heavy/orchestration-light —
    inverted relative to risk): cheapest big win is pool/registry/
    thread-session tests using the fake-backend helpers that already exist
@@ -793,12 +825,16 @@ live bug).
 **Direction.** Add: logging-level policy (Track E), exhaustiveness rule
 (Track A — currently lint-enforced switch constraints are documented
 nowhere), async error-handling subsection (allSettled-vs-all,
-file-lock pointer), the defensiveness policy (Track N's scanner will draft
-it). Fix: replace "prefer explicit types where it aids readability" with the
-checkable "explicit return types on exported functions"; delete "use
-meaningful variable names" (filler); document the `.ts`/.`tsx` `as`-ban
-asymmetry decision from Track C. Also: the one-paragraph module-map doc after
-Track G lands, so future growth has a contract to check against.
+file-lock pointer), the defensiveness policy (Track N), and the lint
+suppression policy per rule 11: suppressions are infrequent, signaled,
+line-level only, justified in the comment — and a recurring legitimate
+exception gets encoded into the rule itself (personal-vibe-check is ours
+to extend) instead of accumulating disables. Fix: replace "prefer explicit
+types where it aids readability" with the checkable "explicit return types
+on exported functions"; delete "use meaningful variable names" (filler);
+document the `.ts`/.`tsx` `as`-ban asymmetry decision from Track C. Also:
+the one-paragraph module-map doc after Track G lands, so future growth has
+a contract to check against.
 
 **Traces to:** rule 11.
 
