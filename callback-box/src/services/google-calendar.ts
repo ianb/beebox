@@ -8,6 +8,12 @@
 import ky, { type HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 import { NotFoundError } from "../lib/errors.js";
+import { validateResponse } from "./connector-response.js";
+import {
+  calendarListSchema,
+  calendarEventsListSchema,
+  calendarEventSchema,
+} from "./google-calendar-schemas.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -89,6 +95,7 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
         const data = await api
           .get("users/me/calendarList", { searchParams })
           .json<{ items?: CalendarListEntry[]; nextPageToken?: string }>();
+        validateResponse(data, { schema: calendarListSchema, service: "calendar", operation: "listCalendars" });
         if (data.items) items.push(...data.items);
         pageToken = data.nextPageToken;
       } while (pageToken);
@@ -108,24 +115,30 @@ export function createGoogleCalendarService(auth: GoogleAuthService): GoogleCale
       }
       if (opts?.pageToken) searchParams["pageToken"] = opts.pageToken;
 
-      return api
+      const data = await api
         .get(`calendars/${encodeURIComponent(calendarId)}/events`, { searchParams })
         .json<EventsListResult>();
+      validateResponse(data, { schema: calendarEventsListSchema, service: "calendar", operation: "listEvents" });
+      return data;
     },
 
     async insertEvent(calendarId, event) {
-      return api
+      const data = await api
         .post(`calendars/${encodeURIComponent(calendarId)}/events`, { json: event })
         .json<CalendarEvent>();
+      validateResponse(data, { schema: calendarEventSchema, service: "calendar", operation: "insertEvent" });
+      return data;
     },
 
     async patchEvent(calendarId, { eventId, event }) {
-      return api
+      const data = await api
         .patch(
           `calendars/${encodeURIComponent(calendarId)}/events/${encodeURIComponent(eventId)}`,
           { json: event },
         )
         .json<CalendarEvent>();
+      validateResponse(data, { schema: calendarEventSchema, service: "calendar", operation: "patchEvent" });
+      return data;
     },
 
     async deleteEvent(calendarId, eventId) {

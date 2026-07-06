@@ -17,6 +17,7 @@ import {
   extractMessage,
   type TelegramUpdate,
 } from "../../connectors/telegram.js";
+import { telegramUpdateSchema } from "../../connectors/telegram-schemas.js";
 import { ChatSessionPool } from "../../core/chat-session-pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
 import { appendMessageToThread } from "../../connectors/chat-utils.js";
@@ -46,12 +47,14 @@ export async function registerTelegramRoutes(opts: RegisterTelegramRoutesOptions
       return reply.status(403).send({ error: "Invalid secret token" });
     }
 
-    const body = request.body as Record<string, unknown>;
-    if (!body || typeof body.update_id !== "number") {
+    // Validate the untyped webhook body once, at the boundary (Track D.2): a
+    // shape that doesn't match the narrow update schema is rejected loudly
+    // instead of casting through to silent undefineds downstream.
+    const parsed = telegramUpdateSchema.safeParse(request.body);
+    if (!parsed.success) {
       return reply.status(400).send({ error: "Invalid update" });
     }
-
-    const update = body as unknown as TelegramUpdate;
+    const update: TelegramUpdate = parsed.data;
     const extracted = extractMessage(update);
     if (!extracted) {
       return reply.status(200).send({ ok: true });

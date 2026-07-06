@@ -9,97 +9,32 @@ import ky, { HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 import { NotFoundError } from "../lib/errors.js";
 import { messageMatchesQuery } from "./gmail-query-match.js";
+import { validateResponse } from "./connector-response.js";
+import {
+  gmailListMessagesSchema,
+  gmailMessageSchema,
+  gmailAttachmentDataSchema,
+  gmailListLabelsSchema,
+  gmailProfileSchema,
+  gmailListHistorySchema,
+  gmailDraftSchema,
+} from "./google-gmail-schemas.js";
+import type {
+  GmailMessageRef,
+  GmailMessage,
+  GmailAttachmentData,
+  GmailLabel,
+  GmailProfile,
+  GmailDraft,
+  GmailHistoryMessageStub,
+  GmailHistoryRecord,
+  ListMessagesResult,
+  ListHistoryResult,
+} from "./google-gmail-types.js";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
-
-export interface GmailMessageRef {
-  id: string;
-  threadId: string;
-}
-
-export interface GmailHeader {
-  name: string;
-  value: string;
-}
-
-export interface GmailBody {
-  data?: string;
-  size?: number;
-  attachmentId?: string;
-}
-
-export interface GmailPayload {
-  partId?: string;
-  mimeType?: string;
-  filename?: string;
-  headers?: GmailHeader[];
-  body?: GmailBody;
-  parts?: GmailPayload[];
-}
-
-export interface GmailMessage {
-  id: string;
-  threadId: string;
-  labelIds?: string[];
-  snippet?: string;
-  /** Epoch ms as a string (Gmail API quirk) */
-  internalDate?: string;
-  payload?: GmailPayload;
-}
-
-export interface GmailAttachmentData {
-  /** base64url-encoded attachment bytes */
-  data: string;
-  size: number;
-}
-
-export interface GmailLabel {
-  id: string;
-  name: string;
-  /** "system" for built-ins like INBOX, "user" for user-created labels */
-  type?: string;
-}
-
-export interface ListMessagesResult {
-  messages: GmailMessageRef[];
-  nextPageToken?: string;
-}
-
-export interface GmailDraft {
-  /** API draft id (e.g. "r-1234567890"); used to update or delete. */
-  id: string;
-  message: {
-    id: string;
-    threadId: string;
-    labelIds?: string[];
-  };
-}
-
-export interface GmailProfile {
-  emailAddress: string;
-  /** Current mailbox history checkpoint (numeric string). */
-  historyId: string;
-}
-
-/** Message stub as it appears inside history records. */
-export interface GmailHistoryMessageStub {
-  id: string;
-  threadId: string;
-  labelIds?: string[];
-}
-
-export interface GmailHistoryRecord {
-  id: string;
-  messagesAdded?: Array<{ message: GmailHistoryMessageStub }>;
-  labelsAdded?: Array<{ message: GmailHistoryMessageStub; labelIds: string[] }>;
-}
-
-export interface ListHistoryResult {
-  history: GmailHistoryRecord[];
-  /** Current mailbox history checkpoint — store and pass back next time. */
-  historyId: string;
-  nextPageToken?: string;
-}
+// Raw-response types live in google-gmail-types.ts; re-export so existing
+// `./google-gmail.js` type imports keep resolving.
+export type * from "./google-gmail-types.js";
 
 // ─── Service interface ───────────────────────────────────────────────────────
 
@@ -167,36 +102,44 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
       const data = await api
         .get("users/me/messages", { searchParams })
         .json<{ messages?: GmailMessageRef[]; nextPageToken?: string }>();
+      validateResponse(data, { schema: gmailListMessagesSchema, service: "gmail", operation: "listMessages" });
       const result: ListMessagesResult = { messages: data.messages ?? [] };
       if (data.nextPageToken) result.nextPageToken = data.nextPageToken;
       return result;
     },
 
     async getMessage(id) {
-      return api
+      const data = await api
         .get(`users/me/messages/${encodeURIComponent(id)}`, {
           searchParams: { format: "full" },
         })
         .json<GmailMessage>();
+      validateResponse(data, { schema: gmailMessageSchema, service: "gmail", operation: "getMessage" });
+      return data;
     },
 
     async getAttachment(messageId, attachmentId) {
-      return api
+      const data = await api
         .get(
           `users/me/messages/${encodeURIComponent(messageId)}/attachments/${encodeURIComponent(attachmentId)}`,
         )
         .json<GmailAttachmentData>();
+      validateResponse(data, { schema: gmailAttachmentDataSchema, service: "gmail", operation: "getAttachment" });
+      return data;
     },
 
     async listLabels() {
       const data = await api
         .get("users/me/labels")
         .json<{ labels?: GmailLabel[] }>();
+      validateResponse(data, { schema: gmailListLabelsSchema, service: "gmail", operation: "listLabels" });
       return data.labels ?? [];
     },
 
     async getProfile() {
-      return api.get("users/me/profile").json<GmailProfile>();
+      const data = await api.get("users/me/profile").json<GmailProfile>();
+      validateResponse(data, { schema: gmailProfileSchema, service: "gmail", operation: "getProfile" });
+      return data;
     },
 
     async listHistory(opts) {
@@ -214,6 +157,7 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
             historyId: string;
             nextPageToken?: string;
           }>();
+        validateResponse(data, { schema: gmailListHistorySchema, service: "gmail", operation: "listHistory" });
         const result: ListHistoryResult = {
           history: data.history ?? [],
           historyId: data.historyId,
@@ -232,9 +176,11 @@ export function createGoogleGmailService(auth: GoogleAuthService): GoogleGmailSe
     async createDraft(opts) {
       const message: { raw: string; threadId?: string } = { raw: opts.raw };
       if (opts.threadId) message.threadId = opts.threadId;
-      return api
+      const data = await api
         .post("users/me/drafts", { json: { message } })
         .json<GmailDraft>();
+      validateResponse(data, { schema: gmailDraftSchema, service: "gmail", operation: "createDraft" });
+      return data;
     },
   };
 }

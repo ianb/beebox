@@ -22,12 +22,14 @@ export interface TelegramMessageObj {
     title?: string | undefined;
     type: string;
   };
-  from?: {
-    id: number;
-    first_name: string;
-    last_name?: string | undefined;
-    username?: string | undefined;
-  };
+  from?:
+    | {
+        id: number;
+        first_name: string;
+        last_name?: string | undefined;
+        username?: string | undefined;
+      }
+    | undefined;
   text?: string | undefined;
   caption?: string | undefined;
 }
@@ -35,6 +37,6 @@ export interface TelegramMessageObj {
 /** Shape of the update objects we accept (from webhook or getUpdates). */
 export interface TelegramUpdate {
   update_id: number;
-  message?: TelegramMessageObj;
-  edited_message?: TelegramMessageObj;
+  message?: TelegramMessageObj | undefined;
+  edited_message?: TelegramMessageObj | undefined;
 }
