@@ -15,6 +15,7 @@ import {
   joinSegmentTexts,
   repairMissingSentenceSpaces,
 } from "./transcription-voxtral-text.js";
+import { buildMultipartForm, type MultipartPart } from "../lib/multipart.js";
 
 const VOXTRAL_MODEL = "voxtral-mini-latest";
 
@@ -51,14 +52,6 @@ function getContentType(ext: string | undefined): string {
   }
 }
 
-function fieldPart(boundary: string, { name, value }: { name: string; value: string }): Buffer {
-  return Buffer.from(
-    `--${boundary}\r\n` +
-      `Content-Disposition: form-data; name="${name}"\r\n\r\n` +
-      `${value}\r\n`
-  );
-}
-
 // timestamp_granularities — `word` for per-word timing, `segment` for
 // diarization (Mistral requires segment granularity when diarize=true;
 // without it the API returns 422). Word timestamps and diarization are
@@ -83,44 +76,33 @@ export function buildVoxtralRequestBody(
   const ext = filename.split(".").pop()?.toLowerCase();
   const contentType = getContentType(ext);
 
-  const boundary =
-    "----FormBoundary" + Math.random().toString(36).substring(2);
-  const formParts: Buffer[] = [];
-
-  // Add file field
-  formParts.push(
-    Buffer.from(
-      `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-        `Content-Type: ${contentType}\r\n\r\n`
-    )
-  );
-  formParts.push(audioBuffer);
-  formParts.push(Buffer.from("\r\n"));
-
-  formParts.push(fieldPart(boundary, { name: "model", value: VOXTRAL_MODEL }));
+  const parts: MultipartPart[] = [
+    {
+      kind: "file",
+      file: { name: "file", filename, contentType, data: audioBuffer },
+    },
+    { kind: "field", field: { name: "model", value: VOXTRAL_MODEL } },
+  ];
 
   const wordTimestamps = options?.wordTimestamps === true;
   const granularity = granularityFor({ wordTimestamps, diarization });
   if (granularity) {
-    formParts.push(fieldPart(boundary, { name: "timestamp_granularities", value: granularity }));
+    parts.push({ kind: "field", field: { name: "timestamp_granularities", value: granularity } });
   }
 
   // Diarization flag. Mistral's parameter is `diarize` (not `diarization`)
   // — sending the wrong name is silently ignored and you get an
   // unlabeled transcript back.
   if (diarization && !wordTimestamps) {
-    formParts.push(fieldPart(boundary, { name: "diarize", value: "true" }));
+    parts.push({ kind: "field", field: { name: "diarize", value: "true" } });
   }
 
   // Add context_bias if prompt provided (Voxtral's equivalent of Whisper's prompt)
   if (prompt) {
-    formParts.push(fieldPart(boundary, { name: "context_bias", value: prompt }));
+    parts.push({ kind: "field", field: { name: "context_bias", value: prompt } });
   }
 
-  formParts.push(Buffer.from(`--${boundary}--\r\n`));
-
-  return { body: Buffer.concat(formParts), boundary };
+  return buildMultipartForm(parts);
 }
 
 /**

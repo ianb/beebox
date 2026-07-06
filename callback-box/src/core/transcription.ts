@@ -9,6 +9,7 @@ import ky, { type HTTPError } from "ky";
 import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
 import { transcribeAudioDeepgram } from "./transcription-deepgram.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { buildMultipartForm, type MultipartPart } from "../lib/multipart.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -268,64 +269,30 @@ async function transcribeAudioWhisper(
   const contentType = getContentType(ext);
 
   // Build multipart form data
-  const boundary = "----FormBoundary" + Math.random().toString(36).substring(2);
-  const formParts: Buffer[] = [];
+  const parts: MultipartPart[] = [
+    {
+      kind: "file",
+      file: { name: "file", filename, contentType, data: audioBuffer },
+    },
+    { kind: "field", field: { name: "model", value: model } },
+    // response_format field. LLM models only support `json`.
+    {
+      kind: "field",
+      field: { name: "response_format", value: isLlm ? "json" : "verbose_json" },
+    },
+  ];
 
-  // Add file field
-  formParts.push(
-    Buffer.from(
-      `--${boundary}\r\n` +
-        `Content-Disposition: form-data; name="file"; filename="${filename}"\r\n` +
-        `Content-Type: ${contentType}\r\n\r\n`
-    )
-  );
-  formParts.push(audioBuffer);
-  formParts.push(Buffer.from("\r\n"));
-
-  // Add model field
-  formParts.push(
-    Buffer.from(
-      `--${boundary}\r\n` +
-        "Content-Disposition: form-data; name=\"model\"\r\n\r\n" +
-        `${model}\r\n`
-    )
-  );
-
-  // Add response_format field. LLM models only support `json`.
-  formParts.push(
-    Buffer.from(
-      `--${boundary}\r\n` +
-        "Content-Disposition: form-data; name=\"response_format\"\r\n\r\n" +
-        `${isLlm ? "json" : "verbose_json"}\r\n`
-    )
-  );
-
-  // timestamp_granularities is whisper-1 only; the LLM models reject it.
+  // timestamp_granularities[] is whisper-1 only; the LLM models reject it.
   if (!isLlm && options?.wordTimestamps) {
-    formParts.push(
-      Buffer.from(
-        `--${boundary}\r\n` +
-          "Content-Disposition: form-data; name=\"timestamp_granularities[]\"\r\n\r\n" +
-          "word\r\n"
-      )
-    );
+    parts.push({ kind: "field", field: { name: "timestamp_granularities[]", value: "word" } });
   }
 
   // Add prompt if provided
   if (prompt) {
-    formParts.push(
-      Buffer.from(
-        `--${boundary}\r\n` +
-          "Content-Disposition: form-data; name=\"prompt\"\r\n\r\n" +
-          `${prompt}\r\n`
-      )
-    );
+    parts.push({ kind: "field", field: { name: "prompt", value: prompt } });
   }
 
-  // End boundary
-  formParts.push(Buffer.from(`--${boundary}--\r\n`));
-
-  const body = Buffer.concat(formParts);
+  const { body, boundary } = buildMultipartForm(parts);
 
   try {
     const result = await ky
