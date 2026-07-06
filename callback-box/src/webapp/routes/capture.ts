@@ -19,8 +19,7 @@ import {
   readSession,
   writeSession,
   withSessionLock,
-  releaseSessionLock,
-  cleanupDir,
+  cleanupSession,
 } from "./capture-session-store.js";
 import { finalizeSession } from "./capture-finalize.js";
 
@@ -134,8 +133,7 @@ export async function registerCaptureRoutes(
     if (!session) {
       return reply.status(404).send({ error: "Session not found" });
     }
-    await cleanupDir(sessionDir(session.id));
-    releaseSessionLock(session.id);
+    await cleanupSession(session.id);
     return { success: true };
   });
 

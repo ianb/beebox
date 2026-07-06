@@ -11,6 +11,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 import { parseCardText, serializeCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { withCardLock } from "../../../lib/card-lock.js";
 import { type TodoItem, type TodoItemStatusType, type TodoListFields } from "../../../schemas/todo-list.js";
 
 /**
@@ -55,38 +56,43 @@ export const todosRouter = router({
       }
 
       const fullPath = path.join(ctx.boxRoot, input.listPath);
-      let content: string;
-      try {
-        content = await fs.readFile(fullPath, "utf8");
-      } catch (_e) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Todo list not found: ${input.listPath}` });
-      }
 
-      const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
-      let parsed;
-      try {
-        parsed = parseCardText(content, { source: fullPath, schemas: cardSchemas, type: "todo-list" });
-      } catch (e) {
-        throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid todo list: ${(e as Error).message}` });
-      }
+      // Serialize the read-modify-write so two concurrent updates to the same
+      // list can't both read the pre-mutation card and drop one's change.
+      return withCardLock(fullPath, async () => {
+        let content: string;
+        try {
+          content = await fs.readFile(fullPath, "utf8");
+        } catch (_e) {
+          throw new TRPCError({ code: "NOT_FOUND", message: `Todo list not found: ${input.listPath}` });
+        }
 
-      // parseCardText validated the fields against TodoListSchema, so the
-      // shape conforms to TodoListFields — this is the parse boundary.
-      const fields = parsed.fields as unknown as TodoListFields;
-      const found =
-        fields.items !== undefined &&
-        updateInItems({ items: fields.items, itemName: input.itemName, status: input.status });
-      if (!found) {
-        throw new TRPCError({ code: "NOT_FOUND", message: `Item not found: ${input.itemName}` });
-      }
+        const cardSchemas = await createCardSchemaMap(ctx.boxRoot);
+        let parsed;
+        try {
+          parsed = parseCardText(content, { source: fullPath, schemas: cardSchemas, type: "todo-list" });
+        } catch (e) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid todo list: ${(e as Error).message}` });
+        }
 
-      await fs.writeFile(fullPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
-      await stageFiles(ctx.boxRoot, [input.listPath]);
-      await commit(ctx.boxRoot, {
-        message: `Update todo item "${input.itemName}" to ${input.status}`,
-        trailers: { Source: "webapp", Endpoint: "todos.updateItem" },
+        // parseCardText validated the fields against TodoListSchema, so the
+        // shape conforms to TodoListFields — this is the parse boundary.
+        const fields = parsed.fields as unknown as TodoListFields;
+        const found =
+          fields.items !== undefined &&
+          updateInItems({ items: fields.items, itemName: input.itemName, status: input.status });
+        if (!found) {
+          throw new TRPCError({ code: "NOT_FOUND", message: `Item not found: ${input.itemName}` });
+        }
+
+        await fs.writeFile(fullPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
+        await stageFiles(ctx.boxRoot, [input.listPath]);
+        await commit(ctx.boxRoot, {
+          message: `Update todo item "${input.itemName}" to ${input.status}`,
+          trailers: { Source: "webapp", Endpoint: "todos.updateItem" },
+        });
+
+        return { success: true };
       });
-
-      return { success: true };
     }),
 });

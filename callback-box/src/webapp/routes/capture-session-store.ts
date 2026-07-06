@@ -67,7 +67,7 @@ export async function withSessionLock<T>(id: string, fn: () => Promise<T>): Prom
   return done;
 }
 
-export function releaseSessionLock(id: string): void {
+function releaseSessionLock(id: string): void {
   sessionLocks.delete(id);
 }
 
@@ -77,4 +77,17 @@ export async function cleanupDir(dir: string): Promise<void> {
   } catch (e) {
     console.error(`[capture] Failed to clean up dir ${dir}:`, e);
   }
+}
+
+/**
+ * Tear down a session: remove its temp dir AND drop its lock-map entry in one
+ * step. Releasing is bundled with cleanup so the in-process lock can't outlive
+ * the session — every teardown path (finalize, empty-finalize, cancel/delete)
+ * goes through here rather than releasing the lock separately (which was easy
+ * to forget: the empty-session finalize path used to clean up but leak the
+ * lock entry forever).
+ */
+export async function cleanupSession(id: string): Promise<void> {
+  await cleanupDir(sessionDir(id));
+  releaseSessionLock(id);
 }

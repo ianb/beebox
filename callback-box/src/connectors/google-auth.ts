@@ -12,6 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { OAuth2Client } from "google-auth-library";
+import { withCardLock } from "../lib/card-lock.js";
 
 class NoTokenStoragePathError extends Error {
   constructor() {
@@ -119,22 +120,28 @@ export async function saveGoogleTokens(
     throw new NoTokenStoragePathError();
   }
 
-  let existing: GoogleTokens = {};
-  try {
-    const content = await fs.readFile(targetPath, "utf-8");
-    existing = JSON.parse(content);
-  } catch (e) {
-    // No existing tokens file (or unreadable) — start fresh and merge into {}.
-    // Log at debug so a real read/parse error is still visible.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-      console.debug("Could not read existing Google tokens file, starting fresh:", e);
+  // Serialize the read-merge-write on the token file. The OAuth callback and
+  // the auto-refresh `tokens` event handler both call this with PARTIAL
+  // updates; without the lock a concurrent access-token save and refresh-token
+  // save can each read the old file and drop the other's field.
+  await withCardLock(targetPath, async () => {
+    let existing: GoogleTokens = {};
+    try {
+      const content = await fs.readFile(targetPath, "utf-8");
+      existing = JSON.parse(content);
+    } catch (e) {
+      // No existing tokens file (or unreadable) — start fresh and merge into {}.
+      // Log at debug so a real read/parse error is still visible.
+      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        console.debug("Could not read existing Google tokens file, starting fresh:", e);
+      }
     }
-  }
 
-  const merged = { ...existing, ...updates };
-  const dir = path.dirname(targetPath);
-  await fs.mkdir(dir, { recursive: true });
-  await fs.writeFile(targetPath, JSON.stringify(merged, null, 2));
+    const merged = { ...existing, ...updates };
+    const dir = path.dirname(targetPath);
+    await fs.mkdir(dir, { recursive: true });
+    await fs.writeFile(targetPath, JSON.stringify(merged, null, 2));
+  });
 }
 
 /**

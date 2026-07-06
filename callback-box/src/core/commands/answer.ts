@@ -14,6 +14,7 @@ import {
 } from "../command-runner.js";
 import { boxPath, isCardFile } from "../../cli/lib/paths.js";
 import { stageFiles, commit } from "../../cli/lib/git.js";
+import { withCardLock } from "../../lib/card-lock.js";
 import { parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type QuestionFields } from "../../schemas/question.js";
@@ -228,40 +229,58 @@ async function executeAnswer(
     return { success: false, error: "Path must be a card file (*.card)" };
   }
 
-  const loaded = await loadPendingQuestion(fullPath, answerArgs.question);
-  if (!loaded.ok) {
-    return loaded.result;
-  }
-  const { fields, content } = loaded;
+  // Serialize the read-modify-write on the question card so two concurrent
+  // answers (e.g. web + CLI) can't both read the pending card and race their
+  // writes. The whole read-through-commit runs under the lock; the follow-up
+  // job below writes a different file and stays outside it.
+  const outcome = await withCardLock(
+    fullPath,
+    async (): Promise<
+      | { ok: false; result: CommandResult }
+      | { ok: true; relativePath: string; finalAnswer: string; selectedId?: string; fields: QuestionFields }
+    > => {
+      const loaded = await loadPendingQuestion(fullPath, answerArgs.question);
+      if (!loaded.ok) {
+        return { ok: false, result: loaded.result };
+      }
+      const { fields, content } = loaded;
 
-  const resolved = resolveAnswer(fields, {
-    answer: answerArgs.answer,
-    selectedId: answerArgs.selectedId,
-  });
-  if (!resolved.ok) {
-    return resolved.result;
-  }
-  const { finalAnswer, selectedId } = resolved;
+      const resolved = resolveAnswer(fields, {
+        answer: answerArgs.answer,
+        selectedId: answerArgs.selectedId,
+      });
+      if (!resolved.ok) {
+        return { ok: false, result: resolved.result };
+      }
+      const { finalAnswer, selectedId } = resolved;
 
-  fields.status = "answered";
-  fields.answer = {
-    text: finalAnswer,
-    ...(selectedId !== undefined && { selected: selectedId }),
-  };
-  fields["answered-at"] = new Date().toISOString();
-  fields["answered-via"] = via as "web" | "cli" | "api";
+      fields.status = "answered";
+      fields.answer = {
+        text: finalAnswer,
+        ...(selectedId !== undefined && { selected: selectedId }),
+      };
+      fields["answered-at"] = new Date().toISOString();
+      fields["answered-via"] = via as "web" | "cli" | "api";
 
-  const split = splitCardContent(content);
-  await fs.writeFile(fullPath, renderFrontmatterBlock(fields, split.body));
+      const split = splitCardContent(content);
+      await fs.writeFile(fullPath, renderFrontmatterBlock(fields, split.body));
 
-  const relativePath = path.relative(ctx.boxRoot, fullPath);
-  await stageFiles(ctx.boxRoot, [relativePath]);
-  await commit(ctx.boxRoot, {
-    message: `Answer question: ${path.basename(answerArgs.question, ".card")}`,
-    trailers: {
-      "Answered-Via": via,
+      const relativePath = path.relative(ctx.boxRoot, fullPath);
+      await stageFiles(ctx.boxRoot, [relativePath]);
+      await commit(ctx.boxRoot, {
+        message: `Answer question: ${path.basename(answerArgs.question, ".card")}`,
+        trailers: {
+          "Answered-Via": via,
+        },
+      });
+
+      return { ok: true, relativePath, finalAnswer, ...(selectedId !== undefined && { selectedId }), fields };
     },
-  });
+  );
+  if (!outcome.ok) {
+    return outcome.result;
+  }
+  const { relativePath, finalAnswer, selectedId, fields } = outcome;
 
   ctx.writeLine(`Answered: ${relativePath}`);
   ctx.writeLine(`  Answer: ${finalAnswer}`);

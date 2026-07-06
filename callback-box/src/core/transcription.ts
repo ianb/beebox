@@ -8,6 +8,7 @@ import * as path from "node:path";
 import ky, { type HTTPError } from "ky";
 import { transcribeAudioVoxtral } from "./transcription-voxtral.js";
 import { transcribeAudioDeepgram } from "./transcription-deepgram.js";
+import { withCardLock } from "../lib/card-lock.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -171,24 +172,28 @@ export async function updateTranscriptionConfig(
   updates: Partial<StoredTranscriptionConfig>,
 ): Promise<TranscriptionConfig> {
   const configPath = path.join(boxRoot, "config/transcription.json");
-  let current: StoredTranscriptionConfig = {};
-  let content: string | null = null;
-  try {
-    content = await fs.readFile(configPath, "utf-8");
-  } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
-    // No file yet — start fresh.
-  }
-  if (content !== null) {
-    // Parse errors are a real bug — let them bubble rather than silently
-    // overwriting a corrupted config.
-    current = JSON.parse(content) as StoredTranscriptionConfig;
-  }
-  const merged: StoredTranscriptionConfig = { ...current, ...updates };
-  await fs.mkdir(path.dirname(configPath), { recursive: true });
-  await fs.writeFile(configPath, JSON.stringify(merged, null, 2) + "\n");
-  return loadTranscriptionConfig(boxRoot);
+  // Serialize the read-merge-write so concurrent setService/setHqService
+  // updates can't both read the old config and drop one's change.
+  return withCardLock(configPath, async () => {
+    let current: StoredTranscriptionConfig = {};
+    let content: string | null = null;
+    try {
+      content = await fs.readFile(configPath, "utf-8");
+    } catch (e) {
+      const err = e as NodeJS.ErrnoException;
+      if (err.code !== "ENOENT") throw e;
+      // No file yet — start fresh.
+    }
+    if (content !== null) {
+      // Parse errors are a real bug — let them bubble rather than silently
+      // overwriting a corrupted config.
+      current = JSON.parse(content) as StoredTranscriptionConfig;
+    }
+    const merged: StoredTranscriptionConfig = { ...current, ...updates };
+    await fs.mkdir(path.dirname(configPath), { recursive: true });
+    await fs.writeFile(configPath, JSON.stringify(merged, null, 2) + "\n");
+    return loadTranscriptionConfig(boxRoot);
+  });
 }
 
 /**

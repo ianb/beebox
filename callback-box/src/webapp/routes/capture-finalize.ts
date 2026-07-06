@@ -16,7 +16,7 @@ import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script.js";
 import type { CaptureFile, CaptureSessionData } from "./capture-session-store.js";
-import { sessionDir, cleanupDir, releaseSessionLock } from "./capture-session-store.js";
+import { sessionDir, cleanupSession } from "./capture-session-store.js";
 
 interface FinalizeResult {
   cards: string[];
@@ -237,7 +237,7 @@ export async function finalizeSession(opts: {
   const tmpDir = sessionDir(session.id);
 
   if (session.files.length === 0) {
-    await cleanupDir(tmpDir);
+    await cleanupSession(session.id);
     return { cards: [] };
   }
 
@@ -291,9 +291,8 @@ export async function finalizeSession(opts: {
   // Create one-shot scheduled script to trigger process-captures on next wakeup
   await createProcessCapturesTrigger(boxRoot);
 
-  // Clean up temp dir
-  await cleanupDir(tmpDir);
-  releaseSessionLock(session.id);
+  // Clean up temp dir and release the session lock together.
+  await cleanupSession(session.id);
 
   const sessionCardRelPath = `${inboxRelDir}/${sessionCardFilename}`;
   console.log(`[capture] Created capture session: ${sessionCardRelPath}`);

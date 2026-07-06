@@ -17,6 +17,7 @@ import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./scheduler-run.js";
+import { withCardLock } from "../../../lib/card-lock.js";
 
 export type { ScheduleEntry };
 
@@ -110,27 +111,31 @@ export const schedulerRouter = router({
         throw new TRPCError({ code: "NOT_FOUND", message: `Schedule not found: ${input.name}` });
       }
 
-      const content = await fs.readFile(fullPath, "utf-8");
-      const split = splitCardContent(content);
-      if (!split.hasFrontmatter) {
-        throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Schedule "${input.name}" has no frontmatter` });
-      }
-      const fm = parseYaml(split.frontmatterText) as Record<string, unknown>;
-      if (input.enabled) {
-        delete fm["enabled"];
-      } else {
-        fm["enabled"] = false;
-      }
-      await fs.writeFile(fullPath, renderFrontmatterBlock(fm, split.body));
+      // Serialize the read-modify-write on the schedule card so concurrent
+      // enable/disable toggles can't clobber each other.
+      return withCardLock(fullPath, async () => {
+        const content = await fs.readFile(fullPath, "utf-8");
+        const split = splitCardContent(content);
+        if (!split.hasFrontmatter) {
+          throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Schedule "${input.name}" has no frontmatter` });
+        }
+        const fm = parseYaml(split.frontmatterText) as Record<string, unknown>;
+        if (input.enabled) {
+          delete fm["enabled"];
+        } else {
+          fm["enabled"] = false;
+        }
+        await fs.writeFile(fullPath, renderFrontmatterBlock(fm, split.body));
 
-      const action = input.enabled ? "Enable" : "Disable";
-      await stageFiles(ctx.boxRoot, [relPath]);
-      await commit(ctx.boxRoot, {
-        message: `${action} schedule: ${input.name}`,
-        trailers: { "Source": "webapp", "Endpoint": "scheduler.setEnabled" },
+        const action = input.enabled ? "Enable" : "Disable";
+        await stageFiles(ctx.boxRoot, [relPath]);
+        await commit(ctx.boxRoot, {
+          message: `${action} schedule: ${input.name}`,
+          trailers: { "Source": "webapp", "Endpoint": "scheduler.setEnabled" },
+        });
+
+        return { enabled: input.enabled };
       });
-
-      return { enabled: input.enabled };
     }),
 
   trigger: publicProcedure

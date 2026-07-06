@@ -10,6 +10,7 @@ import { createClaudeCliService } from "../../../services/claude-cli.js";
 import { stageFiles, commit } from "../../../cli/lib/git.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
+import { withCardLock } from "../../../lib/card-lock.js";
 
 /**
  * Per-box admin router (Telegram, box config).
@@ -217,36 +218,41 @@ export const adminRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       const configPath = path.join(ctx.boxRoot, "config/box.json");
-      let existing: Record<string, unknown> = {};
-      try {
-        existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
-          console.debug("box.json missing or unreadable, starting fresh config:", e);
+
+      // Serialize the read-merge-write on box.json so a concurrent
+      // allowedEmails update and a googleServices update can't drop one.
+      return withCardLock(configPath, async () => {
+        let existing: Record<string, unknown> = {};
+        try {
+          existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            console.debug("box.json missing or unreadable, starting fresh config:", e);
+          }
         }
-      }
 
-      const changed: string[] = [];
-      if (input.allowedEmails) {
-        existing.allowedEmails = input.allowedEmails.filter(
-          (e) => typeof e === "string" && e.includes("@"),
-        );
-        changed.push("allowedEmails");
-      }
-      if (input.googleServices) {
-        existing.googleServices = input.googleServices;
-        changed.push("googleServices");
-      }
-      await fs.mkdir(path.dirname(configPath), { recursive: true });
-      await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
-      await stageFiles(ctx.boxRoot, ["config/box.json"]);
-      await commit(ctx.boxRoot, { message: `Update box config: ${changed.join(", ")}` });
+        const changed: string[] = [];
+        if (input.allowedEmails) {
+          existing.allowedEmails = input.allowedEmails.filter(
+            (e) => typeof e === "string" && e.includes("@"),
+          );
+          changed.push("allowedEmails");
+        }
+        if (input.googleServices) {
+          existing.googleServices = input.googleServices;
+          changed.push("googleServices");
+        }
+        await fs.mkdir(path.dirname(configPath), { recursive: true });
+        await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
+        await stageFiles(ctx.boxRoot, ["config/box.json"]);
+        await commit(ctx.boxRoot, { message: `Update box config: ${changed.join(", ")}` });
 
-      return {
-        success: true,
-        allowedEmails: (existing.allowedEmails ?? []) as string[],
-        googleServices: (existing.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
-      };
+        return {
+          success: true,
+          allowedEmails: (existing.allowedEmails ?? []) as string[],
+          googleServices: (existing.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
+        };
+      });
     }),
 
   ...googleAdminProcedures,

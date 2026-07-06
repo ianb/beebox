@@ -49,7 +49,37 @@
  * In-process async serialization (e.g. capture.ts's per-session promise
  * chain) is a different problem — there's no other process to coordinate
  * with, only concurrent async tasks within one Node process. Use a
- * `Map<id, Promise>` for that, not file locks.
+ * `Map<id, Promise>` for that, not file locks (see `card-lock.ts` and
+ * `capture-session-store.ts`).
+ *
+ * ## Lock table (every lock in the system)
+ *
+ * Consult this before adding a lock so the new one has an ordering
+ * convention to fit into. "cross-proc" = this file's PID-based file lock;
+ * "in-proc" = a `Map<key, Promise>` chain within one Node process.
+ *
+ * | Lock | Kind | Path / key | Scope (what it guards) | Held by | Typical hold |
+ * |------|------|-----------|------------------------|---------|-------------|
+ * | Reactor mutex | cross-proc | `<box>/.cb-reactor.lock` | one reactor cycle per box | reactor engine (`cb wakeup`) | one cycle (s–min) |
+ * | Scheduled-script | cross-proc | `<box>/config/schedules/.state/<script>.lock` (+ lock-group ids) | one run per script / lock-group | scheduler (`cb tick`, `scheduler.trigger`) | one script run |
+ * | Chat-active | cross-proc | `<box>/.callback-box/active-chats/<runId>.lock` | signals a live SDK chat run so tick/housekeeping defer | `ChatSession` run | one SDK chat turn |
+ * | Push store | cross-proc | `<pushStoreDir>/push-subscriptions.json.lock` | server-wide subscription store RMW | push subscribe/unsubscribe | single RMW (ms) |
+ * | Search index | cross-proc | `<box>/.callback-box/<lock file>` | index refresh serialization | `search/refresh.ts` | one index rebuild |
+ * | Capture session | in-proc (`withSessionLock`) | session id | per-`session.json` RMW (concurrent uploads) | capture upload route; entry dropped by `cleanupSession` | single RMW |
+ * | Card write | in-proc (`withCardLock`) | `path.resolve(file)` | per-file card/config read-modify-write within one process | tRPC mutations (todos/scheduler/admin), connector thread writes, `answer`/`transcription` core; map self-drains | single RMW |
+ * | Git index | git-owned | `<box>/.git/index.lock` | staging/commit | any `git commit` (not ours) | retried once on collision (`cli/lib/git.ts`) |
+ *
+ * Ordering notes. The cross-process and in-process tiers are orthogonal —
+ * different failure models, no shared key space. In-process: `withCardLock`
+ * is per file; never nest it on the *same* path (it throws
+ * `ReentrantCardLockError` rather than deadlock). A `withCardLock` critical
+ * section deliberately spans the git stage+commit that follows the write, so
+ * it briefly touches the whole-repo git index — but `withCardLock` only
+ * serializes same-file racers, so two *different* cards committing at once
+ * can still race on `.git/index.lock` (handled by git.ts's retry, not by
+ * these locks; the git-commit race is a separate concern). Avoid holding two
+ * `withCardLock` locks on different files in inconsistent order across call
+ * sites.
  *
  * ## API
  *

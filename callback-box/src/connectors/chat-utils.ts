@@ -22,6 +22,7 @@ import {
 import { createChatJobTemplate, type ChatJobFields } from "../schemas/chat-job.js";
 import { getBoxTimeISO } from "../cli/lib/time.js";
 import { sanitizeFilenameStem } from "../lib/filename.js";
+import { withCardLock } from "../lib/card-lock.js";
 
 class MissingFrontmatterError extends Error {
   constructor(absPath: string) {
@@ -63,20 +64,25 @@ export async function ensureThreadFile(options: {
   const threadDir = path.join(boxRoot, "store/chat", connector, chatSlug);
   const threadPath = path.join(threadDir, "thread.chat-thread.card");
 
-  try {
-    await fs.access(threadPath);
-  } catch (_e) {
-    // access() throws when the thread file doesn't exist yet — that's the
-    // signal to create it. The error carries no actionable detail.
-    await fs.mkdir(threadDir, { recursive: true });
-    const content = createChatThreadTemplate({
-      chatId,
-      connector,
-      ...(options.description != null ? { description: options.description } : {}),
-      ...(options.participants != null ? { participants: options.participants } : {}),
-    });
-    await fs.writeFile(threadPath, content);
-  }
+  // Serialize the check-then-create so two first messages for the same new
+  // thread can't both pass the access() check and race to create/overwrite the
+  // file. Same key as the thread-card RMW helpers below.
+  await withCardLock(threadPath, async () => {
+    try {
+      await fs.access(threadPath);
+    } catch (_e) {
+      // access() throws when the thread file doesn't exist yet — that's the
+      // signal to create it. The error carries no actionable detail.
+      await fs.mkdir(threadDir, { recursive: true });
+      const content = createChatThreadTemplate({
+        chatId,
+        connector,
+        ...(options.description != null ? { description: options.description } : {}),
+        ...(options.participants != null ? { participants: options.participants } : {}),
+      });
+      await fs.writeFile(threadPath, content);
+    }
+  });
 
   return path.relative(boxRoot, threadPath);
 }
@@ -90,11 +96,15 @@ export async function ensureParticipant(options: {
   personRef: string;
 }): Promise<void> {
   const absPath = path.join(options.boxRoot, options.threadRelPath);
-  const fields = await readThreadFields(absPath);
-  const participants = fields.participants ?? [];
-  if (participants.some((p) => p.ref === options.personRef)) return;
-  fields.participants = [...participants, { ref: options.personRef }];
-  await writeThreadFields(absPath, fields);
+  // Serialize the thread-card RMW so concurrent participant/message writes to
+  // the same thread can't clobber each other (see lib/card-lock.ts).
+  await withCardLock(absPath, async () => {
+    const fields = await readThreadFields(absPath);
+    const participants = fields.participants ?? [];
+    if (participants.some((p) => p.ref === options.personRef)) return;
+    fields.participants = [...participants, { ref: options.personRef }];
+    await writeThreadFields(absPath, fields);
+  });
 }
 
 /**
@@ -113,9 +123,14 @@ export async function appendMessageToThread(options: {
   };
 }): Promise<void> {
   const absPath = path.join(options.boxRoot, options.threadRelPath);
-  const fields = await readThreadFields(absPath);
-  fields.entries = [...(fields.entries ?? []), createMessageEntry(options.message)];
-  await writeThreadFields(absPath, fields);
+  // Serialize the thread-card RMW: two inbound messages to the same thread
+  // (e.g. concurrent webhook deliveries) must not both read the same entries[]
+  // and drop one append.
+  await withCardLock(absPath, async () => {
+    const fields = await readThreadFields(absPath);
+    fields.entries = [...(fields.entries ?? []), createMessageEntry(options.message)];
+    await writeThreadFields(absPath, fields);
+  });
 }
 
 /**
@@ -147,20 +162,24 @@ export async function stampSentMessage(options: {
   sentAt: string;
   messageId?: string;
 }): Promise<void> {
-  const fields = await readThreadFields(options.absPath);
-  for (const entry of fields.entries ?? []) {
-    if (
-      entry.kind === "message" &&
-      entry.sender === "agent" &&
-      entry.sent === undefined &&
-      entry.text === options.messageText
-    ) {
-      entry.sent = options.sentAt;
-      if (options.messageId !== undefined) entry.id = options.messageId;
-      await writeThreadFields(options.absPath, fields);
-      return;
+  // Serialize the thread-card RMW so a sent-stamp write can't race with a
+  // concurrent append/participant write on the same thread.
+  await withCardLock(options.absPath, async () => {
+    const fields = await readThreadFields(options.absPath);
+    for (const entry of fields.entries ?? []) {
+      if (
+        entry.kind === "message" &&
+        entry.sender === "agent" &&
+        entry.sent === undefined &&
+        entry.text === options.messageText
+      ) {
+        entry.sent = options.sentAt;
+        if (options.messageId !== undefined) entry.id = options.messageId;
+        await writeThreadFields(options.absPath, fields);
+        return;
+      }
     }
-  }
+  });
 }
 
 /**
