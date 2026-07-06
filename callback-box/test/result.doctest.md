@@ -6,7 +6,7 @@ failure. It's for failures the caller branches on; broken invariants and infra
 failures throw instead (see `lib/invariant.ts`).
 
 ```ts setup
-import { ok, err, type Result } from "../src/lib/result.js";
+import { ok, err, okVoid, type Result } from "../src/lib/result.js";
 
 // A tagged error arm — the pattern for a function whose caller acts on the cause.
 type LookupError =
@@ -54,11 +54,12 @@ bad.ok ? "n/a" : bad.error.cause
 
 ## Void success
 
-A function with nothing to return on success uses `Result<void>` and `ok(undefined)`.
+A function with nothing to return on success uses `Result<void>` and the shared
+`okVoid` marker.
 
 ```ts
 function ensure(flag: boolean): Result<void> {
-  return flag ? ok(undefined) : err("flag was false");
+  return flag ? okVoid : err("flag was false");
 }
 
 ensure(true).ok
