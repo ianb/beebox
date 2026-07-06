@@ -14,8 +14,8 @@
  */
 
 import { loadBoxTimezone } from "./box/config.js";
-import { getMostActiveSavedAt } from "./chat-session-history.js";
-import { composeChatAppSnapshot, type FeatureMap } from "./chat-features.js";
+import { getMostActiveSavedAt } from "./chat/session/history.js";
+import { composeChatAppSnapshot, type FeatureMap } from "./chat/features.js";
 import {
   loadScheduleHealth,
   summarizeScheduleHealth,

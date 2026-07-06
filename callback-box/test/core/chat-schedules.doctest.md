@@ -3,7 +3,7 @@
 `parseScheduleTags` and `parseCancelScheduleTags` extract schedule instructions from assistant response text.
 
 ```ts setup
-import { parseScheduleTags, parseCancelScheduleTags, ChatScheduleManager } from "../../src/core/chat-schedules.js";
+import { parseScheduleTags, parseCancelScheduleTags, ChatScheduleManager } from "../../src/core/chat/schedules.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";

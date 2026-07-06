@@ -12,11 +12,11 @@
 import {
   tailForMinUserMessages,
   type SessionEntry,
-} from "../cli/lib/session.js";
-import { assertNever } from "../lib/invariant.js";
-import { buildChatContentBlocks } from "../shared/chat-content-blocks.js";
-import type { ChatContentBlock } from "../services/claude-chat.js";
-import type { ActivityKind, CardStateDetails } from "./chat-card-activity.js";
+} from "../../../cli/lib/session.js";
+import { assertNever } from "../../../lib/invariant.js";
+import { buildChatContentBlocks } from "../../../shared/chat-content-blocks.js";
+import type { ChatContentBlock } from "../../../services/claude-chat.js";
+import type { ActivityKind, CardStateDetails } from "../card-activity.js";
 import type {
   SDKMessage,
   SDKTaskNotificationMessage,
@@ -34,7 +34,7 @@ import type {
   ChatMessageUser,
   ChatMessageContent,
   TaskEvent,
-} from "./chat-message-types.js";
+} from "../message-types.js";
 
 // The wire types live in a leaf module; re-export so existing importers of this
 // file (and, transitively, chat-session.ts) are unaffected.
@@ -49,7 +49,7 @@ export type {
   ChatMessageTask,
   ChatMessageUnknown,
   TaskEvent,
-} from "./chat-message-types.js";
+} from "../message-types.js";
 
 /** Count of unknown SDK messages surfaced as sentinels this process. */
 let unknownMessageCount = 0;

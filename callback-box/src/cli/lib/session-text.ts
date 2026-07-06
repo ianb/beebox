@@ -6,7 +6,7 @@
  * line cap.
  */
 
-import { stripChatAppTags } from "../../core/chat-features.js";
+import { stripChatAppTags } from "../../core/chat/features.js";
 
 /** User messages that are internal Claude Code plumbing, not real user input */
 const plumbingPatterns = [

@@ -9,7 +9,7 @@ import { useEffect, useRef, useCallback } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
-import { ACTIVITY_KINDS, type ActivityKind, type CardStateDetails } from "../../../../core/chat-card-activity";
+import { ACTIVITY_KINDS, type ActivityKind, type CardStateDetails } from "../../../../core/chat/card-activity.js";
 import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "../ChatMessages";
 

@@ -14,7 +14,7 @@ Manual: spawns the `claude` SDK process, costs API calls, takes
 ~10–30 s. Run with `pnpm test:manual`.
 
 ```ts setup
-import { ChatSession } from "../../src/core/chat-session.js";
+import { ChatSession } from "../../src/core/chat/session/index.js";
 import { createChatBackend } from "../../src/services/claude-chat.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

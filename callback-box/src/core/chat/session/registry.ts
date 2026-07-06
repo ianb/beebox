@@ -16,17 +16,17 @@
  * id is appended to `chat-session-history.json`.
  */
 
-import { makeLog } from "./chat-session-log.js";
-import { checkInvariant } from "../lib/invariant.js";
+import { makeLog } from "./log.js";
+import { checkInvariant } from "../../../lib/invariant.js";
 import { EventEmitter } from "node:events";
-import { ChatSession, type ChatSessionOptions } from "./chat-session.js";
+import { ChatSession, type ChatSessionOptions } from "./index.js";
 import {
   appendHistory,
   setMostActive,
   updateFeaturesForSession,
-} from "./chat-session-history.js";
-import { ensureChatHusk } from "./chat-husk.js";
-import { createChatBackend, type ChatBackend } from "../services/claude-chat.js";
+} from "./history.js";
+import { ensureChatHusk } from "../husk.js";
+import { createChatBackend, type ChatBackend } from "../../../services/claude-chat.js";
 
 interface RegistryEntry {
   session: ChatSession;

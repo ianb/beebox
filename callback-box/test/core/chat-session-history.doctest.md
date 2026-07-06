@@ -12,7 +12,7 @@ import {
   getDirectoryForSession,
   getLastSessionForDirectory,
   resolveSessionLogPath,
-} from "../../src/core/chat-session-history.js";
+} from "../../src/core/chat/session/history.js";
 import { getSessionDir } from "../../src/cli/lib/session.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 

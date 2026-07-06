@@ -16,8 +16,8 @@ import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schem
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
-} from "../../../core/chat-session-history.js";
-import { listChatHusks } from "../../../core/chat-husk.js";
+} from "../../../core/chat/session/history.js";
+import { listChatHusks } from "../../../core/chat/husk.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
 import { getSessionLogPath, getSessionMetadata } from "../../../cli/lib/session.js";
 

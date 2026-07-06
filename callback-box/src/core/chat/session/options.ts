@@ -7,7 +7,7 @@
  * existing importers are unaffected.
  */
 
-import type { ChatBackend } from "../services/claude-chat.js";
+import type { ChatBackend } from "../../../services/claude-chat.js";
 
 /**
  * Configurable knobs for a ChatSession. All fields are optional — the

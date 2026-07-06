@@ -5,7 +5,7 @@
  */
 
 import { once } from "node:events";
-import type { ChatSession, ChatSessionOptions } from "../../src/core/chat-session.js";
+import type { ChatSession, ChatSessionOptions } from "../../src/core/chat/session/index.js";
 import type { FakeChatBackend } from "../../src/services/claude-chat.js";
 
 export async function setupSystemPrompt(): Promise<string> { return "setup"; }

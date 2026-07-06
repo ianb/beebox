@@ -13,7 +13,7 @@ import {
   getFeaturesForSession,
   loadHistoryEntries,
   updateFeaturesForSession,
-} from "../../src/core/chat-session-history.js";
+} from "../../src/core/chat/session/history.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 

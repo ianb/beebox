@@ -10,7 +10,7 @@ import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
 import { createAgent } from "../../core/agent/index.js";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
-import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat-session.js";
+import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat/session/index.js";
 import {
   getSessionLogPath,
   parseSessionLog,

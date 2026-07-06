@@ -1,6 +1,6 @@
 # Chat Features Registry
 
-The control plane for chat-feature flags lives in `src/core/chat-features.ts`.
+The control plane for chat-feature flags lives in `src/core/chat/features.ts`.
 It owns the closed registry of recognized feature names, validates values
 against each feature's allowed set, composes the `<chat-app>` snapshot
 the server prepends to user messages, and parses agent-emitted
@@ -20,7 +20,7 @@ import {
   mergeSeedFeatures,
   parseChatAppDeltas,
   resolveFeatures,
-} from "../../src/core/chat-features.js";
+} from "../../src/core/chat/features.js";
 
 // Several assertions deliberately pass bogus inputs to exercise the warn-and-
 // skip path. The console.warn fires are documented behavior; silence them

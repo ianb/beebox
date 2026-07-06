@@ -10,7 +10,7 @@ import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { publicProcedure } from "../trpc.js";
 import { getChatRuntime, type ChatRuntime } from "../../chat-runtime.js";
-import { loadPersistedChatModel } from "../../../core/chat-session-state.js";
+import { loadPersistedChatModel } from "../../../core/chat/session/state.js";
 
 function requireRuntime(boxRoot: string): ChatRuntime {
   const runtime = getChatRuntime(boxRoot);

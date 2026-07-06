@@ -15,7 +15,7 @@ import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
 import { generateViewsDoc } from "../views/doc.js";
-import { generateChatVoiceDoc } from "../chat-voice-doc.js";
+import { generateChatVoiceDoc } from "../chat/voice-doc.js";
 import { generateNarrationModeDoc } from "../narration-mode-doc.js";
 import { generateReducingClaudeMdDoc } from "../reducing-claude-md-doc.js";
 import { generatePythonToolsDoc } from "../python-tools-doc.js";

@@ -22,20 +22,20 @@
  */
 
 import type { FastifyInstance } from "fastify";
-import { type ChatSession, type TaskEvent } from "../../core/chat-session.js";
-import { ChatSessionRegistry } from "../../core/chat-session-registry.js";
+import { type ChatSession, type TaskEvent } from "../../core/chat/session/index.js";
+import { ChatSessionRegistry } from "../../core/chat/session/registry.js";
 import {
   getMostActive,
   runBackfillIfNeeded,
-} from "../../core/chat-session-history.js";
-import { backfillChatHusks } from "../../core/chat-husk.js";
+} from "../../core/chat/session/history.js";
+import { backfillChatHusks } from "../../core/chat/husk.js";
 import type { EventBus } from "../../core/event-bus.js";
 import type { OpenAIAudioService } from "../../services/openai-audio.js";
 import {
   ChatScheduleManager,
   parseScheduleTags,
   parseCancelScheduleTags,
-} from "../../core/chat-schedules.js";
+} from "../../core/chat/schedules.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { setChatRuntime, clearChatRuntime } from "../chat-runtime.js";

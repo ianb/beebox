@@ -9,8 +9,8 @@
  */
 
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatBackendRun } from "../services/claude-chat.js";
-import type { ChatMessage } from "./chat-session-messages.js";
+import type { ChatBackendRun } from "../../../services/claude-chat.js";
+import type { ChatMessage } from "./messages.js";
 
 export interface PumpChatRunOptions {
   run: ChatBackendRun;

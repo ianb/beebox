@@ -15,9 +15,9 @@
 import { z } from "zod";
 import { tracked } from "@trpc/server";
 import type { BusEvent } from "../../../core/event-bus.js";
-import type { ChatMessage } from "../../../core/chat-session.js";
+import type { ChatMessage } from "../../../core/chat/session/index.js";
 import { ensureBoxWatcher } from "../../../core/box/file-watcher.js";
-import { getTurnBuffer } from "../../../core/chat-turn-buffer.js";
+import { getTurnBuffer } from "../../../core/chat/turn-buffer.js";
 import { router, publicProcedure } from "../trpc.js";
 
 /** Cap on the per-subscriber bus queue before coalescing transient events. */

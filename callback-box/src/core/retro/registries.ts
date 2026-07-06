@@ -14,7 +14,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { loadHistory } from "../chat-session-history.js";
+import { loadHistory } from "../chat/session/history.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 

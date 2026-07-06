@@ -11,7 +11,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 
 import { type SessionEntry, buildEntry } from "./session-entry.js";
-import { stripChatAppTags } from "../../core/chat-features.js";
+import { stripChatAppTags } from "../../core/chat/features.js";
 import {
   extractSnippet,
   isCompactionSummary,

@@ -15,7 +15,7 @@ dropped every atomic block after the first streamed one — the
 
 ```ts setup
 import { handleTurnMessage } from "../../src/frontend/src/machines/chat-actors.js";
-import type { ChatMessage } from "../../src/core/chat-session-messages.js";
+import type { ChatMessage } from "../../src/core/chat/session/messages.js";
 import type { ChatEvent } from "../../src/frontend/src/machines/chat-types.js";
 
 function delta(text: string): ChatMessage {

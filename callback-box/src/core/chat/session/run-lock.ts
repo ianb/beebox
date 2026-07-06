@@ -12,7 +12,7 @@
 import {
   acquireRunLock as acquireChatRunLock,
   releaseRunLock as releaseChatRunLock,
-} from "./chat-session-state.js";
+} from "./state.js";
 
 /**
  * Acquire the chat-active lock unless one is already held. Returns the lock

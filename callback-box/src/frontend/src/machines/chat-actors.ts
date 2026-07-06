@@ -21,8 +21,8 @@ import type { ChatTurnStart } from "../api-chat";
 import { trpcClient } from "../lib/trpc";
 import { settleReceipt } from "../input/targets/receipts";
 import { buildStreamEntry } from "../lib/stream-entry";
-import type { ChatMessage } from "../../../core/chat-session-messages.js";
-import type { ActivityKind, CardStateDetails } from "../../../core/chat-card-activity";
+import type { ChatMessage } from "../../../core/chat/session/messages.js";
+import type { ActivityKind, CardStateDetails } from "../../../core/chat/card-activity.js";
 import { HISTORY_TAIL, MIN_REAL_USER_MESSAGES, logFsm, type ChatEvent, type SessionInput } from "./chat-types";
 import { runFakeStream } from "./chat-actors-fakestream";
 

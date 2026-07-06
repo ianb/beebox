@@ -18,7 +18,7 @@ import {
   getOrCreateSession,
   markSessionUsed,
   resetSession,
-} from "../chat-reactor-sessions.js";
+} from "../chat/reactor-sessions.js";
 import { buildReactorSystemPrompt } from "./prompts.js";
 import { buildJobDescription } from "./batch-jobs.js";
 import { readCardFrontmatter, isRecord } from "../card-io.js";

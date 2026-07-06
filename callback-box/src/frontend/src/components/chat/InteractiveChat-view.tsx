@@ -28,7 +28,7 @@ import type { useChatVoice } from "./InteractiveChat-voice";
 import type { useChatAttachments } from "./InteractiveChat-attachments";
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
-import type { ActivityKind } from "../../../../core/chat-card-activity";
+import type { ActivityKind } from "../../../../core/chat/card-activity.js";
 
 interface ChatBodyProps {
   tabs: ReturnType<typeof useChatTabs>;

@@ -8,8 +8,8 @@ reported as a gap so the client refetches history instead of silently losing
 text.
 
 ```ts setup
-import { TurnBuffer } from "../../src/core/chat-turn-buffer.js";
-import type { ChatMessage } from "../../src/core/chat-session-messages.js";
+import { TurnBuffer } from "../../src/core/chat/turn-buffer.js";
+import type { ChatMessage } from "../../src/core/chat/session/messages.js";
 
 function msg(type: ChatMessage["type"]): ChatMessage {
   return { type };

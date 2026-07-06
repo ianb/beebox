@@ -27,7 +27,7 @@
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
-import type { ActivityKind, CardStateDetails } from "../../core/chat-card-activity";
+import type { ActivityKind, CardStateDetails } from "../../core/chat/card-activity.js";
 
 export interface SessionContentBlock {
   type: "text" | "tool_use" | "tool_result" | "thinking" | "image";

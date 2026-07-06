@@ -13,10 +13,10 @@ import { ExternalIconLink } from "../ui/ExternalIconLink";
 import { FileView } from "../FileView";
 import { withBase } from "../../api";
 import { cn } from "../../lib/cn";
-import type { ChatSchedule } from "../../../../core/chat-schedules";
+import type { ChatSchedule } from "../../../../core/chat/schedules.js";
 import type { NavigateHint, ViewTarget } from "../../lib/view-url";
 import type { AddSelectionInput } from "../../lib/selection-position";
-import type { ActivityKind } from "../../../../core/chat-card-activity";
+import type { ActivityKind } from "../../../../core/chat/card-activity.js";
 
 /**
  * Countdown pill showing time remaining for an active schedule.

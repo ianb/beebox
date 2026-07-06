@@ -12,7 +12,7 @@ import {
   lifecycleBusy,
   lifecycleRun,
   IDLE,
-} from "../../src/core/chat-session-lifecycle.js";
+} from "../../src/core/chat/session/lifecycle.js";
 ```
 
 ## Legal transitions — the run's happy path and teardown

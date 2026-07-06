@@ -10,10 +10,10 @@
  */
 
 import * as fs from "node:fs";
-import { parseAttrs } from "./parse-attrs.js";
+import { parseAttrs } from "../parse-attrs.js";
 import * as path from "node:path";
 import { z } from "zod";
-import { parseDuration } from "../schemas/scheduled-script.js";
+import { parseDuration } from "../../schemas/scheduled-script.js";
 
 // Zod schema per entry, mirroring location-store.ts's pattern (Track D.6):
 // the persisted shape is validated on load, an unparseable `firesAt` never

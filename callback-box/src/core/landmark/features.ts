@@ -14,7 +14,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
-import { isKnownFeature, isValidValue } from "../chat-features.js";
+import { isKnownFeature, isValidValue } from "../chat/features.js";
 
 class LandmarkDirReadError extends Error {
   constructor(cause: unknown, dir: string) {

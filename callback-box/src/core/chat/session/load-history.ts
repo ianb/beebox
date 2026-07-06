@@ -9,9 +9,9 @@
  */
 
 import * as fs from "node:fs";
-import { resolveSessionLogPath } from "./chat-session-history.js";
-import { effectiveTailSize } from "./chat-session-messages.js";
-import { parseSessionLog, type SessionEntry } from "../cli/lib/session.js";
+import { resolveSessionLogPath } from "./history.js";
+import { effectiveTailSize } from "./messages.js";
+import { parseSessionLog, type SessionEntry } from "../../../cli/lib/session.js";
 
 export interface SessionHistoryResult {
   sessionId: string | null;

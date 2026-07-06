@@ -10,7 +10,7 @@ import {
   getTrailerFacets,
 } from "../../../lib/git.js";
 import { parseSessionLog } from "../../../cli/lib/session.js";
-import { resolveSessionLogPath } from "../../../core/chat-session-history.js";
+import { resolveSessionLogPath } from "../../../core/chat/session/history.js";
 
 /** Escape values so they can be interpolated into a git --grep ERE pattern. */
 function escapeRegex(value: string): string {

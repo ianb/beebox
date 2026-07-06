@@ -19,8 +19,8 @@
 
 import { open, type FileHandle } from "node:fs/promises";
 import { setTimeout as sleep } from "node:timers/promises";
-import { resolveSessionLogPath } from "./chat-session-history.js";
-import type { ChatMessage } from "./chat-session-messages.js";
+import { resolveSessionLogPath } from "./history.js";
+import type { ChatMessage } from "./messages.js";
 
 /** How long past `result` we'll wait for the flush before giving up. The
  *  measured lag is ~150ms; the cap only bites if the CLI misbehaves. */

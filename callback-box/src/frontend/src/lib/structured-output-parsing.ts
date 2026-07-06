@@ -10,7 +10,7 @@
  * rather than failing the whole render.
  */
 
-import { stripChatAppTags } from "../../../core/chat-features";
+import { stripChatAppTags } from "../../../core/chat/features.js";
 import { decodeXmlAttr } from "../../../core/self-note";
 
 export interface AckKindDescriptor {

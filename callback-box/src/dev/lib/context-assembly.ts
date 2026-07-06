@@ -17,8 +17,8 @@ import {
   CHAT_SYSTEM_PROMPT,
   NARRATION_OVERLAY,
   buildLandmarkSessionNote,
-} from "../../core/chat-session-prompts.js";
-import { buildThreadSystemPrompt } from "../../core/chat-thread-session.js";
+} from "../../core/chat/session/prompts.js";
+import { buildThreadSystemPrompt } from "../../core/chat/session/thread.js";
 import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,

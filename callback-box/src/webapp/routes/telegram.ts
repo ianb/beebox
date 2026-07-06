@@ -18,7 +18,7 @@ import {
   type TelegramUpdate,
 } from "../../connectors/telegram.js";
 import { telegramUpdateSchema } from "../../connectors/telegram-schemas.js";
-import { ChatSessionPool } from "../../core/chat-session-pool.js";
+import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
 import { appendMessageToThread } from "../../connectors/chat-utils.js";
 import { stageFiles, commit } from "../../lib/git.js";

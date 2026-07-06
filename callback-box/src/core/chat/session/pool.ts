@@ -8,16 +8,16 @@
  * so sessions can be resumed after server restarts.
  */
 
-import { makeLog } from "./chat-session-log.js";
-import { getPublicUrl } from "../lib/public-url.js";
+import { makeLog } from "./log.js";
+import { getPublicUrl } from "../../../lib/public-url.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { ChatThreadSession } from "./chat-thread-session.js";
+import { ChatThreadSession } from "./thread.js";
 import {
   ChatScheduleManager,
   parseScheduleTags,
   parseCancelScheduleTags,
-} from "./chat-schedules.js";
+} from "../schedules.js";
 
 function getBoxSlug(boxRoot: string): string {
   return path.basename(boxRoot);

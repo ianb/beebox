@@ -9,7 +9,7 @@ import type {
   SessionContentBlock,
   ChatImageAttachment,
 } from "../api";
-import type { ActivityKind, CardStateDetails } from "../../../core/chat-card-activity";
+import type { ActivityKind, CardStateDetails } from "../../../core/chat/card-activity.js";
 
 // -- Events --
 

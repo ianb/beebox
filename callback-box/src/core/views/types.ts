@@ -5,7 +5,7 @@
  * server-side with esbuild and rendered in the browser.
  */
 
-import type { ActivityKind } from "../chat-card-activity.js";
+import type { ActivityKind } from "../chat/card-activity.js";
 
 export interface ViewProps {
   cards: ViewCard[];

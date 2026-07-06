@@ -29,7 +29,7 @@ import {
   loadChatSessions,
   saveChatSessions,
   resetAllSessions,
-} from "../chat-reactor-sessions.js";
+} from "../chat/reactor-sessions.js";
 import { runOneCycle, type RunCycleParams } from "./cycle.js";
 import { runSync as realRunSync, runFinalize as realRunFinalize } from "./subprocess.js";
 

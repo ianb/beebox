@@ -1,6 +1,6 @@
 # ChatSessionRegistry — LRU cap, pins, and the idle sweep
 
-`ChatSessionRegistry` (`src/core/chat-session-registry.ts`) pools `ChatSession`
+`ChatSessionRegistry` (`src/core/chat/session/registry.ts`) pools `ChatSession`
 instances by session id: subprocesses are capped (`enforceLiveCap` stops the
 LRU one), SSE listeners pin entries against eviction, and an idle sweep drops
 entries untouched past `idleTimeoutMs`.
@@ -11,7 +11,7 @@ The fake `ChatBackend` keeps each spawned run open until stopped, so
 `isRunning()` reflects which sessions hold a live subprocess.
 
 ```ts setup
-import { ChatSessionRegistry } from "../../src/core/chat-session-registry.js";
+import { ChatSessionRegistry } from "../../src/core/chat/session/registry.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";

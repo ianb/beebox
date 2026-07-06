@@ -8,7 +8,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, type ReactNode } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { getApiBase } from "../api";
-import type { ActivityKind } from "../../../core/chat-card-activity";
+import type { ActivityKind } from "../../../core/chat/card-activity.js";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";

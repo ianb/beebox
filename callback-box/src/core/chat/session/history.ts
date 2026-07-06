@@ -20,12 +20,12 @@
  * which is what bare `/chat` (no session param) resolves to.
  */
 
-import { makeLog } from "./chat-session-log.js";
+import { makeLog } from "./log.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
-import { listSessions, getSessionLogPath } from "../cli/lib/session.js";
+import { listSessions, getSessionLogPath } from "../../../cli/lib/session.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";

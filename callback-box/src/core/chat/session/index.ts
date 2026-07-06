@@ -8,25 +8,25 @@
  * `resume` option.
  */
 
-import { makeLog } from "./chat-session-log.js";
+import { makeLog } from "./log.js";
 import { EventEmitter } from "node:events";
-import { type FeatureMap } from "./chat-features.js";
-import { FeatureStore, applyAgentTurnDeltas } from "./chat-session-features.js";
+import { type FeatureMap } from "../features.js";
+import { FeatureStore, applyAgentTurnDeltas } from "./features.js";
 import {
   loadSessionHistory,
   type SessionHistoryResult,
-} from "./chat-session-load-history.js";
-import { generateDocs } from "./docs-gen/index.js";
+} from "./load-history.js";
+import { generateDocs } from "../../docs-gen/index.js";
 import {
   createChatBackend,
   type ChatBackend,
   type ChatBackendRun,
   type ChatBackendStartOptions,
-} from "../services/claude-chat.js";
+} from "../../../services/claude-chat.js";
 import {
   CHAT_SYSTEM_PROMPT,
   NARRATION_OVERLAY,
-} from "./chat-session-prompts.js";
+} from "./prompts.js";
 import {
   accumulateAssistantText,
   adaptSdkMessage,
@@ -37,9 +37,9 @@ import {
   type ChatMessageContent,
   type ChatSendInput,
   type TaskEvent,
-} from "./chat-session-messages.js";
-import { createTurnDurabilityGate } from "./chat-session-transcript-sync.js";
-import { recordTurnMarkerForSession } from "./chat-turn-marker.js";
+} from "./messages.js";
+import { createTurnDurabilityGate } from "./transcript-sync.js";
+import { recordTurnMarkerForSession } from "../turn-marker.js";
 import {
   captureAssignedSessionId,
   combineQueuedInputs,
@@ -48,16 +48,16 @@ import {
   loadSessionId,
   saveCurrentModel,
   DEFAULT_MODEL_FILE,
-} from "./chat-session-state.js";
-import { pumpChatRun } from "./chat-session-consume.js";
-import { acquireSessionRunLock, releaseSessionRunLock } from "./chat-session-run-lock.js";
+} from "./state.js";
+import { pumpChatRun } from "./consume.js";
+import { acquireSessionRunLock, releaseSessionRunLock } from "./run-lock.js";
 import {
   buildBackendStartOptions as computeBackendStartOptions,
   composeTurnContent,
-} from "./chat-session-start.js";
-import type { ChatSessionOptions } from "./chat-session-options.js";
-import { createHealthGate } from "./session-context.js";
-import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./chat-session-lifecycle.js";
+} from "./start.js";
+import type { ChatSessionOptions } from "./options.js";
+import { createHealthGate } from "../../session-context.js";
+import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 export { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY, buildContentBlocks };
 export type { ChatImage, ChatMessage, ChatMessageContent, ChatSendInput, TaskEvent };

@@ -11,12 +11,12 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { type ChatMessage, type ChatSession } from "../../core/chat-session.js";
-import { getMostActive } from "../../core/chat-session-history.js";
+import { type ChatMessage, type ChatSession } from "../../core/chat/session/index.js";
+import { getMostActive } from "../../core/chat/session/history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
-import { mergeSeedFeatures } from "../../core/chat-features.js";
-import { summarizeWhatsChanged } from "../../core/chat-whats-changed.js";
-import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat-turn-buffer.js";
+import { mergeSeedFeatures } from "../../core/chat/features.js";
+import { summarizeWhatsChanged } from "../../core/chat/whats-changed.js";
+import { createTurnBuffer, removeTurnBuffer, scheduleTurnCleanup } from "../../core/chat/turn-buffer.js";
 import { getSessionUser } from "../auth.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import {

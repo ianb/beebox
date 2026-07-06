@@ -10,9 +10,9 @@
  * line rather than throwing, so the agent always gets *something* truthful.
  */
 
-import { getStatus } from "../lib/git.js";
-import { getHeadSha, getOnelineLog, getDiffStat } from "../lib/git-range.js";
-import { loadTurnMarker } from "./chat-turn-marker.js";
+import { getStatus } from "../../lib/git.js";
+import { getHeadSha, getOnelineLog, getDiffStat } from "../../lib/git-range.js";
+import { loadTurnMarker } from "./turn-marker.js";
 
 const FALLBACK_COMMITS = 5;
 

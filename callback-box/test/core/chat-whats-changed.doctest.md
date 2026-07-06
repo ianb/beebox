@@ -1,8 +1,8 @@
 # `cb chat whats-changed` + turn marker
 
-The chat turn marker (`src/core/chat-turn-marker.ts`) records the git HEAD a
+The chat turn marker (`src/core/chat/turn-marker.ts`) records the git HEAD a
 session was left at after each reply; `summarizeWhatsChanged`
-(`src/core/chat-whats-changed.ts`) diffs `marker.head..HEAD` (committed) plus
+(`src/core/chat/whats-changed.ts`) diffs `marker.head..HEAD` (committed) plus
 the uncommitted working tree to tell the agent what changed since it last
 spoke. The ranged git helpers it needs live in `src/lib/git-range.ts`.
 
@@ -12,8 +12,8 @@ import {
   recordTurnMarker,
   loadTurnMarker,
   recordTurnMarkerForSession,
-} from "../../src/core/chat-turn-marker.js";
-import { summarizeWhatsChanged } from "../../src/core/chat-whats-changed.js";
+} from "../../src/core/chat/turn-marker.js";
+import { summarizeWhatsChanged } from "../../src/core/chat/whats-changed.js";
 ```
 
 ## Marker round-trip

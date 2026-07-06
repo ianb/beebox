@@ -1,6 +1,6 @@
 # Companion-pane card activity
 
-`src/core/chat-card-activity.ts` holds the vocabulary for what the user did to
+`src/core/chat/card-activity.ts` holds the vocabulary for what the user did to
 the card open in the chat's two-pane companion layout. The four kinds project
 onto a canonical order (`scrolled`, `navigated`, `explored`, `modified`) for
 both the snapshot attribute and the queued-send union.
@@ -12,8 +12,8 @@ import {
   unionActivityKinds,
   renderActivityChildren,
   mergeCardStateDetails,
-} from "../../src/core/chat-card-activity.js";
-import { combineQueuedInputs } from "../../src/core/chat-session-state.js";
+} from "../../src/core/chat/card-activity.js";
+import { combineQueuedInputs } from "../../src/core/chat/session/state.js";
 ```
 
 ## Recognizing kinds

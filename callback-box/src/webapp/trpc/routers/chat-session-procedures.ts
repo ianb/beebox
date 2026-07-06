@@ -18,8 +18,8 @@ import {
   getMostActive,
   loadHistory,
   resolveSessionLogPath,
-} from "../../../core/chat-session-history.js";
-import { resolveFeatures } from "../../../core/chat-features.js";
+} from "../../../core/chat/session/history.js";
+import { resolveFeatures } from "../../../core/chat/features.js";
 import {
   getSessionMetadata,
   parseSessionLog,

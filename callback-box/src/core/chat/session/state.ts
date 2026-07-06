@@ -8,16 +8,16 @@
  * line budget; nothing here is part of the module's public surface.
  */
 
-import { makeLog } from "./chat-session-log.js";
+import { makeLog } from "./log.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { randomBytes } from "node:crypto";
-import { acquireChatActiveLock, releaseChatActiveLock } from "./schedule/state.js";
-import { resolveSessionLogPath } from "./chat-session-history.js";
-import { parseSessionLog, type SessionEntry } from "../cli/lib/session.js";
-import { effectiveTailSize } from "./chat-session-messages.js";
-import type { ChatImage, ChatMessage, ChatSendInput } from "./chat-session-messages.js";
-import { unionActivityKinds, mergeCardStateDetails } from "./chat-card-activity.js";
+import { acquireChatActiveLock, releaseChatActiveLock } from "../../schedule/state.js";
+import { resolveSessionLogPath } from "./history.js";
+import { parseSessionLog, type SessionEntry } from "../../../cli/lib/session.js";
+import { effectiveTailSize } from "./messages.js";
+import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
+import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
 
 export interface SessionHistory {
   sessionId: string | null;

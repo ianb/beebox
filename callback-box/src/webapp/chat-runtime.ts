@@ -10,9 +10,9 @@
  * setup and clears it on server close.
  */
 
-import type { ChatSession } from "../core/chat-session.js";
-import type { ChatSessionRegistry } from "../core/chat-session-registry.js";
-import type { ChatScheduleManager } from "../core/chat-schedules.js";
+import type { ChatSession } from "../core/chat/session/index.js";
+import type { ChatSessionRegistry } from "../core/chat/session/registry.js";
+import type { ChatScheduleManager } from "../core/chat/schedules.js";
 
 export interface ChatRuntime {
   registry: ChatSessionRegistry;

@@ -4,7 +4,7 @@
  * renderer (frontend), which kept equivalent private copies. Values are taken
  * verbatim (no entity decoding); a later duplicate key wins.
  *
- * The `Array`-returning parser in `core/chat-features` and the `Map`-returning
+ * The `Array`-returning parser in `core/chat/features` and the `Map`-returning
  * one in `frontend/lib/structured-output-parsing` are intentionally distinct —
  * their callers depend on those shapes — and are not folded in here.
  */

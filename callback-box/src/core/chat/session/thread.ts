@@ -1,7 +1,7 @@
 /**
  * ChatThreadSession — Persistent SDK chat run for a single chat thread.
  *
- * Adapted from ChatSession (src/core/chat-session.ts) but:
+ * Adapted from ChatSession (src/core/chat/session/index.ts) but:
  * - Targeted at a specific thread (not the whole box)
  * - Intercepts <chat-response> tags from agent output for immediate delivery
  * - Can be parked (run closed but session ID preserved) and resumed
@@ -9,21 +9,21 @@
 
 import { EventEmitter } from "node:events";
 import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatMessage, ChatMessageContent } from "./chat-session.js";
+import type { ChatMessage, ChatMessageContent } from "./index.js";
 import {
   unknownChatMessage,
   type ChatMessageAssistant,
   type ChatMessageResult,
-} from "./chat-session-messages.js";
-import { buildTimezoneContext } from "./box/config.js";
-import { buildScriptEnv } from "./script-env.js";
+} from "./messages.js";
+import { buildTimezoneContext } from "../../box/config.js";
+import { buildScriptEnv } from "../../script-env.js";
 import {
   createChatBackend,
   type ChatBackend,
   type ChatBackendRun,
-} from "../services/claude-chat.js";
-import { pumpChatRun } from "./chat-session-consume.js";
-import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./chat-session-lifecycle.js";
+} from "../../../services/claude-chat.js";
+import { pumpChatRun } from "./consume.js";
+import { IDLE, afterTurnResult, lifecycleBusy, lifecycleRun, nextLifecycle, type ChatLifecycle } from "./lifecycle.js";
 
 function log(context: string, ...args: unknown[]): void {
   console.log(`[ChatThreadSession:${context}]`, ...args);

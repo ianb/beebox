@@ -11,10 +11,10 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
-import { splitCardContent } from "../cards/index.js";
-import { createChatHuskTemplate } from "../schemas/chat.js";
-import { loadHistoryEntries, resolveSessionLogPath } from "./chat-session-history.js";
-import { getSessionMetadata } from "../cli/lib/session.js";
+import { splitCardContent } from "../../cards/index.js";
+import { createChatHuskTemplate } from "../../schemas/chat.js";
+import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
+import { getSessionMetadata } from "../../cli/lib/session.js";
 
 export const CHAT_HUSK_DIR = "store/chat/web";
 const BACKFILL_MARKER = ".callback-box/chat-husks-backfilled";

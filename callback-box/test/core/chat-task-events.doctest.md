@@ -6,7 +6,7 @@ ChatMessages, and the frontend `applyTaskEvent` reducer folds those into the
 live in-flight list shown above the composer.
 
 ```ts setup
-import { adaptSdkMessage } from "../../src/core/chat-session-messages.js";
+import { adaptSdkMessage } from "../../src/core/chat/session/messages.js";
 import { applyTaskEvent } from "../../src/frontend/src/components/chat/background-tasks.js";
 
 // The SDK message types are awkward to build by hand; a tiny helper casts a

@@ -8,26 +8,26 @@
  * value back, leaving the instance to store it.
  */
 
-import { makeLog } from "./chat-session-log.js";
+import { makeLog } from "./log.js";
 import * as path from "node:path";
-import { getDirectoryForSession } from "./chat-session-history.js";
-import { buildTimezoneContext } from "./box/config.js";
-import { buildScriptEnv } from "./script-env.js";
-import { composeSendSnapshot, type HealthGate } from "./session-context.js";
-import { renderActivityChildren } from "./chat-card-activity.js";
+import { getDirectoryForSession } from "./history.js";
+import { buildTimezoneContext } from "../../box/config.js";
+import { buildScriptEnv } from "../../script-env.js";
+import { composeSendSnapshot, type HealthGate } from "../../session-context.js";
+import { renderActivityChildren } from "../card-activity.js";
 import {
   CHAT_SYSTEM_PROMPT,
   NARRATION_OVERLAY,
   buildLandmarkSessionNote,
-} from "./chat-session-prompts.js";
+} from "./prompts.js";
 import {
   buildContentBlocks,
   toBackendContent,
   type ChatSendInput,
-} from "./chat-session-messages.js";
-import type { FeatureStore } from "./chat-session-features.js";
-import type { ChatBackendStartOptions, ChatContentBlock } from "../services/claude-chat.js";
-import type { ChatSessionOptions } from "./chat-session-options.js";
+} from "./messages.js";
+import type { FeatureStore } from "./features.js";
+import type { ChatBackendStartOptions, ChatContentBlock } from "../../../services/claude-chat.js";
+import type { ChatSessionOptions } from "./options.js";
 
 const log = makeLog("ChatSession");
 

@@ -8,18 +8,18 @@
  * rather than captured.
  */
 
-import { makeLog } from "./chat-session-log.js";
+import { makeLog } from "./log.js";
 import {
   getFeaturesForSession,
   updateFeaturesForSession,
-} from "./chat-session-history.js";
+} from "./history.js";
 import {
   isKnownFeature,
   isValidValue,
   parseChatAppDeltas,
   resolveFeatures,
   type FeatureMap,
-} from "./chat-features.js";
+} from "../features.js";
 
 class UnknownFeatureError extends Error {
   constructor(feature: string) {

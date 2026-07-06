@@ -21,7 +21,7 @@ import { ChatInputArea } from "./InteractiveChat-composer";
 import { MobileTextareaRow } from "./InteractiveChat-mobile-row";
 import type { OnZoomView } from "../ChatMessages";
 import type { SessionEntry } from "../../api";
-import type { ChatSchedule } from "../../../../core/chat-schedules";
+import type { ChatSchedule } from "../../../../core/chat/schedules.js";
 
 export type { AttachmentItem, FileAttachmentItem };
 

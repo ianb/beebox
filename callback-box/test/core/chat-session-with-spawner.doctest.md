@@ -13,7 +13,7 @@ has trouble with top-level function declarations whose bodies return
 inline object literals, so the helpers are in a regular `.ts` file.
 
 ```ts setup
-import { ChatSession } from "../../src/core/chat-session.js";
+import { ChatSession } from "../../src/core/chat/session/index.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import {

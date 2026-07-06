@@ -9,8 +9,8 @@
 import * as fs from "node:fs/promises";
 import { z } from "zod";
 import type { SessionUser } from "../auth.js";
-import { resolveSessionLogPath } from "../../core/chat-session-history.js";
-import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat-card-activity.js";
+import { resolveSessionLogPath } from "../../core/chat/session/history.js";
+import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
