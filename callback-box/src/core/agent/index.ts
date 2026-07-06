@@ -10,15 +10,15 @@
 
 import type { z } from "zod";
 import { toJSONSchema } from "zod";
-import { validateStructuredResult } from "./agent-json.js";
-import { appendSessionManifest } from "./agent-manifest.js";
-import { runAgent, type RunAgentOptions } from "./agent-run.js";
+import { validateStructuredResult } from "./json.js";
+import { appendSessionManifest } from "./manifest.js";
+import { runAgent, type RunAgentOptions } from "./run.js";
 import type {
   AgentInvokeOptions,
   Agent,
   StructuredAgentResult,
   AgentResult,
-} from "./agent-types.js";
+} from "./types.js";
 
 export type {
   AgentInvokeOptions,
@@ -26,14 +26,14 @@ export type {
   StructuredAgentResult,
   AgentResult,
   AgentResultBase,
-} from "./agent-types.js";
+} from "./types.js";
 
 export {
   COMMIT_NUDGE_PROMPT,
   captureBaseline,
   ensureAgentCommitted,
   type EnsureCommittedOptions,
-} from "./agent-commit.js";
+} from "./commit.js";
 
 // ─── Agent interface ─────────────────────────────────────────────────
 

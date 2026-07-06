@@ -8,7 +8,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
-import { createAgent } from "../../core/agent.js";
+import { createAgent } from "../../core/agent/index.js";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat-session.js";
 import {

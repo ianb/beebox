@@ -11,7 +11,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { fmt } from "../../lib/format.js";
-import type { createAgent as realCreateAgent } from "../agent.js";
+import type { createAgent as realCreateAgent } from "../agent/index.js";
 import type { generateDocs as realGenerateDocs } from "../docs-gen/index.js";
 import { findJobCards } from "./job-discovery.js";
 import { processBatchJobs } from "./batch-jobs.js";

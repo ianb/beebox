@@ -8,7 +8,7 @@
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { runShell } from "../core/procedure/shell.js";
-import { createAgent } from "../core/agent.js";
+import { createAgent } from "../core/agent/index.js";
 import {
   getStatus,
   createBranch,

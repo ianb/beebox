@@ -2,10 +2,10 @@
 
 Tests for the per-box agent token (`.callback-box/agent-token`) that lets
 box agents' `cb chat ...` loopback calls through the per-box auth wall in
-production. See `src/core/agent-token.ts`.
+production. See `src/core/agent/token.ts`.
 
 ```ts setup
-import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../src/core/agent-token.js";
+import { getOrCreateAgentToken, verifyAgentBearer, resolveAgentToken } from "../../src/core/agent/token.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { makeTestServer } from "../helpers/doctest-server.js";
 ```

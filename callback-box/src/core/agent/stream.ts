@@ -11,9 +11,9 @@
  */
 
 import { query, type Query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { fmt } from "../lib/format.js";
-import { renderSdkMessage } from "./agent-render.js";
-import { stopPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
+import { fmt } from "../../lib/format.js";
+import { renderSdkMessage } from "./render.js";
+import { stopPromptLogger, type PromptLogger } from "./prompt-logger.js";
 
 /** How long after the result message the CLI gets to exit by itself. */
 const STREAM_END_GRACE_MS = 10_000;

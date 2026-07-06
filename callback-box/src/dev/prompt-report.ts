@@ -14,7 +14,7 @@ import { cardSchemas } from "../schemas/registry.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../core/reactor/prompts.js";
 import { CHAT_SYSTEM_PROMPT } from "../core/chat-session.js";
 import { buildThreadSystemPrompt } from "../core/chat-thread-session.js";
-import { COMMIT_NUDGE_PROMPT } from "../core/agent.js";
+import { COMMIT_NUDGE_PROMPT } from "../core/agent/index.js";
 import { connectorRules } from "../core/init-rules.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { wordCount } from "./lib/context-assembly.js";

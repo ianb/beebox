@@ -27,7 +27,7 @@ import {
   getOwnerEmail,
   isDiagnosticBypassRequest,
 } from "./auth.js";
-import { verifyAgentBearer } from "../core/agent-token.js";
+import { verifyAgentBearer } from "../core/agent/token.js";
 import { canAccessBox } from "./box-access.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box-file-watcher.js";

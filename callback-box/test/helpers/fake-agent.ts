@@ -26,7 +26,7 @@ import type {
   AgentResult,
   AgentResultBase,
   StructuredAgentResult,
-} from "../../src/core/agent.js";
+} from "../../src/core/agent/index.js";
 
 export interface FakeAgentInvocation {
   /** System prompt — present on first invoke, null on resume. */

@@ -5,7 +5,7 @@
  * imported anywhere without creating an import cycle.
  */
 
-import { type createAgent as realCreateAgent } from "../agent.js";
+import { type createAgent as realCreateAgent } from "../agent/index.js";
 import { MODEL_ID } from "../model-ids.js";
 import type { RunStepResult, ProcedureRunFields } from "../../schemas/procedure-run.js";
 import type { ProcedureStepDef } from "../../schemas/procedure.js";

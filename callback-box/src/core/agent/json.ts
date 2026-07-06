@@ -9,7 +9,7 @@
  */
 
 import type { z } from "zod";
-import type { AgentResult, StructuredAgentResult } from "./agent-types.js";
+import type { AgentResult, StructuredAgentResult } from "./types.js";
 
 /**
  * Pull a JSON value out of the assistant's free-form result text.

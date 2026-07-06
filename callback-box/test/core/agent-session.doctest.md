@@ -1,7 +1,7 @@
 # Agent session id plumbing
 
-Tests for `createAgent`'s session-id handling (`src/core/agent.ts` →
-`src/core/agent-run.ts`). The chat reactor pre-mints a session id
+Tests for `createAgent`'s session-id handling (`src/core/agent/index.ts` →
+`src/core/agent/run.ts`). The chat reactor pre-mints a session id
 (`chat-reactor-sessions.ts`) and stores it in
 `.callback-box/chat-sessions.json`; for that stored id to be resumable in a
 later reactor cycle, the *first* run must hand it to the SDK as the
@@ -13,7 +13,7 @@ The dry-run path reports the session id the run would use, which lets us
 assert the plumbing without spawning the SDK.
 
 ```ts setup
-import { createAgent } from "../../src/core/agent.js";
+import { createAgent } from "../../src/core/agent/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const MINTED = "11111111-1111-4111-8111-111111111111";

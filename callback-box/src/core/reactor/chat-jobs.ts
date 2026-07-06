@@ -11,7 +11,7 @@
  * the next message starts fresh.
  */
 
-import { ensureAgentCommitted, captureBaseline } from "../agent.js";
+import { ensureAgentCommitted, captureBaseline } from "../agent/index.js";
 import {
   loadChatSessions,
   saveChatSessions,

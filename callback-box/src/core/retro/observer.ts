@@ -6,7 +6,7 @@
  * scripted fake (the project's standard real + fake service split).
  */
 
-import { createAgent } from "../agent.js";
+import { createAgent } from "../agent/index.js";
 import {
   ObserverOutputSchema,
   type SessionObservation,

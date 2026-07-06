@@ -6,9 +6,9 @@
  * still fails — creates a fallback commit marked `Fallback: true`.
  */
 
-import { fmt } from "../lib/format.js";
-import { getStatus, stageAll, commit, type GitStatus } from "../lib/git.js";
-import type { Agent } from "./agent-types.js";
+import { fmt } from "../../lib/format.js";
+import { getStatus, stageAll, commit, type GitStatus } from "../../lib/git.js";
+import type { Agent } from "./types.js";
 
 export const COMMIT_NUDGE_PROMPT = `IMPORTANT: You have uncommitted changes in the working directory. Please:
 

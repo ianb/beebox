@@ -9,7 +9,7 @@
  */
 
 import * as path from "node:path";
-import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
+import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent/index.js";
 import { getHead } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { fmt } from "../../lib/format.js";

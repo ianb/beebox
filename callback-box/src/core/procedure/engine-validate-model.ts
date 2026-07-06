@@ -13,7 +13,7 @@
  */
 
 import { z } from "zod";
-import { createAgent as realCreateAgent } from "../agent.js";
+import { createAgent as realCreateAgent } from "../agent/index.js";
 import { MODEL_MAP, type AgentFactory } from "./engine-types.js";
 
 /** Structured verdict the review model returns for an instruction check. */

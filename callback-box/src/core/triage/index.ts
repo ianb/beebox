@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { getBoxDir } from "../../lib/paths.js";
 import { fenceForPrompt } from "../../lib/prompt-fence.js";
-import { createAgent } from "../agent.js";
+import { createAgent } from "../agent/index.js";
 import {
   compileTriageInstructions,
   type CompiledTriageInstructions,

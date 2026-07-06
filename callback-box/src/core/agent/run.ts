@@ -7,15 +7,15 @@
  * and translates the outcome into the public `AgentResult` shape.
  */
 
-import { fmt } from "../lib/format.js";
-import { buildTimezoneContext } from "./box-config.js";
-import { buildScriptEnv } from "./script-env.js";
-import { cardValidatorHook, gitMvNudgeHook } from "./sdk-hooks.js";
-import { resolveClaudeCodeBinary } from "./sdk-binary-path.js";
-import { startPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
-import { consumeAgentStream, type RunStreamOutcome } from "./agent-stream.js";
-import { dropUndefined } from "../lib/drop-undefined.js";
-import type { AgentResult, AgentResultBase } from "./agent-types.js";
+import { fmt } from "../../lib/format.js";
+import { buildTimezoneContext } from "../box-config.js";
+import { buildScriptEnv } from "../script-env.js";
+import { cardValidatorHook, gitMvNudgeHook } from "../sdk-hooks.js";
+import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
+import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
+import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
+import { dropUndefined } from "../../lib/drop-undefined.js";
+import type { AgentResult, AgentResultBase } from "./types.js";
 
 export interface RunAgentOptions {
   boxRoot: string;
