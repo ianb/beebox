@@ -276,7 +276,7 @@ These are available to all tricks via normal imports.
 Put reusable utilities in \`tricks/lib/\` and import them with relative paths:
 
 \`\`\`typescript
-import { helper } from "../../../lib/helper.js";
+import { helper } from "../../lib/helper.js";
 \`\`\`
 
 ## Tips

@@ -5,7 +5,7 @@ replaying speech doesn't re-hit the TTS backend. It is byte-bounded with LRU
 eviction so it can never grow without limit.
 
 ```ts setup
-import { AudioCache, cacheKey } from "../../../src/frontend/src/lib/audio-cache.js";
+import { AudioCache, cacheKey } from "../../../src/frontend/src/lib/audio/cache.js";
 ```
 
 ## Cache keys

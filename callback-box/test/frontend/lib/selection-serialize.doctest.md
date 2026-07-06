@@ -8,7 +8,7 @@ carry none (everything appends). Results are `JSON.stringify`'d so newlines
 and quotes are explicit.
 
 ```ts setup
-import { applySelections } from "../../../src/frontend/src/lib/selection-serialize.js";
+import { applySelections } from "../../../src/frontend/src/lib/selection/serialize.js";
 ```
 
 ## Inline replacement at the token (typed message)

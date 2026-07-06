@@ -1,12 +1,12 @@
 # WAV encoder
 
-`src/frontend/src/lib/wav-encode.ts` packages PCM s16le chunks (16kHz
+`src/frontend/src/lib/audio/wav-encode.ts` packages PCM s16le chunks (16kHz
 mono, what the pcm-processor worklet emits) into a WAV-formatted Blob.
 Used by narration mode to send segment audio to the HQ transcription
 pass.
 
 ```ts setup
-import { encodePcmChunksAsWav } from "../../../src/frontend/src/lib/wav-encode.js";
+import { encodePcmChunksAsWav } from "../../../src/frontend/src/lib/audio/wav-encode.js";
 
 function sampleChunk(samples: number): ArrayBuffer {
   const buf = new ArrayBuffer(samples * 2);

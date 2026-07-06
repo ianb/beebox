@@ -3,7 +3,7 @@
 `parseAllSpeechTags()` extracts `<speech>` tags from assistant responses for TTS playback. Each segment has text content and optional voice/emotion/instruction attributes.
 
 ```ts setup
-import { parseAllSpeechTags, hasAssistantSpeech } from "../../../src/frontend/src/lib/speech-parsing.js";
+import { parseAllSpeechTags, hasAssistantSpeech } from "../../../src/frontend/src/lib/audio/speech-parsing.js";
 
 // Some assertions feed unknown voices to exercise the warn-and-default path.
 // Silence the warning so it doesn't pollute test output.
@@ -291,7 +291,7 @@ segs[0].name
 each chunk with its absolute index (matching parseAllSpeechTags order):
 
 ```ts setup
-import { splitSpeechParts } from "../../../src/frontend/src/lib/speech-parsing.js";
+import { splitSpeechParts } from "../../../src/frontend/src/lib/audio/speech-parsing.js";
 ```
 
 ```ts

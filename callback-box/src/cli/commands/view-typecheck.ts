@@ -50,7 +50,7 @@ async function typecheckOneView(args: { viewPath: string; slug: string }): Promi
     // Relative import to the real ViewProps source, so the assertion is against
     // the actual interface, not a copy that could drift.
     let viewProps = path
-      .relative(tmpDir, path.join(PACKAGE_ROOT, "src", "types", "views"))
+      .relative(tmpDir, path.join(PACKAGE_ROOT, "src", "core", "views", "types"))
       .replaceAll(path.sep, "/");
     if (!viewProps.startsWith(".")) viewProps = `./${viewProps}`;
     const harnessPath = path.join(tmpDir, "harness.ts");

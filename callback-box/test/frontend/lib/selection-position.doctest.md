@@ -9,7 +9,7 @@ The DOM-walking half (`extractSelection`) is verified in the browser, since
 it depends on the live rendered document; this covers the pure formatter.
 
 ```ts setup
-import { formatPosition } from "../../../src/frontend/src/lib/selection-position.js";
+import { formatPosition } from "../../../src/frontend/src/lib/selection/position.js";
 ```
 
 ## All parts present

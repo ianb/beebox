@@ -3,7 +3,7 @@
 `detectKeyword()` recognizes voice control commands in Whisper transcripts — things like "send message", "cancel", "microphone off". When a keyword is found, it's replaced with an XML tag in the transcript.
 
 ```ts setup
-import { detectKeyword, appendSendKeywordTag } from "../../../src/frontend/src/lib/speech-keywords.js";
+import { detectKeyword, appendSendKeywordTag } from "../../../src/frontend/src/lib/audio/speech-keywords.js";
 ```
 
 ## Send commands

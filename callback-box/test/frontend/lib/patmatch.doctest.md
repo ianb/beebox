@@ -3,7 +3,7 @@
 `KeywordPattern` compiles pattern strings into matchers for detecting keywords in speech input. Patterns support alternatives, optional words, and multi-word groups.
 
 ```ts setup
-import { KeywordPattern, TESTING_EXPORTS } from "../../../src/frontend/src/lib/patmatch.js";
+import { KeywordPattern, TESTING_EXPORTS } from "../../../src/frontend/src/lib/patmatch/index.js";
 const { normalizeWord, tokenizeInput } = TESTING_EXPORTS;
 ```
 
