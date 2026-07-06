@@ -30,7 +30,7 @@ import {
   type CalendarState,
 } from "./google-calendar-state.js";
 import { contentHash } from "../lib/content-hash.js";
-import { getBoxTime } from "../cli/lib/time.js";
+import { getBoxTime } from "../lib/time.js";
 import { decideCalendarSync } from "./google-calendar-decide.js";
 import { invariant } from "../lib/invariant.js";
 

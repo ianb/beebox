@@ -11,7 +11,7 @@
  */
 
 import { query, type Query, type SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import { fmt } from "../cli/lib/format.js";
+import { fmt } from "../lib/format.js";
 import { renderSdkMessage } from "./agent-render.js";
 import { stopPromptLogger, type PromptLogger } from "./agent-prompt-logger.js";
 

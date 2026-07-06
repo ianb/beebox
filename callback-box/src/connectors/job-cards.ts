@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseFrontmatterObject } from "../cards/index.js";
-import { getBoxTimeISO } from "../cli/lib/time.js";
+import { getBoxTimeISO } from "../lib/time.js";
 
 /**
  * Build a job-card filename: `<timestamp>-<stem>.<extension>`, where the

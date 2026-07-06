@@ -25,7 +25,7 @@ import {
 import { stageFiles, commit } from "../lib/git.js";
 import { loadTransientState, saveTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
-import { getBoxTimeISO } from "../cli/lib/time.js";
+import { getBoxTimeISO } from "../lib/time.js";
 import type { TelegramService } from "../services/telegram.js";
 import { createTelegramService } from "../services/telegram.js";
 import type {

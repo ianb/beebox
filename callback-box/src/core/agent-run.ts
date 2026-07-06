@@ -7,7 +7,7 @@
  * and translates the outcome into the public `AgentResult` shape.
  */
 
-import { fmt } from "../cli/lib/format.js";
+import { fmt } from "../lib/format.js";
 import { buildTimezoneContext } from "./box-config.js";
 import { buildScriptEnv } from "./script-env.js";
 import { cardValidatorHook, gitMvNudgeHook } from "./sdk-hooks.js";

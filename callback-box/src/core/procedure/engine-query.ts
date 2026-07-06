@@ -6,7 +6,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
-import { fmt } from "../../cli/lib/format.js";
+import { fmt } from "../../lib/format.js";
 import { ok, okVoid, err, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";

@@ -17,7 +17,7 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { getBoxTimeISO } from "../../cli/lib/time.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import {
   loadLedger,
   saveLedger,

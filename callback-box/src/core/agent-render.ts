@@ -10,7 +10,7 @@ import type {
   SDKMessage,
   SDKAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
-import { fmt } from "../cli/lib/format.js";
+import { fmt } from "../lib/format.js";
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;

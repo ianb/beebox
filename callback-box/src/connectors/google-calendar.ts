@@ -24,7 +24,7 @@ import {
 } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
-import { getBoxTime } from "../cli/lib/time.js";
+import { getBoxTime } from "../lib/time.js";
 import {
   createGoogleCalendarService,
   type GoogleCalendarService,

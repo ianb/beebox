@@ -15,7 +15,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { boxPath, isCardFile } from "../../lib/paths.js";
-import { getBoxTimeISO } from "../../cli/lib/time.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import { stageFiles, commit } from "../../lib/git.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";

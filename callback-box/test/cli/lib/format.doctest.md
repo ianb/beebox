@@ -3,7 +3,7 @@
 `stripAnsi` removes ANSI escape codes from text, useful for logging or when color support is disabled.
 
 ```ts setup
-import { stripAnsi } from "../../../src/cli/lib/format.js";
+import { stripAnsi } from "../../../src/lib/format.js";
 ```
 
 ```ts

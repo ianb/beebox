@@ -12,7 +12,7 @@ import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
 import { getHead } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
-import { fmt } from "../../cli/lib/format.js";
+import { fmt } from "../../lib/format.js";
 import { MODEL_MAP, type ParsedStep, type ValidateStatus } from "./engine-types.js";
 import type { ExecuteStepParams } from "./engine-step.js";
 import {

@@ -22,7 +22,7 @@ import {
 import { buildReactorSystemPrompt } from "./prompts.js";
 import { buildJobDescription } from "./batch-jobs.js";
 import { readCardFrontmatter, isRecord } from "../card-io.js";
-import { fmt } from "../../cli/lib/format.js";
+import { fmt } from "../../lib/format.js";
 import type { ProcessJobsOptions } from "./types.js";
 
 /**

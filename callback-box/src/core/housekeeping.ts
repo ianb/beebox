@@ -7,7 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxTime } from "../cli/lib/time.js";
+import { getBoxTime } from "../lib/time.js";
 
 /**
  * Sweep transient chat-upload files from <boxRoot>/tmp/.

@@ -6,7 +6,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { getBoxTime } from "../lib/time.js";
+import { getBoxTime } from "../../lib/time.js";
 import {
   parseScheduledScript,
   ScheduledScriptSchema,

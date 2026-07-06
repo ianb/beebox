@@ -3,7 +3,7 @@
 Stubbable time for scenario testing. Resolution: `CB_TIME` env var → `stubs.yaml` in parent dir → real time.
 
 ```ts setup
-import { getBoxTime, getBoxTimeISO, clearTimeCache } from "../../../src/cli/lib/time.js";
+import { getBoxTime, getBoxTimeISO, clearTimeCache } from "../../../src/lib/time.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";

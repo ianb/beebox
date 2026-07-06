@@ -6,7 +6,7 @@
  * still fails — creates a fallback commit marked `Fallback: true`.
  */
 
-import { fmt } from "../cli/lib/format.js";
+import { fmt } from "../lib/format.js";
 import { getStatus, stageAll, commit, type GitStatus } from "../lib/git.js";
 import type { Agent } from "./agent-types.js";
 

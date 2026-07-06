@@ -4,8 +4,8 @@
  */
 
 import { stageAll, commit } from "../../lib/git.js";
-import { fmt } from "../../cli/lib/format.js";
-import { getBoxTimeISO } from "../../cli/lib/time.js";
+import { fmt } from "../../lib/format.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import type { CommandContext } from "../command-runner.js";
 import {
   type AgentFactory,

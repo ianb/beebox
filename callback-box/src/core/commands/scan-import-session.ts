@@ -12,7 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { CommandContext } from "../command-runner.js";
-import { getBoxTimeISO } from "../../cli/lib/time.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import {
   PDF_EXTENSION,
   SUPPORTED_IMAGE_EXTENSIONS,
