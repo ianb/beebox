@@ -61,6 +61,15 @@ export function assembleChatMessage(
     selections: [...emission.selections],
   });
 
+  // Trust note (Track I): the outer <typed>/<speech> body is deliberately NOT
+  // escaped/fenced. It is first-party owner input (the trust root, not an
+  // injection vector), and — critically — `applySelections` inserts
+  // `<user-selection>` child elements into it that the agent and the display
+  // layer both parse as structure; uniformly escaping the body would launder
+  // those intended tags. The masquerade boundary lives one level down, in
+  // selection-serialize's escapeText/escapeAttr on each selection's own
+  // text/attrs. Fencing here is reserved for untrusted content (card/job/
+  // external bytes), which enters prompts through fenceForPrompt, not this path.
   let wrapped: string;
   if (emission.origin === "typed") {
     wrapped = `<typed${attrs}>${body}</typed>`;
