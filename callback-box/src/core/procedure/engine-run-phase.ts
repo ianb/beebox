@@ -11,6 +11,7 @@
 import * as path from "node:path";
 import { createAgent as realCreateAgent, type AgentInvokeOptions } from "../agent.js";
 import { getHead } from "../../cli/lib/git.js";
+import { invariant } from "../../lib/invariant.js";
 import { fmt } from "../../cli/lib/format.js";
 import { MODEL_MAP, type ParsedStep } from "./engine-types.js";
 import type { ExecuteStepParams } from "./engine-step.js";
@@ -249,7 +250,9 @@ export async function runAndValidate(
 
   // severity: review — try to self-heal by re-invoking the run agent. Only a
   // single-agent run phase has one session to resume; anything else can't retry.
-  if (step.run!.agents.length !== 1 || sessionId === undefined) {
+  // Reaching the review-retry path presupposes a run phase to resume.
+  invariant(step.run, "review-severity retry reached without a run phase");
+  if (step.run.agents.length !== 1 || sessionId === undefined) {
     ctx.writeLine(
       fmt.fail("  severity=review needs exactly one resumable run agent to retry — failing the step.")
     );

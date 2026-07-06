@@ -17,6 +17,7 @@
  */
 
 import { makeLog } from "./chat-session-log.js";
+import { checkInvariant } from "../lib/invariant.js";
 import { EventEmitter } from "node:events";
 import { ChatSession, type ChatSessionOptions } from "./chat-session.js";
 import {
@@ -340,7 +341,11 @@ export class ChatSessionRegistry extends EventEmitter {
     return () => {
       if (released) return;
       released = true;
-      entry.refCount = Math.max(0, entry.refCount - 1);
+      // A release with refCount already 0 means we released more than we
+      // pinned — a real bookkeeping bug. Log loudly, then clamp (don't crash
+      // session cleanup over it) rather than silently masking with Math.max.
+      if (!checkInvariant(entry.refCount > 0, "chat-session pin refCount underflow")) entry.refCount = 0;
+      else entry.refCount -= 1;
     };
   }
 
@@ -365,7 +370,8 @@ export class ChatSessionRegistry extends EventEmitter {
       const entry = assignedId !== null ? this.entries.get(assignedId) : undefined;
       if (entry) {
         // Promoted before release: the pin became part of refCount.
-        entry.refCount = Math.max(0, entry.refCount - 1);
+        if (!checkInvariant(entry.refCount > 0, "chat-session pinSession refCount underflow")) entry.refCount = 0;
+        else entry.refCount -= 1;
         return;
       }
       const remaining = (this.pendingPins.get(session) ?? 1) - 1;
