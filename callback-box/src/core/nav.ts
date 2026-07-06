@@ -13,7 +13,7 @@ import { splitCardContent } from "../cards/index.js";
 import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
-import { resolveBoxRelativeRef } from "../lib/box-containment.js";
+import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
 
 export const NAV_CARD_PATH = "nav.card";
 
@@ -99,7 +99,15 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
       problems.push(`ref "${entry.ref}" must be box-relative (must not escape the box via ..)`);
       continue;
     }
-    const absPath = path.join(boxRoot, contained);
+    // `stat` follows symlinks; realpath-verify so a nav ref can't point (via an
+    // in-box symlink) at a file outside the box.
+    const safe = await realpathContained(boxRoot, contained);
+    if (safe === null) {
+      console.warn(`resolveNav: ref "${entry.ref}" resolves outside the box via symlink`);
+      problems.push(`ref "${entry.ref}" must be box-relative (must not escape the box via a symlink)`);
+      continue;
+    }
+    const absPath = path.join(boxRoot, safe);
     let exists = true;
     try {
       const stat = await fs.stat(absPath);

@@ -69,8 +69,12 @@ function resolveRefToAbs(params: {
     abs = path.resolve(path.dirname(cardAbsPath), pathPart);
   }
   // Containment: a ref that escapes the box can't name an in-box moved card, so
-  // leaving it untouched (null → no rewrite) is both correct and safe.
-  return containWithinBox(boxRoot, abs) === null ? null : abs;
+  // leave it untouched (null → no rewrite) — but never silently.
+  if (containWithinBox(boxRoot, abs) === null) {
+    console.warn(`rewrite-card-refs: ref "${pathPart}" in ${cardAbsPath} escapes the box; leaving unchanged`);
+    return null;
+  }
+  return abs;
 }
 
 /**

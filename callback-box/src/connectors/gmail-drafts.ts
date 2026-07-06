@@ -19,7 +19,7 @@ import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
-import { containWithinBox } from "../lib/box-containment.js";
+import { containWithinBox, realpathContained } from "../lib/box-containment.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 
 interface DraftFields {
@@ -145,7 +145,7 @@ async function uploadOneDraft(opts: {
   let references: string | undefined;
   let threadId: string | undefined;
   if (fields.inReplyToRef) {
-    const sourcePath = resolveCardRef({
+    const sourcePath = await resolveCardRef({
       boxRoot: opts.boxRoot,
       cardPath: opts.cardPath,
       ref: fields.inReplyToRef,
@@ -252,38 +252,33 @@ async function readSourceMessage(
 }
 
 /**
- * Resolve a ref attribute (e.g. on <in-reply-to ref="...">) to an absolute
- * filesystem path. Accepts three forms:
- *   - card-relative: "msg-001.email-message.card" → next to the draft card
- *   - box-relative:  "box/inbox/email/.../msg-001..." → from the box root
- *   - box-absolute:  "/box/inbox/email/..." (leading slash) → from the box root
- *
- * `path.resolve` alone is wrong because a leading-slash arg is treated as
- * filesystem-absolute, which loses the box root and points at /box/... on
- * the host.
+ * Resolve a ref attribute (e.g. on <in-reply-to ref="...">) to a contained
+ * box-relative path (or null on escape). Three forms: card-relative
+ * ("msg-001.email-message.card" → next to the draft card), box-relative
+ * ("box/inbox/email/…"), box-absolute ("/box/inbox/email/…", leading slash) —
+ * both box forms resolve from the box root. (`path.resolve` alone mishandles
+ * the leading-slash form as host-absolute.) Returns an absolute path proven to
+ * stay inside the box (string containment + realpath symlink check), or null on
+ * escape — which the caller surfaces as an unresolved ref.
  */
-function resolveCardRef(opts: {
+async function resolveCardRef(opts: {
   boxRoot: string;
   cardPath: string;
   ref: string;
-}): string | null {
+}): Promise<string | null> {
   const ref = opts.ref;
   let abs: string;
   if (ref.startsWith("/")) {
     abs = path.join(opts.boxRoot, ref.slice(1));
-  } else if (
-    ref.startsWith("box/") ||
-    ref.startsWith("store/") ||
-    ref.startsWith("config/") ||
-    ref.startsWith("people/")
-  ) {
+  } else if (/^(?:box|store|config|people)\//.test(ref)) {
     abs = path.join(opts.boxRoot, ref);
   } else {
     abs = path.resolve(path.dirname(opts.cardPath), ref);
   }
-  // Containment: a ref must not read a source message from outside the box.
-  // An escape resolves to null, which the caller surfaces as an unresolved ref.
-  return containWithinBox(opts.boxRoot, abs) === null ? null : abs;
+  const contained = containWithinBox(opts.boxRoot, abs);
+  if (contained === null) return null;
+  const safe = await realpathContained(opts.boxRoot, contained);
+  return safe === null ? null : path.join(opts.boxRoot, safe);
 }
 
 interface BuildMimeOptions {

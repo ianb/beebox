@@ -15,6 +15,7 @@ import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { listViews } from "../../views/compiler.js";
 import { resolveContainedRef } from "../../../core/ref-exists.js";
+import { realpathContained } from "../../../lib/box-containment.js";
 import { typeFromFilename } from "../../../core/card-io.js";
 import { splitCardContent } from "../../../cards/frontmatter.js";
 import { titleFromFilename } from "../../../core/file-summary.js";
@@ -78,8 +79,15 @@ export const viewsRouter = router({
         console.warn(`views.resolveRef: ref "${refPath}" (base "${input.basePath}") escapes the box`);
         return { path: refPath, title: titleFromFilename(refPath), type: typeFromFilename(refPath) ?? "", exists: false };
       }
-      const abs = path.join(ctx.boxRoot, contained);
-      const relPath = contained;
+      // `stat` follows symlinks; realpath-verify so this endpoint can't report
+      // the existence/title of an out-of-box file reached via an in-box symlink.
+      const safe = await realpathContained(ctx.boxRoot, contained);
+      if (safe === null) {
+        console.warn(`views.resolveRef: ref "${refPath}" (base "${input.basePath}") resolves outside the box via symlink`);
+        return { path: refPath, title: titleFromFilename(refPath), type: typeFromFilename(refPath) ?? "", exists: false };
+      }
+      const abs = path.join(ctx.boxRoot, safe);
+      const relPath = safe;
 
       let exists = false;
       try {

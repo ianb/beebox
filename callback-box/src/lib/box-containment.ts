@@ -70,16 +70,41 @@ export function resolveBoxRelativeRef(boxRoot: string, ref: string): BoxRelative
 }
 
 /**
+ * Re-verify a string-contained path via `fs.realpath` (both sides): follow
+ * symlinks and confirm the target STILL resolves inside the box. Returns the
+ * same branded path when contained (or when the target does not exist yet — a
+ * missing file is the caller's to handle, not an escape), `null` when a symlink
+ * makes it escape. The async symlink-hardening layer every read/stat sink
+ * should apply on top of the sync string floor. (Caveat: a missing leaf behind
+ * a symlinked *parent* directory can't be realpath'd and is reported as
+ * contained; the common leaf-symlink escape IS caught.)
+ */
+export async function realpathContained(
+  boxRoot: string,
+  contained: BoxRelativePath,
+): Promise<BoxRelativePath | null> {
+  const root = path.resolve(boxRoot);
+  const abs = path.join(root, contained);
+  let realAbs: string;
+  try {
+    realAbs = await realpath(abs);
+  } catch (e) {
+    // A target that doesn't exist yet is a missing ref, not an escape — let the
+    // caller's own missing-file path handle it.
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return contained;
+    throw e;
+  }
+  const realRoot = await realpath(root);
+  return realAbs === realRoot || realAbs.startsWith(realRoot + path.sep) ? contained : null;
+}
+
+/**
  * Read a contained ref's UTF-8 bytes, re-verifying containment after symlink
  * resolution. Throws {@link RefEscapesBoxError} on a symlink escape; lets
  * `ENOENT` propagate (a missing ref is the caller's to tolerate).
  */
 export async function readContainedFile(boxRoot: string, contained: BoxRelativePath): Promise<string> {
-  const root = path.resolve(boxRoot);
-  const abs = path.join(root, contained);
-  const [realRoot, realAbs] = await Promise.all([realpath(root), realpath(abs)]);
-  if (realAbs !== realRoot && !realAbs.startsWith(realRoot + path.sep)) {
-    throw new RefEscapesBoxError(contained);
-  }
-  return readFile(abs, "utf-8");
+  const safe = await realpathContained(boxRoot, contained);
+  if (safe === null) throw new RefEscapesBoxError(contained);
+  return readFile(path.join(path.resolve(boxRoot), safe), "utf-8");
 }

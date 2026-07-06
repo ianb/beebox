@@ -17,7 +17,7 @@
 import { access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
-import { containWithinBox, type BoxRelativePath } from "../lib/box-containment.js";
+import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
@@ -64,7 +64,14 @@ export async function resolveRefExists(input: RefExistsInput): Promise<boolean> 
     console.warn(`resolveRefExists: ref "${input.ref}" in ${input.fromPath} escapes the box`);
     return false;
   }
-  const target = resolve(input.boxRoot, contained);
+  // `access` follows symlinks, so re-verify via realpath: an in-box symlink
+  // pointing outside must not be reported as an existing (valid) ref.
+  const safe = await realpathContained(input.boxRoot, contained);
+  if (safe === null) {
+    console.warn(`resolveRefExists: ref "${input.ref}" in ${input.fromPath} resolves outside the box via symlink`);
+    return false;
+  }
+  const target = resolve(input.boxRoot, safe);
   try {
     await access(target);
     return true;

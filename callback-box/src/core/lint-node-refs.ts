@@ -33,6 +33,7 @@ import { dirname, join } from "node:path";
 import { splitCardContent, type LintIssue } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { resolveContainedRef } from "./ref-exists.js";
+import { realpathContained } from "../lib/box-containment.js";
 
 export interface NodeRefLintInput {
   /** Absolute path of the card being linted. */
@@ -114,7 +115,12 @@ async function conceptMapViaCourse(input: {
     console.warn(`conceptMapViaCourse: course ref "${courseRef}" in ${fromPath} escapes the box`);
     return null;
   }
-  const coursePath = join(boxRoot, containedCourse);
+  const safeCourse = await realpathContained(boxRoot, containedCourse);
+  if (safeCourse === null) {
+    console.warn(`conceptMapViaCourse: course ref "${courseRef}" in ${fromPath} resolves outside the box via symlink`);
+    return null;
+  }
+  const coursePath = join(boxRoot, safeCourse);
   const courseFields = await readCardYaml(coursePath);
   if (courseFields === null) return null;
 
@@ -125,7 +131,12 @@ async function conceptMapViaCourse(input: {
     console.warn(`conceptMapViaCourse: concept-map ref "${mapRef}" in ${coursePath} escapes the box`);
     return null;
   }
-  const mapPath = join(boxRoot, containedMap);
+  const safeMap = await realpathContained(boxRoot, containedMap);
+  if (safeMap === null) {
+    console.warn(`conceptMapViaCourse: concept-map ref "${mapRef}" in ${coursePath} resolves outside the box via symlink`);
+    return null;
+  }
+  const mapPath = join(boxRoot, safeMap);
   const mapFields = await readCardYaml(mapPath);
   if (mapFields === null) return null;
 

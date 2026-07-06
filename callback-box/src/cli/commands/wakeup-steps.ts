@@ -17,7 +17,7 @@ import { stageAll, stageFiles, commit, getStatus } from "../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
-import { resolveBoxRelativeRef } from "../../lib/box-containment.js";
+import { resolveBoxRelativeRef, realpathContained } from "../../lib/box-containment.js";
 import { findJobCards } from "../../core/reactor/job-discovery.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
 import { loadContainsState, listMissing } from "../../core/search/contains-state.js";
@@ -136,8 +136,15 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
         console.warn(`  Job ${relPath} ref "${ref}" escapes the box; treating as missing`);
         continue;
       }
+      // `access` follows symlinks; realpath-verify so an in-box symlink pointing
+      // at an out-of-box file can't keep a stale job alive.
+      const safe = await realpathContained(boxRoot, contained);
+      if (safe === null) {
+        console.warn(`  Job ${relPath} ref "${ref}" resolves outside the box via symlink; treating as missing`);
+        continue;
+      }
       try {
-        await fs.access(path.join(boxRoot, contained));
+        await fs.access(path.join(boxRoot, safe));
         allMissing = false;
         break;
       } catch (_e) {

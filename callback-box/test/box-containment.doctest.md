@@ -11,6 +11,7 @@ import {
   containWithinBox,
   resolveBoxRelativeRef,
   readContainedFile,
+  realpathContained,
 } from "../src/lib/box-containment.js";
 import { resolveContainedRef } from "../src/core/ref-exists.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
@@ -146,7 +147,9 @@ await readContainedFile(box.root, inside)
 ```
 
 An in-box symlink pointing outside passes the string floor (the link sits in
-the box) but `realpath` follows it and the read throws.
+the box) but `realpath` follows it: `realpathContained` returns `null` and the
+read throws. A legitimate in-box file, and a not-yet-existing target, both pass
+(a missing ref is the caller's to handle, not an escape).
 
 ```ts continue
 await symlink("/etc/hosts", box.path("store/escape.card"));
@@ -154,9 +157,20 @@ const link = containWithinBox(box.root, box.path("store/escape.card"));
 JSON.stringify(link)
 => "store/escape.card"
 
+JSON.stringify(await realpathContained(box.root, link))
+=> null
+
 const err = await readContainedFile(box.root, link).catch((e) => e);
 err.name
 => RefEscapesBoxError
+
+// legit in-box file: returned unchanged
+await realpathContained(box.root, inside)
+=> store/note.card
+
+// not-yet-existing in-box target: not an escape, returned unchanged
+await realpathContained(box.root, containWithinBox(box.root, box.path("store/missing.card")))
+=> store/missing.card
 ```
 
 ```ts cleanup
