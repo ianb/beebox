@@ -10,7 +10,7 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { bundleView, getViewMeta, buildErrorModule, resolveViewsDir } from "../views/compiler.js";
-import { loadViewCards } from "../../core/view-cards.js";
+import { loadViewCards } from "../../core/views/cards.js";
 
 interface RegisterViewRoutesOptions {
   server: FastifyInstance;

@@ -5,7 +5,7 @@
 
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
-import { migrateBoxViewLinks } from "../../core/view-link-migration.js";
+import { migrateBoxViewLinks } from "../../core/views/link-migration.js";
 
 export const migrateViewLinksCommand = new Command("migrate-view-links")
   .description("Rewrite retired view: links in box content to plain paths ([l](view:x) -> [l](x), dropping ?zoom).")

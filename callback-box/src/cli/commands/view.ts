@@ -35,10 +35,10 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import { compileView, listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
 import { writeNodeViewModule } from "../../webapp/views/node-view-runtime.js";
 import { viewLintCommand } from "./view-lint.js";
-import { loadViewCards } from "../../core/view-cards.js";
+import { loadViewCards } from "../../core/views/cards.js";
 import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import type { ViewProps } from "../../core/view-types.js";
+import type { ViewProps } from "../../core/views/types.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {

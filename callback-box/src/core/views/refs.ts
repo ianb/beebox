@@ -18,7 +18,7 @@
 
 import { promises as fs } from "node:fs";
 import { relative } from "node:path";
-import { resolveRefExists } from "./ref-exists.js";
+import { resolveRefExists } from "../ref-exists.js";
 
 /** Matches `cardRef="…"` / `cardRef='…'` with a literal string value. */
 const CARD_REF_ATTR = /\bcardRef\s*=\s*(["'])([^"']*)\1/g;

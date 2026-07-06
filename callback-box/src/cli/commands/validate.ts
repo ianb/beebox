@@ -16,7 +16,7 @@ import {
 } from "./validate-markdown.js";
 import { requireBoxRoot, isCardFile, isMarkdownFile, isViewFile } from "../../lib/paths.js";
 import { listBoxCardFiles, listBoxMarkdownFiles, listBoxViewFiles } from "../../core/list-cards.js";
-import { collectViewRefWarnings } from "../../core/view-refs.js";
+import { collectViewRefWarnings } from "../../core/views/refs.js";
 import { getStatus } from "../../lib/git.js";
 import { lintAttachLayout, type AttachLintError } from "../../lib/attach-lint.js";
 import { lintCardsDispatch } from "../../core/card-lint.js";

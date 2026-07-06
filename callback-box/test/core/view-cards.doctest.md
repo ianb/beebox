@@ -7,7 +7,7 @@ serves. It additionally reports cards that matched a glob but failed to load
 
 ```ts setup
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { loadViewCards } from "../../src/core/view-cards.js";
+import { loadViewCards } from "../../src/core/views/cards.js";
 
 const MEMO_CARD = `---
 status: new

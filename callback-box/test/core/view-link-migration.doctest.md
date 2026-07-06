@@ -4,7 +4,7 @@ Rewrite stored markdown/card content off the retired `view:` scheme onto plain
 box paths, dropping the `?zoom` flag and preserving every other query param.
 
 ```ts setup
-import { rewriteViewTarget, rewriteViewLinksInText } from "../../src/core/view-link-migration.js";
+import { rewriteViewTarget, rewriteViewLinksInText } from "../../src/core/views/link-migration.js";
 ```
 
 ## rewriteViewTarget (a single URL after the `view:` prefix)

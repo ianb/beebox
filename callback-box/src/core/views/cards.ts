@@ -15,12 +15,12 @@
 import * as path from "node:path";
 import { promises as fs } from "node:fs";
 import { glob } from "glob";
-import { loadCardFile } from "./card-io.js";
-import { buildLoadContext } from "./load-context.js";
-import { getStatus, isRepo } from "../lib/git.js";
-import { fileEtag } from "../webapp/file-etag.js";
-import { attachDirFor } from "../shared/attach-path.js";
-import type { ViewCard, ViewFile } from "./view-types.js";
+import { loadCardFile } from "../card-io.js";
+import { buildLoadContext } from "../load-context.js";
+import { getStatus, isRepo } from "../../lib/git.js";
+import { fileEtag } from "../../webapp/file-etag.js";
+import { attachDirFor } from "../../shared/attach-path.js";
+import type { ViewCard, ViewFile } from "./types.js";
 
 /** A card whose dependency glob matched but that failed to load. */
 export interface SkippedCard {

@@ -4,8 +4,8 @@
  * Called by generate-docs.ts to produce docs/generated/views.md.
  */
 
-import { dependenciesAndParamsSection } from "./views-doc-files.js";
-import { examplesSection } from "./views-doc-examples.js";
+import { dependenciesAndParamsSection } from "./doc-files.js";
+import { examplesSection } from "./doc-examples.js";
 
 const introSection = `# Views: Agent-Generated React Components
 

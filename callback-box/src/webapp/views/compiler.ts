@@ -11,7 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { glob } from "glob";
-import type { ViewMeta } from "../../core/view-types.js";
+import type { ViewMeta } from "../../core/views/types.js";
 import { getBoxShape, boxCodePaths, type BoxShape } from "../../lib/box-shape.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { importViewMetadata } from "./view-meta-import.js";

@@ -8,7 +8,7 @@ target moves (the `cb mv` half). This is the JSX-view analogue of the Markdoc
 body-ref machinery — a different surface, the same `{path, ref}` shape.
 
 ```ts setup
-import { extractViewRefs, lintViewRefs } from "../../src/core/view-refs.js";
+import { extractViewRefs, lintViewRefs } from "../../src/core/views/refs.js";
 import { rewriteViewRefs } from "../../src/core/rewrite-card-refs.js";
 import { listBoxViewFiles } from "../../src/core/list-cards.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
