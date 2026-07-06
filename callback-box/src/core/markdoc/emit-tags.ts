@@ -6,7 +6,7 @@
  * preserved. Unknown tags emit their inner content with a stderr warning —
  * the documented default: don't lose content silently.
  *
- * Split out of `markdoc-emit.ts` to keep that file under the line cap and to
+ * Split out of `markdoc/emit.ts` to keep that file under the line cap and to
  * isolate the (large, vocabulary-specific) tag switch from the core node
  * walker. To avoid a value-import cycle with the walker, the children-emitting
  * callback is passed in rather than imported.
@@ -66,7 +66,7 @@ export function emitTag(ctx: TagCtx): void {
   if (emitRecipeTag(ctx)) return;
   const { node, out } = ctx;
   const tagName = node.tag === undefined ? "(unnamed)" : node.tag;
-  console.warn(`markdoc-emit: unknown tag {% ${tagName} %}; emitting inner content only`);
+  console.warn(`markdoc/emit: unknown tag {% ${tagName} %}; emitting inner content only`);
   ctx.emitChildren(node, out);
 }
 

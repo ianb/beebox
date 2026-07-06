@@ -10,7 +10,7 @@
  *
  * `compileBriefing` emits the frontmatter records plus the body's Markdoc
  * as markdown for inclusion in CLAUDE.md (via `@`-include). The body
- * emitter lives at `src/core/markdoc-emit.ts`. The frontend renders the
+ * emitter lives at `src/core/markdoc/emit.ts`. The frontend renders the
  * records from frontmatter (default card viewer's field table) and the
  * body's `{% purpose %}`/`{% correction %}` tags as styled blocks via
  * `src/frontend/src/components/BriefingTags.tsx`.
@@ -21,8 +21,8 @@
 
 import { z } from "zod";
 import { body, cardSchema, type InferCardFields } from "../cards/index.js";
-import { emitBodyAsMarkdown } from "../core/markdoc-emit.js";
-import { displayFromRef } from "../core/markdoc-emit-tags.js";
+import { emitBodyAsMarkdown } from "../core/markdoc/emit.js";
+import { displayFromRef } from "../core/markdoc/emit-tags.js";
 
 const KeyPersonEntry = z.object({
   ref: z.string().optional(),

@@ -16,10 +16,10 @@
  * the whole class of problems by emitting only what we want to emit.
  *
  * **Module layout.** The recursive node walker lives in
- * `markdoc-emit-nodes.ts`; per-tag rendering for the briefing vocabulary
+ * `markdoc/emit-nodes.ts`; per-tag rendering for the briefing vocabulary
  * (`purpose`, `key-person`, `correction`, `property`, `project-phase`),
  * the recipe vocabulary, and the universal `quote`/`source` tags lives in
- * `markdoc-emit-tags.ts`. Unknown tags fall back to "emit inner text +
+ * `markdoc/emit-tags.ts`. Unknown tags fall back to "emit inner text +
  * stderr warning" (the documented default in Track 2). This file keeps the
  * single public entry point.
  *
@@ -31,7 +31,7 @@
 
 import Markdoc from "@markdoc/markdoc";
 
-import { emitNode } from "./markdoc-emit-nodes.js";
+import { emitNode } from "./emit-nodes.js";
 
 // eslint-disable-next-line import-x/no-named-as-default-member
 const { parse } = Markdoc;

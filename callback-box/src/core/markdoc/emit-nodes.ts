@@ -1,16 +1,16 @@
 /**
  * Core Markdoc AST → markdown node walker for the backend emitter.
  *
- * Split out of `markdoc-emit.ts` to keep that file under the line cap. Holds
+ * Split out of `markdoc/emit.ts` to keep that file under the line cap. Holds
  * the recursive `emitNode`/`emitChildren` pair plus the block-level helpers
  * (`emitItemChildren`, `emitBlockquote`). Tag rendering lives in the sibling
- * `markdoc-emit-tags.ts`; the walker hands its `emitChildren` to `emitTag` so
+ * `markdoc/emit-tags.ts`; the walker hands its `emitChildren` to `emitTag` so
  * tag emitters can recurse without a value-import cycle back into this module.
  */
 
 import type { Node } from "@markdoc/markdoc";
 
-import { emitTag } from "./markdoc-emit-tags.js";
+import { emitTag } from "./emit-tags.js";
 
 export function emitNode(node: Node, out: string[]): void {
   if (emitBlockNode(node, out)) return;

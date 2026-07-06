@@ -60,7 +60,7 @@ import type { Config, Node, RenderableTreeNode, Schema } from "@markdoc/markdoc"
 // module under Node's ESM loader (used by the doctest runner); the frontend
 // bundler tolerates them but the backend/test path does not. Destructure off
 // the default import instead — same pattern, and same lint exception, as
-// `body-refs.ts` / `markdoc-emit.ts`.
+// `body-refs.ts` / `markdoc/emit.ts`.
 // eslint-disable-next-line import-x/no-named-as-default-member -- named import fails under Node ESM; default-member access is the runtime-correct form for this CJS module
 const { Tag, nodes: baseNodes } = Markdoc;
 
