@@ -6,10 +6,16 @@ export function SidepanelApp() {
   const [config, setConfig] = useState<ClerkConfig | null>(null);
 
   useEffect(() => {
-    loadConfig().then(setConfig);
+    loadConfig().then(setConfig).catch((err: unknown) => {
+      console.error("[clerk] failed to load config:", err);
+    });
     const onChanged = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
       if (area !== "local") return;
-      if ("clerkConfig" in changes) loadConfig().then(setConfig);
+      if ("clerkConfig" in changes) {
+        loadConfig().then(setConfig).catch((err: unknown) => {
+          console.error("[clerk] failed to reload config on change:", err);
+        });
+      }
     };
     chrome.storage.onChanged.addListener(onChanged);
     return () => chrome.storage.onChanged.removeListener(onChanged);

@@ -48,13 +48,18 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   const [selectedDir, setSelectedDir] = useState("");
 
   useEffect(() => {
-    chrome.tabs.query({ active: true, currentWindow: true }).then((tabs) => {
-      const current = tabs[0];
-      if (current === undefined || current.id === undefined) return;
-      const url = current.url ?? "";
-      if (!url.startsWith("http://") && !url.startsWith("https://")) return;
-      setTab({ id: current.id, url, title: current.title ?? "" });
-    });
+    chrome.tabs
+      .query({ active: true, currentWindow: true })
+      .then((tabs) => {
+        const current = tabs[0];
+        if (current === undefined || current.id === undefined) return;
+        const url = current.url ?? "";
+        if (!url.startsWith("http://") && !url.startsWith("https://")) return;
+        setTab({ id: current.id, url, title: current.title ?? "" });
+      })
+      .catch((err: unknown) => {
+        console.error("[clerk] failed to query active tab:", err);
+      });
   }, []);
 
   // Load the box's commentary destinations. With exactly one, file there
@@ -66,14 +71,20 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
         const sole = dests.length === 1 ? dests[0] : undefined;
         if (sole !== undefined) setSelectedDir(sole.dir);
       })
-      .catch(() => setDestinations([]));
+      .catch((err: unknown) => {
+        console.error("[clerk] failed to load commentary destinations:", err);
+        setDestinations([]);
+      });
   }, [box]);
 
   const runAction = useCallback(
     (params: { label: string; message: ClerkMessage; okText: string }) => {
       setBusy(params.label);
       setNotice(null);
-      sendAction(params.message).then((response) => {
+      // sendAction's Promise executor has no reject path (chrome.runtime.
+      // lastError is translated into a resolved { ok: false } response
+      // instead) -- it structurally cannot reject.
+      void sendAction(params.message).then((response) => {
         setBusy(null);
         setNotice(toNotice(response, params.okText));
       });
@@ -95,7 +106,12 @@ export function ActionsPanel({ box }: ActionsPanelProps) {
   }, []);
 
   const handleOpenBox = useCallback(() => {
-    chrome.tabs.create({ url: box.boxUrl });
+    // User-initiated action (policy rule 5): surface via the existing
+    // notice banner rather than silently no-opping.
+    chrome.tabs.create({ url: box.boxUrl }).catch((err: unknown) => {
+      console.error("[clerk] failed to open box tab:", err);
+      setNotice({ kind: "error", text: "Could not open the box tab." });
+    });
   }, [box.boxUrl]);
 
   return (

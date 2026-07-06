@@ -10,25 +10,37 @@ export function PopupApp() {
   const [detected, setDetected] = useState<EnabledBox | null>(null);
 
   useEffect(() => {
-    loadConfig().then(setConfig);
-    detectBoxOnActiveTab().then(setDetected);
+    loadConfig().then(setConfig).catch((err: unknown) => {
+      console.error("[clerk] failed to load config:", err);
+    });
+    detectBoxOnActiveTab().then(setDetected).catch((err: unknown) => {
+      console.error("[clerk] failed to detect box on active tab:", err);
+    });
   }, []);
 
   const handleEnable = useCallback(() => {
     if (detected === null) return;
     // enableBox calls permissions.request first — it must stay inside the
     // click gesture, so no awaits before this call.
-    enableBox(detected).then((next) => {
-      if (next !== null) setConfig(next);
-    });
+    enableBox(detected)
+      .then((next) => {
+        if (next !== null) setConfig(next);
+      })
+      .catch((err: unknown) => {
+        console.error("[clerk] failed to enable box:", err);
+      });
   }, [detected]);
 
   const handleActivate = useCallback((boxUrl: string) => {
-    activateBox(boxUrl).then(setConfig);
+    activateBox(boxUrl).then(setConfig).catch((err: unknown) => {
+      console.error("[clerk] failed to activate box:", err);
+    });
   }, []);
 
   const handleDisable = useCallback((boxUrl: string) => {
-    disableBox(boxUrl).then(setConfig);
+    disableBox(boxUrl).then(setConfig).catch((err: unknown) => {
+      console.error("[clerk] failed to disable box:", err);
+    });
   }, []);
 
   if (config === null) {

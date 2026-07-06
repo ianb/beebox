@@ -35,6 +35,11 @@ export default defineContentScript({
     } catch (err) {
       result = { type: CAPTURE_RESULT, error: err instanceof Error ? err.message : String(err) };
     }
-    chrome.runtime.sendMessage(result);
+    chrome.runtime.sendMessage(result).catch((err: unknown) => {
+      // No UI surface from a content script -- console is the only signal,
+      // but a dropped capture result (background port closed mid-capture)
+      // shouldn't vanish silently.
+      console.error("[clerk] failed to send capture result:", err);
+    });
   },
 });
