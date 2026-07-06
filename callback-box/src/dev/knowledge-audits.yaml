@@ -3574,9 +3574,11 @@ tests:
     expected_level: knows_directly
     watch_for: >
       resolveContainedRef (core/ref-exists.ts) — the single producer of a
-      contained BoxRelativePath, returning null on escape; back it at the read
-      sink with realpathContained/readContainedFile (lib/box-containment.ts).
-      Never hand-concatenate boxRoot + ref.
+      contained BoxRelativePath for canonically-resolved card refs (the
+      underlying brand producer is containWithinBox in lib/box-containment.ts;
+      resolveBoxRelativeRef is the box-relative-only variant), returning null on
+      escape; back it at the read sink with realpathContained/readContainedFile
+      (lib/box-containment.ts). Never hand-concatenate boxRoot + ref.
     correct_contains: ["resolveContainedRef"]
     tags: [engine-dev, containment, security]
 
