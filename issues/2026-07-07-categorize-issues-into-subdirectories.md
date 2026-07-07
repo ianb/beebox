@@ -48,6 +48,26 @@ Proposal (Ian's): split into category **subdirectories**:
    place, or does the existing frontmatter already mark "not ready"? Decide before
    adding a fourth bucket that overlaps an existing signal.
 
+## A "sticks out" marker for high-priority items (filename keyword)
+
+Orthogonal to the categories: a lightweight way to flag the handful of items that
+need attention *now* — typically high-priority bugs. Deliberately **not** a full
+priority scale (no low/medium) — just a single marker so the urgent few jump out of
+a listing. A keyword in the filename is enough; no frontmatter, no tooling.
+
+Placement options:
+- An uppercase keyword in the slug — `2026-07-07-HOT-connector-state-rmw.md` —
+  greppable (`ls | grep HOT`), visually loud, keeps the date-first sort.
+- A prefix that sorts to the very top — `!2026-…` / `HOT-2026-…` — stands out at
+  the top of a listing but breaks the date-first filename convention.
+
+Lean: an uppercase in-slug keyword (pick one word — `HOT` / `URGENT` / `P0`),
+because it survives both the date-sort and the subdirectory move and needs nothing
+built. Drop the keyword (a rename) when the item is handled or de-escalated. It
+composes with everything above: a high-priority bug lives in `bugs/` (or carries
+`type: bug`) AND carries the keyword — the marker answers "what's on fire," the
+category answers "what kind of thing is it."
+
 ## Suggested first step
 
 Whichever way #3 lands, start with a **triage pass** that assigns each open issue a
