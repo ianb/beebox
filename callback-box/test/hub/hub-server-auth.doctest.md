@@ -15,6 +15,8 @@ import net from "node:net";
 import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
+import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-auth-doctest";
 
@@ -38,12 +40,20 @@ async function startFakeBox() {
 }
 
 const box = await startFakeBox();
+const mobileBox = await makeTmpBox();
+const mobileTicket = createMobilePairingTicket(mobileBox.root);
+const mobileRedeemed = redeemMobilePairingTicket(mobileBox.root, {
+  pairingToken: mobileTicket.token,
+  deviceLabel: "doctest mobile",
+});
+if (!mobileRedeemed) throw new Error("doctest mobile pairing failed");
+const mobileToken = mobileRedeemed.deviceToken;
 const endpoints = staticEndpointProvider([{ slug: "test1", origin: box.origin }]);
 const hubServer = await createHubServer({
   endpoints,
   getHealth: () => ({ status: "ok", boxes: [] }),
   hubSecret: HUB_SECRET,
-  boxes: [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+  boxes: [{ slug: "test1", boxRoot: mobileBox.root }],
 });
 const hubSockets = [];
 hubServer.on("connection", (socket) => hubSockets.push(socket));
@@ -68,6 +78,22 @@ navResponse.headers.get("location")
 const apiResponse = await fetch(`${hubBase}/test1/api/trpc/health.check`);
 apiResponse.status
 => 401
+```
+
+## A mobile bearer token proxies without a browser session
+
+```ts continue
+const mobileResponse = await fetch(`${hubBase}/test1/chat?embed=1`, {
+  headers: { authorization: `Bearer ${mobileToken}` },
+});
+const mobileBody = await mobileResponse.json();
+JSON.stringify({
+  status: mobileResponse.status,
+  url: mobileBody.url,
+  email: mobileBody.xCbAuthenticatedEmail,
+  secret: mobileBody.xCbHubSecret,
+})
+=> {"status":200,"url":"/test1/chat?embed=1","email":null,"secret":null}
 ```
 
 ## Unauthenticated mobile pairing redemption proxies to the box
@@ -166,6 +192,7 @@ unauthedUpgrade.startsWith("HTTP/1.1 401")
 ```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.CB_SESSION_SECRET;
+await mobileBox.cleanup();
 for (const socket of hubSockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
 await new Promise((resolve) => hubServer.close(resolve));

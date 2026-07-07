@@ -27,6 +27,7 @@
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
+import { mobileAuthHeaders } from "./lib/mobile-auth";
 import type { ActivityKind, CardStateDetails } from "../../core/chat/card-activity.js";
 
 export interface SessionContentBlock {
@@ -114,6 +115,7 @@ export async function postAudioForHqTranscription(blob: Blob, params: { sessionI
   try {
     const res = await fetch(`${getApiBase()}/chat/transcribe-audio`, {
       method: "POST",
+      headers: mobileAuthHeaders(),
       body: form,
     });
     if (!res.ok) {
@@ -213,7 +215,7 @@ export async function startChatTurn(params: {
   const attempt = async (): Promise<Response> => {
     const response = await fetch(`${getApiBase()}/chat/send`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...mobileAuthHeaders() },
       body: JSON.stringify({
         session,
         message,

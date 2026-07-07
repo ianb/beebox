@@ -3,6 +3,7 @@ import { createTRPCClient, createWSClient, httpBatchLink, splitLink, wsLink, typ
 import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@backend/trpc/router.js";
 import { getApiBase, getWebSocketUrl, withBase } from "../../api.js";
+import { getMobileAuthToken, isMobileAuthenticated, withMobileAuth } from "../mobile-auth";
 
 export const trpc = createTRPCReact<AppRouter>();
 
@@ -19,8 +20,9 @@ async function trpcFetch(url: RequestInfo | URL, options?: RequestInit): Promise
   const fixedUrl = trpcPath !== -1
     ? `${getApiBase()}/trpc${reqUrl.slice(trpcPath + "/api/trpc".length)}`
     : reqUrl;
-  const response = await fetch(fixedUrl, options);
+  const response = await fetch(fixedUrl, withMobileAuth(options));
   if (response.status === 401) {
+    if (isMobileAuthenticated()) return response;
     const returnTo = encodeURIComponent(
       window.location.pathname + window.location.search,
     );
@@ -43,6 +45,10 @@ function getWsClient(): ReturnType<typeof createWSClient> {
   if (!wsClientSingleton) {
     wsClientSingleton = createWSClient({
       url: () => getWebSocketUrl(),
+      connectionParams: () => {
+        const token = getMobileAuthToken();
+        return token ? { authorization: `Bearer ${token}` } : null;
+      },
       lazy: { enabled: true, closeMs: 30_000 },
       keepAlive: { enabled: true },
     });

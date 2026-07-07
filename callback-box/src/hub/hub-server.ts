@@ -54,6 +54,7 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
+import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
@@ -111,6 +112,15 @@ function isWebhookPath(reqPath: string): boolean {
 
 function slugForPath(reqPath: string): string | null {
   return isWebhookPath(reqPath) ? parseWebhookSlug(reqPath) : parseSlug(reqPath);
+}
+
+function mobileTokenFromUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url, "http://hub.local").searchParams.get("mobileToken") ?? undefined;
+  } catch (_e) {
+    return undefined;
+  }
 }
 
 /**
@@ -355,20 +365,25 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const reqPath = request.url.split("?")[0] ?? "/";
     const isWebhook = isWebhookPath(reqPath);
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
+    const slug = slugForPath(reqPath);
+    const boxRoot = slug ? boxRootBySlug.get(slug) : undefined;
+    const mobileAuthed = boxRoot
+      ? verifyMobileBearer(boxRoot, request.headers.authorization)
+        || verifyMobileToken(boxRoot, mobileTokenFromUrl(request.url))
+      : false;
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
-    if (!isMobilePairingRedeem && !decision.authorized) {
+    if (!isMobilePairingRedeem && !mobileAuthed && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    if (!isMobilePairingRedeem) {
+    if (!isMobilePairingRedeem && !mobileAuthed) {
       Object.assign(request.raw.headers, decision.headersToSet);
     }
 
-    const slug = slugForPath(reqPath);
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,
     // same as bin/router.ts's ensureRunning does for a whole worktree, AND
@@ -404,17 +419,21 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   server.on("upgrade", (req: http.IncomingMessage, socket: Socket, head: Buffer) => {
     const reqPath = req.url ?? "/";
     const isWebhook = isWebhookPath(reqPath);
+    const slug = slugForPath(reqPath);
+    const boxRoot = slug ? boxRootBySlug.get(slug) : undefined;
+    const mobileAuthed = boxRoot ? verifyMobileToken(boxRoot, mobileTokenFromUrl(req.url)) : false;
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret });
-    if (!decision.authorized) {
+    if (!mobileAuthed && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
-    Object.assign(req.headers, decision.headersToSet);
+    if (!mobileAuthed) {
+      Object.assign(req.headers, decision.headersToSet);
+    }
 
-    const slug = slugForPath(reqPath);
     const endpoint = slug ? endpoints.get(slug) : undefined;
     if (!endpoint) {
       // WebSocket upgrades never cold-start a lazy hub's box — same

@@ -10,7 +10,7 @@ struct RootView: View {
             Group {
                 if let box = store.selectedBox {
                     VStack(spacing: 0) {
-                        ChatWebView(url: box.chatURL)
+                        ChatWebView(box: box)
                             .ignoresSafeArea(edges: .bottom)
                         NativeComposerView(box: box)
                     }
