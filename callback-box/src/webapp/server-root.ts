@@ -5,7 +5,7 @@
  * file under its line budget.
  */
 
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyRequest } from "fastify";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -19,6 +19,7 @@ import { getEngineVersionReport } from "../core/engine-version.js";
 import { filterAccessibleBoxes } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
+import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -239,7 +240,10 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
  * navigations, 404s for unmatched API/asset routes, and redirects to login
  * when auth is enabled and the user isn't signed in.
  */
-export function registerSpaFallback(server: FastifyInstance, frontendPath: string): void {
+export function registerSpaFallback(
+  server: FastifyInstance,
+  opts: { frontendPath: string; boxes: BoxSpec[] },
+): void {
   server.setNotFoundHandler(async (request, reply) => {
     const url = request.url;
 
@@ -265,7 +269,7 @@ export function registerSpaFallback(server: FastifyInstance, frontendPath: strin
       const identity = resolveRequestIdentity(request);
       if (identity.source === "open") {
         // Hub-wide auth is off — fall through to the SPA below.
-      } else if (!identity.email) {
+      } else if (!identity.email && !isMobileSpaRequest(request, opts.boxes)) {
         if (isHubMode()) {
           // See addBoxAuthHook's doc comment: a child never redirects to its
           // own /auth/login in hub mode — the hub gates navigation before
@@ -279,9 +283,35 @@ export function registerSpaFallback(server: FastifyInstance, frontendPath: strin
 
     // SPA fallback: serve index.html
     return reply.type("text/html").send(
-      fs.readFileSync(path.join(frontendPath, "index.html"), "utf-8")
+      fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8")
     );
   });
+}
+
+function isMobileSpaRequest(request: FastifyRequest, boxes: BoxSpec[]): boolean {
+  const box = boxForUrl(request.url, boxes);
+  if (!box) return false;
+  return verifyMobileBearer(box.boxRoot, authorizationHeader(request.headers.authorization))
+    || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(request.url));
+}
+
+function boxForUrl(url: string, boxes: BoxSpec[]): BoxSpec | undefined {
+  const pathname = url.split("?")[0] ?? "/";
+  const slug = pathname.split("/")[1];
+  return slug ? boxes.find((box) => box.slug === slug) : undefined;
+}
+
+function authorizationHeader(value: string | string[] | undefined): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
+function mobileTokenFromUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url, "http://box.local").searchParams.get("mobileToken") ?? undefined;
+  } catch (_e) {
+    return undefined;
+  }
 }
 
 /**

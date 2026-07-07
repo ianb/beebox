@@ -4,6 +4,7 @@ struct RootView: View {
     @EnvironmentObject private var store: PairedBoxStore
     @EnvironmentObject private var outbox: OutboxStore
     @State private var showingPairSheet = false
+    @State private var boxPendingRemoval: PairedBox?
 
     var body: some View {
         NavigationStack {
@@ -24,19 +25,47 @@ struct RootView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    AppChromeMenu(showingPairSheet: $showingPairSheet)
+                    AppChromeMenu(
+                        showingPairSheet: $showingPairSheet,
+                        requestRemoval: { boxPendingRemoval = $0 }
+                    )
                 }
             }
             .sheet(isPresented: $showingPairSheet) {
                 PairBoxView()
             }
+            .alert("Remove Box?", isPresented: removeAlertBinding) {
+                Button("Cancel", role: .cancel) {
+                    boxPendingRemoval = nil
+                }
+                Button("Remove", role: .destructive) {
+                    if let boxPendingRemoval {
+                        store.remove(boxPendingRemoval)
+                    }
+                    boxPendingRemoval = nil
+                }
+            } message: {
+                Text("This removes the box and its mobile auth token from this iPhone. You can pair it again from Settings.")
+            }
         }
+    }
+
+    private var removeAlertBinding: Binding<Bool> {
+        Binding(
+            get: { boxPendingRemoval != nil },
+            set: { showing in
+                if !showing {
+                    boxPendingRemoval = nil
+                }
+            }
+        )
     }
 }
 
 private struct AppChromeMenu: View {
     @EnvironmentObject private var store: PairedBoxStore
     @Binding var showingPairSheet: Bool
+    var requestRemoval: (PairedBox) -> Void
 
     var body: some View {
         Menu {
@@ -66,6 +95,13 @@ private struct AppChromeMenu: View {
                     showingPairSheet = true
                 } label: {
                     Label("Manage Boxes", systemImage: "rectangle.stack")
+                }
+                if let selectedBox = store.selectedBox {
+                    Button(role: .destructive) {
+                        requestRemoval(selectedBox)
+                    } label: {
+                        Label("Remove Current Box", systemImage: "trash")
+                    }
                 }
             }
         } label: {

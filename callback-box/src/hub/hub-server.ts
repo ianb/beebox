@@ -54,7 +54,6 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
-import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
@@ -121,6 +120,12 @@ function mobileTokenFromUrl(url: string | undefined): string | undefined {
   } catch (_e) {
     return undefined;
   }
+}
+
+function hasMobileAuthAttempt(headers: http.IncomingHttpHeaders, url: string | undefined): boolean {
+  const authorization = headers.authorization;
+  return (typeof authorization === "string" && authorization.startsWith("Bearer "))
+    || mobileTokenFromUrl(url) !== undefined;
 }
 
 /**
@@ -366,21 +371,19 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const isWebhook = isWebhookPath(reqPath);
     const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
     const slug = slugForPath(reqPath);
-    const boxRoot = slug ? boxRootBySlug.get(slug) : undefined;
-    const mobileAuthed = boxRoot
-      ? verifyMobileBearer(boxRoot, request.headers.authorization)
-        || verifyMobileToken(boxRoot, mobileTokenFromUrl(request.url))
-      : false;
+    const mobileAuthAttempt = slug !== null
+      && boxRootBySlug.has(slug)
+      && hasMobileAuthAttempt(request.headers, request.url);
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
-    if (!isMobilePairingRedeem && !mobileAuthed && !decision.authorized) {
+    if (!isMobilePairingRedeem && !mobileAuthAttempt && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    if (!isMobilePairingRedeem && !mobileAuthed) {
+    if (!isMobilePairingRedeem && !mobileAuthAttempt) {
       Object.assign(request.raw.headers, decision.headersToSet);
     }
 
@@ -420,17 +423,18 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     const reqPath = req.url ?? "/";
     const isWebhook = isWebhookPath(reqPath);
     const slug = slugForPath(reqPath);
-    const boxRoot = slug ? boxRootBySlug.get(slug) : undefined;
-    const mobileAuthed = boxRoot ? verifyMobileToken(boxRoot, mobileTokenFromUrl(req.url)) : false;
+    const mobileAuthAttempt = slug !== null
+      && boxRootBySlug.has(slug)
+      && hasMobileAuthAttempt(req.headers, req.url);
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret });
-    if (!mobileAuthed && !decision.authorized) {
+    if (!mobileAuthAttempt && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
-    if (!mobileAuthed) {
+    if (!mobileAuthAttempt) {
       Object.assign(req.headers, decision.headersToSet);
     }
 

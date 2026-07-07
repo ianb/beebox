@@ -112,6 +112,14 @@ final class PairedBoxStore: ObservableObject {
         save()
     }
 
+    func remove(_ box: PairedBox) {
+        boxes.removeAll { $0.id == box.id }
+        if selectedBoxID == box.id {
+            selectedBoxID = boxes.first?.id
+        }
+        save()
+    }
+
     private func load() {
         do {
             let data = try Data(contentsOf: storageURL)

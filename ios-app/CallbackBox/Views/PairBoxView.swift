@@ -41,11 +41,21 @@ struct PairBoxView: View {
                 if store.boxes.isEmpty == false {
                     Section("Paired Boxes") {
                         ForEach(store.boxes) { box in
-                            VStack(alignment: .leading) {
-                                Text(box.label)
-                                Text(box.baseURL.absoluteString)
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                            HStack(alignment: .center) {
+                                VStack(alignment: .leading) {
+                                    Text(box.label)
+                                    Text(box.baseURL.absoluteString)
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(box.authToken == nil ? "No mobile token" : "Mobile token saved")
+                                        .font(.caption2)
+                                        .foregroundStyle(box.authToken == nil ? .orange : .secondary)
+                                }
+                                Spacer()
+                                Button("Remove", role: .destructive) {
+                                    store.remove(box)
+                                }
+                                .buttonStyle(.borderless)
                             }
                         }
                         .onDelete(perform: store.remove)
