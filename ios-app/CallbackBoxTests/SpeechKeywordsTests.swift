@@ -1,0 +1,90 @@
+import XCTest
+@testable import CallbackBox
+
+final class SpeechKeywordsTests: XCTestCase {
+    func testSendCommandsMatchTypeScriptDoctestCases() {
+        XCTAssertEqual(SpeechKeywords.detect("send message")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("sent message")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("said message")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("same message")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("deliver the message")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("message finished")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("send now")?.action, .send)
+        XCTAssertEqual(SpeechKeywords.detect("it's a message")?.action, .send)
+
+        XCTAssertNil(SpeechKeywords.detect("finished"))
+        XCTAssertNil(SpeechKeywords.detect("I'm finished"))
+        XCTAssertEqual(
+            SpeechKeywords.detect("OK send message")?.processedTranscript,
+            #"OK <send-message phrase="send message" />"#
+        )
+    }
+
+    func testSendAndCloseCommandsMatchTypeScriptDoctestCases() {
+        XCTAssertEqual(SpeechKeywords.detect("send and close")?.action, .sendClose)
+        XCTAssertEqual(SpeechKeywords.detect("send and stop")?.action, .sendClose)
+        XCTAssertEqual(SpeechKeywords.detect("send and close the mic")?.action, .sendClose)
+        XCTAssertEqual(SpeechKeywords.detect("set a closed message")?.action, .sendClose)
+        XCTAssertEqual(SpeechKeywords.detect("over and out")?.action, .sendClose)
+        XCTAssertEqual(
+            SpeechKeywords.detect("OK send and close")?.processedTranscript,
+            #"OK <send-close-message phrase="send and close" />"#
+        )
+
+        XCTAssertEqual(SpeechKeywords.detect("send and finish the message")?.action, .sendClose)
+        XCTAssertEqual(SpeechKeywords.detect("send and stop the mic")?.action, .sendClose)
+    }
+
+    func testControlCommandsMatchTypeScriptDoctestCases() {
+        XCTAssertEqual(SpeechKeywords.detect("cancel message")?.action, .cancel)
+        XCTAssertEqual(SpeechKeywords.detect("abort the message")?.action, .cancel)
+        XCTAssertNil(SpeechKeywords.detect("nevermind"))
+        XCTAssertEqual(SpeechKeywords.detect("nevermind the message")?.action, .cancel)
+
+        XCTAssertEqual(SpeechKeywords.detect("microphone off")?.action, .micOff)
+        XCTAssertEqual(SpeechKeywords.detect("turn off the mic")?.action, .micOff)
+        XCTAssertEqual(SpeechKeywords.detect("stop listening")?.action, .micOff)
+
+        XCTAssertEqual(SpeechKeywords.detect("erase the message")?.action, .erase)
+        XCTAssertEqual(SpeechKeywords.detect("clear my message")?.action, .erase)
+        XCTAssertEqual(SpeechKeywords.detect("start over")?.action, .erase)
+    }
+
+    func testNoMatchCasesMatchTypeScriptDoctestCases() {
+        XCTAssertNil(SpeechKeywords.detect("hello world"))
+        XCTAssertNil(SpeechKeywords.detect("the weather is nice"))
+    }
+
+    func testAppendSendKeywordTagMatchesTypeScriptDoctestCases() {
+        XCTAssertNil(SpeechKeywords.detect("Buy milk tomorrow."))
+        XCTAssertEqual(
+            SpeechKeywords.appendSendKeywordTag(
+                to: "Buy milk tomorrow.",
+                action: .send,
+                matchedPhrase: "send message"
+            ),
+            #"Buy milk tomorrow. <send-message phrase="send message" />"#
+        )
+        XCTAssertEqual(
+            SpeechKeywords.appendSendKeywordTag(
+                to: "Buy milk tomorrow.",
+                action: .sendClose,
+                matchedPhrase: "send and close"
+            ),
+            #"Buy milk tomorrow. <send-close-message phrase="send and close" />"#
+        )
+        XCTAssertEqual(
+            SpeechKeywords.appendSendKeywordTag(
+                to: "Ping R&D.",
+                action: .send,
+                matchedPhrase: #"send "the" message"#
+            ),
+            #"Ping R&D. <send-message phrase="send &quot;the&quot; message" />"#
+        )
+    }
+
+    func testAtStartPreventsMidUtteranceMatches() {
+        XCTAssertNil(SpeechKeywords.detect("please send message", atStart: true))
+        XCTAssertEqual(SpeechKeywords.detect("send message please", atStart: true)?.action, .send)
+    }
+}

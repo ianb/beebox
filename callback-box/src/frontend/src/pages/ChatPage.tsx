@@ -34,6 +34,11 @@ interface ChatSearch {
    * here so a reload restores it; kept in sync by `useCardUrlPersistence`.
    */
   card?: string;
+  /**
+   * Native companion embed mode: render the conversation as a web client, but
+   * leave input to the native shell.
+   */
+  embed?: string | number;
 }
 
 export function ChatPage() {
@@ -50,6 +55,7 @@ export function ChatPage() {
   const contextDir = search.contextDir;
   const companion = search.companion;
   const card = search.card;
+  const embedded = String(search.embed) === "1";
   const [resolved, setResolved] = useState<string | null>(null);
 
   // Bare `/chat`: resolve the box's most-active session and navigate to it.
@@ -118,6 +124,7 @@ export function ChatPage() {
       companion={companion}
       card={card}
       emissionStore={emissionStore}
+      embedded={embedded}
     />
   );
 }

@@ -82,9 +82,15 @@ interface InteractiveChatProps {
    * chunk 4).
    */
   emissionStore: EmissionStore;
+  /**
+   * Conversation-only mode for native shells. The page remains a full chat
+   * event client, but the web composer and mic controls are suppressed.
+   */
+  embedded?: boolean;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded }: InteractiveChatProps) {
+  const isEmbedded = embedded === true;
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
   });
@@ -262,6 +268,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       onVoiceSegmentSend={sendStopSend}
       send={send}
       reportCardActivity={cardSend.report}
+      embedded={isEmbedded}
       />
     </InputStoreProvider>
   );

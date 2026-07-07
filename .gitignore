@@ -31,6 +31,13 @@ AGENTS.md
 # OS
 .DS_Store
 
+# Xcode local state / build products
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
+DerivedData/
+ios-app/build/
+
 # Scratch artifacts the agent (or you) drop in scratch/ — orientation
 # docs, intermediate outputs, throwaway dumps. Only the README is
 # tracked, to preserve the convention. See scratch/README.md.

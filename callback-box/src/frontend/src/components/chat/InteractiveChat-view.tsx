@@ -76,6 +76,11 @@ interface ChatBodyProps {
   send: (event: { type: "DISMISS_ERROR" }) => void;
   /** Report user activity on the open companion card (scrolled/navigated/…). */
   reportCardActivity: (kind: ActivityKind, detail?: string) => void;
+  /**
+   * Native companion embed mode: keep the web conversation live, but suppress
+   * the web input surface so the native shell can own composition.
+   */
+  embedded: boolean;
 }
 
 function HeaderRegion(props: ChatBodyProps) {
@@ -225,7 +230,7 @@ function ComposerRegion(props: ChatBodyProps) {
 }
 
 export function InteractiveChatBody(props: ChatBodyProps) {
-  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send } = props;
+  const { tabs, voice, selections, schedules, error, pendingCount, isStreaming, processBusy, actions, showDebugLog, setShowDebugLog, send, embedded } = props;
   const { panel, activeView, onZoomView, onSelectTab, onCloseTab, onClosePanel } = tabs;
   const { addSelection } = selections;
   // Capture the live transcript phrase at grab-time so voice selections get a
@@ -273,7 +278,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         ) : null
       }
-      header={<HeaderRegion {...props} />}
+      header={embedded ? null : <HeaderRegion {...props} />}
       messageList={<MessageListRegion {...props} />}
       statusBanners={
         <>
@@ -298,7 +303,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
           />
         </>
       }
-      composerSection={<ComposerRegion {...props} />}
+      composerSection={embedded ? null : <ComposerRegion {...props} />}
       debugLog={showDebugLog ? <DebugLogPanel onClose={() => setShowDebugLog(false)} /> : null}
     />
   );
