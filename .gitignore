@@ -10,6 +10,12 @@ dist/
 # The tracked .commit-blocklist.example documents the format.
 .commit-blocklist
 
+# Codex mirror (AGENTS.md / .agents/ / .codex/) — kept local for now; not
+# committed to avoid maintaining a sync with the .claude/ + CLAUDE.md sources.
+AGENTS.md
+.agents/
+.codex/
+
 # Claude Code worktrees (the WorktreeCreate hook puts ours at
 # ~/src/callback-worktrees/ instead, but the default location would still
 # be created if the hook is somehow bypassed)
