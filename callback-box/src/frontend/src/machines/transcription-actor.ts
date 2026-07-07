@@ -118,9 +118,6 @@ class TranscriptionSession {
   private connectedFired = false;
   private service: TranscriptionService = "voxtral";
   private callbacks: ServiceCallbacks | null = null;
-  /** Set at the top of start(); the debug log uses this to report which
-   *  pipeline step the parent machine's CONNECT_TIMEOUT hung on. */
-  private startedAt = 0;
   /** Gates live worklet→socket forwarding; false during a reconnect replay. */
   private forwardLive = true;
   /** True while a reconnect attempt loop is in flight. */
@@ -218,7 +215,6 @@ class TranscriptionSession {
   private markConnected() {
     if (this.disposed || this.connectedFired) return;
     this.connectedFired = true;
-    console.info(`[realtime-transcription] step ws-open @${Math.round(performance.now() - this.startedAt)}ms`);
     this.sendBack({ type: "WS_CONNECTED" });
   }
 
@@ -338,13 +334,10 @@ class TranscriptionSession {
   };
 
   async start() {
-    this.startedAt = performance.now();
-    const step = (n: string) => console.info(`[realtime-transcription] step ${n} @${Math.round(performance.now() - this.startedAt)}ms`);
     try {
       const config = await trpcClient.transcription.config.query();
       if (this.disposed) { this.cleanup(); return; }
       this.service = config.service;
-      step("config");
 
       this.mic = new MicCapture({
         onPcm: (samples) => {
@@ -367,7 +360,7 @@ class TranscriptionSession {
           if (!this.reconnecting) this.sendBack({ type: "CONNECTION_RESTORED" });
         },
       });
-      await this.mic.start({ step });
+      await this.mic.start();
       if (this.disposed) { this.cleanup(); return; }
 
       this.callbacks = {
