@@ -54,6 +54,7 @@ import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
+import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
 import type { BoxSpec } from "../webapp/server-types.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
@@ -126,6 +127,17 @@ function hasMobileAuthAttempt(headers: http.IncomingHttpHeaders, url: string | u
   const authorization = headers.authorization;
   return (typeof authorization === "string" && authorization.startsWith("Bearer "))
     || mobileTokenFromUrl(url) !== undefined;
+}
+
+function listMobileAuthorizedBoxes(opts: {
+  boxes: BoxSpec[];
+  headers: http.IncomingHttpHeaders;
+  url: string | undefined;
+}): Array<{ slug: string; name: string }> {
+  return opts.boxes
+    .filter((box) => verifyMobileBearer(box.boxRoot, opts.headers.authorization)
+      || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(opts.url)))
+    .map((box) => ({ slug: box.slug, name: box.slug }));
 }
 
 /**
@@ -251,6 +263,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   app.get("/api/boxes", async (request) => {
     if (isAuthEnabled()) {
       const user = getSessionUser(request);
+      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers, url: request.url });
+      if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       if (!user) return { boxes: [], authRequired: true };
       return { boxes: await listAccessibleBoxes(boxes, user.email) };
     }

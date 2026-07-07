@@ -6,6 +6,7 @@
  */
 
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import type { IncomingHttpHeaders } from "node:http";
 import * as path from "node:path";
 import * as fs from "node:fs";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
@@ -225,6 +226,8 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // Root-level box list endpoint (filtered by user access when auth enabled)
   server.get("/api/boxes", async (request) => {
     if (isAuthEnabled()) {
+      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers, url: request.url });
+      if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       const email = getSessionEmail(request);
       if (!email) {
         return { boxes: [], authRequired: true };
@@ -286,6 +289,17 @@ export function registerSpaFallback(
       fs.readFileSync(path.join(opts.frontendPath, "index.html"), "utf-8")
     );
   });
+}
+
+function listMobileAuthorizedBoxes(opts: {
+  boxes: BoxSpec[];
+  headers: IncomingHttpHeaders;
+  url: string | undefined;
+}): Array<{ slug: string; name: string }> {
+  return opts.boxes
+    .filter((box) => verifyMobileBearer(box.boxRoot, authorizationHeader(opts.headers.authorization))
+      || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(opts.url)))
+    .map((box) => ({ slug: box.slug, name: box.slug }));
 }
 
 function isMobileSpaRequest(request: FastifyRequest, boxes: BoxSpec[]): boolean {

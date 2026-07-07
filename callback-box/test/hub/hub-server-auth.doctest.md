@@ -96,6 +96,20 @@ JSON.stringify({
 => {"status":200,"url":"/test1/chat?embed=1","email":null,"secret":null}
 ```
 
+## A mobile bearer token can discover its paired box
+
+```ts continue
+const boxesWithoutMobileAuth = await fetch(`${hubBase}/api/boxes`);
+JSON.stringify(await boxesWithoutMobileAuth.json())
+=> {"boxes":[],"authRequired":true}
+
+const boxesWithMobileAuth = await fetch(`${hubBase}/api/boxes`, {
+  headers: { authorization: `Bearer ${mobileToken}` },
+});
+JSON.stringify(await boxesWithMobileAuth.json())
+=> {"boxes":[{"slug":"test1","name":"test1"}]}
+```
+
 ## Unauthenticated mobile pairing redemption proxies to the box
 
 Pairing redemption is the one non-webhook API path that starts unauthenticated:
