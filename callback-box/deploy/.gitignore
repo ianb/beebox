@@ -1,7 +1,10 @@
 .env
 server-ip
 
-# Prod debug access — a helper that authenticates to prod as the owner, plus its
-# doc. Kept local: it's an operational credential path, not shared code.
+# Prod debug access — helpers that authenticate to prod as the owner, plus the
+# public URL and doc. Kept local: operational credential path (and the public URL
+# is in the history-purge blocklist), not shared code.
 prod-curl
+prod-browse
+public-url
 prod-debug-access.md
