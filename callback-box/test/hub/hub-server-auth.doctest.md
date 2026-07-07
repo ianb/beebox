@@ -70,6 +70,29 @@ apiResponse.status
 => 401
 ```
 
+## Unauthenticated mobile pairing redemption proxies to the box
+
+Pairing redemption is the one non-webhook API path that starts unauthenticated:
+the box validates the short-lived pairing token itself, before creating a
+device bearer token. The hub should pass the request through without injecting a
+browser identity.
+
+```ts continue
+const pairingResponse = await fetch(`${hubBase}/test1/api/pairing/redeem`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ pairingToken: "test-token", deviceLabel: "test device" }),
+});
+const pairingBody = await pairingResponse.json();
+JSON.stringify({
+  status: pairingResponse.status,
+  url: pairingBody.url,
+  email: pairingBody.xCbAuthenticatedEmail,
+  secret: pairingBody.xCbHubSecret,
+})
+=> {"status":200,"url":"/test1/api/pairing/redeem","email":null,"secret":null}
+```
+
 ## A valid session cookie becomes `x-cb-authenticated-email` on the proxied request
 
 ```ts continue

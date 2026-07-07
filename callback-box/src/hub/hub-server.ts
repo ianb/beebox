@@ -50,6 +50,7 @@ import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import type { BoxRuntimeStatus } from "./supervisor.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
+import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
@@ -353,16 +354,19 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   app.all("/*", async (request, reply) => {
     const reqPath = request.url.split("?")[0] ?? "/";
     const isWebhook = isWebhookPath(reqPath);
+    const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
-    if (!decision.authorized) {
+    if (!isMobilePairingRedeem && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    Object.assign(request.raw.headers, decision.headersToSet);
+    if (!isMobilePairingRedeem) {
+      Object.assign(request.raw.headers, decision.headersToSet);
+    }
 
     const slug = slugForPath(reqPath);
     // A lazy hub's box may be "stopped" (idle-collected or never yet
