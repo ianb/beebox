@@ -1,10 +1,13 @@
-# Hub box picker: lists only the boxes the session email can access (Track D, chunk D3)
+# Hub box picker: serves the SPA at `/`, with a minimal ACL-filtered fallback (Track D, chunk D3)
 
-`GET /` on the hub renders a minimal HTML page listing boxes — filtered
-through the SAME fail-closed `allowedEmails` predicate a box uses for its
-own ACL (`canAccessBox`, `src/webapp/box-access.ts`), not a copy of it.
-When hub auth is off, every configured box is listed unconditionally (same
-"open" semantics a standalone box gets without `GOOGLE_OAUTH_CLIENT_ID`).
+`GET /` on the hub serves the SPA (its `/` route renders the styled
+box-selection page and fetches the accessible-box list from `/api/boxes`). When
+the frontend bundle isn't built it falls back to a minimal server-rendered list,
+filtered through the SAME fail-closed `allowedEmails` predicate a box uses for
+its own ACL (`canAccessBox`, `src/webapp/box-access.ts`), not a copy of it. When
+hub auth is off, every configured box is listed unconditionally (same "open"
+semantics a standalone box gets without `GOOGLE_OAUTH_CLIENT_ID`). Either way the
+route is auth-gated: an unauthenticated navigation redirects to login.
 
 ```ts setup
 import { registerBoxPicker } from "../../src/hub/box-picker.js";
@@ -12,6 +15,9 @@ import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import Fastify from "fastify";
 import fastifyCookie from "@fastify/cookie";
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 
 process.env.CB_SESSION_SECRET = "test-session-secret-for-box-picker-doctest";
 
@@ -25,16 +31,40 @@ const boxes = [
   { slug: "box-b", boxRoot: boxB.root },
 ];
 
-async function startPicker() {
+// A path with no index.html forces the minimal-list fallback, which is where the
+// ACL filtering lives; the SPA-served case gets a real index.html below.
+const NO_FRONTEND = path.join(os.tmpdir(), "box-picker-no-frontend-doctest");
+
+async function startPicker(frontendDist = NO_FRONTEND) {
   const app = Fastify({ logger: false });
   await app.register(fastifyCookie);
-  registerBoxPicker(app, { boxes });
+  registerBoxPicker(app, { boxes, frontendDist });
   await app.ready();
   return app;
 }
 ```
 
-## Hub auth off: every configured box is listed, no session needed
+## Frontend built: `/` serves the SPA (box list comes from /api/boxes, not the HTML)
+
+```ts
+delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+const distDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "picker-dist-"));
+await fs.promises.writeFile(path.join(distDir, "index.html"), `<!doctype html><html><body><div id="root"></div></body></html>`);
+const spaApp = await startPicker(distDir);
+const spaRes = await spaApp.inject({ method: "GET", url: "/" });
+spaRes.statusCode
+=> 200
+
+spaRes.body.includes(`id="root"`)
+=> true
+```
+
+```ts cleanup
+await spaApp.close();
+await fs.promises.rm(distDir, { recursive: true, force: true });
+```
+
+## Hub auth off, no frontend build: every configured box is listed, no session needed
 
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
@@ -64,7 +94,7 @@ noSessionRes.headers.location
 => /auth/login?returnTo=%2F
 ```
 
-## Hub auth on, session for alice@example.com: only box-a is listed
+## Hub auth on, session for alice@example.com: only box-a is listed (fallback)
 
 ```ts continue
 const aliceCookie = signSession({ email: "alice@example.com", name: "Alice" });

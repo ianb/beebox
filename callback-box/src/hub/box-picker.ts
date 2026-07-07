@@ -1,14 +1,19 @@
 /**
- * `cb hub`'s box picker (Track D, chunk D3 in
- * `docs/implemented-plans/boxes-as-packages-v2.md`): a minimal, dependency-free
- * server-rendered HTML page at `/` listing the boxes the authenticated
- * user can access. Auth-gated exactly like any HTML navigation through the
- * hub (`src/hub/hub-server.ts`'s proxy path) — but this route lives on the
- * hub's own Fastify instance, so it authenticates directly against the
- * session cookie (the hub is the one process that legitimately holds it),
- * not via the hub-injected headers a box would use.
+ * `cb hub`'s box picker at `/`. Serves the SPA so the styled box-selection page
+ * (`BoxRedirect` → `BoxSelectionTiles`, the SPA's `/` route) renders — matching
+ * the dev router's worktree root (`/<worktree>/`). The SPA fetches the
+ * accessible-box list from the hub's `/api/boxes` and loads its assets via the
+ * hub's root static routes (`hub-server.ts`). When the frontend bundle isn't
+ * built it falls back to a minimal, dependency-free server-rendered list (the
+ * original Track D / boxes-as-packages-v2 behavior, kept for the no-frontend
+ * case). Auth-gated exactly like any HTML navigation through the hub — but this
+ * route lives on the hub's own Fastify instance, so it authenticates directly
+ * against the session cookie (the hub is the one process that legitimately holds
+ * it), not via the hub-injected headers a box would use.
  */
 
+import fs from "node:fs";
+import path from "node:path";
 import type { FastifyInstance } from "fastify";
 import { isAuthEnabled, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
 import { filterAccessibleBoxes } from "../webapp/box-access.js";
@@ -58,17 +63,25 @@ ${items || "    <li>No boxes available.</li>"}
  * every configured box is listed — same "open" semantics the fleet's boxes
  * get via `x-cb-hub-auth: off`).
  */
-export function registerBoxPicker(server: FastifyInstance, { boxes }: { boxes: BoxSpec[] }): void {
+export function registerBoxPicker(
+  server: FastifyInstance,
+  { boxes, frontendDist }: { boxes: BoxSpec[]; frontendDist: string },
+): void {
   server.get("/", async (request, reply) => {
-    if (!isAuthEnabled()) {
-      return reply.type("text/html").send(renderPage(boxes));
-    }
-    const user = getSessionUser(request);
-    if (!user) {
+    const user = isAuthEnabled() ? getSessionUser(request) : null;
+    if (isAuthEnabled() && !user) {
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    const ownerEmail = getOwnerEmail();
-    const accessible = await filterAccessibleBoxes({ boxes, email: user.email, ownerEmail });
+    // Serve the SPA (its `/` route renders the styled box-selection tiles and
+    // fetches the accessible-box list from /api/boxes). Fall back to the minimal
+    // server-rendered list only when the frontend bundle isn't built.
+    const indexHtml = path.join(frontendDist, "index.html");
+    if (fs.existsSync(indexHtml)) {
+      return reply.type("text/html").send(fs.readFileSync(indexHtml, "utf-8"));
+    }
+    const accessible = user
+      ? await filterAccessibleBoxes({ boxes, email: user.email, ownerEmail: getOwnerEmail() })
+      : boxes;
     return reply.type("text/html").send(renderPage(accessible));
   });
 }

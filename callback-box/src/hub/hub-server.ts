@@ -220,8 +220,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // no second OAuth implementation to drift from the box's.
   await registerAuthSurface(app, { boxes, publicUrlFallback: baseUrl });
 
-  // The box picker (Track D, chunk D3).
-  registerBoxPicker(app, { boxes });
+  // The box picker at "/" — serves the SPA's styled box-selection page (with a
+  // minimal server-rendered fallback when the bundle isn't built).
+  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  registerBoxPicker(app, { boxes, frontendDist });
 
   // The frontend's box switcher calls /api/boxes on whatever server it's
   // loaded from -- the standalone server answers it (server-root.ts), but
@@ -248,8 +250,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // 404s and every box renders blank. The build is identical for all boxes, so
   // one root mount serves the fleet. Ungated: a client bundle is public and must
   // load before the user can auth-navigate. find-my-way matches these ahead of
-  // the "/*" proxy wildcard regardless of registration order.
-  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  // the "/*" proxy wildcard regardless of registration order. (frontendDist is
+  // computed above, where the box picker also uses it.)
   if (fs.existsSync(path.join(frontendDist, "index.html"))) {
     // assets first — its default decorateReply provides reply.sendFile below.
     await app.register(fastifyStatic, { root: path.join(frontendDist, "assets"), prefix: "/assets/" });
