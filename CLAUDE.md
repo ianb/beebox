@@ -19,7 +19,7 @@ Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `de
 
 **Probing the running app:** use `bin/browse` (wraps `agent-browser`; rewrites `/`-leading paths to this worktree's URL) — see the `browse` skill.
 
-**Auto-deploy is `main`-only.** The root husky `post-commit` hook triggers `callback-box/deploy/deploy.sh` only when HEAD is on `main`. Worktrees on other branches commit safely without deploying; ship by merging to `main`.
+**Auto-deploy is `main`-only, and only for deployed paths.** The root husky `post-commit`/`post-merge` hooks trigger `callback-box/deploy/deploy.sh` only when HEAD is on `main` AND the commit/merge touched something `deploy.sh` actually ships — `callback-box/`, `agent-doctest/`, `personal-vibe-check/`, `patches/`, or the root pnpm files. A change confined to `issues/`, `callback-clerk/`, `ios-app/`, `research/`, `bin/`, root docs, etc. commits without deploying (the hook says so). Worktrees on other branches also commit without deploying; ship by merging to `main`.
 
 **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so don't `--no-verify` them: `doc-check` (broken doc references + orphans), `path-leak-check` (rejects real home-dir paths like `/Users/<name>/…` in any tracked file — docs are the main leak surface), and `commit-blocklist-check` (a per-person opt-in guard: blocks staged additions matching your gitignored `.commit-blocklist`; a no-op if you don't have one — see `bin/CLAUDE.md`). If doc-check fails, fix the links or see `callback-box/docs/README.md`. If path-leak-check fails, use a repo-relative or `~/…` path (`bin/CLAUDE.md`).
 
