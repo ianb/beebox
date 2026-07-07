@@ -31,4 +31,8 @@ export function setRoute(fullPath: string): void {
     addEventListener() {},
     removeEventListener() {},
   };
+  // TanStack Router (router-core) reads a bare `self` at construction; in a
+  // browser `self === window`. Mirror that so SSR router creation doesn't throw
+  // `self is not defined`. Set after window so they reference the same stub.
+  (globalThis as Record<string, unknown>).self = (globalThis as Record<string, unknown>).window;
 }
