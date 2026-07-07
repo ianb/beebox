@@ -21,6 +21,9 @@
 		5A10000C2C3C000100000001 /* OutboxStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001D2C3C000100000001 /* OutboxStore.swift */; };
 		5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001E2C3C000100000001 /* ChatImageAttachment.swift */; };
 		5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A10001F2C3C000100000001 /* SpeechKeywords.swift */; };
+		5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000212C3C000100000001 /* QRScannerView.swift */; };
+		5A1000222C3C000100000001 /* CallbackBoxAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000242C3C000100000001 /* CallbackBoxAppDelegate.swift */; };
+		5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1000252C3C000100000001 /* PairingURLInbox.swift */; };
 		5A1001012C3C000100000001 /* SpeechKeywordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -51,6 +54,9 @@
 		5A10001D2C3C000100000001 /* OutboxStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxStore.swift; sourceTree = "<group>"; };
 		5A10001E2C3C000100000001 /* ChatImageAttachment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatImageAttachment.swift; sourceTree = "<group>"; };
 		5A10001F2C3C000100000001 /* SpeechKeywords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywords.swift; sourceTree = "<group>"; };
+		5A1000212C3C000100000001 /* QRScannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRScannerView.swift; sourceTree = "<group>"; };
+		5A1000242C3C000100000001 /* CallbackBoxAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CallbackBoxAppDelegate.swift; sourceTree = "<group>"; };
+		5A1000252C3C000100000001 /* PairingURLInbox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PairingURLInbox.swift; sourceTree = "<group>"; };
 		5A1001102C3C000100000001 /* CallbackBoxTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CallbackBoxTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechKeywordsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -86,6 +92,7 @@
 			isa = PBXGroup;
 			children = (
 				5A1000112C3C000100000001 /* CallbackBoxApp.swift */,
+				5A1000242C3C000100000001 /* CallbackBoxAppDelegate.swift */,
 				5A1000402C3C000100000001 /* Models */,
 				5A1000412C3C000100000001 /* Storage */,
 				5A1000432C3C000100000001 /* Services */,
@@ -139,6 +146,7 @@
 				5A1000152C3C000100000001 /* PairBoxView.swift */,
 				5A1000162C3C000100000001 /* ChatWebView.swift */,
 				5A10001A2C3C000100000001 /* NativeComposerView.swift */,
+				5A1000212C3C000100000001 /* QRScannerView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -149,6 +157,7 @@
 				5A1000192C3C000100000001 /* ChatAPI.swift */,
 				5A10001B2C3C000100000001 /* SpeechDictation.swift */,
 				5A10001F2C3C000100000001 /* SpeechKeywords.swift */,
+				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -265,6 +274,9 @@
 				5A10000C2C3C000100000001 /* OutboxStore.swift in Sources */,
 				5A10000D2C3C000100000001 /* ChatImageAttachment.swift in Sources */,
 				5A10000E2C3C000100000001 /* SpeechKeywords.swift in Sources */,
+				5A10000F2C3C000100000001 /* QRScannerView.swift in Sources */,
+				5A1000222C3C000100000001 /* CallbackBoxAppDelegate.swift in Sources */,
+				5A1000232C3C000100000001 /* PairingURLInbox.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

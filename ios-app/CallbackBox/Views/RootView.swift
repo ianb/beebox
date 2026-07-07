@@ -30,9 +30,6 @@ struct RootView: View {
             .sheet(isPresented: $showingPairSheet) {
                 PairBoxView()
             }
-            .onOpenURL { url in
-                _ = store.pair(from: url)
-            }
         }
     }
 }

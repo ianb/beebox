@@ -34,6 +34,8 @@
 	</dict>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Callback Box uses the microphone for native voice input.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Callback Box uses the camera to scan pairing QR codes.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Callback Box uses speech recognition to turn dictated input into chat messages.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>

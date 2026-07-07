@@ -7,10 +7,21 @@ struct PairBoxView: View {
     @State private var urlString = "http://localhost:3210/main/test1"
     @State private var sessionID = ""
     @State private var errorMessage: String?
+    @State private var showingScanner = false
+    @State private var pairingInProgress = false
 
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Button {
+                        showingScanner = true
+                    } label: {
+                        Label("Scan Pairing QR", systemImage: "qrcode.viewfinder")
+                    }
+                    .disabled(pairingInProgress)
+                }
+
                 Section("Box") {
                     TextField("Label", text: $label)
                     TextField("Base URL", text: $urlString)
@@ -50,6 +61,17 @@ struct PairBoxView: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Add", action: addBox)
+                        .disabled(pairingInProgress)
+                }
+            }
+            .sheet(isPresented: $showingScanner) {
+                NavigationStack {
+                    QRScannerView { code in
+                        showingScanner = false
+                        pairScannedCode(code)
+                    } onCancel: {
+                        showingScanner = false
+                    }
                 }
             }
         }
@@ -66,6 +88,24 @@ struct PairBoxView: View {
         }
         store.addManualBox(label: label, baseURL: url, sessionID: sessionID)
         dismiss()
+    }
+
+    private func pairScannedCode(_ code: String) {
+        guard let url = URL(string: code) else {
+            errorMessage = "The QR code did not contain a pairing link."
+            return
+        }
+        pairingInProgress = true
+        errorMessage = nil
+        Task {
+            let paired = await store.pair(from: url)
+            pairingInProgress = false
+            if paired {
+                dismiss()
+            } else {
+                errorMessage = "Pairing failed. Create a fresh QR code and try again."
+            }
+        }
     }
 }
 

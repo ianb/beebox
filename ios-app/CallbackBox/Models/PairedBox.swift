@@ -5,12 +5,14 @@ struct PairedBox: Codable, Equatable, Identifiable {
     var label: String
     var baseURL: URL
     var sessionID: String?
+    var authToken: String?
 
-    init(id: UUID, label: String, baseURL: URL, sessionID: String?) {
+    init(id: UUID, label: String, baseURL: URL, sessionID: String?, authToken: String?) {
         self.id = id
         self.label = label
         self.baseURL = baseURL
         self.sessionID = sessionID
+        self.authToken = authToken
     }
 
     var chatURL: URL {

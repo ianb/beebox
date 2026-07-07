@@ -1,5 +1,6 @@
 import Combine
 import Foundation
+import UIKit
 
 @MainActor
 final class PairedBoxStore: ObservableObject {
@@ -22,14 +23,17 @@ final class PairedBoxStore: ObservableObject {
     }
 
     func addManualBox(label: String, baseURL: URL, sessionID: String?) {
-        addOrSelectBox(label: label, baseURL: baseURL, sessionID: sessionID)
+        addOrSelectBox(label: label, baseURL: baseURL, sessionID: sessionID, authToken: nil)
     }
 
-    func addOrSelectBox(label: String, baseURL: URL, sessionID: String?) {
+    func addOrSelectBox(label: String, baseURL: URL, sessionID: String?, authToken: String?) {
         let cleanLabel = label.trimmingCharacters(in: .whitespacesAndNewlines)
         let cleanSessionID = sessionID?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
-        if let existing = boxes.first(where: { $0.baseURL == baseURL && $0.sessionID == cleanSessionID }) {
-            selectedBoxID = existing.id
+        let cleanAuthToken = authToken?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
+        if let existingIndex = boxes.firstIndex(where: { $0.baseURL == baseURL && $0.sessionID == cleanSessionID }) {
+            boxes[existingIndex].label = cleanLabel.isEmpty ? boxes[existingIndex].label : cleanLabel
+            boxes[existingIndex].authToken = cleanAuthToken ?? boxes[existingIndex].authToken
+            selectedBoxID = boxes[existingIndex].id
             save()
             return
         }
@@ -37,14 +41,15 @@ final class PairedBoxStore: ObservableObject {
             id: UUID(),
             label: cleanLabel.isEmpty ? baseURL.host ?? "Callback Box" : cleanLabel,
             baseURL: baseURL,
-            sessionID: cleanSessionID
+            sessionID: cleanSessionID,
+            authToken: cleanAuthToken
         )
         boxes.append(normalized)
         selectedBoxID = normalized.id
         save()
     }
 
-    func pair(from url: URL) -> Bool {
+    func pair(from url: URL) async -> Bool {
         guard url.scheme == "callbackbox", url.host == "pair" else {
             return false
         }
@@ -58,10 +63,26 @@ final class PairedBoxStore: ObservableObject {
         guard let baseURL = URL(string: baseURLString), baseURL.scheme != nil, baseURL.host != nil else {
             return false
         }
+        let label = queryItems.value(named: "label") ?? "Callback Box"
+        if let pairingToken = queryItems.value(named: "pairingToken") ?? queryItems.value(named: "token") {
+            do {
+                let redeemed = try await redeemPairing(baseURL: baseURL, pairingToken: pairingToken)
+                addOrSelectBox(
+                    label: label,
+                    baseURL: baseURL,
+                    sessionID: queryItems.value(named: "session"),
+                    authToken: redeemed.token
+                )
+                return true
+            } catch {
+                return false
+            }
+        }
         addOrSelectBox(
-            label: queryItems.value(named: "label") ?? "Callback Box",
+            label: label,
             baseURL: baseURL,
-            sessionID: queryItems.value(named: "session")
+            sessionID: queryItems.value(named: "session"),
+            authToken: queryItems.value(named: "authToken")
         )
         return true
     }
@@ -72,7 +93,7 @@ final class PairedBoxStore: ObservableObject {
             assertionFailure("Local test box URL is invalid")
             return
         }
-        addOrSelectBox(label: "Local test box", baseURL: url, sessionID: nil)
+        addOrSelectBox(label: "Local test box", baseURL: url, sessionID: nil, authToken: nil)
     }
     #endif
 
@@ -117,11 +138,36 @@ final class PairedBoxStore: ObservableObject {
             assertionFailure("Failed to save paired boxes: \(error)")
         }
     }
+
+    private func redeemPairing(baseURL: URL, pairingToken: String) async throws -> PairingRedeemResponse {
+        var request = URLRequest(url: baseURL.appendingPathComponent("api/pairing/redeem"))
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
+        request.httpBody = try JSONEncoder().encode(PairingRedeemRequest(
+            pairingToken: pairingToken,
+            deviceLabel: UIDevice.current.name
+        ))
+        let (data, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, (200..<300).contains(http.statusCode) else {
+            throw URLError(.userAuthenticationRequired)
+        }
+        return try JSONDecoder().decode(PairingRedeemResponse.self, from: data)
+    }
 }
 
 private struct StoreSnapshot: Codable {
     var boxes: [PairedBox]
     var selectedBoxID: PairedBox.ID?
+}
+
+private struct PairingRedeemRequest: Encodable {
+    var pairingToken: String
+    var deviceLabel: String
+}
+
+private struct PairingRedeemResponse: Decodable {
+    var token: String
 }
 
 private extension String {

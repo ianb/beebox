@@ -46,6 +46,7 @@ struct ChatAPI {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Content-Type")
         request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
+        applyAuth(to: &request)
         request.httpBody = try JSONEncoder().encode(body)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -73,6 +74,7 @@ struct ChatAPI {
         request.httpMethod = "POST"
         request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
         request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
+        applyAuth(to: &request)
         request.httpBody = try multipartAudioBody(fileURL: fileURL, session: session, boundary: boundary)
 
         let (data, response) = try await URLSession.shared.data(for: request)
@@ -92,6 +94,7 @@ struct ChatAPI {
         }
         var request = URLRequest(url: box.apiURL.appendingPathComponent("chat/default"))
         request.setValue("CallbackBox-iOS/0.1", forHTTPHeaderField: "User-Agent")
+        applyAuth(to: &request)
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse else {
             throw ChatAPIError.invalidResponse
@@ -108,6 +111,13 @@ struct ChatAPI {
         let diarizedAttr = origin == .voice && diarized ? " diarized=\"1\"" : ""
         let attrs = "\(diarizedAttr) local-time=\"\(Self.localTimeString())\""
         return "<\(tag)\(attrs)>\(message)</\(tag)>"
+    }
+
+    private func applyAuth(to request: inout URLRequest) {
+        guard let token = box.authToken, token.isEmpty == false else {
+            return
+        }
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
     }
 
     private func multipartAudioBody(fileURL: URL, session: String, boundary: String) throws -> Data {

@@ -21,6 +21,7 @@ import { locationRouter } from "./routers/location.js";
 import { pushRouter } from "./routers/push.js";
 import { viewsRouter } from "./routers/views.js";
 import { clerkRouter } from "./routers/clerk.js";
+import { pairingRouter } from "./routers/pairing.js";
 
 export const appRouter = router({
   history: historyRouter,
@@ -45,6 +46,7 @@ export const appRouter = router({
   push: pushRouter,
   views: viewsRouter,
   clerk: clerkRouter,
+  pairing: pairingRouter,
 });
 
 export type AppRouter = typeof appRouter;
