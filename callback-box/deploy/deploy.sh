@@ -8,6 +8,29 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 MONO_DIR="$(cd "$REPO_DIR/.." && pwd)"
+
+# Surface failures. This usually runs backgrounded from the post-commit hook,
+# with stdout/err going to deploy/.last-deploy.log that nobody watches — so on
+# any non-zero exit, echo a "Deploy failed" line (the poll pattern in
+# deploy/CLAUDE.md keys off it) AND fire a desktop notification. Skipped when run
+# interactively — you already see the output. terminal-notifier is optional.
+LOG_HINT="callback-box/deploy/.last-deploy.log"
+notify() {  # $1=title  $2=message
+  [ -t 1 ] && return 0
+  command -v terminal-notifier >/dev/null 2>&1 &&
+    terminal-notifier -title "$1" -message "$2" -group callback-deploy >/dev/null 2>&1 || true
+}
+trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "Deploy failed (exit $rc)"; notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"; fi' EXIT
+
+# The deploy target IP lives in a gitignored file; a repo move or fresh clone
+# leaves it behind — which is exactly how a run of silent no-op deploys just
+# happened. Fail loud and actionable instead of a bare "cat: No such file".
+if [ ! -s "$SCRIPT_DIR/server-ip" ]; then
+  echo "deploy: $SCRIPT_DIR/server-ip is missing or empty — it holds the deploy" >&2
+  echo "  target IP and is gitignored (never committed). Restore it from a backup," >&2
+  echo "  or:  echo <SERVER_IP> > $SCRIPT_DIR/server-ip" >&2
+  exit 1
+fi
 SERVER_IP=$(cat "$SCRIPT_DIR/server-ip")
 INSTALL_DIR="/opt/callback"
 
@@ -228,4 +251,5 @@ HEALTHCHECK
 fi
 
 echo "Deploy complete."
+notify "✅ callback-box deployed" "to $SERVER_IP"
 echo "Verify externally: curl -H \"Authorization: Bearer \$CB_DIAG_API_KEY\" https://box.example.com/healthz"

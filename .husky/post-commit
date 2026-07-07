@@ -24,10 +24,19 @@ if [ "$BRANCH" = "main" ]; then
   if git -C "$REPO_DIR" rev-parse --verify --quiet HEAD^2 >/dev/null; then
     echo "[post-commit] Skip deploy: merge commit (post-merge handles it)"
   else
-    echo "[post-commit] Deploying to server (branch: main)..."
-    "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
-    disown
-    echo "[post-commit] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+    if [ ! -s "$REPO_DIR/callback-box/deploy/server-ip" ]; then
+      # Pre-flight the one prerequisite that silently killed a whole run of
+      # deploys after a repo move. Fail visibly here (in the commit output),
+      # rather than backgrounding a deploy that dies on line 1 into a log
+      # nobody reads. deploy.sh also guards this, but this surfaces it now.
+      echo "[post-commit] ⚠ NOT deploying — callback-box/deploy/server-ip is missing" >&2
+      echo "[post-commit]   (gitignored; lost in a repo move?). Nothing shipped — restore it." >&2
+    else
+      echo "[post-commit] Deploying to server (branch: main)..."
+      "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
+      disown
+      echo "[post-commit] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
+    fi
 
     # Rebuild the clerk extension if its sources changed in this commit.
     "$REPO_DIR/callback-clerk/build/auto-build.sh" || true
