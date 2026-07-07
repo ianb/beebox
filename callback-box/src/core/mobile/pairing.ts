@@ -141,7 +141,12 @@ export function verifyMobileBearer(boxRoot: string, authorization: string | unde
   if (typeof authorization !== "string") return false;
   const prefix = "Bearer ";
   if (!authorization.startsWith(prefix)) return false;
-  const suppliedHash = hashToken(authorization.slice(prefix.length));
+  return verifyMobileToken(boxRoot, authorization.slice(prefix.length));
+}
+
+export function verifyMobileToken(boxRoot: string, token: string | undefined): boolean {
+  if (typeof token !== "string" || token.length === 0) return false;
+  const suppliedHash = hashToken(token);
   const store = readDeviceStore(boxRoot);
   for (const device of store.devices) {
     if (device.revokedAt) continue;

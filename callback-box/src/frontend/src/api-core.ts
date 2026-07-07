@@ -82,6 +82,8 @@ export function getApiBase(): string {
  */
 export function getWebSocketUrl(): string {
   const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
-  return `${proto}//${window.location.host}${getApiBase()}/trpc`;
+  const url = new URL(`${proto}//${window.location.host}${getApiBase()}/trpc`);
+  const token = window.localStorage.getItem("callbackbox.mobileAuthToken");
+  if (token) url.searchParams.set("mobileToken", token);
+  return url.toString();
 }
-

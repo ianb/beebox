@@ -85,10 +85,14 @@ briefing.
    quoting issues:
 
    ```bash
-   launch-worktree-session <worktree-name> - <<'EOF'
+   bin/launch-worktree-session <worktree-name> - <<'EOF'
    <briefing text — see "What the briefing is" above>
    EOF
    ```
+
+   Use the repo-relative `bin/launch-worktree-session` path, NOT the bare
+   `launch-worktree-session` — see Script details for why (the agent Bash
+   tool's PATH doesn't include the symlink).
 
    The `<<'EOF'` (single-quoted) prevents shell expansion inside the
    briefing. Use `<<EOF` (unquoted) only if you intentionally want to
@@ -99,16 +103,23 @@ briefing.
 
 ## Script details
 
-The command is `launch-worktree-session` (tracked at
-`bin/launch-worktree-session` in the monorepo, symlinked onto PATH from
-`~/.local/bin/launch-worktree-session` — edit the tracked copy).
+**Invoke it as `bin/launch-worktree-session` from the monorepo root** — a
+repo-relative path that works regardless of PATH. The bare
+`launch-worktree-session` is symlinked onto PATH from `~/.local/bin` for the
+human's interactive shell, but the agent's Bash tool runs a non-interactive
+shell that does NOT have `~/.local/bin` on PATH, so the bare command fails there
+with `command not found` (this recurs — always use the `bin/` path). The tracked
+script is `bin/launch-worktree-session`; edit that copy. (The `~/.local/bin`
+symlink is machine-local and can dangle after a repo move/rename — repoint it
+with `ln -sfn "$PWD/bin/launch-worktree-session" ~/.local/bin/` if the human's
+own shortcut breaks.)
 
-Signature:
+Signature (all forms take the repo-relative path):
 
 ```
-launch-worktree-session <worktree-name> "<briefing>"
-launch-worktree-session <worktree-name> -            # stdin (heredoc)
-launch-worktree-session <worktree-name> @<file>      # from a file
+bin/launch-worktree-session <worktree-name> "<briefing>"
+bin/launch-worktree-session <worktree-name> -            # stdin (heredoc)
+bin/launch-worktree-session <worktree-name> @<file>      # from a file
 ```
 
 It opens a new tab in the front Terminal.app window (or a new window if
