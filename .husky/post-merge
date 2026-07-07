@@ -13,10 +13,24 @@ REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 
 if [ "$BRANCH" = "main" ]; then
-  echo "[post-merge] Deploying to server (branch: main)..."
-  "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
-  disown
-  echo "[post-merge] Deploy started in background (log: callback-box/deploy/.last-deploy.log)"
+  # Only deploy when the merge actually changed something deploy.sh ships (see
+  # post-commit / callback-box/deploy/deploy.sh): callback-box, agent-doctest,
+  # personal-vibe-check, patches/, root pnpm files. A merge confined to issues/,
+  # callback-clerk/, ios-app/, research/, bin/, root docs, etc. ships nothing.
+  # Fail OPEN: if the merge's file list can't be computed, deploy rather than
+  # risk silently skipping a real ship (the failure mode we're guarding against).
+  merge_changed=$(git -C "$REPO_DIR" diff --name-only ORIG_HEAD HEAD 2>/dev/null || echo "callback-box/__diff_failed__")
+  if ! printf '%s\n' "$merge_changed" | grep -qE '^(callback-box|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
+    echo "[post-merge] Skip deploy: merge touches no deployed path (callback-box/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
+  elif [ ! -s "$REPO_DIR/callback-box/deploy/server-ip" ]; then
+    echo "[post-merge] ⚠ NOT deploying — callback-box/deploy/server-ip is missing" >&2
+    echo "[post-merge]   (gitignored; lost in a repo move?). Nothing shipped — restore it." >&2
+  else
+    echo "[post-merge] Deploying to server (branch: main)..."
+    "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
+    disown
+    echo "[post-merge] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
+  fi
 
   # Rebuild the clerk extension if its sources changed in this merge.
   "$REPO_DIR/callback-clerk/build/auto-build.sh" ORIG_HEAD HEAD || true

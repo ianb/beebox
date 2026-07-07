@@ -40,17 +40,23 @@
 
 import type http from "node:http";
 import type { Socket } from "node:net";
+import fs from "node:fs";
+import path from "node:path";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
 import httpProxy from "http-proxy-3";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import type { BoxRuntimeStatus } from "./supervisor.js";
 import { registerBoxPicker } from "./box-picker.js";
 import { registerAuthSurface } from "../webapp/routes/auth.js";
+import { isPairingRedeemUrl } from "../webapp/routes/pairing.js";
 import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
+import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
 import type { BoxSpec } from "../webapp/server-types.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
   isAuthEnabled,
   getSessionUser,
@@ -106,6 +112,32 @@ function isWebhookPath(reqPath: string): boolean {
 
 function slugForPath(reqPath: string): string | null {
   return isWebhookPath(reqPath) ? parseWebhookSlug(reqPath) : parseSlug(reqPath);
+}
+
+function mobileTokenFromUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url, "http://hub.local").searchParams.get("mobileToken") ?? undefined;
+  } catch (_e) {
+    return undefined;
+  }
+}
+
+function hasMobileAuthAttempt(headers: http.IncomingHttpHeaders, url: string | undefined): boolean {
+  const authorization = headers.authorization;
+  return (typeof authorization === "string" && authorization.startsWith("Bearer "))
+    || mobileTokenFromUrl(url) !== undefined;
+}
+
+function listMobileAuthorizedBoxes(opts: {
+  boxes: BoxSpec[];
+  headers: http.IncomingHttpHeaders;
+  url: string | undefined;
+}): Array<{ slug: string; name: string }> {
+  return opts.boxes
+    .filter((box) => verifyMobileBearer(box.boxRoot, opts.headers.authorization)
+      || verifyMobileToken(box.boxRoot, mobileTokenFromUrl(opts.url)))
+    .map((box) => ({ slug: box.slug, name: box.slug }));
 }
 
 /**
@@ -216,8 +248,10 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // no second OAuth implementation to drift from the box's.
   await registerAuthSurface(app, { boxes, publicUrlFallback: baseUrl });
 
-  // The box picker (Track D, chunk D3).
-  registerBoxPicker(app, { boxes });
+  // The box picker at "/" — serves the SPA's styled box-selection page (with a
+  // minimal server-rendered fallback when the bundle isn't built).
+  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  registerBoxPicker(app, { boxes, frontendDist });
 
   // The frontend's box switcher calls /api/boxes on whatever server it's
   // loaded from -- the standalone server answers it (server-root.ts), but
@@ -229,11 +263,38 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   app.get("/api/boxes", async (request) => {
     if (isAuthEnabled()) {
       const user = getSessionUser(request);
+      const mobileBoxes = listMobileAuthorizedBoxes({ boxes, headers: request.headers, url: request.url });
+      if (mobileBoxes.length > 0) return { boxes: mobileBoxes };
       if (!user) return { boxes: [], authRequired: true };
       return { boxes: await listAccessibleBoxes(boxes, user.email) };
     }
     return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
   });
+
+  // Shared frontend static, served at the ROOT for the whole fleet. The built
+  // SPA references its bundles by ABSOLUTE path (`/assets/...`, `/icons/...`,
+  // `/manifest.webmanifest`): Vite bakes base="/" and the box slug is derived at
+  // runtime from the URL, never from the asset paths (frontend/src/api-core.ts).
+  // The hub does no prefix stripping, so a root `/assets/X` request carries no
+  // slug for the "/*" catch-all to route — without these routes every JS/CSS
+  // 404s and every box renders blank. The build is identical for all boxes, so
+  // one root mount serves the fleet. Ungated: a client bundle is public and must
+  // load before the user can auth-navigate. find-my-way matches these ahead of
+  // the "/*" proxy wildcard regardless of registration order. (frontendDist is
+  // computed above, where the box picker also uses it.)
+  if (fs.existsSync(path.join(frontendDist, "index.html"))) {
+    // assets first — its default decorateReply provides reply.sendFile below.
+    await app.register(fastifyStatic, { root: path.join(frontendDist, "assets"), prefix: "/assets/" });
+    for (const dir of ["icons", "earcons"]) {
+      const root = path.join(frontendDist, dir);
+      if (fs.existsSync(root)) await app.register(fastifyStatic, { root, prefix: `/${dir}/`, decorateReply: false });
+    }
+    for (const file of ["manifest.webmanifest", "sw.js"]) {
+      if (fs.existsSync(path.join(frontendDist, file))) {
+        app.get(`/${file}`, (_request, reply) => reply.sendFile(file, frontendDist));
+      }
+    }
+  }
 
   const proxy = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
   // eslint-disable-next-line max-params -- http-proxy-3's ProxyServer "error" event signature is (err, req, res)
@@ -322,18 +383,24 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   app.all("/*", async (request, reply) => {
     const reqPath = request.url.split("?")[0] ?? "/";
     const isWebhook = isWebhookPath(reqPath);
+    const isMobilePairingRedeem = request.method === "POST" && isPairingRedeemUrl(reqPath);
+    const slug = slugForPath(reqPath);
+    const mobileAuthAttempt = slug !== null
+      && boxRootBySlug.has(slug)
+      && hasMobileAuthAttempt(request.headers, request.url);
 
     stripHubHeaders(request.raw.headers);
     const decision = decideHubAuth({ cookieHeader: request.headers.cookie, isWebhook, hubSecret });
-    if (!decision.authorized) {
+    if (!isMobilePairingRedeem && !mobileAuthAttempt && !decision.authorized) {
       if (isApiUrl(reqPath)) {
         return reply.status(401).send({ error: "Not authenticated" });
       }
       return reply.redirect(`/auth/login?returnTo=${encodeURIComponent(request.url)}`);
     }
-    Object.assign(request.raw.headers, decision.headersToSet);
+    if (!isMobilePairingRedeem && !mobileAuthAttempt) {
+      Object.assign(request.raw.headers, decision.headersToSet);
+    }
 
-    const slug = slugForPath(reqPath);
     // A lazy hub's box may be "stopped" (idle-collected or never yet
     // requested) — ensureRunning cold-starts it and waits for readiness,
     // same as bin/router.ts's ensureRunning does for a whole worktree, AND
@@ -369,17 +436,22 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   server.on("upgrade", (req: http.IncomingMessage, socket: Socket, head: Buffer) => {
     const reqPath = req.url ?? "/";
     const isWebhook = isWebhookPath(reqPath);
+    const slug = slugForPath(reqPath);
+    const mobileAuthAttempt = slug !== null
+      && boxRootBySlug.has(slug)
+      && hasMobileAuthAttempt(req.headers, req.url);
 
     stripHubHeaders(req.headers);
     const decision = decideHubAuth({ cookieHeader: req.headers.cookie, isWebhook, hubSecret });
-    if (!decision.authorized) {
+    if (!mobileAuthAttempt && !decision.authorized) {
       socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n");
       socket.destroy();
       return;
     }
-    Object.assign(req.headers, decision.headersToSet);
+    if (!mobileAuthAttempt) {
+      Object.assign(req.headers, decision.headersToSet);
+    }
 
-    const slug = slugForPath(reqPath);
     const endpoint = slug ? endpoints.get(slug) : undefined;
     if (!endpoint) {
       // WebSocket upgrades never cold-start a lazy hub's box — same

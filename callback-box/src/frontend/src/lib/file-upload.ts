@@ -9,6 +9,7 @@
 
 import { getApiBase } from "../api";
 import { RequestError } from "./errors";
+import { withMobileAuth } from "./mobile-auth";
 
 export interface UploadedFile {
   /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
@@ -21,10 +22,10 @@ export interface UploadedFile {
 export async function uploadChatFile(file: File): Promise<UploadedFile> {
   const form = new FormData();
   form.append("file", file, file.name);
-  const response = await fetch(`${getApiBase()}/chat/upload-file`, {
+  const response = await fetch(`${getApiBase()}/chat/upload-file`, withMobileAuth({
     method: "POST",
     body: form,
-  });
+  }));
   if (!response.ok) {
     const err = await response
       .json()

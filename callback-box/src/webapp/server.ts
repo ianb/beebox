@@ -162,7 +162,7 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
 
   if (frontendExists) {
     // SPA fallback — serve index.html for non-API, non-asset routes
-    registerSpaFallback(server, frontendPath);
+    registerSpaFallback(server, { frontendPath, boxes });
   } else {
     // Root redirect when frontend not built
     registerUnbuiltFrontendRoot(server, boxes);

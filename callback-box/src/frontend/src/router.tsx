@@ -70,6 +70,8 @@ const chatRoute = createRoute({
     // active card changes. Distinct from `companion`, which is a one-shot
     // deep-link opened only on mount.
     card: z.string().optional(),
+    // Native companion embed mode: conversation-only chat, no web composer.
+    embed: z.union([z.literal("1"), z.literal(1)]).optional(),
   }),
 });
 
@@ -195,8 +197,11 @@ const routeTree = rootRoute.addChildren([
     viewRoute,
     landmarksRoute,
     chatsRoute,
-    // Dev-only routes are omitted from production builds entirely.
-    ...(import.meta.env.DEV ? [devSpeechRoute, devComposerStatesRoute] : []),
+    // Dev-only routes are omitted from production builds entirely. The undefined
+    // guard keeps the literal `import.meta.env.DEV` intact for Vite's build-time
+    // dead-code elimination, while short-circuiting under the SSR loader / plain-
+    // Node tests where `import.meta.env` is undefined (see lib/view-url.ts).
+    ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute] : []),
     boxCatchAllRoute,
   ]),
 ]);
@@ -208,7 +213,9 @@ export function createAppRouter(opts?: { history?: Parameters<typeof createRoute
   // monorepo dev router), Vite sets import.meta.env.BASE_URL accordingly and
   // we tell TanStack Router about it so it doesn't parse the prefix as the
   // first route segment. Trailing slash is stripped per TanStack's convention.
-  const rawBase = import.meta.env.BASE_URL ?? "/";
+  // Guarded read — import.meta.env is undefined under the SSR loader / plain-Node
+  // (matches lib/view-url.ts's viteBase); the bare `.BASE_URL` would throw there.
+  const rawBase = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
   const basepath = rawBase.replace(/\/$/, "") || undefined;
   return createRouter({
     routeTree,

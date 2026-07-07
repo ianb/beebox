@@ -24,6 +24,7 @@ import type { HubConfig, BoxEntry } from "./hub-config.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import { waitForHttp, killGroup, sleep, HttpReadinessTimeoutError } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
+import { forwardChildOutput } from "./child-output-log.js";
 
 type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
@@ -392,6 +393,7 @@ export class Supervisor implements EndpointProvider {
       // as an unhandledRejection and crashes the hub. Same fix router.ts
       // applies to its vite/fastify children.
       child.catch(() => { /* handled via onExit below */ });
+      forwardChildOutput({ child, logFile: path.join(boxRoot, ".callback-box", "hub-child.log") });
 
       box.child = child;
       box.port = port;

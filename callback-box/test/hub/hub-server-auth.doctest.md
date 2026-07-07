@@ -15,6 +15,8 @@ import net from "node:net";
 import { createHubServer } from "../../src/hub/hub-server.js";
 import { staticEndpointProvider } from "../../src/hub/endpoints.js";
 import { signSession, COOKIE_NAME } from "../../src/webapp/auth.js";
+import { createMobilePairingTicket, redeemMobilePairingTicket } from "../../src/core/mobile/pairing.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const HUB_SECRET = "test-hub-secret-for-auth-doctest";
 
@@ -38,12 +40,20 @@ async function startFakeBox() {
 }
 
 const box = await startFakeBox();
+const mobileBox = await makeTmpBox();
+const mobileTicket = createMobilePairingTicket(mobileBox.root);
+const mobileRedeemed = redeemMobilePairingTicket(mobileBox.root, {
+  pairingToken: mobileTicket.token,
+  deviceLabel: "doctest mobile",
+});
+if (!mobileRedeemed) throw new Error("doctest mobile pairing failed");
+const mobileToken = mobileRedeemed.deviceToken;
 const endpoints = staticEndpointProvider([{ slug: "test1", origin: box.origin }]);
 const hubServer = await createHubServer({
   endpoints,
   getHealth: () => ({ status: "ok", boxes: [] }),
   hubSecret: HUB_SECRET,
-  boxes: [{ slug: "test1", boxRoot: "/nonexistent/test1" }],
+  boxes: [{ slug: "test1", boxRoot: mobileBox.root }],
 });
 const hubSockets = [];
 hubServer.on("connection", (socket) => hubSockets.push(socket));
@@ -68,6 +78,59 @@ navResponse.headers.get("location")
 const apiResponse = await fetch(`${hubBase}/test1/api/trpc/health.check`);
 apiResponse.status
 => 401
+```
+
+## A mobile bearer token proxies without a browser session
+
+```ts continue
+const mobileResponse = await fetch(`${hubBase}/test1/chat?embed=1`, {
+  headers: { authorization: `Bearer ${mobileToken}` },
+});
+const mobileBody = await mobileResponse.json();
+JSON.stringify({
+  status: mobileResponse.status,
+  url: mobileBody.url,
+  email: mobileBody.xCbAuthenticatedEmail,
+  secret: mobileBody.xCbHubSecret,
+})
+=> {"status":200,"url":"/test1/chat?embed=1","email":null,"secret":null}
+```
+
+## A mobile bearer token can discover its paired box
+
+```ts continue
+const boxesWithoutMobileAuth = await fetch(`${hubBase}/api/boxes`);
+JSON.stringify(await boxesWithoutMobileAuth.json())
+=> {"boxes":[],"authRequired":true}
+
+const boxesWithMobileAuth = await fetch(`${hubBase}/api/boxes`, {
+  headers: { authorization: `Bearer ${mobileToken}` },
+});
+JSON.stringify(await boxesWithMobileAuth.json())
+=> {"boxes":[{"slug":"test1","name":"test1"}]}
+```
+
+## Unauthenticated mobile pairing redemption proxies to the box
+
+Pairing redemption is the one non-webhook API path that starts unauthenticated:
+the box validates the short-lived pairing token itself, before creating a
+device bearer token. The hub should pass the request through without injecting a
+browser identity.
+
+```ts continue
+const pairingResponse = await fetch(`${hubBase}/test1/api/pairing/redeem`, {
+  method: "POST",
+  headers: { "content-type": "application/json" },
+  body: JSON.stringify({ pairingToken: "test-token", deviceLabel: "test device" }),
+});
+const pairingBody = await pairingResponse.json();
+JSON.stringify({
+  status: pairingResponse.status,
+  url: pairingBody.url,
+  email: pairingBody.xCbAuthenticatedEmail,
+  secret: pairingBody.xCbHubSecret,
+})
+=> {"status":200,"url":"/test1/api/pairing/redeem","email":null,"secret":null}
 ```
 
 ## A valid session cookie becomes `x-cb-authenticated-email` on the proxied request
@@ -143,6 +206,7 @@ unauthedUpgrade.startsWith("HTTP/1.1 401")
 ```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 delete process.env.CB_SESSION_SECRET;
+await mobileBox.cleanup();
 for (const socket of hubSockets) socket.destroy();
 for (const socket of box.sockets) socket.destroy();
 await new Promise((resolve) => hubServer.close(resolve));

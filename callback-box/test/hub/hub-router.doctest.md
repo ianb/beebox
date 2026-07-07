@@ -117,11 +117,12 @@ missingResponse.status
 => 404
 ```
 
-## `/` renders the box picker, `/healthz` returns the injected health
+## `/` serves the root page, `/healthz` returns the injected health
 
-With `GOOGLE_OAUTH_CLIENT_ID` unset (the doctest process's default), hub
-auth is off — the box picker lists every configured box unconditionally,
-same "open" semantics a standalone box gets outside auth mode.
+`/` routes to the hub's box-picker handler, which serves the SPA when the
+frontend bundle is built and a minimal box list otherwise — either way a 200
+with an HTML body (the picker-content behavior itself is covered in
+`box-picker.doctest.md`; this just asserts the routing).
 
 ```ts continue
 const rootResponse = await fetch(`${hub.base}/`);
@@ -129,7 +130,7 @@ rootResponse.status
 => 200
 
 const rootBody = await rootResponse.text();
-rootBody.includes(`href="/test1/"`)
+rootBody.length > 0
 => true
 
 const healthResponse = await fetch(`${hub.base}/healthz`);

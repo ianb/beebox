@@ -20,8 +20,9 @@ can't be safely inferred, return BLOCKED asking for it — don't guess.
 
 ## Test failures are NEVER acceptable
 
-The single most important rule (applies whenever the worktree touched code — see
-"When tests don't apply"):
+The single most important rule (applies whenever the worktree touched code —
+i.e. anything but the docs-only fast path below, which includes any `.doctest.md`
+change):
 
 > If `pnpm test` reports ANY failure — anywhere in the suite, in any file, for
 > any reason — you do not proceed and you do not merge. "Was failing before",
@@ -29,13 +30,38 @@ The single most important rule (applies whenever the worktree touched code — s
 > the failure is yours to fix, or it's a real bug — and if you can't confidently
 > fix it, return `RESULT: BLOCKED` with the failing output.
 
-### When tests don't apply
+### The docs-only fast path
 
-If the worktree's diff is entirely documentation / notes / ideas (`.md`,
-`docs/`, comments-only), there's no behavior to verify and step 4 can be skipped
-— but still run `pnpm typecheck` and `pnpm lint` in case a stray edit hit a code
-file. If unsure whether a change is docs-only, run the tests (bias toward
-running).
+A **docs-only** finish has no behavior to verify, so skip the entire
+verification tier — the test suite, `pnpm typecheck`, `pnpm lint`, AND the Track
+O review (steps 4 and 5) — and go straight to plan-doc reconciliation (step 6),
+then merge. Take it confidently when it applies; grinding tests/typecheck/lint
+over a prose change is wasted work.
+
+Decide from the diff, never a guess:
+
+```bash
+git diff --name-only main...HEAD     # committed vs main
+git status --porcelain               # + anything uncommitted
+```
+
+It's docs-only **iff every changed path sits under a `docs/` directory AND none
+is a `.doctest.md`.** Two carve-outs, both load-bearing:
+
+- **`.doctest.md` is a TEST, not a doc** — it's Markdown but it's executable
+  behavior. Any `.doctest.md` in the diff → **full flow** (run the tests), never
+  the fast path. This is the whole reason the check is path-precise and not "all
+  `.md`".
+- **Anything outside `docs/`** — source, schema, config, or a stray `.md` like a
+  root `CLAUDE.md`/`code-style.md` — also drops you to the full flow.
+
+Because the fast path only triggers when the diff is *confined to* `docs/`, there
+is by definition no code file to break, so skipping typecheck/lint is safe (and
+docs-only commits already passed the pre-commit doc checks). Broken prose
+references are still caught: every commit (the worktree's, and any step-6 doc
+moves) runs the pre-commit `doc-check`, and step 6 below is doc-specific. If a lone changed file genuinely defies classification,
+run the full flow — but a diff cleanly under `docs/` is the common case and
+should finish fast. Report it as "docs-only, verification skipped".
 
 ## The flow
 
@@ -74,6 +100,9 @@ with high confidence, **return BLOCKED** with the conflicted paths.
 
 ### 4. Run the full test suite
 
+*(Skipped on the docs-only fast path — see above. A `.doctest.md` change is NOT
+docs-only; it runs here.)*
+
 From the worktree's `callback-box/`:
 
 ```bash
@@ -93,6 +122,8 @@ pnpm lint
 ```
 
 ### 5. Diff-scoped review pass (Track O)
+
+*(Skipped on the docs-only fast path — no code changed.)*
 
 Review **only the changed lines** in this worktree's diff (`git diff main...HEAD`)
 against the checklist below — patterns the architectural review shows are still
@@ -218,7 +249,7 @@ session. You may mention it's coming.
 End your final message with a status line the caller can act on:
 
 - `RESULT: MERGED` — followed by: merge hash, `worktree-<name>` + commit count,
-  test counts (X/X) or "docs-only, tests skipped", mode (close-out/checkpoint),
+  test counts (X/X) or "docs-only, verification skipped", mode (close-out/checkpoint),
   honest scope/verification notes, and any deferred cleanup (e.g. unresolved
   feedback item).
 - `RESULT: BLOCKED` — followed by: exactly what's blocking (on main / conflicted

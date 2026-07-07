@@ -58,7 +58,17 @@ async function resolveItems(
     if (isImageCard(fullPath)) {
       const imgPath = await findAttachedImage(fullPath);
       if (!imgPath) {
-        ctx.writeLine(`Warning: No image file found for card ${rawPath}, skipping`);
+        // The card exists but its attachment doesn't (e.g. lost in a box
+        // clone) — this is permanent, not transient, so mark the card
+        // invalid now rather than leaving it "new" to be retried forever by
+        // whatever procedure keeps re-running this command on it.
+        ctx.writeLine(`Warning: No image file found for card ${rawPath}, marking invalid`);
+        try {
+          await markCardInvalid(fullPath, "Image file missing (attachment lost or never uploaded)");
+        } catch (_e) {
+          // Best-effort — don't let a status-update failure block resolving
+          // the rest of the batch; a card left "new" here just gets retried.
+        }
         continue;
       }
       items.push({ cardPath: fullPath, imagePath: imgPath, index: items.length });
@@ -244,7 +254,10 @@ async function executeDescribeImages(
 
   const items = await resolveItems(ctx, paths);
   if (items.length === 0) {
-    return { success: false, error: "No valid images found" };
+    // Every input path was handled inside resolveItems (marked invalid, or
+    // simply wasn't an image/image-card) — nothing left to analyze isn't a
+    // failure, it just means this call had no work.
+    return { success: true, data: { analyzed: 0, total: 0, failed: 0, analyses: [] } };
   }
 
   ctx.writeLine(`Analyzing ${items.length} image(s) with Gemini Flash...`);

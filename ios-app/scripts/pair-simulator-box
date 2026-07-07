@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+device="${1:-booted}"
+base_url="${2:-http://127.0.0.1:3210/main/test1}"
+label="${3:-Local test box}"
+session="${4:-}"
+bundle_id="app.callbackbox.ios"
+
+data_dir="$(xcrun simctl get_app_container "$device" "$bundle_id" data)"
+store_dir="$data_dir/Library/Application Support"
+store_file="$store_dir/paired-boxes.json"
+
+mkdir -p "$store_dir"
+
+/usr/bin/python3 - "$store_file" "$label" "$base_url" "$session" <<'PY'
+import json
+import sys
+import uuid
+
+store_file, label, base_url, session = sys.argv[1:5]
+box_id = str(uuid.uuid4()).upper()
+box = {
+    "id": box_id,
+    "label": label,
+    "baseURL": base_url,
+}
+if session:
+    box["sessionID"] = session
+
+snapshot = {
+    "boxes": [box],
+    "selectedBoxID": box_id,
+}
+
+with open(store_file, "w", encoding="utf-8") as f:
+    json.dump(snapshot, f, indent=2)
+    f.write("\n")
+PY
+
+echo "Paired $label -> $base_url"
+echo "$store_file"

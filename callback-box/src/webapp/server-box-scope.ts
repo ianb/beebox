@@ -18,6 +18,7 @@ import { registerTelegramRoutes } from "./routes/telegram.js";
 import { registerViewRoutes } from "./routes/views.js";
 import { registerFigureRoutes } from "./routes/figure.js";
 import { registerCaptureRoutes } from "./routes/capture.js";
+import { isPairingRedeemUrl, registerPairingRoutes } from "./routes/pairing.js";
 import { appRouter } from "./trpc/router.js";
 import type { TrpcContext } from "./trpc/context.js";
 import {
@@ -28,6 +29,7 @@ import {
   isDiagnosticBypassRequest,
 } from "./auth.js";
 import { verifyAgentBearer } from "../core/agent/token.js";
+import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
 import { canAccessBox } from "./box-access.js";
 import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
@@ -72,10 +74,19 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     if (isDiagnosticBypassRequest(request)) {
       return;
     }
+    if (request.method === "POST" && isPairingRedeemUrl(request.url)) {
+      return;
+    }
     // The box's own agents (chat subprocess, scheduled scripts) call back in
     // with the per-box loopback token from their env — box-scoped auth, same
     // trust as the box user they run as. See core/agent-token.ts.
     if (verifyAgentBearer(box.boxRoot, request.headers["authorization"])) {
+      return;
+    }
+    if (verifyMobileBearer(box.boxRoot, request.headers["authorization"])) {
+      return;
+    }
+    if (verifyMobileToken(box.boxRoot, mobileTokenFromUrl(request.url))) {
       return;
     }
     const identity = resolveRequestIdentity(request);
@@ -170,13 +181,15 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       const openAccess = isHubMode() ? identity.source === "open" : !isAuthEnabled();
       const user = identity.email ? { email: identity.email, name: identity.name ?? identity.email } : null;
       const bearerOk = verifyAgentBearer(box.boxRoot, req.headers["authorization"]);
+      const mobileBearerOk = verifyMobileBearer(box.boxRoot, req.headers["authorization"]);
+      const mobileTokenOk = verifyMobileToken(box.boxRoot, mobileTokenFromUrl(req.url));
       return {
         boxRoot: box.boxRoot,
         boxSlug: box.slug,
         eventBus,
         services: options.services ?? {},
         user,
-        authed: openAccess || user !== null || bearerOk,
+        authed: openAccess || user !== null || bearerOk || mobileBearerOk || mobileTokenOk,
         isOwner: openAccess || (user !== null && user.email === getOwnerEmail()),
       };
     },
@@ -193,6 +206,7 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
   await registerCommandRoutes({ server: instance, boxRoot: box.boxRoot, eventBus });
   await registerHistoryRoutes(instance, box.boxRoot);
   await registerChatRoutes({ server: instance, boxRoot: box.boxRoot, eventBus, openaiAudio: options.services?.openaiAudio, prewarmChat: options.prewarmChat });
+  registerPairingRoutes(instance, { boxRoot: box.boxRoot, boxSlug: box.slug });
   // Box admin (telegram/google/box-config) now lives in the `admin` tRPC router
   // behind ownerProcedure; only the OAuth redirect callback stays a raw route
   // (registered at the root, see server.ts).
@@ -208,6 +222,15 @@ async function registerBoxRoutes(instance: FastifyInstance, deps: BoxScopeDeps):
       wildcard: true,
       decorateReply: false, // Avoid duplicate decorator across box prefixes
     });
+  }
+}
+
+function mobileTokenFromUrl(url: string | undefined): string | undefined {
+  if (!url) return undefined;
+  try {
+    return new URL(url, "http://box.local").searchParams.get("mobileToken") ?? undefined;
+  } catch (_e) {
+    return undefined;
   }
 }
 
