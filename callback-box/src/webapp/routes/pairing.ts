@@ -8,7 +8,8 @@ const RedeemBody = z.object({
 });
 
 export function isPairingRedeemUrl(url: string): boolean {
-  return url.split("?")[0] === "/api/pairing/redeem";
+  const path = url.split("?")[0];
+  return path === "/api/pairing/redeem" || path?.endsWith("/api/pairing/redeem") === true;
 }
 
 export function registerPairingRoutes(
