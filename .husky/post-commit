@@ -23,6 +23,16 @@ BRANCH=$(git -C "$REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ "$BRANCH" = "main" ]; then
   if git -C "$REPO_DIR" rev-parse --verify --quiet HEAD^2 >/dev/null; then
     echo "[post-commit] Skip deploy: merge commit (post-merge handles it)"
+  # Only deploy when the commit actually touched something deploy.sh ships (see
+  # callback-box/deploy/deploy.sh): the synced workspace members
+  # (callback-box, agent-doctest, personal-vibe-check), patches/, and the root
+  # pnpm files. A commit confined to issues/, callback-clerk/, ios-app/,
+  # research/, bin/, root docs, etc. changes nothing on the server — skip it.
+  elif ! git -C "$REPO_DIR" diff-tree --no-commit-id --name-only -r HEAD \
+      | grep -qE '^(callback-box|agent-doctest|personal-vibe-check|patches)/|^(package\.json|pnpm-workspace\.yaml|\.npmrc|pnpm-lock\.yaml)$'; then
+    echo "[post-commit] Skip deploy: commit touches no deployed path (callback-box/, agent-doctest/, personal-vibe-check/, patches/, root pnpm files)"
+    # The clerk extension still self-gates on its own sources below.
+    "$REPO_DIR/callback-clerk/build/auto-build.sh" || true
   else
     if [ ! -s "$REPO_DIR/callback-box/deploy/server-ip" ]; then
       # Pre-flight the one prerequisite that silently killed a whole run of
