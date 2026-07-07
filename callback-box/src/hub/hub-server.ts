@@ -40,8 +40,11 @@
 
 import type http from "node:http";
 import type { Socket } from "node:net";
+import fs from "node:fs";
+import path from "node:path";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
+import fastifyStatic from "@fastify/static";
 import httpProxy from "http-proxy-3";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
 import type { BoxRuntimeStatus } from "./supervisor.js";
@@ -51,6 +54,7 @@ import { isApiUrl } from "../webapp/server-box-scope.js";
 import { listAccessibleBoxes } from "../webapp/server-root.js";
 import { canAccessBox } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
+import { PACKAGE_ROOT } from "../lib/package-root.js";
 import {
   isAuthEnabled,
   getSessionUser,
@@ -234,6 +238,31 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
     }
     return { boxes: boxes.map((b) => ({ slug: b.slug, name: b.slug })) };
   });
+
+  // Shared frontend static, served at the ROOT for the whole fleet. The built
+  // SPA references its bundles by ABSOLUTE path (`/assets/...`, `/icons/...`,
+  // `/manifest.webmanifest`): Vite bakes base="/" and the box slug is derived at
+  // runtime from the URL, never from the asset paths (frontend/src/api-core.ts).
+  // The hub does no prefix stripping, so a root `/assets/X` request carries no
+  // slug for the "/*" catch-all to route — without these routes every JS/CSS
+  // 404s and every box renders blank. The build is identical for all boxes, so
+  // one root mount serves the fleet. Ungated: a client bundle is public and must
+  // load before the user can auth-navigate. find-my-way matches these ahead of
+  // the "/*" proxy wildcard regardless of registration order.
+  const frontendDist = path.join(PACKAGE_ROOT, "src/frontend/dist");
+  if (fs.existsSync(path.join(frontendDist, "index.html"))) {
+    // assets first — its default decorateReply provides reply.sendFile below.
+    await app.register(fastifyStatic, { root: path.join(frontendDist, "assets"), prefix: "/assets/" });
+    for (const dir of ["icons", "earcons"]) {
+      const root = path.join(frontendDist, dir);
+      if (fs.existsSync(root)) await app.register(fastifyStatic, { root, prefix: `/${dir}/`, decorateReply: false });
+    }
+    for (const file of ["manifest.webmanifest", "sw.js"]) {
+      if (fs.existsSync(path.join(frontendDist, file))) {
+        app.get(`/${file}`, (_request, reply) => reply.sendFile(file, frontendDist));
+      }
+    }
+  }
 
   const proxy = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
   // eslint-disable-next-line max-params -- http-proxy-3's ProxyServer "error" event signature is (err, req, res)
