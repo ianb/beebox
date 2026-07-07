@@ -86,21 +86,17 @@ export class MicCapture {
   }
 
   /**
-   * Acquire the mic and stand up the audio graph. `step` reports pipeline
-   * progress for the per-step debug log (see the actor's CONNECT_TIMEOUT
-   * diagnostics). Throws on permission/setup failure; returns early without
-   * a full graph if stopped mid-flight (the caller's disposed check handles
-   * teardown).
+   * Acquire the mic and stand up the audio graph. Throws on permission/setup
+   * failure; returns early without a full graph if stopped mid-flight (the
+   * caller's disposed check handles teardown).
    */
-  async start({ step }: { step: (name: string) => void }) {
+  async start() {
     this.stream = await getMicStream();
     if (this.stopped) return;
-    step("getUserMedia");
 
     this.audioContext = new AudioContext();
     await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
     if (this.stopped) return;
-    step("audioWorklet");
 
     this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
     this.workletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
