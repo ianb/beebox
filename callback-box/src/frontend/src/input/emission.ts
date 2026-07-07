@@ -67,6 +67,7 @@ export function createTypedEmission(input: TypedEmissionInput): Emission {
 
 interface VoiceEmissionInput {
   text: string;
+  images?: readonly ChatImageAttachment[];
   selections: readonly SelectionItem[];
   diarized: boolean;
 }
@@ -80,7 +81,7 @@ export function createVoiceEmission(input: VoiceEmissionInput): Emission {
     id: newMessageId(),
     origin: "voice",
     text: input.text,
-    images: [],
+    images: input.images ?? [],
     files: [],
     selections: input.selections,
     diarized: input.diarized,

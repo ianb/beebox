@@ -28,4 +28,8 @@ struct PairedBox: Codable, Equatable, Identifiable {
     var apiURL: URL {
         baseURL.appendingPathComponent("api")
     }
+
+    func withSessionID(_ sessionID: String?) -> PairedBox {
+        PairedBox(id: id, label: label, baseURL: baseURL, sessionID: sessionID, authToken: authToken)
+    }
 }

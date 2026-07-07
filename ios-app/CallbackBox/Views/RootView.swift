@@ -5,15 +5,34 @@ struct RootView: View {
     @EnvironmentObject private var outbox: OutboxStore
     @State private var showingPairSheet = false
     @State private var boxPendingRemoval: PairedBox?
+    @State private var visibleChatSessionID: String?
+    @State private var visibleChatBoxID: PairedBox.ID?
+    @State private var pendingNativeEmission: NativeChatEmission?
 
     var body: some View {
         NavigationStack {
             Group {
                 if let box = store.selectedBox {
+                    let composerBox = box.withSessionID(visibleChatBoxID == box.id ? visibleChatSessionID : box.sessionID)
                     VStack(spacing: 0) {
-                        ChatWebView(box: box)
+                        ChatWebView(
+                            box: box,
+                            pendingEmission: pendingNativeEmission,
+                            onSessionChange: { sessionID in
+                                visibleChatBoxID = box.id
+                                visibleChatSessionID = sessionID
+                            },
+                            onEmissionHandled: { emissionID in
+                                if pendingNativeEmission?.id == emissionID {
+                                    pendingNativeEmission = nil
+                                }
+                            }
+                        )
+                            .id(box.id)
                             .ignoresSafeArea(edges: .bottom)
-                        NativeComposerView(box: box)
+                        NativeComposerView(box: composerBox) { emission in
+                            pendingNativeEmission = emission
+                        }
                     }
                 } else {
                     EmptyBoxView {
@@ -33,6 +52,11 @@ struct RootView: View {
             }
             .sheet(isPresented: $showingPairSheet) {
                 PairBoxView()
+            }
+            .onChange(of: store.selectedBox?.id) { _, newBoxID in
+                visibleChatBoxID = newBoxID
+                visibleChatSessionID = nil
+                pendingNativeEmission = nil
             }
             .alert("Remove Box?", isPresented: removeAlertBinding) {
                 Button("Cancel", role: .cancel) {

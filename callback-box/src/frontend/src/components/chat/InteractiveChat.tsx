@@ -35,6 +35,7 @@ import { InteractiveChatBody } from "./InteractiveChat-view";
 import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
+import { nativeEmissionFromDetail } from "./native-emission";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -151,6 +152,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     (emission: Emission) => { void dispatchEmission(emission); },
     [dispatchEmission]
   );
+  useNativeEmissionBridge({ enabled: isEmbedded, dispatchEmission: dispatchEmissionVoid });
   // Set after the draft hook below; threaded into voice so a committed segment
   // drops the persisted draft. A ref breaks the voice→draft→voice cycle.
   const clearDraftRef = useRef<() => void>(() => {});
@@ -272,4 +274,30 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       />
     </InputStoreProvider>
   );
+}
+
+function useNativeEmissionBridge(opts: { enabled: boolean; dispatchEmission: (emission: Emission) => void }) {
+  const { enabled, dispatchEmission } = opts;
+  useEffect(() => {
+    if (!enabled) return;
+    for (const detail of drainNativeEmissionQueue()) {
+      const emission = nativeEmissionFromDetail(detail);
+      if (emission) dispatchEmission(emission);
+    }
+    const listener = () => {
+      for (const detail of drainNativeEmissionQueue()) {
+        const emission = nativeEmissionFromDetail(detail);
+        if (emission) dispatchEmission(emission);
+      }
+    };
+    window.addEventListener("callbackbox:native-emission", listener);
+    return () => window.removeEventListener("callbackbox:native-emission", listener);
+  }, [enabled, dispatchEmission]);
+}
+
+function drainNativeEmissionQueue(): unknown[] {
+  const nativeWindow = window as Window & { callbackboxNativeQueue?: unknown[] };
+  const queued = nativeWindow.callbackboxNativeQueue ?? [];
+  nativeWindow.callbackboxNativeQueue = [];
+  return queued;
 }

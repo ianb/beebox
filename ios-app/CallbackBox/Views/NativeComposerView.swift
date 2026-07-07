@@ -5,6 +5,7 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
+    var onSendEmission: (NativeChatEmission) -> Void
 
     @EnvironmentObject private var outbox: OutboxStore
     @State private var text = ""
@@ -129,7 +130,7 @@ struct NativeComposerView: View {
         }
         dictation.stop()
         let origin: QueuedMessage.Origin = dictation.hasDictatedText ? .voice : .typed
-        let queued = outbox.enqueue(text: message, origin: origin, images: images, for: box)
+        let emission = NativeChatEmission(text: message, origin: origin, diarized: false, images: images)
         pendingVoiceMessage = nil
         dictation.resetDictationState()
         text = ""
@@ -137,17 +138,8 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        statusText = "Sending..."
-        Task {
-            await outbox.send(messageID: queued.id, box: box)
-            await MainActor.run {
-                if outbox.messages.contains(where: { $0.id == queued.id }) {
-                    statusText = "Send failed. It is saved below."
-                } else {
-                    statusText = "Sent."
-                }
-            }
-        }
+        statusText = "Sent to chat."
+        onSendEmission(emission)
     }
 
     private func handleKeywordIntent(_ intent: SpeechKeywordResult) {
@@ -249,7 +241,7 @@ struct NativeComposerView: View {
             statusText = "Nothing to send."
             return
         }
-        let queued = outbox.enqueue(text: preparedText, origin: .voice, diarized: diarized, images: images, for: box)
+        let emission = NativeChatEmission(text: preparedText, origin: .voice, diarized: diarized, images: images)
         pendingVoiceMessage = nil
         dictation.resetDictationState()
         text = ""
@@ -257,17 +249,8 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        statusText = "Sending..."
-        Task {
-            await outbox.send(messageID: queued.id, box: box)
-            await MainActor.run {
-                if outbox.messages.contains(where: { $0.id == queued.id }) {
-                    statusText = "Send failed. It is saved below."
-                } else {
-                    statusText = "Sent."
-                }
-            }
-        }
+        statusText = "Sent to chat."
+        onSendEmission(emission)
     }
 
     private func retry(_ message: QueuedMessage) {
