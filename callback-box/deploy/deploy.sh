@@ -44,6 +44,18 @@ for arg in "$@"; do
 done
 
 RSYNC_OPTS=(-az --delete
+  # rsync runs as root over ssh, and -a preserves the sender's (local dev
+  # machine's) numeric uid/gid by default. Without this, /opt/callback ends
+  # up owned by the deploying laptop's local uid — harmless for reads, but
+  # `callback` (the account every box's `pnpm install` runs as, via the
+  # `link:/opt/callback/callback-box` dependency — see docs/box-layout.md)
+  # can't chmod a bin file it doesn't own, so pnpm's redundant "make sure
+  # this bin is executable" step during `_linkBins` throws EPERM and the
+  # whole install exits nonzero even though every real package resolved.
+  # --chown isn't available in the local macOS rsync (openrsync, no 3.1+
+  # extensions) — --no-owner --no-group plus an explicit chown pass below
+  # is the portable equivalent.
+  --no-owner --no-group
   --exclude node_modules
   --exclude .git
   --exclude '*.secret.json'
@@ -102,13 +114,21 @@ done
 # drive one reproducible `pnpm install --frozen-lockfile` from there (below).
 # These are individual files, so no --delete (it would nuke the synced subdirs).
 echo "Syncing workspace root..."
-rsync -az \
+rsync -az --no-owner --no-group \
   "$MONO_DIR/package.json" \
   "$MONO_DIR/pnpm-workspace.yaml" \
   "$MONO_DIR/.npmrc" \
   "$MONO_DIR/pnpm-lock.yaml" \
   "root@$SERVER_IP:$INSTALL_DIR/"
-rsync -az --delete "$MONO_DIR/patches/" "root@$SERVER_IP:$INSTALL_DIR/patches/"
+rsync -az --delete --no-owner --no-group "$MONO_DIR/patches/" "root@$SERVER_IP:$INSTALL_DIR/patches/"
+
+# --no-owner/--no-group above leave everything owned by root (the ssh
+# connection user) rather than the sender's uid — still wrong for `callback`,
+# whose `pnpm install` (this box and every box's) needs to own the files it
+# might chmod. One pass over the whole tree after every sync is simpler and
+# more robust than trying to get every rsync invocation's ownership right.
+echo "Fixing ownership..."
+ssh "root@$SERVER_IP" "chown -R callback:callback $INSTALL_DIR"
 
 # Install deps if package-lock changed (compare hash)
 echo "Checking dependencies..."
@@ -158,6 +178,51 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   cd /opt/callback
   echo "  Reconciling workspace deps (frozen)..."
   HUSKY=0 pnpm install --frozen-lockfile
+REMOTE
+
+# Reconcile each v2-shape (package-layout) box's own node_modules against its
+# package.json. `cb init`/`box-packageify` scaffold a package.json declaring
+# react/react-dom/typescript direct deps (view-metadata compilation needs a
+# real, box-owned react — see src/webapp/views/compiler.ts and
+# src/core/box/package.ts) but deliberately don't install them (Track F of
+# docs/implemented-plans/boxes-as-packages-v2.md has no real registry yet for
+# the `callback-box` dependency itself). Left uninstalled, every view in the
+# box silently degrades to a "Failed to compile" stub with no bound card
+# type and no visible error — see the box-family incident this fixed.
+# Runs after every deploy (not just once) because a box's package.json can
+# change independently — an agent `pnpm add`s a view dependency, or a fresh
+# `box-packageify` runs — between deploys.
+echo "Reconciling box package installs..."
+ssh "root@$SERVER_IP" bash -s <<'REMOTE'
+  set -e
+  for box in /home/callback/boxes/*/; do
+    pj="$box/package.json"
+    [[ -f "$pj" ]] || continue   # shapeVersion 1 (legacy) boxes have none — skip
+    name=$(basename "$box")
+
+    # The callback-box dependency ships as a bare semver range (meaningless —
+    # there's no registry for it yet), which makes a plain `pnpm install` fail
+    # outright trying to resolve it. Normalize it to `link:`, pointing at this
+    # same server install, idempotently (a no-op once already rewritten).
+    node -e "
+      const fs = require('fs');
+      const p = JSON.parse(fs.readFileSync('$pj', 'utf-8'));
+      const want = 'link:/opt/callback/callback-box';
+      if (p.dependencies && p.dependencies['callback-box'] !== want) {
+        p.dependencies['callback-box'] = want;
+        fs.writeFileSync('$pj', JSON.stringify(p, null, 2) + '\n');
+      }
+    "
+
+    marker="$box/node_modules/react"
+    if [[ ! -e "$marker" || "$pj" -nt "$marker" ]]; then
+      echo "  $name: installing (package.json newer than last install, or never installed)..."
+      if ! sudo -u callback -H bash -lc "cd '$box' && pnpm install"; then
+        echo "  $name: pnpm install exited nonzero — check for real dependency errors above" \
+             "(a lone EPERM on .bin linking is a known-harmless pnpm quirk, everything else isn't)"
+      fi
+    fi
+  done
 REMOTE
 
 # Write deploy info (git hashes + timestamp).
