@@ -2,6 +2,19 @@ import XCTest
 @testable import CallbackBox
 
 final class SpeechKeywordsTests: XCTestCase {
+    func testVisibleChatSessionParsing() {
+        XCTAssertEqual(
+            ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1&session=abc123")!),
+            "abc123"
+        )
+        XCTAssertEqual(
+            ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?session=new&embed=1")!),
+            "new"
+        )
+        XCTAssertNil(ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1")!))
+        XCTAssertNil(ChatWebView.visibleSessionID(from: URL(string: "https://cb.example/box/chat?embed=1&session=")!))
+    }
+
     func testSendCommandsMatchTypeScriptDoctestCases() {
         XCTAssertEqual(SpeechKeywords.detect("send message")?.action, .send)
         XCTAssertEqual(SpeechKeywords.detect("sent message")?.action, .send)
