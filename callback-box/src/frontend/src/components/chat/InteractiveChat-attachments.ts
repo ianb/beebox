@@ -5,16 +5,21 @@
  * textarea cursor; removal strips the matching tokens back out.
  *
  * State itself lives in the emission store (`../../input/emission-store.ts`,
- * docs/implemented-plans/input-extraction.md chunk 2) — this hook is a thin React
- * binding: it subscribes to the images/pendingImages/files slices via
- * `useSyncExternalStore` and calls `EmissionEditor` methods for every
- * mutation. DOM-bound caret handling (`insertTokensAtCursor`) has no place
- * in the framework-free store, so it stays here.
+ * docs/implemented-plans/input-extraction.md chunk 2). `useChatAttachments`
+ * (called at the `InteractiveChat` root) is a thin, NON-reactive binding —
+ * action methods only, closing over `emissionStore.get()` for their
+ * point-in-time reads. It deliberately does NOT subscribe to the store: like
+ * composer text (components/chat/CLAUDE.md, "Composer input lives in a store,
+ * not root state"), a root-level subscription here would re-render the whole
+ * chat subtree — including the companion view pane — on every paste. The
+ * reactive read lives in {@link useChatAttachmentValues}, called instead from
+ * `ComposerRegion`, a leaf that isn't an ancestor of the companion pane.
  */
 
 import { useRef, useCallback, useSyncExternalStore } from "react";
 import { processImageBlob } from "../../lib/image-paste";
 import { uploadChatFile } from "../../lib/file-upload";
+import { useEmissionStore } from "./input-store";
 import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-store";
 
 /**
@@ -53,12 +58,13 @@ export function insertTokensAtCursor(tokens: string, opts: {
   });
 }
 
-export function useChatAttachments(opts: {
-  emissionStore: EmissionStore;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
-}) {
-  const { emissionStore, textareaRef } = opts;
-  const { editor } = emissionStore;
+/**
+ * Reactive read of the attachment slices (images, pending-image count,
+ * files). The ONLY subscribing consumer — call this from `ComposerRegion`
+ * (or deeper), never from the `InteractiveChat` root; see the module doc.
+ */
+export function useChatAttachmentValues(): { attachments: ImageItem[]; pendingImageCount: number; fileAttachments: FileItem[] } {
+  const emissionStore = useEmissionStore();
   // Third argument (server snapshot) is required for SSR (`cb render` goes
   // through renderToString) — same convention as useInputValue in input-store.ts.
   const getImages = () => emissionStore.get().images;
@@ -67,6 +73,15 @@ export function useChatAttachments(opts: {
   const attachments = useSyncExternalStore(emissionStore.subscribe, getImages, getImages);
   const pendingImageCount = useSyncExternalStore(emissionStore.subscribe, getPendingImages, getPendingImages);
   const fileAttachments = useSyncExternalStore(emissionStore.subscribe, getFiles, getFiles);
+  return { attachments, pendingImageCount, fileAttachments };
+}
+
+export function useChatAttachments(opts: {
+  emissionStore: EmissionStore;
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
+}) {
+  const { emissionStore, textareaRef } = opts;
+  const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addImageFiles = useCallback(async (files: File[]) => {
@@ -177,7 +192,7 @@ export function useChatAttachments(opts: {
   }, [editor]);
 
   return {
-    attachments, pendingImageCount, fileAttachments, fileInputRef,
+    fileInputRef,
     addImageFiles, removeAttachment, addFileUploads, removeFileAttachment,
     handleAttachFiles, handleFileInputChange, resetAttachments,
   };
