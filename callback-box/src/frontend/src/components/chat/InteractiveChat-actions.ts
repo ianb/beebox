@@ -14,11 +14,11 @@ import { extractImageFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio/context";
 import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
-import { type AttachmentItem, type FileAttachmentItem } from "./ChatAttachments";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { createTypedEmission, type Emission } from "../../input/emission";
 import type { InputStore } from "./input-store";
+import type { EmissionStore } from "../../input/emission-store";
 import type { ChatEvent } from "../../machines/chat-types";
 
 interface ChatActionsOpts {
@@ -31,8 +31,8 @@ interface ChatActionsOpts {
   loadingOlder: boolean;
   setLoadingOlder: React.Dispatch<React.SetStateAction<boolean>>;
   inputStore: InputStore;
-  attachments: AttachmentItem[];
-  fileAttachments: FileAttachmentItem[];
+  /** Read at send-time via `.get()` — not a reactive prop, see module doc. */
+  emissionStore: EmissionStore;
   selections: SelectionItem[];
   resetAttachments: () => void;
   resetSelections: () => void;
@@ -52,7 +52,7 @@ interface ChatActionsOpts {
 export function useChatActions(opts: ChatActionsOpts) {
   const {
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    inputStore, attachments, fileAttachments, selections, resetAttachments, resetSelections, addImageFiles,
+    inputStore, emissionStore, selections, resetAttachments, resetSelections, addImageFiles,
     onSend, isTranscribing, textareaRef, transcriptTick, typingMode, typingLocked, setTypingMode,
     setScrollToBottomTrigger, dispatchEmission,
   } = opts;
@@ -60,6 +60,9 @@ export function useChatActions(opts: ChatActionsOpts) {
 
   const handleSend = useCallback(() => {
     const text = inputStore.get().trim();
+    // Point-in-time read, not a subscription — attachments aren't reactive
+    // props here (see module doc); this only runs on an actual send click.
+    const { images: attachments, files: fileAttachments } = emissionStore.get();
     if (!text && attachments.length === 0 && fileAttachments.length === 0 && selections.length === 0) return;
     onSend();
     unlockAudioContext();
@@ -80,7 +83,7 @@ export function useChatActions(opts: ChatActionsOpts) {
     if (typingMode && !typingLocked) {
       setTypingMode(false);
     }
-  }, [inputStore, attachments, fileAttachments, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
+  }, [inputStore, emissionStore, selections, dispatchEmission, typingMode, typingLocked, onSend, resetAttachments, resetSelections, setScrollToBottomTrigger, setTypingMode]);
 
   const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>) => {
     const images = extractImageFiles(e.clipboardData);

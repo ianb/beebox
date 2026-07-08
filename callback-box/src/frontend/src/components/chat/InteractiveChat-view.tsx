@@ -25,7 +25,7 @@ import type { MessageGroup } from "./ChatMessages";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import type { useChatTabs, useChatModelFeatures, useChatMute, useChatSchedules } from "./InteractiveChat-hooks";
 import type { useChatVoice } from "./InteractiveChat-voice";
-import type { useChatAttachments } from "./InteractiveChat-attachments";
+import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 import type { ActivityKind } from "../../../../core/chat/card-activity.js";
@@ -166,7 +166,11 @@ function ComposerRegion(props: ChatBodyProps) {
     typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { attachments, pendingImageCount, fileAttachments, fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
+  const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
+  // Subscribed here, not at the InteractiveChat root — a paste/upload must
+  // only re-render this composer region, not the companion view pane
+  // (see InteractiveChat-attachments.ts module doc).
+  const { attachments, pendingImageCount, fileAttachments } = useChatAttachmentValues();
   const { selections: selectionItems, removeSelection } = selections;
   const { handleSend, handleKeyDown, handlePaste, handleDrop } = actions;
   const targetBusy = chatTargetStatus({ isStreaming, processBusy }).state === "busy";

@@ -204,7 +204,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
 
   const actions = useChatActions({
     send, sessionId, boxSlug, effectiveContextDir, messages, totalEntries, loadingOlder, setLoadingOlder,
-    inputStore, attachments: attach.attachments, fileAttachments: attach.fileAttachments,
+    inputStore, emissionStore,
     selections: selections.selections,
     resetAttachments: attach.resetAttachments, resetSelections: selections.resetSelections,
     // Both addImageFiles and dispatchEmission already catch their own
