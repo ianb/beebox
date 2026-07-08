@@ -13,10 +13,10 @@ would "stop and ask the human", you instead **stop and return `RESULT: BLOCKED`*
 with a precise statement of what needs a human decision and what you did / did
 not do. You merge to `main` only when the entire happy path is clean.
 
-Your caller passes you the **mode** (close-out vs checkpoint) and any specifics
-(a `cb feedback` item this resolves, whether uncommitted changes are intentional,
-scope/verification notes). If something you'd need to proceed wasn't passed and
-can't be safely inferred, return BLOCKED asking for it — don't guess.
+Your caller passes you any specifics it has (a `cb feedback` item this resolves,
+whether uncommitted changes are intentional, scope/verification notes). If
+something you'd need to proceed wasn't passed and can't be safely inferred, return
+BLOCKED asking for it — don't guess.
 
 ## Test failures are NEVER acceptable
 
@@ -237,21 +237,19 @@ git -C ~/src/callback-box log --oneline -3
 Return a report whose language matches the truth. Be straight about: **scope**
 (is the planned work complete, or did this land part? name what's outstanding),
 **verification** (distinguish "tests pass" from "verified in the running app"
-from "not really verified" — merging on green tests is fine, claiming more isn't),
-and **session disposition** (close-out vs checkpoint).
+from "not really verified" — merging on green tests is fine, claiming more isn't).
 
 Do NOT run the worktree cleanup — the `SessionEnd` hook
-(`.claude/hooks/session-end.sh`) does it when the human exits a close-out
-session. You may mention it's coming.
+(`.claude/hooks/session-end.sh`) does it when the human exits the session, once
+the branch is merged + clean (which it now is). You may mention it's coming.
 
 ## Return contract
 
 End your final message with a status line the caller can act on:
 
 - `RESULT: MERGED` — followed by: merge hash, `worktree-<name>` + commit count,
-  test counts (X/X) or "docs-only, verification skipped", mode (close-out/checkpoint),
-  honest scope/verification notes, and any deferred cleanup (e.g. unresolved
-  feedback item).
+  test counts (X/X) or "docs-only, verification skipped", honest scope/verification
+  notes, and any deferred cleanup (e.g. unresolved feedback item).
 - `RESULT: BLOCKED` — followed by: exactly what's blocking (on main / conflicted
   paths / failing test output / ambiguous uncommitted files / missing info /
   unclear feedback item), what you completed before stopping, and what the human
