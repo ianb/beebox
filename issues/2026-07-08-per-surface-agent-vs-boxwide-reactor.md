@@ -26,9 +26,12 @@ anything the reactor doesn't:
   reactor is a generalist that re-derives context each cycle.
 
 Against that: our **"one box = one agent = one human"** is a deliberate identity +
-simplicity + cost bet (`callback-box/CLAUDE.md`). N per-surface agents multiply cost,
-coordination ("which agent speaks for the box?"), and complexity, and cut against
-that identity. See also `project_views_attach_to_cards`.
+simplicity bet (`callback-box/CLAUDE.md`). Note the cost is NOT "N standing agents":
+Rowboat's per-surface agents are **trigger-invoked configs** (fired on event/schedule
+via the OpenAI Agents SDK), not running processes — same shape as our reactor. The
+real cost of per-surface factoring is **coordination + surface area**: more agent
+definitions to maintain, and "which one speaks for the box?" — which is what cuts
+against the one-identity bet. See also `project_views_attach_to_cards`.
 
 **Disposition: investigate, don't adopt blind.** The design pass decides: (a) does
 reactor + on-demand views already deliver the felt experience; (b) if the gap is
