@@ -152,10 +152,28 @@ validateResponse(deep, { schema: documentStructureSchema, service: "drive", oper
 => ok
 ```
 
-A document missing its `revisionId` is drift:
+A read-only share omits `revisionId` (Google only populates it with edit
+access) — a valid document, not drift:
 
 ```ts continue
-const bad = vErr({ documentId: "d1", title: "x" }, { schema: documentStructureSchema, service: "drive", operation: "getDocument" });
+validateResponse({ documentId: "d3", title: "ReadOnly" }, { schema: documentStructureSchema, service: "drive", operation: "getDocument" });
+"ok"
+=> ok
+```
+
+A document missing its `documentId` IS drift:
+
+```ts continue
+const bad = vErr({ title: "x", revisionId: "r1" }, { schema: documentStructureSchema, service: "drive", operation: "getDocument" });
 JSON.stringify(bad?.issues)
-=> ["revisionId: Invalid input: expected string, received undefined"]
+=> ["documentId: Invalid input: expected string, received undefined"]
+```
+
+Sheet cells can be raw numbers/booleans (unformatted numeric cells), not just
+strings:
+
+```ts continue
+validateResponse({ values: [["Name", "Paid"], ["Alice", 30], ["Bob", true]] }, { schema: sheetValuesSchema, service: "drive", operation: "getSheetValues" });
+"ok"
+=> ok
 ```

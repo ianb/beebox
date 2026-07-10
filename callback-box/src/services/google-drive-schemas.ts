@@ -39,8 +39,13 @@ export const spreadsheetMetadataSchema = z.object({
   ),
 });
 
+// Cells are NOT always strings: Sheets returns raw numbers/booleans for
+// unformatted numeric cells (even under FORMULA render for plain values), so a
+// strings-only schema would reject a valid spreadsheet (codex finding). The
+// service interface's `string[][]` narrowing is the pre-existing cast-site
+// contract; the SCHEMA must be a superset of what Google really sends.
 export const sheetValuesSchema = z.object({
-  values: z.array(z.array(z.string())).optional(),
+  values: z.array(z.array(z.union([z.string(), z.number(), z.boolean()]))).optional(),
 });
 
 // ─── Google Docs document (recursive) ────────────────────────────────────────
@@ -91,7 +96,10 @@ const documentStructuralElementSchema: z.ZodType = z.lazy(() =>
 export const documentStructureSchema = z.object({
   documentId: z.string(),
   title: z.string(),
-  revisionId: z.string(),
+  // Google omits revisionId when the caller lacks edit access (read-only
+  // share); a comment-only doc must still validate (codex finding). Consumers
+  // already treat revision as best-effort.
+  revisionId: z.string().optional(),
   body: z.object({ content: z.array(documentStructuralElementSchema).optional() }).optional(),
   inlineObjects: z.record(z.string(), z.unknown()).optional(),
   footnotes: z.record(z.string(), z.unknown()).optional(),

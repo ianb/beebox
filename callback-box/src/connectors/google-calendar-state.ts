@@ -66,29 +66,66 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
   return persistent;
 }
 
-export async function saveCalendarState(boxRoot: string, state: CalendarState): Promise<void> {
-  // Transient side (gitignored syncTokens): route the RMW through the
-  // serialized lock (Track 1). We WHOLESALE-REPLACE with `state.syncTokens`
-  // rather than per-key delta-merge (as the Drive connector does) for two
-  // reasons that make a merge both unnecessary and unsound here:
-  //   1. Ownership — a calendar sync owns the ENTIRE token map: it loads every
-  //      token, then adds/updates/deletes per calendar. There is no second
-  //      writer touching a DIFFERENT key (the Drive CLI-vs-server split is what
-  //      forces Drive's per-key merge); every sync shares one calendar config,
-  //      so overlapping syncs write the same keys and last-writer-wins yields
-  //      valid tokens either way.
-  //   2. Multi-save — one sync saves several times (e.g. the 410 handler clears
-  //      a token mid-sync, then a full resync re-stores it). A fixed-snapshot
-  //      delta would mis-classify a token that round-trips value→deleted→value
-  //      as "unchanged" and drop it. Wholesale replace of the freshly-computed
-  //      complete map is exact.
-  // The lock still prevents a torn write against a concurrent process.
+/**
+ * Mutable per-sync baseline for the syncToken delta merge: the tokens as of
+ * this sync's LAST save (initially, as loaded). A fixed start-of-sync snapshot
+ * would be unsound — one sync saves several times (the 410 handler clears a
+ * token mid-sync, then the full resync re-stores it), and against a fixed
+ * baseline a token that round-trips value→deleted→same-value would look
+ * "unchanged" and be dropped. Refreshing the baseline after each save makes
+ * every save's delta relative to the previous save, which composes.
+ */
+export interface SyncTokenSnapshot {
+  tokens: Record<string, string>;
+}
+
+/**
+ * Merge one save's syncToken changes onto freshly-loaded transient tokens.
+ * Per-calendarId cursor resolution, relative to `snapshot` (this sync's last
+ * save — see {@link SyncTokenSnapshot}):
+ *   - **added/updated** — differs from the snapshot: this save advanced it, our
+ *     value wins.
+ *   - **deleted** — in the snapshot but absent from `working`: this save
+ *     cleared it (410 → forced full resync); remove it from the merged result
+ *     (a plain spread would resurrect the stale token from `fresh`).
+ *   - **untouched** — identical to the snapshot: keep `fresh`'s value, so a
+ *     concurrent sync's advance of a calendar THIS save didn't touch survives
+ *     (codex round-2 finding: wholesale replace regressed it).
+ */
+export function mergeSyncTokens(opts: {
+  fresh: Record<string, string>;
+  snapshot: Record<string, string>;
+  working: Record<string, string>;
+}): Record<string, string> {
+  const { fresh, snapshot, working } = opts;
+  const merged: Record<string, string> = { ...fresh };
+  for (const calId of Object.keys(snapshot)) {
+    if (!(calId in working)) delete merged[calId];
+  }
+  for (const [calId, cursor] of Object.entries(working)) {
+    if (snapshot[calId] !== cursor) merged[calId] = cursor;
+  }
+  return merged;
+}
+
+export async function saveCalendarState(
+  boxRoot: string,
+  opts: { state: CalendarState; snapshot: SyncTokenSnapshot },
+): Promise<void> {
+  const { state, snapshot } = opts;
+  // Transient side (gitignored syncTokens): serialized delta-merge (Track 1).
+  // The lock prevents torn writes; the merge keeps a concurrent sync's advance
+  // of a calendar this save didn't change from being clobbered.
   await updateTransientState<CalendarTransientState>({
     boxRoot,
     connectorName: "google-calendar",
     defaultValue: { syncTokens: {} },
-    update: () => ({ syncTokens: state.syncTokens }),
+    update: (fresh) => ({
+      syncTokens: mergeSyncTokens({ fresh: fresh.syncTokens, snapshot: snapshot.tokens, working: state.syncTokens }),
+    }),
   });
+  // Advance the baseline: the next save's delta is relative to THIS save.
+  snapshot.tokens = { ...state.syncTokens };
   // Persistent side (committed eventFiles): unchanged direct write; the git
   // commit of this file is scoped and handled by the connector (Track 2).
   const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
