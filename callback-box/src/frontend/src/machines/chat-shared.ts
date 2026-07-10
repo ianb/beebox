@@ -77,12 +77,8 @@ export function reconcilePending(params: {
   }
 
   const serverUserTexts: string[] = [];
-  for (
-    let i = serverMessages.length - 1;
-    i >= 0 && serverUserTexts.length < pendingMessages.length + 5;
-    i--
-  ) {
-    const entry = serverMessages[i];
+  for (const entry of serverMessages.toReversed()) {
+    if (serverUserTexts.length >= pendingMessages.length + 5) break;
     if (entry.type === "user") {
       serverUserTexts.push(normalizeForCompare(entryText(entry)));
     }

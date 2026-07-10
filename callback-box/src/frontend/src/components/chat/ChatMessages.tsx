@@ -100,7 +100,7 @@ export function AssistantMessage({
   const hasSpeech = hasAssistantSpeech(allText);
   const isPlaying = speechPlaying === true;
   const segments = useMemo(() => (hasSpeech ? parseAllSpeechTags(allText) : []), [hasSpeech, allText]);
-  const messageId = entries.length > 0 ? entries[0].uuid : "";
+  const messageId = entries[0]?.uuid ?? "";
   const hasSilentThinking = entries.some((e) =>
     e.content.some((b) => b.type === "thinking" && !b.text?.trim()),
   );

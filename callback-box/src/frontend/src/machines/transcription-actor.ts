@@ -325,8 +325,8 @@ class TranscriptionSession {
     // so the replay can't race live forwarding.
     this.connection = next;
     this.attachActorHandlers(next.ws);
-    for (let i = replayFrom; i < this.audioChunks.length; i++) {
-      next.sendPcm(this.audioChunks[i]);
+    for (const chunk of this.audioChunks.slice(replayFrom)) {
+      next.sendPcm(chunk);
     }
     this.forwardLive = true;
     this.reconnecting = false;

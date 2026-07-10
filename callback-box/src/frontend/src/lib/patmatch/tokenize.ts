@@ -10,8 +10,11 @@ export function tokenizePattern(
   while (remaining) {
     const tagMatch = tagRe.exec(remaining);
     if (tagMatch) {
-      const name = tagMatch[1];
-      const value = tagMatch[2];
+      // Both groups always participate on a successful match — the pattern
+      // has no optional/alternated group — so the fallbacks are unreachable
+      // in practice but honest to the regex-match type.
+      const name = tagMatch[1] ?? "";
+      const value = tagMatch[2] ?? "";
       list.push({ [name]: value });
       remaining = remaining.slice(tagMatch[0].length);
       continue;
@@ -86,15 +89,17 @@ export function tokenizeInput(text: string): InputWord[] {
     remaining = remaining.slice(trailing.length);
     firstLeading = "";
     const normalized = normalizeWord(original);
-    if (normalized && result.length === 1 && result[0].normalized === "") {
-      result[0].leading += leading;
-      result[0].original += original;
-      result[0].trailing += trailing;
-      result[0].normalized = normalized;
-    } else if (!normalized && result.length > 0) {
-      result[result.length - 1].trailing += leading + original + trailing;
+    const onlyWord = result.length === 1 ? result[0] : undefined;
+    const lastWord = result.at(-1);
+    if (normalized && onlyWord !== undefined && onlyWord.normalized === "") {
+      onlyWord.leading += leading;
+      onlyWord.original += original;
+      onlyWord.trailing += trailing;
+      onlyWord.normalized = normalized;
+    } else if (!normalized && lastWord !== undefined) {
+      lastWord.trailing += leading + original + trailing;
       continue;
-    } else if (!normalized && result.length === 0) {
+    } else if (!normalized && lastWord === undefined) {
       result.push({
         normalized: "",
         original,

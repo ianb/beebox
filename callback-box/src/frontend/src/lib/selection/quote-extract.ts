@@ -21,7 +21,7 @@ export function extractQuoteSpeakers(body: string): string[] {
   for (const match of body.matchAll(QUOTE_TAG_RE)) {
     // Group 2 isn't inside any alternation, so it's always defined on a
     // successful match (the `+` still permits an empty-`from` guard below).
-    const raw = match[2];
+    const raw = match[2] ?? "";
     if (raw === "") continue;
     if (seen.has(raw)) continue;
     seen.add(raw);

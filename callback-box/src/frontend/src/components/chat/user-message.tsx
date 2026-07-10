@@ -4,6 +4,7 @@
  */
 
 import { useState } from "react";
+import { invariant } from "../../lib/invariant";
 import { Image } from "../ui/Image";
 import { Pre } from "../ui/Pre";
 import { getApiBase } from "../../api";
@@ -33,8 +34,8 @@ const POSITION_ATTR_RE = /\bpos="([^"]*)"/i;
 const PLACEMENT_ATTR_RE = /\bplacement="([^"]*)"/i;
 
 function readAttr(attrs: string, re: RegExp): string {
-  const match = re.exec(attrs);
-  return match ? decodeXml(match[1]) : "";
+  const match = re.exec(attrs)?.[1];
+  return match !== undefined ? decodeXml(match) : "";
 }
 
 function docBasename(ref: string): string {
@@ -305,8 +306,10 @@ export function UserMessage({ entries, debugView, currentUserEmail, acks, onZoom
     return <TaskNotificationMessage notification={taskNotification} />;
   }
 
-  const senderName = getUserName(entries[0]);
-  const senderEmail = entries[0].userEmail;
+  const firstEntry = entries[0];
+  invariant(firstEntry !== undefined, "user message group has no entries");
+  const senderName = getUserName(firstEntry);
+  const senderEmail = firstEntry.userEmail;
   // Compare by email if available (same user across devices), fall back to name
   const isOtherUser = currentUserEmail
     ? senderEmail ? senderEmail !== currentUserEmail : senderName ? senderName !== currentUserEmail : false

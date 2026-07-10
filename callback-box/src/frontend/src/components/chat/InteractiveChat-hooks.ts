@@ -55,7 +55,7 @@ export function useChatTabs() {
       if (idx === -1) return p;
       const tabs = p.tabs.filter((_, i) => i !== idx);
       const activePath = p.activePath === path
-        ? (tabs.length === 0 ? null : tabs[Math.min(idx, tabs.length - 1)].target.path)
+        ? (tabs.length === 0 ? null : (tabs[Math.min(idx, tabs.length - 1)]?.target.path ?? null))
         : p.activePath;
       return { tabs, activePath };
     });

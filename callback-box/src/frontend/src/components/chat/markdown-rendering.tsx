@@ -95,10 +95,11 @@ function ChatParagraph({ children }: { children?: React.ReactNode }) {
   const images = extractImages(children);
 
   if (images) {
-    if (images.length === 1) {
+    const [only] = images;
+    if (images.length === 1 && only !== undefined) {
       return (
         <div className="flex justify-center my-2">
-          <ChatImage src={images[0].src} alt={images[0].alt} />
+          <ChatImage src={only.src} alt={only.alt} />
         </div>
       );
     }
