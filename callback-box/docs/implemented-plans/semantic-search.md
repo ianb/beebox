@@ -1,5 +1,8 @@
 # Semantic search (box-search phase 3): hybrid BM25 + vector retrieval
 
+**Status:** implemented 2026-07 — hybrid BM25 + vector search shipped;
+see `docs/plans/README.md` for the plan-doc lifecycle.
+
 Add semantic retrieval to `cb search`: embed each searchable card's
 `contains` sentence as a 512-dim vector in the existing Orama index, and
 switch the query path to Orama's native `mode: "hybrid"` (BM25 + vector
