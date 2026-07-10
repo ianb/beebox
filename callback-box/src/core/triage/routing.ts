@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxDir } from "../../lib/paths.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import { createSelectQuestionTemplate } from "../../schemas/question.js";
 import type { TriageCategory } from "./instructions.js";
 
@@ -116,6 +117,7 @@ async function createGuessQuestion(opts: {
     memo,
     prompt: `Which category does ${decision.file} belong in?`,
     options,
+    askedAt: getBoxTimeISO(boxRoot),
     directive: `Move ${heldPath} from inbox/triaged/_unsure/ into inbox/triaged/<chosen-category>/. If "_other" was selected, follow the user's free-text directive instead.`,
   });
 

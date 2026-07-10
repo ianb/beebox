@@ -236,6 +236,7 @@ async function runPhotoMode(
       archivePages,
       filesToStage,
       questionPaths,
+      askedAt: startedAt,
     });
   }
 
@@ -247,6 +248,7 @@ async function runPhotoMode(
       archivePages,
       filesToStage,
       questionPaths,
+      askedAt: startedAt,
     });
   }
 

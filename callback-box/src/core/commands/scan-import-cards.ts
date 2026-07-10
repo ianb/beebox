@@ -104,6 +104,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
       memo,
       prompt: `Review ${photoBasename}: confirm description and back-of-photo text are accurate.`,
       directive: directiveParts.join(" "),
+      askedAt: startedAt,
     });
     const questionFilename = `${photoBasename}.review.question.card`;
     const questionPath = path.join(sessionAttachAbsDir, questionFilename);
@@ -120,13 +121,14 @@ interface LooseQuestionContext {
   archivePages: string[];
   filesToStage: string[];
   questionPaths: string[];
+  askedAt: string;
 }
 
 export async function emitOrphanBackQuestion(
   orphan: OrphanBack,
   looseCtx: LooseQuestionContext
 ): Promise<void> {
-  const { index, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths } = looseCtx;
+  const { index, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths, askedAt } = looseCtx;
   const idx = String(index + 1).padStart(3, "0");
   const basename = `orphan-back-${idx}`;
   const filename = `${basename}.jpg`;
@@ -142,6 +144,7 @@ export async function emitOrphanBackQuestion(
     memo,
     prompt: `Which photo does ${filename} belong with, or should it be discarded?`,
     directive: `If it belongs with a photo in this session, attach by appending text blocks to that image card. Otherwise delete ${sessionAttachRelDir}/${filename}.`,
+    askedAt,
   });
   const questionFilename = `${basename}.question.card`;
   const questionPath = path.join(sessionAttachAbsDir, questionFilename);
@@ -154,7 +157,7 @@ export async function emitUnsureQuestion(
   page: ResolvedPage,
   looseCtx: LooseQuestionContext
 ): Promise<void> {
-  const { index, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths } = looseCtx;
+  const { index, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths, askedAt } = looseCtx;
   const idx = String(index + 1).padStart(3, "0");
   const basename = `unsure-${idx}`;
   const filename = `${basename}.jpg`;
@@ -168,6 +171,7 @@ export async function emitUnsureQuestion(
     memo,
     prompt: `What is ${filename}? (photo, back-of-photo, or trash)`,
     directive: `If a photo, create an image card. If a back, attach to the relevant photo card. Otherwise delete ${sessionAttachRelDir}/${filename}.`,
+    askedAt,
   });
   const questionFilename = `${basename}.question.card`;
   const questionPath = path.join(sessionAttachAbsDir, questionFilename);

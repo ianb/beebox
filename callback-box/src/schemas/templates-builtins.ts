@@ -15,6 +15,7 @@ import {
   createTextQuestionTemplate,
   createConfirmQuestionTemplate,
 } from "./question.js";
+import { getBoxTimeISO } from "../lib/time.js";
 import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
@@ -69,6 +70,7 @@ registerTemplate({
         id: String.fromCodePoint(97 + i),
         label: opt,
       })),
+      askedAt: getBoxTimeISO(),
     }),
 });
 
@@ -80,7 +82,8 @@ registerTemplate({
     memo: z.string().describe("Context/background for the question"),
     prompt: z.string().describe("The question to ask"),
   }),
-  generate: (args) => createTextQuestionTemplate({ memo: args.memo, prompt: args.prompt }),
+  generate: (args) =>
+    createTextQuestionTemplate({ memo: args.memo, prompt: args.prompt, askedAt: getBoxTimeISO() }),
 });
 
 registerTemplate({
@@ -91,7 +94,8 @@ registerTemplate({
     memo: z.string().describe("Context/background for the question"),
     prompt: z.string().describe("The question to ask"),
   }),
-  generate: (args) => createConfirmQuestionTemplate({ memo: args.memo, prompt: args.prompt }),
+  generate: (args) =>
+    createConfirmQuestionTemplate({ memo: args.memo, prompt: args.prompt, askedAt: getBoxTimeISO() }),
 });
 
 registerTemplate({
