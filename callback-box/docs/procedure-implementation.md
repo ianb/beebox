@@ -15,11 +15,11 @@ Run directories are a **recent cache, not an archive** — git history retains e
 ```
 config/
   procedures/
-    process-captures.procedure.card
+    process-pages.procedure.card
 
 procedure/
   runs/
-    process-captures_2026-02-06T2000/
+    process-pages_2026-02-06T2000/
       run.procedure-run.card
 ```
 
@@ -198,15 +198,12 @@ already-completed run is a no-op.
 A complete run produces:
 
 ```
-abc123f Complete procedure: process-captures
-abc123e [procedure] Complete step: archive
-abc123d Archive session 2026-05-22_kitchen         ← agent commit
-abc123c [procedure] Complete step: assemble
-abc123b Assemble timeline for 3 clips              ← agent commit
-abc123a [procedure] Complete step: describe-images
-abc1239 [procedure] Complete step: transcribe
-abc1238 Transcribe 3/3 audio clips                 ← agent commit
-abc1237 Start procedure: process-captures
+abc123f Complete procedure: process-retrospective
+abc123e [procedure] Complete step: integrate
+abc123d Integrate 4 observations into personality card   ← agent commit
+abc123c [procedure] Complete step: scan
+abc123b Scan 3 chat sessions for retro observations       ← agent commit
+abc123a Start procedure: process-retrospective
 ```
 
 Rewinding to any commit gives a valid, consistent state.

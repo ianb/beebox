@@ -94,7 +94,7 @@ Default feature set (intentionally lean):
 | Figure extraction | **on** | Figures become assets in the attach scope |
 | Page image rendering (150 DPI) | **on** | Page renders feed vision models and the UI |
 | Picture classification | off | Coarse labels, no routing depends on them yet |
-| Picture description (VLM captioning) | off | Use existing [`cb describe-images`](glossary.md#cb-attachments) pipeline (Gemini Flash) on extracted figures instead |
+| Picture description (VLM captioning) | off | Describe extracted figures the same way capture images are described — a subagent reading the figure asset directly — instead of a separate VLM pass here |
 | Formula recognition | off | Rare in boxholder docs |
 | Code recognition | off | Rare; raw text is fine |
 | Semantic chunking | off | Not building RAG yet |
@@ -173,6 +173,6 @@ The deploy script also installs `uv` (so `uvx docling` resolves) and verifies AV
 - **Multi-document PDFs.** A single PDF containing several distinct documents (a scan batch with five letters, a combined billing statement + envelope, ...) becomes one card today. Worth revisiting once we see real volume — probably as a downstream agent action ("split this PDF into N cards") rather than at intake time.
 - **Tables as structured data.** Markdown tables are inline in the card body. If we ever want to query table contents (e.g. "extract every dollar amount across all utility bills"), we'd promote tables to addressable structure — a `tables:` frontmatter field, or sibling cards in the attach scope.
 - **Image classification at intake.** Currently off. If figure type ever becomes load-bearing for routing (e.g. "diagrams go here, photos go there"), turning on docling's picture classifier is cheap.
-- **VLM captioning vs `cb describe-images`.** Today we extract figures and rely on the existing image-description pipeline. If docling's VLM ever matches Gemini Flash quality at lower latency / cost, the consolidation might flip the other way.
+- **VLM captioning vs agent-driven description.** Today we extract figures and rely on a subagent describing them the same way capture images are described. If docling's own VLM ever matches that quality at lower latency / cost, the consolidation might flip the other way.
 - **Other formats.** Docling supports docx, xlsx, pptx, html, asciidoc, markdown. Most of those don't need extraction at intake (they're already structured), but a `.docx` could plausibly route through the same code path with the same `.pdf.card`-shaped output. Defer until the demand is real.
 - **Hosted alternatives.** If local extraction becomes a bottleneck, Google Document AI / AWS Textract / Azure Document Intelligence are drop-in-ish replacements. Different output shape; would be an alternate backend behind the same intake interface.

@@ -3,7 +3,8 @@
  * listen — Claude has no audio input modality, so anything beyond
  * transcription (pronunciation critique, tone, language identification,
  * "what's that sound?") goes through Gemini, which the box already uses
- * for image analysis (`cb describe-images`).
+ * for image analysis (`cb scan-import`'s Gemini pass, and the chat agent's
+ * own image-analysis subagents on captures).
  *
  * Consumed by `cb chat ask-about-audio`, which pairs this with the
  * last-audio browser loopback (chat-last-audio-routes.ts).
@@ -57,7 +58,7 @@ export function buildAudioQuestionPrompt(opts: {
   return lines.join("\n");
 }
 
-/** Resolve the Gemini API key from env (same vars `cb describe-images` uses). */
+/** Resolve the Gemini API key from env (same vars scan-import's Gemini pass uses). */
 export function resolveGeminiKey(): string | null {
   return process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"] || null;
 }

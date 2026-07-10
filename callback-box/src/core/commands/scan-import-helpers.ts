@@ -87,7 +87,8 @@ export interface RunScanBatchesResult {
 
 /**
  * Run all batches with sliding overlap, retrying RECITATION/MAX_TOKENS by
- * splitting the batch in half (mirrors describe-images.ts behavior).
+ * splitting the batch in half (the same retry pattern the retired
+ * `cb describe-images` command used).
  *
  * After a successful batch, batch-relative indices in each analysis (both
  * `index` and `paired_with_index`) are translated to global PDF page indices

@@ -604,15 +604,16 @@ Each numbered item is one or a few commits; the plan ships as one unit
 
 The backbone already exists and is reused, not rebuilt:
 
-- **Real capture fixture + record/replay** —
-  `test/fixtures/capture-session/` (one webm, three jpgs, cards) and
-  `createFixtureReplay` (`test/helpers/fixture-replay.ts`), already
-  driving `test/capture-pipeline.test.ts` through transcribe →
-  describe → assemble with saved real API responses (re-recordable via
-  `CB_REGENERATE_FIXTURES=1`). The `prepareCaptureSession` doctest
-  replaces that test's manual step sequence: fixture session staged →
-  prepare → assert the capture card, timeline body, commit, and
-  message payload. The old test retires with the pipeline it covers.
+- **Synthetic fixtures, not the old real-fixture replay** — the
+  `prepareCaptureSession` doctest (`test/core/capture/prepare.doctest.md`)
+  builds its own minimal session in a `makeTmpBox()` (placeholder
+  media bytes, a scripted transcription config) rather than replaying
+  the old `test/fixtures/capture-session/` recording. That fixture
+  directory and `test/capture-pipeline.test.ts` (which drove it through
+  transcribe → describe → assemble against saved real API responses via
+  `createFixtureReplay`, `test/helpers/fixture-replay.ts`) retired with
+  the pipeline they covered; `createFixtureReplay` itself is now
+  unused.
 - **Scripted transcription** — a `fake` service in the
   `loadTranscriptionConfig` dispatch (`transcription/index.ts:207-220`)
   returning caller-scripted `words[]`, following the existing

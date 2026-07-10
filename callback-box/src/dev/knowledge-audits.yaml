@@ -268,31 +268,12 @@ tests:
 
   # === Image Analysis ===
   #
-  # Status (2026-07-03): all 3 pass. describe-images-batch answered batching
-  # directly (dropped stale should_read card-image.md).
-
-  - id: describe-images-command
-    prompt: "I have some new image cards with status='new'. How do I analyze them?"
-    expected_level: knows_about
-    watch_for: "Mentions cb describe-images command — either from the card doc or cb-commands doc"
-    should_read: ["docs/generated/card-image.md"]
-    correct_contains: ["cb describe-images"]
-    tags: [cli, images]
-    notes: >
-      The agent should discover cb describe-images from the image card docs.
-      The failure mode is manually viewing each image and editing the card XML
-      instead of using the command.
-
-  - id: describe-images-batch
-    prompt: "I have 5 image cards from the same capture session. Should I process them one at a time or together?"
-    expected_level: knows_about
-    watch_for: "Recommends batching — passing multiple paths to cb describe-images for better context"
-    correct_contains: ["batch"]
-    tags: [images]
-    notes: >
-      The image card doc and cb-commands doc both mention that multiple images
-      are sent as a batch for better context. The failure mode is suggesting
-      one-at-a-time processing.
+  # Retired 2026-07-10: describe-images-command and describe-images-batch
+  # tested `cb describe-images`, which was deleted along with the old
+  # capture pipeline. Image analysis for captures is now done in-context by
+  # the chat agent annotating the parent capture card (subagents read the
+  # image files directly); scan-import runs its own Gemini pass at import
+  # time. Nothing left to assert here as a "discover this command" audit.
 
   - id: image-exif-date
     prompt: "Where does the captured date come from on image cards?"
@@ -927,7 +908,7 @@ tests:
   # the description). git-trailers answered from agent guide without running.
 
   - id: git-history-first
-    prompt: "The process-captures procedure ran earlier today but I'm not sure what it did. Can you find out?"
+    prompt: "The process-pages procedure ran earlier today but I'm not sure what it did. Can you find out?"
     expected_level: knows_directly
     watch_for: "Runs git log as first action — not searching the filesystem for clues or reading procedure run cards"
     bash_contains: ["git log"]

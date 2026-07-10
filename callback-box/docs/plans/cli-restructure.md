@@ -6,6 +6,8 @@ Proposed reorganization of the `cb` CLI surface. **Not yet implemented** beyond 
 
 Drafted: 2026-05-01.
 
+**2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`cb transcribe-captures`, `cb describe-images`, `cb assemble-timeline`) were deleted outright, not renamed — the old `process-captures` pipeline retired in favor of the preparation-worker + chat-agent-annotation flow (`docs/plans/capture-mode.md`). Mentions of those three below describe the pre-retirement CLI surface; treat them as historical, not a pending rename.
+
 ## Why
 
 Audit found 40+ registered top-level commands with inconsistent grouping: noun-only (`cb activity`, `cb drive`), verb-only (`cb finish`, `cb finalize`), hyphenated noun-verbs (`cb assemble-timeline`, `cb describe-images`), and confusable pairs (`cb finish` vs `cb finalize`). A few commands are dead. The agent's daily surface is hard to discover and the dev/admin surface is mixed in with it.
