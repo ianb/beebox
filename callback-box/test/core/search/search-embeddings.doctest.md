@@ -10,7 +10,9 @@ no card is left pending — the signal the query layer gates hybrid on.
 import { search, getByID } from "@orama/orama";
 import { openSearchIndex } from "../../../src/core/search/refresh.js";
 import { loadManifest } from "../../../src/core/search/manifest.js";
+import { searchLockPath } from "../../../src/core/search/search-store.js";
 import { createFakeEmbeddings } from "../../../src/services/openai-embeddings.js";
+import { acquireLock, releaseLock } from "../../../src/lib/file-lock.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 
 const MEMO = (text: string, contains?: string) =>
@@ -154,7 +156,35 @@ JSON.stringify(bill?.embedding) === JSON.stringify(await fakeVec("Electric bill 
 => true
 ```
 
+## Lock contention fails closed on readiness
+
+The stale path serves the last persisted index, which may predate whatever
+the lock holder is writing — so it never claims `embeddingsReady`, even for
+a fully embedded corpus. One contended query ranks text-only; the stale
+warning already marks it degraded.
+
+```ts continue
+const box3 = await makeTmpBox();
+await box3.write("box/inbox/Contended.memo.card", MEMO("A card.", "Fully embedded already."));
+await openSearchIndex(box3.root, { embeddings: createFakeEmbeddings() });
+
+await acquireLock(searchLockPath(box3.root), { purpose: "doctest-contender" });
+const contended = await openSearchIndex(box3.root, {
+  embeddings: createFakeEmbeddings(),
+  lockRetries: 1,
+  lockRetryMs: 1,
+});
+await releaseLock(searchLockPath(box3.root));
+
+contended.stale
+=> true
+
+contended.embeddingsReady
+=> false
+```
+
 ```ts cleanup
 await box.cleanup();
 await box2.cleanup();
+await box3.cleanup();
 ```

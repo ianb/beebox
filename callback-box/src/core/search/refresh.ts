@@ -40,7 +40,7 @@ import {
   type RefreshState,
   type RefreshEffect,
 } from "./refresh-file.js";
-import { computePendingEmbeds, runEmbedPass } from "./embed-pass.js";
+import { runEmbedPass } from "./embed-pass.js";
 import type { EmbeddingsService } from "../../services/openai-embeddings.js";
 
 export interface OpenSearchIndexResult {
@@ -91,16 +91,16 @@ export async function openSearchIndex(
   });
   if (!locked) {
     const db = (await restoreSearchIndex(boxRoot)) ?? (await createSearchIndex());
-    // Readiness on the stale path is read-only: loadManifest + loadContainsState
-    // + computePendingEmbeds touch only the persisted files, never the db or a
-    // write, so no lock is needed — the whole point of this branch is to serve
-    // last-persisted results without contending for the refresh lock.
-    const embeddingsReady = await staleEmbeddingsReady(boxRoot, opts.embeddings);
+    // Fail closed on readiness: the restored index predates whatever the lock
+    // holder is writing, so manifest/sidecar reads could claim vectors this db
+    // doesn't hold (and an absent sidecar would read as "nothing pending").
+    // One contended query ranks text-only; the stale warning already marks it
+    // as degraded.
     return {
       db,
       warnings: ["search index locked by another process; results may be stale"],
       stale: true,
-      embeddingsReady,
+      embeddingsReady: false,
     };
   }
   try {
@@ -176,6 +176,18 @@ async function refreshUnderLock(
     embeddingsReady = embedResult.ready;
   }
 
+  // Sidecar first, then index, then manifest — the manifest must be the
+  // OLDEST thing a crash can leave behind, because an older manifest re-diffs
+  // the affected files next refresh (self-healing), while a NEWER manifest is
+  // believed. Concretely: `embeddedHash` (in the manifest) asserts "the
+  // indexed vector embeds this card's sidecar `containsText`" — if the
+  // manifest landed but the sidecar didn't, the next embed pass would re-embed
+  // the stale sidecar text onto the current doc, durably. Saving the sidecar
+  // first makes that window converge instead: sidecar-new + manifest-old
+  // re-extracts and re-embeds correctly.
+  if (JSON.stringify(containsState.cards) !== containsBefore) {
+    await saveContainsState(boxRoot, containsState);
+  }
   if (dirtyIndex) {
     // Index first, manifest last: a crash between the two leaves an older
     // manifest, and the affected files simply re-extract next refresh. The
@@ -195,25 +207,7 @@ async function refreshUnderLock(
     // so a manifest-only write is safe; indexUnchanged mints the receipt.
     await saveManifest(boxRoot, { manifest, indexProof: indexUnchanged(boxRoot) });
   }
-  if (JSON.stringify(containsState.cards) !== containsBefore) {
-    await saveContainsState(boxRoot, containsState);
-  }
   return { db, warnings, stale: false, embeddingsReady };
-}
-
-/**
- * Readiness for the lock-contended stale path: a service must be configured
- * and no contains-bearing card may be pending. Read-only (manifest + sidecar
- * loads over the persisted files), so it needs no lock.
- */
-async function staleEmbeddingsReady(
-  boxRoot: string,
-  embeddings: EmbeddingsService | undefined
-): Promise<boolean> {
-  if (embeddings === undefined) return false;
-  const manifest = await loadManifest(boxRoot);
-  const containsState = await loadContainsState(boxRoot);
-  return computePendingEmbeds({ manifest, containsState }).length === 0;
 }
 
 /** Observe manifest-indexed frontmatter cards the contains sidecar doesn't know yet. */
