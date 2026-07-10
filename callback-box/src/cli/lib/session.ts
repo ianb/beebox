@@ -18,6 +18,7 @@ import {
   isPlumbingMessage,
   parseSelfNote,
 } from "./session-text.js";
+import { invariant } from "../../lib/invariant.js";
 
 // Re-exported so existing callers of `cli/lib/session` keep their imports.
 export {
@@ -300,7 +301,9 @@ export function tailForMinUserMessages(
   if (minRealUserMessages <= 0) return 0;
   let count = 0;
   for (let i = entries.length - 1; i >= 0; i--) {
-    if (isRealUserMessage(entries[i]!)) {
+    const entry = entries[i];
+    invariant(entry !== undefined, `entries[${i}] must exist for 0 <= i < entries.length`);
+    if (isRealUserMessage(entry)) {
       count += 1;
       if (count >= minRealUserMessages) return entries.length - i;
     }
