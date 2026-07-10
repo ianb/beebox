@@ -6,8 +6,8 @@
  * attachment lives as a sibling file sharing the card's basename.
  *
  * `audio` was historically handled here too; that path is dead now —
- * capture-session audio is transcribed by `cb transcribe-captures`
- * which uses the per-audio-card attach scope.
+ * capture-session audio is transcribed by the capture preparation worker
+ * (src/core/capture/transcribe-clips.ts).
  */
 
 import * as fs from "node:fs/promises";

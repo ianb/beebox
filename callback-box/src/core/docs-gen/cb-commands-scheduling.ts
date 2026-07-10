@@ -6,7 +6,7 @@
 
 /**
  * Hand-written command sections: procedure, tick, scheduled, scheduler, finalize,
- * describe-images, scenario.
+ * scenario.
  */
 export function cbCommandsScheduling(): string[] {
   return [
@@ -104,19 +104,6 @@ export function cbCommandsScheduling(): string[] {
     "Symmetric counterpart to `cb wakeup`. Sends any pending cards in `box/output/`",
     "(e.g. telegram messages). Called automatically by the reactor after job processing,",
     "or run manually to flush output.",
-    "",
-    "## cb describe-images",
-    "",
-    "Analyze images using Gemini Flash — OCR, descriptions, EXIF extraction, and renaming.",
-    "",
-    "```",
-    "cb describe-images [--no-rename] <paths...>",
-    "```",
-    "",
-    "Pass image files (`.jpg`, `.png`) or image cards (`.image.card`). Multiple images",
-    "are sent as a batch so the model sees them together (better context for related images).",
-    "Extracts EXIF date to update the card's `captured` attribute. Creates image cards for",
-    "raw image files if none exists. Renames cards to descriptive names by default.",
     "",
     "## cb scenario",
     "",

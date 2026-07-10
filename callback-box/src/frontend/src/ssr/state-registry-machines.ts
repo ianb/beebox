@@ -8,7 +8,6 @@
 import { chatMachine } from "../machines/chatMachine";
 import { claudeAuthMachine } from "../machines/claudeAuthMachine";
 import { speechPlaybackMachine } from "../machines/speechPlaybackMachine";
-import { voiceRecorderMachine } from "../machines/voiceRecorderMachine";
 import { realtimeTranscriptionMachine } from "../machines/realtimeTranscriptionMachine";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import type { MachineStateInfo } from "./state-registry-types";
@@ -141,14 +140,6 @@ export const machineRegistry: Record<string, MachineStateInfo> = {
     states: {
       idle: { context: { playingMessageId: null } },
       playing: { context: { playingMessageId: "sample-002" } },
-    },
-  },
-  voiceRecorder: {
-    machine: voiceRecorderMachine,
-    states: {
-      idle: { context: { error: null, duration: 0, startTime: 0 } },
-      recording: { context: { error: null, duration: 5, startTime: Date.now() - 5000 } },
-      uploading: { context: { error: null, duration: 10, startTime: 0 } },
     },
   },
   realtimeTranscription: {

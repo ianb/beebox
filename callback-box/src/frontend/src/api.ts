@@ -4,25 +4,15 @@
  * Most endpoints have been migrated to tRPC (see lib/trpc.ts).
  * This file retains only functions that use patterns tRPC can't handle:
  * - SSE streaming (chat)
- * - File uploads (voice memos, file uploads)
  * - getApiBase() for SSE/WebSocket URL construction
  * - Legacy type exports still referenced by components
  *
  * Core primitives live in api-core.ts and the chat surface in api-chat.ts;
  * both are re-exported here so callers keep importing from "./api".
  *
- * Deliberate-REST inventory (Track L.12e — checked against
- * src/webapp/trpc/routers/* for an equivalent; none exists for either, so
- * neither is a migration candidate):
- * - `createVoiceMemo` — POST /api/actions/create-voice-memo, multipart file
- *   upload. tRPC doesn't carry `multipart/form-data` bodies.
- *
  * `CardInfo`/`HistoryCommit` are plain type exports (no transport), kept
  * here because components already import them from this path.
  */
-
-import { RequestError } from "./lib/errors";
-import { getApiBase } from "./api-core";
 
 export {
   getApiBase,
@@ -74,26 +64,5 @@ export interface HistoryCommit {
   body?: string;
   trailers?: Record<string, string | string[]>;
   fileStat?: { added: number; modified: number; deleted: number; renamed: number; insertions: number; deletions: number };
-}
-
-// --- File uploads (multipart — can't use tRPC) ---
-
-export async function createVoiceMemo(
-  audioBlob: Blob
-): Promise<{ success: boolean; path: string; audioPath: string }> {
-  const formData = new FormData();
-  formData.append("file", audioBlob, "recording.webm");
-
-  const response = await fetch(`${getApiBase()}/actions/create-voice-memo`, {
-    method: "POST",
-    body: formData,
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: response.statusText }));
-    throw new RequestError(error.error || error.message || "Request failed");
-  }
-
-  return response.json();
 }
 

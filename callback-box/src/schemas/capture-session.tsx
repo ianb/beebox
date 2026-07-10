@@ -136,7 +136,9 @@ export function parseCaptureSession(content: string): ParsedCaptureSession | nul
 
 /**
  * Template for creating a capture session card — frontmatter manifests with
- * an empty transcript body (filled in later by `assemble-timeline`).
+ * an empty transcript body (filled in later: the capture preparation worker
+ * builds the timeline for chat captures, `src/core/capture/timeline.ts`;
+ * `cb scan-import` fills its own).
  *
  * `imageRefs`, `audioRefs`, `fileRefs` are bare child-card filenames
  * (e.g. `photo-001.image.card`). They're emitted with the `attach/` virtual
