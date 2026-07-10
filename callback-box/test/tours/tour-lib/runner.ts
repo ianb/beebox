@@ -93,7 +93,13 @@ async function runPass(input: PassInput): Promise<PassResult> {
     },
     async checkpoint(name) {
       currentCheckpoint = name;
-      const { url, title, artifact } = await captureCheckpoint({ name, artifactsDir, viewport, session });
+      const { url, title, artifact } = await captureCheckpoint({
+        name,
+        artifactsDir,
+        viewport,
+        session,
+        pushFinding: (f) => findings.push(f),
+      });
       checkpoints.set(name, { url, title, artifact });
     },
     async click(locator: ClickLocator) {
