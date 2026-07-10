@@ -22,6 +22,30 @@ CLOUDFLARE_API_TOKEN=your-token-here
 
 ## Scripts
 
+### `deploy.sh` — Deploy a commit to the server
+
+The everyday deploy (also fired automatically by the root husky
+`post-commit`/`post-merge` hooks on `main`). It deploys a git COMMIT, never a
+working tree: the requested ref is checked out into a persistent build
+checkout (`<main-repo-root>/.deploy-checkout`, a detached git worktree shared
+by all worktrees of the repo), gitignored build artifacts there are cleaned,
+the frontend and CLI bundle are built, and the result is rsynced to
+`/opt/callback` followed by a frozen workspace install, service restart, and
+healthcheck. `deploy-info.json` on the server therefore records exactly what
+shipped.
+
+```bash
+./deploy/deploy.sh                 # deploy HEAD of this checkout
+./deploy/deploy.sh --ref <sha>     # deploy (or roll back to) any commit
+./deploy/deploy.sh --skip-restart  # sync + build without restarting services
+```
+
+Concurrent deploys collapse latest-wins: a run that finds another deploy in
+progress records its request and exits; the running deploy chains to the
+newest request when it finishes. Hook-triggered runs each log to
+`deploy/.deploy-logs/`, with `deploy/.last-deploy.log` symlinked to the newest
+(see `deploy/CLAUDE.md` for the wait/poll pattern).
+
 ### `create-server.sh` — Create a new server from scratch
 
 Destroys any existing server, creates a fresh Hetzner VPS, provisions it, and sets up DNS.

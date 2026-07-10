@@ -59,6 +59,7 @@ export const SECRET_ENV_NAMES: ReadonlySet<string> = new Set([
   // Transcription / vision provider keys (validated when present, redacted).
   "THINKING_OPENAI_API_KEY",
   "CALLBACK_MISTRAL_API_KEY",
+  "CALLBACK_OPENAI_API_KEY",
   "GEMINI_KEY",
   "SKE_GEMINI_API_KEY",
   "CALLBACK_DEEPGRAM_API_KEY",

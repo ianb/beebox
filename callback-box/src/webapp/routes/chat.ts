@@ -213,6 +213,11 @@ export async function registerChatRoutes(
   // (session controls live in tRPC; see webapp/chat-runtime.ts).
   setChatRuntime(boxRoot, { registry, scheduleManager, wireSession });
 
+  server.get("/api/chat/default", async () => {
+    const sessionId = await getMostActive(boxRoot);
+    return { sessionId };
+  });
+
   registerChatSendRoutes(ctx);
   registerChatAudioRoutes(ctx);
   registerChatLastAudioRoutes(ctx);

@@ -78,11 +78,16 @@ final class PairedBoxStore: ObservableObject {
                 return false
             }
         }
+        #if DEBUG
+        let directAuthToken = queryItems.value(named: "authToken")
+        #else
+        let directAuthToken: String? = nil
+        #endif
         addOrSelectBox(
             label: label,
             baseURL: baseURL,
             sessionID: queryItems.value(named: "session"),
-            authToken: queryItems.value(named: "authToken")
+            authToken: directAuthToken
         )
         return true
     }

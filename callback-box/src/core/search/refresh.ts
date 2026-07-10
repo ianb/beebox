@@ -40,6 +40,8 @@ import {
   type RefreshState,
   type RefreshEffect,
 } from "./refresh-file.js";
+import { runEmbedPass } from "./embed-pass.js";
+import type { EmbeddingsService } from "../../services/openai-embeddings.js";
 
 export interface OpenSearchIndexResult {
   db: SearchIndex;
@@ -47,6 +49,14 @@ export interface OpenSearchIndexResult {
   warnings: string[];
   /** True when another process held the lock — results from the last persisted index. */
   stale: boolean;
+  /**
+   * True only when an embedder is configured and every contains-bearing
+   * indexed card holds a current-`EMBEDDER_ID` vector (the pending set is
+   * empty after the pass). The query layer gates hybrid on this — a failed or
+   * partial embed leaves it false so search stays text-only rather than
+   * ranking a half-embedded corpus.
+   */
+  embeddingsReady: boolean;
 }
 
 export interface OpenSearchIndexOptions {
@@ -57,6 +67,12 @@ export interface OpenSearchIndexOptions {
   /** Delay between lock attempts in ms (default 500). */
   lockRetryMs?: number;
   onProgress?: (message: string) => void;
+  /**
+   * Embeds `contains` texts and reports readiness. Omitted ⇒ the embedding
+   * pass is skipped entirely and `embeddingsReady` is false — the designed
+   * not-configured normal state, not a failure (no warning).
+   */
+  embeddings?: EmbeddingsService | undefined;
 }
 
 /**
@@ -75,7 +91,17 @@ export async function openSearchIndex(
   });
   if (!locked) {
     const db = (await restoreSearchIndex(boxRoot)) ?? (await createSearchIndex());
-    return { db, warnings: ["search index locked by another process; results may be stale"], stale: true };
+    // Fail closed on readiness: the restored index predates whatever the lock
+    // holder is writing, so manifest/sidecar reads could claim vectors this db
+    // doesn't hold (and an absent sidecar would read as "nothing pending").
+    // One contended query ranks text-only; the stale warning already marks it
+    // as degraded.
+    return {
+      db,
+      warnings: ["search index locked by another process; results may be stale"],
+      stale: true,
+      embeddingsReady: false,
+    };
   }
   try {
     return await refreshUnderLock(boxRoot, opts);
@@ -139,6 +165,29 @@ async function refreshUnderLock(
   // missing/stale lists are complete. No-op when the sidecar is current.
   await healContainsState(state);
 
+  // Embed changed/never-embedded contains texts. Runs after heal (so the
+  // sidecar covers manifest-unchanged cards — the box-gains-a-key-later
+  // corpus) and before persist, so any vectors added ride the existing
+  // index-before-manifest persist + receipt ordering below.
+  let embeddingsReady = false;
+  if (opts.embeddings !== undefined) {
+    const embedResult = await runEmbedPass(state, opts.embeddings);
+    if (embedResult.dirtyIndex) dirtyIndex = true;
+    embeddingsReady = embedResult.ready;
+  }
+
+  // Sidecar first, then index, then manifest — the manifest must be the
+  // OLDEST thing a crash can leave behind, because an older manifest re-diffs
+  // the affected files next refresh (self-healing), while a NEWER manifest is
+  // believed. Concretely: `embeddedHash` (in the manifest) asserts "the
+  // indexed vector embeds this card's sidecar `containsText`" — if the
+  // manifest landed but the sidecar didn't, the next embed pass would re-embed
+  // the stale sidecar text onto the current doc, durably. Saving the sidecar
+  // first makes that window converge instead: sidecar-new + manifest-old
+  // re-extracts and re-embeds correctly.
+  if (JSON.stringify(containsState.cards) !== containsBefore) {
+    await saveContainsState(boxRoot, containsState);
+  }
   if (dirtyIndex) {
     // Index first, manifest last: a crash between the two leaves an older
     // manifest, and the affected files simply re-extract next refresh. The
@@ -158,10 +207,7 @@ async function refreshUnderLock(
     // so a manifest-only write is safe; indexUnchanged mints the receipt.
     await saveManifest(boxRoot, { manifest, indexProof: indexUnchanged(boxRoot) });
   }
-  if (JSON.stringify(containsState.cards) !== containsBefore) {
-    await saveContainsState(boxRoot, containsState);
-  }
-  return { db, warnings, stale: false };
+  return { db, warnings, stale: false, embeddingsReady };
 }
 
 /** Observe manifest-indexed frontmatter cards the contains sidecar doesn't know yet. */
