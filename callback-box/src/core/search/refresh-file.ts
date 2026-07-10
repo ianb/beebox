@@ -85,13 +85,11 @@ export async function refreshOneCard(
     warnings.push(...inputRead.warnings);
     docs = extractCardDocs({ path: relPath, card, contentHash, inputContents: inputRead.contents });
     const basis = computeContainsBasis({ card, inputContents: inputRead.contents });
-    if (basis !== null && card.kind === "frontmatter") {
-      observeCard(state.containsState, {
-        cardPath: relPath,
-        contains: effectiveContains(card.schema.type, card.fields),
-        basis,
-      });
-    }
+    observeCard(state.containsState, {
+      cardPath: relPath,
+      contains: effectiveContains(card.schema.type, card.fields),
+      basis,
+    });
   } catch (e) {
     // CardIOError: bad frontmatter/schema. ParseError: malformed XML body.
     // Either way the card is skipped with a warning — one broken card must

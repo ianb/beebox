@@ -51,10 +51,14 @@ export async function loadManifest(boxRoot: string): Promise<SearchManifest> {
     return emptyManifest();
   }
   try {
-    const parsed = JSON.parse(raw) as SearchManifest;
+    // Parse boundary: disk JSON is untrusted, so keep `schemaVersion`/`files`
+    // typed `unknown` rather than casting straight to `SearchManifest` — a
+    // cast there would make the shape checks below vacuously "always true"
+    // instead of real validation of file content we didn't write ourselves.
+    const parsed = JSON.parse(raw) as { schemaVersion: unknown; files: unknown };
     if (parsed.schemaVersion !== SEARCH_SCHEMA_VERSION) return emptyManifest();
     if (typeof parsed.files !== "object" || parsed.files === null) return emptyManifest();
-    return parsed;
+    return { schemaVersion: parsed.schemaVersion, files: parsed.files as SearchManifest["files"] };
   } catch (e) {
     console.warn(`search: manifest unreadable (${(e as Error).message}); rebuilding`);
     return emptyManifest();
