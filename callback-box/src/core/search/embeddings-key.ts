@@ -55,6 +55,10 @@ export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | 
     throw new EmbeddingsKeyError(parseFailedDetail, { cause: e });
   }
 
+  if (typeof parsed !== "object" || parsed === null) {
+    const notObjectDetail = `${SECRET_RELATIVE_PATH} must hold a JSON object with an "apiKey" string`;
+    throw new EmbeddingsKeyError(notObjectDetail);
+  }
   if (typeof parsed.apiKey !== "string" || parsed.apiKey.trim() === "") {
     const missingKeyDetail = `${SECRET_RELATIVE_PATH} is missing a non-empty "apiKey" string`;
     throw new EmbeddingsKeyError(missingKeyDetail);
