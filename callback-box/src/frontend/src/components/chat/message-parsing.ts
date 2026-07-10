@@ -283,6 +283,13 @@ export interface TextGroup { kind: "text"; text: string }
 export interface ActivityPart { type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }
 export interface ActivityGroupData { kind: "activity"; parts: ActivityPart[] }
 
+// AssistantPart's `type` is a plain union field, not a discriminated union, so
+// TS can't narrow it structurally. This guard is sound: a non-"text" part has
+// exactly the ActivityPart shape.
+function isActivityPart(part: AssistantPart): part is ActivityPart {
+  return part.type !== "text";
+}
+
 /**
  * Group consecutive non-text parts (thinking, tools) into activity groups,
  * separated by text parts which render as normal markdown.
@@ -319,11 +326,11 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
   }
 
   for (const part of flat) {
-    if (part.type === "text") {
+    if (isActivityPart(part)) {
+      activityBuf.push(part);
+    } else {
       flushActivity();
       grouped.push({ kind: "text", text: part.text || "" });
-    } else {
-      activityBuf.push(part as ActivityPart);
     }
   }
   flushActivity();
