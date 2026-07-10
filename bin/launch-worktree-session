@@ -4,9 +4,12 @@
 # user message; the agent reads it as context but does NOT auto-implement.
 #
 # Usage:
-#   launch-worktree-session <worktree-name> "<prompt text>"
-#   launch-worktree-session <worktree-name> -            # read prompt from stdin
-#   launch-worktree-session <worktree-name> @<file>      # read prompt from a file
+#   launch-worktree-session [--model <model>] <worktree-name> "<prompt text>"
+#   launch-worktree-session [--model <model>] <worktree-name> -      # prompt from stdin
+#   launch-worktree-session [--model <model>] <worktree-name> @<file># prompt from a file
+#
+# --model passes `claude --model <model>` (e.g. claude-fable-5, opus, sonnet) so a
+# worktree can be spun up on a specific model; omit to use the default.
 #
 # Examples:
 #   launch-worktree-session service-inject-gcal "We discussed switching the gcal connector to use a Service-style injection..."
@@ -21,8 +24,18 @@
 
 set -euo pipefail
 
+# Leading options (only --model today); stop at the first non-option (the name).
+model=""
+while [ $# -ge 1 ]; do
+  case "$1" in
+    --model)   [ $# -ge 2 ] || { echo "launch-worktree-session: --model needs a value" >&2; exit 1; }; model="$2"; shift 2 ;;
+    --model=*) model="${1#--model=}"; shift ;;
+    *)         break ;;
+  esac
+done
+
 if [ $# -lt 1 ]; then
-  echo "Usage: launch-worktree-session <worktree-name> [<prompt> | - | @<file>]" >&2
+  echo "Usage: launch-worktree-session [--model <model>] <worktree-name> [<prompt> | - | @<file>]" >&2
   exit 1
 fi
 
@@ -78,14 +91,17 @@ fi
 
 # A tiny launcher that the new Terminal tab runs. Keeps AppleScript clear of
 # any quoting hazards.
+model_arg=""
+[ -n "$model" ] && model_arg="--model $model"
+
 launcher="$launch_dir/launch.sh"
 cat > "$launcher" <<EOF
 #!/usr/bin/env bash
 cd "$MONO"
 if [ -s "$prompt_file" ]; then
-  exec claude --worktree "$wt" --name "$wt" --dangerously-skip-permissions "\$(cat "$prompt_file")"
+  exec claude --worktree "$wt" --name "$wt" $model_arg --dangerously-skip-permissions "\$(cat "$prompt_file")"
 else
-  exec claude --worktree "$wt" --name "$wt" --dangerously-skip-permissions
+  exec claude --worktree "$wt" --name "$wt" $model_arg --dangerously-skip-permissions
 fi
 EOF
 chmod +x "$launcher"
