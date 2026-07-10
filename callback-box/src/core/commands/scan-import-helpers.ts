@@ -300,7 +300,7 @@ function translateIndices(raw: RawScanAnalysis, globalIndices: number[]): ScanPa
     return null;
   }
   let pairedGlobal: number | null = null;
-  if (raw.paired_with_index !== null && raw.paired_with_index !== undefined) {
+  if (raw.paired_with_index !== null) {
     const partner = globalIndices[raw.paired_with_index];
     if (partner !== undefined) pairedGlobal = partner;
   }

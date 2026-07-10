@@ -189,7 +189,7 @@ export class ChatThreadSession extends EventEmitter {
   }
 
   private handleMessage(msg: ChatMessage): void {
-    log("msg", `type=${msg.type}${msg.type === "assistant" ? ` blocks=${msg.message?.content?.length ?? 0}` : ""}`);
+    log("msg", `type=${msg.type}${msg.type === "assistant" ? ` blocks=${msg.message.content.length}` : ""}`);
 
     // Capture session ID from first message that carries one (the `unknown`
     // sentinel has none; a `user` echo's session_id is optional).

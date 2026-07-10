@@ -6,7 +6,7 @@
  * into photo bundles, orphan backs, unsure pages, and blank pages.
  */
 
-import { invariant } from "../../lib/invariant.js";
+import { assertNever, invariant } from "../../lib/invariant.js";
 import type { ScanPageAnalysis } from "./scan-import-gemini.js";
 
 export interface ResolvedPage {
@@ -149,26 +149,23 @@ export function bundleResolvedPages(resolved: ResolvedPage[]): BundleResult {
   for (const page of resolved) {
     if (used.has(page.index)) continue;
     const a = page.analysis;
-    if (a.kind === "blank") {
-      used.add(page.index);
-      blankPages.push(page.index);
-      continue;
-    }
-    if (a.kind === "unsure") {
-      used.add(page.index);
-      unsurePages.push(page);
-      continue;
-    }
-    if (a.kind === "photo") {
-      used.add(page.index);
-      bundles.push(buildPhotoBundle(page, { resolved, used }));
-      continue;
-    }
-    if (a.kind === "back") {
-      // A back not consumed by any photo — orphan.
-      used.add(page.index);
-      orphanBacks.push({ index: page.index, analysis: a });
-      continue;
+    used.add(page.index);
+    switch (a.kind) {
+      case "blank":
+        blankPages.push(page.index);
+        continue;
+      case "unsure":
+        unsurePages.push(page);
+        continue;
+      case "photo":
+        bundles.push(buildPhotoBundle(page, { resolved, used }));
+        continue;
+      case "back":
+        // A back not consumed by any photo — orphan.
+        orphanBacks.push({ index: page.index, analysis: a });
+        continue;
+      default:
+        assertNever(a.kind);
     }
   }
 

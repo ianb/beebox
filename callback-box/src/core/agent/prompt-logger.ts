@@ -47,8 +47,8 @@ export async function startPromptLogger(
     stdio: ["ignore", "pipe", "pipe"],
   });
 
-  proxy.stdout?.on("data", (data) => logStream.write(data));
-  proxy.stderr?.on("data", (data) => logStream.write(data));
+  proxy.stdout.on("data", (data) => logStream.write(data));
+  proxy.stderr.on("data", (data) => logStream.write(data));
 
   const ready = await new Promise<boolean>((resolve) => {
     const timeout = setTimeout(() => resolve(false), 10000);
@@ -60,8 +60,8 @@ export async function startPromptLogger(
         resolve(true);
       }
     };
-    proxy.stdout?.on("data", onData);
-    proxy.stderr?.on("data", onData);
+    proxy.stdout.on("data", onData);
+    proxy.stderr.on("data", onData);
     proxy.on("error", () => {
       clearTimeout(timeout);
       resolve(false);

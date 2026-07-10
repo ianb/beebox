@@ -73,7 +73,7 @@ function applyAnalysisFields(fields: ImageFields, analysis: ImageAnalysis): void
   }
 
   fields.description = analysis.description;
-  if (analysis.contains !== undefined && analysis.contains.trim() !== "") {
+  if (analysis.contains.trim() !== "") {
     fields.contains = analysis.contains;
   }
 
