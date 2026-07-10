@@ -15,6 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 
 const SECRET_RELATIVE_PATH = "config/connectors/openai.secret.json";
 
@@ -30,9 +31,9 @@ export class EmbeddingsKeyError extends Error {
   }
 }
 
-interface OpenAiSecretFile {
-  apiKey?: unknown;
-}
+const openAiSecretFileSchema = z.object({
+  apiKey: z.string().trim().min(1),
+});
 
 export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | null> {
   const secretPath = path.join(boxRoot, SECRET_RELATIVE_PATH);
@@ -47,21 +48,18 @@ export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | 
     throw new EmbeddingsKeyError(readFailedDetail, { cause: e });
   }
 
-  let parsed: OpenAiSecretFile;
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(content) as OpenAiSecretFile;
+    parsed = JSON.parse(content);
   } catch (e) {
     const parseFailedDetail = `${SECRET_RELATIVE_PATH} is not valid JSON: ${(e as Error).message}`;
     throw new EmbeddingsKeyError(parseFailedDetail, { cause: e });
   }
 
-  if (typeof parsed !== "object" || parsed === null) {
-    const notObjectDetail = `${SECRET_RELATIVE_PATH} must hold a JSON object with an "apiKey" string`;
-    throw new EmbeddingsKeyError(notObjectDetail);
+  const result = openAiSecretFileSchema.safeParse(parsed);
+  if (!result.success) {
+    const missingKeyDetail = `${SECRET_RELATIVE_PATH} must hold a JSON object with a non-empty "apiKey" string`;
+    throw new EmbeddingsKeyError(missingKeyDetail, { cause: result.error });
   }
-  if (typeof parsed.apiKey !== "string" || parsed.apiKey.trim() === "") {
-    const missingKeyDetail = `${SECRET_RELATIVE_PATH} is missing a non-empty "apiKey" string`;
-    throw new EmbeddingsKeyError(missingKeyDetail);
-  }
-  return parsed.apiKey;
+  return result.data.apiKey;
 }
