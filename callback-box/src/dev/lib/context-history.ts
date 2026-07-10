@@ -13,6 +13,7 @@
 import * as fs from "node:fs/promises";
 import YAML from "yaml";
 import type { ContextStats } from "./context-usage.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export interface ContextHistoryEntry {
   date: string;
@@ -75,7 +76,7 @@ export async function loadHistory(historyPath: string): Promise<ContextHistory> 
     const text = await fs.readFile(historyPath, "utf-8");
     return (YAML.parse(text) as ContextHistory | null) ?? {};
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
     return {};
   }
 }

@@ -15,6 +15,7 @@ import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { type CardSchema } from "../cards/index.js";
 import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
 import { MemoSchema } from "./memo.js";
@@ -305,7 +306,7 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   try {
     files = await readdir(schemasDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read box schemas dir ${schemasDir}, skipping box-local schemas:`, e);
     }
     boxFileRecords.delete(boxRoot);
@@ -380,10 +381,10 @@ async function loadOneSchemaFile({ filePath, file, boxRoot, records, failures }:
   try {
     source = await readFile(filePath, "utf8");
   } catch (err) {
-    const message = `failed to read: ${(err as Error).message}`;
+    const message = `failed to read: ${errorMessage(err)}`;
     failures.push({ file, message, at: new Date().toISOString() });
     if (prior) return reuse(prior, boxRoot);
-    console.warn(`Warning: failed to read box schema ${file}: ${(err as Error).message}`);
+    console.warn(`Warning: failed to read box schema ${file}: ${errorMessage(err)}`);
     return undefined;
   }
 
@@ -407,7 +408,7 @@ async function loadOneSchemaFile({ filePath, file, boxRoot, records, failures }:
     records.set(filePath, { hash, card: def, template });
     return def;
   } catch (err) {
-    const message = (err as Error).message;
+    const message = errorMessage(err);
     failures.push({ file, message, at: new Date().toISOString() });
     console.warn(`Warning: failed to load box schema ${file}: ${message}`);
     // Keep `prior` (its old hash) so a later fixed save is detected and retried.

@@ -96,6 +96,7 @@
 
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
+import { errnoCode } from "./error-guards.js";
 
 export interface LockHolder {
   pid: number;
@@ -156,7 +157,7 @@ function pidExists(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ESRCH") return false;
     // EPERM means the process exists but we can't signal it (different uid).
     // Anything unexpected — be conservative and treat as live.
@@ -195,7 +196,7 @@ async function readHolder(path: string): Promise<LockHolder | null> {
   try {
     content = await fs.readFile(path, "utf-8");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ENOENT") return null;
     return null;
   }
@@ -217,7 +218,7 @@ async function writeExclusive(path: string, holder: LockHolder): Promise<boolean
   try {
     handle = await fs.open(path, "wx");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "EEXIST") return false;
     throw err;
   }
@@ -233,7 +234,7 @@ async function unlinkIgnoringMissing(path: string): Promise<void> {
   try {
     await fs.unlink(path);
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code !== "ENOENT") throw err;
   }
 }
@@ -325,7 +326,7 @@ export async function scanLocks(
   try {
     entries = await fs.readdir(dir);
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ENOENT") return result;
     throw err;
   }

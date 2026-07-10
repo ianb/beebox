@@ -31,6 +31,7 @@
 
 import { realpath, readFile } from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "./error-guards.js";
 
 /**
  * A box-relative path (forward slashes, no leading slash, `..`-free) proven to
@@ -91,7 +92,7 @@ export async function realpathContained(
   } catch (e) {
     // A target that doesn't exist yet is a missing ref, not an escape — let the
     // caller's own missing-file path handle it.
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return contained;
+    if (errnoCode(e) === "ENOENT") return contained;
     throw e;
   }
   const realRoot = await realpath(root);

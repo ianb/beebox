@@ -18,6 +18,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { parse as parseYaml } from "yaml";
+import { errnoCode } from "../lib/error-guards.js";
 import type { ScenarioDefinition, StubsDefinition } from "./types.js";
 
 function scenariosDir(): string {
@@ -76,7 +77,7 @@ export async function listScenarios(): Promise<string[]> {
   } catch (e) {
     // Scenarios dir absent/unreadable. Empty list is the right answer, but
     // surface it in case a real read error is masking existing scenarios.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Failed to read scenarios directory, treating as empty:", e);
     }
     return [];

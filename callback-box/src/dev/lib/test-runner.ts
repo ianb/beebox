@@ -8,6 +8,7 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { createAgent } from "../../core/agent/index.js";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat/session/index.js";
@@ -267,7 +268,7 @@ async function extractBehavior(
     }
   } catch (e) {
     // Sub-agent dir may not exist if the agent never delegated — that's fine.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[test-runner] Failed to read subagent logs at ${subagentDir}:`, e);
     }
   }

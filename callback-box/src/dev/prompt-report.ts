@@ -18,6 +18,7 @@ import { COMMIT_NUDGE_PROMPT } from "../core/agent/index.js";
 import { connectorRules } from "../core/init-rules.js";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { wordCount } from "./lib/context-assembly.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 const PLACEHOLDER = "${boxRoot}";
 const TEMPLATES_DIR = path.join(PACKAGE_ROOT, "templates", "procedures");
@@ -131,7 +132,7 @@ async function collectPrompts(): Promise<PromptEntry[]> {
       });
     }
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedure templates dir ${TEMPLATES_DIR}, skipping:`, e);
     }
   }

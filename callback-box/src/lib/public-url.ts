@@ -17,6 +17,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "./error-guards.js";
 
 /**
  * Resolve the public base URL from the environment, falling back to a
@@ -33,7 +34,7 @@ async function readBoxJsonPublicUrl(boxRoot: string): Promise<string | undefined
     const boxJson = JSON.parse(await fs.readFile(path.join(boxRoot, "config/box.json"), "utf-8"));
     if (typeof boxJson.publicUrl === "string" && boxJson.publicUrl) return boxJson.publicUrl;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Could not read box.json publicUrl, falling back to env:", e);
     }
   }

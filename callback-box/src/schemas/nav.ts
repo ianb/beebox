@@ -23,6 +23,7 @@ import { z } from "zod";
 import { cardSchema, splitCardContent, type CardSchema } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { NAV_ROUTES } from "../shared/nav-routes.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 const validHrefs = new Set(NAV_ROUTES.map((r) => r.href));
 const hrefList = NAV_ROUTES.map((r) => r.href).join(", ");
@@ -93,7 +94,7 @@ export function parseNavFields(
   try {
     fm = parseYaml(split.frontmatterText);
   } catch (e) {
-    return { fields: null, error: `invalid YAML frontmatter: ${(e as Error).message}` };
+    return { fields: null, error: `invalid YAML frontmatter: ${errorMessage(e)}` };
   }
   const parsed = NavObject.safeParse(fm ?? {});
   if (!parsed.success) {

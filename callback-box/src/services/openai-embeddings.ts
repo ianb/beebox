@@ -12,6 +12,7 @@
  */
 
 import ky from "ky";
+import { errorMessage } from "../lib/error-guards.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -138,7 +139,7 @@ export function createOpenAIEmbeddingsService(apiKey: string): EmbeddingsService
         })
         .json<unknown>();
     } catch (e) {
-      const requestFailedDetail = `request failed: ${(e as Error).message}`;
+      const requestFailedDetail = `request failed: ${errorMessage(e)}`;
       throw new EmbeddingsError(requestFailedDetail, { cause: e });
     }
     return parseEmbeddingsResponse(body, texts.length);
