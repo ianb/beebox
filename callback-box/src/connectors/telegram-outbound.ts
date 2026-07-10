@@ -7,8 +7,8 @@
 import * as path from "node:path";
 import { glob } from "glob";
 import type { ChatThreadFields } from "../schemas/chat-thread.js";
-import { stageFiles, commit } from "../lib/git.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
+import { stageAndCommitPaths } from "../lib/git.js";
+import { updateTransientState } from "./transient-state.js";
 import { findUnsentAgentMessages, stampSentMessage } from "./chat-utils.js";
 import { parseDuration } from "./telegram-helpers.js";
 import type { TelegramState } from "./telegram-types.js";
@@ -87,10 +87,10 @@ async function sendThreadOutbound(
     });
   }
 
-  // Commit the stamped thread
-  await stageFiles(boxRoot, [threadRelPath]);
+  // Commit the stamped thread (path-scoped, Track 2)
   const slug = path.basename(path.dirname(threadRelPath));
-  await commit(boxRoot, {
+  await stageAndCommitPaths(boxRoot, {
+    paths: [threadRelPath],
     message: `Send telegram message to ${slug}`,
     trailers: {
       "Pushed-By": "telegram-connector",
@@ -119,20 +119,17 @@ async function recordCallbackTimers(
   const durationMs = parseDuration(callbackIn);
   if (!durationMs) return;
 
-  const state = await loadTransientState<TelegramState>({
+  const at = new Date(Date.now() + durationMs).toISOString();
+  // Set this thread's callback timer as a delta against fresh state (Track 1),
+  // so a concurrent checkCallbackTimers/webhook write isn't clobbered.
+  await updateTransientState<TelegramState>({
     boxRoot,
     connectorName: "telegram",
     defaultValue: {},
-  });
-
-  const callbacks = state.callbacks ?? {};
-  const at = new Date(Date.now() + durationMs).toISOString();
-  callbacks[threadRelPath] = { at };
-  state.callbacks = callbacks;
-
-  await saveTransientState({
-    boxRoot,
-    connectorName: "telegram",
-    data: state,
+    update: (fresh) => {
+      const callbacks = { ...(fresh.callbacks ?? {}) };
+      callbacks[threadRelPath] = { at };
+      return { ...fresh, callbacks };
+    },
   });
 }

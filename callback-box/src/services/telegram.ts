@@ -7,26 +7,12 @@
 
 import { Bot } from "grammy";
 
+import { validateResponse } from "./connector-response.js";
+import { telegramUpdatesSchema, type TelegramUpdate } from "./telegram-schemas.js";
+
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-/** Minimal update shape matching what we extract in telegram.ts */
-export interface TelegramUpdate {
-  update_id: number;
-  message?: {
-    message_id: number;
-    date: number;
-    chat: { id: number; title?: string; type: string };
-    from?: {
-      id: number;
-      first_name: string;
-      last_name?: string;
-      username?: string;
-    };
-    text?: string;
-    caption?: string;
-  };
-  edited_message?: TelegramUpdate["message"];
-}
+export type { TelegramUpdate } from "./telegram-schemas.js";
 
 export interface TelegramSentMessage {
   chatId: string | number;
@@ -96,6 +82,16 @@ export function createTelegramService(botToken: string): TelegramService {
     },
     async getUpdates(options) {
       const updates = await bot.api.getUpdates(options);
+      // Validate the raw polling response at the boundary (Track 4c): a drift in
+      // the update shape throws ConnectorResponseError here instead of casting
+      // through to silent undefineds in the ingest pipeline. Validate-and-
+      // passthrough, mirroring the Gmail service — the cast narrows grammy's
+      // richer Update type to the fields we actually consume.
+      validateResponse(updates, {
+        schema: telegramUpdatesSchema,
+        service: "telegram",
+        operation: "getUpdates",
+      });
       return updates as TelegramUpdate[];
     },
   };
