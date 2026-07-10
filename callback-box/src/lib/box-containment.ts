@@ -57,6 +57,7 @@ export function containWithinBox(boxRoot: string, absPath: string): BoxRelativeP
   const root = path.resolve(boxRoot);
   const resolved = path.resolve(absPath);
   if (resolved !== root && !resolved.startsWith(root + path.sep)) return null;
+  // eslint-disable-next-line no-restricted-syntax -- mints the BoxRelativePath brand after the containment check above proves the value is box-relative
   return path.relative(root, resolved).split(path.sep).join("/") as BoxRelativePath;
 }
 

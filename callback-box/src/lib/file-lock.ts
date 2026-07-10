@@ -97,6 +97,7 @@
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import { errnoCode } from "./error-guards.js";
+import { isRecord } from "./is-record.js";
 
 export interface LockHolder {
   pid: number;
@@ -182,13 +183,12 @@ function isOurs(holder: LockHolder): boolean {
 }
 
 function isWellFormedHolder(value: unknown): value is LockHolder {
-  if (value === null || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return typeof v["pid"] === "number" &&
-    typeof v["bootEpochSeconds"] === "number" &&
-    typeof v["hostname"] === "string" &&
-    typeof v["acquiredAt"] === "string" &&
-    typeof v["metadata"] === "object" && v["metadata"] !== null;
+  if (!isRecord(value)) return false;
+  return typeof value["pid"] === "number" &&
+    typeof value["bootEpochSeconds"] === "number" &&
+    typeof value["hostname"] === "string" &&
+    typeof value["acquiredAt"] === "string" &&
+    typeof value["metadata"] === "object" && value["metadata"] !== null;
 }
 
 async function readHolder(path: string): Promise<LockHolder | null> {

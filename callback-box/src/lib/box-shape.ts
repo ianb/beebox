@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 
 const BOX_MARKER = ".cb-box";
 
@@ -22,8 +23,8 @@ const LEGACY_SHAPE_VERSION = 1;
 const MAX_KNOWN_SHAPE_VERSION = 2;
 
 export class BoxShapeError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: { cause?: unknown }) {
+    super(message, options);
     this.name = "BoxShapeError";
   }
 }
@@ -38,14 +39,14 @@ export interface BoxShape {
   packageRoot: string;
 }
 
-interface BoxMarker {
-  shapeVersion?: number;
-}
+const boxMarkerSchema = z.object({ shapeVersion: z.number().optional() });
+type BoxMarker = z.infer<typeof boxMarkerSchema>;
 
-interface PackageJsonShape {
-  dependencies?: Record<string, string>;
-  devDependencies?: Record<string, string>;
-}
+const packageJsonShapeSchema = z.object({
+  dependencies: z.record(z.string(), z.string()).optional(),
+  devDependencies: z.record(z.string(), z.string()).optional(),
+});
+type PackageJsonShape = z.infer<typeof packageJsonShapeSchema>;
 
 /**
  * Determine a box's physical layout.
@@ -111,7 +112,14 @@ async function readBoxMarker(boxRoot: string): Promise<BoxMarker> {
     // it the same as a legacy marker with no fields set.
     return {};
   }
-  return JSON.parse(raw) as BoxMarker;
+  const parsed = boxMarkerSchema.safeParse(JSON.parse(raw));
+  if (!parsed.success) {
+    throw new BoxShapeError(
+      "Box marker at " + markerPath + " is malformed (see cause).",
+      { cause: parsed.error }
+    );
+  }
+  return parsed.data;
 }
 
 async function requireCallbackBoxDependency(packageRoot: string, boxRoot: string): Promise<void> {
@@ -119,7 +127,7 @@ async function requireCallbackBoxDependency(packageRoot: string, boxRoot: string
   let pkg: PackageJsonShape;
   try {
     const raw = await fs.readFile(packageJsonPath, "utf-8");
-    pkg = JSON.parse(raw) as PackageJsonShape;
+    pkg = packageJsonShapeSchema.parse(JSON.parse(raw));
   } catch (e) {
     throw new BoxShapeError(
       `Box at ${boxRoot} declares shapeVersion 2+ (package layout), but its parent ` +
