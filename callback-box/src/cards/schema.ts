@@ -1,5 +1,6 @@
 import { z, type ZodType } from "zod";
 import type { LintIssue } from "./lint-format.js";
+import { isRecord } from "../lib/is-record.js";
 
 /**
  * Card schemas describe a card file's full shape: most fields live in the
@@ -363,15 +364,15 @@ function walkForRefs(value: unknown, { currentPath, out }: WalkForRefsOptions): 
     }
     return;
   }
-  if (value === null || typeof value !== "object") return;
-  for (const [key, child] of Object.entries(value as Record<string, unknown>)) {
+  if (!isRecord(value)) return;
+  for (const [key, child] of Object.entries(value)) {
     const childPath = currentPath === "" ? key : `${currentPath}.${key}`;
     if (key === "ref" && typeof child === "string") {
       out.push({ path: childPath, ref: child });
       continue;
     }
     if (key === "refs" && Array.isArray(child)) {
-      const items = child as unknown[];
+      const items: unknown[] = child;
       for (const [i, item] of items.entries()) {
         if (typeof item === "string") {
           out.push({ path: `${childPath}[${String(i)}]`, ref: item });

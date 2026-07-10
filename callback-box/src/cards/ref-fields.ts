@@ -30,6 +30,7 @@
  */
 
 import { z, type ZodType } from "zod";
+import { isRecord } from "../lib/is-record.js";
 
 /** Metadata key carrying a ref field's inline-safety kind (see module comment). */
 const REF_KIND_META = "callbackBoxRefKind";
@@ -82,6 +83,7 @@ function unwrap(schema: ZodType): ZodType {
   let current = schema;
   // A ref tag lives on the object schema itself; stop the moment we see one.
   while (refKindOf(current) === null) {
+    // eslint-disable-next-line no-restricted-syntax -- reads zod 4's loosely-typed `_zod.def` internals; localized here and guarded by the doctest so a zod change fails loudly (see fn comment)
     const def = current._zod.def as { type: string; innerType?: ZodType };
     if (WRAPPER_TYPES.has(def.type) && def.innerType !== undefined) {
       current = def.innerType;
@@ -90,10 +92,6 @@ function unwrap(schema: ZodType): ZodType {
     break;
   }
   return current;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 /**
@@ -116,6 +114,7 @@ export function collectInlineRefs(schema: ZodType, fields: Record<string, unknow
   // unions (both z.union and z.discriminatedUnion — same internal `union` def).
   const walk = (node: ZodType, value: unknown): void => {
     const core = unwrap(node);
+    // eslint-disable-next-line no-restricted-syntax -- reads zod 4's loosely-typed `_zod.def` internals; localized here and guarded by the doctest so a zod change fails loudly
     const def = core._zod.def as {
       type: string;
       shape?: Record<string, ZodType>;

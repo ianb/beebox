@@ -16,6 +16,7 @@ import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 import { type CardSchema } from "../cards/index.js";
 import { setSchemaLoadFailures, type SchemaLoadFailure } from "./schema-load-status.js";
 import { MemoSchema } from "./memo.js";
@@ -403,7 +404,8 @@ async function loadOneSchemaFile({ filePath, file, boxRoot, records, failures }:
       console.warn(`Warning: ${file} does not export a default cardSchema(), skipping`);
       return prior ? reuse(prior, boxRoot) : undefined;
     }
-    const template = mod.template as TemplateDefinition | undefined;
+    const rawTemplate: unknown = mod.template;
+    const template = isTemplateDefinition(rawTemplate) ? rawTemplate : undefined;
     if (template) registerBoxTemplate(template, boxRoot);
     records.set(filePath, { hash, card: def, template });
     return def;
@@ -423,11 +425,16 @@ function reuse(record: SchemaFileRecord, boxRoot: string): CardSchema {
 }
 
 function isCardSchema(def: unknown): def is CardSchema {
+  return isRecord(def) && typeof def["type"] === "string" && "frontmatterSchema" in def;
+}
+
+/** Structural guard for a box schema module's optional `template` export. */
+function isTemplateDefinition(value: unknown): value is TemplateDefinition {
   return (
-    typeof def === "object"
-    && def !== null
-    && typeof (def as CardSchema).type === "string"
-    && "frontmatterSchema" in def
+    isRecord(value)
+    && typeof value["name"] === "string"
+    && typeof value["generate"] === "function"
+    && "argsSchema" in value
   );
 }
 
