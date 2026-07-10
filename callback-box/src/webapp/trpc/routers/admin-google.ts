@@ -18,15 +18,19 @@ export const googleAdminProcedures = {
   googleStatus: ownerProcedure.query(async ({ ctx }) => {
     const creds = getGoogleClientCreds();
     if (!creds) {
-      return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES, enabledServices: {} as Record<string, boolean> };
+      const enabledServices: Record<string, boolean> = {};
+      return { available: false, hasTokens: false, scopes: GOOGLE_SCOPES, enabledServices };
     }
     const tokens = await loadGoogleTokens(ctx.boxRoot);
     const config = await loadBoxConfig(ctx.boxRoot);
+    const enabledServices: Record<string, boolean> = Object.fromEntries(
+      Object.entries(config.googleServices ?? {}),
+    );
     return {
       available: true,
       hasTokens: !!(tokens && tokens.refreshToken),
       scopes: GOOGLE_SCOPES,
-      enabledServices: (config.googleServices || {}) as Record<string, boolean>,
+      enabledServices,
     };
   }),
 
