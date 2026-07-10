@@ -86,7 +86,8 @@ export const statusRouter = router({
       // Security: ensure we stay within boxRoot
       const resolved = path.resolve(targetDir);
       if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
-        return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
+        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+        return { path: relPath, ...empty };
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
@@ -96,7 +97,8 @@ export const statusRouter = router({
         if (errnoCode(e) !== "ENOENT") {
           console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
         }
-        return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
+        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+        return { path: relPath, ...empty };
       }
 
       const dirs: BrowseDir[] = [];
@@ -154,8 +156,10 @@ export const statusRouter = router({
             cards.push({ relativePath, name: parsed.name, type: parsed.type, hasAttachments });
             continue;
           }
-          const str = (key: string): string | undefined =>
-            typeof fm[key] === "string" ? (fm[key] as string) : undefined;
+          const str = (key: string): string | undefined => {
+            const value = fm[key];
+            return typeof value === "string" ? value : undefined;
+          };
           cards.push({
             relativePath,
             name: parsed.name,

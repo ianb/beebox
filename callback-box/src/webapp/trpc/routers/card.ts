@@ -4,6 +4,7 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
+import { isRecord } from "../../../lib/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
@@ -48,9 +49,9 @@ function loadFrontmatterCard(input: {
     const split = splitCardContent(raw);
     body = split.body;
     try {
-      const fm = parseYaml(split.frontmatterText);
-      if (fm !== null && typeof fm === "object" && !Array.isArray(fm)) {
-        frontmatter = fm as Record<string, unknown>;
+      const fm: unknown = parseYaml(split.frontmatterText);
+      if (isRecord(fm)) {
+        frontmatter = fm;
       }
     } catch (_e) {
       // YAML itself is malformed — leave frontmatter undefined.
@@ -117,7 +118,7 @@ export const cardRouter = router({
         path: relPath,
         kind: "frontmatter" as const,
         type: fileType ?? "",
-        frontmatter: undefined as Record<string, unknown> | undefined,
+        frontmatter: undefined,
         body: split.hasFrontmatter ? split.body : raw,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",
       };

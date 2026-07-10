@@ -64,7 +64,13 @@ export const calendarRouter = router({
       })
     )
     .mutation(async ({ input, ctx }) => {
-      await saveCalendarConfig(ctx.boxRoot, input as CalendarConfig);
+      // Copy only present keys so an omitted field stays absent rather than
+      // becoming an explicit `undefined` (exactOptionalPropertyTypes).
+      const config: CalendarConfig = {};
+      if (input.calendars !== undefined) config.calendars = input.calendars;
+      if (input.syncDaysBack !== undefined) config.syncDaysBack = input.syncDaysBack;
+      if (input.syncDaysForward !== undefined) config.syncDaysForward = input.syncDaysForward;
+      await saveCalendarConfig(ctx.boxRoot, config);
       await stageAndCommitPaths(ctx.boxRoot, {
         paths: ["config/connectors/google-calendar.json"],
         message: "Update calendar sync config",

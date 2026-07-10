@@ -18,28 +18,38 @@ import { stageAndCommitPaths } from "../../../lib/git.js";
 import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./scheduler-run.js";
 import { withCardLock } from "../../../lib/card-lock.js";
+import { isRecord } from "../../../lib/is-record.js";
 
 export type { ScheduleEntry };
 
 /** Clean log entry type without index signature for tRPC serialization */
-export interface SchedulerLogEntry {
-  ts: string;
-  event: string;
-  box?: string | undefined;
-  result?: {
-    ran: number;
-    skipped: number;
-    errors: number;
-    scripts: Array<{
-      name: string;
-      status: "ran" | "skipped" | "error";
-      command?: string | undefined;
-      durationMs?: number | undefined;
-      error?: string | undefined;
-    }>;
-  } | undefined;
-  error?: string | undefined;
-}
+/**
+ * A scheduler tick log line (JSONL). Validated on read (`log` query) so a
+ * malformed line is skipped rather than flowing on as a mis-typed cast.
+ */
+const schedulerLogEntrySchema = z.object({
+  ts: z.string(),
+  event: z.string(),
+  box: z.string().optional(),
+  result: z
+    .object({
+      ran: z.number(),
+      skipped: z.number(),
+      errors: z.number(),
+      scripts: z.array(
+        z.object({
+          name: z.string(),
+          status: z.enum(["ran", "skipped", "error"]),
+          command: z.string().optional(),
+          durationMs: z.number().optional(),
+          error: z.string().optional(),
+        }),
+      ),
+    })
+    .optional(),
+  error: z.string().optional(),
+});
+export type SchedulerLogEntry = z.infer<typeof schedulerLogEntrySchema>;
 
 export const schedulerRouter = router({
   log: publicProcedure
@@ -57,7 +67,8 @@ export const schedulerRouter = router({
         await fs.access(logPath);
       } catch (_e) {
         // No log file yet means there are no entries to return.
-        return { entries: [] as SchedulerLogEntry[] };
+        const entries: SchedulerLogEntry[] = [];
+        return { entries };
       }
 
       let entries: SchedulerLogEntry[] = [];
@@ -70,7 +81,12 @@ export const schedulerRouter = router({
       for await (const line of rl) {
         if (!line.trim()) continue;
         try {
-          const entry = JSON.parse(line) as SchedulerLogEntry;
+          const parsedEntry = schedulerLogEntrySchema.safeParse(JSON.parse(line));
+          if (!parsedEntry.success) {
+            console.warn("Skipping scheduler log line that failed validation:", parsedEntry.error.message);
+            continue;
+          }
+          const entry = parsedEntry.data;
           if (input.event && entry.event !== input.event) continue;
           if (input.status && entry.result) {
             const hasMatch = entry.result.scripts.some((s) => s.status === input.status);
@@ -119,7 +135,8 @@ export const schedulerRouter = router({
         if (!split.hasFrontmatter) {
           throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: `Schedule "${input.name}" has no frontmatter` });
         }
-        const fm = parseYaml(split.frontmatterText) as Record<string, unknown>;
+        const parsedFm: unknown = parseYaml(split.frontmatterText);
+        const fm: Record<string, unknown> = isRecord(parsedFm) ? parsedFm : {};
         if (input.enabled) {
           delete fm["enabled"];
         } else {

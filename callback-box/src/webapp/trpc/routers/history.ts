@@ -115,10 +115,10 @@ export const historyRouter = router({
         return {
           sessionId: input.sessionId,
           found: false,
-          entries: [] as never[],
+          entries: [],
           total: 0,
           hasMore: false,
-          nextCursor: undefined as number | undefined,
+          nextCursor: undefined,
         };
       }
 

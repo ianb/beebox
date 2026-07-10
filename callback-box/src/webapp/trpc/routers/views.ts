@@ -12,6 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { z } from "zod";
+import { isRecord } from "../../../lib/is-record.js";
 import { router, publicProcedure } from "../trpc.js";
 import { listViews } from "../../views/compiler.js";
 import { resolveContainedRef } from "../../../core/ref-exists.js";
@@ -37,8 +38,8 @@ async function frontmatterTitle(absPath: string): Promise<string | null> {
     const content = await fs.readFile(absPath, "utf-8");
     const { frontmatterText, hasFrontmatter } = splitCardContent(content);
     if (!hasFrontmatter) return null;
-    const fields = parseYaml(frontmatterText) as Record<string, unknown> | null;
-    const title = fields?.["title"];
+    const parsed: unknown = parseYaml(frontmatterText);
+    const title = isRecord(parsed) ? parsed["title"] : undefined;
     return typeof title === "string" && title.trim() !== "" ? title.trim() : null;
   } catch (_e) {
     // A card whose frontmatter doesn't parse still resolves by filename; the
