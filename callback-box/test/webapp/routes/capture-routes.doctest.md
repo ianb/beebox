@@ -1,8 +1,11 @@
 # Capture routes
 
-The capture routes stage media into the box and, on finalize, write a
-capture-session card. Uploads are multipart with `X-Capture-*` headers; audio
-chunks carry a segment id so preparation can concatenate within a segment.
+The capture routes stage media into the box; finalize seals the staging session
+and kicks off the background preparation worker (Track 3), returning immediately.
+Uploads are multipart with `X-Capture-*` headers; audio chunks carry a segment id
+so preparation can concatenate within a segment. (The full prepare → transcribe →
+assemble → deliver pipeline is covered by `test/core/capture/prepare.doctest.md`;
+here we test the route boundary only.)
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
@@ -34,7 +37,7 @@ async function upload(ctx, opts) {
 }
 ```
 
-## Create → two audio segments → finalize writes two audio cards
+## Create → two audio segments land in the staging manifest
 
 Creating a session records the chat `targetSessionId` it was started from:
 
@@ -83,36 +86,43 @@ b.statusCode
 => 200
 ```
 
-Finalize writes exactly one capture-session card, and its attach scope holds one
-audio card per segment:
+The staging manifest records both segments in order, each with its chunk:
 
 ```ts continue
+const manifest = JSON.parse(await ctx.read(`tmp/capture-staging/${sessionId}/session.json`));
+manifest.segments.map((s) => s.id).join(",")
+=> seg-a,seg-b
+
+manifest.segments[0].chunks.join(",")
+=> audio-0-001.webm
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Finalize seals the session and returns staged
+
+Finalize returns immediately with `staged: true` (preparation runs in the
+background). An empty session — nothing uploaded — is discarded by the worker
+with no delivery:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: null },
+});
+const sessionId = created.body.sessionId;
+
 const done = await ctx.request({ method: "POST", url: `/api/capture/sessions/${sessionId}/finalize` });
 done.statusCode
 => 200
 
-done.body.cards.length
-=> 1
-
-const cardPath = done.body.cards[0];
-const attachDir = cardPath.replace(".capture-session.card", ".attach");
-const audioCard1 = await ctx.read(`${attachDir}/audio-001.audio.card`);
-audioCard1.includes("recorded: 2026-07-09T14:00:00.000Z")
+done.body.staged
 => true
 
-const audioCard2 = await ctx.read(`${attachDir}/audio-002.audio.card`);
-audioCard2.includes("recorded: 2026-07-09T14:05:00.000Z")
-=> true
-```
-
-The concatenated segment bytes land in each audio card's attach scope:
-
-```ts continue
-await ctx.read(`${attachDir}/audio-001.attach/audio-001.webm`)
-=> SEGMENT-A
-
-await ctx.read(`${attachDir}/audio-002.attach/audio-002.webm`)
-=> SEGMENT-B
+done.body.sessionId
+=> «*»
 ```
 
 ```ts cleanup

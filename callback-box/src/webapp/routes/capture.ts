@@ -2,10 +2,10 @@
  * Capture session routes — audio recording + photo/file capture from the web UI.
  *
  * Uploads stage into the box at `tmp/capture-staging/<session-id>/` with a
- * `session.json` manifest (see `core/capture/staging-store.ts`). On finalize a
- * capture-session card lands at `box/inbox/<basename>.capture-session.card`,
- * and its attach scope holds the audio/image/file cards plus their media (see
- * capture-finalize.ts).
+ * `session.json` manifest (see `core/capture/staging-store.ts`). Finalize seals
+ * the session and fires the background preparation worker
+ * (`core/capture/prepare.ts`), which writes + commits the capture document under
+ * the target chat's `tmp-capture/` and delivers a `<capture>` message.
  *
  * These stay raw Fastify routes (not tRPC): multipart upload + custom
  * `X-Capture-*` headers don't fit the tRPC request/response shape. They run
@@ -21,14 +21,16 @@ import {
   createStagingSession,
   readStagingSession,
   cleanupStagingSession,
+  setStagingState,
   addAudioChunk,
   addPhoto,
   addFile,
   resolveStagedFile,
   StagingPathError,
-  type StagingSession,
 } from "../../core/capture/staging-store.js";
-import { finalizeSession } from "./capture-finalize.js";
+import { prepareCaptureSession } from "../../core/capture/prepare.js";
+import { resumeStagingSessions } from "../../core/capture/resume.js";
+import { getChatRuntime } from "../chat-runtime.js";
 
 interface RegisterCaptureRoutesOptions {
   server: FastifyInstance;
@@ -150,24 +152,55 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     },
   );
 
-  // POST /api/capture/sessions/:id/finalize — write the capture-session cards.
+  // POST /api/capture/sessions/:id/finalize — seal the session and kick off
+  // the background preparation worker (Track 3), returning immediately. The
+  // worker writes + commits the capture document under the target chat's
+  // `tmp-capture/`, then delivers a `<capture>` message.
   server.post<{ Params: { id: string } }>(
     "/api/capture/sessions/:id/finalize",
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
-      const session: StagingSession | null = await readStagingSession({
-        boxRoot,
-        id: request.params.id,
-      });
+      const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
 
-      const { cards } = await finalizeSession({ session, boxRoot });
-
-      const timestamp = getBoxTimeISO(boxRoot);
-      for (const cardPath of cards) {
-        eventBus.emit("card-created", { path: cardPath, template: "capture-session", timestamp });
+      // Re-fire only from a fresh (open) or previously-failed session; an
+      // already-sealed/preparing one is left to its in-flight worker.
+      const shouldFire = session.state === "open" || session.state.startsWith("failed:");
+      if (shouldFire) {
+        const runtime = getChatRuntime(boxRoot);
+        if (!runtime) {
+          console.error(`[capture] No chat runtime for box; cannot prepare capture ${session.id}`);
+          return reply.status(503).send({ error: "Chat runtime unavailable" });
+        }
+        await setStagingState({ boxRoot, id: session.id, state: "sealed" });
+        void prepareCaptureSession({
+          boxRoot,
+          id: session.id,
+          eventBus,
+          registry: runtime.registry,
+          wireSession: runtime.wireSession,
+        }).catch(async (err: unknown) => {
+          console.error(`[capture] Preparation of ${session.id} failed:`, err);
+          await setStagingState({ boxRoot, id: session.id, state: "failed:prepare" }).catch(() => {});
+        });
       }
 
-      return { success: true, cards };
+      return { sessionId: session.id, staged: true };
     },
   );
+
+  // On startup, resume any staged captures left mid-preparation by a crash or
+  // restart. Fire-and-forget; the chat runtime is registered before this route.
+  const runtime = getChatRuntime(boxRoot);
+  if (runtime) {
+    void resumeStagingSessions({
+      boxRoot,
+      eventBus,
+      registry: runtime.registry,
+      wireSession: runtime.wireSession,
+    }).catch((err: unknown) => {
+      console.error("[capture] Staging resume scan failed:", err);
+    });
+  } else {
+    console.warn("[capture] Chat runtime not ready; skipping staging resume scan");
+  }
 }

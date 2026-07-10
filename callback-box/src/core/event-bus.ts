@@ -73,6 +73,17 @@ export interface EventMap {
   "chat-history": { sessionId: string | null; entries: unknown[] };
   /** A chat session id was assigned by the SDK. */
   "chat-session-assigned": { sessionId: string };
+  /**
+   * A capture staging session moved through preparation/delivery (Track 3).
+   * Drives the pending capture bubble in chat. `docPath` is the box-relative
+   * capture card once written; `sessionId` is the delivery target once known.
+   */
+  "capture-status": {
+    stagingId: string;
+    sessionId: string | null;
+    status: "preparing" | "transcribing" | "delivered" | "failed";
+    docPath?: string | undefined;
+  };
 }
 
 /** A known event name. */
