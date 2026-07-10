@@ -306,12 +306,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   const proxy = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
   // eslint-disable-next-line max-params -- http-proxy-3's ProxyServer "error" event signature is (err, req, res)
   proxy.on("error", (err: Error, _req, res) => {
-    if (res && "writeHead" in res && !(res as http.ServerResponse).headersSent) {
+    if ("writeHead" in res && !(res as http.ServerResponse).headersSent) {
       (res as http.ServerResponse).writeHead(502, { "content-type": "application/json" });
       (res as http.ServerResponse).end(JSON.stringify({ error: "bad_gateway", message: err.message }));
-    } else if (res) {
+    } else {
       try {
-        (res as http.ServerResponse | Socket).end();
+        res.end();
       } catch (_e) {
         /* already gone */
       }
@@ -475,8 +475,11 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
       socket.destroy();
       return;
     }
-    proxy.ws(req, socket, head, { target: endpoint.origin }, (err) => {
-      if (err) socket.destroy();
+    proxy.ws(req, socket, head, { target: endpoint.origin }, () => {
+      // This callback fires only from http-proxy's error path (see
+      // ws-incoming.js's onOutgoingError) -- never on success -- so an
+      // invocation always means the upgrade failed.
+      socket.destroy();
     });
   });
 

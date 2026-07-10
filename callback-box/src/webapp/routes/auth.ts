@@ -114,7 +114,7 @@ export async function registerAuthRoutes(
         tokens = result.tokens;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        const response = (err as { response?: { data?: unknown } })?.response?.data;
+        const response = (err as { response?: { data?: unknown } }).response?.data;
         console.error("[auth] Token exchange failed:", message);
         if (response) console.error("[auth] Google response:", JSON.stringify(response));
         console.error("[auth] Redirect URI used:", redirectUri);

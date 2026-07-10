@@ -124,7 +124,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
   server.post<{ Params: { "*": string }; Body: WriteBody }>("/api/files/*", writeHandler(true));
 
   // POST /api/files-commit — commit the file's card + attach scope, nothing else
-  server.post<{ Body: CommitBody }>("/api/files-commit", async (request, reply) => {
+  server.post<{ Body: CommitBody | undefined }>("/api/files-commit", async (request, reply) => {
     const reqPath = boxRelativePath(typeof request.body?.path === "string" ? request.body.path : "");
     const message = typeof request.body?.message === "string" ? request.body.message.trim() : "";
     if (reqPath === "" || message === "") {
