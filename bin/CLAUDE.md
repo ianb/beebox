@@ -54,6 +54,18 @@ hub then lazily spawns/idle-collects a `cb serve` child per box within
 that worktree, so boxes cold-start and idle-stop independently of the
 worktree they live in. `CB_DEV_NO_HUB=1` reverts to the router spawning
 a single legacy `server-main.ts` Fastify process per worktree instead.
+
+`router.ts` holds the process-supervision/proxying machinery only; the
+`/<worktree>/dev/` HTML rendering (manifest, markdown doc browser, static
+artifact serving) lives in the sibling `router-docs.ts`, imported one-way
+(`router.ts` → `router-docs.ts`, never back) to avoid a value-import cycle.
+
+**Before changing worktree lifecycle code** (`ensureRunning`, `startWorktree`,
+`stopWorktree`, `onChildExit`, `removePidFile`, the PID-file or `worktrees`-map
+shapes), read `bin/docs/router-protocol.md` — it promotes four incident-derived
+concurrency invariants (each has a pointing comment at its code site in
+`router.ts`) out of inline comments into one durable place, so they survive
+future edits instead of being easy to read past or accidentally undo.
 URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the
 tRPC WebSocket all flow through the router.
 
