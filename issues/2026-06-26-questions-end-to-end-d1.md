@@ -1,5 +1,5 @@
 ---
-needs: [design]
+design: ../callback-box/docs/plans/questions-end-to-end.md
 area: callback-box
 ---
 
