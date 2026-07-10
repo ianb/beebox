@@ -62,6 +62,17 @@ export class MicCapture {
   private muteGraceId: ReturnType<typeof setTimeout> | null = null;
   private recovering = false;
   private stopped = false;
+  /**
+   * Opaque read of `stopped` for checks after an `await`. A raw `this.stopped`
+   * read after an earlier same-method `if (this.stopped) return;` gets flagged
+   * as an always-false dead check — TS's control-flow narrowing carries the
+   * "false" from that earlier return across later `await`s, even though
+   * {@link stopCapture} can genuinely flip it mid-flight. Routing through a
+   * method call is opaque to CFA, so the check stays live for its real purpose.
+   */
+  private isStopped(): boolean {
+    return this.stopped;
+  }
   private readonly callbacks: MicCaptureCallbacks;
   /** Stable identity for register/clear with the mic-level bridge. */
   private readonly levelSource = () => this.readLevel();
@@ -96,7 +107,7 @@ export class MicCapture {
 
     this.audioContext = new AudioContext();
     await this.audioContext.audioWorklet.addModule(pcmProcessorUrl);
-    if (this.stopped) return;
+    if (this.isStopped()) return;
 
     this.sourceNode = this.audioContext.createMediaStreamSource(this.stream);
     this.workletNode = new AudioWorkletNode(this.audioContext, "pcm-processor");
@@ -124,7 +135,7 @@ export class MicCapture {
     this.clearMuteGrace();
     console.warn("[realtime-transcription] mic lost — attempting recovery");
     this.callbacks.onMicLost();
-    for (let attempt = 1; !this.stopped; attempt++) {
+    for (let attempt = 1; !this.isStopped(); attempt++) {
       try {
         await this.reacquire();
         this.recovering = false;
@@ -141,7 +152,7 @@ export class MicCapture {
   /** One attempt to swap a fresh mic stream into the existing audio graph. */
   private async reacquire() {
     const stream = await getMicStream();
-    const track = stream.getAudioTracks()[0];
+    const track = stream.getAudioTracks().at(0);
     if (this.stopped || !this.audioContext || !this.workletNode || !track || track.muted) {
       for (const t of stream.getTracks()) t.stop();
       throw new MicReacquireError(track && track.muted ? "mic still muted" : "capture torn down");
@@ -159,7 +170,7 @@ export class MicCapture {
   }
 
   private watchTrack(stream: MediaStream) {
-    const track = stream.getAudioTracks()[0];
+    const track = stream.getAudioTracks().at(0);
     if (!track) return;
     // No `ended` guard needed for our own stopTracks(): a manual stop()
     // doesn't fire the event — only external (OS-level) causes do.

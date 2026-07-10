@@ -63,7 +63,7 @@ export function startVoxtralConnection(callbacks: ServiceCallbacks): ConnectionH
         callbacks.onDone(text);
       } else if (msg.type === "error") {
         const errMsg = typeof msg.error === "object"
-          ? (msg.error as { message?: string })?.message || JSON.stringify(msg.error)
+          ? (msg.error as { message?: string } | null)?.message || JSON.stringify(msg.error)
           : msg.error || "Transcription error";
         callbacks.onServerError(String(errMsg));
       }

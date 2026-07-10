@@ -135,7 +135,11 @@ export function useRecentFiles(entries: SessionEntry[]): {
     const seen = new Set<string>();
     const out: RecentFile[] = [];
     for (const [i, p] of paths.entries()) {
-      const summary = results[i];
+      // `.at()` (not `results[i]`): `results` can be a stale query.data still
+      // sized for a previous `paths` array (react-query doesn't clear data on
+      // a new query key until the refetch resolves), so this index can
+      // genuinely run past the end of a shorter, stale `results`.
+      const summary = results.at(i);
       if (summary === null || summary === undefined) continue;
       if (seen.has(summary.path)) continue;
       seen.add(summary.path);

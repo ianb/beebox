@@ -133,7 +133,7 @@ export function applyServerMessages(
 export function promoteLastToPending(
   { context }: { context: ChatContext },
 ): Partial<ChatContext> {
-  const last = context.messages[context.messages.length - 1];
+  const last = context.messages.at(-1);
   if (!last || last.type !== "user") return {};
   if (context.pendingMessages.some((p) => p.uuid === last.uuid)) return {};
   const promoted: SessionEntry = { ...last, pending: true };

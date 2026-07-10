@@ -83,11 +83,9 @@ const mediaRecorderActor = fromCallback<
 
   mediaRecorder.start(1000);
 
-  receive((event) => {
-    if (event.type === "STOP") {
-      if (mediaRecorder.state === "recording") {
-        mediaRecorder.stop();
-      }
+  receive(() => {
+    if (mediaRecorder.state === "recording") {
+      mediaRecorder.stop();
     }
   });
 

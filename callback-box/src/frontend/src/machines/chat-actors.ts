@@ -128,32 +128,29 @@ export function handleTurnMessage(
   }
 
   if (msg.type === "assistant") {
-    const content = msg.message?.content;
-    if (content) {
-      for (const block of content) {
-        if (block.type === "text" && block.text) {
-          // Skip text already accumulated via stream_event deltas. `sawTextPartial`
-          // is scoped to the CURRENT block (reset below): the SDK emits one
-          // assistant message per content block, and a streamed block's deltas
-          // always arrive immediately before that block's own assistant frame. So
-          // the latch is true here only when *this* block streamed — an atomic
-          // block (post-tool text/embeds delivered with no deltas) finds it false
-          // and is surfaced. A turn-global latch dropped every atomic block after
-          // the first streamed one (the "only the last block renders" bug).
-          if (state.sawTextPartial) continue;
-          sendBack({ type: "STREAM_TEXT", text: block.text });
-        } else if (block.type === "tool_use") {
-          sendBack({
-            type: "STREAM_TOOL",
-            tool: {
-              type: "tool_use",
-              toolName: block.name,
-              toolId: block.id,
-              input: block.input,
-              inputSummary: block.name ?? "",
-            },
-          });
-        }
+    for (const block of msg.message.content) {
+      if (block.type === "text" && block.text) {
+        // Skip text already accumulated via stream_event deltas. `sawTextPartial`
+        // is scoped to the CURRENT block (reset below): the SDK emits one
+        // assistant message per content block, and a streamed block's deltas
+        // always arrive immediately before that block's own assistant frame. So
+        // the latch is true here only when *this* block streamed — an atomic
+        // block (post-tool text/embeds delivered with no deltas) finds it false
+        // and is surfaced. A turn-global latch dropped every atomic block after
+        // the first streamed one (the "only the last block renders" bug).
+        if (state.sawTextPartial) continue;
+        sendBack({ type: "STREAM_TEXT", text: block.text });
+      } else if (block.type === "tool_use") {
+        sendBack({
+          type: "STREAM_TOOL",
+          tool: {
+            type: "tool_use",
+            toolName: block.name,
+            toolId: block.id,
+            input: block.input,
+            inputSummary: block.name ?? "",
+          },
+        });
       }
     }
     // One block per assistant frame: clear the latch so the next block's deltas
@@ -173,7 +170,7 @@ export function handleTurnMessage(
     if (msg.is_error === true) {
       const detail = typeof msg.result === "string" && msg.result.trim()
         ? msg.result.trim()
-        : `the run reported an error with no detail (subtype: ${msg.subtype ?? "unknown"}). Common causes: the selected model is unavailable, or this session can't be resumed.`;
+        : `the run reported an error with no detail (subtype: ${msg.subtype}). Common causes: the selected model is unavailable, or this session can't be resumed.`;
       terminal({ type: "STREAM_ERROR", error: `Chat turn failed — ${detail}` });
     } else {
       terminal({ type: "STREAM_RESULT" });
