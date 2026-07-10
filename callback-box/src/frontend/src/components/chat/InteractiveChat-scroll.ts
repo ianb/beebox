@@ -58,7 +58,6 @@ function topVisibleChild(scroller: HTMLDivElement | null, content: HTMLDivElemen
   const scTop = scroller.getBoundingClientRect().top;
   for (let i = 0; i < content.children.length; i++) {
     const child = content.children[i];
-    if (!child) break;
     const r = child.getBoundingClientRect();
     if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
   }

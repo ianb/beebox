@@ -110,8 +110,10 @@ export function extractSelection(selection: Selection, container: Element): Extr
   }
   if (nearestHeading !== null) {
     const id = nearestHeading.getAttribute("id");
+    // `Element.textContent` (unlike the wider `Node.textContent`) is never
+    // null per spec — only Document/DocumentType nodes can return null.
     const headingText = nearestHeading.textContent;
-    heading = { text: headingText === null ? "" : headingText.trim(), id: id === null ? "" : id };
+    heading = { text: headingText.trim(), id: id === null ? "" : id };
     const dataLine = nearestHeading.getAttribute("data-line");
     if (dataLine !== null) {
       const parsed = parseInt(dataLine, 10);

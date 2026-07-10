@@ -159,7 +159,10 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
       continue;
     }
     if (entry.type === "assistant") {
-      const last = groups[groups.length - 1];
+      // `.at(-1)`: its return type is honestly `T | undefined` (a plain
+      // index read would type as always-defined without
+      // `noUncheckedIndexedAccess`, which the frontend tsconfig lacks).
+      const last = groups.at(-1);
       if (last && last.type === "assistant") {
         last.entries.push(entry);
         continue;
@@ -183,11 +186,9 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   const match = text.match(/<task-notification>[\S\s]*?<task-id>([^<]*)<\/task-id>[\S\s]*?<status>([^<]*)<\/status>[\S\s]*?<summary>([^<]*)<\/summary>[\S\s]*?<\/task-notification>/);
   if (!match) return null;
   const outputMatch = text.match(/<output-file>([^<]*)<\/output-file>/);
+  // No group in the pattern is optional/alternated, so a successful overall
+  // match guarantees every capture participated (possibly as "").
   const [, taskId, status, summary] = match;
-  invariant(
-    taskId !== undefined && status !== undefined && summary !== undefined,
-    "task-notification regex matched but a required capture group is missing",
-  );
   return {
     taskId,
     status,
@@ -293,7 +294,8 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
       } else if (block.type === "text" && block.text?.trim()) {
         flat.push({ type: "text", text: block.text });
       } else if (block.type === "tool_use") {
-        const last = flat[flat.length - 1];
+        // `.at(-1)`: see the note in `groupMessages` above.
+        const last = flat.at(-1);
         if (last && last.type === "tools") {
           invariant(last.tools, "a 'tools' part must always carry a tools array");
           last.tools.push(block);
