@@ -18,6 +18,15 @@
  *   narrow types, logs loudly, and returns the condition so the caller can
  *   branch and degrade explicitly. Use it only where limping past a broken
  *   invariant is genuinely preferable to crashing.
+ * - `tolerateNever` — the non-throwing exhaustiveness terminator, for a
+ *   switch over a *vendor* union (a third-party type we don't control, that
+ *   can grow a new member out from under us on a dependency bump). Compile
+ *   time it demands the same exhaustive handling as `assertNever`; runtime it
+ *   logs and returns instead of throwing, so a best-effort renderer/walker
+ *   degrades gracefully on drift instead of crashing. Use `assertNever` for
+ *   our own closed unions (a new member is our bug, should fail loudly); use
+ *   `tolerateNever` only where the union is out of our hands and a crash
+ *   would be worse than a degraded result.
  */
 
 /**
@@ -62,6 +71,33 @@ export function invariant(cond: unknown, msg: string): asserts cond {
 export function checkInvariant(cond: unknown, msg: string): boolean {
   if (!cond) console.error(`Invariant violated: ${msg}`);
   return Boolean(cond);
+}
+
+/**
+ * Non-throwing exhaustiveness terminator for a switch/if-chain over a
+ * *vendor* union — one owned by a dependency, not by us, that can grow a new
+ * member when the dependency is upgraded. Compile time it demands the same
+ * exhaustive handling `assertNever` does (a new member fails to compile
+ * until every switch over the union adds a case for it). Runtime it never
+ * throws: it logs via `console.warn` with `context` and the offending value,
+ * then returns, so the caller's `default:` can still degrade gracefully
+ * (e.g. a best-effort renderer emits a fallback instead of crashing).
+ *
+ * Reserve `assertNever` for unions *we* declare — an unhandled member there
+ * is our own bug and should fail loudly. Reach for `tolerateNever` only when
+ * the union is out of our hands (e.g. a parser's node-type union) and a hard
+ * crash on drift would be worse than a degraded result.
+ *
+ *   switch (node.type) {
+ *     case "text": return emitText(node);
+ *     // ...
+ *     default:
+ *       tolerateNever(node.type, "emitNode: unhandled vendor NodeType");
+ *       return emitChildren(node); // graceful fallback
+ *   }
+ */
+export function tolerateNever(x: never, context: string): void {
+  console.warn(`${context}: unhandled union member (degrading gracefully): ${stringify(x)}`);
 }
 
 /** A broken internal invariant — an impossible state was reached. */
