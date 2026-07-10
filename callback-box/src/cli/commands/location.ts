@@ -14,6 +14,7 @@ import { formatLocationLine, locationAge } from "../../core/location-format.js";
 import { loadPlaces } from "../../core/place-cards.js";
 import { matchPlace } from "../../core/geo.js";
 import { markPlace } from "../../core/place-mark.js";
+import { getBoxTime } from "../../lib/time.js";
 
 export const locationCommand = new Command("location")
   .description("Read the boxholder's last-known location (web-shared, on-demand)")
@@ -30,7 +31,7 @@ locationCommand
   .action(async (options: { json?: boolean; box?: string }) => {
     const boxRoot = options.box ?? (await requireBoxRoot());
     const location = await loadLocation(boxRoot);
-    const now = new Date();
+    const now = getBoxTime(boxRoot);
 
     if (!location) {
       console.log(options.json ? JSON.stringify({ status: "unknown" }, null, 2) : "unknown");
@@ -54,7 +55,7 @@ locationCommand
   .option("--box <path>", "Box root path (defaults to current directory)")
   .action(async (cardPath: string, options: { expand?: boolean; box?: string }) => {
     const boxRoot = options.box ?? (await requireBoxRoot());
-    const result = await markPlace({ boxRoot, cardPath, expand: options.expand === true, now: new Date() });
+    const result = await markPlace({ boxRoot, cardPath, expand: options.expand === true, now: getBoxTime(boxRoot) });
     if (!result.ok) {
       console.error(result.error);
       process.exitCode = 1;
