@@ -16,6 +16,7 @@
  */
 
 import { setup, assign, fromPromise } from "xstate";
+import { invariant } from "../lib/invariant";
 import { shouldPrefetchSpeech } from "../lib/audio/context";
 import type { SpeechSegment } from "../lib/audio/speech-parsing";
 import type { getTTSClient, PrefetchHandle } from "../lib/audio/tts-client";
@@ -133,13 +134,16 @@ export const speechPlaybackMachine = setup({
     playing: {
       invoke: {
         src: "playOne",
-        input: ({ context }) => ({
-          // Non-null assertions are safe: we only enter `playing` via PLAY
-          // (populates queue + ttsClient) or a self-transition that
-          // preserves them.
-          item: context.queue[0] as QueueItem,
-          ttsClient: context.ttsClient as TTSClient,
-        }),
+        input: ({ context }) => {
+          // We only enter `playing` via PLAY (populates queue + ttsClient) or a
+          // self-transition that preserves them, so both are always present —
+          // assert the invariant rather than cast past the optional types.
+          const item = context.queue[0];
+          const { ttsClient } = context;
+          invariant(item !== undefined, "speechPlayback entered `playing` with an empty queue");
+          invariant(ttsClient !== null, "speechPlayback entered `playing` without a ttsClient");
+          return { item, ttsClient };
+        },
         onDone: [
           {
             // More segments queued — drop the one we just played and replay
@@ -168,7 +172,7 @@ export const speechPlaybackMachine = setup({
             reenter: true,
             actions: [
               ({ event }) => {
-                console.error("[speech] segment failed, skipping:", (event as { error?: unknown }).error);
+                console.error("[speech] segment failed, skipping:", event.error);
               },
               assign(({ context }) => ({
                 queue: context.queue.slice(1),
@@ -179,7 +183,7 @@ export const speechPlaybackMachine = setup({
             target: "idle",
             actions: [
               ({ event, context }) => {
-                console.error("[speech] segment failed:", (event as { error?: unknown }).error);
+                console.error("[speech] segment failed:", event.error);
                 abortPending(context.queue.slice(1));
               },
               assign({ queue: [], playingMessageId: null }),
