@@ -98,6 +98,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // comment in the script) — a half-converted box is unsafe, not just
   // incomplete.
   { name: "box-packageify", script: "scripts/migrate/box-packageify.ts" },
+  // Question-card lifecycle cleanup for the Track A schema change
+  // (docs/plans/questions-end-to-end.md): strip answered-by, backfill
+  // asked-at from git history, relocate stray question cards into
+  // box/questions/, and fix retired <agent-needs-to-know> directives.
+  { name: "question-lifecycle", script: "scripts/migrate/question-lifecycle-run.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";
