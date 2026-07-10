@@ -30,6 +30,7 @@ const samples = {
   "card-created": { path: "Voice.voice-memo.card", template: "voice-memo", timestamp: TS, audioPath: "attach/a.webm" },
   "command-complete": { command: "wakeup", success: true, timestamp: TS },
   "question-answered": { path: "Q.question.card", answer: "yes", selectedId: "opt-1", timestamp: TS },
+  "question-dismissed": { path: "Q.question.card", timestamp: TS },
   "cards-changed": { source: "telegram" },
   "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Ada" }, timestamp: TS },
   "chat-complete": { sessionId: "s1", timestamp: TS },
@@ -43,12 +44,12 @@ const samples = {
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 13 events, and each parses cleanly against the
+The sample catalog covers all 14 events, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
 Object.keys(samples).length
-=> 13
+=> 14
 
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true

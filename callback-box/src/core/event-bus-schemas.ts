@@ -115,6 +115,11 @@ export const eventSchemas = {
     selectedId: z.unknown().optional(),
     timestamp: z.string(),
   }),
+  /** A question card was dismissed (the boxholder declined to answer it). */
+  "question-dismissed": z.object({
+    path: z.string(),
+    timestamp: z.string(),
+  }),
   /** Cards in the box changed (coarse refresh signal). */
   "cards-changed": z.object({ source: z.string() }),
   /** A user message was sent into a chat session. */

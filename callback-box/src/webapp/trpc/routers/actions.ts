@@ -49,6 +49,33 @@ export const actionsRouter = router({
       return { success: true, message: "Question answered", path: input.questionPath };
     }),
 
+  dismiss: publicProcedure
+    .input(z.object({ questionPath: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const cmdCtx: CommandContext = {
+        boxRoot: ctx.boxRoot,
+        write: () => {},
+        writeLine: () => {},
+      };
+
+      const result = await runCommand({
+        name: "dismiss",
+        args: { question: input.questionPath },
+        ctx: cmdCtx,
+      });
+
+      if (!result.success) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: result.error ?? "Failed to dismiss" });
+      }
+
+      ctx.eventBus.emit("question-dismissed", {
+        path: input.questionPath,
+        timestamp: new Date().toISOString(),
+      });
+
+      return { success: true, message: "Question dismissed", path: input.questionPath };
+    }),
+
   create: publicProcedure
     .input(
       z.object({
