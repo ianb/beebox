@@ -319,7 +319,7 @@ export async function getLog(
     });
 
     return result.all.map((entry) => {
-      const body = entry.body?.trim() || undefined;
+      const body = entry.body.trim() || undefined;
       const trailers = parseTrailers(body);
 
       return {

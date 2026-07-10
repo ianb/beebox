@@ -33,7 +33,7 @@ export class UnknownBoxDirsKeyError extends Error {
  */
 export const BOX_DIRS: BoxDirs = Object.fromEntries(
   BOX_LAYOUT.filter(
-    (entry): entry is BoxDirsEntry => "boxDirsKey" in entry && entry.boxDirsKey !== undefined
+    (entry): entry is BoxDirsEntry => "boxDirsKey" in entry
   ).map((entry) => [entry.boxDirsKey, entry.path])
 ) as BoxDirs;
 
@@ -110,7 +110,7 @@ async function packageRootContentDir(dir: string): Promise<string | null> {
 export async function findBoxRoot(startPath: string): Promise<string | null> {
   let current = path.resolve(startPath);
 
-  while (true) {
+  for (;;) {
     if (await pathExists(path.join(current, BOX_MARKER))) {
       return current;
     }

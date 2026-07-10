@@ -84,28 +84,24 @@ export function execWithTimeout(
     let stderrBuf = "";
     let stdoutBuf = "";
 
-    if (child.stdout) {
-      child.stdout.on("data", (chunk: Buffer) => {
-        stdoutBuf += chunk.toString();
-        if (stdoutBuf.length > MAX_STDOUT * 2) {
-          stdoutBuf = stdoutBuf.slice(-MAX_STDOUT);
-        }
-        if (options.stdio === "inherit") {
-          process.stdout.write(chunk);
-        }
-      });
-    }
-    if (child.stderr) {
-      child.stderr.on("data", (chunk: Buffer) => {
-        stderrBuf += chunk.toString();
-        if (stderrBuf.length > MAX_STDERR * 2) {
-          stderrBuf = stderrBuf.slice(-MAX_STDERR);
-        }
-        if (options.stdio === "inherit") {
-          process.stderr.write(chunk);
-        }
-      });
-    }
+    child.stdout.on("data", (chunk: Buffer) => {
+      stdoutBuf += chunk.toString();
+      if (stdoutBuf.length > MAX_STDOUT * 2) {
+        stdoutBuf = stdoutBuf.slice(-MAX_STDOUT);
+      }
+      if (options.stdio === "inherit") {
+        process.stdout.write(chunk);
+      }
+    });
+    child.stderr.on("data", (chunk: Buffer) => {
+      stderrBuf += chunk.toString();
+      if (stderrBuf.length > MAX_STDERR * 2) {
+        stderrBuf = stderrBuf.slice(-MAX_STDERR);
+      }
+      if (options.stdio === "inherit") {
+        process.stderr.write(chunk);
+      }
+    });
 
     const timer = startAwakeTimeout({
       timeoutMs: options.timeout,

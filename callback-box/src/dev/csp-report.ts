@@ -180,7 +180,7 @@ async function readState(): Promise<RunnerState> {
   try {
     const parsed: unknown = JSON.parse(await fs.readFile(STATE_PATH, "utf-8"));
     if (parsed !== null && typeof parsed === "object") {
-      const o = parsed as Partial<RunnerState>;
+      const o = parsed as { [K in keyof RunnerState]?: RunnerState[K] | null };
       return {
         sources: typeof o.sources === "object" && o.sources !== null ? o.sources : {},
         lastNotifiedHardenReady: o.lastNotifiedHardenReady === true,

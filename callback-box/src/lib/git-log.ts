@@ -168,7 +168,7 @@ export async function getLogPaginated(
     const statMap = await fetchPageStats(git, { count, offset });
 
     return result.all.map((entry) => {
-      const body = entry.body?.trim() || undefined;
+      const body = entry.body.trim() || undefined;
       const trailers = parseTrailersMulti(body);
 
       return {

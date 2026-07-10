@@ -54,7 +54,6 @@ export function createClaudeCliService(): ClaudeCliService {
         env: { ...process.env, BROWSER: "echo" },
       });
 
-      let authUrl: string | null = null;
       let output = "";
 
       const login = { process: child, authUrl: null as string | null };
@@ -62,12 +61,11 @@ export function createClaudeCliService(): ClaudeCliService {
 
       const onData = (data: Buffer): void => {
         output += data.toString();
-        if (authUrl) return;
+        if (login.authUrl) return;
         const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
         if (!urlMatch) return;
         invariant(urlMatch[1] !== undefined, "capture group 1 is non-optional in urlMatch");
-        authUrl = urlMatch[1];
-        login.authUrl = authUrl;
+        login.authUrl = urlMatch[1];
       };
       child.stdout.on("data", onData);
       child.stderr.on("data", onData);
@@ -78,14 +76,14 @@ export function createClaudeCliService(): ClaudeCliService {
 
       // Wait up to 10s for auth URL
       for (let i = 0; i < 20; i++) {
-        if (authUrl) return { authUrl };
+        if (login.authUrl) return { authUrl: login.authUrl };
         await new Promise((r) => setTimeout(r, 500));
       }
 
       child.kill();
       activeLogin = null;
 
-      if (authUrl) return { authUrl };
+      if (login.authUrl) return { authUrl: login.authUrl };
       return { authUrl: null, error: "Failed to get auth URL" };
     },
 

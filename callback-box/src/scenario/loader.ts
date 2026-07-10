@@ -89,14 +89,14 @@ export async function listScenarios(): Promise<string[]> {
 export async function loadScenario(name: string): Promise<ScenarioDefinition> {
   const yamlPath = path.join(getScenarioDir(name), "scenario.yaml");
   const content = await fs.readFile(yamlPath, "utf-8");
-  const parsed = parseYaml(content) as ScenarioDefinition;
+  const parsed = parseYaml(content) as Partial<ScenarioDefinition>;
 
   if (!parsed.name) parsed.name = name;
   if (!parsed.steps || !Array.isArray(parsed.steps)) {
     throw new InvalidScenarioStepsError(name);
   }
 
-  return parsed;
+  return parsed as ScenarioDefinition;
 }
 
 /**
