@@ -1,9 +1,24 @@
 ---
-needs: [decision]
 area: callback-box
+resolution: implemented
 ---
 
 # Switch deploy from rsync to git push
+
+**Closed 2026-07-09** — resolved by a fourth option, "deploy-from-commit"
+(option 3's spirit, enforced by construction): `deploy.sh` now builds the
+requested ref in a persistent detached git worktree (`.deploy-checkout` at the
+main repo root) and rsyncs from there, never from a working tree. Dirty-tree
+deploys are impossible; `deploy.sh --ref <sha>` is a one-command rollback;
+concurrent deploys collapse latest-wins; `deploy-info.json` (already read by
+`/healthz`) is promoted from workaround to the authoritative deploy record.
+Option 1 (bare repo + post-receive) was considered and rejected: it moves the
+build — the most failure-prone step — onto the 4GB prod box that's serving
+live boxes, and its unique payoff (truthful server `git HEAD`) is cosmetic
+once deploy-info is guaranteed correct. Mechanism docs: `deploy/README.md`;
+rollback runbook: `docs/server-operations.md`. A Codex adversarial review
+shaped the hardenings (clean-artifact boundary, checkout ownership
+validation, per-run deploy logs).
 
 `deploy/deploy.sh` rsyncs the local working tree to `/opt/callback/`, excluding `.git`. Side effects:
 

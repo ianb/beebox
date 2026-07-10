@@ -26,8 +26,21 @@ if [ "$BRANCH" = "main" ]; then
     echo "[post-merge] ⚠ NOT deploying — callback-box/deploy/server-ip is missing" >&2
     echo "[post-merge]   (gitignored; lost in a repo move?). Nothing shipped — restore it." >&2
   else
-    echo "[post-merge] Deploying to server (branch: main)..."
-    "$REPO_DIR/callback-box/deploy/deploy.sh" &>"$REPO_DIR/callback-box/deploy/.last-deploy.log" &
+    # Capture the post-merge HEAD and deploy exactly that sha, so a commit landed
+    # while the (backgrounded) deploy runs can't change what ships.
+    SHA=$(git -C "$REPO_DIR" rev-parse HEAD)
+    # Per-run log: a shared .last-deploy.log gets truncated by the next deploy
+    # while the first is still writing (a real observability bug). Write each run
+    # to its own timestamped file and repoint .last-deploy.log at it as a RELATIVE
+    # symlink, so the documented `tail .last-deploy.log` poll keeps working. Prune
+    # to the newest 20 logs.
+    LOG_DIR="$REPO_DIR/callback-box/deploy/.deploy-logs"
+    mkdir -p "$LOG_DIR"
+    LOG_FILE="$LOG_DIR/$(date -u +%Y%m%dT%H%M%SZ)-${SHA:0:8}.log"
+    ln -sfn ".deploy-logs/$(basename "$LOG_FILE")" "$REPO_DIR/callback-box/deploy/.last-deploy.log"
+    ls -1t "$LOG_DIR"/*.log 2>/dev/null | tail -n +21 | while IFS= read -r old; do rm -f "$old"; done
+    echo "[post-merge] Deploying to server (branch: main, ref: ${SHA:0:8})..."
+    "$REPO_DIR/callback-box/deploy/deploy.sh" --ref "$SHA" &>"$LOG_FILE" &
     disown
     echo "[post-merge] Deploy started in background — notifies on failure (log: callback-box/deploy/.last-deploy.log)"
   fi

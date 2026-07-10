@@ -94,12 +94,29 @@ callers. Don't write a fresh `ssh root@... 'command'` line.
 
 ## Prod runs the bundled `dist/cli.mjs`
 
-`cb serve` (spawned by `cb hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.mjs`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle locally and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `cb hub` itself runs from the same bundle.
+`cb serve` (spawned by `cb hub` per box, or run directly) runs the single-file esbuild bundle at `dist/cli.mjs` (built by `scripts/build-cli.mjs`), not tsx on source and not a per-file compiled tree. `deploy/deploy.sh` builds the bundle in its local build checkout (a detached git worktree at the deployed ref — see `deploy/README.md`) and rsyncs it — `bin/cb` sees the bundle is newer than every backend `.ts` (the deploy builds it last) and runs it directly; tsx is only the fallback if a build fails. `deploy/deploy.sh` also rsyncs the `.ts` sources, but they're not what the server executes. `cb hub` itself runs from the same bundle.
 
 Consequences:
 
 - The bundle lives at `dist/` — one level below the package root, **not** `dist/webapp/`. So `import.meta.dirname` inside the running code is `/opt/callback/callback-box/dist`. Resolve package-relative asset paths (frontend dist, templates, tsconfig) via `src/lib/package-root.ts` `PACKAGE_ROOT` (walks up to the `callback-box` package.json — correct under both the bundle and tsx), never a hardcoded `import.meta.dirname + "../.."` that assumes a 2-level layout. A `../..` path that worked under tsx silently overshoots under the bundle — this is what made the frontend serve its "not built yet" fallback for every box (fixed 2026-06-20).
 - If a behavior seems not to have deployed, the source rsync isn't enough — confirm `dist/cli.mjs` rebuilt (its mtime should be newer than the sources). A stale bundle keeps serving old code even with fresh `.ts` on disk.
+
+## Rolling back a bad deploy
+
+Any commit in history redeploys with one command from a local checkout:
+
+```bash
+./deploy/deploy.sh --ref <old-sha>
+```
+
+This runs the FULL pipeline (build from that commit in the deploy build
+checkout, frozen install, restart, healthcheck), so a rollback is exactly as
+safe as a deploy. Pick the target from `deploy-history.json` on the server
+(`/opt/callback/callback-box/deploy-history.json` — newest first; entries
+carry `requestedRef`, so previous rollbacks are recognizable). Rolling forward
+again is the same command with the newer sha. Note a rollback across a
+`pnpm-lock.yaml`/`patches/` change triggers a clean reinstall in the build
+checkout, so it takes a few minutes instead of seconds.
 
 ## Claude Code credentials
 
