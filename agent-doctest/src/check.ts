@@ -109,6 +109,7 @@ function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions;
   if (result.pass) return result.extractions;
 
   const err = new CheckError(result.message, { diff: result.diff, found: result.actual, wanted: result.expected });
+  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- @types/node declares captureStackTrace as always present, but it's a non-spec V8 extension genuinely absent on other engines
   if (Error.captureStackTrace) {
     Error.captureStackTrace(err, opts.caller);
   }

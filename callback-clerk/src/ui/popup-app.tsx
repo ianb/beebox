@@ -53,7 +53,7 @@ export function PopupApp() {
   return (
     <div className="w-80 p-4">
       <h1 className="mb-3 text-lg font-semibold">Callback Clerk</h1>
-      {showOffer && detected !== null ? (
+      {showOffer ? (
         <EnableOffer box={detected} onEnable={handleEnable} />
       ) : null}
       {config.boxes.length > 0 ? (
