@@ -120,9 +120,12 @@ Design decisions settled with the boxholder (2026-07-10):
   renders as a textarea), dashboard `AttentionCards.tsx` (links to the raw
   card view), notification sweep `src/core/question-alert.ts:50-91` (latch
   file `.callback-box/notified-questions.json`; single question deep-links to
-  `/<box>/browse/<path>` — a page with **no answer form**, since the
-  `question` file type registers only an icon,
-  `src/frontend/src/file-types/builtins.tsx:30`). All reworked in Tracks C/D.
+  `/<box>/browse/<path>` — a page with **no answer form**: the `question`
+  file type registers only an icon
+  (`src/frontend/src/file-types/builtins.tsx:30`), so the card falls
+  through to the generic frontmatter renderer
+  (`src/frontend/src/renderers/markdown-card.tsx`), which has no
+  `QuestionForm`). All reworked in Tracks C/D.
 - **Notification plumbing** — `notifyBoxholder`
   (`src/core/notify-boxholder.ts:67`) fans out to web-push +
   Telegram-message output cards; `checkPendingQuestionsAndNotify` runs from
@@ -137,9 +140,11 @@ Design decisions settled with the boxholder (2026-07-10):
   `answered-by` to your agent name so the answer routes back to you"* —
   **nothing reads `answered-by` anywhere in the codebase**; the field and the
   promise are removed.
-- **Locks/commits** — `withCardLock` (`src/lib/card-lock.ts`),
-  `stageAndCommitPaths` (`src/lib/git.ts`). Reused; Track B moves the job
-  write inside the existing lock + commit.
+- **Locks/commits** — `withCardLock` (`src/lib/card-lock.ts`, in-process
+  only per its module comment), `file-lock.ts` (the cross-process
+  primitive), `stageAndCommitPaths` (`src/lib/git.ts`, no rollback on
+  failure). Reused; Track B composes them into a guarded cross-process
+  transition with commit-failure rollback.
 - **Dead/duplicated code touched** — raw-Fastify `POST /api/actions/answer`
   (`src/webapp/routes/actions.ts:57-114`) duplicates the tRPC procedure
   (`src/webapp/trpc/routers/actions.ts:10-50`) the frontend actually uses;
@@ -210,8 +215,14 @@ expired-at: …                          # set by the aging sweep
 
 - `learning.sink` reuses the retro sink vocabulary
   (`src/core/retro/observations.ts:19`) minus `question`. No `claude-md`
-  sink: the briefing already compiles into the box CLAUDE.md
-  (`src/core/docs-gen/claude-md.ts:20`), so briefing *is* the CLAUDE.md path.
+  sink: the briefing compiles into the box CLAUDE.md
+  (`src/core/docs-gen/claude-md.ts:20`), so briefing *is* the CLAUDE.md
+  path — **with one constraint** (codex finding): `compileBriefings` only
+  compiles the *root* briefing; directory briefings are an explicit TODO
+  (`src/core/docs-gen/compile.ts:74-101`). A `learning.ref` targeting a
+  directory briefing would record a belief no agent's context ever sees.
+  For sink `briefing`, `ref` must be the root briefing (schema instructions
+  say so; the follow-up job instructions repeat it).
 - `answered-by` removed from schema, templates, and instructions.
 - Zod `superRefine`: `input.type === "select"` requires `options` with ≥ 2
   entries (illegal state made unrepresentable — principle 1/3). `confirm`
@@ -232,8 +243,11 @@ expired-at: …                          # set by the aging sweep
 **Migration.** Removing `answered-by` and requiring select-options are shape
 changes on cards existing boxes hold (cb-migration territory). Migration
 script: strip `answered-by:` from existing question cards; backfill
-`asked-at:` for pending questions from the card's git add date; verify no
-existing select question violates the options refinement. Run per
+`asked-at:` for pending questions from the card's git add date; relocate
+stray question cards (scan-import's attach-scope questions — Track E) into
+`box/questions/`; verify no existing select question violates the options
+refinement (the one-option select fixture in
+`test/schemas/schemas.doctest.md:156` gets updated alongside). Run per
 `docs/migrations.md` on test1 + prod boxes. The two live test1 retro
 questions also get their directives fixed: they instruct edits to the
 briefing's `<agent-needs-to-know>` element, a tag retired by the Markdoc
@@ -260,13 +274,23 @@ zero test references; (5) the raw route duplicates the tRPC procedure.
 
 **Direction.**
 
-- **Atomicity**: build the follow-up job content *inside* the `withCardLock`
-  span and commit question + job in one `stageAndCommitPaths` call (one
-  commit, message `Answer question: <name>`, trailer `Answered-Via`). The
-  job file is new and uniquely named, so including it under the question's
-  card lock adds no contention. A pre-commit failure leaves the question
-  pending and the answer retryable (principle 4: no silent loss; no
-  reconciliation sweep needed because the window no longer exists).
+- **Atomicity — a guarded transition, not just one commit** (revised per
+  codex review 2026-07-10): `withCardLock` is in-process only
+  (`src/lib/card-lock.ts:4`), and CLI answer, web answer, `cb finalize`,
+  and the scheduler are different processes — so every status transition
+  (answer, dismiss, expire) wraps its read-modify-write in the
+  cross-process lock (`src/lib/file-lock.ts`, per CLAUDE.md's lock policy)
+  in addition to `withCardLock` for in-process callers, and re-checks
+  `status` after acquiring it. Inside the lock: write the answered card AND
+  the follow-up job file, commit both in one `stageAndCommitPaths` call
+  (message `Answer question: <name>`, trailer `Answered-Via`); **on commit
+  failure, roll back** — restore the original card content and delete the
+  job file before returning the error — because the filesystem write is not
+  atomic with the commit, and without rollback a failed commit leaves an
+  `answered` card on disk that rejects retries (principle 4: no silent
+  loss). Job filenames gain the question slug plus a short random suffix —
+  the current second-resolution name (`answer.ts:205-209`) collides when
+  two questions are answered in the same second.
 - **Confirm**: `resolveAnswer` accepts `selectedId: "yes" | "no"` for
   confirm questions directly (the new UI's path), with optional `answer`
   text carried as a note into `answer.text`; typed free-text still
@@ -279,7 +303,10 @@ zero test references; (5) the raw route duplicates the tRPC procedure.
 - **Hygiene**: `getBoxTimeISO` for the job timestamp; `via` validated by a
   Zod enum in `AnswerArgsSchema`; delete the raw-Fastify answer route
   (`src/webapp/routes/actions.ts:57-114`) and move its doctest coverage to
-  the tRPC procedure; collapse the frontend to the tRPC-derived `CardInfo`.
+  the tRPC procedure; collapse the frontend to the tRPC-derived `CardInfo`;
+  fix the stale comment at `answer.ts:174-177` claiming `selectedId` is
+  "the web UI's normal path" (the form has sent the label as `answer` since
+  `4c7f3b9a`).
 - **Follow-up instructions** (`question-followup-job.ts:23-45`) rewritten to
   a two-product contract: (1) execute `directive:` with the answer; (2) if
   `learning:` is present, record the confirmed belief in the declared sink
@@ -347,9 +374,15 @@ forever"*).
 
 - A sweep alongside `checkPendingQuestionsAndNotify`, driven from the same
   `cb finalize` call site (`finalize.ts:32`) — it already runs every wakeup,
-  which is the right cadence (nothing here needs minute precision).
-  Per-question state extends the existing latch file
-  (`.callback-box/notified-questions.json`) with `firstSeenAt`/`nudgedAt`.
+  which is the right cadence (nothing here needs minute precision). **Age is
+  computed from the card's durable `asked-at`, never from latch state**
+  (revised per codex review): a lost or corrupt local JSON file must not
+  reset a question's age or block its expiry. The latch file's only job is
+  deduplicating notifications (`notifiedAt`/`nudgedAt`). The expiry half of
+  the sweep also runs when no notification channel is configured — today's
+  `checkPendingQuestionsAndNotify` exits early on empty `notifyChannels`
+  (`question-alert.ts:54`); only nudge *delivery* is channel-gated, never
+  the lifecycle transition.
 - **Nudge at 7 days pending** (default): one re-notification through
   `notifyBoxholder`, marked as a reminder, latched so it fires once.
 - **Expire at 30 days pending** (default): set `status: expired` +
@@ -398,9 +431,21 @@ no decision rule, no dedup discipline, and a false promise about
   guess (e.g. *"items like <summary> belong in <category>"*) — so answering
   a triage question durably teaches triage, not just placement of one item.
   The directive keeps the placement instruction (the two-product contract).
+- **All question cards live in `box/questions/`.** Scan-import currently
+  writes its questions inside the capture session's `.attach/` scope
+  (`scan-import-cards.ts:108,146,172`), where `getSystemState` never finds
+  them (`state.ts:128` scans only `box/questions`) — so they appear on no
+  page, no header count, no notification, no aging sweep (codex finding;
+  hierarchy is a discoverability contract, principle 7). Scan-import moves
+  its question creation to `box/questions/` with `context:` refs back into
+  the attach scope; the Track A migration relocates existing strays.
 - Scan-import questions get `learning:` only where a durable rule is
   plausible; its unsure-page questions are usually pure decision authority —
   the follow-up job's "does this generalize?" step covers the exception.
+- The producer cleanup covers procedure templates too:
+  `templates/procedures/process-pages.procedure.card:149-162` still
+  instructs agents to author question cards in the retired XML card format,
+  with `answered-by` — both stale (codex finding).
 - The retro integrate prompt
   (`process-retrospective.procedure.card:165-191`) updated: its question
   cards declare `learning: {sink: briefing, proposal: …}` and stop
@@ -436,13 +481,13 @@ it now; the iOS app's push story will re-open surfacing as its own plan.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| Job write/commit fails mid-answer | Track B doctest (single-commit assertion) | Track B: both files in one commit inside the lock; failure leaves question pending, retryable | Clear (command returns the error; nothing partial committed) |
-| Two concurrent answers (web + CLI) | Track B doctest | `withCardLock` serializes; second sees `answered` and is rejected | Clear ("Question is not pending") |
+| Commit fails after the card/job writes | Track B doctest (rollback assertion) | Track B: rollback inside the lock — restore original card, delete job file, return the error; question stays pending and retryable | Clear (command returns the error; disk matches git) |
+| Two concurrent answers (web + CLI — different processes) | Track B doctest | Cross-process `file-lock` + status re-check after acquire (`withCardLock` alone is in-process only); loser sees `answered` and is rejected | Clear ("Question is not pending") |
 | Confirm submitted with unknown `selectedId` | Track B doctest | Zod/`resolveAnswer` reject with typed error | Clear |
 | Select question authored without options | Track A schema doctest | `superRefine` rejects at validation (creation + `cb validate` + load) | Clear, at the boundary |
 | Follow-up agent's sink target (`learning.ref`) missing/moved | No (agent-mediated) | Instructions: resolve by sink type; create the guide entry/card if absent; note the substitution in the job commit | Clear (visible in commit/report) |
-| Aging sweep latch file corrupt/missing | Track D doctest (missing-file case) | Same behavior as today's notify latch: rebuilt from scratch; worst case one duplicate nudge and `firstSeenAt` resets | Visible (a duplicate notification), not harmful |
-| Expiry commit races a simultaneous answer | Track D doctest | Expiry runs under `withCardLock` per card; loser sees non-pending status and skips | Clear |
+| Aging sweep latch file corrupt/missing | Track D doctest (missing-file case) | Age derives from the card's `asked-at`, never the latch; latch loss can only cause one duplicate nudge — never a reset age or a missed expiry | Visible (a duplicate notification), not harmful |
+| Expiry commit races a simultaneous answer (different processes) | Track D doctest | Expiry uses the same cross-process guarded transition; loser re-reads a non-pending status and skips | Clear |
 | Deep link opened after question was answered | Manual + renderer doctest via `cb render` | Track C renderer shows the answered state instead of a form | Clear |
 | Notification channels absent (no push subs, no Telegram) | Existing (`question-alert.doctest.md`) | `notifyChannels` guard (`notify-boxholder.ts:36-41`); header badge still shows | Clear — web surface is primary |
 | Migration meets a hand-edited card that fails schema | Migration dry-run step | `cb validate` pass in the runbook before/after; script reports per-card | Clear |
