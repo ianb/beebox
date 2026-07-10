@@ -11,6 +11,7 @@
 import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { isRecord } from "../../lib/is-record.js";
 import { type ChatMessage, type ChatSession } from "../../core/chat/session/index.js";
 import { getMostActive } from "../../core/chat/session/history.js";
 import { readLandmarkFeaturesForDir } from "../../core/landmark/features.js";
@@ -160,10 +161,12 @@ function dedupStatePath(boxRoot: string): string {
 export function loadProcessedMessageIds(boxRoot: string): Map<string, number> {
   const map = new Map<string, number>();
   try {
-    const obj = JSON.parse(fs.readFileSync(dedupStatePath(boxRoot), "utf-8")) as Record<string, number>;
+    const obj: unknown = JSON.parse(fs.readFileSync(dedupStatePath(boxRoot), "utf-8"));
     const cutoff = Date.now() - MESSAGE_ID_TTL_MS;
-    for (const [id, ts] of Object.entries(obj)) {
-      if (typeof ts === "number" && ts >= cutoff) map.set(id, ts);
+    if (isRecord(obj)) {
+      for (const [id, ts] of Object.entries(obj)) {
+        if (typeof ts === "number" && ts >= cutoff) map.set(id, ts);
+      }
     }
   } catch (_e) {
     // No prior dedup file (fresh box / first run) — start empty.

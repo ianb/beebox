@@ -33,8 +33,7 @@ export async function registerHistoryRoutes(
 
     try {
       const git = simpleGit(boxRoot);
-      // binaryCatFile returns a Buffer
-      let buffer = await git.binaryCatFile(["blob", `${hash}:${filePath}`]) as Buffer;
+      let buffer: Buffer = await git.binaryCatFile(["blob", `${hash}:${filePath}`]);
 
       // If this is a Git LFS pointer, resolve through smudge filter
       const LFS_PREFIX = "version https://git-lfs.github.com/spec/v1\n";

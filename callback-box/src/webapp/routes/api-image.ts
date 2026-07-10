@@ -17,6 +17,7 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isRecord } from "../../lib/is-record.js";
 import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
@@ -48,14 +49,8 @@ async function resolveImageCard(cardAbs: string): Promise<string | null> {
       } catch (_e) {
         fields = null;
       }
-      if (
-        typeof fields === "object" &&
-        fields !== null &&
-        "filename" in fields &&
-        typeof (fields as Record<string, unknown>)["filename"] === "object"
-      ) {
-        const filename = (fields as Record<string, unknown>)["filename"] as Record<string, unknown>;
-        const r = filename["ref"];
+      if (isRecord(fields) && isRecord(fields["filename"])) {
+        const r = fields["filename"]["ref"];
         if (typeof r === "string" && r.startsWith("attach/")) ref = r;
       }
     }

@@ -15,7 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
-import type { ViewMode } from "../../core/views/types.js";
+import { z } from "zod";
 import { writeNodeViewModule } from "./node-view-runtime.js";
 import type { BoxShape } from "../../lib/box-shape.js";
 
@@ -39,13 +39,15 @@ try {
 }
 `;
 
-export interface ImportedViewMeta {
-  name?: string;
-  description?: string;
-  dependencies?: string[];
-  modes?: ViewMode[];
-  rendersCardTypes?: string[];
-}
+/** Metadata a view module may export, validated at the subprocess boundary. */
+const importedViewMetaSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  dependencies: z.array(z.string()).optional(),
+  modes: z.array(z.enum(["page", "chat"])).optional(),
+  rendersCardTypes: z.array(z.string()).optional(),
+});
+export type ImportedViewMeta = z.infer<typeof importedViewMetaSchema>;
 
 /** Run the runner script against `moduleUrl` in a killable child with a timeout. Never rejects. */
 function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMeta | null> {
@@ -66,7 +68,8 @@ function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMe
         return;
       }
       try {
-        resolve(JSON.parse(stdout) as ImportedViewMeta);
+        const parsed = importedViewMetaSchema.safeParse(JSON.parse(stdout));
+        resolve(parsed.success ? parsed.data : null);
       } catch (_e) {
         resolve(null);
       }

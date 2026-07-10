@@ -190,7 +190,7 @@ export function verifySession(cookie: string): SessionUser | null {
  * Extract the authenticated user from a request's session cookie.
  */
 export function getSessionUser(request: FastifyRequest): SessionUser | null {
-  const cookie = (request.cookies as Record<string, string | undefined>)[COOKIE_NAME];
+  const cookie = request.cookies[COOKIE_NAME];
   if (!cookie) return null;
   return verifySession(cookie);
 }

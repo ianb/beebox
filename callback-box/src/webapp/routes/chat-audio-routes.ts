@@ -32,6 +32,9 @@ import { serveMockTts } from "../tts-mock.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { readSessionLogTail } from "./chat-helpers.js";
 
+/** Voice model names as a string set, for validating an untrusted `voice` param. */
+const VOICE_MODEL_SET = new Set<string>(VOICE_MODELS);
+
 interface TtsBody {
   text: string;
   instructions?: string;
@@ -117,7 +120,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize });
     }
 
-    const resolvedVoice = voice && (VOICE_MODELS as readonly string[]).includes(voice) ? voice : "marin";
+    const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : "marin";
 
     if (openaiAudio) {
       const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };
