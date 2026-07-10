@@ -107,8 +107,8 @@ export function renderActivityChildren(
     if (kind === "scrolled" && !hasDetail) continue;
     if (kind === "navigated" && (!hasDetail || detail === openCard)) continue;
     lines.push(
-      hasDetail
-        ? `<card-activity kind="${kind}">${escapeXmlText(detail!)}</card-activity>`
+      hasDetail && typeof detail === "string"
+        ? `<card-activity kind="${kind}">${escapeXmlText(detail)}</card-activity>`
         : `<card-activity kind="${kind}"/>`,
     );
   }

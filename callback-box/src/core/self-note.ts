@@ -11,6 +11,7 @@
  */
 
 import { stripChatAppTags } from "./chat/features.js";
+import { invariant } from "../lib/invariant.js";
 
 /** Parsed self-note metadata. */
 export interface SelfNoteInfo {
@@ -57,11 +58,17 @@ export function parseSelfNotes(rawText: string): SelfNoteInfo[] | null {
     const body = (m[2] || "").trim();
     const refMatch = attrs.match(/\bref="([^"]*)"/);
     const commitMatch = attrs.match(/\bcommit="([^"]*)"/);
-    notes.push({
-      ref: refMatch ? decodeXmlAttr(refMatch[1]!) : null,
-      commit: commitMatch ? decodeXmlAttr(commitMatch[1]!) : null,
-      body,
-    });
+    let ref: string | null = null;
+    if (refMatch) {
+      invariant(refMatch[1] !== undefined, "the regex's sole capture group always participates in a match");
+      ref = decodeXmlAttr(refMatch[1]);
+    }
+    let commit: string | null = null;
+    if (commitMatch) {
+      invariant(commitMatch[1] !== undefined, "the regex's sole capture group always participates in a match");
+      commit = decodeXmlAttr(commitMatch[1]);
+    }
+    notes.push({ ref, commit, body });
     lastEnd = m.index + m[0].length;
   }
   if (notes.length === 0) return null;
@@ -76,7 +83,10 @@ export function parseSelfNotes(rawText: string): SelfNoteInfo[] | null {
  */
 export function parseSelfNote(text: string): SelfNoteInfo | null {
   const notes = parseSelfNotes(text);
-  return notes && notes.length > 0 ? notes[0]! : null;
+  if (!notes || notes.length === 0) return null;
+  const [first] = notes;
+  invariant(first !== undefined, "notes has at least one element (checked above)");
+  return first;
 }
 
 /**

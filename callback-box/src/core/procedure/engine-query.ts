@@ -8,6 +8,7 @@ import * as path from "node:path";
 import { parseProcedureRun } from "../../schemas/procedure-run.js";
 import { fmt } from "../../lib/format.js";
 import { ok, okVoid, err, type Result } from "../../lib/result.js";
+import { invariant } from "../../lib/invariant.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
 
@@ -27,7 +28,10 @@ export async function resolveRunDir(
   try {
     const dirs = await fs.readdir(runsDir);
     const sorted = dirs.toSorted().toReversed();
-    return sorted.length === 0 ? null : path.join(runsDir, sorted[0]!);
+    if (sorted.length === 0) return null;
+    const [latest] = sorted;
+    invariant(latest !== undefined, "sorted has at least one element (checked above)");
+    return path.join(runsDir, latest);
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Could not read runs directory ${runsDir}:`, e);

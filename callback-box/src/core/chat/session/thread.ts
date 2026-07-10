@@ -9,7 +9,7 @@
 
 import { EventEmitter } from "node:events";
 import { adaptSdkMessage, type ChatMessage } from "./messages.js";
-import { assertNever } from "../../../lib/invariant.js";
+import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import { buildScriptEnv } from "../../script-env.js";
 import {
@@ -278,7 +278,8 @@ export class ChatThreadSession extends EventEmitter {
     let lastIndex = 0;
 
     while ((match = regex.exec(this.turnText)) !== null) {
-      const text = match[1]!.trim();
+      invariant(match[1] !== undefined, "regex's sole capture group always participates in a match");
+      const text = match[1].trim();
       if (text) {
         this.emit("chat-response", text);
       }

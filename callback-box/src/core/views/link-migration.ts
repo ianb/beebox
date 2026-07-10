@@ -47,11 +47,14 @@ export function rewriteViewTarget(urlAfterScheme: string): string {
 /** Rewrite every `view:` link/image target in a document. */
 export function rewriteViewLinksInText(text: string): { text: string; count: number } {
   let count = 0;
-  const out = text.replace(VIEW_TARGET_RE, (_match, ...groups: string[]) => {
-    count++;
-    const [prefix, url, close] = groups;
-    return `${prefix}${rewriteViewTarget(url!)}${close}`;
-  });
+  const out = text.replace(
+    VIEW_TARGET_RE,
+    (_match: string, ...groups: [prefix: string, url: string, close: string, ...rest: unknown[]]) => {
+      count++;
+      const [prefix, url, close] = groups;
+      return `${prefix}${rewriteViewTarget(url)}${close}`;
+    }
+  );
   return { text: out, count };
 }
 

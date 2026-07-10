@@ -69,12 +69,17 @@ type RunPhaseParams = ExecuteStepParams & {
 async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string | undefined }> {
   const { ctx, boxRoot, step, procedure, procedureCardPath, runCardPath, relProcedurePath } =
     params;
-  const run = step.run!;
+  invariant(step.run, "runRunAgents requires a run phase (checked by executeStep before invoking)");
+  const { run } = step;
   const agentFactory = params.createAgent ?? realCreateAgent;
   const agentName = `procedure-${procedure.name}-${step.id}`;
 
   if (params.retry) {
-    const agentDef = run.agents[0]!;
+    const [agentDef] = run.agents;
+    invariant(
+      agentDef !== undefined,
+      "retry path only reached when run.agents.length === 1 (checked in runAndValidate)"
+    );
     ctx.writeLine(fmt.dim("  Re-running agent with validation feedback..."));
     const agent = agentFactory({
       name: agentName,
@@ -149,7 +154,8 @@ async function runRunShells(
   params: ExecuteStepParams
 ): Promise<{ runStdout: string | undefined; runFailure: RunShellFailure | undefined }> {
   const { ctx, boxRoot, step } = params;
-  const run = step.run!;
+  invariant(step.run, "runRunShells requires a run phase (checked by executeStep before invoking)");
+  const { run } = step;
   if (run.shells.length === 0) {
     return { runStdout: undefined, runFailure: undefined };
   }
