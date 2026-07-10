@@ -15,7 +15,18 @@
 
 import * as fs from "node:fs";
 import * as readline from "node:readline";
+import { z } from "zod";
 import { invariant } from "../../lib/invariant.js";
+import { isRecord } from "../../core/card-io.js";
+
+/** One assistant line of a Claude Code session JSONL (fields we read). */
+const contextUsageLineSchema = z.object({
+  type: z.string().optional(),
+  isMeta: z.boolean().optional(),
+  message: z
+    .object({ model: z.string().optional(), usage: z.unknown().optional() })
+    .optional(),
+});
 
 /** The three input components of one assistant turn's loaded context. */
 export interface TurnUsage {
@@ -60,13 +71,12 @@ export function summarizeContextUsage(turns: TurnUsage[]): ContextStats | null {
 
 /** Pull a TurnUsage from a raw `message.usage` record, or null if absent. */
 function parseUsage(usage: unknown): TurnUsage | null {
-  if (!usage || typeof usage !== "object") return null;
-  const u = usage as Record<string, unknown>;
+  if (!isRecord(usage)) return null;
   const num = (v: unknown): number => (typeof v === "number" ? v : 0);
   return {
-    inputTokens: num(u["input_tokens"]),
-    cacheCreationInputTokens: num(u["cache_creation_input_tokens"]),
-    cacheReadInputTokens: num(u["cache_read_input_tokens"]),
+    inputTokens: num(usage["input_tokens"]),
+    cacheCreationInputTokens: num(usage["cache_creation_input_tokens"]),
+    cacheReadInputTokens: num(usage["cache_read_input_tokens"]),
   };
 }
 
@@ -83,17 +93,20 @@ export async function readTurnUsage(logPath: string): Promise<TurnUsage[]> {
   const turns: TurnUsage[] = [];
   for await (const line of rl) {
     if (!line.trim()) continue;
-    let raw: Record<string, unknown>;
+    let parsedLine: unknown;
     try {
-      raw = JSON.parse(line) as Record<string, unknown>;
+      parsedLine = JSON.parse(line);
     } catch (_e) {
       // Partial/concurrent write — skip the line, not the whole scan.
       continue;
     }
-    if (raw["type"] !== "assistant" || raw["isMeta"] === true) continue;
-    const message = raw["message"] as Record<string, unknown> | undefined;
-    if (!message || message["model"] === "<synthetic>") continue;
-    const usage = parseUsage(message["usage"]);
+    const parsed = contextUsageLineSchema.safeParse(parsedLine);
+    if (!parsed.success) continue;
+    const raw = parsed.data;
+    if (raw.type !== "assistant" || raw.isMeta === true) continue;
+    const message = raw.message;
+    if (!message || message.model === "<synthetic>") continue;
+    const usage = parseUsage(message.usage);
     if (usage) turns.push(usage);
   }
   return turns;
