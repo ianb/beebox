@@ -15,6 +15,7 @@ import { parse as parseYaml } from "yaml";
 import { resolveExternalRef, buildExternalStamp, ExternalRefError } from "./external/ref.js";
 import { rootsForBox } from "./external/roots.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "./card-io.js";
 
 export type ExtfileSyncStatus = "stamped" | "unchanged" | "unresolved";
 
@@ -43,7 +44,8 @@ async function syncOne(input: { path: string; roots: string[] }): Promise<Extfil
     return { path, status: "unresolved", detail: `cannot read card: ${errorMessage(e)}` };
   }
   const split = splitCardContent(content);
-  const fm = (parseYaml(split.frontmatterText) ?? {}) as Record<string, unknown>;
+  const parsed: unknown = parseYaml(split.frontmatterText);
+  const fm = isRecord(parsed) ? parsed : {};
   const href = fm["href"];
   if (typeof href !== "string" || href === "") {
     return { path, status: "unresolved", detail: "card has no href" };

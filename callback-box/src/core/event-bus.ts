@@ -39,7 +39,7 @@
 import Database from "better-sqlite3";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import { eventSchemas, type BusEventName, type EventMap } from "./event-bus-schemas.js";
+import { eventSchemas, isBusEventName, type BusEventName, type EventMap } from "./event-bus-schemas.js";
 
 export type { BusEventName, EventMap } from "./event-bus-schemas.js";
 
@@ -86,8 +86,8 @@ interface EventRow {
 function reconcileSchemaGeneration(db: Database.Database): void {
   const reconcile = db.transaction(() => {
     const meta = db
-      .prepare("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
-      .get() as { gen: number } | undefined;
+      .prepare<[], { gen: number }>("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
+      .get();
     if (meta === undefined) {
       // No meta row: either a fresh DB (0 events — the DELETE is a harmless
       // no-op) or a legacy DB written before generation stamping existed. A
@@ -153,12 +153,10 @@ function validateRow(row: EventRow): BusEvent {
   } catch (e) {
     return unknownEventRow(row, { reason: `JSON parse failed: ${String(e)}` });
   }
-  const schema = eventSchemas[row.event as BusEventName] as
-    | (typeof eventSchemas)[BusEventName]
-    | undefined;
-  if (schema === undefined) {
+  if (!isBusEventName(row.event)) {
     return unknownEventRow(row, { reason: `unknown event name "${row.event}"`, raw: parsed });
   }
+  const schema = eventSchemas[row.event];
   const result = schema.safeParse(parsed);
   if (!result.success) {
     return unknownEventRow(row, { reason: result.error.message, raw: parsed });
@@ -234,13 +232,13 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   const insertStmt = db.prepare(
     "INSERT INTO events (event, data) VALUES (?, ?)"
   );
-  const readSinceStmt = db.prepare(
+  const readSinceStmt = db.prepare<[number], EventRow>(
     "SELECT id, event, data, created_at as createdAt FROM events WHERE id > ? ORDER BY id"
   );
   const pruneStmt = db.prepare(
     "DELETE FROM events WHERE created_at < ?"
   );
-  const maxIdStmt = db.prepare(
+  const maxIdStmt = db.prepare<[], { maxId: number | null }>(
     "SELECT MAX(id) as maxId FROM events"
   );
 
@@ -250,8 +248,8 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
 
   // High-water mark: the highest event ID we've dispatched locally.
   // Used by the poll loop to detect events inserted by other processes.
-  const initialRow = maxIdStmt.get() as { maxId: number | null };
-  let highWaterMark = initialRow.maxId ?? 0;
+  const initialRow = maxIdStmt.get();
+  let highWaterMark = initialRow?.maxId ?? 0;
 
   function notifyListeners(busEvent: BusEvent): void {
     for (const fn of listeners) {
@@ -297,7 +295,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   }
 
   function readSince(afterId: number): BusEvent[] {
-    const rows = readSinceStmt.all(afterId) as EventRow[];
+    const rows = readSinceStmt.all(afterId);
     return parseRows(rows);
   }
 
@@ -340,7 +338,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     pollTimer = setInterval(() => {
       if (listeners.size === 0) return; // no one listening, skip
 
-      const rows = readSinceStmt.all(highWaterMark) as EventRow[];
+      const rows = readSinceStmt.all(highWaterMark);
 
       if (rows.length === 0) return;
 

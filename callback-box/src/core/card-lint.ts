@@ -30,7 +30,7 @@ import {
   type LintIssue,
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
-import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
+import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
@@ -207,11 +207,11 @@ function unknownKeyWarnings(input: { content: string; schema: CardSchema }): Lin
     // parseCardText (which threw → errorResult); nothing to add here.
     return [];
   }
-  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return [];
+  if (!isRecord(fm)) return [];
   const allowed = new Set<string>(["type", ...schema.globalFieldNames, ...Object.keys(schema.fields)]);
   if (schema.bodyFieldName !== null) allowed.delete(schema.bodyFieldName);
   const warnings: LintIssue[] = [];
-  for (const key of Object.keys(fm as Record<string, unknown>)) {
+  for (const key of Object.keys(fm)) {
     if (allowed.has(key)) continue;
     warnings.push({
       type: "schema",

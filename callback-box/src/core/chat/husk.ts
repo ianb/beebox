@@ -16,6 +16,7 @@ import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
 import { getSessionMetadata } from "../../cli/lib/session.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 export const CHAT_HUSK_DIR = "store/chat/web";
 const BACKFILL_MARKER = ".callback-box/chat-husks-backfilled";
@@ -106,8 +107,7 @@ function parseHuskFrontmatter(content: string): Record<string, unknown> | null {
     // Malformed YAML — reported by the caller as a skipped husk.
     return null;
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  return parsed as Record<string, unknown>;
+  return isRecord(parsed) ? parsed : null;
 }
 
 export interface ChatHuskEntry {

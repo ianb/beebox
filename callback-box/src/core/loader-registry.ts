@@ -47,7 +47,7 @@ export function registerTypeLoader<T>(type: string, loader: FileLoader<T>): void
   registrations.push({
     kind: "type",
     type,
-    loader: loader as FileLoader<unknown>,
+    loader,
   });
 }
 
@@ -62,7 +62,7 @@ export function registerPathLoader<T>(
   registrations.push({
     kind: "match",
     match,
-    loader: loader as FileLoader<unknown>,
+    loader,
   });
 }
 

@@ -17,7 +17,10 @@ import {
   installTricksFiles,
   installViewsGuide,
 } from "./templates.js";
+import { z } from "zod";
 import { errnoCode } from "../../lib/error-guards.js";
+
+const BoxMarkerSchema = z.object({ version: z.string(), created: z.string() });
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -293,7 +296,7 @@ export async function getBoxMetadata(
   const markerPath = path.join(boxRoot, BOX_MARKER);
   try {
     const content = await fs.readFile(markerPath, "utf-8");
-    return JSON.parse(content) as { version: string; created: string };
+    return BoxMarkerSchema.parse(JSON.parse(content));
   } catch (e) {
     // Missing marker is the normal "not a box" case; a malformed marker is
     // worth surfacing. Either way we report no metadata, but log so a

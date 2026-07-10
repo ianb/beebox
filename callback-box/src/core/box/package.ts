@@ -9,8 +9,18 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { isValidBox } from "./index.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+
+const EnginePackageJsonSchema = z.object({
+  version: z.string().optional(),
+  dependencies: z.record(z.string(), z.string()).optional(),
+  devDependencies: z.record(z.string(), z.string()).optional(),
+});
+const FrontendPackageJsonSchema = z.object({
+  devDependencies: z.record(z.string(), z.string()).optional(),
+});
 
 export type BoxInitMode = "fresh" | "update-legacy" | "update-v2";
 
@@ -105,12 +115,8 @@ async function readEngineVersions(): Promise<EngineVersions> {
     fs.readFile(path.join(PACKAGE_ROOT, "package.json"), "utf-8"),
     fs.readFile(path.join(PACKAGE_ROOT, "src/frontend/package.json"), "utf-8"),
   ]);
-  const engine = JSON.parse(rawEngine) as {
-    version?: string;
-    dependencies?: Record<string, string>;
-    devDependencies?: Record<string, string>;
-  };
-  const frontend = JSON.parse(rawFrontend) as { devDependencies?: Record<string, string> };
+  const engine = EnginePackageJsonSchema.parse(JSON.parse(rawEngine));
+  const frontend = FrontendPackageJsonSchema.parse(JSON.parse(rawFrontend));
   return {
     engine: engine.version ?? "0.0.0",
     typescript: engine.dependencies?.typescript ?? "^5.7.0",

@@ -13,6 +13,7 @@ import { execFile } from "node:child_process";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { promisify } from "node:util";
 import { mkdir, writeFile, readFile, readdir, stat } from "node:fs/promises";
+import { z } from "zod";
 import { cardSchemas, loadBoxSchemas } from "../../schemas/registry.js";
 import { generateViewsDoc } from "../views/doc.js";
 import { generateChatVoiceDoc } from "../chat/voice-doc.js";
@@ -65,6 +66,10 @@ class GenerateDocsAgainstSourceError extends Error {
   }
 }
 
+const DeployInfoSchema = z.object({
+  commits: z.record(z.string(), z.object({ hash: z.string().optional() })).optional(),
+});
+
 const GENERATE_MARKER = ".callback-box/docs-generated-at";
 
 const DOCID_DEBUG_MARKER = ".callback-box/docid-debug";
@@ -91,7 +96,7 @@ async function getCallbackBoxVersion(): Promise<string | null> {
   try {
     const raw = await readFile(join(PACKAGE_ROOT, "deploy-info.json"), "utf-8");
     // Parse boundary: deploy-info.json is written by deploy.sh, untyped here.
-    const info = JSON.parse(raw) as { commits?: { "callback-box"?: { hash?: string } } };
+    const info = DeployInfoSchema.parse(JSON.parse(raw));
     const hash = info.commits?.["callback-box"]?.hash;
     if (typeof hash === "string" && hash !== "") parts.push(`deploy:${hash}`);
   } catch (_e) {

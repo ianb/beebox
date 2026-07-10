@@ -8,7 +8,7 @@
  */
 
 import * as fs from "node:fs/promises";
-import { readCardFrontmatter } from "./card-io.js";
+import { readCardFrontmatter, isRecord } from "./card-io.js";
 
 /**
  * Read a dotted field path out of a frontmatter mapping. `title` →
@@ -18,8 +18,8 @@ import { readCardFrontmatter } from "./card-io.js";
 export function lookupField(frontmatter: Record<string, unknown>, expr: string): string {
   let cursor: unknown = frontmatter;
   for (const key of expr.split(".")) {
-    if (cursor === null || typeof cursor !== "object") return "";
-    cursor = (cursor as Record<string, unknown>)[key];
+    if (!isRecord(cursor)) return "";
+    cursor = cursor[key];
   }
   if (cursor === null || cursor === undefined) return "";
   if (typeof cursor === "object") return "";

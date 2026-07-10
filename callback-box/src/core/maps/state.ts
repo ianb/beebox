@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { errnoCode } from "../../lib/error-guards.js";
 
 export interface MapStateEntry {
@@ -23,6 +24,14 @@ export interface MapState {
   maps: Record<string, MapStateEntry>;
 }
 
+const MapStateEntrySchema = z.object({
+  asOf: z.string(),
+  generatedAt: z.string(),
+});
+const MapStateSchema = z.object({
+  maps: z.record(z.string(), MapStateEntrySchema).optional(),
+});
+
 export const MAP_STATE_FILE = ".cb-maps-state.json";
 
 function stateFilePath(boxRoot: string): string {
@@ -33,11 +42,11 @@ function stateFilePath(boxRoot: string): string {
 export async function loadMapState(boxRoot: string): Promise<MapState> {
   try {
     const raw = await fs.readFile(stateFilePath(boxRoot), "utf-8");
-    const parsed = JSON.parse(raw) as Partial<MapState>;
-    if (!parsed.maps || typeof parsed.maps !== "object") {
+    const result = MapStateSchema.safeParse(JSON.parse(raw));
+    if (!result.success || !result.data.maps) {
       return { maps: {} };
     }
-    return { maps: parsed.maps };
+    return { maps: result.data.maps };
   } catch (e) {
     // Missing or unreadable/corrupt state file — start fresh (documented behavior).
     if (errnoCode(e) !== "ENOENT") {

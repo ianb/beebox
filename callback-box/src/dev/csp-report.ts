@@ -40,6 +40,7 @@ import * as fs from "node:fs/promises";
 import * as os from "node:os";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { z } from "zod";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, type CspEntry } from "./csp-digest.js";
@@ -85,12 +86,13 @@ interface SourceReport {
   newest: string | null;
 }
 
-interface RunnerState {
+const runnerStateSchema = z.object({
   /** source key → newest entry ts observed on the last run. */
-  sources: Record<string, string>;
+  sources: z.record(z.string(), z.string()),
   /** True if we've already notified "clean — harden-ready" for the current clean streak. */
-  lastNotifiedHardenReady: boolean;
-}
+  lastNotifiedHardenReady: z.boolean(),
+});
+type RunnerState = z.infer<typeof runnerStateSchema>;
 
 function errMessage(e: unknown): string {
   return e instanceof Error ? e.message : String(e);
@@ -179,13 +181,8 @@ function parseProdSections(stdout: string): Source[] {
 async function readState(): Promise<RunnerState> {
   try {
     const parsed: unknown = JSON.parse(await fs.readFile(STATE_PATH, "utf-8"));
-    if (parsed !== null && typeof parsed === "object") {
-      const o = parsed as { [K in keyof RunnerState]?: RunnerState[K] | null };
-      return {
-        sources: typeof o.sources === "object" && o.sources !== null ? o.sources : {},
-        lastNotifiedHardenReady: o.lastNotifiedHardenReady === true,
-      };
-    }
+    const result = runnerStateSchema.safeParse(parsed);
+    if (result.success) return result.data;
   } catch (_e) {
     // First run or unreadable state — start from a clean baseline.
   }

@@ -19,20 +19,23 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { invariant } from "../lib/invariant.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { z } from "zod";
 
-export interface AssetManifestEntry {
+const assetManifestEntrySchema = z.object({
   /** File size in bytes. */
-  size: number;
+  size: z.number(),
   /** ISO mtime — used as a speed hint for the hash-skip path. Not load-bearing. */
-  mtime: string;
+  mtime: z.string(),
   /** SHA-256 hex digest of the file's contents. */
-  sha256: string;
-}
+  sha256: z.string(),
+});
+export type AssetManifestEntry = z.infer<typeof assetManifestEntrySchema>;
 
-export interface AssetManifest {
+const assetManifestSchema = z.object({
   /** Map of direct-child filename → entry. Does not include nested attach scopes. */
-  files: Record<string, AssetManifestEntry>;
-}
+  files: z.record(z.string(), assetManifestEntrySchema),
+});
+export type AssetManifest = z.infer<typeof assetManifestSchema>;
 
 export const MANIFEST_FILENAME = "manifest.json";
 
@@ -95,16 +98,11 @@ export async function loadManifest(attachDir: string): Promise<AssetManifest> {
     if (errnoCode(e) === "ENOENT") return emptyManifest();
     throw e;
   }
-  const parsed = JSON.parse(content) as unknown;
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof (parsed as { files?: unknown }).files !== "object" ||
-    (parsed as { files: unknown }).files === null
-  ) {
+  const result = assetManifestSchema.safeParse(JSON.parse(content));
+  if (!result.success) {
     throw new MalformedManifestError(filePath);
   }
-  return parsed as AssetManifest;
+  return result.data;
 }
 
 /**

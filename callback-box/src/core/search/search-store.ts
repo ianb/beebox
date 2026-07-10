@@ -86,8 +86,7 @@ export async function restoreSearchIndex(boxRoot: string): Promise<SearchIndex |
     return null;
   }
   try {
-    const db = await restoreFromFile("json", indexPath);
-    return db as SearchIndex;
+    return await restoreFromFile<SearchIndex>("json", indexPath);
   } catch (e) {
     console.warn(`search: could not restore index (${errorMessage(e)}); rebuilding`);
     return null;

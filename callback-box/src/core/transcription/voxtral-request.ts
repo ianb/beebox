@@ -164,7 +164,7 @@ export function shapeVoxtralResult(
       duration,
       language,
       words,
-    } as DetailedTranscriptionResult;
+    } satisfies DetailedTranscriptionResult;
   }
 
   // Diarization: rewrite the text as speaker-prefixed lines using each

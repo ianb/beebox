@@ -44,7 +44,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execFileSync, type StdioOptions } from "node:child_process";
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
+import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
@@ -85,9 +86,9 @@ function resolveCbBin(): string {
     // on success" rule bans.
     const opts = {
       cwd: PACKAGE_ROOT,
-      encoding: "utf8" as const,
-      stdio: ["ignore", "pipe", "ignore"] as StdioOptions,
-    };
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    } satisfies ExecFileSyncOptionsWithStringEncoding;
     const top = execFileSync("git", ["rev-parse", "--show-toplevel"], opts).trim();
     const commonDir = execFileSync(
       "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts,
@@ -252,15 +253,28 @@ fi
 `;
 }
 
-interface SettingsShape {
-  hooks?: {
-    PostToolUse?: Array<{
-      matcher?: string;
-      hooks?: Array<{ type: string; command: string }>;
-    }>;
-  };
-  [k: string]: unknown;
-}
+// `.claude/settings.json` is a user-owned config file with many keys we
+// don't model (permissions, other hook events, ...) — `.passthrough()` at
+// every level preserves them verbatim through a read-modify-write cycle
+// instead of silently dropping them, matching the old cast's zero-cost
+// round-trip behavior while still validating the shape we actually touch.
+const settingsHookSchema = z.object({
+  type: z.string(),
+  command: z.string(),
+}).passthrough();
+
+const settingsPostToolUseEntrySchema = z.object({
+  matcher: z.string().optional(),
+  hooks: z.array(settingsHookSchema).optional(),
+}).passthrough();
+
+const settingsShapeSchema = z.object({
+  hooks: z.object({
+    PostToolUse: z.array(settingsPostToolUseEntrySchema).optional(),
+  }).passthrough().optional(),
+}).passthrough();
+
+type SettingsShape = z.infer<typeof settingsShapeSchema>;
 
 const POST_TOOL_USE_MATCHER = "Edit|Write|MultiEdit";
 
@@ -314,7 +328,7 @@ async function readJsonIfExists(filePath: string): Promise<SettingsShape> {
   try {
     const text = await fs.readFile(filePath, "utf-8");
     if (text.trim() === "") return {};
-    return JSON.parse(text) as SettingsShape;
+    return settingsShapeSchema.parse(JSON.parse(text));
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return {};
     throw e;

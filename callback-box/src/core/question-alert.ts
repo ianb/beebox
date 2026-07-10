@@ -17,17 +17,16 @@ import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
 import { errnoCode } from "../lib/error-guards.js";
+import { z } from "zod";
 
 const LATCH_PATH = ".callback-box/notified-questions.json";
 
-interface QuestionLatch {
-  paths: string[];
-}
+const questionLatchSchema = z.object({ paths: z.array(z.string()) });
 
 async function loadLatch(boxRoot: string): Promise<Set<string>> {
   try {
     const raw = await fs.readFile(path.join(boxRoot, LATCH_PATH), "utf-8");
-    const data = JSON.parse(raw) as QuestionLatch;
+    const data = questionLatchSchema.parse(JSON.parse(raw));
     return new Set(data.paths);
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {

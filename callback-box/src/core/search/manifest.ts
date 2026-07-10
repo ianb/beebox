@@ -5,30 +5,32 @@
  */
 
 import { promises as fs } from "node:fs";
+import { z } from "zod";
 import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic, type IndexPersisted } from "./search-store.js";
 import { invariant } from "../../lib/invariant.js";
 import { errorMessage } from "../../lib/error-guards.js";
 
 /** Stat/hash record for a declared input file (e.g. a gdoc snapshot). */
-export interface InputFileEntry {
-  mtimeMs: number;
-  size: number;
-  contentHash: string;
-}
+const inputFileEntrySchema = z.object({
+  mtimeMs: z.number(),
+  size: z.number(),
+  contentHash: z.string(),
+});
+export type InputFileEntry = z.infer<typeof inputFileEntrySchema>;
 
-export interface ManifestFileEntry {
-  mtimeMs: number;
-  size: number;
-  contentHash: string;
+const manifestFileEntrySchema = z.object({
+  mtimeMs: z.number(),
+  size: z.number(),
+  contentHash: z.string(),
   /** Document ids this card contributed — exact removal on change/delete. */
-  docIds: string[];
+  docIds: z.array(z.string()),
   /** Extra files this card's documents were built from, keyed by box-relative path. */
-  inputs?: Record<string, InputFileEntry>;
+  inputs: z.record(z.string(), inputFileEntrySchema).optional(),
   /**
    * The card failed to parse and contributed no documents. Remembered so an
    * unchanged broken card warns once, not on every refresh.
    */
-  skipped?: boolean;
+  skipped: z.boolean().optional(),
   /**
    * Hash of `EMBEDDER_ID + "\n" + containsText` as of this card's last
    * successful embed. Absent means not embedded (no key configured yet, or
@@ -37,13 +39,15 @@ export interface ManifestFileEntry {
    * this one field covers changed cards, never-embedded cards, and retry
    * after failure.
    */
-  embeddedHash?: string;
-}
+  embeddedHash: z.string().optional(),
+});
+export type ManifestFileEntry = z.infer<typeof manifestFileEntrySchema>;
 
-export interface SearchManifest {
-  schemaVersion: number;
-  files: Record<string, ManifestFileEntry>;
-}
+const searchManifestSchema = z.object({
+  schemaVersion: z.number(),
+  files: z.record(z.string(), manifestFileEntrySchema),
+});
+export type SearchManifest = z.infer<typeof searchManifestSchema>;
 
 export function emptyManifest(): SearchManifest {
   return { schemaVersion: SEARCH_SCHEMA_VERSION, files: {} };
@@ -61,14 +65,15 @@ export async function loadManifest(boxRoot: string): Promise<SearchManifest> {
     return emptyManifest();
   }
   try {
-    // Parse boundary: disk JSON is untrusted, so keep `schemaVersion`/`files`
-    // typed `unknown` rather than casting straight to `SearchManifest` — a
-    // cast there would make the shape checks below vacuously "always true"
-    // instead of real validation of file content we didn't write ourselves.
-    const parsed = JSON.parse(raw) as { schemaVersion: unknown; files: unknown };
-    if (parsed.schemaVersion !== SEARCH_SCHEMA_VERSION) return emptyManifest();
-    if (typeof parsed.files !== "object" || parsed.files === null) return emptyManifest();
-    return { schemaVersion: parsed.schemaVersion, files: parsed.files as SearchManifest["files"] };
+    // Parse boundary: disk JSON is untrusted — validate the full shape with
+    // zod rather than casting, so a corrupt or foreign-shaped manifest falls
+    // back to a full rebuild instead of flowing unchecked data downstream.
+    const parsed: unknown = JSON.parse(raw);
+    const result = searchManifestSchema.safeParse(parsed);
+    if (!result.success || result.data.schemaVersion !== SEARCH_SCHEMA_VERSION) {
+      return emptyManifest();
+    }
+    return result.data;
   } catch (e) {
     console.warn(`search: manifest unreadable (${errorMessage(e)}); rebuilding`);
     return emptyManifest();

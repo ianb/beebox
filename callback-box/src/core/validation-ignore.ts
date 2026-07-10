@@ -27,6 +27,7 @@ import { errnoCode } from "../lib/error-guards.js";
 // NodeNext the interop types don't line up — `.default` is typed as the module
 // namespace — but at runtime it IS the callable factory (`module.exports`). One
 // centralized cast at this package boundary, using the package's own types.
+// eslint-disable-next-line no-restricted-syntax -- vendor .d.ts mistypes the CJS default export as the module namespace; verified callable at runtime, no code-level fix exists
 const ignoreFactory = ignoreModule.default as unknown as (options?: Options) => Ignore;
 
 export const VALIDATION_IGNORE_PATH = "config/cb-validate.ignore";

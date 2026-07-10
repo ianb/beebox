@@ -13,6 +13,7 @@ import { parse as parseYaml } from "yaml";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { buildLoadContext } from "../load-context.js";
 import { cardTypeFromPath } from "./walk.js";
+import { isRecord } from "../card-io.js";
 import {
   computeBasisForCardPath,
   loadContainsState,
@@ -64,6 +65,13 @@ class NoFrontmatterError extends ContainsUpdateError {
   }
 }
 
+class MalformedFrontmatterError extends ContainsUpdateError {
+  constructor(relPath: string) {
+    super(`${relPath}'s frontmatter is not a YAML mapping`);
+    this.name = "MalformedFrontmatterError";
+  }
+}
+
 class InvalidAfterUpdateError extends ContainsUpdateError {
   constructor(relPath: string) {
     super(`${relPath} did not validate after the update — check the card with cb validate`);
@@ -103,7 +111,11 @@ export async function updateContainsField(
   if (!split.hasFrontmatter) {
     throw new NoFrontmatterError(relPath);
   }
-  const fields = (parseYaml(split.frontmatterText) ?? {}) as Record<string, unknown>;
+  const parsedFrontmatter: unknown = parseYaml(split.frontmatterText) ?? {};
+  if (!isRecord(parsedFrontmatter)) {
+    throw new MalformedFrontmatterError(relPath);
+  }
+  const fields = parsedFrontmatter;
   const unchanged = fields["contains"] === text;
   if (!unchanged) {
     fields["contains"] = text;

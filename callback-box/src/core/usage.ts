@@ -10,6 +10,7 @@
  */
 
 import Database from "better-sqlite3";
+import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
@@ -84,11 +85,36 @@ function openDb(boxRoot: string): Database.Database {
   return db;
 }
 
-interface ManifestEntry {
-  sessionId: string;
-  task: string;
-  timestamp: string;
-}
+const manifestEntrySchema = z.object({
+  sessionId: z.string(),
+  task: z.string(),
+  timestamp: z.string(),
+});
+type ManifestEntry = z.infer<typeof manifestEntrySchema>;
+
+/**
+ * One assistant line of a Claude Code session JSONL — validated at the read
+ * boundary so token counts flow typed rather than through an `as` cast. All
+ * fields optional: a session file is external input and older/other line types
+ * legitimately omit them.
+ */
+const sessionUsageLineSchema = z.object({
+  type: z.string().optional(),
+  timestamp: z.string().optional(),
+  message: z
+    .object({
+      model: z.string().optional(),
+      usage: z
+        .object({
+          input_tokens: z.number().optional(),
+          output_tokens: z.number().optional(),
+          cache_creation_input_tokens: z.number().optional(),
+          cache_read_input_tokens: z.number().optional(),
+        })
+        .optional(),
+    })
+    .optional(),
+});
 
 function readManifest(boxRoot: string): Map<string, ManifestEntry> {
   const manifestPath = path.join(boxRoot, MANIFEST_REL_PATH);
@@ -102,7 +128,7 @@ function readManifest(boxRoot: string): Map<string, ManifestEntry> {
   for (const line of content.split("\n")) {
     if (!line.trim()) continue;
     try {
-      const entry = JSON.parse(line) as ManifestEntry;
+      const entry = manifestEntrySchema.parse(JSON.parse(line));
       entries.set(entry.sessionId, entry);
     } catch (_e) {
       // skip malformed lines
@@ -133,19 +159,22 @@ async function parseSessionUsage(
 
   for await (const line of rl) {
     if (!line.trim()) continue;
-    let raw: Record<string, unknown>;
+    let parsedLine: unknown;
     try {
-      raw = JSON.parse(line);
+      parsedLine = JSON.parse(line);
     } catch (_e) {
       continue;
     }
+    const parsed = sessionUsageLineSchema.safeParse(parsedLine);
+    if (!parsed.success) continue;
+    const raw = parsed.data;
 
     if (raw.type !== "assistant") continue;
 
-    const message = raw.message as Record<string, unknown> | undefined;
+    const message = raw.message;
     if (!message) continue;
 
-    const usage = message.usage as Record<string, number> | undefined;
+    const usage = message.usage;
     if (!usage) continue;
 
     const model = String(message.model || "unknown");
@@ -198,7 +227,9 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     return { sessionsProcessed: 0, sessionsSkipped: 0, sessionsMissing: 0 };
   }
 
-  const getSyncState = db.prepare("SELECT file_size FROM sync_state WHERE session_id = ?");
+  const getSyncState = db.prepare<[string], { file_size: number }>(
+    "SELECT file_size FROM sync_state WHERE session_id = ?"
+  );
   const upsertUsage = db.prepare(`
     INSERT INTO usage (session_id, task, date, model, input_tokens, output_tokens, cache_write_tokens, cache_read_tokens, message_count)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -229,7 +260,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
     }
 
     // Check if already processed at this size
-    const row = getSyncState.get(sessionId) as { file_size: number } | undefined;
+    const row = getSyncState.get(sessionId);
     if (row && row.file_size === stat.size) {
       result.sessionsSkipped++;
       continue;

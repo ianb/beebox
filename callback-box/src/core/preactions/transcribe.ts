@@ -15,6 +15,8 @@ import * as path from "node:path";
 import type { PreAction, PreActionContext } from "./types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription/index.js";
 import { getBoxTimeISO } from "../../lib/time.js";
+import { errorMessage } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 /** Audio file extensions we can transcribe. */
 const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];
@@ -30,6 +32,22 @@ interface TranscriptionErrorFields {
   code?: string;
   "attempted-at": string;
   message: string;
+}
+
+/** Structural shape of a `TranscriptionError` — permanent flag plus a message. */
+interface TranscriptionErrorLike {
+  permanent: boolean;
+  code?: string;
+  message: string;
+}
+
+/**
+ * Real (non-cast) guard for `TranscriptionError` — `transcription/index.ts`
+ * has an equivalent `isTranscriptionError` but doesn't export it, so this
+ * duplicates the structural check locally rather than reaching for `as`.
+ */
+function isTranscriptionErrorShape(error: unknown): error is TranscriptionError {
+  return error instanceof Error && isRecord(error) && typeof error.permanent === "boolean";
 }
 
 export const transcribePreAction: PreAction = {
@@ -74,7 +92,13 @@ export const transcribePreAction: PreAction = {
         message: `Transcribed ${String(Math.round(result.duration))}s of audio`,
       };
     } catch (error) {
-      const transcriptionError = error as TranscriptionError;
+      // The try block above isn't limited to transcribeAudio (which always
+      // throws TranscriptionError) — fs.readFile/applyFrontmatterTranscription
+      // could throw a plain Error too, so fall back to a non-permanent generic
+      // entry rather than assuming the shape.
+      const transcriptionError: TranscriptionErrorLike = isTranscriptionErrorShape(error)
+        ? error
+        : { permanent: false, message: errorMessage(error) };
       const attemptedAt = getBoxTimeISO(ctx.boxRoot);
       applyFrontmatterError(ctx.frontmatter.fields, {
         permanent: transcriptionError.permanent,
@@ -109,9 +133,7 @@ async function findAudioAttachment(cardPath: string): Promise<string | null> {
 // ─── Frontmatter (Phase 2) helpers ──────────────────────────────────────────
 
 function isPermanentError(raw: unknown): boolean {
-  if (raw === null || typeof raw !== "object") return false;
-  const e = raw as Record<string, unknown>;
-  return e["permanent"] === true;
+  return isRecord(raw) && raw["permanent"] === true;
 }
 
 function getFrontmatterContent(fields: Record<string, unknown>): string | null {

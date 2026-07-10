@@ -360,6 +360,12 @@ export async function compilePersonalities(boxRoot: string, debug: boolean): Pro
       source: filename,
       schemas: await createCardSchemaMap(boxRoot),
     });
+    // parseCardText validated these fields against the personality schema
+    // (createCardSchemaMap includes it). PersonalityFields is a hand-written
+    // interface not derived from that schema, so TS can't connect the generic
+    // `Record<string, unknown>` to it — see the follow-up to derive one from
+    // the other.
+    // eslint-disable-next-line no-restricted-syntax -- validated at parse; hand-written interface can't be inferred from the CardSchema-typed schema
     const fields = parsed.fields as unknown as PersonalityFields;
     const boxholders = await loadBoxholders(boxRoot);
     const compiled = compilePersonality(fields, { boxholders });

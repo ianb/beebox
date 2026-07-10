@@ -11,6 +11,15 @@ import { buildScriptEnv } from "../script-env.js";
 /** Exit code that signals "skip this step" */
 export const CHECK_SKIP_CODE = 75;
 
+/**
+ * Real guard for `ExecaError` — execa doesn't export one, but `error.name` is
+ * a readonly `'ExecaError'` literal on the class, so a plain instanceof +
+ * name check narrows soundly without a cast.
+ */
+function isExecaError(error: unknown): error is ExecaError {
+  return error instanceof Error && error.name === "ExecaError";
+}
+
 export interface ShellResult {
   exitCode: number;
   stdout: string;
@@ -53,14 +62,14 @@ export async function runShell(
       skipped: false,
     };
   } catch (error) {
-    const execError = error as ExecaError;
-    const exitCode = execError.exitCode ?? 1;
+    if (!isExecaError(error)) throw error;
+    const exitCode = error.exitCode ?? 1;
     // stdout/stderr are typed string | string[] | Uint8Array | undefined in
     // general (execa's type widens over every stdio config); this call uses
     // plain string stdio, but narrow with a runtime check rather than an `as
     // string` cast that would silently lie about the other possibilities.
-    const stdout = typeof execError.stdout === "string" ? execError.stdout : "";
-    const stderr = typeof execError.stderr === "string" ? execError.stderr : "";
+    const stdout = typeof error.stdout === "string" ? error.stdout : "";
+    const stderr = typeof error.stderr === "string" ? error.stderr : "";
     return {
       exitCode,
       stdout: stdout.trimEnd(),

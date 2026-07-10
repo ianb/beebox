@@ -11,6 +11,7 @@ import type {
   SDKAssistantMessage,
 } from "@anthropic-ai/claude-agent-sdk";
 import { fmt } from "../../lib/format.js";
+import { isRecord } from "../card-io.js";
 
 function truncate(s: string, max: number): string {
   if (s.length <= max) return s;
@@ -18,14 +19,13 @@ function truncate(s: string, max: number): string {
 }
 
 function summarizeToolInput(input: unknown): string {
-  if (input === null || typeof input !== "object") return "";
-  const obj = input as Record<string, unknown>;
+  if (!isRecord(input)) return "";
   // Surface common fields concisely.
   for (const key of ["command", "file_path", "path", "pattern", "url"]) {
-    const v = obj[key];
+    const v = input[key];
     if (typeof v === "string") return truncate(v, 120);
   }
-  return truncate(JSON.stringify(obj), 120);
+  return truncate(JSON.stringify(input), 120);
 }
 
 function extractToolResultText(content: unknown): string {
@@ -33,9 +33,8 @@ function extractToolResultText(content: unknown): string {
   if (Array.isArray(content)) {
     const parts: string[] = [];
     for (const item of content) {
-      if (item && typeof item === "object" && "type" in item && item.type === "text") {
-        const text = (item as { text?: unknown }).text;
-        if (typeof text === "string") parts.push(text);
+      if (isRecord(item) && item.type === "text" && typeof item.text === "string") {
+        parts.push(item.text);
       }
     }
     return parts.join("\n");

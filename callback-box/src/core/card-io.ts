@@ -131,7 +131,12 @@ export function parseCardText(
       `invalid ${resolved} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
     );
   }
-  const fmFields = fmParse.data as Record<string, unknown>;
+  // frontmatterSchema is a `z.object(...)`, so a successful parse always yields
+  // a mapping; the guard narrows the `ZodType`-typed `unknown` result honestly.
+  if (!isRecord(fmParse.data)) {
+    throw new CardIOError(source, "frontmatter did not validate to a mapping");
+  }
+  const fmFields = fmParse.data;
 
   const bodyValue = validateCardBody({ schema, body: split.body, resolved, source });
 
@@ -284,7 +289,7 @@ function parseFrontmatterMapping(frontmatterText: string, source: string): Recor
   if (Array.isArray(frontmatter) || (frontmatter !== null && typeof frontmatter !== "object")) {
     throw new CardIOError(source, "frontmatter must be a YAML mapping");
   }
-  return (frontmatter as Record<string, unknown> | null) ?? {};
+  return isRecord(frontmatter) ? frontmatter : {};
 }
 
 /**

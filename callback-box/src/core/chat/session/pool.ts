@@ -12,12 +12,14 @@ import { makeLog } from "./log.js";
 import { getPublicUrl } from "../../../lib/public-url.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { ChatThreadSession } from "./thread.js";
 import {
   ChatScheduleManager,
   parseScheduleTags,
   parseCancelScheduleTags,
 } from "../schedules.js";
+import { isRecord } from "../../card-io.js";
 
 function getBoxSlug(boxRoot: string): string {
   return path.basename(boxRoot);
@@ -32,12 +34,14 @@ const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 /** Max time to wait for a busy session (ms) */
 const BUSY_TIMEOUT_MS = 60_000;
 
-interface SessionRecord {
-  sessionId: string;
-  createdAt: string;
-  lastUsedAt: string;
-  messageCount: number;
-}
+const SessionRecordSchema = z.object({
+  sessionId: z.string(),
+  createdAt: z.string(),
+  lastUsedAt: z.string(),
+  messageCount: z.number(),
+});
+
+type SessionRecord = z.infer<typeof SessionRecordSchema>;
 
 type SessionStore = Record<string, SessionRecord>;
 
@@ -344,7 +348,19 @@ export class ChatSessionPool {
     const filePath = path.join(this.boxRoot, SESSIONS_FILE);
     try {
       const data = await fs.readFile(filePath, "utf-8");
-      this.store = JSON.parse(data) as SessionStore;
+      const parsedRaw: unknown = JSON.parse(data);
+      const store: SessionStore = {};
+      if (isRecord(parsedRaw)) {
+        for (const [key, value] of Object.entries(parsedRaw)) {
+          const result = SessionRecordSchema.safeParse(value);
+          if (result.success) {
+            store[key] = result.data;
+          } else {
+            log("loadStore", `Dropping malformed session record for thread ${key}: ${result.error.message}`);
+          }
+        }
+      }
+      this.store = store;
     } catch (err) {
       log("loadStore", `Could not load session store from ${filePath}, starting empty: ${err}`);
       this.store = {};

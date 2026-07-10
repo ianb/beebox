@@ -59,8 +59,9 @@ class MissingBoxRootError extends Error {
  * OS filesystem root would false-positive every valid link.
  */
 function readBoxRoot(config: Parameters<Rule["function"]>[0]["config"]): string {
-  // markdownlint types `config` as `boolean | any`; narrow at this parse boundary.
-  const cfg = (config ?? {}) as { boxRoot?: unknown };
+  // markdownlint types `config` as `boolean | any` (i.e. effectively `any`);
+  // an explicitly-typed local narrows it without a cast.
+  const cfg: { boxRoot?: unknown } = config ?? {};
   if (typeof cfg.boxRoot !== "string" || cfg.boxRoot === "") {
     throw new MissingBoxRootError();
   }

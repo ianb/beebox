@@ -27,6 +27,7 @@ import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { listSessions, getSessionLogPath } from "../../../cli/lib/session.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+import { isRecord } from "../../card-io.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";
@@ -84,11 +85,8 @@ async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
     const data = await fs.readFile(filePath, "utf-8");
     // The file is read in two compatible shapes — v1 had `sessionIds`,
     // v2 has `sessions`. Tolerate either, and let the next write upgrade.
-    const parsed = JSON.parse(data) as {
-      sessions?: unknown;
-      sessionIds?: unknown;
-      migrated?: unknown;
-    };
+    const parsedRaw: unknown = JSON.parse(data);
+    const parsed = isRecord(parsedRaw) ? parsedRaw : {};
     const sessions: SessionHistoryEntry[] = [];
     if (Array.isArray(parsed.sessions)) {
       for (const raw of parsed.sessions) {
@@ -294,8 +292,8 @@ export async function getMostActive(boxRoot: string): Promise<string | null> {
   const filePath = path.join(boxRoot, MOST_ACTIVE_FILE);
   try {
     const data = await fs.readFile(filePath, "utf-8");
-    const parsed = JSON.parse(data) as Partial<MostActiveFile>;
-    return typeof parsed.sessionId === "string" ? parsed.sessionId : null;
+    const parsed: unknown = JSON.parse(data);
+    return isRecord(parsed) && typeof parsed.sessionId === "string" ? parsed.sessionId : null;
   } catch (e) {
     if (errnoCode(e) === "ENOENT") return null;
     log("most-active", `Failed to read most-active file: ${errorMessage(e)}`);
@@ -313,8 +311,8 @@ export async function getMostActiveSavedAt(boxRoot: string): Promise<Date | null
   const filePath = path.join(boxRoot, MOST_ACTIVE_FILE);
   try {
     const data = await fs.readFile(filePath, "utf-8");
-    const parsed = JSON.parse(data) as Partial<MostActiveFile>;
-    if (typeof parsed.savedAt !== "string") return null;
+    const parsed: unknown = JSON.parse(data);
+    if (!isRecord(parsed) || typeof parsed.savedAt !== "string") return null;
     const savedAt = new Date(parsed.savedAt);
     return Number.isNaN(savedAt.getTime()) ? null : savedAt;
   } catch (e) {
@@ -364,7 +362,10 @@ async function logHasWebChatMarkers(logPath: string): Promise<boolean> {
         typeof content === "string"
           ? [{ type: "text", text: content }]
           : Array.isArray(content)
-            ? (content as Array<{ type?: string; text?: string }>)
+            ? content.filter(isRecord).map((item) => ({
+                ...(typeof item.type === "string" ? { type: item.type } : {}),
+                ...(typeof item.text === "string" ? { text: item.text } : {}),
+              }))
             : [];
       for (const block of blocks) {
         if (block.type !== "text" || typeof block.text !== "string") continue;

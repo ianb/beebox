@@ -30,6 +30,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 import { GoogleGenAI } from "@google/genai";
 import { extensionToMimetype } from "../lib/mimetype.js";
+import { errorMessage, toError } from "../lib/error-guards.js";
 
 const SELF = import.meta.filename;
 
@@ -68,7 +69,8 @@ function parseArgs(argv: string[]): Args {
   };
   const positional: string[] = [];
   for (let i = 0; i < argv.length; i++) {
-    const a = argv[i] as string;
+    const a = argv[i];
+    if (a === undefined) continue;
     const next = (): string => {
       const v = argv[++i];
       if (v === undefined) throw new GenImageError(1, `${a} requires a value`);
@@ -90,8 +92,9 @@ function parseArgs(argv: string[]): Args {
   if (positional.length > 1) {
     throw new GenImageError(1, "at most one positional prompt argument allowed");
   }
-  if (positional.length === 1 && args.prompt === null) {
-    args.prompt = positional[0] as string;
+  const firstPositional = positional[0];
+  if (firstPositional !== undefined && args.prompt === null) {
+    args.prompt = firstPositional;
   }
   return args;
 }
@@ -151,6 +154,13 @@ interface TextPart { text: string }
 type ResponsePart = RawInlineDataPart | TextPart;
 interface GenerateResponse {
   candidates?: Array<{ content?: { parts?: ResponsePart[] } }>;
+}
+
+/** Duck-typed `.status` probe for a caught value — mirrors error-guards.ts's `errnoCode`. */
+function errorStatus(e: unknown): number | undefined {
+  if (typeof e !== "object" || e === null || !("status" in e)) return undefined;
+  const { status } = e;
+  return typeof status === "number" ? status : undefined;
 }
 
 function extractInlineData(p: ResponsePart): InlineDataPart | null {
@@ -220,14 +230,23 @@ async function main(): Promise<void> {
   const ai = new GoogleGenAI({ apiKey: key });
   let response: GenerateResponse;
   try {
-    response = (await ai.models.generateContent({
+    // The SDK's declared return type (`GenerateContentResponse`) is a rich
+    // class with helper getters; we only read the raw `candidates` shape
+    // documented by the API, which is what `GenerateResponse` models. A
+    // structural check (not a cast) confirms the field we depend on exists.
+    const raw: unknown = await ai.models.generateContent({
       model: args.model,
       contents: parts,
       config: { responseModalities: ["TEXT", "IMAGE"] },
-    })) as unknown as GenerateResponse;
+    });
+    if (typeof raw !== "object" || raw === null || !("candidates" in raw)) {
+      throw new GenImageError(3, "API error: response had no candidates field");
+    }
+    response = raw as GenerateResponse; // eslint-disable-line no-restricted-syntax -- narrowed above to an object carrying `candidates`; GenerateResponse only further types that field's inner shape, which the API contract guarantees
   } catch (err) {
-    const e = err as { status?: number; message?: string };
-    if (e.status === 429) {
+    if (err instanceof GenImageError) throw err;
+    const status = errorStatus(err);
+    if (status === 429) {
       throw new GenImageError(
         3,
         `429 quota exceeded on $${from}.\n` +
@@ -235,8 +254,7 @@ async function main(): Promise<void> {
         "    gen-image -k SKE_GEMINI_API_KEY ...",
       );
     }
-    const msg = e.message !== undefined ? e.message : String(err);
-    throw new GenImageError(3, `API error: ${msg}`);
+    throw new GenImageError(3, `API error: ${errorMessage(err)}`);
   }
 
   if (args.verbose) {
@@ -258,7 +276,6 @@ main().catch((err: unknown) => {
     if (err.exitCode === 1) console.error("try: gen-image --help");
     process.exit(err.exitCode);
   }
-  const e = err as { stack?: string };
-  console.error(`gen-image: ${e.stack !== undefined ? e.stack : String(err)}`);
+  console.error(`gen-image: ${toError(err).stack ?? String(err)}`);
   process.exit(3);
 });

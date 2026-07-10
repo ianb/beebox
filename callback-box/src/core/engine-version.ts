@@ -12,15 +12,14 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { z } from "zod";
 
-interface PackageJsonVersion {
-  version?: string;
-}
+const packageJsonVersionSchema = z.object({ version: z.string().optional() });
 
 async function readVersionField(packageJsonPath: string): Promise<string | null> {
   try {
     const raw = await fs.readFile(packageJsonPath, "utf-8");
-    const pkg = JSON.parse(raw) as PackageJsonVersion;
+    const pkg = packageJsonVersionSchema.parse(JSON.parse(raw));
     return pkg.version ?? null;
   } catch (_e) {
     // Missing/unreadable/malformed package.json — nothing actionable to

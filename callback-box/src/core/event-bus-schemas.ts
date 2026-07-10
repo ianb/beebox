@@ -170,6 +170,15 @@ export const eventSchemas = {
 export type BusEventName = keyof typeof eventSchemas;
 
 /**
+ * Whether an untrusted string (e.g. an `event` column read from the DB) names a
+ * known bus event — the membership guard that lets the read boundary index
+ * {@link eventSchemas} without a key cast.
+ */
+export function isBusEventName(name: string): name is BusEventName {
+  return Object.hasOwn(eventSchemas, name);
+}
+
+/**
  * The events the bus carries, each mapped to its payload shape — DERIVED from
  * {@link eventSchemas} so the schema is the single source of truth. `emit`/
  * `emitTransient` type their payload against this; the read boundary validates

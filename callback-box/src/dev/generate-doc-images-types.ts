@@ -4,6 +4,7 @@
 
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { NotFoundError } from "../lib/errors.js";
 import { parse as parseYaml } from "yaml";
@@ -38,28 +39,39 @@ export interface ImagePrompt {
   referencedCharacters: string[];
 }
 
-export interface ImageMetadata {
-  prompt: string;
-  style: string;
-  model: string;
-  generatedAt: string;
-  promptHash: string;
-  references: string[];
-}
+export const imageMetadataSchema = z.object({
+  prompt: z.string(),
+  style: z.string(),
+  model: z.string(),
+  generatedAt: z.string(),
+  promptHash: z.string(),
+  references: z.array(z.string()),
+});
+export type ImageMetadata = z.infer<typeof imageMetadataSchema>;
 
 export const DOCS_DIR = path.join(PACKAGE_ROOT, "docs", "architecture");
+
+const imageGenConfigFileSchema = z.object({
+  style: z.string().default(""),
+  diagramStyle: z.string().optional(),
+  model: z.string().default("gemini-2.5-flash-image"),
+  apiKeyEnv: z.string().default("GEMINI_KEY"),
+});
 
 export function loadConfig(): ImageGenConfig {
   const configPath = path.join(DOCS_DIR, "image-gen.yaml");
   if (!existsSync(configPath)) {
     throw new NotFoundError(configPath, "Config");
   }
-  const raw = parseYaml(readFileSync(configPath, "utf8")) as Record<string, unknown>;
-  const style = String(raw.style || "").trim();
+  // Parse boundary: config/image-gen.yaml is untrusted on-disk data — zod
+  // validates it (and applies the same defaults the old `|| ""` fallbacks
+  // gave) instead of a blind cast.
+  const raw = imageGenConfigFileSchema.parse(parseYaml(readFileSync(configPath, "utf8")));
+  const style = raw.style.trim();
   return {
     style,
-    diagramStyle: String(raw.diagramStyle || style).trim(),
-    model: String(raw.model || "gemini-2.5-flash-image"),
-    apiKeyEnv: String(raw.apiKeyEnv || "GEMINI_KEY"),
+    diagramStyle: (raw.diagramStyle ?? style).trim(),
+    model: raw.model,
+    apiKeyEnv: raw.apiKeyEnv,
   };
 }

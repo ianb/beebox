@@ -47,7 +47,7 @@ async function readJsonFile(filePath: string): Promise<unknown | null> {
     return null;
   }
   try {
-    return JSON.parse(text) as unknown;
+    return JSON.parse(text);
   } catch (e) {
     console.warn(`retro: ${filePath} is not valid JSON, skipping registry:`, e);
     return null;
