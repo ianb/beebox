@@ -3,6 +3,8 @@
  * into structured DiffFile records, plus new-file content extraction.
  */
 
+import { invariant } from "../../lib/invariant";
+
 export interface DiffFile {
   path: string;
   meta: string[];
@@ -14,7 +16,9 @@ export interface DiffFile {
 function extractFilePath(line: string): string {
   const match = line.match(/^diff --git a\/(.+) b\/(.+)$/);
   if (!match) return line;
-  return match[2]!;
+  const path = match[2];
+  invariant(path !== undefined, "diff --git line matched but the 'b/' path group is missing");
+  return path;
 }
 
 interface FinalizeRenameParams {
@@ -26,8 +30,9 @@ interface FinalizeRenameParams {
 function finalizeRename(params: FinalizeRenameParams): void {
   const { file, from, to } = params;
   file.path = to;
-  const fromName = from.split("/").pop()!;
-  const toName = to.split("/").pop()!;
+  const fromName = from.split("/").pop();
+  const toName = to.split("/").pop();
+  invariant(fromName !== undefined && toName !== undefined, "split('/') never returns an empty array");
   if (fromName === toName) {
     const fromDir = from.substring(0, from.length - fromName.length) || "/";
     const toDir = to.substring(0, to.length - toName.length) || "/";

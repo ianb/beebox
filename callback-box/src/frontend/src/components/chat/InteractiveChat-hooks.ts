@@ -35,11 +35,12 @@ export function useChatTabs() {
       // viewer/params refreshes the existing tab's target in place (so
       // `?view=` actually switches) rather than colliding silently.
       const idx = p.tabs.findIndex((t) => t.target.path === view.target.path);
+      const existing = idx === -1 ? undefined : p.tabs[idx];
       const key = serializeViewUrl(view.target);
       const tabs =
-        idx === -1
+        existing === undefined
           ? [...p.tabs, view]
-          : serializeViewUrl(p.tabs[idx]!.target) === key
+          : serializeViewUrl(existing.target) === key
           ? p.tabs
           : p.tabs.map((t, i) => (i === idx ? view : t));
       return { tabs, activePath: view.target.path };

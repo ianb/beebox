@@ -37,13 +37,17 @@ function extractFromText(text: string, out: string[]): void {
   VIEW_LINK_RE.lastIndex = 0;
   while ((m = VIEW_LINK_RE.exec(text)) !== null) {
     const raw = m[1];
-    if (raw) out.push(boxRelativePath(raw.split(/[#?]/, 1)[0]!));
+    if (raw) {
+      const [clean = ""] = raw.split(/[#?]/, 1);
+      out.push(boxRelativePath(clean));
+    }
   }
   MD_TARGET_RE.lastIndex = 0;
   while ((m = MD_TARGET_RE.exec(text)) !== null) {
     const target = m[1];
     if (!target || isExternalUrl(target) || target.startsWith("#")) continue;
-    out.push(boxRelativePath(target.split(/[#?]/, 1)[0]!));
+    const [clean = ""] = target.split(/[#?]/, 1);
+    out.push(boxRelativePath(clean));
   }
   // <ack ref="…"> tags also indicate the agent touched a file — surface
   // those in recent-files too. Reuses the same parser the badge UI uses.
@@ -89,7 +93,7 @@ export function dedupeRecent(paths: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (let i = paths.length - 1; i >= 0; i--) {
-    const p = paths[i]!;
+    const p = paths[i];
     if (seen.has(p)) continue;
     seen.add(p);
     out.push(p);

@@ -10,6 +10,7 @@ import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat/features.js";
 import { entrySelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
+import { invariant } from "../../lib/invariant";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -182,10 +183,15 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   const match = text.match(/<task-notification>[\S\s]*?<task-id>([^<]*)<\/task-id>[\S\s]*?<status>([^<]*)<\/status>[\S\s]*?<summary>([^<]*)<\/summary>[\S\s]*?<\/task-notification>/);
   if (!match) return null;
   const outputMatch = text.match(/<output-file>([^<]*)<\/output-file>/);
+  const [, taskId, status, summary] = match;
+  invariant(
+    taskId !== undefined && status !== undefined && summary !== undefined,
+    "task-notification regex matched but a required capture group is missing",
+  );
   return {
-    taskId: match[1]!,
-    status: match[2]!,
-    summary: match[3]!,
+    taskId,
+    status,
+    summary,
     outputFile: outputMatch ? outputMatch[1] : undefined,
   };
 }
@@ -195,7 +201,7 @@ const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".
 export function isImagePath(path: string): boolean {
   // Strip any ?query / #hash before checking the extension, so a cache-busted
   // image (`photo.png?v=1`) is still recognized as an image, not an embed.
-  const clean = path.split(/[#?]/, 1)[0]!;
+  const [clean = ""] = path.split(/[#?]/, 1);
   const dot = clean.lastIndexOf(".");
   if (dot <= 0) return false;
   return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
@@ -289,7 +295,8 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
       } else if (block.type === "tool_use") {
         const last = flat[flat.length - 1];
         if (last && last.type === "tools") {
-          last.tools!.push(block);
+          invariant(last.tools, "a 'tools' part must always carry a tools array");
+          last.tools.push(block);
         } else {
           flat.push({ type: "tools", tools: [block] });
         }

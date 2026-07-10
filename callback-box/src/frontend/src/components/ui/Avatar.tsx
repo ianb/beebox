@@ -44,7 +44,7 @@ export function Avatar({
   fallbackClassName = fallbackClassName ?? "bg-warm-200 text-warm-700";
   const altText = name !== null ? name : email !== null && email !== undefined ? email : "User";
   const initialSource = name !== null && name !== "" ? name : email !== null && email !== undefined ? email : null;
-  const initial = initialSource !== null ? initialSource[0]!.toUpperCase() : null;
+  const initial = initialSource !== null ? initialSource[0].toUpperCase() : null;
 
   if (picture !== null && picture !== undefined && picture !== "") {
     return (

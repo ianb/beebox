@@ -60,13 +60,14 @@ function SheetView({ data }: RendererProps) {
 
   useEffect(() => {
     if (!sheet) return;
+    const tabs = sheet.tabs;
     let cancelled = false;
 
     async function loadTabs() {
       setLoading(true);
       const results = new Map<string, CellValue[][]>();
 
-      for (const tab of sheet!.tabs) {
+      for (const tab of tabs) {
         try {
           const filePath = resolveRelativePath(data.path, tab.ref);
           const resp = await fetch(`${getApiBase()}/files/${filePath}`);
