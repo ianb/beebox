@@ -3506,3 +3506,68 @@ tests:
     notes: >
       `cb upgrade` (src/cli/commands/upgrade.ts) is an operator verb, not
       something the operating agent should invoke on its own initiative.
+
+  # === Capture mode ===
+  #
+  # A `<capture doc="...">` chat message delivers a user-recorded batch of
+  # photos/voice as real user input pointing at a capture-session card
+  # (Track 6 of docs/plans/capture-mode.md). Chat-only concept — the tag is
+  # documented in CHAT_SYSTEM_PROMPT (prompts.ts), not the agent guide — so
+  # every entry below needs chat_mode: true.
+  #
+  # Status: new, unrun (added 2026-07-10 with Track 6). Run at the plan's
+  # final verification breakpoint (`pnpm knowledge-audit run --filter capture`)
+  # and record results here — not run during Track 6 itself (a never-run
+  # audit costs an agent session each time; the breakpoint runs the whole set
+  # once).
+
+  - id: capture-message-meaning
+    prompt: >
+      A message arrives in chat: `<capture doc="tmp-capture/capture-20260710T0900-ab12.capture-session.card" images="2" audio="1:40">making dinner notes</capture>`.
+      What is this, and what (if anything) do you do with it?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Says this is real user input (not a background/system note) and that a
+      reply is expected — contrasted with `<self-note>`, which is not user
+      input and doesn't expect a reply. Says it should read the `doc` card
+      (the actual capture-session.card) before responding substantively,
+      not just answer from the one-line inner summary.
+    correct_contains_any: ["user input", "real user", "expects a reply", "reply is expected"]
+    correct_contains: ["doc"]
+    tags: [capture, chat, behavioral]
+
+  - id: capture-agent-duties
+    prompt: >
+      You've read a capture-session card at `tmp-capture/capture-20260710T0900-ab12.capture-session.card`
+      with two photos and a short voice transcript. What are your duties on
+      this card, in order, before it's done?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      (1) Annotate by default — OCR/describe the images (via subagents
+      reading the actual image files, not invented from the transcript) and
+      commit, setting status to annotated. (2) Then file the card out of
+      tmp-capture/ with `cb mv` to wherever it belongs, OR complete the
+      capture on the spot and delete the card instead. (3) tmp-capture/
+      must not accumulate — this isn't storage. Should NOT invent other
+      behavior (e.g. leaving it in tmp-capture/ indefinitely, or skipping
+      annotation).
+    correct_contains_any: ["annotate", "OCR", "describe"]
+    correct_contains: ["tmp-capture"]
+    tags: [capture, chat, behavioral]
+
+  - id: capture-partial-marker
+    prompt: >
+      A capture-session card's frontmatter has `partial: true`. What does
+      that tell you about the transcript in its body?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Says the recording cut off unexpectedly (crash/disconnect/abandonment
+      sweep) and that the final seconds may be missing — the tail should be
+      treated as possibly mid-thought, not as the person trailing off or
+      finishing their point. Does not invent an unrelated meaning (e.g.
+      "the user only partially wants this filed").
+    correct_contains_any: ["cut off", "cut short", "missing", "mid-thought", "incomplete"]
+    tags: [capture, chat, behavioral]
