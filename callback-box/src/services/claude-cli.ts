@@ -6,6 +6,7 @@
  */
 
 import { spawn, execFile } from "node:child_process";
+import { invariant } from "../lib/invariant.js";
 
 // ─── Service interface ───────────────────────────────────────────────────────
 
@@ -56,25 +57,20 @@ export function createClaudeCliService(): ClaudeCliService {
       let authUrl: string | null = null;
       let output = "";
 
-      activeLogin = { process: child, authUrl: null };
+      const login = { process: child, authUrl: null as string | null };
+      activeLogin = login;
 
-      child.stdout.on("data", (data: Buffer) => {
+      const onData = (data: Buffer): void => {
         output += data.toString();
+        if (authUrl) return;
         const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
-        if (urlMatch && !authUrl) {
-          authUrl = urlMatch[1]!;
-          activeLogin!.authUrl = authUrl;
-        }
-      });
-
-      child.stderr.on("data", (data: Buffer) => {
-        output += data.toString();
-        const urlMatch = output.match(/(https:\/\/claude\.ai\/oauth\/authorize\S+)/);
-        if (urlMatch && !authUrl) {
-          authUrl = urlMatch[1]!;
-          activeLogin!.authUrl = authUrl;
-        }
-      });
+        if (!urlMatch) return;
+        invariant(urlMatch[1] !== undefined, "capture group 1 is non-optional in urlMatch");
+        authUrl = urlMatch[1];
+        login.authUrl = authUrl;
+      };
+      child.stdout.on("data", onData);
+      child.stderr.on("data", onData);
 
       child.on("close", () => {
         activeLogin = null;

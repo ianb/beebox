@@ -8,6 +8,7 @@
 import ky, { type HTTPError } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
 import { NotFoundError } from "../lib/errors.js";
+import { invariant } from "../lib/invariant.js";
 import { validateResponse } from "./connector-response.js";
 import {
   calendarListSchema,
@@ -203,7 +204,9 @@ export function createFakeGoogleCalendar(
       if (idx === -1) {
         throw new NotFoundError(eventId, "Calendar event");
       }
-      const merged: CalendarEvent = { ...fake.events[idx]!, ...event } as CalendarEvent;
+      const existing = fake.events[idx];
+      invariant(existing !== undefined, "idx came from findIndex, checked !== -1 above");
+      const merged: CalendarEvent = { ...existing, ...event } as CalendarEvent;
       fake.events[idx] = merged;
       return merged;
     },
