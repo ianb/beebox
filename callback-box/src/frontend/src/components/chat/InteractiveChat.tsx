@@ -33,6 +33,7 @@ import { useChatActions } from "./InteractiveChat-actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
 import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
+import { joinTranscript } from "./InteractiveChat-helpers";
 import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
 import { nativeEmissionFromDetail } from "./native-emission";
@@ -182,6 +183,17 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     clearDraft();
   }, [recoveredDraft, sendVoiceSegment, clearDraft]);
 
+  const handleRecoverContinue = useCallback(() => {
+    if (!recoveredDraft) return;
+    // Resume the interrupted message: the recovered text becomes composer
+    // input — the prior-input slot every voice path already folds into the
+    // next utterance (keyword send prepends it; a manual stop joins onto it) —
+    // and the mic reopens.
+    inputStore.set((existing) => joinTranscript(existing, recoveredDraft.text));
+    clearDraft();
+    voice.startVoice();
+  }, [recoveredDraft, inputStore, clearDraft, voice]);
+
   // Surface the recovery widget only when idle: hidden while the mic is open
   // and while an HQ commit is in flight (the mic briefly idles between
   // segments — don't flash the just-committed text as "recovered").
@@ -190,6 +202,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       draft={recoveredDraft}
       sessionId={sessionId}
       onSend={handleRecoverSend}
+      onContinue={handleRecoverContinue}
       onDiscard={clearDraft}
     />
   ) : null;
