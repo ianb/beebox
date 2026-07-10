@@ -13,6 +13,7 @@ export { createCommand } from "./create.js";
 export { serveCommand } from "./serve.js";
 export { hubCommand } from "./hub.js";
 export { answerCommand } from "./answer.js";
+export { dismissCommand } from "./dismiss.js";
 export { wakeupCommand } from "./wakeup.js";
 export { trashCommand } from "./trash.js";
 export { moveCommand } from "./move.js";

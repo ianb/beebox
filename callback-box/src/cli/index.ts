@@ -21,6 +21,7 @@ import {
   serveCommand,
   hubCommand,
   answerCommand,
+  dismissCommand,
   wakeupCommand,
   trashCommand,
   moveCommand,
@@ -92,6 +93,7 @@ program.addCommand(createCommand);
 program.addCommand(serveCommand);
 program.addCommand(hubCommand);
 program.addCommand(answerCommand);
+program.addCommand(dismissCommand);
 program.addCommand(wakeupCommand);
 program.addCommand(trashCommand);
 program.addCommand(moveCommand);
