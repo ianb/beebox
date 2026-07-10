@@ -270,7 +270,7 @@ class GoogleCalendarConnector implements Connector {
       collect(await syncCalendar({ ...base, syncToken }), { withNotes: true });
       return { fullResync: false };
     } catch (err) {
-      const status = err instanceof HTTPError ? err.response?.status : undefined;
+      const status = err instanceof HTTPError ? err.response.status : undefined;
       const message = (err as Error).message;
       if (status !== 410 && !message.includes("410")) {
         await this.saveState(state, snapshot);

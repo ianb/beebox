@@ -144,7 +144,7 @@ export async function deleteEventViaApi(
     return true;
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response?.status;
+      const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
       return false;
@@ -163,7 +163,7 @@ export async function insertEventViaApi(
     return await calendar.insertEvent(calendarId, event);
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response?.status;
+      const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
       return null;
@@ -182,7 +182,7 @@ export async function patchEventViaApi(
     return await calendar.patchEvent(calendarId, { eventId: googleEventId, event });
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response?.status;
+      const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
       return null;
@@ -216,7 +216,7 @@ export async function fetchEvents(
     if (pageToken) listOpts.pageToken = pageToken;
 
     const data = await calendar.listEvents(calendarId, listOpts);
-    if (data.items) allEvents.push(...data.items);
+    allEvents.push(...data.items);
     pageToken = data.nextPageToken;
     if (data.nextSyncToken) {
       state.syncTokens[calendarId] = data.nextSyncToken;

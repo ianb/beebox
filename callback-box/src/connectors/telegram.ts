@@ -197,7 +197,7 @@ class TelegramConnector implements Connector {
     let offset = working.lastUpdateId ? working.lastUpdateId + 1 : undefined;
 
     // Drain all pending updates
-    while (true) {
+    for (;;) {
       const updates = await tg.getUpdates(
         offset != null
           ? { offset, limit: 100, timeout: 0 }

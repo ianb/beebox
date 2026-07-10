@@ -73,7 +73,10 @@ async function sendThreadOutbound(
   await recordCallbackTimers(boxRoot, { fields, threadRelPath });
 
   for (const msg of unsent) {
-    const text = msg.text?.trim();
+    // msg.text is declared required by the ChatThreadMessage schema, but
+    // findUnsentAgentMessages reads the thread file via readThreadFields's raw
+    // (unvalidated) YAML parse — a hand-edited or corrupted entry can omit it.
+    const text = (msg.text as string | undefined)?.trim();
     if (!text) continue;
 
     const result = await tg.sendMessage(chatId, text);
@@ -109,7 +112,7 @@ async function recordCallbackTimers(
   opts: { fields: ChatThreadFields; threadRelPath: string }
 ): Promise<void> {
   const { fields, threadRelPath } = opts;
-  const entries = fields.entries ?? [];
+  const entries = fields.entries;
   const lastEntry = entries[entries.length - 1];
   if (!lastEntry || lastEntry.kind !== "seen") return;
 

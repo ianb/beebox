@@ -37,18 +37,25 @@ export async function processWebhookUpdate(opts: {
   // `state.chatMappings` (via getChatSlug) in place; returning that same fresh
   // object preserves a concurrent writer's lastUpdateId/callbacks. The lock is
   // released before the git commits below — we never hold it across a commit.
-  let ingested: IngestResult | null = null;
+  //
+  // A holder object (rather than a captured `let`) sidesteps a TypeScript
+  // narrowing false-positive: the checker otherwise treats a bare `let`
+  // reassigned inside this closure as unconditionally written by the time
+  // `updateTransientState` resolves, which isn't true — processUpdateToThread
+  // genuinely returns null for update types extractMessage() doesn't handle
+  // (e.g. edited_message, channel_post).
+  const holder: { ingested: IngestResult | null } = { ingested: null };
   await updateTransientState<TelegramState>({
     boxRoot,
     connectorName: "telegram",
     defaultValue: {},
     update: async (state) => {
-      ingested = await processUpdateToThread({ boxRoot, update, state });
+      holder.ingested = await processUpdateToThread({ boxRoot, update, state });
       return state;
     },
   });
-  if (!ingested) return null;
-  const result: IngestResult = ingested;
+  if (!holder.ingested) return null;
+  const result: IngestResult = holder.ingested;
 
   // Commit the thread file + any people files/cards (Track 2). Path-scoped so a
   // concurrent mutator's staged files aren't co-committed. FIRST of the three
