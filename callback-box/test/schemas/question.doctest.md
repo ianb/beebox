@@ -79,10 +79,10 @@ QuestionSchema.frontmatterSchema.safeParse(baseFields({ input: { type: "confirm"
 JSON.stringify(QuestionStatus.options)
 => ["pending","answered","dismissed","expired"]
 
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "dismissed" })).success
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "dismissed", "dismissed-at": ASKED_AT })).success
 => true
 
-QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "expired" })).success
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "expired", "expired-at": ASKED_AT })).success
 => true
 
 QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "closed" })).success
@@ -225,6 +225,91 @@ expires-after: P7D
 
 ```
 
+## Option uniqueness: ids unique, labels unique case-insensitively
+
+Answer resolution matches typed answers against option labels with
+`toLowerCase()`, so two options differing only in case would be ambiguous:
+
+```ts
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({
+    input: { type: "select", options: [{ id: "a", label: "A" }, { id: "a", label: "B" }] },
+  })
+).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({
+    input: { type: "select", options: [{ id: "a", label: "Yes" }, { id: "b", label: "yes" }] },
+  })
+).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({
+    input: { type: "select", options: [{ id: "a", label: "Yes" }, { id: "b", label: "No" }] },
+  })
+).success
+=> true
+```
+
+## Status/lifecycle coherence: each status owns exactly its own fields
+
+`answered` requires `answer` + `answered-at`; `dismissed` requires
+`dismissed-at`; `expired` requires `expired-at`. A card must not carry another
+status's lifecycle fields — status is single.
+
+```ts
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "answered" })).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({ status: "answered", answer: { text: "Blue" }, "answered-at": ASKED_AT })
+).success
+=> true
+
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "dismissed" })).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({ status: "dismissed", "dismissed-at": ASKED_AT })
+).success
+=> true
+
+QuestionSchema.frontmatterSchema.safeParse(baseFields({ status: "expired" })).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({ status: "expired", "expired-at": ASKED_AT })
+).success
+=> true
+```
+
+A `pending` card must carry none of the terminal fields, and a terminal card
+must not carry a foreign status's timestamp:
+
+```ts
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({ status: "pending", "expired-at": ASKED_AT })
+).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({ status: "pending", answer: { text: "x" } })
+).success
+=> false
+
+QuestionSchema.frontmatterSchema.safeParse(
+  baseFields({
+    status: "answered",
+    answer: { text: "Blue" },
+    "answered-at": ASKED_AT,
+    "dismissed-at": ASKED_AT,
+  })
+).success
+=> false
+```
+
 ## Confirm template: no options, `asked-at` still set
 
 ```ts
@@ -243,4 +328,71 @@ input:
 asked-at: 2026-07-10T09:00:00-07:00
 ---
 
+```
+
+## Registered templates expose the answer contract (directive / learning / expires-after)
+
+The `question`, `question-text`, and `question-confirm` cb-create templates
+accept optional `directive`, `learning`, and `expires-after` args and pass them
+through to the builders. Validation is strict: a bad `expires-after` or a
+`learning` missing its `proposal` is rejected at the args boundary.
+
+```ts setup
+import { getTemplate } from "../../src/schemas/templates-registry.js";
+import "../../src/schemas/templates-builtins.js";
+
+// Parse raw args through the template's own schema, then generate — exercising
+// both the argsSchema (accepts the contract fields) and the passthrough.
+function renderTemplate(name, rawArgs) {
+  const def = getTemplate(name);
+  if (def === undefined) throw new Error(`no template ${name}`);
+  return def.generate(def.argsSchema.parse(rawArgs));
+}
+```
+
+The text template carries `directive`, a `learning` block, and `expires-after`:
+
+```ts
+const card = renderTemplate("question-text", {
+  memo: "Why",
+  prompt: "What is this?",
+  directive: "File it.",
+  learning: { sink: "guide", proposal: "Items like this belong in category A." },
+  "expires-after": "P7D",
+});
+card.includes("directive: File it.")
+=> true
+
+card.includes("Items like this belong in category A.")
+=> true
+
+card.includes("expires-after: P7D")
+=> true
+```
+
+The select template threads the same fields alongside its options:
+
+```ts
+const card = renderTemplate("question", {
+  memo: "Why",
+  prompt: "Pick one",
+  options: ["Finance", "Personal"],
+  directive: "File the receipt",
+});
+card.includes("directive: File the receipt")
+=> true
+
+card.includes("label: Finance")
+=> true
+```
+
+Strict arg validation — a malformed `expires-after` and a `learning` without a
+`proposal` are both rejected at the args boundary (a `ZodError`):
+
+```ts
+renderTemplate("question-confirm", { memo: "m", prompt: "p", "expires-after": "7 days" })
+=> throws ZodError
+
+renderTemplate("question-text", { memo: "m", prompt: "p", learning: { sink: "guide" } })
+=> throws ZodError
 ```
