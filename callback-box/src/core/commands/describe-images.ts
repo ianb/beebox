@@ -54,11 +54,6 @@ const DescribeImagesArgsSchema = z.object({
   noRename: z.boolean().optional(),
 });
 
-const DescribeImagesArgsSchema = z.object({
-  paths: z.array(z.string()).optional(),
-  noRename: z.boolean().optional(),
-});
-
 /** Resolve each input path to a { cardPath, imagePath } batch item, warning on skips. */
 async function resolveItems(
   ctx: CommandContext,
