@@ -274,9 +274,20 @@ search module. Chunks are ordered under Implementation order.
        current-`EMBEDDER_ID` vector). This is the signal the query path
        gates hybrid on: without it, a failed or partial corpus embed
        would still rank hybrid, silently biasing toward the docs that
-       happen to have vectors (Orama fuses whichever halves exist). On
-       the lock-contended stale path, readiness is computed the same
-       way from read-only manifest + sidecar loads.
+       happen to have vectors (Orama fuses whichever halves exist). The
+       lock-contended stale path **fails closed** (`embeddingsReady:
+       false`, one contended query ranks text-only): its restored index
+       may predate the lock holder's writes, and an absent sidecar would
+       otherwise read as "nothing pending". *(As-built refinement from
+       the chunk-3 cross-model review.)*
+    6. **Persist ordering (as-built, from the chunk-3 review)**: the
+       contains sidecar saves BEFORE index + manifest, making the
+       manifest the oldest survivor of any crash. `embeddedHash` asserts
+       "the indexed vector embeds this card's sidecar `containsText`" —
+       under the old sidecar-last order, a crash between the manifest
+       and sidecar writes would durably attach a vector of the *old*
+       contains text on the next refresh; sidecar-first makes that
+       window re-diff and converge instead.
     Cost reality (why there is no opt-in gate, no job cards, no cache
     file): a full 10k-card box is ~2k searchable `contains` sentences ×
     ~30 tokens ≈ 60k tokens ≈ **$0.001** and one or two API calls; steady
@@ -305,9 +316,14 @@ search module. Chunks are ordered under Implementation order.
     `--mode <text|hybrid>`: omitted = auto (hybrid when possible);
     `text` forces today's behavior (offline, deterministic, and the
     relevance-comparison lever while tuning); `hybrid` fails loudly with
-    the key-setup hint when no key is configured, and with the pending
-    count when the corpus isn't fully embedded yet (enumerated values in
-    the error per `docs/ideas.md` § CLI Design for Agents).
+    the key-setup hint when no key is configured, and — when the corpus
+    isn't fully embedded yet — with the refresh-side cause folded into
+    the error (the 401/timeout warning would otherwise be swallowed;
+    as-built refinement from the chunk-4 review, which also traded the
+    planned pending-count for the cause text). `--mode text` skips key
+    resolution and corpus embedding entirely — offline means zero
+    network calls and immunity to a malformed secret file (enumerated
+    values in errors per `docs/ideas.md` § CLI Design for Agents).
   - **Tuning constants** (in `query.ts`, tuned while dogfooding against
     the large box copy): `SIMILARITY = 0.35` to start (Orama's 0.8
     default would filter out virtually every OpenAI-embedding match);
