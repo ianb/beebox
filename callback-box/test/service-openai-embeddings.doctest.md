@@ -11,6 +11,8 @@ import {
   EMBEDDING_DIMENSIONS,
   EMBEDDER_ID,
   createFakeEmbeddings,
+  parseEmbeddingsResponse,
+  chunkTexts,
 } from "../src/services/openai-embeddings.js";
 import { getOpenAiEmbeddingsKey } from "../src/core/search/embeddings-key.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
@@ -85,6 +87,72 @@ recovered.length
 
 flaky.calls.length
 => 3
+```
+
+## Response validation: every malformed shape is a typed EmbeddingsError
+
+The real service parses untrusted API responses through
+`parseEmbeddingsResponse`; nothing malformed may escape as a raw
+`TypeError` — the refresh and query layers degrade on `EmbeddingsError`
+specifically.
+
+```ts continue
+function okVector(): number[] {
+  return Array.from({ length: EMBEDDING_DIMENSIONS }, () => 0.1);
+}
+
+parseEmbeddingsResponse({ data: [{ index: 0, embedding: okVector() }] }, 1).length
+=> 1
+
+parseEmbeddingsResponse(null, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({}, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [] }, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [null] }, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [{ index: 1, embedding: okVector() }] }, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [{ index: 0 }] }, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [{ index: 0, embedding: [0.1, 0.2] }] }, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [{ index: 0, embedding: okVector().map(() => "x") }] }, 1)
+=> throws EmbeddingsError
+
+parseEmbeddingsResponse({ data: [{ index: 0, embedding: okVector().map(() => NaN) }] }, 1)
+=> throws EmbeddingsError
+```
+
+## Request chunking respects input-count and character budgets
+
+```ts continue
+chunkTexts([]).length
+=> 0
+
+chunkTexts(["a", "b"]).length
+=> 1
+
+const manyTexts = Array.from({ length: 2049 }, (_, i) => `t${i}`);
+const byCount = chunkTexts(manyTexts);
+JSON.stringify(byCount.map((c) => c.length))
+=> [2048,1]
+
+const bigTexts = ["x".repeat(250_000), "y".repeat(250_000), "z"];
+const byChars = chunkTexts(bigTexts);
+JSON.stringify(byChars.map((c) => c.length))
+=> [1,2]
+
+byChars.flat().join("").length === bigTexts.join("").length
+=> true
 ```
 
 ## EMBEDDER_ID names provider, model, and dims

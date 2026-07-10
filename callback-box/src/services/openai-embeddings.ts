@@ -22,6 +22,12 @@ export const EMBEDDER_ID = `openai:${EMBEDDING_MODEL}@${String(EMBEDDING_DIMENSI
 
 /** OpenAI's `/v1/embeddings` accepts at most this many inputs per request. */
 const MAX_INPUTS_PER_REQUEST = 2048;
+/**
+ * Conservative character budget per request. The API caps a request at
+ * 300k tokens summed across inputs; ~4 chars/token makes 400k chars a
+ * comfortable margin even for adversarial tokenization.
+ */
+const MAX_CHARS_PER_REQUEST = 400_000;
 
 // ─── Errors ──────────────────────────────────────────────────────────────────
 
@@ -46,13 +52,73 @@ export interface EmbeddingsService {
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
-interface OpenAIEmbeddingItem {
-  index: number;
-  embedding: number[];
+/**
+ * Validate an untrusted `/v1/embeddings` response body into vectors, in
+ * request order. Every malformed shape — non-object body, missing/short
+ * `data`, null items, wrong `index`, absent/misshapen/non-finite
+ * `embedding` — becomes a typed EmbeddingsError, never a raw TypeError:
+ * the refresh and query layers degrade on EmbeddingsError specifically.
+ * Exported for doctests (no real key can exercise this boundary in CI).
+ */
+export function parseEmbeddingsResponse(body: unknown, expectedCount: number): number[][] {
+  if (typeof body !== "object" || body === null || !Array.isArray((body as { data?: unknown }).data)) {
+    const noDataDetail = `response body had no data array (got ${body === null ? "null" : typeof body})`;
+    throw new EmbeddingsError(noDataDetail);
+  }
+  const data = (body as { data: unknown[] }).data;
+  if (data.length !== expectedCount) {
+    const countMismatchDetail = `response had ${String(data.length)} entries for ${String(expectedCount)} inputs`;
+    throw new EmbeddingsError(countMismatchDetail);
+  }
+  const vectors: number[][] = Array.from<number[]>({ length: expectedCount });
+  for (const [position, rawItem] of data.entries()) {
+    if (typeof rawItem !== "object" || rawItem === null) {
+      const nonObjectDetail = `response entry at position ${String(position)} was not an object`;
+      throw new EmbeddingsError(nonObjectDetail);
+    }
+    const item = rawItem as { index?: unknown; embedding?: unknown };
+    if (item.index !== position) {
+      const indexMismatchDetail = `response index ${String(item.index)} did not match request position ${String(position)}`;
+      throw new EmbeddingsError(indexMismatchDetail);
+    }
+    const embedding = item.embedding;
+    if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
+      const receivedDims = Array.isArray(embedding) ? String(embedding.length) : "no";
+      const dimensionMismatchDetail = `response vector at index ${String(position)} had ${receivedDims} dims, expected ${String(EMBEDDING_DIMENSIONS)}`;
+      throw new EmbeddingsError(dimensionMismatchDetail);
+    }
+    if (!embedding.every((v) => typeof v === "number" && Number.isFinite(v))) {
+      const nonNumericDetail = `response vector at index ${String(position)} held non-finite or non-number entries`;
+      throw new EmbeddingsError(nonNumericDetail);
+    }
+    vectors[position] = embedding as number[];
+  }
+  return vectors;
 }
 
-interface OpenAIEmbeddingsResponse {
-  data: OpenAIEmbeddingItem[];
+/**
+ * Split texts into request chunks respecting both input-count and char
+ * budgets. Exported for doctests only — the real service applies it inside
+ * embed().
+ */
+export function chunkTexts(texts: string[]): string[][] {
+  const chunks: string[][] = [];
+  let current: string[] = [];
+  let currentChars = 0;
+  for (const text of texts) {
+    const over =
+      current.length >= MAX_INPUTS_PER_REQUEST
+      || (current.length > 0 && currentChars + text.length > MAX_CHARS_PER_REQUEST);
+    if (over) {
+      chunks.push(current);
+      current = [];
+      currentChars = 0;
+    }
+    current.push(text);
+    currentChars += text.length;
+  }
+  if (current.length > 0) chunks.push(current);
+  return chunks;
 }
 
 export function createOpenAIEmbeddingsService(apiKey: string): EmbeddingsService {
@@ -64,44 +130,25 @@ export function createOpenAIEmbeddingsService(apiKey: string): EmbeddingsService
   });
 
   async function embedChunk(texts: string[]): Promise<number[][]> {
-    let body: OpenAIEmbeddingsResponse;
+    let body: unknown;
     try {
       body = await api
         .post("embeddings", {
           json: { model: EMBEDDING_MODEL, input: texts, dimensions: EMBEDDING_DIMENSIONS },
         })
-        .json<OpenAIEmbeddingsResponse>();
+        .json<unknown>();
     } catch (e) {
       const requestFailedDetail = `request failed: ${(e as Error).message}`;
       throw new EmbeddingsError(requestFailedDetail, { cause: e });
     }
-
-    if (!Array.isArray(body.data) || body.data.length !== texts.length) {
-      const receivedCount = Array.isArray(body.data) ? String(body.data.length) : "no";
-      const countMismatchDetail = `response had ${receivedCount} entries for ${String(texts.length)} inputs`;
-      throw new EmbeddingsError(countMismatchDetail);
-    }
-    const vectors: number[][] = Array.from<number[]>({ length: texts.length });
-    for (const [position, item] of body.data.entries()) {
-      if (item.index !== position) {
-        const indexMismatchDetail = `response index ${String(item.index)} did not match request position ${String(position)}`;
-        throw new EmbeddingsError(indexMismatchDetail);
-      }
-      if (!Array.isArray(item.embedding) || item.embedding.length !== EMBEDDING_DIMENSIONS) {
-        const dimensionMismatchDetail = `response vector at index ${String(position)} had ${String(item.embedding.length)} dims, expected ${String(EMBEDDING_DIMENSIONS)}`;
-        throw new EmbeddingsError(dimensionMismatchDetail);
-      }
-      vectors[position] = item.embedding;
-    }
-    return vectors;
+    return parseEmbeddingsResponse(body, texts.length);
   }
 
   return {
     async embed(texts) {
       if (texts.length === 0) return [];
       const results: number[][] = [];
-      for (let start = 0; start < texts.length; start += MAX_INPUTS_PER_REQUEST) {
-        const chunk = texts.slice(start, start + MAX_INPUTS_PER_REQUEST);
+      for (const chunk of chunkTexts(texts)) {
         results.push(...(await embedChunk(chunk)));
       }
       return results;

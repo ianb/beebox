@@ -16,6 +16,8 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
+import { EMBEDDING_DIMENSIONS } from "../../services/openai-embeddings.js";
+import { invariant } from "../../lib/invariant.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
@@ -41,6 +43,13 @@ export const searchOramaSchema = {
   // dims change also requires bumping SEARCH_SCHEMA_VERSION above.
   embedding: "vector[512]",
 } as const;
+
+// Import-time tripwire for the hand-kept tie described above: a dims change
+// that misses the schema literal fails here, not obscurely at insert time.
+invariant(
+  searchOramaSchema.embedding === `vector[${String(EMBEDDING_DIMENSIONS)}]`,
+  `search schema embedding field "${searchOramaSchema.embedding}" does not match EMBEDDING_DIMENSIONS ${String(EMBEDDING_DIMENSIONS)}`,
+);
 
 export type SearchIndex = Orama<typeof searchOramaSchema>;
 
