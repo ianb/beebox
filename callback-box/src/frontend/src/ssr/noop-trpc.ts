@@ -17,6 +17,7 @@ type TrpcProviderClient = Parameters<typeof trpc.Provider>[0]["client"];
 
 export function createSsrNoopTrpcClient(): TrpcProviderClient {
   return (
+    // eslint-disable-next-line no-restricted-syntax -- createTRPCReact doesn't surface `createClient` in its public types, and the result isn't the branded type Provider wants; both boundary casts centralized here (see file docstring).
     trpc as unknown as {
       createClient: (opts: { links: [] }) => TrpcProviderClient;
     }

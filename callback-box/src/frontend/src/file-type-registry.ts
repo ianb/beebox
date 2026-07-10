@@ -133,6 +133,7 @@ export function registerFileType<T = unknown>(
   entries.push({
     selector,
     renderer: facets.renderer,
+    // eslint-disable-next-line no-restricted-syntax -- generic erasure: the registry stores heterogeneous FileTypeUI<T> in one array as FileTypeUI<unknown>; T is recovered by the selector match at read time.
     listUI: facets.listUI as FileTypeUI<unknown> | undefined,
   });
 }
