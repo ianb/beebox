@@ -65,7 +65,7 @@ export async function transcribeCaptureClips(opts: {
   let durationSeconds = 0;
   let firstTranscript: string | undefined;
 
-  for (const [index, cardFile] of audioCards.entries()) {
+  for (const cardFile of audioCards) {
     const cardPath = path.join(captureAttachDir, cardFile);
     let fields: AudioFields;
     try {
@@ -79,7 +79,9 @@ export async function transcribeCaptureClips(opts: {
     if (fields.status === "transcribed") {
       transcribed += 1;
       durationSeconds += durationOf(fields);
-      if (index === 0) firstTranscript = fields.transcript;
+      // Summary comes from the first SUCCEEDED clip, not clip 0 — a partial
+      // failure where clip 0 failed must still yield a meaningful summary.
+      if (firstTranscript === undefined) firstTranscript = fields.transcript;
       continue;
     }
 
@@ -103,7 +105,7 @@ export async function transcribeCaptureClips(opts: {
       fields.filename.duration = `${String(Math.round(result.duration))}s`;
       fields.status = "transcribed";
       await saveAudioCard(cardPath, fields);
-      if (index === 0) firstTranscript = result.text;
+      if (firstTranscript === undefined) firstTranscript = result.text;
 
       const audioBasename = cardFile.replace(/\.audio\.card$/, "");
       const audioCardAttachDir = attachDirFor(cardPath);

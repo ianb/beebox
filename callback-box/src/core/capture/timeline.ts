@@ -62,15 +62,39 @@ interface TimedImage {
   absoluteTime: number; // ms since epoch
 }
 
-type TimelineEvent = { type: "word"; word: TimedWord } | { type: "image"; image: TimedImage };
+/** A clip present in the session but left untranscribed (provider outage). */
+interface UntranscribedClip {
+  absoluteTime: number; // ms since epoch (segment start)
+  label: string; // e.g. "audio clip 2"
+}
+
+type TimelineEvent =
+  | { type: "word"; word: TimedWord }
+  | { type: "image"; image: TimedImage }
+  | { type: "untranscribed"; clip: UntranscribedClip };
 
 const SILENCE_THRESHOLD_MS = 10_000;
 
-/** Load the timing words for a single audio card, or null when unavailable. */
-async function loadTimingWords(sessionAttachDir: string, ac: string): Promise<TimedWord[] | null> {
+/** Human label for an audio card ("audio-002.audio.card" → "audio clip 2"). */
+function clipLabel(ac: string): string {
+  const match = /audio-0*(\d+)\.audio\.card$/.exec(ac);
+  return match ? `audio clip ${match[1]}` : ac.replace(/\.audio\.card$/, "");
+}
+
+/**
+ * The timing outcome for one audio card: its transcribed words, or a marker
+ * that it exists but was left untranscribed, or unavailable (unreadable card).
+ */
+type ClipTiming =
+  | { kind: "words"; words: TimedWord[] }
+  | { kind: "untranscribed"; clip: UntranscribedClip }
+  | { kind: "unavailable" };
+
+/** Load the timing for a single audio card. */
+async function loadClipTiming(sessionAttachDir: string, ac: string): Promise<ClipTiming> {
   const audioCardPath = path.join(sessionAttachDir, ac);
   const acFields = await readAudioCard(audioCardPath);
-  if (!acFields) return null;
+  if (!acFields) return { kind: "unavailable" };
   const recordedMs = new Date(acFields.filename.recorded).getTime();
 
   const audioBasename = ac.replace(/\.audio\.card$/, "");
@@ -79,29 +103,37 @@ async function loadTimingWords(sessionAttachDir: string, ac: string): Promise<Ti
   try {
     timingData = JSON.parse(await fs.readFile(timingPath, "utf-8"));
   } catch (e) {
-    // No timing sidecar — an untranscribed clip (provider outage). Its words
-    // are simply absent from the timeline; not an error worth logging loudly.
+    // No timing sidecar — an untranscribed clip (provider outage). Emit a
+    // visible marker at the clip's start rather than silently dropping it.
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`Could not load timing data ${timingPath} for ${ac}:`, e);
     }
-    return null;
+    return { kind: "untranscribed", clip: { absoluteTime: recordedMs, label: clipLabel(ac) } };
   }
 
-  return timingData.words.map((w) => ({
-    word: w.word,
-    absoluteStart: recordedMs + w.start * 1000,
-    absoluteEnd: recordedMs + w.end * 1000,
-  }));
+  return {
+    kind: "words",
+    words: timingData.words.map((w) => ({
+      word: w.word,
+      absoluteStart: recordedMs + w.start * 1000,
+      absoluteEnd: recordedMs + w.end * 1000,
+    })),
+  };
 }
 
-/** Collect timed words across all audio cards in the session. */
-async function collectTimedWords(sessionAttachDir: string, audioCards: string[]): Promise<TimedWord[]> {
-  const allWords: TimedWord[] = [];
+/** Collect timed words + untranscribed-clip markers across all audio cards. */
+async function collectAudioTiming(
+  sessionAttachDir: string,
+  audioCards: string[],
+): Promise<{ words: TimedWord[]; untranscribed: UntranscribedClip[] }> {
+  const words: TimedWord[] = [];
+  const untranscribed: UntranscribedClip[] = [];
   for (const ac of audioCards) {
-    const words = await loadTimingWords(sessionAttachDir, ac);
-    if (words) allWords.push(...words);
+    const timing = await loadClipTiming(sessionAttachDir, ac);
+    if (timing.kind === "words") words.push(...timing.words);
+    else if (timing.kind === "untranscribed") untranscribed.push(timing.clip);
   }
-  return allWords;
+  return { words, untranscribed };
 }
 
 /** Collect timed images across all (non-invalid) image cards in the session. */
@@ -119,17 +151,30 @@ async function collectTimedImages(sessionAttachDir: string, imageCards: string[]
   return allImages;
 }
 
-/** Merge words and images into a single timeline sorted by absolute time. */
-function mergeTimelineEvents(allWords: TimedWord[], allImages: TimedImage[]): TimelineEvent[] {
+/** Absolute time (ms) an event is anchored at, for sorting. */
+function eventTime(e: TimelineEvent): number {
+  switch (e.type) {
+    case "word":
+      return e.word.absoluteStart;
+    case "image":
+      return e.image.absoluteTime;
+    case "untranscribed":
+      return e.clip.absoluteTime;
+  }
+}
+
+/** Merge words, images, and untranscribed markers into one time-sorted timeline. */
+function mergeTimelineEvents(input: {
+  words: TimedWord[];
+  images: TimedImage[];
+  untranscribed: UntranscribedClip[];
+}): TimelineEvent[] {
   const events: TimelineEvent[] = [
-    ...allWords.map((w): TimelineEvent => ({ type: "word", word: w })),
-    ...allImages.map((img): TimelineEvent => ({ type: "image", image: img })),
+    ...input.words.map((w): TimelineEvent => ({ type: "word", word: w })),
+    ...input.images.map((img): TimelineEvent => ({ type: "image", image: img })),
+    ...input.untranscribed.map((clip): TimelineEvent => ({ type: "untranscribed", clip })),
   ];
-  events.sort((a, b) => {
-    const timeA = a.type === "word" ? a.word.absoluteStart : a.image.absoluteTime;
-    const timeB = b.type === "word" ? b.word.absoluteStart : b.image.absoluteTime;
-    return timeA - timeB;
-  });
+  events.sort((a, b) => eventTime(a) - eventTime(b));
   return events;
 }
 
@@ -151,18 +196,26 @@ function buildTranscriptMarkdown(events: TimelineEvent[], allImages: TimedImage[
   }
 
   for (const event of events) {
-    if (event.type === "word") {
-      const w = event.word;
-      if (lastWordEnd > 0 && w.absoluteStart - lastWordEnd > SILENCE_THRESHOLD_MS) {
-        flushText();
-        const gapSeconds = Math.round((w.absoluteStart - lastWordEnd) / 1000);
-        parts.push(`{% silence duration="${gapSeconds}s" /%}`);
+    switch (event.type) {
+      case "word": {
+        const w = event.word;
+        if (lastWordEnd > 0 && w.absoluteStart - lastWordEnd > SILENCE_THRESHOLD_MS) {
+          flushText();
+          const gapSeconds = Math.round((w.absoluteStart - lastWordEnd) / 1000);
+          parts.push(`{% silence duration="${gapSeconds}s" /%}`);
+        }
+        currentWords.push(w.word);
+        lastWordEnd = w.absoluteEnd;
+        break;
       }
-      currentWords.push(w.word);
-      lastWordEnd = w.absoluteEnd;
-    } else {
-      flushText();
-      parts.push(`{% image ref="${event.image.ref}" /%}`);
+      case "image":
+        flushText();
+        parts.push(`{% image ref="${event.image.ref}" /%}`);
+        break;
+      case "untranscribed":
+        flushText();
+        parts.push(`[${event.clip.label} not transcribed]`);
+        break;
     }
   }
 
@@ -195,9 +248,9 @@ export async function assembleCaptureTimeline(opts: { captureCardPath: string })
   const audioCards = attachFiles.filter((f) => f.endsWith(".audio.card"));
   const imageCards = attachFiles.filter((f) => f.endsWith(".image.card"));
 
-  const allWords = await collectTimedWords(sessionAttachDir, audioCards);
+  const { words: allWords, untranscribed } = await collectAudioTiming(sessionAttachDir, audioCards);
   const allImages = await collectTimedImages(sessionAttachDir, imageCards);
-  const events = mergeTimelineEvents(allWords, allImages);
+  const events = mergeTimelineEvents({ words: allWords, images: allImages, untranscribed });
   const transcript = buildTranscriptMarkdown(events, allImages);
 
   await fs.writeFile(captureCardPath, `---\n${split.frontmatterText}\n---\n${transcript}\n`, "utf-8");

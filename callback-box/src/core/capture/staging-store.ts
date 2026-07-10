@@ -24,6 +24,7 @@ export type StagingSessionState =
   | "open"
   | "sealed"
   | "preparing"
+  | "delivering"
   | "delivered"
   | `failed:${string}`;
 
@@ -283,6 +284,57 @@ export async function setStagingState(opts: {
     mutate: (session) => {
       session.state = opts.state;
     },
+  });
+}
+
+/**
+ * Persist the resolved delivery target session id onto the staging session, so
+ * a later retry/resume reuses the same chat rather than re-resolving (or, for a
+ * freshly-created session, orphaning a new one each attempt). Idempotent no-op
+ * if unchanged.
+ */
+export async function setStagingTargetSessionId(opts: {
+  boxRoot: string;
+  id: string;
+  targetSessionId: string;
+}): Promise<void> {
+  await mutateSession({
+    boxRoot: opts.boxRoot,
+    id: opts.id,
+    mutate: (session) => {
+      session.targetSessionId = opts.targetSessionId;
+    },
+  });
+}
+
+/** Outcome of a {@link sealStagingSession} compare-and-swap. */
+export interface SealResult {
+  /** True when THIS call performed the fire-eligible transition (→ `sealed`). */
+  sealed: boolean;
+  /** True when the session was already sealed/in-flight (no transition, no re-fire). */
+  alreadySealed: boolean;
+}
+
+/**
+ * Compare-and-swap the session into `sealed` so exactly one concurrent finalize
+ * fires preparation. A fire-eligible source state — `open` (fresh finalize) or
+ * `failed:*` (retry affordance) — transitions to `sealed` and returns
+ * `sealed: true`; any in-flight state (`sealed`/`preparing`/`delivering`/
+ * `delivered`) is left untouched and returns `alreadySealed: true`. The whole
+ * read-decide-write runs under the per-session lock, so two POSTs racing on one
+ * `open` session can't both win.
+ */
+export async function sealStagingSession(opts: { boxRoot: string; id: string }): Promise<SealResult> {
+  const { boxRoot, id } = opts;
+  return withStagingLock(id, async () => {
+    const session = await readStagingSession({ boxRoot, id });
+    if (!session) throw new StagingSessionGoneError(id);
+    const fireEligible = session.state === "open" || session.state.startsWith("failed:");
+    if (!fireEligible) return { sealed: false, alreadySealed: true };
+    session.state = "sealed";
+    session.lastActivityAt = getBoxTimeISO(boxRoot);
+    await writeStagingSession({ boxRoot, session });
+    return { sealed: true, alreadySealed: false };
   });
 }
 

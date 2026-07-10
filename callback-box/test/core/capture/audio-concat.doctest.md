@@ -69,3 +69,29 @@ out[0].segmentId
 concatSegmentChunks([Buffer.from("one"), Buffer.from("two")]).toString("utf-8")
 => onetwo
 ```
+
+## A truncated tail chunk still concatenates (decodable prefix, no throw)
+
+A crash mid-recording can leave the last chunk cut to half its bytes (the tail
+since the last `dataavailable` is lost). Concat is pure byte-join, so it returns
+a buffer carrying the full prefix plus whatever survived — never throwing:
+
+```ts
+const header = Buffer.from("HEADER-cluster0-cluster1-");
+const truncatedTail = Buffer.from("cluster2-HALF").subarray(0, 8); // "cluster2" — cut mid-chunk
+const out = concatSegments([
+  { segmentId: "seg-a", startedAt: "2026-07-09T14:00:00.000Z", chunks: [header, truncatedTail] },
+]);
+out.length
+=> 1
+
+out[0].buffer.toString("utf-8")
+=> HEADER-cluster0-cluster1-cluster2
+```
+
+The full prefix is intact — the truncation only costs the missing tail bytes:
+
+```ts continue
+out[0].buffer.toString("utf-8").startsWith("HEADER-cluster0-cluster1-")
+=> true
+```

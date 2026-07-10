@@ -21,6 +21,7 @@ import {
   createStagingSession,
   readStagingSession,
   cleanupStagingSession,
+  sealStagingSession,
   setStagingState,
   addAudioChunk,
   addPhoto,
@@ -162,16 +163,18 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
 
-      // Re-fire only from a fresh (open) or previously-failed session; an
-      // already-sealed/preparing one is left to its in-flight worker.
-      const shouldFire = session.state === "open" || session.state.startsWith("failed:");
-      if (shouldFire) {
-        const runtime = getChatRuntime(boxRoot);
-        if (!runtime) {
-          console.error(`[capture] No chat runtime for box; cannot prepare capture ${session.id}`);
-          return reply.status(503).send({ error: "Chat runtime unavailable" });
-        }
-        await setStagingState({ boxRoot, id: session.id, state: "sealed" });
+      const runtime = getChatRuntime(boxRoot);
+      if (!runtime) {
+        console.error(`[capture] No chat runtime for box; cannot prepare capture ${session.id}`);
+        return reply.status(503).send({ error: "Chat runtime unavailable" });
+      }
+
+      // Compare-and-swap into `sealed` so two concurrent finalize POSTs can't
+      // both fire preparation. Only a true fire-eligible transition (open, or a
+      // failed:* retry) kicks off the worker; an already-sealed/in-flight
+      // session returns the same success response without re-firing.
+      const seal = await sealStagingSession({ boxRoot, id: session.id });
+      if (seal.sealed) {
         void prepareCaptureSession({
           boxRoot,
           id: session.id,

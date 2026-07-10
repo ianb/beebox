@@ -3,9 +3,11 @@
  *
  * On webapp startup, scan the box's staging area for sessions left mid-flight
  * (`sealed` — finalize fired but preparation hadn't started; `preparing` — a
- * crash interrupted it) and re-fire {@link prepareCaptureSession}. Each step is
- * idempotent, so a resumed run skips completed work and finishes where it left
- * off. Fire-and-forget so startup isn't blocked; failures are logged and marked.
+ * crash interrupted it; `delivering` — a crash between send and the `delivered`
+ * write, resolved idempotently by the at-most-once probe) and re-fire
+ * {@link prepareCaptureSession}. Each step is idempotent, so a resumed run skips
+ * completed work and finishes where it left off. Fire-and-forget so startup
+ * isn't blocked; failures are logged and marked.
  */
 
 import * as fs from "node:fs/promises";
@@ -36,7 +38,7 @@ export async function resumeStagingSessions(deps: {
   for (const id of ids) {
     const session = await readStagingSession({ boxRoot, id });
     if (session === null) continue;
-    if (session.state !== "sealed" && session.state !== "preparing") continue;
+    if (session.state !== "sealed" && session.state !== "preparing" && session.state !== "delivering") continue;
 
     console.warn(`[capture] Resuming staged capture ${id} (state=${session.state})`);
     void prepareCaptureSession({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {

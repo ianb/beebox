@@ -13,6 +13,7 @@ import {
   addPhoto,
   addFile,
   setStagingState,
+  sealStagingSession,
   cleanupStagingSession,
   stagingSessionIsEmpty,
 } from "../../../src/core/capture/staging-store.js";
@@ -112,6 +113,77 @@ Cleanup removes the whole session directory:
 await cleanupStagingSession({ boxRoot: box.root, id: session.id });
 await readStagingSession({ boxRoot: box.root, id: session.id })
 => null
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Concurrent chunk uploads to one segment all land (per-session lock)
+
+Ten chunks fired at once on a single segment read-modify-write `session.json`;
+the per-session promise-chain lock serializes them so none is lost:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+await Promise.all(
+  Array.from({ length: 10 }, (_v, i) =>
+    addAudioChunk({
+      boxRoot: box.root, id: session.id,
+      segmentId: "seg-a", segmentStartedAt: "2026-07-09T14:00:00.000Z",
+      filename: `audio-0-${String(i).padStart(3, "0")}.webm`, buffer: Buffer.from(`chunk-${i}`),
+    }),
+  ),
+);
+const after = await readStagingSession({ boxRoot: box.root, id: session.id });
+after.segments.length
+=> 1
+
+after.segments[0].chunks.length
+=> 10
+
+new Set(after.segments[0].chunks).size
+=> 10
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## `sealStagingSession` is a single-winner compare-and-swap
+
+Two concurrent finalize POSTs both call the CAS; exactly one wins the
+`open → sealed` transition, so preparation fires once:
+
+```ts
+const box = await makeTmpBox();
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const [a, b] = await Promise.all([
+  sealStagingSession({ boxRoot: box.root, id: session.id }),
+  sealStagingSession({ boxRoot: box.root, id: session.id }),
+]);
+[a.sealed, b.sealed].filter(Boolean).length
+=> 1
+
+[a.alreadySealed, b.alreadySealed].filter(Boolean).length
+=> 1
+
+(await readStagingSession({ boxRoot: box.root, id: session.id })).state
+=> sealed
+```
+
+A `failed:*` session is fire-eligible again (the retry affordance), while an
+in-flight `preparing`/`delivering`/`delivered` one is not:
+
+```ts continue
+await setStagingState({ boxRoot: box.root, id: session.id, state: "failed:deliver" });
+(await sealStagingSession({ boxRoot: box.root, id: session.id })).sealed
+=> true
+
+await setStagingState({ boxRoot: box.root, id: session.id, state: "delivering" });
+(await sealStagingSession({ boxRoot: box.root, id: session.id })).alreadySealed
+=> true
 ```
 
 ```ts cleanup

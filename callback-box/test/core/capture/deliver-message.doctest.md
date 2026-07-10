@@ -12,7 +12,7 @@ import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js"
 import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
 import { appendHistory, setMostActive } from "../../../src/core/chat/session/history.js";
-import { deliverCaptureMessage, buildCaptureWrapper } from "../../../src/core/capture/deliver.js";
+import { deliverCaptureMessage, buildCaptureWrapper, resolveCaptureDeliveryTarget } from "../../../src/core/capture/deliver.js";
 
 const W = buildCaptureWrapper({ docPath: "tmp-capture/x.capture-session.card", imageCount: 1, audioSeconds: 7, summary: "hi" });
 
@@ -38,7 +38,7 @@ const registry = makeRegistry(box, backend);
 const eventBus = createEventBus(box.root);
 
 const res = await deliverCaptureMessage({
-  boxRoot: box.root, registry, eventBus, targetSessionId: null, contextDir: null, message: W,
+  boxRoot: box.root, registry, eventBus, target: { sessionId: null, contextDir: null }, message: W,
 });
 await tick();
 
@@ -69,8 +69,10 @@ await busy.send("first turn");
 await tick();
 await setMostActive(box.root, "s-busy");
 
+// The caller resolves the target (→ the busy most-active session) first.
+const target = await resolveCaptureDeliveryTarget({ boxRoot: box.root, targetSessionId: null });
 const res = await deliverCaptureMessage({
-  boxRoot: box.root, registry, eventBus, targetSessionId: null, contextDir: null, message: W,
+  boxRoot: box.root, registry, eventBus, target, message: W,
 });
 
 res.queued
@@ -101,7 +103,7 @@ const eventBus = createEventBus(box.root);
 await appendHistory(box.root, { sessionId: "s-target" });
 
 const res = await deliverCaptureMessage({
-  boxRoot: box.root, registry, eventBus, targetSessionId: "s-target", contextDir: null, message: W,
+  boxRoot: box.root, registry, eventBus, target: { sessionId: "s-target", contextDir: null }, message: W,
 });
 await tick();
 
@@ -130,7 +132,7 @@ const registry = {
   enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
 };
 
-const caught = await deliverCaptureMessage({ boxRoot: box.root, registry, eventBus, targetSessionId: null, contextDir: null, message: W }).then(() => "no throw", (e) => e.name);
+const caught = await deliverCaptureMessage({ boxRoot: box.root, registry, eventBus, target: { sessionId: null, contextDir: null }, message: W }).then(() => "no throw", (e) => e.name);
 caught
 => CaptureDeliveryError
 ```

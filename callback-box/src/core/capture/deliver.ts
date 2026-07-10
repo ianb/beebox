@@ -10,11 +10,13 @@
  * `failed:deliver`) rather than fire-and-forgotten.
  */
 
+import * as fs from "node:fs/promises";
 import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import type { EventBus } from "../event-bus.js";
-import { loadHistory, getMostActive } from "../chat/session/history.js";
+import { loadHistory, getMostActive, getDirectoryForSession, resolveSessionLogPath } from "../chat/session/history.js";
 import { getBoxTimeISO } from "../../lib/time.js";
+import { invariant } from "../../lib/invariant.js";
 
 /** Raised when the non-busy `send()` of a capture message fails. Retryable. */
 export class CaptureDeliveryError extends Error {
@@ -46,6 +48,15 @@ export function buildCaptureWrapper(opts: {
   partial?: boolean;
   transcriptionFailed?: boolean;
 }): string {
+  // `doc` is a server-generated path (`<contextDir>/tmp-capture/capture-…`);
+  // a double quote or newline in it would break the wrapper's attribute
+  // parsing. These characters can't occur in the generated basename, and a
+  // landmark contextDir carrying one is a broken invariant, not runtime input —
+  // fail loudly rather than emit an unparseable message.
+  invariant(
+    !/[\n\r"]/.test(opts.docPath),
+    `Capture doc path contains a quote or newline: ${JSON.stringify(opts.docPath)}`,
+  );
   const attrs = [
     `doc="${opts.docPath}"`,
     `images="${String(opts.imageCount)}"`,
@@ -82,32 +93,69 @@ export function summarizeCapture(opts: {
 }
 
 /**
- * Resolve the delivery target: the staging session's `targetSessionId` if that
- * chat is still known to this box, else the most-active session, else a fresh
- * session (never 404s). Returns the session and its id (`null` for a fresh
- * pre-assignment session).
+ * A resolved delivery destination — computed ONCE at the start of preparation
+ * (before cards are written) so placement and delivery agree, and persisted so
+ * a retry reuses it. `sessionId === null` means "no existing chat resolved;
+ * create a fresh session at delivery time".
  */
-async function resolveDeliveryTarget(opts: {
-  boxRoot: string;
-  registry: ChatSessionRegistry;
-  targetSessionId: string | null;
+export interface CaptureDeliveryTarget {
+  sessionId: string | null;
+  /** Box-relative landmark dir of the target chat (drives `tmp-capture/` placement). */
   contextDir: string | null;
-}): Promise<{ session: ChatSession; id: string | null }> {
-  const { boxRoot, registry, targetSessionId, contextDir } = opts;
+}
+
+/**
+ * Resolve where a capture should be delivered, purely from on-disk state (no
+ * session is created here): the staging session's `targetSessionId` if that
+ * chat is still known to this box, else the most-active session, else "create a
+ * fresh session" (`sessionId: null`). Never 404s.
+ */
+export async function resolveCaptureDeliveryTarget(opts: {
+  boxRoot: string;
+  targetSessionId: string | null;
+}): Promise<CaptureDeliveryTarget> {
+  const { boxRoot, targetSessionId } = opts;
   if (targetSessionId !== null) {
     const known = await loadHistory(boxRoot);
     if (known.includes(targetSessionId)) {
-      return { session: registry.getOrCreate(targetSessionId), id: targetSessionId };
+      return { sessionId: targetSessionId, contextDir: await getDirectoryForSession(boxRoot, targetSessionId) };
     }
   }
   const mostActive = await getMostActive(boxRoot);
   if (mostActive !== null) {
-    return { session: registry.getOrCreate(mostActive), id: mostActive };
+    return { sessionId: mostActive, contextDir: await getDirectoryForSession(boxRoot, mostActive) };
   }
-  const session = registry.createNew(
-    contextDir !== null && contextDir !== "" ? { contextDir } : {},
-  );
-  return { session, id: null };
+  return { sessionId: null, contextDir: null };
+}
+
+/**
+ * At-most-once probe: has this capture's `<capture>` message already been
+ * recorded in the target chat's transcript? Used on a mid-delivery resume to
+ * avoid re-sending a message whose `send()` resolved before we could persist
+ * the `delivered` marker. The `doc` path is unique per capture (it carries the
+ * staging id + timestamp), so a bare substring match on the JSONL is a reliable
+ * landed-signal — bare, not `doc="…"`, because the transcript stores the message
+ * as a JSON string where the wrapper's quotes are backslash-escaped. A `null`
+ * target (a fresh session that never got an id persisted) can't be probed →
+ * false.
+ */
+export async function captureMessageAlreadyLanded(opts: {
+  boxRoot: string;
+  sessionId: string | null;
+  docPath: string;
+}): Promise<boolean> {
+  const { boxRoot, sessionId, docPath } = opts;
+  if (sessionId === null) return false;
+  const logPath = await resolveSessionLogPath(boxRoot, sessionId);
+  try {
+    const raw = await fs.readFile(logPath, "utf-8");
+    return raw.includes(docPath);
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      console.warn(`[capture] Could not read transcript ${logPath} for at-most-once probe:`, e);
+    }
+    return false;
+  }
 }
 
 export interface DeliverCaptureResult {
@@ -116,30 +164,61 @@ export interface DeliverCaptureResult {
 }
 
 /**
- * Deliver a prepared capture message into a chat session. Emits
- * `chat-user-message` for the pending UI, then enqueues (if the agent is busy)
- * or awaits `send()`. A failed non-busy send throws {@link CaptureDeliveryError}
- * so the caller can record `failed:deliver`.
+ * Deliver a prepared capture message into a chat session, against a
+ * pre-resolved {@link CaptureDeliveryTarget}. Emits `chat-user-message` for the
+ * pending UI, then enqueues (if the agent is busy) or awaits `send()`. A failed
+ * non-busy send throws {@link CaptureDeliveryError} so the caller can record
+ * `failed:deliver`.
+ *
+ * For a fresh session (`target.sessionId === null`) the real id is assigned
+ * asynchronously by the backend; `onSessionResolved` fires once it lands so the
+ * caller can persist it (a retry then reuses the session instead of orphaning a
+ * new one each attempt).
  */
 export async function deliverCaptureMessage(opts: {
   boxRoot: string;
   registry: ChatSessionRegistry;
   eventBus: EventBus;
   wireSession?: ((session: ChatSession) => void) | undefined;
-  targetSessionId: string | null;
-  contextDir: string | null;
+  target: CaptureDeliveryTarget;
   /** The `<capture>` wrapper message body. */
   message: string;
+  /** Called with the target's session id once known (immediately for an
+   *  existing session; on assignment for a freshly-created one). */
+  onSessionResolved?: ((sessionId: string) => void | Promise<void>) | undefined;
 }): Promise<DeliverCaptureResult> {
-  const { boxRoot, registry, eventBus, wireSession, targetSessionId, contextDir, message } = opts;
+  const { boxRoot, registry, eventBus, wireSession, target, message, onSessionResolved } = opts;
 
-  const { session, id } = await resolveDeliveryTarget({
-    boxRoot,
-    registry,
-    targetSessionId,
-    contextDir,
-  });
+  let session: ChatSession;
+  let id: string | null;
+  if (target.sessionId !== null) {
+    session = registry.getOrCreate(target.sessionId);
+    id = target.sessionId;
+  } else {
+    session = registry.createNew(
+      target.contextDir !== null && target.contextDir !== "" ? { contextDir: target.contextDir } : {},
+    );
+    id = null;
+    // The fresh session's id arrives asynchronously via the registry's
+    // `session-assigned` event; persist it the moment it matches this exact
+    // session object (guarded so duck-typed test-double registries without an
+    // event emitter are a no-op).
+    if (onSessionResolved && typeof registry.on === "function") {
+      const handler = (payload: { sessionId: string }): void => {
+        if (session.getSessionId() !== payload.sessionId) return;
+        registry.off("session-assigned", handler);
+        void Promise.resolve(onSessionResolved(payload.sessionId)).catch((e: unknown) => {
+          console.error(`[capture] Persisting resolved target ${payload.sessionId} failed:`, e);
+        });
+      };
+      registry.on("session-assigned", handler);
+    }
+  }
   wireSession?.(session);
+
+  if (id !== null && onSessionResolved) {
+    await onSessionResolved(id);
+  }
 
   eventBus.emit("chat-user-message", {
     sessionId: id,

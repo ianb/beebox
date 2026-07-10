@@ -8,12 +8,15 @@ deterministically with no API key or Claude subprocess.
 
 ```ts setup
 import { execFileSync } from "node:child_process";
+import { mkdir, writeFile, appendFile, readFile, rm, access } from "node:fs/promises";
+import { dirname } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { splitCardContent } from "../../../src/cards/index.js";
 import { createEventBus } from "../../../src/core/event-bus.js";
 import { ChatSessionRegistry } from "../../../src/core/chat/session/registry.js";
 import { createFakeChatBackend } from "../../../src/services/claude-chat.js";
 import { plainTestPrompt, tick } from "../../helpers/chat-session-spawner-helpers.js";
+import { appendHistory, resolveSessionLogPath } from "../../../src/core/chat/session/history.js";
 import {
   createStagingSession,
   addAudioChunk,
@@ -24,6 +27,34 @@ import {
 import { prepareCaptureSession } from "../../../src/core/capture/prepare.js";
 import { sessionBasenameFor } from "../../../src/core/capture/write-cards.js";
 import { buildCaptureWrapper } from "../../../src/core/capture/deliver.js";
+
+async function pathExists(p) {
+  try { await access(p); return true; } catch { return false; }
+}
+
+// Arrow-free-at-call-site git inspection (keeps inline `=>` out of example
+// blocks, where the doctest tracker confuses arrows with assertion markers).
+function commitReport(boxRoot, baseA, baseB) {
+  const rows = execFileSync("git", ["log", "--format=%H%x09%s"], { cwd: boxRoot })
+    .toString().trim().split("\n").map((l) => l.split("\t"));
+  const subjectA = "Capture: " + baseA;
+  const subjectB = "Capture: " + baseB;
+  const countA = rows.filter((r) => r[1] === subjectA).length;
+  const countB = rows.filter((r) => r[1] === subjectB).length;
+  const rowA = rows.find((r) => r[1] === subjectA);
+  const rowB = rows.find((r) => r[1] === subjectB);
+  function filesOf(hash) {
+    return execFileSync("git", ["show", "--name-only", "--format=", hash], { cwd: boxRoot })
+      .toString().trim().split("\n").filter(Boolean);
+  }
+  const filesA = rowA ? filesOf(rowA[0]) : [];
+  const filesB = rowB ? filesOf(rowB[0]) : [];
+  const aIsolated = filesA.length > 0 && filesA.every((f) => f.includes(baseA)) && !filesA.some((f) => f.includes(baseB));
+  const bIsolated = filesB.length > 0 && filesB.every((f) => f.includes(baseB)) && !filesB.some((f) => f.includes(baseA));
+  // Single combined verdict: each capture committed exactly once, and each
+  // commit's files belong only to that capture (the F1 cross-contamination fix).
+  return countA === 1 && countB === 1 && aIsolated && bIsolated;
+}
 
 const GITIGNORE = ["tmp/", ".callback-box/", "**/*.attach/**/*.webm", "**/*.attach/**/*.jpg"].join("\n") + "\n";
 
@@ -120,14 +151,22 @@ JSON.stringify(splitCardContent(await box.read(docRel)).body.trim())
 => "Walked through the kitchen.\n\n{% image ref=\"attach/photo-001.image.card\" /%}\n\n{% silence duration=\"26s\" /%}\n\nFound the recipe."
 ```
 
-The document is committed with the capture message + trailer:
+The document is committed with the capture message + trailer, and delivery
+flipped the card `new` → `delivered` in a second (card-only) commit:
 
 ```ts continue
-execFileSync("git", ["log", "-1", "--format=%s"], { cwd: box.root }).toString().trim()
-=> Capture: «*»
+const subjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
+subjects.filter((s) => s.startsWith("Capture: ")).length
+=> 1
 
-execFileSync("git", ["log", "-1", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().trim()
-=> capture
+subjects.filter((s) => s.startsWith("Capture delivered: ")).length
+=> 1
+
+execFileSync("git", ["log", "--format=%(trailers:key=Created-By,valueonly)"], { cwd: box.root }).toString().includes("capture")
+=> true
+
+(await box.read(docRel)).includes("status: delivered")
+=> true
 ```
 
 Delivery injected the `<capture>` wrapper as a chat-user-message, and a
@@ -149,6 +188,55 @@ The staging session's media was cleaned up once delivered:
 ```ts continue
 await readStagingSession({ boxRoot: box.root, id })
 => null
+```
+
+```ts cleanup
+registry.shutdown();
+eventBus.close();
+await box.cleanup();
+```
+
+## Partial transcription: the failed clip is flagged and visibly marked (F4)
+
+When only some clips transcribe, the capture is delivered anyway with
+`transcription-failed`, the summary comes from a clip that DID transcribe, and
+the untranscribed clip gets a visible marker in the timeline instead of being
+silently dropped.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write(".gitignore", GITIGNORE);
+await box.write("config/transcription.json", JSON.stringify({ service: "fake" }));
+// Script only the first segment's clip; the second clip fails to transcribe.
+await box.write("config/fake-transcription.json", JSON.stringify({ "audio-001.webm": SCRIPT["audio-001.webm"] }, null, 2));
+box.commitAll("partial script");
+const id = await stageSealedSession(box.root);
+
+const backend = createFakeChatBackend();
+const registry = new ChatSessionRegistry(box.root, {
+  backend,
+  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+});
+const eventBus = createEventBus(box.root);
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus, registry });
+await tick();
+
+const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
+const partialBody = splitCardContent(await box.read(`tmp-capture/${basename}.capture-session.card`)).body;
+partialBody.includes("[audio clip 2 not transcribed]")
+=> true
+```
+
+The delivered wrapper carries `transcription-failed`, with the summary taken
+from the clip that succeeded (not the failed clip 0-or-2):
+
+```ts continue
+const captureMsg = eventBus.readSince(0).find((e) => e.event === "chat-user-message").data.message;
+captureMsg.includes("transcription-failed=\"1\"")
+=> true
+
+captureMsg.includes("Walked through the kitchen.")
+=> true
 ```
 
 ```ts cleanup
@@ -223,5 +311,197 @@ execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().split(
 
 ```ts cleanup
 eventBus.close();
+await box.cleanup();
+```
+
+## Two concurrent preparations commit independently (pathspec-scoped)
+
+Two staged sessions prepared via `Promise.all` must each produce their own
+commit touching only their own files — the pathspec-scoped, serialized commit
+never sweeps the other worker's staged files under the wrong message.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+const idA = await stageSealedSession(box.root);
+const idB = await stageSealedSession(box.root);
+
+const backend = createFakeChatBackend();
+const registry = new ChatSessionRegistry(box.root, {
+  backend,
+  buildSessionOptions: () => ({ systemPrompt: plainTestPrompt, skipBootstrap: true }),
+});
+const eventBus = createEventBus(box.root);
+
+await Promise.all([
+  prepareCaptureSession({ boxRoot: box.root, id: idA, eventBus, registry }),
+  prepareCaptureSession({ boxRoot: box.root, id: idB, eventBus, registry }),
+]);
+await tick();
+
+const baseA = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id: idA });
+const baseB = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id: idB });
+const capSubjects = execFileSync("git", ["log", "--format=%s"], { cwd: box.root }).toString().trim().split("\n");
+capSubjects.filter((s) => s.startsWith("Capture: ")).length
+=> 2
+
+capSubjects.filter((s) => s.startsWith("Capture delivered: ")).length
+=> 2
+```
+
+Each capture committed exactly once and each commit touches only its own files —
+no cross-contamination (the F1 fix). The report helper does the arrow-heavy
+inspection out of the example block and returns a single verdict:
+
+```ts continue
+commitReport(box.root, baseA, baseB)
+=> true
+```
+
+Both delivered — their staging media was cleaned up:
+
+```ts continue
+await readStagingSession({ boxRoot: box.root, id: idA })
+=> null
+```
+
+```ts continue
+await readStagingSession({ boxRoot: box.root, id: idB })
+=> null
+```
+
+```ts cleanup
+registry.shutdown();
+eventBus.close();
+await box.cleanup();
+```
+
+## Double-delivery resume: the at-most-once probe suppresses a re-send
+
+A crash after `send()` resolved (the message reached the transcript) but before
+the `delivered` marker was written leaves the session in `delivering`. On resume,
+the at-most-once probe finds the message already in the target chat's transcript
+(matched by the unique `doc="…"`) and finishes the bookkeeping without a second
+send — so exactly one `<capture>` message lands.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+const id = await stageSealedSession(box.root);
+
+// The capture targets a known chat; seed its history + an (initially empty)
+// transcript JSONL that the mock send writes into.
+await setStagingState({ boxRoot: box.root, id, state: "sealed" });
+await appendHistory(box.root, { sessionId: "s-known" });
+const logPath = await resolveSessionLogPath(box.root, "s-known");
+await mkdir(dirname(logPath), { recursive: true });
+await writeFile(logPath, "");
+
+// Rewire the staged session's target to the known chat.
+const staged = await readStagingSession({ boxRoot: box.root, id });
+staged.targetSessionId = "s-known";
+await writeFile(`${box.root}/tmp/capture-staging/${id}/session.json`, JSON.stringify(staged, null, 2));
+
+let sendCount = 0;
+let crashOnSend = true;
+const session = {
+  isBusy: () => false,
+  enqueue: () => {},
+  getSessionId: () => "s-known",
+  send: async (input) => {
+    sendCount += 1;
+    await appendFile(logPath, JSON.stringify({ type: "user", text: input.text }) + "\n");
+    if (crashOnSend) throw new Error("simulated crash after send, before delivered marker");
+    return true;
+  },
+};
+const registry = {
+  getOrCreate: () => session,
+  createNew: () => session,
+  get: () => session,
+  enforceLiveCap: () => {},
+  touch: () => {},
+  markMostActive: async () => {},
+};
+
+// First run: send lands the message, then "crashes" before the delivered write.
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry }).catch(() => {});
+sendCount
+=> 1
+
+(await readStagingSession({ boxRoot: box.root, id })).state
+=> delivering
+```
+
+Resume: the probe short-circuits delivery — no second send, still one message:
+
+```ts continue
+crashOnSend = false;
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry });
+
+sendCount
+=> 1
+
+(await readFile(logPath, "utf-8")).split("\n").filter((l) => l.includes("<capture ")).length
+=> 1
+
+await readStagingSession({ boxRoot: box.root, id })
+=> null
+
+const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
+(await box.read(`tmp-capture/${basename}.capture-session.card`)).includes("status: delivered")
+=> true
+```
+
+```ts cleanup
+await rm(dirname(logPath), { recursive: true, force: true });
+await box.cleanup();
+```
+
+## Validation failure deletes the written cards and dead-ends cleanly (F6)
+
+A card that fails validation must not leave orphaned uncommitted files that
+re-fire identically forever. Pre-seeding an invalid capture card (so the write
+step is skipped and validation runs on it) drives the `failed:assemble` path:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+const id = await stageSealedSession(box.root);
+
+const basename = sessionBasenameFor({ actualStartedAt: "2026-07-09T14:00:00.000Z", id });
+const cardRel = `tmp-capture/${basename}.capture-session.card`;
+const attachRel = `tmp-capture/${basename}.attach`;
+// Seed an invalid card (bogus status enum, no session-id) + an empty attach dir,
+// so prepare skips the write step and validates the pre-seeded card.
+await mkdir(`${box.root}/${attachRel}`, { recursive: true });
+await writeFile(`${box.root}/${cardRel}`, "---\nstatus: not-a-real-status\n---\n");
+
+const registry = {
+  getOrCreate: () => ({ isBusy: () => false, enqueue: () => {}, send: async () => true, getSessionId: () => "x" }),
+  createNew: () => ({ isBusy: () => false, enqueue: () => {}, send: async () => true, getSessionId: () => "x" }),
+  get: () => null, enforceLiveCap: () => {}, touch: () => {}, markMostActive: async () => {},
+};
+await prepareCaptureSession({ boxRoot: box.root, id, eventBus: createEventBus(box.root), registry });
+
+(await readStagingSession({ boxRoot: box.root, id })).state
+=> failed:assemble
+```
+
+The invalid files this run wrote are deleted — no orphaned uncommitted files,
+working tree clean, so a re-fire rebuilds from scratch:
+
+```ts continue
+await pathExists(`${box.root}/${cardRel}`)
+=> false
+
+await pathExists(`${box.root}/${attachRel}`)
+=> false
+
+execFileSync("git", ["status", "--short"], { cwd: box.root }).toString().trim().length
+=> 0
+```
+
+```ts cleanup
 await box.cleanup();
 ```
