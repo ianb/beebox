@@ -20,6 +20,7 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import * as ignoreModule from "ignore";
 import type { Ignore, Options } from "ignore";
+import { errnoCode } from "../lib/error-guards.js";
 
 // `ignore` is a legacy CJS package (no `type`/`exports` in package.json) whose
 // ESM-style `.d.ts` declares a merged function+namespace default export. Under
@@ -50,8 +51,7 @@ export async function loadValidationIgnore(boxRoot: string): Promise<ValidationI
   try {
     text = await readFile(path.join(boxRoot, VALIDATION_IGNORE_PATH), "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return ALLOW_ALL;
+    if (errnoCode(e) === "ENOENT") return ALLOW_ALL;
     throw e;
   }
 

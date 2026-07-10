@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkFields } from "../../schemas/landmark.js";
 import { findDestination } from "../landmark/destination.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 /**
  * One triage category, derived from a landmark with a `triage`
@@ -60,9 +61,8 @@ async function loadLandmarkFields(absPath: string): Promise<LandmarkFields | nul
   try {
     content = await fs.readFile(absPath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return null;
-    console.warn(`triage-instructions: failed to read ${absPath}: ${err.message}`);
+    if (errnoCode(e) === "ENOENT") return null;
+    console.warn(`triage-instructions: failed to read ${absPath}: ${errorMessage(e)}`);
     return null;
   }
   return parseLandmarkFields(content);

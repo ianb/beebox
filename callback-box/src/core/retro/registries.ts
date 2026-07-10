@@ -15,6 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
 import { loadHistory } from "../chat/session/history.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 
@@ -40,7 +41,7 @@ async function readJsonFile(filePath: string): Promise<unknown | null> {
   try {
     text = await fs.readFile(filePath, "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`retro: could not read ${filePath}, skipping registry:`, e);
     }
     return null;

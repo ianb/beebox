@@ -24,6 +24,7 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import { loadScriptState } from "./state.js";
 import { evaluateTaskHealth, type TaskHealth } from "./health.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const HEARTBEAT_FILE = ".callback-box/scheduler-heartbeat";
 const HEARTBEAT_STALE_MS = 5 * 60 * 1000;
@@ -55,7 +56,7 @@ export async function checkSchedulerHeartbeat(
   try {
     content = await fs.readFile(path.join(boxRoot, HEARTBEAT_FILE), "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read scheduler heartbeat for ${boxRoot}:`, e);
     }
     return { status: "never", lastTickAt: null, ageMs: null };
@@ -84,7 +85,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
   try {
     files = (await fs.readdir(schedulesDir)).filter((f) => f.endsWith(".scheduled-script.card"));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read schedules directory ${schedulesDir}:`, e);
     }
     return { tasks: [], scheduler };
@@ -114,7 +115,7 @@ export async function loadScheduleHealth(boxRoot: string, now: Date): Promise<Bo
         lastSuccess: state.lastSuccess,
         consecutiveFailures: state.consecutiveFailures,
         lastError: state.lastError,
-        reason: `card does not parse: ${(err as Error).message}`,
+        reason: `card does not parse: ${errorMessage(err)}`,
         alertedAt: state.alertedAt,
         alertedFor: state.alertedFor,
       });

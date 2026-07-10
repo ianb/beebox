@@ -15,6 +15,7 @@ import { splitCardContent } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { listBoxCardFiles } from "./list-cards.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 const RULE_PREFIX = "exposition-";
 
@@ -89,7 +90,7 @@ export async function compileExpositionRules(boxRoot: string): Promise<string[]>
       }
     }
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug("exposition-rules cleanup skipped (rules dir not readable):", e);
     }
   }

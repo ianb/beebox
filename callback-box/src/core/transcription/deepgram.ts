@@ -14,6 +14,7 @@ import type {
   TranscriptionError,
 } from "./index.js";
 import { getDeepgramCredentials } from "../deepgram-key.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
 const DEEPGRAM_MODEL = "nova-3";
@@ -144,7 +145,7 @@ export async function transcribeAudioDeepgram(
       const parsed = await parseErrorResponse(error.response);
       throw parsed;
     }
-    throw new DeepgramNetworkError((error as Error).message);
+    throw new DeepgramNetworkError(errorMessage(error));
   }
 }
 

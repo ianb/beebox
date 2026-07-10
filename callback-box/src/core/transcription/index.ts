@@ -11,6 +11,7 @@ import { transcribeAudioDeepgram } from "./deepgram.js";
 import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -152,8 +153,7 @@ export async function loadTranscriptionConfig(boxRoot?: string): Promise<Transcr
   try {
     content = await fs.readFile(configPath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return defaults;
+    if (errnoCode(e) === "ENOENT") return defaults;
     // Permissions / I/O failures are not the same as "no config" — surface
     // them rather than silently returning defaults.
     throw e;
@@ -182,8 +182,7 @@ export async function updateTranscriptionConfig(
     try {
       content = await fs.readFile(configPath, "utf-8");
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (errnoCode(e) !== "ENOENT") throw e;
       // No file yet — start fresh.
     }
     if (content !== null) {
@@ -345,7 +344,7 @@ async function transcribeAudioWhisper(
     }
 
     // Network or other errors are intermittent
-    throw new WhisperNetworkError((error as Error).message);
+    throw new WhisperNetworkError(errorMessage(error));
   }
 }
 

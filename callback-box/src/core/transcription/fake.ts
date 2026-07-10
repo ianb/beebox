@@ -17,6 +17,7 @@ import type {
   TranscriptionError,
   WordTimestamp,
 } from "./index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** One scripted transcription result. */
 interface FakeTranscriptionEntry {
@@ -73,8 +74,7 @@ export async function transcribeAudioFake(
   try {
     script = JSON.parse(await fs.readFile(configPath, "utf-8")) as FakeTranscriptionScript;
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    throw new FakeTranscriptionScriptError({ configPath, filename, ioError: err.message });
+    throw new FakeTranscriptionScriptError({ configPath, filename, ioError: errorMessage(e) });
   }
   const entry = script[filename] ?? script["*"];
   if (!entry) throw new FakeTranscriptionScriptError({ configPath, filename });

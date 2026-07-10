@@ -28,6 +28,7 @@ import {
 import { declareInputFiles, effectiveContains } from "./extract.js";
 import { writeJsonAtomic } from "./search-store.js";
 import { contentHash } from "../../lib/content-hash.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const STATE_FILENAME = "contains-state.json";
 // v2: containsText records the *effective* contains (per-kind description
@@ -76,7 +77,7 @@ export async function loadContainsState(boxRoot: string): Promise<ContainsState>
     if (typeof parsed.cards !== "object" || parsed.cards === null) return emptyContainsState();
     return { version: parsed.version, cards: parsed.cards as ContainsState["cards"] };
   } catch (e) {
-    console.warn(`contains-state unreadable (${(e as Error).message}); starting fresh`);
+    console.warn(`contains-state unreadable (${errorMessage(e)}); starting fresh`);
     return emptyContainsState();
   }
 }

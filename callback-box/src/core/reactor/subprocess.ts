@@ -9,6 +9,7 @@
 
 import { buildScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Run `cb <command>` as a subprocess, streaming output to `onLog`. Returns
@@ -31,7 +32,7 @@ async function runCbSubcommand(
     });
     return code === 0;
   } catch (err) {
-    onLog?.(`${label} error: ${(err as Error).message}\n`);
+    onLog?.(`${label} error: ${errorMessage(err)}\n`);
     return false;
   }
 }

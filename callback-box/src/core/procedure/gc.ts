@@ -20,6 +20,7 @@ import { ok, type Result } from "../../lib/result.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
 import { COMPLETED_RUN_EXPIRY, FAILED_RUN_EXPIRY, MAX_RUNS_PER_PROCEDURE } from "./run-expiry.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const RUN_DIR_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{4}$/;
 
@@ -86,7 +87,7 @@ export async function gcProcedureRuns(ctx: CommandContext): Promise<Result<{ rem
     const entries = await fs.readdir(runsDir, { withFileTypes: true });
     dirNames = entries.filter((e) => e.isDirectory()).map((e) => e.name);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read runs directory ${runsDir}:`, e);
     }
     return ok({ removed: [] });

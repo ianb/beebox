@@ -20,6 +20,7 @@ import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../cards/index.js";
 import { parseCardFileName } from "../shared/card-name.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
@@ -276,8 +277,7 @@ function parseFrontmatterMapping(frontmatterText: string, source: string): Recor
   try {
     frontmatter = parseYaml(frontmatterText);
   } catch (e) {
-    const err = e as Error;
-    throw new CardIOError(source, `invalid YAML frontmatter: ${err.message}`);
+    throw new CardIOError(source, `invalid YAML frontmatter: ${errorMessage(e)}`);
   }
   // YAML parses an empty block as `null`; treat that as an empty mapping
   // so cards whose only frontmatter field got stripped still parse.

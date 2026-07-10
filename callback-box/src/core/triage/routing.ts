@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { getBoxDir } from "../../lib/paths.js";
 import { createSelectQuestionTemplate } from "../../schemas/question.js";
 import type { TriageCategory } from "./instructions.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 class TriageDestinationConflictError extends Error {
   readonly file: string;
@@ -67,7 +68,7 @@ async function moveItem(file: string, { srcDir, dstDir }: { srcDir: string; dstD
     await fs.access(dst);
     throw new TriageDestinationConflictError(file);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
   await fs.rename(path.join(srcDir, file), dst);
 }

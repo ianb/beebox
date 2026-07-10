@@ -15,6 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const SESSIONS_FILE = ".callback-box/chat-sessions.json";
 
@@ -38,7 +39,7 @@ export async function loadChatSessions(boxRoot: string): Promise<SessionStore> {
     const data = await fs.readFile(filePath, "utf-8");
     return JSON.parse(data) as SessionStore;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not load chat sessions from ${filePath}, starting empty:`, e);
     }
     return {};

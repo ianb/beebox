@@ -7,6 +7,7 @@
 import { promises as fs } from "node:fs";
 import { SEARCH_SCHEMA_VERSION, searchManifestPath, writeJsonAtomic, type IndexPersisted } from "./search-store.js";
 import { invariant } from "../../lib/invariant.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** Stat/hash record for a declared input file (e.g. a gdoc snapshot). */
 export interface InputFileEntry {
@@ -69,7 +70,7 @@ export async function loadManifest(boxRoot: string): Promise<SearchManifest> {
     if (typeof parsed.files !== "object" || parsed.files === null) return emptyManifest();
     return { schemaVersion: parsed.schemaVersion, files: parsed.files as SearchManifest["files"] };
   } catch (e) {
-    console.warn(`search: manifest unreadable (${(e as Error).message}); rebuilding`);
+    console.warn(`search: manifest unreadable (${errorMessage(e)}); rebuilding`);
     return emptyManifest();
   }
 }

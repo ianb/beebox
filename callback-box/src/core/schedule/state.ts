@@ -13,6 +13,7 @@ import {
   scanLocks,
   LockHeldError,
 } from "../../lib/file-lock.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {
@@ -91,7 +92,7 @@ export async function loadScriptState(boxRoot: string, scriptName: string): Prom
     const content = await fs.readFile(stateFile(boxRoot, scriptName), "utf-8");
     return normalizeScriptState(JSON.parse(content) as Partial<ScriptState>);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not load schedule state for "${scriptName}", using empty state:`, e);
     }
     return { ...EMPTY_STATE };
@@ -334,7 +335,7 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
   try {
     entries = await fs.readdir(runsDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedure runs directory ${runsDir}:`, e);
     }
     return [];
@@ -349,7 +350,7 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
       const stat = await fs.stat(cardPath);
       mtimeMs = stat.mtimeMs;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not stat run card ${cardPath}, skipping:`, e);
       }
       continue;
@@ -358,7 +359,7 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
     try {
       content = await fs.readFile(cardPath, "utf-8");
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not read run card ${cardPath}, skipping:`, e);
       }
       continue;

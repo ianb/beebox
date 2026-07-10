@@ -15,6 +15,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { getAllConnectors } from "../../connectors/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Arguments for the sync command.
@@ -81,7 +82,7 @@ async function executeSync(
         ctx.writeLine("  No new items.");
       }
     } catch (err) {
-      ctx.writeLine(`  Failed: ${(err as Error).message}`);
+      ctx.writeLine(`  Failed: ${errorMessage(err)}`);
       totalErrors++;
     }
   }

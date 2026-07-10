@@ -12,6 +12,7 @@ import { join, relative } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 export interface ConnectorRule {
   /** Rule filename without .md extension, e.g. "connector-calendar" */
@@ -94,7 +95,7 @@ export async function generateRules(boxRoot: string): Promise<string[]> {
     }
   } catch (e) {
     // Directory may not exist yet, that's fine — nothing to clean up.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug("Skipping old-rule cleanup (rules dir not readable):", e);
     }
   }

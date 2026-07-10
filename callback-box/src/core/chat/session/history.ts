@@ -26,6 +26,7 @@ import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
 import { listSessions, getSessionLogPath } from "../../../cli/lib/session.js";
+import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 
 const HISTORY_FILE = ".callback-box/chat-session-history.json";
 const MOST_ACTIVE_FILE = ".callback-box/chat-session-id.json";
@@ -101,9 +102,8 @@ async function readHistoryFile(boxRoot: string): Promise<HistoryFile | null> {
     }
     return { sessions, migrated: parsed.migrated === true };
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return null;
-    log("read", `Failed to read history file: ${err.message}`);
+    if (errnoCode(e) === "ENOENT") return null;
+    log("read", `Failed to read history file: ${errorMessage(e)}`);
     return null;
   }
 }
@@ -297,9 +297,8 @@ export async function getMostActive(boxRoot: string): Promise<string | null> {
     const parsed = JSON.parse(data) as Partial<MostActiveFile>;
     return typeof parsed.sessionId === "string" ? parsed.sessionId : null;
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return null;
-    log("most-active", `Failed to read most-active file: ${err.message}`);
+    if (errnoCode(e) === "ENOENT") return null;
+    log("most-active", `Failed to read most-active file: ${errorMessage(e)}`);
     return null;
   }
 }
@@ -319,9 +318,8 @@ export async function getMostActiveSavedAt(boxRoot: string): Promise<Date | null
     const savedAt = new Date(parsed.savedAt);
     return Number.isNaN(savedAt.getTime()) ? null : savedAt;
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return null;
-    log("most-active", `Failed to read most-active savedAt: ${err.message}`);
+    if (errnoCode(e) === "ENOENT") return null;
+    log("most-active", `Failed to read most-active savedAt: ${errorMessage(e)}`);
     return null;
   }
 }

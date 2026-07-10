@@ -16,6 +16,7 @@ import { generateContext } from "../webapp/context.js";
 import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 const LATCH_PATH = ".callback-box/notified-questions.json";
 
@@ -29,7 +30,7 @@ async function loadLatch(boxRoot: string): Promise<Set<string>> {
     const data = JSON.parse(raw) as QuestionLatch;
     return new Set(data.paths);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Could not read notified-questions latch, treating as empty:", e);
     }
     return new Set();

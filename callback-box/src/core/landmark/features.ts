@@ -15,6 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../schemas/landmark.js";
 import { isKnownFeature, isValidValue } from "../chat/features.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 class LandmarkDirReadError extends Error {
   constructor(cause: unknown, dir: string) {
@@ -60,8 +61,7 @@ export async function readLandmarkFeaturesForDir(
   try {
     entries = await fs.readdir(absDir);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw new LandmarkDirReadError(e, absDir);
   }
   const landmarkName = entries.find((n) => n.endsWith(".landmark.card"));
@@ -72,7 +72,7 @@ export async function readLandmarkFeaturesForDir(
     const content = await fs.readFile(absPath, "utf-8");
     fields = parseLandmarkFields(content);
   } catch (e) {
-    console.warn(`readLandmarkFeaturesForDir: failed to read ${landmarkName}: ${(e as Error).message}`);
+    console.warn(`readLandmarkFeaturesForDir: failed to read ${landmarkName}: ${errorMessage(e)}`);
     return null;
   }
   if (fields === null) return null;

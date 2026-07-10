@@ -22,6 +22,7 @@ import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type QuestionFields, QuestionSchema } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const AnswerArgsSchema = z.object({
   question: z.string().optional(),
@@ -70,7 +71,7 @@ async function loadPendingQuestion(
       ok: false,
       result: {
         success: false,
-        error: `Could not parse question: ${(err as Error).message}`,
+        error: `Could not parse question: ${errorMessage(err)}`,
       },
     };
   }

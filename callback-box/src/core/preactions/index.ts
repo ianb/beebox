@@ -19,6 +19,7 @@ import { loadCardFile } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 
 import { transcribePreAction } from "./transcribe.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export type { PreAction, PreActionContext, PreActionResult } from "./types.js";
 
@@ -72,7 +73,7 @@ export async function runPreActions(input: {
       console.error(`  Pre-action ${action.name} failed:`, error);
       results.push({
         name: action.name,
-        result: { modified: false, error: (error as Error).message },
+        result: { modified: false, error: errorMessage(error) },
       });
     }
   }

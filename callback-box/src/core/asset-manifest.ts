@@ -18,6 +18,7 @@ import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { invariant } from "../lib/invariant.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 export interface AssetManifestEntry {
   /** File size in bytes. */
@@ -91,8 +92,7 @@ export async function loadManifest(attachDir: string): Promise<AssetManifest> {
   try {
     content = await fs.readFile(filePath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return emptyManifest();
+    if (errnoCode(e) === "ENOENT") return emptyManifest();
     throw e;
   }
   const parsed = JSON.parse(content) as unknown;

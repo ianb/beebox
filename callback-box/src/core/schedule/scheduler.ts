@@ -18,6 +18,7 @@ import {
   saveBoxesConfig,
   type BoxesConfig,
 } from "../box/boxes-config.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 /** @deprecated — use `BoxesConfig` from `./boxes-config.js`. */
 export type SchedulerConfig = BoxesConfig;
@@ -101,7 +102,7 @@ async function rotateLogIfNeeded(logPath: string): Promise<void> {
     // Log rotation is best-effort: the file may not exist yet, or a concurrent
     // write may be in flight. Skipping rotation just lets the log grow a bit;
     // it does not affect scheduler operation.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`rotateLogIfNeeded: could not rotate ${logPath}:`, e);
     }
   }
@@ -208,7 +209,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
           ts: new Date().toISOString(),
           event: "tick",
           box: boxPath,
-          error: (err as Error).message,
+          error: errorMessage(err),
         });
       }
 
@@ -228,7 +229,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
           ts: new Date().toISOString(),
           event: "health-alert",
           box: boxPath,
-          error: (err as Error).message,
+          error: errorMessage(err),
         });
       }
     }

@@ -48,6 +48,7 @@ import { execFileSync, type StdioOptions } from "node:child_process";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 /**
  * Resolve `bin/cb` to embed in a box's git hooks. Embedding an absolute path
@@ -315,8 +316,7 @@ async function readJsonIfExists(filePath: string): Promise<SettingsShape> {
     if (text.trim() === "") return {};
     return JSON.parse(text) as SettingsShape;
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return {};
+    if (errnoCode(e) === "ENOENT") return {};
     throw e;
   }
 }
@@ -342,8 +342,7 @@ async function installIgnoreScaffold(
   try {
     await fs.stat(seedAbs);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
     seedExists = false;
   }
   if (!seedExists) {
@@ -361,8 +360,7 @@ async function installIgnoreScaffold(
   try {
     ruleExisting = await fs.readFile(ruleAbs, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
   if (ruleExisting !== ruleBody) {
     await fs.mkdir(path.dirname(ruleAbs), { recursive: true });
@@ -411,8 +409,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
   try {
     isRepo = (await fs.stat(path.join(packageRoot, ".git"))).isDirectory();
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
 
   if (isRepo) {
@@ -421,8 +418,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     try {
       existing = await fs.readFile(hookAbs, "utf-8");
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (errnoCode(e) !== "ENOENT") throw e;
     }
 
     const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);
@@ -445,8 +441,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     try {
       postExisting = await fs.readFile(postAbs, "utf-8");
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (errnoCode(e) !== "ENOENT") throw e;
     }
     const postMerged = upsertPostCommitBlock(postExisting, postCommitBlock(cbBin, boxRelFromPackageRoot));
     if (postMerged !== postExisting) {

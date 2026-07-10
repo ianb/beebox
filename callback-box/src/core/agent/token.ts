@@ -21,6 +21,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const TOKEN_RELATIVE_PATH = ".callback-box/agent-token";
 const MIN_TOKEN_LENGTH = 32;
@@ -38,7 +39,7 @@ export function getOrCreateAgentToken(boxRoot: string): string {
     const existing = fs.readFileSync(file, "utf-8").trim();
     if (existing.length >= MIN_TOKEN_LENGTH) return existing;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
   const token = crypto.randomBytes(32).toString("hex");
   fs.mkdirSync(path.dirname(file), { recursive: true });

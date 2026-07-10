@@ -23,6 +23,7 @@ import {
 import { loadCardFromText } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 async function validateGeneratedCard(input: {
   boxRoot: string;
@@ -148,7 +149,7 @@ async function executeCreate(
   } catch (err) {
     return {
       success: false,
-      error: `Template produced invalid card: ${(err as Error).message}`,
+      error: `Template produced invalid card: ${errorMessage(err)}`,
     };
   }
 

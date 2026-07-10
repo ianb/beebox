@@ -20,6 +20,7 @@ import * as path from "node:path";
 import { z } from "zod";
 import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
 import type { StoredPushSubscription, PushSubscriptionKeys } from "../services/push.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 interface SubscriptionRecord {
   keys: PushSubscriptionKeys;
@@ -79,7 +80,7 @@ async function loadStore(): Promise<SubscriptionStore> {
   try {
     raw = await fs.readFile(storePath(), "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+    if (errnoCode(e) === "ENOENT") {
       return {};
     }
     // Not "missing" — some other read failure (permissions, I/O error). Treat

@@ -11,6 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const STATE_FILE = ".callback-box/retro/state.json";
 
@@ -58,7 +59,7 @@ export async function loadRetroState(boxRoot: string): Promise<RetroState> {
   try {
     text = await fs.readFile(filePath, "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`retro: could not read ${STATE_FILE}, starting fresh:`, e);
     }
     return emptyRetroState();

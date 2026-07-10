@@ -17,6 +17,7 @@ import {
   installTricksFiles,
   installViewsGuide,
 } from "./templates.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export interface InitOptions {
   /** Skip git initialization */
@@ -297,7 +298,7 @@ export async function getBoxMetadata(
     // Missing marker is the normal "not a box" case; a malformed marker is
     // worth surfacing. Either way we report no metadata, but log so a
     // corrupt marker doesn't vanish silently.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read box marker at ${markerPath}:`, e);
     }
     return null;

@@ -24,6 +24,7 @@ import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type ImageFields, ImageSchema } from "../../schemas/image.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
 import { attachDirFor } from "../../shared/attach-path.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 async function readImageCard(cardPath: string): Promise<ImageFields | null> {
   try {
@@ -31,7 +32,7 @@ async function readImageCard(cardPath: string): Promise<ImageFields | null> {
     const parsed = parseCardText(content, { source: cardPath, schemas: await createCardSchemaMap() });
     return cardFields(parsed, ImageSchema);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Failed to read image card ${cardPath}, treating as unavailable:`, e);
     }
     return null;
@@ -44,7 +45,7 @@ async function readAudioCard(cardPath: string): Promise<AudioFields | null> {
     const parsed = parseCardText(content, { source: cardPath, schemas: await createCardSchemaMap() });
     return cardFields(parsed, AudioSchema);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Failed to read audio card ${cardPath}, treating as unavailable:`, e);
     }
     return null;
@@ -105,7 +106,7 @@ async function loadClipTiming(sessionAttachDir: string, ac: string): Promise<Cli
   } catch (e) {
     // No timing sidecar — an untranscribed clip (provider outage). Emit a
     // visible marker at the clip's start rather than silently dropping it.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not load timing data ${timingPath} for ${ac}:`, e);
     }
     return { kind: "untranscribed", clip: { absoluteTime: recordedMs, label: clipLabel(ac) } };

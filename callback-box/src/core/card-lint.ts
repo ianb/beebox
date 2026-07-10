@@ -35,6 +35,7 @@ import { extractBodyRefs } from "./body-refs.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 export interface LintDispatchOptions {
   /**
@@ -82,7 +83,7 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
   try {
     content = await readFile(path, "utf8");
   } catch (e) {
-    return errorResult(path, (e as Error).message);
+    return errorResult(path, errorMessage(e));
   }
 
   const split = splitCardContent(content);
@@ -132,7 +133,7 @@ async function lintFrontmatterCard(input: {
   try {
     parsed = parseCardText(content, { source: path, schemas: options.ctx.cardSchemas, type });
   } catch (e) {
-    return errorResult(path, (e as Error).message);
+    return errorResult(path, errorMessage(e));
   }
   // Broken refs are surfaced as WARNINGS, not errors. Refs commonly go
   // stale via legitimate operations (the referent got moved, archived,
@@ -159,7 +160,7 @@ async function lintFrontmatterCard(input: {
       warnings.push({
         type: "reference",
         severity: "warning",
-        message: `Reference at ${refPath} failed to resolve: ${(e as Error).message}`,
+        message: `Reference at ${refPath} failed to resolve: ${errorMessage(e)}`,
       });
     }
   }

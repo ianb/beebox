@@ -51,6 +51,7 @@ import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 const VERSIONS_FILE = "config/template-versions.json";
 const TEMPLATE_UPDATES_DIR = "config/_template-updates";
@@ -256,8 +257,7 @@ async function removeParkedMirror(boxRoot: string, relPath: string): Promise<voi
   try {
     await fs.unlink(mirrorAbs);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return;
+    if (errnoCode(e) === "ENOENT") return;
     throw e;
   }
   // Sweep empty parents up to (but not including) the updates root.
@@ -267,8 +267,8 @@ async function removeParkedMirror(boxRoot: string, relPath: string): Promise<voi
     try {
       await fs.rmdir(dir);
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOTEMPTY" || err.code === "ENOENT") break;
+      const code = errnoCode(e);
+      if (code === "ENOTEMPTY" || code === "ENOENT") break;
       throw e;
     }
     dir = path.dirname(dir);
@@ -282,8 +282,7 @@ async function readVersions(boxRoot: string): Promise<VersionsFile> {
     const parsed = JSON.parse(text) as VersionsFile;
     return parsed;
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return {};
+    if (errnoCode(e) === "ENOENT") return {};
     throw e;
   }
 }
@@ -320,8 +319,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   try {
     localContent = await fs.readFile(targetAbs, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
 
   const templateHash = sha256(canonicalize(templateContent));
@@ -431,8 +429,7 @@ export async function pruneStaleTemplateUpdates(
   try {
     entries = await fs.readdir(rootAbs, { withFileTypes: true, recursive: true });
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
 
@@ -460,10 +457,10 @@ export async function pruneStaleTemplateUpdates(
     try {
       await fs.rmdir(dir);
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
+      const code = errnoCode(e);
       // Not empty (still holds non-stale files) or already gone — both are
       // expected outcomes of best-effort sweeping, not errors to report.
-      if (err.code === "ENOTEMPTY" || err.code === "ENOENT") continue;
+      if (code === "ENOTEMPTY" || code === "ENOENT") continue;
       throw e;
     }
   }
@@ -489,8 +486,7 @@ export async function listParkedTemplateUpdates(boxRoot: string): Promise<string
   try {
     entries = await fs.readdir(rootAbs, { withFileTypes: true, recursive: true });
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const parked: string[] = [];

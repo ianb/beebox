@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { readCardFrontmatter } from "./card-io.js";
 import { invariant } from "../lib/invariant.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 class JobDeleteError extends Error {
   readonly jobPath: string;
@@ -55,7 +56,7 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
   try {
     await fs.unlink(absPath);
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ENOENT") {
       return; // Already gone
     }

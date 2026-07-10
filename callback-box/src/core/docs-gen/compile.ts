@@ -18,6 +18,7 @@ import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
 import { invariant } from "../../lib/invariant.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /**
  * Scan procedure cards and extract name + first-line description.
@@ -34,7 +35,7 @@ export async function scanProcedures(boxRoot: string): Promise<ProcedureSummary[
   try {
     files = await readdir(procedureDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[generate-docs] could not read ${procedureDir}; assuming no procedures:`, e);
     }
     return [];
@@ -92,7 +93,7 @@ export async function compileBriefings(boxRoot: string, debug: boolean): Promise
   } catch (e) {
     // Missing root briefing is normal (skip); a parse error means a malformed
     // card we failed to compile — surface it either way so bad cards aren't silent.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[generate-docs] could not compile ${rootBriefingPath} (absent or malformed):`, e);
     }
   }
@@ -146,7 +147,7 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
   try {
     files = await readdir(configDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[generate-docs] could not read ${configDir}; assuming no guides:`, e);
     }
     return [];

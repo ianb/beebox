@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export interface MapStateEntry {
   /** Commit hash this MAP.md was last generated against. */
@@ -39,7 +40,7 @@ export async function loadMapState(boxRoot: string): Promise<MapState> {
     return { maps: parsed.maps };
   } catch (e) {
     // Missing or unreadable/corrupt state file — start fresh (documented behavior).
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug("Map state unreadable, starting fresh:", e);
     }
     return { maps: {} };

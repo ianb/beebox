@@ -25,6 +25,7 @@ import {
 } from "./triage/instructions.js";
 import { startProcedure } from "./procedure/engine.js";
 import type { CommandContext } from "./command-runner.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 /** Env var the handler procedure reads to get its bucket. */
 export const TRIAGE_ITEMS_ENV = "TRIAGE_ITEMS";
@@ -109,7 +110,7 @@ async function listCategoryBuckets(boxRoot: string): Promise<string[]> {
   try {
     entries = await fs.readdir(triagedDir, { withFileTypes: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw new DirectoryReadError(triagedDir, e);
   }
   return entries
@@ -125,7 +126,7 @@ async function listBucketItems({ boxRoot, category }: { boxRoot: string; categor
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw new DirectoryReadError(dir, e);
   }
   return entries

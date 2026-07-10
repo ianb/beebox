@@ -12,6 +12,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
+import { errnoCode } from "../lib/error-guards.js";
 
 const storedLocationSchema = z.object({
   lat: z.number().finite().min(-90).max(90),
@@ -39,7 +40,7 @@ export async function loadLocation(boxRoot: string): Promise<StoredLocation | nu
   try {
     raw = await fs.readFile(locationStatePath(boxRoot), "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     console.warn(`[location-store] Could not read location.json: ${e instanceof Error ? e.message : e}`);
     return null;
   }

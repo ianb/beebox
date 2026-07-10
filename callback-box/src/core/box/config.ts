@@ -6,6 +6,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export interface BoxConfig {
   publicUrl?: string;
@@ -80,7 +81,7 @@ export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
     const stat = await fs.promises.stat(configPath);
     mtime = stat.mtimeMs;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`No box config at ${configPath}, using defaults:`, e);
     }
     return {};
@@ -97,7 +98,7 @@ export async function loadBoxConfig(boxRoot: string): Promise<BoxConfig> {
     cache.set(boxRoot, { config, mtime });
     return config;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read or parse box config at ${configPath}, using defaults:`, e);
     }
     return {};

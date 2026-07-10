@@ -14,6 +14,7 @@ import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 
 export const NAV_CARD_PATH = "nav.card";
 
@@ -64,8 +65,8 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
   try {
     content = await fs.readFile(path.join(boxRoot, NAV_CARD_PATH), "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { status: "absent" };
-    return { status: "invalid", error: `could not read ${NAV_CARD_PATH}: ${(e as Error).message}` };
+    if (errnoCode(e) === "ENOENT") return { status: "absent" };
+    return { status: "invalid", error: `could not read ${NAV_CARD_PATH}: ${errorMessage(e)}` };
   }
 
   const parsed = parseNavFields(content);

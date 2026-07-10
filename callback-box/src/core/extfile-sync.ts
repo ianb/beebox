@@ -14,6 +14,7 @@ import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { resolveExternalRef, buildExternalStamp, ExternalRefError } from "./external/ref.js";
 import { rootsForBox } from "./external/roots.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 export type ExtfileSyncStatus = "stamped" | "unchanged" | "unresolved";
 
@@ -39,7 +40,7 @@ async function syncOne(input: { path: string; roots: string[] }): Promise<Extfil
   try {
     content = await readFile(path, "utf8");
   } catch (e) {
-    return { path, status: "unresolved", detail: `cannot read card: ${(e as Error).message}` };
+    return { path, status: "unresolved", detail: `cannot read card: ${errorMessage(e)}` };
   }
   const split = splitCardContent(content);
   const fm = (parseYaml(split.frontmatterText) ?? {}) as Record<string, unknown>;
@@ -52,7 +53,7 @@ async function syncOne(input: { path: string; roots: string[] }): Promise<Extfil
   try {
     real = await resolveExternalRef(href, { roots });
   } catch (e) {
-    return { path, status: "unresolved", detail: e instanceof ExternalRefError ? e.message : (e as Error).message };
+    return { path, status: "unresolved", detail: e instanceof ExternalRefError ? e.message : errorMessage(e) };
   }
 
   const stamp = await buildExternalStamp(real);

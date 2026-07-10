@@ -9,6 +9,7 @@ import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { invariant } from "../../lib/invariant.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
 export const PDF_EXTENSION = ".pdf";
@@ -155,8 +156,7 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
   try {
     content = await fs.readFile(ledgerPath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return emptyLedger();
+    if (errnoCode(e) === "ENOENT") return emptyLedger();
     throw e;
   }
   const parsed = JSON.parse(content) as unknown;

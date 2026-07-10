@@ -16,6 +16,7 @@ import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
 import { stagingBaseDir, readStagingSession } from "./staging-store.js";
 import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export async function resumeStagingSessions(deps: {
   boxRoot: string;
@@ -30,8 +31,7 @@ export async function resumeStagingSessions(deps: {
     const entries = await fs.readdir(stagingBaseDir(boxRoot), { withFileTypes: true });
     ids = entries.filter((e) => e.isDirectory()).map((e) => e.name);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") console.warn("[capture] Could not scan staging area for resume:", err);
+    if (errnoCode(e) !== "ENOENT") console.warn("[capture] Could not scan staging area for resume:", e);
     return;
   }
 

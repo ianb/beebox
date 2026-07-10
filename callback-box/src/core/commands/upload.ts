@@ -29,6 +29,7 @@ import {
   type UploadLedgerEntry,
   type ScanGroup,
 } from "./upload-helpers.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const UploadArgsSchema = z.object({
   files: z.array(z.string()).optional(),
@@ -197,7 +198,7 @@ async function executeUpload(
   try {
     groups = groupScanFiles(limitedFiles);
   } catch (e) {
-    return { success: false, error: (e as Error).message };
+    return { success: false, error: errorMessage(e) };
   }
 
   ctx.writeLine(`Found ${groups.length} group${groups.length === 1 ? "" : "s"}:`);

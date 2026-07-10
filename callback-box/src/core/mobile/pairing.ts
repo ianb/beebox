@@ -1,6 +1,7 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const MOBILE_DEVICES_RELATIVE_PATH = ".callback-box/mobile-devices.secret.json";
 const PAIRING_TOKEN_BYTES = 32;
@@ -57,7 +58,7 @@ function readDeviceStore(boxRoot: string): MobileDeviceStore {
     const parsed = JSON.parse(fs.readFileSync(mobileDevicesPath(boxRoot), "utf-8")) as Partial<MobileDeviceStore>;
     return { devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isMobileDevice) : [] };
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("[pairing] failed to read mobile device store:", e);
     }
     return { devices: [] };

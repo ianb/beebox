@@ -27,6 +27,7 @@ import {
   dropCardState,
   type ContainsState,
 } from "./contains-state.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export interface RefreshState {
   boxRoot: string;
@@ -65,7 +66,7 @@ export async function refreshOneCard(
   try {
     content = await fs.readFile(path.join(boxRoot, relPath), "utf8");
   } catch (e) {
-    warnings.push(`${relPath}: unreadable (${(e as Error).message})`);
+    warnings.push(`${relPath}: unreadable (${errorMessage(e)})`);
     return "none";
   }
   const contentHash = computeContentHash(content);
@@ -143,7 +144,7 @@ export async function refreshOneMarkdownFile(
   try {
     content = await fs.readFile(path.join(boxRoot, relPath), "utf8");
   } catch (e) {
-    warnings.push(`${relPath}: unreadable (${(e as Error).message})`);
+    warnings.push(`${relPath}: unreadable (${errorMessage(e)})`);
     return "none";
   }
   const contentHash = computeContentHash(content);
@@ -211,7 +212,7 @@ async function readInputFiles(
         contentHash: computeContentHash(content),
       };
     } catch (e) {
-      warnings.push(`${relPath}: input file unreadable (${(e as Error).message})`);
+      warnings.push(`${relPath}: input file unreadable (${errorMessage(e)})`);
     }
   }
   return { contents, entries, warnings };

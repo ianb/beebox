@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { glob } from "glob";
 import { parseLandmarkFields, type LandmarkSymbolData } from "../../schemas/landmark.js";
 import { findDestination, type DestinationKind } from "./destination.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export interface DestinationInfo {
   /** Box-relative directory containing the landmark (empty string = box root). */
@@ -46,7 +47,7 @@ export async function listDestinations(
       const content = await fs.readFile(absPath, "utf-8");
       fields = parseLandmarkFields(content);
     } catch (e) {
-      console.warn(`list-destinations: failed to parse ${absPath}: ${(e as Error).message}`);
+      console.warn(`list-destinations: failed to parse ${absPath}: ${errorMessage(e)}`);
       continue;
     }
     if (fields === null) continue;

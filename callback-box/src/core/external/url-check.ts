@@ -18,6 +18,7 @@ import * as path from "node:path";
 import { promisify } from "node:util";
 import { listBoxCardFiles, listBoxMarkdownFiles } from "../list-cards.js";
 import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from "./url-fetch.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const execFileP = promisify(execFile);
 
@@ -68,8 +69,7 @@ async function loadCache(boxRoot: string): Promise<UrlCheckCache> {
   try {
     content = await fs.readFile(filePath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return emptyCache();
+    if (errnoCode(e) === "ENOENT") return emptyCache();
     throw e;
   }
   const parsed = JSON.parse(content) as unknown;

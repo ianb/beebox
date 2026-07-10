@@ -18,6 +18,7 @@ import { parseSessionLog, type SessionEntry } from "../../../cli/lib/session.js"
 import { effectiveTailSize } from "./messages.js";
 import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
+import { errorMessage } from "../../../lib/error-guards.js";
 
 export interface SessionHistory {
   sessionId: string | null;
@@ -67,7 +68,7 @@ export async function acquireRunLock(
     const lockId = randomBytes(8).toString("hex");
     return await acquireChatActiveLock({ boxRoot, lockId, sessionId });
   } catch (e) {
-    log("error", `Failed to acquire chat-active lock: ${(e as Error).message}`);
+    log("error", `Failed to acquire chat-active lock: ${errorMessage(e)}`);
     return null;
   }
 }
@@ -80,7 +81,7 @@ export async function releaseRunLock(lockPath: string): Promise<void> {
   try {
     await releaseChatActiveLock(lockPath);
   } catch (e) {
-    log("error", `Failed to release chat-active lock: ${(e as Error).message}`);
+    log("error", `Failed to release chat-active lock: ${errorMessage(e)}`);
   }
 }
 

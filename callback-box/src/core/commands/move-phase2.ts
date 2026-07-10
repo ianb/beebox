@@ -16,6 +16,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { attachDirFor } from "../../shared/attach-path.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 class AttachDirRenameError extends Error {
   readonly from: string;
@@ -50,8 +51,7 @@ export async function movePhase2CardFiles(
       await fs.rename(oldAttach, newAttach);
       moved.push({ from: oldAttach, to: newAttach });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw new AttachDirRenameError({ from: oldAttach, to: newAttach, cause: err });
+      if (errnoCode(e) !== "ENOENT") throw new AttachDirRenameError({ from: oldAttach, to: newAttach, cause: e });
       // No attach dir to move; fine.
     }
   }

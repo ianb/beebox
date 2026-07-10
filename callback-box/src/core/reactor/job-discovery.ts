@@ -13,6 +13,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { readCardFrontmatter } from "../card-io.js";
 import type { JobCardInfo } from "./types.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export async function findJobCards(
   jobsDir: string,
@@ -26,7 +27,7 @@ export async function findJobCards(
   } catch (e) {
     // jobs/ may not exist yet (fresh box, or no jobs produced) — treat as
     // no pending jobs rather than an error.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug(`findJobCards: cannot read ${jobsDir}, treating as empty:`, e);
     }
     return [];

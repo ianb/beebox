@@ -12,6 +12,7 @@ import { getStatus, getLog, type GitStatus, type GitLogEntry } from "../lib/git.
 import { loadCardFile } from "./card-io.js";
 import { buildLoadContext } from "./load-context.js";
 import { getBoxMetadata } from "./box/index.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 class InvalidBoxError extends Error {
   constructor() {
@@ -64,7 +65,7 @@ async function scanCards(params: ScanCardsParams): Promise<CardInfo[]> {
   try {
     entries = await fs.readdir(dir, { withFileTypes: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read card directory ${dir}, treating as empty:`, e);
     }
     return cards;

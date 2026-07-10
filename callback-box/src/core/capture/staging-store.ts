@@ -16,6 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /**
  * Preparation/lifecycle state. `failed:<step>` records which preparation step
@@ -399,7 +400,7 @@ export async function listStagingSessions(opts: { boxRoot: string }): Promise<St
   try {
     ids = await fs.readdir(stagingBaseDir(boxRoot));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const sessions = await Promise.all(ids.map((id) => readStagingSession({ boxRoot, id })));

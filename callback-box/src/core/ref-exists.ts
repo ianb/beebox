@@ -18,6 +18,7 @@ import { access } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
 import { containWithinBox, realpathContained, type BoxRelativePath } from "../lib/box-containment.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 interface RefExistsInput {
   /** The raw ref string as written in the card. */
@@ -76,7 +77,7 @@ export async function resolveRefExists(input: RefExistsInput): Promise<boolean> 
     await access(target);
     return true;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`resolveRefExists: access failed for ${target}`, e);
     }
     return false;

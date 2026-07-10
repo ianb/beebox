@@ -10,6 +10,7 @@ import { promises as fs, type Dirent } from "node:fs";
 import path from "node:path";
 import { isInsideAttachScope } from "../../shared/attach-path.js";
 import { cardTypeFromName } from "../../shared/card-name.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /** Directories never descended into. `store/trash` is handled by path. */
 const SKIP_DIRS = new Set([
@@ -47,7 +48,7 @@ export async function walkCardFiles(boxRoot: string): Promise<Map<string, CardSt
     } catch (e) {
       // Deleted-mid-walk or unreadable directories contribute no cards;
       // anything other than a plain disappearance is worth a log line.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`search walk: could not read ${absDir}, skipping:`, e);
       }
       return;

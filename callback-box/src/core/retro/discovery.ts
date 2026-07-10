@@ -17,6 +17,7 @@ import {
 } from "../../cli/lib/session.js";
 import { loadChatRegistryIndex } from "./registries.js";
 import { isSessionSettled, type RetroState } from "./state.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /** How long a transcript must sit unmodified before it can be observed. */
 export const QUIESCENCE_MS = 30 * 60 * 1000;
@@ -72,7 +73,7 @@ async function countUserMessages(logPath: string): Promise<TranscriptCounts | nu
       tagged: userEntries.filter(isRealUserMessage).length,
     };
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
 }
