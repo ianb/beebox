@@ -30,6 +30,43 @@ import { getApiBase } from "../../api";
 import { RequestError } from "../../lib/errors";
 import { withMobileAuth } from "../../lib/mobile-auth";
 
+// --- Resume session id (localStorage, keyed by box) ---
+//
+// The current staging session id, persisted per box so a returning client can
+// ask whether that exact session is still resumable — belt-and-braces for the
+// standalone `targetSessionId: null` case, where there's no chat id to match on.
+
+const RESUME_KEY_PREFIX = "capture-resume-session:";
+
+function resumeStorageKey(): string {
+  return `${RESUME_KEY_PREFIX}${getApiBase()}`;
+}
+
+export function saveResumeSessionId(sessionId: string): void {
+  try {
+    localStorage.setItem(resumeStorageKey(), sessionId);
+  } catch (_e) {
+    // Storage unavailable (private mode / quota) — resume-by-id degrades to the
+    // targetSessionId match; not worth surfacing.
+  }
+}
+
+export function loadResumeSessionId(): string | null {
+  try {
+    return localStorage.getItem(resumeStorageKey());
+  } catch (_e) {
+    return null;
+  }
+}
+
+export function clearResumeSessionId(): void {
+  try {
+    localStorage.removeItem(resumeStorageKey());
+  } catch (_e) {
+    // Ignore — a stale id at worst re-offers a session the server already reaped.
+  }
+}
+
 export type UploadState = "uploading" | "uploaded" | "failed";
 
 // --- Device preferences (localStorage) ---

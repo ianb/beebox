@@ -12,7 +12,7 @@
  * still-`open` session (capture mode is live, nothing finalized) is not pending.
  */
 
-import type { StagingSession, StagingSessionState } from "./staging-store.js";
+import { stagingSessionIsEmpty, type StagingSession, type StagingSessionState } from "./staging-store.js";
 
 /** Media tallies shown in the pending bubble's caption line. */
 export interface PendingCaptureCounts {
@@ -55,6 +55,44 @@ export function selectPendingCaptures(opts: {
     .map((s) => ({
       id: s.id,
       state: s.state,
+      counts: { photos: s.photos.length, files: s.files.length, audioSegments: s.segments.length },
+      startedAt: s.createdAt,
+    }));
+}
+
+/** A resumable staged capture surfaced to the resume prompt (Track 5). */
+export interface ResumableCapture {
+  id: string;
+  counts: PendingCaptureCounts;
+  /** When capture started (the staging session's creation time). */
+  startedAt: string;
+}
+
+/**
+ * The still-`open`, non-empty staged captures a returning client may resume
+ * (Track 5). A session qualifies when it's bound to the chat capture is being
+ * entered from (`targetSessionId`) OR it's the exact session id the client
+ * still holds in localStorage (`clientSessionId` — belt-and-braces for the
+ * standalone `targetSessionId: null` case). Empty sessions (a bare create with
+ * no media, including the fresh one the client just made) are excluded, so the
+ * prompt only offers a capture with real content to lose.
+ */
+export function selectResumableCaptures(opts: {
+  sessions: StagingSession[];
+  targetSessionId: string | null;
+  clientSessionId: string | null;
+}): ResumableCapture[] {
+  const { sessions, targetSessionId, clientSessionId } = opts;
+  return sessions
+    .filter((s) => s.state === "open" && !stagingSessionIsEmpty(s))
+    .filter(
+      (s) =>
+        (targetSessionId !== null && s.targetSessionId === targetSessionId) ||
+        (clientSessionId !== null && s.id === clientSessionId),
+    )
+    .toSorted((a, b) => a.createdAt.localeCompare(b.createdAt))
+    .map((s) => ({
+      id: s.id,
       counts: { photos: s.photos.length, files: s.files.length, audioSegments: s.segments.length },
       startedAt: s.createdAt,
     }));

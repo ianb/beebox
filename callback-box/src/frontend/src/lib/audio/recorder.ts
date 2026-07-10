@@ -1,4 +1,5 @@
-const CHUNK_INTERVAL_MS = 20_000; // 20 seconds
+/** Default MediaRecorder timeslice. Capture mode overrides this (see below). */
+const DEFAULT_CHUNK_INTERVAL_MS = 20_000; // 20 seconds
 
 export interface ChunkCallbackParams {
   blob: Blob;
@@ -11,6 +12,12 @@ export type ChunkCallback = (params: ChunkCallbackParams) => void;
 export interface ChunkedRecorderOptions {
   onChunk: ChunkCallback;
   deviceId?: string | undefined;
+  /**
+   * MediaRecorder timeslice (ms between `dataavailable` events). Shorter =
+   * smaller loss window on a crash (only the tail since the last chunk is lost),
+   * at the cost of more uploads. Capture mode passes ~5s; defaults to 20s.
+   */
+  timesliceMs?: number | undefined;
 }
 
 export class ChunkedRecorder {
@@ -20,11 +27,13 @@ export class ChunkedRecorder {
   private chunkStartedAt: string = "";
   private onChunk: ChunkCallback;
   private deviceId: string | undefined;
+  private timesliceMs: number;
   private stopResolve: (() => void) | null = null;
 
   constructor(options: ChunkedRecorderOptions) {
     this.onChunk = options.onChunk;
     this.deviceId = options.deviceId;
+    this.timesliceMs = options.timesliceMs ?? DEFAULT_CHUNK_INTERVAL_MS;
   }
 
   static async getAudioDevices(): Promise<MediaDeviceInfo[]> {
@@ -68,7 +77,7 @@ export class ChunkedRecorder {
       }
     };
 
-    this.mediaRecorder.start(CHUNK_INTERVAL_MS);
+    this.mediaRecorder.start(this.timesliceMs);
   }
 
   /**

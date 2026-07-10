@@ -21,6 +21,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { getStatus, pushToRemote, stageFiles, commitPaths } from "../../lib/git.js";
 import { cleanupOldTmpUploads } from "../../core/housekeeping.js";
+import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { installRootLandmark } from "../../core/box/index.js";
 import { getBoxTime } from "../../lib/time.js";
 import { runOnWakeupScripts } from "./tick-utils.js";
@@ -57,6 +58,19 @@ async function reportUncommittedChanges(boxRoot: string): Promise<void> {
 async function runHousekeeping(boxRoot: string): Promise<void> {
   console.log("[Housekeeping]");
   const swept = await cleanupOldTmpUploads(boxRoot, (msg) => console.log(msg));
+
+  // Abandonment sweep (Track 5): finalize/discard staged captures the browser
+  // never finished. Seal-only here — with no live chat runtime, sealed-partial
+  // sessions wait for the next server startup's resume scan to prepare + deliver
+  // them (CAS makes the double-fire safe). Empty and stale entries are handled
+  // in full.
+  const captureSweep = await sweepAbandonedCaptures({ boxRoot });
+  if (captureSweep.sealed.length > 0) {
+    console.log(`  Sealed ${captureSweep.sealed.length} abandoned capture(s) as partial (delivered on next server start)`);
+  }
+  if (captureSweep.discarded.length > 0) {
+    console.log(`  Discarded ${captureSweep.discarded.length} empty abandoned capture session(s)`);
+  }
   const rootLandmarkPath = await installRootLandmark(boxRoot);
   if (rootLandmarkPath !== null) {
     // Persist the refill so it survives, propagates to clones, and doesn't

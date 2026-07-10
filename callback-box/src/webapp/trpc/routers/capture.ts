@@ -16,7 +16,12 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { listStagingSessions } from "../../../core/capture/staging-store.js";
-import { selectPendingCaptures, type PendingCapture } from "../../../core/capture/pending.js";
+import {
+  selectPendingCaptures,
+  selectResumableCaptures,
+  type PendingCapture,
+  type ResumableCapture,
+} from "../../../core/capture/pending.js";
 
 export const captureRouter = router({
   pendingSessions: publicProcedure
@@ -24,5 +29,21 @@ export const captureRouter = router({
     .query(async ({ input, ctx }): Promise<{ pending: PendingCapture[] }> => {
       const sessions = await listStagingSessions({ boxRoot: ctx.boxRoot });
       return { pending: selectPendingCaptures({ sessions, sessionId: input.sessionId }) };
+    }),
+
+  // Still-open, non-empty staged captures the entering client may resume
+  // (Track 5). Matched by the chat capture was started from, or the exact
+  // session id the client still holds in localStorage (standalone case).
+  resumableSessions: publicProcedure
+    .input(z.object({ targetSessionId: z.string().nullable(), clientSessionId: z.string().nullable() }))
+    .query(async ({ input, ctx }): Promise<{ resumable: ResumableCapture[] }> => {
+      const sessions = await listStagingSessions({ boxRoot: ctx.boxRoot });
+      return {
+        resumable: selectResumableCaptures({
+          sessions,
+          targetSessionId: input.targetSessionId,
+          clientSessionId: input.clientSessionId,
+        }),
+      };
     }),
 });

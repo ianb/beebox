@@ -31,7 +31,67 @@ import {
 } from "../../core/capture/staging-store.js";
 import { prepareCaptureSession } from "../../core/capture/prepare.js";
 import { resumeStagingSessions } from "../../core/capture/resume.js";
-import { getChatRuntime } from "../chat-runtime.js";
+import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
+import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
+import { getChatRuntime, type ChatRuntime } from "../chat-runtime.js";
+
+/** How much awake time between abandonment sweeps (Track 5). */
+const SWEEP_INTERVAL_MS = 10 * 60 * 1000; // 10 minutes
+
+/**
+ * Run the abandonment sweep every {@link SWEEP_INTERVAL_MS} of *awake* time
+ * (never wall time — a plain interval fires instantly after a macOS sleep and
+ * would mass-finalize sessions that were "abandoned" only by the laptop lid).
+ * Self-rearms after each run; returns a cancel handle wired to server close so
+ * the timer never outlives the box scope.
+ */
+function scheduleAbandonmentSweep(opts: {
+  boxRoot: string;
+  eventBus: EventBus;
+  runtime: ChatRuntime;
+}): () => void {
+  const { boxRoot, eventBus, runtime } = opts;
+  let timer: AwakeTimeout | null = null;
+  let stopped = false;
+
+  const runOnce = async (): Promise<void> => {
+    await sweepAbandonedCaptures({
+      boxRoot,
+      firePreparation: (id) => {
+        void prepareCaptureSession({
+          boxRoot,
+          id,
+          eventBus,
+          registry: runtime.registry,
+          wireSession: runtime.wireSession,
+        }).catch(async (err: unknown) => {
+          console.error(`[capture] Swept preparation of ${id} failed:`, err);
+          await setStagingState({ boxRoot, id, state: "failed:prepare" }).catch(() => {});
+        });
+      },
+    });
+  };
+
+  const arm = (): void => {
+    if (stopped) return;
+    timer = startAwakeTimeout({
+      timeoutMs: SWEEP_INTERVAL_MS,
+      onTimeout: () => {
+        void runOnce()
+          .catch((err: unknown) => {
+            console.error(`[capture] Abandonment sweep failed for box=${boxRoot}:`, err);
+          })
+          .finally(() => arm());
+      },
+    });
+  };
+
+  arm();
+  return () => {
+    stopped = true;
+    timer?.stop();
+  };
+}
 
 interface RegisterCaptureRoutesOptions {
   server: FastifyInstance;
@@ -192,7 +252,8 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
   );
 
   // On startup, resume any staged captures left mid-preparation by a crash or
-  // restart. Fire-and-forget; the chat runtime is registered before this route.
+  // restart, and start the periodic abandonment sweep. Fire-and-forget; the
+  // chat runtime is registered before this route.
   const runtime = getChatRuntime(boxRoot);
   if (runtime) {
     void resumeStagingSessions({
@@ -203,7 +264,12 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     }).catch((err: unknown) => {
       console.error("[capture] Staging resume scan failed:", err);
     });
+
+    const cancelSweep = scheduleAbandonmentSweep({ boxRoot, eventBus, runtime });
+    server.addHook("onClose", async () => {
+      cancelSweep();
+    });
   } else {
-    console.warn("[capture] Chat runtime not ready; skipping staging resume scan");
+    console.warn("[capture] Chat runtime not ready; skipping staging resume scan + sweep");
   }
 }

@@ -178,6 +178,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
       basename,
       actualStartedAt,
       endedAt,
+      partial: session.partial === true,
     });
   }
 
@@ -234,6 +235,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
     imageCount: session.photos.length,
     audioSeconds: transcription.durationSeconds,
     summary: wrapperSummary,
+    partial: session.partial === true,
     transcriptionFailed,
   });
 

@@ -65,6 +65,13 @@ export interface StagingSession {
   segments: StagingSegment[];
   photos: StagingPhoto[];
   files: StagingFile[];
+  /**
+   * Set true only when the abandonment sweep (Track 5) seals a session the user
+   * never finalized. It flows through to the capture card's `partial: true`
+   * frontmatter and the `<capture partial="1">` wrapper — a deliberate "Submit
+   * now" or normal "Done" finalize leaves this unset (partial: false).
+   */
+  partial?: boolean;
 }
 
 /** Raised when a session vanished between read and write (e.g. cancelled). */
@@ -323,15 +330,27 @@ export interface SealResult {
  * `delivered`) is left untouched and returns `alreadySealed: true`. The whole
  * read-decide-write runs under the per-session lock, so two POSTs racing on one
  * `open` session can't both win.
+ *
+ * `requireOpen` narrows fire-eligibility to `open` only — the abandonment sweep
+ * (Track 5) uses it so a session that raced into `failed:*` between the sweep's
+ * list and its seal is NOT auto-retried (the plan bars auto-retrying failures).
+ * `partial: true` marks the session partial as part of the same atomic seal.
  */
-export async function sealStagingSession(opts: { boxRoot: string; id: string }): Promise<SealResult> {
-  const { boxRoot, id } = opts;
+export async function sealStagingSession(opts: {
+  boxRoot: string;
+  id: string;
+  partial?: boolean;
+  requireOpen?: boolean;
+}): Promise<SealResult> {
+  const { boxRoot, id, partial, requireOpen } = opts;
   return withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
-    const fireEligible = session.state === "open" || session.state.startsWith("failed:");
+    const fireEligible =
+      session.state === "open" || (requireOpen !== true && session.state.startsWith("failed:"));
     if (!fireEligible) return { sealed: false, alreadySealed: true };
     session.state = "sealed";
+    if (partial === true) session.partial = true;
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
     return { sealed: true, alreadySealed: false };

@@ -235,8 +235,10 @@ export async function writeCaptureDocument(opts: {
   basename: string;
   actualStartedAt: string;
   endedAt: string;
+  /** Sweep-sealed capture — writes `partial: true` frontmatter. */
+  partial?: boolean;
 }): Promise<WrittenCaptureDocument> {
-  const { boxRoot, session, sessionDir, destRelDir, basename, actualStartedAt, endedAt } = opts;
+  const { boxRoot, session, sessionDir, destRelDir, basename, actualStartedAt, endedAt, partial } = opts;
 
   const sessionAttachRelDir = `${destRelDir}/${basename}.attach`;
   const sessionAttachAbsDir = path.join(boxRoot, sessionAttachRelDir);
@@ -256,6 +258,7 @@ export async function writeCaptureDocument(opts: {
     imageRefs: builder.imageRefs,
     audioRefs: builder.audioRefs,
     fileRefs: builder.fileRefs,
+    partial: partial === true,
   });
   const sessionCardAbsPath = path.join(destAbsDir, sessionCardFilename);
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);

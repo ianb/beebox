@@ -149,6 +149,8 @@ export function createCaptureSessionTemplate(options: {
   imageRefs: string[];
   audioRefs: string[];
   fileRefs?: string[];
+  /** True when the abandonment sweep finalized an unfinished capture. */
+  partial?: boolean;
 }): string {
   const duration = options.endedAt
     ? formatDuration(new Date(options.endedAt).getTime() - new Date(options.startedAt).getTime())
@@ -167,6 +169,7 @@ export function createCaptureSessionTemplate(options: {
   };
   const fileRefs = options.fileRefs ?? [];
   if (fileRefs.length > 0) fields.files = fileRefs.map((ref) => `attach/${ref}`);
+  if (options.partial === true) fields.partial = true;
 
   return `---\n${stringifyYaml(fields)}---\n`;
 }
