@@ -1,10 +1,17 @@
 # Architectural Review — Findings and Improvement Plan
 
+**Status:** implemented 2026-07 — all tracks A–P landed on the
+`architectural-review` worktree and merged to `main`; the genuinely-open
+judgment calls below were carried forward to
+[`issues/2026-07-06-architectural-review-open-decisions.md`](../../../issues/2026-07-06-architectural-review-open-decisions.md)
+rather than left buried in this now-historical plan.
+
 A whole-monorepo architectural review (2026-07-05), run as ~17 parallel scan
 agents plus direct tooling (knip, madge), synthesized into an improvement plan.
-This document is both the review's record and the plan for acting on it.
+This document is both the review's record and the plan for acting on it —
+kept here as the historical record of that work.
 
-> **STATUS: IN IMPLEMENTATION (updated 2026-07-06).** Boxholder-approved;
+> **STATUS: IN IMPLEMENTATION (updated 2026-07-06, historical).** Boxholder-approved;
 > implementing on the `architectural-review` worktree.
 >
 > - **Phase 1 — safety fixes + enforcement infrastructure: COMPLETE.** The

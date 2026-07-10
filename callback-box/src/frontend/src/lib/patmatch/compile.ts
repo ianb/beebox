@@ -33,7 +33,7 @@ export function compileLines(stream: TokenStream): Matcher {
   const matchers: Matcher[] = [];
   let tags: Record<string, string> = {};
   let currentSequence: Matcher[] = [];
-  while (true) {
+  for (;;) {
     if (stream.isEmpty() || stream.peek() === "\n") {
       if (currentSequence.length === 0) {
         if (Object.keys(tags).length > 0) {
@@ -94,7 +94,7 @@ function compileGroup(stream: TokenStream): Matcher {
   const matchers: Matcher[] = [];
   let currentSequence: Matcher[] = [];
   let isOptional = false;
-  while (true) {
+  for (;;) {
     if (stream.isEmpty()) {
       throw new ExpectedClosingParenError();
     }

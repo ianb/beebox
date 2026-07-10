@@ -24,6 +24,7 @@ import {
   buildReactorUserPrompt,
 } from "../../core/reactor/prompts.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
+import { invariant } from "../../lib/invariant.js";
 
 /** How a layer reaches the agent's context. */
 export type LayerLoading = "always" | "situational" | "on-demand";
@@ -176,7 +177,8 @@ async function claudeMdLayer(boxRoot: string): Promise<ContextLayer> {
       parts.push(line);
       continue;
     }
-    const includePath = include[1]!;
+    const includePath = include[1];
+    invariant(includePath !== undefined, "regex match must populate its required capture group");
     try {
       const included = await readFile(join(boxRoot, includePath), "utf-8");
       parts.push(`<!-- ─── @${includePath} ─── -->`, included.trimEnd(), `<!-- ─── end @${includePath} ─── -->`);
@@ -279,7 +281,10 @@ async function skillDescription(path: string): Promise<string | null> {
     return null;
   }
   const match = content.match(/^description:\s*(.+)$/m);
-  return match ? match[1]!.trim() : null;
+  if (!match) return null;
+  const description = match[1];
+  invariant(description !== undefined, "regex match must populate its required capture group");
+  return description.trim();
 }
 
 export function wordCount(text: string): number {

@@ -14,7 +14,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { parseCardName, isCardFile, boxPath } from "../../lib/paths.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import {
   getTemplate,
   getDefaultTemplate,
@@ -208,8 +208,8 @@ async function executeCreate(
       filesToStage.push(path.relative(ctx.boxRoot, attachmentPath));
     }
 
-    await stageFiles(ctx.boxRoot, filesToStage);
-    await commit(ctx.boxRoot, {
+    await stageAndCommitPaths(ctx.boxRoot, {
+      paths: filesToStage,
       message: `Create ${parsed.type} card: ${parsed.name}`,
       trailers: {
         "Created-By": "cb create",

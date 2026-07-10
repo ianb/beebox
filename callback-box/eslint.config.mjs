@@ -28,4 +28,19 @@ export default [
   // disabling a chunk of our own documented style. They are now re-enabled;
   // existing debt is burned down rule-by-rule. See
   // ../docs/eslint-rule-suppression-audit.md.
+  {
+    // return-await (personal-vibe-check, enabled repo-wide) is off for route
+    // handlers specifically: 30 of ~35 backend hits are Fastify
+    // `return reply.send(...)` inside a try-block whose catch re-sends on
+    // error. Forcing `await` there routes a rejected send into the catch
+    // block, which sends a *second* response and throws
+    // FST_ERR_REP_ALREADY_SENT — the rule would introduce the exact bug
+    // class it exists to prevent, so this directory is carved out rather
+    // than the rule being weakened project-wide (measured 2026-07,
+    // issues/2026-07-06-deferred-lint-rules.md).
+    files: ["src/webapp/routes/**/*.ts"],
+    rules: {
+      "@typescript-eslint/return-await": "off",
+    },
+  },
 ];

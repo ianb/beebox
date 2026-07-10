@@ -189,7 +189,7 @@ export function useChatWs(opts: {
         if (config.model && isTTSVoice(config.model)) {
           tts.setVoiceConfig({ voice: config.model });
         }
-        if (config.instructions && config.instructions.length > 0) {
+        if (config.instructions.length > 0) {
           tts.setVoiceConfig({ baseInstructions: config.instructions.join(" ") });
         }
       })

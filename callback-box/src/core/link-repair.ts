@@ -19,6 +19,7 @@ import { glob } from "glob";
 import { listBoxMarkdownFiles } from "./list-cards.js";
 import { extractInlineLinks, resolveInternalLink } from "./markdown-lint-rules.js";
 import { fileExists } from "../lib/file-exists.js";
+import { invariant } from "../lib/invariant.js";
 
 const INDEX_IGNORE = [
   "**/node_modules/**",
@@ -90,7 +91,9 @@ function decideRepair(oldUrl: string, index: Map<string, string[]>): {
 
   if (matches.length === 0) return { status: "unresolvable", candidates: [] };
   if (matches.length === 1) {
-    return { status: "fixed", newUrl: toBoxAbsolute(matches[0]!, fragment), candidates: [] };
+    const [only] = matches;
+    invariant(only !== undefined, "matches has exactly one element (checked above)");
+    return { status: "fixed", newUrl: toBoxAbsolute(only, fragment), candidates: [] };
   }
 
   // Several files share the basename — prefer the one whose path best lines up
@@ -99,7 +102,9 @@ function decideRepair(oldUrl: string, index: Map<string, string[]>): {
   const top = Math.max(...scored.map((s) => s.score));
   const winners = scored.filter((s) => s.score === top);
   if (winners.length === 1) {
-    return { status: "fixed", newUrl: toBoxAbsolute(winners[0]!.rel, fragment), candidates: [] };
+    const [winner] = winners;
+    invariant(winner !== undefined, "winners has exactly one element (checked above)");
+    return { status: "fixed", newUrl: toBoxAbsolute(winner.rel, fragment), candidates: [] };
   }
   return {
     status: "ambiguous",

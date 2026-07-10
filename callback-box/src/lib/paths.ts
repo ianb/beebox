@@ -5,6 +5,7 @@
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
+import { invariant } from "./invariant.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -32,7 +33,7 @@ export class UnknownBoxDirsKeyError extends Error {
  */
 export const BOX_DIRS: BoxDirs = Object.fromEntries(
   BOX_LAYOUT.filter(
-    (entry): entry is BoxDirsEntry => "boxDirsKey" in entry && entry.boxDirsKey !== undefined
+    (entry): entry is BoxDirsEntry => "boxDirsKey" in entry
   ).map((entry) => [entry.boxDirsKey, entry.path])
 ) as BoxDirs;
 
@@ -109,7 +110,7 @@ async function packageRootContentDir(dir: string): Promise<string | null> {
 export async function findBoxRoot(startPath: string): Promise<string | null> {
   let current = path.resolve(startPath);
 
-  while (true) {
+  for (;;) {
     if (await pathExists(path.join(current, BOX_MARKER))) {
       return current;
     }
@@ -199,17 +200,15 @@ export function toRelativePath(boxRoot: string, absolutePath: string): string | 
 export function parseCardName(filename: string): { name: string; type: string } | null {
   const match = filename.match(/^(.+)\.([^.]+)\.card$/);
   if (match) {
-    return {
-      name: match[1]!,
-      type: match[2]!,
-    };
+    const [, name, type] = match;
+    invariant(name !== undefined && type !== undefined, "regex capture groups missing on a successful match");
+    return { name, type };
   }
   const positional = filename.match(/^([^.]+)\.card$/);
   if (positional) {
-    return {
-      name: positional[1]!,
-      type: positional[1]!,
-    };
+    const [, name] = positional;
+    invariant(name !== undefined, "regex capture group missing on a successful match");
+    return { name, type: name };
   }
   return null;
 }

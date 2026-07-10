@@ -10,6 +10,30 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { syncUsage, queryUsage, USAGE_SCHEMA_DESCRIPTION } from "../../core/usage.js";
+import { invariant } from "../../lib/invariant.js";
+
+/** Print `rows` as an aligned, header-and-dashes text table. */
+function printTable(rows: Array<Record<string, unknown>>): void {
+  const keys = Object.keys(rows[0] as Record<string, unknown>);
+  const widths = keys.map((k) => {
+    const values = rows.map((r) => String(r[k] ?? ""));
+    return Math.max(k.length, ...values.map((v) => v.length));
+  });
+  const formatRow = (values: string[]): string =>
+    values
+      .map((v, i) => {
+        const width = widths[i];
+        invariant(width !== undefined, `widths[${i}] must exist for 0 <= i < keys.length`);
+        return v.padEnd(width);
+      })
+      .join("  ");
+
+  console.log(formatRow(keys));
+  console.log(widths.map((w) => "-".repeat(w)).join("  "));
+  for (const row of rows) {
+    console.log(formatRow(keys.map((k) => String(row[k] ?? ""))));
+  }
+}
 
 export const usageCommand = new Command("usage")
   .description("Token usage tracking and reporting")
@@ -43,17 +67,7 @@ export const usageCommand = new Command("usage")
         return;
       }
       // Print as aligned table
-      const keys = Object.keys(rows[0] as Record<string, unknown>);
-      const widths = keys.map((k) => {
-        const values = rows.map((r) => String((r as Record<string, unknown>)[k] ?? ""));
-        return Math.max(k.length, ...values.map((v) => v.length));
-      });
-      console.log(keys.map((k, i) => k.padEnd(widths[i]!)).join("  "));
-      console.log(widths.map((w) => "-".repeat(w)).join("  "));
-      for (const row of rows) {
-        const r = row as Record<string, unknown>;
-        console.log(keys.map((k, i) => String(r[k] ?? "").padEnd(widths[i]!)).join("  "));
-      }
+      printTable(rows as Array<Record<string, unknown>>);
       return;
     }
 
@@ -76,15 +90,5 @@ export const usageCommand = new Command("usage")
       console.log("No usage data yet. Run some agents first.");
       return;
     }
-    const keys = Object.keys(rows[0] as Record<string, unknown>);
-    const widths = keys.map((k) => {
-      const values = rows.map((r) => String((r as Record<string, unknown>)[k] ?? ""));
-      return Math.max(k.length, ...values.map((v) => v.length));
-    });
-    console.log(keys.map((k, i) => k.padEnd(widths[i]!)).join("  "));
-    console.log(widths.map((w) => "-".repeat(w)).join("  "));
-    for (const row of rows) {
-      const r = row as Record<string, unknown>;
-      console.log(keys.map((k, i) => String(r[k] ?? "").padEnd(widths[i]!)).join("  "));
-    }
+    printTable(rows as Array<Record<string, unknown>>);
   });

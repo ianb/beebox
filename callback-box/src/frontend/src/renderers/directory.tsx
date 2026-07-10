@@ -93,7 +93,7 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
   if (error) return <div className="p-4"><Text tone="danger">Error: {error.message}</Text></div>;
   if (!browse) return <div className="p-4"><Text tone="subtle">Not found: {dirPath || "/"}</Text></div>;
 
-  const isEmpty = browse.dirs.length === 0 && browse.cards.length === 0 && (browse.files ?? []).length === 0;
+  const isEmpty = browse.dirs.length === 0 && browse.cards.length === 0 && browse.files.length === 0;
 
   return (
     <div className="p-4">
@@ -130,9 +130,9 @@ function DirectoryRenderer({ data, onNavigate }: RendererProps) {
           ))}
         </Stack>
       ) : null}
-      {(browse.files ?? []).length > 0 ? (
+      {browse.files.length > 0 ? (
         <Stack as="ul" gap="xs">
-          {(browse.files ?? []).map((file) => (
+          {browse.files.map((file) => (
             <li key={file.relativePath}>
               <TextLink to={href(`/${boxSlug}/browse/${file.relativePath}`)}>
                 <Text size="sm" mono>{file.name}</Text>

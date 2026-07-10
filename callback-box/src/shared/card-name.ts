@@ -26,11 +26,11 @@ export interface ParsedCardFileName {
  */
 export function parseCardFileName(fileName: string): ParsedCardFileName | null {
   const job = fileName.match(/^(.+)\.([^.]+)\.job\.card$/);
-  if (job) return { name: job[1]!, type: `${job[2]!}-job` };
+  if (job?.[1] !== undefined && job[2] !== undefined) return { name: job[1], type: `${job[2]}-job` };
   const nominal = fileName.match(/^(.+)\.([^.]+)\.card$/);
-  if (nominal) return { name: nominal[1]!, type: nominal[2]! };
+  if (nominal?.[1] !== undefined && nominal[2] !== undefined) return { name: nominal[1], type: nominal[2] };
   const positional = fileName.match(/^([^.]+)\.card$/);
-  if (positional) return { name: null, type: positional[1]! };
+  if (positional?.[1] !== undefined) return { name: null, type: positional[1] };
   return null;
 }
 

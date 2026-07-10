@@ -1,4 +1,5 @@
 import { encodeCanvasBlob } from "./canvas-encode";
+import { invariant } from "./invariant";
 
 export type FacingMode = "user" | "environment";
 
@@ -26,7 +27,11 @@ export class CameraCapture {
       audio: false,
     });
 
-    const track = this.stream.getVideoTracks()[0];
+    // getVideoTracks() can return an empty array in rare hardware cases; the
+    // frontend tsconfig lacks noUncheckedIndexedAccess, so `[0]` alone would
+    // type `track` as always-defined. `.at()` is typed `T | undefined`
+    // regardless, keeping this check honest.
+    const track = this.stream.getVideoTracks().at(0);
     this.currentDeviceId = track ? track.getSettings().deviceId ?? null : null;
     videoEl.srcObject = this.stream;
     await videoEl.play();
@@ -57,8 +62,13 @@ export class CameraCapture {
     if (devices.length < 2 || !this.videoEl) return;
     const currentIdx = devices.findIndex((d) => d.deviceId === this.currentDeviceId);
     const nextIdx = (currentIdx + 1) % devices.length;
-    const nextDevice = devices[nextIdx];
-    if (!nextDevice) return;
+    // nextIdx is always in [0, devices.length) given the guard above and the
+    // modulo above — a missing element here would mean the index math is
+    // broken, not a genuine runtime absence. `.at()` (unlike `[nextIdx]`) is
+    // typed `T | undefined` even without noUncheckedIndexedAccess, so the
+    // invariant below stays meaningful to the type checker.
+    const nextDevice = devices.at(nextIdx);
+    invariant(nextDevice !== undefined, "cycleDevice: nextIdx out of range");
     this.stopStream();
     await this.startWithDeviceId(this.videoEl, nextDevice.deviceId);
   }

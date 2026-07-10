@@ -22,10 +22,11 @@ import {
   type Connector,
   type SyncResult,
 } from "./index.js";
-import { stageFiles, commit } from "../lib/git.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
+import { stageAndCommitPaths } from "../lib/git.js";
+import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
 import { getBoxTimeISO } from "../lib/time.js";
+import { invariant } from "../lib/invariant.js";
 import type { TelegramService } from "../services/telegram.js";
 import { createTelegramService } from "../services/telegram.js";
 import type {
@@ -37,7 +38,6 @@ import {
   MissingPublicUrlError,
   loadPublicUrl,
   loadTelegramConfig,
-  extractMessage,
 } from "./telegram-helpers.js";
 import {
   processUpdateToThread,
@@ -50,6 +50,29 @@ import { sendOutputCards } from "./telegram-output-cards.js";
 // importers ("./telegram.js") keep working unchanged.
 export type { TelegramConfig, TelegramUpdate } from "./telegram-types.js";
 export { loadTelegramConfig, extractMessage } from "./telegram-helpers.js";
+export { processWebhookUpdate } from "./telegram-webhook.js";
+
+/**
+ * Merge an ingest working copy's telegram-state deltas into freshly loaded
+ * state (Track 1). Only the fields the poll/webhook ingest owns are merged:
+ * `lastUpdateId` takes the newer value and `chatMappings` merges per key —
+ * working contributes chat ids fresh hasn't seen, but on a key collision FRESH
+ * wins (a mapping a concurrent writer already committed is authoritative; the
+ * working copy's is at best a redundant re-derivation of the same slug).
+ * `callbacks` is left to `fresh` — ingest never sets timers, so writing the
+ * working copy's possibly-stale callbacks back would resurrect a timer a
+ * concurrent `sendOutbound`/`checkCallbackTimers` just changed.
+ */
+function mergeIngestState(fresh: TelegramState, working: TelegramState): TelegramState {
+  const merged: TelegramState = { ...fresh };
+  if (working.lastUpdateId != null) {
+    merged.lastUpdateId = Math.max(fresh.lastUpdateId ?? 0, working.lastUpdateId);
+  }
+  if (working.chatMappings) {
+    merged.chatMappings = { ...working.chatMappings, ...(fresh.chatMappings ?? {}) };
+  }
+  return merged;
+}
 
 class TelegramConnector implements Connector {
   name = "telegram";
@@ -153,7 +176,12 @@ class TelegramConnector implements Connector {
     jobs: string[];
   }> {
     const tg = this.getTelegram(config.botToken);
-    const state = await loadTransientState<TelegramState>({
+    // Working copy for reads (chat-slug mappings + offset). Persisted per batch
+    // via updateTransientState, whose update fn delta-merges into freshly-loaded
+    // state (Track 1) so a concurrent webhook's lastUpdateId/chatMappings aren't
+    // clobbered. We never hold the transient-state lock across the getUpdates
+    // network calls or the git commits below.
+    let working = await loadTransientState<TelegramState>({
       boxRoot: this.boxRoot,
       connectorName: "telegram",
       defaultValue: {},
@@ -164,11 +192,12 @@ class TelegramConnector implements Connector {
 
     const allThreads = new Set<string>();
     const allPeopleFiles: string[] = [];
+    const allPersonCards: string[] = [];
     const created: string[] = [];
-    let offset = state.lastUpdateId ? state.lastUpdateId + 1 : undefined;
+    let offset = working.lastUpdateId ? working.lastUpdateId + 1 : undefined;
 
     // Drain all pending updates
-    while (true) {
+    for (;;) {
       const updates = await tg.getUpdates(
         offset != null
           ? { offset, limit: 100, timeout: 0 }
@@ -178,35 +207,41 @@ class TelegramConnector implements Connector {
       if (updates.length === 0) break;
 
       for (const update of updates) {
-        const result = await this.processUpdateToThread(
-          update as TelegramUpdate,
-          state
-        );
+        const result = await this.processUpdateToThread(update, working);
         if (result) {
           allThreads.add(result.threadRelPath);
           if (result.newThread) created.push(result.threadRelPath);
           if (result.personFile) allPeopleFiles.push(result.personFile);
+          if (result.personCard) allPersonCards.push(result.personCard);
         }
         offset = update.update_id + 1;
       }
 
-      // Save offset after each batch
-      state.lastUpdateId = updates[updates.length - 1]!.update_id;
-      await saveTransientState({
+      // Persist offset + any new chat mappings after each batch as a delta into
+      // fresh state; the returned merged state becomes the working copy so it
+      // now reflects any concurrent writes too.
+      const lastUpdate = updates[updates.length - 1];
+      invariant(lastUpdate !== undefined, "updates is non-empty here (checked above)");
+      const batchMax = lastUpdate.update_id;
+      working = await updateTransientState<TelegramState>({
         boxRoot: this.boxRoot,
         connectorName: "telegram",
-        data: state,
+        defaultValue: {},
+        update: (fresh) => mergeIngestState(fresh, { ...working, lastUpdateId: batchMax }),
       });
     }
 
-    // Commit all thread changes and people files in one commit
-    const filesToStage = [...allThreads, ...allPeopleFiles];
+    // Commit all thread changes, people files, and seeded person cards in one
+    // path-scoped commit (Track 2). Person cards are staged internally by
+    // telegram-ingest, so they must be named here or a scoped commit leaves
+    // them staged-but-uncommitted.
+    const filesToStage = [...allThreads, ...allPeopleFiles, ...allPersonCards];
     const jobs: string[] = [];
 
     if (filesToStage.length > 0) {
-      await stageFiles(this.boxRoot, filesToStage);
       const msgCount = allThreads.size;
-      await commit(this.boxRoot, {
+      await stageAndCommitPaths(this.boxRoot, {
+        paths: filesToStage,
         message: `Pull messages from Telegram (${msgCount} thread${msgCount === 1 ? "" : "s"})`,
         trailers: {
           "Pulled-By": "telegram-connector",
@@ -227,8 +262,8 @@ class TelegramConnector implements Connector {
       }
 
       if (jobs.length > 0) {
-        await stageFiles(this.boxRoot, jobs);
-        await commit(this.boxRoot, {
+        await stageAndCommitPaths(this.boxRoot, {
+          paths: jobs,
           message: `Create chat job${jobs.length === 1 ? "" : "s"} for Telegram`,
           trailers: {
             "Created-By": "telegram-connector",
@@ -293,7 +328,10 @@ class TelegramConnector implements Connector {
     const callbacks = state.callbacks ?? {};
     const now = new Date(getBoxTimeISO(this.boxRoot));
     const jobs: string[] = [];
-    let changed = false;
+    // Capture the exact timer value we fire on, so the delete below removes only
+    // the timer we handled — never a fresher timer a concurrent sendOutbound
+    // re-added for the same thread between our read and the write (Track 1).
+    const fired: Array<{ threadRef: string; at: string }> = [];
 
     for (const [threadRef, timer] of Object.entries(callbacks)) {
       if (new Date(timer.at) <= now) {
@@ -306,25 +344,30 @@ class TelegramConnector implements Connector {
           source: "telegram",
         });
         jobs.push(jobPath);
-
-        // Remove the timer
-        delete callbacks[threadRef];
-        changed = true;
+        fired.push({ threadRef, at: timer.at });
       }
     }
 
-    if (changed) {
-      state.callbacks = callbacks;
-      await saveTransientState({
+    if (fired.length > 0) {
+      // Delta against fresh state: remove only the exact timers we fired,
+      // preserving any callbacks a concurrent writer added.
+      await updateTransientState<TelegramState>({
         boxRoot: this.boxRoot,
         connectorName: "telegram",
-        data: state,
+        defaultValue: {},
+        update: (fresh) => {
+          const freshCallbacks = { ...(fresh.callbacks ?? {}) };
+          for (const { threadRef, at } of fired) {
+            if (freshCallbacks[threadRef]?.at === at) delete freshCallbacks[threadRef];
+          }
+          return { ...fresh, callbacks: freshCallbacks };
+        },
       });
     }
 
     if (jobs.length > 0) {
-      await stageFiles(this.boxRoot, jobs);
-      await commit(this.boxRoot, {
+      await stageAndCommitPaths(this.boxRoot, {
+        paths: jobs,
         message: `Create callback job${jobs.length === 1 ? "" : "s"} for Telegram`,
         trailers: {
           "Created-By": "telegram-connector",
@@ -347,66 +390,5 @@ export function createTelegramConnector(boxRoot: string, telegram?: TelegramServ
   return connector;
 }
 
-/**
- * Process a webhook update — used by the webhook route.
- * Appends to a thread file, commits, and creates a chat job.
- * Returns the thread relative path, or null if the update was skipped.
- */
-export async function processWebhookUpdate(opts: {
-  boxRoot: string;
-  update: TelegramUpdate;
-  /** When true, skip chat job creation (caller handles response directly) */
-  skipJob?: boolean | undefined;
-}): Promise<{ threadRef: string; personRef: string | null } | null> {
-  const { boxRoot, update, skipJob } = opts;
-
-  // Load state for chat mappings
-  const state = await loadTransientState<TelegramState>({
-    boxRoot,
-    connectorName: "telegram",
-    defaultValue: {},
-  });
-
-  const connector = new TelegramConnector(boxRoot);
-  const result = await connector.processUpdateToThread(update, state);
-  if (!result) return null;
-
-  // Save state (chat mappings may have been updated)
-  await saveTransientState({ boxRoot, connectorName: "telegram", data: state });
-
-  // Commit the thread file + any people files
-  const filesToStage = [result.threadRelPath];
-  if (result.personFile) filesToStage.push(result.personFile);
-
-  await stageFiles(boxRoot, filesToStage);
-
-  const extracted = extractMessage(update)!;
-  await commit(boxRoot, {
-    message: `Telegram: ${extracted.senderName} in ${path.basename(path.dirname(result.threadRelPath))}`,
-    trailers: { "Pulled-By": "telegram-webhook" },
-  });
-
-  if (!skipJob) {
-    // Create chat job
-    const slug = path.basename(path.dirname(result.threadRelPath));
-    const jobPath = await createChatJob({
-      boxRoot,
-      threadRef: result.threadRelPath,
-      description: `New messages in ${slug}`,
-      source: "telegram",
-    });
-    await stageFiles(boxRoot, [jobPath]);
-    await commit(boxRoot, {
-      message: "Create chat job for Telegram message",
-      trailers: { "Created-By": "telegram-webhook" },
-    });
-  }
-
-  // Update state so catch-up polling doesn't re-process this update
-  if (!state.lastUpdateId || update.update_id > state.lastUpdateId) {
-    state.lastUpdateId = update.update_id;
-    await saveTransientState({ boxRoot, connectorName: "telegram", data: state });
-  }
-
-  return { threadRef: result.threadRelPath, personRef: result.personRef };
-}
+// processWebhookUpdate lives in ./telegram-webhook.js (kept out of this file for
+// the line cap); re-exported below so importers of "./telegram.js" are unchanged.

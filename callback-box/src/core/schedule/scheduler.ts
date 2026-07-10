@@ -121,6 +121,15 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
   const interval = (options?.intervalSeconds ?? 60) * 1000;
   let stopping = false;
 
+  // Indirection so TS doesn't narrow `stopping` to its literal initializer
+  // `false` at the read sites below — its only assignment lives inside
+  // `shutdown`, invoked asynchronously via a signal handler that TS's
+  // control-flow analysis can't see as a reachable mutation. The two reads
+  // below are load-bearing: they're how the main loop notices a signal fired.
+  function isStopping(): boolean {
+    return stopping;
+  }
+
   async function shutdown(signal: string) {
     console.log(`[${new Date().toISOString()}] Scheduler received ${signal}, shutting down...`);
     stopping = true;
@@ -144,7 +153,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
 
   console.log(`Scheduler started (interval: ${interval / 1000}s, pid: ${process.pid})`);
 
-  while (!stopping) {
+  while (!isStopping()) {
     const config = await loadSchedulerConfig();
 
     if (config.boxes.length === 0) {
@@ -153,7 +162,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
     }
 
     for (const boxPath of config.boxes) {
-      if (stopping) break;
+      if (isStopping()) break;
       try {
         if (!(await isBox(boxPath))) {
           console.error(`[${new Date().toISOString()}] ${boxPath}: not a valid box (missing ${BOX_MARKER})`);

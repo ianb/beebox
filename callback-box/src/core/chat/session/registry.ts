@@ -146,7 +146,7 @@ export class ChatSessionRegistry extends EventEmitter {
     this.cleanupTimer = setInterval(() => {
       this.sweepIdle();
     }, this.cleanupIntervalMs);
-    this.cleanupTimer.unref?.();
+    this.cleanupTimer.unref();
   }
 
   stopCleanup(): void {

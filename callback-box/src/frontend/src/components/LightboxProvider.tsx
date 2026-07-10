@@ -51,7 +51,7 @@ function collectImages(): LightboxImage[] {
   for (const node of nodes) {
     if (node.hasAttribute("data-image-list")) {
       const raw = node.textContent;
-      if (raw === null || raw.trim() === "") continue;
+      if (raw.trim() === "") continue;
       let parsed: unknown;
       try {
         parsed = JSON.parse(raw);

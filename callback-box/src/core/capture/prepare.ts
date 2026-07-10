@@ -354,14 +354,13 @@ async function markCaptureCardDelivered(opts: {
   basename: string;
 }): Promise<void> {
   const { boxRoot, sessionCardAbsPath, sessionCardRelPath, basename } = opts;
-  let changed = false;
-  await withCardLock(sessionCardAbsPath, async () => {
+  const changed = await withCardLock(sessionCardAbsPath, async () => {
     const content = await fs.readFile(sessionCardAbsPath, "utf-8");
     const parsed = parseCardText(content, { source: sessionCardAbsPath, schemas: await createCardSchemaMap() });
-    if (parsed.fields.status !== "new") return; // Already delivered/annotated.
+    if (parsed.fields.status !== "new") return false; // Already delivered/annotated.
     parsed.fields.status = "delivered";
     await fs.writeFile(sessionCardAbsPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
-    changed = true;
+    return true;
   });
   if (!changed) return;
   await commitPathsSerialized(boxRoot, {

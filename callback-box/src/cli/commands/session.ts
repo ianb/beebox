@@ -24,6 +24,7 @@ import {
   runSinceMode,
   type SinceWindow,
 } from "./session-modes.js";
+import { invariant } from "../../lib/invariant.js";
 
 export const sessionCommand = new Command("session")
   .description("View a Claude Code session transcript")
@@ -98,7 +99,9 @@ export const sessionCommand = new Command("session")
           console.error("No sessions found for this box.");
           process.exit(1);
         }
-        sessionId = sessions[0]!.sessionId;
+        const [latest] = sessions;
+        invariant(latest !== undefined, "sessions must be non-empty (checked above)");
+        sessionId = latest.sessionId;
       }
 
       if (!sessionId) {

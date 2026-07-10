@@ -40,7 +40,7 @@ const TRANSCRIPTION_FAILED_RE = /\btranscription-failed="([^"]*)"/i;
 
 function readStringAttr(attrs: string, re: RegExp): string | null {
   const match = re.exec(attrs);
-  return match ? match[1]! : null;
+  return match ? match[1] : null;
 }
 
 /**
@@ -57,7 +57,7 @@ export function parseCaptureWrapper(text: string): CaptureChipModel | null {
   const match = CAPTURE_RE.exec(trimmed);
   // Reject unless the wrapper is the whole message (no leading/trailing text).
   if (!match || match[0] !== trimmed) return null;
-  const attrs = match[1] ?? "";
+  const attrs = match[1];
   const doc = readStringAttr(attrs, DOC_RE);
   if (doc === null || doc === "") return null;
   const imagesRaw = readStringAttr(attrs, IMAGES_RE);
@@ -68,7 +68,7 @@ export function parseCaptureWrapper(text: string): CaptureChipModel | null {
     doc,
     images: Number.isNaN(images) ? 0 : images,
     audio,
-    summary: (match[2] ?? "").trim(),
+    summary: match[2].trim(),
     partial: readStringAttr(attrs, PARTIAL_RE) === "1",
     transcriptionFailed: readStringAttr(attrs, TRANSCRIPTION_FAILED_RE) === "1",
   };

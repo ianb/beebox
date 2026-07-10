@@ -163,7 +163,11 @@ export function splitSpeechParts(content: string): SpeechPart[] {
   let cursor = 0;
   let segIndex = 0;
   for (const start of starts) {
-    const segment = segments[segIndex];
+    // `.at()`, not `segments[segIndex]`: `starts` comes from a separate regex
+    // scan and can genuinely diverge in count from `segments` (parsed by
+    // parseAllSpeechTags) on malformed/unclosed tags, so this index can run
+    // past the end of `segments`.
+    const segment = segments.at(segIndex);
     if (segment === undefined) break;
     if (start > cursor) {
       const between = content.slice(cursor, start);

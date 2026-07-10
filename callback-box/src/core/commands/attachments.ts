@@ -182,10 +182,11 @@ async function runOverwrite(ctx: CommandContext, relPath: string): Promise<Comma
   }
 
   await writeAsset({ absPath, content: stdin });
-  manifest.files[fileName] = await computeEntry(absPath);
+  const entry = await computeEntry(absPath);
+  manifest.files[fileName] = entry;
   await saveManifest(attachDir, manifest);
 
-  ctx.writeLine(`Overwrote ${relPath} (${stdin.length} bytes, sha=${manifest.files[fileName]!.sha256.slice(0, 12)}…)`);
+  ctx.writeLine(`Overwrote ${relPath} (${stdin.length} bytes, sha=${entry.sha256.slice(0, 12)}…)`);
   return { success: true, data: { path: relPath, size: stdin.length } };
 }
 

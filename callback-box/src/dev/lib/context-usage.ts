@@ -15,6 +15,7 @@
 
 import * as fs from "node:fs";
 import * as readline from "node:readline";
+import { invariant } from "../../lib/invariant.js";
 
 /** The three input components of one assistant turn's loaded context. */
 export interface TurnUsage {
@@ -46,7 +47,8 @@ export function loadedContextTokens(usage: TurnUsage): number {
 export function summarizeContextUsage(turns: TurnUsage[]): ContextStats | null {
   if (turns.length === 0) return null;
   const loads = turns.map(loadedContextTokens);
-  const initialTokens = loads[0]!;
+  const [initialTokens] = loads;
+  invariant(initialTokens !== undefined, "loads must be non-empty (turns.length checked above)");
   const peakTokens = Math.max(...loads);
   return {
     initialTokens,

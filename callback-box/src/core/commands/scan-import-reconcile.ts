@@ -6,6 +6,7 @@
  * into photo bundles, orphan backs, unsure pages, and blank pages.
  */
 
+import { assertNever, invariant } from "../../lib/invariant.js";
 import type { ScanPageAnalysis } from "./scan-import-gemini.js";
 
 export interface ResolvedPage {
@@ -43,8 +44,7 @@ export function resolveScanPages(
 
   // Reconcile pairs: only mutual claims survive.
   const resolved: ResolvedPage[] = [];
-  for (let i = 0; i < totalPages; i++) {
-    const analysis = picked[i]!;
+  for (const [i, analysis] of picked.entries()) {
     let pairedWith: number | null = null;
     const claim = analysis.paired_with_index;
     if (claim !== null && claim >= 0 && claim < totalPages) {
@@ -56,7 +56,9 @@ export function resolveScanPages(
         conflicts[i] = true;
       }
     }
-    resolved.push({ index: i, analysis, pairedWith, conflict: conflicts[i]! });
+    const conflict = conflicts[i];
+    invariant(conflict !== undefined, "conflicts is initialized with one entry per page index");
+    resolved.push({ index: i, analysis, pairedWith, conflict });
   }
   return resolved;
 }
@@ -73,10 +75,12 @@ function pickAnalysis(
     return makeMissingAnalysis(i);
   }
   if (analyses.length === 1) {
-    return analyses[0]!;
+    const [only] = analyses;
+    invariant(only !== undefined, "checked analyses.length === 1 above");
+    return only;
   }
-  const a = analyses[0]!;
-  const b = analyses[1]!;
+  const [a, b] = analyses;
+  invariant(a !== undefined && b !== undefined, "checked analyses.length >= 2 above");
   if (a.kind !== b.kind || a.paired_with_index !== b.paired_with_index) {
     conflicts[i] = true;
   }
@@ -145,26 +149,23 @@ export function bundleResolvedPages(resolved: ResolvedPage[]): BundleResult {
   for (const page of resolved) {
     if (used.has(page.index)) continue;
     const a = page.analysis;
-    if (a.kind === "blank") {
-      used.add(page.index);
-      blankPages.push(page.index);
-      continue;
-    }
-    if (a.kind === "unsure") {
-      used.add(page.index);
-      unsurePages.push(page);
-      continue;
-    }
-    if (a.kind === "photo") {
-      used.add(page.index);
-      bundles.push(buildPhotoBundle(page, { resolved, used }));
-      continue;
-    }
-    if (a.kind === "back") {
-      // A back not consumed by any photo — orphan.
-      used.add(page.index);
-      orphanBacks.push({ index: page.index, analysis: a });
-      continue;
+    used.add(page.index);
+    switch (a.kind) {
+      case "blank":
+        blankPages.push(page.index);
+        continue;
+      case "unsure":
+        unsurePages.push(page);
+        continue;
+      case "photo":
+        bundles.push(buildPhotoBundle(page, { resolved, used }));
+        continue;
+      case "back":
+        // A back not consumed by any photo — orphan.
+        orphanBacks.push({ index: page.index, analysis: a });
+        continue;
+      default:
+        assertNever(a.kind);
     }
   }
 

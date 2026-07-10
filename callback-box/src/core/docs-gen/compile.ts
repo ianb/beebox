@@ -17,6 +17,7 @@ import { loadBoxholders } from "../boxholder-cards.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { DOCS_DIR, withDocId } from "./shared.js";
+import { invariant } from "../../lib/invariant.js";
 
 /**
  * Scan procedure cards and extract name + first-line description.
@@ -189,10 +190,12 @@ async function compileConfigGuides(ctx: GuideCompileContext): Promise<GuideSumma
 
       // Collect job-type mappings
       for (const jobType of parsed.jobTypes) {
-        if (!jobTypeMap.has(jobType)) {
-          jobTypeMap.set(jobType, []);
+        let entries = jobTypeMap.get(jobType);
+        if (!entries) {
+          entries = [];
+          jobTypeMap.set(jobType, entries);
         }
-        jobTypeMap.get(jobType)!.push({
+        entries.push({
           guidePath,
           appliesTo: parsed.appliesTo ?? "",
           compiledPath,
@@ -346,7 +349,8 @@ export async function compilePersonalities(boxRoot: string, debug: boolean): Pro
   if (personalityFiles.length === 0) return undefined;
 
   // Only support one personality card (main) for now
-  const filename = personalityFiles[0]!;
+  const [filename] = personalityFiles;
+  invariant(filename !== undefined, "checked personalityFiles.length === 0 above");
   const personalityName = filename.replace(".personality.card", "");
 
   try {

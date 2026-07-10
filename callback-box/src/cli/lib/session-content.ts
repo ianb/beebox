@@ -49,7 +49,6 @@ export function summarizeToolInput(
   toolName: string,
   input: Record<string, unknown>
 ): string {
-  if (!input) return "";
   if (isKnownTool(toolName)) {
     const summarize = TOOL_INPUT_SUMMARIZERS[toolName];
     if (summarize) return summarize(input);
@@ -67,7 +66,7 @@ export function summarizeToolResult(content: unknown): string {
   if (Array.isArray(content)) {
     return content
       .map((c: unknown) =>
-        typeof c === "string" ? c : (c as { text?: string })?.text || ""
+        typeof c === "string" ? c : (c as { text?: string } | null | undefined)?.text || ""
       )
       .join("\n")
       .substring(0, 500);

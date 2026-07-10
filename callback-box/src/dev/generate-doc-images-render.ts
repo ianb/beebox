@@ -51,7 +51,7 @@ export async function generateImage(
     const content = candidate ? candidate.content : undefined;
     if (content && content.parts) {
       for (const part of content.parts) {
-        if ("inlineData" in part && part.inlineData && part.inlineData.data) {
+        if ("inlineData" in part && part.inlineData.data) {
           return Buffer.from(part.inlineData.data, "base64");
         }
       }

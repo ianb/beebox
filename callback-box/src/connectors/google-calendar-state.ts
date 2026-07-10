@@ -11,7 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
+import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { type GoogleCalendarEvent } from "./google-calendar-ics.js";
 
 interface CalendarTransientState {
@@ -66,12 +66,68 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
   return persistent;
 }
 
-export async function saveCalendarState(boxRoot: string, state: CalendarState): Promise<void> {
-  // Save syncTokens to transient (gitignored), eventFiles to persistent (committed)
-  await saveTransientState({
-    boxRoot, connectorName: "google-calendar",
-    data: { syncTokens: state.syncTokens },
+/**
+ * Mutable per-sync baseline for the syncToken delta merge: the tokens as of
+ * this sync's LAST save (initially, as loaded). A fixed start-of-sync snapshot
+ * would be unsound — one sync saves several times (the 410 handler clears a
+ * token mid-sync, then the full resync re-stores it), and against a fixed
+ * baseline a token that round-trips value→deleted→same-value would look
+ * "unchanged" and be dropped. Refreshing the baseline after each save makes
+ * every save's delta relative to the previous save, which composes.
+ */
+export interface SyncTokenSnapshot {
+  tokens: Record<string, string>;
+}
+
+/**
+ * Merge one save's syncToken changes onto freshly-loaded transient tokens.
+ * Per-calendarId cursor resolution, relative to `snapshot` (this sync's last
+ * save — see {@link SyncTokenSnapshot}):
+ *   - **added/updated** — differs from the snapshot: this save advanced it, our
+ *     value wins.
+ *   - **deleted** — in the snapshot but absent from `working`: this save
+ *     cleared it (410 → forced full resync); remove it from the merged result
+ *     (a plain spread would resurrect the stale token from `fresh`).
+ *   - **untouched** — identical to the snapshot: keep `fresh`'s value, so a
+ *     concurrent sync's advance of a calendar THIS save didn't touch survives
+ *     (codex round-2 finding: wholesale replace regressed it).
+ */
+export function mergeSyncTokens(opts: {
+  fresh: Record<string, string>;
+  snapshot: Record<string, string>;
+  working: Record<string, string>;
+}): Record<string, string> {
+  const { fresh, snapshot, working } = opts;
+  const merged: Record<string, string> = { ...fresh };
+  for (const calId of Object.keys(snapshot)) {
+    if (!(calId in working)) delete merged[calId];
+  }
+  for (const [calId, cursor] of Object.entries(working)) {
+    if (snapshot[calId] !== cursor) merged[calId] = cursor;
+  }
+  return merged;
+}
+
+export async function saveCalendarState(
+  boxRoot: string,
+  opts: { state: CalendarState; snapshot: SyncTokenSnapshot },
+): Promise<void> {
+  const { state, snapshot } = opts;
+  // Transient side (gitignored syncTokens): serialized delta-merge (Track 1).
+  // The lock prevents torn writes; the merge keeps a concurrent sync's advance
+  // of a calendar this save didn't change from being clobbered.
+  await updateTransientState<CalendarTransientState>({
+    boxRoot,
+    connectorName: "google-calendar",
+    defaultValue: { syncTokens: {} },
+    update: (fresh) => ({
+      syncTokens: mergeSyncTokens({ fresh: fresh.syncTokens, snapshot: snapshot.tokens, working: state.syncTokens }),
+    }),
   });
+  // Advance the baseline: the next save's delta is relative to THIS save.
+  snapshot.tokens = { ...state.syncTokens };
+  // Persistent side (committed eventFiles): unchanged direct write; the git
+  // commit of this file is scoped and handled by the connector (Track 2).
   const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
   await fs.mkdir(path.dirname(calendarStatePath(boxRoot)), { recursive: true });
   await fs.writeFile(calendarStatePath(boxRoot), JSON.stringify(persistent, null, 2));
@@ -88,7 +144,7 @@ export async function deleteEventViaApi(
     return true;
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response?.status;
+      const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error deleting from ${calendarId}: ${status} ${text}`);
       return false;
@@ -107,7 +163,7 @@ export async function insertEventViaApi(
     return await calendar.insertEvent(calendarId, event);
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response?.status;
+      const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error pushing to ${calendarId}: ${status} ${text}`);
       return null;
@@ -126,7 +182,7 @@ export async function patchEventViaApi(
     return await calendar.patchEvent(calendarId, { eventId: googleEventId, event });
   } catch (err) {
     if (err instanceof HTTPError) {
-      const status = err.response?.status;
+      const status = err.response.status;
       const text = await err.response.text();
       console.warn(`  API error patching in ${calendarId}: ${status} ${text}`);
       return null;
@@ -160,7 +216,7 @@ export async function fetchEvents(
     if (pageToken) listOpts.pageToken = pageToken;
 
     const data = await calendar.listEvents(calendarId, listOpts);
-    if (data.items) allEvents.push(...data.items);
+    allEvents.push(...data.items);
     pageToken = data.nextPageToken;
     if (data.nextSyncToken) {
       state.syncTokens[calendarId] = data.nextSyncToken;

@@ -23,6 +23,7 @@ import {
   enrichSessions,
 } from "./session-format.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
+import { invariant } from "../../lib/invariant.js";
 
 export interface SinceWindow {
   cutoff: number;
@@ -149,10 +150,14 @@ async function renderWindowedSession(options: {
   });
   if (inWindowEntries.length === 0) return;
 
-  const shownStart = new Date(inWindowEntries[0]!.timestamp);
-  const shownEnd = new Date(
-    inWindowEntries[inWindowEntries.length - 1]!.timestamp
+  const firstEntry = inWindowEntries[0];
+  const lastEntry = inWindowEntries[inWindowEntries.length - 1];
+  invariant(
+    firstEntry !== undefined && lastEntry !== undefined,
+    "inWindowEntries must be non-empty (checked above)"
   );
+  const shownStart = new Date(firstEntry.timestamp);
+  const shownEnd = new Date(lastEntry.timestamp);
   console.log(
     sessionDividerForWindow(meta, { start: shownStart, end: shownEnd })
   );

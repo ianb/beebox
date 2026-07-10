@@ -8,11 +8,15 @@ buried. None blocks the merge.
 
 1. **Router refactor depth.** `bin/router.ts` recurring race bugs (6 of its
    last 20 commits were concurrency fixes to the same comment-guarded
-   machinery). Conservative option: extract only the ~570-line embedded
-   doc-browser + HTML views. Fuller option (the hard-code scan's case): a
-   formal `WorktreeState` transition function, injected clock/spawner, unit
-   tests with fakes. Shared dev infra — coordinate with the boxholder either
-   way; promote the four incident comments into a protocol doc.
+   machinery). **Phased (boxholder decision, 2026-07-09): the conservative
+   phase is DONE** — commit `16ad6d11` (followups Track 8) extracted the
+   doc-browser + HTML views into `bin/router-docs.ts` (router.ts 2019 → 1409
+   lines) and promoted the four incident comments into
+   `bin/docs/router-protocol.md` (pointer comments kept at each code site).
+   **Still OPEN — the fuller option** (the hard-code scan's case): a formal
+   `WorktreeState` transition function, injected clock/spawner, unit tests
+   with fakes. The boxholder explicitly wants to keep going with the router
+   work in later phases. Shared dev infra — coordinate with the boxholder.
 
 2. **Clerk↔server contract.** The extension talks to the box via hand-built
    tRPC URLs + a hand-duplicated payload shape (no shared typed contract,

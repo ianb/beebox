@@ -35,6 +35,7 @@ import type { EventBus } from "../core/event-bus.js";
 import { closeBoxWatcher } from "../core/box/file-watcher.js";
 import { ensureSchemaWatcher, closeSchemaWatcher } from "../core/schema-watcher.js";
 import type { BoxSpec, ServerOptions } from "./server-types.js";
+import { invariant } from "../lib/invariant.js";
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -66,7 +67,8 @@ function addBoxAuthHook(instance: FastifyInstance, box: BoxSpec): void {
     // Let static assets (served by fastify-static) through. Scope this
     // narrowly: API paths (like /api/files/foo.jpg) need the auth
     // check even when they end in an asset extension.
-    const urlPath = request.url.split("?")[0]!;
+    const urlPath = request.url.split("?")[0];
+    invariant(urlPath !== undefined, "String.split always returns at least one element");
     if (!isApiUrl(urlPath) && ASSET_EXTENSIONS.test(urlPath)) {
       return;
     }

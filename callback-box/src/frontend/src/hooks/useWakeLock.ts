@@ -15,6 +15,13 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+/**
+ * lib.dom.d.ts declares `Navigator.wakeLock` as always present, but the Wake
+ * Lock API isn't universally supported (older Safari/Firefox lack it) — this
+ * admits the real-world absence the DOM lib type hides.
+ */
+type MaybeWakeLockNavigator = Omit<Navigator, "wakeLock"> & { wakeLock?: WakeLock };
+
 export interface WakeLockApi {
   /** Request a screen wake lock. Idempotent — returns true if already held. */
   requestWakeLock: () => Promise<boolean>;
@@ -64,7 +71,7 @@ export function useWakeLock(): WakeLockApi {
     if (wakeLock.current !== null && !wakeLock.current.released) {
       return true;
     }
-    if (typeof navigator === "undefined" || navigator.wakeLock === undefined) {
+    if (typeof navigator === "undefined" || (navigator as MaybeWakeLockNavigator).wakeLock === undefined) {
       console.warn("[wakelock] navigator.wakeLock is not available in this browser");
       return false;
     }

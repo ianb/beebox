@@ -5,7 +5,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ky, { type HTTPError } from "ky";
+import ky, { isHTTPError } from "ky";
 import { transcribeAudioVoxtral } from "./voxtral.js";
 import { transcribeAudioDeepgram } from "./deepgram.js";
 import { transcribeAudioFake } from "./fake.js";
@@ -340,9 +340,8 @@ async function transcribeAudioWhisper(
     }
 
     // ky HTTPError — parse the response for error details
-    const httpErr = error as HTTPError;
-    if (httpErr.response) {
-      throw await parseErrorResponse(httpErr.response);
+    if (isHTTPError(error)) {
+      throw await parseErrorResponse(error.response);
     }
 
     // Network or other errors are intermittent

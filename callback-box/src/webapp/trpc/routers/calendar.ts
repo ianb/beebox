@@ -3,7 +3,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
 import { isGoogleServiceAllowed } from "../../../core/box/config.js";
-import { stageFiles, commit } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
@@ -65,8 +65,10 @@ export const calendarRouter = router({
     )
     .mutation(async ({ input, ctx }) => {
       await saveCalendarConfig(ctx.boxRoot, input as CalendarConfig);
-      await stageFiles(ctx.boxRoot, ["config/connectors/google-calendar.json"]);
-      await commit(ctx.boxRoot, { message: "Update calendar sync config" });
+      await stageAndCommitPaths(ctx.boxRoot, {
+        paths: ["config/connectors/google-calendar.json"],
+        message: "Update calendar sync config",
+      });
       return { success: true };
     }),
 });

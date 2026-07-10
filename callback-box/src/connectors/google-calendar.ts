@@ -36,7 +36,7 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
-import { stageFiles, commit, getStatus } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
   type SyncNote,
@@ -47,6 +47,7 @@ import {
   loadCalendarState,
   saveCalendarState,
   type CalendarState,
+  type SyncTokenSnapshot,
 } from "./google-calendar-state.js";
 import { syncCalendar } from "./google-calendar-sync.js";
 import { pushAndCleanOrphans, processLocalDeletes } from "./google-calendar-push.js";
@@ -103,8 +104,13 @@ class GoogleCalendarConnector implements Connector {
     return loadCalendarState(this.boxRoot);
   }
 
-  private async saveState(state: CalendarState): Promise<void> {
-    return saveCalendarState(this.boxRoot, state);
+  /**
+   * Persist state. `snapshot` is the per-sync mutable delta baseline for the
+   * transient syncTokens side (see SyncTokenSnapshot) — saveCalendarState
+   * merges against it and advances it to this save.
+   */
+  private async saveState(state: CalendarState, snapshot: SyncTokenSnapshot): Promise<void> {
+    return saveCalendarState(this.boxRoot, { state, snapshot });
   }
 
   async sync(): Promise<SyncResult> {
@@ -123,6 +129,9 @@ class GoogleCalendarConnector implements Connector {
 
     const config = await this.loadConfig();
     const state = await this.loadState();
+    // Per-sync delta baseline for the transient syncTokens (advanced by each
+    // save — see SyncTokenSnapshot in google-calendar-state.ts).
+    const snapshot: SyncTokenSnapshot = { tokens: { ...state.syncTokens } };
     const calendars = config.calendars || ["primary"];
     const syncDaysBack = config.syncDaysBack ?? 30;
     const syncDaysForward = config.syncDaysForward ?? 90;
@@ -170,7 +179,7 @@ class GoogleCalendarConnector implements Connector {
 
       const outcome = await this.runCalendarSync({
         calendar, calendarId, syncToken: existingSyncToken, icsOpts, state, calDir,
-        syncDaysBack, syncDaysForward, windowStart, windowEnd,
+        syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot,
         acc: { created, updated, deleted, allNotes },
       });
       if (outcome.fullResync) isFullResync = true;
@@ -193,36 +202,32 @@ class GoogleCalendarConnector implements Connector {
     deleted.push(...orphanResult.deleted);
     allNotes.push(...orphanResult.notes);
 
-    await this.saveState(state);
+    await this.saveState(state, snapshot);
 
-    // Stage and commit
-    const filesToStage = [
-      path.relative(this.boxRoot, calDir),
+    // Commit an EXPLICIT changed-file list — never a bare directory-staged
+    // commit that could sweep a concurrent mutator's staged files. The list
+    // mirrors the other connectors: the per-event files this sync
+    // created/updated/deleted/pushed (each already box-root-relative from the
+    // sync/push modules) plus the two connector-owned config files the sync
+    // rewrites every run — the committed calendar state (eventFiles) and the
+    // cached calendar metadata (names/roles). stageAndCommitPaths' fast path
+    // no-ops when none of these actually changed, replacing the old
+    // getStatus-guarded second commit for a token-only refresh.
+    const changedEventFiles = [...created, ...updated, ...deleted, ...pushed];
+    const paths = [
+      ...changedEventFiles,
       path.relative(this.boxRoot, this.statePath()),
       "config/connectors/google-calendar.json",
     ];
-    await stageFiles(this.boxRoot, filesToStage);
-    const allChanged = [...created, ...updated, ...deleted, ...pushed];
-    if (allChanged.length > 0) {
-      const message = buildNarrativeCommitMessage(allNotes, {
-        isFullResync,
-        totalEvents: allChanged.length,
-      });
-      await commit(this.boxRoot, {
-        message,
-        trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
-      });
-    } else {
-      // Only commit state update if there are actually staged changes
-      // (syncToken may have changed even with no event changes)
-      const status = await getStatus(this.boxRoot);
-      if (status.staged.length > 0) {
-        await commit(this.boxRoot, {
-          message: "Sync calendar: no changes (token refreshed)",
-          trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
-        });
-      }
-    }
+    const message =
+      changedEventFiles.length > 0
+        ? buildNarrativeCommitMessage(allNotes, { isFullResync, totalEvents: changedEventFiles.length })
+        : "Sync calendar: no changes (token refreshed)";
+    await stageAndCommitPaths(this.boxRoot, {
+      paths,
+      message,
+      trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
+    });
 
     const result: SyncResult = { success: true, created, updated };
     if (pushed.length > 0) result.pushed = pushed;
@@ -245,10 +250,11 @@ class GoogleCalendarConnector implements Connector {
     syncDaysForward: number;
     windowStart: Date;
     windowEnd: Date;
+    snapshot: SyncTokenSnapshot;
     acc: { created: string[]; updated: string[]; deleted: string[]; allNotes: SyncNote[] };
   }): Promise<{ fullResync: boolean; error?: string }> {
     const { calendar, calendarId, syncToken, icsOpts, state, calDir,
-            syncDaysBack, syncDaysForward, windowStart, windowEnd, acc } = opts;
+            syncDaysBack, syncDaysForward, windowStart, windowEnd, snapshot, acc } = opts;
     const base = {
       boxRoot: this.boxRoot, calendar, calendarId, syncDaysBack, syncDaysForward,
       state, icsOpts, calDir, windowStart, windowEnd,
@@ -264,15 +270,15 @@ class GoogleCalendarConnector implements Connector {
       collect(await syncCalendar({ ...base, syncToken }), { withNotes: true });
       return { fullResync: false };
     } catch (err) {
-      const status = err instanceof HTTPError ? err.response?.status : undefined;
+      const status = err instanceof HTTPError ? err.response.status : undefined;
       const message = (err as Error).message;
       if (status !== 410 && !message.includes("410")) {
-        await this.saveState(state);
+        await this.saveState(state, snapshot);
         return { fullResync: false, error: `Calendar sync failed for ${calendarId}: ${message}` };
       }
       console.log(`  Sync token expired for ${calendarId}, doing full sync...`);
       delete state.syncTokens[calendarId];
-      await this.saveState(state);
+      await this.saveState(state, snapshot);
       // Don't add individual notes for full re-sync — the message will summarize
       collect(await syncCalendar({ ...base, syncToken: undefined }), { withNotes: false });
       return { fullResync: true };

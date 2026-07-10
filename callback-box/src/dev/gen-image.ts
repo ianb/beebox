@@ -142,15 +142,20 @@ function resolveApiKey(override: string | null): { key: string; from: string } {
   );
 }
 
+/** Shape as it arrives over HTTP — the Gemini API may send `inlineData: null`
+ * or omit it even for the variant of `ResponsePart` that carries it. */
+interface RawInlineDataPart { inlineData?: { mimeType: string; data: string } | null }
+/** Shape after `extractInlineData` has validated inlineData is genuinely present. */
 interface InlineDataPart { inlineData: { mimeType: string; data: string } }
 interface TextPart { text: string }
-type ResponsePart = InlineDataPart | TextPart;
+type ResponsePart = RawInlineDataPart | TextPart;
 interface GenerateResponse {
   candidates?: Array<{ content?: { parts?: ResponsePart[] } }>;
 }
 
-function hasInlineData(p: ResponsePart): p is InlineDataPart {
-  return "inlineData" in p && p.inlineData !== undefined && p.inlineData.data.length > 0;
+function extractInlineData(p: ResponsePart): InlineDataPart | null {
+  if (!("inlineData" in p) || p.inlineData == null || p.inlineData.data.length === 0) return null;
+  return { inlineData: p.inlineData };
 }
 function hasText(p: ResponsePart): p is TextPart {
   return "text" in p && p.text.length > 0;
@@ -164,7 +169,8 @@ function firstImagePart(response: GenerateResponse): InlineDataPart | null {
   const content = first.content;
   if (content === undefined || content.parts === undefined) return null;
   for (const p of content.parts) {
-    if (hasInlineData(p)) return p;
+    const inline = extractInlineData(p);
+    if (inline) return inline;
   }
   return null;
 }

@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
+import { invariant } from "../lib/invariant.js";
 
 class InvalidTimespanError extends Error {
   constructor(input: string) {
@@ -109,8 +110,11 @@ export function parseIcsContent(
     }
 
     // Non-recurring event (or no range given): parse directly
-    const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time;
-    const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time;
+    // getFirstPropertyValue()'s declared return type includes `| null`; the
+    // cast narrows the union to Time without dropping that — a missing
+    // DTSTART/DTEND is a real possibility on malformed .ics input.
+    const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time | null;
+    const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time | null;
     const allDay = dtstart ? dtstart.isDate : false;
 
     const result: CalendarEvent = {
@@ -147,9 +151,13 @@ function expandRecurring(
   const rangeStart = ICAL.Time.fromJSDate(range.from, false);
   const rangeEnd = ICAL.Time.fromJSDate(range.to, false);
 
-  // Calculate duration from first occurrence for computing end times
-  const dtstart = event.startDate;
-  const dtend = event.endDate;
+  // Calculate duration from first occurrence for computing end times.
+  // ical.js declares startDate/endDate as always-Time, but both getters fall
+  // through to `this._firstProp(...)`, which returns undefined for a
+  // malformed VEVENT missing DTSTART/DTEND — the library's own doc example
+  // for RecurExpansion#next() below shows the same undersell.
+  const dtstart = event.startDate as ICAL.Time | undefined;
+  const dtend = event.endDate as ICAL.Time | undefined;
   const duration = dtend && dtstart
     ? dtend.subtractDate(dtstart)
     : null;
@@ -160,7 +168,9 @@ function expandRecurring(
   let count = 0;
   const MAX_EXPANSIONS = 500;
 
-  while ((occurrence = iter.next()) && count < MAX_EXPANSIONS) {
+  // RecurExpansion#next() is declared as always-Time, but returns a falsy
+  // value once the iteration is exhausted (see the class's own usage example).
+  while ((occurrence = iter.next() as ICAL.Time | null) && count < MAX_EXPANSIONS) {
     // Past our range — stop iterating
     if (occurrence.compare(rangeEnd) >= 0) break;
     // Before our range — skip (but count toward limit)
@@ -317,7 +327,9 @@ export function validateIcsTimezone(content: string): string | null {
     const dtstart = vevent.getFirstProperty("dtstart");
     if (!dtstart) return "No DTSTART property found";
 
-    const dtValue = dtstart.getFirstValue() as ICAL.Time;
+    // getFirstValue()'s declared return type includes `| null`; preserve that
+    // instead of casting it away.
+    const dtValue = dtstart.getFirstValue() as ICAL.Time | null;
     if (dtValue && dtValue.isDate) return null; // All-day event — no timezone needed
 
     const tzid = dtstart.getParameter("tzid");
@@ -341,7 +353,8 @@ export function parseTimespan(input: string): number {
   if (!match) {
     throw new InvalidTimespanError(input);
   }
-  const n = parseInt(match[1]!, 10);
+  invariant(match[1] !== undefined, "capture group 1 is non-optional in the timespan regex");
+  const n = parseInt(match[1], 10);
   const unit = (match[2] || "d").toLowerCase();
   const DAY = 24 * 60 * 60 * 1000;
   switch (unit) {

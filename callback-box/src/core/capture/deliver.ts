@@ -73,7 +73,7 @@ function firstSentence(text: string | undefined): string | null {
   const trimmed = text.trim();
   if (trimmed.length === 0) return null;
   const match = /^(.*?[!.?])(?:\s|$)/s.exec(trimmed);
-  return match ? match[1]! : trimmed;
+  return match ? (match[1] ?? trimmed) : trimmed;
 }
 
 /**

@@ -158,9 +158,7 @@ export class ChatScheduleManager {
     }, delay);
 
     // Don't keep process alive just for schedules
-    if (timer.unref) {
-      timer.unref();
-    }
+    timer.unref();
 
     this.timers.set(schedule.id, timer);
   }

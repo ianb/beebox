@@ -47,7 +47,7 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
   if (provisionalUuid && prev.uuid === provisionalUuid) {
     for (let i = data.length - 1; i >= 0; i--) {
       const d = data[i];
-      if (!d || d.kind === "marker") continue;
+      if (d.kind === "marker") continue;
       return d.kind === "group" && d.group.type === "assistant" ? d.group.entries[0].uuid : null;
     }
     return null;
@@ -190,7 +190,7 @@ function MessageListInner({
   let lastAssistantGroupIndex = -1;
   for (let i = data.length - 1; i >= 0; i--) {
     const d = data[i];
-    if (d && d.kind === "group" && d.group.type === "assistant") {
+    if (d.kind === "group" && d.group.type === "assistant") {
       lastAssistantGroupIndex = d.groupIndex;
       break;
     }

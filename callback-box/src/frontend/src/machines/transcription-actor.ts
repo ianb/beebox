@@ -115,6 +115,18 @@ class TranscriptionSession {
   private connection: ConnectionHandle | null = null;
   private mic: MicCapture | null = null;
   private disposed = false;
+  /**
+   * Opaque read of `disposed` for checks after an `await` in {@link start}.
+   * A raw `this.disposed` read there gets flagged as an always-false dead
+   * check — TS's control-flow narrowing (wrongly) treats the field as still
+   * `false` from an earlier same-tick check, even though `stop()`/`cleanup()`
+   * can genuinely land between the await and this line (a CANCEL event
+   * arriving mid-`start()`). Routing through a method call is opaque to CFA,
+   * so the check stays live for its real purpose.
+   */
+  private isDisposed(): boolean {
+    return this.disposed;
+  }
   private connectedFired = false;
   private service: TranscriptionService = "voxtral";
   private callbacks: ServiceCallbacks | null = null;
@@ -361,7 +373,7 @@ class TranscriptionSession {
         },
       });
       await this.mic.start();
-      if (this.disposed) { this.cleanup(); return; }
+      if (this.isDisposed()) { this.cleanup(); return; }
 
       this.callbacks = {
         onTextUpdate: (finalText, interimText) => {
@@ -388,7 +400,7 @@ class TranscriptionSession {
         isAborted: () => this.disposed,
         discard: (handle) => this.discardSocket(handle),
       });
-      if (this.disposed) { this.cleanup(); return; }
+      if (this.isDisposed()) { this.cleanup(); return; }
       if (!opened) {
         this.sendBack({ type: "WS_ERROR", message: "Couldn't connect to transcription service" });
         this.cleanup();
@@ -460,7 +472,7 @@ export const transcriptionActor = fromCallback<
   receive((event) => {
     if (event.type === "STOP") {
       session.stop();
-    } else if (event.type === "CANCEL") {
+    } else {
       session.cleanup();
     }
   });

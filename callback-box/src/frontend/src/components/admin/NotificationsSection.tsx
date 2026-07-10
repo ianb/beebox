@@ -86,7 +86,7 @@ export function NotificationsSection() {
         applicationServerKey: publicKey,
       });
       const json = sub.toJSON();
-      if (!json.endpoint || !json.keys?.p256dh || !json.keys?.auth) {
+      if (!json.endpoint || !json.keys?.p256dh || !json.keys.auth) {
         setError("Subscription was missing keys; try again.");
         return;
       }

@@ -37,13 +37,17 @@ function extractFromText(text: string, out: string[]): void {
   VIEW_LINK_RE.lastIndex = 0;
   while ((m = VIEW_LINK_RE.exec(text)) !== null) {
     const raw = m[1];
-    if (raw) out.push(boxRelativePath(raw.split(/[#?]/, 1)[0]!));
+    if (raw) {
+      const [clean = ""] = raw.split(/[#?]/, 1);
+      out.push(boxRelativePath(clean));
+    }
   }
   MD_TARGET_RE.lastIndex = 0;
   while ((m = MD_TARGET_RE.exec(text)) !== null) {
     const target = m[1];
     if (!target || isExternalUrl(target) || target.startsWith("#")) continue;
-    out.push(boxRelativePath(target.split(/[#?]/, 1)[0]!));
+    const [clean = ""] = target.split(/[#?]/, 1);
+    out.push(boxRelativePath(clean));
   }
   // <ack ref="…"> tags also indicate the agent touched a file — surface
   // those in recent-files too. Reuses the same parser the badge UI uses.
@@ -89,7 +93,7 @@ export function dedupeRecent(paths: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
   for (let i = paths.length - 1; i >= 0; i--) {
-    const p = paths[i]!;
+    const p = paths[i];
     if (seen.has(p)) continue;
     seen.add(p);
     out.push(p);
@@ -131,7 +135,11 @@ export function useRecentFiles(entries: SessionEntry[]): {
     const seen = new Set<string>();
     const out: RecentFile[] = [];
     for (const [i, p] of paths.entries()) {
-      const summary = results[i];
+      // `.at()` (not `results[i]`): `results` can be a stale query.data still
+      // sized for a previous `paths` array (react-query doesn't clear data on
+      // a new query key until the refetch resolves), so this index can
+      // genuinely run past the end of a shorter, stale `results`.
+      const summary = results.at(i);
       if (summary === null || summary === undefined) continue;
       if (seen.has(summary.path)) continue;
       seen.add(summary.path);

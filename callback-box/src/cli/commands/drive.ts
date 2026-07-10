@@ -18,9 +18,9 @@ import { extractDriveFileId } from "../../connectors/drive-types.js";
 import { createGoogleAuthService } from "../../services/google-auth.js";
 import { createGoogleDriveService } from "../../services/google-drive.js";
 import type { GoogleDriveService } from "../../services/google-drive.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
-import { loadTransientState, saveTransientState } from "../../connectors/transient-state.js";
+import { updateTransientState } from "../../connectors/transient-state.js";
 
 // Ensure handlers are registered
 import "../../connectors/drive-handler-sheets.js";
@@ -165,22 +165,20 @@ driveCommand
       file, localDir, cardPath, boxRoot, service, state: fileState,
     });
 
-    // Persist the per-file state into the connector's transient state file
-    // so future `cb drive sync` runs see this file as already-synced.
-    const transient = await loadTransientState<DriveTransientState>({
+    // Persist the per-file state into the connector's transient state file so
+    // future `cb drive sync` runs see this file as already-synced. Delta-merge
+    // under the serialized RMW lock: add ONLY this new file's entry to
+    // freshly-loaded state, so a concurrent server `sync()` writing the same
+    // file (from another process) isn't clobbered.
+    await updateTransientState<DriveTransientState>({
       boxRoot,
       connectorName: "google-drive",
       defaultValue: { files: {} },
-    });
-    transient.files[fileId] = fileState;
-    await saveTransientState({
-      boxRoot,
-      connectorName: "google-drive",
-      data: transient,
+      update: (fresh) => ({ files: { ...fresh.files, [fileId]: fileState } }),
     });
 
-    await stageFiles(boxRoot, result.written);
-    await commit(boxRoot, {
+    await stageAndCommitPaths(boxRoot, {
+      paths: result.written,
       message: `Add Drive ${handler.cardType}: ${file.name}`,
     });
 

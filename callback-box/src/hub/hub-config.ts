@@ -19,6 +19,7 @@ import * as path from "node:path";
 import * as os from "node:os";
 import { z } from "zod";
 import { resolveBoxRoot } from "./supervisor.js";
+import { invariant } from "../lib/invariant.js";
 
 /**
  * URL prefixes the box server itself claims at the root level (outside any
@@ -210,11 +211,14 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
   const duplicated = Array.from(canonicalToEntries.values()).filter((entries) => entries.length > 1);
   if (duplicated.length > 0) {
     const detail = duplicated
-      .map(
-        (entries) =>
-          `  - ${entries[0]!.resolvedPath} is claimed by slugs: ` +
+      .map((entries) => {
+        const [first] = entries;
+        invariant(first !== undefined, "duplicated entries must be non-empty (length > 1 filter above)");
+        return (
+          `  - ${first.resolvedPath} is claimed by slugs: ` +
           entries.map(({ slug, resolvedPath }) => `${slug} (${resolvedPath})`).join(", ")
-      )
+        );
+      })
       .join("\n");
     throw new HubConfigError(
       `Hub config at ${configPath}: the same box path is registered under more than one ` +

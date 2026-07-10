@@ -17,11 +17,11 @@ import {
   extractMessage,
   type TelegramUpdate,
 } from "../../connectors/telegram.js";
-import { telegramUpdateSchema } from "../../connectors/telegram-schemas.js";
+import { telegramUpdateSchema } from "../../services/telegram-schemas.js";
 import { ChatSessionPool } from "../../core/chat/session/pool.js";
 import { sendTelegramMessage, startTypingIndicator } from "../../core/telegram-send.js";
 import { appendMessageToThread } from "../../connectors/chat-utils.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 
 interface RegisterTelegramRoutesOptions {
   server: FastifyInstance;
@@ -142,8 +142,13 @@ async function handleChatMessage(opts: HandleChatMessageOptions): Promise<void> 
         },
       });
 
-      await stageFiles(boxRoot, [threadRef]);
-      await commit(boxRoot, {
+      // Path-scoped commit (Track 2): third of the three commit sites in the
+      // one logical Telegram webhook flow — the inbound message + optional chat
+      // job commit from `processWebhookUpdate` (connectors/telegram.ts), and
+      // this outbound chat-response commit. Scoping to `threadRef` keeps a
+      // concurrent mutator's unrelated staged files off this commit.
+      await stageAndCommitPaths(boxRoot, {
+        paths: [threadRef],
         message: `Chat response in ${slug}`,
         trailers: { "Sent-By": "telegram-chat-pool" },
       });

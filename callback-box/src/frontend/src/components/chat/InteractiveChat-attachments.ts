@@ -30,7 +30,7 @@ import type { EmissionStore, ImageItem, FileItem } from "../../input/emission-st
 export function insertTokensAtCursor(tokens: string, opts: {
   input: string;
   setInput: React.Dispatch<React.SetStateAction<string>>;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
   alwaysFocus: boolean;
 }): void {
   const { input, setInput, textareaRef, alwaysFocus } = opts;
@@ -40,8 +40,11 @@ export function insertTokensAtCursor(tokens: string, opts: {
     setInput((prev) => (prev ? prev + " " + tokens + " " : tokens + " "));
     return;
   }
-  const selStart = taFocused && ta !== null && ta.selectionStart !== null ? ta.selectionStart : input.length;
-  const selEnd = taFocused && ta !== null && ta.selectionEnd !== null ? ta.selectionEnd : selStart;
+  // `taFocused` is `ta !== null && ...`, so TS already narrows `ta` non-null
+  // here; `HTMLTextAreaElement.selectionStart/End` (unlike the input-element
+  // form, which can be null for some `type`s) are always numbers.
+  const selStart = taFocused ? ta.selectionStart : input.length;
+  const selEnd = taFocused ? ta.selectionEnd : selStart;
   const before = input.slice(0, selStart);
   const after = input.slice(selEnd);
   // Pad with a space before/after the tokens (when not already whitespace) so
@@ -78,7 +81,7 @@ export function useChatAttachmentValues(): { attachments: ImageItem[]; pendingIm
 
 export function useChatAttachments(opts: {
   emissionStore: EmissionStore;
-  textareaRef: React.RefObject<HTMLTextAreaElement>;
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
 }) {
   const { emissionStore, textareaRef } = opts;
   const { editor } = emissionStore;

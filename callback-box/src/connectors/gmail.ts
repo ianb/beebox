@@ -46,8 +46,8 @@ import {
   type SyncResult,
 } from "./index.js";
 import { uploadPendingDrafts } from "./gmail-drafts.js";
-import { stageFiles, commit } from "../lib/git.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
+import { stageAndCommitPaths } from "../lib/git.js";
+import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { getGoogleAuth } from "./google-auth.js";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
@@ -214,8 +214,8 @@ class GmailConnector implements Connector {
   }): Promise<void> {
     const { created, updated, threadNotes } = opts;
     const stateRelPath = path.relative(this.boxRoot, this.statePath());
-    await stageFiles(this.boxRoot, [...created, ...updated, stateRelPath]);
-    await commit(this.boxRoot, {
+    await stageAndCommitPaths(this.boxRoot, {
+      paths: [...created, ...updated, stateRelPath],
       message: buildGmailCommitMessage(threadNotes, created.length + updated.length),
       trailers: {
         "Pulled-By": "gmail-connector",
@@ -224,11 +224,24 @@ class GmailConnector implements Connector {
     });
   }
 
+  /**
+   * Persist the sync's transient cursors under the serialized RMW lock.
+   * Delta-merge against freshly-loaded state: `historyId` and `lastReconcileAt`
+   * are both forward-only cursors this sync just advanced, so our computed value
+   * wins when present; a field this sync didn't produce keeps the fresh value
+   * (so a concurrent gmail sync's advance of the other cursor isn't dropped).
+   */
   private async saveTransient(data: GmailTransientState): Promise<void> {
-    await saveTransientState({
+    await updateTransientState<GmailTransientState>({
       boxRoot: this.boxRoot,
       connectorName: "gmail",
-      data,
+      defaultValue: {},
+      update: (fresh) => {
+        const next: GmailTransientState = { ...fresh };
+        if (data.historyId !== undefined) next.historyId = data.historyId;
+        if (data.lastReconcileAt !== undefined) next.lastReconcileAt = data.lastReconcileAt;
+        return next;
+      },
     });
   }
 
@@ -376,8 +389,8 @@ class GmailConnector implements Connector {
       service,
     });
     if (draftResult.updated.length > 0) {
-      await stageFiles(this.boxRoot, draftResult.updated);
-      await commit(this.boxRoot, {
+      await stageAndCommitPaths(this.boxRoot, {
+        paths: draftResult.updated,
         message: `Upload ${draftResult.updated.length} draft${draftResult.updated.length === 1 ? "" : "s"} to Gmail`,
         trailers: {
           "Pushed-By": "gmail-connector",

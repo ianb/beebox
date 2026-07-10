@@ -10,6 +10,7 @@ import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat/features.js";
 import { entrySelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
+import { invariant } from "../../lib/invariant";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -158,7 +159,10 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
       continue;
     }
     if (entry.type === "assistant") {
-      const last = groups[groups.length - 1];
+      // `.at(-1)`: its return type is honestly `T | undefined` (a plain
+      // index read would type as always-defined without
+      // `noUncheckedIndexedAccess`, which the frontend tsconfig lacks).
+      const last = groups.at(-1);
       if (last && last.type === "assistant") {
         last.entries.push(entry);
         continue;
@@ -182,10 +186,13 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   const match = text.match(/<task-notification>[\S\s]*?<task-id>([^<]*)<\/task-id>[\S\s]*?<status>([^<]*)<\/status>[\S\s]*?<summary>([^<]*)<\/summary>[\S\s]*?<\/task-notification>/);
   if (!match) return null;
   const outputMatch = text.match(/<output-file>([^<]*)<\/output-file>/);
+  // No group in the pattern is optional/alternated, so a successful overall
+  // match guarantees every capture participated (possibly as "").
+  const [, taskId, status, summary] = match;
   return {
-    taskId: match[1]!,
-    status: match[2]!,
-    summary: match[3]!,
+    taskId,
+    status,
+    summary,
     outputFile: outputMatch ? outputMatch[1] : undefined,
   };
 }
@@ -195,7 +202,7 @@ const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".
 export function isImagePath(path: string): boolean {
   // Strip any ?query / #hash before checking the extension, so a cache-busted
   // image (`photo.png?v=1`) is still recognized as an image, not an embed.
-  const clean = path.split(/[#?]/, 1)[0]!;
+  const [clean = ""] = path.split(/[#?]/, 1);
   const dot = clean.lastIndexOf(".");
   if (dot <= 0) return false;
   return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
@@ -287,9 +294,11 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
       } else if (block.type === "text" && block.text?.trim()) {
         flat.push({ type: "text", text: block.text });
       } else if (block.type === "tool_use") {
-        const last = flat[flat.length - 1];
+        // `.at(-1)`: see the note in `groupMessages` above.
+        const last = flat.at(-1);
         if (last && last.type === "tools") {
-          last.tools!.push(block);
+          invariant(last.tools, "a 'tools' part must always carry a tools array");
+          last.tools.push(block);
         } else {
           flat.push({ type: "tools", tools: [block] });
         }

@@ -20,6 +20,7 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import type { CommandContext, CommandResult } from "../command-runner.js";
 import { type AssetManifest, loadManifest } from "../asset-manifest.js";
+import { invariant } from "../../lib/invariant.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -121,7 +122,9 @@ async function listTrackedIgnored(boxRoot: string): Promise<string[]> {
 function enclosingAttachScope(relPath: string): string | null {
   const parts = relPath.split("/");
   for (let i = parts.length - 1; i >= 0; i--) {
-    if (parts[i]!.endsWith(".attach")) {
+    const part = parts[i];
+    invariant(part !== undefined, "i is within [0, parts.length) by the loop bounds");
+    if (part.endsWith(".attach")) {
       return parts.slice(0, i + 1).join("/");
     }
   }

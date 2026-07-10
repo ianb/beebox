@@ -74,8 +74,8 @@ export function createSdkRetroObserver(options: {
         maxTurns: 4,
         maxBudgetUsd: MAX_BUDGET_USD,
       });
-      if (!result.success || result.data === null) {
-        throw new ObserverRunError(args.sessionId, result.error || "no structured output");
+      if (!result.success) {
+        throw new ObserverRunError(args.sessionId, result.error);
       }
       return result.data.observations;
     },

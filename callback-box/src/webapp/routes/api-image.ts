@@ -83,7 +83,7 @@ export function registerApiImageRoutes({
   server: FastifyInstance;
   boxRoot: string;
 }): void {
-  server.get<{ Params: { "*": string } }>(
+  server.get<{ Params: { "*": string | undefined } }>(
     "/api/image/*",
     { exposeHeadRoute: true },
     async (request, reply) => {

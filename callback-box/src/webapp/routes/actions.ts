@@ -37,7 +37,7 @@ interface RegisterActionRoutesOptions {
  * Handle POST /api/actions/answer - Answer a question.
  */
 async function handleAnswer(args: {
-  request: FastifyRequest<{ Body: AnswerBody }>;
+  request: FastifyRequest<{ Body: AnswerBody | undefined }>;
   reply: FastifyReply;
   boxRoot: string;
   eventBus: EventBus;
@@ -99,7 +99,7 @@ async function handleAnswer(args: {
  * Handle POST /api/actions/create - Create a card.
  */
 async function handleCreate(args: {
-  request: FastifyRequest<{ Body: CreateBody }>;
+  request: FastifyRequest<{ Body: CreateBody | undefined }>;
   reply: FastifyReply;
   boxRoot: string;
   eventBus: EventBus;
@@ -164,12 +164,12 @@ export async function registerActionRoutes(
   const { server, boxRoot, eventBus } = options;
 
   // POST /api/actions/answer - Answer a question
-  server.post<{ Body: AnswerBody }>("/api/actions/answer", async (request, reply) =>
+  server.post<{ Body: AnswerBody | undefined }>("/api/actions/answer", async (request, reply) =>
     handleAnswer({ request, reply, boxRoot, eventBus })
   );
 
   // POST /api/actions/create - Create a card
-  server.post<{ Body: CreateBody }>("/api/actions/create", async (request, reply) =>
+  server.post<{ Body: CreateBody | undefined }>("/api/actions/create", async (request, reply) =>
     handleCreate({ request, reply, boxRoot, eventBus })
   );
 

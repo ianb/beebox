@@ -21,8 +21,17 @@ import type { TelegramState, TelegramUpdate } from "./telegram-types.js";
 export interface IngestResult {
   threadRelPath: string;
   newThread: boolean;
+  /** The connector metadata json (`people/<slug>/telegram.json`), or null. */
   personFile: string | null;
+  /**
+   * The seeded/refreshed person card (`people/<slug>.person.card`), or null
+   * when the card already existed unchanged. Staged internally here, but the
+   * caller's path-scoped commit must include it explicitly — a scoped commit
+   * only commits the paths it names, so an omitted card would be left staged.
+   */
+  personCard: string | null;
   personRef: string | null;
+  senderName: string;
 }
 
 /**
@@ -47,6 +56,7 @@ export async function processUpdateToThread(opts: {
 
   // Update people directory first (need the ref for participants)
   let personFile: string | null = null;
+  let personCard: string | null = null;
   let personRef: string | null = null;
   if (msg.from) {
     const displayName = [msg.from.first_name, msg.from.last_name].filter(Boolean).join(" ");
@@ -64,6 +74,7 @@ export async function processUpdateToThread(opts: {
       ...(msg.from.username != null ? { username: msg.from.username } : {}),
     });
     personFile = person.metadataPath;
+    personCard = person.cardPath;
     // Stage the seeded/refreshed person card so the caller's commit picks it
     // up; the metadata json is surfaced via personFile and staged by callers.
     if (person.cardPath) await stageFiles(boxRoot, [person.cardPath]);
@@ -107,5 +118,5 @@ export async function processUpdateToThread(opts: {
     },
   });
 
-  return { threadRelPath, newThread, personFile, personRef };
+  return { threadRelPath, newThread, personFile, personCard, personRef, senderName };
 }

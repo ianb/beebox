@@ -83,7 +83,7 @@ export function reconcilePending(params: {
     i--
   ) {
     const entry = serverMessages[i];
-    if (entry && entry.type === "user") {
+    if (entry.type === "user") {
       serverUserTexts.push(normalizeForCompare(entryText(entry)));
     }
   }

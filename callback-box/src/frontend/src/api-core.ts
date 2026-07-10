@@ -47,7 +47,7 @@ export function joinBaseAndPath(base: string, p: string): string {
  * which the helper treats as empty prefix.
  */
 export function withBase(p: string): string {
-  return joinBaseAndPath(import.meta.env.BASE_URL ?? "/", p);
+  return joinBaseAndPath(import.meta.env.BASE_URL, p);
 }
 
 /**
@@ -62,7 +62,7 @@ export function withBase(p: string): string {
  * In prod (and dev without a base) the URL shape is just /<box>/...
  */
 export function getApiBase(): string {
-  const base = import.meta.env.BASE_URL ?? "/"; // e.g. "/main/" or "/"
+  const base = import.meta.env.BASE_URL; // e.g. "/main/" or "/"
   const pathname = window.location.pathname;
   // Strip the base prefix if present.
   const stripped = pathname.startsWith(base)

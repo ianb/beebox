@@ -1,5 +1,5 @@
 import { z } from "zod";
-import ky, { type HTTPError } from "ky";
+import ky, { HTTPError } from "ky";
 import { router, publicProcedure } from "../trpc.js";
 import { TRPCError } from "@trpc/server";
 import {
@@ -65,11 +65,10 @@ export const transcriptionRouter = router({
         ttlSeconds: TEMP_KEY_TTL_SECONDS,
       };
     } catch (e) {
-      const httpErr = e as HTTPError;
-      let detail = (e as Error).message;
-      if (httpErr.response) {
+      let detail = e instanceof Error ? e.message : String(e);
+      if (e instanceof HTTPError) {
         try {
-          detail = await httpErr.response.text();
+          detail = await e.response.text();
         } catch (_inner) {
           // ignore
         }

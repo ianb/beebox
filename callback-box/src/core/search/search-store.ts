@@ -16,14 +16,17 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
+import { EMBEDDING_DIMENSIONS } from "../../services/openai-embeddings.js";
+import { invariant } from "../../lib/invariant.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
  * triggers a silent full rebuild.
  * v2: image OCR text: blocks fold into content.
  * v3: standalone .md files index as kind "markdown".
+ * v4: embedding vector field.
  */
-export const SEARCH_SCHEMA_VERSION = 3;
+export const SEARCH_SCHEMA_VERSION = 4;
 
 export const searchOramaSchema = {
   path: "string",
@@ -34,7 +37,19 @@ export const searchOramaSchema = {
   content: "string",
   created: "string",
   contentHash: "string",
+  // Literal string tied to EMBEDDING_DIMENSIONS (openai-embeddings.ts) — Orama's
+  // schema typing needs `vector[${number}]` as a literal type, which a template
+  // literal built from the constant can't preserve. Keep in sync by hand; a
+  // dims change also requires bumping SEARCH_SCHEMA_VERSION above.
+  embedding: "vector[512]",
 } as const;
+
+// Import-time tripwire for the hand-kept tie described above: a dims change
+// that misses the schema literal fails here, not obscurely at insert time.
+invariant(
+  searchOramaSchema.embedding === `vector[${String(EMBEDDING_DIMENSIONS)}]`,
+  `search schema embedding field "${searchOramaSchema.embedding}" does not match EMBEDDING_DIMENSIONS ${String(EMBEDDING_DIMENSIONS)}`,
+);
 
 export type SearchIndex = Orama<typeof searchOramaSchema>;
 

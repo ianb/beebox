@@ -20,6 +20,7 @@ interface SearchCliOptions {
   limit?: string;
   json?: boolean;
   rebuild?: boolean;
+  mode?: string;
 }
 
 export const searchCommand = new Command("search")
@@ -30,6 +31,7 @@ export const searchCommand = new Command("search")
   .option("--limit <n>", "Maximum results (default 10)")
   .option("--json", "Output the structured result envelope as JSON")
   .option("--rebuild", "Rebuild the index from scratch before searching")
+  .option("--mode <mode>", "Ranking mode: hybrid (semantic + text) or text; omitted = auto")
   .action(async (query: string, options: SearchCliOptions) => {
     try {
       const boxRoot = await requireBoxRoot();
@@ -45,6 +47,7 @@ export const searchCommand = new Command("search")
         path: options.path,
         limit,
         rebuild: options.rebuild,
+        mode: options.mode,
       };
 
       if (options.json === true) {

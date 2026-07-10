@@ -6,12 +6,27 @@
  * are safe ordinary functions.
  */
 
-import type { SessionEntry } from "../api";
+import { interruptChat, type SessionEntry } from "../api";
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
 import { queueMessageToBackend } from "./chat-actors";
+import { toastError } from "../components/ui/toast-store";
 import type { ChatContext, ChatEvent } from "./chat-types";
 
 type SendEvent = Extract<ChatEvent, { type: "SEND" }>;
+
+/**
+ * Fire the interrupt request for the live turn. A user-initiated action, so a
+ * failure is never swallowed (engineering principle 4): the turn keeps
+ * streaming on failure, so surface it via the toast channel and log rather
+ * than dropping it. Fire-and-forget — the machine has already set
+ * `interrupting`; this only reports if the request itself fails.
+ */
+export function sendInterrupt(sessionId: string): void {
+  interruptChat({ sessionId }).catch((e: unknown) => {
+    console.error(`[chatfsm] interrupt failed for session ${sessionId}:`, e);
+    toastError("Failed to interrupt the agent", { cause: e });
+  });
+}
 
 /** Pull the companion-card fields off a SEND event, omitting empties — shared
  *  by the streaming input builder and the queued-send dispatcher. */
@@ -118,7 +133,7 @@ export function applyServerMessages(
 export function promoteLastToPending(
   { context }: { context: ChatContext },
 ): Partial<ChatContext> {
-  const last = context.messages[context.messages.length - 1];
+  const last = context.messages.at(-1);
   if (!last || last.type !== "user") return {};
   if (context.pendingMessages.some((p) => p.uuid === last.uuid)) return {};
   const promoted: SessionEntry = { ...last, pending: true };

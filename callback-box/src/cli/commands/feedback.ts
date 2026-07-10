@@ -12,6 +12,7 @@ import * as path from "node:path";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { stageFiles, commitPaths } from "../../lib/git.js";
 import { slugify } from "../../lib/filename.js";
+import { invariant } from "../../lib/invariant.js";
 import {
   getSessionLogPath,
   listSessions,
@@ -49,8 +50,8 @@ async function resolveSession(
   // CLAUDE_CODE_SESSION_ID is not propagated when agents are spawned by the SDK.
   // Fall back to the most recently modified session log.
   const sessions = await listSessions(boxRoot);
-  if (sessions.length === 0) return null;
-  const newest = sessions[0]!;
+  const [newest] = sessions;
+  if (!newest) return null;
   return { sessionId: newest.sessionId, logPath: newest.path };
 }
 
@@ -76,7 +77,8 @@ async function getSessionContext(boxRoot: string): Promise<string | null> {
   let userMessageCount = 0;
 
   for (let i = entries.length - 1; i >= 0 && tail.length < MAX_CONTEXT_ENTRIES; i--) {
-    const entry = entries[i]!;
+    const entry = entries[i];
+    invariant(entry !== undefined, `entries[${i}] must exist for 0 <= i < entries.length`);
     tail.unshift(entry);
     if (entry.type === "user") {
       userMessageCount += 1;

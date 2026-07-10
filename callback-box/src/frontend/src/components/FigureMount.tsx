@@ -43,15 +43,6 @@ export type FigureSketch = (
   ctx: { mount: HTMLElement; figure: FigureContext },
 ) => FigureTeardown;
 
-class FigureRuntimeUnsupportedError extends Error {
-  readonly runtime: string;
-  constructor(runtime: string) {
-    super(`Figure runtime "${runtime}" is not supported yet`);
-    this.name = "FigureRuntimeUnsupportedError";
-    this.runtime = runtime;
-  }
-}
-
 /**
  * Lazily load the runtime library a sketch is handed as `lib`. Each `import()`
  * becomes its own Vite chunk, loaded only when a figure of that runtime first
@@ -66,10 +57,7 @@ async function loadRuntimeLib(runtime: FigureRuntime): Promise<unknown> {
   if (runtime === "three") {
     return import("three");
   }
-  if (runtime === "d3") {
-    return import("d3");
-  }
-  throw new FigureRuntimeUnsupportedError(runtime);
+  return import("d3");
 }
 
 interface FigureMountProps {
@@ -95,20 +83,25 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
     const el = mountRef.current;
     if (el === null) return;
     let teardown: FigureTeardown;
-    let cancelled = false;
+    // A plain boolean would get narrowed to its literal `false` at the read
+    // sites below — TS's flow analysis can't see that the cleanup closure
+    // (a separate function) may flip it before the async load resolves. A
+    // mutable object property isn't narrowed the same way, which also keeps
+    // the check honest for readers.
+    const state = { cancelled: false };
 
     void (async () => {
       try {
         const lib = await loadRuntimeLib(runtime);
-        if (cancelled) return;
+        if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });
       } catch (e) {
-        if (!cancelled) onError(e instanceof Error ? e.message : String(e));
+        if (!state.cancelled) onError(e instanceof Error ? e.message : String(e));
       }
     })();
 
     return () => {
-      cancelled = true;
+      state.cancelled = true;
       if (typeof teardown === "function") {
         try {
           teardown();

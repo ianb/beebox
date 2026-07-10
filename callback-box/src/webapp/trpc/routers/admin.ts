@@ -7,7 +7,7 @@ import { router, ownerProcedure } from "../trpc.js";
 import { loadTelegramConfig } from "../../../connectors/telegram.js";
 import { createTelegramService } from "../../../services/telegram.js";
 import { createClaudeCliService } from "../../../services/claude-cli.js";
-import { stageFiles, commit } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
@@ -182,8 +182,10 @@ export const adminRouter = router({
       const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
       await fs.mkdir(path.dirname(configPath), { recursive: true });
       await fs.writeFile(configPath, JSON.stringify(next, null, 2) + "\n");
-      await stageFiles(ctx.boxRoot, ["config/connectors/gmail.json"]);
-      await commit(ctx.boxRoot, { message: "Update Gmail filter config" });
+      await stageAndCommitPaths(ctx.boxRoot, {
+        paths: ["config/connectors/gmail.json"],
+        message: "Update Gmail filter config",
+      });
 
       return { query: next.query ?? "", labels: next.labels ?? [] };
     }),
@@ -227,8 +229,10 @@ export const adminRouter = router({
         }
         await fs.mkdir(path.dirname(configPath), { recursive: true });
         await fs.writeFile(configPath, JSON.stringify(existing, null, 2) + "\n");
-        await stageFiles(ctx.boxRoot, ["config/box.json"]);
-        await commit(ctx.boxRoot, { message: `Update box config: ${changed.join(", ")}` });
+        await stageAndCommitPaths(ctx.boxRoot, {
+          paths: ["config/box.json"],
+          message: `Update box config: ${changed.join(", ")}`,
+        });
 
         return {
           success: true,

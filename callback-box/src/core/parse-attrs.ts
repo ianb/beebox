@@ -8,11 +8,17 @@
  * one in `frontend/lib/structured-output-parsing` are intentionally distinct —
  * their callers depend on those shapes — and are not folded in here.
  */
+import { invariant } from "../lib/invariant.js";
+
 export function parseAttrs(s: string): Record<string, string> {
   if (!s || !s.trim()) return {};
   const attrs: Record<string, string> = {};
   for (const match of s.trim().matchAll(/([^\s=]+)="([^"]*)"/g)) {
-    attrs[match[1]!.trim()] = match[2]!;
+    invariant(
+      match[1] !== undefined && match[2] !== undefined,
+      "both capture groups always participate in a match for this regex"
+    );
+    attrs[match[1].trim()] = match[2];
   }
   return attrs;
 }

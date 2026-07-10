@@ -167,7 +167,11 @@ export function resolveFileTypeUI(summary: FileSummary<unknown>): FileTypeUI<unk
       `FileType path collision for "${summary.path}": ${pathMatches.length} matches; using first`,
     );
   }
-  const pathMatch = pathMatches[0];
+  // pathMatches can be empty (no path selector matched); the frontend tsconfig
+  // lacks noUncheckedIndexedAccess, so `pathMatches[0]` would type `pathMatch`
+  // as always-defined. `.at()` is typed `T | undefined` regardless, keeping
+  // this check honest.
+  const pathMatch = pathMatches.at(0);
   if (pathMatch) return pathMatch.listUI;
   return fallbackFileTypeUI;
 }

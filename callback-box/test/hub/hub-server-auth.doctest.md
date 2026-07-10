@@ -22,6 +22,9 @@ const HUB_SECRET = "test-hub-secret-for-auth-doctest";
 
 process.env.CB_SESSION_SECRET = "test-session-secret-for-hub-server-auth-doctest";
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-hub-server-auth-doctest";
+// registerAuthRoutes now fails loudly on an ID-without-secret half-config
+// (MissingOAuthClientSecretError), so the fake credentials must be a pair.
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-hub-server-auth-doctest";
 
 async function startFakeBox() {
   const sockets = [];
@@ -205,6 +208,7 @@ unauthedUpgrade.startsWith("HTTP/1.1 401")
 
 ```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
 await mobileBox.cleanup();
 for (const socket of hubSockets) socket.destroy();

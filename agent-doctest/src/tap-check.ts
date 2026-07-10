@@ -42,7 +42,7 @@ function report(t: InstanceType<typeof TestBase>, result: CheckResult): Extracti
   }
 
   t.fail(result.message, {
-    diff: result.diff!,
+    diff: result.diff,
     found: result.actual,
     wanted: result.expected,
   });
@@ -94,7 +94,7 @@ TestBase.prototype.checkThrows = function tapCheckThrows(
   }
 
   const extra: Record<string, unknown> = {
-    diff: result.diff!,
+    diff: result.diff,
     found: result.actual,
     wanted: result.expected,
   };

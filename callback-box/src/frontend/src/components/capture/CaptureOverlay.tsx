@@ -50,7 +50,7 @@ export function CaptureOverlay({ targetSessionId, onExit }: { targetSessionId: s
   const { loading, resumable, submitNow, discard } = useCaptureResume(targetSessionId);
 
   // Prompt on the most recent unfinished capture until the user decides.
-  const candidate = decision === null && resumable.length > 0 ? resumable[resumable.length - 1]! : null;
+  const candidate = decision === null && resumable.length > 0 ? resumable[resumable.length - 1] : null;
 
   const handleSubmit = async (id: string): Promise<void> => {
     setBusy(true);

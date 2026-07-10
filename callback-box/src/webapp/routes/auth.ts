@@ -20,6 +20,20 @@ import {
 import { getPublicUrl } from "../../lib/public-url.js";
 import { canAccessBox } from "../box-access.js";
 import type { BoxSpec } from "../server.js";
+import { getGoogleClientCreds } from "../../connectors/google-auth.js";
+
+/** Thrown when auth is enabled (GOOGLE_OAUTH_CLIENT_ID set) but the paired
+ * GOOGLE_OAUTH_CLIENT_SECRET is missing — a misconfiguration, not a request
+ * failure, so it fails the server at route-registration time. */
+export class MissingOAuthClientSecretError extends Error {
+  constructor() {
+    super(
+      "GOOGLE_OAUTH_CLIENT_ID is set but GOOGLE_OAUTH_CLIENT_SECRET is missing — " +
+        "both must be configured together to enable Google OAuth.",
+    );
+    this.name = "MissingOAuthClientSecretError";
+  }
+}
 
 interface AuthRoutesOptions {
   boxes: BoxSpec[];
@@ -61,8 +75,9 @@ export async function registerAuthRoutes(
   server: FastifyInstance,
   options: AuthRoutesOptions,
 ) {
-  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID!;
-  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET!;
+  const creds = getGoogleClientCreds();
+  if (!creds) throw new MissingOAuthClientSecretError();
+  const { clientId, clientSecret } = creds;
   const publicUrl = getPublicUrl(options.publicUrlFallback ?? "http://localhost:3210");
   const redirectUri = `${publicUrl}/auth/callback`;
 
@@ -99,7 +114,7 @@ export async function registerAuthRoutes(
         tokens = result.tokens;
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        const response = (err as { response?: { data?: unknown } })?.response?.data;
+        const response = (err as { response?: { data?: unknown } }).response?.data;
         console.error("[auth] Token exchange failed:", message);
         if (response) console.error("[auth] Google response:", JSON.stringify(response));
         console.error("[auth] Redirect URI used:", redirectUri);

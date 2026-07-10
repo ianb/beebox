@@ -5,6 +5,7 @@ import UIKit
 
 struct NativeComposerView: View {
     var box: PairedBox
+    var deliveredEmissionID: NativeChatEmission.ID? = nil
     var onSendEmission: (NativeChatEmission) -> Void
 
     @EnvironmentObject private var outbox: OutboxStore
@@ -13,6 +14,7 @@ struct NativeComposerView: View {
     @State private var images: [ChatImageAttachment] = []
     @State private var pendingVoiceMessage: PendingVoiceMessage?
     @State private var statusText: String?
+    @State private var lastSentEmissionID: NativeChatEmission.ID?
     @StateObject private var dictation = SpeechDictation()
     @FocusState private var focused: Bool
 
@@ -100,6 +102,7 @@ struct NativeComposerView: View {
         .onAppear(perform: loadDraft)
         .onChange(of: text) { _, newValue in
             UserDefaults.standard.set(newValue, forKey: draftKey)
+            dictation.noteManualTextChange(newValue)
         }
         .onChange(of: dictation.transcript) { _, newValue in
             text = newValue
@@ -114,6 +117,13 @@ struct NativeComposerView: View {
             Task {
                 await loadPhotos(from: newValue)
             }
+        }
+        .onChange(of: deliveredEmissionID) { _, newValue in
+            guard let newValue, newValue == lastSentEmissionID else {
+                return
+            }
+            statusText = "Sent to chat."
+            lastSentEmissionID = nil
         }
         .onDisappear {
             dictation.stop()
@@ -138,7 +148,8 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        statusText = "Sent to chat."
+        lastSentEmissionID = emission.id
+        statusText = "Sending to chat..."
         onSendEmission(emission)
     }
 
@@ -249,7 +260,8 @@ struct NativeComposerView: View {
         selectedPhotoItems = []
         UserDefaults.standard.removeObject(forKey: draftKey)
         focused = false
-        statusText = "Sent to chat."
+        lastSentEmissionID = emission.id
+        statusText = "Sending to chat..."
         onSendEmission(emission)
     }
 
@@ -280,6 +292,9 @@ struct NativeComposerView: View {
     }
 
     private func loadPhotos(from items: [PhotosPickerItem]) async {
+        guard items.isEmpty == false else {
+            return
+        }
         var loaded: [ChatImageAttachment] = []
         for (index, item) in items.prefix(4).enumerated() {
             guard let data = try? await item.loadTransferable(type: Data.self) else {
@@ -304,7 +319,6 @@ struct NativeComposerView: View {
         images = images.enumerated().map { index, image in
             ChatImageAttachment(id: index + 1, mimeType: image.mimeType, dataBase64: image.dataBase64)
         }
-        selectedPhotoItems = []
     }
 }
 

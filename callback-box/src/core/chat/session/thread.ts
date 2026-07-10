@@ -8,13 +8,8 @@
  */
 
 import { EventEmitter } from "node:events";
-import type { SDKMessage } from "@anthropic-ai/claude-agent-sdk";
-import type { ChatMessage, ChatMessageContent } from "./index.js";
-import {
-  unknownChatMessage,
-  type ChatMessageAssistant,
-  type ChatMessageResult,
-} from "./messages.js";
+import { adaptSdkMessage, type ChatMessage } from "./messages.js";
+import { assertNever, invariant } from "../../../lib/invariant.js";
 import { buildTimezoneContext } from "../../box/config.js";
 import { buildScriptEnv } from "../../script-env.js";
 import {
@@ -99,65 +94,6 @@ LINKING:
 COMMIT DISCIPLINE:
 - If you make file changes, commit with a descriptive message and a Session trailer.
 - Do NOT add Co-Authored-By trailers — the system adds appropriate trailers automatically.`;
-}
-
-/**
- * Adapt an SDK message into the stable ChatMessage wire shape we emit
- * to consumers. (Same logic as ChatSession's adapter, narrowed to the
- * subset this thread session cares about.)
- */
-function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
-  switch (msg.type) {
-    case "system": {
-      if (msg.subtype !== "init") return null;
-      return { type: "system", subtype: "init", session_id: msg.session_id };
-    }
-    case "assistant": {
-      const result: ChatMessageAssistant = {
-        type: "assistant",
-        session_id: msg.session_id,
-        message: {
-          role: msg.message.role,
-          content: msg.message.content as ChatMessageContent[],
-          ...(msg.message.stop_reason !== null && msg.message.stop_reason !== undefined
-            ? { stop_reason: msg.message.stop_reason }
-            : {}),
-        },
-      };
-      if (msg.uuid) result.uuid = msg.uuid;
-      return result;
-    }
-    case "result": {
-      const r: ChatMessageResult = {
-        type: "result",
-        subtype: msg.subtype,
-        session_id: msg.session_id,
-        is_error: msg.is_error,
-        duration_ms: msg.duration_ms,
-        num_turns: msg.num_turns,
-        total_cost_usd: msg.total_cost_usd,
-      };
-      if (msg.subtype === "success") r.result = msg.result;
-      return r;
-    }
-    case "user":
-    case "stream_event":
-      // deliberately not handled on the thread path — see plan open question 2.
-      // (ChatSession's adapter DOES surface these; this narrowing is the known
-      // adaptSdkMessage drift, flagged for the boxholder.)
-      return null;
-    case "tool_progress":
-    case "auth_status":
-    case "tool_use_summary":
-    case "rate_limit_event":
-    case "prompt_suggestion":
-      // SDK-internal partials/status events; never surfaced to consumers.
-      return null;
-    default:
-      // A future SDK version's unrecognized type: surface the logged, counted
-      // wire-tolerance sentinel rather than dropping it silently.
-      return unknownChatMessage(msg);
-  }
 }
 
 export class ChatThreadSession extends EventEmitter {
@@ -253,37 +189,82 @@ export class ChatThreadSession extends EventEmitter {
   }
 
   private handleMessage(msg: ChatMessage): void {
-    log("msg", `type=${msg.type}${msg.type === "assistant" ? ` blocks=${msg.message?.content?.length ?? 0}` : ""}`);
+    log("msg", `type=${msg.type}${msg.type === "assistant" ? ` blocks=${msg.message.content.length}` : ""}`);
 
-    // Capture session ID from first message (the `unknown` sentinel has none).
+    // Capture session ID from first message that carries one (the `unknown`
+    // sentinel has none; a `user` echo's session_id is optional).
     if (msg.type !== "unknown" && msg.session_id && !this.sessionId) {
       this.sessionId = msg.session_id;
       log("session", `Got session ID: ${this.sessionId}`);
       this.emit("session", this.sessionId);
     }
 
-    // Accumulate text from assistant messages for <chat-response> extraction
-    if (msg.type === "assistant" && msg.message?.content) {
-      for (const block of msg.message.content) {
-        if (block.type === "text" && block.text) {
-          this.turnText += block.text;
-          this.fullTurnText += block.text;
-          this.checkForResponses();
+    // Every message type the SHARED adapter (messages.ts) can surface has an
+    // explicit fate here — the thread path narrows away a few types that make
+    // no sense for external chat delivery, but that narrowing is now ONE visible
+    // switch instead of a divergent local adapter (Track 6 convergence). A
+    // deliberate skip is a real `case`, never a silent fall-through.
+    switch (msg.type) {
+      case "assistant": {
+        // Accumulate assistant text for <chat-response> extraction.
+        for (const block of msg.message.content) {
+          if (block.type === "text" && block.text) {
+            this.turnText += block.text;
+            this.fullTurnText += block.text;
+            this.checkForResponses();
+          }
         }
+        this.emit("message", msg);
+        return;
       }
-    }
-
-    this.emit("message", msg);
-
-    if (msg.type === "result") {
-      // Final check for any remaining responses in the accumulated text
-      this.checkForResponses();
-      log("done", `Turn complete, is_error: ${msg.is_error}, turnText length: ${this.turnText.length}${this.turnText.length > 0 ? `, text: ${this.turnText.slice(0, 200)}` : ""}`);
-      // Turn done: streaming → ready (run stays open, isBusy() flips false).
-      this.state = afterTurnResult(this.state);
-      this.emit("turn-text", this.fullTurnText);
-      this.emit("done", msg);
-      this.resolveTurn();
+      case "result": {
+        this.emit("message", msg);
+        // Final check for any remaining responses in the accumulated text.
+        this.checkForResponses();
+        log("done", `Turn complete, is_error: ${msg.is_error}, turnText length: ${this.turnText.length}${this.turnText.length > 0 ? `, text: ${this.turnText.slice(0, 200)}` : ""}`);
+        // Turn done: streaming → ready (run stays open, isBusy() flips false).
+        this.state = afterTurnResult(this.state);
+        this.emit("turn-text", this.fullTurnText);
+        this.emit("done", msg);
+        this.resolveTurn();
+        return;
+      }
+      case "system":
+        // `init` — session id already captured above. Forward for parity with
+        // ChatSession; the pool ignores "message", so this is a no-op today.
+        this.emit("message", msg);
+        return;
+      case "user":
+        // The SDK echoes back the user turn we just sent. External chat (Telegram
+        // etc.) has no UI that re-renders the user's own message, and it is NOT
+        // assistant output, so it must never accumulate into <chat-response>
+        // extraction. Forwarded as "message" for parity, but nothing consumes it.
+        this.emit("message", msg);
+        return;
+      case "stream_event":
+        // Partial-streaming deltas. The thread path delivers only COMPLETE
+        // <chat-response> blocks parsed from finished assistant messages;
+        // surfacing partials here would double-count against the assistant
+        // message that follows. Deliberately dropped — this is the core
+        // thread-path narrowing (the fork used to drop these at the adapter).
+        log("skip", "Dropping stream_event partial — thread path delivers complete blocks only");
+        return;
+      case "task":
+        // Background-task lifecycle events (task_started/progress/updated/
+        // notification, normalized by the shared adapter). ChatSession bridges
+        // these to the event bus for its task UI; the external-chat thread path
+        // has no task surface, so they are deliberately dropped. Explicit so a
+        // future task consumer is a conscious add, not an accidental revival.
+        log("skip", `Dropping task event (phase=${msg.task.phase}) — thread path has no task surface`);
+        return;
+      case "unknown":
+        // Wire-tolerance sentinel — already logged + counted at the adapter
+        // boundary (unknownChatMessage). Forward so a consumer could observe SDK
+        // drift; the thread path itself takes no action.
+        this.emit("message", msg);
+        return;
+      default:
+        return assertNever(msg);
     }
   }
 
@@ -297,7 +278,8 @@ export class ChatThreadSession extends EventEmitter {
     let lastIndex = 0;
 
     while ((match = regex.exec(this.turnText)) !== null) {
-      const text = match[1]!.trim();
+      invariant(match[1] !== undefined, "regex's sole capture group always participates in a match");
+      const text = match[1].trim();
       if (text) {
         this.emit("chat-response", text);
       }

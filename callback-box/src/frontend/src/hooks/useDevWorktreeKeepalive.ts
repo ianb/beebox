@@ -21,7 +21,7 @@ export function useDevWorktreeKeepalive(): void {
     if (!import.meta.env.DEV) return;
     const beat = () => {
       if (document.visibilityState !== "visible") return;
-      fetch(import.meta.env.BASE_URL ?? "/", { method: "HEAD" }).catch(() => {
+      fetch(import.meta.env.BASE_URL, { method: "HEAD" }).catch(() => {
         // The router being down isn't this hook's problem; HMR handles it.
       });
     };

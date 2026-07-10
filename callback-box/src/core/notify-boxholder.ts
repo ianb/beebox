@@ -20,7 +20,7 @@ import * as path from "node:path";
 import { loadBoxConfig } from "./box/config.js";
 import { createWebPushTemplate, type WebPushSeverityValue } from "../schemas/web-push.js";
 import { createTelegramMessageTemplate } from "../schemas/telegram-message.js";
-import { stageFiles, commit } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import { sendOutputCards } from "../connectors/telegram-output-cards.js";
 import { sendOutputPushCards } from "../connectors/push.js";
 import { loadTelegramConfig } from "../connectors/telegram-helpers.js";
@@ -107,8 +107,8 @@ export async function notifyBoxholder(
     return { cards, channels };
   }
 
-  await stageFiles(boxRoot, cards);
-  await commit(boxRoot, {
+  await stageAndCommitPaths(boxRoot, {
+    paths: cards,
     message: `Notify boxholder: ${input.title}`,
     trailers: { "Created-By": "notify-boxholder" },
   });

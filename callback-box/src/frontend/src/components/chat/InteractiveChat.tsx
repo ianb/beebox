@@ -19,9 +19,8 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
-import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
-import { RecoveredDictation } from "./RecoveredDictation";
+import { useRecoveredDictation } from "./InteractiveChat-recovery";
 import { ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
@@ -176,37 +175,19 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
 
-  // Persist the in-flight transcript so an interrupted session (screen sleep,
-  // tab eviction, reload) doesn't erase it. Recovery surfaces in a dedicated
-  // widget above the composer rather than autofilling the field.
-  const { recoveredDraft, clearDraft } = useDictationDraft({
+  // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
+  const { recoveredDictation } = useRecoveredDictation({
     boxSlug,
     transcript: voice.transcription.transcript,
     isTranscribing: voice.isTranscribing,
     narrationEnabled: model.narrationEnabled,
+    hqInFlight: voice.hqInFlight,
+    sessionId,
+    sendVoiceSegment,
+    inputStore,
+    startVoice: voice.startVoice,
+    clearDraftRef,
   });
-  useEffect(() => { clearDraftRef.current = clearDraft; });
-
-  const handleRecoverSend = useCallback(() => {
-    if (!recoveredDraft) return;
-    // No audio survives a drop, so the realtime text stands in for the HQ pass
-    // (the design's documented HQ-failure fallback). Sent as a narration
-    // <speech> message; the session's narration flag re-syncs from the server.
-    sendVoiceSegment(recoveredDraft.text);
-    clearDraft();
-  }, [recoveredDraft, sendVoiceSegment, clearDraft]);
-
-  // Surface the recovery widget only when idle: hidden while the mic is open
-  // and while an HQ commit is in flight (the mic briefly idles between
-  // segments — don't flash the just-committed text as "recovered").
-  const recoveredDictation = recoveredDraft && !voice.isTranscribing && !voice.hqInFlight ? (
-    <RecoveredDictation
-      draft={recoveredDraft}
-      sessionId={sessionId}
-      onSend={handleRecoverSend}
-      onDiscard={clearDraft}
-    />
-  ) : null;
 
   const expiredAttachmentsNotice = (
     <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />

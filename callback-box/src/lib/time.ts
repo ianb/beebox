@@ -18,8 +18,9 @@ interface StubsTime {
 const stubsCache = new Map<string, StubsTime | null>();
 
 function loadParentStubs(boxRoot: string): StubsTime | null {
-  if (stubsCache.has(boxRoot)) {
-    return stubsCache.get(boxRoot)!;
+  const cached = stubsCache.get(boxRoot);
+  if (cached !== undefined) {
+    return cached;
   }
 
   const stubsPath = path.join(boxRoot, "../stubs.yaml");

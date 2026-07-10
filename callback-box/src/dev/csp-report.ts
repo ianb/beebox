@@ -49,8 +49,9 @@ const execFileP = promisify(execFile);
 /** `--boxes-dir <path>` from argv, else `CB_BOXES_DIR`, else the historical `~/src/boxes` default. */
 function resolveBoxesDir(argv: string[]): string {
   const flagIndex = argv.indexOf("--boxes-dir");
-  if (flagIndex !== -1 && argv[flagIndex + 1] !== undefined) {
-    return path.resolve(argv[flagIndex + 1]!);
+  const flagValue = flagIndex !== -1 ? argv[flagIndex + 1] : undefined;
+  if (flagValue !== undefined) {
+    return path.resolve(flagValue);
   }
   return process.env["CB_BOXES_DIR"] || path.join(os.homedir(), "src/boxes");
 }
@@ -179,7 +180,7 @@ async function readState(): Promise<RunnerState> {
   try {
     const parsed: unknown = JSON.parse(await fs.readFile(STATE_PATH, "utf-8"));
     if (parsed !== null && typeof parsed === "object") {
-      const o = parsed as Partial<RunnerState>;
+      const o = parsed as { [K in keyof RunnerState]?: RunnerState[K] | null };
       return {
         sources: typeof o.sources === "object" && o.sources !== null ? o.sources : {},
         lastNotifiedHardenReady: o.lastNotifiedHardenReady === true,

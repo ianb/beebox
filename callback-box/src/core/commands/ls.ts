@@ -9,13 +9,27 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { glob } from "glob";
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
 import { isCardFile, boxPath } from "../../lib/paths.js";
 import { lookupField, loadCardFrontmatter } from "../frontmatter-field.js";
+
+/**
+ * Arguments for the ls command. `paths` is optional here because the command
+ * owns its presence check (its own error text); the schema is the type
+ * boundary.
+ */
+const LsArgsSchema = z.object({
+  /** Glob patterns or directories to list */
+  paths: z.array(z.string()).optional(),
+  /** Frontmatter template applied per card (e.g. "{status} {title}") */
+  format: z.string().optional(),
+});
 
 /**
  * Check if a string contains glob special characters.
@@ -81,8 +95,7 @@ async function executeLs(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const paths = args.paths as string[] | undefined;
-  const format = args.format as string | undefined;
+  const { paths, format } = parseCommandArgs(args, LsArgsSchema);
 
   if (!paths || paths.length === 0) {
     return { success: false, error: "At least one path or glob pattern is required" };

@@ -78,7 +78,8 @@ export function Sidebar({
             </button>
           </div>
 
-          <div className="flex-1 overflow-auto" tabIndex={0} aria-label={title}>
+          {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- role="region" + tabIndex=0 is the W3C APG "scrollable region" pattern (lets a keyboard user Page-Down/arrow-scroll the pane before tabbing into a row); the rule's default config only whitelists role="tabpanel", not "region" */}
+          <div className="flex-1 overflow-auto" tabIndex={0} role="region" aria-label={title}>
             {children}
           </div>
         </>

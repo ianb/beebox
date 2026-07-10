@@ -362,7 +362,7 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
     boxRoot,
     relPath: "../src/tricks/scripts/CLAUDE.md",
     templateContent: TRICKS_CLAUDE_MD_V2,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["tricks-guide-v2"]!.superseded,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["tricks-guide-v2"].superseded,
   });
 }
 
@@ -410,7 +410,7 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
       boxRoot,
       relPath: "config/schemas/CLAUDE.md",
       templateContent: SCHEMAS_CLAUDE_MD,
-      priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"]!.superseded,
+      priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"].superseded,
     });
     return;
   }
@@ -419,7 +419,7 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
     boxRoot,
     relPath: "../src/schemas/CLAUDE.md",
     templateContent: SCHEMAS_CLAUDE_MD_V2,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide-v2"]!.superseded,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide-v2"].superseded,
   });
 }
 
@@ -436,7 +436,7 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
       boxRoot,
       relPath: "views/CLAUDE.md",
       templateContent: VIEWS_CLAUDE_MD,
-      priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"]!.superseded,
+      priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"].superseded,
     });
     return;
   }
@@ -445,6 +445,6 @@ export async function installViewsGuide(boxRoot: string): Promise<void> {
     boxRoot,
     relPath: "../src/views/CLAUDE.md",
     templateContent: VIEWS_CLAUDE_MD,
-    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"]!.superseded,
+    priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide-v2"].superseded,
   });
 }

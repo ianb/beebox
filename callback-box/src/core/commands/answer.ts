@@ -16,7 +16,7 @@ import {
 } from "../command-runner.js";
 import { boxPath, isCardFile } from "../../lib/paths.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
@@ -218,8 +218,8 @@ async function createFollowupJob(
   await fs.mkdir(path.join(ctx.boxRoot, "box/jobs"), { recursive: true });
   await fs.writeFile(jobPath, jobContent);
   const jobRelative = path.relative(ctx.boxRoot, jobPath);
-  await stageFiles(ctx.boxRoot, [jobRelative]);
-  await commit(ctx.boxRoot, {
+  await stageAndCommitPaths(ctx.boxRoot, {
+    paths: [jobRelative],
     message: "Create follow-up job for answered question",
   });
   return jobRelative;
@@ -292,8 +292,8 @@ async function executeAnswer(
       await fs.writeFile(fullPath, renderFrontmatterBlock(fields, split.body));
 
       const relativePath = path.relative(ctx.boxRoot, fullPath);
-      await stageFiles(ctx.boxRoot, [relativePath]);
-      await commit(ctx.boxRoot, {
+      await stageAndCommitPaths(ctx.boxRoot, {
+        paths: [relativePath],
         message: `Answer question: ${path.basename(question, ".card")}`,
         trailers: {
           "Answered-Via": via,

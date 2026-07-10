@@ -4,6 +4,7 @@
  */
 
 import { parseAttrs } from "../../../core/parse-attrs";
+import { invariant } from "./invariant";
 
 export interface TagType {
   type: string;
@@ -34,7 +35,8 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
       break;
     }
 
-    const matchStart = pos + nextMatch.index!;
+    invariant(nextMatch.index !== undefined, "a successful string match always has an index");
+    const matchStart = pos + nextMatch.index;
     const matchEnd = matchStart + nextMatch[0].length;
     const isEnd = !!nextMatch[1];
     const tagName = nextMatch[2];
@@ -69,7 +71,8 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
       // as literal text (no-op on the stack) keeps malformed input from
       // unraveling the tree.
       if (stack.length > 0 && stack[stack.length - 1].tag.type === tagName) {
-        const currentItem = stack.pop()!;
+        const currentItem = stack.pop();
+        invariant(currentItem !== undefined, "stack.length > 0 was just checked");
         const currentTag = currentItem.tag;
         currentTag.content = s.slice(currentItem.contentStart, matchStart);
         const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
@@ -104,7 +107,8 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
   }
 
   while (stack.length > 0) {
-    const currentItem = stack.pop()!;
+    const currentItem = stack.pop();
+    invariant(currentItem !== undefined, "stack.length > 0 was just checked");
     const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
     parentTag.content += s.slice(currentItem.startPos);
   }

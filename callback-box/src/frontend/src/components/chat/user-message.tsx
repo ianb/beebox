@@ -88,13 +88,21 @@ export function UserMessageText({ text }: { text: string }) {
     if (match.index > lastIndex) {
       parts.push({ type: "text", value: stripped.slice(lastIndex, match.index) });
     }
-    if (match[1] !== undefined) {
-      parts.push({ type: "send", phrase: match[1].replace(/&quot;/g, '"').replace(/&amp;/g, "&") });
+    // `.at()` (not `match[n]`): the pattern alternates between two
+    // capture-group sets, so whichever branch DIDN'T match has its groups
+    // genuinely undefined at runtime — but TS's built-in RegExpExecArray
+    // types a plain index read as always `string` (it doesn't model
+    // alternation), whereas `.at()` is honestly `string | undefined`.
+    const sendPhrase = match.at(1);
+    const selectionAttrs = match.at(2);
+    const selectionText = match.at(3);
+    if (sendPhrase !== undefined) {
+      parts.push({ type: "send", phrase: sendPhrase.replace(/&quot;/g, '"').replace(/&amp;/g, "&") });
     } else {
-      const attrs = match[2] ?? "";
+      const attrs = selectionAttrs ?? "";
       parts.push({
         type: "selection",
-        text: decodeXml(match[3] ?? ""),
+        text: decodeXml(selectionText ?? ""),
         sourceRef: readAttr(attrs, REF_ATTR_RE),
         position: readAttr(attrs, POSITION_ATTR_RE),
         placement: readAttr(attrs, PLACEMENT_ATTR_RE),

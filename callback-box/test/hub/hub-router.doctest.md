@@ -321,6 +321,9 @@ const ownedBox = await makeTmpBox();
 await ownedBox.write("config/box.json", JSON.stringify({ allowedEmails: ["owner@example.com"] }));
 
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-router-doctest";
+// registerAuthRoutes fails loudly on an ID-without-secret half-config
+// (MissingOAuthClientSecretError), so the fake credentials must be a pair.
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-router-doctest";
 process.env.CB_SESSION_SECRET = "test-session-secret-for-router-doctest";
 
 const authedHub = await startHub(staticEndpointProvider([{ slug: "test1", origin: box.origin }]), {
@@ -362,6 +365,7 @@ JSON.stringify({ url: allowedBody.url, email: allowedBody.headers.xCbAuthenticat
 
 ```ts continue
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
 for (const socket of authedHub.sockets) socket.destroy();
 await new Promise((resolve) => authedHub.server.close(resolve));

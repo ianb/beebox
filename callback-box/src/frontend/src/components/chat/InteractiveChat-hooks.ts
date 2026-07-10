@@ -15,6 +15,7 @@ import type { PanelTab } from "./InteractiveChat-controls";
 import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
+import { toastError } from "../ui/toast-store";
 import type { ChatSchedule } from "../../../../core/chat/schedules.js";
 import type { ChatEvent } from "../../machines/chat-types";
 
@@ -34,11 +35,12 @@ export function useChatTabs() {
       // viewer/params refreshes the existing tab's target in place (so
       // `?view=` actually switches) rather than colliding silently.
       const idx = p.tabs.findIndex((t) => t.target.path === view.target.path);
+      const existing = idx === -1 ? undefined : p.tabs[idx];
       const key = serializeViewUrl(view.target);
       const tabs =
-        idx === -1
+        existing === undefined
           ? [...p.tabs, view]
-          : serializeViewUrl(p.tabs[idx]!.target) === key
+          : serializeViewUrl(existing.target) === key
           ? p.tabs
           : p.tabs.map((t, i) => (i === idx ? view : t));
       return { tabs, activePath: view.target.path };
@@ -257,13 +259,14 @@ export function useChatSchedules(opts: {
   // rather than ported.
 
   const handleCancelSchedule = useCallback((label: string) => {
-    // User-initiated action (rule 5): log at error level, not warn -- the UI
-    // has no toast affordance here, so this is the only signal that the
-    // schedule wasn't actually cancelled.
+    // User-initiated action (rule 5): surface a failed cancel via the toast
+    // channel -- otherwise the schedule pill stays, but the user has no signal
+    // that their cancel didn't take.
     trpcClient.chat.cancelSchedule.mutate({ label })
       .then(() => fetchSchedules())
       .catch((e: unknown) => {
         console.error(`[chatfsm] cancel-schedule "${label}" failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError(`Failed to cancel the "${label}" schedule`, { cause: e });
       });
   }, [fetchSchedules]);
 

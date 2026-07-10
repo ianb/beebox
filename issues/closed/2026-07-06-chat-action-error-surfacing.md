@@ -4,9 +4,19 @@ area: frontend
 filed-by: agent
 discovered-in: worktree-architectural-review — Track F/N (P1-f), fixing
   InteractiveChat-actions.ts's silent restart-process catch
+resolution: implemented
 ---
 
 # No generic user-visible error surfacing for chat action handlers
+
+**Closed (implemented) by c5c1fe73** (architectural-review follow-ups, Track 5).
+Built a generic frontend toast primitive: a module-level, framework-free store
+(`src/frontend/src/components/ui/toast-store.ts`, singleton `toastError`) bound
+via `useSyncExternalStore` in one `<ToastViewport>` at the app root
+(`main.tsx`). Errors only; dedupe counter, ~10s auto-expiry, dismissible,
+`role="alert"`. Wired all four silent sites — `handleRestartProcess`,
+`handleLoadOlder`, `handleCancelSchedule`, and the machine's swallowed
+`interruptChat(...).catch(() => {})` (now `sendInterrupt`, toast + console.error).
 
 `InteractiveChat`'s chat machine has exactly one user-visible error channel:
 `context.error`, set by `STREAM_ERROR`/`STREAM_FAILED` and rendered as a

@@ -2,6 +2,13 @@ node_modules/
 dist/
 *.log
 
+# Deploy build checkout + latest-wins lock state (see callback-box/deploy/deploy.sh).
+# The checkout is a disposable detached git worktree; the other two are runtime
+# lock/coordination files. All live at the main repo root.
+/.deploy-checkout/
+/.deploy-requested
+/.deploy-checkout.lock
+
 # Per-worktree dev config
 .env
 .overmind.sock

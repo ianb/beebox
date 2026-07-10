@@ -235,8 +235,8 @@ export async function checkExternalUrls(
   await saveCache(boxRoot, cache);
 
   const broken: BrokenUrl[] = [];
-  for (const url of Object.keys(cache.broken).toSorted()) {
-    const entry = cache.broken[url]!;
+  const sortedBrokenEntries = Object.entries(cache.broken).toSorted(([a], [b]) => a.localeCompare(b));
+  for (const [url, entry] of sortedBrokenEntries) {
     broken.push({ url, status: entry.status, detail: entry.detail, referrers: await referrersOf(boxRoot, url) });
   }
   const transient = verdicts.filter((v) => v.reason === "transient").map((v) => v.url).toSorted();

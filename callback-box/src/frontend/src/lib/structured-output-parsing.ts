@@ -61,9 +61,10 @@ function parseAttrs(raw: string): Map<string, string> {
   const re = /([A-Z_a-z][\w-]*)\s*=\s*"([^"]*)"/g;
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw)) !== null) {
+    // Both groups are mandatory (no alternation before them), so a
+    // successful match always populates them — no undefined check needed.
     const name = m[1];
     const value = m[2];
-    if (name === undefined || value === undefined) continue;
     out.set(name, decodeXmlAttr(value));
   }
   return out;
@@ -92,8 +93,13 @@ export function parseAcks(content: string): AckIndication[] {
   content = normalizeAckAliases(content);
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
-    const attrs = parseAttrs(m[1] ?? "");
-    const innerRaw = m[2];
+    // Group 1 precedes the alternation, so it's always defined; group 2 is
+    // inside the paired-tag branch of the alternation and is genuinely
+    // undefined when the self-closing branch matches instead (TS's
+    // RegExpExecArray typing doesn't model per-branch participation).
+    // `.at()` (not `m[2]`) keeps that honestly `string | undefined`.
+    const attrs = parseAttrs(m[1]);
+    const innerRaw = m.at(2);
     const kind = attrs.get("kind");
     if (kind === undefined) {
       console.warn("[structured-output] Skipping <ack> with no kind");
@@ -124,13 +130,15 @@ export function parseCallouts(content: string): CalloutData[] {
   const re = /<callout\b([^>]*?)>([\S\s]*?)<\/callout\s*>/gi;
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
-    const attrs = parseAttrs(m[1] ?? "");
+    // Neither group is inside an alternation, so both are always defined
+    // on a successful match.
+    const attrs = parseAttrs(m[1]);
     const context = attrs.get("context");
     if (context === undefined || context.length === 0) {
       console.warn("[structured-output] Skipping <callout> with no context");
       continue;
     }
-    const body = (m[2] ?? "").trim();
+    const body = m[2].trim();
     if (body.length === 0) continue;
     out.push({ context, body });
   }

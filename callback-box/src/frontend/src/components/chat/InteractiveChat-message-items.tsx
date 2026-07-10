@@ -151,7 +151,11 @@ export function buildDataItems(opts: {
       const allText = assistantGroupText(group);
       const groupAcks = parseAcks(allText);
       if (groupAcks.length > 0) {
-        const last = items[items.length - 1];
+        // `.at(-1)` (not `items[items.length - 1]`): its return type is
+        // honestly `T | undefined` regardless of `noUncheckedIndexedAccess`
+        // (which the frontend tsconfig lacks) — a plain index read would
+        // type as always-defined even though `items` can be empty here.
+        const last = items.at(-1);
         if (last && last.kind === "group" && last.group.type === "user") {
           last.acks = [...(last.acks ?? []), ...groupAcks];
         }

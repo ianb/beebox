@@ -7,6 +7,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { invariant } from "../../lib/invariant.js";
 
 export const moveCommand = new Command("mv")
   .description("Move/rename one or more cards and update all references")
@@ -19,7 +20,8 @@ export const moveCommand = new Command("mv")
       process.exit(1);
     }
 
-    const to = paths[paths.length - 1]!;
+    const to = paths[paths.length - 1];
+    invariant(to !== undefined, "paths must have at least 2 entries (checked above)");
     const from = paths.slice(0, -1);
 
     try {

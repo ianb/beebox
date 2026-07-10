@@ -81,7 +81,7 @@ export async function transcribeAudioFake(
   const words = entry.words ?? [];
   return {
     text: entry.text,
-    duration: entry.duration ?? (words.length > 0 ? words[words.length - 1]!.end : 0),
+    duration: entry.duration ?? (words[words.length - 1]?.end ?? 0),
     language: entry.language ?? "en",
     words,
   };

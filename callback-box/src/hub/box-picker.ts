@@ -18,6 +18,7 @@ import type { FastifyInstance } from "fastify";
 import { isAuthEnabled, getSessionUser, getOwnerEmail } from "../webapp/auth.js";
 import { filterAccessibleBoxes } from "../webapp/box-access.js";
 import type { BoxSpec } from "../webapp/server-types.js";
+import { invariant } from "../lib/invariant.js";
 
 function escapeHtml(value: string): string {
   const escapes: Record<string, string> = {
@@ -27,7 +28,11 @@ function escapeHtml(value: string): string {
     '"': "&quot;",
     "'": "&#39;",
   };
-  return value.replace(/["&'<>]/g, (c) => escapes[c]!);
+  return value.replace(/["&'<>]/g, (c) => {
+    const escaped = escapes[c];
+    invariant(escaped !== undefined, `escapeHtml: no mapping for matched character "${c}"`);
+    return escaped;
+  });
 }
 
 function renderPage(boxes: BoxSpec[]): string {

@@ -3,6 +3,7 @@
  */
 
 import { fileExists } from "../lib/file-exists.js";
+import { invariant } from "../lib/invariant.js";
 import * as path from "node:path";
 import type { Rule, RuleOnError } from "markdownlint";
 
@@ -22,8 +23,7 @@ export const noLegacyViewLinks: Rule = {
   tags: ["links"],
   parser: "none",
   function: (params: Parameters<Rule["function"]>[0], onError: RuleOnError): void => {
-    for (let i = 0; i < params.lines.length; i++) {
-      const line = params.lines[i]!;
+    for (const [i, line] of params.lines.entries()) {
       LEGACY_VIEW_RE.lastIndex = 0;
       let match = LEGACY_VIEW_RE.exec(line);
       while (match !== null) {
@@ -121,7 +121,8 @@ export function extractInlineLinks(lines: readonly string[]): InlineLink[] {
     INLINE_LINK_RE.lastIndex = 0;
     let match = INLINE_LINK_RE.exec(line);
     while (match !== null) {
-      out.push({ lineNumber: i + 1, index: match.index, length: match[0].length, url: match[1]!.trim() });
+      invariant(match[1] !== undefined, "INLINE_LINK_RE's sole capture group always participates in a match");
+      out.push({ lineNumber: i + 1, index: match.index, length: match[0].length, url: match[1].trim() });
       match = INLINE_LINK_RE.exec(line);
     }
   }
@@ -148,7 +149,8 @@ export function resolveInternalLink(
 ): LinkResolution {
   if (!isRelativePath(url)) return { internal: false, inside: false, resolved: "" };
   const root = path.resolve(boxRoot);
-  const target = url.split("#")[0]!;
+  const [target] = url.split("#");
+  invariant(target !== undefined, "String.split always returns at least one element");
   const resolved = target.startsWith("/") ? path.join(root, target) : path.resolve(fileDir, target);
   const inside = resolved === root || resolved.startsWith(root + path.sep);
   return { internal: true, inside, resolved };

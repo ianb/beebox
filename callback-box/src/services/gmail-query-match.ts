@@ -10,6 +10,7 @@
  */
 
 import type { GmailMessage, GmailLabel } from "./google-gmail.js";
+import { invariant } from "../lib/invariant.js";
 
 export function messageMatchesQuery(opts: {
   msg: GmailMessage;
@@ -18,7 +19,10 @@ export function messageMatchesQuery(opts: {
 }): boolean {
   const { msg, query, labels } = opts;
   if (!query) return true;
-  const labelNames = [...query.matchAll(/label:(\S+)/g)].map((m) => m[1]!);
+  const labelNames = [...query.matchAll(/label:(\S+)/g)].map((m) => {
+    invariant(m[1] !== undefined, "capture group 1 is non-optional in the label: pattern");
+    return m[1];
+  });
   if (labelNames.length === 0) return true;
   const targetIds = new Set(
     labelNames.map((name) => {

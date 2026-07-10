@@ -63,7 +63,9 @@ function coerceOne(type: FigureParamType, raw: string): FigureParamValue | undef
  */
 export function coerceFigureParams(
   declared: FigureParamDecl[],
-  raw: Record<string, string>,
+  // `string | undefined`: `raw` is the embed's query-string params — an
+  // arbitrary key from `declared` may simply not be supplied.
+  raw: Record<string, string | undefined>,
 ): Record<string, FigureParamValue> {
   const out: Record<string, FigureParamValue> = {};
   for (const decl of declared) {

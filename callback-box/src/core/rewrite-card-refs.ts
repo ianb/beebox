@@ -30,6 +30,7 @@
 import * as path from "node:path";
 import { isAttachRef, resolveAttachRef } from "../shared/attach-path.js";
 import { containWithinBox } from "../lib/box-containment.js";
+import { invariant } from "../lib/invariant.js";
 
 /**
  * Decide where a resolved target moves to. Receives an absolute path; returns
@@ -196,36 +197,58 @@ function rewriteFrontmatter(text: string, wrap: RefTransform): string {
 
     const scalar = /^(\s*ref:\s+)(\S.*?)\s*$/.exec(line);
     if (scalar !== null) {
-      lines[i] = scalar[1]! + apply(scalar[2]!);
+      const [, prefix, value] = scalar;
+      invariant(
+        prefix !== undefined && value !== undefined,
+        "ref: scalar regex has two mandatory capture groups",
+      );
+      lines[i] = prefix + apply(value);
       refsIndent = -1;
       continue;
     }
 
     const inlineList = /^(\s*refs:\s*\[)(.*)(]\s*)$/.exec(line);
     if (inlineList !== null) {
-      const items = inlineList[2]!
+      const [, prefix, itemsRaw, suffix] = inlineList;
+      invariant(
+        prefix !== undefined && itemsRaw !== undefined && suffix !== undefined,
+        "refs: [...] regex has three mandatory capture groups",
+      );
+      const items = itemsRaw
         .split(",")
         .map((item) => {
           const m = /^(\s*)(\S.*?)(\s*)$/.exec(item);
           if (m === null) return item;
-          return m[1]! + apply(m[2]!) + m[3]!;
+          const [, lead, core, trail] = m;
+          invariant(
+            lead !== undefined && core !== undefined && trail !== undefined,
+            "inline-list item regex has three mandatory capture groups",
+          );
+          return lead + apply(core) + trail;
         })
         .join(",");
-      lines[i] = inlineList[1]! + items + inlineList[3]!;
+      lines[i] = prefix + items + suffix;
       refsIndent = -1;
       continue;
     }
 
     const blockOpen = /^(\s*)refs:\s*$/.exec(line);
     if (blockOpen !== null) {
-      refsIndent = blockOpen[1]!.length;
+      const [, indent] = blockOpen;
+      invariant(indent !== undefined, "refs: block-open regex has one mandatory capture group");
+      refsIndent = indent.length;
       continue;
     }
 
     if (refsIndent !== -1) {
       const item = /^(\s+-\s+)(\S.*?)\s*$/.exec(line);
       if (item !== null && line.search(/\S/) > refsIndent) {
-        lines[i] = item[1]! + apply(item[2]!);
+        const [, prefix, value] = item;
+        invariant(
+          prefix !== undefined && value !== undefined,
+          "refs list-item regex has two mandatory capture groups",
+        );
+        lines[i] = prefix + apply(value);
         continue;
       }
       // A line that isn't a deeper list item closes the refs block.
@@ -251,17 +274,25 @@ function applyTransform(text: string, transform: RefTransform): { text: string; 
   let updated = rewriteFrontmatter(text, wrap);
 
   // Inline markdown links and images: [text](path) / ![alt](path).
-  updated = updated.replace(
-    /(!?\[[^\]]*]\(\s*)([^\s()]+)/g,
-    (_m: string, ...g: string[]) => g[0]! + wrap(g[1]!),
-  );
+  updated = updated.replace(/(!?\[[^\]]*]\(\s*)([^\s()]+)/g, (_m: string, ...g: string[]) => {
+    const [prefix, refPart] = g;
+    invariant(
+      prefix !== undefined && refPart !== undefined,
+      "inline-link regex has two mandatory capture groups",
+    );
+    return prefix + wrap(refPart);
+  });
 
   // Body `ref="…"` attributes (Markdoc tags; XML attributes pass through
   // harmlessly since remap gates every change).
-  updated = updated.replace(
-    /(\bref=)(["'])([^"']*)\2/g,
-    (_m: string, ...g: string[]) => g[0]! + g[1]! + wrap(g[2]!) + g[1]!,
-  );
+  updated = updated.replace(/(\bref=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
+    const [attr, quote, value] = g;
+    invariant(
+      attr !== undefined && quote !== undefined && value !== undefined,
+      "ref= attribute regex has three mandatory capture groups",
+    );
+    return attr + quote + wrap(value) + quote;
+  });
 
   return { text: updated, count };
 }
@@ -302,14 +333,16 @@ export function rewriteViewRefs(params: {
     remap: params.remap,
   });
   let count = 0;
-  const text = params.text.replace(
-    /(\bcardRef=)(["'])([^"']*)\2/g,
-    (_m: string, ...g: string[]) => {
-      const out = transform(g[2]!);
-      if (out !== g[2]!) count += 1;
-      return g[0]! + g[1]! + out + g[1]!;
-    },
-  );
+  const text = params.text.replace(/(\bcardRef=)(["'])([^"']*)\2/g, (_m: string, ...g: string[]) => {
+    const [attr, quote, value] = g;
+    invariant(
+      attr !== undefined && quote !== undefined && value !== undefined,
+      "cardRef= attribute regex has three mandatory capture groups",
+    );
+    const out = transform(value);
+    if (out !== value) count += 1;
+    return attr + quote + out + quote;
+  });
   return { text, count };
 }
 

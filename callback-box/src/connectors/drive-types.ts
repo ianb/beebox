@@ -11,6 +11,7 @@
  */
 
 import type { GoogleDriveService, DriveFile } from "../services/google-drive.js";
+import { invariant } from "../lib/invariant.js";
 
 // ─── Handler interface ──────────────────────────────────────────────────────
 
@@ -108,12 +109,18 @@ export function extractDriveFileId(input: string): string | null {
   // URL with /d/FILE_ID/ pattern
   const dPattern = /\/d\/([\w-]+)/;
   const dMatch = input.match(dPattern);
-  if (dMatch) return dMatch[1]!;
+  if (dMatch) {
+    invariant(dMatch[1] !== undefined, "capture group 1 is non-optional in dPattern");
+    return dMatch[1];
+  }
 
   // URL with ?id=FILE_ID parameter
   const idParam = /[&?]id=([\w-]+)/;
   const idMatch = input.match(idParam);
-  if (idMatch) return idMatch[1]!;
+  if (idMatch) {
+    invariant(idMatch[1] !== undefined, "capture group 1 is non-optional in idParam");
+    return idMatch[1];
+  }
 
   // Bare file ID (must look like one — at least 10 chars, only valid chars)
   if (/^[\w-]{10,}$/.test(input)) {

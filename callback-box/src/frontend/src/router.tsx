@@ -210,7 +210,12 @@ const routeTree = rootRoute.addChildren([
     // Dev-only routes are omitted from production builds entirely. The undefined
     // guard keeps the literal `import.meta.env.DEV` intact for Vite's build-time
     // dead-code elimination, while short-circuiting under the SSR loader / plain-
-    // Node tests where `import.meta.env` is undefined (see lib/view-url.ts).
+    // Node tests where `import.meta.env` is undefined (see lib/view-url.ts). Vite's
+    // ambient types declare `import.meta.env` as always-defined (true only inside a
+    // Vite-processed build), so the check is real at runtime but invisible to TS —
+    // and the literal `import.meta.env.DEV` shape has to stay intact for Vite's
+    // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
     ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute] : []),
     boxCatchAllRoute,
   ]),

@@ -15,7 +15,7 @@ export function useBoxIdentityMeta(box: { slug: string; name: string } | null) {
 
   useEffect(() => {
     if (slug === null || title === null) return;
-    const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+    const base = import.meta.env.BASE_URL.replace(/\/$/, "");
     const boxUrl = `${window.location.origin}${base}/${slug}`;
 
     let meta = document.head.querySelector<HTMLMetaElement>('meta[name="callback-box"]');

@@ -168,47 +168,54 @@ function dispatchKeyword(
   }
 ): void {
   const { send, optionsRef, pendingSendRef } = ctx;
-  if (keyword.action === "send" || keyword.action === "sendClose") {
-    // Both variants run the same send path; the only difference is whether
-    // the mic re-arms afterward, which the chat layer decides off `closeMic`.
-    const closeMic = keyword.action === "sendClose";
-    const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
-    if (wantBlob) {
-      // Slow path: park the text and STOP so the machine finalizes and
-      // emits the segment's audio blob. The idle-transition effect fires the
-      // "submit" intent with both text and blob once the machine settles.
-      // Used by narration mode to get the HQ-quality transcript.
-      pendingSendRef.current = {
-        processedTranscript: keyword.processedTranscript,
-        matchedPhrase: keyword.matchedPhrase,
-        closeMic,
-      };
-      send({ type: "STOP" });
-    } else {
-      // Fast path: drop the in-flight stream and fire immediately so the
-      // message commits with the realtime text — no waiting on WS
-      // finalization (which adds 1-2s of dead air).
-      send({ type: "CANCEL" });
-      optionsRef.current?.onVoiceIntent?.({
-        kind: "submit",
-        text: keyword.processedTranscript,
-        matchedPhrase: keyword.matchedPhrase,
-        audioBlob: null,
-        closeMic,
-      });
+  switch (keyword.action) {
+    case "send":
+    case "sendClose": {
+      // Both variants run the same send path; the only difference is whether
+      // the mic re-arms afterward, which the chat layer decides off `closeMic`.
+      const closeMic = keyword.action === "sendClose";
+      const wantBlob = optionsRef.current?.wantAudioBlob?.() ?? false;
+      if (wantBlob) {
+        // Slow path: park the text and STOP so the machine finalizes and
+        // emits the segment's audio blob. The idle-transition effect fires the
+        // "submit" intent with both text and blob once the machine settles.
+        // Used by narration mode to get the HQ-quality transcript.
+        pendingSendRef.current = {
+          processedTranscript: keyword.processedTranscript,
+          matchedPhrase: keyword.matchedPhrase,
+          closeMic,
+        };
+        send({ type: "STOP" });
+      } else {
+        // Fast path: drop the in-flight stream and fire immediately so the
+        // message commits with the realtime text — no waiting on WS
+        // finalization (which adds 1-2s of dead air).
+        send({ type: "CANCEL" });
+        optionsRef.current?.onVoiceIntent?.({
+          kind: "submit",
+          text: keyword.processedTranscript,
+          matchedPhrase: keyword.matchedPhrase,
+          audioBlob: null,
+          closeMic,
+        });
+      }
+      break;
     }
-  } else if (keyword.action === "micOff") {
-    send({ type: "CANCEL" });
-    optionsRef.current?.onVoiceIntent?.({ kind: "mic-off" });
-  } else if (keyword.action === "cancel") {
-    optionsRef.current?.onVoiceIntent?.({ kind: "cancel" });
-  } else if (keyword.action === "erase") {
-    send({ type: "CANCEL" });
-    send({ type: "START" });
-    // Notify the consumer: the machine restart only clears the live
-    // segment; the chat layer holds the rest of the in-progress message
-    // (composer input, persisted draft) and must erase it too.
-    optionsRef.current?.onVoiceIntent?.({ kind: "erase" });
+    case "micOff":
+      send({ type: "CANCEL" });
+      optionsRef.current?.onVoiceIntent?.({ kind: "mic-off" });
+      break;
+    case "cancel":
+      optionsRef.current?.onVoiceIntent?.({ kind: "cancel" });
+      break;
+    case "erase":
+      send({ type: "CANCEL" });
+      send({ type: "START" });
+      // Notify the consumer: the machine restart only clears the live
+      // segment; the chat layer holds the rest of the in-progress message
+      // (composer input, persisted draft) and must erase it too.
+      optionsRef.current?.onVoiceIntent?.({ kind: "erase" });
+      break;
   }
 }
 
