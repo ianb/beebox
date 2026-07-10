@@ -79,20 +79,33 @@ Reused (cited) vs rebuilt, per sub-problem:
   `transcribe-captures.ts:144-154`. **Reuse as-is** (the CLI command
   retires; the service call moves into preparation).
 - **Timeline assembly** — `assembleSession` is deterministic (no model
-  calls; algorithm in `assemble-timeline.ts:7-15`) and already takes
-  `inboxDir` as a parameter (`assemble-timeline-helpers.ts:246-299`) —
-  the only inbox coupling is the caller passing
+  calls; algorithm in `src/core/commands/assemble-timeline.ts:7-15`)
+  and already takes `inboxDir` as a parameter
+  (`src/core/commands/assemble-timeline-helpers.ts:246-299`) — the only
+  inbox coupling is the caller passing
   `getBoxDir(ctx.boxRoot, "inbox")` (`assemble-timeline.ts:26`).
-  **Reuse the helpers directly** against the capture's actual
-  directory; the CLI command retires.
+  **Reuse the helpers with one required change** (Codex review finding):
+  `assembleSession` refuses to assemble until every image card is
+  `analyzed` or `invalid` (`allImagesAnalyzed`,
+  `assemble-timeline-helpers.ts:109-116`, gate at `:274-283`), and new
+  image cards default to `status: new` — since this plan drops the
+  describe-images pass, the relocated helper drops that gate (images
+  interleave by `filename.captured` regardless of analysis status).
+  The CLI command retires.
 - **Server-injected chat message** — `POST /api/chat/self-note`
   (`chat-send-routes.ts:300-339`): resolve target
   (`requestedSession ?? getMostActive`), busy-check,
   `enqueue`/`send`. The Telegram pool's `handleScheduleFire`
   (`src/core/chat/session/pool.ts:266-291`) is the fully
-  requestless precedent. **Reuse the mechanism** for capture delivery —
-  but not `<self-note>` semantics, which are documented as "not user
-  input … no one is waiting on a reply"
+  requestless precedent. **Precedent, not reuse** (Codex review
+  finding): self-note 404s with no live/most-active session, emits no
+  `chat-user-message` event, and fire-and-forgets `send()` failures
+  after replying OK — capture delivery is a new core function
+  (Track 3) that shares the enqueue/send semantics but creates a
+  session when needed, emits the events the pending UI consumes, and
+  records delivery failure retryably. And not `<self-note>`
+  *semantics* either — those are documented as "not user input … no
+  one is waiting on a reply"
   (`src/core/chat/session/prompts.ts:88`); a capture is the opposite.
 - **Pending user message UI** — `SessionEntry.pending`
   (`src/frontend/src/api-chat.ts:70-77`), optimistic entries
@@ -213,9 +226,13 @@ correct headers preserved).
 **What.** A server-side `prepareCaptureSession(sessionId)` step: concat
 segments → write the capture card + child audio/image/file cards into
 `tmp-capture/` under the chat's area → HQ-transcribe each clip with
-word timestamps → write `.timing.json` sidecars → run the (relocated)
-`assembleSession` helpers to build the timeline body → commit → inject
-the chat message → emit completion events.
+word timestamps → write `.timing.json` sidecars → run the (relocated,
+image-gate-removed) `assembleSession` helpers to build the timeline
+body → **validate the written cards** (today's `finalizeSession`
+writes and commits with no validation boundary,
+`capture-finalize.ts:266-289`; a validation failure here is
+`failed:assemble`, loud) → commit → inject the chat message → emit
+completion events.
 
 **Why.** This is the boxholder's stated model: "prepare a full capture
 document, then submit that to chat as a message pointing to the
@@ -232,9 +249,15 @@ service (#10).
   `cb mv` them; per-card commit message
   `"Capture: <basename>"`, trailer `Created-By: capture`, matching
   `commitSession`'s current trailer, `capture-finalize.ts:198-213`).
-- **Delivery:** the message goes through the self-note *mechanism*
-  (`chat-send-routes.ts:300-339`: resolve target → busy? `enqueue` :
-  `send`) but as a first-class user message with a new wrapper:
+- **Delivery:** a new core function `deliverCaptureMessage()` —
+  modeled on the self-note route's resolve target → busy? `enqueue` :
+  `send` shape (`chat-send-routes.ts:300-339`) but: creates a session
+  via `registry.createNew()` when no target resolves (self-note 404s
+  there), emits `chat-user-message`/completion events for the pending
+  UI, awaits the non-busy `send()` and records failure as
+  `failed:deliver` on the staging session (retryable) instead of
+  fire-and-forget. The message is a first-class user message with a
+  new wrapper:
 
   ```
   <capture doc="tmp-capture/capture-20260709T1432-ab3f.capture-session.card"
@@ -285,8 +308,9 @@ transcript immediately and resolves when delivery lands.
 
 **Why.** This is the design's core move (input-widget.md, "Capture
 mode"): one input surface, capture as a stance. The `/capture` page is
-currently unreachable anyway (no nav link — the route at
-`src/frontend/src/router.tsx:112-116` is the only reference).
+nearly unreachable today — no AppNav link; the one live link is the
+box-selection tiles (`src/frontend/src/components/BoxSelectionTiles.tsx:40-52`),
+which Track 4 re-points at the chat-with-capture-mode deep link.
 
 **Direction.**
 - Mode state lives beside the emission store (frame state, not URL);
@@ -299,10 +323,14 @@ currently unreachable anyway (no nav link — the route at
   home-screen shortcuts).
 - **Pending message:** a third pending variant with the
   `SessionEntry.pending` visual language (opacity-60 bubble +
-  caption — `user-message.tsx:337-354`) but keyed by staging session
-  id and fed by server events: caption progresses
-  "uploading… / preparing… / transcribing…" from bus events; resolves
-  when the delivered user message shows up in history (reuse the
+  caption — `user-message.tsx:337-354`) but **server-derived, not
+  client-only** (Codex review finding: today's pending entries are
+  in-memory only, `chat-actions.ts:26-49` — a reload would silently
+  drop the bubble while preparation runs). The staging store exposes a
+  query (tRPC) listing sessions in `preparing`/`failed:*` state for a
+  chat; the pending bubble renders from that query + live bus events,
+  so it survives reload/another tab/server restart. Resolution:
+  the delivered user message shows up in history (reuse the
   `reconcilePending` matching idea, `chat-shared.ts:61-100`, matching
   on the wrapper's `doc=` path rather than text). Failure state renders
   a retry affordance that re-POSTs finalize (idempotent).
@@ -329,7 +357,18 @@ survives *invisibly* — the current design loses orphaned tmpdir
 sessions silently (#4's exact target). The boxholder explicitly asked
 for continue-or-submit-partial.
 
-**Direction.** Resume = reopen the staging session; a new recording is
+**Direction.** Be honest about the loss window (Codex review finding):
+the sweep can only deliver what reached the server — chunks held in
+the browser's failed-upload maps (`useCaptureUploads.ts:67-69`) and
+the tail since the last `dataavailable` are client-side only. Two
+mitigations land with this track: capture mode shortens the recorder
+timeslice from today's 20s (`src/frontend/src/lib/audio/recorder.ts:71`)
+to ~5s, and every stop path (done, cancel-into-resume, mode exit)
+awaits the final `dataavailable` before releasing the recorder
+(today's non-Done paths call plain `stop()` without awaiting it,
+`useCaptureSession.ts:74-78,155-158`). A partial capture's wrapper
+states the bound ("recording may be missing its final seconds").
+Resume = reopen the staging session; a new recording is
 a new segment (Track 2 makes this sound). The sweep runs on the server
 alongside other webapp periodic work using `startAwakeTimeout`
 (`src/lib/awake-timeout.ts` — a plain timer would fire instantly after
@@ -404,11 +443,15 @@ process-captures.procedure.card` and any pending
 `config/schedules/process-captures.scheduled-script.card` trigger on
 every initialized box, now referencing deleted `cb` commands (a
 wakeup-time failure). Migration (per `docs/migrations.md` runbook
-style): a migration step that removes both files when the procedure
-card's hash matches a known shipped version (the
-`config/template-versions.json` machinery,
-`install-template-file.ts:303-390`, already tracks this), and parks a
-boxholder-modified copy instead of deleting it. In-flight inbox
+style): an explicit migration that removes both files when the
+procedure card's content hash matches an **enumerated list of shipped
+versions** carried in the migration itself — not the
+`template-versions.json` ledger, which (Codex review finding, matching
+known prod state) is sparse on real boxes and doesn't cover this
+pruning case; `installTemplateFile` can overwrite or park, never
+prune (`install-template-file.ts:303-390`). Enumerate the field hashes
+the same way template rollouts do (`priorStockHashes` style). A
+boxholder-modified copy parks instead of deleting. In-flight inbox
 capture-session cards (including the prod retry-loop victim,
 `issues/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
 are *not* auto-migrated: they stay in inbox as ordinary cards for the
@@ -436,7 +479,8 @@ handling.
 |---|---|---|---|
 | Chunk/photo upload fails after retries mid-capture | Track 1 route doctest (5xx fixture) | Failed-payload registry + banner retry (pattern from `useCaptureUploads.ts:67-69`) | Clear (banner) |
 | Browser crashes mid-capture | Track 5 sweep doctest | Abandonment sweep → partial capture delivered with `partial="1"` | Clear (marked partial in chat) |
-| Crash *mid-recording* truncates the active segment | Concat doctest with truncated tail chunk | Header chunk uploads first; decodable prefix; per-clip transcribe errors don't abort the session (pattern: `transcribe-captures.ts:160-176`) | Clear (clip marked failed) |
+| Crash *mid-recording* truncates the active segment | Concat doctest with truncated tail chunk | Header chunk uploads first; decodable prefix *of uploaded chunks* — tail since last `dataavailable` is lost (bounded by the ~5s timeslice, Track 5); per-clip transcribe errors don't abort the session (pattern: `transcribe-captures.ts:160-176`) | Clear (partial wrapper states the bound) |
+| Reload/second tab while preparation runs | Track 4 doctest (query returns preparing session) | Pending bubble is server-derived (staging-state query), not in-memory | Clear (bubble survives) |
 | Transcription provider down at preparation | Track 3 doctest (fake service failure) | Deliver with `transcription-failed="1"`, clips left `status: new`, agent instructed it can rerun | Clear |
 | Server restarts during preparation | Track 3 idempotency doctest | `session.json` preparation state; resume on startup; steps check own outputs | Clear (resumes) |
 | Target chat session no longer exists at delivery | Route doctest | Fall back `targetSessionId → getMostActive → createNew` | Clear (message still lands) |
