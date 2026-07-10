@@ -26,6 +26,7 @@ import { stageAndCommitPaths } from "../lib/git.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
 import { getBoxTimeISO } from "../lib/time.js";
+import { invariant } from "../lib/invariant.js";
 import type { TelegramService } from "../services/telegram.js";
 import { createTelegramService } from "../services/telegram.js";
 import type {
@@ -219,7 +220,9 @@ class TelegramConnector implements Connector {
       // Persist offset + any new chat mappings after each batch as a delta into
       // fresh state; the returned merged state becomes the working copy so it
       // now reflects any concurrent writes too.
-      const batchMax = updates[updates.length - 1]!.update_id;
+      const lastUpdate = updates[updates.length - 1];
+      invariant(lastUpdate !== undefined, "updates is non-empty here (checked above)");
+      const batchMax = lastUpdate.update_id;
       working = await updateTransientState<TelegramState>({
         boxRoot: this.boxRoot,
         connectorName: "telegram",

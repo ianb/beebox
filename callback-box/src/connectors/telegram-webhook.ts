@@ -9,7 +9,6 @@ import * as path from "node:path";
 import { stageAndCommitPaths } from "../lib/git.js";
 import { updateTransientState } from "./transient-state.js";
 import { createChatJob } from "./chat-utils.js";
-import { extractMessage } from "./telegram-helpers.js";
 import { processUpdateToThread, type IngestResult } from "./telegram-ingest.js";
 import type { TelegramState, TelegramUpdate } from "./telegram-types.js";
 
@@ -61,10 +60,9 @@ export async function processWebhookUpdate(opts: {
   // commits paths it names, so it must be listed here too.
   if (result.personCard) filesToStage.push(result.personCard);
 
-  const extracted = extractMessage(update)!;
   await stageAndCommitPaths(boxRoot, {
     paths: filesToStage,
-    message: `Telegram: ${extracted.senderName} in ${path.basename(path.dirname(result.threadRelPath))}`,
+    message: `Telegram: ${result.senderName} in ${path.basename(path.dirname(result.threadRelPath))}`,
     trailers: { "Pulled-By": "telegram-webhook" },
   });
 

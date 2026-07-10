@@ -31,6 +31,7 @@ export interface IngestResult {
    */
   personCard: string | null;
   personRef: string | null;
+  senderName: string;
 }
 
 /**
@@ -117,5 +118,5 @@ export async function processUpdateToThread(opts: {
     },
   });
 
-  return { threadRelPath, newThread, personFile, personCard, personRef };
+  return { threadRelPath, newThread, personFile, personCard, personRef, senderName };
 }

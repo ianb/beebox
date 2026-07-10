@@ -31,6 +31,7 @@ import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
 import { attachDirFor } from "../shared/attach-path.js";
+import { invariant } from "../lib/invariant.js";
 
 // Ensure handlers are registered
 import "./drive-handler-sheets.js";
@@ -54,10 +55,15 @@ async function readDriveIdFromCard(cardPath: string): Promise<string | null> {
     const content = await fs.readFile(cardPath, "utf-8");
     // YAML frontmatter form: `drive-id: value` (optionally quoted)
     const yamlMatch = /^drive-id:\s*"?([^\n"]+?)"?\s*$/m.exec(content);
-    if (yamlMatch) return yamlMatch[1]!;
+    if (yamlMatch) {
+      invariant(yamlMatch[1] !== undefined, "capture group 1 is non-optional in yamlMatch");
+      return yamlMatch[1];
+    }
     // Legacy XML form (kept while older boxes still have unmigrated cards)
     const xmlMatch = /drive-id="([^"]+)"/.exec(content);
-    return xmlMatch ? xmlMatch[1]! : null;
+    if (!xmlMatch) return null;
+    invariant(xmlMatch[1] !== undefined, "capture group 1 is non-optional in xmlMatch");
+    return xmlMatch[1];
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn(`[google-drive] Could not read drive-id from ${cardPath}, skipping: ${e instanceof Error ? e.message : String(e)}`);

@@ -9,6 +9,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
+import { invariant } from "../lib/invariant.js";
 
 class InvalidTimespanError extends Error {
   constructor(input: string) {
@@ -341,7 +342,8 @@ export function parseTimespan(input: string): number {
   if (!match) {
     throw new InvalidTimespanError(input);
   }
-  const n = parseInt(match[1]!, 10);
+  invariant(match[1] !== undefined, "capture group 1 is non-optional in the timespan regex");
+  const n = parseInt(match[1], 10);
   const unit = (match[2] || "d").toLowerCase();
   const DAY = 24 * 60 * 60 * 1000;
   switch (unit) {

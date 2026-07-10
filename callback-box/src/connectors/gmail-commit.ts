@@ -3,6 +3,8 @@
  * body summarizing the threads pulled in a sync (new vs. updated, capped).
  */
 
+import { invariant } from "../lib/invariant.js";
+
 export interface ThreadNote {
   subject: string;
   from: string;
@@ -12,7 +14,9 @@ export interface ThreadNote {
 
 function displayName(from: string): string {
   const match = from.match(/^(.+?)\s*<[^>]+>$/);
-  return match ? match[1]!.trim() : from;
+  if (!match) return from;
+  invariant(match[1] !== undefined, "capture group 1 is non-optional in the display-name regex");
+  return match[1].trim();
 }
 
 export function buildGmailCommitMessage(notes: ThreadNote[], fileCount: number): string {
