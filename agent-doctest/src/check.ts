@@ -108,7 +108,7 @@ function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions;
   const result = compare(actual, opts.expected);
   if (result.pass) return result.extractions;
 
-  const err = new CheckError(result.message, { diff: result.diff!, found: result.actual, wanted: result.expected });
+  const err = new CheckError(result.message, { diff: result.diff, found: result.actual, wanted: result.expected });
   if (Error.captureStackTrace) {
     Error.captureStackTrace(err, opts.caller);
   }
@@ -117,23 +117,24 @@ function throwIfFailed(actual: unknown, opts: { expected: string | CheckOptions;
 
 // ── Inspect ──────────────────────────────────────────────────────────────────
 
-/**
- * Result of comparing actual vs expected, without throwing.
- */
-export interface CheckResult {
-  /** Whether the check passed */
-  pass: boolean;
+interface CheckResultBase {
   /** The serialized actual value */
   actual: string;
   /** The expected string (after normalization if applicable) */
   expected: string;
-  /** Diff text on failure, null on pass */
-  diff: string | null;
   /** Full message (includes label and diff) on failure, empty on pass */
   message: string;
   /** Captured wildcard values (positional + named) */
   extractions: Extractions;
 }
+
+/**
+ * Result of comparing actual vs expected, without throwing. A discriminated
+ * union on `pass` — `diff` is only present (and only meaningful) on failure.
+ */
+export type CheckResult =
+  | (CheckResultBase & { pass: true; diff: null })
+  | (CheckResultBase & { pass: false; diff: string });
 
 /**
  * Same as check() but returns a result instead of throwing.
