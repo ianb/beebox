@@ -21,12 +21,16 @@ import { MARKDOWN_KIND, type SearchDoc } from "./extract.js";
 const BOOST = { contains: 3, title: 2 } as const;
 
 /**
- * Vector-half cosine cutoff for hybrid search. Tuned while dogfooding against
- * the large box copy (see docs/plans/semantic-search.md): Orama's 0.8 default
- * filters out nearly every real OpenAI-embedding match — cosine similarities
- * for related texts run 0.2-0.5 — so leaving the default would make the vector
- * half silently contribute nothing. Fusion weights stay at Orama's 0.5/0.5
- * default (we deliberately do NOT pass `hybridWeights`).
+ * Vector-half cosine cutoff for hybrid search. Orama's 0.8 default filters
+ * out nearly every real OpenAI-embedding match, which would make the vector
+ * half silently contribute nothing. Validated July 2026 (real
+ * text-embedding-3-small@512, 20-card corpus, 12 vocabulary-mismatch
+ * queries — see docs/plans/semantic-search.md § Rollout): query↔target
+ * `contains` cosines ran 0.467-0.682, off-target median 0.161 / max 0.470,
+ * so 0.35 passes every true match with margin while excluding most noise.
+ * Hybrid ranked the intended card top-1 on 10/12 conceptual queries vs
+ * text-only's 3/12. Fusion weights stay at Orama's 0.5/0.5 default (we
+ * deliberately do NOT pass `hybridWeights`).
  */
 const SIMILARITY = 0.35;
 

@@ -497,6 +497,19 @@ main until the plan completes and the boxholder says ship.
 
 ## Rollout shape
 
+- **Chunk-5 measurements (July 2026, recorded post-validation)**:
+  - *Scale* (2,000 embedded + 200 plain cards, fake embedder, M-series
+    laptop): cold build 0.7s → 1.9s with embeddings; index 7.6 MB →
+    48.5 MB (21.5 KB/embedded doc — matching the review's estimate);
+    restore-only 45ms → 322ms; per-search ~386ms text / ~430ms hybrid,
+    restore-bound. The restore cost repeats on every search (no
+    in-process cache) — acceptable now, and the compact-persistence
+    lever in NOT-in-scope is the recorded mitigation if it grows.
+  - *Relevance* (real text-embedding-3-small@512, 20 cards, 12
+    vocabulary-mismatch queries): hybrid top-1 on 10/12 vs text-only
+    3/12 (both misses rank 1); query↔target cosines 0.467-0.682,
+    off-target median 0.161 / max 0.470 — `SIMILARITY = 0.35` passes
+    every true match with margin. Weights stay 0.5/0.5.
 - **Test posture**: doctests land with their chunks (the shipped plan's
   posture for regression-shaped risks): the service doctest (chunk 1),
   the refresh/degradation/round-trip doctests (chunk 3), the query-mode
