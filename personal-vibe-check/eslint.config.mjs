@@ -647,6 +647,24 @@ export function vibeCheck(options) {
         // (see callback-box/eslint.config.mjs for the model), not here —
         // this preset has no opinion on any one project's route layout.
         "@typescript-eslint/return-await": "error",
+        // `x!` silences the compiler instead of proving non-null; a wrong
+        // assertion becomes a runtime crash with no type-checker warning.
+        // Burned down 2026-07-10: 190 sites converted to real narrowing
+        // (optional chaining, explicit guards, or a typed assertion helper)
+        // across callback-box (backend + frontend), callback-clerk, and
+        // agent-doctest.
+        "@typescript-eslint/no-non-null-assertion": "error",
+        // Flags conditions/optional-chains/binary-expressions that TypeScript's
+        // types prove can never be false (or never true) — usually a stale
+        // guard left over after a type narrowed, or a check that was never
+        // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
+        // across callback-box (backend + frontend), callback-clerk, and
+        // agent-doctest; 3 sites kept a justified single-line
+        // eslint-disable-next-line (agent-doctest/src/check.ts and
+        // callback-box frontend useSSRMachine.ts, router.tsx) where the
+        // condition is genuinely defensive against a case the type system
+        // can't see (e.g. a cast at a parse/runtime boundary).
+        "@typescript-eslint/no-unnecessary-condition": "error",
       },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict

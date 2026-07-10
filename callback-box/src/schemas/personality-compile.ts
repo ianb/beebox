@@ -44,7 +44,7 @@ function formatBoxholders(boxholders: Boxholder[]): string {
   });
   if (parts.length === 0) return "";
   if (parts.length === 1) return `Your boxholder is ${parts[0]}.`;
-  const last = parts[parts.length - 1]!;
+  const last = parts.at(-1) ?? "";
   const rest = parts.slice(0, -1).join(", ");
   return `Your boxholders are ${rest}, and ${last}.`;
 }

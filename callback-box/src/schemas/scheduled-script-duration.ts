@@ -33,12 +33,12 @@ export class InvalidBudgetError extends Error {
  */
 export function parseDuration(str: string): number {
   const match = str.match(/^(\d+\.?\d*)\s*([dhmsw])$/);
-  if (!match) {
+  const [, valueStr, unit] = match ?? [];
+  if (valueStr === undefined || unit === undefined) {
     throw new InvalidDurationError(str);
   }
 
-  const value = parseFloat(match[1]!);
-  const unit = match[2]!;
+  const value = parseFloat(valueStr);
 
   switch (unit) {
     case "s":
