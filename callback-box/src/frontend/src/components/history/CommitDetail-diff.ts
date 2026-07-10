@@ -16,9 +16,7 @@ export interface DiffFile {
 function extractFilePath(line: string): string {
   const match = line.match(/^diff --git a\/(.+) b\/(.+)$/);
   if (!match) return line;
-  const path = match[2];
-  invariant(path !== undefined, "diff --git line matched but the 'b/' path group is missing");
-  return path;
+  return match[2];
 }
 
 interface FinalizeRenameParams {

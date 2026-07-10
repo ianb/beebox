@@ -188,7 +188,7 @@ function isLoneImageReactChildren(children: ReactNode): boolean {
   let imgCount = 0;
   for (const child of arr) {
     if (typeof child === "string" && child.trim() === "") continue;
-    if (typeof child === "object" && child !== null && "type" in child) {
+    if (typeof child === "object" && "type" in child) {
       const el = child as React.ReactElement;
       const t = el.type as { displayName?: string; name?: string };
       const name = t.displayName ?? t.name ?? "";

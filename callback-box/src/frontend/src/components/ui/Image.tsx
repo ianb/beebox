@@ -251,7 +251,7 @@ export function Image(props: ImageProps) {
   const primaryFailed = failedImageUrls.has(src);
   const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(fallbackSrc);
   const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
-  const displaySrc = usingFallback && fallbackSrc !== undefined ? fallbackSrc : src;
+  const displaySrc = usingFallback ? fallbackSrc : src;
   const errored = primaryFailed && (fallbackSrc === undefined || fallbackFailed);
   const handleError = () => {
     failedImageUrls.add(displaySrc);

@@ -152,19 +152,17 @@ export function extractImageFiles(
   if (!dt) return [];
   const out: File[] = [];
   // Prefer files array (covers drag-drop cleanly)
-  if (dt.files && dt.files.length > 0) {
+  if (dt.files.length > 0) {
     for (const f of Array.from(dt.files)) {
       if (f.type.startsWith("image/")) out.push(f);
     }
     if (out.length > 0) return out;
   }
   // Fallback to items (covers clipboard paste on Chrome)
-  if (dt.items) {
-    for (const item of Array.from(dt.items)) {
-      if (item.kind === "file" && item.type.startsWith("image/")) {
-        const f = item.getAsFile();
-        if (f) out.push(f);
-      }
+  for (const item of Array.from(dt.items)) {
+    if (item.kind === "file" && item.type.startsWith("image/")) {
+      const f = item.getAsFile();
+      if (f) out.push(f);
     }
   }
   return out;

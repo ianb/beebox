@@ -71,7 +71,11 @@ export function ExternalDocument({
 }) {
   const filePath = decodeURIComponent(new URL(href).pathname);
   const fileData: FileData = { path: filePath, content: decodeBase64Utf8(envelope.contentBase64) };
-  const [renderer] = getRenderers(filePath, fileData);
+  // getRenderers() can return an empty array (no renderer matches); the frontend
+  // tsconfig lacks noUncheckedIndexedAccess, so `[0]`/destructuring alone would
+  // type `renderer` as always-defined. `.at()` is typed `T | undefined`
+  // regardless of that flag, keeping this check honest.
+  const renderer = getRenderers(filePath, fileData).at(0);
   if (renderer === undefined) {
     return <Pre boxed scroll="lg">{fileData.content}</Pre>;
   }

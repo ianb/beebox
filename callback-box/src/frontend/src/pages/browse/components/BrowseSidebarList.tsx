@@ -127,7 +127,7 @@ export function BrowseSidebarList({
         );
       })}
 
-      {(data.files ?? []).map((file) => (
+      {data.files.map((file) => (
         <button
           key={file.relativePath}
           onClick={() => {
@@ -146,7 +146,7 @@ export function BrowseSidebarList({
         </button>
       ))}
 
-      {data.dirs.length === 0 && data.cards.length === 0 && (data.files ?? []).length === 0 ? (
+      {data.dirs.length === 0 && data.cards.length === 0 && data.files.length === 0 ? (
         <div className="p-4 text-warm-600 text-sm text-center">
           Empty directory
         </div>

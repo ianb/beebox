@@ -64,7 +64,10 @@ function formatFraction(f: Fraction): ReactNode {
   const remN = n % d;
   if (remN === 0) return `${sign}${whole}`;
   const fracKey = `${remN}/${d}`;
-  const unicodeFrac = UNICODE_FRACTIONS[fracKey];
+  // Most fracKeys have no Unicode glyph; the frontend tsconfig lacks
+  // noUncheckedIndexedAccess, so a plain index read would type this as
+  // always-defined. Object.hasOwn keeps the miss case honest.
+  const unicodeFrac = Object.hasOwn(UNICODE_FRACTIONS, fracKey) ? UNICODE_FRACTIONS[fracKey] : undefined;
   if (unicodeFrac !== undefined) {
     return whole > 0 ? `${sign}${whole} ${unicodeFrac}` : `${sign}${unicodeFrac}`;
   }

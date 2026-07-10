@@ -14,7 +14,7 @@ export function GmailFiltersSection() {
   const boxConfigQuery = trpc.admin.boxConfig.useQuery();
   const gmailConfigQuery = trpc.admin.gmailConfig.useQuery();
 
-  const enabled = boxConfigQuery.data?.googleServices?.gmail === true;
+  const enabled = boxConfigQuery.data?.googleServices.gmail === true;
   const initialError =
     boxConfigQuery.error?.message ?? gmailConfigQuery.error?.message ?? null;
 

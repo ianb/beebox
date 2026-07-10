@@ -146,7 +146,7 @@ export function HistoryBrowser({
           onLoadMore={() => void fetchNextPage()}
           onFilterSession={handleFilterSession}
           activeSession={filter.session}
-          hasMore={hasNextPage ?? false}
+          hasMore={hasNextPage}
           loading={loading}
         />
       </Sidebar>

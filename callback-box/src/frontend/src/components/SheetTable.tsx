@@ -67,9 +67,12 @@ export function SheetTable({ rows }: SheetTableProps) {
                 {rowIdx + 1}
               </td>
               {Array.from({ length: maxCols }, (_, colIdx) => {
-                const cell = row[colIdx] ?? "";
+                // `?? ""` covers two real absences: a null CellValue cell, and
+                // a ragged row shorter than maxCols (`.at()`, unlike `[colIdx]`,
+                // is typed `T | undefined` even without noUncheckedIndexedAccess).
+                const cell = row.at(colIdx) ?? "";
                 const formula = isFormulaCell(cell);
-                const display = formula ? cell.v : String(cell ?? "");
+                const display = formula ? cell.v : String(cell);
                 return (
                   <td
                     key={colIdx}

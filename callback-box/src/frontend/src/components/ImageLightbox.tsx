@@ -30,7 +30,10 @@ interface ImageLightboxProps {
 export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLightboxProps) {
   const total = images.length;
   const safeIndex = total === 0 ? 0 : ((index % total) + total) % total;
-  const current = images[safeIndex];
+  // images can be empty; the frontend tsconfig lacks noUncheckedIndexedAccess,
+  // so `images[safeIndex]` would type `current` as always-defined. `.at()` is
+  // typed `T | undefined` regardless of that flag, keeping the guard honest.
+  const current = images.at(safeIndex);
   const hasMany = total > 1;
 
   useEffect(() => {

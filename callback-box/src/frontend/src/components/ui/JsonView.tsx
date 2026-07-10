@@ -22,6 +22,19 @@ export function JsonView({ value, className }: JsonViewProps) {
   );
 }
 
+/**
+ * TS types `JSON.stringify` as always returning `string`, but at runtime it
+ * returns `undefined` for an `undefined` input — a known gap in the lib types.
+ * The cast makes that possibility honest for the one caller (a bare scalar
+ * fallback) that can actually hit it. Takes `unknown` because TS can't narrow
+ * a plain `unknown` value down to a smaller union by negation (unlike a real
+ * union type), so the caller's typeof/Array.isArray checks don't narrow it
+ * for us here.
+ */
+function stringifyScalar(value: unknown): string {
+  return (JSON.stringify(value) as string | undefined) ?? "undefined";
+}
+
 function JsonNode({ value }: { value: unknown }): ReactNode {
   if (typeof value === "string") {
     return <span className="whitespace-pre-wrap break-all text-warm-800">{value}</span>;
@@ -33,7 +46,7 @@ function JsonNode({ value }: { value: unknown }): ReactNode {
     return <JsonObject entries={Object.entries(value)} />;
   }
   // number | boolean | null | undefined — show literally, colored apart from strings.
-  return <span className="text-info-dark break-all">{JSON.stringify(value) ?? "undefined"}</span>;
+  return <span className="text-info-dark break-all">{stringifyScalar(value)}</span>;
 }
 
 function JsonObject({ entries }: { entries: [string, unknown][] }) {

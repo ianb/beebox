@@ -103,7 +103,7 @@ function BoxNotFound({ slug, boxes }: { slug: string; boxes: KnownBox[] }) {
   // first segment is the worktree name. The default WorktreeCreate setup only
   // clones `test1` into a worktree (as `test1-<name>`), so URLs copied from
   // /main/ that reference other boxes won't resolve here.
-  const base = (import.meta.env.BASE_URL ?? "/").replace(/\/$/, "");
+  const base = import.meta.env.BASE_URL.replace(/\/$/, "");
   const isWorktreeUrl = base !== "";
 
   return (
