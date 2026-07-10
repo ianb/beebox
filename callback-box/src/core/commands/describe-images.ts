@@ -14,9 +14,11 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { renderFrontmatterBlock } from "../../cards/index.js";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -40,10 +42,17 @@ import {
   renameCard,
 } from "./describe-images-card.js";
 
-export interface DescribeImagesArgs {
-  paths: string[];
-  noRename?: boolean;
-}
+/**
+ * Arguments for the describe-images command. `paths` is optional here because
+ * the command owns its presence check (its own error text); the schema is the
+ * type boundary.
+ */
+const DescribeImagesArgsSchema = z.object({
+  /** Image files or image cards to analyze */
+  paths: z.array(z.string()).optional(),
+  /** Skip the title-based card rename */
+  noRename: z.boolean().optional(),
+});
 
 /** Resolve each input path to a { cardPath, imagePath } batch item, warning on skips. */
 async function resolveItems(
@@ -241,7 +250,7 @@ async function executeDescribeImages(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const { paths, noRename } = args as unknown as DescribeImagesArgs;
+  const { paths, noRename } = parseCommandArgs(args, DescribeImagesArgsSchema);
 
   if (!paths || paths.length === 0) {
     return { success: false, error: "At least one image path is required" };
