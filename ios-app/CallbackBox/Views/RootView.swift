@@ -7,7 +7,8 @@ struct RootView: View {
     @State private var boxPendingRemoval: PairedBox?
     @State private var visibleChatSessionID: String?
     @State private var visibleChatBoxID: PairedBox.ID?
-    @State private var pendingNativeEmission: NativeChatEmission?
+    @State private var pendingNativeEmissions: [NativeChatEmission] = []
+    @State private var deliveredNativeEmissionID: NativeChatEmission.ID?
 
     var body: some View {
         NavigationStack {
@@ -17,21 +18,23 @@ struct RootView: View {
                     VStack(spacing: 0) {
                         ChatWebView(
                             box: box,
-                            pendingEmission: pendingNativeEmission,
+                            pendingEmissions: pendingNativeEmissions,
                             onSessionChange: { sessionID in
                                 visibleChatBoxID = box.id
                                 visibleChatSessionID = sessionID
                             },
                             onEmissionHandled: { emissionID in
-                                if pendingNativeEmission?.id == emissionID {
-                                    pendingNativeEmission = nil
-                                }
+                                pendingNativeEmissions.removeAll { $0.id == emissionID }
+                                deliveredNativeEmissionID = emissionID
                             }
                         )
                             .id(box.id)
                             .ignoresSafeArea(edges: .bottom)
-                        NativeComposerView(box: composerBox) { emission in
-                            pendingNativeEmission = emission
+                        NativeComposerView(
+                            box: composerBox,
+                            deliveredEmissionID: deliveredNativeEmissionID
+                        ) { emission in
+                            pendingNativeEmissions.append(emission)
                         }
                     }
                 } else {
@@ -56,7 +59,8 @@ struct RootView: View {
             .onChange(of: store.selectedBox?.id) { _, newBoxID in
                 visibleChatBoxID = newBoxID
                 visibleChatSessionID = nil
-                pendingNativeEmission = nil
+                pendingNativeEmissions = []
+                deliveredNativeEmissionID = nil
             }
             .alert("Remove Box?", isPresented: removeAlertBinding) {
                 Button("Cancel", role: .cancel) {
@@ -110,11 +114,6 @@ private struct AppChromeMenu: View {
             }
 
             Section {
-                Button {
-                    showingPairSheet = true
-                } label: {
-                    Label("Pair Box", systemImage: "link.badge.plus")
-                }
                 Button {
                     showingPairSheet = true
                 } label: {
