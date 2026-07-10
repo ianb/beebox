@@ -9,6 +9,10 @@
  * Send commits the text as a narration `<speech>` message — the audio is gone
  * after a drop, so this is the realtime transcript taking the place of the HQ
  * pass, exactly the design's documented HQ-failure fallback.
+ *
+ * Continue reopens the mic with the recovered text as the start of the
+ * message: the text moves into the composer (the prior-input slot the next
+ * voice send folds in) and dictation restarts.
  */
 
 import { useEffect, useState } from "react";
@@ -24,9 +28,10 @@ export function RecoveredDictation(props: {
   draft: DictationDraft;
   sessionId: string | null;
   onSend: () => void;
+  onContinue: () => void;
   onDiscard: () => void;
 }) {
-  const { draft, sessionId, onSend, onDiscard } = props;
+  const { draft, sessionId, onSend, onContinue, onDiscard } = props;
   // Age is derived from the wall clock, so compute it in an effect (Date.now
   // is impure and can't run during render). The card is short-lived — the user
   // sends or discards promptly — so it needn't tick.
@@ -59,6 +64,7 @@ export function RecoveredDictation(props: {
           </Text>
           <Row gap="sm">
             <Button intent="secondary" size="sm" onClick={onDiscard}>Discard</Button>
+            <Button intent="secondary" size="sm" onClick={onContinue}>Continue</Button>
             <Button intent="primary" size="sm" onClick={onSend}>Send</Button>
           </Row>
         </Row>

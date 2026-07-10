@@ -5,8 +5,10 @@
  * (for --json and API consumers) is the full envelope from searchBox.
  */
 
+import { z } from "zod";
 import {
   registerCommand,
+  parseCommandArgs,
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
@@ -18,11 +20,33 @@ import {
 } from "../search/query.js";
 import { EmbeddingsKeyError } from "../search/embeddings-key.js";
 
+/**
+ * Arguments for the search command. `query` is optional here because the
+ * command owns its presence check (friendlier error than a schema failure);
+ * everything else is a type boundary — wrong-typed values fail loudly as
+ * CommandArgsError instead of being silently dropped.
+ */
+const SearchArgsSchema = z.object({
+  /** The search query */
+  query: z.string().optional(),
+  /** Restrict to these card types */
+  kinds: z.array(z.string()).optional(),
+  /** Restrict to paths starting with this box-relative prefix */
+  path: z.string().optional(),
+  /** Maximum results to return */
+  limit: z.number().optional(),
+  /** Discard and rebuild the index before searching */
+  rebuild: z.boolean().optional(),
+  /** Force text ranking, or force hybrid (fails loudly when unavailable) */
+  mode: z.enum(["text", "hybrid"]).optional(),
+});
+
 async function executeSearch(
   ctx: CommandContext,
   args: Record<string, unknown>
 ): Promise<CommandResult> {
-  const query = typeof args["query"] === "string" ? args["query"] : "";
+  const parsed = parseCommandArgs(args, SearchArgsSchema);
+  const query = parsed.query ?? "";
   if (query.trim() === "") {
     return { success: false, error: 'a search query is required — e.g. cb search "dentist appointment"' };
   }
@@ -31,25 +55,11 @@ async function executeSearch(
     query,
     onProgress: (message) => ctx.writeLine(message),
   };
-  if (Array.isArray(args["kinds"])) {
-    options.kinds = args["kinds"].filter((k): k is string => typeof k === "string");
-  }
-  if (typeof args["path"] === "string" && args["path"] !== "") {
-    options.pathPrefix = args["path"];
-  }
-  if (typeof args["limit"] === "number") options.limit = args["limit"];
-  if (args["rebuild"] === true) options.rebuild = true;
-
-  const modeRaw = args["mode"];
-  if (modeRaw !== undefined) {
-    if (modeRaw !== "text" && modeRaw !== "hybrid") {
-      return {
-        success: false,
-        error: `unknown --mode "${String(modeRaw)}" — valid modes: hybrid, text`,
-      };
-    }
-    options.mode = modeRaw;
-  }
+  if (parsed.kinds !== undefined) options.kinds = parsed.kinds;
+  if (parsed.path !== undefined && parsed.path !== "") options.pathPrefix = parsed.path;
+  if (parsed.limit !== undefined) options.limit = parsed.limit;
+  if (parsed.rebuild === true) options.rebuild = true;
+  if (parsed.mode !== undefined) options.mode = parsed.mode;
 
   let result;
   try {

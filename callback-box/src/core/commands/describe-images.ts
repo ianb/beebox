@@ -42,10 +42,17 @@ import {
   renameCard,
 } from "./describe-images-card.js";
 
-export interface DescribeImagesArgs {
-  paths: string[];
-  noRename?: boolean;
-}
+/**
+ * Arguments for the describe-images command. `paths` is optional here because
+ * the command owns its presence check (its own error text); the schema is the
+ * type boundary.
+ */
+const DescribeImagesArgsSchema = z.object({
+  /** Image files or image cards to analyze */
+  paths: z.array(z.string()).optional(),
+  /** Skip the title-based card rename */
+  noRename: z.boolean().optional(),
+});
 
 const DescribeImagesArgsSchema = z.object({
   paths: z.array(z.string()).optional(),
