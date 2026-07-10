@@ -11,16 +11,29 @@
  */
 
 import { useMemo } from "react";
+import { z } from "zod";
 
-/** File metadata from the views API; content is fetched on demand. */
-export interface ViewFile {
-  path: string;
-  size: number;
-  mtimeMs: number;
-  /** Version token — echo back via {expect} for conflict-safe writes. */
-  etag: string;
-  gitStatus?: "dirty" | "untracked";
-}
+/**
+ * File metadata from the views API; content is fetched on demand. The zod
+ * schema is the parse boundary for every write/commit response below (the
+ * server hands back untyped JSON); {@link ViewFile} is derived from it.
+ */
+const viewFileSchema = z.object({
+  path: z.string(),
+  size: z.number(),
+  mtimeMs: z.number(),
+  // Version token — echo back via {expect} for conflict-safe writes.
+  etag: z.string(),
+  gitStatus: z.enum(["dirty", "untracked"]).optional(),
+});
+
+export type ViewFile = z.infer<typeof viewFileSchema>;
+
+/** Response bodies of the write/commit routes (see routes/api-files-write.ts). */
+const writeOkBodySchema = z.object({ file: viewFileSchema });
+const conflictBodySchema = z.object({ current: viewFileSchema.nullable().optional() });
+const commitResultSchema = z.object({ committed: z.boolean(), hash: z.string().optional() });
+const errorBodySchema = z.object({ error: z.string().optional() });
 
 /** readFile() failure — carries the path and HTTP status for view code to inspect. */
 export class ViewFileFetchError extends Error {
@@ -133,14 +146,20 @@ function makeHelpers(apiBase: string): ViewFileHelpers {
       body: JSON.stringify({ content }),
     });
     if (resp.status === 412) {
-      const body = await resp.json() as { current?: ViewFile | null };
-      throw new ViewFileConflictError(filePath, { current: body.current ?? null });
+      // A malformed conflict body still means the write lost the version race;
+      // treat an unparseable `current` as "gone" and refresh from null.
+      const parsed = conflictBodySchema.safeParse(await resp.json());
+      const current = parsed.success ? parsed.data.current ?? null : null;
+      throw new ViewFileConflictError(filePath, { current });
     }
     if (!resp.ok) {
       throw new ViewFileWriteError(filePath, { status: resp.status, detail: await errorDetail(resp) });
     }
-    const body = await resp.json() as { file: ViewFile };
-    return body.file;
+    const parsed = writeOkBodySchema.safeParse(await resp.json());
+    if (!parsed.success) {
+      throw new ViewFileWriteError(filePath, { status: resp.status, detail: `malformed write response: ${parsed.error.message}` });
+    }
+    return parsed.data.file;
   };
 
   const commitFile = async (
@@ -155,7 +174,11 @@ function makeHelpers(apiBase: string): ViewFileHelpers {
     if (!resp.ok) {
       throw new ViewFileWriteError(filePath, { status: resp.status, detail: await errorDetail(resp) });
     }
-    return await resp.json() as { committed: boolean; hash?: string };
+    const parsed = commitResultSchema.safeParse(await resp.json());
+    if (!parsed.success) {
+      throw new ViewFileWriteError(filePath, { status: resp.status, detail: `malformed commit response: ${parsed.error.message}` });
+    }
+    return parsed.data;
   };
 
   return {
@@ -172,8 +195,8 @@ function makeHelpers(apiBase: string): ViewFileHelpers {
 
 async function errorDetail(resp: Response): Promise<string> {
   try {
-    const body = await resp.json() as { error?: string };
-    return typeof body.error === "string" ? body.error : "";
+    const parsed = errorBodySchema.safeParse(await resp.json());
+    return parsed.success && parsed.data.error !== undefined ? parsed.data.error : "";
   } catch (_e) {
     return "";
   }

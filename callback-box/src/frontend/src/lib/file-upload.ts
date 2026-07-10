@@ -7,17 +7,21 @@
  * mapping each token to its path on send.
  */
 
+import { z } from "zod";
 import { getApiBase } from "../api";
 import { RequestError } from "./errors";
 import { withMobileAuth } from "./mobile-auth";
 
-export interface UploadedFile {
+/** Server response shape of POST /api/chat/upload-file (see routes/chat-uploads.ts). */
+const uploadedFileSchema = z.object({
   /** Path relative to box root, e.g. "tmp/2026-04-27T15-30-12-987Z_report.pdf". */
-  path: string;
-  originalName: string;
-  size: number;
-  mimetype: string;
-}
+  path: z.string(),
+  originalName: z.string(),
+  size: z.number(),
+  mimetype: z.string(),
+});
+
+export type UploadedFile = z.infer<typeof uploadedFileSchema>;
 
 export async function uploadChatFile(file: File): Promise<UploadedFile> {
   const form = new FormData();
@@ -32,5 +36,10 @@ export async function uploadChatFile(file: File): Promise<UploadedFile> {
       .catch(() => ({ error: response.statusText }));
     throw new RequestError(err.error || "File upload failed");
   }
-  return (await response.json()) as UploadedFile;
+  const parsed = uploadedFileSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    const detail = `File upload returned a malformed response: ${parsed.error.message}`;
+    throw new RequestError(detail);
+  }
+  return parsed.data;
 }

@@ -9,9 +9,11 @@
  */
 
 import { useEffect, useCallback } from "react";
+import { z } from "zod";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
-import { getApiBase, type SessionEntry } from "../../api";
+import { busEventData } from "../../lib/bus-events";
+import { getApiBase } from "../../api";
 import { getTTSClient } from "../../lib/audio/tts-client";
 import { alarm } from "../../lib/audio/earcons";
 import { isTTSVoice } from "../../lib/audio/speech-parsing";
@@ -19,19 +21,26 @@ import { href, toSearch } from "../../lib/routing";
 import { applyFeaturesChange } from "./InteractiveChat-helpers";
 import { fulfillLastAudioRequest } from "../../lib/audio/last-audio";
 import { bumpFileVersion } from "../../lib/file-version";
-import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "./capture-bubble";
 
+/**
+ * Server response shape of GET /api/chat/voice-config (mirrors the backend's
+ * `CompiledSpeakingVoiceSchema`; see routes/chat-audio-routes.ts). `model` is
+ * kept a plain optional string here — the caller re-validates it through
+ * `isTTSVoice` before use, so the frontend needn't import the backend voice enum.
+ */
+const voiceConfigSchema = z.object({
+  model: z.string().optional(),
+  instructions: z.array(z.string()),
+});
+
 // An agent (or anything) wrote a box file. Stamp a fresh cache-buster for that
 // path so chat images at the same URL re-fetch instead of showing the
 // browser's in-memory copy. See lib/file-version.ts.
-function stampFileVersion(eventData: unknown): void {
-  const data = eventData as { path?: string; timestamp?: string };
-  if (data.path && data.timestamp) {
-    bumpFileVersion(data.path, data.timestamp.replace(/\D/g, ""));
-  }
+function stampFileVersion(data: { path: string; timestamp: string }): void {
+  bumpFileVersion(data.path, data.timestamp.replace(/\D/g, ""));
 }
 
 /** True when an event tagged with `dataSessionId` belongs to this view's session. */
@@ -58,26 +67,38 @@ interface SecondaryEventDeps {
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
   const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus } = deps;
-  if (event.event === "capture-status") {
+  const capture = busEventData(event, "capture-status");
+  if (capture) {
     // `sessionId` on the event is null until delivery, so we don't filter by
     // session here — the bubble hook refetches its session-scoped query and
     // keys the live status by stagingId, ignoring ids not in this chat.
-    const data = event.data as { stagingId: string; status: CaptureLiveStatus };
-    onCaptureStatus(data);
-  } else if (event.event === "chat-task") {
-    const data = event.data as { sessionId: string | null; task: TaskEvent };
-    if (forSession(data.sessionId, sessionId)) onTaskEvent(data.task);
-  } else if (event.event === "file-change") {
-    stampFileVersion(event.data);
-  } else if (event.event === "chat-last-audio-request") {
+    onCaptureStatus({ stagingId: capture.stagingId, status: capture.status });
+    return;
+  }
+  const task = busEventData(event, "chat-task");
+  if (task) {
+    if (forSession(task.sessionId, sessionId)) onTaskEvent(task.task);
+    return;
+  }
+  const fileChange = busEventData(event, "file-change");
+  if (fileChange) {
+    stampFileVersion(fileChange);
+    return;
+  }
+  const lastAudio = busEventData(event, "chat-last-audio-request");
+  if (lastAudio) {
     // The box agent ran `cb chat get-last-audio` — answer with this tab's
     // cached recording (or "none"; the server waits out other tabs).
-    const data = event.data as { requestId: string };
-    void fulfillLastAudioRequest(data.requestId);
-  } else if (event.event === "chat-features-changed") {
-    applyFeaturesChange({ data: event.data, currentSessionId: sessionId, setFeatures: setChatFeatures });
-  } else if (event.event === "chat-session-assigned") {
-    const data = event.data as { sessionId: string };
+    void fulfillLastAudioRequest(lastAudio.requestId);
+    return;
+  }
+  const features = busEventData(event, "chat-features-changed");
+  if (features) {
+    applyFeaturesChange({ data: features, currentSessionId: sessionId, setFeatures: setChatFeatures });
+    return;
+  }
+  const assigned = busEventData(event, "chat-session-assigned");
+  if (assigned) {
     // The authoritative, per-tab assignment is the in-stream `system/init`
     // delivered over this tab's own turnStream — it always corrects the id.
     // This bus broadcast is a backup (restart recovery), and it carries no
@@ -85,7 +106,7 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // flight. Otherwise a second, idle "new" tab would bind to another tab's
     // session. URL navigation is the useEffect below.
     if (sessionInput === "new" && !sessionId && isStreaming) {
-      send({ type: "SESSION_ASSIGNED", sessionId: data.sessionId });
+      send({ type: "SESSION_ASSIGNED", sessionId: assigned.sessionId });
     }
   }
 }
@@ -120,37 +141,37 @@ export function useChatWs(opts: {
       send({ type: "REFRESH" });
     }, [send]),
     onEvent: useCallback((event: RealtimeEvent) => {
-      if (event.event === "schedule-fired") {
-        const data = event.data as { label: string; alarm: boolean; announce: string | null };
-        if (data.alarm) {
+      const scheduleFired = busEventData(event, "schedule-fired");
+      const history = busEventData(event, "chat-history");
+      const complete = busEventData(event, "chat-complete");
+      const userMessage = busEventData(event, "chat-user-message");
+      if (scheduleFired) {
+        if (scheduleFired.alarm) {
           alarm.play();
         }
-        if (data.announce) {
+        if (scheduleFired.announce) {
           const tts = getTTSClient();
-          tts.speak(data.announce).catch(() => {});
+          tts.speak(scheduleFired.announce).catch(() => {});
         }
         fetchSchedules();
-      } else if (event.event === "chat-history") {
-        const data = event.data as { entries: SessionEntry[]; sessionId: string | null };
-        if (!forSession(data.sessionId, sessionId)) return;
-        console.debug(`[chatfsm] ws-chat-history entries=${data.entries.length}`);
-        send({ type: "SET_MESSAGES", messages: data.entries, sessionId: data.sessionId });
+      } else if (history) {
+        if (!forSession(history.sessionId, sessionId)) return;
+        console.debug(`[chatfsm] ws-chat-history entries=${history.entries.length}`);
+        send({ type: "SET_MESSAGES", messages: history.entries, sessionId: history.sessionId });
         fetchSchedules();
-      } else if (event.event === "chat-complete") {
-        const data = event.data as { sessionId: string | null };
-        if (!forSession(data.sessionId, sessionId)) return;
+      } else if (complete) {
+        if (!forSession(complete.sessionId, sessionId)) return;
         console.debug("[chatfsm] ws-chat-complete");
         // Agent turn completed — refresh history to pick up the response.
         send({ type: "REFRESH" });
-      } else if (event.event === "chat-user-message") {
-        const data = event.data as { sessionId: string | null; message: string; user: { email: string; name: string } | null; timestamp: string };
-        if (!forSession(data.sessionId, sessionId)) return;
-        if (data.user && currentUser && data.user.email !== currentUser.email) {
+      } else if (userMessage) {
+        if (!forSession(userMessage.sessionId, sessionId)) return;
+        if (userMessage.user && currentUser && userMessage.user.email !== currentUser.email) {
           send({
             type: "OTHER_USER_MESSAGE",
-            message: data.message,
-            userName: data.user.name,
-            timestamp: data.timestamp,
+            message: userMessage.message,
+            userName: userMessage.user.name,
+            timestamp: userMessage.timestamp,
           });
         }
       } else {
@@ -184,8 +205,14 @@ export function useChatWs(opts: {
   useEffect(() => {
     const tts = getTTSClient();
     fetch(`${getApiBase()}/chat/voice-config`)
-      .then((r) => r.json() as Promise<CompiledSpeakingVoice>)
-      .then((config) => {
+      .then((r) => r.json())
+      .then((raw) => {
+        const parsed = voiceConfigSchema.safeParse(raw);
+        if (!parsed.success) {
+          console.warn("[chat] voice-config response malformed; using defaults", parsed.error.message);
+          return;
+        }
+        const config = parsed.data;
         if (config.model && isTTSVoice(config.model)) {
           tts.setVoiceConfig({ voice: config.model });
         }

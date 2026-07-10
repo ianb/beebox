@@ -114,9 +114,11 @@ function resolveExternalRef(ref: string, ctx: ExternalResolveContext): [string, 
 
   const base = path.basename(cleaned);
   const internal = ctx.internalBasenames.get(base);
-  if (internal && internal.length === 1) return [internal[0] as string, true];
+  const soleInternal = internal?.length === 1 ? internal[0] : undefined;
+  if (soleInternal !== undefined) return [soleInternal, true];
   const external = ctx.externalBasenames.get(base);
-  if (external && external.length === 1) return ["../" + (external[0] as string), true];
+  const soleExternal = external?.length === 1 ? external[0] : undefined;
+  if (soleExternal !== undefined) return ["../" + soleExternal, true];
 
   return [cleaned, false];
 }
@@ -206,8 +208,8 @@ function extractReferences(
     const linkRegex = /\[([^\]]*)]\(([^)]+\.md(?:#[^)]*)?)\)/g;
     let match;
     while ((match = linkRegex.exec(line)) !== null) {
-      const rawTarget = match[2] as string;
-      if (hasUriScheme(rawTarget)) continue;
+      const rawTarget = match[2];
+      if (rawTarget === undefined || hasUriScheme(rawTarget)) continue;
       const [target, resolved] = doResolve(rawTarget);
       const key = `${filePath}:${target}:link`;
       if (!seen.has(key)) {
@@ -218,7 +220,8 @@ function extractReferences(
 
     const atRegex = /@([\w.-]+\.md)\b/g;
     while ((match = atRegex.exec(line)) !== null) {
-      const rawTarget = match[1] as string;
+      const rawTarget = match[1];
+      if (rawTarget === undefined) continue;
       const [target, resolved] = doResolve(rawTarget);
       const key = `${filePath}:${target}:at-include`;
       if (!seen.has(key)) {
@@ -229,7 +232,8 @@ function extractReferences(
 
     const mentionRegex = /(?:`|(?:^|[\s(]))(([\w./-]+\.md)(?:#[\w-]*)?)/g;
     while ((match = mentionRegex.exec(line)) !== null) {
-      const rawTarget = match[2] as string;
+      const rawTarget = match[2];
+      if (rawTarget === undefined) continue;
       const [target, resolved] = doResolve(rawTarget);
       const key = `${filePath}:${target}`;
       const alreadyCaptured = [...seen].some((s) => s.startsWith(key));

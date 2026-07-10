@@ -24,6 +24,7 @@
  * duplication left to migrate for this group.
  */
 
+import { z } from "zod";
 import { RequestError } from "./lib/errors";
 import { getApiBase } from "./api-core";
 import { trpcClient } from "./lib/trpc";
@@ -170,6 +171,17 @@ export async function restartChatSubprocess(params: { sessionId: string }): Prom
   return trpcClient.chat.restart.mutate({ session: params.sessionId });
 }
 
+/**
+ * Server response shape of POST /api/chat/send — the turn either starts (a
+ * `turnId` to subscribe to), or is `queued`/`deduplicated` (see
+ * routes/chat-send-routes.ts). All three keys are mutually-exclusive optionals.
+ */
+const chatTurnStartSchema = z.object({
+  turnId: z.string().optional(),
+  queued: z.boolean().optional(),
+  deduplicated: z.boolean().optional(),
+});
+
 /** Outcome of starting a chat turn — see {@link startChatTurn}. */
 export interface ChatTurnStart {
   /** Server-minted id to subscribe to (events.turnStream) for the output.
@@ -254,5 +266,10 @@ export async function startChatTurn(params: {
     }
   }
 
-  return (await response.json()) as ChatTurnStart;
+  const parsed = chatTurnStartSchema.safeParse(await response.json());
+  if (!parsed.success) {
+    const detail = `Chat send returned a malformed response: ${parsed.error.message}`;
+    throw new RequestError(detail);
+  }
+  return parsed.data;
 }

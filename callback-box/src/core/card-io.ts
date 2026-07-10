@@ -223,6 +223,7 @@ export function cardFields<S extends CardSchema>(
   // the schema objects are identical, or by the re-parse above under a box
   // override. This is the single centralized cast that the per-site
   // `as unknown as XFields` casts collapse into.
+  // eslint-disable-next-line no-restricted-syntax -- the one sanctioned cast: fields are Zod-validated against `schema` above; InferCardFields<S> can't be inferred from the runtime-generic Record
   return card.fields as InferCardFields<S>;
 }
 
@@ -304,7 +305,8 @@ function resolveCardType(input: {
   type: string | undefined;
 }): string {
   const { fm, source, type } = input;
-  const yamlType = typeof fm["type"] === "string" ? (fm["type"] as string) : undefined;
+  const fmType = fm["type"];
+  const yamlType = typeof fmType === "string" ? fmType : undefined;
   const resolved = type ?? typeFromFilename(source) ?? yamlType;
   if (resolved === undefined) {
     throw new CardIOError(

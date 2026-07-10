@@ -136,7 +136,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
     stopping = true;
 
     // Log shutdown to each box
-    const config = await loadSchedulerConfig().catch(() => ({ boxes: [] as string[] }));
+    const config = await loadSchedulerConfig().catch((): SchedulerConfig => ({ boxes: [] }));
     for (const boxPath of config.boxes) {
       await writeBoxLog(boxPath, {
         ts: new Date().toISOString(),
@@ -237,7 +237,7 @@ export async function runScheduler(options?: SchedulerOptions): Promise<never> {
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 
-  // Unreachable, but satisfies return type
+  // `process.exit` is typed `never`, so this terminates the `Promise<never>`
+  // return without a synthetic `return … as never`.
   process.exit(0);
-  return undefined as never;
 }
