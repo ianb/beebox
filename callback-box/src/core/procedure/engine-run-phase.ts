@@ -23,8 +23,12 @@ import {
   getStepLineRange,
 } from "./engine-phase.js";
 
-/** Max self-heal retries for a `severity: review` validation failure. */
-export const MAX_REVIEW_RETRIES = 1;
+/**
+ * Max self-heal retries for a `severity: review` validation failure. Typed
+ * `number` (not the narrowed literal `1`) since it's a tunable knob — the
+ * plural-vs-singular check below stays meaningful if this value changes.
+ */
+export const MAX_REVIEW_RETRIES: number = 1;
 
 /** Hard cost ceiling (USD) per review-retry agent invocation — runaway guard. */
 const REVIEW_RETRY_BUDGET_USD = 2;
@@ -98,7 +102,7 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
     }
     const agentResult = await agent.invoke(invokeOpts);
     if (!agentResult.success) {
-      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));
+      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error}`));
     }
     return { sessionId: agent.sessionId ?? params.retry.sessionId };
   }
@@ -137,7 +141,7 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
     const agentResult = await agent.invoke(invokeOpts);
     sessionId = agent.sessionId ?? undefined;
     if (!agentResult.success) {
-      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));
+      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error}`));
     }
   }
 

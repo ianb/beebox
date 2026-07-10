@@ -55,10 +55,16 @@ export async function runShell(
   } catch (error) {
     const execError = error as ExecaError;
     const exitCode = execError.exitCode ?? 1;
+    // stdout/stderr are typed string | string[] | Uint8Array | undefined in
+    // general (execa's type widens over every stdio config); this call uses
+    // plain string stdio, but narrow with a runtime check rather than an `as
+    // string` cast that would silently lie about the other possibilities.
+    const stdout = typeof execError.stdout === "string" ? execError.stdout : "";
+    const stderr = typeof execError.stderr === "string" ? execError.stderr : "";
     return {
       exitCode,
-      stdout: (execError.stdout as string ?? "").trimEnd(),
-      stderr: (execError.stderr as string ?? "").trimEnd(),
+      stdout: stdout.trimEnd(),
+      stderr: stderr.trimEnd(),
       skipped: exitCode === CHECK_SKIP_CODE,
     };
   }

@@ -114,7 +114,7 @@ export async function evaluateInstructions(
     // Model unavailable / schema-invalid output → fail-closed.
     return {
       passed: false,
-      review: `Instruction validation could not obtain a verdict: ${result.error ?? "unknown error"}`,
+      review: `Instruction validation could not obtain a verdict: ${result.error}`,
     };
   }
 
