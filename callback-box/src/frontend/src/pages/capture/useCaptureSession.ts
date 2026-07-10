@@ -40,11 +40,15 @@ export function useCaptureSession() {
   const recorderRef = useRef<ChunkedRecorder | null>(null);
   const timerRef = useRef<number | null>(null);
   const recordStartRef = useRef<number>(0);
+  // Each recording start is a new segment (toggle-off → toggle-on = new segment).
+  const segmentCountRef = useRef<number>(0);
 
-  // Create session on mount + enumerate devices
+  // Create session on mount + enumerate devices. The standalone /capture page
+  // has no chat context, so targetSessionId is null (capture-mode-in-chat will
+  // pass the active session, Track 4).
   useEffect(() => {
     let cancelled = false;
-    createCaptureSession().then((result) => {
+    createCaptureSession(null).then((result) => {
       if (!cancelled) setSessionId(result.sessionId);
     }).catch((err: Error) => {
       if (!cancelled) setError(`Session creation failed: ${err.message}`);
@@ -80,8 +84,15 @@ export function useCaptureSession() {
       if (!sessionId) return;
       try {
         const prefs = loadDevicePrefs();
+        // A fresh recording start = a new segment; each segment gets its own
+        // ChunkedRecorder (its own WebM header) and a stable id + index.
+        const segmentIndex = segmentCountRef.current;
+        segmentCountRef.current += 1;
+        const segmentId = crypto.randomUUID();
+        const segmentStartedAt = new Date().toISOString();
         const recorder = new ChunkedRecorder({
-          onChunk: (chunk: ChunkCallbackParams) => handleChunk({ sessionId, ...chunk }),
+          onChunk: (chunk: ChunkCallbackParams) =>
+            handleChunk({ sessionId, segmentId, segmentIndex, segmentStartedAt, ...chunk }),
           deviceId: prefs.audioDeviceId ?? undefined,
         });
         recorderRef.current = recorder;
@@ -129,7 +140,8 @@ export function useCaptureSession() {
 
   const startFreshSession = useCallback(async () => {
     try {
-      const result = await createCaptureSession();
+      const result = await createCaptureSession(null);
+      segmentCountRef.current = 0;
       setSessionId(result.sessionId);
     } catch (err) { setError(`New session failed: ${err instanceof Error ? err.message : "unknown"}`); }
   }, []);

@@ -1,22 +1,33 @@
 /**
- * Capture session finalization — turn an accumulated session's temp files into
+ * Capture session finalization — turn a staged session's uploaded media into
  * cards in the box.
  *
  * On finalize, a capture-session card lands at `box/inbox/<basename>.capture-session.card`,
  * and its attach scope (`box/inbox/<basename>.attach/`) holds the audio/image/file
  * cards plus their attached media (each child has its own attach scope inside).
+ *
+ * (Track 3 of the capture-mode plan replaces this inbox path with an in-chat
+ * preparation worker; for now it keeps the `/capture` page working end-to-end
+ * against the in-box staging store.)
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { stageFiles, commit } from "../../lib/git.js";
 import { createAudioTemplate } from "../../schemas/audio.js";
-import { createImageTemplate } from "../../schemas/image.js";
+import { createImageTemplate, type ImageSource } from "../../schemas/image.js";
 import { createFileTemplate } from "../../schemas/file.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script.js";
-import type { CaptureFile, CaptureSessionData } from "./capture-session-store.js";
-import { sessionDir, cleanupSession } from "./capture-session-store.js";
+import { concatSegments, type SegmentChunks } from "../../core/capture/audio-concat.js";
+import { computeEntry, saveManifest, emptyManifest } from "../../core/asset-manifest.js";
+import type {
+  StagingSession,
+  StagingSegment,
+  StagingPhoto,
+  StagingFile,
+} from "../../core/capture/staging-store.js";
+import { stagingSessionDir, cleanupStagingSession } from "../../core/capture/staging-store.js";
 
 interface FinalizeResult {
   cards: string[];
@@ -48,7 +59,11 @@ class SessionBuilder {
 
   /**
    * Each child card (audio/image/file) gets its own attach scope holding the
-   * bound media. Writes the media + card and records both for staging.
+   * bound media. The media bytes are gitignored assets tracked by a
+   * `manifest.json` (size + sha256) — so we write the media, write its
+   * manifest, and stage the *manifest* and card, never the raw bytes (see
+   * docs/asset-manifests.md). Staging the bytes directly errors on any box
+   * with the cb-assets `.gitignore` block.
    */
   async writeChildCard(opts: {
     childBasename: string;
@@ -62,7 +77,12 @@ class SessionBuilder {
     await fs.mkdir(childAttachAbs, { recursive: true });
     const mediaAbsPath = path.join(childAttachAbs, opts.mediaFilename);
     await fs.writeFile(mediaAbsPath, opts.mediaContent);
-    this.filesToStage.push(`${childAttachRel}/${opts.mediaFilename}`);
+
+    // Track the asset in the scope's manifest (committable), not the bytes.
+    const manifest = emptyManifest();
+    manifest.files[opts.mediaFilename] = await computeEntry(mediaAbsPath);
+    await saveManifest(childAttachAbs, manifest);
+    this.filesToStage.push(`${childAttachRel}/manifest.json`);
 
     const cardFilename = `${opts.childBasename}.${opts.cardType}.card`;
     const cardAbsPath = path.join(this.sessionAttachAbsDir, cardFilename);
@@ -72,70 +92,70 @@ class SessionBuilder {
 }
 
 /**
- * Concatenate audio chunks into a single WebM file + create its audio card.
- * MediaRecorder with timeslice produces chunks where only the first has the
- * WebM/EBML header; subsequent chunks are raw Clusters. Concatenating them
- * produces a valid WebM file. Individual chunks (except the first) are not
- * playable or transcribable on their own. Returns the latest timestamp seen.
+ * Write one audio card per recording segment. Chunks are concatenated *within*
+ * a segment only (`concatSegments` — only the first chunk of a recording has
+ * the WebM/EBML header). Cards are numbered `audio-001`, `audio-002`, … and
+ * each card's `filename.recorded` is its segment's `startedAt`.
  */
-async function writeAudioCard(opts: {
+async function writeAudioCards(opts: {
   builder: SessionBuilder;
-  tmpDir: string;
-  audioChunks: CaptureFile[];
-}): Promise<string> {
-  const { builder, tmpDir, audioChunks } = opts;
-  const audioBasename = "audio-001";
-  const mediaFilename = `${audioBasename}.webm`;
+  sessionDir: string;
+  segments: StagingSegment[];
+}): Promise<void> {
+  const { builder, sessionDir, segments } = opts;
 
-  const chunkBuffers: Buffer[] = [];
-  for (const chunk of audioChunks) {
-    const srcPath = path.join(tmpDir, chunk.name);
-    chunkBuffers.push(await fs.readFile(srcPath));
+  const segmentBuffers: SegmentChunks[] = [];
+  for (const segment of segments) {
+    const chunks: Buffer[] = [];
+    for (const chunkFilename of segment.chunks) {
+      chunks.push(await fs.readFile(path.join(sessionDir, chunkFilename)));
+    }
+    segmentBuffers.push({ segmentId: segment.id, startedAt: segment.startedAt, chunks });
   }
-  const concatenated = Buffer.concat(chunkBuffers);
 
-  const firstChunk = audioChunks[0]!;
-  const cardContent = createAudioTemplate({
-    recordedAt: firstChunk.startedAt,
-    source: firstChunk.source,
-    filename: mediaFilename,
-  });
-
-  await builder.writeChildCard({
-    childBasename: audioBasename,
-    cardType: "audio",
-    mediaFilename,
-    mediaContent: concatenated,
-    cardContent,
-  });
-  builder.audioRefs.push(`${audioBasename}.audio.card`);
-
-  return audioChunks[audioChunks.length - 1]!.startedAt;
+  const concatenated = concatSegments(segmentBuffers);
+  for (const [i, segment] of concatenated.entries()) {
+    const audioBasename = `audio-${String(i + 1).padStart(3, "0")}`;
+    const mediaFilename = `${audioBasename}.webm`;
+    const cardContent = createAudioTemplate({
+      recordedAt: segment.startedAt,
+      source: "microphone",
+      filename: mediaFilename,
+    });
+    await builder.writeChildCard({
+      childBasename: audioBasename,
+      cardType: "audio",
+      mediaFilename,
+      mediaContent: segment.buffer,
+      cardContent,
+    });
+    builder.audioRefs.push(`${audioBasename}.audio.card`);
+  }
 }
 
-/** Create image cards + copy media files. Returns the latest timestamp seen. */
+/** Create image cards + copy media files. */
 async function writeImageCards(opts: {
   builder: SessionBuilder;
-  tmpDir: string;
-  photoFiles: CaptureFile[];
-  endedAt: string;
-}): Promise<string> {
-  const { builder, tmpDir, photoFiles } = opts;
-  let { endedAt } = opts;
-  for (const [i, file] of photoFiles.entries()) {
+  sessionDir: string;
+  photos: StagingPhoto[];
+}): Promise<void> {
+  const { builder, sessionDir, photos } = opts;
+  for (const [i, photo] of photos.entries()) {
     const idx = String(i + 1).padStart(3, "0");
     const photoBasename = `photo-${idx}`;
-    const ext = file.name.endsWith(".png") ? ".png" : ".jpg";
+    const ext = photo.filename.endsWith(".png") ? ".png" : ".jpg";
     const mediaFilename = `${photoBasename}${ext}`;
 
-    // Determine camera source from upload source header
-    const imageSource = file.source === "camera-environment" ? "camera-environment" : "camera-user";
+    const imageSource: ImageSource =
+      photo.source === "camera-environment"
+        ? "camera-environment"
+        : photo.source === "gallery"
+          ? "gallery"
+          : "camera-user";
 
-    const srcPath = path.join(tmpDir, file.name);
-    const mediaContent = await fs.readFile(srcPath);
-
+    const mediaContent = await fs.readFile(path.join(sessionDir, photo.filename));
     const cardContent = createImageTemplate({
-      capturedAt: file.startedAt,
+      capturedAt: photo.capturedAt,
       source: imageSource,
       filename: mediaFilename,
     });
@@ -148,37 +168,28 @@ async function writeImageCards(opts: {
       cardContent,
     });
     builder.imageRefs.push(`${photoBasename}.image.card`);
-
-    if (file.startedAt > endedAt) endedAt = file.startedAt;
   }
-  return endedAt;
 }
 
-/** Copy uploaded files + create file cards. Returns the latest timestamp seen. */
+/** Copy uploaded files + create file cards. */
 async function writeFileCards(opts: {
   builder: SessionBuilder;
-  tmpDir: string;
-  uploadedFiles: CaptureFile[];
-  endedAt: string;
-}): Promise<string> {
-  const { builder, tmpDir, uploadedFiles } = opts;
-  let { endedAt } = opts;
-  for (const file of uploadedFiles) {
-    const mediaFilename = file.name; // stored as client-provided (file-NNN-<sanitized>.ext)
+  sessionDir: string;
+  files: StagingFile[];
+}): Promise<void> {
+  const { builder, sessionDir, files } = opts;
+  for (const file of files) {
+    const mediaFilename = file.filename; // stored as client-provided (file-NNN-<sanitized>.ext)
     const baseWithoutExt = mediaFilename.replace(/\.[^./]+$/, "");
+    const mediaContent = await fs.readFile(path.join(sessionDir, file.filename));
 
-    const srcPath = path.join(tmpDir, file.name);
-    const mediaContent = await fs.readFile(srcPath);
-
-    const cardOptions: Parameters<typeof createFileTemplate>[0] = {
-      capturedAt: file.startedAt,
-      source: file.source,
+    const cardContent = createFileTemplate({
+      capturedAt: file.uploadedAt,
+      source: "disk",
       filename: mediaFilename,
-      size: file.size,
-    };
-    if (file.originalName) cardOptions.originalName = file.originalName;
-    if (file.mimeType) cardOptions.mimeType = file.mimeType;
-    const cardContent = createFileTemplate(cardOptions);
+      originalName: file.originalName,
+      mimeType: file.mimeType,
+    });
 
     await builder.writeChildCard({
       childBasename: baseWithoutExt,
@@ -188,17 +199,11 @@ async function writeFileCards(opts: {
       cardContent,
     });
     builder.fileRefs.push(`${baseWithoutExt}.file.card`);
-
-    if (file.startedAt > endedAt) endedAt = file.startedAt;
   }
-  return endedAt;
 }
 
 /** Commit all staged media + cards in a single commit summarizing the counts. */
-async function commitSession(opts: {
-  boxRoot: string;
-  builder: SessionBuilder;
-}): Promise<void> {
+async function commitSession(opts: { boxRoot: string; builder: SessionBuilder }): Promise<void> {
   const { boxRoot, builder } = opts;
   if (builder.filesToStage.length === 0) return;
   await stageFiles(boxRoot, builder.filesToStage);
@@ -214,46 +219,50 @@ async function commitSession(opts: {
 
 /** Build the deterministic `capture-YYYYMMDDTHHMM-shortId` basename. */
 function sessionBasenameFor(opts: { actualStartedAt: string; id: string }): string {
-  // Format: capture-YYYYMMDDTHHMM-shortId (using actual capture time)
   const startDate = new Date(opts.actualStartedAt);
   const datePart = startDate.toISOString().slice(0, 16).replace(/[:-]/g, "").replace("T", "T");
-  // e.g. 20260310T1924
   const formattedDate = `${datePart.slice(0, 8)}T${datePart.slice(9, 13)}`;
   const shortId = opts.id.slice(0, 8);
   return `capture-${formattedDate}-${shortId}`;
 }
 
+/** All media timestamps in the session (segment starts, photo/file times). */
+function collectTimestamps(session: StagingSession): string[] {
+  return [
+    ...session.segments.map((s) => s.startedAt),
+    ...session.photos.map((p) => p.capturedAt),
+    ...session.files.map((f) => f.uploadedAt),
+  ];
+}
+
 /**
- * Turn an accumulated session into cards + a single commit, then clean up the
- * temp dir. Returns the relative paths of the session card(s) created (empty
- * when the session had no files). Pure orchestration; route handler adapts the
- * HTTP shape and broadcasts.
+ * Turn a staged session into cards + a single commit, then clean up the
+ * staging directory. Returns the relative paths of the session card(s) created
+ * (empty when the session had no media). Pure orchestration; the route handler
+ * adapts the HTTP shape and broadcasts.
  */
 export async function finalizeSession(opts: {
-  session: CaptureSessionData;
+  session: StagingSession;
   boxRoot: string;
 }): Promise<FinalizeResult> {
   const { session, boxRoot } = opts;
-  const tmpDir = sessionDir(session.id);
+  const sessionDir = stagingSessionDir(boxRoot, session.id);
 
-  if (session.files.length === 0) {
-    await cleanupSession(session.id);
+  const isEmpty =
+    session.segments.length === 0 && session.photos.length === 0 && session.files.length === 0;
+  if (isEmpty) {
+    await cleanupStagingSession({ boxRoot, id: session.id });
     return { cards: [] };
   }
 
-  const audioChunks = session.files.filter((f) => f.name.startsWith("audio-"));
-  const photoFiles = session.files.filter((f) => f.name.startsWith("photo-"));
-  const uploadedFiles = session.files.filter((f) => f.name.startsWith("file-"));
-
-  // Compute actual start/end from file timestamps (client-provided),
-  // not session creation time (server-provided) which may differ significantly
-  // if the capture page was open a long time before the user took photos.
-  const allFileTimestamps = session.files.map((f) => f.startedAt).toSorted();
-  const actualStartedAt = allFileTimestamps[0] || session.startedAt;
-  let endedAt = actualStartedAt;
+  // Compute actual start/end from media timestamps (client-provided), not
+  // session creation time — the capture surface may sit open a long time
+  // before the user records or shoots.
+  const timestamps = collectTimestamps(session).toSorted();
+  const actualStartedAt = timestamps[0] || session.createdAt;
+  const endedAt = timestamps[timestamps.length - 1] || actualStartedAt;
 
   const sessionBasename = sessionBasenameFor({ actualStartedAt, id: session.id });
-  // Session card lives at inbox level; its attach scope holds the children.
   const inboxRelDir = "box/inbox";
   const sessionAttachRelDir = `${inboxRelDir}/${sessionBasename}.attach`;
   const sessionAttachAbsDir = path.join(boxRoot, sessionAttachRelDir);
@@ -261,18 +270,16 @@ export async function finalizeSession(opts: {
 
   await fs.mkdir(sessionAttachAbsDir, { recursive: true });
 
-  console.log(`[capture] Finalizing session ${session.id} → ${sessionBasename}: ${audioChunks.length} audio chunks, ${photoFiles.length} photos, ${uploadedFiles.length} files`);
+  console.log(
+    `[capture] Finalizing staging session ${session.id} → ${sessionBasename}: ` +
+      `${session.segments.length} segments, ${session.photos.length} photos, ${session.files.length} files`,
+  );
 
   const builder = new SessionBuilder({ boxRoot, sessionAttachRelDir, sessionAttachAbsDir });
+  await writeAudioCards({ builder, sessionDir, segments: session.segments });
+  await writeImageCards({ builder, sessionDir, photos: session.photos });
+  await writeFileCards({ builder, sessionDir, files: session.files });
 
-  if (audioChunks.length > 0) {
-    const lastAudioAt = await writeAudioCard({ builder, tmpDir, audioChunks });
-    if (lastAudioAt > endedAt) endedAt = lastAudioAt;
-  }
-  endedAt = await writeImageCards({ builder, tmpDir, photoFiles, endedAt });
-  endedAt = await writeFileCards({ builder, tmpDir, uploadedFiles, endedAt });
-
-  // Create capture-session card at the inbox level
   const sessionCardFilename = `${sessionBasename}.capture-session.card`;
   const sessionCardContent = createCaptureSessionTemplate({
     sessionId: session.id,
@@ -287,35 +294,26 @@ export async function finalizeSession(opts: {
   builder.filesToStage.push(`${inboxRelDir}/${sessionCardFilename}`);
 
   await commitSession({ boxRoot, builder });
-
-  // Create one-shot scheduled script to trigger process-captures on next wakeup
   await createProcessCapturesTrigger(boxRoot);
-
-  // Clean up temp dir and release the session lock together.
-  await cleanupSession(session.id);
+  await cleanupStagingSession({ boxRoot, id: session.id });
 
   const sessionCardRelPath = `${inboxRelDir}/${sessionCardFilename}`;
   console.log(`[capture] Created capture session: ${sessionCardRelPath}`);
-
   return { cards: [sessionCardRelPath] };
 }
 
 /**
- * Create a one-shot scheduled script that triggers process-captures
- * on the next wakeup. Idempotent — skips if the trigger already exists
- * (e.g. from a previous capture that hasn't been processed yet).
+ * Create a one-shot scheduled script that triggers process-captures on the next
+ * wakeup. Idempotent — skips if the trigger already exists.
  */
 async function createProcessCapturesTrigger(boxRoot: string): Promise<void> {
   const triggerPath = path.join(boxRoot, "config/schedules/process-captures.scheduled-script.card");
   try {
     await fs.access(triggerPath);
-    // Already exists — the procedure will handle all pending sessions
     console.log("[capture] process-captures trigger already exists, skipping");
     return;
   } catch (_e) {
-    // fs.access throwing means the trigger file doesn't exist yet, which is
-    // the normal path here — fall through and create it. The specific error
-    // carries no actionable info beyond "not present".
+    // fs.access throwing means the trigger doesn't exist yet — the normal path.
   }
 
   const content = createScheduledScriptTemplate({

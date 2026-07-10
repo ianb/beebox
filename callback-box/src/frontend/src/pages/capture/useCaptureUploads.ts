@@ -11,7 +11,8 @@ import { sanitizeFilename } from "../../../../lib/filename";
 import { type UploadState, uploadCaptureFile } from "./capture-api";
 
 interface AudioChunkStatus {
-  index: number;
+  /** Composite `${segmentIndex}-${chunkIndex}` — unique across segments. */
+  key: string;
   state: UploadState;
 }
 
@@ -29,7 +30,21 @@ interface UploadFileParams {
   file: File;
 }
 
+/** One chunk emitted by a per-segment `ChunkedRecorder`. */
 interface ChunkParams {
+  sessionId: string;
+  segmentId: string;
+  segmentIndex: number;
+  segmentStartedAt: string;
+  blob: Blob;
+  index: number;
+  startedAt: string;
+}
+
+interface FailedAudioData {
+  segmentId: string;
+  segmentIndex: number;
+  segmentStartedAt: string;
   blob: Blob;
   index: number;
   startedAt: string;
@@ -43,7 +58,7 @@ interface CaptureUploads {
   setFileStates: React.Dispatch<React.SetStateAction<UploadState[]>>;
   uploadPhoto: (params: UploadPhotoParams) => void;
   uploadFile: (params: UploadFileParams) => void;
-  handleChunk: (params: ChunkParams & { sessionId: string }) => void;
+  handleChunk: (params: ChunkParams) => void;
   retryFailedUploads: (sessionId: string) => void;
   awaitPending: () => Promise<void>;
   clearPendingAndFailed: () => void;
@@ -65,7 +80,7 @@ export function useCaptureUploads(): CaptureUploads {
 
   const pendingUploads = useRef<Promise<void>[]>([]);
   const failedPhotoData = useRef<Map<number, { blob: Blob; startedAt: string; source: string }>>(new Map());
-  const failedAudioData = useRef<Map<number, { blob: Blob; startedAt: string }>>(new Map());
+  const failedAudioData = useRef<Map<string, FailedAudioData>>(new Map());
   const failedFileData = useRef<Map<number, { file: File }>>(new Map());
 
   const uploadPhoto = useCallback(
@@ -73,7 +88,7 @@ export function useCaptureUploads(): CaptureUploads {
       const ext = blob.type.includes("png") ? "png" : "jpg";
       const filename = `photo-${String(index + 1).padStart(3, "0")}.${ext}`;
       setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploading"; return next; });
-      const p = uploadCaptureFile({ sessionId: sid, filename, blob, startedAt, source })
+      const p = uploadCaptureFile({ sessionId: sid, kind: "photo", filename, blob, startedAt, source })
         .then(() => {
           failedPhotoData.current.delete(index);
           setPhotoStates((prev) => { const next = [...prev]; next[index] = "uploaded"; return next; });
@@ -90,22 +105,26 @@ export function useCaptureUploads(): CaptureUploads {
   );
 
   const handleChunk = useCallback(
-    ({ sessionId, blob, index, startedAt }: ChunkParams & { sessionId: string }) => {
-      const filename = `audio-${String(index + 1).padStart(3, "0")}.webm`;
+    ({ sessionId, segmentId, segmentIndex, segmentStartedAt, blob, index, startedAt }: ChunkParams) => {
+      const key = `${segmentIndex}-${index}`;
+      const filename = `audio-${segmentIndex}-${String(index + 1).padStart(3, "0")}.webm`;
       setAudioChunks((prev) => {
-        const existing = prev.find((c) => c.index === index);
-        if (existing) return prev.map((c) => (c.index === index ? { ...c, state: "uploading" } : c));
-        return [...prev, { index, state: "uploading" }];
+        const existing = prev.find((c) => c.key === key);
+        if (existing) return prev.map((c) => (c.key === key ? { ...c, state: "uploading" } : c));
+        return [...prev, { key, state: "uploading" }];
       });
-      const p = uploadCaptureFile({ sessionId, filename, blob, startedAt, source: "microphone" })
+      const p = uploadCaptureFile({
+        sessionId, kind: "audio", filename, blob, startedAt,
+        source: "microphone", segmentId, segmentStartedAt,
+      })
         .then(() => {
-          failedAudioData.current.delete(index);
-          setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "uploaded" } : c)));
+          failedAudioData.current.delete(key);
+          setAudioChunks((prev) => prev.map((c) => (c.key === key ? { ...c, state: "uploaded" } : c)));
         })
         .catch((e: Error) => {
           console.error(`[capture] Audio upload failed (${filename}):`, e);
-          failedAudioData.current.set(index, { blob, startedAt });
-          setAudioChunks((prev) => prev.map((c) => (c.index === index ? { ...c, state: "failed" } : c)));
+          failedAudioData.current.set(key, { segmentId, segmentIndex, segmentStartedAt, blob, index, startedAt });
+          setAudioChunks((prev) => prev.map((c) => (c.key === key ? { ...c, state: "failed" } : c)));
         });
       pendingUploads.current.push(p);
     },
@@ -120,6 +139,7 @@ export function useCaptureUploads(): CaptureUploads {
       setFileStates((prev) => { const next = [...prev]; next[index] = "uploading"; return next; });
       const p = uploadCaptureFile({
         sessionId: sid,
+        kind: "file",
         filename,
         blob: file,
         startedAt,
@@ -149,9 +169,17 @@ export function useCaptureUploads(): CaptureUploads {
       uploadPhoto({ sessionId, index, blob: data.blob, startedAt: data.startedAt, source: data.source });
     }
     const audioEntries = Array.from(failedAudioData.current.entries());
-    for (const [index, data] of audioEntries) {
-      failedAudioData.current.delete(index);
-      handleChunk({ sessionId, blob: data.blob, index, startedAt: data.startedAt });
+    for (const [key, data] of audioEntries) {
+      failedAudioData.current.delete(key);
+      handleChunk({
+        sessionId,
+        segmentId: data.segmentId,
+        segmentIndex: data.segmentIndex,
+        segmentStartedAt: data.segmentStartedAt,
+        blob: data.blob,
+        index: data.index,
+        startedAt: data.startedAt,
+      });
     }
     const fileEntries = Array.from(failedFileData.current.entries());
     for (const [index, data] of fileEntries) {
