@@ -1,9 +1,10 @@
 import { createTypedEmission, createVoiceEmission, type Emission } from "../../input/emission";
+import { isRecord } from "../../lib/is-record";
 import type { ChatImageAttachment } from "../../api-chat";
 
 export function nativeEmissionFromDetail(detail: unknown): Emission | null {
-  if (detail === null || typeof detail !== "object") return null;
-  const candidate = detail as Record<string, unknown>;
+  if (!isRecord(detail)) return null;
+  const candidate = detail;
   const text = typeof candidate.text === "string" ? candidate.text.trim() : "";
   const images = parseNativeImages(candidate.images);
   if (!text && images.length === 0) return null;
@@ -27,8 +28,8 @@ export function nativeEmissionFromDetail(detail: unknown): Emission | null {
 function parseNativeImages(value: unknown): ChatImageAttachment[] {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
-    if (item === null || typeof item !== "object") return [];
-    const image = item as Record<string, unknown>;
+    if (!isRecord(item)) return [];
+    const image = item;
     if (typeof image.id !== "number" || typeof image.mimeType !== "string" || typeof image.dataBase64 !== "string") {
       return [];
     }

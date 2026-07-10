@@ -16,6 +16,7 @@
  */
 
 import { trpcClient } from "./trpc";
+import { isRecord } from "./is-record";
 
 const KEY_PREFIX = "cb-location-share";
 
@@ -74,10 +75,9 @@ export function parseLocationShareState(raw: string | null): LocationShareState 
     console.warn(`[location-share] discarding unparseable state: ${e instanceof Error ? e.message : String(e)}`);
     return DISABLED;
   }
-  if (value === null || typeof value !== "object") return DISABLED;
   // Parse boundary: localStorage JSON arrives untyped; every field is validated.
-  const record = value as Record<string, unknown>;
-  const { enabled, lastCapturedAt } = record;
+  if (!isRecord(value)) return DISABLED;
+  const { enabled, lastCapturedAt } = value;
   if (typeof enabled !== "boolean") return DISABLED;
   if (lastCapturedAt !== null && (typeof lastCapturedAt !== "number" || !Number.isFinite(lastCapturedAt))) return DISABLED;
   return { enabled, lastCapturedAt: lastCapturedAt ?? null };

@@ -26,6 +26,7 @@
 
 import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
+import { isRecord } from "../lib/is-record";
 
 /** The subset of Storage this module touches (fakeable in doctests). */
 export interface KeyValueStorage {
@@ -86,8 +87,8 @@ export function serializePersistedEmission(
 }
 
 function isPersistedEmission(value: unknown): value is PersistedEmission {
-  if (value === null || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
+  const v = value;
   return (
     v["version"] === 1 &&
     typeof v["text"] === "string" &&
@@ -179,8 +180,8 @@ export function adoptLegacyComposerDrafts(
   for (const key of keys) {
     try {
       const parsed: unknown = JSON.parse(storage.getItem(key) ?? "null");
-      if (parsed === null || typeof parsed !== "object") continue;
-      const draft = parsed as Record<string, unknown>;
+      if (!isRecord(parsed)) continue;
+      const draft = parsed;
       const text = typeof draft["text"] === "string" ? draft["text"] : "";
       const updatedAt = typeof draft["updatedAt"] === "number" ? draft["updatedAt"] : 0;
       if (text.trim() === "") continue;

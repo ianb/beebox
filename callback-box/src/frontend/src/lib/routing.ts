@@ -28,5 +28,6 @@ export function href(path: string): any {
  * known rather than href()-built.
  */
 export function toSearch<T extends object>(params: T): never {
+  // eslint-disable-next-line no-restricted-syntax -- deliberate router-boundary escape hatch: href() returns `any`, so the target route's search type is unresolvable and no sound type exists here; this is the single centralized home for what were ~19 scattered `{...} as never` casts (see this function's doc comment).
   return params as never;
 }

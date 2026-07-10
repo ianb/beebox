@@ -34,6 +34,9 @@ export function highlightRange(range: Range): void {
 
 export function scrollRangeIntoView(range: Range): void {
   const start = range.startContainer;
-  const el = start.nodeType === Node.TEXT_NODE ? start.parentElement : (start as Element);
+  // instanceof narrows without a cast, and is more correct than a TEXT_NODE
+  // check: any non-Element container (text, comment, document) falls back to
+  // its parent element.
+  const el = start instanceof Element ? start : start.parentElement;
   if (el !== null) el.scrollIntoView({ block: "center", behavior: "smooth" });
 }
