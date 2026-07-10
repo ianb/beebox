@@ -22,6 +22,7 @@ import { bumpFileVersion } from "../../lib/file-version";
 import type { CompiledSpeakingVoice } from "../../../../schemas/personality";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
+import type { CaptureLiveStatus } from "./capture-bubble";
 
 // An agent (or anything) wrote a box file. Stamp a fresh cache-buster for that
 // path so chat images at the same URL re-fetch instead of showing the
@@ -46,6 +47,8 @@ interface SecondaryEventDeps {
   send: (event: ChatEvent) => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
+  /** A capture staging session changed state — refine the pending bubble. */
+  onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
 }
 
 /**
@@ -54,8 +57,14 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent } = deps;
-  if (event.event === "chat-task") {
+  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus } = deps;
+  if (event.event === "capture-status") {
+    // `sessionId` on the event is null until delivery, so we don't filter by
+    // session here — the bubble hook refetches its session-scoped query and
+    // keys the live status by stagingId, ignoring ids not in this chat.
+    const data = event.data as { stagingId: string; status: CaptureLiveStatus };
+    onCaptureStatus(data);
+  } else if (event.event === "chat-task") {
     const data = event.data as { sessionId: string | null; task: TaskEvent };
     if (forSession(data.sessionId, sessionId)) onTaskEvent(data.task);
   } else if (event.event === "file-change") {
@@ -92,8 +101,9 @@ export function useChatWs(opts: {
   fetchSchedules: () => void;
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
+  onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
 
@@ -144,9 +154,9 @@ export function useChatWs(opts: {
           });
         }
       } else {
-        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent });
+        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onCaptureStatus]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for

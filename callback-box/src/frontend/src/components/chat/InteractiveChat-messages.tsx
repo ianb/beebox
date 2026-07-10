@@ -21,6 +21,7 @@ import {
   type RenderItemContext,
   type SpeechPlaybackState,
 } from "./InteractiveChat-message-items";
+import type { CaptureBubbleModel } from "./capture-bubble";
 
 interface LiveTurnState { turnId: string | null; uuid: string | null }
 
@@ -106,6 +107,7 @@ function MessageListInner({
   messages, groups, modelMarkers, isStreaming, streamText, streamTools, processingShown,
   debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, snapshot,
   totalEntries, onLoadOlder, loadingOlder, scrollToBottomTrigger, liveTurnId, proseEnabled, pendingHqDraft,
+  captureBubbles, onCaptureRetry,
 }: {
   messages: SessionEntry[];
   groups: MessageGroup[];
@@ -129,6 +131,8 @@ function MessageListInner({
   liveTurnId: string | null;
   proseEnabled: boolean;
   pendingHqDraft: string | null;
+  captureBubbles: CaptureBubbleModel[];
+  onCaptureRetry: (id: string) => void;
 }) {
   const { boxSlug } = useParams({ strict: false });
   const hasOlder = totalEntries > messages.length;
@@ -145,8 +149,8 @@ function MessageListInner({
     || (snapshot.matches("refreshing") && (streamText.length > 0 || streamTools.length > 0));
 
   const data = useMemo<DataItem[]>(
-    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView }),
-    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView],
+    () => buildDataItems({ groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView }),
+    [groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView],
   );
 
   const { scrollerRef, contentRef, isPinned, hasUnseenContent, scrollToBottom, captureForPrepend } = useStickToBottom();
@@ -204,7 +208,8 @@ function MessageListInner({
     onZoomView,
     proseEnabled,
     lastAssistantGroupIndex,
-  }), [streamText, streamTools, debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex]);
+    handleCaptureRetry: onCaptureRetry,
+  }), [streamText, streamTools, debugView, currentUserEmail, speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, onZoomView, proseEnabled, lastAssistantGroupIndex, onCaptureRetry]);
 
   if (messages.length === 0 && !isStreaming) {
     return (

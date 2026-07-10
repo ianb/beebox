@@ -161,6 +161,8 @@ function StateBlock({ spec }: { spec: Spec }) {
       voicePaused={spec.voicePaused}
       onUnpause={noop}
       onAttachFiles={noop}
+      onEnterCapture={noop}
+      captureEnabled
       narrationEnabled={spec.narrationEnabled}
     />
   );

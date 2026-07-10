@@ -19,6 +19,8 @@ import {
   stripUserDisplayTags,
   type TaskNotification,
 } from "./message-parsing";
+import { parseCaptureWrapper } from "./capture-message";
+import { CaptureChip } from "./CaptureChip";
 
 function decodeXml(value: string): string {
   return value
@@ -249,6 +251,12 @@ function UserEntryContent({ entry, debugView }: { entry: SessionEntry; debugView
             return (
               <Pre key={key} size="xs">{block.text ?? ""}</Pre>
             );
+          }
+          // A delivered capture is a `<capture …>` wrapper — render it as a
+          // compact chip linking to the capture document, not as raw markup.
+          const capture = parseCaptureWrapper(block.text ?? "");
+          if (capture) {
+            return <CaptureChip key={key} model={capture} />;
           }
           return (
             <div key={key} className="text-sm whitespace-pre-wrap">

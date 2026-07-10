@@ -6,18 +6,25 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { ChunkedRecorder, type ChunkCallbackParams } from "../../lib/audio/recorder";
-import {
-  loadDevicePrefs,
-  createCaptureSession,
-  finalizeCaptureSession,
-  cancelCaptureSession,
-} from "./capture-api";
+import { loadDevicePrefs } from "./capture-api";
+import { useCaptureApi } from "./capture-api-context";
 import { useCaptureDevices } from "./useCaptureDevices";
 import { useCaptureUploads } from "./useCaptureUploads";
 import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
 
-export function useCaptureSession() {
+/**
+ * @param targetSessionId - the chat session capture was started from, recorded
+ *   on the staging session so delivery lands in that chat. `null` for a fresh
+ *   or unresolved chat (delivery falls back to most-active / a new session).
+ * @param onExit - called after Done (finalize) or Cancel to close the capture
+ *   surface and return to the composer. In capture-mode-in-chat there is no
+ *   "loop into a fresh session" as the standalone page had — one capture, then
+ *   back to chat.
+ */
+export function useCaptureSession(opts: { targetSessionId: string | null; onExit: () => void }) {
+  const { targetSessionId, onExit } = opts;
+  const { createCaptureSession, finalizeCaptureSession, cancelCaptureSession } = useCaptureApi();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -30,7 +37,7 @@ export function useCaptureSession() {
   const uploads = useCaptureUploads();
   const { videoDevices, devicePrefs, refreshDevices, setVideoDevices, setAudioDevices } = devices;
   const { setPhotoStates, setFileStates, uploadPhoto, uploadFile, handleChunk } = uploads;
-  const { awaitPending, clearPendingAndFailed, resetState } = uploads;
+  const { awaitPending, clearPendingAndFailed } = uploads;
 
   const camera = useCaptureCamera({
     videoDeviceId: devicePrefs.videoDeviceId, videoDevices, isMobile, setError, refreshDevices,
@@ -43,12 +50,11 @@ export function useCaptureSession() {
   // Each recording start is a new segment (toggle-off → toggle-on = new segment).
   const segmentCountRef = useRef<number>(0);
 
-  // Create session on mount + enumerate devices. The standalone /capture page
-  // has no chat context, so targetSessionId is null (capture-mode-in-chat will
-  // pass the active session, Track 4).
+  // Create a staging session on mount + enumerate devices. `targetSessionId`
+  // is the chat capture was started from, recorded so delivery lands there.
   useEffect(() => {
     let cancelled = false;
-    createCaptureSession(null).then((result) => {
+    createCaptureSession(targetSessionId).then((result) => {
       if (!cancelled) setSessionId(result.sessionId);
     }).catch((err: Error) => {
       if (!cancelled) setError(`Session creation failed: ${err.message}`);
@@ -61,7 +67,7 @@ export function useCaptureSession() {
       // Permission not yet granted — devices populate after first use
     });
     return () => { cancelled = true; };
-  }, [setVideoDevices, setAudioDevices]);
+  }, [targetSessionId, createCaptureSession, setVideoDevices, setAudioDevices]);
 
   useEffect(() => {
     if (recording) {
@@ -138,14 +144,8 @@ export function useCaptureSession() {
     if (sessionId) uploads.retryFailedUploads(sessionId);
   }, [sessionId, uploads]);
 
-  const startFreshSession = useCallback(async () => {
-    try {
-      const result = await createCaptureSession(null);
-      segmentCountRef.current = 0;
-      setSessionId(result.sessionId);
-    } catch (err) { setError(`New session failed: ${err instanceof Error ? err.message : "unknown"}`); }
-  }, []);
-
+  // Seal the staging session (fires background preparation → delivery) and exit
+  // capture mode. A server-derived pending bubble takes over from here.
   const handleDone = useCallback(async () => {
     if (!sessionId || finalizing) return;
     setFinalizing(true);
@@ -158,25 +158,25 @@ export function useCaptureSession() {
       }
       await awaitPending();
       await finalizeCaptureSession(sessionId);
-      setSessionId(null); resetState(); setError(null); setFinalizing(false);
+      camera.stopCamera();
       clearPendingAndFailed();
-      await startFreshSession();
+      onExit();
     } catch (err) { setError(`Finalize failed: ${err instanceof Error ? err.message : "unknown"}`); setFinalizing(false); }
-  }, [sessionId, finalizing, recording, awaitPending, resetState, clearPendingAndFailed, startFreshSession]);
+  }, [sessionId, finalizing, recording, awaitPending, finalizeCaptureSession, camera, clearPendingAndFailed, onExit]);
 
   const handleCancel = useCallback(async () => {
-    if (!sessionId) return;
     if (recording && recorderRef.current) { recorderRef.current.stop(); recorderRef.current = null; setRecording(false); }
     clearPendingAndFailed();
     camera.stopCamera();
-    try {
-      await cancelCaptureSession(sessionId);
-    } catch (err) {
-      console.error("Cancel failed:", err);
+    if (sessionId) {
+      try {
+        await cancelCaptureSession(sessionId);
+      } catch (err) {
+        console.error("Cancel failed:", err);
+      }
     }
-    setSessionId(null); resetState(); setError(null); setRecordingTime(0);
-    await startFreshSession();
-  }, [sessionId, recording, camera, clearPendingAndFailed, resetState, startFreshSession]);
+    onExit();
+  }, [sessionId, recording, camera, cancelCaptureSession, clearPendingAndFailed, onExit]);
 
   return {
     state: { sessionId, recording, recordingTime, error, finalizing, showSettings },

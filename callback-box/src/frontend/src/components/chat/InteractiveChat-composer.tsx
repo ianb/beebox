@@ -141,7 +141,7 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, narrationEnabled,
+  onPaste, onDrop, onAttachFiles, onEnterCapture, captureEnabled, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -163,6 +163,10 @@ export function ChatInputArea({
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   onAttachFiles: () => void;
+  /** Enter capture mode (full-screen viewfinder / mic). */
+  onEnterCapture: () => void;
+  /** Whether capture is offered (suppressed for native shells, like the mic). */
+  captureEnabled: boolean;
   narrationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
@@ -181,7 +185,7 @@ export function ChatInputArea({
             degraded={transcription.state === "reconnecting"}
           />
         ) : null}
-        {/* Add menu: camera (coming soon), attach file. Capture lives here in the future. */}
+        {/* Add menu: capture mode, attach file, share location. */}
         <Dropdown
           align="left"
           vertical="above"
@@ -201,10 +205,27 @@ export function ChatInputArea({
             </button>
           )}
         >
-          <MenuItem onClick={() => {}} disabled>Camera (coming soon)</MenuItem>
+          {captureEnabled ? <MenuItem onClick={onEnterCapture}>Capture…</MenuItem> : null}
           <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
           <ShareLocationMenuItem />
         </Dropdown>
+
+        {/* First-class capture button on the mobile row (room the desktop
+            textarea occupies). Desktop reaches capture via the Add menu. */}
+        {captureEnabled ? (
+          <button
+            type="button"
+            onClick={onEnterCapture}
+            className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
+            title="Capture"
+            aria-label="Capture"
+          >
+            <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <circle cx="12" cy="13" r="3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        ) : null}
 
         <DesktopComposerRow
           textareaRef={textareaRef}

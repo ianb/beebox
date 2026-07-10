@@ -338,6 +338,26 @@ export async function sealStagingSession(opts: { boxRoot: string; id: string }):
   });
 }
 
+/**
+ * List every staging session currently on disk, newest activity last. Reads
+ * each `<id>/session.json`, skipping directories without a readable manifest
+ * (a half-created session, or one being torn down). Used by the pending-capture
+ * query to surface in-flight captures for a chat — see the `capture` tRPC
+ * router. No lock: a torn read just yields `null` and is skipped.
+ */
+export async function listStagingSessions(opts: { boxRoot: string }): Promise<StagingSession[]> {
+  const { boxRoot } = opts;
+  let ids: string[];
+  try {
+    ids = await fs.readdir(stagingBaseDir(boxRoot));
+  } catch (e) {
+    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw e;
+  }
+  const sessions = await Promise.all(ids.map((id) => readStagingSession({ boxRoot, id })));
+  return sessions.filter((s): s is StagingSession => s !== null);
+}
+
 /** True once the session holds at least one piece of media. */
 export function stagingSessionIsEmpty(session: StagingSession): boolean {
   return session.segments.length === 0 && session.photos.length === 0 && session.files.length === 0;

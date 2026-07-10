@@ -36,6 +36,8 @@ import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
 import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
 import { nativeEmissionFromDetail } from "./native-emission";
+import { useCaptureBubbles } from "./useCaptureBubbles";
+import { CaptureOverlay } from "../capture/CaptureOverlay";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -88,9 +90,15 @@ interface InteractiveChatProps {
    * event client, but the web composer and mic controls are suppressed.
    */
   embedded?: boolean;
+  /**
+   * Open capture mode immediately on mount — the `/capture` deep link
+   * (`?capture=1`) redirects here. Consumed once via initial state; the mode is
+   * a normal user toggle afterward.
+   */
+  openCaptureOnMount?: boolean;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, openCaptureOnMount }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
@@ -120,6 +128,12 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [typingMode, setTypingMode] = useState(false);
   const [typingLocked, setTypingLocked] = useState(false);
+  // Capture mode: a rare user toggle (frame state, not URL / per-keystroke), so
+  // it lives in root state; the overlay's recording-timer ticks stay in its own
+  // subtree. Seeded from the `?capture=1` deep link, consumed once.
+  const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
+  // Server-derived pending capture bubbles (survive reload; refined live below).
+  const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
@@ -202,6 +216,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
+    onCaptureStatus: applyCaptureStatus,
   });
 
   const actions = useChatActions({
@@ -271,7 +286,10 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       send={send}
       reportCardActivity={cardSend.report}
       embedded={isEmbedded}
+      captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
+      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!isEmbedded}
       />
+      {captureMode && !isEmbedded ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
     </InputStoreProvider>
   );
 }

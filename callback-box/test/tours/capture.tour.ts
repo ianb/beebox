@@ -1,13 +1,15 @@
 /**
- * Capture page tour: just loads the page and snapshots. The page has
- * a camera viewport that needs camera permissions to fully exercise;
- * the camera-off / tap-to-start state is what we capture here.
+ * Capture tour: `/capture` is now a deep link that redirects into the chat with
+ * capture mode auto-open (`?capture=1`), so this loads `/capture` and snapshots
+ * the resulting full-screen capture overlay. The overlay reuses the same
+ * viewport/controls, which need camera permissions to fully exercise; the
+ * camera-off / tap-to-start state is what we capture here.
  */
 
 import { tour } from "./tour-lib/index.js";
 
 tour(
-  { name: "capture", description: "Load the capture page in its camera-off state and capture artifacts." },
+  { name: "capture", description: "Follow the /capture deep link into chat capture mode and capture artifacts." },
   async (t) => {
     await t.go("/capture");
     await t.checkpoint("camera-off");

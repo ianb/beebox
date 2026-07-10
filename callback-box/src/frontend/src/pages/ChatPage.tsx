@@ -39,6 +39,11 @@ interface ChatSearch {
    * leave input to the native shell.
    */
   embed?: string | number;
+  /**
+   * Open capture mode on load — the `/capture` deep link redirects here with
+   * this set. Consumed once by InteractiveChat's initial state.
+   */
+  capture?: string | number;
 }
 
 export function ChatPage() {
@@ -56,6 +61,7 @@ export function ChatPage() {
   const companion = search.companion;
   const card = search.card;
   const embedded = String(search.embed) === "1";
+  const openCaptureOnMount = String(search.capture) === "1";
   const [resolved, setResolved] = useState<string | null>(null);
 
   // Bare `/chat`: resolve the box's most-active session and navigate to it.
@@ -125,6 +131,7 @@ export function ChatPage() {
       card={card}
       emissionStore={emissionStore}
       embedded={embedded}
+      openCaptureOnMount={openCaptureOnMount}
     />
   );
 }

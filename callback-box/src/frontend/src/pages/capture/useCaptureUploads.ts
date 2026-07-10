@@ -8,7 +8,8 @@
 
 import { useState, useRef, useCallback } from "react";
 import { sanitizeFilename } from "../../../../lib/filename";
-import { type UploadState, uploadCaptureFile } from "./capture-api";
+import { type UploadState } from "./capture-api";
+import { useCaptureApi } from "./capture-api-context";
 
 interface AudioChunkStatus {
   /** Composite `${segmentIndex}-${chunkIndex}` — unique across segments. */
@@ -74,6 +75,7 @@ interface UploadCounts {
 }
 
 export function useCaptureUploads(): CaptureUploads {
+  const { uploadCaptureFile } = useCaptureApi();
   const [photoStates, setPhotoStates] = useState<UploadState[]>([]);
   const [fileStates, setFileStates] = useState<UploadState[]>([]);
   const [audioChunks, setAudioChunks] = useState<AudioChunkStatus[]>([]);
@@ -101,7 +103,7 @@ export function useCaptureUploads(): CaptureUploads {
         });
       pendingUploads.current.push(p);
     },
-    []
+    [uploadCaptureFile]
   );
 
   const handleChunk = useCallback(
@@ -128,7 +130,7 @@ export function useCaptureUploads(): CaptureUploads {
         });
       pendingUploads.current.push(p);
     },
-    []
+    [uploadCaptureFile]
   );
 
   const uploadFile = useCallback(
@@ -159,7 +161,7 @@ export function useCaptureUploads(): CaptureUploads {
         });
       pendingUploads.current.push(p);
     },
-    []
+    [uploadCaptureFile]
   );
 
   const retryFailedUploads = useCallback((sessionId: string) => {
