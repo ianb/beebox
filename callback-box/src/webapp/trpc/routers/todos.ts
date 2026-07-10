@@ -13,6 +13,7 @@ import { cardFields, parseCardText, serializeCardText, typeFromFilename } from "
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { withCardLock } from "../../../lib/card-lock.js";
 import { getBoxTimeISO } from "../../../lib/time.js";
+import { errorMessage } from "../../../lib/error-guards.js";
 import { type TodoItem, type TodoItemStatusType, TodoListSchema } from "../../../schemas/todo-list.js";
 
 /**
@@ -74,7 +75,7 @@ export const todosRouter = router({
         try {
           parsed = parseCardText(content, { source: fullPath, schemas: cardSchemas, type: "todo-list" });
         } catch (e) {
-          throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid todo list: ${(e as Error).message}` });
+          throw new TRPCError({ code: "BAD_REQUEST", message: `Invalid todo list: ${errorMessage(e)}` });
         }
 
         const fields = cardFields(parsed, TodoListSchema);

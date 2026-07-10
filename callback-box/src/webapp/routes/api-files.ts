@@ -19,6 +19,7 @@ import { fileEtag } from "../file-etag.js";
 import { boxRelativePath } from "../../shared/box-path.js";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { dangerousRenderableDisposition } from "../serving-security.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 // Injected into frozen pages at serve time so a hot-linked image that fails
 // (hot-link blockers, auth, dead origin) retries once through the box image
@@ -207,7 +208,7 @@ export function registerApiFilesRoutes(options: RegisterApiFilesRoutesOptions): 
         );
         return plainReply.send(content);
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`Could not stat/read file, returning 404: ${resolved}:`, e);
         }
         return reply.status(404).send({ error: "Not found" });
@@ -256,7 +257,7 @@ async function deleteBoxFile({
       return reply.status(404).send({ error: "Not found" });
     }
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not stat file for delete, returning 404: ${resolved}:`, e);
     }
     return reply.status(404).send({ error: "Not found" });

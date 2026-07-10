@@ -16,6 +16,7 @@ import {
 } from "../../core/commands/index.js";
 import type { EventBus } from "../../core/event-bus.js";
 import { mimetypeToExtension } from "../../lib/mimetype.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Output line for streaming command execution.
@@ -59,7 +60,7 @@ export async function executeCommandStreaming(options: {
     const errorLine: OutputLine = {
       type: "result",
       success: false,
-      error: (error as Error).message,
+      error: errorMessage(error),
     };
     emit(errorLine);
     return errorLine;
@@ -114,7 +115,7 @@ export async function registerCommandRoutes(
     } catch (error) {
       return reply.status(500).send({
         error: "Failed to upload file",
-        details: (error as Error).message,
+        details: errorMessage(error),
       });
     }
   });

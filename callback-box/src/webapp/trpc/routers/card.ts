@@ -8,6 +8,7 @@ import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { parse as parseYaml } from "yaml";
+import { errorMessage } from "../../../lib/error-guards.js";
 
 export interface FrontmatterCardResponse {
   path: string;
@@ -42,7 +43,7 @@ function loadFrontmatterCard(input: {
     delete fields["type"];
     frontmatter = fields;
   } catch (e) {
-    validationError = (e as Error).message;
+    validationError = errorMessage(e);
     // Still surface what we can — split the file and parse YAML loosely.
     const split = splitCardContent(raw);
     body = split.body;
@@ -92,7 +93,7 @@ export const cardRouter = router({
       try {
         raw = await fs.readFile(fullPath, "utf-8");
       } catch (e) {
-        const msg = (e as Error).message;
+        const msg = errorMessage(e);
         if (msg.includes("ENOENT") || msg.includes("no such file")) {
           throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
         }

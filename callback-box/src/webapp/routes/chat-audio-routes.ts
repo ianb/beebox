@@ -27,6 +27,7 @@ import {
   CompiledSpeakingVoiceSchema,
   type CompiledSpeakingVoice,
 } from "../../schemas/personality.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { serveMockTts } from "../tts-mock.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { readSessionLogTail } from "./chat-helpers.js";
@@ -99,7 +100,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       console.warn("[chat] speaking-voice.json failed validation:", parsed.error.message);
       return { model: undefined, instructions: [] };
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn("[chat] failed to read speaking-voice.json:", e);
       }
       return { model: undefined, instructions: [] };

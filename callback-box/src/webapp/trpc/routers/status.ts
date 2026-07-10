@@ -8,6 +8,7 @@ import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 
 export interface BrowseDir {
   name: string;
@@ -92,7 +93,7 @@ export const statusRouter = router({
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
         }
         return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
@@ -128,7 +129,7 @@ export const statusRouter = router({
             fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
           } catch (e) {
             // Can't read subdirectory — leave fileCount at 0 rather than failing the whole listing.
-            if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            if (errnoCode(e) !== "ENOENT") {
               console.warn(`browse: cannot count cards in ${dirFullPath}:`, e);
             }
           }

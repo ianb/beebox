@@ -20,6 +20,7 @@ import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"]);
 
@@ -153,7 +154,7 @@ export function registerApiImageRoutes({
           { ext, filename }
         ).send(content);
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`[api-image] could not serve ${imageAbs}:`, e);
         }
         return reply.status(404).send({ error: "Not found" });

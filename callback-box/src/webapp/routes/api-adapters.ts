@@ -20,6 +20,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
 import { Readable } from "node:stream";
+import { errorMessage } from "../../lib/error-guards.js";
 
 interface AdapterDef {
   /** Default upstream base URL; CB_ADAPTER_BASE_<NAME> overrides (tests). */
@@ -102,7 +103,7 @@ export function registerApiAdapterRoutes(options: RegisterApiAdapterRoutesOption
         upstream = await fetch(url, init);
       } catch (e) {
         return reply.status(502).send({
-          error: `Upstream ${adapterName} request failed: ${(e as Error).message}`,
+          error: `Upstream ${adapterName} request failed: ${errorMessage(e)}`,
         });
       }
 

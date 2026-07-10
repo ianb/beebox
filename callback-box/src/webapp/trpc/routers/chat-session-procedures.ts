@@ -25,6 +25,7 @@ import {
   parseSessionLog,
   tailForMinUserMessages,
 } from "../../../cli/lib/session.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 
 export const chatSessionProcedures = {
   // Load + slice a session's conversation history.
@@ -79,7 +80,7 @@ export const chatSessionProcedures = {
           if (meta.firstUserSnippet) label = meta.firstUserSnippet;
           if (meta.endTime) lastUsedAt = meta.endTime.toISOString();
         } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.warn(`[chat] session ${sessionId} log unreadable, keeping id-prefix label:`, e);
           }
           // JSONL missing or unreadable — keep id-prefix label.

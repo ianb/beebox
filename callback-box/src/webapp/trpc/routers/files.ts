@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import { router, publicProcedure } from "../trpc.js";
 import { loadCardFile } from "../../../core/card-io.js";
 import { buildLoadContext } from "../../../core/load-context.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 import { registerBuiltinLoaders } from "../../../core/loader-registrations.js";
 import { summarize } from "../../../core/loader-registry.js";
 import type { FileSummary, LoaderInput } from "../../../core/file-summary.js";
@@ -46,7 +47,7 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
       input.fields = loaded.fields;
       input.type = loaded.schema.type;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Failed to load card ${relPath}, falling through to fallback loader:`, e);
       }
     }
@@ -57,7 +58,7 @@ async function summarizePath(boxRoot: string, inputPath: string): Promise<FileSu
         input.content = await fs.readFile(fullPath, "utf-8");
       }
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Failed to stat/read ${relPath}, leaving content unset:`, e);
       }
     }

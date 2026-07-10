@@ -18,6 +18,7 @@ import { registerApiBrowseRoutes } from "./api-browse.js";
 import { registerApiFilesRoutes } from "./api-files.js";
 import { registerProxyImageRoutes } from "./proxy-image.js";
 import { registerApiFilesWriteRoutes } from "./api-files-write.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { registerApiAdapterRoutes } from "./api-adapters.js";
 import { registerApiExternalRoute } from "./api-external.js";
 import { registerApiImageRoutes } from "./api-image.js";
@@ -84,7 +85,7 @@ export async function registerApiRoutes(
         const content = await fs.readFile(resolved, "utf-8");
         return reply.header("Content-Type", "text/plain").send(content);
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`Could not read task output file, returning 404: ${resolved}:`, e);
         }
         return reply.status(404).send({ error: "Output file not found" });

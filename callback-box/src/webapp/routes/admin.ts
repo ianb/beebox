@@ -11,6 +11,7 @@ import type { FastifyInstance } from "fastify";
 import { saveGoogleTokens, getGoogleClientCreds, createOAuth2Client, type GoogleTokens } from "../../connectors/google-auth.js";
 import { baseServerUrl } from "../base-server-url.js";
 import { resolveBoxPublicUrl } from "../../lib/public-url.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Extract the base server URL from a box's publicUrl by stripping the
@@ -65,8 +66,8 @@ export async function registerGoogleServicesCallback(server: FastifyInstance, { 
       console.log("[google-oauth] Saved tokens (centralized), redirecting to:", `${returnUrl}?google=connected`);
       return reply.redirect(`${returnUrl}?google=connected`);
     } catch (err) {
-      console.log("[google-oauth] Token exchange failed:", (err as Error).message);
-      const message = encodeURIComponent((err as Error).message);
+      console.log("[google-oauth] Token exchange failed:", errorMessage(err));
+      const message = encodeURIComponent(errorMessage(err));
       return reply.redirect(`${returnUrl}?google=error&message=${message}`);
     }
   });

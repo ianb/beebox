@@ -12,6 +12,7 @@ import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { withCardLock } from "../../../lib/card-lock.js";
+import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 
 /**
  * Per-box admin router (Telegram, box config).
@@ -42,7 +43,7 @@ export const adminRouter = router({
       return {
         configured: true,
         botToken: config.botToken,
-        error: (err as Error).message,
+        error: errorMessage(err),
         boxSlug: ctx.boxSlug,
       };
     }
@@ -58,7 +59,7 @@ export const adminRouter = router({
       } catch (err) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Invalid bot token: ${(err as Error).message}`,
+          message: `Invalid bot token: ${errorMessage(err)}`,
         });
       }
 
@@ -86,7 +87,7 @@ export const adminRouter = router({
             botUsername: me.username,
             botFirstName: me.first_name,
             webhookUrl,
-            webhookError: (err as Error).message,
+            webhookError: errorMessage(err),
           };
         }
       }
@@ -112,7 +113,7 @@ export const adminRouter = router({
     try {
       await fs.unlink(configPath);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn("Could not remove Telegram config file (may already be gone):", e);
       }
     }
@@ -133,7 +134,7 @@ export const adminRouter = router({
         googleServices: (config.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
       };
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("box.json missing or unreadable, returning default box config:", e);
       }
       return {
@@ -158,7 +159,7 @@ export const adminRouter = router({
           : ([] as string[]),
       };
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("gmail.json missing or unreadable, returning empty Gmail config:", e);
       }
       return { query: "", labels: [] as string[] };
@@ -211,7 +212,7 @@ export const adminRouter = router({
         try {
           existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
         } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.debug("box.json missing or unreadable, starting fresh config:", e);
           }
         }
