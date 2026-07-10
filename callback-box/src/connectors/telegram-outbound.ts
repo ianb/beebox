@@ -77,7 +77,7 @@ async function sendThreadOutbound(
     // msg.text is declared required by the ChatThreadMessage schema, but
     // findUnsentAgentMessages reads the thread file via readThreadFields's raw
     // (unvalidated) YAML parse — a hand-edited or corrupted entry can omit it.
-    const text = (msg.text as string | undefined)?.trim();
+    const text = typeof msg.text === "string" ? msg.text.trim() : undefined;
     if (!text) continue;
 
     const result = await tg.sendMessage(chatId, text);

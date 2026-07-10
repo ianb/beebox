@@ -102,6 +102,7 @@ async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | 
   // Parse boundary: the loose frontmatter read yields a plain mapping, which we
   // vouch for as IntakeJobFields (validated on load elsewhere; this is a
   // best-effort append path).
+  // eslint-disable-next-line no-restricted-syntax -- parse boundary: best-effort append path; the loose frontmatter mapping is vouched for as IntakeJobFields (validated on load elsewhere)
   return parseFrontmatterObject(content) as IntakeJobFields | null;
 }
 

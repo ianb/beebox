@@ -9,6 +9,7 @@ import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { errnoCode } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   buildSheetData,
@@ -126,10 +127,11 @@ const sheetsHandler: DriveTypeHandler = {
     const currentGids = new Set(
       spreadsheet.sheets.map((s) => String(s.properties.sheetId)),
     );
+    const existingTabGidsRaw = state.extra["tabGids"];
+    const existingTabGids: Record<string, unknown> = isRecord(existingTabGidsRaw) ? existingTabGidsRaw : {};
     for (const [relPath, _hash] of Object.entries(state.contentHashes)) {
-      const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
-      const gid = tabGids[relPath];
-      if (gid && !currentGids.has(gid)) {
+      const gid = existingTabGids[relPath];
+      if (typeof gid === "string" && !currentGids.has(gid)) {
         const filePath = path.join(localDir, relPath);
         try {
           await fs.unlink(filePath);
@@ -208,7 +210,8 @@ const sheetsHandler: DriveTypeHandler = {
     const { file, localDir, boxRoot, service, state } = opts;
     const pushed: string[] = [];
 
-    const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
+    const tabGidsRaw = state.extra["tabGids"];
+    const tabGids: Record<string, unknown> = isRecord(tabGidsRaw) ? tabGidsRaw : {};
 
     for (const [relPath, storedHash] of Object.entries(state.contentHashes)) {
       if (!relPath.endsWith(".json")) continue;
@@ -230,7 +233,7 @@ const sheetsHandler: DriveTypeHandler = {
       if (localHash === storedHash) continue;
 
       const gid = tabGids[relPath];
-      if (!gid) continue;
+      if (typeof gid !== "string" || gid === "") continue;
 
       const spreadsheet = await service.getSpreadsheet(file.id);
       const sheet = spreadsheet.sheets.find(

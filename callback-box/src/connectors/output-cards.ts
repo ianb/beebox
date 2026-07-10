@@ -82,6 +82,7 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
       // TFields shape, not the schema's own precise fields type — the single
       // centralized cast here replaces one per call site (cardFields already
       // validated `card.fields` against `schema` at runtime).
+      // eslint-disable-next-line no-restricted-syntax -- generic seam: cardFields validated card.fields against `schema` at runtime, but the loop can only promise the caller-declared TFields, not the schema's own inferred type
       const fields = cardFields(card, schema) as unknown as TFields;
       if (fields.status !== "pending") continue;
 
@@ -92,9 +93,12 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
       } else {
         fields.status = "failed";
         fields.error = failure;
+        // `fields` is the same object as `card.fields` (cardFields retypes it in
+        // place), so the mutations above are already reflected here — serialize
+        // the untyped bag directly, no cast.
         await fs.writeFile(
           absPath,
-          serializeCardText({ schema: card.schema, fields: { ...fields } as Record<string, unknown> }),
+          serializeCardText({ schema: card.schema, fields: card.fields }),
         );
         failed.push(relPath);
         console.error(`Failed to ${failureVerb} ${relPath}: ${failure}`);

@@ -22,6 +22,7 @@ import {
 import { createChatJobTemplate } from "../schemas/chat-job.js";
 import { sanitizeFilenameStem } from "../lib/filename.js";
 import { withCardLock } from "../lib/card-lock.js";
+import { isRecord } from "../lib/is-record.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
 
 class MissingFrontmatterError extends Error {
@@ -53,6 +54,7 @@ async function readThreadFields(absPath: string): Promise<ChatThreadFields> {
   if (!split.hasFrontmatter) {
     throw new MissingFrontmatterError(absPath);
   }
+  // eslint-disable-next-line no-restricted-syntax -- parse boundary: raw (deliberately unvalidated) thread frontmatter read; whole-shape vouch normalized to ChatThreadFields on return
   const raw = parseYaml(split.frontmatterText) as RawChatThreadFields;
   return { ...raw, entries: raw.entries ?? [] };
 }
@@ -209,10 +211,7 @@ export async function findExistingChatJob(
     match: (fields) => {
       if (fields["status"] !== "pending") return false;
       const thread = fields["thread"];
-      const ref =
-        thread !== null && typeof thread === "object" && !Array.isArray(thread)
-          ? (thread as Record<string, unknown>)["ref"]
-          : undefined;
+      const ref = isRecord(thread) ? thread["ref"] : undefined;
       return ref === threadRef;
     },
   });
@@ -353,8 +352,8 @@ async function refreshPersonCardName(cardPath: string, name: string): Promise<bo
   const content = await fs.readFile(cardPath, "utf-8");
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) return false;
-  const parsed = parseYaml(split.frontmatterText) as unknown;
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+  const parsed: unknown = parseYaml(split.frontmatterText);
+  if (!isRecord(parsed)) {
     return false;
   }
   const fields: Record<string, unknown> = { ...parsed };

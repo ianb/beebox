@@ -150,6 +150,7 @@ function lossyToTemplateItems(
   counts: LossyCounts,
 ): Array<{ type: GdocLossyType; count: number }> {
   const items: Array<{ type: GdocLossyType; count: number }> = [];
+  // eslint-disable-next-line no-restricted-syntax -- Object.keys widens to string[]; counts is a LossyCounts so its own keys are exactly keyof LossyCounts
   for (const key of Object.keys(counts) as Array<keyof LossyCounts>) {
     if (counts[key] > 0) items.push({ type: key, count: counts[key] });
   }
@@ -381,7 +382,8 @@ const docsHandler: DriveTypeHandler = {
     // Both signals are best-effort: revisionId only kicks in when both the
     // stored and current values are available (Docs API scope present at
     // both pull-time and push-time). modifiedTime always works.
-    const storedRevision = state.extra["headRevisionId"] as string | undefined;
+    const rawStoredRevision = state.extra["headRevisionId"];
+    const storedRevision = typeof rawStoredRevision === "string" ? rawStoredRevision : undefined;
     const doc = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
     const remoteDiverged =
       file.modifiedTime !== state.lastModified ||

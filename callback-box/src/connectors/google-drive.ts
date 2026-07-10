@@ -175,7 +175,7 @@ class GoogleDriveConnector implements Connector {
             existingDriveIds: new Set(
               await Promise.all(
                 cardPaths.map((p) => readDriveIdFromCard(path.join(this.boxRoot, p))),
-              ).then((ids) => ids.filter(Boolean) as string[]),
+              ).then((ids) => ids.filter((id): id is string => Boolean(id))),
             ),
             service,
             state,

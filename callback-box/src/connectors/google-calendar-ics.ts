@@ -9,6 +9,7 @@
 import ICAL from "ical.js";
 import { type CalendarEvent } from "../services/google-calendar.js";
 import { invariant } from "../lib/invariant.js";
+import { asIcalTime } from "./calendar-utils.js";
 
 export type GoogleCalendarEvent = CalendarEvent;
 
@@ -345,7 +346,7 @@ function readEventTime(
   propName: "dtstart" | "dtend",
 ): { date?: string; dateTime?: string; timeZone?: string } | undefined {
   const prop = vevent.getFirstProperty(propName);
-  const value = prop ? (prop.getFirstValue() as ICAL.Time | null) : null;
+  const value = prop ? asIcalTime(prop.getFirstValue()) : null;
   if (!value) return undefined;
   if (value.isDate) {
     return { date: value.toString() };
