@@ -136,10 +136,15 @@ wrapped.cause
 => plain string throw
 ```
 
-Non-string throwables render best-effort — an object serializes as JSON,
-`undefined` stringifies, and the original is still recoverable via `.cause`:
+Non-string throwables render best-effort — an error-shaped object (a plain
+object carrying a string `message`, as some libraries throw) reads like the old
+`(e as Error).message` cast did; other objects serialize as JSON; `undefined`
+stringifies:
 
 ```ts
+toError({ message: "boom", status: 500 }).message
+=> boom
+
 toError({ code: "ENOENT", path: "/x" }).message
 => {"code":"ENOENT","path":"/x"}
 

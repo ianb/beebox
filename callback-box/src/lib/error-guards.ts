@@ -86,6 +86,11 @@ export class NonError extends Error {
 function describeThrowable(value: unknown): string {
   if (typeof value === "string") return value;
   if (typeof value === "object" && value !== null) {
+    // An error-shaped object (a plain object carrying a string `message`, as
+    // some libraries throw) reads like the old `(e as Error).message` cast did.
+    if ("message" in value && typeof value.message === "string") {
+      return value.message;
+    }
     try {
       // JSON.stringify is typed `: string` but returns undefined at runtime for
       // values that don't serialize; objects here always yield a string.
