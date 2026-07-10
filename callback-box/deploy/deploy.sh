@@ -1,30 +1,65 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deploy from local working tree to server via rsync.
-# Syncs all three repos, builds frontend locally first, restarts services.
-# Usage: ./deploy/deploy.sh [--skip-frontend] [--skip-restart]
+# Deploy a git COMMIT to the server via rsync — never the working tree.
+#
+# The old mechanism rsynced the invoking working tree directly, so a dirty tree
+# (or a mid-deploy edit) could ship source that matched no commit and lie in
+# deploy-info.json. This version builds from a persistent, detached `git
+# worktree` (the "build checkout") that we reset to the target ref before
+# building, and rsyncs FROM that checkout. The user's active working tree is
+# never touched, cleaned, or rebuilt by a deploy.
+#
+# Mechanism:
+#   * `--ref <ref>` (default: HEAD of the invoking repo) is resolved to a full
+#     SHA immediately, so a commit landed mid-deploy can't produce a mixed ship.
+#   * The build checkout lives at <main-repo-root>/.deploy-checkout and is SHARED
+#     across every worktree of this repo (keyed to the shared git common dir), so
+#     concurrent worktrees reuse one checkout + one warm node_modules.
+#   * Per deploy we `checkout --detach <sha>` + `git clean -fdx` (preserving only
+#     node_modules and the meta file) so a stale gitignored dist/ from a previous
+#     ref can never ship — that clean is the whole point: it kills the "commit-X
+#     source, commit-Y artifacts" lie the old design allowed.
+#   * node_modules is preserved across deploys so the frozen install stays a fast
+#     reconcile; it's wiped only when pnpm-lock.yaml or patches/ changed between
+#     the last and current ref (patch-package mutates files inside node_modules,
+#     so reuse across such a change is unsafe).
+#   * deploy-info.json records a hash GUARANTEED to be exactly what shipped, plus
+#     the raw requested ref so a rollback (`deploy.sh --ref <old-sha>`) is
+#     recognizable in deploy-history.json.
+#
+# Only server-ip, the failure trap/notify, and the lock/meta files stay keyed to
+# the invoking repo; EVERYTHING built or synced comes from the build checkout.
+#
+# Usage: ./deploy/deploy.sh [--ref <ref>] [--skip-restart]
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-MONO_DIR="$(cd "$REPO_DIR/.." && pwd)"
+REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"   # callback-box within the invoking tree
+MONO_DIR="$(cd "$REPO_DIR/.." && pwd)"     # the invoking tree's monorepo root
 
 # Surface failures. This usually runs backgrounded from the post-commit hook,
-# with stdout/err going to deploy/.last-deploy.log that nobody watches — so on
-# any non-zero exit, echo a "Deploy failed" line (the poll pattern in
-# deploy/CLAUDE.md keys off it) AND fire a desktop notification. Skipped when run
-# interactively — you already see the output. terminal-notifier is optional.
+# with stdout/err going to a per-run log under deploy/.deploy-logs/ (symlinked as
+# deploy/.last-deploy.log) that nobody watches — so on any non-zero exit, echo a
+# "Deploy failed" line (the poll pattern in deploy/CLAUDE.md keys off it) AND
+# fire a desktop notification. Skipped when run interactively — you already see
+# the output. terminal-notifier is optional.
 LOG_HINT="callback-box/deploy/.last-deploy.log"
 notify() {  # $1=title  $2=message
   [ -t 1 ] && return 0
   command -v terminal-notifier >/dev/null 2>&1 &&
     terminal-notifier -title "$1" -message "$2" -group callback-deploy >/dev/null 2>&1 || true
 }
-trap 'rc=$?; if [ "$rc" -ne 0 ]; then echo "Deploy failed (exit $rc)"; notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"; fi' EXIT
+# The trap also releases the deploy lock (LOCK_HELD is set only after shlock
+# succeeds, further below). On a FAILED run the lock is released but any newer
+# request recorded during the run is deliberately NOT chained — the failure
+# notification tells the human, and the next commit (or a manual run) redeploys.
+trap 'rc=$?; [ -n "${LOCK_HELD:-}" ] && rm -f "${LOCK_FILE:-}"; if [ "$rc" -ne 0 ]; then echo "Deploy failed (exit $rc)"; notify "❌ callback-box deploy FAILED" "exit $rc — see $LOG_HINT"; fi' EXIT
 
 # The deploy target IP lives in a gitignored file; a repo move or fresh clone
 # leaves it behind — which is exactly how a run of silent no-op deploys just
 # happened. Fail loud and actionable instead of a bare "cat: No such file".
+# Stays keyed to the invoking tree: server-ip exists only in real checkouts, not
+# the (git-clean) build checkout below.
 if [ ! -s "$SCRIPT_DIR/server-ip" ]; then
   echo "deploy: $SCRIPT_DIR/server-ip is missing or empty — it holds the deploy" >&2
   echo "  target IP and is gitignored (never committed). Restore it from a backup," >&2
@@ -34,14 +69,211 @@ fi
 SERVER_IP=$(cat "$SCRIPT_DIR/server-ip")
 INSTALL_DIR="/opt/callback"
 
-SKIP_FRONTEND=false
+# The latest-wins lock below uses shlock(1) — a PID-based lock that ships with
+# macOS at /usr/bin/shlock and auto-breaks a stale lock left by a dead process
+# (flock would be the natural choice but stock macOS doesn't have it). Guard
+# here with the same loud-and-actionable pattern as server-ip rather than dying
+# on a bare "shlock: command not found" deep inside the run.
+if ! command -v shlock >/dev/null 2>&1; then
+  echo "deploy: shlock is required for deploy serialization but is not on PATH." >&2
+  echo "  It ships with macOS (/usr/bin/shlock). On another OS, install inn's" >&2
+  echo "  shlock or adapt the locking section to flock(1)." >&2
+  exit 1
+fi
+
+# --- Argument parsing -------------------------------------------------------
+# --skip-frontend is intentionally gone: it's incompatible with "ref == prod"
+# (the frontend build is the price of a truthful deploy, and it's backgrounded
+# anyway).
+RAW_REF="HEAD"          # the ref as requested, recorded verbatim in deploy-info
 SKIP_RESTART=false
-for arg in "$@"; do
-  case "$arg" in
-    --skip-frontend) SKIP_FRONTEND=true ;;
-    --skip-restart) SKIP_RESTART=true ;;
+CHAINED=false           # internal: set by the end-of-run chain re-exec, never by hand
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --chained)
+      CHAINED=true
+      shift
+      ;;
+    --ref)
+      if [[ $# -lt 2 ]]; then
+        echo "deploy: --ref requires a value" >&2
+        exit 1
+      fi
+      RAW_REF="$2"
+      shift 2
+      ;;
+    --skip-restart)
+      SKIP_RESTART=true
+      shift
+      ;;
+    *)
+      echo "deploy: unknown argument '$1' (usage: deploy.sh [--ref <ref>] [--skip-restart])" >&2
+      exit 1
+      ;;
   esac
 done
+
+# Resolve the requested ref to a FULL sha immediately, against the invoking repo.
+# Everything downstream keys off this sha, so a commit landed mid-deploy can't
+# produce a mixed ship. Fail loud if the ref doesn't resolve to a commit.
+if ! SHA=$(git -C "$MONO_DIR" rev-parse --verify --quiet "${RAW_REF}^{commit}"); then
+  echo "deploy: could not resolve ref '$RAW_REF' to a commit in $MONO_DIR" >&2
+  exit 1
+fi
+
+# --- Build-checkout location ------------------------------------------------
+# The checkout is shared across all worktrees of this repo, so key it to the
+# shared git common dir (identical for the main checkout and every linked
+# worktree) rather than to MONO_DIR (the invoking tree, which varies). The common
+# dir is <main-repo-root>/.git; strip the trailing /.git to get the main root.
+GIT_COMMON_DIR="$(git -C "$MONO_DIR" rev-parse --path-format=absolute --git-common-dir)"
+MAIN_ROOT="${GIT_COMMON_DIR%/.git}"
+CHECKOUT="$MAIN_ROOT/.deploy-checkout"
+META_FILE="$CHECKOUT/.deploy-last-sha"   # last-installed sha; drives clean-reinstall + git-clean keep
+LOCK_FILE="$MAIN_ROOT/.deploy-checkout.lock"
+REQUESTED_FILE="$MAIN_ROOT/.deploy-requested"
+
+# checkout_belongs_to_repo: true iff the persistent checkout's root .git file
+# points at a worktree gitdir under THIS repo's common dir. A repo move/rename
+# (the exact failure that bit server-ip) leaves the old absolute gitdir dangling,
+# so this catches it and we recreate from scratch below.
+checkout_belongs_to_repo() {
+  local gitfile="$CHECKOUT/.git"
+  [ -f "$gitfile" ] || return 1
+  local line
+  read -r line < "$gitfile" || return 1
+  case "$line" in
+    "gitdir: "*) ;;
+    *) return 1 ;;
+  esac
+  local gitdir="${line#gitdir: }"
+  # Canonicalize both sides; if the recorded gitdir no longer exists (repo
+  # moved), the cd fails and we report mismatch.
+  local resolved_gitdir resolved_common
+  resolved_gitdir="$(cd "$gitdir" 2>/dev/null && pwd -P)" || return 1
+  resolved_common="$(cd "$GIT_COMMON_DIR" 2>/dev/null && pwd -P)" || return 1
+  case "$resolved_gitdir" in
+    "$resolved_common"/worktrees/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# --- Locking: latest-wins ---------------------------------------------------
+# Record the requested sha (plain overwrite — last writer wins; a manual
+# rollback to an OLDER sha is still the LATEST intent, which is why this is
+# write-time ordering, not commit ancestry), then try to take the lock. shlock
+# is non-blocking, so a loser doesn't queue: it exits, trusting the current
+# holder to CHAIN — after finishing, the holder re-reads .deploy-requested and
+# re-execs itself (see end of script). This collapses a rapid `main` commit
+# burst to at most one extra deploy, always ending on the latest requested ref.
+# A stale lock from a crashed deploy is auto-broken by shlock's PID liveness
+# check.
+#
+# A CHAINED invocation does NOT stamp the file: it carries no new intent, it
+# only relays whatever is currently requested. (If it re-stamped, a stale sha
+# read just before the re-exec could clobber a newer concurrent request and the
+# final deployed state would silently regress.)
+if [[ "$CHAINED" != true ]]; then
+  echo "$SHA" > "$REQUESTED_FILE"
+fi
+if ! shlock -f "$LOCK_FILE" -p $$; then
+  echo "Another deploy holds $LOCK_FILE — requested $SHA recorded; the running deploy will chain to it."
+  exit 0
+fi
+LOCK_HELD=1
+# Deploy the latest REQUESTED sha, not necessarily our own. For a chained run
+# this is the main mechanism (pick up whatever is requested right now); for a
+# normal run it catches the race where we won the lock against an invocation
+# that stamped a newer sha just before losing.
+REQUESTED="$(cat "$REQUESTED_FILE" 2>/dev/null || echo "$SHA")"
+if [[ -n "$REQUESTED" && "$REQUESTED" != "$SHA" ]]; then
+  echo "Latest requested sha is $REQUESTED — deploying it instead of $SHA."
+  SHA="$REQUESTED"
+  RAW_REF="$REQUESTED"
+fi
+
+echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
+
+# --- Build-checkout lifecycle ----------------------------------------------
+# The checkout is a disposable cache; recreating it is always safe.
+if [ ! -d "$CHECKOUT" ]; then
+  # Clear any stale registration left by a wiped-but-not-pruned checkout dir,
+  # then create the detached worktree at the target sha.
+  git -C "$MONO_DIR" worktree prune
+  git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"
+elif ! checkout_belongs_to_repo; then
+  echo "deploy: build checkout $CHECKOUT does not belong to this repo (repo moved/renamed?)." >&2
+  echo "  Wiping and recreating it — it's a disposable build cache, so this is safe." >&2
+  rm -rf "$CHECKOUT"
+  git -C "$MONO_DIR" worktree prune
+  git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"
+fi
+
+# Reset the checkout to the target sha. (Redundant right after a fresh
+# `worktree add`, which already checked out $SHA, but harmless and keeps the
+# path uniform for the reuse case.)
+git -C "$CHECKOUT" checkout --detach "$SHA"
+
+# Clean EVERYTHING ignored/untracked except node_modules and the meta file. This
+# is the clean-artifact boundary: a stale gitignored dist/ (callback-box/dist,
+# src/frontend/dist) from a previous ref must never ship. node_modules is
+# preserved so the pnpm install below stays a fast reconcile (Vite's cache lives
+# inside node_modules, so it survives too); the meta file records the
+# last-installed sha and must outlive the clean.
+git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .
+
+# --- Clean-reinstall trigger ------------------------------------------------
+# patch-package mutates files inside node_modules, so reusing node_modules across
+# a pnpm-lock.yaml or patches/ change (notably a rollback) is unsafe. Wipe all
+# node_modules trees (root + workspace members) when the lockfile or patches
+# differ between the last-installed sha and this one — or when the meta file is
+# missing/invalid (we can't prove the tree is safe to reuse).
+NEED_CLEAN_INSTALL=false
+if [ -f "$META_FILE" ]; then
+  LAST_SHA="$(cat "$META_FILE")"
+  if ! git -C "$CHECKOUT" rev-parse --verify --quiet "${LAST_SHA}^{commit}" >/dev/null; then
+    NEED_CLEAN_INSTALL=true
+  elif ! git -C "$CHECKOUT" diff --quiet "$LAST_SHA" "$SHA" -- pnpm-lock.yaml patches/; then
+    NEED_CLEAN_INSTALL=true
+  fi
+else
+  NEED_CLEAN_INSTALL=true
+fi
+if [[ "$NEED_CLEAN_INSTALL" == true ]]; then
+  echo "Lockfile/patches changed (or first install) — wiping checkout node_modules for a clean reinstall..."
+  rm -rf "$CHECKOUT/node_modules" \
+         "$CHECKOUT/personal-vibe-check/node_modules" \
+         "$CHECKOUT/agent-doctest/node_modules" \
+         "$CHECKOUT/callback-box/node_modules" \
+         "$CHECKOUT/callback-box/src/frontend/node_modules"
+fi
+
+# Reconcile the BUILD CHECKOUT's node_modules to the committed lockfile before
+# any build. A just-merged dependency change (added/removed dep) otherwise builds
+# the frontend/cards package against stale modules and fails — this has bitten the
+# auto-deploy repeatedly. Frozen so it's deterministic and never rewrites the
+# lockfile; a no-op when already in sync. HUSKY=0 skips the hook install.
+echo "Reconciling build-checkout deps..."
+(cd "$CHECKOUT" && HUSKY=0 pnpm install --frozen-lockfile --silent)
+
+# Record the sha we just installed against, so the next deploy can decide whether
+# node_modules is safe to reuse. Only written after a successful install.
+echo "$SHA" > "$META_FILE"
+
+# Build frontend from the checkout (always — no skip). Vite empties its outDir,
+# but the git clean above already removed any stale dist as well.
+echo "Building frontend..."
+(cd "$CHECKOUT/callback-box/src/frontend" && pnpm --silent build)
+
+# Build the CLI bundle from the checkout before syncing. dist/ is rsynced (not
+# excluded), and while the server runs cb via tsx (not the bundle), it DOES need
+# dist/cards/index.js on disk: box-local schema files import `callback-box/cards`,
+# which package.json `exports` maps to ./dist/cards/index.js (a plain-JS build of
+# the card-primitive layer, emitted by build-cli.mjs alongside dist/cli.mjs). If
+# that file is missing or stale on the server, every box-local schema fails to
+# load. Building here keeps dist/ in lockstep with the source we rsync.
+echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
+(cd "$CHECKOUT/callback-box" && node scripts/build-cli.mjs >/dev/null)
 
 RSYNC_OPTS=(-az --delete
   # rsync runs as root over ssh, and -a preserves the sender's (local dev
@@ -66,41 +298,23 @@ RSYNC_OPTS=(-az --delete
   --exclude '.claude/'
   --exclude 'deploy-info.json'
   --exclude 'deploy-history.json'
+  # server-ip and the per-run logs never exist in the git-clean build checkout,
+  # so these excludes are belt-and-suspenders — but stated explicitly so the
+  # --delete semantics are documented: neither is a build artifact, and neither
+  # should ever be pushed to (or deleted from) the server based on the checkout.
+  --exclude 'deploy/server-ip'
+  --exclude 'deploy/.deploy-logs'
 )
 
-# Reconcile local node_modules to the committed lockfile before any local
-# build. A just-merged dependency change (added/removed dep) otherwise builds
-# the frontend/cards package against stale modules and fails — this has bitten the
-# auto-deploy repeatedly. Frozen so it's deterministic and never rewrites the
-# lockfile; a no-op when already in sync.
-echo "Reconciling local deps..."
-(cd "$MONO_DIR" && HUSKY=0 pnpm install --frozen-lockfile --silent)
-
-# Build frontend locally (fast — already has node_modules)
-if [[ "$SKIP_FRONTEND" != true ]]; then
-  echo "Building frontend..."
-  cd "$REPO_DIR/src/frontend" && pnpm --silent build
-fi
-
-# Build the CLI bundle locally before syncing. dist/ is rsynced (not excluded),
-# and while the server runs cb via tsx (not the bundle), it DOES need
-# dist/cards/index.js on disk: box-local schema files import `callback-box/cards`,
-# which package.json `exports` maps to ./dist/cards/index.js (a plain-JS build of
-# the card-primitive layer, emitted by build-cli.mjs alongside dist/cli.mjs). If
-# that file is missing or stale on the server, every box-local schema fails to
-# load. Building here keeps dist/ in lockstep with the source we rsync.
-echo "Building CLI bundle (dist/cli.mjs + dist/cards)..."
-cd "$REPO_DIR" && node scripts/build-cli.mjs >/dev/null
-
-# Sync monorepo packages. These are pnpm workspace members linked via
-# `workspace:*` deps, so they must all be present alongside callback-box on the
-# server for the root `pnpm install` to resolve. personal-vibe-check and
-# agent-doctest are devDeps of callback-box (the server install is non-prod
-# because the runtime uses tsx, itself a devDep).
+# Sync monorepo packages FROM THE BUILD CHECKOUT. These are pnpm workspace
+# members linked via `workspace:*` deps, so they must all be present alongside
+# callback-box on the server for the root `pnpm install` to resolve.
+# personal-vibe-check and agent-doctest are devDeps of callback-box (the server
+# install is non-prod because the runtime uses tsx, itself a devDep).
 # browse/agent-browser-typed are deliberately NOT synced — they're dev-only
 # tooling and a partial workspace installs fine (pnpm ignores absent members).
 for repo in personal-vibe-check agent-doctest callback-box; do
-  local_path="$MONO_DIR/$repo/"
+  local_path="$CHECKOUT/$repo/"
   if [[ ! -d "$local_path" ]]; then
     echo "  $repo: not found at $local_path, skipping"
     continue
@@ -109,18 +323,19 @@ for repo in personal-vibe-check agent-doctest callback-box; do
   rsync "${RSYNC_OPTS[@]}" "$local_path" "root@$SERVER_IP:$INSTALL_DIR/$repo/"
 done
 
-# Sync the workspace root itself. With workspace deps, /opt/callback becomes the
-# pnpm workspace root: the single root lockfile + manifest + .npmrc + patches
-# drive one reproducible `pnpm install --frozen-lockfile` from there (below).
-# These are individual files, so no --delete (it would nuke the synced subdirs).
+# Sync the workspace root itself, FROM THE BUILD CHECKOUT. With workspace deps,
+# /opt/callback becomes the pnpm workspace root: the single root lockfile +
+# manifest + .npmrc + patches drive one reproducible `pnpm install
+# --frozen-lockfile` from there (below). These are individual files, so no
+# --delete (it would nuke the synced subdirs).
 echo "Syncing workspace root..."
 rsync -az --no-owner --no-group \
-  "$MONO_DIR/package.json" \
-  "$MONO_DIR/pnpm-workspace.yaml" \
-  "$MONO_DIR/.npmrc" \
-  "$MONO_DIR/pnpm-lock.yaml" \
+  "$CHECKOUT/package.json" \
+  "$CHECKOUT/pnpm-workspace.yaml" \
+  "$CHECKOUT/.npmrc" \
+  "$CHECKOUT/pnpm-lock.yaml" \
   "root@$SERVER_IP:$INSTALL_DIR/"
-rsync -az --delete --no-owner --no-group "$MONO_DIR/patches/" "root@$SERVER_IP:$INSTALL_DIR/patches/"
+rsync -az --delete --no-owner --no-group "$CHECKOUT/patches/" "root@$SERVER_IP:$INSTALL_DIR/patches/"
 
 # --no-owner/--no-group above leave everything owned by root (the ssh
 # connection user) rather than the sender's uid — still wrong for `callback`,
@@ -177,7 +392,10 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   # patch-package still runs via the root postinstall to patch eslint-config-agent.
   cd /opt/callback
   echo "  Reconciling workspace deps (frozen)..."
-  HUSKY=0 pnpm install --frozen-lockfile
+  # npm_config_update_notifier=false: the "Update available!" banner is noise
+  # in a deploy log (and agent context) on every run; updating pnpm is a
+  # deliberate act, not something a deploy should advertise.
+  HUSKY=0 npm_config_update_notifier=false pnpm install --frozen-lockfile
 REMOTE
 
 # Reconcile each v2-shape (package-layout) box's own node_modules against its
@@ -229,22 +447,17 @@ REMOTE
 # Build the JSON via node so JSON.stringify escapes subjects correctly —
 # commit subjects can contain quotes, backslashes, etc. that break naive
 # shell interpolation. Values come through env vars to avoid any shell
-# expansion in the node script body.
+# expansion in the node script body. Hash + subject are read from the BUILD
+# CHECKOUT at the resolved sha, so the recorded hash is exactly what shipped;
+# requestedRef records the raw ref so a rollback is recognizable in history.
 echo "Writing deploy info..."
 DEPLOYED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-CALLBACK_BOX_HASH=""
-CALLBACK_BOX_SUBJECT=""
-# Since the monorepo merge there's no per-project callback-box/.git — the repo
-# is at $MONO_DIR. Read the deployed commit from the monorepo HEAD. (Kept the
-# `commits["callback-box"]` key below for the health endpoint's shape.)
-if [[ -d "$MONO_DIR/.git" ]]; then
-  CALLBACK_BOX_HASH=$(cd "$MONO_DIR" && git rev-parse --short HEAD)
-  CALLBACK_BOX_SUBJECT=$(cd "$MONO_DIR" && git log -1 --format=%s)
-fi
-DEPLOY_INFO=$(DEPLOYED_AT="$DEPLOYED_AT" \
+CALLBACK_BOX_HASH=$(git -C "$CHECKOUT" rev-parse --short "$SHA")
+CALLBACK_BOX_SUBJECT=$(git -C "$CHECKOUT" log -1 --format=%s "$SHA")
+DEPLOY_INFO=$(DEPLOYED_AT="$DEPLOYED_AT" REQUESTED_REF="$RAW_REF" \
   CALLBACK_BOX_HASH="$CALLBACK_BOX_HASH" CALLBACK_BOX_SUBJECT="$CALLBACK_BOX_SUBJECT" \
   node -e '
-const out = { deployedAt: process.env.DEPLOYED_AT, commits: {} };
+const out = { deployedAt: process.env.DEPLOYED_AT, requestedRef: process.env.REQUESTED_REF, commits: {} };
 if (process.env.CALLBACK_BOX_HASH) {
   out.commits["callback-box"] = { hash: process.env.CALLBACK_BOX_HASH, subject: process.env.CALLBACK_BOX_SUBJECT };
 }
@@ -318,3 +531,29 @@ fi
 echo "Deploy complete."
 notify "✅ callback-box deployed" "to $SERVER_IP"
 echo "Verify externally: curl -H \"Authorization: Bearer \$CB_DIAG_API_KEY\" https://box.example.com/healthz"
+
+# --- Chain to a newer request (latest-wins, second half) ----------------------
+# If a deploy was requested while this one ran, its invocation exited early
+# (shlock held) trusting us to pick it up. Release the lock and re-exec in
+# --chained mode (which re-reads .deploy-requested itself rather than trusting
+# the sha we read here — see the stamping comment above). Ordering matters:
+# release BEFORE the re-check, so a request that lands in the gap either gets
+# seen by our re-check or finds the lock free and runs itself — no window where
+# a request is silently dropped. --skip-restart is deliberately not propagated:
+# the chained request came from a hook wanting a full deploy. (exec does not
+# fire the EXIT trap, hence the manual release.)
+rm -f "$LOCK_FILE"
+LOCK_HELD=""
+NEWREQ="$(cat "$REQUESTED_FILE" 2>/dev/null || true)"
+if [ -n "$NEWREQ" ] && [ "$NEWREQ" != "$SHA" ]; then
+  echo "A newer deploy ($NEWREQ) was requested during this run — chaining."
+  if [ -t 1 ]; then
+    exec "$0" --ref "$NEWREQ" --chained
+  else
+    # Backgrounded (hook) case: our stdout is run N's per-run log, but anyone
+    # polling follows the .last-deploy.log symlink, which the newer request's
+    # hook already repointed at ITS log. Send the chained run's output through
+    # the symlink so "Deploy complete/failed" lands in the log being watched.
+    exec "$0" --ref "$NEWREQ" --chained >>"$SCRIPT_DIR/.last-deploy.log" 2>&1
+  fi
+fi
