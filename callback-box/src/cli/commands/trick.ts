@@ -18,6 +18,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
 
 const require = createRequire(import.meta.url);
@@ -61,7 +62,7 @@ async function readDescription(entryPoint: string): Promise<string> {
     );
     return match?.[1] ?? "";
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read trick description, continuing without one: ${entryPoint}:`, e);
     }
     return "";
@@ -79,7 +80,7 @@ async function discoverTricks(tricksDir: string): Promise<TrickInfo[]> {
   try {
     entries = await fs.readdir(scriptsDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read tricks directory, treating as no tricks: ${scriptsDir}:`, e);
     }
     return [];

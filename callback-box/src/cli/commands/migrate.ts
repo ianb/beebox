@@ -26,6 +26,7 @@ import {
 import { parseProcedureDefinition } from "../../schemas/procedure.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { getStatus, stageAll, commit } from "../../lib/git.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const CALLBACK_BOX_ROOT = PACKAGE_ROOT;
 const CB_BIN = path.join(CALLBACK_BOX_ROOT, "bin", "cb");
@@ -64,8 +65,7 @@ async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
     }
     return entries;
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw new ManifestReadError(abs, e);
   }
 }
@@ -315,7 +315,7 @@ export const migrateCommand = new Command("migrate")
         try {
           await assertProcedureHasGate({ procedure: m.procedure, boxRoot });
         } catch (e) {
-          console.error(`\n${(e as Error).message}`);
+          console.error(`\n${errorMessage(e)}`);
           process.exit(1);
         }
         code = await runProcedure({ procedure: m.procedure, boxRoot });

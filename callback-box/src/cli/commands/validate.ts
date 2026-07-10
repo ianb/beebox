@@ -26,6 +26,7 @@ import { checkExternalUrls, formatUrlReport, type UrlCheckMode } from "../../cor
 import { loadValidationIgnore, type ValidationIgnore } from "../../core/validation-ignore.js";
 import type { LoadCardContext } from "../../core/card-io.js";
 import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from "../../lib/box-shape.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const execFileP = promisify(execFile);
 
@@ -341,7 +342,7 @@ export const validateCommand = new Command("validate")
           process.exit(1);
         }
       } catch (error) {
-        console.error(`Error: ${(error as Error).message}`);
+        console.error(`Error: ${errorMessage(error)}`);
         process.exit(1);
       }
     }

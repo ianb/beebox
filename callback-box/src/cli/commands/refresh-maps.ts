@@ -26,6 +26,7 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import { precheck, type MapBrief } from "../../core/maps/precheck.js";
 import { finalize } from "../../core/maps/finalize.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const BRIEF_FILE = path.join(".callback-box", "refresh-maps-brief.json");
 
@@ -43,7 +44,7 @@ async function readSavedBrief(boxRoot: string): Promise<MapBrief | null> {
     const raw = await fs.readFile(path.join(boxRoot, BRIEF_FILE), "utf-8");
     return JSON.parse(raw) as MapBrief;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("refresh-maps: could not read saved brief, treating as absent:", e);
     }
     return null;
@@ -130,7 +131,7 @@ export const refreshMapsCommand = new Command("refresh-maps")
         await runCheck(boxRoot, options);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

@@ -18,6 +18,7 @@ import {
   updateContainsField,
   ContainsUpdateError,
 } from "../../core/search/contains-update.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** Human output cap per group; --json is always complete. */
 const LIST_CAP = 100;
@@ -92,7 +93,7 @@ containsCommand
     try {
       await runList(options);
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });
@@ -106,7 +107,7 @@ containsCommand
     try {
       await runUpdate(card, options);
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

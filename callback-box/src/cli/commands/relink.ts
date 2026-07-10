@@ -5,6 +5,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { repairBoxLinks, type RepairReport } from "../../core/link-repair.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 function printReport(report: RepairReport, { dryRun }: { dryRun: boolean }): void {
   const verb = dryRun ? "Would fix" : "Fixed";
@@ -50,7 +51,7 @@ export const relinkCommand = new Command("relink")
         printReport(report, { dryRun });
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

@@ -20,6 +20,7 @@ import {
   createOAuth2Client,
   GOOGLE_SCOPES,
 } from "../../connectors/google-auth.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const googleAuthCommand = new Command("google-auth")
   .description("Set up Google OAuth2 credentials")
@@ -139,7 +140,7 @@ export const googleAuthCommand = new Command("google-auth")
                 await reply.type("text/html").send(errorPage("Token exchange failed"));
                 resolve({
                   success: false,
-                  error: `Token exchange failed: ${(err as Error).message}`,
+                  error: `Token exchange failed: ${errorMessage(err)}`,
                 });
               }
             }
@@ -161,7 +162,7 @@ export const googleAuthCommand = new Command("google-auth")
               console.error("Failed to start OAuth callback server:", err);
               resolve({
                 success: false,
-                error: `Failed to start server: ${(err as Error).message}`,
+                error: `Failed to start server: ${errorMessage(err)}`,
               });
             });
         }

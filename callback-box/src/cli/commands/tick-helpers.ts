@@ -29,6 +29,7 @@ import { fallbackTiming, handleCreateAfterSuccess } from "./tick-utils.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 import type { TickOptions, ScriptResult } from "./tick.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 type RunningScripts = Awaited<ReturnType<typeof loadRunningScripts>>;
 type ScriptState = Awaited<ReturnType<typeof loadScriptState>>;
@@ -45,7 +46,7 @@ export async function readScheduleFiles(
       f.endsWith(".scheduled-script.card")
     );
   } catch (e) {
-    if (!options.quiet && (e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (!options.quiet && errnoCode(e) !== "ENOENT") {
       console.warn(`No schedules directory found (or unreadable): ${e instanceof Error ? e.message : String(e)}`);
     }
     return null;
@@ -259,10 +260,10 @@ export async function executeScript(args: ExecuteScriptArgs): Promise<ScriptResu
     return { name: scriptName, status: "ran", command: parsed.runs, durationMs };
   } catch (err) {
     const { durationMs, sleepAffected } = fallbackTiming(err);
-    recordOutcome(state, { result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
+    recordOutcome(state, { result: "failure", error: errorMessage(err), durationMs, sleepAffected, windowMs, now });
     await saveScriptState({ boxRoot, scriptName, state });
-    if (!options.quiet) console.error(`  Failed: ${(err as Error).message}`);
-    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: (err as Error).message };
+    if (!options.quiet) console.error(`  Failed: ${errorMessage(err)}`);
+    return { name: scriptName, status: "error", command: parsed.runs, durationMs, error: errorMessage(err) };
   } finally {
     await releaseScriptLock({ boxRoot, scriptName });
   }

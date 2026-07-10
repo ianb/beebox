@@ -14,6 +14,7 @@ import {
   LOG_DIR,
   type LogEntry,
 } from "../../core/schedule/scheduler.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import {
   loadBoxesConfig,
   addBoxToManifest,
@@ -200,7 +201,7 @@ schedulerCommand
       } catch (e) {
         // Auto-load failed (e.g. already loaded, or launchctl unavailable).
         // Fall through to print the manual instructions below.
-        console.warn(`Auto-load failed: ${(e as Error).message}`);
+        console.warn(`Auto-load failed: ${errorMessage(e)}`);
         console.warn("Falling back to manual instructions.");
         console.log();
       }

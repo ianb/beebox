@@ -12,6 +12,7 @@ import * as os from "node:os";
 
 import { type SessionEntry, buildEntry } from "./session-entry.js";
 import { stripChatAppTags } from "../../core/chat/features.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import {
   extractSnippet,
   isCompactionSummary,
@@ -90,7 +91,7 @@ export async function listSessions(
   } catch (e) {
     // No session dir yet (box never had a Claude Code run) is the common
     // case — treat any read failure as "no sessions" but record it.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug("listSessions: could not read session dir, treating as empty:", e);
     }
     return [];
@@ -108,7 +109,7 @@ export async function listSessions(
     } catch (e) {
       // File vanished between readdir and stat (concurrent cleanup) — skip
       // it rather than fail the whole listing, but note the anomaly.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`listSessions: could not stat ${filePath}, skipping:`, e);
       }
       continue;

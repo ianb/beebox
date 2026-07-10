@@ -16,6 +16,7 @@ import { generateSkills } from "../../core/box/skills.js";
 import { generateDocs, setDocIdDebug } from "../../core/docs-gen/index.js";
 import { installValidationHooks } from "../../core/install-validation-hooks.js";
 import { openSearchIndex } from "../../core/search/refresh.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Print the "what just happened" banner and (for a fresh init) initialize
@@ -223,7 +224,7 @@ export const initCommand = new Command("init")
     try {
       await runInit(targetPath, options);
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

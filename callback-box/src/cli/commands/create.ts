@@ -15,6 +15,7 @@ import {
   describeTemplateArgs,
 } from "../../schemas/index.js";
 import { loadBoxSchemas } from "../../schemas/registry.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 interface CreateOptions {
   template?: string;
@@ -135,7 +136,7 @@ export const createCommand = new Command("create")
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

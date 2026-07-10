@@ -36,6 +36,7 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { getStatus, getHead, revertToSnapshot, stageAll, commit } from "../../lib/git.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
+import { toError, errorMessage } from "../../lib/error-guards.js";
 
 const OLD_ENGINE_CB_BIN = path.join(PACKAGE_ROOT, "bin", "cb");
 
@@ -309,7 +310,7 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
 
     return { installedVersion, commitHash };
   } catch (e) {
-    await revertUpgrade({ packageRoot, boxRoot, snapshotSha, runCommand, failure: e as Error });
+    await revertUpgrade({ packageRoot, boxRoot, snapshotSha, runCommand, failure: toError(e) });
     throw e;
   }
 }
@@ -322,7 +323,7 @@ export const upgradeCommand = new Command("upgrade")
       const result = await runUpgrade({ to: options.to });
       console.log(`Upgraded to callback-box@${result.installedVersion} (commit ${result.commitHash}).`);
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

@@ -14,6 +14,7 @@ import {
 import { cardFields, parseCardText } from "../../core/card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { loadScriptState } from "../../core/schedule/state.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 export const scheduledCommand = new Command("scheduled")
   .description("Show all scheduled scripts and their state")
@@ -28,7 +29,7 @@ export const scheduledCommand = new Command("scheduled")
         f.endsWith(".scheduled-script.card")
       );
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not read schedules directory at ${schedulesDir}:`, e);
       }
       console.log("No schedules directory found.");
@@ -53,7 +54,7 @@ export const scheduledCommand = new Command("scheduled")
         const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
         parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
       } catch (err) {
-        console.log(`  ${scriptName.padEnd(22)} [parse error: ${(err as Error).message}]`);
+        console.log(`  ${scriptName.padEnd(22)} [parse error: ${errorMessage(err)}]`);
         continue;
       }
 

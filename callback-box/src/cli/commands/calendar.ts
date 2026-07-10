@@ -16,6 +16,7 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { getGoogleAuth } from "../../connectors/google-auth.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import {
   loadCalendarConfig,
   saveCalendarConfig,
@@ -114,7 +115,7 @@ calendarCommand
       const state = JSON.parse(content);
       eventCount = Object.keys(state.eventFiles || {}).length;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not read calendar state at ${statePath}, assuming no events stored:`, e);
       }
     }

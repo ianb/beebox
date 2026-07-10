@@ -39,6 +39,7 @@ import { loadViewCards } from "../../core/views/cards.js";
 import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import type { ViewProps } from "../../core/views/types.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {
@@ -305,7 +306,7 @@ const viewTypecheckCommand = new Command("typecheck")
       }
       process.exitCode = ok ? 0 : 1;
     } catch (error) {
-      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.stderr.write(`Error: ${errorMessage(error)}\n`);
       process.exitCode = 1;
     }
   });
@@ -341,7 +342,7 @@ const viewCheckCommand = new Command("check")
       }
       process.exitCode = ok ? 0 : 1;
     } catch (error) {
-      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.stderr.write(`Error: ${errorMessage(error)}\n`);
       process.exitCode = 1;
     }
   });
@@ -368,7 +369,7 @@ const viewTestCommand = new Command("test")
         });
         process.exitCode = code;
       } catch (error) {
-        process.stderr.write(`Error: ${(error as Error).message}\n`);
+        process.stderr.write(`Error: ${errorMessage(error)}\n`);
         process.exitCode = 1;
       } finally {
         // Tear down esbuild's service child deterministically — nothing

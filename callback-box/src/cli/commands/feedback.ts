@@ -13,6 +13,7 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import { stageFiles, commitPaths } from "../../lib/git.js";
 import { slugify } from "../../lib/filename.js";
 import { invariant } from "../../lib/invariant.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import {
   getSessionLogPath,
   listSessions,
@@ -64,7 +65,7 @@ async function getSessionContext(boxRoot: string): Promise<string | null> {
     const result = await parseSessionLog({ logPath: session.logPath });
     entries = result.entries;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not parse session log at ${session.logPath}, no session context available:`, e);
     }
     return null;
@@ -142,6 +143,6 @@ export const feedbackCommand = new Command("feedback")
     } catch (error) {
       // Best-effort: feedback shouldn't block work. Note the failure on stderr
       // but exit zero so the agent's task isn't interrupted.
-      process.stderr.write(`cb feedback: ${(error as Error).message}\n`);
+      process.stderr.write(`cb feedback: ${errorMessage(error)}\n`);
     }
   });
