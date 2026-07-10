@@ -8,6 +8,7 @@
  */
 
 import { assertPublicHttpUrl, UnsafeProxyUrlError } from "../../webapp/routes/proxy-image.js";
+import { invariant } from "../../lib/invariant.js";
 
 /**
  * Matches an http(s) URL in raw card/markdown text. Excludes whitespace and the
@@ -178,7 +179,9 @@ export async function checkUrls(urls: string[], { concurrency }: { concurrency?:
     for (;;) {
       const i = next++;
       if (i >= urls.length) return;
-      verdicts[i] = await checkUrl(urls[i]!);
+      const url = urls[i];
+      invariant(url !== undefined, "i is within [0, urls.length) by the check above");
+      verdicts[i] = await checkUrl(url);
     }
   }
   const workers = Array.from({ length: Math.min(limit, urls.length) }, () => worker());

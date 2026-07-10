@@ -8,6 +8,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { invariant } from "../../lib/invariant.js";
 
 export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
 export const PDF_EXTENSION = ".pdf";
@@ -94,7 +95,8 @@ export function groupScanFiles(files: string[]): ScanGroup[] {
   for (const img of images) {
     const m = path.basename(img).match(SCANNER_PREFIX_RE);
     if (m) {
-      const prefix = m[1]!;
+      const prefix = m[1];
+      invariant(prefix !== undefined, "SCANNER_PREFIX_RE's first capture group (.+) is mandatory, not optional");
       const arr = matched.get(prefix);
       if (arr) arr.push(img);
       else matched.set(prefix, [img]);
@@ -102,10 +104,9 @@ export function groupScanFiles(files: string[]): ScanGroup[] {
       unmatched.push(img);
     }
   }
-  const sortedPrefixes = [...matched.keys()].toSorted();
-  for (const prefix of sortedPrefixes) {
-    const paths = matched.get(prefix)!.toSorted();
-    groups.push({ kind: "image-batch", files: paths, label: prefix });
+  const sortedEntries = [...matched.entries()].toSorted(([a], [b]) => a.localeCompare(b));
+  for (const [prefix, imgs] of sortedEntries) {
+    groups.push({ kind: "image-batch", files: imgs.toSorted(), label: prefix });
   }
   if (unmatched.length > 0) {
     groups.push({ kind: "image-batch", files: unmatched.toSorted(), label: "(loose images)" });

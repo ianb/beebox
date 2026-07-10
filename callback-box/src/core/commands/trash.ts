@@ -18,6 +18,7 @@ import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../lib/paths.j
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
+import { invariant } from "../../lib/invariant.js";
 
 class NotACardFileError extends Error {
   readonly cardPath: string;
@@ -231,9 +232,14 @@ async function executeTrash(
   // Optionally commit all at once
   if (trashArgs.commit) {
     const reason = trashArgs.reason ? `: ${trashArgs.reason}` : "";
-    const summary = results.length === 1
-      ? `Trash card: ${path.basename(results[0]!.sourcePath)}${reason}`
-      : `Trash ${results.length} cards${reason}`;
+    let summary: string;
+    if (results.length === 1) {
+      const [only] = results;
+      invariant(only !== undefined, "checked results.length === 1 above");
+      summary = `Trash card: ${path.basename(only.sourcePath)}${reason}`;
+    } else {
+      summary = `Trash ${results.length} cards${reason}`;
+    }
     await stageAndCommitPaths(ctx.boxRoot, {
       paths: [...allMovedFiles, ...allAdditions],
       message: summary,

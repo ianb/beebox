@@ -40,6 +40,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
+import { invariant } from "../../lib/invariant.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
@@ -108,7 +109,9 @@ async function executeScanImport(
       };
     }
     // PDFs are always filed as documents — Flash treatment for PDFs is deferred.
-    return runDocumentMode(ctx, { pdfPath: resolved[0]! });
+    const [pdfPath] = resolved;
+    invariant(pdfPath !== undefined, "resolved has exactly one entry here (non-empty inputs, length > 1 handled above)");
+    return runDocumentMode(ctx, { pdfPath });
   }
 
   const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];

@@ -9,6 +9,7 @@
  * place.
  */
 
+import { invariant } from "../../lib/invariant.js";
 import { sleep } from "../../lib/sleep.js";
 import {
   analyzeScanBatchWithGemini,
@@ -172,7 +173,11 @@ interface RunOneBatchArgs {
 
 async function runOneBatch(args: RunOneBatchArgs): Promise<OneBatchOutcome> {
   const { plan, log } = args;
-  const batchPaths = plan.globalIndices.map((g) => args.imagePaths[g]!);
+  const batchPaths = plan.globalIndices.map((g) => {
+    const p = args.imagePaths[g];
+    invariant(p !== undefined, "planScanBatches only emits indices within imagePaths' range");
+    return p;
+  });
 
   // Transient-error retry: try the same batch up to 3 times with exponential
   // backoff before giving up or splitting.
