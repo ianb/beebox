@@ -1,5 +1,6 @@
 import Foundation
 import SwiftUI
+import UIKit
 import WebKit
 
 struct NativeChatEmission: Equatable, Identifiable {
@@ -12,18 +13,18 @@ struct NativeChatEmission: Equatable, Identifiable {
 
 struct ChatWebView: UIViewRepresentable {
     var box: PairedBox
-    var pendingEmission: NativeChatEmission?
+    var pendingEmissions: [NativeChatEmission]
     var onSessionChange: (String?) -> Void
     var onEmissionHandled: (NativeChatEmission.ID) -> Void
 
     init(
         box: PairedBox,
-        pendingEmission: NativeChatEmission? = nil,
+        pendingEmissions: [NativeChatEmission] = [],
         onSessionChange: @escaping (String?) -> Void = { _ in },
         onEmissionHandled: @escaping (NativeChatEmission.ID) -> Void = { _ in }
     ) {
         self.box = box
-        self.pendingEmission = pendingEmission
+        self.pendingEmissions = pendingEmissions
         self.onSessionChange = onSessionChange
         self.onEmissionHandled = onEmissionHandled
     }
@@ -46,22 +47,33 @@ struct ChatWebView: UIViewRepresentable {
     func updateUIView(_ webView: WKWebView, context: Context) {
         context.coordinator.onSessionChange = onSessionChange
         context.coordinator.onEmissionHandled = onEmissionHandled
+        context.coordinator.allowedOrigin = Self.origin(from: box.baseURL)
         if webView.url == nil {
             webView.load(request())
         }
-        context.coordinator.deliver(pendingEmission, to: webView)
+        context.coordinator.deliver(pendingEmissions, to: webView)
     }
 
     func makeCoordinator() -> Coordinator {
-        Coordinator(onSessionChange: onSessionChange, onEmissionHandled: onEmissionHandled)
+        Coordinator(
+            allowedOrigin: Self.origin(from: box.baseURL),
+            onSessionChange: onSessionChange,
+            onEmissionHandled: onEmissionHandled
+        )
     }
 
     final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+        var allowedOrigin: String?
         var onSessionChange: (String?) -> Void
         var onEmissionHandled: (NativeChatEmission.ID) -> Void
-        private var deliveredEmissionID: NativeChatEmission.ID?
+        private var inflightEmissionIDs = Set<NativeChatEmission.ID>()
 
-        init(onSessionChange: @escaping (String?) -> Void, onEmissionHandled: @escaping (NativeChatEmission.ID) -> Void) {
+        init(
+            allowedOrigin: String?,
+            onSessionChange: @escaping (String?) -> Void,
+            onEmissionHandled: @escaping (NativeChatEmission.ID) -> Void
+        ) {
+            self.allowedOrigin = allowedOrigin
             self.onSessionChange = onSessionChange
             self.onEmissionHandled = onEmissionHandled
         }
@@ -70,27 +82,46 @@ struct ChatWebView: UIViewRepresentable {
             onSessionChange(ChatWebView.visibleSessionID(from: webView.url))
         }
 
+        func webView(
+            _ webView: WKWebView,
+            decidePolicyFor navigationAction: WKNavigationAction,
+            decisionHandler: @escaping (WKNavigationActionPolicy) -> Void
+        ) {
+            guard navigationAction.targetFrame?.isMainFrame != false, let url = navigationAction.request.url else {
+                decisionHandler(.allow)
+                return
+            }
+            if ChatWebView.origin(from: url) == allowedOrigin || url.scheme == "about" {
+                decisionHandler(.allow)
+                return
+            }
+            decisionHandler(.cancel)
+            UIApplication.shared.open(url)
+        }
+
         func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
             guard message.name == "callbackboxSession", let urlString = message.body as? String, let url = URL(string: urlString) else {
+                return
+            }
+            guard ChatWebView.origin(from: url) == allowedOrigin else {
                 return
             }
             onSessionChange(ChatWebView.visibleSessionID(from: url))
         }
 
-        func deliver(_ emission: NativeChatEmission?, to webView: WKWebView) {
-            guard let emission, deliveredEmissionID != emission.id else {
-                return
-            }
-            guard let detail = Self.javascriptDetail(for: emission) else {
-                return
-            }
-            deliveredEmissionID = emission.id
-            let script = "window.callbackboxNativeReceive(\(detail));"
-            webView.evaluateJavaScript(script) { [weak self] _, error in
-                if error == nil {
-                    self?.onEmissionHandled(emission.id)
-                } else {
-                    self?.deliveredEmissionID = nil
+        func deliver(_ emissions: [NativeChatEmission], to webView: WKWebView) {
+            for emission in emissions where inflightEmissionIDs.contains(emission.id) == false {
+                guard let detail = Self.javascriptDetail(for: emission) else {
+                    continue
+                }
+                inflightEmissionIDs.insert(emission.id)
+                let script = "window.callbackboxNativeReceive(\(detail));"
+                webView.evaluateJavaScript(script) { [weak self] _, error in
+                    if error == nil {
+                        self?.onEmissionHandled(emission.id)
+                    } else {
+                        self?.inflightEmissionIDs.remove(emission.id)
+                    }
                 }
             }
         }
@@ -117,17 +148,46 @@ struct ChatWebView: UIViewRepresentable {
         return value?.trimmingCharacters(in: .whitespacesAndNewlines).nilIfEmpty
     }
 
-    private func request() -> URLRequest {
-        var request = URLRequest(url: box.chatURL)
-        if let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines), !authToken.isEmpty {
-            request.setValue("Bearer \(authToken)", forHTTPHeaderField: "Authorization")
+    static func origin(from url: URL) -> String? {
+        guard let scheme = url.scheme, let host = url.host else {
+            return nil
         }
-        return request
+        if let port = url.port {
+            return "\(scheme)://\(host):\(port)"
+        }
+        return "\(scheme)://\(host)"
+    }
+
+    private func request() -> URLRequest {
+        URLRequest(url: authenticatedChatURL)
+    }
+
+    private var authenticatedChatURL: URL {
+        guard
+            let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines),
+            authToken.isEmpty == false,
+            var components = URLComponents(url: box.chatURL, resolvingAgainstBaseURL: false)
+        else {
+            return box.chatURL
+        }
+        var queryItems = components.queryItems ?? []
+        queryItems.removeAll { $0.name == "mobileToken" }
+        queryItems.append(URLQueryItem(name: "mobileToken", value: authToken))
+        components.queryItems = queryItems
+        return components.url ?? box.chatURL
     }
 
     private func startupScript() -> WKUserScript? {
+        guard
+            let originData = try? JSONEncoder().encode(Self.origin(from: box.baseURL) ?? ""),
+            let allowedOrigin = String(data: originData, encoding: .utf8)
+        else {
+            return nil
+        }
         let sessionObserver = """
         (() => {
+          const allowedOrigin = \(allowedOrigin);
+          if (window.location.origin !== allowedOrigin) return;
           window.callbackboxNativeQueue = window.callbackboxNativeQueue || [];
           window.callbackboxNativeReceive = (detail) => {
             window.callbackboxNativeQueue.push(detail);
@@ -151,13 +211,22 @@ struct ChatWebView: UIViewRepresentable {
         })();
         """
         guard let authToken = box.authToken?.trimmingCharacters(in: .whitespacesAndNewlines), !authToken.isEmpty else {
-            return WKUserScript(source: sessionObserver, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+            return WKUserScript(source: sessionObserver, injectionTime: .atDocumentStart, forMainFrameOnly: true)
         }
         guard let data = try? JSONEncoder().encode(authToken), let encoded = String(data: data, encoding: .utf8) else {
             return nil
         }
-        let source = "window.localStorage.setItem('callbackbox.mobileAuthToken', \(encoded));\n\(sessionObserver)"
-        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: false)
+        // Keep this key name in sync with callback-box/src/frontend/src/api-client.ts.
+        let source = """
+        (() => {
+          const allowedOrigin = \(allowedOrigin);
+          if (window.location.origin === allowedOrigin) {
+            window.localStorage.setItem('callbackbox.mobileAuthToken', \(encoded));
+          }
+        })();
+        \(sessionObserver)
+        """
+        return WKUserScript(source: source, injectionTime: .atDocumentStart, forMainFrameOnly: true)
     }
 }
 

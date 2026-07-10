@@ -120,7 +120,13 @@ Signature (all forms take the repo-relative path):
 bin/launch-worktree-session <worktree-name> "<briefing>"
 bin/launch-worktree-session <worktree-name> -            # stdin (heredoc)
 bin/launch-worktree-session <worktree-name> @<file>      # from a file
+bin/launch-worktree-session --model <model> <name> @<file>   # run on a specific model
 ```
+
+Pass `--model <model>` (e.g. `claude-fable-5`, `opus`, `sonnet`) to spin the
+worktree up on a specific model — use it when the boxholder asks for a
+particular model (e.g. a Fable session, which then follows the
+delegate-and-Codex-review guidance in the root CLAUDE.md). Omit for the default.
 
 It opens a new tab in the front Terminal.app window (or a new window if
 none is open), `cd`s into the monorepo, and runs `claude --worktree <name>

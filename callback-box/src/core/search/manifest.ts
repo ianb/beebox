@@ -28,6 +28,15 @@ export interface ManifestFileEntry {
    * unchanged broken card warns once, not on every refresh.
    */
   skipped?: boolean;
+  /**
+   * Hash of `EMBEDDER_ID + "\n" + containsText` as of this card's last
+   * successful embed. Absent means not embedded (no key configured yet, or
+   * the last embed attempt failed). A mismatch against the current
+   * `EMBEDDER_ID`/`containsText` pair means the card is pending re-embed —
+   * this one field covers changed cards, never-embedded cards, and retry
+   * after failure.
+   */
+  embeddedHash?: string;
 }
 
 export interface SearchManifest {

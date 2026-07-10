@@ -3,6 +3,10 @@ dist/
 dist-release/
 src/frontend/dist/
 *.log
+# Per-run deploy logs + the .last-deploy.log symlink (see deploy/deploy.sh).
+# The .log files are already covered by *.log above; this ignores the directory
+# explicitly so a non-.log entry can never sneak in.
+deploy/.deploy-logs/
 .DS_Store
 .env
 .claude/session-*

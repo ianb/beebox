@@ -2,25 +2,28 @@
 
 Native iOS companion app for Callback Box. This project is intentionally thin
 at first: the conversation view stays in the box's web chat via `WKWebView`,
-loaded with `?embed=1`, while native code owns the paired-box shell.
+loaded with `?embed=1`, while native code owns pairing, native input controls,
+and the paired-box shell.
 
 ## Current Setup
 
 - SwiftUI app target: `CallbackBox`
 - Minimum iOS: 17.0
 - No external dependencies
-- Manual pairing for now: enter a box URL and optional session id
-- Dev pairing shortcut: `callbackbox://pair?baseURL=...`
+- Pairing: scan/open a `callbackbox://pair?...&pairingToken=...` URL from a
+  box Settings QR code. The app redeems that token for a per-device mobile
+  auth token.
+- Manual/dev pairing is still available from the app and URL scheme. In release
+  builds, raw `authToken=` URL imports are ignored; use a pairing token instead.
+- Native text, photo, and speech input is delivered into the embedded web chat
+  via a small same-origin `WKWebView` bridge. Keep that bridge in sync with the
+  frontend native-emission handler.
 
 Once Xcode is installed, open:
 
 ```sh
 open ios-app/CallbackBox.xcodeproj
 ```
-
-The first real pairing/auth implementation belongs to the Track A subplan in
-`callback-box/docs/plans/ios-companion-app.md`; this scaffold does not invent a
-token format ahead of that design.
 
 ## Simulator Pairing Shortcut
 

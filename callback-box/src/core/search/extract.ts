@@ -33,6 +33,13 @@ export interface SearchDoc {
   content: string;
   created: string;
   contentHash: string;
+  /**
+   * The embedding vector, when this doc has one. Omitted (never `null`) for
+   * docs without one — Orama throws on an explicit `null` field, but skips
+   * inserting a key that's absent entirely. Extraction itself never sets
+   * this; the refresh pass adds it in a later remove/re-insert.
+   */
+  embedding?: number[];
 }
 
 /** Bodies longer than this split into per-section documents. */

@@ -42,10 +42,11 @@ final class SpeechDictation: ObservableObject {
         currentRecordingURL = nil
         recordingFile = nil
         recognitionRequest?.endAudio()
-        recognitionTask?.cancel()
+        recognitionTask?.finish()
         recognitionRequest = nil
         recognitionTask = nil
         isRecording = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     }
 
     func resetDictationState() {
@@ -55,6 +56,14 @@ final class SpeechDictation: ObservableObject {
         firedKeywordKey = nil
         recordedAudioURL = nil
         keywordSeedText = ""
+    }
+
+    func noteManualTextChange(_ text: String) {
+        guard isRecording == false, text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return
+        }
+        hasDictatedText = false
+        transcript = ""
     }
 
     func clearKeywordIntent() {

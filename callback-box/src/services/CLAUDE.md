@@ -115,6 +115,7 @@ Each service has a doctest in `test/service-*.doctest.md` demonstrating the fake
 | `google-calendar.ts` | `GoogleCalendarService` | `createGoogleCalendarService(auth)` | `createFakeGoogleCalendar({ calendars?, events? })` |
 | `google-gmail.ts` | `GoogleGmailService` | `createGoogleGmailService(auth)` | `createFakeGoogleGmail({ messages?, labels?, attachments? })` |
 | `openai-audio.ts` | `OpenAIAudioService` | `createOpenAIAudioService(apiKey)` | `createFakeOpenAIAudio({ transcriptionText? })` |
+| `openai-embeddings.ts` | `EmbeddingsService` | `createOpenAIEmbeddingsService(apiKey)` | `createFakeEmbeddings({ failTimes? })` |
 | `feed-fetcher.ts` | `FeedFetcherService` | `createFeedFetcherService()` | `createFakeFeedFetcher({ feeds? })` |
 | `article-fetcher.ts` | `ArticleFetcherService` | `createArticleFetcherService()` | `createFakeArticleFetcher(articles?)` |
 | `google-drive.ts` | `GoogleDriveService` | `createGoogleDriveService(auth)` | `createFakeGoogleDrive({ files?, spreadsheets? })` |
