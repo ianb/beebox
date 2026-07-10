@@ -1,4 +1,14 @@
+---
+resolution: implemented
+---
+
 # Connector transient-state files have unserialized read-modify-write
+
+**Closed 2026-07-09:** all eight RMW spans now run through
+`updateTransientState` (dual in-process + cross-process locking, fresh-state
+delta semantics) — helper in c1e65a22, telegram sites in 5c93f7a9,
+gmail/drive/calendar sites in 5dcd611e. Plan:
+`callback-box/docs/plans/architectural-review-followups.md` Track 1.
 
 Surfaced by the Track H card-locking work (codex review finding, deliberately
 deferred). Telegram's `processWebhookUpdate` and two sibling methods
