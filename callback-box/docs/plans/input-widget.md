@@ -1,6 +1,11 @@
 # The input — interface design
 
-**Status:** active — design 2026-07, no implementation yet
+**Status:** active — design 2026-07. Revised 2026-07: capture is a
+*mode of the input*, not a target — `PlaceTarget` is dropped (see
+"Capture mode"). The Emission/editor/persistence/chat-target foundation
+has since shipped as `input-extraction`
+(`docs/implemented-plans/input-extraction.md`); the capture-mode slice
+is the remaining work.
 
 Extracts the chat composer and
 its satellites into a distinct component with a firm API. Grows out of
@@ -71,7 +76,12 @@ type EmissionId = string; // client-generated (ULID); becomes messageId on
 interface ImageAttachment {          // today: AttachmentItem (ChatAttachments.tsx)
   id: string;
   mimeType: string;
-  dataBase64: string;                // downscaled at add time
+  dataBase64: string;                // REVISED 2026-07: downscale-at-add
+                                     // was destructive and is dropped —
+                                     // originals stage full-res in the
+                                     // in-box staging area; downscaling
+                                     // for chat moves into ChatTarget
+                                     // assembly (see "Capture mode")
   byteLength: number;
   objectUrl: string;                 // preview; revoked on remove/clear
 }
@@ -211,12 +221,10 @@ type AssembledPayload =
       body: string;                       // <typed>/<speech> wrapper, selections
                                           // folded, <attachments> block appended
       images: readonly ChatImageAttachment[];
-    }
-  | {
-      kind: "deposit";                    // capture / place target
-      emissionId: EmissionId;
-      files: readonly DepositPart[];      // audio, images, files, text note
     };
+// The "deposit" variant was dropped with PlaceTarget (2026-07). A
+// capture delivers a chat-message whose body points at the prepared
+// capture document (see "Capture mode").
 
 function assemble(emission: Emission, ctx: AssembleContext): AssembledPayload;
 ```
@@ -231,7 +239,9 @@ called from exactly one place.
 ## Target — the acceptor
 
 ```ts
-type TargetKind = "chat" | "place" | "unaddressed";
+type TargetKind = "chat" | "unaddressed";
+// "place" dropped 2026-07: capture became an input mode delivering a
+// chat message, not a target (see "Capture mode")
 
 interface Target {
   readonly kind: TargetKind;
@@ -253,8 +263,8 @@ type TargetStatus =
 type Receipt =
   | { disposition: "delivered"; emissionId: EmissionId; at: string }
   | { disposition: "queued";    emissionId: EmissionId; at: string; behind: "turn" }
-  | { disposition: "deposited"; emissionId: EmissionId; at: string; cardPath: string }
   | { disposition: "rejected";  emissionId: EmissionId; reason: string };
+// "deposited" dropped with PlaceTarget (2026-07).
 
 interface TargetControl {
   id: "stop" | string;
@@ -275,16 +285,11 @@ Notes:
 - **Status is pre-submit truth**: the submit affordance renders it
   ("Send" / "Queue" / disabled-with-reason). HTTP's 200-vs-202 split,
   surfaced at compose time.
-- **`deposited` receipts carry a card path** — a capture's receipt is an
-  address (today's capture-finalize already creates
-  `box/inbox/<name>.capture-session.card`; the receipt just returns it).
 - **Stop is a `TargetControl`**, rendered on the target's status strip.
-  The input never renders target controls; a place target simply has
-  none, and the input doesn't know the difference.
-- **Two adapters at first**: `ChatTarget` (wraps the chat machine's SEND
-  + turn state + interrupt; merges witness context into the payload) and
-  `PlaceTarget` (wraps the capture-session create/upload/finalize
-  apparatus). `unaddressed` (triage memo,
+  The input never renders target controls.
+- **One adapter at first**: `ChatTarget` (wraps the chat machine's SEND
+  + turn state + interrupt; merges witness context into the payload).
+  `unaddressed` (triage memo,
   [issues/2026-06-28-triage-agent-session-routing.md](../../../issues/2026-06-28-triage-agent-session-routing.md))
   is a declared kind with no adapter yet.
 
@@ -461,18 +466,14 @@ interface RetentionStore {
 **Re-aim mid-composition (the singleton earning its keep):**
 
 ```
- user            input             chat A            chat B         place: inbox
-  │ 2 photos +    │                  │                 │                │
-  │ half a draft  │  aimed at A      │                 │                │
-  │──────────────▶│                  │                 │                │
-  │ switch chat   │                  │                 │                │
-  │──────────────▶│ aim(B)  [emission untouched]       │                │
-  │ decide: just  │                  │                 │                │
-  │ file it       │                  │                 │                │
-  │──────────────▶│ aim(inbox)                         │                │
-  │ submit        │──accept(deposit)────────────────────────────────── ▶│
-  │               │◀─receipt: deposited {cardPath: box/inbox/….card}────│
-  │               │  [toast links the card]            │                │
+ user            input             chat A            chat B
+  │ 2 photos +    │                  │                 │
+  │ half a draft  │  aimed at A      │                 │
+  │──────────────▶│                  │                 │
+  │ switch chat   │                  │                 │
+  │──────────────▶│ aim(B)  [emission untouched]       │
+  │ submit        │──accept(msg)──────────────────────▶│
+  │               │◀─receipt: delivered────────────────│
 ```
 
 **Stop, on the target strip (not the input):**
@@ -503,7 +504,7 @@ interface RetentionStore {
 | keyword callbacks (`onKeywordSend`…) | `VoiceFeeder.intents` |
 | `last-audio-cache.ts` + loopback routes | `RetentionStore` (loopback unchanged) |
 | `chat-uploads.ts` / `file-upload.ts` | `AttachFeeder` → `editor.addFiles` (route unchanged) |
-| capture pages/api/routes | `CameraFeeder` + `PlaceTarget` (finalize = accept) |
+| capture pages/api/routes | capture mode: `CameraFeeder` + staging + preparation (see "Capture mode") |
 | SEND event's `openCard`/`cardActivity`/`cardState` | `ChatTarget` adapter merges (witness-side) |
 | stop/interrupt in composer bar | `TargetControl` on the target strip |
 
@@ -525,6 +526,69 @@ interface RetentionStore {
 - **Two voice pipelines, one interface.** Streaming and recorded
   profiles are genuinely different machines; unifying their *interface*
   is the win, unifying their internals is not attempted.
+
+## Capture mode (added 2026-07 — supersedes PlaceTarget)
+
+Boxholder decision: capture is not a *target*, it is a **mode of the
+input** — a composition stance entered by a button on the composer.
+`TargetKind` `"place"` and the `PlaceTarget` adapter are dropped;
+a capture flows to the chat the input is aimed at. A
+capture-into-a-chosen-landmark chooser (and an instant-triage variant)
+are deferred — the default destination is the most recent chat, as chat
+aiming works today.
+
+**The stance.** In capture mode the input is camera/mic only — no
+typing. Photos (viewfinder or picker) and voice as a recorded clip;
+image-only and voice-only captures are both normal. The posture keeps
+today's capture-page virtues: full-screen viewfinder, rapid repeat
+shots, done-then-fresh-session loop. `/capture` becomes a deep link
+that opens the input in this mode.
+
+**Staging.** Media uploads eagerly as it is produced (every photo,
+every audio chunk) into an **in-box staging area** — a temp location in
+the box, replacing both R2 and today's `os.tmpdir()` capture sessions.
+Crash-safety and mobile resilience carry over from the capture
+apparatus. Images stage at full resolution; downscaling for chat
+payloads happens in ChatTarget assembly, not at add time.
+
+**Preparation.** On "done": concatenate audio chunks, HQ-transcribe
+with word timestamps, and deterministically assemble the **capture
+document** — the interleaved transcript with `{% image %}` refs and
+`{% silence %}` markers — as a capture card + attach scope. No model
+calls in preparation (Gemini Flash describe-images is dropped from the
+pipeline; annotation moves to the chat agent, below). Preparation runs
+in the background: the input frees immediately on done, further
+captures can start while earlier ones prepare, and prepared messages
+queue behind a running turn like any send.
+
+**Delivery.** The prepared capture auto-submits to the aimed chat as a
+message that *points at* the document (the content is too large to
+inline): a wrapper element plus a one-line summary, e.g.
+`<capture doc="tmp-capture/…"/>`. The document lands near the chat's
+context area (a `tmp-capture/` directory or similar). In the
+transcript the capture appears immediately as an uploading/processing
+*user message* — the same pattern HQ transcription uses today — with an
+error state + retry if preparation fails (the media is already safe in
+staging either way).
+
+**Agent duties (schema-carried).** The capture document is a card with
+a schema; reading the card injects the rules, so the duties live in
+schema `instructions`, not the agent guide. Defaults: **annotate** —
+OCR where applicable and image descriptions, via subagents — and commit
+the annotation. Then either **file** the card out of `tmp-capture/` to
+where it belongs, or, if the capture can be fully processed on the
+spot, **complete it and delete the card**. `tmp-capture/` must not
+become a landfill.
+
+**What this retires.** The `/capture` page as a separate app; inbox
+routing of captures and the `process-captures` procedure (captures no
+longer flow through inbox — accepted); the capture-processing `cb`
+commands (`transcribe-captures`, `describe-images`,
+`assemble-timeline`); the dead `VoiceRecorder.tsx` +
+`create-voice-memo` endpoint. The capture **card type survives** with a
+revised schema. Open: `cb scan-import`/`cb upload` produce
+capture-session cards into inbox and depended on the retired pipeline —
+they need a follow-up migration onto the new flow or an explicit stay.
 
 ## Interaction stances: conversation vs listening (added 2026-07)
 
@@ -607,5 +671,7 @@ is frame state.
 3. `Target` interface: `ChatTarget` adapter, status/receipts, stop moves
    to the strip.
 4. Singleton persistence (the behavior change) + re-aim.
-5. `PlaceTarget` over capture; `CameraFeeder`; voice profiles under one
-   interface. Possibly much later.
+5. Capture mode: staging area, `CameraFeeder`, recorded voice profile,
+   preparation + pointer message; retires the capture page and
+   pipeline. (Steps 1–4 largely shipped as `input-extraction`; this
+   step is the `unify-capture-input` worktree's work.)
