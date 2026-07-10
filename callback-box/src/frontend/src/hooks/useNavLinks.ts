@@ -12,6 +12,7 @@
 import { useCallback } from "react";
 import { DEFAULT_NAV_HREFS, navRouteFor } from "@shared/nav-routes";
 import { trpc } from "../lib/trpc";
+import { busEventData } from "../lib/bus-events";
 import { useBusSubscription, type RealtimeEvent } from "./useBusSubscription";
 
 export interface NavLink {
@@ -52,8 +53,8 @@ export function useNavLinks({ base, freshCount }: { base: string; freshCount: nu
   useBusSubscription({
     onEvent: useCallback(
       (event: RealtimeEvent) => {
-        if (event.event !== "file-change") return;
-        if ((event.data as { path?: string }).path !== "nav.card") return;
+        const change = busEventData(event, "file-change");
+        if (!change || change.path !== "nav.card") return;
         void utils.nav.get.invalidate();
       },
       [utils],

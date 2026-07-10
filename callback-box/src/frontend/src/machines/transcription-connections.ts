@@ -8,6 +8,7 @@
  */
 
 import { getApiBase } from "../api";
+import { isRecord } from "../lib/is-record";
 import { deepgramKeyManager } from "../lib/audio/deepgram-key";
 import { openaiRealtimeKeyManager } from "../lib/audio/openai-realtime-key";
 
@@ -33,6 +34,20 @@ export interface ServiceCallbacks {
  * in audio (e.g. a silent gap between turns) without dropping the connection.
  */
 const DEEPGRAM_KEEPALIVE_INTERVAL_MS = 5000;
+
+/**
+ * Final-transcript accessors keyed by their socket. The Deepgram/OpenAI paths
+ * accumulate text the actor reads back in `onclose` (via {@link socketFinalText}).
+ * A WeakMap keeps the accessor beside the socket without patching a non-standard
+ * field onto the `WebSocket` DOM type — which needed an `as` cast — and lets the
+ * socket's entry be GC'd with it.
+ */
+const finalTextAccessors = new WeakMap<WebSocket, () => string>();
+
+/** The accumulated-final-transcript accessor registered for a socket, if any. */
+export function socketFinalText(ws: WebSocket): (() => string) | undefined {
+  return finalTextAccessors.get(ws);
+}
 
 function arrayBufferToBase64(buffer: ArrayBuffer): string {
   const bytes = new Uint8Array(buffer);
@@ -62,9 +77,10 @@ export function startVoxtralConnection(callbacks: ServiceCallbacks): ConnectionH
         const text = typeof msg.text === "string" && msg.text ? msg.text : accumulated;
         callbacks.onDone(text);
       } else if (msg.type === "error") {
-        const errMsg = typeof msg.error === "object"
-          ? (msg.error as { message?: string } | null)?.message || JSON.stringify(msg.error)
-          : msg.error || "Transcription error";
+        const rawErr: unknown = msg.error;
+        const errMsg = isRecord(rawErr)
+          ? (typeof rawErr.message === "string" ? rawErr.message : JSON.stringify(rawErr))
+          : rawErr || "Transcription error";
         callbacks.onServerError(String(errMsg));
       }
       // session.created, session.updated, transcription.segment,
@@ -151,8 +167,8 @@ export async function startDeepgramConnection(callbacks: ServiceCallbacks): Prom
 
   // The done signal is delivered when Deepgram closes the socket after
   // CloseStream — wire it via the actor's onclose handler below by stashing
-  // the accumulated text on the handle.
-  (ws as WebSocket & { __dgFinal?: () => string }).__dgFinal = () => accumulatedFinal;
+  // the accumulated-text accessor beside the socket (see finalTextAccessors).
+  finalTextAccessors.set(ws, () => accumulatedFinal);
 
   return {
     ws,
@@ -254,8 +270,8 @@ export async function startOpenAIRealtimeConnection(callbacks: ServiceCallbacks)
   };
 
   // Mirror the Deepgram pattern: the actor's onclose finalizes from the
-  // accumulated text on the handle.
-  (ws as WebSocket & { __openaiFinal?: () => string }).__openaiFinal = () => accumulatedFinal;
+  // accumulated-text accessor stored beside the socket (see finalTextAccessors).
+  finalTextAccessors.set(ws, () => accumulatedFinal);
 
   return {
     ws,

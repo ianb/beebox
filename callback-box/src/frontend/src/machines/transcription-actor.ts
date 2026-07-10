@@ -57,6 +57,7 @@ import { encodePcmChunksAsWav } from "../lib/audio/wav-encode";
 import {
   type ConnectionHandle,
   type ServiceCallbacks,
+  socketFinalText,
   startDeepgramConnection,
   startOpenAIRealtimeConnection,
   startVoxtralConnection,
@@ -236,8 +237,7 @@ class TranscriptionSession {
    * machine just needs to know the socket closed.
    */
   private finalizeFromHandle(ws: WebSocket) {
-    const handle = ws as WebSocket & { __dgFinal?: () => string; __openaiFinal?: () => string };
-    const finalFn = handle.__dgFinal ?? handle.__openaiFinal;
+    const finalFn = socketFinalText(ws);
     if (finalFn) {
       const audioBlob = this.takeAudioBlob();
       this.sendBack({ type: "TRANSCRIPTION_DONE", text: this.mergeFinal(finalFn()), audioBlob });
