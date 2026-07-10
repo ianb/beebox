@@ -600,14 +600,58 @@ Each numbered item is one or a few commits; the plan ships as one unit
 
 ## Rollout shape
 
-- **Tests first, as design tools:** the named doctests above —
-  store/route doctests (Track 1), segment-concat fixture (Track 2),
-  `prepareCaptureSession` filesystem doctest with the fake
-  transcription service + idempotent-resume doctest (Track 3), sweep
-  doctest under frozen `CB_TIME` (Track 5), migration doctest
-  (Track 7). Done-when: all pass, plus one manual end-to-end on the
-  worktree box (photo + two-segment voice capture → message in chat →
-  agent files it) — run via the verify skill before finishing.
+### Test apparatus
+
+The backbone already exists and is reused, not rebuilt:
+
+- **Real capture fixture + record/replay** —
+  `test/fixtures/capture-session/` (one webm, three jpgs, cards) and
+  `createFixtureReplay` (`test/helpers/fixture-replay.ts`), already
+  driving `test/capture-pipeline.test.ts` through transcribe →
+  describe → assemble with saved real API responses (re-recordable via
+  `CB_REGENERATE_FIXTURES=1`). The `prepareCaptureSession` doctest
+  replaces that test's manual step sequence: fixture session staged →
+  prepare → assert the capture card, timeline body, commit, and
+  message payload. The old test retires with the pipeline it covers.
+- **Scripted transcription** — a `fake` service in the
+  `loadTranscriptionConfig` dispatch (`transcription/index.ts:207-220`)
+  returning caller-scripted `words[]`, following the existing
+  services fake pattern (`createFakeOpenAIAudio({transcriptionText})`,
+  `src/services/CLAUDE.md`). Scripted word timestamps + fixture image
+  `filename.captured` values make **speech-interleaved-with-images
+  timelines fully composable in tests**: place words and photos at
+  chosen absolute times, assert the exact assembled body
+  (exact-string doctests, the input-extraction precedent).
+- **Doctests per track** (design tools, written with the code):
+  store/route doctests incl. auth + traversal + idempotent finalize
+  (Track 1); segment concat incl. truncated-tail chunk (Track 2);
+  prepare end-to-end + idempotent-resume-after-kill, delivery
+  busy/enqueue/createNew-fallback/failure-recorded (Track 3); sweep
+  under frozen `CB_TIME`, empty-session discard (Track 5); migration
+  hash-match-delete / modified-park (Track 7).
+
+### Interactive testing
+
+- **Capture harness dev page** (`pages/dev/`, precedent:
+  `ComposerStatesHarness.tsx`): the capture-mode UI wired to stub
+  feeders — a fake camera that serves the fixture jpgs (or canvas
+  frames), a fake recorder that emits pre-built fixture webm chunks on
+  an accelerated timer, and the scripted transcription service on the
+  dev box. Drives the full flow in a browser with no mic, camera, or
+  API keys: pending-message progression, queued-behind-turn, failure +
+  retry, resume prompt, partial marker. This is where the boxholder
+  reviews the embodiment questions (mode button placement, viewfinder
+  takeover) against something clickable.
+- **Browser automation** — `bin/browse` against the harness page for
+  scripted walkthroughs; for the *real* `getUserMedia` path, Chromium's
+  `--use-fake-device-for-media-stream --use-fake-ui-for-media-stream`
+  flags provide a synthetic camera/mic with no permission prompt —
+  wire into agent-browser launch flags if supported (check at
+  implementation time; the harness stubs are the fallback).
+- **Manual end-to-end** on the worktree box (real mic + camera,
+  including a phone via the dev router URL): photo + two-segment voice
+  capture → message in chat → agent annotates and files it. Run via
+  the verify skill before finishing; this is the done-when gate.
 - **Knowledge audits:** the three entries above land with Track 6 and
   are executed (`pnpm knowledge-audit run --filter capture`) with
   status comments recorded.
