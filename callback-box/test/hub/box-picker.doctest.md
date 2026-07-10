@@ -48,6 +48,7 @@ async function startPicker(frontendDist = NO_FRONTEND) {
 
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const distDir = await fs.promises.mkdtemp(path.join(os.tmpdir(), "picker-dist-"));
 await fs.promises.writeFile(path.join(distDir, "index.html"), `<!doctype html><html><body><div id="root"></div></body></html>`);
 const spaApp = await startPicker(distDir);
@@ -68,6 +69,7 @@ await fs.promises.rm(distDir, { recursive: true, force: true });
 
 ```ts
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 const openApp = await startPicker();
 const openRes = await openApp.inject({ method: "GET", url: "/" });
 openRes.statusCode
@@ -85,6 +87,9 @@ await openApp.close();
 
 ```ts
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id-for-box-picker-doctest";
+// Paired secret: an ID-without-secret half-config is now a loud
+// MissingOAuthClientSecretError wherever auth routes register.
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret-for-box-picker-doctest";
 const gatedApp = await startPicker();
 const noSessionRes = await gatedApp.inject({ method: "GET", url: "/" });
 noSessionRes.statusCode
@@ -126,6 +131,7 @@ strangerRes.body.includes("No boxes available")
 
 ```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 delete process.env.CB_SESSION_SECRET;
 await gatedApp.close();
 await boxA.cleanup();

@@ -2,7 +2,19 @@
 area: callback-box
 filed-by: agent
 discovered-in: worktree-architectural-review — verifying `pnpm test` while landing the no-non-null-assertion / no-unnecessary-condition preset burn-down (architectural-review-followups Track 7c/7d)
+resolution: implemented
 ---
+
+**Closed 2026-07-10 — the diagnosis below was wrong; the hang WAS this
+round's regression.** The "ambient env var" was set by the doctest itself
+(`hub-router.doctest.md:323` set `GOOGLE_OAUTH_CLIENT_ID` with no secret,
+the half-config that `registerAuthRoutes` now makes fatal via
+`MissingOAuthClientSecretError` — c5dff450's bug fix). The `git stash`
+"pre-existing" check was invalid because that fix was already *committed*
+beneath the stash. Fixed by pairing the fake secret (and its cleanup) in
+`hub-router`, and the same fragile ID-only pattern proactively in
+`box-picker` and `mobile-spa-fallback` doctests; all pass in ~1.7s
+(previously a 5-minute handle-leak timeout).
 
 `test/hub/hub-router.doctest.md` hung and timed out (~5 minutes, tap's
 default handle-leak timeout) on a full `pnpm test` run in this worktree, on
