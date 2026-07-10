@@ -124,6 +124,21 @@ On session exit with no changes the worktree is auto-removed and the
 the worktree's dev server. With uncommitted changes, Claude Code prompts
 to keep or remove.
 
+## Multiple agents sharing one worktree
+
+A plan can spawn several concurrent task agents committing straight to the
+same shared worktree/branch (e.g. the architectural-review round). `git add
+<paths>` followed by a bare `git commit` is not atomic across processes: one
+agent's already-staged-but-uncommitted changes can be swept into a
+concurrently-running `git commit` (or a `lint-staged` stash/restore cycle)
+from another agent, landing under the wrong commit's attribution. The fix is
+always **path-scoped commits**: `git add <paths> && git commit -- <paths>`
+(or the `stageAndCommitPaths` helper in `callback-box/src/lib/git.ts`),
+never a bare `git commit` — scoping the commit to exactly the paths this
+agent staged means an interleaved sweep from another agent can't get
+co-committed under this one's message. This is a convention, not a lock:
+each agent is responsible for scoping its own commits.
+
 ## `/<worktree>/dev/` serving
 
 `/<name>/dev/` serves that worktree's tracked `dev/` directory straight
