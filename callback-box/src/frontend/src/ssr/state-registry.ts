@@ -24,13 +24,25 @@ class RegistryLookupError extends Error {
   }
 }
 
+/**
+ * Honest `Record` lookup: the frontend tsconfig doesn't set
+ * `noUncheckedIndexedAccess`, so a bare `rec[key]` types as always-defined
+ * even though every key here (machine id, route path, scenario name) is an
+ * external string that may not be registered. Routing through a function
+ * with an explicit `| undefined` return type keeps the absence real instead
+ * of annotating a `const` in a way TS's control-flow analysis discards.
+ */
+function recordGet<T>(rec: Record<string, T>, key: string): T | undefined {
+  return rec[key];
+}
+
 // --- Enumeration ---
 
 /**
  * List declared states for a machine from the registry.
  */
 export function enumerateStates(machineId: string): string[] {
-  const info = machineRegistry[machineId];
+  const info = recordGet(machineRegistry, machineId);
   if (!info) return [];
   return Object.keys(info.states);
 }
@@ -46,13 +58,13 @@ interface BuildSnapshotOptions {
  */
 export function buildSnapshot(opts: BuildSnapshotOptions): unknown {
   const { machineId, stateValue, contextOverrides } = opts;
-  const info = machineRegistry[machineId];
+  const info = recordGet(machineRegistry, machineId);
   if (!info) {
     const message = `Unknown machine: ${machineId}`;
     throw new RegistryLookupError(message);
   }
 
-  const stateInfo = info.states[stateValue];
+  const stateInfo = recordGet(info.states, stateValue);
   if (!stateInfo) {
     const message =
       `Unknown state "${stateValue}" for machine "${machineId}". ` +
@@ -78,13 +90,13 @@ export function buildSSRStateMap(
   options = options ?? {};
   const ssrState: Record<string, unknown> = {};
   const normalizedRoute = routePath === "/" ? "/" : "/" + routePath.replace(/^\//, "").replace(/\/.*/, "");
-  const routeConfig = routeConfigs[normalizedRoute];
+  const routeConfig = recordGet(routeConfigs, normalizedRoute);
 
   // Determine machine states from scenario or explicit overrides
   const machineStates: Record<string, string> = {};
 
   if (options.scenario && routeConfig) {
-    const scenario = routeConfig.scenarios[options.scenario];
+    const scenario = recordGet(routeConfig.scenarios, options.scenario);
     if (!scenario) {
       const available = Object.keys(routeConfig.scenarios).join(", ");
       const message = `Unknown scenario "${options.scenario}" for route "${normalizedRoute}". Available: ${available}`;
@@ -107,7 +119,7 @@ export function buildSSRStateMap(
 
   // Build snapshots
   for (const [machineId, stateValue] of Object.entries(machineStates)) {
-    if (machineRegistry[machineId]) {
+    if (recordGet(machineRegistry, machineId)) {
       ssrState[machineId] = buildSnapshot({ machineId, stateValue });
     }
   }
@@ -124,10 +136,10 @@ export function getQueryOverrides(
   scenario: string,
 ): Record<string, unknown> | undefined {
   const normalizedRoute = routePath === "/" ? "/" : "/" + routePath.replace(/^\//, "").replace(/\/.*/, "");
-  const routeConfig = routeConfigs[normalizedRoute];
+  const routeConfig = recordGet(routeConfigs, normalizedRoute);
   if (!routeConfig) return undefined;
 
-  const sc = routeConfig.scenarios[scenario];
+  const sc = recordGet(routeConfig.scenarios, scenario);
   return sc?.queryOverrides;
 }
 
@@ -136,7 +148,7 @@ export function getQueryOverrides(
  */
 export function formatStateList(routePath: string): string {
   const normalizedRoute = routePath === "/" ? "/" : "/" + routePath.replace(/^\//, "").replace(/\/.*/, "");
-  const routeConfig = routeConfigs[normalizedRoute];
+  const routeConfig = recordGet(routeConfigs, normalizedRoute);
 
   const lines: string[] = [];
   lines.push(`Route: ${normalizedRoute}`);
