@@ -26,6 +26,7 @@
 import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import type {
   DriveTypeHandler,
   InspectResult,
@@ -168,7 +169,7 @@ async function tryGetDocument(
   try {
     return await service.getDocument(opts.fileId);
   } catch (e) {
-    const msg = (e as Error).message;
+    const msg = errorMessage(e);
     console.warn(
       "[google-drive] Could not fetch Docs API metadata for " +
         opts.fileName + ": " + msg +
@@ -242,7 +243,7 @@ const docsHandler: DriveTypeHandler = {
         localContent = await fs.readFile(mdPath, "utf-8");
       } catch (e) {
         // File missing — treat as no local edit, will be written below
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.debug(`[google-drive] No local markdown at ${mdPath}, treating as no local edit:`, e);
         }
       }
@@ -310,7 +311,7 @@ const docsHandler: DriveTypeHandler = {
       existingCard = await fs.readFile(cardPath, "utf-8");
     } catch (e) {
       // New card — no existing file to diff against
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`[google-drive] No existing card at ${cardPath}, treating as new:`, e);
       }
     }
@@ -341,7 +342,7 @@ const docsHandler: DriveTypeHandler = {
       localContent = await fs.readFile(mdPath, "utf-8");
     } catch (e) {
       // Nothing to push — no local markdown file exists.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`[google-drive] No local markdown at ${mdPath}, nothing to push:`, e);
       }
       return { pushed: [] };

@@ -8,6 +8,7 @@
 import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   buildSheetData,
@@ -100,7 +101,7 @@ const sheetsHandler: DriveTypeHandler = {
         } catch (e) {
           // File missing (or unreadable) — leave localContent empty so it
           // hashes as a mismatch and gets written below; note why we ignored.
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.debug(`drive-handler-sheets: could not read ${jsonPath}, treating as absent:`, e);
           }
         }
@@ -135,7 +136,7 @@ const sheetsHandler: DriveTypeHandler = {
         } catch (e) {
           // Cleanup is best-effort — the file may already be gone. Note it
           // but keep deleting the state entry below.
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.debug(`drive-handler-sheets: could not unlink stale tab file ${filePath}:`, e);
           }
         }
@@ -185,7 +186,7 @@ const sheetsHandler: DriveTypeHandler = {
     } catch (e) {
       // No card yet (first pull) — leave existingCard empty so the compare
       // below treats it as new and writes it; note why we ignored.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`drive-handler-sheets: no existing card at ${cardPath}, treating as new:`, e);
       }
     }
@@ -219,7 +220,7 @@ const sheetsHandler: DriveTypeHandler = {
       } catch (e) {
         // No local file to push for this tab (deleted/never materialized) —
         // skip it, but note we couldn't read it.
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.debug(`drive-handler-sheets: could not read ${filePath} to push, skipping:`, e);
         }
         continue;

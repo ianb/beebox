@@ -40,6 +40,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import {
   registerConnector,
   type Connector,
@@ -114,7 +115,7 @@ class GmailConnector implements Connector {
       const content = await fs.readFile(this.configPath(), "utf-8");
       return JSON.parse(content);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("Gmail: no connector config found, using defaults:", e);
       }
       return {};
@@ -126,7 +127,7 @@ class GmailConnector implements Connector {
       const content = await fs.readFile(this.statePath(), "utf-8");
       return JSON.parse(content);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("Gmail: no prior state found, starting fresh:", e);
       }
       return { seenMessageIds: [] };
@@ -355,7 +356,7 @@ class GmailConnector implements Connector {
         success: false,
         created,
         updated,
-        error: `Gmail pull failed: ${(err as Error).message}`,
+        error: `Gmail pull failed: ${errorMessage(err)}`,
       };
     }
 

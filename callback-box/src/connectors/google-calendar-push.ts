@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { validateIcsTimezone } from "./calendar-utils.js";
 import { icsToGoogleEvent } from "./google-calendar-ics.js";
@@ -46,7 +47,7 @@ export async function pushAndCleanOrphans(
   try {
     files = await fs.readdir(calDir);
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    if (errnoCode(err) !== "ENOENT") throw err;
     return { pushed, deleted, notes };
   }
 

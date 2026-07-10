@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { createEmailThreadTemplate } from "../schemas/email-thread.js";
 import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { type FetchedMessage, makeSnippet, safeDirectoryName } from "./gmail-mime.js";
@@ -54,7 +55,7 @@ async function findExistingBasename(emailDir: string, threadId: string): Promise
     }
   } catch (e) {
     // emailDir doesn't exist yet — treat thread as new
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Gmail: could not scan email dir for existing thread, treating as new:", e);
     }
   }
@@ -67,7 +68,7 @@ async function countExistingMessages(attachDir: string): Promise<number> {
     const files = await fs.readdir(attachDir);
     return files.filter((f) => f.match(MESSAGE_CARD_RE)).length;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Gmail: could not read attach dir to count messages:", e);
     }
     return 0;
@@ -165,7 +166,7 @@ async function mergeExistingRefs(attachDir: string, messageRefs: string[]): Prom
       }
     }
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Gmail: could not read attach dir to merge message refs:", e);
     }
   }

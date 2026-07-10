@@ -11,6 +11,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { OAuth2Client } from "google-auth-library";
 import { withCardLock } from "../lib/card-lock.js";
 
@@ -81,7 +82,7 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
     } catch (e) {
       // Usually the file doesn't exist yet; fall through to the legacy
       // location. Log at debug so a real read/parse error is still visible.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("Could not read centralized Google tokens file, falling back:", e);
       }
     }
@@ -95,7 +96,7 @@ export async function loadGoogleTokens(boxRoot?: string): Promise<GoogleTokens |
     } catch (e) {
       // No legacy tokens file (or it's unreadable) — treat as "no tokens".
       // Log at debug so a real read/parse error is still visible.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("Could not read legacy Google tokens file:", e);
       }
       return null;
@@ -132,7 +133,7 @@ export async function saveGoogleTokens(
     } catch (e) {
       // No existing tokens file (or unreadable) — start fresh and merge into {}.
       // Log at debug so a real read/parse error is still visible.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("Could not read existing Google tokens file, starting fresh:", e);
       }
     }

@@ -5,6 +5,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   parseDuration as parseScheduledDuration,
@@ -35,7 +36,7 @@ export async function loadPublicUrl(boxRoot: string): Promise<string | null> {
     if (parsed.publicUrl) return parsed.publicUrl;
   } catch (e) {
     // box.json missing or unparseable — fall through to the env var.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read publicUrl from config/box.json, falling back to PUBLIC_URL: ${e instanceof Error ? e.message : String(e)}`);
     }
   }

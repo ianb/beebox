@@ -10,6 +10,7 @@
 import { TelegramMessageSchema, type TelegramMessageFields } from "../schemas/telegram-message.js";
 import { deliverPendingOutputCards } from "./output-cards.js";
 import type { TelegramService } from "../services/telegram.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 const CARD_SUFFIX = ".telegram-message.card";
 
@@ -40,7 +41,7 @@ export async function sendOutputCards(ctx: OutputCardsContext): Promise<string[]
         await tg.sendMessage(fields["chat-id"], fields.text);
         return null;
       } catch (sendErr) {
-        return (sendErr as Error).message;
+        return errorMessage(sendErr);
       }
     },
   });

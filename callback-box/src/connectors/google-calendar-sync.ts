@@ -10,6 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import {
   eventToIcs,
@@ -61,7 +62,7 @@ async function handleCancelledEvent(
     acc.deleted.push(path.relative(boxRoot, filePath));
     acc.notes.push({ action: "cancelled", summary: event.summary || oldName });
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    if (errnoCode(err) !== "ENOENT") throw err;
   }
   delete state.eventFiles[event.id];
 }
@@ -76,7 +77,7 @@ async function unlinkRenamed(
     await fs.unlink(path.join(calDir, oldName));
     acc.deleted.push(path.relative(boxRoot, path.join(calDir, oldName)));
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    if (errnoCode(err) !== "ENOENT") throw err;
   }
 }
 

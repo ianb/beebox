@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { invariant } from "../lib/invariant.js";
@@ -229,7 +230,7 @@ export async function loadAllEvents(
     // Calendar dir may not exist (no calendar synced yet) — that's a normal
     // empty result. Log so a permissions/IO failure isn't mistaken for "no
     // events".
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read calendar dir ${calendarDir}, returning no events:`, e);
     }
     return [];

@@ -15,6 +15,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { parse as parseYaml } from "yaml";
 import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
@@ -61,7 +62,7 @@ export async function uploadPendingDrafts(opts: {
     } catch (err) {
       result.errors.push({
         path: path.relative(opts.boxRoot, cardPath),
-        error: (err as Error).message,
+        error: errorMessage(err),
       });
     }
   }
@@ -81,7 +82,7 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
   } catch (e) {
     // No email dir (or unreadable) means no drafts to upload — expected on boxes
     // that have never received email.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug(`gmail-drafts: cannot read ${emailDir}, no drafts to upload:`, e);
     }
     return drafts;
@@ -319,7 +320,7 @@ async function stampDraftCard(opts: {
   try {
     fm = parseYaml(split.frontmatterText);
   } catch (e) {
-    throw new StampDraftCardError(opts.cardPath, `invalid YAML in ${opts.cardPath}: ${(e as Error).message}`);
+    throw new StampDraftCardError(opts.cardPath, `invalid YAML in ${opts.cardPath}: ${errorMessage(e)}`);
   }
   if (fm === null || typeof fm !== "object" || Array.isArray(fm)) {
     throw new StampDraftCardError(opts.cardPath, `frontmatter in ${opts.cardPath} is not a mapping`);

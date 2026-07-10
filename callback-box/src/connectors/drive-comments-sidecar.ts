@@ -17,6 +17,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import type { DriveComment } from "../services/google-drive.js";
 
 /** Bare filename of the comments sidecar within an attach scope. */
@@ -62,7 +63,7 @@ export async function reconcileCommentsSidecar(opts: {
       result.changed = true;
     } catch (e) {
       // Absent is the normal case; anything else is worth noting.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`drive-comments-sidecar: could not remove ${filePath}:`, e);
       }
     }
@@ -76,7 +77,7 @@ export async function reconcileCommentsSidecar(opts: {
     existing = await fs.readFile(filePath, "utf-8");
   } catch (e) {
     // Missing file — write it below; note anything other than absence.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug(`drive-comments-sidecar: could not read ${filePath}, rewriting:`, e);
     }
   }

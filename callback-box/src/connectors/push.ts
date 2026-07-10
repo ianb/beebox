@@ -15,6 +15,7 @@ import { WebPushSchema, type WebPushFields } from "../schemas/web-push.js";
 import { sendPush, VapidNotConfiguredError } from "../core/send-push.js";
 import type { PushService } from "../services/push.js";
 import { deliverPendingOutputCards } from "./output-cards.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 const CARD_SUFFIX = ".web-push.card";
 
@@ -73,7 +74,7 @@ export async function sendOutputPushCards(ctx: {
         }
         return null;
       } catch (sendErr) {
-        return sendErr instanceof VapidNotConfiguredError ? sendErr.message : (sendErr as Error).message;
+        return sendErr instanceof VapidNotConfiguredError ? sendErr.message : errorMessage(sendErr);
       }
     },
   });

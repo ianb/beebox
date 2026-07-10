@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import type { CardSchema } from "../cards/index.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
@@ -62,7 +63,7 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
   try {
     files = (await fs.readdir(outputDir)).filter((f) => f.endsWith(cardSuffix));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read output directory ${outputDir}:`, e);
     }
     return [];
@@ -100,7 +101,7 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
       }
     } catch (err) {
       // Unreadable/unparseable card: leave it for `cb validate` to flag.
-      console.error(`Skipping ${relPath}: ${(err as Error).message}`);
+      console.error(`Skipping ${relPath}: ${errorMessage(err)}`);
     }
   }
 
