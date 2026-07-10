@@ -250,6 +250,13 @@ commands (a wakeup-time failure). Behavior worth knowing:
   template-review location) and cleared from the active procedures dir so it stops
   firing the deleted commands. Recompute/extend the hash list from
   `git show <ref>:callback-box/templates/procedures/process-captures.procedure.card | shasum -a 256`.
+  **Expect PARK on long-lived boxes, and treat it as success:** only two
+  frontmatter-era template versions ever shipped, and box-side migrations
+  (the XML→frontmatter card conversion, box-packageify) rewrote installed
+  copies in place — so any box older than 2026-06-18, or migrated since,
+  won't byte-match a shipped hash even if the boxholder never touched the
+  card (observed on test1: parked, correctly). The parked file needs no
+  merge work — review it for custom steps worth keeping, then delete it.
 - **The trigger** (`config/schedules/process-captures.scheduled-script.card`) is
   auto-generated box state (never boxholder-authored) and always broken once the
   procedure is gone, so it's removed whenever present.

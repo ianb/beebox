@@ -3496,11 +3496,15 @@ tests:
   # documented in CHAT_SYSTEM_PROMPT (prompts.ts), not the agent guide — so
   # every entry below needs chat_mode: true.
   #
-  # Status: new, unrun (added 2026-07-10 with Track 6). Run at the plan's
-  # final verification breakpoint (`pnpm knowledge-audit run --filter capture`)
-  # and record results here — not run during Track 6 itself (a never-run
-  # audit costs an agent session each time; the breakpoint runs the whole set
-  # once).
+  # Status (2026-07-10): all 3 pass on test1 (capture-mode breakpoint run).
+  # capture-message-meaning: 0 reads, correct contrast with <self-note> —
+  # passed after its check loosened from a too-literal contains ["doc"] to
+  # the card filename (first run answered correctly, failed the string
+  # check). capture-partial-marker: 0 reads, correct. capture-agent-duties:
+  # passes, but note it answers by READING docs/generated/
+  # card-capture-session.md (1 read, 1 search) rather than from context —
+  # that is the designed flow (the prompt paragraph says to read the doc
+  # rules), so reading here is desired behavior, not a recall failure.
 
   - id: capture-message-meaning
     prompt: >
@@ -3515,7 +3519,10 @@ tests:
       (the actual capture-session.card) before responding substantively,
       not just answer from the one-line inner summary.
     correct_contains_any: ["user input", "real user", "expects a reply", "reply is expected"]
-    correct_contains: ["doc"]
+    # "Read the doc first" — a correct answer names the card it would read.
+    # (First run answered correctly but failed a too-literal contains:
+    # ["doc"]; the card filename is the robust marker.)
+    correct_contains: ["capture-session.card"]
     tags: [capture, chat, behavioral]
 
   - id: capture-agent-duties
