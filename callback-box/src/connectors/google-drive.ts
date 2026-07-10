@@ -18,13 +18,17 @@ import { registerConnector } from "./index.js";
 import { getGoogleAuth } from "./google-auth.js";
 import { isGoogleServiceAllowed } from "../core/box/config.js";
 import { loadDriveConfig } from "./drive-config.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
-import { stageFiles, commit } from "../lib/git.js";
+import { loadTransientState } from "./transient-state.js";
+import {
+  DEFAULT_DRIVE_STATE,
+  commitDriveStateDelta,
+  type DriveTransientState,
+} from "./google-drive-state.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import { createGoogleAuthService } from "../services/google-auth.js";
 import { createGoogleDriveService } from "../services/google-drive.js";
 import type { GoogleDriveService } from "../services/google-drive.js";
 import { getHandlerForMimeType, getAllDriveHandlers } from "./drive-types.js";
-import type { FileState } from "./drive-types.js";
 import { safeFilename } from "./chat-utils.js";
 import { attachDirFor } from "../shared/attach-path.js";
 
@@ -32,17 +36,12 @@ import { attachDirFor } from "../shared/attach-path.js";
 import "./drive-handler-sheets.js";
 import "./drive-handler-docs.js";
 
-// ─── State types ────────────────────────────────────────────────────────────
-
-export interface DriveTransientState {
-  files: Record<string, FileState>;
-}
-
-const DEFAULT_STATE: DriveTransientState = { files: {} };
-
-export function emptyFileState(): FileState {
-  return { contentHashes: {}, lastModified: "", extra: {} };
-}
+// State types + the delta-merging state writer live in the sibling state-IO
+// module; re-export the surface CLI callers (`cli/commands/drive.ts`) import.
+export {
+  emptyFileState,
+  type DriveTransientState,
+} from "./google-drive-state.js";
 
 // ─── Card parsing ───────────────────────────────────────────────────────────
 
@@ -117,8 +116,12 @@ class GoogleDriveConnector implements Connector {
     const state = await loadTransientState<DriveTransientState>({
       boxRoot: this.boxRoot,
       connectorName: "google-drive",
-      defaultValue: DEFAULT_STATE,
+      defaultValue: DEFAULT_DRIVE_STATE,
     });
+    // Baseline for the end-of-sync delta merge: which files THIS sync changed
+    // is `state` (mutated in place below) diffed against this snapshot. Deep
+    // copy so the in-place mutation doesn't move the baseline underneath us.
+    const stateSnapshot: DriveTransientState = structuredClone(state);
 
     const created: string[] = [];
     const updated: string[] = [];
@@ -179,22 +182,27 @@ class GoogleDriveConnector implements Connector {
       }
     }
 
-    // Save state
-    await saveTransientState({
+    // Save state via a serialized delta merge (not a whole-sync lock): the CLI
+    // `cb drive add` writes the same file from another process, so we merge the
+    // per-file entries THIS sync changed into freshly-loaded state rather than
+    // clobbering the file wholesale. See commitDriveStateDelta / mergeDriveState.
+    await commitDriveStateDelta({
       boxRoot: this.boxRoot,
-      connectorName: "google-drive",
-      data: state,
+      snapshot: stateSnapshot,
+      working: state,
     });
 
-    // Stage and commit if anything changed
+    // Stage and commit if anything changed — scoped to exactly the paths this
+    // sync produced (never a bare commit that could sweep a concurrent
+    // mutator's staged files).
     const allChanged = [...created, ...updated, ...pushed];
     if (allChanged.length > 0) {
-      await stageFiles(this.boxRoot, allChanged);
       const parts: string[] = [];
       if (created.length > 0) parts.push(`${created.length} new`);
       if (updated.length > 0) parts.push(`${updated.length} updated`);
       if (pushed.length > 0) parts.push(`${pushed.length} pushed`);
-      await commit(this.boxRoot, {
+      await stageAndCommitPaths(this.boxRoot, {
+        paths: allChanged,
         message: `Sync Google Drive: ${parts.join(", ")}`,
       });
     }

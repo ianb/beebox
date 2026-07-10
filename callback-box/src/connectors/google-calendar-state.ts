@@ -11,7 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
-import { loadTransientState, saveTransientState } from "./transient-state.js";
+import { loadTransientState, updateTransientState } from "./transient-state.js";
 import { type GoogleCalendarEvent } from "./google-calendar-ics.js";
 
 interface CalendarTransientState {
@@ -67,11 +67,30 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
 }
 
 export async function saveCalendarState(boxRoot: string, state: CalendarState): Promise<void> {
-  // Save syncTokens to transient (gitignored), eventFiles to persistent (committed)
-  await saveTransientState({
-    boxRoot, connectorName: "google-calendar",
-    data: { syncTokens: state.syncTokens },
+  // Transient side (gitignored syncTokens): route the RMW through the
+  // serialized lock (Track 1). We WHOLESALE-REPLACE with `state.syncTokens`
+  // rather than per-key delta-merge (as the Drive connector does) for two
+  // reasons that make a merge both unnecessary and unsound here:
+  //   1. Ownership — a calendar sync owns the ENTIRE token map: it loads every
+  //      token, then adds/updates/deletes per calendar. There is no second
+  //      writer touching a DIFFERENT key (the Drive CLI-vs-server split is what
+  //      forces Drive's per-key merge); every sync shares one calendar config,
+  //      so overlapping syncs write the same keys and last-writer-wins yields
+  //      valid tokens either way.
+  //   2. Multi-save — one sync saves several times (e.g. the 410 handler clears
+  //      a token mid-sync, then a full resync re-stores it). A fixed-snapshot
+  //      delta would mis-classify a token that round-trips value→deleted→value
+  //      as "unchanged" and drop it. Wholesale replace of the freshly-computed
+  //      complete map is exact.
+  // The lock still prevents a torn write against a concurrent process.
+  await updateTransientState<CalendarTransientState>({
+    boxRoot,
+    connectorName: "google-calendar",
+    defaultValue: { syncTokens: {} },
+    update: () => ({ syncTokens: state.syncTokens }),
   });
+  // Persistent side (committed eventFiles): unchanged direct write; the git
+  // commit of this file is scoped and handled by the connector (Track 2).
   const persistent = { syncTokens: {}, eventFiles: state.eventFiles };
   await fs.mkdir(path.dirname(calendarStatePath(boxRoot)), { recursive: true });
   await fs.writeFile(calendarStatePath(boxRoot), JSON.stringify(persistent, null, 2));

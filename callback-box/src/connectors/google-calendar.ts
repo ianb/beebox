@@ -36,7 +36,7 @@ import {
   fetchAvailableCalendars,
   type CalendarConfig,
 } from "./calendar-config.js";
-import { stageFiles, commit, getStatus } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import {
   buildNarrativeCommitMessage,
   type SyncNote,
@@ -195,34 +195,30 @@ class GoogleCalendarConnector implements Connector {
 
     await this.saveState(state);
 
-    // Stage and commit
-    const filesToStage = [
-      path.relative(this.boxRoot, calDir),
+    // Commit an EXPLICIT changed-file list — never a bare directory-staged
+    // commit that could sweep a concurrent mutator's staged files. The list
+    // mirrors the other connectors: the per-event files this sync
+    // created/updated/deleted/pushed (each already box-root-relative from the
+    // sync/push modules) plus the two connector-owned config files the sync
+    // rewrites every run — the committed calendar state (eventFiles) and the
+    // cached calendar metadata (names/roles). stageAndCommitPaths' fast path
+    // no-ops when none of these actually changed, replacing the old
+    // getStatus-guarded second commit for a token-only refresh.
+    const changedEventFiles = [...created, ...updated, ...deleted, ...pushed];
+    const paths = [
+      ...changedEventFiles,
       path.relative(this.boxRoot, this.statePath()),
       "config/connectors/google-calendar.json",
     ];
-    await stageFiles(this.boxRoot, filesToStage);
-    const allChanged = [...created, ...updated, ...deleted, ...pushed];
-    if (allChanged.length > 0) {
-      const message = buildNarrativeCommitMessage(allNotes, {
-        isFullResync,
-        totalEvents: allChanged.length,
-      });
-      await commit(this.boxRoot, {
-        message,
-        trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
-      });
-    } else {
-      // Only commit state update if there are actually staged changes
-      // (syncToken may have changed even with no event changes)
-      const status = await getStatus(this.boxRoot);
-      if (status.staged.length > 0) {
-        await commit(this.boxRoot, {
-          message: "Sync calendar: no changes (token refreshed)",
-          trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
-        });
-      }
-    }
+    const message =
+      changedEventFiles.length > 0
+        ? buildNarrativeCommitMessage(allNotes, { isFullResync, totalEvents: changedEventFiles.length })
+        : "Sync calendar: no changes (token refreshed)";
+    await stageAndCommitPaths(this.boxRoot, {
+      paths,
+      message,
+      trailers: { "Pulled-By": "google-calendar-connector", ...(this.triggeredBy ? { "Triggered-By": this.triggeredBy } : {}) },
+    });
 
     const result: SyncResult = { success: true, created, updated };
     if (pushed.length > 0) result.pushed = pushed;

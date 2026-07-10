@@ -30,7 +30,7 @@ import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { attachDirFor } from "../shared/attach-path.js";
 import { getBoxDir } from "../lib/paths.js";
-import { stageFiles, commit } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import type { GoogleGmailService } from "../services/google-gmail.js";
 import { buildGmailQuery, listAllMatching, type GmailPullConfig } from "./gmail-pull.js";
 
@@ -207,8 +207,8 @@ export async function reconcileOrphans(opts: {
   }
   staged.push(...(await pruneJobRefs(boxRoot, withdrawn)));
 
-  await stageFiles(boxRoot, staged);
-  await commit(boxRoot, {
+  await stageAndCommitPaths(boxRoot, {
+    paths: staged,
     message: `gmail: withdraw ${withdrawn.length} thread${withdrawn.length === 1 ? "" : "s"} (label removed upstream)`,
     trailers: { "Withdrawn-By": "gmail-connector" },
   });
