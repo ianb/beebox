@@ -94,7 +94,7 @@ function SheetView({ data }: RendererProps) {
 
   if (!sheet) return null;
 
-  const firstTabGid = sheet.tabs.length > 0 ? sheet.tabs[0].gid : "";
+  const firstTabGid = sheet.tabs[0]?.gid ?? "";
   const selectedGid = activeTabGid || firstTabGid;
   const currentTab = sheet.tabs.find((t) => t.gid === selectedGid);
   const currentRows = currentTab ? (tabData.get(currentTab.title) ?? []) : [];

@@ -79,12 +79,13 @@ export function HistoryBrowser({
   const firstPage = data?.pages[0];
   if (firstPage !== prevFirstPage) {
     setPrevFirstPage(firstPage);
-    if (firstPage && firstPage.commits.length > 0) {
+    const [firstCommit] = firstPage?.commits ?? [];
+    if (firstCommit !== undefined) {
       if (initialHash) {
-        const match = firstPage.commits.find((c) => c.hash.startsWith(initialHash));
-        setSelectedCommit(match ?? firstPage.commits[0]);
+        const match = firstPage?.commits.find((c) => c.hash.startsWith(initialHash));
+        setSelectedCommit(match ?? firstCommit);
       } else {
-        setSelectedCommit(firstPage.commits[0]);
+        setSelectedCommit(firstCommit);
       }
     } else {
       setSelectedCommit(null);

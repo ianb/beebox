@@ -45,10 +45,9 @@ function nextLiveTargetUuid(opts: { prev: LiveTurnState; data: DataItem[]; liveT
   // First non-streaming render after the turn streamed: bind to the finalized
   // group (skip trailing markers; null if the turn produced no assistant group).
   if (provisionalUuid && prev.uuid === provisionalUuid) {
-    for (let i = data.length - 1; i >= 0; i--) {
-      const d = data[i];
+    for (const d of data.toReversed()) {
       if (d.kind === "marker") continue;
-      return d.kind === "group" && d.group.type === "assistant" ? d.group.entries[0].uuid : null;
+      return d.kind === "group" && d.group.type === "assistant" ? (d.group.entries[0]?.uuid ?? null) : null;
     }
     return null;
   }
@@ -188,8 +187,7 @@ function MessageListInner({
 
   // Newest assistant group's index, for the now-playing speech-highlight match.
   let lastAssistantGroupIndex = -1;
-  for (let i = data.length - 1; i >= 0; i--) {
-    const d = data[i];
+  for (const d of data.toReversed()) {
     if (d.kind === "group" && d.group.type === "assistant") {
       lastAssistantGroupIndex = d.groupIndex;
       break;

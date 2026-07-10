@@ -184,7 +184,11 @@ function upsamplePcm16To24(buf: ArrayBuffer): ArrayBuffer {
     const i0 = Math.floor(pos);
     const i1 = i0 < lastIdx ? i0 + 1 : lastIdx;
     const frac = pos - i0;
-    out[i] = Math.round(src[i0] * (1 - frac) + src[i1] * frac);
+    // i0 and i1 are both clamped into [0, lastIdx] above, and src has at
+    // least one element (the `src.length === 0` case returned early), so
+    // both reads are always in bounds; the `?? 0` fallbacks are unreachable
+    // but honest to the array-index type.
+    out[i] = Math.round((src[i0] ?? 0) * (1 - frac) + (src[i1] ?? 0) * frac);
   }
   return out.buffer;
 }

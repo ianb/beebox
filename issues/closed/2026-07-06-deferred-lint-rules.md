@@ -1,4 +1,16 @@
+---
+area: callback-box
+resolution: implemented
+---
+
 # Deferred lint rules + tsconfig raises (architectural review Track F)
+
+**Closed 2026-07-10** — the last open item, frontend `noUncheckedIndexedAccess`,
+landed in `57f70f24` (~95 measured errors fixed: index loops restructured to
+`for...of`/`.entries()`/`.toReversed()`, `.at()`-with-fallback at regex-match
+and user-input boundaries, `invariant()` only where a message/user group is
+non-empty by construction). Every item in this issue is now resolved —
+adopted, decided never, or (this one) implemented.
 
 Track F's first slice (`no-floating-promises`, `no-misused-promises`,
 `switch-exhaustiveness-check`) and the cheap wins (type-aware `no-shadow`,

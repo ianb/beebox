@@ -73,8 +73,9 @@ async function fileExists(path: string): Promise<boolean> {
 }
 
 function maxId(items: readonly { id: number }[]): number | undefined {
-  if (items.length === 0) return undefined;
-  return items.reduce((max, item) => (item.id > max ? item.id : max), items[0].id);
+  const first = items[0];
+  if (first === undefined) return undefined;
+  return items.reduce((max, item) => (item.id > max ? item.id : max), first.id);
 }
 
 function isEmptyDraft(draft: { text: string; images: unknown[]; files: unknown[]; selections: unknown[] }): boolean {

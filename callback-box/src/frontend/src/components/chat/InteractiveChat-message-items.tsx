@@ -17,6 +17,7 @@ import type { SessionContentBlock } from "../../api";
 import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel } from "./capture-bubble";
+import { invariant } from "../../lib/invariant";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -108,7 +109,11 @@ export function dataItemKey(d: DataItem): string {
     case "processing": return "processing";
     case "pendingHq": return "pendingHq";
     case "captureBubble": return `capture-${d.model.id}`;
-    case "group": return d.group.entries[0].uuid;
+    case "group": {
+      const first = d.group.entries[0];
+      invariant(first !== undefined, "message group has no entries");
+      return first.uuid;
+    }
   }
 }
 

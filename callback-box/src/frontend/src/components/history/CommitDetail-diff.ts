@@ -15,8 +15,7 @@ export interface DiffFile {
 
 function extractFilePath(line: string): string {
   const match = line.match(/^diff --git a\/(.+) b\/(.+)$/);
-  if (!match) return line;
-  return match[2];
+  return match?.[2] ?? line;
 }
 
 interface FinalizeRenameParams {

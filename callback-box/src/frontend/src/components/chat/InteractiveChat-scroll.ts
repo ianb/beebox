@@ -56,8 +56,7 @@ const SCROLL_KEYS = new Set(["ArrowUp", "ArrowDown", "PageUp", "PageDown", "Home
 function topVisibleChild(scroller: HTMLDivElement | null, content: HTMLDivElement | null): { el: Element; top: number } | null {
   if (!scroller || !content) return null;
   const scTop = scroller.getBoundingClientRect().top;
-  for (let i = 0; i < content.children.length; i++) {
-    const child = content.children[i];
+  for (const child of content.children) {
     const r = child.getBoundingClientRect();
     if (r.bottom > scTop + 1) return { el: child, top: r.top - scTop };
   }
