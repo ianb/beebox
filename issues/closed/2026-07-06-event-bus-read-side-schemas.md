@@ -1,4 +1,16 @@
+---
+resolution: implemented
+---
+
 # EventBus read-side payload validation (Track B follow-up)
+
+**Closed (implemented) by commit ae564c2f** (architectural-review follow-ups,
+Track 3). Added `core/event-bus-schemas.ts` (per-event zod schemas for all 13
+events; `EventMap` derived via `z.infer`), read-boundary validation in
+`parseRows` with a logged/counted `event:"unknown"` sentinel for bad rows, and
+`EVENT_SCHEMA_GENERATION` + a one-row `event_meta` table that truncates
+persisted events on a generation mismatch (or a legacy no-meta DB) so replayed
+rows stay valid against current schemas. Doctests: `test/core/event-bus.doctest.md`.
 
 Track B (architectural review) typed the EventBus **producer** surface: `EventMap`
 names every event and `emit<K>`/`emitTransient<K>` reject an unknown event name or
