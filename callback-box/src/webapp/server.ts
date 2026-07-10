@@ -28,6 +28,7 @@ import {
   registerUnbuiltFrontendRoot,
 } from "./server-root.js";
 import { registerCspReportRoute } from "./routes/api-csp-report.js";
+import { invariant } from "../lib/invariant.js";
 import { PROD_CSP_REPORT_PATH } from "../lib/csp.js";
 
 export type { BoxSpec, ServerOptions, ServerContext } from "./server-types.js";
@@ -132,7 +133,9 @@ export async function createServer(options?: ServerOptions): Promise<FastifyInst
   // Root-level (a report has no box context); stored under the primary box for
   // lack of a server-level state dir. No-op if no boxes are mounted.
   if (boxes.length > 0) {
-    registerCspReportRoute({ server, logDir: boxes[0]!.boxRoot });
+    const firstBox = boxes[0];
+    invariant(firstBox !== undefined, "boxes.length > 0 was just checked");
+    registerCspReportRoute({ server, logDir: firstBox.boxRoot });
   }
 
   // Resolve from the package root (bundle-safe) rather than a fixed depth off

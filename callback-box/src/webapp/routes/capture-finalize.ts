@@ -17,6 +17,7 @@ import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createScheduledScriptTemplate } from "../../schemas/scheduled-script.js";
 import type { CaptureFile, CaptureSessionData } from "./capture-session-store.js";
 import { sessionDir, cleanupSession } from "./capture-session-store.js";
+import { invariant } from "../../lib/invariant.js";
 
 interface FinalizeResult {
   cards: string[];
@@ -94,7 +95,8 @@ async function writeAudioCard(opts: {
   }
   const concatenated = Buffer.concat(chunkBuffers);
 
-  const firstChunk = audioChunks[0]!;
+  const firstChunk = audioChunks[0];
+  invariant(firstChunk !== undefined, "caller only invokes writeAudioCard when audioChunks.length > 0");
   const cardContent = createAudioTemplate({
     recordedAt: firstChunk.startedAt,
     source: firstChunk.source,
@@ -110,7 +112,9 @@ async function writeAudioCard(opts: {
   });
   builder.audioRefs.push(`${audioBasename}.audio.card`);
 
-  return audioChunks[audioChunks.length - 1]!.startedAt;
+  const lastChunk = audioChunks[audioChunks.length - 1];
+  invariant(lastChunk !== undefined, "caller only invokes writeAudioCard when audioChunks.length > 0");
+  return lastChunk.startedAt;
 }
 
 /** Create image cards + copy media files. Returns the latest timestamp seen. */
