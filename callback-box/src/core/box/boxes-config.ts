@@ -84,7 +84,7 @@ async function readBoxesConfigFile(filePath: string): Promise<BoxesConfig> {
 export async function loadBoxesConfig(configPath?: string): Promise<BoxesConfig> {
   const targetFile = configPath ?? CONFIG_FILE;
   if (await fileExists(targetFile)) {
-    return await readBoxesConfigFile(targetFile);
+    return readBoxesConfigFile(targetFile);
   }
   if (configPath === undefined && (await fileExists(LEGACY_CONFIG_FILE))) {
     const parsed = await readBoxesConfigFile(LEGACY_CONFIG_FILE);

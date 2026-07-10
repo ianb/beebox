@@ -86,7 +86,7 @@ export const historyRouter = router({
     }),
 
   facets: publicProcedure.query(async ({ ctx }) => {
-    return await getTrailerFacets(ctx.boxRoot);
+    return getTrailerFacets(ctx.boxRoot);
   }),
 
   diff: publicProcedure

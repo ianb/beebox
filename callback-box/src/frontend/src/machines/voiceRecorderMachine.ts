@@ -110,7 +110,7 @@ export const voiceRecorderMachine = setup({
   },
   actors: {
     requestMic: fromPromise(async () => {
-      return await navigator.mediaDevices.getUserMedia({ audio: true });
+      return navigator.mediaDevices.getUserMedia({ audio: true });
     }),
     durationTicker: fromCallback<VoiceRecorderEvent>(({ sendBack }) => {
       const id = window.setInterval(() => {

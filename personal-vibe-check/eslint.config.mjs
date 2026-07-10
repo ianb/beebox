@@ -619,6 +619,23 @@ export function vibeCheck(options) {
         // functions passed as attributes/handlers, inherited method mismatch,
         // and conditionals like `if (asyncFn())`.
         "@typescript-eslint/no-misused-promises": "error",
+        // `return await x` inside a try/catch (or a `using`/`await using`
+        // scope) is not redundant: dropping the `await` lets the returned
+        // promise reject *after* the try block (or resource disposal) has
+        // already exited, so the rejection is attributed to the wrong frame
+        // and any `finally`/`using` cleanup that should run before the
+        // rejection propagates doesn't. Default (`in-try-catch`) mode
+        // requires `await` on returns inside try/catch/using scopes and
+        // disallows the redundant `await` on a bare tail-return elsewhere.
+        // Measured fallout in one consumer: most hits were Fastify route
+        // handlers (`return reply.send(...)` inside a try whose catch
+        // re-sends) where forcing `await` routes a rejected send into the
+        // catch block and causes a second send (FST_ERR_REP_ALREADY_SENT).
+        // Consuming projects with a route-handler directory matching this
+        // shape should disable the rule there in their OWN eslint config
+        // (see callback-box/eslint.config.mjs for the model), not here —
+        // this preset has no opinion on any one project's route layout.
+        "@typescript-eslint/return-await": "error",
       },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict

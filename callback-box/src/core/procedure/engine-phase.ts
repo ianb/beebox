@@ -184,14 +184,14 @@ export async function ensureGitClean(params: EnsureGitCleanParams): Promise<stri
     const allFiles = [...gitStatus.staged, ...gitStatus.modified, ...gitStatus.untracked];
     const summary = buildFallbackSummary(allFiles);
 
-    return await commit(boxRoot, {
+    return commit(boxRoot, {
       message: `[procedure] ${stepId}: ${summary}`,
       trailers,
     });
   }
 
   // Git is clean — get the latest commit ref
-  return await getHead(boxRoot);
+  return getHead(boxRoot);
 }
 
 /**

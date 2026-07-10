@@ -350,7 +350,7 @@ export async function getDiff(
 ): Promise<string> {
   staged = staged ?? false;
   const args = staged ? ["--cached"] : [];
-  return await simpleGit(boxRoot).diff(args);
+  return simpleGit(boxRoot).diff(args);
 }
 
 /**
