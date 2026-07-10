@@ -127,8 +127,11 @@ export async function searchBox(
   // Resolve the embeddings service: the injected one, or one built from the
   // box's configured key. A malformed secret file throws EmbeddingsKeyError
   // (loud, typed) rather than degrading — a config error the user must see.
-  let service = options.embeddings;
-  if (service === undefined) {
+  // `--mode text` skips ALL of this: no key resolution, no service into the
+  // refresh — text mode is offline and deterministic (never a paid call, and
+  // it must keep working with a broken secret file).
+  let service = mode === "text" ? undefined : options.embeddings;
+  if (service === undefined && mode !== "text") {
     const key = await getOpenAiEmbeddingsKey(boxRoot);
     if (key !== null) service = createOpenAIEmbeddingsService(key);
   }
@@ -245,9 +248,14 @@ async function resolveRanking({
       throw new HybridUnavailableError(noKeyDetail);
     }
     if (!embeddingsReady) {
+      // Surface the refresh-side cause (401, timeout, …) when there is one —
+      // the generic message alone would swallow the actionable warning.
+      const cause = warnings.find(isEmbeddingsWarning);
       const notReadyDetail =
-        "semantic index not ready; run cb search again after embedding completes, " +
-        "or search with --mode text";
+        cause !== undefined
+          ? `semantic index not ready (${cause}); retry, or search with --mode text`
+          : "semantic index not ready; run cb search again after embedding completes, " +
+            "or search with --mode text";
       throw new HybridUnavailableError(notReadyDetail);
     }
     const queryVector = await embedQuery(service, query); // EmbeddingsError propagates
