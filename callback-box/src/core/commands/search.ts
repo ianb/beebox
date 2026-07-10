@@ -10,7 +10,13 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { searchBox, UnknownKindError, type SearchBoxOptions } from "../search/query.js";
+import {
+  searchBox,
+  UnknownKindError,
+  HybridUnavailableError,
+  type SearchBoxOptions,
+} from "../search/query.js";
+import { EmbeddingsKeyError } from "../search/embeddings-key.js";
 
 async function executeSearch(
   ctx: CommandContext,
@@ -34,6 +40,17 @@ async function executeSearch(
   if (typeof args["limit"] === "number") options.limit = args["limit"];
   if (args["rebuild"] === true) options.rebuild = true;
 
+  const modeRaw = args["mode"];
+  if (modeRaw !== undefined) {
+    if (modeRaw !== "text" && modeRaw !== "hybrid") {
+      return {
+        success: false,
+        error: `unknown --mode "${String(modeRaw)}" — valid modes: hybrid, text`,
+      };
+    }
+    options.mode = modeRaw;
+  }
+
   let result;
   try {
     result = await searchBox(ctx.boxRoot, options);
@@ -43,6 +60,10 @@ async function executeSearch(
         success: false,
         error: `${e.message}\n  e.g. cb search "${query}" --kind ${e.validKinds[0] ?? "memo"}`,
       };
+    }
+    // Config/mode errors surface as clean CLI errors, not stack traces.
+    if (e instanceof HybridUnavailableError || e instanceof EmbeddingsKeyError) {
+      return { success: false, error: e.message };
     }
     throw e;
   }
@@ -75,6 +96,7 @@ registerCommand({
     { name: "path", description: "Restrict to a box-relative path prefix", required: false, type: "string" },
     { name: "limit", description: "Maximum results (default 10)", required: false, type: "number" },
     { name: "rebuild", description: "Rebuild the index from scratch", required: false, type: "boolean" },
+    { name: "mode", description: "Ranking mode: hybrid or text (default auto)", required: false, type: "string" },
   ],
   execute: executeSearch,
 });
