@@ -5,8 +5,9 @@ Track F's first slice (`no-floating-promises`, `no-misused-promises`,
 clerk `exactOptionalPropertyTypes`, the `bin`/root tsconfig raise to
 `exactOptionalPropertyTypes: true` + `noUncheckedIndexedAccess`) landed
 first. All of the measured candidates below have since been resolved —
-adopted, deferred with reasons, or decided never — except the two frontend
-tsconfig raises, which stay open.
+adopted, deferred with reasons, or decided never — except the frontend
+`noUncheckedIndexedAccess` raise, which is APPROVED and is the only
+remaining work here.
 
 ## Adopted
 
@@ -47,13 +48,19 @@ tsconfig raises, which stay open.
 - **`@typescript-eslint/promise-function-async`** (34/42/3/0 = 79 fallout).
   Mechanical, no safety benefit beyond the already-landed
   `no-floating-promises`/`no-misused-promises`. Not revisiting.
+- **frontend `exactOptionalPropertyTypes`** (88 fallout measured). Boxholder
+  decision 2026-07-10: not a big enough deal on the frontend to justify the
+  burn-down; okay never adopting. (It stays on for backend/bin/clerk, where
+  it already lives.)
+- **`return-await` `always` mode.** Boxholder decision 2026-07-10: the landed
+  `in-try-catch` mode is right; going further is unnecessary churn and
+  forfeits the real-but-small win of not awaiting a tail call.
 
-## Still open
+## Still open (approved, needs its burn-down pass)
 
-- **frontend `exactOptionalPropertyTypes`** (88 fallout measured). Deferred —
-  large, no burn-down scheduled yet.
-- **frontend `noUncheckedIndexedAccess`** (56 fallout measured). Deferred,
-  but the case for it got stronger this round: the `no-non-null-assertion`
+- **frontend `noUncheckedIndexedAccess`** (56 fallout measured). Boxholder
+  APPROVED 2026-07-10 — do as its own dedicated pass. The case for it got
+  stronger this round: the `no-non-null-assertion`
   burn-down hit ~15 frontend sites that needed `.at(-1)`-with-guard
   conversions specifically *because* the frontend tsconfig lacks
   `noUncheckedIndexedAccess` (the backend already has it, which is why the
