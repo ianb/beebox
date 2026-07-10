@@ -3492,7 +3492,7 @@ tests:
   #
   # A `<capture doc="...">` chat message delivers a user-recorded batch of
   # photos/voice as real user input pointing at a capture-session card
-  # (Track 6 of docs/plans/capture-mode.md). Chat-only concept — the tag is
+  # (Track 6 of docs/implemented-plans/capture-mode.md). Chat-only concept — the tag is
   # documented in CHAT_SYSTEM_PROMPT (prompts.ts), not the agent guide — so
   # every entry below needs chat_mode: true.
   #

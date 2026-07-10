@@ -101,7 +101,7 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Prune the retired process-captures procedure card + its one-shot trigger
   // from boxes (installProcedures never prunes). Stock copies are deleted by
   // hash match; a boxholder-modified copy is parked for review. See
-  // docs/plans/capture-mode.md (Track 7).
+  // docs/implemented-plans/capture-mode.md (Track 7).
   { name: "retire-process-captures", script: "scripts/migrate/retire-process-captures.ts" },
 ];
 

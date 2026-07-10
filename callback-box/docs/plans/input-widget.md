@@ -4,8 +4,10 @@
 *mode of the input*, not a target — `PlaceTarget` is dropped (see
 "Capture mode"). The Emission/editor/persistence/chat-target foundation
 has since shipped as `input-extraction`
-(`docs/implemented-plans/input-extraction.md`); the capture-mode slice
-is the remaining work.
+(`docs/implemented-plans/input-extraction.md`), and the capture-mode
+slice has since shipped as `capture-mode`
+(`docs/implemented-plans/capture-mode.md`). The remaining open section
+of this design is "Interaction stances: conversation vs listening."
 
 Extracts the chat composer and
 its satellites into a distinct component with a firm API. Grows out of
@@ -528,6 +530,11 @@ interface RetentionStore {
   is the win, unifying their internals is not attempted.
 
 ## Capture mode (added 2026-07 — supersedes PlaceTarget)
+
+**Implemented** — see
+[../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
+for the shipped design and its since-verified details. This section is
+kept as the original design record.
 
 Boxholder decision: capture is not a *target*, it is a **mode of the
 input** — a composition stance entered by a button on the composer.

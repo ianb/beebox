@@ -1,7 +1,7 @@
 # Capture mode — unifying capture into the input
 
 Implements the "Capture mode" section of
-[input-widget.md](input-widget.md): capture stops being a separate app
+[input-widget.md](../plans/input-widget.md): capture stops being a separate app
 that deposits into inbox and becomes a mode of the chat composer. Media
 stages eagerly into the box, a background preparation step assembles a
 capture document (audio concat, HQ transcription, deterministic
@@ -11,8 +11,10 @@ annotates and files (or completes and deletes) the capture. The
 `/capture` page, the `process-captures` pipeline, its `cb` commands,
 and the dead voice-memo path retire.
 
-**Status:** planned 2026-07 (this worktree: `unify-capture-input`).
-Parent design: [input-widget.md](input-widget.md). Related parked doc:
+**Status:** implemented 2026-07 (worktree: `unify-capture-input`).
+Parent design: [input-widget.md](../plans/input-widget.md) (that doc's
+capture-mode section is now implemented; its listening-mode section
+remains an open design). Related parked doc:
 [../unimplemented-plans/capture-pipeline-redesign.md](../unimplemented-plans/capture-pipeline-redesign.md)
 (this plan supersedes its motivation for UI captures — the pipeline it
 wanted to fix is retired instead).

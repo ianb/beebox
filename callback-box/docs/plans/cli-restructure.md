@@ -6,7 +6,7 @@ Proposed reorganization of the `cb` CLI surface. **Not yet implemented** beyond 
 
 Drafted: 2026-05-01.
 
-**2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`cb transcribe-captures`, `cb describe-images`, `cb assemble-timeline`) were deleted outright, not renamed — the old `process-captures` pipeline retired in favor of the preparation-worker + chat-agent-annotation flow (`docs/plans/capture-mode.md`). Mentions of those three below describe the pre-retirement CLI surface; treat them as historical, not a pending rename.
+**2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`cb transcribe-captures`, `cb describe-images`, `cb assemble-timeline`) were deleted outright, not renamed — the old `process-captures` pipeline retired in favor of the preparation-worker + chat-agent-annotation flow (`docs/implemented-plans/capture-mode.md`). Mentions of those three below describe the pre-retirement CLI surface; treat them as historical, not a pending rename.
 
 ## Why
 
