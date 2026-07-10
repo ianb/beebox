@@ -20,7 +20,8 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageAndCommitPaths } from "../../lib/git.js";
+import { stageAndCommitPaths, unstageFiles } from "../../lib/git.js";
+import { toRelativePath, isCardFile } from "../../lib/paths.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";
@@ -93,6 +94,30 @@ export type TransitionResult =
   | { ok: true; fields: QuestionFields; committedPaths: string[] }
   | { ok: false; result: CommandResult };
 
+/**
+ * Resolve a caller-supplied question reference to an absolute path and its
+ * box-relative form, FAIL-CLOSED on any path that escapes the box. Both the
+ * `answer` and `dismiss` commands accept a path and join it with `boxRoot`; an
+ * absolute path or a `../` segment would otherwise reach an arbitrary file on
+ * disk. A CLI caller may pass an absolute path as long as it resolves INSIDE
+ * the box (`toRelativePath` returns non-null); the web tRPC boundary rejects
+ * absolute paths earlier, before ever reaching here.
+ */
+export function resolveContainedQuestionPath(
+  boxRoot: string,
+  question: string
+): { ok: true; fullPath: string; relativePath: string } | { ok: false; error: string } {
+  const fullPath = path.isAbsolute(question) ? question : path.join(boxRoot, question);
+  if (!isCardFile(fullPath)) {
+    return { ok: false, error: "Path must be a card file (*.card)" };
+  }
+  const relativePath = toRelativePath(boxRoot, fullPath);
+  if (relativePath === null) {
+    return { ok: false, error: `Question path escapes the box: ${question}` };
+  }
+  return { ok: true, fullPath, relativePath };
+}
+
 function questionLockPath(boxRoot: string, fullPath: string): string {
   // `.callback-box/` is gitignored ephemeral state, the right home for a
   // cross-process lock file (never committed, never validated). One lock per
@@ -154,11 +179,19 @@ async function loadForTransition(
 /**
  * Apply the plan's writes, then commit them all in ONE commit. On commit
  * failure, restore every touched file to its pre-write state (or delete files
- * that didn't exist before) so the transition is atomic with respect to the
- * commit and the question stays retryable.
+ * that didn't exist before) AND unstage the paths, so the transition is atomic
+ * with respect to the commit and the question stays retryable.
+ *
+ * WRITE ORDER IS LOAD-BEARING: `plan.writes` are applied in array order, so a
+ * caller MUST list any companion file (e.g. the answer's follow-up job) BEFORE
+ * the status-flipped question card. The card's `status` flip is the commit
+ * point; the companion must already exist on disk when it lands. A crash
+ * between writes then leaves companion+pending-question (harmless, recoverable —
+ * answering again just creates a second job) instead of the unrecoverable
+ * answered-card-with-no-job state.
  */
 async function applyAndCommit(
-  ctx: CommandContext,
+  { ctx, questionRef }: { ctx: CommandContext; questionRef: string },
   plan: TransitionPlan
 ): Promise<{ ok: true; committedPaths: string[] } | { ok: false; result: CommandResult }> {
   // Snapshot originals before writing, so a failed commit rolls back cleanly.
@@ -184,8 +217,9 @@ async function applyAndCommit(
 
   const committedPaths = plan.writes.map((w) => path.relative(ctx.boxRoot, w.absPath));
 
+  let commitHash: string | null;
   try {
-    await stageAndCommitPaths(ctx.boxRoot, {
+    commitHash = await stageAndCommitPaths(ctx.boxRoot, {
       paths: committedPaths,
       message: plan.commit.message,
       ...(plan.commit.trailers !== undefined && { trailers: plan.commit.trailers }),
@@ -193,6 +227,18 @@ async function applyAndCommit(
   } catch (err) {
     // Roll back: the filesystem writes are not atomic with the commit, so a
     // failed commit must not leave a mutated card on disk that rejects retries.
+    // Unstage first — stageAndCommitPaths stages before committing, so on
+    // failure the paths sit in the index; leaving them staged would let a later
+    // unrelated commit sweep up this transition's half-applied writes.
+    try {
+      await unstageFiles(ctx.boxRoot, committedPaths);
+    } catch (e) {
+      // Best-effort: if the commit failed because there's no repo (or the index
+      // is unreadable), there's nothing staged to undo — the working-tree
+      // restore below is what keeps the card retryable. Never let cleanup mask
+      // the original commit failure.
+      console.warn(`Question transition rollback: could not unstage paths in ${ctx.boxRoot}:`, e);
+    }
     for (const backup of backups) {
       if (backup.original === null) {
         await fs.rm(backup.absPath, { force: true });
@@ -204,6 +250,16 @@ async function applyAndCommit(
       ok: false,
       result: { success: false, error: `Failed to commit transition: ${(err as Error).message}` },
     };
+  }
+
+  if (commitHash === null) {
+    // stageAndCommitPaths returns null when the paths showed no changes (a
+    // concurrent sweep already committed them). Unexpected for a guarded
+    // transition that just wrote a status flip — surface it rather than
+    // silently reporting success on a commit that didn't happen here.
+    console.warn(
+      `Question transition committed nothing (paths already committed by another process?) — box=${ctx.boxRoot}, card=${questionRef}`
+    );
   }
 
   return { ok: true, committedPaths };
@@ -245,7 +301,7 @@ export async function withQuestionTransition(
         const planned = await plan({ fields: loaded.fields, content: loaded.content });
         if (!planned.ok) return { ok: false, result: planned.result };
 
-        const applied = await applyAndCommit(ctx, planned.plan);
+        const applied = await applyAndCommit({ ctx, questionRef }, planned.plan);
         if (!applied.ok) return applied;
 
         return { ok: true, fields: loaded.fields, committedPaths: applied.committedPaths };

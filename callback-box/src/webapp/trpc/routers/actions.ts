@@ -1,7 +1,17 @@
+import * as path from "node:path";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { runCommand, type CommandContext } from "../../../core/commands/index.js";
+
+// The web boundary is box-relative only: an absolute path from an untrusted
+// client would (if it resolved inside the box) reach an arbitrary card, and
+// containment is easiest to reason about when the boundary never accepts one.
+// The CLI still accepts absolute paths that resolve inside the box.
+const boxRelativeQuestionPath = z
+  .string()
+  .min(1)
+  .refine((p) => !path.isAbsolute(p), { message: "questionPath must be box-relative, not absolute" });
 
 // Note: a `wakeup`/connector-sync trigger procedure was removed — the box agent
 // runs the wakeup cycle (via the scheduler / `cb wakeup`); the web UI no longer
@@ -10,7 +20,7 @@ export const actionsRouter = router({
   answer: publicProcedure
     .input(
       z.object({
-        questionPath: z.string().min(1),
+        questionPath: boxRelativeQuestionPath,
         answer: z.string().optional(),
         selectedId: z.string().optional(),
       }).refine((d) => d.answer || d.selectedId, {
@@ -50,7 +60,7 @@ export const actionsRouter = router({
     }),
 
   dismiss: publicProcedure
-    .input(z.object({ questionPath: z.string().min(1) }))
+    .input(z.object({ questionPath: boxRelativeQuestionPath }))
     .mutation(async ({ input, ctx }) => {
       const cmdCtx: CommandContext = {
         boxRoot: ctx.boxRoot,

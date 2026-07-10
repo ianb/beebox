@@ -44,7 +44,7 @@
  *   pnpm exec tsx scripts/migrate/question-lifecycle-run.ts <boxRoot> --apply
  */
 
-import { readFile, writeFile, readdir, access, unlink } from "node:fs/promises";
+import { readFile, writeFile, readdir, access, unlink, mkdir } from "node:fs/promises";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { join, dirname, basename, relative, resolve, posix } from "node:path";
@@ -220,6 +220,11 @@ async function processOne(
 
   if (apply) {
     const destAbs = join(boxRoot, result.newRelPath);
+    if (result.relocated) {
+      // Ensure box/questions/ exists — a box with only stray question cards
+      // (all outside box/questions/) won't have the destination directory yet.
+      await mkdir(dirname(destAbs), { recursive: true });
+    }
     await writeFile(result.relocated ? destAbs : absPath, result.content);
     if (result.relocated) await rmIfExists(absPath);
   }
@@ -283,6 +288,15 @@ async function main(): Promise<void> {
       `\nRewrote relocated question-card refs in ${String(fixedFiles.length)} other card(s):`
     );
     for (const f of fixedFiles) console.log(`  ${f}`);
+  }
+
+  // Exit 2 (the migrate harness's soft-failure code) when violations remain:
+  // the migration DID apply its automatic fixes, but some cards still can't be
+  // converted by hand-free means (a select question with fewer than two
+  // options fails the schema at load). Exiting 0 would let `cb migrate` record
+  // the migration as cleanly applied despite cards that `cb validate` rejects.
+  if (totals.violations.length > 0) {
+    process.exitCode = 2;
   }
 }
 

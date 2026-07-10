@@ -120,12 +120,46 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await box.write(
   "box/questions/Color.question.card",
-  SELECT.replace("status: pending", "status: answered"),
+  // A coherent answered card carries answer + answered-at (schema-required).
+  SELECT.replace(
+    "status: pending",
+    "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Red\n  selected: red",
+  ),
 );
 const { caller } = contextFor(box);
 
 const out = await attempt(() => caller.dismiss({ questionPath: "box/questions/Color.question.card" }));
 out.startsWith("THREW:BAD_REQUEST:")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Absolute paths are rejected at the web boundary
+
+The tRPC input is box-relative only: an absolute `questionPath` is refused at
+input validation (a `BAD_REQUEST`), before the command runs — even one that
+would resolve inside the box. The CLI still accepts inside-the-box absolutes;
+the web boundary does not.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("box/questions/Color.question.card", SELECT);
+const { caller } = contextFor(box);
+
+const absPath = `${box.root}/box/questions/Color.question.card`;
+
+const ans = await attempt(() => caller.answer({ questionPath: absPath, answer: "Red" }));
+ans.startsWith("THREW:BAD_REQUEST:")
+=> true
+
+const dis = await attempt(() => caller.dismiss({ questionPath: absPath }));
+dis.startsWith("THREW:BAD_REQUEST:")
+=> true
+
+(await box.read("box/questions/Color.question.card")).includes("status: pending")
 => true
 ```
 

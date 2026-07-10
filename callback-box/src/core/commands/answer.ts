@@ -16,12 +16,11 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { boxPath, isCardFile } from "../../lib/paths.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { assertNever } from "../../lib/invariant.js";
 import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
-import { withQuestionTransition } from "./question-transition.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
 
 const AnswerVia = z.enum(["web", "cli", "api"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;
@@ -205,12 +204,11 @@ async function executeAnswer(
   const via: AnswerViaValue = answerArgs.via ?? "cli";
   const question = answerArgs.question;
 
-  const fullPath = path.isAbsolute(question) ? question : boxPath(ctx.boxRoot, question);
-  if (!isCardFile(fullPath)) {
-    return { success: false, error: "Path must be a card file (*.card)" };
+  const contained = resolveContainedQuestionPath(ctx.boxRoot, question);
+  if (!contained.ok) {
+    return { success: false, error: contained.error };
   }
-
-  const relativePath = path.relative(ctx.boxRoot, fullPath);
+  const { fullPath, relativePath } = contained;
   let resolved: ResolvedAnswer | undefined;
   let jobRelative: string | undefined;
 
@@ -238,6 +236,11 @@ async function executeAnswer(
       };
       fields["answered-at"] = getBoxTimeISO(ctx.boxRoot);
       fields["answered-via"] = via;
+      // Clear stale lifecycle bookkeeping from a prior expired/dismissed state:
+      // status is single, so an `answered` card must not carry `dismissed-at`
+      // or `expired-at` (the schema's coherence refinement enforces this).
+      delete fields["dismissed-at"];
+      delete fields["expired-at"];
 
       const split = splitCardContent(content);
       const cardContent = renderFrontmatterBlock(fields, split.body);
@@ -256,9 +259,14 @@ async function executeAnswer(
       return {
         ok: true,
         plan: {
+          // Job FIRST, then the card: the card's status flip is the commit
+          // point, so the follow-up job must already exist on disk before it
+          // (see applyAndCommit's write-order invariant). A crash between the
+          // two writes leaves job+pending-question (recoverable), never an
+          // answered card with no job.
           writes: [
-            { absPath: fullPath, content: cardContent },
             { absPath: jobAbsPath, content: jobContent },
+            { absPath: fullPath, content: cardContent },
           ],
           commit: {
             message: `Answer question: ${path.basename(question, ".card")}`,

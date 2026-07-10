@@ -16,9 +16,8 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { boxPath, isCardFile } from "../../lib/paths.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { withQuestionTransition } from "./question-transition.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
 
 const DismissArgsSchema = z.object({
   question: z.string().optional(),
@@ -36,12 +35,11 @@ async function executeDismiss(
   }
   const question = dismissArgs.question;
 
-  const fullPath = path.isAbsolute(question) ? question : boxPath(ctx.boxRoot, question);
-  if (!isCardFile(fullPath)) {
-    return { success: false, error: "Path must be a card file (*.card)" };
+  const contained = resolveContainedQuestionPath(ctx.boxRoot, question);
+  if (!contained.ok) {
+    return { success: false, error: contained.error };
   }
-
-  const relativePath = path.relative(ctx.boxRoot, fullPath);
+  const { fullPath, relativePath } = contained;
 
   const outcome = await withQuestionTransition({
     ctx,

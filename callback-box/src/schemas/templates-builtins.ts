@@ -10,12 +10,9 @@ import {
   createMemoTemplate,
   createVoiceMemoTemplate,
 } from "./memo.js";
-import {
-  createSelectQuestionTemplate,
-  createTextQuestionTemplate,
-  createConfirmQuestionTemplate,
-} from "./question.js";
-import { getBoxTimeISO } from "../lib/time.js";
+// Question templates register on import of this side-effect module (split out
+// to keep this catalogue under its size budget).
+import "./templates-question.js";
 import { createInitialGuideTemplate } from "./guide.js";
 import { createRecordTemplate } from "./record.js";
 import { createRecipeTemplate } from "./recipe.js";
@@ -47,55 +44,6 @@ registerTemplate({
   defaultForTypes: ["voice-memo"],
   argsSchema: z.object({}),
   generate: () => createVoiceMemoTemplate(),
-});
-
-registerTemplate({
-  name: "question",
-  description: "A multiple-choice question card",
-  cardTypes: ["question"],
-  defaultForTypes: ["question"],
-  argsSchema: z.object({
-    memo: z.string().describe("Context/background for the question"),
-    prompt: z.string().describe("The question to ask"),
-    options: z
-      .array(z.string())
-      .min(2)
-      .describe("Answer options (at least 2)"),
-  }),
-  generate: (args) =>
-    createSelectQuestionTemplate({
-      memo: args.memo,
-      prompt: args.prompt,
-      options: args.options.map((opt, i) => ({
-        id: String.fromCodePoint(97 + i),
-        label: opt,
-      })),
-      askedAt: getBoxTimeISO(),
-    }),
-});
-
-registerTemplate({
-  name: "question-text",
-  description: "A free-text question card",
-  cardTypes: ["question"],
-  argsSchema: z.object({
-    memo: z.string().describe("Context/background for the question"),
-    prompt: z.string().describe("The question to ask"),
-  }),
-  generate: (args) =>
-    createTextQuestionTemplate({ memo: args.memo, prompt: args.prompt, askedAt: getBoxTimeISO() }),
-});
-
-registerTemplate({
-  name: "question-confirm",
-  description: "A yes/no confirmation question card",
-  cardTypes: ["question"],
-  argsSchema: z.object({
-    memo: z.string().describe("Context/background for the question"),
-    prompt: z.string().describe("The question to ask"),
-  }),
-  generate: (args) =>
-    createConfirmQuestionTemplate({ memo: args.memo, prompt: args.prompt, askedAt: getBoxTimeISO() }),
 });
 
 registerTemplate({

@@ -34,6 +34,32 @@ const QuestionInputField = z
           path: ["options"],
           message: "select questions require at least two options",
         });
+        return;
+      }
+      // Ids must be unique, and labels must be unique case-insensitively:
+      // answer resolution matches a typed answer against option labels with
+      // `toLowerCase()` (see resolveSelectAnswer in core/commands/answer.ts), so
+      // two options differing only in case would make the match ambiguous.
+      const seenIds = new Set<string>();
+      const seenLabels = new Set<string>();
+      for (const [i, option] of input.options.entries()) {
+        if (seenIds.has(option.id)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["options", i, "id"],
+            message: `duplicate option id "${option.id}"`,
+          });
+        }
+        seenIds.add(option.id);
+        const label = option.label.toLowerCase();
+        if (seenLabels.has(label)) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["options", i, "label"],
+            message: `duplicate option label "${option.label}" (labels must be unique case-insensitively)`,
+          });
+        }
+        seenLabels.add(label);
       }
     } else if (input.options) {
       ctx.addIssue({
@@ -81,11 +107,63 @@ function isIso8601Duration(value: string): boolean {
   return ISO_8601_DURATION.test(value);
 }
 
-const IsoDuration = z
+export const IsoDuration = z
   .string()
   .refine(isIso8601Duration, { message: "must be an ISO-8601 duration, e.g. P30D or PT12H" });
 
+/**
+ * Every lifecycle timestamp/answer field, keyed to the ONE status that owns it.
+ * A question's status is single: exactly the fields for its status may be
+ * present, and the others must be absent. `answered-via` is grouped with
+ * `answered` but is optional there (a legacy answered card may lack it), so it
+ * is only forbidden on the other statuses, never required.
+ */
+const REQUIRED_LIFECYCLE_FIELDS: Record<QuestionStatusType, readonly string[]> = {
+  pending: [],
+  answered: ["answer", "answered-at"],
+  dismissed: ["dismissed-at"],
+  expired: ["expired-at"],
+};
+const OWNED_LIFECYCLE_FIELDS: Record<QuestionStatusType, readonly string[]> = {
+  pending: [],
+  answered: ["answer", "answered-at", "answered-via"],
+  dismissed: ["dismissed-at"],
+  expired: ["expired-at"],
+};
+const ALL_LIFECYCLE_FIELDS = ["answer", "answered-at", "answered-via", "dismissed-at", "expired-at"] as const;
+
+/**
+ * Parse-time coherence check tying a question's `status` to its lifecycle
+ * fields, so a card whose bookkeeping contradicts its status can't load (the
+ * transition in `core/commands/question-transition.ts` clears stale fields when
+ * re-answering an expired/dismissed question precisely to keep this holding).
+ */
+function refineQuestionLifecycle(fields: Record<string, unknown>, ctx: z.core.$RefinementCtx): void {
+  const status = fields["status"];
+  // status is validated by the enum field; if it isn't a known status that
+  // failure is already reported, so this refinement has nothing coherent to say.
+  if (status !== "pending" && status !== "answered" && status !== "dismissed" && status !== "expired") {
+    return;
+  }
+  const owned = new Set(OWNED_LIFECYCLE_FIELDS[status]);
+  for (const key of REQUIRED_LIFECYCLE_FIELDS[status]) {
+    if (fields[key] === undefined) {
+      ctx.addIssue({ code: "custom", path: [key], message: `status "${status}" requires "${key}"` });
+    }
+  }
+  for (const key of ALL_LIFECYCLE_FIELDS) {
+    if (!owned.has(key) && fields[key] !== undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: [key],
+        message: `status "${status}" must not carry "${key}"`,
+      });
+    }
+  }
+}
+
 export const QuestionSchema = cardSchema("question", {
+  superRefine: refineQuestionLifecycle,
   description: "Asks the user something (select/text/confirm) and routes the answer back to an agent via its directive",
   category: "authored",
   fields: {

@@ -58,7 +58,11 @@ await box.cleanup();
 const box = await makeTmpBox({ git: true });
 await box.write(
   "box/questions/Done.question.card",
-  PENDING.replace("status: pending", "status: answered"),
+  // A coherent answered card carries its answer + answered-at (schema-required).
+  PENDING.replace(
+    "status: pending",
+    "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done",
+  ),
 );
 
 const res = await dismiss(box, { question: "box/questions/Done.question.card" });

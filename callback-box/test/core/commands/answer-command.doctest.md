@@ -246,44 +246,66 @@ await box.cleanup();
 ## Expired and dismissed are answerable; answered is terminal
 
 An expired question still accepts an answer (expiry demotes visibility, it does
-not close the question):
+not close the question). A stored `expired-at` (required by the schema for an
+expired card) is cleared on re-answer, so the resulting card is coherent:
 
 ```ts
+const EXPIRED = TEXT.replace(
+  "status: pending",
+  "status: expired\nexpired-at: 2026-01-01T00:00:00-07:00",
+);
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Old.question.card", TEXT.replace("status: pending", "status: expired"));
+await box.write("box/questions/Old.question.card", EXPIRED);
 
 const res = await answer(box, { question: "box/questions/Old.question.card", answer: "Phoenix" });
 res.success
 => true
+
+const card = await box.read("box/questions/Old.question.card");
+card.includes("status: answered")
+=> true
+
+card.includes("expired-at")
+=> false
 ```
 
 ```ts cleanup
 await box.cleanup();
 ```
 
-So does a dismissed one (an un-dismissal is the boxholder's prerogative):
+So does a dismissed one (an un-dismissal is the boxholder's prerogative); its
+`dismissed-at` is likewise cleared:
 
 ```ts
+const DISMISSED = TEXT.replace(
+  "status: pending",
+  "status: dismissed\ndismissed-at: 2026-01-01T00:00:00-07:00",
+);
 const box = await makeTmpBox({ git: true });
-await box.write("box/questions/Skipped.question.card", TEXT.replace("status: pending", "status: dismissed"));
+await box.write("box/questions/Skipped.question.card", DISMISSED);
 
 const res = await answer(box, { question: "box/questions/Skipped.question.card", answer: "Phoenix" });
 res.success
 => true
+
+(await box.read("box/questions/Skipped.question.card")).includes("dismissed-at")
+=> false
 ```
 
 ```ts cleanup
 await box.cleanup();
 ```
 
-An already-answered question is rejected:
+An already-answered question is rejected (a coherent answered card carries its
+`answer` + `answered-at`):
 
 ```ts
-const box = await makeTmpBox({ git: true });
-await box.write(
-  "box/questions/Done.question.card",
-  TEXT.replace("status: pending", "status: answered"),
+const ANSWERED = TEXT.replace(
+  "status: pending",
+  "status: answered\nanswered-at: 2026-01-01T00:00:00-07:00\nanswer:\n  text: Done",
 );
+const box = await makeTmpBox({ git: true });
+await box.write("box/questions/Done.question.card", ANSWERED);
 
 const res = await answer(box, { question: "box/questions/Done.question.card", answer: "Phoenix" });
 res.success
@@ -291,6 +313,40 @@ res.success
 
 res.error
 => Question is already answered (status: answered); an answered question is terminal
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Path containment — absolute and traversal paths are rejected fail-closed
+
+A relative path that escapes the box via `../`, or an absolute path pointing
+outside it, is rejected before any transition runs (the card never loads):
+
+```ts
+const box = await makeTmpBox({ git: true });
+
+const traversal = await answer(box, { question: "../../etc/passwd.card", answer: "x" });
+traversal.success
+=> false
+
+traversal.error.startsWith("Question path escapes the box:")
+=> true
+
+const outside = await answer(box, { question: "/etc/passwd.card", answer: "x" });
+outside.error.startsWith("Question path escapes the box:")
+=> true
+```
+
+An absolute path that resolves INSIDE the box is accepted (the CLI may pass one):
+
+```ts continue
+await box.write("box/questions/Name.question.card", TEXT);
+const abs = `${box.root}/box/questions/Name.question.card`;
+const res = await answer(box, { question: abs, answer: "Phoenix" });
+res.success
+=> true
 ```
 
 ```ts cleanup
