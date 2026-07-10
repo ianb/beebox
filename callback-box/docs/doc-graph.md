@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-10T12:46:53Z
-Total documents: 164
+Generated: 2026-07-10T13:59:36Z
+Total documents: 165
 
 ## Issues
 
@@ -51,7 +51,7 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Callback Box" | 166 lines
+Title: "Callback Box" | 169 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
@@ -148,7 +148,6 @@ Referenced by:
 - ../issues/2026-07-07-categorize-issues-into-subdirectories.md:80 (mention) — Note: `issues/CLAUDE.md` and the root `CLAUDE.md`'s "issue queue" pointer both
 - ../issues/2026-07-07-cb-render-vs-bin-browse.md:49 (mention) — `suppressHydrationWarning`); and references in `CLAUDE.md`, `frontend.md`,
 - ../issues/2026-07-08-per-surface-agent-vs-boxwide-reactor.md:29 (mention) — simplicity bet (`callback-box/CLAUDE.md`). Note the cost is NOT "N standing agents":
-- ../issues/2026-07-10-tours-exist-but-undocumented.md:25 (mention) — should be — a CLAUDE.md/docs entry requirement at creation time is the
 - ../issues/closed/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 - ../research/gstack/README.md:21 (mention) — 3. When something becomes a real change to our project, link out to where it landed (CLAUDE.md, a skill of our own, etc.
@@ -198,6 +197,7 @@ References:
 - → docs/design/README.md (mention)
 - → docs/adding-schemas.md (mention)
 - → docs/testing.md (mention)
+- → docs/tours.md (mention)
 - → docs/migrations.md (mention)
 - → docs/adding-api-endpoints.md (mention)
 - → docs/connectors.md (mention)
@@ -226,7 +226,7 @@ Title: "Code Style" | 112 lines
 
 Referenced by:
 - CLAUDE.md:120 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:165 (at-include) — @code-style.md
+- CLAUDE.md:168 (at-include) — @code-style.md
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:84 (mention) — - `callback-box/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/app-wide-csp.md:28 (mention) — - `callback-box/code-style.md:` no `any`, max 2 positional params, custom error
@@ -277,6 +277,7 @@ Referenced by:
 - ../issues/2026-07-04-claude-md-review-docs-backlog.md:7 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/2026-07-05-writing-skill.md:13 (mention) — code style (that's `code-style.md`).
 - ../issues/2026-07-06-engine-dev-knowledge-audits.md:14 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
+- ../issues/2026-07-10-tour-lib-lint-debt.md:15 (mention) — in code-style.md so per-edit hook reports on test files stop
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
 
 References:
@@ -410,7 +411,7 @@ References:
 Title: "Adding a Box" | 129 lines
 
 Referenced by:
-- CLAUDE.md:147 (mention) — | Adding a box | `docs/adding-a-box.md` |
+- CLAUDE.md:150 (mention) — | Adding a box | `docs/adding-a-box.md` |
 - README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
 - deploy/README.md:104 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
 - docs/implemented-plans/boxes-as-packages-v2.md:497 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
@@ -433,7 +434,7 @@ References:
 Title: "Adding API Endpoints" | 237 lines
 
 Referenced by:
-- CLAUDE.md:137 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
+- CLAUDE.md:140 (mention) — | Adding API endpoints | `docs/adding-api-endpoints.md` |
 - docs/plans/docs-reorg.gap-analysis.md:160 (mention) — `docs/adding-api-endpoints.md`, `docs/asset-manifests.md`,
 - docs/plans/docs-reorg.md:150 (mention) — - **Skill-promotion candidates**: `adding-api-endpoints.md` (tRPC-vs-REST
 - ../.claude/skills/cb-guide-api/SKILL.md:3 (mention) — description: Explains how HTTP endpoints are added in callback-box and the tRPC-vs-raw-Fastify decision. Use when adding
@@ -443,7 +444,7 @@ Referenced by:
 Title: "Adding a New Card Schema" | 279 lines
 
 Referenced by:
-- CLAUDE.md:129 (mention) — | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/template
+- CLAUDE.md:131 (mention) — | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/template
 - README.md:80 (link) — - [`docs/adding-schemas.md`](docs/adding-schemas.md) — adding a new card type
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/glossary.md:22 (mention) — **card** — A typed file validated by a schema from `callback-box/cards`. The atomic unit of data in a box. Named `Title.
@@ -518,7 +519,7 @@ References:
 Title: "Calendar Integration" | 89 lines
 
 Referenced by:
-- CLAUDE.md:156 (mention) — | Calendar integration | `docs/calendar.md` |
+- CLAUDE.md:159 (mention) — | Calendar integration | `docs/calendar.md` |
 - docs/connectors.md:28 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
 - docs/design/README.md:29 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
@@ -600,7 +601,7 @@ References:
 Title: "Chat session lifecycle" | 94 lines
 
 Referenced by:
-- CLAUDE.md:151 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
+- CLAUDE.md:154 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
 - docs/implemented-plans/architectural-review-followups.md:271 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
 - ../issues/2026-07-06-chat-session-shared-core.md:51 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
@@ -645,7 +646,7 @@ References:
 Title: "Connectors" | 89 lines
 
 Referenced by:
-- CLAUDE.md:138 (mention) — | Connectors | `docs/connectors.md` |
+- CLAUDE.md:141 (mention) — | Connectors | `docs/connectors.md` |
 - docs/design/interaction-model.md:27 (link) — cards back out (flushed by `cb finalize`). See [`../connectors.md`](../connectors.md);
 - docs/implemented-plans/gmail-gc-unlabeled.md:5 (mention) — Lives in `src/connectors/gmail-gc.ts`; reference docs in `docs/connectors.md`.
 - docs/implemented-plans/mvp-implementation-guide.md:288 (link) — Config includes credential references, polling intervals, filters, etc. Agents can read these to understand what's avail
@@ -667,7 +668,7 @@ References:
 Title: "Content-Security-Policy" | 80 lines
 
 Referenced by:
-- CLAUDE.md:152 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
+- CLAUDE.md:155 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
 - src/dev/CLAUDE.md:14 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
@@ -693,7 +694,7 @@ Referenced by:
 - docs/maintenance.md:17 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:116 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:429 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
-- docs/testing.md:589 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
+- docs/testing.md:602 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:10 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - ../issues/closed/2026-03-04-documentation-graph.md:8 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 
@@ -702,7 +703,7 @@ Referenced by:
 Title: "Engineering Principles" | 160 lines
 
 Referenced by:
-- CLAUDE.md:126 (mention) — | Engineering principles | `docs/engineering-principles.md` |
+- CLAUDE.md:128 (mention) — | Engineering principles | `docs/engineering-principles.md` |
 - code-style.md:3 (link) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
 - docs/implemented-plans/architectural-review-followups.md:10 (mention) — principles (`../engineering-principles.md`) and the same execution model
 - docs/implemented-plans/architectural-review.md:29 (mention) — >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
@@ -743,7 +744,7 @@ Referenced by:
 Title: "Glossary" | 57 lines
 
 Referenced by:
-- CLAUDE.md:162 (mention) — | Glossary | `docs/glossary.md` |
+- CLAUDE.md:165 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/plans/design-reconciliation.md:21 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/plans/docs-reorg.gap-analysis.md:143 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
@@ -815,7 +816,7 @@ References:
 Title: "Health Checks" | 60 lines
 
 Referenced by:
-- CLAUDE.md:141 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
+- CLAUDE.md:144 (mention) — | Deployed-server health-check runbooks | `docs/health-checks.md` |
 - docs/plans/docs-reorg.md:180 (mention) — `health-checks.md` are load-bearing but missing from CLAUDE.md's Guides
 - docs/server-operations.md:180 (link) — **Periodic health check:** see [`health-checks.md`](./health-checks.md#claude-update-nightly-claude-code-self-update) — 
 
@@ -827,7 +828,7 @@ References:
 Title: "Knowledge Audits" | 91 lines
 
 Referenced by:
-- CLAUDE.md:154 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
+- CLAUDE.md:157 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/engineering-principles.md:159 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
 - docs/maintenance.md:32 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:119 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
@@ -880,7 +881,7 @@ References:
 Title: "Landmarks" | 164 lines
 
 Referenced by:
-- CLAUDE.md:149 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
+- CLAUDE.md:152 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
 - docs/design/representation.md:91 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
 - docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/clerk-webpage-capture.md:264 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
@@ -899,7 +900,7 @@ References:
 Title: "Code Maintenance" | 98 lines
 
 Referenced by:
-- CLAUDE.md:153 (mention) — | Periodic maintenance | `docs/maintenance.md` |
+- CLAUDE.md:156 (mention) — | Periodic maintenance | `docs/maintenance.md` |
 - docs/implemented-plans/box-retrospectives.md:413 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
 - docs/migrations.md:302 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
@@ -922,7 +923,7 @@ References:
 Title: "Box Migrations" | 316 lines
 
 Referenced by:
-- CLAUDE.md:135 (mention) — | Box migration runbook | `docs/migrations.md` |
+- CLAUDE.md:138 (mention) — | Box migration runbook | `docs/migrations.md` |
 - README.md:82 (link) — - [`docs/migrations.md`](docs/migrations.md) — the data-migration runbook
 - docs/design/representation.md:65 (link) — controlled migration ([`../migrations.md`](../migrations.md)), not silent
 - docs/implemented-plans/agent-applied-migrations.md:33 (mention) — `docs/migrations.md` ("Writing an agent-applied (procedure) migration").
@@ -949,14 +950,14 @@ References:
 Title: "Module map: where shared code lives" | 42 lines
 
 Referenced by:
-- CLAUDE.md:127 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
+- CLAUDE.md:129 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
 
 #### docs/procedure-implementation.md
 
 Title: "Procedures" | 212 lines
 
 Referenced by:
-- CLAUDE.md:139 (mention) — | Procedures | `docs/procedure-implementation.md` |
+- CLAUDE.md:142 (mention) — | Procedures | `docs/procedure-implementation.md` |
 - docs/glossary.md:40 (mention) — **procedure** — A multi-step workflow defined as a `*.procedure.card` (YAML frontmatter, no body). Config in `config/pro
 - docs/implemented-plans/agent-applied-migrations.md:29 (mention) — general write-up landed in `docs/procedure-implementation.md` ("Checklists"
 - docs/implemented-plans/procedure-validation-completion.md:9 (mention) — > `docs/procedure-implementation.md` and the generated procedure guide. Two
@@ -988,7 +989,7 @@ References:
 Title: "Prompt Logging for Agent Invocations" | 212 lines
 
 Referenced by:
-- CLAUDE.md:143 (mention) — | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
+- CLAUDE.md:146 (mention) — | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
 - docs/plans/docs-reorg.md:179 (mention) — link. `prompt-logging.md` is a near-orphan; `scheduler.md` and
 - docs/reports/user-stories-audit-2026-06-26.md:1326 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
 
@@ -1039,7 +1040,7 @@ Referenced by:
 Title: "Server Operations" | 202 lines
 
 Referenced by:
-- CLAUDE.md:146 (mention) — | Server operations | `docs/server-operations.md` |
+- CLAUDE.md:149 (mention) — | Server operations | `docs/server-operations.md` |
 - docs/health-checks.md:9 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
@@ -1060,7 +1061,7 @@ References:
 Title: "SSR Render Testing (`cb render`)" | 185 lines
 
 Referenced by:
-- CLAUDE.md:155 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
+- CLAUDE.md:158 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 - docs/reports/user-stories-audit-2026-06-26.md:4686 (mention) — All files exist and are properly implemented. Verified: (1) src/cli/commands/render.ts spawns render.tsx with full optio
 - ../.claude/skills/cb-guide-testing/SKILL.md:38 (mention) — - **SSR render tests** (`cb render`, `docs/ssr-render-testing.md`) —
 - ../issues/2026-07-07-cb-render-ssr-window-undefined.md:25 (mention) — couldn't use. It's also covered by `docs/ssr-render-testing.md`, so SSR is
@@ -1102,10 +1103,10 @@ Referenced by:
 
 #### docs/testing.md
 
-Title: "Testing" | 609 lines
+Title: "Testing" | 622 lines
 
 Referenced by:
-- CLAUDE.md:130 (mention) — | Testing philosophy | `docs/testing.md` |
+- CLAUDE.md:132 (mention) — | Testing philosophy | `docs/testing.md` |
 - docs/chat-scroll-testing.md:5 (mention) — behavior that doctests can't exercise (`docs/testing.md` §6). This is the
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
 - docs/implemented-plans/agent-applied-migrations.md:82 (mention) — - `callback-box/docs/testing.md` — tests-first as a design tool; the machine
@@ -1128,11 +1129,11 @@ Referenced by:
 - docs/plans/docs-reorg.gap-analysis.md:53 (mention) — `docs/testing.md:80` lists the helper without the prefixing.
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/plans/ios-companion-app.md:212 (mention) — - **Test posture.** Box-side (TS) gets doctests per `docs/testing.md`: a route doctest for `verifyDeviceToken` (`makeTes
+- docs/tours.md:16 (link) — ([testing.md](testing.md)).
 - ../.claude/skills/cb-debug/SKILL.md:30 (mention) — - **A doctest** — the default, and per `docs/testing.md` it's also your
 - ../.claude/skills/cb-guide-testing/SKILL.md:3 (mention) — description: Explains callback-box's testing system — the test tiers, what each is for, and how to choose. Use when deci
 - ../.claude/skills/cb-plan/SKILL.md:285 (mention) — `docs/testing.md`): a test's first job is to force decomposition —
 - ../issues/2026-07-04-claude-md-review-docs-backlog.md:21 (mention) — `docs/testing.md`): which doctest tier to choose, what to fake vs. let run
-- ../issues/2026-07-10-tours-exist-but-undocumented.md:12 (mention) — 1. **Doc altitude.** Tours are referenced in neither `docs/testing.md` nor
 - ../issues/closed/2026-03-04-session-output-critique-tool.md:8 (mention) — **Closed:** Implemented as `cb session <id> --tool-report` + `@session-critique` subagent. See `docs/testing.md` § Sessi
 - ../research/external-skills-harvest.md:289 (mention) — - [x] **X1 — reconcile cb-plan's test posture with `docs/testing.md`. DONE →
 
@@ -1141,6 +1142,7 @@ References:
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/knowledge-taxonomy.md (link)
 - → docs/chat-scroll-testing.md (link)
+- → docs/tours.md (link)
 - → docs/doc-graph.md (mention)
 
 #### docs/todo-security.md
@@ -1151,12 +1153,24 @@ Referenced by:
 - docs/maintenance.md:24 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 
+#### docs/tours.md
+
+Title: "Tours — scripted browser walks for rendering + a11y review" | 133 lines
+
+Referenced by:
+- CLAUDE.md:133 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
+- docs/testing.md:554 (link) — them: [tours.md](tours.md).
+- ../issues/2026-07-10-tour-lib-lint-debt.md:20 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
+
+References:
+- → docs/testing.md (link)
+
 #### docs/triage.md
 
 Title: "Triage" | 262 lines
 
 Referenced by:
-- CLAUDE.md:144 (mention) — | Triage pipeline design | `docs/triage.md` |
+- CLAUDE.md:147 (mention) — | Triage pipeline design | `docs/triage.md` |
 - docs/box-layout.md:107 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
 - docs/connectors.md:86 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:28 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
@@ -1339,7 +1353,7 @@ References:
 Title: "docs/design/ — engineering rationale" | 40 lines
 
 Referenced by:
-- CLAUDE.md:128 (mention) — | Design rationale | `docs/design/README.md` |
+- CLAUDE.md:130 (mention) — | Design rationale | `docs/design/README.md` |
 - docs/implemented-plans/mvp-implementation-guide.md:4 (mention) — > that postdate it; current design rationale is `../design/README.md`. Known
 
 References:
@@ -2321,7 +2335,7 @@ References:
 Title: "The interface as cards — design" | 473 lines
 
 Referenced by:
-- CLAUDE.md:159 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
+- CLAUDE.md:162 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
@@ -2370,7 +2384,7 @@ References:
 Title: "PDF Intake" | 179 lines
 
 Referenced by:
-- CLAUDE.md:157 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
+- CLAUDE.md:160 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/implemented-plans/user-story-audit-followups.md:57 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:81 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
@@ -2452,7 +2466,7 @@ References:
 Title: "Source Editor Plan" | 140 lines
 
 Referenced by:
-- CLAUDE.md:158 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
+- CLAUDE.md:161 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 
