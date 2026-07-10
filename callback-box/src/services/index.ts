@@ -13,6 +13,7 @@ import type { GoogleAuthService } from "./google-auth.js";
 import type { GoogleCalendarService } from "./google-calendar.js";
 import type { GoogleGmailService } from "./google-gmail.js";
 import type { OpenAIAudioService } from "./openai-audio.js";
+import type { EmbeddingsService } from "./openai-embeddings.js";
 import type { GoogleDriveService } from "./google-drive.js";
 
 // ─── Re-exports ─────────────────────────────────────────────────────────────
@@ -64,6 +65,16 @@ export {
   createFakeOpenAIAudio,
 } from "./openai-audio.js";
 
+export type { EmbeddingsService, FakeEmbeddingsService, FakeEmbeddingsOptions } from "./openai-embeddings.js";
+export {
+  EMBEDDING_MODEL,
+  EMBEDDING_DIMENSIONS,
+  EMBEDDER_ID,
+  EmbeddingsError,
+  createOpenAIEmbeddingsService,
+  createFakeEmbeddings,
+} from "./openai-embeddings.js";
+
 export type { GoogleDriveService, DriveFile, SpreadsheetMetadata, SheetProperties, FakeGoogleDriveService } from "./google-drive.js";
 export {
   createGoogleDriveService,
@@ -82,5 +93,6 @@ export interface Services {
   calendar?: GoogleCalendarService | undefined;
   gmail?: GoogleGmailService | undefined;
   openaiAudio?: OpenAIAudioService | undefined;
+  embeddings?: EmbeddingsService | undefined;
   drive?: GoogleDriveService | undefined;
 }
