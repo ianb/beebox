@@ -237,8 +237,9 @@ const args = process.argv.slice(2);
 let outputPath: string | null = null;
 
 for (let i = 0; i < args.length; i++) {
-  if (args[i] === "--output" && args[i + 1]) {
-    outputPath = args[i + 1]!;
+  const next = args[i + 1];
+  if (args[i] === "--output" && next) {
+    outputPath = next;
     i++;
   }
 }

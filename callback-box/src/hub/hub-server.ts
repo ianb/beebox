@@ -66,6 +66,7 @@ import {
   HUB_EMAIL_HEADER,
   HUB_AUTH_OFF_HEADER,
 } from "../webapp/auth.js";
+import { invariant } from "../lib/invariant.js";
 
 export interface HubHealth {
   status: "ok";
@@ -96,14 +97,20 @@ export interface HubServerOptions {
  *  router's `parseWorktreeName`. */
 function parseSlug(reqPath: string): string | null {
   const m = /^\/([^#/?]+)(?:[#/?]|$)/.exec(reqPath);
-  return m ? m[1]! : null;
+  if (!m) return null;
+  const slug = m[1];
+  invariant(slug !== undefined, "regex match must populate its required capture group");
+  return slug;
 }
 
 /** `/webhook/<slug>/...` -> `<slug>`. A SEPARATE top-level prefix from a
  *  box's own `/<slug>` scope -- see `RESERVED_SLUGS`'s doc comment. */
 function parseWebhookSlug(reqPath: string): string | null {
   const m = /^\/webhook\/([^#/?]+)(?:[#/?]|$)/.exec(reqPath);
-  return m ? m[1]! : null;
+  if (!m) return null;
+  const slug = m[1];
+  invariant(slug !== undefined, "regex match must populate its required capture group");
+  return slug;
 }
 
 function isWebhookPath(reqPath: string): boolean {
