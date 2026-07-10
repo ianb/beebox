@@ -13,6 +13,7 @@
 
 import ky from "ky";
 import { errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -62,37 +63,36 @@ export interface EmbeddingsService {
  * Exported for doctests (no real key can exercise this boundary in CI).
  */
 export function parseEmbeddingsResponse(body: unknown, expectedCount: number): number[][] {
-  if (typeof body !== "object" || body === null || !Array.isArray((body as { data?: unknown }).data)) {
+  const data = isRecord(body) ? body["data"] : undefined;
+  if (!Array.isArray(data)) {
     const noDataDetail = `response body had no data array (got ${body === null ? "null" : typeof body})`;
     throw new EmbeddingsError(noDataDetail);
   }
-  const data = (body as { data: unknown[] }).data;
   if (data.length !== expectedCount) {
     const countMismatchDetail = `response had ${String(data.length)} entries for ${String(expectedCount)} inputs`;
     throw new EmbeddingsError(countMismatchDetail);
   }
   const vectors: number[][] = Array.from<number[]>({ length: expectedCount });
   for (const [position, rawItem] of data.entries()) {
-    if (typeof rawItem !== "object" || rawItem === null) {
+    if (!isRecord(rawItem)) {
       const nonObjectDetail = `response entry at position ${String(position)} was not an object`;
       throw new EmbeddingsError(nonObjectDetail);
     }
-    const item = rawItem as { index?: unknown; embedding?: unknown };
-    if (item.index !== position) {
-      const indexMismatchDetail = `response index ${String(item.index)} did not match request position ${String(position)}`;
+    if (rawItem["index"] !== position) {
+      const indexMismatchDetail = `response index ${String(rawItem["index"])} did not match request position ${String(position)}`;
       throw new EmbeddingsError(indexMismatchDetail);
     }
-    const embedding = item.embedding;
+    const embedding = rawItem["embedding"];
     if (!Array.isArray(embedding) || embedding.length !== EMBEDDING_DIMENSIONS) {
       const receivedDims = Array.isArray(embedding) ? String(embedding.length) : "no";
       const dimensionMismatchDetail = `response vector at index ${String(position)} had ${receivedDims} dims, expected ${String(EMBEDDING_DIMENSIONS)}`;
       throw new EmbeddingsError(dimensionMismatchDetail);
     }
-    if (!embedding.every((v) => typeof v === "number" && Number.isFinite(v))) {
+    if (!embedding.every((v): v is number => typeof v === "number" && Number.isFinite(v))) {
       const nonNumericDetail = `response vector at index ${String(position)} held non-finite or non-number entries`;
       throw new EmbeddingsError(nonNumericDetail);
     }
-    vectors[position] = embedding as number[];
+    vectors[position] = embedding;
   }
   return vectors;
 }

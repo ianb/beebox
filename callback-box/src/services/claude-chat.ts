@@ -202,6 +202,7 @@ export function createChatBackend(): ChatBackend {
       messages: messageQueue.iterable,
       send(content: ChatContentBlock[]): void {
         if (run.closed) return;
+        // eslint-disable-next-line no-restricted-syntax -- adapter boundary: our ChatContentBlock is intentionally looser than the SDK's ContentBlockParam (message.content), so the literal can't `satisfies` SDKUserMessage; sound because our blocks serialize to valid SDK content
         inputQueue.push({
           type: "user",
           message: { role: "user", content },

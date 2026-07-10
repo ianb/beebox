@@ -21,10 +21,10 @@ export type WithCallLog<T> = T & { callLog: CallEntry[] };
  */
 export function withCallLog<T extends object>(service: T): WithCallLog<T> {
   const callLog: CallEntry[] = [];
-  const proxy = Object.create(null) as Record<string, unknown>;
+  const proxy: Record<string, unknown> = Object.create(null);
   proxy.callLog = callLog;
   for (const key of Object.keys(service)) {
-    const orig = (service as Record<string, unknown>)[key];
+    const orig: unknown = Reflect.get(service, key);
     if (typeof orig === "function") {
       proxy[key] = async (...args: unknown[]) => {
         const result = await orig.apply(service, args);
@@ -35,6 +35,7 @@ export function withCallLog<T extends object>(service: T): WithCallLog<T> {
       proxy[key] = orig;
     }
   }
+  // eslint-disable-next-line no-restricted-syntax -- reflection proxy: every own key of `service` was copied above, so the dynamic object structurally satisfies WithCallLog<T> (unprovable to TS)
   return proxy as WithCallLog<T>;
 }
 

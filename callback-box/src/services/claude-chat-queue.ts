@@ -35,7 +35,7 @@ export function createAsyncIterableQueue<T>(): {
     ended = true;
     while (waiters.length > 0) {
       const w = waiters.shift();
-      if (w !== undefined) w({ value: undefined as unknown as T, done: true });
+      if (w !== undefined) w({ value: undefined, done: true });
     }
   }
 
@@ -44,11 +44,12 @@ export function createAsyncIterableQueue<T>(): {
       return {
         next(): Promise<IteratorResult<T>> {
           if (queue.length > 0) {
+            // eslint-disable-next-line no-restricted-syntax -- length>0 guarantees shift() returns an element, not undefined
             const value = queue.shift() as T;
             return Promise.resolve({ value, done: false });
           }
           if (ended) {
-            return Promise.resolve({ value: undefined as unknown as T, done: true });
+            return Promise.resolve({ value: undefined, done: true });
           }
           return new Promise((resolve) => {
             waiters.push(resolve);

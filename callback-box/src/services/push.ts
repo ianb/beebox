@@ -14,6 +14,7 @@
  */
 
 import webpush from "web-push";
+import { isRecord } from "../lib/is-record.js";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -67,8 +68,8 @@ export function createPushService(vapid: VapidConfig): PushService {
         );
         return { delivered: true };
       } catch (e) {
-        const statusCode = (e as { statusCode?: number }).statusCode;
-        if (statusCode != null && GONE_STATUS.has(statusCode)) {
+        const statusCode = isRecord(e) && typeof e["statusCode"] === "number" ? e["statusCode"] : undefined;
+        if (statusCode !== undefined && GONE_STATUS.has(statusCode)) {
           return { gone: true };
         }
         throw e;

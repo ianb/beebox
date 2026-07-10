@@ -193,10 +193,10 @@ export function createFakeGoogleCalendar(
 
     async insertEvent(_calendarId, event) {
       const full: CalendarEvent = {
-        id: `evt-${nextId++}`,
-        status: "confirmed",
         ...event,
-      } as CalendarEvent;
+        id: `evt-${nextId++}`,
+        status: event.status ?? "confirmed",
+      };
       fake.events.push(full);
       return full;
     },
@@ -208,7 +208,12 @@ export function createFakeGoogleCalendar(
       }
       const existing = fake.events[idx];
       invariant(existing !== undefined, "idx came from findIndex, checked !== -1 above");
-      const merged: CalendarEvent = { ...existing, ...event } as CalendarEvent;
+      const merged: CalendarEvent = {
+        ...existing,
+        ...event,
+        id: existing.id,
+        status: event.status ?? existing.status,
+      };
       fake.events[idx] = merged;
       return merged;
     },

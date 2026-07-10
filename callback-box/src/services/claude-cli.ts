@@ -56,7 +56,7 @@ export function createClaudeCliService(): ClaudeCliService {
 
       let output = "";
 
-      const login = { process: child, authUrl: null as string | null };
+      const login: { process: typeof child; authUrl: string | null } = { process: child, authUrl: null };
       activeLogin = login;
 
       const onData = (data: Buffer): void => {
