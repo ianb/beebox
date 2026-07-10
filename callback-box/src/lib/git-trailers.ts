@@ -7,6 +7,8 @@
  * them from "lib/git" unchanged.
  */
 
+import { invariant } from "./invariant.js";
+
 /**
  * Trailer keys that name a connector performing some action on a card.
  * For the browse UI these are treated as a single axis — selecting a
@@ -45,7 +47,9 @@ export function parseTrailers(body: string | undefined): Record<string, string> 
   for (const line of body.split("\n")) {
     const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
     if (match) {
-      trailers[match[1]!] = match[2]!;
+      const [, key, value] = match;
+      invariant(key !== undefined && value !== undefined, "regex capture groups missing on a successful match");
+      trailers[key] = value;
     }
   }
   return trailers;
@@ -61,8 +65,8 @@ export function parseTrailersMulti(body: string | undefined): Record<string, str
   for (const line of body.split("\n")) {
     const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
     if (match) {
-      const key = match[1]!;
-      const value = match[2]!;
+      const [, key, value] = match;
+      invariant(key !== undefined && value !== undefined, "regex capture groups missing on a successful match");
       const existing = trailers[key];
       if (existing === undefined) {
         trailers[key] = value;

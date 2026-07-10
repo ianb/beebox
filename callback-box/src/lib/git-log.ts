@@ -13,6 +13,7 @@ import { simpleGit } from "simple-git";
 import type { GitLogFormat } from "./git-internal.js";
 import { LOG_FORMAT } from "./git-internal.js";
 import { CONNECTOR_TRAILER_KEYS, parseTrailersMulti } from "./git-trailers.js";
+import { invariant } from "./invariant.js";
 
 /**
  * Extended log entry with multi-value trailer support.
@@ -78,10 +79,10 @@ function applyNameStatus(stat: FileStat, status: string | undefined): void {
 /** Accumulate `--numstat` insertion/deletion columns into a file stat. */
 function applyNumstat(stat: FileStat, lines: string[]): void {
   for (const line of lines) {
-    const cols = line.split("\t");
-    if (cols.length >= 2 && cols[0] !== "-") {
-      stat.insertions += parseInt(cols[0]!, 10) || 0;
-      stat.deletions += parseInt(cols[1]!, 10) || 0;
+    const [insCol, delCol] = line.split("\t");
+    if (insCol !== undefined && delCol !== undefined && insCol !== "-") {
+      stat.insertions += parseInt(insCol, 10) || 0;
+      stat.deletions += parseInt(delCol, 10) || 0;
     }
   }
 }
@@ -206,8 +207,9 @@ export async function getTrailerFacets(boxRoot: string): Promise<TrailerFacets> 
       for (const line of commitBlock.split("\n")) {
         const match = line.match(/^([A-Za-z-]+):\s*(.+)$/);
         if (!match) continue;
-        const key = match[1]!;
-        const value = match[2]!.trim();
+        const [, key, rawValue] = match;
+        invariant(key !== undefined && rawValue !== undefined, "regex capture groups missing on a successful match");
+        const value = rawValue.trim();
         if (!value) continue;
         if (connectorKeys.has(key)) {
           connectors.add(value);
@@ -305,14 +307,19 @@ async function getLogFiltered(
     if (!record.trim()) continue;
     const parts = record.split(FS);
     if (parts.length < 5) continue;
-    const hash = parts[1]!.trim();
+    const [, rawHash, rawDate, rawSubject, rawBody] = parts;
+    invariant(
+      rawHash !== undefined && rawDate !== undefined && rawSubject !== undefined && rawBody !== undefined,
+      "record has fewer than 5 fields despite the length check above"
+    );
+    const hash = rawHash.trim();
     if (!/^[\da-f]{40}$/.test(hash)) continue;
-    const body = parts[4]!.trim() || undefined;
+    const body = rawBody.trim() || undefined;
     const trailers = parseTrailersMulti(body);
     entries.push({
       hash,
-      date: parts[2]!.trim(),
-      subject: parts[3]!.trim(),
+      date: rawDate.trim(),
+      subject: rawSubject.trim(),
       body,
       trailers: Object.keys(trailers).length > 0 ? trailers : undefined,
     });

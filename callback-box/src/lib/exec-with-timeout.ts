@@ -111,10 +111,14 @@ export function execWithTimeout(
       timeoutMs: options.timeout,
       ...(options.periodMs !== undefined && { periodMs: options.periodMs }),
       onTimeout: (elapsed) => {
-        try {
-          process.kill(-child.pid!, "SIGKILL");
-        } catch (_e) {
-          // process group already exited — nothing to kill
+        // child.pid is undefined only when spawn() never got a process off the
+        // ground (e.g. the shell itself failed to launch) — nothing to kill.
+        if (child.pid !== undefined) {
+          try {
+            process.kill(-child.pid, "SIGKILL");
+          } catch (_e) {
+            // process group already exited — nothing to kill
+          }
         }
         const slept = elapsed.sleepDetected
           ? ` (${String(Math.round(elapsed.wallMs / 1000))}s wall clock — the machine slept mid-run)`
