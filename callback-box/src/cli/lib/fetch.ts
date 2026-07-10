@@ -82,7 +82,10 @@ function ensureEnvStubs(): void {
 
   try {
     const content = fsSync.readFileSync(stubsFile, "utf-8");
-    const parsed = parseYaml(content) as { http?: Array<{ pattern: string; response_file: string; status?: number; content_type?: string; after?: string }> };
+    const parsed = parseYaml(content) as
+      | { http?: Array<{ pattern: string; response_file: string; status?: number; content_type?: string; after?: string }> }
+      | null
+      | undefined;
     if (parsed?.http && parsed.http.length > 0) {
       scenarioDir = path.dirname(stubsFile);
       stubs = parsed.http.map((h) => ({
