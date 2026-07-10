@@ -7,10 +7,12 @@ import { trpc } from "../../lib/trpc";
 import { cbSource } from "../../lib/source-tag";
 import { RadioGroup, TextareaField } from "../ui/fields";
 import { Button } from "../ui/Button";
-import type { CardInfo } from "../../api";
+import type { RouterOutput } from "../../lib/trpc";
+
+type QuestionInfo = RouterOutput["status"]["questions"]["items"][number];
 
 interface QuestionFormProps {
-  question: CardInfo;
+  question: QuestionInfo;
   onAnswered: () => void;
   sourcePath?: string;
 }
