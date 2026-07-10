@@ -38,6 +38,7 @@ import {
   stagingSessionDir,
   stagingSessionIsEmpty,
   cleanupStagingSession,
+  type StagingSessionState,
 } from "./staging-store.js";
 import { writeCaptureDocument, sessionBasenameFor, collectTimestamps } from "./write-cards.js";
 import { transcribeCaptureClips } from "./transcribe-clips.js";
@@ -50,6 +51,31 @@ import {
   captureMessageAlreadyLanded,
   CaptureDeliveryError,
 } from "./deliver.js";
+
+/**
+ * Record a capture preparation failure AND emit the `capture-status`
+ * `failed` event, so the pending bubble flips to its failed/retry state instead
+ * of going stale. Every `.catch` fire-path (finalize route, resume scan, sweep)
+ * and every in-worker failure branch routes through here — setting the state
+ * without emitting was the bug (X5): the bubble stayed "preparing" forever.
+ * The state write is best-effort (a failed capture whose disk write also fails
+ * is logged, not thrown) because this runs on error paths that must not mask the
+ * original failure.
+ */
+export async function markCapturePreparationFailed(opts: {
+  boxRoot: string;
+  id: string;
+  eventBus: EventBus;
+  state?: StagingSessionState | undefined;
+  docPath?: string | undefined;
+}): Promise<void> {
+  const { boxRoot, id, eventBus, docPath } = opts;
+  const state = opts.state ?? "failed:prepare";
+  await setStagingState({ boxRoot, id, state }).catch((e: unknown) => {
+    console.error(`[capture] Recording ${state} for ${id} failed:`, e);
+  });
+  eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "failed", docPath });
+}
 
 export interface PrepareCaptureDeps {
   boxRoot: string;
@@ -212,8 +238,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
     // rebuilds from scratch rather than re-validating stale output forever.
     // Staging media is left intact (the re-fire re-reads it).
     await discardWrittenDocument({ sessionCardAbsPath, sessionAttachAbsDir });
-    await setStagingState({ boxRoot, id, state: "failed:assemble" });
-    eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "failed", docPath: sessionCardRelPath });
+    await markCapturePreparationFailed({ boxRoot, id, eventBus, state: "failed:assemble", docPath: sessionCardRelPath });
     return;
   }
 
@@ -274,8 +299,7 @@ async function runPreparation(deps: PrepareCaptureDeps): Promise<void> {
   } catch (e) {
     if (e instanceof CaptureDeliveryError) {
       console.error(`[capture] Delivery failed for ${basename}:`, e);
-      await setStagingState({ boxRoot, id, state: "failed:deliver" });
-      eventBus.emit("capture-status", { stagingId: id, sessionId: null, status: "failed", docPath: sessionCardRelPath });
+      await markCapturePreparationFailed({ boxRoot, id, eventBus, state: "failed:deliver", docPath: sessionCardRelPath });
       return;
     }
     throw e;

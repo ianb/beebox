@@ -14,8 +14,8 @@ import * as fs from "node:fs/promises";
 import type { EventBus } from "../event-bus.js";
 import type { ChatSession } from "../chat/session/index.js";
 import type { ChatSessionRegistry } from "../chat/session/registry.js";
-import { stagingBaseDir, readStagingSession, setStagingState } from "./staging-store.js";
-import { prepareCaptureSession } from "./prepare.js";
+import { stagingBaseDir, readStagingSession } from "./staging-store.js";
+import { prepareCaptureSession, markCapturePreparationFailed } from "./prepare.js";
 
 export async function resumeStagingSessions(deps: {
   boxRoot: string;
@@ -43,7 +43,7 @@ export async function resumeStagingSessions(deps: {
     console.warn(`[capture] Resuming staged capture ${id} (state=${session.state})`);
     void prepareCaptureSession({ boxRoot, id, eventBus, registry, wireSession }).catch((err: unknown) => {
       console.error(`[capture] Resume of staged capture ${id} failed:`, err);
-      void setStagingState({ boxRoot, id, state: "failed:prepare" }).catch(() => {});
+      void markCapturePreparationFailed({ boxRoot, id, eventBus });
     });
   }
 }

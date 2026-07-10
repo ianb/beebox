@@ -15,6 +15,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxTimeISO } from "../../lib/time.js";
+import { enforceStagingLimits } from "./staging-limits.js";
 
 /**
  * Preparation/lifecycle state. `failed:<step>` records which preparation step
@@ -61,10 +62,24 @@ export interface StagingSession {
   createdAt: string;
   lastActivityAt: string;
   targetSessionId: string | null;
+  /**
+   * Identifier (email) of the authenticated user who started the capture, or
+   * `null` when unauthenticated (auth-disabled dev). The resume query filters on
+   * this so one box user can never resume/submit another's in-flight capture
+   * (X4). `null` matches `null` — legacy sessions predating this field read as
+   * `null` and stay resumable only by an unauthenticated caller.
+   */
+  createdBy: string | null;
   state: StagingSessionState;
   segments: StagingSegment[];
   photos: StagingPhoto[];
   files: StagingFile[];
+  /**
+   * Bytes accumulated across every staged upload, tracked at add time so the
+   * per-session cap (X3) is a cheap running compare rather than a disk walk.
+   * Optional for legacy manifests written before the cap existed (read as 0).
+   */
+  totalBytes?: number;
   /**
    * Set true only when the abandonment sweep (Track 5) seals a session the user
    * never finalized. It flows through to the capture card's `partial: true`
@@ -139,8 +154,9 @@ export async function writeStagingSession(opts: {
 export async function createStagingSession(opts: {
   boxRoot: string;
   targetSessionId: string | null;
+  createdBy: string | null;
 }): Promise<StagingSession> {
-  const { boxRoot, targetSessionId } = opts;
+  const { boxRoot, targetSessionId, createdBy } = opts;
   const id = crypto.randomUUID();
   await fs.mkdir(stagingSessionDir(boxRoot, id), { recursive: true });
   const now = getBoxTimeISO(boxRoot);
@@ -149,10 +165,12 @@ export async function createStagingSession(opts: {
     createdAt: now,
     lastActivityAt: now,
     targetSessionId,
+    createdBy,
     state: "open",
     segments: [],
     photos: [],
     files: [],
+    totalBytes: 0,
   };
   await writeStagingSession({ boxRoot, session });
   return session;
@@ -187,16 +205,27 @@ function releaseStagingLock(id: string): void {
 /**
  * Read-modify-write `session.json` under the per-session lock, bumping
  * `lastActivityAt`. Throws if the session vanished mid-flight.
+ *
+ * With `media`, this is also the shared write path for a media add: it enforces
+ * the per-session caps (X3) against the incoming bytes, writes the file, and
+ * accumulates `totalBytes` — all under the same lock, so concurrent uploads
+ * can't each pass the check and jointly overshoot.
  */
 async function mutateSession(opts: {
   boxRoot: string;
   id: string;
   mutate: (session: StagingSession) => void;
+  media?: { filename: string; buffer: Buffer };
 }): Promise<void> {
-  const { boxRoot, id, mutate } = opts;
+  const { boxRoot, id, mutate, media } = opts;
   await withStagingLock(id, async () => {
     const session = await readStagingSession({ boxRoot, id });
     if (!session) throw new StagingSessionGoneError(id);
+    if (media) {
+      enforceStagingLimits({ session, incomingBytes: media.buffer.length });
+      await fs.writeFile(resolveStagedFile({ boxRoot, id, filename: media.filename }), media.buffer);
+      session.totalBytes = (session.totalBytes ?? 0) + media.buffer.length;
+    }
     mutate(session);
     session.lastActivityAt = getBoxTimeISO(boxRoot);
     await writeStagingSession({ boxRoot, session });
@@ -216,10 +245,10 @@ export interface AddAudioChunkParams {
  * segment on first chunk). */
 export async function addAudioChunk(params: AddAudioChunkParams): Promise<void> {
   const { boxRoot, id, segmentId, segmentStartedAt, filename, buffer } = params;
-  await fs.writeFile(resolveStagedFile({ boxRoot, id, filename }), buffer);
   await mutateSession({
     boxRoot,
     id,
+    media: { filename, buffer },
     mutate: (session) => {
       let segment = session.segments.find((s) => s.id === segmentId);
       if (!segment) {
@@ -244,10 +273,10 @@ export interface AddPhotoParams {
 
 export async function addPhoto(params: AddPhotoParams): Promise<void> {
   const { boxRoot, id, filename, capturedAt, source, originalName, mimeType, buffer } = params;
-  await fs.writeFile(resolveStagedFile({ boxRoot, id, filename }), buffer);
   await mutateSession({
     boxRoot,
     id,
+    media: { filename, buffer },
     mutate: (session) => {
       const photo: StagingPhoto = { filename, capturedAt, source };
       if (originalName) photo.originalName = originalName;
@@ -269,10 +298,10 @@ export interface AddFileParams {
 
 export async function addFile(params: AddFileParams): Promise<void> {
   const { boxRoot, id, filename, uploadedAt, originalName, mimeType, buffer } = params;
-  await fs.writeFile(resolveStagedFile({ boxRoot, id, filename }), buffer);
   await mutateSession({
     boxRoot,
     id,
+    media: { filename, buffer },
     mutate: (session) => {
       session.files.push({ filename, uploadedAt, originalName, mimeType });
     },

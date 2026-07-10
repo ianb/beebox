@@ -7,6 +7,12 @@
  * delivered — but explicitly *partial* — captures rather than losing them
  * silently (engineering principle #4: resilient AND never silent):
  *
+ * - `sealed`/`preparing`/`delivering` (any age) → preparation re-fired when the
+ *   sweep has a runtime (`firePreparation`). `cb wakeup`'s seal-only sweep and a
+ *   crashed worker both leave sessions in these states with nothing to advance
+ *   them until the next server startup's resume scan; the periodic server sweep
+ *   folds in `resume.ts`'s re-fire so they don't strand between restarts. The
+ *   in-flight set + idempotent steps + CAS make the double-fire safe.
  * - `open` with no activity for {@link ABANDONMENT_WINDOW_MS}:
  *   - empty (no media) → discarded, matching the finalize empty-short-circuit;
  *   - otherwise → CAS-sealed with `partial: true` and preparation fired (the
@@ -58,6 +64,11 @@ export interface SweepDeps {
 export interface SweepResult {
   /** Ids CAS-sealed as partial (and fired, if `firePreparation` was given). */
   sealed: string[];
+  /**
+   * Ids already `sealed`/`preparing`/`delivering` whose preparation this pass
+   * re-fired (server sweep only — `firePreparation` present). Idempotent.
+   */
+  refired: string[];
   /** Empty open ids removed. */
   discarded: string[];
   /** `failed:*` ids past the window — warned, never retried. */
@@ -74,10 +85,23 @@ export interface SweepResult {
 export async function sweepAbandonedCaptures(deps: SweepDeps): Promise<SweepResult> {
   const { boxRoot, firePreparation } = deps;
   const now = getBoxTime(boxRoot).getTime();
-  const result: SweepResult = { sealed: [], discarded: [], staleFailed: [], staleTmpCaptureCards: [] };
+  const result: SweepResult = { sealed: [], refired: [], discarded: [], staleFailed: [], staleTmpCaptureCards: [] };
 
   const sessions = await listStagingSessions({ boxRoot });
   for (const session of sessions) {
+    // Re-fire sessions already sealed/mid-flight, regardless of age (X2): a
+    // wakeup seal or a dead worker leaves them with nothing to advance them.
+    // Only when this sweep has a runtime to prepare with; otherwise the next
+    // server startup's resume scan handles them.
+    if (
+      firePreparation !== undefined &&
+      (session.state === "sealed" || session.state === "preparing" || session.state === "delivering")
+    ) {
+      result.refired.push(session.id);
+      firePreparation(session.id);
+      continue;
+    }
+
     const ageMs = now - new Date(session.lastActivityAt).getTime();
     const isStale = ageMs >= ABANDONMENT_WINDOW_MS;
     if (!isStale) continue;

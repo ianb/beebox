@@ -22,14 +22,15 @@ import {
   readStagingSession,
   cleanupStagingSession,
   sealStagingSession,
-  setStagingState,
   addAudioChunk,
   addPhoto,
   addFile,
   resolveStagedFile,
   StagingPathError,
 } from "../../core/capture/staging-store.js";
-import { prepareCaptureSession } from "../../core/capture/prepare.js";
+import { isStagingLimitError } from "../../core/capture/staging-limits.js";
+import { prepareCaptureSession, markCapturePreparationFailed } from "../../core/capture/prepare.js";
+import { getSessionUser } from "../auth.js";
 import { resumeStagingSessions } from "../../core/capture/resume.js";
 import { sweepAbandonedCaptures } from "../../core/capture/sweep.js";
 import { startAwakeTimeout, type AwakeTimeout } from "../../lib/awake-timeout.js";
@@ -66,7 +67,7 @@ function scheduleAbandonmentSweep(opts: {
           wireSession: runtime.wireSession,
         }).catch(async (err: unknown) => {
           console.error(`[capture] Swept preparation of ${id} failed:`, err);
-          await setStagingState({ boxRoot, id, state: "failed:prepare" }).catch(() => {});
+          await markCapturePreparationFailed({ boxRoot, id, eventBus });
         });
       },
     });
@@ -124,7 +125,10 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     "/api/capture/sessions",
     async (request, _reply) => {
       const targetSessionId = request.body?.targetSessionId ?? null;
-      const session = await createStagingSession({ boxRoot, targetSessionId });
+      // Attribute the session to the authenticated user so the resume query can
+      // scope by owner (X4). Null when auth is disabled (local dev).
+      const createdBy = getSessionUser(request)?.email ?? null;
+      const session = await createStagingSession({ boxRoot, targetSessionId, createdBy });
       return { sessionId: session.id, startedAt: session.createdAt };
     },
   );
@@ -135,6 +139,15 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
     async (request: FastifyRequest<{ Params: { id: string } }>, reply) => {
       const session = await readStagingSession({ boxRoot, id: request.params.id });
       if (!session) return reply.status(404).send({ error: "Session not found" });
+
+      // Uploads are only accepted while the session is open; a sealed/preparing/
+      // delivered/failed session is past the point of accepting media (X3). 409
+      // rather than 404 so the client can tell "gone" from "no longer open".
+      if (session.state !== "open") {
+        return reply
+          .status(409)
+          .send({ error: `Session is ${session.state}; uploads are only accepted while it is open` });
+      }
 
       const header = (name: string): string | undefined => {
         const value = request.headers[name];
@@ -168,34 +181,40 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
       const now = getBoxTimeISO(boxRoot);
       const startedAt = header("x-capture-started-at") ?? now;
 
-      if (kindHeader === "audio") {
-        const segmentId = header("x-capture-segment-id");
-        if (!segmentId) {
-          return reply.status(400).send({ error: "X-Capture-Segment-Id required for audio" });
+      try {
+        if (kindHeader === "audio") {
+          const segmentId = header("x-capture-segment-id");
+          if (!segmentId) {
+            return reply.status(400).send({ error: "X-Capture-Segment-Id required for audio" });
+          }
+          const segmentStartedAt = header("x-capture-segment-started-at") ?? startedAt;
+          await addAudioChunk({ boxRoot, id: session.id, segmentId, segmentStartedAt, filename, buffer });
+        } else if (kindHeader === "photo") {
+          await addPhoto({
+            boxRoot,
+            id: session.id,
+            filename,
+            capturedAt: startedAt,
+            source: header("x-capture-source") ?? "camera-user",
+            originalName: header("x-capture-original-name"),
+            mimeType: header("x-capture-mime-type"),
+            buffer,
+          });
+        } else {
+          await addFile({
+            boxRoot,
+            id: session.id,
+            filename,
+            uploadedAt: startedAt,
+            originalName: header("x-capture-original-name") ?? filename,
+            mimeType: header("x-capture-mime-type") ?? "application/octet-stream",
+            buffer,
+          });
         }
-        const segmentStartedAt = header("x-capture-segment-started-at") ?? startedAt;
-        await addAudioChunk({ boxRoot, id: session.id, segmentId, segmentStartedAt, filename, buffer });
-      } else if (kindHeader === "photo") {
-        await addPhoto({
-          boxRoot,
-          id: session.id,
-          filename,
-          capturedAt: startedAt,
-          source: header("x-capture-source") ?? "camera-user",
-          originalName: header("x-capture-original-name"),
-          mimeType: header("x-capture-mime-type"),
-          buffer,
-        });
-      } else {
-        await addFile({
-          boxRoot,
-          id: session.id,
-          filename,
-          uploadedAt: startedAt,
-          originalName: header("x-capture-original-name") ?? filename,
-          mimeType: header("x-capture-mime-type") ?? "application/octet-stream",
-          buffer,
-        });
+      } catch (e) {
+        // Over a per-session cap → 413 with the error's message as the body (X3).
+        if (isStagingLimitError(e)) return reply.status(413).send({ error: e.message });
+        throw e;
       }
 
       return { success: true, filename, size: buffer.length };
@@ -243,7 +262,7 @@ export async function registerCaptureRoutes(options: RegisterCaptureRoutesOption
           wireSession: runtime.wireSession,
         }).catch(async (err: unknown) => {
           console.error(`[capture] Preparation of ${session.id} failed:`, err);
-          await setStagingState({ boxRoot, id: session.id, state: "failed:prepare" }).catch(() => {});
+          await markCapturePreparationFailed({ boxRoot, id: session.id, eventBus });
         });
       }
 

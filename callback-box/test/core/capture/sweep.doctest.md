@@ -61,7 +61,7 @@ const box = await makeTmpBox({ git: true });
 await configureBox(box);
 
 // Stage an open capture with one recording + one photo at 13:00.
-const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const staged = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 const id = staged.id;
 await addAudioChunk({ boxRoot: box.root, id, segmentId: "seg-a", segmentStartedAt: EARLY, filename: "audio-a-001.webm", buffer: Buffer.from("A") });
 await addPhoto({ boxRoot: box.root, id, filename: "photo-x.jpg", capturedAt: EARLY, source: "camera-user", buffer: Buffer.from("J") });
@@ -123,16 +123,16 @@ const box = await makeTmpBox({ git: true });
 await configureBox(box);
 
 // Empty open session, abandoned at 13:00 → should be discarded.
-const empty = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const empty = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 
 // Failed session with media, abandoned at 13:00 → warned, NOT retried.
-const failed = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const failed = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 await addPhoto({ boxRoot: box.root, id: failed.id, filename: "p.jpg", capturedAt: EARLY, source: "camera-user", buffer: Buffer.from("J") });
 await setStagingState({ boxRoot: box.root, id: failed.id, state: "failed:deliver" });
 
 // Advance the clock, then create a FRESH open session with media (active now).
 process.env.CB_TIME = LATE;
-const fresh = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const fresh = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 await addPhoto({ boxRoot: box.root, id: fresh.id, filename: "p.jpg", capturedAt: LATE, source: "camera-user", buffer: Buffer.from("J") });
 
 // Sweep with no firePreparation (the seal-only path): sealing still happens.
@@ -164,6 +164,58 @@ result.discarded[0] === empty.id
 
 result.staleFailed[0] === failed.id
 => true
+```
+
+```ts cleanup
+await box.cleanup();
+delete process.env.CB_TIME;
+```
+
+## A server sweep re-fires a sealed session left by `cb wakeup` (X2)
+
+`cb wakeup`'s seal-only sweep (no runtime) seals abandoned captures but can't
+prepare them; a crashed worker also leaves sessions `sealed`/`preparing`/
+`delivering`. The periodic *server* sweep (which has `firePreparation`) re-fires
+these regardless of age, so they don't strand until the next restart. Here a
+session is already `sealed` and recently active — still re-fired:
+
+```ts
+process.env.CB_TIME = LATE;
+const box = await makeTmpBox({ git: true });
+await configureBox(box);
+
+const sealed = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
+await addPhoto({ boxRoot: box.root, id: sealed.id, filename: "p.jpg", capturedAt: LATE, source: "camera-user", buffer: Buffer.from("J") });
+await setStagingState({ boxRoot: box.root, id: sealed.id, state: "sealed" });
+
+const fired = [];
+const result = await sweepAbandonedCaptures({
+  boxRoot: box.root,
+  firePreparation: (id) => { fired.push(id); },
+});
+
+JSON.stringify({ refired: result.refired, sealed: result.sealed })
+=> {"refired":["«*»"],"sealed":[]}
+```
+
+The re-fired id is the sealed session, and `firePreparation` was actually called
+for it:
+
+```ts continue
+result.refired[0] === sealed.id
+=> true
+
+fired[0] === sealed.id
+=> true
+```
+
+Without a runtime (the `cb wakeup` seal-only path), a sealed session is left for
+the next server startup — not re-fired here:
+
+```ts continue
+const result2 = await sweepAbandonedCaptures({ boxRoot: box.root });
+result2.refired.length
+=> 0
 ```
 
 ```ts cleanup

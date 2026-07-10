@@ -84,7 +84,7 @@ const SCRIPT = {
 // Stage a sealed session: two audio segments (14:00:00, 14:00:30) + one photo
 // (14:00:15). Media bytes are placeholders — the fake service keys on filenames.
 async function stageSealedSession(boxRoot) {
-  const staged = await createStagingSession({ boxRoot, targetSessionId: null });
+  const staged = await createStagingSession({ boxRoot, targetSessionId: null, createdBy: null });
   const id = staged.id;
   await addAudioChunk({ boxRoot, id, segmentId: "seg-a", segmentStartedAt: "2026-07-09T14:00:00.000Z", filename: "audio-a-001.webm", buffer: Buffer.from("A") });
   await addAudioChunk({ boxRoot, id, segmentId: "seg-b", segmentStartedAt: "2026-07-09T14:00:30.000Z", filename: "audio-b-001.webm", buffer: Buffer.from("B") });

@@ -26,7 +26,7 @@ A fresh session starts `open` and empty, with a `targetSessionId` recorded:
 
 ```ts
 const box = await makeTmpBox();
-const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-123" });
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-123", createdBy: null });
 session.state
 => open
 
@@ -126,7 +126,7 @@ the per-session promise-chain lock serializes them so none is lost:
 
 ```ts
 const box = await makeTmpBox();
-const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 await Promise.all(
   Array.from({ length: 10 }, (_v, i) =>
     addAudioChunk({
@@ -158,7 +158,7 @@ Two concurrent finalize POSTs both call the CAS; exactly one wins the
 
 ```ts
 const box = await makeTmpBox();
-const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null });
+const session = await createStagingSession({ boxRoot: box.root, targetSessionId: null, createdBy: null });
 const [a, b] = await Promise.all([
   sealStagingSession({ boxRoot: box.root, id: session.id }),
   sealStagingSession({ boxRoot: box.root, id: session.id }),

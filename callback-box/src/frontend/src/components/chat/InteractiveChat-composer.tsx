@@ -141,7 +141,7 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, onEnterCapture, captureEnabled, narrationEnabled,
+  onPaste, onDrop, onAttachFiles, onEnterCapture, captureEnabled, captureDisabledReason, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -167,6 +167,8 @@ export function ChatInputArea({
   onEnterCapture: () => void;
   /** Whether capture is offered (suppressed for native shells, like the mic). */
   captureEnabled: boolean;
+  /** When set, the capture affordance renders disabled with this tooltip (X1). */
+  captureDisabledReason?: string | undefined;
   narrationEnabled: boolean;
 }) {
   // Subscribing read of the composer text — this is the component a keystroke
@@ -205,7 +207,11 @@ export function ChatInputArea({
             </button>
           )}
         >
-          {captureEnabled ? <MenuItem onClick={onEnterCapture}>Capture…</MenuItem> : null}
+          {captureEnabled ? (
+            <MenuItem onClick={onEnterCapture} disabled={captureDisabledReason !== undefined}>
+              {captureDisabledReason !== undefined ? `Capture… (${captureDisabledReason.toLowerCase()})` : "Capture…"}
+            </MenuItem>
+          ) : null}
           <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
           <ShareLocationMenuItem />
         </Dropdown>
@@ -216,8 +222,9 @@ export function ChatInputArea({
           <button
             type="button"
             onClick={onEnterCapture}
-            className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500`}
-            title="Capture"
+            disabled={captureDisabledReason !== undefined}
+            className={`${CIRCLE_BTN} sm:hidden bg-warm-300 text-warm-700 hover:bg-warm-400 active:bg-warm-500 disabled:opacity-50 disabled:cursor-not-allowed`}
+            title={captureDisabledReason ?? "Capture"}
             aria-label="Capture"
           >
             <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">

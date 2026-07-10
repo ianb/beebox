@@ -43,6 +43,9 @@ export const captureRouter = router({
           sessions,
           targetSessionId: input.targetSessionId,
           clientSessionId: input.clientSessionId,
+          // Scope to the authenticated user so one box user can't resume
+          // another's in-flight capture (X4). Null (auth-disabled) matches null.
+          requestingUser: ctx.user?.email ?? null,
         }),
       };
     }),

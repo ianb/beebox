@@ -288,6 +288,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       embedded={isEmbedded}
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!isEmbedded}
+      captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       />
       {captureMode && !isEmbedded ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
     </InputStoreProvider>

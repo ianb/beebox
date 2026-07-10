@@ -76,15 +76,22 @@ export interface ResumableCapture {
  * standalone `targetSessionId: null` case). Empty sessions (a bare create with
  * no media, including the fresh one the client just made) are excluded, so the
  * prompt only offers a capture with real content to lose.
+ *
+ * Cross-user isolation (X4): only a session whose `createdBy` matches the
+ * requesting user is ever returned, so presenting another user's chat id or a
+ * stale localStorage id (shared browser) can't surface their capture. `null`
+ * matches `null` — an unauthenticated caller sees only unauthenticated captures.
  */
 export function selectResumableCaptures(opts: {
   sessions: StagingSession[];
   targetSessionId: string | null;
   clientSessionId: string | null;
+  requestingUser: string | null;
 }): ResumableCapture[] {
-  const { sessions, targetSessionId, clientSessionId } = opts;
+  const { sessions, targetSessionId, clientSessionId, requestingUser } = opts;
   return sessions
     .filter((s) => s.state === "open" && !stagingSessionIsEmpty(s))
+    .filter((s) => s.createdBy === requestingUser)
     .filter(
       (s) =>
         (targetSessionId !== null && s.targetSessionId === targetSessionId) ||

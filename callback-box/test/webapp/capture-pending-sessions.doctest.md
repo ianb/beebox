@@ -29,23 +29,23 @@ function caller(boxRoot) {
 const box = await makeTmpBox();
 
 // s1: bound to chat-1, one photo, mid-preparation → pending.
-const s1 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1" });
+const s1 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 await addPhoto({ boxRoot: box.root, id: s1.id, filename: "photo-001.jpg", capturedAt: "2026-07-09T14:00:00.000Z", source: "camera-user", buffer: Buffer.from("IMG") });
 await setStagingState({ boxRoot: box.root, id: s1.id, state: "preparing" });
 
 // s2: bound to chat-1 but still open (capture mode live) → NOT pending.
-const s2 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1" });
+const s2 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 
 // s3: bound to chat-1 but already delivered → NOT pending.
-const s3 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1" });
+const s3 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 await setStagingState({ boxRoot: box.root, id: s3.id, state: "delivered" });
 
 // s4: bound to chat-1, delivery failed → pending (retryable).
-const s4 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1" });
+const s4 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-1", createdBy: null });
 await setStagingState({ boxRoot: box.root, id: s4.id, state: "failed:deliver" });
 
 // s5: bound to a different chat → excluded from chat-1's list.
-const s5 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-2" });
+const s5 = await createStagingSession({ boxRoot: box.root, targetSessionId: "chat-2", createdBy: null });
 await setStagingState({ boxRoot: box.root, id: s5.id, state: "preparing" });
 
 const { pending } = await caller(box.root).capture.pendingSessions({ sessionId: "chat-1" });

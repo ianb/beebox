@@ -46,12 +46,17 @@ function readStringAttr(attrs: string, re: RegExp): string | null {
 /**
  * Parse a `<capture>` wrapper out of a user message. Returns `null` when the
  * text isn't a capture wrapper (the common case — a normal message), so callers
- * can branch on it. Tolerant of surrounding whitespace; `doc` is required (a
- * wrapper without it isn't a capture we can link).
+ * can branch on it. Tolerant of surrounding whitespace, but the ENTIRE trimmed
+ * message must be the wrapper: a message with text before or after the block is
+ * ordinary prose that happens to mention `<capture>`, not a delivered capture,
+ * and rendering it as a chip would swallow the surrounding text. `doc` is
+ * required (a wrapper without it isn't a capture we can link).
  */
 export function parseCaptureWrapper(text: string): CaptureChipModel | null {
-  const match = CAPTURE_RE.exec(text);
-  if (!match) return null;
+  const trimmed = text.trim();
+  const match = CAPTURE_RE.exec(trimmed);
+  // Reject unless the wrapper is the whole message (no leading/trailing text).
+  if (!match || match[0] !== trimmed) return null;
   const attrs = match[1] ?? "";
   const doc = readStringAttr(attrs, DOC_RE);
   if (doc === null || doc === "") return null;

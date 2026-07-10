@@ -10,6 +10,8 @@ here we test the route boundary only.)
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { buildMultipartForm } from "../../../src/lib/multipart.js";
+import { setStagingState, readStagingSession, writeStagingSession } from "../../../src/core/capture/staging-store.js";
+import { MAX_STAGED_BYTES } from "../../../src/core/capture/staging-limits.js";
 
 // Stage one upload via multipart, mirroring the browser client.
 async function upload(ctx, opts) {
@@ -151,6 +153,70 @@ res.statusCode
 ```ts continue
 res.body.error
 => Invalid filename
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Uploading to a sealed session returns 409
+
+Once a session is sealed (finalize fired), it is past the point of accepting
+media — an upload returns 409, distinct from the 404 for a session that is gone
+(X3). Here we seal directly via the store to avoid racing the async worker:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: null },
+});
+const sessionId = created.body.sessionId;
+await setStagingState({ boxRoot: ctx.boxRoot, id: sessionId, state: "sealed" });
+
+const res = await upload(ctx, {
+  sessionId, filename: "photo-001.jpg", data: Buffer.from("X"),
+  headers: { "x-capture-kind": "photo" },
+});
+res.statusCode
+=> 409
+```
+
+```ts continue
+res.body.error
+=> Session is sealed; uploads are only accepted while it is open
+```
+
+```ts cleanup
+await ctx.cleanup();
+```
+
+## Exceeding the per-session byte cap returns 413
+
+An upload that would push the session past `MAX_STAGED_BYTES` is rejected with
+413 (X3). We seed the manifest's accumulated bytes to the cap so a single byte
+tips it over, without staging a real gigabyte:
+
+```ts
+const ctx = await makeTestServer();
+const created = await ctx.request({
+  method: "POST", url: "/api/capture/sessions", payload: { targetSessionId: null },
+});
+const sessionId = created.body.sessionId;
+const session = await readStagingSession({ boxRoot: ctx.boxRoot, id: sessionId });
+session.totalBytes = MAX_STAGED_BYTES;
+await writeStagingSession({ boxRoot: ctx.boxRoot, session });
+
+const res = await upload(ctx, {
+  sessionId, filename: "photo-001.jpg", data: Buffer.from("X"),
+  headers: { "x-capture-kind": "photo" },
+});
+res.statusCode
+=> 413
+```
+
+```ts continue
+res.body.error
+=> Capture exceeds the staging byte limit
 ```
 
 ```ts cleanup

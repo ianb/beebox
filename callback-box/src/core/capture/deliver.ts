@@ -120,6 +120,18 @@ export async function resolveCaptureDeliveryTarget(opts: {
     if (known.includes(targetSessionId)) {
       return { sessionId: targetSessionId, contextDir: await getDirectoryForSession(boxRoot, targetSessionId) };
     }
+    console.warn(
+      `[capture] Target chat ${targetSessionId} no longer exists; falling back to the most-active session for box=${boxRoot}`,
+    );
+  } else {
+    // A null target means the capture was started before its chat had a
+    // server-assigned id. Delivering to the most-active session can misdirect it
+    // to a different chat — log so that misdirection is observable (X1). The
+    // client disables the capture affordance until a session exists, so this
+    // should only fire for the `/capture` deep link (most-active is expected there).
+    console.warn(
+      `[capture] Capture has no target session; falling back to the most-active session for box=${boxRoot}`,
+    );
   }
   const mostActive = await getMostActive(boxRoot);
   if (mostActive !== null) {

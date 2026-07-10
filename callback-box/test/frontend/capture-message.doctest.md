@@ -73,3 +73,34 @@ parseCaptureWrapper("just a normal message")
 parseCaptureWrapper("<capture images=\"1\">no doc attr</capture>")
 => null
 ```
+
+## Only a message that is ENTIRELY the wrapper renders as a chip (X6)
+
+A real delivered capture is nothing but the wrapper (surrounding whitespace is
+tolerated). Text before or after the block means it's ordinary prose that merely
+mentions `<capture>` — parsing it as a chip would swallow the surrounding text,
+so it returns `null` and renders as plain text.
+
+```ts
+const wrapper = buildCaptureWrapper({
+  docPath: "tmp-capture/x.capture-session.card",
+  imageCount: 1,
+  audioSeconds: 5,
+  summary: "hi",
+});
+
+// The bare wrapper (optionally whitespace-padded) still parses.
+parseCaptureWrapper(wrapper) !== null
+=> true
+
+parseCaptureWrapper("\n\n" + wrapper + "\n") !== null
+=> true
+
+// Leading prose → not a chip.
+parseCaptureWrapper("see this: " + wrapper)
+=> null
+
+// Trailing prose → not a chip.
+parseCaptureWrapper(wrapper + " what do you think?")
+=> null
+```
