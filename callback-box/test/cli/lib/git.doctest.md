@@ -8,6 +8,7 @@ import {
   commit, getLog, getLogPaginated, getDiff, getCommitDiff,
   getCurrentBranch, hasCommits, createBranch, checkoutBranch,
   createTag, deleteTag, getHead, clean, isNothingToCommitError,
+  stageAndCommitPaths,
 } from "../../../src/lib/git.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
@@ -360,4 +361,64 @@ isNothingToCommitError(new Error("On branch main\nnothing to commit, working tre
 
 isNothingToCommitError(new Error("fatal: not a git repository (or any of the parent directories): .git"))
 => false
+```
+
+## stageAndCommitPaths — stage + path-scoped commit with race tolerance
+
+`stageAndCommitPaths` stages exactly `paths` and commits only them (via
+`commitPaths`), so a concurrent mutator's unrelated staged files can't be
+co-committed under this caller's attribution. It returns the new commit hash.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("note.card", "hi");
+const hash = await stageAndCommitPaths(box.root, {
+  paths: ["note.card"],
+  message: "Add note",
+  trailers: { "Created-By": "clerk-api" },
+});
+print(`hash length: ${hash?.length}`);
+
+const log = await getLog(box.root);
+print(`subject: ${log[0].subject}`);
+print(`Created-By: ${log[0].trailers?.["Created-By"]}`);
+=>
+hash length: 40
+subject: Add note
+Created-By: clerk-api
+```
+
+Only the named paths land — a concurrently-staged unrelated file is left
+staged, NOT swept into this commit:
+
+```ts continue
+await box.write("scoped.card", "mine");
+await box.write("other.card", "someone else's staged work");
+await stageFiles(box.root, ["other.card"]);
+
+await stageAndCommitPaths(box.root, { paths: ["scoped.card"], message: "Add scoped" });
+const committed = await getCommitDiff(box.root, await getHead(box.root));
+print(`scoped in commit: ${committed.includes("scoped.card")}`);
+print(`other in commit: ${committed.includes("other.card")}`);
+const status = await getStatus(box.root);
+print(`other still staged: ${status.staged.includes("other.card")}`);
+=>
+scoped in commit: true
+other in commit: false
+other still staged: true
+```
+
+Fast path — nothing to commit returns `null` instead of throwing. Both an
+already-committed path (no changes) and an empty path list land here:
+
+```ts continue
+JSON.stringify(await stageAndCommitPaths(box.root, { paths: ["scoped.card"], message: "no-op" }))
+=> null
+
+JSON.stringify(await stageAndCommitPaths(box.root, { paths: [], message: "empty" }))
+=> null
+```
+
+```ts cleanup
+await box.cleanup();
 ```

@@ -12,6 +12,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 
+import { withCardLock } from "../lib/card-lock.js";
+import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
+
 /**
  * Build the transient state file path for a connector.
  * e.g. "gmail" → "config/connectors/gmail.state.json"
@@ -57,4 +60,105 @@ export async function saveTransientState(opts: SaveOptions): Promise<void> {
   const filePath = transientStatePath(opts.boxRoot, opts.connectorName);
   await fs.mkdir(path.dirname(filePath), { recursive: true });
   await fs.writeFile(filePath, JSON.stringify(opts.data, null, 2) + "\n");
+}
+
+const LOCK_RETRIES = 50;
+const LOCK_RETRY_MS = 100;
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Thrown when a transient-state file stays cross-process-locked past the retry
+ * budget. Signals real contention (another process holding the lock for
+ * seconds), not a transient collision — those are absorbed by the retry loop.
+ */
+export class TransientStateLockError extends Error {
+  readonly lockPath: string;
+  constructor(lockPath: string) {
+    super(`transient state lock could not be acquired: ${lockPath}`);
+    this.name = "TransientStateLockError";
+    this.lockPath = lockPath;
+  }
+}
+
+interface UpdateOptions<T> {
+  boxRoot: string;
+  connectorName: string;
+  defaultValue: T;
+  /**
+   * Receives FRESHLY-loaded state (loaded inside the lock, never a snapshot the
+   * caller captured earlier) and returns the updated state. Express the change
+   * as a delta against `state`, so overlapping updates compose instead of
+   * clobbering. May be sync or async.
+   */
+  update: (state: T) => T | Promise<T>;
+}
+
+/**
+ * Serialized read-modify-write for a connector's transient state file.
+ *
+ * The eight RMW spans over `<name>.state.json` used to run unlocked, so two
+ * overlapping spans both read the pre-mutation bytes and the last writer
+ * silently dropped the other's change. This funnels every RMW through two
+ * locks, layered deliberately:
+ *
+ *   - **`withCardLock` (in-process) is the OUTER lock**, keyed on the resolved
+ *     state-file path. Two modules mutating the same file (e.g. `telegram.ts`
+ *     and `telegram-outbound.ts` both on `telegram.state.json`) share one
+ *     lock. It must be outer because the cross-process lock cannot distinguish
+ *     two racers in the *same* process — both would see a live holder with our
+ *     own PID and spin until the retry budget throws. Serializing in-process
+ *     first guarantees only one task per process ever contends for the file
+ *     lock, so that lock only ever arbitrates *across* processes.
+ *   - **The cross-process file lock (`file-lock.ts`) is the INNER lock**, on a
+ *     SIBLING `<state-file>.lock` path — NEVER the state file itself, because
+ *     `acquireLock()` treats malformed lock-file content as a dead lock and
+ *     unlinks/overwrites it, which would destroy real state on first
+ *     contention. `google-drive.state.json` is written by both the server and
+ *     the CLI, so the cross-process half is load-bearing; we take it uniformly
+ *     for every connector (one lockfile touch per RMW, all low-frequency
+ *     paths). `acquireLock()` throws `LockHeldError` immediately rather than
+ *     queueing, so we retry with backoff (~50 × 100ms) to turn contention into
+ *     a wait, not a connector error.
+ *
+ * Fresh state is loaded INSIDE both locks and passed to `update`; its return
+ * is saved and returned. Returns the updated state.
+ */
+export async function updateTransientState<T>(opts: UpdateOptions<T>): Promise<T> {
+  const { boxRoot, connectorName, defaultValue, update } = opts;
+  const statePath = transientStatePath(boxRoot, connectorName);
+  const lockPath = `${statePath}.lock`;
+
+  // withCardLock is OUTER (see the doc comment): serialize same-process racers
+  // before either one reaches the cross-process lock.
+  return withCardLock(statePath, async () => {
+    // acquireLock's fs.open("wx") needs the containing dir to exist; on first
+    // run config/connectors/ may be absent.
+    await fs.mkdir(path.dirname(lockPath), { recursive: true });
+
+    for (let attempt = 0; attempt < LOCK_RETRIES; attempt++) {
+      try {
+        await acquireLock(lockPath, { purpose: "transient-state", connectorName });
+      } catch (e) {
+        if (e instanceof LockHeldError) {
+          // Held by ANOTHER process (a same-process holder is impossible here —
+          // withCardLock already serialized us). Wait and retry.
+          await delay(LOCK_RETRY_MS);
+          continue;
+        }
+        throw e;
+      }
+      try {
+        const state = await loadTransientState({ boxRoot, connectorName, defaultValue });
+        const updated = await update(state);
+        await saveTransientState({ boxRoot, connectorName, data: updated });
+        return updated;
+      } finally {
+        await releaseLock(lockPath);
+      }
+    }
+    throw new TransientStateLockError(lockPath);
+  });
 }

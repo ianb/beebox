@@ -15,6 +15,7 @@ import {
   GitCommandError,
   NoPathsError,
   isIndexLockError,
+  isNothingToCommitError,
   unstageOversizedBlobs,
   LOG_FORMAT,
 } from "./git-internal.js";
@@ -244,6 +245,44 @@ export async function commitPaths(
 
   const hash = await git.revparse(["HEAD"]);
   return hash.trim();
+}
+
+/**
+ * Stage `paths` and commit exactly them, tolerating a concurrent sweep that
+ * may have already committed the same paths.
+ *
+ * The idiom this consolidates (from the clerk router): a `stageFiles` +
+ * `commit` pair is two non-atomic ops on one shared git index, so scoping the
+ * commit to `paths` (via `commitPaths`) is what keeps a concurrent mutator's
+ * unrelated staged files from being co-committed under this caller's
+ * attribution. Two races are absorbed rather than surfaced as errors:
+ *
+ *   - Fast path: if none of `paths` currently show changes, a sweep already
+ *     committed them — nothing to do, return `null`.
+ *   - Residual race: if the sweep commits between our `pathsHaveChanges` check
+ *     and our `commitPaths`, git reports "nothing to commit"
+ *     (`isNothingToCommitError`) — the paths landed anyway, so that is success,
+ *     also `null`.
+ *
+ * Returns the new commit hash, or `null` when there was nothing to commit.
+ */
+export async function stageAndCommitPaths(
+  boxRoot: string,
+  options: GitPathCommitOptions,
+): Promise<string | null> {
+  const { paths } = options;
+  // Fast path: the box's auto-sweep may already have committed these paths (an
+  // empty path list also lands here — nothing to stage or commit).
+  if (!(await pathsHaveChanges(boxRoot, paths))) return null;
+  await stageFiles(boxRoot, paths);
+  try {
+    return await commitPaths(boxRoot, options);
+  } catch (err) {
+    // Residual race: a sweep committed our paths between the check and here.
+    // "nothing to commit" means the paths landed — success, not an error.
+    if (isNothingToCommitError(err)) return null;
+    throw err;
+  }
 }
 
 function buildCommitMessage(options: GitCommitOptions): string {

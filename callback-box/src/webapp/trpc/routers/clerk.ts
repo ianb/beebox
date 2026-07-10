@@ -17,7 +17,7 @@ import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
 import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../../connectors/chat-utils.js";
-import { stageFiles, commitPaths, pathsHaveChanges, isNothingToCommitError } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 
 const commentaryInput = z.object({
   url: z.string().url(),
@@ -84,9 +84,13 @@ export const clerkRouter = router({
     await writeCard(path.join(boxRoot, commentaryRel), createCommentaryTemplate({ title: input.title }));
     createdPaths.push(commentaryRel);
 
-    await gitCommit(boxRoot, {
-      relPaths: createdPaths,
+    // commitPaths (inside stageAndCommitPaths) scopes the commit to exactly our
+    // paths so a concurrent sweep can't entangle unrelated staged changes under
+    // the clerk attribution.
+    await stageAndCommitPaths(boxRoot, {
+      paths: createdPaths,
       message: `Add commentary from Clerk: "${input.title}"`,
+      trailers: { "Created-By": "clerk-api" },
     });
 
     // Open the webpage card in a chat companion pane, chat scoped to the dest
@@ -147,20 +151,4 @@ async function writeWebpageCard(opts: {
     created.push(frozenRel);
   }
   return created;
-}
-
-async function gitCommit(boxRoot: string, { relPaths, message }: { relPaths: string[]; message: string }): Promise<void> {
-  // Fast path: the box's auto-sweep may already have committed these cards.
-  if (!(await pathsHaveChanges(boxRoot, relPaths))) return;
-  await stageFiles(boxRoot, relPaths);
-  try {
-    // commitPaths scopes the commit to exactly our paths so a concurrent sweep
-    // can't entangle unrelated staged changes under the clerk attribution.
-    await commitPaths(boxRoot, { paths: relPaths, message, trailers: { "Created-By": "clerk-api" } });
-  } catch (err) {
-    // Residual race: the sweep committed our paths first. "nothing to commit"
-    // means the cards landed anyway — success, not an error. Re-throw the rest.
-    if (isNothingToCommitError(err)) return;
-    throw err;
-  }
 }
