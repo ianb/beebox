@@ -13,7 +13,7 @@ import * as path from "node:path";
 import { type Connector } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { getSystemState } from "../../core/state.js";
-import { stageAll, stageFiles, commit, getStatus } from "../../lib/git.js";
+import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
 import { readCardFrontmatter, collectRefs } from "../../core/card-io.js";
@@ -169,11 +169,11 @@ export async function cleanupStaleJobs(boxRoot: string): Promise<number> {
     deletedPaths.push(job.relPath);
   }
 
-  await stageFiles(boxRoot, deletedPaths);
   const summary = staleJobs
     .map((j) => `  ${j.relPath} (${j.totalRefs} dead refs)`)
     .join("\n");
-  await commit(boxRoot, {
+  await stageAndCommitPaths(boxRoot, {
+    paths: deletedPaths,
     message: `Clean up ${staleJobs.length} stale job(s) with all dead references\n\nThese jobs were never completed by the agent — all referenced\nfiles have been processed or removed through other paths.\n\n${summary}`,
     trailers: {
       "Triggered-By": "cb wakeup",
@@ -250,8 +250,8 @@ export async function createIntakeJobsForUnjobbed(
   }
 
   if (jobPaths.length > 0) {
-    await stageFiles(boxRoot, jobPaths);
-    await commit(boxRoot, {
+    await stageAndCommitPaths(boxRoot, {
+      paths: jobPaths,
       message: `Create intake jobs for ${unjobbedItems.length} unjobbed inbox item(s)`,
       trailers: {
         "Triggered-By": "cb wakeup",
@@ -393,8 +393,8 @@ export async function createContainsBackfillJob(boxRoot: string): Promise<number
   const jobPath = path.join(jobsDir, jobFilename);
   await fs.writeFile(jobPath, card);
   const relJobPath = path.relative(boxRoot, jobPath);
-  await stageFiles(boxRoot, [relJobPath]);
-  await commit(boxRoot, {
+  await stageAndCommitPaths(boxRoot, {
+    paths: [relJobPath],
     message: `Queue contains backfill job (${String(batch.length)} cards)`,
     trailers: { "Created-By": "wakeup-contains-backfill" },
   });

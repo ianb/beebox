@@ -14,7 +14,7 @@ import {
 } from "../../../schemas/scheduled-script.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
-import { stageFiles, commit } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 import { listSchedules, type ScheduleEntry } from "./scheduler-schedules.js";
 import { checkTriggerPreconditions, runScheduledScript } from "./scheduler-run.js";
 import { withCardLock } from "../../../lib/card-lock.js";
@@ -128,8 +128,8 @@ export const schedulerRouter = router({
         await fs.writeFile(fullPath, renderFrontmatterBlock(fm, split.body));
 
         const action = input.enabled ? "Enable" : "Disable";
-        await stageFiles(ctx.boxRoot, [relPath]);
-        await commit(ctx.boxRoot, {
+        await stageAndCommitPaths(ctx.boxRoot, {
+          paths: [relPath],
           message: `${action} schedule: ${input.name}`,
           trailers: { "Source": "webapp", "Endpoint": "scheduler.setEnabled" },
         });

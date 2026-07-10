@@ -40,7 +40,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import {
@@ -260,11 +260,11 @@ async function runPhotoMode(
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
   filesToStage.push(sessionCardRelPath);
 
-  await stageFiles(ctx.boxRoot, filesToStage);
   const summaryParts: string[] = [`${bundles.length} photos`];
   if (orphanBacks.length > 0) summaryParts.push(`${orphanBacks.length} orphan backs`);
   if (unsurePages.length > 0) summaryParts.push(`${unsurePages.length} unsure`);
-  await commit(ctx.boxRoot, {
+  await stageAndCommitPaths(ctx.boxRoot, {
+    paths: filesToStage,
     message: `Scan import: ${summaryParts.join(", ")}`,
     trailers: { "Created-By": "scan-import" },
   });

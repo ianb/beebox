@@ -6,7 +6,7 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageFiles, commit } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import { readCardFrontmatter } from "./card-io.js";
 
 class JobDeleteError extends Error {
@@ -60,8 +60,6 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
   }
 
   // Stage and commit the deletion
-  await stageFiles(boxRoot, [jobRelPath]);
-
   const commitMsg = description
     ? `Finish job: ${description}`
     : `Finish ${jobType || "unknown"} job`;
@@ -71,5 +69,5 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
     trailers["Job-Type"] = jobType;
   }
 
-  await commit(boxRoot, { message: commitMsg, trailers });
+  await stageAndCommitPaths(boxRoot, { paths: [jobRelPath], message: commitMsg, trailers });
 }

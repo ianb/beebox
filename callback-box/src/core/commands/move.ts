@@ -23,7 +23,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { isCardFile, boxPath } from "../../lib/paths.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
 
 /**
@@ -217,12 +217,11 @@ async function commitMoves({
   allFilesToStage: string[];
   rawDestPath: string;
 }): Promise<void> {
-  await stageFiles(ctx.boxRoot, allFilesToStage);
-
   const summary = results.length === 1
     ? `Move ${results[0]!.from} → ${results[0]!.to}`
     : `Move ${results.length} item(s) to ${path.relative(ctx.boxRoot, rawDestPath)}`;
-  await commit(ctx.boxRoot, {
+  await stageAndCommitPaths(ctx.boxRoot, {
+    paths: allFilesToStage,
     message: summary,
     trailers: {
       "Moved-By": "cb mv",

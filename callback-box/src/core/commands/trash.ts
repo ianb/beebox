@@ -15,7 +15,7 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { getBoxDir, isCardFile, boxPath, parseCardName } from "../../lib/paths.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 
@@ -230,13 +230,12 @@ async function executeTrash(
 
   // Optionally commit all at once
   if (trashArgs.commit) {
-    await stageFiles(ctx.boxRoot, [...allMovedFiles, ...allAdditions]);
-
     const reason = trashArgs.reason ? `: ${trashArgs.reason}` : "";
     const summary = results.length === 1
       ? `Trash card: ${path.basename(results[0]!.sourcePath)}${reason}`
       : `Trash ${results.length} cards${reason}`;
-    await commit(ctx.boxRoot, {
+    await stageAndCommitPaths(ctx.boxRoot, {
+      paths: [...allMovedFiles, ...allAdditions],
       message: summary,
       trailers: {
         "Trashed-By": "cb rm",

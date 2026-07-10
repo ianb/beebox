@@ -9,7 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { stageFiles, commit } from "../../lib/git.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { createAudioTemplate } from "../../schemas/audio.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createFileTemplate } from "../../schemas/file.js";
@@ -201,12 +201,12 @@ async function commitSession(opts: {
 }): Promise<void> {
   const { boxRoot, builder } = opts;
   if (builder.filesToStage.length === 0) return;
-  await stageFiles(boxRoot, builder.filesToStage);
   const parts: string[] = [];
   if (builder.audioRefs.length > 0) parts.push(`${builder.audioRefs.length} audio`);
   if (builder.imageRefs.length > 0) parts.push(`${builder.imageRefs.length} photos`);
   if (builder.fileRefs.length > 0) parts.push(`${builder.fileRefs.length} files`);
-  await commit(boxRoot, {
+  await stageAndCommitPaths(boxRoot, {
+    paths: builder.filesToStage,
     message: `Capture session: ${parts.join(", ")}`,
     trailers: { "Created-By": "capture" },
   });
