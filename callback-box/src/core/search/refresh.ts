@@ -40,6 +40,8 @@ import {
   type RefreshState,
   type RefreshEffect,
 } from "./refresh-file.js";
+import { computePendingEmbeds, runEmbedPass } from "./embed-pass.js";
+import type { EmbeddingsService } from "../../services/openai-embeddings.js";
 
 export interface OpenSearchIndexResult {
   db: SearchIndex;
@@ -47,6 +49,14 @@ export interface OpenSearchIndexResult {
   warnings: string[];
   /** True when another process held the lock — results from the last persisted index. */
   stale: boolean;
+  /**
+   * True only when an embedder is configured and every contains-bearing
+   * indexed card holds a current-`EMBEDDER_ID` vector (the pending set is
+   * empty after the pass). The query layer gates hybrid on this — a failed or
+   * partial embed leaves it false so search stays text-only rather than
+   * ranking a half-embedded corpus.
+   */
+  embeddingsReady: boolean;
 }
 
 export interface OpenSearchIndexOptions {
@@ -57,6 +67,12 @@ export interface OpenSearchIndexOptions {
   /** Delay between lock attempts in ms (default 500). */
   lockRetryMs?: number;
   onProgress?: (message: string) => void;
+  /**
+   * Embeds `contains` texts and reports readiness. Omitted ⇒ the embedding
+   * pass is skipped entirely and `embeddingsReady` is false — the designed
+   * not-configured normal state, not a failure (no warning).
+   */
+  embeddings?: EmbeddingsService | undefined;
 }
 
 /**
@@ -75,7 +91,17 @@ export async function openSearchIndex(
   });
   if (!locked) {
     const db = (await restoreSearchIndex(boxRoot)) ?? (await createSearchIndex());
-    return { db, warnings: ["search index locked by another process; results may be stale"], stale: true };
+    // Readiness on the stale path is read-only: loadManifest + loadContainsState
+    // + computePendingEmbeds touch only the persisted files, never the db or a
+    // write, so no lock is needed — the whole point of this branch is to serve
+    // last-persisted results without contending for the refresh lock.
+    const embeddingsReady = await staleEmbeddingsReady(boxRoot, opts.embeddings);
+    return {
+      db,
+      warnings: ["search index locked by another process; results may be stale"],
+      stale: true,
+      embeddingsReady,
+    };
   }
   try {
     return await refreshUnderLock(boxRoot, opts);
@@ -139,6 +165,17 @@ async function refreshUnderLock(
   // missing/stale lists are complete. No-op when the sidecar is current.
   await healContainsState(state);
 
+  // Embed changed/never-embedded contains texts. Runs after heal (so the
+  // sidecar covers manifest-unchanged cards — the box-gains-a-key-later
+  // corpus) and before persist, so any vectors added ride the existing
+  // index-before-manifest persist + receipt ordering below.
+  let embeddingsReady = false;
+  if (opts.embeddings !== undefined) {
+    const embedResult = await runEmbedPass(state, opts.embeddings);
+    if (embedResult.dirtyIndex) dirtyIndex = true;
+    embeddingsReady = embedResult.ready;
+  }
+
   if (dirtyIndex) {
     // Index first, manifest last: a crash between the two leaves an older
     // manifest, and the affected files simply re-extract next refresh. The
@@ -161,7 +198,22 @@ async function refreshUnderLock(
   if (JSON.stringify(containsState.cards) !== containsBefore) {
     await saveContainsState(boxRoot, containsState);
   }
-  return { db, warnings, stale: false };
+  return { db, warnings, stale: false, embeddingsReady };
+}
+
+/**
+ * Readiness for the lock-contended stale path: a service must be configured
+ * and no contains-bearing card may be pending. Read-only (manifest + sidecar
+ * loads over the persisted files), so it needs no lock.
+ */
+async function staleEmbeddingsReady(
+  boxRoot: string,
+  embeddings: EmbeddingsService | undefined
+): Promise<boolean> {
+  if (embeddings === undefined) return false;
+  const manifest = await loadManifest(boxRoot);
+  const containsState = await loadContainsState(boxRoot);
+  return computePendingEmbeds({ manifest, containsState }).length === 0;
 }
 
 /** Observe manifest-indexed frontmatter cards the contains sidecar doesn't know yet. */
