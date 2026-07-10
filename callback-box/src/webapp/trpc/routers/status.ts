@@ -8,6 +8,20 @@ import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
+import { cardFields, parseCardText } from "../../../core/card-io.js";
+import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
+import type { CardInfo } from "../../../core/state.js";
+
+/** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
+export interface QuestionInfo extends CardInfo {
+  prompt?: string | undefined;
+  memo?: string | undefined;
+  inputType?: QuestionFields["input"]["type"] | undefined;
+  options?: string[] | undefined;
+  learning?: QuestionFields["learning"] | undefined;
+  answer?: QuestionFields["answer"] | undefined;
+}
 
 export interface BrowseDir {
   name: string;
@@ -52,12 +66,29 @@ export const statusRouter = router({
 
   questions: publicProcedure.query(async ({ ctx }) => {
     const state = await getSystemState(ctx.boxRoot);
-    const context = await generateContext(ctx.boxRoot);
-    const enriched = state.questions.map((q) => {
-      const pending = context.pendingQuestions.find((p) => p.path === q.relativePath);
-      return { ...q, prompt: pending?.prompt, options: pending?.options };
-    });
-    return { items: enriched };
+    const schemas = await createCardSchemaMap(ctx.boxRoot);
+    const items: QuestionInfo[] = await Promise.all(
+      state.questions.map(async (q): Promise<QuestionInfo> => {
+        try {
+          const content = await fs.readFile(q.path, "utf-8");
+          const card = parseCardText(content, { source: q.path, schemas });
+          const fields = cardFields(card, QuestionSchema);
+          return {
+            ...q,
+            prompt: fields.prompt,
+            memo: fields.memo,
+            inputType: fields.input.type,
+            options: fields.input.options?.map((o) => o.label),
+            learning: fields.learning,
+            answer: fields.answer,
+          };
+        } catch (e) {
+          console.warn(`Skipping invalid question card ${q.path}:`, e);
+          return { ...q };
+        }
+      }),
+    );
+    return { items };
   }),
 
   context: publicProcedure.query(async ({ ctx }) => {
