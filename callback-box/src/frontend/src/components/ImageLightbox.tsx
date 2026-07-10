@@ -75,23 +75,28 @@ export function ImageLightbox({ images, index, onIndexChange, onClose }: ImageLi
       {hasMany ? (
         <NavButton direction="prev" onClick={goPrev} />
       ) : null}
+      {/* pointer-events-none on the figure (with auto restored on its visible
+          children) so clicks on the figure box's transparent whitespace — the
+          gap beside a narrow image, dead space around a wide caption — fall
+          through to the backdrop button and close, matching the pre-a11y
+          behavior where only the img/caption/controls swallowed clicks. */}
       <figure
-        className="relative z-10 max-w-[95vw] max-h-[95vh] flex flex-col items-center"
+        className="pointer-events-none relative z-10 max-w-[95vw] max-h-[95vh] flex flex-col items-center"
       >
         <img
           src={current.src}
           alt={current.alt}
-          className={`max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
+          className={`pointer-events-auto max-w-full rounded shadow-lg ${captionText ? "max-h-[80vh]" : "max-h-[92vh]"}`}
         />
         {captionText ? (
           <figcaption
-            className="mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed"
+            className="pointer-events-auto mt-3 max-w-[80ch] text-sm text-white/90 text-center px-4 leading-relaxed"
           >
             {captionText}
           </figcaption>
         ) : null}
         <div
-          className="absolute top-2 right-2 flex items-center gap-2"
+          className="pointer-events-auto absolute top-2 right-2 flex items-center gap-2"
         >
           {hasMany ? (
             <span className="text-xs text-white/80 bg-black/40 rounded px-2 py-0.5 font-mono">

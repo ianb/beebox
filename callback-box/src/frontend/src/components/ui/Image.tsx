@@ -119,7 +119,13 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
       ref={imgRef}
       src={src}
       alt={alt}
-      className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", !interactive ? extraClass : undefined)}
+      // In the interactive case the button is the outermost element, so
+      // context styles that space the image against surrounding flow (e.g.
+      // prose typography's vertical img margins) must not land on the img —
+      // trapped inside the button they become dead clickable height instead
+      // of collapsing into the layout. m-0 suppresses them; the button
+      // carries the caller's spacing classes (extraClass) instead.
+      className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
       onError={onError}
       title={title}
