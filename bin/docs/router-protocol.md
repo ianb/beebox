@@ -103,7 +103,7 @@ their call sites in the boot sequence at the bottom of `router.ts`.
 ## Status: conservative extraction only (2026-07-09)
 
 This doc and the doc-browser extraction (`bin/router-docs.ts`) are Track 8 of
-`callback-box/docs/plans/architectural-review-followups.md` — pure code
+`callback-box/docs/implemented-plans/architectural-review-followups.md` — pure code
 motion plus this write-up, no change to the state machine or its invariants.
 The fuller option — a formal `WorktreeState` transition function with an
 injected clock/spawner and unit-testable fakes — remains open in

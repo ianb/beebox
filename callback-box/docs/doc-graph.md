@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-10T11:45:15Z
-Total documents: 162
+Generated: 2026-07-10T12:11:19Z
+Total documents: 163
 
 ## Issues
 
@@ -67,7 +67,7 @@ Referenced by:
 - docs/design/identity.md:5 (mention) — and operating system built on Claude Code" (CLAUDE.md) is the identity;
 - docs/glossary.md:20 (mention) — **boxholder** — The human a box belongs to. Used in shared prose where "the user" is ambiguous (since agents are also "u
 - docs/implemented-plans/app-wide-csp.md:217 (mention) — `mode`. Lives in `src/lib/` per CLAUDE.md ("Cross-cutting helpers").
-- docs/implemented-plans/architectural-review.md:61 (mention) — `CLAUDE.md`s, and the boxholder's stated preferences during this review. Where
+- docs/implemented-plans/architectural-review.md:68 (mention) — `CLAUDE.md`s, and the boxholder's stated preferences during this review. Where
 - docs/implemented-plans/attach-directories-superseded.md:156 (mention) — Throughout prompts, generated docs, agent instructions, and `CLAUDE.md` mentions, the user-facing terminology is "card a
 - docs/implemented-plans/box-retrospectives.md:46 (mention) — - "Treat noisy command output as a bug" (monorepo CLAUDE.md) — `cb retro`
 - docs/implemented-plans/box-search.md:47 (mention) — - Monorepo `CLAUDE.md`: *"Treat noisy command output as a bug"* — search and
@@ -229,7 +229,7 @@ Referenced by:
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:84 (mention) — - `callback-box/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/app-wide-csp.md:28 (mention) — - `callback-box/code-style.md:` no `any`, max 2 positional params, custom error
-- docs/implemented-plans/architectural-review.md:60 (mention) — They come from three sources: `callback-box/code-style.md`, the monorepo
+- docs/implemented-plans/architectural-review.md:67 (mention) — They come from three sources: `callback-box/code-style.md`, the monorepo
 - docs/implemented-plans/box-retrospectives.md:39 (mention) — - `callback-box/code-style.md` — custom error classes; no silent error
 - docs/implemented-plans/box-search.md:38 (mention) — - `callback-box/code-style.md`: max 2 positional params, no default
 - docs/implemented-plans/boxes-as-packages-v2.md:48 (mention) — - `callback-box/code-style.md`: strict types, no `any`, custom error classes — the new
@@ -289,7 +289,7 @@ Title: "Frontend Conventions" | 114 lines
 Referenced by:
 - CLAUDE.md:66 (mention) — src/components/ui/  Shared UI primitives (Button, Text, Stack, Image, ...) — see frontend.md
 - code-style.md:3 (mention) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
-- docs/implemented-plans/architectural-review.md:590 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
+- docs/implemented-plans/architectural-review.md:597 (mention) — gray→warm, `DebugLog.tsx:145`) and amend frontend.md's capture-surface
 - docs/implemented-plans/card-view-widgets.md:24 (mention) — - `callback-box/frontend.md:34` — *"Reach for a primitive from
 - docs/implemented-plans/chat-scroll-redesign.md:37 (mention) — palette. Read frontend.md before writing UI … the `className`-only-for-outer-layout
 - docs/implemented-plans/chat-stream-finalize-unify.md:44 (mention) — palette. Read frontend.md before writing UI"* and the
@@ -595,12 +595,13 @@ References:
 
 #### docs/chat-session-lifecycle.md
 
-Title: "Chat session lifecycle" | 81 lines
+Title: "Chat session lifecycle" | 94 lines
 
 Referenced by:
 - CLAUDE.md:151 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
-- docs/implemented-plans/architectural-review.md:703 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
-- ../issues/2026-07-06-chat-session-shared-core.md:40 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
+- docs/implemented-plans/architectural-review-followups.md:271 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
+- docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
+- ../issues/2026-07-06-chat-session-shared-core.md:51 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
 
 References:
 - → ../issues/2026-07-06-chat-session-shared-core.md (mention)
@@ -621,7 +622,7 @@ Title: "Composer input machine — design note" | 305 lines
 
 Referenced by:
 - docs/composer-states.md:5 (mention) — us, doing UI polish. Companion to `docs/composer-input-machine.md`, which
-- docs/implemented-plans/architectural-review.md:174 (mention) — docs in sync (`docs/composer-input-machine.md`). xstate's home; not to be
+- docs/implemented-plans/architectural-review.md:181 (mention) — docs in sync (`docs/composer-input-machine.md`). xstate's home; not to be
 - docs/plans/docs-reorg.gap-analysis.md:115 (mention) — 10. `docs/composer-input-machine.md` leads with an unshipped 5-state
 
 References:
@@ -701,7 +702,8 @@ Title: "Engineering Principles" | 160 lines
 Referenced by:
 - CLAUDE.md:126 (mention) — | Engineering principles | `docs/engineering-principles.md` |
 - code-style.md:3 (link) — General coding conventions for backend and frontend. UI palette and primitive reference live in frontend.md. The *why* b
-- docs/implemented-plans/architectural-review.md:22 (mention) — >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
+- docs/implemented-plans/architectural-review-followups.md:10 (mention) — principles (`../engineering-principles.md`) and the same execution model
+- docs/implemented-plans/architectural-review.md:29 (mention) — >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
@@ -877,7 +879,7 @@ Title: "Landmarks" | 164 lines
 Referenced by:
 - CLAUDE.md:149 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
 - docs/design/representation.md:91 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
-- docs/implemented-plans/architectural-review.md:822 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
+- docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/clerk-webpage-capture.md:264 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
 - docs/implemented-plans/open-chat-from-card.md:96 (mention) — `contextDir` chosen at the call site (`LandmarkSection.tsx:96`). `docs/landmarks.md` (per the
 - docs/landmark-curation.md:5 (mention) — For the design and schema of the card itself, see `docs/landmarks.md` and `docs/generated/card-landmark.md`.
@@ -1069,7 +1071,7 @@ Referenced by:
 - docs/activities-retrospective.md:43 (mention) — The original design docs ([activities-design.md](activities-design.md), and references in `narration-mode.md`, `stack-de
 - docs/architecture/CLAUDE.md:5 (mention) — **Role:** this series is the onboarding narrative — the canonical human-facing "what is this." Engineering rationale liv
 - docs/design/README.md:3 (link) — Why the system is shaped the way it is. Peer of [`../stack-decisions.md`](../stack-decisions.md)
-- docs/implemented-plans/architectural-review.md:821 (mention) — 5. **Doc drift:** `docs/stack-decisions.md` cites deleted `sseMachine.ts`;
+- docs/implemented-plans/architectural-review.md:828 (mention) — 5. **Doc drift:** `docs/stack-decisions.md` cites deleted `sseMachine.ts`;
 - docs/plans/README.md:98 (mention) — `design-vision.md`, `stack-decisions.md` were judged reference and stayed
 - docs/plans/design-reconciliation.md:22 (mention) — `docs/stack-decisions.md`, `docs/plans/interface-as-cards.md`,
 - docs/plans/docs-reorg.gap-analysis.md:110 (mention) — 8. **`@xstate/store` documented as adopted (`docs/stack-decisions.md:143`)
@@ -1103,7 +1105,7 @@ Referenced by:
 - docs/chat-scroll-testing.md:5 (mention) — behavior that doctests can't exercise (`docs/testing.md` §6). This is the
 - docs/engineering-principles.md:125 (link) — [`docs/testing.md`](testing.md).
 - docs/implemented-plans/agent-applied-migrations.md:82 (mention) — - `callback-box/docs/testing.md` — tests-first as a design tool; the machine
-- docs/implemented-plans/architectural-review.md:753 (mention) — that didn't happen. `testing.md:608`'s "soft assertions" note is a
+- docs/implemented-plans/architectural-review.md:760 (mention) — that didn't happen. `testing.md:608`'s "soft assertions" note is a
 - docs/implemented-plans/architectural-review.review.md:12 (mention) — **Citation:** plan Track P.1; `testing.md:608`.
 - docs/implemented-plans/card-view-widgets.md:636 (mention) — - **Test posture** (per `docs/testing.md` — tests first, as a design tool):
 - docs/implemented-plans/chat-scroll-redesign.md:55 (mention) — - `callback-box/docs/testing.md:5-11` — tests force decomposition, document, and
@@ -1420,17 +1422,34 @@ References:
 - → CLAUDE.md (mention)
 - → docs/content-security-policy.md (mention)
 
-#### docs/implemented-plans/architectural-review.md
+#### docs/implemented-plans/architectural-review-followups.md
 
-Title: "Architectural Review — Findings and Improvement Plan" | 1232 lines
+Title: "Architectural Review Follow-ups — Plan" | 383 lines
 
 Referenced by:
-- ../issues/2026-07-05-connector-transient-state-rmw.md:14 (mention) — `docs/implemented-plans/architectural-review.md`.
-- ../issues/2026-07-05-git-commit-race-audit.md:3 (mention) — Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card
-- ../issues/2026-07-06-architectural-review-open-decisions.md:4 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
-- ../issues/2026-07-06-phase2-deferred-boundaries.md:4 (mention) — (`callback-box/docs/implemented-plans/architectural-review.md`, Tracks P.2/D.2):
+- ../bin/docs/router-protocol.md:106 (mention) — `callback-box/docs/implemented-plans/architectural-review-followups.md` — pure code
+- ../issues/closed/2026-07-05-connector-transient-state-rmw.md:11 (mention) — `callback-box/docs/implemented-plans/architectural-review-followups.md` Track 1.
+- ../issues/closed/2026-07-05-git-commit-race-audit.md:13 (mention) — deliberate). Plan: `callback-box/docs/implemented-plans/architectural-review-followups.md`
+- ../issues/closed/2026-07-06-parallel-agent-git-commit-race.md:9 (mention) — `callback-box/docs/implemented-plans/architectural-review-followups.md` swept ~31
+- ../issues/closed/2026-07-06-phase2-deferred-boundaries.md:12 (mention) — 5c93f7a9. Plan: `callback-box/docs/implemented-plans/architectural-review-followups.md`
 
 References:
+- → ../issues/2026-07-09-flaky-child-output-log-doctest.md (link)
+- → docs/engineering-principles.md (mention)
+- → docs/chat-session-lifecycle.md (mention)
+
+#### docs/implemented-plans/architectural-review.md
+
+Title: "Architectural Review — Findings and Improvement Plan" | 1239 lines
+
+Referenced by:
+- ../issues/2026-07-06-architectural-review-open-decisions.md:4 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
+- ../issues/closed/2026-07-05-connector-transient-state-rmw.md:24 (mention) — `docs/implemented-plans/architectural-review.md`.
+- ../issues/closed/2026-07-05-git-commit-race-audit.md:16 (mention) — Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card
+- ../issues/closed/2026-07-06-phase2-deferred-boundaries.md:16 (mention) — (`callback-box/docs/implemented-plans/architectural-review.md`, Tracks P.2/D.2):
+
+References:
+- → ../issues/2026-07-06-architectural-review-open-decisions.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → CLAUDE.md (mention)

@@ -1,26 +1,28 @@
 # Architectural Review Follow-ups — Plan
 
+**Status:** implemented 2026-07 — all eight tracks landed on
+`worktree-architectural-review` and merged to `main`; full suite green (3484
+pass at merge; one known flake filed as
+[`issues/2026-07-09-flaky-child-output-log-doctest.md`](../../../issues/2026-07-09-flaky-child-output-log-doctest.md)).
+
 Second round of the architectural review: implementing the follow-up issues
 the first round filed (`issues/2026-07-0[56]-*.md`), under the same
 principles (`../engineering-principles.md`) and the same execution model
 (parallel subagents, per-track codex review, path-scoped commits).
 
-> **STATUS: IMPLEMENTED (2026-07-10).** All eight tracks landed on
-> `worktree-architectural-review`; full suite green (3395 pass; one known
-> flake filed as `issues/2026-07-09-flaky-child-output-log-doctest.md`).
-> Deviations from the plan, both deliberate and recorded in the closing
-> commits: `return-await` adopted in default `in-try-catch` mode rather than
-> `always` (the issue's measured 35-site fallout matched default mode;
-> `always` would have been an unscoped ~258-site churn), and the final
-> whole-round codex pass was replaced by per-track reviews plus orchestrator
-> self-review (codex hit its usage limit late in the round). Issues closed:
-> event-bus-read-side-schemas, chat-action-error-surfacing,
-> parallel-agent-git-commit-race, connector-transient-state-rmw,
-> git-commit-race-audit, phase2-deferred-boundaries, deferred-lint-rules
-> items 1-6 (two frontend tsconfig raises remain open there); open-decisions
-> item 1 (router) marked conservative-phase-done, full formalization still
-> open by boxholder intent; chat-session-shared-core narrowed to the
-> composition question.
+Deviations from the plan, both deliberate and recorded in the closing
+commits: `return-await` adopted in default `in-try-catch` mode rather than
+`always` (the issue's measured 35-site fallout matched default mode;
+`always` would have been an unscoped ~258-site churn), and the final
+whole-round codex pass was replaced by per-track reviews plus orchestrator
+self-review (codex hit its usage limit late in the round). Issues closed:
+event-bus-read-side-schemas, chat-action-error-surfacing,
+parallel-agent-git-commit-race, connector-transient-state-rmw,
+git-commit-race-audit, phase2-deferred-boundaries, deferred-lint-rules
+items 1-6 (two frontend tsconfig raises remain open there); open-decisions
+item 1 (router) marked conservative-phase-done, full formalization still
+open by boxholder intent; chat-session-shared-core narrowed to the
+composition question.
 
 ## Boxholder decisions (2026-07-09)
 
