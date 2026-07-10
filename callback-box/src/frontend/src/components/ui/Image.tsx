@@ -1,4 +1,4 @@
-import { useReducer, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useReducer, useRef, type CSSProperties, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 
@@ -107,39 +107,46 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
   };
-  const handleKeyDown = (e: KeyboardEvent<HTMLImageElement>) => {
-    if (onActivate !== null && (e.key === "Enter" || e.key === " ") && imgRef.current) {
-      e.preventDefault();
-      onActivate(imgRef.current);
-    }
-  };
-  const cursorClass = interactive ? (lightbox ? "cursor-zoom-in" : "cursor-pointer") : "";
-  const classes = cn(
-    SIZE_CLASSES[size],
-    "rounded",
-    bordered ? "border border-warm-300" : "",
-    interactive ? `${cursorClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent` : "",
-    extraClass,
-  );
 
-  return (
+  // `img` is a non-interactive element by ARIA default: it can't legitimately
+  // take role="button" (jsx-a11y/no-noninteractive-element-to-interactive-role),
+  // and faking click/keydown handlers on it means hand-rolling focus, tabIndex,
+  // and Enter/Space activation that a real <button> gets for free. So the
+  // interactive case wraps the img in an actual <button> instead of dressing
+  // the img up as one.
+  const imgNode = (
     <img
       ref={imgRef}
       src={src}
       alt={alt}
-      className={classes}
+      className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", !interactive ? extraClass : undefined)}
       style={rotationStyle}
-      onClick={interactive ? handleClick : undefined}
-      onKeyDown={interactive ? handleKeyDown : undefined}
       onError={onError}
       title={title}
-      role={interactive ? "button" : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      aria-label={interactive && lightbox ? `${alt} (click to zoom)` : undefined}
       data-image-src={lightbox ? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
       data-image-caption={lightbox && lightboxCaption !== undefined ? lightboxCaption : undefined}
     />
+  );
+
+  if (!interactive) {
+    return imgNode;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={lightbox ? `${alt} (click to zoom)` : undefined}
+      className={cn(
+        "block border-0 bg-transparent p-0",
+        lightbox ? "cursor-zoom-in" : "cursor-pointer",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        extraClass,
+      )}
+    >
+      {imgNode}
+    </button>
   );
 }
 

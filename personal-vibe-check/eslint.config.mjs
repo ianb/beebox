@@ -3,6 +3,7 @@ import dddPlugin from "eslint-plugin-ddd";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import unicornPlugin from "eslint-plugin-unicorn";
 import importXPlugin from "eslint-plugin-import-x";
+import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import vibePlugin from "./plugin.mjs";
 
 // Some plugins eslint-config-agent depends on still ship legacy-eslintrc
@@ -384,6 +385,15 @@ export function vibeCheck(options) {
   // React-specific rules — only included when react option is true
   const reactRules = react
     ? {
+        // jsx-a11y recommended, minus no-autofocus. ~15 rules catching real
+        // accessibility bugs (interactive elements without keyboard
+        // handlers, images/inputs without labels, invalid anchors, etc.) —
+        // see conventions.md for the fix taxonomy. no-autofocus is off
+        // because it fights a deliberate autofocus (e.g. a chat composer
+        // that should grab focus on mount); every other recommended rule
+        // is kept as-is.
+        ...jsxA11yPlugin.flatConfigs.recommended.rules,
+        "jsx-a11y/no-autofocus": "off",
         // React hooks
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "error",
@@ -520,6 +530,7 @@ export function vibeCheck(options) {
         unicorn: unicornPlugin,
         "import-x": importXPlugin,
         "personal-vibe-check": vibePlugin,
+        ...(react ? { "jsx-a11y": jsxA11yPlugin } : {}),
       },
       settings: {
         ...reactSettings,

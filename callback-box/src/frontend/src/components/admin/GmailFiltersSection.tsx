@@ -109,9 +109,11 @@ function GmailFiltersForm({ initial }: { initial: GmailConfig }) {
       </div>
 
       <div className="mb-4">
-        <label className="block text-sm font-medium text-warm-700 mb-2">
+        {/* Heading for the label-chips group below, not a control label — the
+            actual input ("Add label") carries its own associated label. */}
+        <p className="block text-sm font-medium text-warm-700 mb-2">
           Labels (OR-joined when no query is set)
-        </label>
+        </p>
         {labels.length > 0 ? (
           <div className="mb-2 space-y-2">
             {labels.map((label) => (
