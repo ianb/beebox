@@ -78,4 +78,21 @@ export interface ChatBackend {
    * have to implement it.
    */
   prewarm?(opts: ChatBackendStartOptions): Promise<void>;
+  /**
+   * Close the held warm slot, if any, and abandon any in-flight warm-up: if a
+   * `startup()` is still resolving, its eventual `WarmQuery` must NOT be
+   * installed — it's closed the moment it lands (via an epoch check). Until
+   * that abandoned warm-up settles, `hasWarm()` still reports true, so no
+   * overlapping warm-up gets spawned; the backend ends up cold either way.
+   *
+   * Idempotent and cheap when there's nothing to close. Optional — fakes and
+   * backends without a warm pool don't have to implement it.
+   */
+  closeWarm?(): void;
+  /**
+   * Whether a warm slot is currently held OR a warm-up is in flight. Callers
+   * use this to avoid stampeding re-`prewarm()` calls when the backend is
+   * already warm or warming. Optional — absent means "no warm pool".
+   */
+  hasWarm?(): boolean;
 }

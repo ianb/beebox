@@ -145,6 +145,106 @@ run.interrupted
 => true
 ```
 
+## Warm pool: prewarm, hasWarm, closeWarm
+
+The backend can hold a single pre-warmed subprocess so the next compatible
+`start()` skips spawn latency. The fake models that slot with observable
+counters and a `describe()` snapshot — no real subprocess. `prewarm()` installs
+the slot, `hasWarm()` reports whether one is held or warming, and `closeWarm()`
+reaps it (idle registries call this on the sweep).
+
+```ts
+const backend = createFakeChatBackend();
+const start = backend.describe();
+
+await backend.prewarm({ cwd: "/tmp", systemPrompt: "x", env: {} });
+const afterWarm = backend.describe();
+
+backend.closeWarm();
+const afterClose = backend.describe();
+
+[start, "--", afterWarm, "--", afterClose].join("\n")
+=> warmHeld: false
+warming: false
+prewarmCount: 0
+closeWarmCount: 0
+--
+warmHeld: true
+warming: false
+prewarmCount: 1
+closeWarmCount: 0
+--
+warmHeld: false
+warming: false
+prewarmCount: 1
+closeWarmCount: 1
+```
+
+`hasWarm()` gates re-prewarm stampedes — true once warmed, false after a reap:
+
+```ts
+const backend = createFakeChatBackend();
+backend.hasWarm()
+=> false
+
+await backend.prewarm({ cwd: "/tmp", systemPrompt: "x", env: {} });
+backend.hasWarm()
+=> true
+
+backend.closeWarm();
+backend.hasWarm()
+=> false
+```
+
+### closeWarm abandons an in-flight warm-up
+
+The real backend re-warms with an async `startup()`; a `closeWarm()` while that
+is in flight must NOT install the resulting slot — it's closed the moment it
+lands (an epoch check). With `autoSettleWarm` off, the fake holds warm-ups in
+flight so this path is testable: `hasWarm()` is true while warming, but a
+`closeWarm()` before `settleWarm()` abandons the slot so nothing is installed.
+
+```ts
+const backend = createFakeChatBackend();
+backend.autoSettleWarm = false;
+
+await backend.prewarm({ cwd: "/tmp", systemPrompt: "x", env: {} });
+// Warm-up in flight: hasWarm true, but no slot held yet.
+const warming = backend.describe();
+
+// Reap arrives mid-warm, then the warm-up settles.
+backend.closeWarm();
+const installed = backend.settleWarm();
+const settled = backend.describe();
+
+[warming, "--", `installed=${installed}`, "--", settled].join("\n")
+=> warmHeld: false
+warming: true
+prewarmCount: 1
+closeWarmCount: 0
+--
+installed=false
+--
+warmHeld: false
+warming: false
+prewarmCount: 1
+closeWarmCount: 1
+```
+
+Without an interleaved `closeWarm()`, the same in-flight warm-up settles into a
+held slot:
+
+```ts
+const backend = createFakeChatBackend();
+backend.autoSettleWarm = false;
+
+await backend.prewarm({ cwd: "/tmp", systemPrompt: "x", env: {} });
+const installed = backend.settleWarm();
+
+`installed=${installed} hasWarm=${backend.hasWarm()}`
+=> installed=true hasWarm=true
+```
+
 ## Notes for agents writing chat-adjacent code
 
 - Any code that drives a chat session should accept a

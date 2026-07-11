@@ -93,6 +93,15 @@ export class ChatSessionRegistry extends EventEmitter {
   /** Deadline clock (never CB_TIME-frozen); injectable for tests. */
   private readonly now: () => number;
   /**
+   * Last chat activity (any accessor or prewarm). Drives warm-slot reaping:
+   * once chat has been quiet past `idleTimeoutMs`, the sweep closes the
+   * backend's warm slot so an idle box doesn't hold a Claude subprocess
+   * around the clock; the next accessor re-warms.
+   */
+  private lastUse: number;
+  /** True once `prewarm()` has been requested, so the sweep re-warms later. */
+  private prewarmRequested = false;
+  /**
    * Tracks pre-id "new" sessions whose Claude assignment hasn't arrived yet.
    * Once `onSessionIdAssigned` fires, they're moved into `entries` under
    * the real id and removed from this list.
@@ -115,6 +124,18 @@ export class ChatSessionRegistry extends EventEmitter {
     this.buildSessionOptions = options.buildSessionOptions ?? ((_id) => ({}));
     this.backend = options.backend ?? createChatBackend();
     this.now = options.now ?? Date.now;
+    this.lastUse = this.now();
+  }
+
+  /**
+   * Record chat activity: bump `lastUse` and, if prewarming was ever requested
+   * and the backend's warm slot has since been reaped, kick off a best-effort
+   * re-warm. Cheap when already warm/warming (just the `hasWarm` check); the
+   * re-`prewarm()` is fire-and-forget with its own error handling.
+   */
+  private noteActivity(): void {
+    this.lastUse = this.now();
+    if (this.prewarmRequested && this.backend.hasWarm?.() === false) void this.prewarm();
   }
 
   /**
@@ -124,6 +145,8 @@ export class ChatSessionRegistry extends EventEmitter {
    * back to a cold spawn.
    */
   async prewarm(): Promise<void> {
+    this.prewarmRequested = true;
+    this.lastUse = this.now();
     if (this.backend.prewarm === undefined) return;
     try {
       const baseOpts = this.buildSessionOptions(null);
@@ -178,6 +201,7 @@ export class ChatSessionRegistry extends EventEmitter {
     const entry = this.entries.get(sessionId);
     if (!entry) return null;
     entry.lastActivity = this.now();
+    this.noteActivity();
     return entry.session;
   }
 
@@ -186,6 +210,7 @@ export class ChatSessionRegistry extends EventEmitter {
    * the on-disk JSONL on first send).
    */
   getOrCreate(sessionId: string): ChatSession {
+    this.noteActivity();
     const existing = this.entries.get(sessionId);
     if (existing) {
       existing.lastActivity = this.now();
@@ -224,6 +249,7 @@ export class ChatSessionRegistry extends EventEmitter {
    */
   createNew(opts?: { contextDir?: string; seedFeatures?: Record<string, string> }): ChatSession {
     opts = opts ?? {};
+    this.noteActivity();
     const { contextDir, seedFeatures } = opts;
     const baseOpts = this.buildSessionOptions(null);
     const session = new ChatSession(this.boxRoot, {
@@ -292,13 +318,7 @@ export class ChatSessionRegistry extends EventEmitter {
 
       // Re-key pending "new" sessions into the entries map under the real id.
       if (knownId === null) {
-        let promoted: ChatSession | null = null;
-        for (const s of this.pending) {
-          if (s.getSessionId() === sessionId) {
-            promoted = s;
-            break;
-          }
-        }
+        const promoted = [...this.pending].find((s) => s.getSessionId() === sessionId);
         if (promoted) {
           this.pending.delete(promoted);
           // Carry any pin held while pending into the new entry's refCount so
@@ -329,13 +349,11 @@ export class ChatSessionRegistry extends EventEmitter {
    * against the session. Optionally also marks subprocess use, for LRU.
    */
   touch(sessionId: string, opts?: { subprocessUse?: boolean }): void {
+    this.noteActivity();
     const entry = this.entries.get(sessionId);
     if (!entry) return;
-    const now = this.now();
-    entry.lastActivity = now;
-    if (opts?.subprocessUse) {
-      entry.lastSubprocessUse = now;
-    }
+    entry.lastActivity = this.now();
+    if (opts?.subprocessUse) entry.lastSubprocessUse = entry.lastActivity;
   }
 
   /**
@@ -441,13 +459,19 @@ export class ChatSessionRegistry extends EventEmitter {
       entry.session.stop();
       this.entries.delete(id);
     }
+    // Reap the warm slot once chat has gone quiet, so an idle box doesn't hold
+    // a Claude subprocess around the clock. The next accessor re-warms it.
+    if (this.backend.closeWarm !== undefined && this.now() - this.lastUse > this.idleTimeoutMs) {
+      if (this.backend.hasWarm?.() === true) log("sweep", "Reaping idle warm slot");
+      this.backend.closeWarm();
+    }
   }
 
-  /**
-   * Tear down all entries. Call on server shutdown.
-   */
+  /** Tear down all entries AND the backend's warm slot (a subprocess too).
+   *  Call on server shutdown. */
   shutdown(): void {
     this.stopCleanup();
+    this.backend.closeWarm?.();
     for (const [id, entry] of this.entries) {
       log("shutdown", `Stopping ${id}`);
       entry.session.stop();

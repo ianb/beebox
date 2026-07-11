@@ -54,14 +54,71 @@ export interface FakeChatBackend extends ChatBackend {
   runs: FakeChatBackendRun[];
   /** The most recent run, or null. */
   lastRun(): FakeChatBackendRun | null;
+  /** How many times `prewarm()` has been called. */
+  prewarmCount: number;
+  /** How many times `closeWarm()` has been called. */
+  closeWarmCount: number;
+  /**
+   * When true (default), each `prewarm()` installs its warm slot
+   * synchronously. Set false to hold warm-ups in flight so a test can
+   * interleave `closeWarm()` and then settle via `settleWarm()`, exercising
+   * the epoch-abandon path the real backend implements.
+   */
+  autoSettleWarm: boolean;
+  /**
+   * Settle the oldest in-flight `prewarm()` (only meaningful while
+   * `autoSettleWarm` is false). Installs a warm slot unless `closeWarm()` ran
+   * since that prewarm began — mirroring the real backend's epoch check.
+   * Returns whether a slot was installed.
+   */
+  settleWarm(): boolean;
+  /** Stable, human-readable snapshot of warm-pool state for doctests. */
+  describe(): string;
 }
 
 export function createFakeChatBackend(): FakeChatBackend {
   const runs: FakeChatBackendRun[] = [];
-  return {
+  let warmHeld = false;
+  // Bumped by closeWarm() so an in-flight prewarm settling afterward abandons
+  // its slot instead of installing it (the epoch check the real backend runs).
+  let warmEpoch = 0;
+  // Epoch captured at the start of each in-flight prewarm awaiting settleWarm().
+  const pendingWarms: number[] = [];
+  const backend: FakeChatBackend = {
     runs,
+    prewarmCount: 0,
+    closeWarmCount: 0,
+    autoSettleWarm: true,
     lastRun() {
       return runs[runs.length - 1] ?? null;
+    },
+    async prewarm(_opts: ChatBackendStartOptions): Promise<void> {
+      backend.prewarmCount += 1;
+      if (backend.autoSettleWarm) warmHeld = true;
+      else pendingWarms.push(warmEpoch);
+    },
+    closeWarm(): void {
+      backend.closeWarmCount += 1;
+      warmEpoch += 1;
+      warmHeld = false;
+    },
+    hasWarm(): boolean {
+      return warmHeld || pendingWarms.length > 0;
+    },
+    settleWarm(): boolean {
+      const epochAtStart = pendingWarms.shift();
+      if (epochAtStart === undefined) return false;
+      if (epochAtStart !== warmEpoch) return false; // abandoned by closeWarm
+      warmHeld = true;
+      return true;
+    },
+    describe(): string {
+      return [
+        `warmHeld: ${warmHeld}`,
+        `warming: ${pendingWarms.length > 0}`,
+        `prewarmCount: ${backend.prewarmCount}`,
+        `closeWarmCount: ${backend.closeWarmCount}`,
+      ].join("\n");
     },
     start(opts: ChatBackendStartOptions): FakeChatBackendRun {
       const messageQueue = createAsyncIterableQueue<SDKMessage>();
@@ -127,4 +184,5 @@ export function createFakeChatBackend(): FakeChatBackend {
       return run;
     },
   };
+  return backend;
 }

@@ -29,6 +29,16 @@ function makeRegistry(box: { root: string }, backend: ReturnType<typeof createFa
     now,
   });
 }
+
+// Poll until a condition holds — the registry's re-warm is fire-and-forget
+// (`void this.prewarm()`), and prewarm awaits async box I/O before the fake's
+// counter moves, so a fixed tick count would be flaky.
+async function waitFor(cond: () => boolean): Promise<void> {
+  for (let i = 0; i < 100; i += 1) {
+    if (cond()) return;
+    await new Promise((r) => setImmediate(r));
+  }
+}
 ```
 
 ## LRU eviction under the live cap
@@ -141,6 +151,78 @@ clock = 40_000;
 registry.sweepIdle();
 JSON.stringify({ size: registry.size(), s2: registry.get("s2") === null })
 => {"size":0,"s2":true}
+```
+
+```ts cleanup
+registry.shutdown();
+await box.cleanup();
+```
+
+## Warm slot: reaped when idle, re-warmed on activity
+
+`prewarm()` installs a warm subprocess slot on the shared backend so the first
+"new chat" send skips spawn latency. It shouldn't live forever: once chat has
+been quiet past `idleTimeoutMs`, the sweep reaps it, and the next accessor
+re-warms. (The backend clock and the registry's `lastUse` share the injected
+`now`.)
+
+```ts
+const box = await makeTmpBox();
+const backend = createFakeChatBackend();
+const registry = makeRegistry(box, backend);
+
+clock = 1_000;
+await registry.prewarm();
+backend.describe()
+=> warmHeld: true
+warming: false
+prewarmCount: 1
+closeWarmCount: 0
+```
+
+Chat goes quiet: `lastUse` (1_000) ages past `idleTimeoutMs` (10s). The sweep
+closes the warm slot — an idle box shouldn't hold a Claude subprocess forever:
+
+```ts continue
+clock = 30_000;
+registry.sweepIdle();
+backend.describe()
+=> warmHeld: false
+warming: false
+prewarmCount: 1
+closeWarmCount: 1
+```
+
+Activity resumes: `getOrCreate` re-warms (best-effort, fire-and-forget) because
+prewarm was requested earlier and the backend now reports no warm slot:
+
+```ts continue
+registry.getOrCreate("s1");
+await waitFor(() => backend.prewarmCount === 2);
+backend.describe()
+=> warmHeld: true
+warming: false
+prewarmCount: 2
+closeWarmCount: 1
+```
+
+No stampede while already warm: further accessors see `hasWarm() === true` and
+don't fire redundant re-prewarms — the count stays put:
+
+```ts continue
+registry.get("s1");
+registry.getOrCreate("s1");
+registry.touch("s1");
+backend.prewarmCount
+=> 2
+```
+
+`shutdown()` closes the warm slot too — it's a subprocess like any session's:
+
+```ts continue
+registry.shutdown();
+`closeWarmCount=${backend.closeWarmCount} warmHeld after shutdown: ${backend.hasWarm()}`
+=> closeWarmCount=2 warmHeld after shutdown: false
 ```
 
 ```ts cleanup

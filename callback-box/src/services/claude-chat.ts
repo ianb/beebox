@@ -106,6 +106,23 @@ export interface ChatBackend {
    * have to implement it.
    */
   prewarm?(opts: ChatBackendStartOptions): Promise<void>;
+  /**
+   * Close the held warm slot, if any, and abandon any in-flight warm-up: if a
+   * `startup()` is still resolving, its eventual `WarmQuery` must NOT be
+   * installed — it's closed the moment it lands (via an epoch check). Until
+   * that abandoned warm-up settles, `hasWarm()` still reports true, so no
+   * overlapping warm-up gets spawned; the backend ends up cold either way.
+   *
+   * Idempotent and cheap when there's nothing to close. Optional — fakes and
+   * backends without a warm pool don't have to implement it.
+   */
+  closeWarm?(): void;
+  /**
+   * Whether a warm slot is currently held OR a warm-up is in flight. Callers
+   * use this to avoid stampeding re-`prewarm()` calls when the backend is
+   * already warm or warming. Optional — absent means "no warm pool".
+   */
+  hasWarm?(): boolean;
 }
 
 // ─── Real implementation ─────────────────────────────────────────────────────
@@ -172,14 +189,26 @@ function warmCompatible(
 export function createChatBackend(): ChatBackend {
   let warmSlot: { warmQuery: WarmQuery; opts: ChatBackendStartOptions } | null = null;
   let warming: Promise<void> | null = null;
+  // Bumped by closeWarm() to abandon an in-flight startup(): the warming
+  // continuation installs its fresh WarmQuery only if the epoch is unchanged,
+  // otherwise it closes it immediately. Covers the consume-then-re-warm path
+  // in start() too — a closeWarm during that background re-warm wins.
+  let warmEpoch = 0;
 
   function startWarming(opts: ChatBackendStartOptions): Promise<void> {
     if (warming !== null) return warming;
     if (warmSlot !== null) return Promise.resolve();
+    const epochAtStart = warmEpoch;
     warming = (async (): Promise<void> => {
       try {
         const wq = await startup({ options: buildQueryOptions(opts) });
-        warmSlot = { warmQuery: wq, opts };
+        if (warmEpoch !== epochAtStart) {
+          // closeWarm() ran while we were warming — abandon this slot rather
+          // than installing a process nobody asked to keep.
+          wq.close();
+        } else {
+          warmSlot = { warmQuery: wq, opts };
+        }
       } catch (e) {
         // Warming is best-effort; the next start() will fall back to a cold spawn.
         console.warn("Chat backend warm-up failed, will cold-spawn on next start:", e);
@@ -243,6 +272,18 @@ export function createChatBackend(): ChatBackend {
   return {
     async prewarm(opts: ChatBackendStartOptions): Promise<void> {
       await startWarming(opts);
+    },
+    closeWarm(): void {
+      // Bump the epoch so any in-flight startup() abandons its result when it
+      // lands (see startWarming), then drop a slot we're already holding.
+      warmEpoch += 1;
+      if (warmSlot !== null) {
+        warmSlot.warmQuery.close();
+        warmSlot = null;
+      }
+    },
+    hasWarm(): boolean {
+      return warmSlot !== null || warming !== null;
     },
     start(opts: ChatBackendStartOptions): ChatBackendRun {
       const inputQueue = createAsyncIterableQueue<SDKUserMessage>();
