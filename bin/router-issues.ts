@@ -509,12 +509,15 @@ function filterChipsHtml(base: string, f: Filters, facets: { categories: string[
 
 function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] | undefined): string {
   const href = `${base}/issues/${issue.relPath}`;
+  // The slug starts with the filing date, so "date · slug" would print the
+  // date twice — split it into "date · rest-of-slug" instead.
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+  const shortSlug = date ? issue.slug.slice(date.length).replace(/^-/, "") : issue.slug;
   const pills = `${facetChips(issue.frontmatter, issue.research)}${worktreeBadges(overlay)}`;
   return `<li>
     <div class="issue-main">
       <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
-      <span class="meta">${escapeHtml(date)} · ${escapeHtml(issue.slug)}</span>
+      <span class="meta">${escapeHtml(date)}${date && shortSlug ? " · " : ""}${escapeHtml(shortSlug)}</span>
     </div>
     <div class="issue-pills">${pills}</div>
   </li>`;
