@@ -11,13 +11,13 @@
  * Flow: the request route parks the CLI call in {@link createPendingBrowserRequests}
  * (with a 2s ack window), which mints a server-side `crypto.randomUUID` request
  * id — the id is NEVER caller-supplied (a caller-chosen id would flow into the
- * `tmp/screenshots/<id>.png` write path and the registry key: a path-traversal
+ * `tmp/screenshot-<id>.png` write path and the registry key: a path-traversal
  * and entry-collision hazard). The route broadcasts a *transient*
  * `screenshot-request` bus event carrying that id, the target session, and an
  * `expiresAt` deadline. The tab holding that exact session acks immediately
  * (cancelling the `no-client` window), captures, then answers with the PNG
  * (first-wins). The request route writes the winning image under
- * `<boxRoot>/tmp/screenshots/<requestId>.png` and returns its absolute path; the
+ * `<boxRoot>/tmp/screenshot-<requestId>.png` and returns its absolute path; the
  * CLI prints that path for the agent to Read.
  *
  * Auth: both routes sit behind the shared box-scope auth wall
@@ -132,7 +132,7 @@ function multipartField(
 /**
  * Turn a settled long-poll outcome into the CLI's HTTP response. Only the
  * `image` outcome touches the filesystem — it writes the winning PNG under
- * `<boxRoot>/tmp/screenshots/<requestId>.png` and returns its absolute path.
+ * `<boxRoot>/tmp/screenshot-<requestId>.png` and returns its absolute path.
  */
 async function respondToScreenshotOutcome(opts: {
   reply: FastifyReply;
@@ -169,13 +169,16 @@ async function respondToScreenshotFulfillment(opts: {
     case "failed":
       return reply.status(502).send({ error: "failed", reason: fulfillment.reason });
     case "image": {
-      const dir = path.resolve(boxRoot, "tmp", "screenshots");
-      const absPath = path.resolve(dir, `${requestId}.png`);
+      // Flat file directly under tmp/ (not a tmp/screenshots/ subdir) so the
+      // housekeeping sweep — which only stat()s immediate children of tmp/ and
+      // skips directories — actually reaches and expires it (`core/housekeeping.ts`).
+      const dir = path.resolve(boxRoot, "tmp");
+      const fileName = `screenshot-${requestId}.png`;
+      const absPath = path.resolve(dir, fileName);
       // Defense in depth: `requestId` is a server-minted UUID, so this can't
-      // escape — but confirm the resolved path stays inside the screenshots dir
-      // before writing, so no future change to how the id is produced can
-      // silently open a traversal.
-      if (absPath !== path.join(dir, `${requestId}.png`) || !absPath.startsWith(dir + path.sep)) {
+      // escape — but confirm the resolved path stays inside tmp/ before writing,
+      // so no future change to how the id is produced can silently open a traversal.
+      if (absPath !== path.join(dir, fileName) || !absPath.startsWith(dir + path.sep)) {
         return reply.status(400).send({ error: "bad-request-id" });
       }
       await fs.mkdir(dir, { recursive: true });

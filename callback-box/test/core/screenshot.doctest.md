@@ -336,7 +336,7 @@ await ctx.cleanup();
 
 The long-poll is started; the "browser" reads the server-minted id off the bus
 and answers with a PNG plus `viewport`/`fidelity` fields; the route writes the
-image under `tmp/screenshots/<requestId>.png` and returns its absolute path with
+image under `tmp/screenshot-<requestId>.png` and returns its absolute path with
 the metadata. The saved bytes match what was uploaded.
 
 ```ts
@@ -366,10 +366,10 @@ const res = await longPoll;
 print(`status: ${res.statusCode}`);
 print(`fidelity: ${res.body.fidelity}`);
 print(`viewport: ${JSON.stringify(res.body.viewport)}`);
-print(`path ends: ${res.body.path.endsWith(`/tmp/screenshots/${requestId}.png`)}`);
+print(`path ends: ${res.body.path.endsWith(`/tmp/screenshot-${requestId}.png`)}`);
 print(`path absolute: ${res.body.path.startsWith("/")}`);
 // The 200 is sent only after the PNG is written; the file therefore exists.
-const saved = await ctx.read(`tmp/screenshots/${requestId}.png`);
+const saved = await ctx.read(`tmp/screenshot-${requestId}.png`);
 print(`saved non-empty: ${saved.length > 0}`);
 =>
 answer ok: {"ok":true}

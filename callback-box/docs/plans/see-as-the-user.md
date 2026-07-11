@@ -283,7 +283,7 @@ e.g. while debugging a custom view it just wrote.
     `{session, timeoutMs}`. Creates the pending entry, emits transient bus
     event `screenshot-request {requestId, session, expiresAt}` (schema in
     `event-bus-schemas.ts` + `EVENT_SCHEMA_GENERATION` bump). Resolves
-    with the image (written to `tmp/screenshots/<requestId>.png` under the
+    with the image (written to `tmp/screenshot-<requestId>.png` under the
     box root, the same 7-day-swept tmp area the agent already knows,
     `prompts.ts:66`) or the outcome. **Cancels the pending entry on
     request abort** (CLI killed / connection dropped) so a consent popup
@@ -329,7 +329,7 @@ e.g. while debugging a custom view it just wrote.
   `chat-send-routes.ts:249-257`, so posting mid-turn would enqueue a
   spurious user turn; direct transcript mutation is a concurrency-sensitive
   feature of its own). The honesty property this loses is partly retained:
-  the image lives in `tmp/screenshots/` where the user can open it, and
+  the image lives in flat `tmp/screenshot-<id>.png` files (swept with the rest of `tmp/`) where the user can open it, and
   the indicator shows the thumbnail at capture time.
 - **Discoverability**: one line in `src/core/agent-guide/commands.ts`
   (`keyCommandsSection()`); the generated reference picks the command up
@@ -475,7 +475,7 @@ forcing the popup always would defeat Track C's purpose.
 - **Two agents / two requests concurrently**: ADDRESSED — independent
   requestIds; popups queue one at a time; relay is stateless per request.
 - **Hand-edit drift**: not applicable — no card format introduced; the
-  only persisted artifacts are PNGs under `tmp/screenshots/` (7-day sweep).
+  only persisted artifacts are PNGs under flat `tmp/screenshot-<id>.png` files (swept with the rest of `tmp/`) (7-day sweep).
 - **Fabricated free-form value** (agent claims it saw something it
   didn't): PARTIALLY ADDRESSED — the indicator thumbnail on the answering
   client and the tmp file let the user check what the agent saw; full
@@ -584,7 +584,7 @@ one unit.
   `cb chat screenshot` with and without the extension; decline, no-client,
   and popup-timeout paths).
 - **Knowledge audit** lands and runs in D1.
-- **No data migration** — no card shapes change; `tmp/screenshots/` lives
+- **No data migration** — no card shapes change; flat `tmp/screenshot-<id>.png` files (swept with the rest of `tmp/`) lives
   under the existing swept tmp area.
 - Ships by merging the worktree branch to main on the boxholder's explicit
   signal; auto-deploy covers `callback-box/`; the clerk ships by its own
