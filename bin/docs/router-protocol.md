@@ -107,7 +107,7 @@ This doc and the doc-browser extraction (`bin/router-docs.ts`) are Track 8 of
 motion plus this write-up, no change to the state machine or its invariants.
 The fuller option — a formal `WorktreeState` transition function with an
 injected clock/spawner and unit-testable fakes — remains open in
-`issues/2026-07-06-architectural-review-open-decisions.md` (item 1). If you
+`issues/decisions/2026-07-06-architectural-review-open-decisions.md` (item 1). If you
 find yourself wanting to add a fifth invariant to this doc, that's a signal
 the conservative approach is running out of runway and the formal state
 machine is worth revisiting.

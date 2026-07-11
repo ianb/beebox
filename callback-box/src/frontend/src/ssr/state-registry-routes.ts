@@ -42,7 +42,7 @@ export const routeConfigs: Record<string, RouteConfig> = {
     },
   },
   "/chat": {
-    machines: ["sse", "chat", "speechPlayback", "voiceRecorder", "realtimeTranscription"],
+    machines: ["sse", "chat", "speechPlayback", "realtimeTranscription"],
     scenarios: {
       default: {
         description: "Chat with message history",
@@ -72,14 +72,6 @@ export const routeConfigs: Record<string, RouteConfig> = {
         },
         queryOverrides: {
           "chat.history": { sessionId: null, entries: [] },
-        },
-      },
-      recording: {
-        description: "Voice recording in progress",
-        machines: {
-          sse: "connected",
-          chat: "idle",
-          voiceRecorder: "recording",
         },
       },
     },

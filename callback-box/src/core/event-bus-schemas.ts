@@ -163,6 +163,17 @@ export const eventSchemas = {
   }),
   /** A chat session id was assigned by the SDK. */
   "chat-session-assigned": z.object({ sessionId: z.string() }),
+  /**
+   * A capture staging session moved through preparation/delivery (Track 3).
+   * Drives the pending capture bubble in chat. `docPath` is the box-relative
+   * capture card once written; `sessionId` is the delivery target once known.
+   */
+  "capture-status": z.object({
+    stagingId: z.string(),
+    sessionId: z.string().nullable(),
+    status: z.enum(["preparing", "transcribing", "delivered", "failed"]),
+    docPath: z.string().optional(),
+  }),
 } satisfies Record<string, z.ZodType>;
 
 /** A known event name. */

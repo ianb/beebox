@@ -1,8 +1,11 @@
 /**
  * Audio card schema — audio clips from capture sessions.
  *
- * Created by the capture connector. Processed by `cb transcribe-captures`
- * which fills in transcript + summary and sets duration on the filename.
+ * Created by the capture preparation worker, which also fills in
+ * transcript + summary and sets duration on the filename during its
+ * deterministic transcription pass (`src/core/capture/prepare.ts`). A clip
+ * whose transcription failed at prepare time stays `status: new` with no
+ * `transcript:` — see `transcription-error:` below.
  *
  * Layout: `audio-001.audio.card` next to `audio-001.attach/audio-001.webm`.
  * Word-level timing data lives alongside as
@@ -59,7 +62,15 @@ Status: new (not yet transcribed, no \`transcript\`/\`summary\`) →
 transcribed (transcription complete).
 
 If status is "new" with no \`transcript:\`, the audio hasn't been
-transcribed yet — don't treat it as empty content.`,
+transcribed yet — don't treat it as empty content. This usually means
+the transcription provider was unavailable when the capture was
+prepared (see the parent capture-session card's
+\`transcription-failed:\` flag). You can retry it yourself: run
+\`cb chat retranscribe --file <path-to-the-attached-audio-file>\`,
+copy the printed transcript into \`transcript:\` (and a short
+\`summary:\`), and set \`status: transcribed\`. If the retry also
+fails, record it in \`transcription-error:\` and note it in your
+annotation instead of fabricating a transcript.`,
 });
 
 export type AudioFields = InferCardFields<typeof AudioSchema>;

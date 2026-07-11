@@ -17,6 +17,7 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
   s = s.trim().replace(/^`+/, "").replace(/`+$/, "").trim();
   const root: TagType = { type: "root", attrs: {}, content: "" };
   const stack: { tag: TagType; startPos: number; contentStart: number }[] = [];
+  const topTag = (): TagType => stack.at(-1)?.tag ?? root;
   let pos = 0;
 
   while (pos < s.length) {
@@ -24,7 +25,7 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
     const nextMatch = restOfString.match(/<(\/)?([^\s/>]+)([^>]*?)(\/)?>/);
     if (!nextMatch) {
       const text = s.slice(pos);
-      const currentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+      const currentTag = topTag();
       currentTag.content += text;
       const trimmedText = text.trim();
       if (trimmedText) {
@@ -36,16 +37,19 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
     }
 
     invariant(nextMatch.index !== undefined, "a successful string match always has an index");
+    // Group 2 (`[^\s/>]+`) always participates on a successful match — it's
+    // not optional/alternated in the pattern — so the fallback is unreachable
+    // in practice but honest to the regex-match type.
     const matchStart = pos + nextMatch.index;
     const matchEnd = matchStart + nextMatch[0].length;
     const isEnd = !!nextMatch[1];
-    const tagName = nextMatch[2];
-    const tagAttrs = nextMatch[3];
+    const tagName = nextMatch[2] ?? "";
+    const tagAttrs = nextMatch[3] ?? "";
     const isSelfClosing = !!nextMatch[4];
 
     if (matchStart > pos) {
       const text = s.slice(pos, matchStart);
-      const currentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+      const currentTag = topTag();
       currentTag.content += text;
       const trimmedText = text.trim();
       if (trimmedText) {
@@ -70,16 +74,16 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
       // outer `<speech>` and lose the real body. Treating an unmatched close
       // as literal text (no-op on the stack) keeps malformed input from
       // unraveling the tree.
-      if (stack.length > 0 && stack[stack.length - 1].tag.type === tagName) {
+      if (stack.at(-1)?.tag.type === tagName) {
         const currentItem = stack.pop();
         invariant(currentItem !== undefined, "stack.length > 0 was just checked");
         const currentTag = currentItem.tag;
         currentTag.content = s.slice(currentItem.contentStart, matchStart);
-        const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+        const parentTag = topTag();
         parentTag.content += s.slice(currentItem.startPos, matchEnd);
       } else {
         console.warn("Unexpected closing tag", nextMatch[0]);
-        const currentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+        const currentTag = topTag();
         currentTag.content += s.slice(matchStart, matchEnd);
       }
       pos = matchEnd;
@@ -93,7 +97,7 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
 
     const attrs = parseAttrs(tagAttrs);
     const newTag: TagType = { type: tagName, attrs, content: "" };
-    const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+    const parentTag = topTag();
     parentTag.content += s.slice(matchStart, matchEnd);
     if (!parentTag.subTags) parentTag.subTags = [];
     parentTag.subTags.push(newTag);
@@ -109,7 +113,7 @@ export function parseTags(s: string, allowTags?: string[]): TagType[] {
   while (stack.length > 0) {
     const currentItem = stack.pop();
     invariant(currentItem !== undefined, "stack.length > 0 was just checked");
-    const parentTag = stack.length > 0 ? stack[stack.length - 1].tag : root;
+    const parentTag = topTag();
     parentTag.content += s.slice(currentItem.startPos);
   }
 

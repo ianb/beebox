@@ -61,6 +61,7 @@ function parseArgs(): RenderArgs {
   const positional: string[] = [];
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
+    if (arg === undefined) continue;
     if (arg === "--raw") {
       raw = true;
     } else if (arg === "--list-states") {
@@ -125,6 +126,7 @@ interface NamedArg {
 
 function parseNamedArg(args: string[], i: number): NamedArg | null {
   const arg = args[i];
+  if (arg === undefined) return null;
   for (const name of ["selector", "s", "scenario", "machine", "mock"]) {
     const prefix = `--${name}=`;
     if (arg.startsWith(prefix)) {

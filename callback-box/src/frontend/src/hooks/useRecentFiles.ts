@@ -92,8 +92,7 @@ export function collectPaths(entries: SessionEntry[]): string[] {
 export function dedupeRecent(paths: string[]): string[] {
   const seen = new Set<string>();
   const out: string[] = [];
-  for (let i = paths.length - 1; i >= 0; i--) {
-    const p = paths[i];
+  for (const p of paths.toReversed()) {
     if (seen.has(p)) continue;
     seen.add(p);
     out.push(p);

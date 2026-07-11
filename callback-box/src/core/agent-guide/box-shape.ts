@@ -91,7 +91,7 @@ export function howItemsEnterSection(): string {
 
 Most items arrive on their own — you rarely need to place one by hand (though you do create and move cards with \`cb create\` / \`cb mv\` as part of your work). The arrival mechanisms:
 
-- **Capture UI** — the user records voice memos, takes photos, or types text in the web interface. These are saved to \`box/inbox/\` automatically and processed via the \`process-captures\` procedure.
+- **Capture UI** — the user records voice memos, takes photos, or types text in the web interface. The preparation worker transcribes and assembles a timeline, then delivers the session as a \`<capture>\` chat message pointing at a capture-session card (its child image/audio cards live in that card's attach scope) — the chat agent annotates it and files it. \`cb scan-import\` batches (photos/PDFs with no chat message) drop their capture-session card straight into \`box/inbox/\` for triage instead.
 - **Connectors** — external services (Gmail, Telegram, Google Calendar, Google Drive) sync during \`cb wakeup\`. Connectors create cards in \`box/inbox/\` and job cards in \`box/jobs/\` for processing.
 - **\`cb create\`** — the CLI command creates cards from templates. Use this when YOU need to create a card (e.g., a question, todo, or record). Example: \`cb create box/questions/Color.question.card -t question\`
 - **Chat** — users send messages through the chat UI, which creates/updates chat-thread cards.

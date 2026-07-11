@@ -146,30 +146,37 @@ JSON.stringify([
 
 ## resolveImageSrc
 
-Rewrites a markdown image `src` into a URL that doesn't depend on the page URL — so an image written into `dossiers/annika.md` renders the same whether it's opened in chat or browsed at a deep URL.
+Rewrites a markdown image `src` into a URL that doesn't depend on the page URL — so an image written into `dossiers/annika.md` renders the same whether it's opened in chat or browsed at a deep URL. Output goes through the canonical `/api/image/` route, which serves a raw image file directly and dereferences an `.image.card` to its attached binary.
 
 A leading `/` means box-root-relative:
 
 ```ts
 resolveImageSrc("/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/files/store/images/front.png
+=> /test1/api/image/store/images/front.png
 ```
 
 A bare path is document-relative — resolved against `basePath`:
 
 ```ts
 resolveImageSrc("images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/files/store/dossiers/images/front.png
+=> /test1/api/image/store/dossiers/images/front.png
 
 resolveImageSrc("../shared/logo.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/files/store/shared/logo.png
+=> /test1/api/image/store/shared/logo.png
 ```
 
-The legacy `api/files/<path>` form is accepted as a hint that the path is already box-root-relative:
+An `.image.card` embed resolves through the same route — the backend reads `filename.ref` and serves the attached binary, so `![](…/foo.image.card)` renders instead of 404ing on the card file:
+
+```ts
+resolveImageSrc("images/aya-intake.image.card", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
+=> /test1/api/image/store/dossiers/images/aya-intake.image.card
+```
+
+The legacy `api/files/<path>` form (and the `api/image/<path>` form) is accepted as a hint that the path is already box-root-relative; both re-emit through `/api/image/`:
 
 ```ts
 resolveImageSrc("api/files/store/images/front.png", { boxSlug: "test1", basePath: "store/dossiers/annika.md" })
-=> /test1/api/files/store/images/front.png
+=> /test1/api/image/store/images/front.png
 ```
 
 External URLs pass through untouched:

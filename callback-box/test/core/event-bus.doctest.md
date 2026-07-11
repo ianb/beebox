@@ -40,17 +40,18 @@ const samples = {
   "schedule-fired": { id: "sch_1", label: "tea", alarm: true, announce: null },
   "chat-history": { sessionId: "s1", entries: [{ uuid: "u1", type: "user", timestamp: TS, content: [{ type: "text", text: "hi" }] }] },
   "chat-session-assigned": { sessionId: "s1" },
+  "capture-status": { stagingId: "cap_1", sessionId: "s1", status: "preparing", docPath: "captures/cap_1.capture-session.card" },
 };
 ```
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 15 events, and each parses cleanly against the
+The sample catalog covers all 16 events, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
 Object.keys(samples).length
-=> 15
+=> 16
 
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true

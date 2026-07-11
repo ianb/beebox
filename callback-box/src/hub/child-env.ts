@@ -69,7 +69,7 @@ const CHILD_ENV_ALLOWLIST: readonly string[] = [
   "CB_TIME", // src/cli/lib/time.ts, fetch.ts -- scenario/time-travel harness.
   "THINKING_OPENAI_API_KEY", // src/webapp/routes/chat-audio-routes.ts -- box's own transcription key.
   "CALLBACK_MISTRAL_API_KEY", // src/core/mistral-key.ts -- box's own transcription key fallback.
-  "GEMINI_KEY", // src/core/audio-question.ts, commands/scan-import.ts, describe-images.ts, chat-audio.ts, webapp/trpc/routers/health.ts -- box's own image/audio description key.
+  "GEMINI_KEY", // src/core/audio-question.ts, commands/scan-import.ts, chat-audio.ts, webapp/trpc/routers/health.ts -- box's own image/audio description key.
   "SKE_GEMINI_API_KEY", // same call sites as GEMINI_KEY -- documented fallback read alongside it (checked first in src/core/audio-question.ts etc.).
 
   // --- Claude Agent SDK config knobs (not credentials) ---

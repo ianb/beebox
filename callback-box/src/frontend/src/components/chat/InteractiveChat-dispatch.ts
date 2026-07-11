@@ -39,8 +39,8 @@ export function useEmissionDispatch(opts: {
   // chat-target assembler (input/targets/chat-assemble.ts).
   const getWitness = useCallback((): ChatWitness => {
     let timePassed: string | null = null;
-    if (messages.length > 0) {
-      const last = messages[messages.length - 1];
+    const last = messages.at(-1);
+    if (last !== undefined) {
       timePassed = formatTimePassed(Date.now() - new Date(last.timestamp).getTime());
     }
     return {

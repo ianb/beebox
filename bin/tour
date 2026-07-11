@@ -16,8 +16,13 @@
 set -euo pipefail
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-if [[ ! -x "$REPO_DIR/browse/node_modules/.bin/tsx" ]]; then
-  echo "tour: tsx not found in browse/node_modules. Run 'pnpm install' in browse/." >&2
+# pnpm hoists tsx to the root bin; older layouts had it under browse/.
+TSX="$REPO_DIR/node_modules/.bin/tsx"
+if [[ ! -x "$TSX" ]]; then
+  TSX="$REPO_DIR/browse/node_modules/.bin/tsx"
+fi
+if [[ ! -x "$TSX" ]]; then
+  echo "tour: tsx not found. Run 'pnpm install' at the monorepo root." >&2
   exit 1
 fi
 
@@ -32,4 +37,4 @@ fi
 export BROWSE_WORKTREE="$worktree"
 
 CLI="$REPO_DIR/callback-box/test/tours/tour-lib/cli.ts"
-exec "$REPO_DIR/browse/node_modules/.bin/tsx" "$CLI" "$@"
+exec "$TSX" "$CLI" "$@"

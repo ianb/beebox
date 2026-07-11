@@ -1,23 +1,40 @@
 /**
  * Capture session card schema (Phase-2 frontmatter + Markdoc transcript body).
  *
- * Created by the capture connector. Frontmatter carries the session
- * metadata and the manifests of child image/audio/file cards (which live
- * in the session's attach scope). The markdown body is the assembled
- * transcript: transcribed speech interleaved, in timeline order, with
- * `{% image %}` markers (where a photo was taken) and `{% silence %}`
- * markers (gaps) — see `src/shared/markdoc-config.ts`.
+ * Written by the capture preparation worker (`src/core/capture/prepare.ts`)
+ * when a recorded/photographed capture session is delivered to chat as a
+ * `<capture>` message, and by `cb scan-import` for photo/PDF batches that
+ * never touch chat. Frontmatter carries the session metadata and the
+ * manifests of child image/audio/file cards (which live in the session's
+ * attach scope). The markdown body is the assembled transcript: transcribed
+ * speech interleaved, in timeline order, with `{% image %}` markers (where a
+ * photo was taken) and `{% silence %}` markers (gaps) — see
+ * `src/shared/markdoc-config.ts`.
  *
- * Later procedures transcribe audio, analyze images, and assemble the
- * transcript (`assemble-timeline`).
+ * The chat agent — not a background procedure — annotates and files these
+ * cards; see `instructions` below.
  */
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 import { z } from "zod";
 import { splitCardContent, body, cardSchema, type CardSchema } from "../cards/index.js";
 
+/**
+ * Current lifecycle: `new` (just written by preparation, not yet delivered
+ * or delivery not yet confirmed) → `delivered` (the `<capture>` chat message
+ * was sent) → `annotated` (the agent has done its OCR/description pass and
+ * committed it). The remaining values (`transcribing`, `transcribed`,
+ * `intake-complete`, `extracted`) are legacy — written by the retired
+ * `process-captures` pipeline and still present on cards from before this
+ * lifecycle shipped. They validate but nothing writes them anymore; treat a
+ * card in one of those states as a leftover from the old pipeline (its
+ * content is still usable, just triage it like any other card in `new`).
+ */
 export const CaptureSessionStatus = z.enum([
   "new",
+  "delivered",
+  "annotated",
+  // Legacy (pre-2026-07 pipeline); still validate, nothing writes them now.
   "transcribing",
   "transcribed",
   "intake-complete",
@@ -41,6 +58,10 @@ const captureSessionFields = {
   "audio-clips": z.array(z.string()).optional(),
   /** Manifest of child uploaded-file cards. */
   files: z.array(z.string()).optional(),
+  /** Recording was cut off unexpectedly; the final seconds may be missing. */
+  partial: z.boolean().optional(),
+  /** One or more clips still need transcription (provider failure at prepare time). */
+  "transcription-failed": z.boolean().optional(),
   /** The assembled transcript (markdown + `{% image %}` / `{% silence %}`). */
   body: body(z.string()),
 };
@@ -52,19 +73,26 @@ export const CaptureSessionSchema: CardSchema = cardSchema("capture-session", {
   fields: captureSessionFields,
   instructions: `# Capture Session Cards
 
-A capture session groups images, audio clips, and uploaded files from a single recording session (e.g., a voice walkthrough with photos, or a batch of documents). The session card lives at the inbox level; its child cards (audio, image, file) live inside the session's attach scope (\`{basename}.attach/\`). Refs to children use the \`attach/\` virtual prefix.
+A capture is a user-recorded batch of photos and/or voice, delivered to chat as a \`<capture doc="...">\` message (or, for \`cb scan-import\` batches, dropped straight into \`box/inbox/\` with no chat message at all — these instructions apply wherever the card is found). The session card groups the images, audio clips, and uploaded files from one recording session; its child cards live inside the session's attach scope (\`{basename}.attach/\`), refs using the \`attach/\` virtual prefix.
 
 Frontmatter:
-- \`status\` — new → transcribing → transcribed (audio done) → intake-complete (images described, timeline assembled) → extracted (records pulled into a catalog directory).
-- \`session-id\` — links back to the capture API.
+- \`status\` — \`new\` (just written, not yet annotated) → \`delivered\` (the chat message went out) → \`annotated\` (you've done your annotation pass and committed it). Older cards may carry \`transcribing\`/\`transcribed\`/\`intake-complete\`/\`extracted\` — legacy values from a retired pipeline; treat those cards as leftover \`new\` work.
+- \`session-id\` — links back to the capture session.
 - \`time\` — \`{ start, end?, duration? }\`.
 - \`images\` / \`audio-clips\` / \`files\` — manifests of the child card refs.
+- \`partial\` — the recording cut off unexpectedly (crash, disconnect, abandonment). Treat the final seconds of transcript as possibly mid-thought — the tail may be missing, not the person trailing off.
+- \`transcription-failed\` — one or more clips still need transcription (the transcription provider was unavailable when this was prepared). The capture was still delivered rather than held hostage to the outage; a later \`cb transcribe\`/HQ pass can fill in the missing text.
 
 Body — the assembled transcript, a timeline of transcribed speech interleaved with:
 - \`{% image ref="photo-001.image.card" /%}\` — where a photo was taken (description/filename come from the referenced image card).
 - \`{% silence duration="15s" /%}\` — gaps of 10+ seconds.
 
-The transcript is generated by \`assemble-timeline\`; agents read it to extract records but shouldn't usually hand-edit it.`,
+This body is generated, not hand-written — don't edit it directly; if something needs correcting, fix the source (a child card's transcript/description) and re-derive, or note the correction in your own annotation instead.
+
+**Your duties on a capture card, in order:**
+1. **Annotate by default.** OCR any images with text and add descriptions for the rest, via subagents reading the actual image files (don't invent content from the transcript alone) — write the results onto the child image cards, commit, and set this card's \`status\` to \`annotated\`.
+2. **Then file it.** Either \`cb mv\` the card (and its attach scope) out of \`tmp-capture/\` to wherever it belongs — a project, a person, a memo, a record — or, if you can fully process the capture on the spot (e.g. it's just a quick note that becomes a todo), complete that work and **delete the card** instead of filing it.
+3. **\`tmp-capture/\` must not accumulate.** It's a landing zone, not storage — a capture left there is unfinished work. If you can't finish filing it in one turn, say so and come back to it; don't leave it silently.`,
 });
 
 /** Frontmatter-only object schema (the body field lives outside Zod). */
@@ -75,6 +103,8 @@ const CaptureSessionObject = z.object({
   images: z.array(z.string()).optional(),
   "audio-clips": z.array(z.string()).optional(),
   files: z.array(z.string()).optional(),
+  partial: z.boolean().optional(),
+  "transcription-failed": z.boolean().optional(),
 });
 export type CaptureSessionFrontmatter = z.infer<typeof CaptureSessionObject>;
 /** Back-compat alias. */
@@ -106,7 +136,9 @@ export function parseCaptureSession(content: string): ParsedCaptureSession | nul
 
 /**
  * Template for creating a capture session card — frontmatter manifests with
- * an empty transcript body (filled in later by `assemble-timeline`).
+ * an empty transcript body (filled in later: the capture preparation worker
+ * builds the timeline for chat captures, `src/core/capture/timeline.ts`;
+ * `cb scan-import` fills its own).
  *
  * `imageRefs`, `audioRefs`, `fileRefs` are bare child-card filenames
  * (e.g. `photo-001.image.card`). They're emitted with the `attach/` virtual
@@ -119,6 +151,8 @@ export function createCaptureSessionTemplate(options: {
   imageRefs: string[];
   audioRefs: string[];
   fileRefs?: string[];
+  /** True when the abandonment sweep finalized an unfinished capture. */
+  partial?: boolean;
 }): string {
   const duration = options.endedAt
     ? formatDuration(new Date(options.endedAt).getTime() - new Date(options.startedAt).getTime())
@@ -137,6 +171,7 @@ export function createCaptureSessionTemplate(options: {
   };
   const fileRefs = options.fileRefs ?? [];
   if (fileRefs.length > 0) fields.files = fileRefs.map((ref) => `attach/${ref}`);
+  if (options.partial === true) fields.partial = true;
 
   return `---\n${stringifyYaml(fields)}---\n`;
 }

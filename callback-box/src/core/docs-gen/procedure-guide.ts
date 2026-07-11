@@ -13,11 +13,11 @@ Procedures are multi-step processes defined as YAML-frontmatter cards. The proce
 ## Running Procedures
 
 \`\`\`bash
-cb procedure run process-captures                   # Run by name
+cb procedure run process-pages                   # Run by name
 cb procedure run config/procedures/my.procedure.card  # Run by path
-cb procedure run process-captures --step transcribe # Run one step only
-cb procedure run process-captures --dry-run         # Preview steps
-cb procedure run process-captures --directive "skip the music clips"  # Pass directive
+cb procedure run process-pages --step intake     # Run one step only
+cb procedure run process-pages --dry-run         # Preview steps
+cb procedure run process-pages --directive "prefer the reading list over trashing"  # Pass directive
 cb procedure list                                   # List available procedures
 cb procedure status                                 # Show latest run status
 cb procedure gc                                     # Delete expired run dirs
@@ -30,7 +30,7 @@ Procedure definitions live in \`config/procedures/\`. Each run creates a trackin
 A **directive** is an opaque runtime string passed when invoking a procedure. It appears as \`<directive>...</directive>\` in every agent's system prompt within the procedure, allowing callers to customize behavior without modifying the procedure card.
 
 \`\`\`bash
-cb procedure run process-captures --directive "Only process today's session"
+cb procedure run process-pages --directive "Only process today's pages"
 \`\`\`
 
 The directive is also recorded as the \`directive\` field on the procedure-run card for auditability. Step prompts can reference "the Directive" to act on it.
@@ -211,7 +211,7 @@ To check for updates:
 \`\`\`bash
 ls config/_template-updates/procedures/
 # If any exist, compare with the main version and merge changes
-diff config/procedures/process-captures.procedure.card config/_template-updates/procedures/process-captures.procedure.card
+diff config/procedures/process-pages.procedure.card config/_template-updates/procedures/process-pages.procedure.card
 \`\`\`
 
 After merging, delete the file under \`config/_template-updates/procedures/\`. The next \`cb init\` will see your merged version as the current copy.
@@ -221,15 +221,12 @@ After merging, delete the file under \`config/_template-updates/procedures/\`. T
 A complete procedure run produces commits like:
 
 \`\`\`
-abc123f Complete procedure: process-captures
-abc123e [procedure] Complete step: archive
-abc123d Archive session 2026-05-22_kitchen           ← agent commit
-abc123c [procedure] Complete step: assemble
-abc123b Assemble timeline for 3 clips                ← agent commit
-abc123a [procedure] Complete step: describe-images
-abc1239 [procedure] Complete step: transcribe
-abc1238 Transcribe 3/3 audio clips                   ← agent commit
-abc1237 Start procedure: process-captures
+abc123f Complete procedure: process-retrospective
+abc123e [procedure] Complete step: integrate
+abc123d Integrate 4 observations into personality card   ← agent commit
+abc123c [procedure] Complete step: scan
+abc123b Scan 3 chat sessions for retro observations       ← agent commit
+abc123a Start procedure: process-retrospective
 \`\`\`
 
 Each commit represents a clean, consistent state. You can \`git reset --hard\` to any commit to get a valid snapshot.

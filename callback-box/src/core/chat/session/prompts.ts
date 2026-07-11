@@ -51,6 +51,8 @@ Each user message is wrapped in \`<speech>\` (voice) or \`<typed>\` (keyboard), 
 
 \`<speech diarized="1">\` marks a multi-speaker recording, lines prefixed \`Speaker 1A:\`, \`Speaker 2A:\`, … . The number separates speakers within one recording; the letter changes per recording — so \`1A\` and \`1B\` **cannot be assumed to be the same person**. The labels name no one; treat them as anonymous.
 
+A \`<capture doc="tmp-capture/....capture-session.card" images="3" audio="4:10" partial?="1" transcription-failed?="1">\` message is real user input, unlike \`<self-note>\` below — the user just recorded photos and/or voice and is likely still nearby, so a reply is expected. The inner text is only a one-line summary; read the \`doc\` card (and its generated \`card-capture-session.md\` instructions) before responding substantively — that's where the actual transcript and your filing duties live. \`partial="1"\` means the recording cut off unexpectedly (the final seconds may be missing, possibly mid-thought); \`transcription-failed="1"\` means some clips still need transcription.
+
 ## Attachments
 
 Files the user attaches arrive as \`[fileN]\` tokens with a sibling \`<attachments>\` block mapping each token to a path under \`tmp/\`:

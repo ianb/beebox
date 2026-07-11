@@ -330,31 +330,12 @@ tests:
 
   # === Image Analysis ===
   #
-  # Status (2026-07-03): all 3 pass. describe-images-batch answered batching
-  # directly (dropped stale should_read card-image.md).
-
-  - id: describe-images-command
-    prompt: "I have some new image cards with status='new'. How do I analyze them?"
-    expected_level: knows_about
-    watch_for: "Mentions cb describe-images command — either from the card doc or cb-commands doc"
-    should_read: ["docs/generated/card-image.md"]
-    correct_contains: ["cb describe-images"]
-    tags: [cli, images]
-    notes: >
-      The agent should discover cb describe-images from the image card docs.
-      The failure mode is manually viewing each image and editing the card XML
-      instead of using the command.
-
-  - id: describe-images-batch
-    prompt: "I have 5 image cards from the same capture session. Should I process them one at a time or together?"
-    expected_level: knows_about
-    watch_for: "Recommends batching — passing multiple paths to cb describe-images for better context"
-    correct_contains: ["batch"]
-    tags: [images]
-    notes: >
-      The image card doc and cb-commands doc both mention that multiple images
-      are sent as a batch for better context. The failure mode is suggesting
-      one-at-a-time processing.
+  # Retired 2026-07-10: describe-images-command and describe-images-batch
+  # tested `cb describe-images`, which was deleted along with the old
+  # capture pipeline. Image analysis for captures is now done in-context by
+  # the chat agent annotating the parent capture card (subagents read the
+  # image files directly); scan-import runs its own Gemini pass at import
+  # time. Nothing left to assert here as a "discover this command" audit.
 
   - id: image-exif-date
     prompt: "Where does the captured date come from on image cards?"
@@ -989,7 +970,7 @@ tests:
   # the description). git-trailers answered from agent guide without running.
 
   - id: git-history-first
-    prompt: "The process-captures procedure ran earlier today but I'm not sure what it did. Can you find out?"
+    prompt: "The process-pages procedure ran earlier today but I'm not sure what it did. Can you find out?"
     expected_level: knows_directly
     watch_for: "Runs git log as first action — not searching the filesystem for clues or reading procedure run cards"
     bash_contains: ["git log"]
@@ -3568,3 +3549,75 @@ tests:
     notes: >
       `cb upgrade` (src/cli/commands/upgrade.ts) is an operator verb, not
       something the operating agent should invoke on its own initiative.
+
+  # === Capture mode ===
+  #
+  # A `<capture doc="...">` chat message delivers a user-recorded batch of
+  # photos/voice as real user input pointing at a capture-session card
+  # (Track 6 of docs/implemented-plans/capture-mode.md). Chat-only concept — the tag is
+  # documented in CHAT_SYSTEM_PROMPT (prompts.ts), not the agent guide — so
+  # every entry below needs chat_mode: true.
+  #
+  # Status (2026-07-10): all 3 pass on test1 (capture-mode breakpoint run).
+  # capture-message-meaning: 0 reads, correct contrast with <self-note> —
+  # passed after its check loosened from a too-literal contains ["doc"] to
+  # the card filename (first run answered correctly, failed the string
+  # check). capture-partial-marker: 0 reads, correct. capture-agent-duties:
+  # passes, but note it answers by READING docs/generated/
+  # card-capture-session.md (1 read, 1 search) rather than from context —
+  # that is the designed flow (the prompt paragraph says to read the doc
+  # rules), so reading here is desired behavior, not a recall failure.
+
+  - id: capture-message-meaning
+    prompt: >
+      A message arrives in chat: `<capture doc="tmp-capture/capture-20260710T0900-ab12.capture-session.card" images="2" audio="1:40">making dinner notes</capture>`.
+      What is this, and what (if anything) do you do with it?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Says this is real user input (not a background/system note) and that a
+      reply is expected — contrasted with `<self-note>`, which is not user
+      input and doesn't expect a reply. Says it should read the `doc` card
+      (the actual capture-session.card) before responding substantively,
+      not just answer from the one-line inner summary.
+    correct_contains_any: ["user input", "real user", "expects a reply", "reply is expected"]
+    # "Read the doc first" — a correct answer names the card it would read.
+    # (First run answered correctly but failed a too-literal contains:
+    # ["doc"]; the card filename is the robust marker.)
+    correct_contains: ["capture-session.card"]
+    tags: [capture, chat, behavioral]
+
+  - id: capture-agent-duties
+    prompt: >
+      You've read a capture-session card at `tmp-capture/capture-20260710T0900-ab12.capture-session.card`
+      with two photos and a short voice transcript. What are your duties on
+      this card, in order, before it's done?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      (1) Annotate by default — OCR/describe the images (via subagents
+      reading the actual image files, not invented from the transcript) and
+      commit, setting status to annotated. (2) Then file the card out of
+      tmp-capture/ with `cb mv` to wherever it belongs, OR complete the
+      capture on the spot and delete the card instead. (3) tmp-capture/
+      must not accumulate — this isn't storage. Should NOT invent other
+      behavior (e.g. leaving it in tmp-capture/ indefinitely, or skipping
+      annotation).
+    correct_contains_any: ["annotate", "OCR", "describe"]
+    correct_contains: ["tmp-capture"]
+    tags: [capture, chat, behavioral]
+
+  - id: capture-partial-marker
+    prompt: >
+      A capture-session card's frontmatter has `partial: true`. What does
+      that tell you about the transcript in its body?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Says the recording cut off unexpectedly (crash/disconnect/abandonment
+      sweep) and that the final seconds may be missing — the tail should be
+      treated as possibly mid-thought, not as the person trailing off or
+      finishing their point. Does not invent an unrelated meaning (e.g.
+      "the user only partially wants this filed").
+    correct_contains_any: ["cut off", "cut short", "missing", "mid-thought", "incomplete"]
+    tags: [capture, chat, behavioral]

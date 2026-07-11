@@ -29,6 +29,7 @@ import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveC
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
 import type { ActivityKind } from "../../../../core/chat/card-activity.js";
+import type { CaptureBubbleModel } from "./capture-bubble";
 
 interface ChatBodyProps {
   tabs: ReturnType<typeof useChatTabs>;
@@ -81,6 +82,20 @@ interface ChatBodyProps {
    * the web input surface so the native shell can own composition.
    */
   embedded: boolean;
+  /** Server-derived pending capture bubbles for this chat (Track 4). */
+  captureBubbles: CaptureBubbleModel[];
+  /** Retry a failed pending capture (re-seals its staging session). */
+  onCaptureRetry: (id: string) => void;
+  /** Enter capture mode (open the full-screen capture overlay). */
+  onEnterCapture: () => void;
+  /** Whether the capture affordance is offered (suppressed for native shells). */
+  captureEnabled: boolean;
+  /**
+   * When set, the capture affordance is shown but disabled, with this string as
+   * its tooltip — used before a fresh chat has a server-assigned session id, so
+   * a capture can't misdirect into another chat (X1).
+   */
+  captureDisabledReason?: string | undefined;
 }
 
 function HeaderRegion(props: ChatBodyProps) {
@@ -125,7 +140,7 @@ function MessageListRegion(props: ChatBodyProps) {
   const {
     tabs, model, voice, actions, messages, groups, modelMarkers, isStreaming, streamText, streamTools,
     processBusy, debugView, currentUserEmail, snapshot, totalEntries, loadingOlder, scrollToBottomTrigger, liveTurnId,
-    effectiveContextDir,
+    effectiveContextDir, captureBubbles, onCaptureRetry,
   } = props;
   const { onZoomView } = tabs;
   const { speechPlayback, handleStopSpeech, handleSkipSpeech, handleReplaySpeech, pendingHqDraft } = voice;
@@ -155,6 +170,8 @@ function MessageListRegion(props: ChatBodyProps) {
       liveTurnId={liveTurnId}
       proseEnabled={model.chatFeatures.prose !== "off"}
       pendingHqDraft={pendingHqDraft}
+      captureBubbles={captureBubbles}
+      onCaptureRetry={onCaptureRetry}
     />
     </ChatContextDirProvider>
   );
@@ -163,7 +180,8 @@ function MessageListRegion(props: ChatBodyProps) {
 function ComposerRegion(props: ChatBodyProps) {
   const {
     model, voice, recoveredDictation, expiredAttachmentsNotice, attach, selections, actions, isStreaming, processBusy, textareaRef,
-    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend,
+    typingMode, setTypingMode, typingLocked, setTypingLocked, onVoiceSegmentSend, onEnterCapture, captureEnabled,
+    captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
   const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
@@ -212,6 +230,9 @@ function ComposerRegion(props: ChatBodyProps) {
           onPaste={handlePaste}
           onDrop={handleDrop}
           onAttachFiles={handleAttachFiles}
+          onEnterCapture={onEnterCapture}
+          captureEnabled={captureEnabled}
+          captureDisabledReason={captureDisabledReason}
           narrationEnabled={model.narrationEnabled}
         />
       }

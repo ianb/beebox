@@ -213,8 +213,9 @@ export function CommitTimeline({
   // Build a map of commit hash -> previous commit date (earlier in time).
   // commits is reverse chronological, so commits[i+1] is earlier than commits[i].
   const prevDateMap = new Map<string, string>();
-  for (let i = 0; i < commits.length - 1; i++) {
-    prevDateMap.set(commits[i].hash, commits[i + 1].date);
+  for (const [i, commit] of commits.entries()) {
+    const next = commits[i + 1];
+    if (next !== undefined) prevDateMap.set(commit.hash, next.date);
   }
 
   return (

@@ -6,7 +6,7 @@
 
 import { Link } from "@tanstack/react-router";
 import { withBase } from "../api";
-import { href } from "../lib/routing";
+import { href, toSearch } from "../lib/routing";
 
 interface Box {
   slug: string;
@@ -45,7 +45,8 @@ export function BoxActionsTile({ box }: { box: Box }) {
           Chat
         </Link>
         <Link
-          to={href(`/${box.slug}/capture`)}
+          to={href(`/${box.slug}/chat`)}
+          search={toSearch({ capture: "1" })}
           className="py-4 text-center text-base font-medium text-primary hover:bg-warm-50 active:bg-warm-100"
         >
           Capture

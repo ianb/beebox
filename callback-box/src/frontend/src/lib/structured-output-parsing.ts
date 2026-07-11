@@ -62,9 +62,10 @@ function parseAttrs(raw: string): Map<string, string> {
   let m: RegExpExecArray | null;
   while ((m = re.exec(raw)) !== null) {
     // Both groups are mandatory (no alternation before them), so a
-    // successful match always populates them — no undefined check needed.
-    const name = m[1];
-    const value = m[2];
+    // successful match always populates them; the `?? ""` fallbacks are
+    // unreachable but honest to the regex-match type.
+    const name = m[1] ?? "";
+    const value = m[2] ?? "";
     out.set(name, decodeXmlAttr(value));
   }
   return out;
@@ -98,7 +99,7 @@ export function parseAcks(content: string): AckIndication[] {
     // undefined when the self-closing branch matches instead (TS's
     // RegExpExecArray typing doesn't model per-branch participation).
     // `.at()` (not `m[2]`) keeps that honestly `string | undefined`.
-    const attrs = parseAttrs(m[1]);
+    const attrs = parseAttrs(m[1] ?? "");
     const innerRaw = m.at(2);
     const kind = attrs.get("kind");
     if (kind === undefined) {
@@ -131,14 +132,15 @@ export function parseCallouts(content: string): CalloutData[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(content)) !== null) {
     // Neither group is inside an alternation, so both are always defined
-    // on a successful match.
-    const attrs = parseAttrs(m[1]);
+    // on a successful match; the `?? ""` fallbacks are unreachable but
+    // honest to the regex-match type.
+    const attrs = parseAttrs(m[1] ?? "");
     const context = attrs.get("context");
     if (context === undefined || context.length === 0) {
       console.warn("[structured-output] Skipping <callout> with no context");
       continue;
     }
-    const body = m[2].trim();
+    const body = (m[2] ?? "").trim();
     if (body.length === 0) continue;
     out.push({ context, body });
   }

@@ -47,18 +47,18 @@ const FILE_REF_LINE_RE = /\[file(\d+)]:\s*(\S+)/g;
 const TMP_FILENAME_PREFIX_RE = /^tmp\/[^/_]+_(.+)$/;
 
 export function extractFileAttachments(text: string): FileAttachmentRef[] {
-  const block = text.match(ATTACHMENTS_BLOCK_RE);
-  if (!block) return [];
-  const inner = block[1];
+  const inner = text.match(ATTACHMENTS_BLOCK_RE)?.[1];
+  if (inner === undefined) return [];
   const refs: FileAttachmentRef[] = [];
   for (const m of inner.matchAll(FILE_REF_LINE_RE)) {
-    const id = parseInt(m[1], 10);
+    const idStr = m[1];
     const p = m[2];
-    const stripped = p.match(TMP_FILENAME_PREFIX_RE);
+    if (idStr === undefined || p === undefined) continue;
+    const stripped = p.match(TMP_FILENAME_PREFIX_RE)?.[1];
     refs.push({
-      id,
+      id: parseInt(idStr, 10),
       path: p,
-      displayName: stripped ? stripped[1] : p,
+      displayName: stripped ?? p,
     });
   }
   return refs;
@@ -72,7 +72,8 @@ export function getUserName(entry: SessionEntry): string | null {
   if (entry.user) return entry.user;
   const firstText = entry.content.find((b) => b.type === "text")?.text || "";
   const match = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
-  if (match) return match[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
+  const user = match?.[1];
+  if (user !== undefined) return user.replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
   return null;
 }
 
@@ -187,13 +188,14 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   if (!match) return null;
   const outputMatch = text.match(/<output-file>([^<]*)<\/output-file>/);
   // No group in the pattern is optional/alternated, so a successful overall
-  // match guarantees every capture participated (possibly as "").
-  const [, taskId, status, summary] = match;
+  // match guarantees every capture participated (possibly as ""); the `?? ""`
+  // fallbacks are unreachable in practice but honest to the regex-match type.
+  const [, taskId = "", status = "", summary = ""] = match;
   return {
     taskId,
     status,
     summary,
-    outputFile: outputMatch ? outputMatch[1] : undefined,
+    outputFile: outputMatch?.[1],
   };
 }
 
@@ -227,7 +229,7 @@ function extractImagesFromMarkdown(
   { out, boxSlug }: { out: LightboxImage[]; boxSlug: string | undefined },
 ): void {
   for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
-    const alt = match[1];
+    const alt = match[1] ?? "";
     const rawSrc = match[2];
     // `![…](…)` is the embed syntax: an image src belongs in the lightbox, but a
     // card/file embed (an in-box, non-image path) does not — skip it.

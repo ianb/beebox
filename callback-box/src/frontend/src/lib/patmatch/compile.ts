@@ -90,6 +90,13 @@ function compileForWord(stream: TokenStream): Matcher {
   return new WordMatcher({}, word);
 }
 
+/** A single matcher stands for itself; more than one collapses into a sequence. */
+function collapseSequence(sequence: Matcher[]): Matcher | undefined {
+  if (sequence.length === 0) return undefined;
+  if (sequence.length === 1) return sequence[0];
+  return new SequenceMatcher({}, sequence);
+}
+
 function compileGroup(stream: TokenStream): Matcher {
   const matchers: Matcher[] = [];
   let currentSequence: Matcher[] = [];
@@ -101,12 +108,9 @@ function compileGroup(stream: TokenStream): Matcher {
     const token = stream.peek();
     if (token === ")") {
       stream.next();
-      if (currentSequence.length > 0) {
-        if (currentSequence.length === 1) {
-          matchers.push(currentSequence[0]);
-        } else {
-          matchers.push(new SequenceMatcher({}, currentSequence));
-        }
+      const collapsed = collapseSequence(currentSequence);
+      if (collapsed !== undefined) {
+        matchers.push(collapsed);
       } else {
         // Implies there was an empty group
         isOptional = true;
@@ -118,12 +122,9 @@ function compileGroup(stream: TokenStream): Matcher {
       break;
     } else if (token === "|") {
       stream.next();
-      if (currentSequence.length > 0) {
-        if (currentSequence.length === 1) {
-          matchers.push(currentSequence[0]);
-        } else {
-          matchers.push(new SequenceMatcher({}, currentSequence));
-        }
+      const collapsed = collapseSequence(currentSequence);
+      if (collapsed !== undefined) {
+        matchers.push(collapsed);
         currentSequence = [];
       } else {
         isOptional = true;

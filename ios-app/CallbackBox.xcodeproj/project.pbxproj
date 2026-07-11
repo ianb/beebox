@@ -112,14 +112,6 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		5A1001122C3C000100000001 /* CallbackBoxTests */ = {
-			isa = PBXGroup;
-			children = (
-				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
-			);
-			path = CallbackBoxTests;
-			sourceTree = "<group>";
-		};
 		5A1000402C3C000100000001 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -160,6 +152,14 @@
 				5A1000252C3C000100000001 /* PairingURLInbox.swift */,
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		5A1001122C3C000100000001 /* CallbackBoxTests */ = {
+			isa = PBXGroup;
+			children = (
+				5A1001112C3C000100000001 /* SpeechKeywordsTests.swift */,
+			);
+			path = CallbackBoxTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -423,7 +423,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 44AJ3D25ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CallbackBox/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -452,7 +452,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = "";
+				DEVELOPMENT_TEAM = 44AJ3D25ZD;
 				GENERATE_INFOPLIST_FILE = NO;
 				INFOPLIST_FILE = CallbackBox/Info.plist;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -28,8 +28,6 @@ import {
   relinkCommand,
   migrateViewLinksCommand,
   procedureCommand,
-  transcribeCapturesCommand,
-  assembleTimelineCommand,
   googleAuthCommand,
   calendarCommand,
   finishCommand,
@@ -43,7 +41,6 @@ import {
   finalizeCommand,
   sessionCommand,
   schedulerCommand,
-  describeImagesCommand,
   scanImportCommand,
   uploadCommand,
   attachmentsCommand,
@@ -100,8 +97,6 @@ program.addCommand(moveCommand);
 program.addCommand(relinkCommand);
 program.addCommand(migrateViewLinksCommand);
 program.addCommand(procedureCommand);
-program.addCommand(transcribeCapturesCommand);
-program.addCommand(assembleTimelineCommand);
 program.addCommand(googleAuthCommand);
 program.addCommand(calendarCommand);
 program.addCommand(driveCommand);
@@ -116,7 +111,6 @@ program.addCommand(trickCommand);
 program.addCommand(finalizeCommand);
 program.addCommand(sessionCommand);
 program.addCommand(schedulerCommand);
-program.addCommand(describeImagesCommand);
 program.addCommand(scanImportCommand);
 program.addCommand(uploadCommand);
 program.addCommand(attachmentsCommand);

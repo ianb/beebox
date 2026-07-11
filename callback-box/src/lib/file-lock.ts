@@ -50,7 +50,7 @@
  * chain) is a different problem — there's no other process to coordinate
  * with, only concurrent async tasks within one Node process. Use a
  * `Map<id, Promise>` for that, not file locks (see `card-lock.ts` and
- * `capture-session-store.ts`).
+ * `core/capture/staging-store.ts`).
  *
  * ## Lock table (every lock in the system)
  *
@@ -65,7 +65,7 @@
  * | Chat-active | cross-proc | `<box>/.callback-box/active-chats/<runId>.lock` | signals a live SDK chat run so tick/housekeeping defer | `ChatSession` run | one SDK chat turn |
  * | Push store | cross-proc | `<pushStoreDir>/push-subscriptions.json.lock` | server-wide subscription store RMW | push subscribe/unsubscribe | single RMW (ms) |
  * | Search index | cross-proc | `<box>/.callback-box/<lock file>` | index refresh serialization | `search/refresh.ts` | one index rebuild |
- * | Capture session | in-proc (`withSessionLock`) | session id | per-`session.json` RMW (concurrent uploads) | capture upload route; entry dropped by `cleanupSession` | single RMW |
+ * | Capture staging | in-proc (`withStagingLock`) | session id | per-`session.json` RMW (concurrent uploads) | capture upload route; entry dropped by `cleanupStagingSession` | single RMW |
  * | Card write | in-proc (`withCardLock`) | `path.resolve(file)` | per-file card/config read-modify-write within one process | tRPC mutations (todos/scheduler/admin), connector thread writes, `answer`/`transcription` core; map self-drains | single RMW |
  * | Git index | git-owned | `<box>/.git/index.lock` | staging/commit | any `git commit` (not ours) | retried once on collision (`lib/git.ts`) |
  *
