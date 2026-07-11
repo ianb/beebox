@@ -12,6 +12,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as ICAL from "ical.js";
 import { getGoogleAuth } from "../src/connectors/google-auth.js";
+import { asIcalTime } from "../src/connectors/calendar-utils.js";
 
 interface EventFileEntry {
   filename: string;
@@ -49,7 +50,8 @@ async function main() {
   const event = new ICAL.Event(vevent);
   const summary = event.summary;
   const description = event.description || undefined;
-  const location = vevent.getFirstPropertyValue("location") as string | null;
+  const locationValue = vevent.getFirstPropertyValue("location");
+  const location = typeof locationValue === "string" ? locationValue : null;
 
   console.log(`Event: ${summary}`);
   console.log(`Description: ${description ?? "(none)"}`);
@@ -87,8 +89,8 @@ async function main() {
   }
 
   // 5. Build the PATCH body — just the fields we want to update
-  const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time;
-  const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time;
+  const dtstart = asIcalTime(vevent.getFirstPropertyValue("dtstart"));
+  const dtend = asIcalTime(vevent.getFirstPropertyValue("dtend"));
   const isAllDay = dtstart ? dtstart.isDate : false;
 
   const body: Record<string, unknown> = {

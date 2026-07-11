@@ -26,7 +26,9 @@ export const BOX_LAYOUT = [
     boxDirsKey: "inbox",
     path: "box/inbox",
     area: "box",
-    description: "Incoming items awaiting triage. Created by capture UI, connectors, `cb create`.",
+    description:
+      "Incoming items awaiting triage. Created by connectors, `cb create`, `cb scan-import`. " +
+      "(Composer captures don't land here — they deliver to chat; see below.)",
     agentDescription: "Incoming items to be triaged",
   },
   {

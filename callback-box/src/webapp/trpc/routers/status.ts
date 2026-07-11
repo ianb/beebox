@@ -9,6 +9,29 @@ import { parseCardName } from "../../../lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
 import { errnoCode } from "../../../lib/error-guards.js";
+import { cardFields, parseCardText } from "../../../core/card-io.js";
+import { createCardSchemaMap } from "../../../schemas/registry.js";
+import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
+import type { CardInfo } from "../../../core/state.js";
+
+/** A question card's answerable/archive-relevant fields, layered onto its `CardInfo`. */
+export interface QuestionInfo extends CardInfo {
+  prompt?: string | undefined;
+  memo?: string | undefined;
+  inputType?: QuestionFields["input"]["type"] | undefined;
+  options?: string[] | undefined;
+  learning?: QuestionFields["learning"] | undefined;
+  answer?: QuestionFields["answer"] | undefined;
+  /**
+   * Set when the card failed to parse against `QuestionSchema` (bad
+   * frontmatter, a superRefine violation, …). An invalid card carries only
+   * its `CardInfo` fields — `status` is whatever `getSystemState` found (or
+   * undefined) — so callers must still surface it rather than dropping it:
+   * a card the boxholder needs to fix by hand is exactly the one that must
+   * not silently vanish from the list.
+   */
+  invalid?: true | undefined;
+}
 
 export interface BrowseDir {
   name: string;
@@ -53,12 +76,29 @@ export const statusRouter = router({
 
   questions: publicProcedure.query(async ({ ctx }) => {
     const state = await getSystemState(ctx.boxRoot);
-    const context = await generateContext(ctx.boxRoot);
-    const enriched = state.questions.map((q) => {
-      const pending = context.pendingQuestions.find((p) => p.path === q.relativePath);
-      return { ...q, prompt: pending?.prompt, options: pending?.options };
-    });
-    return { items: enriched };
+    const schemas = await createCardSchemaMap(ctx.boxRoot);
+    const items: QuestionInfo[] = await Promise.all(
+      state.questions.map(async (q): Promise<QuestionInfo> => {
+        try {
+          const content = await fs.readFile(q.path, "utf-8");
+          const card = parseCardText(content, { source: q.path, schemas });
+          const fields = cardFields(card, QuestionSchema);
+          return {
+            ...q,
+            prompt: fields.prompt,
+            memo: fields.memo,
+            inputType: fields.input.type,
+            options: fields.input.options?.map((o) => o.label),
+            learning: fields.learning,
+            answer: fields.answer,
+          };
+        } catch (e) {
+          console.warn(`Question card failed to parse, surfacing as invalid: ${q.path}:`, e);
+          return { ...q, invalid: true };
+        }
+      }),
+    );
+    return { items };
   }),
 
   context: publicProcedure.query(async ({ ctx }) => {

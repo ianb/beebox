@@ -3,7 +3,7 @@
 **Status:** active — design exploration 2026-07, no implementation yet
 
 Grew out of the "The interface itself as cards" entry, now
-[issues/closed/2026-05-11-interface-itself-as-cards.md](../../../issues/closed/2026-05-11-interface-itself-as-cards.md);
+[issues/closed/exploration/2026-05-11-interface-itself-as-cards.md](../../../issues/closed/exploration/2026-05-11-interface-itself-as-cards.md);
 this doc supersedes that entry. Related threads it absorbs or touches:
 prominence / head cards, card-aware widgets, agent-editable UI text,
 backlinks, addressable URIs.

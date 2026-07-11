@@ -418,7 +418,7 @@ Wire into `Services` container in `src/services/index.ts`. Provider choice is a 
 
 **Frontend integration.** Two pieces in `src/frontend/src/machines/`:
 
-- `voiceRecorderMachine.ts` already captures PCM; extend it to retain the buffered audio for each segment (between `cancel` / `erase` / `send`) so it can be retrieved on checkpoint.
+- `voiceRecorderMachine.ts` already captures PCM; extend it to retain the buffered audio for each segment (between `cancel` / `erase` / `send`) so it can be retrieved on checkpoint. *(Update 2026-07: `voiceRecorderMachine.ts` was deleted in the capture-mode retirement — the checkpoint-buffering idea needs a new home, likely `realtimeTranscriptionMachine.ts` or a fresh audio-buffer module.)*
 - `realtimeTranscriptionMachine.ts` handles keyword detection. When the send keyword fires *and narration is on*, instead of immediately committing the realtime text, the machine grabs the segment's audio buffer, POSTs it to `/api/transcribe-audio`, and only commits the message once HQ returns. On HQ failure, commit the realtime text with an error indicator. When narration is off, the existing path runs unchanged.
 
 Reading the narration feature state in the frontend: subscribe to the same store/state that the toggle UI binds to (synced via SSE in Stage A).

@@ -195,7 +195,9 @@ All scripts live in `scripts/migrate/`.
 | 18 | `doc-to-gdoc`      | `doc-to-gdoc.ts`       | Rename Google-Doc `.doc.card` → `.gdoc.card` and flip the YAML `type:` so the `doc` type name can be reused for a generic in-box document type |
 | 19 | `strip-type-field` | `strip-type-field.ts`  | Remove the redundant `type:` field from every card's frontmatter — filename is the canonical type discriminator. Also renames `.X.job.card` → `.X-job.card` so the filename actually carries the canonical type for jobs |
 
-(This table stops at #19 — later migrators registered in `src/core/migrations.ts` after `strip-type-field`, up through `strip-entry-timestamps`, aren't reflected here; each one's own doc comment is the source of truth until this table is refreshed.)
+(This table stops at #19 — later migrators registered in `src/core/migrations.ts` after `strip-type-field`, up through `question-lifecycle`, aren't reflected here; each one's own doc comment is the source of truth until this table is refreshed.)
+
+`question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
 
 ### `box-packageify` (structural — legacy → v2 package layout)
 
@@ -262,7 +264,7 @@ commands (a wakeup-time failure). Behavior worth knowing:
   procedure is gone, so it's removed whenever present.
 - **Legacy inbox capture-session cards are intentionally left in place.** In-flight
   `*.capture-session.card` files in `box/inbox/` (including the prod retry-loop
-  victim, `issues/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
+  victim, `issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
   stay as ordinary cards for the normal triage/agent flow — they are legacy data,
   not something this migration touches.
 - Idempotent: a box with neither file (already retired, or one that never had the

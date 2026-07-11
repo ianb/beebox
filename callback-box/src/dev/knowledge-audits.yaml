@@ -136,9 +136,71 @@ tests:
   - id: question-answer-creates-job
     prompt: "What happens when a user answers a question?"
     expected_level: knows_about
-    watch_for: "Mentions that a follow-up job is created from the directive"
+    watch_for: "Mentions that a follow-up job is created from the directive, and (when the question declared learning:) that the job also records the confirmed belief"
     correct_contains: ["job", "directive"]
     tags: [questions, jobs]
+
+  # === Questions: Lifecycle and Learning ===
+  #
+  # Status (2026-07-10): 3/3 pass on first run (the --filter questions run
+  # also re-passed the three Card Types question audits above, 6/6 total,
+  # plus triage-guess-handling — 7/7). All three answer from the always-on
+  # questionsSection + question schema instructions; question-learning-sink
+  # did confirmatory reading (13 files) but named learning.sink +
+  # source: user-stated correctly.
+  #
+  # Track F (docs/implemented-plans/questions-end-to-end.md) additions. These probe the
+  # two-product answer contract (directive + learning) and lifecycle facts
+  # (dismissed/expired remain answerable) that the plan's "purpose frame"
+  # depends on agents actually carrying. Deliberately NOT audited: the aging
+  # sweep's nudge-latch mechanics (.callback-box/notified-questions.json) —
+  # purely infrastructural bookkeeping no agent needs to recall to ask or
+  # answer questions correctly; docs/questions.md is the durable reference
+  # for a maintainer instead.
+
+  - id: question-learning-sink
+    prompt: >
+      A question card has a learning: block and the boxholder answers it.
+      Where does the confirmed belief actually get written down, and what
+      marks it as coming directly from the boxholder rather than an
+      inference?
+    expected_level: knows_directly
+    watch_for: >
+      Names learning.sink (guide/briefing/personality) as the destination,
+      written by the follow-up job created when the question is answered,
+      tagged source: user-stated (the strongest evidence tier).
+    correct_contains: ["user-stated"]
+    tags: [questions, learning]
+
+  - id: question-ask-decision-rule
+    prompt: >
+      You're running as a background job (not a chat) and you hit an
+      ambiguity you genuinely can't resolve on your own. What do you do, and
+      what do you check before asking?
+    expected_level: knows_directly
+    watch_for: >
+      Says to finish by creating a question card (not guess past the
+      ambiguity), declaring learning: when the destination is known; and
+      says to check box/questions/ first — including answered/dismissed/
+      expired cards, not just pending ones — before asking something that
+      may already have been asked.
+    correct_contains_any: ["learning", "box/questions"]
+    tags: [questions]
+
+  - id: question-dismissed-expired-meaning
+    prompt: >
+      What's the difference between a dismissed question and an expired one
+      — and once a question is dismissed or expired, can it still be
+      answered?
+    expected_level: knows_directly
+    watch_for: >
+      Dismissed = the boxholder declined to answer it (a Dismiss action);
+      expired = aged out by the sweep without an answer (default 30 days
+      pending, overridable via expires-after). Both are non-closing states —
+      the agent should say either remains answerable later; expiry only
+      demotes visibility, never auto-answers.
+    correct_contains: ["answerable"]
+    tags: [questions]
 
   - id: guide-vs-procedure
     prompt: "What's the difference between a guide card and a procedure card?"

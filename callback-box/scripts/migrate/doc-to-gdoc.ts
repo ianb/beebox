@@ -15,6 +15,7 @@
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
+import { errorMessage, errnoCode } from "../../src/lib/error-guards.js";
 
 async function findDocCards(root: string): Promise<string[]> {
   const out: string[] = [];
@@ -23,8 +24,7 @@ async function findDocCards(root: string): Promise<string[]> {
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
+      if (errnoCode(e) === "ENOENT") return;
       throw e;
     }
     for (const entry of entries) {
@@ -122,7 +122,7 @@ async function main(): Promise<void> {
         console.log(`  skipped ${relative(absRoot, f)} (generic doc, not a Google Doc)`);
       }
     } catch (e) {
-      failed.push({ file: f, error: (e as Error).message });
+      failed.push({ file: f, error: errorMessage(e) });
     }
   }
   console.log(

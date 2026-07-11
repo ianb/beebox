@@ -1,11 +1,13 @@
 /**
  * Answer command - Answer a pending question.
  *
- * This is the core logic shared by both CLI and web API.
+ * This is the core logic shared by both CLI and web API. The status change,
+ * the answered-card write, and the follow-up-job write all land in ONE guarded,
+ * atomic commit (see `question-transition.ts`).
  */
 
 import * as path from "node:path";
-import * as fs from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { renderFrontmatterBlock, splitCardContent } from "../../cards/index.js";
 import { z } from "zod";
 import {
@@ -14,105 +16,63 @@ import {
   type CommandContext,
   type CommandResult,
 } from "../command-runner.js";
-import { boxPath, isCardFile } from "../../lib/paths.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { stageAndCommitPaths } from "../../lib/git.js";
-import { withCardLock } from "../../lib/card-lock.js";
-import { cardFields, parseCardText } from "../card-io.js";
-import { createCardSchemaMap } from "../../schemas/registry.js";
-import { type QuestionFields, QuestionSchema } from "../../schemas/question.js";
+import { assertNever } from "../../lib/invariant.js";
+import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
-import { errorMessage } from "../../lib/error-guards.js";
+import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
+
+const AnswerVia = z.enum(["web", "cli"]);
+type AnswerViaValue = z.infer<typeof AnswerVia>;
 
 const AnswerArgsSchema = z.object({
   question: z.string().optional(),
   answer: z.string().optional(),
   selectedId: z.string().optional(),
-  via: z.enum(["web", "cli", "api"]).optional(),
+  // Validated here (a Zod enum) rather than cast at the write site — a junk
+  // `via` is rejected at the dispatch boundary, not silently recorded.
+  via: AnswerVia.optional(),
 });
 export type AnswerArgs = z.infer<typeof AnswerArgsSchema>;
 
 /**
- * Load, parse, and validate the question card at the given path.
- * Returns either the parsed fields or a failure result to short-circuit on.
+ * The normalized products of resolving a raw answer against a question:
+ * - `answerText` → the card's `answer.text`;
+ * - `selectedId` → the card's `answer.selected`;
+ * - `jobAnswer`  → the follow-up job's `answer` (may fold a confirm decision
+ *   and its note together so the follow-up agent sees both).
  */
-async function loadPendingQuestion(
-  fullPath: string,
-  questionRef: string
-): Promise<
-  { ok: true; fields: QuestionFields; content: string } | { ok: false; result: CommandResult }
-> {
-  let content: string;
-  try {
-    content = await fs.readFile(fullPath, "utf-8");
-  } catch (e) {
-    console.warn(`Could not load card ${fullPath}:`, e);
-    return {
-      ok: false,
-      result: { success: false, error: `Could not load card: ${questionRef}` },
-    };
-  }
-
-  let fields: QuestionFields;
-  try {
-    const card = parseCardText(content, {
-      source: fullPath,
-      schemas: await createCardSchemaMap(),
-    });
-    if (card.schema.type !== "question") {
-      return {
-        ok: false,
-        result: { success: false, error: `Not a question card (got ${card.schema.type})` },
-      };
-    }
-    fields = cardFields(card, QuestionSchema);
-  } catch (err) {
-    return {
-      ok: false,
-      result: {
-        success: false,
-        error: `Could not parse question: ${errorMessage(err)}`,
-      },
-    };
-  }
-
-  if (fields.status !== "pending") {
-    return {
-      ok: false,
-      result: {
-        success: false,
-        error: `Question is not pending (status: ${fields.status})`,
-      },
-    };
-  }
-
-  return { ok: true, fields, content };
+interface ResolvedAnswer {
+  answerText: string;
+  selectedId: string | undefined;
+  jobAnswer: string;
 }
+
+type ResolveResult = ({ ok: true } & ResolvedAnswer) | { ok: false; result: CommandResult };
 
 /**
  * Resolve the raw answer/selectedId against a select-type question's options.
- * Returns the normalized answer/selection or a failure result.
  */
 function resolveSelectAnswer(
   rawAnswer: string,
   questionOptions: QuestionFields["input"]["options"] & object
-):
-  | { ok: true; finalAnswer: string; selectedId: string | undefined }
-  | { ok: false; result: CommandResult } {
+): ResolveResult {
+  // Label match takes precedence over the letter-index shortcut below: an
+  // option literally labelled "a" (or "b", etc.) must resolve to itself even
+  // when it isn't at the matching position, never to whatever option sits at
+  // that letter's index.
+  const match = questionOptions.find((o) => o.label.toLowerCase() === rawAnswer.toLowerCase());
+  if (match) {
+    return { ok: true, answerText: match.label, selectedId: match.id, jobAnswer: match.label };
+  }
+
   const optionIndex = (rawAnswer.codePointAt(0) ?? 0) - 97;
   if (rawAnswer.length === 1 && optionIndex >= 0 && optionIndex < questionOptions.length) {
     const option = questionOptions[optionIndex];
     if (option) {
-      return { ok: true, finalAnswer: option.label, selectedId: option.id };
+      return { ok: true, answerText: option.label, selectedId: option.id, jobAnswer: option.label };
     }
-    return { ok: true, finalAnswer: rawAnswer, selectedId: undefined };
-  }
-
-  const match = questionOptions.find(
-    (o) => o.label.toLowerCase() === rawAnswer.toLowerCase()
-  );
-  if (match) {
-    return { ok: true, finalAnswer: match.label, selectedId: match.id };
+    return { ok: true, answerText: rawAnswer, selectedId: undefined, jobAnswer: rawAnswer };
   }
 
   const optionsList = questionOptions
@@ -120,110 +80,116 @@ function resolveSelectAnswer(
     .join("\n");
   return {
     ok: false,
-    result: {
-      success: false,
-      error: `Invalid option. Available options:\n${optionsList}`,
-    },
+    result: { success: false, error: `Invalid option. Available options:\n${optionsList}` },
   };
 }
 
 /**
- * Resolve the raw answer for a confirm-type question to yes/no.
+ * Resolve a select question: by typed answer/letter, or by `selectedId` alone.
  */
-function resolveConfirmAnswer(
-  rawAnswer: string
-):
-  | { ok: true; finalAnswer: string; selectedId: string }
-  | { ok: false; result: CommandResult } {
-  const normalized = rawAnswer.toLowerCase();
+function resolveSelect(
+  args: { answer: string | undefined; selectedId: string | undefined },
+  questionOptions: QuestionFields["input"]["options"] & object
+): ResolveResult {
+  // A typed answer (a label or a letter) takes precedence; the frontend form
+  // sends the chosen option's label as `answer`, which resolves here.
+  if (args.answer !== undefined) {
+    return resolveSelectAnswer(args.answer, questionOptions);
+  }
+  // A select answered by `selectedId` alone — a direct API/CLI path (not the
+  // web form, which sends the label as `answer`). Resolve the id to its label
+  // so the recorded answer and the follow-up job carry the label, not an id.
+  const option = questionOptions.find((o) => o.id === args.selectedId);
+  if (!option) {
+    return {
+      ok: false,
+      result: { success: false, error: `Unknown option id: ${args.selectedId ?? ""}` },
+    };
+  }
+  return { ok: true, answerText: option.label, selectedId: option.id, jobAnswer: option.label };
+}
+
+/**
+ * Resolve a confirm question. The new UI path sends `selectedId: "yes" | "no"`
+ * directly with an optional free-text `answer` note; a typed free-text answer
+ * still normalizes to yes/no.
+ */
+function resolveConfirm(
+  args: { answer: string | undefined; selectedId: string | undefined }
+): ResolveResult {
+  if (args.selectedId !== undefined) {
+    if (args.selectedId !== "yes" && args.selectedId !== "no") {
+      return {
+        ok: false,
+        result: {
+          success: false,
+          error: `Confirm answer must be "yes" or "no" (got "${args.selectedId}")`,
+        },
+      };
+    }
+    const note = args.answer;
+    return {
+      ok: true,
+      answerText: note ?? args.selectedId,
+      selectedId: args.selectedId,
+      jobAnswer: note ? `${args.selectedId} (${note})` : args.selectedId,
+    };
+  }
+
+  const normalized = (args.answer ?? "").toLowerCase();
   if (["yes", "y", "true", "1"].includes(normalized)) {
-    return { ok: true, finalAnswer: "yes", selectedId: "yes" };
+    return { ok: true, answerText: "yes", selectedId: "yes", jobAnswer: "yes" };
   }
   if (["no", "n", "false", "0"].includes(normalized)) {
-    return { ok: true, finalAnswer: "no", selectedId: "no" };
+    return { ok: true, answerText: "no", selectedId: "no", jobAnswer: "no" };
   }
   return {
     ok: false,
-    result: {
-      success: false,
-      error: "Confirm questions require yes/no answer",
-    },
+    result: { success: false, error: "Confirm questions require a yes/no answer" },
   };
 }
 
 /**
- * Resolve the final answer text and selected option ID for a question,
- * applying select/confirm normalization. Returns a failure result on
- * invalid input.
+ * Resolve the final answer text, selected id, and follow-up-job answer for a
+ * question, applying select/confirm normalization.
  */
 function resolveAnswer(
   fields: QuestionFields,
   args: { answer: string | undefined; selectedId: string | undefined }
-):
-  | { ok: true; finalAnswer: string; selectedId: string | undefined }
-  | { ok: false; result: CommandResult } {
+): ResolveResult {
   const inputType = fields.input.type;
-  const questionOptions = fields.input.options ?? [];
-
-  // The caller's guard guarantees answer OR selectedId. In the branches that
-  // read `args.answer ?? ""`, answer is always present (no selectedId ⇒
-  // answer set) — the fallback only keeps the type honest.
-  if (inputType === "select" && !args.selectedId) {
-    return resolveSelectAnswer(args.answer ?? "", questionOptions);
-  }
-
-  // A select answered by selectedId alone (the web UI's normal path): resolve
-  // the id to its option label so the recorded answer text and the follow-up
-  // job carry the label, not an empty string. An unknown id is a caller
-  // error, reported like an invalid typed option.
-  if (inputType === "select" && args.answer === undefined) {
-    const option = questionOptions.find((o) => o.id === args.selectedId);
-    if (!option) {
+  switch (inputType) {
+    case "select":
+      return resolveSelect(args, fields.input.options ?? []);
+    case "confirm":
+      return resolveConfirm(args);
+    case "text":
       return {
-        ok: false,
-        result: { success: false, error: `Unknown option id: ${args.selectedId ?? ""}` },
+        ok: true,
+        answerText: args.answer ?? "",
+        selectedId: args.selectedId,
+        jobAnswer: args.answer ?? "",
       };
-    }
-    return { ok: true, finalAnswer: option.label, selectedId: option.id };
+    default:
+      return assertNever(inputType);
   }
-
-  if (inputType === "confirm") {
-    return resolveConfirmAnswer(args.answer ?? "");
-  }
-
-  return { ok: true, finalAnswer: args.answer ?? "", selectedId: args.selectedId };
 }
 
 /**
- * Create and commit a follow-up job card for an answered question.
- * Returns the box-relative path of the created job.
+ * Build a collision-proof follow-up job filename: the box time, the question's
+ * slug, and a short random suffix — so two questions answered in the same
+ * second (the old second-resolution name collided) still get distinct files.
  */
-async function createFollowupJob(
-  ctx: CommandContext,
-  params: { fields: QuestionFields; questionRef: string; finalAnswer: string }
-): Promise<string> {
-  const { fields, questionRef, finalAnswer } = params;
-  const timestamp = new Date()
-    .toISOString()
-    .replace(/[.:]/g, "-")
-    .slice(0, 19);
-  const jobFilename = `${timestamp}-question-followup.question-followup.job.card`;
-  const jobPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
-  const jobContent = createQuestionFollowupJobTemplate({
-    description: `Follow up on answered question: ${fields.prompt}`,
-    questionRef,
-    directive: fields.directive ?? "Process the answer to this question",
-    answer: finalAnswer,
-  });
-
-  await fs.mkdir(path.join(ctx.boxRoot, "box/jobs"), { recursive: true });
-  await fs.writeFile(jobPath, jobContent);
-  const jobRelative = path.relative(ctx.boxRoot, jobPath);
-  await stageAndCommitPaths(ctx.boxRoot, {
-    paths: [jobRelative],
-    message: "Create follow-up job for answered question",
-  });
-  return jobRelative;
+function buildJobFilename(boxRoot: string, questionRef: string): string {
+  const timestamp = getBoxTimeISO(boxRoot).replace(/[.:]/g, "-").slice(0, 19);
+  const slug =
+    path
+      .basename(questionRef, ".card")
+      .replace(/[^\w-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .toLowerCase() || "question";
+  const suffix = randomUUID().slice(0, 8);
+  return `${timestamp}-${slug}-${suffix}.question-followup.job.card`;
 }
 
 async function executeAnswer(
@@ -239,95 +205,102 @@ async function executeAnswer(
     return { success: false, error: "Answer or selectedId is required" };
   }
 
-  const via = answerArgs.via ?? "cli";
-
-  let fullPath: string;
-  if (path.isAbsolute(answerArgs.question)) {
-    fullPath = answerArgs.question;
-  } else {
-    fullPath = boxPath(ctx.boxRoot, answerArgs.question);
-  }
-
-  if (!isCardFile(fullPath)) {
-    return { success: false, error: "Path must be a card file (*.card)" };
-  }
-
-  // Narrowed once here so the withCardLock closure below (which loses the
-  // guard's narrowing across the function boundary) sees a plain string.
+  const via: AnswerViaValue = answerArgs.via ?? "cli";
   const question = answerArgs.question;
 
-  // Serialize the read-modify-write on the question card so two concurrent
-  // answers (e.g. web + CLI) can't both read the pending card and race their
-  // writes. The whole read-through-commit runs under the lock; the follow-up
-  // job below writes a different file and stays outside it.
-  const outcome = await withCardLock(
-    fullPath,
-    async (): Promise<
-      | { ok: false; result: CommandResult }
-      | { ok: true; relativePath: string; finalAnswer: string; selectedId?: string; fields: QuestionFields }
-    > => {
-      const loaded = await loadPendingQuestion(fullPath, question);
-      if (!loaded.ok) {
-        return { ok: false, result: loaded.result };
-      }
-      const { fields, content } = loaded;
+  const contained = resolveContainedQuestionPath(ctx.boxRoot, question);
+  if (!contained.ok) {
+    return { success: false, error: contained.error };
+  }
+  const { fullPath, relativePath } = contained;
+  let resolved: ResolvedAnswer | undefined;
+  let jobRelative: string | undefined;
 
-      const resolved = resolveAnswer(fields, {
+  const outcome = await withQuestionTransition({
+    ctx,
+    fullPath,
+    questionRef: question,
+    // Answering is allowed from every non-terminal status: expired and
+    // dismissed questions stay answerable; only `answered` is terminal.
+    allowedStatuses: ["pending", "expired", "dismissed"],
+    disallowedMessage: (status) =>
+      `Question is already answered (status: ${status}); an answered question is terminal`,
+    plan: async ({ fields, content }) => {
+      const r = resolveAnswer(fields, {
         answer: answerArgs.answer,
         selectedId: answerArgs.selectedId,
       });
-      if (!resolved.ok) {
-        return { ok: false, result: resolved.result };
-      }
-      const { finalAnswer, selectedId } = resolved;
+      if (!r.ok) return { ok: false, result: r.result };
+      resolved = r;
 
       fields.status = "answered";
       fields.answer = {
-        text: finalAnswer,
-        ...(selectedId !== undefined && { selected: selectedId }),
+        text: r.answerText,
+        ...(r.selectedId !== undefined && { selected: r.selectedId }),
       };
       fields["answered-at"] = getBoxTimeISO(ctx.boxRoot);
       fields["answered-via"] = via;
+      // Clear stale lifecycle bookkeeping from a prior expired/dismissed state:
+      // status is single, so an `answered` card must not carry `dismissed-at`
+      // or `expired-at` (the schema's coherence refinement enforces this).
+      delete fields["dismissed-at"];
+      delete fields["expired-at"];
 
       const split = splitCardContent(content);
-      await fs.writeFile(fullPath, renderFrontmatterBlock(fields, split.body));
+      const cardContent = renderFrontmatterBlock(fields, split.body);
 
-      const relativePath = path.relative(ctx.boxRoot, fullPath);
-      await stageAndCommitPaths(ctx.boxRoot, {
-        paths: [relativePath],
-        message: `Answer question: ${path.basename(question, ".card")}`,
-        trailers: {
-          "Answered-Via": via,
-        },
+      const jobFilename = buildJobFilename(ctx.boxRoot, relativePath);
+      const jobAbsPath = path.join(ctx.boxRoot, "box/jobs", jobFilename);
+      jobRelative = path.relative(ctx.boxRoot, jobAbsPath);
+      const jobContent = createQuestionFollowupJobTemplate({
+        description: `Follow up on answered question: ${fields.prompt}`,
+        questionRef: relativePath,
+        directive: fields.directive ?? "Process the answer to this question",
+        answer: r.jobAnswer,
+        ...(fields.learning !== undefined && { learning: fields.learning }),
       });
 
-      return { ok: true, relativePath, finalAnswer, ...(selectedId !== undefined && { selectedId }), fields };
+      return {
+        ok: true,
+        plan: {
+          // Job FIRST, then the card: the card's status flip is the commit
+          // point, so the follow-up job must already exist on disk before it
+          // (see applyAndCommit's write-order invariant). A crash between the
+          // two writes leaves job+pending-question (recoverable), never an
+          // answered card with no job.
+          writes: [
+            { absPath: jobAbsPath, content: jobContent },
+            { absPath: fullPath, content: cardContent },
+          ],
+          commit: {
+            message: `Answer question: ${path.basename(question, ".card")}`,
+            trailers: { "Answered-Via": via },
+          },
+        },
+      };
     },
-  );
+  });
   if (!outcome.ok) {
     return outcome.result;
   }
-  const { relativePath, finalAnswer, selectedId, fields } = outcome;
 
   ctx.writeLine(`Answered: ${relativePath}`);
-  ctx.writeLine(`  Answer: ${finalAnswer}`);
-  if (selectedId) {
-    ctx.writeLine(`  Selected: ${selectedId}`);
+  if (resolved) {
+    ctx.writeLine(`  Answer: ${resolved.answerText}`);
+    if (resolved.selectedId) {
+      ctx.writeLine(`  Selected: ${resolved.selectedId}`);
+    }
   }
-
-  const jobRelative = await createFollowupJob(ctx, {
-    fields,
-    questionRef: relativePath,
-    finalAnswer,
-  });
-  ctx.writeLine(`  Created follow-up job: ${jobRelative}`);
+  if (jobRelative) {
+    ctx.writeLine(`  Created follow-up job: ${jobRelative}`);
+  }
 
   return {
     success: true,
     data: {
       path: relativePath,
-      answer: finalAnswer,
-      selectedId,
+      answer: resolved?.answerText,
+      selectedId: resolved?.selectedId,
     },
   };
 }
@@ -356,7 +329,7 @@ registerCommand({
     },
     {
       name: "via",
-      description: "Answer source (e.g., 'cli', 'web')",
+      description: "Answer source (web or cli)",
       required: false,
       default: "cli",
       type: "string",

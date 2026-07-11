@@ -10,8 +10,10 @@
  * Core primitives live in api-core.ts and the chat surface in api-chat.ts;
  * both are re-exported here so callers keep importing from "./api".
  *
- * `CardInfo`/`HistoryCommit` are plain type exports (no transport), kept
- * here because components already import them from this path.
+ * `HistoryCommit` is a plain type export (no transport), kept here because
+ * components already import it from this path. (Question surfaces now derive
+ * their card type from the tRPC output — `RouterOutput["status"]["questions"]`
+ * — rather than a hand-written duplicate.)
  */
 
 export {
@@ -44,18 +46,6 @@ export {
 } from "./api-chat";
 
 // --- Types still imported by components ---
-
-export interface CardInfo {
-  path: string;
-  relativePath: string;
-  name: string;
-  type: string;
-  status?: string;
-  prompt?: string;
-  options?: string[];
-  /** Subdirectory within the parent dir (e.g., "email" for inbox/email/) */
-  subdir?: string;
-}
 
 export interface HistoryCommit {
   hash: string;

@@ -155,32 +155,45 @@ steps:
 
             ```
 
-            Then edit it:
+            Then edit its frontmatter (YAML, not XML — the card format is
+            frontmatter + markdown body):
 
-            ```xml
+            ```yaml
 
-            <question status="pending" answered-by="process-pages">
-              <memo>
-                Saved page: "Page Title" from example.com
-                Content appears to be: [your assessment]
-                [Brief summary of what the page contains]
-              </memo>
-              <context ref="box/inbox/pages-saved/Page.record.card" />
-              <prompt>What would you like to do with this page?</prompt>
-              <input type="select">
-                <option id="recipe">Convert to recipe</option>
-                <option id="reference">Save as reference</option>
-                <option id="read-later">Add to reading list</option>
-                <option id="trash">Trash it</option>
-              </input>
-            </question>
+            status: pending
+            memo: >-
+              Saved page: "Page Title" from example.com.
+              Content appears to be: [your assessment].
+              [Brief summary of what the page contains]
+            prompt: What would you like to do with this page?
+            input:
+              type: select
+              options:
+                - {id: recipe, label: Convert to recipe}
+                - {id: reference, label: Save as reference}
+                - {id: read-later, label: Add to reading list}
+                - {id: trash, label: Trash it}
+            directive: >-
+              Route box/inbox/pages-saved/Page.record.card per the selected
+              option (convert to recipe.card, move to store/catalogs/,
+              move to box/pool/reading/, or cb rm it).
+            context:
+              - ref: box/inbox/pages-saved/Page.record.card
 
             ```
 
 
-            Adjust the options based on what makes sense for the content.
+            Adjust the options based on what makes sense for the content, and
+            always set `directive:` — it's what the follow-up job does with
+            the answer.
 
-            Include enough context in <memo> that the user can decide without
+            If the page's category is genuinely reusable (not a one-off — e.g.
+            "pages from this site are always recipes"), also set `learning:
+            {sink: guide, proposal: ...}` naming the rule, so a confirmed
+            answer teaches the intake guide instead of only placing this one
+            page.
+
+            Include enough context in `memo:` that the user can decide without
 
             re-reading the whole page.
 

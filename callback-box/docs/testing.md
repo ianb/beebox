@@ -173,7 +173,6 @@ printCalls(tg.callLog);
 | Google Calendar | `createFakeGoogleCalendar()` | `{ calendars?, events? }` | `.calendars[]`, `.events[]` |
 | OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
 | IMAP | `createFakeImap()` | `{ messages? }` | `.connected`, `.lockedMailbox` |
-| Capture Relay | `createFakeCaptureRelay()` | `{ sessions?, manifests? }` | `.sessions[]` |
 | Google Auth | `createFakeGoogleAuth()` | `{ accessToken? }` | — |
 
 ### Connector testing pattern
@@ -542,6 +541,17 @@ against `/fakestream`:
 The stub is gated purely on the message prefix, so it ships harmlessly — a real
 message never starts with `/fakestream`.
 
+## Tours (rendering + a11y review — not a gate)
+
+Scripted browser walks (`bin/tour <name>`, scripts in `test/tours/`)
+that produce review artifacts: desktop+mobile screenshots, AX-tree
+snapshots, axe-core reports, and soft-assertion findings per
+checkpoint. Deliberately ungated — findings never fail an exit code and
+artifacts are gitignored; they're judgment material for a human or
+agent reviewing UI work, not pass/fail facts. Full reference —
+running, reviewing artifacts, writing conventions, and when NOT to use
+them: [tours.md](tours.md).
+
 ## Choosing the Right Approach
 
 | Question | Approach |
@@ -552,6 +562,8 @@ message never starts with `/fakestream`.
 | Did the CLI tools help or hinder the agent? | Session critique |
 | Does a card validate after agent edits? | Card validator (automatic) |
 | Does the streaming UI scroll/reflow correctly? | Frontend dev stub (`/fakestream` + `bin/browse`) |
+| Does this page render sane at both viewports / pass axe? | Tour (`bin/tour <name>` — see [tours.md](tours.md); review instrument, not a gate) |
+| Is every state of this component reachable and right? | Dev harness route (`/dev/…`, real components over injected fakes) |
 
 **Overlap:** Some things could be tested at multiple levels. Prefer the lowest level that catches the bug:
 - A template generating bad XML → unit test (fast, deterministic)

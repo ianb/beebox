@@ -28,6 +28,13 @@ import { mkdtemp, mkdir, readFile, writeFile, readdir, stat, rm } from "node:fs/
 import * as os from "node:os";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { isRecord } from "../src/lib/is-record.js";
+
+/** Extract a `version` string from a parsed `package.json`-shaped value, throwing on anything else. */
+function requireVersion(parsed: unknown): string {
+  if (isRecord(parsed) && typeof parsed["version"] === "string") return parsed["version"];
+  throw new MissingPackageVersionError();
+}
 
 const BUILT_DEPENDENCIES = ["better-sqlite3", "esbuild", "@google/genai", "protobufjs"];
 
@@ -53,6 +60,13 @@ class SmokeStepError extends Error {
     this.name = "SmokeStepError";
     this.label = label;
     this.detail = detail;
+  }
+}
+
+class MissingPackageVersionError extends Error {
+  constructor() {
+    super("Expected a package.json body with a string `version` field");
+    this.name = "MissingPackageVersionError";
   }
 }
 
@@ -143,10 +157,11 @@ async function deriveSecondVersionTarball(args: { firstTarball: string; scratchD
   });
 
   const pkgJsonPath = path.join(extractDir, "package/package.json");
-  const pkg = JSON.parse(await readFile(pkgJsonPath, "utf-8")) as { version: string };
-  const secondVersion = bumpPatch(pkg.version);
-  pkg.version = secondVersion;
-  await writeFile(pkgJsonPath, JSON.stringify(pkg, null, 2) + "\n");
+  const parsedPkg: unknown = JSON.parse(await readFile(pkgJsonPath, "utf-8"));
+  if (!isRecord(parsedPkg)) throw new MissingPackageVersionError();
+  const secondVersion = bumpPatch(requireVersion(parsedPkg));
+  parsedPkg["version"] = secondVersion;
+  await writeFile(pkgJsonPath, JSON.stringify(parsedPkg, null, 2) + "\n");
 
   const secondTarball = path.join(args.scratchDir, "callback-box-" + secondVersion + ".tgz");
   await step("repack as v" + secondVersion, {
@@ -195,7 +210,7 @@ async function scaffoldBox(args: { tarball: string; boxDir: string }): Promise<v
 
 async function readInstalledVersion(boxDir: string): Promise<string> {
   const raw = await readFile(path.join(boxDir, "node_modules/callback-box/package.json"), "utf-8");
-  return (JSON.parse(raw) as { version: string }).version;
+  return requireVersion(JSON.parse(raw));
 }
 
 async function main(): Promise<void> {

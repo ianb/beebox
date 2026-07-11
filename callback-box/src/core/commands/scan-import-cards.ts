@@ -1,7 +1,7 @@
 /**
  * Card emission for the scan-import photo flow.
  *
- * Three cohesive jobs live here, all operating on the session's attach scope:
+ * Three cohesive jobs live here:
  *   - `emitPhotoBundle` — write a photo's image card (renaming the photo and
  *     any back JPEG into the card's attach scope), apply the Gemini analysis,
  *     and emit a review question when the bundle is flagged.
@@ -9,6 +9,12 @@
  *     a text question prompting the human to place or discard it.
  *   - `applyBundleAnalysisToCard` — mutate a freshly-written image card with
  *     the analyzed description, text blocks, rotation, and subject bbox.
+ *
+ * Photo/JPEG artifacts stay in the session's attach scope, but question cards
+ * land in `box/questions/` (the one location `getSystemState` scans for
+ * questions — see `docs/box-layout.md`), named with a session-slug prefix to
+ * avoid collisions across sessions, with a `context:` ref back into the
+ * attach scope.
  *
  * Each emitter pushes onto the caller's `filesToStage`/`questionPaths` arrays
  * and (for bundles) the `imageRefs` array, mirroring the original inline loops
@@ -20,15 +26,34 @@ import * as path from "node:path";
 import { parseCardText, serializeCardText } from "../card-io.js";
 import { invariant } from "../../lib/invariant.js";
 import { type CardSchema } from "../../cards/index.js";
+import { getBoxDir } from "../../lib/paths.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
 import type { PhotoBundle, OrphanBack, ResolvedPage } from "./scan-import-helpers.js";
+
+/** Ensure `box/questions/` exists and return its absolute path. */
+async function questionsDir(boxRoot: string): Promise<string> {
+  const dir = getBoxDir(boxRoot, "questions");
+  await fs.mkdir(dir, { recursive: true });
+  return dir;
+}
+
+/**
+ * A short, filename-safe slug identifying the capture session, so multiple
+ * scan-import runs don't collide when their question cards land together in
+ * `box/questions/` (unlike the old per-session attach scope, which never
+ * collided across sessions by construction).
+ */
+function sessionSlug(sessionAttachRelDir: string): string {
+  return path.basename(sessionAttachRelDir).replace(/\.attach$/, "");
+}
 
 interface PhotoBundleEmitContext {
   cardSchemas: Map<string, CardSchema>;
   index: number;
   bundle: PhotoBundle;
   startedAt: string;
+  boxRoot: string;
   sessionAttachAbsDir: string;
   sessionAttachRelDir: string;
   archivePages: string[];
@@ -55,6 +80,7 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
     index,
     bundle,
     startedAt,
+    boxRoot,
     sessionAttachAbsDir,
     sessionAttachRelDir,
     archivePages,
@@ -104,29 +130,34 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
       memo,
       prompt: `Review ${photoBasename}: confirm description and back-of-photo text are accurate.`,
       directive: directiveParts.join(" "),
+      askedAt: startedAt,
+      context: [{ ref: `${sessionAttachRelDir}/${cardFilename}` }],
     });
-    const questionFilename = `${photoBasename}.review.question.card`;
-    const questionPath = path.join(sessionAttachAbsDir, questionFilename);
+    const questionFilename = `${sessionSlug(sessionAttachRelDir)}-${photoBasename}.review.question.card`;
+    const questionPath = path.join(await questionsDir(boxRoot), questionFilename);
     await fs.writeFile(questionPath, questionContent);
-    filesToStage.push(`${sessionAttachRelDir}/${questionFilename}`);
-    questionPaths.push(`${sessionAttachRelDir}/${questionFilename}`);
+    const questionRelPath = path.relative(boxRoot, questionPath);
+    filesToStage.push(questionRelPath);
+    questionPaths.push(questionRelPath);
   }
 }
 
 interface LooseQuestionContext {
   index: number;
+  boxRoot: string;
   sessionAttachAbsDir: string;
   sessionAttachRelDir: string;
   archivePages: string[];
   filesToStage: string[];
   questionPaths: string[];
+  askedAt: string;
 }
 
 export async function emitOrphanBackQuestion(
   orphan: OrphanBack,
   looseCtx: LooseQuestionContext
 ): Promise<void> {
-  const { index, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths } = looseCtx;
+  const { index, boxRoot, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths, askedAt } = looseCtx;
   const idx = String(index + 1).padStart(3, "0");
   const basename = `orphan-back-${idx}`;
   const filename = `${basename}.jpg`;
@@ -142,19 +173,22 @@ export async function emitOrphanBackQuestion(
     memo,
     prompt: `Which photo does ${filename} belong with, or should it be discarded?`,
     directive: `If it belongs with a photo in this session, attach by appending text blocks to that image card. Otherwise delete ${sessionAttachRelDir}/${filename}.`,
+    askedAt,
+    context: [{ ref: `${sessionAttachRelDir}/${filename}` }],
   });
-  const questionFilename = `${basename}.question.card`;
-  const questionPath = path.join(sessionAttachAbsDir, questionFilename);
+  const questionFilename = `${sessionSlug(sessionAttachRelDir)}-${basename}.question.card`;
+  const questionPath = path.join(await questionsDir(boxRoot), questionFilename);
   await fs.writeFile(questionPath, questionContent);
-  filesToStage.push(`${sessionAttachRelDir}/${questionFilename}`);
-  questionPaths.push(`${sessionAttachRelDir}/${questionFilename}`);
+  const questionRelPath = path.relative(boxRoot, questionPath);
+  filesToStage.push(questionRelPath);
+  questionPaths.push(questionRelPath);
 }
 
 export async function emitUnsureQuestion(
   page: ResolvedPage,
   looseCtx: LooseQuestionContext
 ): Promise<void> {
-  const { index, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths } = looseCtx;
+  const { index, boxRoot, sessionAttachAbsDir, sessionAttachRelDir, archivePages, filesToStage, questionPaths, askedAt } = looseCtx;
   const idx = String(index + 1).padStart(3, "0");
   const basename = `unsure-${idx}`;
   const filename = `${basename}.jpg`;
@@ -168,12 +202,15 @@ export async function emitUnsureQuestion(
     memo,
     prompt: `What is ${filename}? (photo, back-of-photo, or trash)`,
     directive: `If a photo, create an image card. If a back, attach to the relevant photo card. Otherwise delete ${sessionAttachRelDir}/${filename}.`,
+    askedAt,
+    context: [{ ref: `${sessionAttachRelDir}/${filename}` }],
   });
-  const questionFilename = `${basename}.question.card`;
-  const questionPath = path.join(sessionAttachAbsDir, questionFilename);
+  const questionFilename = `${sessionSlug(sessionAttachRelDir)}-${basename}.question.card`;
+  const questionPath = path.join(await questionsDir(boxRoot), questionFilename);
   await fs.writeFile(questionPath, questionContent);
-  filesToStage.push(`${sessionAttachRelDir}/${questionFilename}`);
-  questionPaths.push(`${sessionAttachRelDir}/${questionFilename}`);
+  const questionRelPath = path.relative(boxRoot, questionPath);
+  filesToStage.push(questionRelPath);
+  questionPaths.push(questionRelPath);
 }
 
 async function applyBundleAnalysisToCard(

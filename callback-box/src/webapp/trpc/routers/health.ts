@@ -17,6 +17,7 @@ import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShapeOrLegacyFallback } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
+import { engineHealthChecks } from "./health-engine.js";
 
 export interface HealthCheck {
   name: string;
@@ -289,6 +290,8 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
       severity: "error",
     });
   }
+
+  checks.push(...(await engineHealthChecks(boxRoot)));
 
   return checks;
 }

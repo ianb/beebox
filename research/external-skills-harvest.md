@@ -200,7 +200,7 @@ one-line why). Mark status as you go.
 - [ ] **F3 — write-new: docs-index skills.** *(Boxholder idea.)* Skills that,
   when invoked, pull in a *relevant index of docs* rather than the full text —
   a lazy, task-triggered pointer into `docs/`. Relates to the
-  [loading-eagerness axis](../../../issues/2026-06-17-loading-eagerness-axis.md)
+  [loading-eagerness axis](../../../issues/exploration/2026-06-17-loading-eagerness-axis.md)
   and E2. Decide: design the pattern (one index skill? per
   domain? generated from the doc tree?). Likely `idea` → small design first.
 
@@ -211,7 +211,7 @@ one-line why). Mark status as you go.
   prompts given to boxes** (box `CLAUDE.md`, nested CLAUDE.md, `.claude/rules/`,
   schema `instructions`, box docs) — not the generic agent-context skill the
   source is. Built `.claude/skills/cb-context/SKILL.md` around the **loading-
-  eagerness tier router** ([issues/2026-06-17-loading-eagerness-axis.md](../../../issues/2026-06-17-loading-eagerness-axis.md) — which
+  eagerness tier router** ([issues/exploration/2026-06-17-loading-eagerness-axis.md](../../../issues/exploration/2026-06-17-loading-eagerness-axis.md) — which
   explicitly names a router as "the real artifact worth building"): a table
   mapping the *shape* of a durable instruction → the right tier (always-true →
   lean root CLAUDE.md; when-working-here → nested CLAUDE.md / path rule;

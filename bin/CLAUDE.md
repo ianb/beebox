@@ -15,7 +15,7 @@ is absolute). Fail-closed — `ALLOWED_NAMES` lists the hardcoded deploy service
 (`callback`, `cb-test1`) and placeholders (`me`, `you`, `user`, `x`) that
 aren't personal-identity leaks; any other username trips it. Fix a hit with a repo-relative or
 `~/…` path, not by widening the allowlist. Background:
-`issues/closed/2026-07-05-report-workflows-emit-relative-paths.md`.
+`issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md`.
 
 ## Commit blocklist (`commit-blocklist-check.ts`)
 

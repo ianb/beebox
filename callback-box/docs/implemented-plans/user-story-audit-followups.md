@@ -58,11 +58,11 @@ every comment is traceable back to its story.
     card-shape examples refreshed to YAML; build deferred.
   - **D8 (Docs/Sheets comments → sidecar)** — implemented, entry retired. **D9
     (Drive mounting/browsing)** — parked as
-    `/issues/2026-06-26-drive-mounting-file-browsing-ui.md`.
-  - **Remaining:** D1 questions overhaul (open, `/issues/2026-06-26-questions-end-to-end-d1.md`),
+    `/issues/features/2026-06-26-drive-mounting-file-browsing-ui.md`.
+  - **Remaining:** D1 questions overhaul (open, `/issues/features/2026-06-26-questions-end-to-end-d1.md`),
     D2/D5/D6/D10 all done (see `/issues/closed/`), D3 frontmatter write (WONTFIX,
     story deleted), plus deferred [69] model-switch verification (open,
-    `/issues/2026-06-26-model-switch-verification-deferred.md`).
+    `/issues/code-quality/2026-06-26-model-switch-verification-deferred.md`).
 
 ## Summary
 

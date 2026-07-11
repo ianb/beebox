@@ -4,8 +4,10 @@
  * Responsibilities:
  *
  *   1. Route fresh top-level `box/inbox/*` cards into `box/inbox/intake/`.
- *      Connectors and the capture UI currently drop items at the top of
- *      `box/inbox/`; the router pulls them into the pipeline. Anything in
+ *      Connectors and `cb scan-import` drop items at the top of
+ *      `box/inbox/`; the router pulls them into the pipeline. (Composer
+ *      captures don't land here — they deliver to chat via
+ *      `src/core/capture/`.) Anything in
  *      a reserved subdirectory (intake/, staged/, triaged/, unhandled/,
  *      etc.) stays put.
  *

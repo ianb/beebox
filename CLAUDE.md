@@ -7,7 +7,7 @@ Four projects live in one git repository (previously independent repos, merged 2
 - **agent-doctest/** — Doctest framework extracted from callback-box.
 - **personal-vibe-check/** — The shared ESLint/TS/Prettier preset (`@ianbicking/personal-vibe-check`), consumed by the other packages via `workspace:*`. Edit it HERE — the old standalone checkout at `~/src/personal-vibe-check` is stale and no longer what anything resolves to.
 
-Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `dev/` — per-worktree pages served at `/<worktree>/dev/`; `bin/` — the dev router and worktree tooling (see `bin/CLAUDE.md`); `issues/` — dated task/decision notes (`YYYY-MM-DD-slug.md`), the parking lot for known problems that aren't scheduled work yet.
+Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `dev/` — per-worktree pages served at `/<worktree>/dev/`; `bin/` — the dev router and worktree tooling (see `bin/CLAUDE.md`); `issues/` — the task/idea queue, sorted into category subdirs (`bugs/`, `features/`, `code-quality/`, `docs-and-chores/`, `decisions/`, `exploration/`; `closed/<category>/` for done), one `YYYY-MM-DD-slug.md` per item, title in frontmatter — the parking lot for known problems that aren't scheduled work yet (conventions in `issues/CLAUDE.md`).
 
 **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md). `~/src/boxes/test1/` is the primary test box; each worktree gets its own clone at `~/src/box-worktrees/<name>/test1/`.
 
@@ -25,7 +25,7 @@ Also: `research/` — competitive/external-tool reviews (see its CLAUDE.md); `de
 
 **Husky lives at the monorepo root.** One `.husky/` directory holds all git hooks (pre-commit dispatches per-subproject; post-commit handles deploy + image-backup cleanup; the rest wrap git-lfs); subprojects opt out via `prepare: ":"`. Root `pnpm install` wires up `core.hooksPath`.
 
-**Issue queue — `issues/` at the repo root.** One markdown file per idea/issue; conventions in `issues/CLAUDE.md`. If you notice something worth keeping that's outside your current task, file it there (your discretion) rather than fixing it in place or letting it drop. Items are tensions, not mandates — being filed is not license to implement.
+**Issue queue — `issues/` at the repo root.** One markdown file per idea/issue, sorted into category subdirs (`bugs/`, `features/`, `code-quality/`, `docs-and-chores/`, `decisions/`, `exploration/`); conventions in `issues/CLAUDE.md`. If you notice something worth keeping that's outside your current task, file it there (your discretion) rather than fixing it in place or letting it drop. Items are tensions, not mandates — being filed is not license to implement.
 
 **Subagents are your discretion.** Start subagents (the Agent tool) whenever it helps — parallel or independent work, fan-out searches, or keeping a noisy sub-task out of the main thread — you don't need to ask first. Choose the subagent's model to fit the task; Sonnet 5 is good at subagent work.
 

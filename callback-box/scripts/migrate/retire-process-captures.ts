@@ -52,6 +52,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { pathToFileURL } from "node:url";
+import { errnoCode } from "../../src/lib/error-guards.js";
 
 const PROCEDURE_REL = "config/procedures/process-captures.procedure.card";
 const TRIGGER_REL = "config/schedules/process-captures.scheduled-script.card";
@@ -84,7 +85,7 @@ async function readFileOrNull(absPath: string): Promise<string | null> {
   try {
     return await fs.readFile(absPath, "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
 }

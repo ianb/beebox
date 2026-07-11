@@ -3,7 +3,7 @@
 > **Status: implemented and merged** (Tracks A–E). All doctests + the full suite
 > pass; the Admin "Enable notifications" UI is browser-verified on desktop.
 > Remaining verification + the prod VAPID-keys ops step are tracked in
-> `issues/2026-07-04-web-push-followup-testing.md` — the feature stays dormant in
+> `issues/code-quality/2026-07-04-web-push-followup-testing.md` — the feature stays dormant in
 > prod until those keys are set.
 
 Add W3C Web Push so the box can reach the boxholder on phone (incl. iOS) and

@@ -119,6 +119,8 @@ There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-
 
 When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, frontend.md, `.claude/rules/`, or `docs/` so the next agent doesn't repeat the mistake. One-line additions preferred.
 
+The same duty applies at creation time: **new infrastructure isn't done until it's discoverable** — a tool, framework, or convention you build gets a doc (or at minimum a pointer in the guides table below) in the same change, at the altitude its importance warrants. Undocumented infrastructure reads as not existing (this happened with tours: built 2026-05, discovered by the boxholder 2026-07).
+
 ## Guides
 
 | Topic | Location |
@@ -128,6 +130,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Design rationale | `docs/design/README.md` |
 | Card examples | `docs/cards-as-markdown.md` (format), `docs/adding-schemas.md` (worked example), `src/schemas/templates*.ts` (template registry) |
 | Testing philosophy | `docs/testing.md` |
+| Tours (browser walks for UI/a11y review) | `docs/tours.md` |
 | Doctest syntax | `.claude/rules/doctest.md`; deeper reference in the monorepo's `agent-doctest/docs/` |
 | Adding a card type | `docs/adding-schemas.md` |
 | Card format reference | `docs/cards-as-markdown.md` |
@@ -142,6 +145,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Agent-set chat timers (`<schedule>` tag) | `docs/chat-schedules.md` |
 | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
 | Triage pipeline design | `docs/triage.md` |
+| Questions subsystem design | `docs/questions.md` |
 | Deployment | `deploy/README.md` |
 | Server operations | `docs/server-operations.md` |
 | Adding a box | `docs/adding-a-box.md` |

@@ -32,21 +32,29 @@ function matchFor(base: string, hrefPath: string): (p: string) => boolean {
   return (p) => p === full || p.startsWith(`${full}?`) || p.startsWith(`${full}/`);
 }
 
-function hrefLink(input: { base: string; hrefPath: string; label?: string; freshCount: number }): NavLink {
-  const { base, hrefPath, label, freshCount } = input;
+function hrefLink(input: { base: string; hrefPath: string; label?: string; badgeCounts: Map<string, number> }): NavLink {
+  const { base, hrefPath, label, badgeCounts } = input;
   const link: NavLink = {
     to: hrefPath === "/" ? `${base}/` : `${base}${hrefPath}`,
     label: label ?? navRouteFor(hrefPath)?.label ?? hrefPath,
     match: matchFor(base, hrefPath),
   };
-  // The freshness badge is bound to the Chats route for now; it becomes the
-  // target card's own concern once card types grow a nav form
-  // (docs/plans/interface-as-cards.md).
-  if (hrefPath === "/chats") link.badge = freshCount;
+  // Route-bound badges (chat freshness, pending questions) until card types
+  // grow a nav form of their own (docs/plans/interface-as-cards.md).
+  const badge = badgeCounts.get(hrefPath);
+  if (badge !== undefined) link.badge = badge;
   return link;
 }
 
-export function useNavLinks({ base, freshCount }: { base: string; freshCount: number }): NavLink[] {
+export function useNavLinks({
+  base,
+  freshCount,
+  pendingQuestions,
+}: {
+  base: string;
+  freshCount: number;
+  pendingQuestions: number;
+}): NavLink[] {
   const utils = trpc.useUtils();
   const navQuery = trpc.nav.get.useQuery();
 
@@ -61,15 +69,17 @@ export function useNavLinks({ base, freshCount }: { base: string; freshCount: nu
     ),
   });
 
+  const badgeCounts = new Map<string, number>([["/chats", freshCount], ["/questions", pendingQuestions]]);
+
   const nav = navQuery.data;
   if (nav === undefined || nav.status !== "ok") {
     // Absent, invalid, or still loading — the builtin fallback nav.
-    return DEFAULT_NAV_HREFS.map((hrefPath) => hrefLink({ base, hrefPath, freshCount }));
+    return DEFAULT_NAV_HREFS.map((hrefPath) => hrefLink({ base, hrefPath, badgeCounts }));
   }
 
   return nav.entries.map((entry) => {
     if (entry.kind === "href") {
-      return hrefLink({ base, hrefPath: entry.target, label: entry.label, freshCount });
+      return hrefLink({ base, hrefPath: entry.target, label: entry.label, badgeCounts });
     }
     const to = `${base}/browse/${entry.target}`;
     return {

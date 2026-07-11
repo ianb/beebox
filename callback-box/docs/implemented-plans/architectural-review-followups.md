@@ -3,7 +3,7 @@
 **Status:** implemented 2026-07 — all eight tracks landed on
 `worktree-architectural-review` and merged to `main`; full suite green (3484
 pass at merge; one known flake filed as
-[`issues/2026-07-09-flaky-child-output-log-doctest.md`](../../../issues/2026-07-09-flaky-child-output-log-doctest.md)).
+[`issues/bugs/2026-07-09-flaky-child-output-log-doctest.md`](../../../issues/bugs/2026-07-09-flaky-child-output-log-doctest.md)).
 
 Second round of the architectural review: implementing the follow-up issues
 the first round filed (`issues/2026-07-0[56]-*.md`), under the same
@@ -29,7 +29,7 @@ composition question.
 | Decision | Answer |
 |---|---|
 | Deferred lint rules | Adopt all four: `jsx-a11y` (minus `no-autofocus`), `return-await` (routes excluded), `no-non-null-assertion` burn-down, `no-unnecessary-condition` burn-down. `strict-boolean-expressions` and `promise-function-async`: never (as recommended). |
-| Router refactor | **Phased.** Conservative extraction now (Track 8); the full `WorktreeState` formalization stays open in `issues/2026-07-06-architectural-review-open-decisions.md` — do NOT close that item. |
+| Router refactor | **Phased.** Conservative extraction now (Track 8); the full `WorktreeState` formalization stays open in `issues/decisions/2026-07-06-architectural-review-open-decisions.md` — do NOT close that item. |
 | Thread-session SDK narrowing | **Converge** with ChatSession's adapter. Rationale: message-handling bugs have been confusing/hard to reproduce; make the flow explicit so problems surface (Track 6). |
 | Frontend import boundary, clerk↔server contract, barrels, markdoc walkers, `.ts` as-ban | Not this round — stay parked in the open-decisions issue. |
 | Event-bus durability | Persisted events are a reconnect bridge, not a source of truth — validate strictly against **current** shapes and drop cross-generation rows at startup (Track 3 design). |
@@ -39,7 +39,7 @@ composition question.
 ## Tracks
 
 ### Track 1 — Connector transient-state locking
-*(closes `issues/2026-07-05-connector-transient-state-rmw.md`)*
+*(closes `issues/closed/bugs/2026-07-05-connector-transient-state-rmw.md`)*
 
 Eight read→mutate→write spans on `config/connectors/<name>.state.json` run
 unlocked; overlapping spans silently lose writes. All route through
@@ -104,8 +104,8 @@ committed `google-calendar-state.json` half is Track 2's problem),
 `cli/commands/drive.ts:170`.
 
 ### Track 2 — Git stage→commit race sweep
-*(closes `issues/2026-07-05-git-commit-race-audit.md` and
-`issues/2026-07-06-parallel-agent-git-commit-race.md`)*
+*(closes `issues/closed/bugs/2026-07-05-git-commit-race-audit.md` and
+`issues/closed/bugs/2026-07-06-parallel-agent-git-commit-race.md`)*
 
 `stageFiles` + `commit` are two non-atomic ops on one shared git index; a
 concurrent mutation's staged files get co-committed under the wrong
@@ -150,7 +150,7 @@ existing index-lock retry in `git.ts`); provisioning-time sites
 (`init/migrate/upgrade`, scenario runner) where no concurrent mutator exists.
 
 ### Track 3 — Event-bus read-side validation
-*(closes `issues/2026-07-06-event-bus-read-side-schemas.md`)*
+*(closes `issues/closed/code-quality/2026-07-06-event-bus-read-side-schemas.md`)*
 
 The bus persists rows in SQLite (`.callback-box/events.db`) and replays up to
 ~24h on reconnect through a bare `JSON.parse` — rows written by *older code*
@@ -197,7 +197,7 @@ the single network chokepoint; frontend `useBusSubscription.ts` consumers
 must see unchanged `data` for valid rows.
 
 ### Track 4 — Boundary completions
-*(closes `issues/2026-07-06-phase2-deferred-boundaries.md`)*
+*(closes `issues/closed/code-quality/2026-07-06-phase2-deferred-boundaries.md`)*
 
 - **Clock migrations (4).** Swap `new Date()` → `getBoxTime*(boxRoot)`:
   `core/preactions/transcribe.ts:72,127` (add `boxRoot` to
@@ -224,7 +224,7 @@ must see unchanged `data` for valid rows.
   location. services→connectors direction stays intact.
 
 ### Track 5 — Chat action-error surfacing (toast)
-*(closes `issues/2026-07-06-chat-action-error-surfacing.md`)*
+*(closes `issues/closed/bugs/2026-07-06-chat-action-error-surfacing.md`)*
 
 Four user-initiated actions fail silently (console-only or fully swallowed):
 `handleRestartProcess`, `handleLoadOlder`
@@ -250,7 +250,7 @@ can't cover them — build the small generic mechanism instead.
   (blocks resend) not transient, a different job.
 
 ### Track 6 — Chat SDK-adapter convergence
-*(advances `issues/2026-07-06-chat-session-shared-core.md`; the class
+*(advances `issues/code-quality/2026-07-06-chat-session-shared-core.md`; the class
 extraction itself stays status quo — see decision table)*
 
 `ChatThreadSession`'s local `adaptSdkMessage` (`core/chat/session/thread.ts:109-161`)
@@ -277,7 +277,7 @@ divergence 3 is resolved and the item now hinges only on whether the
 genuinely one-sided queue/durability cluster justifies composition.
 
 ### Track 7 — Lint adoption (Phase 2 — after Tracks 1-6 land)
-*(closes `issues/2026-07-06-deferred-lint-rules.md` decisions 1-4)*
+*(closes `issues/closed/code-quality/2026-07-06-deferred-lint-rules.md` decisions 1-4)*
 
 Repo-wide sweeps; run AFTER the code tracks to avoid churn conflicts.
 
@@ -314,7 +314,7 @@ red state).
 - Promote the four incident comments guarding the concurrency machinery into
   `bin/docs/router-protocol.md` (or a section in `bin/CLAUDE.md`), so the
   hard-won invariants survive future edits.
-- Update `issues/2026-07-06-architectural-review-open-decisions.md` item 1:
+- Update `issues/decisions/2026-07-06-architectural-review-open-decisions.md` item 1:
   conservative phase done, full `WorktreeState` formalization remains open
   (boxholder wants to keep going in later phases).
 - Constraint: the live router is shared across sessions — changes take

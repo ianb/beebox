@@ -33,6 +33,7 @@ import { readdir } from "node:fs/promises";
 import { join, relative, resolve } from "node:path";
 import type { WarningCollector } from "./_warnings.js";
 import { WarningCollector as WarningCollectorClass } from "./_warnings.js";
+import { errorMessage, errnoCode } from "../../src/lib/error-guards.js";
 
 export type ConvertOutcome = "converted" | "already";
 
@@ -64,8 +65,7 @@ async function findMatching(root: string, match: (name: string) => boolean): Pro
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
+      if (errnoCode(e) === "ENOENT") return;
       throw e;
     }
     for (const entry of entries) {
@@ -116,7 +116,7 @@ export async function runMigration(opts: MigrationOptions): Promise<void> {
       if (r === "converted") converted++;
       else already++;
     } catch (e) {
-      failed.push({ file: f, error: (e as Error).message });
+      failed.push({ file: f, error: errorMessage(e) });
     }
   }
   console.log(

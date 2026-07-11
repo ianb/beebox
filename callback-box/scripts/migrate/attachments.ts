@@ -44,6 +44,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
+import { errnoCode } from "../../src/lib/error-guards.js";
 
 class MergeConflictError extends Error {
   readonly fromAbs: string;
@@ -712,11 +713,11 @@ async function executePlan(boxRoot: string, plan: MigrationPlan): Promise<void> 
     try {
       await fs.rename(fromAbs, toAbs);
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
       // Destination already exists (partial prior migration, or an .attach
       // dir that was hand-created). Merge the source contents into it
       // instead of failing the whole run.
-      if (err.code === "ENOTEMPTY" || err.code === "EEXIST") {
+      const code = errnoCode(e);
+      if (code === "ENOTEMPTY" || code === "EEXIST") {
         await mergeMove(fromAbs, toAbs);
       } else {
         throw e;
@@ -745,7 +746,7 @@ async function mergeMove(fromAbs: string, toAbs: string): Promise<void> {
     // File-on-file collision. If contents identical, drop the source.
     const [a, b] = await Promise.all([
       fs.readFile(fromAbs),
-      fs.readFile(toAbs).catch(() => null as Buffer | null),
+      fs.readFile(toAbs).catch((): Buffer | null => null),
     ]);
     if (b && a.equals(b)) {
       await fs.unlink(fromAbs);
@@ -760,8 +761,8 @@ async function mergeMove(fromAbs: string, toAbs: string): Promise<void> {
     try {
       await fs.rename(childFrom, childTo);
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOTEMPTY" || err.code === "EEXIST") {
+      const code = errnoCode(e);
+      if (code === "ENOTEMPTY" || code === "EEXIST") {
         await mergeMove(childFrom, childTo);
       } else {
         throw e;

@@ -8,6 +8,7 @@
  */
 
 import { getGoogleAuth } from "../src/connectors/google-auth.js";
+import { isRecord } from "../src/lib/is-record.js";
 
 async function main() {
   const boxRoot = process.argv[2];
@@ -76,13 +77,14 @@ async function main() {
     process.exit(1);
   }
 
-  const result = await response.json() as Record<string, unknown>;
+  const parsed: unknown = await response.json();
+  const result = isRecord(parsed) ? parsed : {};
   console.log("\nSuccess! Created event:");
-  console.log(`  ID: ${result.id}`);
-  console.log(`  Summary: ${result.summary}`);
-  console.log(`  Status: ${result.status}`);
-  console.log(`  Transparency: ${result.transparency}`);
-  console.log(`  Link: ${result.htmlLink}`);
+  console.log(`  ID: ${result["id"]}`);
+  console.log(`  Summary: ${result["summary"]}`);
+  console.log(`  Status: ${result["status"]}`);
+  console.log(`  Transparency: ${result["transparency"]}`);
+  console.log(`  Link: ${result["htmlLink"]}`);
 }
 
 main().catch((err) => {
