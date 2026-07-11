@@ -6,7 +6,7 @@ import { execFile } from "node:child_process";
 import * as path from "node:path";
 import { promisify } from "node:util";
 import { Command } from "commander";
-import { formatLintResults, type LintSummary } from "../../cards/index.js";
+import { formatLintResults, countBrokenRefs, type LintSummary } from "../../cards/index.js";
 import {
   listStagedMarkdown,
   lintMarkdownFiles,
@@ -323,6 +323,10 @@ export const validateCommand = new Command("validate")
         if (json) {
           const payload = {
             cards: results.cardSummary,
+            // Broken-reference warnings (type: "reference") called out as their
+            // own count — they're the subset that accumulates silently across
+            // renames/deletes and would otherwise hide inside `cards.totalWarnings`.
+            brokenRefs: results.cardSummary !== null ? countBrokenRefs(results.cardSummary) : 0,
             markdown: results.mdSummary,
             attach: results.attachErrors,
             claudeMd: results.claudeMdWarnings,

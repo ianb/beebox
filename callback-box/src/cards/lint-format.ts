@@ -104,6 +104,23 @@ function formatLintResult(result: LintResult, options: FormatOptions): string {
 }
 
 /**
+ * Count broken-reference warnings (`type === "reference"`) across all
+ * results. These are the subset of warnings raised by the ref-resolution
+ * walk in `card-lint.ts` — worth calling out separately in the summary since
+ * they accumulate silently (a box can carry thousands from renames/deletes)
+ * and would otherwise hide inside the generic warning count.
+ */
+export function countBrokenRefs(summary: LintSummary): number {
+  let count = 0;
+  for (const result of summary.results) {
+    for (const warning of result.warnings) {
+      if (warning.type === "reference") count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Format all lint results into a terminal-ready string with a summary line.
  */
 export function formatLintResults(summary: LintSummary, options?: FormatOptions): string {
@@ -131,8 +148,13 @@ export function formatLintResults(summary: LintSummary, options?: FormatOptions)
         ? `${c.yellow}${String(summary.totalWarnings)} warning${summary.totalWarnings === 1 ? "" : "s"}${c.reset}`
         : "";
     const parts = [errorPart, warningPart].filter(Boolean).join(" and ");
+    const brokenRefs = countBrokenRefs(summary);
+    const brokenRefPart =
+      brokenRefs > 0
+        ? ` (${c.yellow}${String(brokenRefs)} broken ref${brokenRefs === 1 ? "" : "s"}${c.reset})`
+        : "";
     lines.push(
-      `${String(summary.filesChecked)} file${summary.filesChecked === 1 ? "" : "s"} checked, ${parts} in ${String(summary.filesWithErrors)} file${summary.filesWithErrors === 1 ? "" : "s"}`
+      `${String(summary.filesChecked)} file${summary.filesChecked === 1 ? "" : "s"} checked, ${parts} in ${String(summary.filesWithErrors)} file${summary.filesWithErrors === 1 ? "" : "s"}${brokenRefPart}`
     );
   }
 

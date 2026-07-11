@@ -9,6 +9,7 @@ import { z } from "zod";
 import {
   body,
   cardSchema,
+  formatLintResults,
   type CardSchema,
 } from "../../src/cards/index.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
@@ -157,6 +158,47 @@ result.totalWarnings
 
 result.results[0]!.warnings[0]!.message
 => Broken reference at messages[0].ref: thread.attach/missing.email-message.card does not exist
+```
+
+## `cb validate`'s summary line calls out broken refs separately
+
+Broken-reference warnings accumulate silently across renames/deletes and can
+run into the thousands on a drifted box — easy to lose inside a generic
+"N warnings" count. `formatLintResults` breaks them out as their own
+"N broken ref(s)" clause on the aggregate summary line, so they can't hide in
+the noise. Zero broken refs (even alongside other warnings) means no such
+clause is added at all — a clean box gets no new output.
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "box/inbox/email/thread-x/thread.email-thread.card",
+  "---\ntype: email-thread\nthread-id: t1\nsubject: hi\nparticipants:\n  - a@x\ndate-range:\n  start: 2026-02-15T10:00:00Z\n  end: 2026-02-15T10:30:00Z\nmessages:\n  - ref: thread.attach/missing.email-message.card\n---\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/email/thread-x/thread.email-thread.card")],
+  { boxRoot: box.root, ctx },
+);
+const summary = formatLintResults(result, { colors: false }).split("\n").at(-1);
+summary
+=> 1 file checked, 1 warning in 0 files (1 broken ref)
+```
+
+A warning that isn't a broken ref (e.g. an unknown frontmatter key) leaves
+the summary's broken-ref clause off entirely:
+
+```ts
+const box = await makeTmpBox();
+await box.write(
+  "box/inbox/notes/drift.doc.card",
+  "---\ntype: doc\ntitle: Drift\nbogus-field: oops\n---\nBody.\n",
+);
+const result = await lintCardsDispatch(
+  [box.path("box/inbox/notes/drift.doc.card")],
+  { boxRoot: box.root, ctx },
+);
+formatLintResults(result, { colors: false }).split("\n").at(-1)
+=> 1 file checked, 1 warning in 0 files
 ```
 
 ## An over-budget `contains:` field warns (never blocks)

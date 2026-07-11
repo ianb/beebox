@@ -38,6 +38,7 @@ export {
 
 export {
   formatLintResults,
+  countBrokenRefs,
   type LintIssue,
   type LintResult,
   type LintSummary,
