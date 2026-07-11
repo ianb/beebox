@@ -38,20 +38,26 @@ Cause, fully traced:
    orphaning the twelve; the `cb-as-library` worktree's later deletion
    orphaned `test1`'s. Six days of silent breakage followed.
 
-The remaining tension (why this isn't just closed):
+**Detection implemented 2026-07-10** (the boxholder's call: the health
+check owns this, not `cb validate`; and the symlink model stays — one
+shared engine link per box means updating the main checkout updates
+every local box at once). Two new checks in the health router
+(`src/webapp/trpc/routers/health-engine.ts`, doctested):
 
-- **The bootstrap is a trap.** An absolute symlink into a movable,
-  deletable checkout, documented as temporary, with no mechanism that
-  ever replaces or checks it. Candidate fixes: have `cb` fail loudly (or
-  self-repair to its own `PACKAGE_ROOT`) when the box's engine link is
-  dead; or finish the Track F story locally so boxes hold a real
-  dependency. Self-repair-to-running-engine is attractive but changes
-  which engine a box pins — needs a deliberate decision.
-- **The failure was too quiet.** A box whose declared card types stop
-  loading emits one stderr warning per schema and otherwise behaves
-  normally. `cb validate`/`cb search` arguably should treat an
-  unloadable declared schema as an error, not a warning.
-- `test1`'s case shows a second path to the same breakage: a box
-  migrated/scaffolded from a worktree keeps pointing there after the
-  worktree dies. Any repair mechanism should normalize originals at
-  `~/src/boxes/` to the main checkout, never a worktree.
+- `engine-link` (v2 boxes) — error when `node_modules/callback-box`
+  doesn't resolve to a readable engine (message carries the dead target
+  and the `ln -sfn` repair); warning when a non-worktree-clone box pins
+  a `callback-worktrees` checkout (the test1 failure path, flagged
+  before the worktree dies).
+- `box-schemas` — error when any box-local schema file failed to load
+  (the registry recorded failures for `cb status` and "`/healthz`" per
+  `schema-load-status.ts`'s own doc, but the health router never read
+  them — now it does).
+
+The remaining tension (why this isn't closed): **nothing repairs the
+link automatically.** Candidate mechanisms — `cb` self-repairing a dead
+link to its own `PACKAGE_ROOT` (changes which engine a box pins, so it
+needs a deliberate decision), or finishing the Track F real-install
+story locally (but a pinned install would end the update-all-boxes-at-
+once property the boxholder wants). Detection now makes breakage loud;
+repair remains a human `ln -sfn` guided by the health message.
