@@ -5,7 +5,7 @@
  * bus event carrying the target chat session and an `expiresAt` deadline. The
  * tab holding *exactly* that session acks immediately (closing the server's
  * `no-client` window), then answers with a PNG — captured either via the clerk
- * extension relay (Track C, {@link captureViaRelay}, a null stub until C2) or,
+ * extension relay (Track C, {@link captureViaRelay} in `screenshot-relay.ts`) or,
  * as the fallback, a consent popup gating {@link captureTabScreenshot} (Track A).
  *
  * This module owns the orchestration and the small FIFO state behind the popup
@@ -15,10 +15,11 @@
  * are exported for the doctest; the DOM capture/upload can't run under Node.
  */
 
-import { useCallback, useReducer } from "react";
+import { useCallback, useEffect, useReducer } from "react";
 import { getApiBase } from "../../api-core";
-import { processImageBlob } from "../../lib/image-paste";
+import { base64ToBlob, processImageBlob } from "../../lib/image-paste";
 import { captureTabScreenshot, type CaptureOutcome } from "./screenshot-capture";
+import { captureViaRelay, startRelayProbe } from "./screenshot-relay";
 import {
   captureOutcomeToAnswer,
   isRequestExpired,
@@ -66,12 +67,6 @@ async function postJson(requestId: string, { body, label }: { body: object; labe
 /** Ack that this tab saw and matched the request — closes the server's `no-client` window. */
 export function postAck(requestId: string): Promise<void> {
   return postJson(requestId, { body: { ack: true }, label: "ack" });
-}
-
-/** Decode a base64 payload (no data: prefix) back into a Blob, without a network round-trip. */
-function base64ToBlob(base64: string, mimeType: string): Blob {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.codePointAt(0) ?? 0);
-  return new Blob([bytes], { type: mimeType });
 }
 
 /** Multipart-upload the PNG with its fidelity + viewport. Never rejects (logs and returns). */
@@ -132,18 +127,6 @@ async function answerWithCapture(
   }
 }
 
-/**
- * Track C seam: capture via the clerk extension relay (silent
- * `captureVisibleTab`) when it's present, else null to fall through to the
- * consent popup. A null stub until C2 replaces the body with the real relay
- * handshake — keeping the seam here (and answering with `fidelity: "extension"`
- * in {@link handleMatchedRequest}) makes C2 a small diff that never touches the
- * popup or the WS dispatch.
- */
-export async function captureViaRelay(_request: ScreenshotRequest): Promise<CaptureOutcome | null> {
-  return null;
-}
-
 /** Capture the outcome for the consent popup's Share button (user-gesture path). */
 export async function shareViaPopup(request: ScreenshotRequest): Promise<ScreenshotIndicator | null> {
   // captureTabScreenshot() must be the first statement so getDisplayMedia runs
@@ -167,7 +150,7 @@ async function handleMatchedRequest(
   dispatch: (action: ScreenshotAction) => void,
 ): Promise<void> {
   void postAck(request.requestId);
-  const relayOutcome = await captureViaRelay(request);
+  const relayOutcome = await captureViaRelay();
   if (relayOutcome !== null) {
     const indicator = await answerWithCapture(request, { outcome: relayOutcome, fidelity: "extension" });
     if (indicator) dispatch({ type: "addIndicator", indicator });
@@ -197,6 +180,13 @@ export interface ScreenshotRequestController {
  */
 export function useScreenshotRequests(sessionId: string | null): ScreenshotRequestController {
   const [state, dispatch] = useReducer(screenshotReducer, { queue: [], indicators: [] });
+
+  // Probe for the clerk relay once at mount so an agent-initiated capture pays no
+  // handshake latency. Presence is cached module-level in `screenshot-relay.ts`
+  // (not React state — the chat scroll/store invariants forbid new root state).
+  useEffect(() => {
+    startRelayProbe();
+  }, []);
 
   const onScreenshotRequest = useCallback(
     (request: ScreenshotRequest) => {

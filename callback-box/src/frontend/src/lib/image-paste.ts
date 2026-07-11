@@ -143,6 +143,18 @@ export async function processImageBlob(blob: Blob): Promise<ProcessedImage> {
 }
 
 /**
+ * Decode a raw base64 payload (no `data:` prefix) back into a Blob, without a
+ * network round-trip. Inverse of the {@link ProcessedImage.dataBase64} this
+ * module produces — used to reconstruct the upload Blob after downscaling
+ * (screenshot-request-handler) and to decode the clerk relay's captured PNG
+ * (screenshot-relay). One decoder, both callers.
+ */
+export function base64ToBlob(base64: string, mimeType: string): Blob {
+  const bytes = Uint8Array.from(atob(base64), (c) => c.codePointAt(0) ?? 0);
+  return new Blob([bytes], { type: mimeType });
+}
+
+/**
  * Extract image files from a ClipboardEvent / DragEvent data transfer.
  * Returns an empty array if none are present.
  */

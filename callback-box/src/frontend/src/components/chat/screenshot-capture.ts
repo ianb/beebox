@@ -88,41 +88,83 @@ function stopTracks(stream: MediaStream): void {
 }
 
 /**
+ * Whether the video has a decoded frame with real dimensions — the pure
+ * frame-readiness predicate. Exported for the unit test; a zero-sized or
+ * undecoded first frame is NOT ready (it would draw a blank PNG).
+ */
+export function isFrameDecoded(
+  video: Pick<HTMLVideoElement, "readyState" | "videoWidth" | "videoHeight" | "HAVE_CURRENT_DATA">,
+): boolean {
+  return video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0 && video.videoHeight > 0;
+}
+
+/**
  * Resolve once the video has a decoded frame with real dimensions. Uses
  * `requestVideoFrameCallback` (fires on the first presented frame) when the
  * browser has it, else polls readyState/dimensions on animation frames.
+ *
+ * Cancellable via `signal`: when the overall capture times out (or any other
+ * exit aborts the controller), the pending `requestAnimationFrame` /
+ * `requestVideoFrameCallback` is cancelled and the promise rejects — otherwise a
+ * never-decoding stream would leave a rAF loop running every frame forever.
  */
-function waitForDecodedFrame(video: HTMLVideoElement): Promise<void> {
-  const hasFrame = (): boolean =>
-    video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0 && video.videoHeight > 0;
-  return new Promise((resolve) => {
-    if (hasFrame()) {
+function waitForDecodedFrame(video: HTMLVideoElement, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (isFrameDecoded(video)) {
       resolve();
       return;
     }
+    let rafId: number | undefined;
+    let rvfcId: number | undefined;
+    const cleanup = (): void => {
+      signal.removeEventListener("abort", onAbort);
+      if (rafId !== undefined) cancelAnimationFrame(rafId);
+      if (rvfcId !== undefined && "cancelVideoFrameCallback" in video) {
+        video.cancelVideoFrameCallback(rvfcId);
+      }
+    };
+    const onAbort = (): void => {
+      cleanup();
+      reject(new ScreenshotCaptureError(CAPTURE_ERR.frameTimeout));
+    };
+    if (signal.aborted) {
+      onAbort();
+      return;
+    }
+    signal.addEventListener("abort", onAbort, { once: true });
     if ("requestVideoFrameCallback" in video) {
-      video.requestVideoFrameCallback(() => resolve());
+      rvfcId = video.requestVideoFrameCallback(() => {
+        cleanup();
+        resolve();
+      });
       return;
     }
     const tick = (): void => {
-      if (hasFrame()) {
+      if (isFrameDecoded(video)) {
+        cleanup();
         resolve();
         return;
       }
-      requestAnimationFrame(tick);
+      rafId = requestAnimationFrame(tick);
     };
-    requestAnimationFrame(tick);
+    rafId = requestAnimationFrame(tick);
   });
 }
 
-/** Draw the first decoded frame of `stream` to a canvas and read it back as a PNG blob. */
-async function grabFrame(stream: MediaStream): Promise<{ blob: Blob; width: number; height: number }> {
-  const video = document.createElement("video");
+/**
+ * Draw the first decoded frame of `stream` to a canvas and read it back as a PNG
+ * blob. The `video` is caller-owned so the caller can detach it on every exit
+ * path; `signal` cancels the frame-wait when the overall capture times out.
+ */
+async function grabFrame(
+  video: HTMLVideoElement,
+  { stream, signal }: { stream: MediaStream; signal: AbortSignal },
+): Promise<{ blob: Blob; width: number; height: number }> {
   video.muted = true;
   video.playsInline = true;
   video.srcObject = stream;
   await video.play();
-  await waitForDecodedFrame(video);
+  await waitForDecodedFrame(video, signal);
   const width = video.videoWidth;
   const height = video.videoHeight;
   // A zero-sized frame must fail loudly rather than produce a blank PNG.
@@ -134,30 +176,21 @@ async function grabFrame(stream: MediaStream): Promise<{ blob: Blob; width: numb
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new ScreenshotCaptureError(CAPTURE_ERR.canvasContext);
   ctx.drawImage(video, 0, 0);
-  video.srcObject = null;
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob((b) => resolve(b), "image/png"));
   if (!blob) throw new ScreenshotCaptureError(CAPTURE_ERR.toBlobNull);
   return { blob, width, height };
 }
 
-/** Reject `promise` with a ScreenshotCaptureError if it doesn't settle within `ms`. */
-async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(() => reject(new ScreenshotCaptureError(CAPTURE_ERR.frameTimeout)), ms);
-  });
-  try {
-    return await Promise.race([promise, timeout]);
-  } finally {
-    if (timer !== undefined) clearTimeout(timer);
-  }
-}
-
 /**
  * Capture what the user currently sees as a PNG blob. Resolves an enumerable
  * outcome — never rejects. On `image`, `viewport` reports best-effort CSS
  * dimensions (the intrinsic capture is physical pixels; CSS = physical / dpr).
+ *
+ * The timeout is driven by an AbortController rather than a racing promise, so
+ * on timeout the frame-wait is genuinely cancelled (no orphaned rAF loop) and
+ * there is no dangling losing-promise to reject unhandled. Every exit path
+ * (success, error, timeout) clears the stream AND detaches the `<video>`.
  */
 export async function captureTabScreenshot(): Promise<CaptureOutcome> {
   if (!isScreenshotSupported()) return { kind: "unsupported" };
@@ -171,8 +204,11 @@ export async function captureTabScreenshot(): Promise<CaptureOutcome> {
     return classifyGetDisplayMediaError(e);
   }
 
+  const video = document.createElement("video");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), CAPTURE_TIMEOUT_MS);
   try {
-    const { blob, width, height } = await withTimeout(grabFrame(stream), CAPTURE_TIMEOUT_MS);
+    const { blob, width, height } = await grabFrame(video, { stream, signal: controller.signal });
     const dpr = window.devicePixelRatio || 1;
     return {
       kind: "image",
@@ -182,8 +218,13 @@ export async function captureTabScreenshot(): Promise<CaptureOutcome> {
   } catch (e) {
     return { kind: "error", message: e instanceof Error ? e.message : String(e) };
   } finally {
-    // Always drop the stream — success or failure — so the capture indicator
-    // never lingers.
+    // Every exit path: stop the timer, cancel any pending frame-wait (abort is a
+    // no-op once the wait resolved), drop the stream so the capture indicator
+    // never lingers, and detach the video so it releases the stream — no
+    // dangling rAF/rVFC callback, no retained <video>.
+    clearTimeout(timer);
+    controller.abort();
     stopTracks(stream);
+    video.srcObject = null;
   }
 }

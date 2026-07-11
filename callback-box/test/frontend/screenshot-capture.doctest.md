@@ -11,6 +11,7 @@ rejection mapping and the feature-detect.
 ```ts setup
 import {
   classifyGetDisplayMediaError,
+  isFrameDecoded,
   isScreenshotSupported,
 } from "../../src/frontend/src/components/chat/screenshot-capture.js";
 
@@ -58,3 +59,34 @@ result mobile Safari and insecure contexts produce.
 isScreenshotSupported()
 => false
 ```
+
+## Frame-readiness is only true for a decoded, non-zero frame
+
+`isFrameDecoded` is the predicate the frame-wait loop polls. A decoded frame
+needs `readyState >= HAVE_CURRENT_DATA` **and** real dimensions — an undecoded or
+zero-sized first frame is not ready, so we never draw a blank PNG.
+
+```ts
+const frame = (readyState, videoWidth, videoHeight) => ({ readyState, videoWidth, videoHeight, HAVE_CURRENT_DATA: 2 });
+
+isFrameDecoded(frame(2, 1920, 1080))
+=> true
+
+isFrameDecoded(frame(0, 1920, 1080))
+=> false
+
+isFrameDecoded(frame(4, 0, 0))
+=> false
+
+isFrameDecoded(frame(2, 1920, 0))
+=> false
+```
+
+## Manual-verify boundary: frame-wait cancellation
+
+The leak fix — a timed-out capture aborting its pending
+`requestAnimationFrame`/`requestVideoFrameCallback` and detaching the `<video>`
+on every exit path — is DOM/timing behavior that can't run under the Node tier.
+It's verified by driving Track A in a real browser (a stream that never decodes
+must not leave a rAF loop spinning). The pure `isFrameDecoded` seam above is what
+that loop consults.
