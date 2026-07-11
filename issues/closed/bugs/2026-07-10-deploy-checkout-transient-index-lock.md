@@ -3,7 +3,19 @@ title: "Post-commit deploy fails hard on a transient worktree index.lock (ENOTDI
 area: callback-box
 filed-by: agent
 discovered-in: main session — while deploying a frontend image-card fix (commit e0a788a7)
+resolution: implemented
 ---
+
+**Resolved** (worktree `fix-bugs`, 2026-07-11): factored a `recreate_checkout()`
+helper out of the duplicated wipe+`worktree prune`+`worktree add` recreate logic,
+then wrapped both the bare `git -C "$CHECKOUT" checkout --detach "$SHA"` and
+`git -C "$CHECKOUT" clean -fdx ...` in retry-once-then-recreate handling
+(`callback-box/deploy/deploy.sh:203-252`). A transient failure now gets a 2s
+sleep + one retry; a second failure falls back to the existing wipe/recreate
+path instead of exiting fatally. A `CHECKOUT_FRESH` flag skips the `clean` step
+entirely when the checkout was just (re)created (a fresh worktree has nothing
+to clean). The settle/serialize idea (third bullet in the original list) was
+not pursued — the retry/recreate handling covers the failure mode without it.
 
 The root `post-commit` hook backgrounds `callback-box/deploy/deploy.sh --ref <sha>`
 the instant a `main` commit completes. On one deploy the build-checkout step

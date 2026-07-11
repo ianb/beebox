@@ -196,31 +196,60 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 
 # --- Build-checkout lifecycle ----------------------------------------------
 # The checkout is a disposable cache; recreating it is always safe.
-if [ ! -d "$CHECKOUT" ]; then
-  # Clear any stale registration left by a wiped-but-not-pruned checkout dir,
-  # then create the detached worktree at the target sha.
-  git -C "$MONO_DIR" worktree prune
-  git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"
-elif ! checkout_belongs_to_repo; then
-  echo "deploy: build checkout $CHECKOUT does not belong to this repo (repo moved/renamed?)." >&2
-  echo "  Wiping and recreating it — it's a disposable build cache, so this is safe." >&2
+# CHECKOUT_FRESH tracks whether recreate_checkout ran below, so the clean step
+# further down can skip itself — a worktree just carved by `worktree add` has
+# nothing to clean.
+CHECKOUT_FRESH=false
+recreate_checkout() {
   rm -rf "$CHECKOUT"
   git -C "$MONO_DIR" worktree prune
   git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"
+  CHECKOUT_FRESH=true
+}
+if [ ! -d "$CHECKOUT" ]; then
+  # Clear any stale registration left by a wiped-but-not-pruned checkout dir,
+  # then create the detached worktree at the target sha.
+  recreate_checkout
+elif ! checkout_belongs_to_repo; then
+  echo "deploy: build checkout $CHECKOUT does not belong to this repo (repo moved/renamed?)." >&2
+  echo "  Wiping and recreating it — it's a disposable build cache, so this is safe." >&2
+  recreate_checkout
 fi
 
 # Reset the checkout to the target sha. (Redundant right after a fresh
 # `worktree add`, which already checked out $SHA, but harmless and keeps the
-# path uniform for the reuse case.)
-git -C "$CHECKOUT" checkout --detach "$SHA"
+# path uniform for the reuse case.) A transient git failure here (observed:
+# ENOTDIR writing a worktree's index.lock, racing git's own bookkeeping) is
+# retried once after a short sleep; if it still fails, the checkout is a
+# disposable cache, so wipe and recreate it from scratch rather than dying
+# mid-deploy.
+if ! git -C "$CHECKOUT" checkout --detach "$SHA"; then
+  echo "deploy: checkout --detach $SHA failed — retrying once..." >&2
+  sleep 2
+  if ! git -C "$CHECKOUT" checkout --detach "$SHA"; then
+    echo "deploy: checkout --detach $SHA failed again — recreating the build checkout." >&2
+    recreate_checkout
+  fi
+fi
 
 # Clean EVERYTHING ignored/untracked except node_modules and the meta file. This
 # is the clean-artifact boundary: a stale gitignored dist/ (callback-box/dist,
 # src/frontend/dist) from a previous ref must never ship. node_modules is
 # preserved so the pnpm install below stays a fast reconcile (Vite's cache lives
 # inside node_modules, so it survives too); the meta file records the
-# last-installed sha and must outlive the clean.
-git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .
+# last-installed sha and must outlive the clean. Same transient-failure
+# handling as the checkout above; skipped entirely when the checkout was just
+# (re)created fresh, since a brand-new worktree has nothing to clean.
+if [[ "$CHECKOUT_FRESH" != true ]]; then
+  if ! git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .; then
+    echo "deploy: git clean failed — retrying once..." >&2
+    sleep 2
+    if ! git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .; then
+      echo "deploy: git clean failed again — recreating the build checkout." >&2
+      recreate_checkout
+    fi
+  fi
+fi
 
 # --- Clean-reinstall trigger ------------------------------------------------
 # patch-package mutates files inside node_modules, so reusing node_modules across
@@ -392,10 +421,33 @@ ssh -A "root@$SERVER_IP" bash -s <<'REMOTE'
   # patch-package still runs via the root postinstall to patch eslint-config-agent.
   cd /opt/callback
   echo "  Reconciling workspace deps (frozen)..."
-  # npm_config_update_notifier=false: the "Update available!" banner is noise
-  # in a deploy log (and agent context) on every run; updating pnpm is a
-  # deliberate act, not something a deploy should advertise.
-  HUSKY=0 npm_config_update_notifier=false pnpm install --frozen-lockfile
+  # The install competes for RAM with every running box's `cb serve` +
+  # claude-agent-sdk subprocess on this single small server, and the kernel
+  # OOM-kills it (exit 137) under a transient contention spike rather than a
+  # permanent regression — a short backoff usually clears it. Retry only on
+  # 137; anything else is a real failure (e.g. a stale lockfile) and should
+  # fail immediately rather than burn two backoffs on a certain repeat.
+  install_with_retry() {
+    local attempt=1 max_attempts=3 backoff=60 rc
+    while true; do
+      # npm_config_update_notifier=false: the "Update available!" banner is
+      # noise in a deploy log (and agent context) on every run; updating pnpm
+      # is a deliberate act, not something a deploy should advertise.
+      if HUSKY=0 npm_config_update_notifier=false pnpm install --frozen-lockfile; then
+        return 0
+      else
+        rc=$?
+      fi
+      if [[ "$rc" -ne 137 || "$attempt" -ge "$max_attempts" ]]; then
+        return "$rc"
+      fi
+      echo "  pnpm install OOM-killed (exit 137, attempt $attempt/$max_attempts) — retrying in ${backoff}s..." >&2
+      sleep "$backoff"
+      backoff=$((backoff * 3))
+      attempt=$((attempt + 1))
+    done
+  }
+  install_with_retry
 REMOTE
 
 # Reconcile each v2-shape (package-layout) box's own node_modules against its
