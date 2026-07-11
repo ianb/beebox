@@ -3,7 +3,7 @@
 `parseScheduleTags` and `parseCancelScheduleTags` extract schedule instructions from assistant response text.
 
 ```ts setup
-import { parseScheduleTags, parseCancelScheduleTags, ChatScheduleManager } from "../../src/core/chat/schedules.js";
+import { parseScheduleTags, parseCancelScheduleTags, ChatScheduleManager, loadChatSchedules } from "../../src/core/chat/schedules.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -230,6 +230,61 @@ capturedLogs.some((line) => line.includes("corrupt entry"))
 
 ```ts cleanup
 manager2.stopAll();
+```
+
+## Originating session id round-trips through persistence
+
+A schedule records the id of the session whose turn created it, so the fire can
+land back in that conversation (`chat-schedule-fire.ts`). `addSchedule` accepts
+an optional `sessionId`, persists it, and `loadChatSchedules` reads it back:
+
+```ts
+const box3 = await makeTmpBox();
+const schedulesPath3 = ".callback-box/schedules-session-test.json";
+const manager3 = new ChatScheduleManager(box3.root, {
+  schedulesFile: schedulesPath3,
+  onFire: () => {},
+});
+const withSession = manager3.addSchedule({ label: "with", alarm: false, announce: null, content: "hi", durationMs: 3_600_000, sessionId: "sess-abc" });
+withSession.sessionId
+=> sess-abc
+```
+
+```ts continue
+// Reloading from disk preserves the session id.
+const reloaded = loadChatSchedules({ boxRoot: box3.root, schedulesFile: schedulesPath3 });
+JSON.stringify(reloaded.map((s) => ({ label: s.label, sessionId: s.sessionId ?? null })))
+=> [{"label":"with","sessionId":"sess-abc"}]
+```
+
+```ts continue
+// Omitting sessionId is allowed — the field just isn't written.
+const noSession = manager3.addSchedule({ label: "without", alarm: false, announce: null, content: "hi", durationMs: 3_600_000 });
+JSON.stringify(noSession.sessionId ?? null)
+=> null
+```
+
+```ts cleanup
+manager3.stopAll();
+```
+
+## Legacy entry without a session id still loads
+
+An entry persisted before the `sessionId` field existed stays valid — it loads
+and fires (falling back to the most-active session):
+
+```ts
+const box4 = await makeTmpBox();
+const legacyPath = ".callback-box/schedules-legacy.json";
+const absLegacy = path.join(box4.root, legacyPath);
+fs.mkdirSync(path.dirname(absLegacy), { recursive: true });
+const farFuture4 = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+fs.writeFileSync(absLegacy, JSON.stringify([
+  { id: "sch_legacy", label: "old timer", alarm: false, announce: null, content: "hi", createdAt: "2026-01-01T00:00:00.000Z", firesAt: farFuture4 },
+]));
+const legacy = loadChatSchedules({ boxRoot: box4.root, schedulesFile: legacyPath });
+JSON.stringify(legacy.map((s) => ({ label: s.label, sessionId: s.sessionId ?? null })))
+=> [{"label":"old timer","sessionId":null}]
 ```
 
 ## Schedule tags in chat-response context

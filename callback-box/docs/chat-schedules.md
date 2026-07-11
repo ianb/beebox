@@ -32,11 +32,17 @@ The text content inside the tag is context passed back to the agent when the sch
 
 1. `chatSession.on("turn-text")` fires after each agent response
 2. `parseScheduleTags()` / `parseCancelScheduleTags()` extract tags from the response text
-3. `ChatScheduleManager` stores schedules in `.callback-box/chat-schedules.json` and sets `setTimeout` timers
-4. When a timer fires, `onFire` callback:
-   - Broadcasts `schedule-fired` SSE event (alarm/announce data for the frontend)
-   - Sends a `<schedule-fired>` message to the agent via `chatSession.send()`
-   - Listens for `chatSession.once("done")` to broadcast updated history via SSE
+3. `ChatScheduleManager` stores schedules in `.callback-box/chat-schedules.json` and sets `setTimeout` timers. Each entry records the **originating session id** (`sessionId`) so the fire can land back in the conversation that created it.
+4. When a timer fires, `fireChatSchedule` (`src/webapp/routes/chat-schedule-fire.ts`):
+   - Broadcasts `schedule-fired` SSE event (alarm/announce data for the frontend), before any session work
+   - Resumes the **originating session** (`schedule.sessionId`) and sends it a `<schedule-fired>` message, so the reply lands in the right thread rather than whatever chat was last active
+   - Broadcasts updated history via SSE once the fired turn completes
+
+### Targeting: originating session, with fallbacks
+
+- **Originating session** — the normal case. The schedule carries the id of the session whose turn created it, and the fire resumes exactly that session.
+- **Legacy fallback (most-active)** — entries persisted before the `sessionId` field existed have none; they fall back to the most-active session (`getMostActive`), preserving the old behavior.
+- **Fresh-session fallback (unresumable target)** — if the targeted session's turn errors instantly (`is_error=true`, e.g. a pre-v2 session id the SDK refuses to resume — see `issues/bugs/2026-07-11-pre-v2-session-resume-broken.md`), the reminder is re-sent **once** into a brand-new session. If that also fails, it's logged (`console.error`) and given up. A fired schedule's response is never silently lost. The failed-turn signal is the session's `done` event, whose `ChatMessageResult` payload carries `is_error`.
 
 ### Frontend display
 
@@ -73,7 +79,8 @@ No alarm or announce support — Telegram schedules are simple wakeup messages. 
 | `src/core/chat/session/index.ts` | `CHAT_SYSTEM_PROMPT` (scheduling instructions for the agent) |
 | `src/core/chat/session/pool.ts` | Per-thread schedule managers for Telegram, `deliverResponse` callbacks |
 | `src/core/chat/session/thread.ts` | `turn-text` event, `fullTurnText` accumulator, `SCHEDULING` prompt section |
-| `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text, onFire handler, wires the schedule manager into `webapp/chat-runtime.ts` |
+| `src/webapp/routes/chat.ts` | Server-side: schedule creation on turn-text (stamps the originating `sessionId`), wires the schedule manager into `webapp/chat-runtime.ts` |
+| `src/webapp/routes/chat-schedule-fire.ts` | `fireChatSchedule` — resolves the target session (originating / most-active / fresh fallback) and injects the fired reminder |
 | `src/webapp/trpc/routers/chat-control-procedures.ts` | `schedules` query, `cancelSchedule` mutation |
 | `src/frontend/src/components/chat/InteractiveChat-layout.tsx`, `InteractiveChat-controls.tsx` | `SchedulePill`, alarm/TTS |
 | `src/frontend/src/components/chat/InteractiveChat-ws.ts` | Subscribes to the box event stream (`schedule-fired`, `chat-history`) over the shared WebSocket |

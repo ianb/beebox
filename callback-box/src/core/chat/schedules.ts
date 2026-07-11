@@ -29,6 +29,12 @@ const chatScheduleSchema = z.object({
   content: z.string(),
   createdAt: z.string().datetime(),
   firesAt: z.string().datetime(),
+  // Id of the chat session whose turn created this schedule, so the fire can
+  // land back in the originating conversation. Optional: entries persisted
+  // before this field existed lack it and stay valid (they fall back to the
+  // most-active session when they fire). Also loaded hub-side via
+  // `loadChatSchedules` — purely additive, so no hub change is needed.
+  sessionId: z.string().optional(),
 });
 
 export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
@@ -133,6 +139,8 @@ export class ChatScheduleManager {
     announce: string | null;
     content: string;
     durationMs: number;
+    /** Originating chat session id; omitted for callers that don't track one. */
+    sessionId?: string;
   }): ChatSchedule {
     const id = `sch_${Date.now()}_${this.idCounter++}`;
     const now = new Date();
@@ -146,6 +154,7 @@ export class ChatScheduleManager {
       content: opts.content,
       createdAt: now.toISOString(),
       firesAt: firesAt.toISOString(),
+      ...(opts.sessionId !== undefined ? { sessionId: opts.sessionId } : {}),
     };
 
     this.schedules.set(id, schedule);
