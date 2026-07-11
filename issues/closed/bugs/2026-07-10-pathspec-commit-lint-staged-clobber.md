@@ -3,7 +3,26 @@ title: "`git commit -- <pathspec>` + lint-staged silently clobbers concurrent un
 area: bin
 filed-by: agent
 discovered-in: worktree-architectural-review — as-ban wave 2, multiple concurrent agents committing to one worktree
+resolution: implemented
 ---
+
+**Resolved** (worktree-fix-bugs, 2026-07-11): implemented option 3.
+`.husky/pre-commit` now invokes `pnpm exec lint-staged --no-stash` for both
+callback-box and callback-clerk. `--no-stash` is safe here specifically
+because both lint-staged configs are check-only eslint (no `--fix`) — there's
+no task-written output that the stash/backup was ever protecting, so removing
+the backup only removes the failure-path `git reset --hard HEAD` + partial-
+restore that did the clobbering. The independent partial-staged-file hiding
+(lint-staged always hides unstaged hunks from a partially-staged file before
+running tasks, stash or no) is unaffected. Reproduced in a scratch repo:
+racing an edit to an unrelated tracked file into the middle of a failing
+lint-staged task showed default mode reverting that edit to its
+pre-run committed state on the revert-to-original-state path, while
+`--no-stash` left it untouched. Path-scoped commits
+(`git commit -- <paths>` / `stageAndCommitPaths`) remain the convention for
+the attribution-sweep reason (bin/CLAUDE.md, "Multiple agents sharing one
+worktree") — this fix removes the second, independent failure mode
+(lint-staged's reset-hard) rather than replacing pathspec commits.
 
 The multi-agent convention added after the parallel-agent commit-race issue
 (bin/CLAUDE.md: path-scoped commits, `git commit -- <paths>`) turns out to

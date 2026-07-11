@@ -44,12 +44,16 @@ if [ -n "$staged" ] && ! echo "$staged" | grep -qv '\.md$'; then
   exit 0
 fi
 
+# --no-stash: lint-staged's default failure path does `git reset --hard HEAD`
+# then reapplies only its own stash, clobbering concurrent agents' uncommitted
+# edits elsewhere in the worktree. Safe here because both lint-staged configs
+# are check-only eslint (no --fix), so there's nothing for the stash to protect.
 if echo "$staged" | grep -q '^callback-box/'; then
-  run_in callback-box pnpm exec lint-staged
+  run_in callback-box pnpm exec lint-staged --no-stash
   run_in callback-box pnpm typecheck
 fi
 
 if echo "$staged" | grep -q '^callback-clerk/'; then
-  run_in callback-clerk pnpm exec lint-staged
+  run_in callback-clerk pnpm exec lint-staged --no-stash
   run_in callback-clerk pnpm typecheck
 fi

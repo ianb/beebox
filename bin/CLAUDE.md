@@ -130,14 +130,17 @@ A plan can spawn several concurrent task agents committing straight to the
 same shared worktree/branch (e.g. the architectural-review round). `git add
 <paths>` followed by a bare `git commit` is not atomic across processes: one
 agent's already-staged-but-uncommitted changes can be swept into a
-concurrently-running `git commit` (or a `lint-staged` stash/restore cycle)
-from another agent, landing under the wrong commit's attribution. The fix is
-always **path-scoped commits**: `git add <paths> && git commit -- <paths>`
-(or the `stageAndCommitPaths` helper in `callback-box/src/lib/git.ts`),
-never a bare `git commit` — scoping the commit to exactly the paths this
-agent staged means an interleaved sweep from another agent can't get
-co-committed under this one's message. This is a convention, not a lock:
-each agent is responsible for scoping its own commits.
+concurrently-running `git commit` from another agent, landing under the
+wrong commit's attribution. The fix is always **path-scoped commits**:
+`git add <paths> && git commit -- <paths>` (or the `stageAndCommitPaths`
+helper in `callback-box/src/lib/git.ts`), never a bare `git commit` —
+scoping the commit to exactly the paths this agent staged means an
+interleaved sweep from another agent can't get co-committed under this
+one's message. This is a convention, not a lock: each agent is responsible
+for scoping its own commits. (`lint-staged`'s pre-commit run uses
+`--no-stash`, so a failing task no longer `git reset --hard`s the whole
+worktree on top of this — see
+`../issues/closed/bugs/2026-07-10-pathspec-commit-lint-staged-clobber.md`.)
 
 ## `/<worktree>/dev/` serving
 
