@@ -1,7 +1,17 @@
 ---
 title: "questions aging policy"
 area: callback-box
+resolution: implemented
 ---
+
+**Closed 2026-07-10:** Implemented in `src/core/question-aging.ts` (the
+aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
+at 7 days pending (default), expire at 30 days pending (default), both
+overridable per-question via `expires-after:`. Expiry sets `status:
+expired` + `expired-at` and demotes the question from the active
+list/header count/notifications; it never auto-answers, and an expired
+question stays answerable (demote, don't close — matches the sketch below).
+See `docs/questions.md` § Aging.
 
 We already have a notion of questions/answers the agent surfaces to the boxholder; the piece probably missing is an operational aging policy so the queue actually drains rather than accumulating dead items. Sketch (numbers tunable):
 

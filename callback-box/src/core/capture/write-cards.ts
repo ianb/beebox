@@ -1,12 +1,13 @@
 /**
  * Capture card writing — turn a staged session's uploaded media into a
  * capture-session card plus its child audio/image/file cards, in an arbitrary
- * destination directory (the inbox for the legacy finalize path; a chat area's
- * `tmp-capture/` for the preparation worker, Track 3).
+ * destination directory (a chat area's `tmp-capture/` for the preparation
+ * worker; `cb scan-import` writes the same card shape into the inbox via its
+ * own path).
  *
- * Extracted from the original `webapp/routes/capture-finalize.ts` so both the
- * legacy finalize route and the preparation worker share one card-writing core
- * (the finalize path retires in Track 7). Media bytes are gitignored assets
+ * Originated in the retired `webapp/routes/capture-finalize.ts`; the
+ * preparation worker (prepare.ts) is now the only consumer. Media bytes are
+ * gitignored assets
  * tracked via a per-scope `manifest.json` (see docs/asset-manifests.md); we
  * write the media, write its manifest, and stage the *manifest* + card, never
  * the raw bytes.

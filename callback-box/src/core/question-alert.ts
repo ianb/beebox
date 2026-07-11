@@ -19,27 +19,38 @@ import type { PushService } from "../services/push.js";
 
 const LATCH_PATH = ".callback-box/notified-questions.json";
 
-interface QuestionLatch {
+/**
+ * Shared per-box latch, one file for both dedup jobs that ride the `cb
+ * finalize` sweep: `paths` is this module's "already notified about the
+ * newly-pending set" record (rewritten to exactly the current pending set
+ * each pass); `nudged` is the aging sweep's (`question-aging.ts`) "already
+ * sent the one reminder" record, keyed by question path to its nudge
+ * timestamp. One file, one load/save pair, so the two sweeps (which run
+ * sequentially from the same finalize call site, never concurrently) don't
+ * clobber each other's half.
+ */
+export interface QuestionLatch {
   paths: string[];
+  nudged: Record<string, string>;
 }
 
-async function loadLatch(boxRoot: string): Promise<Set<string>> {
+export async function loadQuestionLatch(boxRoot: string): Promise<QuestionLatch> {
   try {
     const raw = await fs.readFile(path.join(boxRoot, LATCH_PATH), "utf-8");
-    const data = JSON.parse(raw) as QuestionLatch;
-    return new Set(data.paths);
+    const data = JSON.parse(raw) as Partial<QuestionLatch>;
+    return { paths: data.paths ?? [], nudged: data.nudged ?? {} };
   } catch (e) {
     if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
       console.warn("Could not read notified-questions latch, treating as empty:", e);
     }
-    return new Set();
+    return { paths: [], nudged: {} };
   }
 }
 
-async function saveLatch(boxRoot: string, paths: string[]): Promise<void> {
+export async function saveQuestionLatch(boxRoot: string, latch: QuestionLatch): Promise<void> {
   const absPath = path.join(boxRoot, LATCH_PATH);
   await fs.mkdir(path.dirname(absPath), { recursive: true });
-  await fs.writeFile(absPath, `${JSON.stringify({ paths }, null, 2)}\n`);
+  await fs.writeFile(absPath, `${JSON.stringify(latch, null, 2)}\n`);
 }
 
 export interface QuestionAlertResult {
@@ -56,12 +67,19 @@ export async function checkPendingQuestionsAndNotify(
 
   const { pendingQuestions } = await generateContext(boxRoot);
   const pendingPaths = pendingQuestions.map((q) => q.path);
-  const latched = await loadLatch(boxRoot);
-  const fresh = pendingQuestions.filter((q) => !latched.has(q.path));
+  const latch = await loadQuestionLatch(boxRoot);
+  const latchedPaths = new Set(latch.paths);
+  const fresh = pendingQuestions.filter((q) => !latchedPaths.has(q.path));
 
-  // Rewrite the latch to exactly the currently-pending set, so answered
-  // questions drop out (and may re-notify if they ever reappear).
-  await saveLatch(boxRoot, pendingPaths);
+  // Rewrite `paths` to exactly the currently-pending set, so answered
+  // questions drop out (and may re-notify if they ever reappear). Prune
+  // `nudged` the same way — it's the aging sweep's dedup record, but a
+  // question that's left the pending set (answered/dismissed/expired
+  // elsewhere) has nothing left to nudge, so its entry is stale here too.
+  const prunedNudged = Object.fromEntries(
+    Object.entries(latch.nudged).filter(([p]) => pendingPaths.includes(p)),
+  );
+  await saveQuestionLatch(boxRoot, { paths: pendingPaths, nudged: prunedNudged });
 
   if (fresh.length === 0) return null;
 
