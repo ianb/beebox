@@ -1,10 +1,9 @@
 ---
+title: "Box pre-commit hooks point at a fixed checkout's cb, breaking worktree schema development"
 area: callback-box
 filed-by: agent
 discovered-in: worktree-questions-end-to-end — live-verifying a schema change against the worktree's test box
 ---
-
-# Box pre-commit hooks point at a fixed checkout's `cb`, breaking worktree schema development
 
 A box's `.git/hooks/pre-commit` (installed by `cb init`) invokes a hardcoded
 `cb` path — in the observed case the `main` checkout's
