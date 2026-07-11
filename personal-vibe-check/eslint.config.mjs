@@ -40,11 +40,18 @@ const baseConfig = baseConfigRaw.map((entry) => {
 //     idiom is the sanctioned way to hand XState the context/event types it
 //     can't infer (14 frontend machine sites). The trailing `:not(...)` exempts
 //     a `TSAsExpression` sitting as a property value inside the `types:` object
-//     of a `setup()` call — and nothing else: a bare `x as Foo` (even
-//     `{} as Ctx`) anywhere outside that exact position is still banned.
+//     of a `setup(...)` call — and ONLY when the cast operand is an empty object
+//     literal (`{} as T`), which every XState type-slot cast is. So a bare
+//     `x as Foo` (even `{} as Ctx`) outside that exact position is still banned,
+//     and a `realValue as Foo` even inside a `setup({ types })` shape is still
+//     banned. This is a syntactic approximation: a `no-restricted-syntax`
+//     selector can't prove `setup` was imported from `xstate`, so a local
+//     function literally named `setup` receiving `{ types: { k: {} as T } }`
+//     would also be exempted — an accepted, negligible gap (the tightest
+//     practical AST match; a deliberate bypass already has `eslint-disable`).
 const AS_BAN_SELECTORS = [
   { selector: 'TSAsExpression[typeAnnotation.type="TSIndexedAccessType"]', message: 'Type assertions with indexed access types like "as (typeof X)[number]" are not allowed. Use a named type instead.' },
-  { selector: 'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"])):not(CallExpression[callee.name="setup"] > ObjectExpression > Property[key.name="types"] > ObjectExpression > Property > TSAsExpression)', message: 'Type assertions with "as" are not allowed except for "as const" (and the XState `setup({ types })` idiom). If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line no-restricted-syntax` comment explaining why, or centralize it in one typed helper.' },
+  { selector: 'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"])):not(CallExpression[callee.name="setup"] > ObjectExpression > Property[key.name="types"] > ObjectExpression > Property > TSAsExpression[expression.type="ObjectExpression"][expression.properties.length=0])', message: 'Type assertions with "as" are not allowed except for "as const" (and the XState `setup({ types: { … : {} as T } })` idiom). If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line no-restricted-syntax` comment explaining why, or centralize it in one typed helper.' },
 ];
 
 // ── Enabled rules ──────────────────────────────────────────────────
