@@ -10,7 +10,25 @@ import * as path from "node:path";
 
 const MAX_LOG_FILE_BYTES = 100_000;
 
-export async function appendRollingLog(filePath: string, content: string): Promise<void> {
+/** Serializes concurrent `appendRollingLog` calls per file path -- each call
+ *  chains off the prior in-flight promise for the same path so mkdir/append/
+ *  stat/truncate steps from overlapping calls can't interleave. Cleared once
+ *  a path's chain drains so the map doesn't grow unbounded. */
+const pendingAppends = new Map<string, Promise<void>>();
+
+export function appendRollingLog(filePath: string, content: string): Promise<void> {
+  const previous = pendingAppends.get(filePath) ?? Promise.resolve();
+  const current = previous.then(() => appendRollingLogUnserialized(filePath, content));
+  const cleanedUp = current.finally(() => {
+    if (pendingAppends.get(filePath) === current) {
+      pendingAppends.delete(filePath);
+    }
+  });
+  pendingAppends.set(filePath, current);
+  return cleanedUp;
+}
+
+async function appendRollingLogUnserialized(filePath: string, content: string): Promise<void> {
   try {
     await fs.mkdir(path.dirname(filePath), { recursive: true });
     await fs.appendFile(filePath, content);
