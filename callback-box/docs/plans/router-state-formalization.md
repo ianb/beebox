@@ -7,10 +7,14 @@ function, injected effects (clock/spawner/fs), and unit tests with fakes that
 reproduce the documented incidents (`bin/docs/router-protocol.md`). Phase 1
 (the conservative doc-browser extraction + protocol doc) landed 2026-07-09.
 
-> **STATUS: IN IMPLEMENTATION (2026-07-11).** Codex-reviewed 2026-07-11; the
-> review found two LIVE race families the four-invariant framing doesn't
-> cover (§ "New invariants") — this plan now fixes them rather than
-> formalizing around them.
+> **STATUS: PHASE A LANDED (2026-07-11); Phases B+C pending.** Codex-reviewed
+> 2026-07-11; the review found two LIVE race families the four-invariant framing
+> doesn't cover (§ "New invariants") — this plan now fixes them rather than
+> formalizing around them. Phase A shipped `bin/router-lifecycle.ts` +
+> `bin/router-pidfile.ts`, adopted them in `router.ts`, and landed invariants
+> #5 (guarded publication) and #6 (pidfile serialization); protocol doc updated.
+> Phases B (factory + effects injection) and C (incident tests with fakes)
+> remain.
 
 Scoping record (2026-07-11): `bin/router.ts` is 1407 lines post-extraction.
 It is a **script, not a module**: zero exports; a top-level async boot IIFE

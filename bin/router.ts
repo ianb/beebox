@@ -36,6 +36,18 @@ import httpProxy from "http-proxy-3";
 import { reclaimOrphans } from "./process-cleanup.js";
 import { resolveBoxEntries, boxEntryToArg, type ResolvedBoxEntry } from "./box-entry.js";
 import { escapeHtml, serveDev } from "./router-docs.js";
+import {
+  type WorktreeHandle,
+  type CapturedError,
+  transitionLifecycle,
+  createStartingHandle,
+  readyLifecycle,
+  failedLifecycle,
+  startPromiseOf,
+  isServing,
+  childPids,
+} from "./router-lifecycle.js";
+import { createPidStore, type PidRecord } from "./router-pidfile.js";
 
 type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
 
@@ -158,57 +170,15 @@ async function readBoxes(envPath: string): Promise<string[] | null> {
 
 // --- PID file management ----------------------------------------------
 
-interface PidRecord {
-  name: string;
-  vitePid: number | undefined;
-  fastifyPid: number | undefined;
-  frontendPort: number;
-  backendPort: number;
-  dashboardPort: number | null;
-  socketDir: string;
-  profileDir: string;
-  routerPid: number;
-  startedAt: number;
-}
-
-async function writePidFile(name: string, data: PidRecord): Promise<void> {
-  await fs.mkdir(PID_DIR, { recursive: true });
-  await fs.writeFile(
-    path.join(PID_DIR, `${name}.json`),
-    JSON.stringify(data, null, 2),
-  );
-}
-
-// Invariant #1 of bin/docs/router-protocol.md: the pidfile is single-slot.
-// Remove a worktree's pidfile. The pidfile is single-slot (`<name>.json`),
-// holding only the *current* generation — so a teardown that races a fresh
-// start must NOT delete a pidfile that a newer generation has already written,
-// or that generation becomes invisible to the startup sweep (an untracked
-// orphan if the router later dies). Callers that know which generation they're
-// tearing down pass `expect`; removal is skipped when the on-disk record names
-// different pids. Generation-agnostic callers (shutdown) omit it.
-async function removePidFile(
-  name: string,
-  expect?: { vitePid: number | undefined; fastifyPid: number | undefined },
-): Promise<void> {
-  const fullPath = path.join(PID_DIR, `${name}.json`);
-  if (expect) {
-    try {
-      const data = JSON.parse(await fs.readFile(fullPath, "utf8")) as Partial<PidRecord>;
-      if (data.vitePid !== expect.vitePid || data.fastifyPid !== expect.fastifyPid) {
-        // A newer generation owns the slot now — leave it alone.
-        return;
-      }
-    } catch {
-      // Missing or unreadable — fall through to the unlink (a no-op if gone).
-    }
-  }
-  try {
-    await fs.unlink(fullPath);
-  } catch {
-    // Already gone — fine.
-  }
-}
+// Invariants #1 (single-slot) and #6 (per-name serialization) of
+// bin/docs/router-protocol.md live inside the store: `write`/`remove` are
+// serialized per worktree name so a `remove`'s generation-guard read+unlink is
+// atomic relative to a concurrent generation's `write`. Every current-generation
+// pidfile op (startWorktree, stopWorktree, onChildExit, shutdown, and a
+// superseded start's self-clean) routes through here. sweepStaleChildren below
+// touches pidfiles directly, but only at boot — before the server listens, so
+// no worktree op can race it.
+const pidStore = createPidStore(PID_DIR);
 
 function pidAlive(pid: number): boolean {
   try {
@@ -261,20 +231,11 @@ async function sweepStaleChildren(): Promise<void> {
 }
 
 // --- Process supervision ----------------------------------------------
-
-type EntryState = "starting" | "ready" | "stopping" | "dead" | "failed";
-
-interface CapturedError {
-  message: string;
-  /** Which lifecycle phase failed (waitForHttp, spawn, etc.). */
-  phase: string;
-  /** Tail of stdout+stderr (interleaved) from each child. Both streams are
-   *  captured because some startup output (fastify's "Server running at …",
-   *  vite's box-listing) lands on stdout, not stderr. */
-  viteOutput: string;
-  fastifyOutput: string;
-  at: number;
-}
+//
+// The worktree lifecycle model (the WorktreeHandle shell, the phase union, the
+// guarded transition table, and the four incident invariants it encodes) lives
+// in ./router-lifecycle.ts. This file owns the effects: spawning children,
+// killing them, HTTP-readiness probes, pidfiles, and driving transitions.
 
 /**
  * Fixed-size in-memory ring buffer for capturing the tail of a child's
@@ -293,78 +254,56 @@ function makeOutputRing(maxBytes: number): { write: (s: string) => void; read: (
   };
 }
 
-interface WorktreeEntry {
-  state: EntryState;
-  name: string;
-  startPromise?: Promise<WorktreeEntry>;
-  vite?: ChildProc;
-  fastify?: ChildProc;
-  frontendPort?: number;
-  backendPort?: number;
-  dashboardPort: number | null;
-  dashboardUrl: string | null;
-  socketDir?: string;
-  profileDir?: string;
-  browseEnv?: NodeJS.ProcessEnv;
-  startedAt?: number;
-  lastActivity?: number;
-  idleTimer: NodeJS.Timeout | null;
-  logFile?: string;
-  /** Populated when state === "failed". Surfaced on the error page so the
-   *  user can see what went wrong without grepping the log. */
-  lastError?: CapturedError;
+const worktrees = new Map<string, WorktreeHandle>();
+
+function statusError(message: string, statusCode: number): StatusError {
+  const err: StatusError = new Error(message);
+  err.statusCode = statusCode;
+  return err;
 }
 
-const worktrees = new Map<string, WorktreeEntry>();
-
-async function ensureRunning(name: string): Promise<WorktreeEntry> {
+async function ensureRunning(name: string): Promise<WorktreeHandle> {
   const existing = worktrees.get(name);
-  if (existing?.state === "ready") {
-    touch(existing);
-    return existing;
-  }
-  if (existing?.startPromise) return existing.startPromise;
-  // Failed worktrees stay failed until the user explicitly retries (via the
-  // /__router/retry/<name> endpoint). Auto-restarting on every page-fetch
-  // would mask the failure and burn CPU / log noise — a broken worktree
-  // should *look* broken, with the captured error visible.
-  if (existing?.state === "failed" && existing.lastError) {
-    const err: StatusError = new Error(existing.lastError.message);
-    err.statusCode = 502;
-    throw err;
+  if (existing) {
+    if (readyLifecycle(existing)) {
+      touch(existing);
+      return existing;
+    }
+    const inFlight = startPromiseOf(existing);
+    if (inFlight) return inFlight;
+    // Failed worktrees stay failed until the user explicitly retries (via the
+    // /__router/retry/<name> endpoint). Auto-restarting on every page-fetch
+    // would mask the failure and burn CPU / log noise — a broken worktree
+    // should *look* broken, with the captured error visible.
+    const failed = failedLifecycle(existing);
+    if (failed) throw statusError(failed.lastError.message, 502);
+    // Any other in-map phase is unreachable (stopping handles are unlinked
+    // before the transition); fall through to start a fresh generation.
   }
 
-  // Invariant #2 of bin/docs/router-protocol.md: atomic placeholder registration.
-  // Register the placeholder and its startPromise *atomically* — there must be
-  // NO await between the worktrees.get() above and the worktrees.set() below,
-  // or two near-simultaneous cold requests for the same worktree both observe
-  // an empty map, both call startWorktree, and each spawns a full vite+fastify
-  // pair. Only the last startWorktree to resolve wins the map slot; the loser's
-  // pair stays alive but unreferenced (a leaked generation), and its eventual
-  // exit is swallowed by onChildExit's replaced-generation guard. The old code
-  // awaited resolveWorktree() here, before registering — which is exactly the
-  // window that leaked. startWorktree does its own resolveWorktree()/404 check,
-  // so we no longer need (or want) one before the placeholder.
-  const placeholder: WorktreeEntry = {
-    state: "starting",
-    name,
-    dashboardPort: null,
-    dashboardUrl: null,
-    idleTimer: null,
-  };
-  placeholder.startPromise = startWorktree(name);
-  worktrees.set(name, placeholder);
-  // On rejection that ISN'T a captured waitForHttp failure (e.g. an
-  // unknown-name 404 from a `/.well-known/...` probe, crawler, or typo —
-  // startWorktree throws before parking a "failed" entry), drop the bare
-  // placeholder so it leaves no phantom index entry and a later valid request
-  // can retry. The waitForHttp path replaces the map entry with its own
-  // "failed" record, so the `cur === placeholder` guard leaves that intact.
-  placeholder.startPromise.catch(() => {
+  // Invariant #2 of bin/docs/router-protocol.md: atomic registration, then
+  // start. Construct the handle, register it, and begin startup in ONE
+  // synchronous stretch with no `await` between the worktrees.get() above and
+  // the worktrees.set() below — otherwise two near-simultaneous cold requests
+  // both observe an empty map, both start, and each spawns a full vite+fastify
+  // pair (a leaked generation). Registration happens BEFORE begin() invokes
+  // startWorktree, so even a synchronous resolver can't run before the handle
+  // is in the map.
+  const { handle, begin } = createStartingHandle({ name, startedAt: Date.now() });
+  worktrees.set(name, handle);
+  const inFlight = begin(startWorktree);
+  // On rejection that ISN'T a parked waitForHttp failure (e.g. an unknown-name
+  // 404 from a `/.well-known/...` probe, crawler, or typo — startWorktree throws
+  // before any transition), drop the bare starting handle so it leaves no
+  // phantom index entry and a later valid request can retry. The failure path
+  // transitions this same handle to `failed` in place, so the still-`starting`
+  // guard leaves that record intact; a superseded generation (cur !== handle)
+  // is likewise left alone.
+  inFlight.catch(() => {
     const cur = worktrees.get(name);
-    if (cur === placeholder && cur.state === "starting") worktrees.delete(name);
+    if (cur === handle && cur.lifecycle.phase === "starting") worktrees.delete(name);
   });
-  return placeholder.startPromise;
+  return inFlight;
 }
 
 /**
@@ -404,25 +343,28 @@ async function writeWorktreeHubConfig(params: {
   return configPath;
 }
 
-let touch = (entry: WorktreeEntry): void => {
-  entry.lastActivity = Date.now();
-  if (entry.idleTimer) clearTimeout(entry.idleTimer);
-  entry.idleTimer = setTimeout(() => {
-    log(`[${entry.name}] idle for ${IDLE_TIMEOUT_MS}ms, shutting down`);
-    stopWorktree(entry.name).catch((err: Error) =>
-      log(`[${entry.name}] idle shutdown error: ${err.message}`),
+// Record activity and (re)arm the idle timer. Only a `ready` handle has an idle
+// timer; other phases are a no-op. This mutates the ready variant's idle
+// bookkeeping in place — a within-phase field update, not a lifecycle
+// transition.
+let touch = (handle: WorktreeHandle): void => {
+  const ready = readyLifecycle(handle);
+  if (!ready) return;
+  ready.lastActivity = Date.now();
+  if (ready.idleTimer) clearTimeout(ready.idleTimer);
+  ready.idleTimer = setTimeout(() => {
+    log(`[${handle.name}] idle for ${IDLE_TIMEOUT_MS}ms, shutting down`);
+    stopWorktree(handle.name).catch((err: Error) =>
+      log(`[${handle.name}] idle shutdown error: ${err.message}`),
     );
   }, IDLE_TIMEOUT_MS);
-  entry.idleTimer.unref();
+  ready.idleTimer.unref();
 };
 
-async function startWorktree(name: string): Promise<WorktreeEntry> {
+async function startWorktree(handle: WorktreeHandle): Promise<WorktreeHandle> {
+  const name = handle.name;
   const wt = await resolveWorktree(name);
-  if (!wt) {
-    const err: StatusError = new Error(`Worktree ${JSON.stringify(name)} not found`);
-    err.statusCode = 404;
-    throw err;
-  }
+  if (!wt) throw statusError(`Worktree ${JSON.stringify(name)} not found`, 404);
   log(`[${name}] starting`);
 
   await fs.mkdir(LOG_DIR, { recursive: true });
@@ -538,7 +480,7 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
     log(`[${name}] dashboard failed to start: ${(err as Error).message}`);
   }
 
-  await writePidFile(name, {
+  await pidStore.write(name, {
     name,
     vitePid: vite.pid,
     fastifyPid: fastify.pid,
@@ -551,6 +493,20 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
     startedAt: Date.now(),
   });
 
+  // SIGTERM→SIGKILL escalation for this generation's children — shared by the
+  // failure path and the superseded-start self-clean (invariant #5). A vite
+  // that's slow to die on SIGTERM (e.g. mid esbuild/optimizeDeps) would
+  // otherwise survive as an orphan, and the pidfile is removed right after so
+  // the sweep couldn't find it either.
+  const killOwnChildren = (): void => {
+    killGroup(vite.pid);
+    killGroup(fastify.pid);
+    setTimeout(() => {
+      killGroup(vite.pid, "SIGKILL");
+      killGroup(fastify.pid, "SIGKILL");
+    }, KILL_GRACE_MS).unref();
+  };
+
   // Wait for both to serve HTTP — not just accept TCP.
   try {
     await Promise.all([
@@ -558,16 +514,7 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       waitForHttp(backendPort, "/healthz", 30000, `fastify/${name}`),
     ]);
   } catch (err) {
-    // Match the SIGTERM→SIGKILL escalation of the other teardown paths: a vite
-    // that's slow to die on SIGTERM (e.g. mid esbuild/optimizeDeps) would
-    // otherwise survive as an orphan, and we've already removed its pidfile
-    // below so the sweep couldn't find it either.
-    killGroup(vite.pid);
-    killGroup(fastify.pid);
-    setTimeout(() => {
-      killGroup(vite.pid, "SIGKILL");
-      killGroup(fastify.pid, "SIGKILL");
-    }, KILL_GRACE_MS).unref();
+    killOwnChildren();
     // The dashboard daemon started before waitForHttp; stop it too so a failed
     // startup doesn't leak an agent-browser process.
     if (dashboardStarted) {
@@ -577,10 +524,7 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
         timeout: 5000,
       }).catch(() => { /* nothing to stop, fine */ });
     }
-    await removePidFile(name, { vitePid: vite.pid, fastifyPid: fastify.pid });
-    // Park the entry in `failed` with what we captured. The HTTP request
-    // handler (and /__router/retry/<name>) reads `lastError` to render
-    // the error page; ensureRunning won't auto-restart a failed worktree.
+    await pidStore.remove(name, { vitePid: vite.pid, fastifyPid: fastify.pid });
     const captured: CapturedError = {
       message: (err as Error).message,
       phase: "waitForHttp",
@@ -589,24 +533,63 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
       at: Date.now(),
     };
     log(`[${name}] startup failed in ${captured.phase}: ${captured.message}`);
-    worktrees.set(name, {
-      state: "failed",
-      name,
-      dashboardPort: null,
-      dashboardUrl: null,
-      idleTimer: null,
-      lastError: captured,
-    });
-    const wrapped: StatusError = new Error(captured.message);
-    wrapped.statusCode = 502;
-    throw wrapped;
+    // Invariant #5: guarded publication at the failure terminal too. If a stop
+    // (or a newer generation) superseded us while we were failing, DON'T park a
+    // `failed` record — this handle is off the map, so terminate it as
+    // `stopping` (self-clean semantics) and let the generation that owns the
+    // slot stand. Only the current generation publishes its `failed` record
+    // (which the HTTP handler and /__router/retry/<name> read to render the
+    // error page; ensureRunning won't auto-restart a failed worktree).
+    if (worktrees.get(name) !== handle) {
+      log(`[${name}] startup failed but this generation was superseded — not publishing failure`);
+      transitionLifecycle(handle, {
+        phase: "stopping",
+        reason: "requested",
+        vitePid: vite.pid,
+        fastifyPid: fastify.pid,
+        dashboardPort: dashboardStarted ? dashboardPort : null,
+        browseEnv,
+      });
+      throw statusError(captured.message, 502);
+    }
+    transitionLifecycle(handle, { phase: "failed", lastError: captured });
+    throw statusError(captured.message, 502);
   }
 
-  const entry: WorktreeEntry = {
-    state: "ready",
-    name,
-    vite,
-    fastify,
+  // Invariant #5: guarded publication. A `/__router/stop/<name>` (or a newer
+  // generation) during this cold start unlinks the handle from the map; if that
+  // happened, DON'T publish — kill our own children, remove our own pidfile, and
+  // resolve without reappearing in the map (the completed start must not
+  // silently resurrect a worktree the user stopped, nor clobber a replacement).
+  if (worktrees.get(name) !== handle) {
+    log(`[${name}] startup finished but this generation was superseded — self-cleaning, not publishing`);
+    killOwnChildren();
+    if (dashboardStarted) {
+      await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
+        env: browseEnv,
+        stdio: "ignore",
+        timeout: 5000,
+      }).catch(() => { /* nothing to stop, fine */ });
+    }
+    await pidStore.remove(name, { vitePid: vite.pid, fastifyPid: fastify.pid });
+    transitionLifecycle(handle, {
+      phase: "stopping",
+      reason: "requested",
+      vitePid: vite.pid,
+      fastifyPid: fastify.pid,
+      dashboardPort: dashboardStarted ? dashboardPort : null,
+      browseEnv,
+    });
+    return handle;
+  }
+
+  // Still the current generation — publish `ready` by transitioning the same
+  // handle in place (it has been in the map since ensureRunning registered it;
+  // no map replacement, so the identity guards stay valid).
+  transitionLifecycle(handle, {
+    phase: "ready",
+    vitePid: vite.pid,
+    fastifyPid: fastify.pid,
     frontendPort,
     backendPort,
     dashboardPort: dashboardStarted ? dashboardPort : null,
@@ -614,27 +597,25 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
     socketDir,
     profileDir,
     browseEnv,
-    startedAt: Date.now(),
+    logFile,
     lastActivity: Date.now(),
     idleTimer: null,
-    logFile,
-  };
-  worktrees.set(name, entry);
-  touch(entry);
+  });
+  touch(handle);
   log(`[${name}] ready`);
 
   vite.on("exit", (code, signal) => {
     log(`[${name}] vite exited code=${code} signal=${signal}`);
-    onChildExit(name, entry);
+    onChildExit(handle);
   });
   fastify.on("exit", (code, signal) => {
     log(`[${name}] fastify exited code=${code} signal=${signal}`);
-    onChildExit(name, entry);
+    onChildExit(handle);
   });
   // execa-promise rejection handlers are attached at spawn time above — not
   // here — so they're in place even on the waitForHttp-failure path.
 
-  return entry;
+  return handle;
 }
 
 // Invariant #4 of bin/docs/router-protocol.md: verify generation identity before tearing down.
@@ -647,55 +628,94 @@ async function startWorktree(name: string): Promise<WorktreeEntry> {
 // 2026-06-09 "main restarts every 10s" incident). Every teardown must
 // therefore verify the exiting child belongs to the entry currently in the
 // map, and stale exits reduce to a log line.
-let onChildExit = (name: string, exited: WorktreeEntry): void => {
-  const entry = worktrees.get(name);
-  if (entry !== exited) {
+// An unexpected exit of a `ready` generation's child (crash, or a drained
+// SIGTERM finally landing). Invariant #4: verify the exiting child still belongs
+// to the map's current handle — a late exit from a replaced generation reduces
+// to a log line, never a teardown of the live entry (the 2026-06-09 "main
+// restarts every 10s" incident). Reason "exited" → detached, fire-and-forget
+// cleanup (no caller is awaiting an unexpected death).
+let onChildExit = (handle: WorktreeHandle): void => {
+  const name = handle.name;
+  if (worktrees.get(name) !== handle) {
     log(`[${name}] exit event from a replaced generation, ignoring`);
     return;
   }
-  if (!entry || entry.state !== "ready") return;
-  entry.state = "dead";
-  if (entry.idleTimer) clearTimeout(entry.idleTimer);
-  killGroup(entry.vite?.pid);
-  killGroup(entry.fastify?.pid);
-  setTimeout(() => {
-    killGroup(entry.vite?.pid, "SIGKILL");
-    killGroup(entry.fastify?.pid, "SIGKILL");
-  }, KILL_GRACE_MS).unref();
+  const ready = readyLifecycle(handle);
+  if (!ready) return;
+  if (ready.idleTimer) clearTimeout(ready.idleTimer);
+  const { vitePid, fastifyPid } = ready;
   worktrees.delete(name);
-  stopDashboard(entry).catch(() => {});
-  removePidFile(name, { vitePid: entry.vite?.pid, fastifyPid: entry.fastify?.pid }).catch(() => {});
+  transitionLifecycle(handle, {
+    phase: "stopping",
+    reason: "exited",
+    vitePid,
+    fastifyPid,
+    dashboardPort: ready.dashboardPort,
+    browseEnv: ready.browseEnv,
+  });
+  killGroup(vitePid);
+  killGroup(fastifyPid);
+  setTimeout(() => {
+    killGroup(vitePid, "SIGKILL");
+    killGroup(fastifyPid, "SIGKILL");
+  }, KILL_GRACE_MS).unref();
+  stopDashboard(handle).catch(() => {});
+  pidStore.remove(name, { vitePid, fastifyPid }).catch(() => {});
 };
 
+// Explicit/idle stop. Reason "requested" → cleanup is AWAITED (the retry
+// endpoint relies on stopWorktree completion). Unlink from the map before any
+// await so a request arriving mid-stop sees a cold worktree and starts a fresh
+// generation, and this cleanup can never delete that new generation's state.
 let stopWorktree = async (name: string): Promise<void> => {
-  const entry = worktrees.get(name);
-  if (!entry) return;
-  if (entry.idleTimer) clearTimeout(entry.idleTimer);
-  entry.state = "stopping";
-  killGroup(entry.vite?.pid);
-  killGroup(entry.fastify?.pid);
-  setTimeout(() => {
-    killGroup(entry.vite?.pid, "SIGKILL");
-    killGroup(entry.fastify?.pid, "SIGKILL");
-  }, KILL_GRACE_MS).unref();
-  // Drop the entry before any await: a request arriving mid-stop must see a
-  // cold worktree and start a fresh generation, and the async cleanup below
-  // must never delete that new generation's state (see onChildExit's comment).
+  const handle = worktrees.get(name);
+  if (!handle) return;
   worktrees.delete(name);
-  await removePidFile(name, { vitePid: entry.vite?.pid, fastifyPid: entry.fastify?.pid });
-  await stopDashboard(entry).catch(() => {});
+  const ready = readyLifecycle(handle);
+  if (!ready) {
+    // `starting`: the in-flight start owns the children (they live in
+    //   startWorktree's scope) and self-cleans on its guarded publication now
+    //   that we've unlinked it (invariant #5) — nothing to kill here.
+    // `failed`: nothing is running; dropping it from the map is the whole stop.
+    return;
+  }
+  if (ready.idleTimer) clearTimeout(ready.idleTimer);
+  const { vitePid, fastifyPid } = ready;
+  transitionLifecycle(handle, {
+    phase: "stopping",
+    reason: "requested",
+    vitePid,
+    fastifyPid,
+    dashboardPort: ready.dashboardPort,
+    browseEnv: ready.browseEnv,
+  });
+  killGroup(vitePid);
+  killGroup(fastifyPid);
+  setTimeout(() => {
+    killGroup(vitePid, "SIGKILL");
+    killGroup(fastifyPid, "SIGKILL");
+  }, KILL_GRACE_MS).unref();
+  await pidStore.remove(name, { vitePid, fastifyPid });
+  await stopDashboard(handle).catch(() => {});
 };
 
-async function stopDashboard(entry: WorktreeEntry): Promise<void> {
-  if (!entry.dashboardPort || !entry.browseEnv) return;
+// Stop the agent-browser dashboard daemon for a handle in a phase that owns one
+// (`ready` or `stopping`). Other phases carry no dashboard, so this is a no-op.
+async function stopDashboard(handle: WorktreeHandle): Promise<void> {
+  const lc = handle.lifecycle;
+  const dashboard =
+    lc.phase === "ready" || lc.phase === "stopping"
+      ? { dashboardPort: lc.dashboardPort, browseEnv: lc.browseEnv }
+      : null;
+  if (!dashboard || !dashboard.dashboardPort || !dashboard.browseEnv) return;
   try {
     await execa("node", [AGENT_BROWSER_BIN, "dashboard", "stop"], {
-      env: entry.browseEnv,
+      env: dashboard.browseEnv,
       stdio: "ignore",
       timeout: 5000,
     });
   } catch (err) {
-    log(`[${entry.name}] dashboard stop failed: ${(err as Error).message}`);
+    log(`[${handle.name}] dashboard stop failed: ${(err as Error).message}`);
   }
 }
 
@@ -770,7 +790,7 @@ function parseWorktreeName(reqPath: string): string | null {
 interface DiscoveredWorktree {
   name: string;
   running: boolean;
-  entry?: WorktreeEntry;
+  handle?: WorktreeHandle;
 }
 
 async function discoverWorktrees(): Promise<DiscoveredWorktree[]> {
@@ -784,9 +804,9 @@ async function discoverWorktrees(): Promise<DiscoveredWorktree[]> {
   } catch {
     // No worktrees dir yet — fine.
   }
-  for (const [name, entry] of worktrees) {
+  for (const [name, handle] of worktrees) {
     const existing = all.get(name) ?? { name, running: false };
-    all.set(name, { ...existing, running: entry.state === "ready", entry });
+    all.set(name, { ...existing, running: isServing(handle), handle });
   }
   return Array.from(all.values()).sort((a, b) =>
     a.name === "main" ? -1 : b.name === "main" ? 1 : a.name.localeCompare(b.name),
@@ -796,10 +816,11 @@ async function discoverWorktrees(): Promise<DiscoveredWorktree[]> {
 async function renderIndex(): Promise<string> {
   const list = await discoverWorktrees();
   const rows = list.map((w) => {
-    const status = w.entry?.state === "failed"
+    const ready = w.handle ? readyLifecycle(w.handle) : null;
+    const status = w.handle && failedLifecycle(w.handle)
       ? `<span class="badge failed">failed · <a href="/${escapeHtml(w.name)}/">see error</a></span>`
-      : w.running && w.entry?.lastActivity
-        ? `<span class="badge running">running · idle ${Math.round((Date.now() - w.entry.lastActivity) / 1000)}s</span>`
+      : ready
+        ? `<span class="badge running">running · idle ${Math.round((Date.now() - ready.lastActivity) / 1000)}s</span>`
         : `<span class="badge cold" title="will lazy-start on first request">cold</span>`;
     const dashLink = `<a href="/__router/dashboard/${escapeHtml(w.name)}" class="dash" target="_blank" rel="noopener" title="agent-browser dashboard for ${escapeHtml(w.name)} (starts the worktree if cold)">agent-browser ↗</a>`;
     const devLink = `<a href="/${escapeHtml(w.name)}/dev/" class="dash" title="agent-built visualizations &amp; markdown doc browser for ${escapeHtml(w.name)} (served from disk, no start)">dev ↗</a>`;
@@ -970,24 +991,31 @@ const server = http.createServer(async (req, res) => {
     const discovered = await discoverWorktrees();
     const state: Record<string, unknown> = {};
     for (const w of discovered) {
-      const entry = worktrees.get(w.name);
-      if (entry) {
+      const handle = worktrees.get(w.name);
+      if (!handle) {
+        state[w.name] = { state: "cold" };
+        continue;
+      }
+      const ready = readyLifecycle(handle);
+      if (ready) {
         state[w.name] = {
-          state: entry.state,
-          frontendPort: entry.frontendPort,
-          backendPort: entry.backendPort,
-          dashboardPort: entry.dashboardPort,
-          dashboardUrl: entry.dashboardUrl,
-          vitePid: entry.vite?.pid,
-          fastifyPid: entry.fastify?.pid,
-          socketDir: entry.socketDir,
-          profileDir: entry.profileDir,
-          startedAt: entry.startedAt,
-          lastActivity: entry.lastActivity,
-          idleMs: entry.lastActivity ? Date.now() - entry.lastActivity : null,
+          state: "ready",
+          frontendPort: ready.frontendPort,
+          backendPort: ready.backendPort,
+          dashboardPort: ready.dashboardPort,
+          dashboardUrl: ready.dashboardUrl,
+          vitePid: ready.vitePid,
+          fastifyPid: ready.fastifyPid,
+          socketDir: ready.socketDir,
+          profileDir: ready.profileDir,
+          startedAt: handle.startedAt,
+          lastActivity: ready.lastActivity,
+          idleMs: Date.now() - ready.lastActivity,
         };
       } else {
-        state[w.name] = { state: "cold" };
+        // starting / failed — the only other in-map phases (stopping handles
+        // are unlinked before the transition). Ports/pids aren't meaningful yet.
+        state[w.name] = { state: handle.lifecycle.phase, startedAt: handle.startedAt };
       }
     }
     res.end(
@@ -1022,7 +1050,7 @@ const server = http.createServer(async (req, res) => {
     // Clear any failed-state entry so ensureRunning will spawn a fresh
     // attempt rather than re-throwing the cached error.
     const existing = worktrees.get(name);
-    if (existing?.state === "failed") {
+    if (existing && failedLifecycle(existing)) {
       worktrees.delete(name);
     }
     res.writeHead(303, { location: `/${name}/` });
@@ -1063,21 +1091,22 @@ const server = http.createServer(async (req, res) => {
       res.end("missing worktree name");
       return;
     }
-    let entry: WorktreeEntry;
+    let handle: WorktreeHandle;
     try {
-      entry = await ensureRunning(name);
+      handle = await ensureRunning(name);
     } catch (err) {
       const status = (err as StatusError).statusCode ?? 502;
       res.writeHead(status, { "content-type": "text/plain" });
       res.end(`Failed to start worktree ${name}: ${(err as Error).message}\n`);
       return;
     }
-    if (!entry.dashboardUrl) {
+    const dashboardUrl = readyLifecycle(handle)?.dashboardUrl ?? null;
+    if (!dashboardUrl) {
       res.writeHead(502, { "content-type": "text/plain" });
       res.end(`Worktree ${name} is running but its dashboard failed to start. See logs at ~/.cache/callback-box/logs/${name}.log\n`);
       return;
     }
-    res.writeHead(302, { location: entry.dashboardUrl });
+    res.writeHead(302, { location: dashboardUrl });
     res.end();
     return;
   }
@@ -1143,8 +1172,9 @@ const server = http.createServer(async (req, res) => {
     // If we have a captured failure for this worktree, render the rich
     // HTML error page (stderr tail + retry button). Otherwise fall back
     // to plain text (e.g. 404 for unknown worktree name).
-    const failed = worktrees.get(name);
-    if (failed?.state === "failed" && failed.lastError) {
+    const failedHandle = worktrees.get(name);
+    const failed = failedHandle ? failedLifecycle(failedHandle) : null;
+    if (failed) {
       res.writeHead(status, { "content-type": "text/html; charset=utf-8" });
       res.end(renderFailedPage(name, failed.lastError));
       return;
@@ -1172,19 +1202,21 @@ server.on("upgrade", async (req, socket, head) => {
     socket.destroy();
     return;
   }
-  let entry = worktrees.get(name);
-  if (entry?.startPromise) {
+  let handle = worktrees.get(name);
+  const inFlight = handle ? startPromiseOf(handle) : null;
+  if (inFlight) {
     // A cold start is already underway (triggered by an HTTP request) — let
     // the socket wait for it rather than refusing and forcing a retry cycle.
     try {
-      entry = await entry.startPromise;
+      handle = await inFlight;
     } catch (err) {
       log(`[${name}] upgrade failed: ${(err as Error).message}`);
       socket.destroy();
       return;
     }
   }
-  if (entry?.state !== "ready") {
+  const ready = handle ? readyLifecycle(handle) : null;
+  if (!handle || !ready) {
     const last = refusedUpgradeLogAt.get(name) ?? 0;
     if (Date.now() - last > 60_000) {
       refusedUpgradeLogAt.set(name, Date.now());
@@ -1193,11 +1225,11 @@ server.on("upgrade", async (req, socket, head) => {
     socket.end("HTTP/1.1 503 Service Unavailable\r\nConnection: close\r\n\r\n");
     return;
   }
-  touch(entry);
-  const target = `http://127.0.0.1:${entry.frontendPort}`;
+  touch(handle);
+  const target = `http://127.0.0.1:${ready.frontendPort}`;
   proxy.ws(req, socket, head, { target }, (err: Error | undefined) => {
     if (err) {
-      log(`[${entry.name}] ws proxy error: ${err.message}`);
+      log(`[${name}] ws proxy error: ${err.message}`);
       try { socket.destroy(); } catch { /* already gone */ }
     }
   });
@@ -1228,10 +1260,10 @@ async function readBody(req: http.IncomingMessage): Promise<Buffer> {
 function proxyOnce(
   req: http.IncomingMessage,
   res: http.ServerResponse,
-  { entry, body }: { entry: WorktreeEntry; body: Buffer | null },
+  { frontendPort, body }: { frontendPort: number; body: Buffer | null },
 ): Promise<(Error & { code?: string }) | undefined> {
   return new Promise((resolve) => {
-    const target = `http://127.0.0.1:${entry.frontendPort}`;
+    const target = `http://127.0.0.1:${frontendPort}`;
     // The proxy callback fires only on error; success is the response closing.
     res.on("close", () => resolve(undefined));
     const options = body === null
@@ -1250,14 +1282,14 @@ async function proxyWithRetry(
   const bodyLength = replayableBodyLength(req);
   const body = bodyLength === null ? null : await readBody(req);
   for (;;) {
-    let entry: WorktreeEntry;
+    let handle: WorktreeHandle;
     try {
       // Re-resolve every attempt: after a kill/restart race the worktree's
       // new generation listens on different ports, so retrying the original
       // target would hammer a dead port. ensureRunning also restarts a
       // worktree that died between request arrival and proxying — the HTTP
       // request already established user intent.
-      entry = await ensureRunning(name);
+      handle = await ensureRunning(name);
     } catch (err) {
       if (!res.headersSent) {
         res.writeHead((err as StatusError).statusCode ?? 502, { "content-type": "text/plain" });
@@ -1265,7 +1297,18 @@ async function proxyWithRetry(
       }
       return;
     }
-    const err = await proxyOnce(req, res, { entry, body });
+    // A start that was superseded mid-flight (invariant #5) resolves to a
+    // non-ready handle; treat it like a transient upstream and retry, which
+    // re-runs ensureRunning against the fresh generation (or cold-starts one).
+    const ready = readyLifecycle(handle);
+    let err: (Error & { code?: string }) | undefined;
+    if (ready) {
+      err = await proxyOnce(req, res, { frontendPort: ready.frontendPort, body });
+    } else {
+      const notReady: Error & { code?: string } = new Error(`worktree ${name} not ready`);
+      notReady.code = "ECONNREFUSED";
+      err = notReady;
+    }
     if (!err) return;
     // ECONNREFUSED: nothing listening (cold port). ECONNRESET/EPIPE: the
     // process died with the socket mid-handshake (e.g. a kill racing the
@@ -1318,20 +1361,23 @@ async function shutdown(reason: string): Promise<void> {
   if (shuttingDown) return;
   shuttingDown = true;
   log(`shutting down: ${reason}`);
-  for (const entry of worktrees.values()) {
-    if (entry.idleTimer) clearTimeout(entry.idleTimer);
-    killGroup(entry.vite?.pid);
-    killGroup(entry.fastify?.pid);
+  for (const handle of worktrees.values()) {
+    const ready = readyLifecycle(handle);
+    if (ready?.idleTimer) clearTimeout(ready.idleTimer);
+    const { vitePid, fastifyPid } = childPids(handle.lifecycle);
+    killGroup(vitePid);
+    killGroup(fastifyPid);
   }
   setTimeout(() => {
-    for (const entry of worktrees.values()) {
-      killGroup(entry.vite?.pid, "SIGKILL");
-      killGroup(entry.fastify?.pid, "SIGKILL");
+    for (const handle of worktrees.values()) {
+      const { vitePid, fastifyPid } = childPids(handle.lifecycle);
+      killGroup(vitePid, "SIGKILL");
+      killGroup(fastifyPid, "SIGKILL");
     }
   }, KILL_GRACE_MS).unref();
   await sleep(500);
   for (const name of worktrees.keys()) {
-    await removePidFile(name);
+    await pidStore.remove(name);
   }
   await fs.unlink(ROUTER_PID_FILE).catch(() => {});
   server.close(() => process.exit(0));
@@ -1357,7 +1403,7 @@ function setTabTitle(title: string): void {
 }
 
 function updateTabTitle(): void {
-  const running = [...worktrees.values()].filter((e) => e.state === "ready");
+  const running = [...worktrees.values()].filter((h) => isServing(h));
   let title = `⚡ cb router :${ROUTER_PORT}`;
   if (running.length === 1) {
     title += ` · ${running[0]!.name}`;
@@ -1369,11 +1415,11 @@ function updateTabTitle(): void {
 
 // Hook the state-transition helpers to keep the tab title fresh.
 const _origTouch = touch;
-touch = (entry: WorktreeEntry) => { _origTouch(entry); updateTabTitle(); };
+touch = (handle: WorktreeHandle) => { _origTouch(handle); updateTabTitle(); };
 const _origStop = stopWorktree;
 stopWorktree = async (name: string) => { await _origStop(name); updateTabTitle(); };
 const _origOnExit = onChildExit;
-onChildExit = (name: string, exited: WorktreeEntry) => { _origOnExit(name, exited); updateTabTitle(); };
+onChildExit = (handle: WorktreeHandle) => { _origOnExit(handle); updateTabTitle(); };
 
 // --- Boot --------------------------------------------------------------
 
