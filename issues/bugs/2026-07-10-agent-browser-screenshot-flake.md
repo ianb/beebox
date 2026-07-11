@@ -1,5 +1,6 @@
 ---
 title: "agent-browser screenshot op flakes with os error 35"
+needs: [decision]
 ---
 
 `bin/browse screenshot` (and therefore every tour checkpoint)
@@ -24,3 +25,28 @@ it's payload-size-related — whether `screenshot --full` fails harder.
 Until fixed, tours can't reliably produce their core artifact; the
 fail-findings they now record at least make the flake visible in
 summary.md instead of silently missing screenshots.
+
+## Research (2026-07-11)
+
+Reproduced twice (worktree-fix-bugs bug-queue validation) — and it's worse
+than filed: after the "os error 35 (after 5 retries)" wait failure, the
+follow-on screenshot capture hung indefinitely (5+ min, no file), daemon and
+Chrome confirmed healthy throughout. Root cause pinpointed **upstream** in
+`vercel-labs/agent-browser` (Rust CLI, ships as a precompiled binary — not
+patchable via `pnpm patch`):
+
+- `cli/src/connection.rs:1032` `is_transient_error` string-matches
+  `(os error 35)` (macOS EAGAIN) as retry-worthy — but on macOS an expired
+  `SO_RCVTIMEO` read (set at `connection.rs:1073`, 30s floor) surfaces as the
+  SAME `os error 35` string. A command whose server-side work legitimately
+  approaches the per-attempt read timeout — the `wait --fn` long-poll
+  `bin/browse` issues before every screenshot, or a large base64 PNG payload —
+  gets its connection torn down and the WHOLE command restarted from scratch
+  (`send_command_once`, `connection.rs:1091`), up to 5 times, then fails even
+  though the daemon was never stuck.
+
+Our wrapper (`browse/src/cli.ts`, `browse/src/screenshot.ts`) is a thin
+pass-through with no bug of its own. Decision needed: file this upstream
+(report is ready — the file:line citations above), and/or add a stopgap outer
+retry with a longer budget in `browse/src/cli.ts` — which papers over the wait
+failure but can't prevent the post-failure indefinite hang observed here.
