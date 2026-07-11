@@ -148,7 +148,9 @@ export class ChatThreadSession extends EventEmitter {
     const env = await buildScriptEnv(this.boxRoot, {
       CLAUDECODE: undefined,
       // Only when a real id exists — a pending-new session has none yet, and a
-      // placeholder would misdirect a mid-turn `cb chat screenshot`.
+      // placeholder would misdirect a mid-turn `cb chat screenshot`. A new
+      // session's id is published post-spawn via the backend's
+      // CB_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
       ...(this.sessionId !== null ? { CB_CHAT_SESSION_ID: this.sessionId } : {}),
     });
 

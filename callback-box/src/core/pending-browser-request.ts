@@ -42,10 +42,17 @@ interface PendingEntry<TFulfillment> {
 }
 
 export interface PendingBrowserRequests<TFulfillment> {
-  /** Park a new request; `outcome` resolves on answer, ack-timeout, or timeout. */
+  /**
+   * Park a new request; `outcome` resolves on answer, ack-timeout, or timeout.
+   * The id is ALWAYS generated internally (`crypto.randomUUID`) and returned —
+   * never caller-supplied. A caller-chosen id is a security boundary hazard:
+   * it flows into filesystem paths (`tmp/screenshots/<id>.png`) and the pending
+   * registry key, so a hostile id could traverse paths or collide/orphan a live
+   * entry. Consumers learn the id from the return value (and broadcast it to
+   * browser tabs via the event bus); nothing outside this module picks it.
+   */
   create(opts: {
     timeoutMs: number;
-    requestId?: string | undefined;
     ackGraceMs?: number | undefined;
   }): { requestId: string; outcome: Promise<PendingOutcome<TFulfillment>> };
   /**
@@ -101,8 +108,8 @@ export function createPendingBrowserRequests<TFulfillment>(
   }
 
   return {
-    create({ timeoutMs, requestId, ackGraceMs }) {
-      const id = requestId ?? randomUUID();
+    create({ timeoutMs, ackGraceMs }) {
+      const id = randomUUID();
       let resolve!: (outcome: PendingOutcome<TFulfillment>) => void;
       const outcome = new Promise<PendingOutcome<TFulfillment>>((r) => {
         resolve = r;

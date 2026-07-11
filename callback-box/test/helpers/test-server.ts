@@ -22,6 +22,7 @@ import { execSync } from "node:child_process";
 import type { FastifyInstance } from "fastify";
 import { initBox } from "../../src/core/box/index.js";
 import { createServer } from "../../src/webapp/server.js";
+import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
 
 export const TEST_SLUG = "test";
@@ -29,6 +30,12 @@ export const TEST_SLUG = "test";
 export interface TestServerContext {
   server: FastifyInstance;
   boxRoot: string;
+  /**
+   * The box's event bus — the SAME instance the routes emit on, so a test can
+   * subscribe and read transient events (e.g. the server-minted screenshot
+   * request id) that never leave the process otherwise.
+   */
+  eventBus: EventBus;
   cleanup: () => Promise<void>;
 }
 
@@ -92,17 +99,23 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   // dir — no per-boot git subprocess. See getTemplateBox above.
   await cp(template, tmpDir, { recursive: true });
 
+  // Build the box's event bus here and inject it so the test holds the SAME
+  // instance the routes emit on (transient events never leave the process).
+  const eventBus = createEventBus(tmpDir, { pollInterval: 1000 });
+
   // Create server pointing at this temp box
   const server = await createServer({
-    boxes: [{ slug: TEST_SLUG, boxRoot: tmpDir }],
+    boxes: [{ slug: TEST_SLUG, boxRoot: tmpDir, eventBus }],
     services: opts?.services,
   });
 
   return {
     server,
     boxRoot: tmpDir,
+    eventBus,
     cleanup: async () => {
       await server.close();
+      eventBus.close();
       // maxRetries handles benign ENOTEMPTY races on macOS when background
       // writes (chat-history backfill, scheduler tick) finish just as we walk.
       await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });

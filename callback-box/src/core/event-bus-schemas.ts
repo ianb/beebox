@@ -94,9 +94,9 @@ export const eventSchemas = {
    * moment. `expiresAt` is the ISO deadline past which the frontend ignores it.
    */
   "screenshot-request": z.object({
-    requestId: z.string(),
-    session: z.string(),
-    expiresAt: z.string(),
+    requestId: z.string().min(1),
+    session: z.string().min(1),
+    expiresAt: z.string().datetime(),
   }),
   /** A card was created (optionally with a captured audio attachment). */
   "card-created": z.object({

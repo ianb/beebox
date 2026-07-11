@@ -9,26 +9,35 @@
  *                                         `{failed}`
  *
  * Flow: the request route parks the CLI call in {@link createPendingBrowserRequests}
- * (with a 2s ack window) and broadcasts a *transient* `screenshot-request` bus
- * event carrying the target session id and an `expiresAt` deadline. The tab
- * holding that exact session acks immediately (cancelling the `no-client`
- * window), captures, then answers with the PNG (first-wins). The request route
- * writes the winning image under `<boxRoot>/tmp/screenshots/<requestId>.png` and
- * returns its absolute path; the CLI prints that path for the agent to Read.
+ * (with a 2s ack window), which mints a server-side `crypto.randomUUID` request
+ * id — the id is NEVER caller-supplied (a caller-chosen id would flow into the
+ * `tmp/screenshots/<id>.png` write path and the registry key: a path-traversal
+ * and entry-collision hazard). The route broadcasts a *transient*
+ * `screenshot-request` bus event carrying that id, the target session, and an
+ * `expiresAt` deadline. The tab holding that exact session acks immediately
+ * (cancelling the `no-client` window), captures, then answers with the PNG
+ * (first-wins). The request route writes the winning image under
+ * `<boxRoot>/tmp/screenshots/<requestId>.png` and returns its absolute path; the
+ * CLI prints that path for the agent to Read.
  *
  * Auth: both routes sit behind the shared box-scope auth wall
- * (`server-box-scope.ts`) exactly like the last-audio routes — the request
- * long-poll is reached by the agent subprocess with its per-box loopback bearer
- * (`loopbackHeaders()`); the answer route by the user's authenticated browser
- * session. There is no additional explicit loopback guard here, matching
- * self-note / last-audio (which have none either).
+ * (`server-box-scope.ts`). The REQUEST route adds an explicit loopback guard on
+ * top: it requires the per-box agent bearer (`verifyAgentBearer`) and 403s a
+ * plain user session — the flow is agent-initiated, so an ordinary
+ * authenticated/open-access user must not be able to start a request. The
+ * agent subprocess presents that bearer via `loopbackHeaders()`; the box auth
+ * wall recognizes the same bearer, so no browser session can forge it. The
+ * ANSWER route stays user-session-authed (the browser tab uploads the PNG), so
+ * it gets no agent guard.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import type { FastifyReply } from "fastify";
 import { z } from "zod";
 import { getBoxTime, getBoxTimeISO } from "../../lib/time.js";
 import { assertNever } from "../../lib/invariant.js";
+import { verifyAgentBearer } from "../../core/agent/token.js";
 import {
   createPendingBrowserRequests,
   type PendingOutcome,
@@ -72,25 +81,36 @@ export type ScreenshotFulfillment =
   | { kind: "declined" }
   | { kind: "failed"; reason: string };
 
-const requestBodySchema = z.object({
-  session: z.string().min(1),
-  timeoutMs: z.number().optional(),
-  /** Caller-chosen request id — for tests and debugging correlation. */
-  requestId: z.string().min(1).max(80).optional(),
-});
+/**
+ * A pending screenshot id is always a `crypto.randomUUID` (see the module
+ * header) — 8-4-4-4-12 lowercase hex. The answer route validates its
+ * caller-supplied `:requestId` param against this before any registry lookup
+ * or filesystem use, so a hostile param (`../../target`) is rejected up front
+ * even though the id is never itself interpolated into a write path.
+ */
+const REQUEST_ID_RE = /^[\da-f-]{36}$/;
 
-const viewportSchema = z.object({
-  cssWidth: z.number(),
-  cssHeight: z.number(),
-  dpr: z.number(),
-});
+const requestBodySchema = z
+  .object({
+    session: z.string().min(1),
+    timeoutMs: z.number().optional(),
+  })
+  .strict();
+
+const viewportSchema = z
+  .object({
+    cssWidth: z.number().positive().finite(),
+    cssHeight: z.number().positive().finite(),
+    dpr: z.number().positive().finite(),
+  })
+  .strict();
 
 const fidelitySchema = z.enum(["extension", "displaymedia"]);
 
 const answerJsonSchema = z.union([
-  z.object({ ack: z.literal(true) }),
-  z.object({ declined: z.literal(true) }),
-  z.object({ failed: z.string() }),
+  z.object({ ack: z.literal(true) }).strict(),
+  z.object({ declined: z.literal(true) }).strict(),
+  z.object({ failed: z.string().min(1).max(500) }).strict(),
 ]);
 
 function multipartField(
@@ -109,6 +129,75 @@ function multipartField(
   return null;
 }
 
+/**
+ * Turn a settled long-poll outcome into the CLI's HTTP response. Only the
+ * `image` outcome touches the filesystem — it writes the winning PNG under
+ * `<boxRoot>/tmp/screenshots/<requestId>.png` and returns its absolute path.
+ */
+async function respondToScreenshotOutcome(opts: {
+  reply: FastifyReply;
+  boxRoot: string;
+  requestId: string;
+  outcomeResult: PendingOutcome<ScreenshotFulfillment>;
+}): Promise<unknown> {
+  const { reply, boxRoot, requestId, outcomeResult } = opts;
+  switch (outcomeResult.status) {
+    case "no-client":
+      return reply.status(504).send({ error: "no-client" });
+    case "timeout":
+      return reply.status(504).send({ error: "timeout" });
+    case "none":
+      // Screenshots never call reportNone, so `none` cannot occur.
+      return reply.status(504).send({ error: "no-client" });
+    case "fulfilled":
+      return respondToScreenshotFulfillment({ reply, boxRoot, requestId, fulfillment: outcomeResult.fulfillment });
+    default:
+      assertNever(outcomeResult);
+  }
+}
+
+async function respondToScreenshotFulfillment(opts: {
+  reply: FastifyReply;
+  boxRoot: string;
+  requestId: string;
+  fulfillment: ScreenshotFulfillment;
+}): Promise<unknown> {
+  const { reply, boxRoot, requestId, fulfillment } = opts;
+  switch (fulfillment.kind) {
+    case "declined":
+      return reply.status(409).send({ error: "declined" });
+    case "failed":
+      return reply.status(502).send({ error: "failed", reason: fulfillment.reason });
+    case "image": {
+      const dir = path.resolve(boxRoot, "tmp", "screenshots");
+      const absPath = path.resolve(dir, `${requestId}.png`);
+      // Defense in depth: `requestId` is a server-minted UUID, so this can't
+      // escape — but confirm the resolved path stays inside the screenshots dir
+      // before writing, so no future change to how the id is produced can
+      // silently open a traversal.
+      if (absPath !== path.join(dir, `${requestId}.png`) || !absPath.startsWith(dir + path.sep)) {
+        return reply.status(400).send({ error: "bad-request-id" });
+      }
+      await fs.mkdir(dir, { recursive: true });
+      await fs.writeFile(absPath, fulfillment.png);
+      const responseBody: {
+        path: string;
+        fidelity: "extension" | "displaymedia";
+        capturedAt: string;
+        viewport?: ScreenshotViewport;
+      } = {
+        path: absPath,
+        fidelity: fulfillment.fidelity,
+        capturedAt: getBoxTimeISO(boxRoot),
+      };
+      if (fulfillment.viewport !== undefined) responseBody.viewport = fulfillment.viewport;
+      return reply.status(200).send(responseBody);
+    }
+    default:
+      assertNever(fulfillment);
+  }
+}
+
 export function registerChatScreenshotRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus } = ctx;
   const pendingRequests = createPendingBrowserRequests<ScreenshotFulfillment>();
@@ -116,6 +205,17 @@ export function registerChatScreenshotRoutes(ctx: ChatRoutesContext): void {
   server.post<{ Body: unknown }>(
     "/api/chat/screenshot/request",
     async (request, reply) => {
+      // Loopback-only: a screenshot request is agent-initiated, so it requires
+      // the per-box agent bearer. A plain user session (even authenticated /
+      // open-access, which the box auth wall admits) must not be able to start
+      // one — the answer route below is where the browser participates.
+      if (!verifyAgentBearer(boxRoot, request.headers["authorization"])) {
+        return reply.status(403).send({
+          error: "forbidden",
+          message: "Screenshot requests are agent-initiated (loopback bearer required)",
+        });
+      }
+
       const parsed = requestBodySchema.safeParse(request.body ?? {});
       if (!parsed.success) {
         return reply.status(400).send({
@@ -127,80 +227,41 @@ export function registerChatScreenshotRoutes(ctx: ChatRoutesContext): void {
       const requestedTimeout = parsed.data.timeoutMs ?? DEFAULT_TIMEOUT_MS;
       const timeoutMs = Math.min(Math.max(requestedTimeout, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
 
+      // The id is minted server-side (never caller-supplied) and broadcast to
+      // browser tabs on the bus — that is how a tab learns which id to answer.
       const { requestId, outcome } = pendingRequests.create({
         timeoutMs,
         ackGraceMs: ACK_GRACE_MS,
-        requestId: parsed.data.requestId,
       });
       const expiresAt = new Date(getBoxTime(boxRoot).getTime() + timeoutMs).toISOString();
       eventBus.emitTransient("screenshot-request", { requestId, session, expiresAt });
 
-      // Cancel the pending entry if the CLI's long-poll is severed (process
+      // Cancel the pending entry only on a GENUINE client/CLI disconnect (process
       // killed / connection dropped): the awaiter is gone, so a late browser
-      // answer must settle nothing (→ 404), not fulfill a dead request. Race
-      // the outcome against a close signal — `cancel()` leaves `outcome`
-      // pending on purpose, so we must not keep awaiting it.
+      // answer must settle nothing (→ 404), not fulfill a dead request. The
+      // ServerResponse 'close' event fires both on a real disconnect AND right
+      // after a normal response flushes, so we gate on `writableFinished` — a
+      // close with an unfinished body is the disconnect; a close after we've
+      // written the reply is benign and must NOT hijack the poll. (We also
+      // remove the listener before responding on the happy path; the
+      // `writableFinished` guard is the belt-and-suspenders half.) `cancel()`
+      // leaves `outcome` pending on purpose, so we must not keep awaiting it.
       let onClose: (() => void) | undefined;
       const aborted = new Promise<"aborted">((resolve) => {
-        onClose = () => resolve("aborted");
-        request.raw.on("close", onClose);
+        onClose = () => {
+          if (!reply.raw.writableFinished) resolve("aborted");
+        };
+        reply.raw.on("close", onClose);
       });
       const result = await Promise.race([outcome, aborted]);
-      if (onClose) request.raw.off("close", onClose);
+      if (onClose) reply.raw.off("close", onClose);
       if (result === "aborted") {
         pendingRequests.cancel(requestId);
         reply.hijack(); // connection already closed; nothing to send
         return reply;
       }
 
-      return respond(result);
-
-      async function respond(
-        outcomeResult: PendingOutcome<ScreenshotFulfillment>
-      ): Promise<unknown> {
-        switch (outcomeResult.status) {
-          case "no-client":
-            return reply.status(504).send({ error: "no-client" });
-          case "timeout":
-            return reply.status(504).send({ error: "timeout" });
-          case "none":
-            // Screenshots never call reportNone, so `none` cannot occur.
-            return reply.status(504).send({ error: "no-client" });
-          case "fulfilled":
-            return respondFulfilled(outcomeResult.fulfillment);
-          default:
-            assertNever(outcomeResult);
-        }
-      }
-
-      async function respondFulfilled(fulfillment: ScreenshotFulfillment): Promise<unknown> {
-        switch (fulfillment.kind) {
-          case "declined":
-            return reply.status(409).send({ error: "declined" });
-          case "failed":
-            return reply.status(502).send({ error: "failed", reason: fulfillment.reason });
-          case "image": {
-            const dir = path.join(boxRoot, "tmp", "screenshots");
-            await fs.mkdir(dir, { recursive: true });
-            const absPath = path.join(dir, `${requestId}.png`);
-            await fs.writeFile(absPath, fulfillment.png);
-            const responseBody: {
-              path: string;
-              fidelity: "extension" | "displaymedia";
-              capturedAt: string;
-              viewport?: ScreenshotViewport;
-            } = {
-              path: absPath,
-              fidelity: fulfillment.fidelity,
-              capturedAt: getBoxTimeISO(boxRoot),
-            };
-            if (fulfillment.viewport !== undefined) responseBody.viewport = fulfillment.viewport;
-            return reply.status(200).send(responseBody);
-          }
-          default:
-            assertNever(fulfillment);
-        }
-      }
+      return respondToScreenshotOutcome({ reply, boxRoot, requestId, outcomeResult: result });
     }
   );
 
@@ -208,6 +269,11 @@ export function registerChatScreenshotRoutes(ctx: ChatRoutesContext): void {
     "/api/chat/screenshot/:requestId",
     async (request, reply) => {
       const { requestId } = request.params;
+      // A live pending id is always a server-minted UUID; reject a malformed
+      // param (e.g. a path-traversal attempt) before any registry lookup.
+      if (!REQUEST_ID_RE.test(requestId)) {
+        return reply.status(400).send({ error: "bad-request-id" });
+      }
 
       if (request.isMultipart()) {
         const data = await request.file();

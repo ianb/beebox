@@ -436,7 +436,7 @@ forcing the popup always would defeat Track C's purpose.
 
 | What can fail | Test exists? | Handling exists? | Clear-or-silent? |
 |---|---|---|---|
-| User dismisses the getDisplayMedia picker (Track A) | planned (unit test of `CaptureOutcome` mapping from a rejected promise) | `kind: "declined"`, toast, no attachment | clear |
+| User dismisses the getDisplayMedia picker (Track A) | planned (unit test of `CaptureOutcome` mapping from a rejected promise) | `kind: "declined"`, silent no-op, no attachment (cancelling is not an error; matches the Direction text) | clear |
 | First video frame undecoded / zero-sized (Track A) | planned (unit test with a stubbed track) | wait for decoded non-zero frame; timeout → `kind: "error"` | clear |
 | `processImageBlob` fails after a successful grab | planned (unit test) | screenshot path shows a toast (paste path keeps console-only) | clear |
 | `getDisplayMedia` unsupported (mobile) | planned (feature-detect test) | menu item hidden; Track B popup path answers `{failed: "unsupported-client"}` | clear |

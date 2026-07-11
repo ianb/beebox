@@ -10,6 +10,8 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { execSync } from "node:child_process";
+import type { FastifyInstance } from "fastify";
+import type { EventBus } from "../../src/core/event-bus.js";
 import { createTestServer, TEST_SLUG, type TestServerOptions } from "./test-server.js";
 
 export { TEST_SLUG } from "./test-server.js";
@@ -35,6 +37,17 @@ export interface RawInjectResult {
 export interface TestServer {
   /** Absolute path to the temp box root. */
   boxRoot: string;
+  /**
+   * The underlying Fastify instance — for tests that need a REAL listening
+   * socket (e.g. exercising a genuine client abort, which `inject` can't model).
+   */
+  server: FastifyInstance;
+  /**
+   * The box's event bus — the SAME instance the routes emit on. Subscribe to
+   * read a server-minted request id (screenshot / last-audio) the way a real
+   * browser tab learns it, instead of correlating on a caller-supplied id.
+   */
+  eventBus: EventBus;
   /** Inject an HTTP request and return "statusCode\njsonBody" for check(). */
   inject(opts: InjectOpts): Promise<string>;
   /** Inject and return { statusCode, body } for programmatic access. */
@@ -59,6 +72,8 @@ export async function makeTestServer(opts?: TestServerOptions): Promise<TestServ
 
   return {
     boxRoot: ctx.boxRoot,
+    server: ctx.server,
+    eventBus: ctx.eventBus,
     async inject(opts: InjectOpts) {
       const res = await this.request(opts);
       return `${res.statusCode}\n${JSON.stringify(res.body, null, 2)}`;

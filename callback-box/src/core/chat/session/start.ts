@@ -41,7 +41,9 @@ interface StartContext {
    * The live session id if this run resumes a known session, else null.
    * Passed to the subprocess as `CB_CHAT_SESSION_ID` so a mid-turn
    * `cb chat screenshot` can target this exact conversation. A brand-new
-   * session has no id yet, so the var is left unset (never a placeholder).
+   * session has no id yet, so the var is left unset (never a placeholder) —
+   * its id reaches the subprocess after spawn via the backend-written
+   * `CB_CHAT_SESSION_ID_FILE` instead (see `session-id-file.ts`).
    */
   sessionId: string | null;
 }
@@ -113,7 +115,9 @@ export async function buildBackendStartOptions(
   const baseEnv = await buildScriptEnv(ctx.boxRoot, {
     CLAUDECODE: undefined,
     // Only when a real id exists — a pending-new session must not advertise a
-    // placeholder that a `cb chat screenshot` would then fail to match.
+    // placeholder that a `cb chat screenshot` would then fail to match. A new
+    // session's id is instead published post-spawn via the backend's
+    // CB_CHAT_SESSION_ID_FILE (services/claude-chat.ts + session-id-file.ts).
     ...(ctx.sessionId !== null ? { CB_CHAT_SESSION_ID: ctx.sessionId } : {}),
   });
   const env: Record<string, string | undefined> = {

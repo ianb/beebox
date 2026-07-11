@@ -28,6 +28,13 @@ import { cardValidatorHook, gitMvNudgeHook } from "../core/sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../core/sdk-binary-path.js";
 import { dropUndefined } from "../lib/drop-undefined.js";
 import { createAsyncIterableQueue } from "./claude-chat-queue.js";
+import {
+  CB_CHAT_SESSION_ID_ENV,
+  CB_CHAT_SESSION_ID_FILE_ENV,
+  allocateSessionIdFilePath,
+  cleanupSessionIdFile,
+  writeSessionIdFile,
+} from "../core/chat/session/session-id-file.js";
 
 // Fake implementation lives in a sibling; re-exported here so the public
 // surface stays a single module.
@@ -110,14 +117,36 @@ export interface ChatBackend {
 
 // ─── Real implementation ─────────────────────────────────────────────────────
 
+/** Pull a string `session_id` off a raw SDK message, or null if absent. */
+function messageSessionId(msg: SDKMessage): string | null {
+  if ("session_id" in msg && typeof msg.session_id === "string" && msg.session_id.length > 0) {
+    return msg.session_id;
+  }
+  return null;
+}
+
 /**
  * Build SDK Options from a ChatBackendStartOptions for either `query()` or
  * `startup()` calls. Pulled out so the warm-pool path uses the same shape.
+ *
+ * Also mints the per-subprocess session-id file for a fresh (non-resume)
+ * spawn whose id isn't known until after start: the path is injected as
+ * `CB_CHAT_SESSION_ID_FILE` and returned so the run's pump can write the id
+ * into it once the SDK assigns one. Resumes (id already in env as
+ * `CB_CHAT_SESSION_ID`) and any spawn that already carries the id skip it.
  */
-function buildQueryOptions(opts: ChatBackendStartOptions): Options {
+function buildQueryOptions(
+  opts: ChatBackendStartOptions,
+): { queryOptions: Options; sessionIdFilePath: string | null } {
+  const env = dropUndefined(opts.env);
+  let sessionIdFilePath: string | null = null;
+  if (opts.resumeSessionId === undefined && env[CB_CHAT_SESSION_ID_ENV] === undefined) {
+    sessionIdFilePath = allocateSessionIdFilePath();
+    env[CB_CHAT_SESSION_ID_FILE_ENV] = sessionIdFilePath;
+  }
   const queryOptions: Options = {
     cwd: opts.cwd,
-    env: dropUndefined(opts.env),
+    env,
     permissionMode: "bypassPermissions",
     systemPrompt: {
       type: "preset" as const,
@@ -142,7 +171,7 @@ function buildQueryOptions(opts: ChatBackendStartOptions): Options {
   if (opts.includePartialMessages === true) {
     queryOptions.includePartialMessages = true;
   }
-  return queryOptions;
+  return { queryOptions, sessionIdFilePath };
 }
 
 /**
@@ -170,7 +199,9 @@ function warmCompatible(
 }
 
 export function createChatBackend(): ChatBackend {
-  let warmSlot: { warmQuery: WarmQuery; opts: ChatBackendStartOptions } | null = null;
+  let warmSlot:
+    | { warmQuery: WarmQuery; opts: ChatBackendStartOptions; sessionIdFilePath: string | null }
+    | null = null;
   let warming: Promise<void> | null = null;
 
   function startWarming(opts: ChatBackendStartOptions): Promise<void> {
@@ -178,8 +209,9 @@ export function createChatBackend(): ChatBackend {
     if (warmSlot !== null) return Promise.resolve();
     warming = (async (): Promise<void> => {
       try {
-        const wq = await startup({ options: buildQueryOptions(opts) });
-        warmSlot = { warmQuery: wq, opts };
+        const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
+        const wq = await startup({ options: queryOptions });
+        warmSlot = { warmQuery: wq, opts, sessionIdFilePath };
       } catch (e) {
         // Warming is best-effort; the next start() will fall back to a cold spawn.
         console.warn("Chat backend warm-up failed, will cold-spawn on next start:", e);
@@ -195,8 +227,10 @@ export function createChatBackend(): ChatBackend {
     opts: ChatBackendStartOptions;
     inputQueue: ReturnType<typeof createAsyncIterableQueue<SDKUserMessage>>;
     messageQueue: ReturnType<typeof createAsyncIterableQueue<SDKMessage>>;
+    /** File to write the SDK-assigned session id into, or null (resume). */
+    sessionIdFilePath: string | null;
   }): ChatBackendRun {
-    const { q, opts, inputQueue, messageQueue } = params;
+    const { q, opts, inputQueue, messageQueue, sessionIdFilePath } = params;
     const run: ChatBackendRun = {
       closed: false,
       messages: messageQueue.iterable,
@@ -224,13 +258,26 @@ export function createChatBackend(): ChatBackend {
     };
 
     const pump = (async (): Promise<void> => {
+      let sessionIdWritten = false;
       try {
         for await (const msg of q) {
+          // Publish the SDK-assigned session id to the per-subprocess file the
+          // moment it first appears, so a mid-turn `cb chat screenshot` in this
+          // subprocess can target this exact conversation (new sessions only —
+          // resumes carry the id in env and get no file).
+          if (!sessionIdWritten && sessionIdFilePath !== null) {
+            const id = messageSessionId(msg);
+            if (id !== null) {
+              writeSessionIdFile(sessionIdFilePath, id);
+              sessionIdWritten = true;
+            }
+          }
           messageQueue.push(msg);
         }
       } finally {
         messageQueue.end();
         run.closed = true;
+        if (sessionIdFilePath !== null) cleanupSessionIdFile(sessionIdFilePath);
       }
     })();
     pump.catch(() => {
@@ -255,7 +302,16 @@ export function createChatBackend(): ChatBackend {
         const q = consumed.warmQuery.query(inputQueue.iterable);
         // Re-warm in the background using the same options we just consumed.
         void startWarming(consumed.opts);
-        return buildRunFromQuery({ q, opts, inputQueue, messageQueue });
+        // Use the warm subprocess's OWN baked file path, not this call's opts:
+        // warm reuse keeps the prewarmed env, so the consuming session's env
+        // never reaches the subprocess (see session-id-file.ts).
+        return buildRunFromQuery({
+          q,
+          opts,
+          inputQueue,
+          messageQueue,
+          sessionIdFilePath: consumed.sessionIdFilePath,
+        });
       }
 
       // Cold path: drop a stale warm slot if its options don't match this
@@ -266,11 +322,12 @@ export function createChatBackend(): ChatBackend {
         warmSlot = null;
       }
 
+      const { queryOptions, sessionIdFilePath } = buildQueryOptions(opts);
       const q: Query = query({
         prompt: inputQueue.iterable,
-        options: buildQueryOptions(opts),
+        options: queryOptions,
       });
-      return buildRunFromQuery({ q, opts, inputQueue, messageQueue });
+      return buildRunFromQuery({ q, opts, inputQueue, messageQueue, sessionIdFilePath });
     },
   };
 }

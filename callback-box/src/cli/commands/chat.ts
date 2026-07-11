@@ -9,6 +9,7 @@
 
 import { Command } from "commander";
 import { isRecord } from "../../lib/is-record.js";
+import { resolveChatSessionId } from "../../core/chat/session/session-id-file.js";
 import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./chat-audio.js";
 
 interface SelfNoteOptions {
@@ -197,7 +198,7 @@ const screenshotCommand = new Command("screenshot")
       process.exit(1);
     }
 
-    const session = options.session ?? process.env.CB_CHAT_SESSION_ID;
+    const session = options.session ?? (await resolveChatSessionId());
     if (!session) {
       console.error(
         `${label}: no session — pass --session <id> or run inside a chat session (CB_CHAT_SESSION_ID)`

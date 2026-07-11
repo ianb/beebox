@@ -33,8 +33,12 @@ export type LastAudioOutcome =
   | { status: "timeout" };
 
 export interface LastAudioPending {
-  /** Park a new request; `outcome` resolves on answer or timeout. */
-  create(opts: { timeoutMs: number; requestId?: string | undefined }): {
+  /**
+   * Park a new request; `outcome` resolves on answer or timeout. The id is
+   * generated internally and returned — never caller-supplied (see
+   * {@link createPendingBrowserRequests}).
+   */
+  create(opts: { timeoutMs: number }): {
     requestId: string;
     outcome: Promise<LastAudioOutcome>;
   };
@@ -75,8 +79,8 @@ export function createLastAudioPending(options?: CreateLastAudioPendingOptions):
     options?.graceMs === undefined ? undefined : { graceMs: options.graceMs }
   );
   return {
-    create({ timeoutMs, requestId }) {
-      const { requestId: id, outcome } = inner.create({ timeoutMs, requestId });
+    create({ timeoutMs }) {
+      const { requestId: id, outcome } = inner.create({ timeoutMs });
       return { requestId: id, outcome: outcome.then(toLastAudioOutcome) };
     },
     fulfill(requestId, fulfillment) {
