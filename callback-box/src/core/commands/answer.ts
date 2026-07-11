@@ -22,7 +22,7 @@ import { type QuestionFields } from "../../schemas/question.js";
 import { createQuestionFollowupJobTemplate } from "../../schemas/question-followup-job.js";
 import { withQuestionTransition, resolveContainedQuestionPath } from "./question-transition.js";
 
-const AnswerVia = z.enum(["web", "cli", "api"]);
+const AnswerVia = z.enum(["web", "cli"]);
 type AnswerViaValue = z.infer<typeof AnswerVia>;
 
 const AnswerArgsSchema = z.object({
@@ -57,6 +57,15 @@ function resolveSelectAnswer(
   rawAnswer: string,
   questionOptions: QuestionFields["input"]["options"] & object
 ): ResolveResult {
+  // Label match takes precedence over the letter-index shortcut below: an
+  // option literally labelled "a" (or "b", etc.) must resolve to itself even
+  // when it isn't at the matching position, never to whatever option sits at
+  // that letter's index.
+  const match = questionOptions.find((o) => o.label.toLowerCase() === rawAnswer.toLowerCase());
+  if (match) {
+    return { ok: true, answerText: match.label, selectedId: match.id, jobAnswer: match.label };
+  }
+
   const optionIndex = (rawAnswer.codePointAt(0) ?? 0) - 97;
   if (rawAnswer.length === 1 && optionIndex >= 0 && optionIndex < questionOptions.length) {
     const option = questionOptions[optionIndex];
@@ -64,11 +73,6 @@ function resolveSelectAnswer(
       return { ok: true, answerText: option.label, selectedId: option.id, jobAnswer: option.label };
     }
     return { ok: true, answerText: rawAnswer, selectedId: undefined, jobAnswer: rawAnswer };
-  }
-
-  const match = questionOptions.find((o) => o.label.toLowerCase() === rawAnswer.toLowerCase());
-  if (match) {
-    return { ok: true, answerText: match.label, selectedId: match.id, jobAnswer: match.label };
   }
 
   const optionsList = questionOptions
@@ -325,7 +329,7 @@ registerCommand({
     },
     {
       name: "via",
-      description: "Answer source (web, cli, or api)",
+      description: "Answer source (web or cli)",
       required: false,
       default: "cli",
       type: "string",

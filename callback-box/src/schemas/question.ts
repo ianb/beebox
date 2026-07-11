@@ -224,7 +224,7 @@ export const QuestionSchema = cardSchema("question", {
     "expires-after": IsoDuration.optional(),
     answer: QuestionAnswer.optional(),
     "answered-at": z.string().datetime({ offset: true }).optional(),
-    "answered-via": z.enum(["web", "cli", "api"]).optional(),
+    "answered-via": z.enum(["web", "cli"]).optional(),
     "dismissed-at": z.string().datetime({ offset: true }).optional(),
     "expired-at": z.string().datetime({ offset: true }).optional(),
   },
@@ -236,7 +236,7 @@ A question card asks the user something and routes the answer back for processin
 
 - \`status:\` — \`pending\`, \`answered\`, \`dismissed\`, or \`expired\`. Default \`pending\`.
   - \`pending\` — awaiting an answer.
-  - \`answered\` — the boxholder responded; terminal only in the sense that a new question is normally asked instead of re-opening one, but the card itself still accepts a fresh answer.
+  - \`answered\` — the boxholder responded; terminal — an answered question does not accept a fresh answer.
   - \`dismissed\` — the boxholder declined to answer. Still answerable later.
   - \`expired\` — aged out of the active view by the aging sweep, without an answer. Still answerable later — expiry demotes visibility, it does not close the question.
   Before asking something new, check \`box/questions/\` including answered/dismissed/expired cards: an existing answer is a \`user-stated\` fact, and a dismissal or expiry is a signal the boxholder didn't care to answer that.
@@ -252,7 +252,7 @@ A question card asks the user something and routes the answer back for processin
 After the user answers, the system fills in:
 - \`answer:\` — \`{text, selected?}\` where \`selected\` is the option id for select questions.
 - \`answered-at:\` — ISO 8601 timestamp.
-- \`answered-via:\` — \`web\`, \`cli\`, or \`api\`.
+- \`answered-via:\` — \`web\` or \`cli\`.
 
 Dismissing sets \`dismissed-at:\`; the aging sweep expiring a question sets \`expired-at:\`.
 

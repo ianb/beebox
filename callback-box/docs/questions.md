@@ -70,8 +70,8 @@ expires-after: P30D          # optional ISO-8601 duration override
 ```
 
 Filled in by the answer/dismiss/expire transitions, never by the asker:
-`answer: { text, selected? }`, `answered-at`, `answered-via` (`web | cli |
-api`), `dismissed-at`, `expired-at`. A question's status is single —
+`answer: { text, selected? }`, `answered-at`, `answered-via` (`web | cli`),
+`dismissed-at`, `expired-at`. A question's status is single —
 exactly the fields owned by its current status may be present; a
 `superRefine` (`refineQuestionLifecycle` in `question.ts`) rejects a card
 whose bookkeeping contradicts its `status`. Re-answering a `dismissed`/
@@ -123,10 +123,9 @@ pending ──answer──> answered
 
 - **`pending`** — awaiting a response. The only status a question is created
   with.
-- **`answered`** — terminal in the everyday sense (a new question is
-  normally asked rather than reopening one), but the card itself still
-  accepts a fresh answer — re-answering is not blocked by the schema, only
-  by convention.
+- **`answered`** — terminal: the card no longer accepts a fresh answer
+  (`answer.ts` allows answering only from `pending`, `expired`, or
+  `dismissed`). A new question is asked instead of reopening one.
 - **`dismissed`** — the boxholder declined to answer via the Dismiss
   affordance (`cb dismiss` / `actions.dismiss`). Only a `pending` question
   can be dismissed. Dismissed questions **remain answerable** — an
@@ -265,8 +264,11 @@ evidence model.
   (`src/frontend/src/renderers/question.tsx`) registers on `/browse/<path>`
   deep links (from notifications, dashboard, `context:` refs): shows the
   embedded `QuestionForm` when the question is answerable, or the recorded
-  answer + what was learned once it's answered. Every deep link into a
-  question card lands somewhere actionable, never a bare frontmatter dump.
+  answer plus the `learning:` proposal once it's answered. The proposal is
+  what the box wanted to learn, stated at ask time — not a record of what was
+  actually learned; that recording happens separately, in the follow-up
+  job's commits. Every deep link into a question card lands somewhere
+  actionable, never a bare frontmatter dump.
 - **Type-driven form** (`QuestionForm.tsx`) — dispatches exhaustively on
   `input.type`: `confirm` → Yes/No buttons + optional note; `select` →
   radios (submits the label; the backend resolves it); `text` → textarea.

@@ -64,6 +64,18 @@ input:
   type: text
 ---
 `;
+
+const LETTER_LABELS = `---
+status: pending
+prompt: Pick one
+input:
+  type: select
+  options:
+    - {id: first, label: b}
+    - {id: second, label: Second}
+directive: Use the picked option
+---
+`;
 ```
 
 ## Select — by letter, by label, by selectedId
@@ -138,6 +150,48 @@ res.success
 => true
 
 (await box.read("box/questions/Receipt.question.card")).includes("text: Finance")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## Select — label match wins over the letter-index shortcut
+
+An option can be labelled with a letter (e.g. "b") at a position that letter
+wouldn't naturally index to. Label matching runs before the letter-index
+shortcut, so typing that letter picks the matching label, not whatever
+option sits at that letter's position:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("box/questions/Letters.question.card", LETTER_LABELS);
+
+const res = await answer(box, { question: "box/questions/Letters.question.card", answer: "b" });
+res.success
+=> true
+
+(await box.read("box/questions/Letters.question.card")).includes("selected: first")
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+With no label collision, typing "a" still falls through to the letter-index
+shortcut and picks position 0:
+
+```ts
+const box = await makeTmpBox({ git: true });
+await box.write("box/questions/Letters.question.card", LETTER_LABELS);
+
+const res = await answer(box, { question: "box/questions/Letters.question.card", answer: "a" });
+res.success
+=> true
+
+(await box.read("box/questions/Letters.question.card")).includes("selected: first")
 => true
 ```
 

@@ -101,7 +101,7 @@ export const eventSchemas = {
     timestamp: z.string(),
   }),
   /**
-   * A question card was answered via web/cli/api. `answer`/`selectedId` ride
+   * A question card was answered via web/cli. `answer`/`selectedId` ride
    * from an untyped HTTP body (raw route) or an optional-string tRPC input, so
    * they stay genuinely arbitrary in value. Both are `.optional()`: an answer
    * carries only ONE of them, and `JSON.stringify` drops the undefined key, so
