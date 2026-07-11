@@ -121,6 +121,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
         if (
           event.event === "question-answered" ||
           event.event === "question-dismissed" ||
+          event.event === "question-expired" ||
           event.event === "card-created" ||
           event.event === "file-change"
         ) {

@@ -15,6 +15,7 @@ import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { createPushConnector } from "../../connectors/push.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
+import { ageQuestions } from "../../core/question-aging.js";
 import { getAllConnectors } from "../../connectors/index.js";
 
 export const finalizeCommand = new Command("finalize")
@@ -33,6 +34,20 @@ export const finalizeCommand = new Command("finalize")
         if (result) console.log(`  Question alert: ${result.notified.length} new question(s)`);
       } catch (err) {
         console.error(`  Question alert failed: ${(err as Error).message}`);
+      }
+
+      // Ages pending questions (nudge, then expire) regardless of whether
+      // any notification channel is configured — the lifecycle transition
+      // never depends on notifyChannels, only the nudge's delivery does.
+      try {
+        const aging = await ageQuestions(boxRoot);
+        if (aging.nudged.length > 0 || aging.expired.length > 0) {
+          console.log(
+            `  Question aging: ${aging.nudged.length} nudged, ${aging.expired.length} expired`
+          );
+        }
+      } catch (err) {
+        console.error(`  Question aging failed: ${(err as Error).message}`);
       }
     }
 
