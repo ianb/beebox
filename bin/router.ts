@@ -1132,7 +1132,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
   if (afterName.startsWith("/dev/")) {
-    await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name) });
+    await serveDev({ name, rest: afterName, res, repoRoot: worktreeRoot(name), mainRoot: MAIN_ROOT, worktreesRoot: WORKTREES_ROOT });
     return;
   }
 

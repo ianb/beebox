@@ -13,6 +13,7 @@ import type http from "node:http";
 import { execa } from "execa";
 import Markdoc from "@markdoc/markdoc";
 import hljs from "highlight.js";
+import { serveIssues } from "./router-issues.js";
 
 const DEV_CONTENT_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -41,7 +42,7 @@ export function escapeHtml(s: string): string {
   return String(s).replace(/[&<>"']/g, (c) => replacements[c] ?? c);
 }
 
-function renderDevShell(title: string, breadcrumbs: string, body: string, extraCss = ""): string {
+export function renderDevShell(title: string, breadcrumbs: string, body: string, extraCss = ""): string {
   return `<!doctype html>
 <html lang="en">
 <head>
@@ -93,7 +94,7 @@ ${body}
 
 // Build "<base> / sub / file.md" breadcrumbs (base like "/main/dev"); every
 // segment but the last links.
-function devBreadcrumbs(base: string, rel: string): string {
+export function devBreadcrumbs(base: string, rel: string): string {
   const parts = rel.split("/").filter(Boolean);
   const crumbs = [`<a href="/">router</a>`, `<a href="${base}/">${escapeHtml(base.replace(/^\//, ""))}</a>`];
   let acc = base;
@@ -140,7 +141,7 @@ function highlightCodeBlocks(html: string, defaultLang: string): string {
   });
 }
 
-function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
+export function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
   return highlightCodeBlocks(Markdoc.renderers.html(Markdoc.transform(Markdoc.parse(src))), defaultLang);
 }
 
@@ -151,7 +152,9 @@ function renderMarkdownToHtml(src: string, defaultLang = "ts"): string {
  */
 async function renderDevManifest(name: string, base: string, devRoot: string): Promise<string> {
   const builtinHtml = `<li><a class="title" href="${base}/docs/">📄 Markdown doc browser</a>`
-    + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`;
+    + `<div class="desc">Browse and read every <code>.md</code> file in <code>${escapeHtml(name)}</code>, grouped by area, rendered to HTML. A reader that focuses only on docs.</div></li>`
+    + `<li><a class="title" href="${base}/issues/">🗂️ Issue browser</a>`
+    + `<div class="desc">Browse the monorepo's <code>issues/</code> queue, overlaid with what every active worktree has added, changed, or closed relative to main.</div></li>`;
 
   let artifactsHtml: string;
   try {
@@ -606,10 +609,20 @@ async function serveDevArtifact(base: string, devRoot: string, rel: string, path
  * `worktreeRoot(name)`) — passed in rather than resolved here so this module
  * never needs to import router.ts's MAIN_ROOT/WORKTREES_ROOT config (which
  * would create a value-import cycle, since router.ts imports `escapeHtml`
- * and `serveDev` from here).
+ * and `serveDev` from here). `mainRoot`/`worktreesRoot` are those same
+ * constants, threaded through for the issue browser only (router-issues.ts
+ * reads main's issues/ tree regardless of which /<name>/ prefix served the
+ * request, plus the cross-worktree overlay).
  */
-export async function serveDev(params: { name: string; rest: string; res: http.ServerResponse; repoRoot: string }): Promise<void> {
-  const { name, rest, res, repoRoot } = params;
+export async function serveDev(params: {
+  name: string;
+  rest: string;
+  res: http.ServerResponse;
+  repoRoot: string;
+  mainRoot: string;
+  worktreesRoot: string;
+}): Promise<void> {
+  const { name, rest, res, repoRoot, mainRoot, worktreesRoot } = params;
   // The /dev/ space is live working material — never let the browser cache it.
   // Set here so every response below (manifest, doc browser, .md, dir index,
   // static artifacts) inherits it; nothing overrides cache-control to anything
@@ -634,6 +647,16 @@ export async function serveDev(params: { name: string; rest: string; res: http.S
     const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
     const sort = new URLSearchParams(query).get("sort") === "recent" ? "recent" : "path";
     await serveDocBrowser(base, repoRoot, rel.slice("/docs".length), sort, res);
+    return;
+  }
+  if (rel === "/issues") {
+    res.writeHead(301, { location: `${base}/issues/` });
+    res.end();
+    return;
+  }
+  if (rel === "/issues/" || rel.startsWith("/issues/")) {
+    const query = rest.includes("?") ? rest.slice(rest.indexOf("?") + 1) : "";
+    await serveIssues({ base, mainRoot, worktreesRoot, rel: rel.slice("/issues".length), query: new URLSearchParams(query), res });
     return;
   }
   await serveDevArtifact(base, devRoot, rel, pathOnly, res);
