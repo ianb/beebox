@@ -42,23 +42,32 @@ transient. A deeper fix (a shared lock serializing deploy's worktree ops against
 the WorktreeCreate hook) was considered but not taken — no `flock` on macOS, and
 the backoff covers the observed window; revisit if it recurs.
 
-**Definitive fix** (main session, 2026-07-11): it recurred, harder. Two findings:
-(1) the worktree auto-sweep added on `post-merge` (for the separate
-worktree-cleanup problem) runs `git worktree prune` on the SAME trigger as the
-deploy — a deterministic collision that corrupted `.deploy-checkout`
-mid-creation; removed it (cleanup runs on SessionStart only). (2) even without
-it, the deploy races worktree-*session* creation (a `git worktree add` from a
-session spinning up) — the backoff can't win a race that lasts as long as the
-contended window, so a deploy died FATAL after ~60s. Took the shared lock after
-all: `bin/git-worktree-lock.sh`, an atomic `mkdir` mutex (no `flock` needed on
-macOS), best-effort (never blocks a caller indefinitely — PID-liveness + 2-min
-mtime staleness reclaim, and proceeds without the lock rather than deadlocking).
-Every git-worktree-mutating span now brackets itself with it:
-`callback-box/deploy/deploy.sh` (around checkout creation, released before the
-build), `.claude/hooks/worktree-create.sh` (around `worktree add`),
-`.claude/hooks/session-end.sh` (around the cleanup `prune`), and `bin/worktrees`
-sweep. Unit-verified: mutual exclusion, dead-PID reclaim, best-effort
-proceed-without-lock on timeout.
+**Definitive fix** (main session, 2026-07-11): it recurred, harder, and the
+backoff/self-heal/lock attempts all failed because they treated symptoms. The
+real cause is structural: **`.deploy-checkout` was a git *worktree*, so it
+shared the main repo's `.git/worktrees/` bookkeeping that every concurrent
+worktree op mutates** — worktree sessions spinning up, cleanup hooks,
+`bin/worktrees sweep`, and (unlockable) Claude Code's own `git worktree remove`
+on session exit. A shared `mkdir` lock was tried and STILL failed: `core.hooksPath`
+is relative (`.husky/_`), so the pre-existing worktree sessions run their OWN
+old, unlocked hooks — a lock in the current checkout can't cover them, nor
+Claude Code's built-in worktree removal.
+
+The fix: **stop using a git worktree for the build checkout.** It's now a
+standalone local `git clone --shared` (`callback-box/deploy/deploy.sh`) — its own
+`.git` dir, so it's invisible to `git worktree` ops and *cannot* be corrupted by
+any of the above. `--shared` points its object store at the main repo via
+alternates, so a just-committed `$SHA` checks out with no fetch and no object
+copy (measured: 0.04s to create the clone), and node_modules persists across
+deploys. `checkout_belongs_to_repo` now validates the clone's alternates instead
+of a worktree gitdir. All the worktree-specific machinery (backoff, recreate,
+scrub) and the shared lock (`bin/git-worktree-lock.sh` + its hook wiring) were
+removed — the clone makes them unnecessary. Verified in isolation: fast create,
+sha checkout without fetch, clean preserving node_modules, and invisibility to a
+concurrent `git worktree prune`.
+
+The `post-merge` auto-sweep is still removed (worktree cleanup runs on
+SessionStart) — good hygiene, though the clone no longer needs it gone.
 
 The root `post-commit` hook backgrounds `callback-box/deploy/deploy.sh --ref <sha>`
 the instant a `main` commit completes. On one deploy the build-checkout step

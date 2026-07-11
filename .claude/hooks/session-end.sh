@@ -34,17 +34,6 @@ printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
 wlog() { printf '%s pid=%s SessionEnd %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
 
-# Shared git-worktree mutex (bin/git-worktree-lock.sh): serialize the cleanup's
-# `git worktree prune` below against a concurrent deploy build-checkout / create.
-HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [ -f "$HOOK_DIR/../../bin/git-worktree-lock.sh" ]; then
-  # shellcheck source=../../bin/git-worktree-lock.sh
-  . "$HOOK_DIR/../../bin/git-worktree-lock.sh"
-else
-  cb_worktree_lock() { :; }
-  cb_worktree_unlock() { :; }
-fi
-
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
 session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
 reason=$(printf '%s' "$input" | jq -r '.reason // empty')
@@ -147,13 +136,10 @@ fi
 cd "$MONO"
 
 # Trash the worktree directory, then prune the now-dangling registration.
-# Locked so the prune doesn't race a concurrent deploy build-checkout / create.
-cb_worktree_lock "session-end:$name"
 if mv "$worktree_path" "$TRASH/wt-$name-$ts" 2>/dev/null; then
   echo "[session-end]   trashed worktree $worktree_path"
 fi
 git worktree prune 2>/dev/null || true
-cb_worktree_unlock
 
 # Delete the branch.
 if git branch -D "$branch" >/dev/null 2>&1; then
