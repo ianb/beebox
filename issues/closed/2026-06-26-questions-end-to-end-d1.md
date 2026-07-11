@@ -1,9 +1,18 @@
 ---
 design: ../callback-box/docs/plans/questions-end-to-end.md
 area: callback-box
+resolution: implemented
 ---
 
 # Questions, end-to-end (D1)
+
+**Closed 2026-07-10:** Implemented by `docs/plans/questions-end-to-end.md`
+(worktree `worktree-questions-end-to-end`) — confirm-type questions now
+render as Yes/No buttons (type-driven `QuestionForm`), the triage
+option-id scheme and answer round-trip got a full atomic-transition rewrite
+(`src/core/commands/question-transition.ts`), and the subsystem has a
+maintainer doc at `docs/questions.md`. See that plan for the full track
+breakdown.
 
 From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
 The removals, doc fixes, small fixes, and the calendar-conflict (D7) +

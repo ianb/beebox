@@ -1,9 +1,19 @@
 ---
 needs: [design]
 area: callback-box
+resolution: wontfix
 ---
 
 # In-chat interactive questions from the agent
+
+**Closed 2026-07-10 (wontfix):** Decided during
+`docs/plans/questions-end-to-end.md` (see its "NOT in scope"): synchronous
+chat is a different situation from the async question queue — in chat the
+agent just asks in prose, the boxholder is right there to answer, and a
+retrospective converts that conversation into learning afterward.
+`box/questions/` remains the only structured-question primitive; it's for
+situations that can wait for a wakeup/review cycle, not live conversation.
+No in-chat question tag will be built.
 
 Reported 2026-06-09: the chat agent can't actually ask the boxholder a question in chat — there's no working affordance for "agent asks, user answers, agent continues." The boxholder doesn't especially *like* being asked questions, but the models powering the agent ask them anyway (newer models especially), so the path has to work: a question with no answer affordance is a dead-end turn.
 
