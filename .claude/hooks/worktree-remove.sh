@@ -20,6 +20,10 @@ input=$(cat)
 mkdir -p "$HOME/.cache/callback-box"
 printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-remove-input.json"
 
+# Shared append-only lifecycle log (see session-end.sh for rationale).
+WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
+wlog() { printf '%s pid=%s WorktreeRemove %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
+
 name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
 path_from_input=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
 
@@ -35,6 +39,7 @@ fi
 BOX_DEST="$HOME/src/box-worktrees/$NAME"
 ROUTER_PORT="${ROUTER_PORT:-3210}"
 echo "[worktree-remove] name=$NAME"
+wlog "event: name=$NAME name_in='$name_from_input' path_in='$path_from_input'"
 
 # Tell the dev router to stop this worktree's processes immediately (rather
 # than waiting for its idle timeout). Best-effort — if the router isn't
