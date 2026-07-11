@@ -3,7 +3,14 @@ title: "PostToolUse lint hook errors on every bin/ edit — ESLint can't find a 
 area: router
 filed-by: agent
 discovered-in: worktree-issue-browser — editing bin/router-issues.ts
+resolution: implemented
 ---
+
+Fixed on worktree-issue-browser (same session that filed it): moved the
+deliberately-empty flat config from `bin/eslint.config.mjs` to the repo root,
+where the hook's cwd-upward config resolution actually finds it. Verified the
+hook is now silent on `bin/` files and still reports real errors in
+subprojects (their own configs shadow the root one).
 
 Every Edit/Write to a file under `bin/` makes the PostToolUse lint hook report
 a hard ESLint error: "ESLint couldn't find an eslint.config.(js|mjs|cjs) file."
