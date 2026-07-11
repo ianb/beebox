@@ -5,6 +5,14 @@ filed-by: agent
 discovered-in: worktree-chat-steering — editing bin/update-agent-sdk.ts
 ---
 
+**Closed 2026-07-11:** duplicate of the already-closed
+[bin-edit-lint-hook-config-not-found](../code-quality/2026-07-10-bin-edit-lint-hook-config-not-found.md),
+fixed same-day by commit a5fbc55f — the empty flat config moved from
+`bin/eslint.config.mjs` to the repo root, where ESLint 9 (which resolves config
+from cwd only, and the hook's cwd is the repo root since `bin/` has no
+package.json) actually finds it. Verified: a hook-shaped lint run on
+`bin/router.ts` now exits 0 silently.
+
 Every Edit/Write to a file under `bin/` makes the PostToolUse lint hook report
 "ESLint couldn't find an eslint.config.(js|mjs|cjs) file" — even though
 `bin/eslint.config.mjs` exists (the deliberately empty flat config whose whole

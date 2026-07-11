@@ -177,7 +177,13 @@ EOF
 # Idempotent (cb init is "initialize or update").
 if [ -d "$BOX_DEST" ]; then
   echo "[worktree-create] refreshing box hooks (worktree's cb -> $BOX_DEST)..."
-  "$worktree_path/callback-box/bin/cb" init "$BOX_DEST" >/dev/null
+  # CB_HOOK_BIN: without it, resolveCbBin() detects it's running from a linked
+  # worktree and rebases the hook's embedded cb path back onto the MAIN
+  # checkout, defeating this refresh (a stale main cb then rejects cards using
+  # in-flight schema changes; see
+  # issues/closed/bugs/2026-07-10-box-hook-stale-cross-checkout-cb.md).
+  CB_HOOK_BIN="$worktree_path/callback-box/bin/cb" \
+    "$worktree_path/callback-box/bin/cb" init "$BOX_DEST" >/dev/null
 fi
 
 echo "[worktree-create] done. open http://localhost:3210/$NAME/ when the router is running"

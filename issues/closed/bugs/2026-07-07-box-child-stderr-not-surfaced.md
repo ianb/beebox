@@ -3,7 +3,15 @@ title: "box child stderr not surfaced"
 area: callback-box
 filed-by: agent
 discovered-in: prod (one personal box) — an intermittent chat-turn "error_during_execution (no detail)" couldn't be diagnosed because the box child's error log went nowhere findable
+resolution: implemented
 ---
+
+**Closed 2026-07-11:** fixed same-day by commit e6b00ab0 — `forwardChildOutput`
+(`src/hub/child-output-log.ts`, called from `src/hub/supervisor.ts:397`)
+line-buffers child stdout/stderr into a rolling `.callback-box/hub-child.log`
+per box. The secondary ask (surfacing truncated agent-error text in the chat UI
+instead of "no detail") is still open — refiled as
+[surface-agent-error-detail-in-chat-ui](../../features/2026-07-11-surface-agent-error-detail-in-chat-ui.md).
 
 The hub spawns each box's `cb serve` child with `stdio: ["ignore", "pipe",
 "pipe"]` (`src/hub/supervisor.ts:55`) — stdout/stderr are piped to the hub but

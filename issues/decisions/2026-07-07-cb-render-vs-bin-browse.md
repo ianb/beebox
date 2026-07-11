@@ -15,7 +15,7 @@ remove it.
 ## The honest case against (why this is filed)
 
 - **It's currently broken past the crash.** Even after the SSR-safety fixes
-  (see [cb-render-ssr-window-undefined](../bugs/2026-07-07-cb-render-ssr-window-undefined.md)),
+  (see [cb-render-ssr-window-undefined](../closed/bugs/2026-07-07-cb-render-ssr-window-undefined.md)),
   `renderToString` yields an empty `<body>` — the app is React-Query/Suspense-
   driven and `renderToString` doesn't await Suspense. Making it emit real content
   needs streaming SSR (`renderToPipeableStream`) or a non-suspense prefetch path:
