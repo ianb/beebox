@@ -81,10 +81,14 @@ page↔extension relay. Wiring:
   `captureErrorReason` (pure, unit-tested).
 - `src/domain/relay-messages.ts` — the postMessage + runtime message shapes and
   guards (pure, unit-tested).
-- `background.ts` `handleRelayCapture(sender)` — the real gate: verifies
-  `sender.tab.url` is under an enabled boxUrl (full origin incl. port),
-  before/after active-tab checks around `captureVisibleTab`, quota→`busy`.
-  Stateless across messages (MV3 workers die unpredictably).
+- `background.ts` `handleRelayCapture(sender)` — the real gate. Uses `sender`
+  only to identify the tab id, then **re-queries the live tab**
+  (`chrome.tabs.get`) and authorizes on its CURRENT url (under an enabled boxUrl,
+  full origin incl. port) — never the send-time `sender.tab.url` snapshot, which
+  a same-document navigation can move off the box (TOCTOU). Before AND after
+  `captureVisibleTab` it re-checks that the tab is still active and still under
+  the SAME box; quota→`busy`. Stateless across messages (MV3 workers die
+  unpredictably).
 
 **Match-pattern semantics (important):** Chrome match patterns cannot express a
 port — a pattern's host is portless and matches ALL ports. On the dev router

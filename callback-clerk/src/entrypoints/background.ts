@@ -118,53 +118,71 @@ function dispatch(message: ClerkMessage): Promise<void> {
   return commentOnPage(message.tabId, message.destinationDir);
 }
 
-async function isActiveTab(windowId: number, tabId: number): Promise<boolean> {
-  const [active] = await chrome.tabs.query({ active: true, windowId });
-  return active?.id === tabId;
+// Re-reads the live tab record. Returns null if it can't be read (tab closed,
+// no host access). NEVER trust `sender.tab.url` for authorization: that field
+// is a snapshot from message-send time, and a same-document navigation
+// (history.pushState / hash change) can move the tab to a non-enabled sibling
+// path on the same origin AFTER the request is sent but BEFORE capture — the
+// tab id is unchanged, so a tab-id check would miss it. Authorization must rest
+// on the tab's CURRENT url, freshly queried here.
+async function liveTab(tabId: number): Promise<chrome.tabs.Tab | null> {
+  try {
+    return await chrome.tabs.get(tabId);
+  } catch (e) {
+    console.debug("[callback-clerk] relay capture: tab lookup failed:", e);
+    return null;
+  }
 }
 
 // Handles a relay capture request (Track C). Stateless across messages — MV3
 // workers terminate unpredictably, so there is no queue and no in-flight map;
-// each request is authorized and answered within this one turn. The enabled-box
-// URL check (not the page's assertion) is the authorization boundary; the
-// active-tab checks bound capture to the tab that asked. See the plan's trust
-// model and "Known residual race".
+// each request is authorized and answered within this one turn. The sender is
+// used ONLY to identify which tab asked; authorization rests on the freshly
+// queried tab url matched against the enabled-box list (full origin incl.
+// port), never on anything the page asserts or on the send-time url snapshot.
+// The before/after active-tab-and-url checks bound capture to the tab that
+// asked while it stays on the box. See the plan's trust model and "Known
+// residual race".
 async function handleRelayCapture(
   sender: chrome.runtime.MessageSender,
 ): Promise<CaptureResult> {
-  const tab = sender.tab;
-  const tabId = tab?.id;
-  const tabUrl = tab?.url;
-  const windowId = tab?.windowId;
-  if (tab === undefined || tabId === undefined || tabUrl === undefined || windowId === undefined) {
+  const tabId = sender.tab?.id;
+  if (tabId === undefined) {
     return { ok: false, reason: "error", message: "relay capture: message had no sender tab" };
   }
 
-  // (a) sender URL must be under an enabled box's boxUrl (full origin incl. port).
   const config = await loadConfig();
-  if (!config.boxes.some((box) => isUrlUnderBoxUrl(tabUrl, box.boxUrl))) {
-    return { ok: false, reason: "not-enabled" };
-  }
 
-  // (b) the sender must be its window's active tab (captureVisibleTab has no
-  // tabId param — it grabs whatever is active).
-  if (!(await isActiveTab(windowId, tabId))) {
+  // (a) re-query the tab and authorize on its CURRENT url (not the send-time
+  // snapshot — see liveTab). It must be under an enabled box's boxUrl AND be
+  // its window's active tab (captureVisibleTab has no tabId param — it grabs
+  // whatever is active). Remember WHICH box it matched, to re-check the same
+  // one after capture.
+  const before = await liveTab(tabId);
+  const beforeUrl = before?.url;
+  if (before === null || beforeUrl === undefined) {
     return { ok: false, reason: "not-capturable" };
   }
+  const box = config.boxes.find((b) => isUrlUnderBoxUrl(beforeUrl, b.boxUrl));
+  if (box === undefined) return { ok: false, reason: "not-enabled" };
+  if (!before.active) return { ok: false, reason: "not-capturable" };
 
-  // (c) capture.
+  // (b) capture.
   let dataUrl: string;
   try {
-    dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
+    dataUrl = await chrome.tabs.captureVisibleTab(before.windowId, { format: "png" });
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);
     return { ok: false, reason: captureErrorReason(message), message };
   }
 
-  // (d) re-verify the active tab is still the sender — a tab switch DURING the
-  // capture call can substitute another tab's pixels. Discard on mismatch. This
-  // shrinks but cannot close the race (documented residual risk).
-  if (!(await isActiveTab(windowId, tabId))) {
+  // (c) re-query and discard the pixels unless the tab is STILL the active tab
+  // AND its url is STILL under the SAME box. This catches both a tab switch and
+  // a same-document navigation off the box during the capture call. It shrinks
+  // but cannot close the switch race (documented residual risk).
+  const after = await liveTab(tabId);
+  const afterUrl = after?.url;
+  if (after === null || afterUrl === undefined || !after.active || !isUrlUnderBoxUrl(afterUrl, box.boxUrl)) {
     return { ok: false, reason: "not-capturable" };
   }
 

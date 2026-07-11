@@ -44,6 +44,34 @@ test("isUrlUnderBoxUrl: rejects sibling boxes on the same host", async (t) => {
   t.equal(isUrlUnderBoxUrl("http://localhost:3210/main/test2", box), false);
 });
 
+test("isUrlUnderBoxUrl: rejects a same-origin sibling reached by pushState (the TOCTOU path)", async (t) => {
+  // The verified attack: an enabled page pushState-navigates to a NON-enabled
+  // sibling on the same origin before capture runs. The gate must reject the
+  // now-current sibling url even though it shares the box's origin.
+  const box = "http://localhost:3210/main/test1";
+  t.equal(isUrlUnderBoxUrl("http://localhost:3210/main/test1evil", box), false);
+  t.equal(isUrlUnderBoxUrl("http://localhost:3210/main", box), false);
+  t.equal(isUrlUnderBoxUrl("http://localhost:3210/admin", box), false);
+  t.equal(isUrlUnderBoxUrl("http://localhost:3210/", box), false);
+});
+
+test("isUrlUnderBoxUrl: boxUrl trailing-slash variants normalize the same", async (t) => {
+  // The stored boxUrl may or may not carry a trailing slash; both must gate
+  // identically, and neither may leak the sibling `test1-other`.
+  for (const box of ["http://localhost:3210/main/test1", "http://localhost:3210/main/test1/"]) {
+    t.equal(isUrlUnderBoxUrl("http://localhost:3210/main/test1", box), true, `exact root vs ${box}`);
+    t.equal(isUrlUnderBoxUrl("http://localhost:3210/main/test1/", box), true, `root slash vs ${box}`);
+    t.equal(isUrlUnderBoxUrl("http://localhost:3210/main/test1/browse", box), true, `descendant vs ${box}`);
+    t.equal(isUrlUnderBoxUrl("http://localhost:3210/main/test1-other", box), false, `sibling vs ${box}`);
+  }
+});
+
+test("isUrlUnderBoxUrl: exact-root (no trailing slash) matches", async (t) => {
+  // A page sitting exactly at the box root, boxUrl stored without a trailing
+  // slash — the canonical enabled-page case.
+  t.equal(isUrlUnderBoxUrl("https://cb.example.com/main", "https://cb.example.com/main"), true);
+});
+
 test("isUrlUnderBoxUrl: rejects a different port (real gate, unlike match patterns)", async (t) => {
   t.equal(isUrlUnderBoxUrl("http://localhost:9999/main/test1", "http://localhost:3210/main/test1"), false);
 });
