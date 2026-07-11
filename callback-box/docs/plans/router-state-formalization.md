@@ -7,14 +7,36 @@ function, injected effects (clock/spawner/fs), and unit tests with fakes that
 reproduce the documented incidents (`bin/docs/router-protocol.md`). Phase 1
 (the conservative doc-browser extraction + protocol doc) landed 2026-07-09.
 
-> **STATUS: PHASE A LANDED (2026-07-11); Phases B+C pending.** Codex-reviewed
-> 2026-07-11; the review found two LIVE race families the four-invariant framing
-> doesn't cover (§ "New invariants") — this plan now fixes them rather than
-> formalizing around them. Phase A shipped `bin/router-lifecycle.ts` +
-> `bin/router-pidfile.ts`, adopted them in `router.ts`, and landed invariants
-> #5 (guarded publication) and #6 (pidfile serialization); protocol doc updated.
-> Phases B (factory + effects injection) and C (incident tests with fakes)
-> remain.
+> **STATUS: IMPLEMENTED (Phases A+B+C landed 2026-07-11).** Codex-reviewed at
+> each phase. Phase A shipped `bin/router-lifecycle.ts` + `bin/router-pidfile.ts`,
+> adopted them in `router.ts`, and landed invariants #5 (guarded publication) and
+> #6 (pidfile serialization). Phase B split the lifecycle engine into
+> `bin/router-core.ts` (`createRouterCore(effects, config)`) driven by an injected
+> `RouterEffects` surface, with `router.ts` building the real effects and running
+> boot + signal handlers in an import-safe `main()`. Phase C added the incident
+> tests (`bin/router-core.test.ts`, `bin/router-lifecycle.test.ts`) with
+> deterministic fakes, each proven non-vacuous by neutering. B+C codex review
+> reproduced two honesty findings (below). Verified: typecheck clean, 60 tests
+> green, isolated-router smoke on the real effects path (cold→ready→proxy,
+> unexpected-exit teardown, explicit stop, idle stop, stop-during-start, 404/
+> no-phantom).
+>
+> **Deliberately left (recorded non-goals):** (1) *stale-exit safety is doubly
+> enforced* in the stable-handle model — onChildExit operates on the passed
+> handle and checks both identity AND phase, so the identity line alone is not
+> solely load-bearing; the incident test guards against the historically
+> dangerous regression (name-based teardown, the 2026-06-09 bug), not the
+> identity `if` in isolation. (2) *Invariant #5's failure-path clobber-prevention
+> is now structural* — the failure terminal transitions the detached handle in
+> place and never re-sets the map, so a stale `failed` cannot overwrite a newer
+> generation regardless of the runtime guard; the guard's remaining
+> uniquely-observable job is routing a superseded failure to `stopping`
+> (self-clean) vs `failed`, which the #5b test asserts. (3) *stopping-phase
+> status accuracy* (handles are unlinked before the transition, so `stopping` is
+> never observed on the map). (4) *proxy-retry body-replay* stays a request-level
+> concern, untouched. (5) The name-scoped dashboard-socket hazard a superseded
+> self-clean can trip is filed as `issues/bugs/2026-07-11-router-superseded-
+> selfclean-kills-replacement-dashboard.md` (pre-existing class, low severity).
 
 Scoping record (2026-07-11): `bin/router.ts` is 1407 lines post-extraction.
 It is a **script, not a module**: zero exports; a top-level async boot IIFE

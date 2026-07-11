@@ -190,19 +190,46 @@ recorded in stale pidfiles at router startup) and `reclaimOrphans` in
 pidfiles can't see, e.g. from an older router generation). See the comments at
 their call sites in the boot sequence at the bottom of `router.ts`.
 
-## Status: state machine formalized (2026-07-11)
+## Status: state machine formalized + effects-injected + tested (2026-07-11)
 
 Phase 1 (2026-07-09) was the conservative doc-browser extraction
 (`bin/router-docs.ts`) plus the first write-up of invariants #1–#4 — pure code
 motion, no state-machine change. Phase 2 (2026-07-11,
-`callback-box/docs/implemented-plans/router-state-formalization.md`) then did the
-fuller option from
-`issues/decisions/2026-07-06-architectural-review-open-decisions.md` (item 1):
-the formal lifecycle (`bin/router-lifecycle.ts`) and the two live-race fixes it
-uncovered — invariant #5 (guarded publication) and invariant #6 (pidfile
-serialization), which the earlier four-invariant framing didn't cover. The wish
-to add a fifth invariant was exactly the signal that note predicted; the formal
-model is the answer. Deliberate non-goals recorded at close-out: status
-accuracy for the in-flight `stopping` phase (handles are unlinked before the
-transition, so it's never observed on the map), and formalizing the proxy-retry
-body-replay machinery (it stays a request-level concern, see its section above).
+`callback-box/docs/plans/router-state-formalization.md`) then did the fuller
+option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
+(item 1), in three sub-phases:
+
+- **A** — the formal lifecycle (`bin/router-lifecycle.ts`) and the two live-race
+  fixes it uncovered: invariant #5 (guarded publication) and #6 (pidfile
+  serialization), which the earlier four-invariant framing didn't cover.
+- **B** — the lifecycle engine moved into `bin/router-core.ts`
+  (`createRouterCore(effects, config)`), driven by an injected `RouterEffects`
+  surface (spawn / killGroup / waitForHttp / timers / clock / pidfile store /
+  hub-config / getPort / resolution); `router.ts` builds the real effects and
+  runs boot + signal handlers in an import-safe `main()`.
+- **C** — incident tests with deterministic fakes.
+
+**Each invariant now has a test** (proven non-vacuous by neutering):
+
+- #1/#6 (single-slot + per-name serialization) → `bin/router-core.test.ts`
+  "pidfile serialization…" (barrier-gated fs backend on `createPidStore`).
+- #2 (atomic registration / dedupe) → "dedupe…" and "404 corollary…".
+- #3 (swallow at spawn time) → "rejection discipline…".
+- #4 (identity-checked teardown) → "stale exit…". NOTE: in the stable-shell
+  model this safety is *doubly* enforced — `onChildExit` operates on the passed
+  handle and checks both identity AND phase — so the identity `if` alone is not
+  solely load-bearing; the test guards the historically dangerous regression
+  (name-based teardown, the 2026-06-09 storm), which is the load-bearing failure.
+- #5 (guarded publication) → "stop-during-start…" and "stale failure…". NOTE:
+  the failure-path clobber-prevention is now *structural* (the terminal
+  transitions the detached handle in place and never re-sets the map); the
+  runtime guard's uniquely-observable job is routing a superseded failure to
+  `stopping` (self-clean) vs `failed`, which the #5b test asserts.
+- transition table + stable-shell identity → `bin/router-lifecycle.test.ts`.
+
+Deliberate non-goals recorded at close-out: status accuracy for the in-flight
+`stopping` phase (handles are unlinked before the transition, so it's never
+observed on the map); formalizing the proxy-retry body-replay machinery (it
+stays a request-level concern, see its section above); and the name-scoped
+dashboard-socket hazard a superseded self-clean can trip
+(`issues/bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md`).
