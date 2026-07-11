@@ -239,9 +239,12 @@ Return a report whose language matches the truth. Be straight about: **scope**
 **verification** (distinguish "tests pass" from "verified in the running app"
 from "not really verified" — merging on green tests is fine, claiming more isn't).
 
-Do NOT run the worktree cleanup — the `SessionEnd` hook
-(`.claude/hooks/session-end.sh`) does it when the human exits the session, once
-the branch is merged + clean (which it now is). You may mention it's coming.
+Do NOT run the worktree cleanup — it happens automatically now that the branch
+is merged + clean. Two backstops handle it: the `.husky/post-merge` sweep fires
+the moment your merge lands on main (removing the worktree even though the
+finishing session presents as a main session, which defeats `SessionEnd`), and
+`SessionEnd` (`.claude/hooks/session-end.sh`) cleans up on a clean worktree exit.
+You may mention cleanup is coming.
 
 ## Return contract
 
