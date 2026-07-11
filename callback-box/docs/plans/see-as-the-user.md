@@ -247,15 +247,24 @@ e.g. while debugging a custom view it just wrote.
 
 **Direction / shape.**
 
-- **Session identity (prerequisite).** The agent subprocess env gains
-  `CB_CHAT_SESSION_ID`, set by the chat session when it spawns the agent
-  (the session knows its own id; plumb it through the `buildScriptEnv`
-  `additions` parameter, `script-env.ts:92-101`). `cb chat screenshot`
-  requires a session id — from `--session` or `CB_CHAT_SESSION_ID` — and
-  errors out if neither is present. No "most-active session" fallback:
-  guessing can target a different live conversation (Codex review, finding
-  2). `cb chat self-note`/`whats-changed` may adopt the env var later —
-  out of scope here.
+- **Session identity (prerequisite).** `cb chat screenshot` requires the
+  current SDK session id — the exact id the frontend matches the bus event
+  against. It resolves via `resolveChatSessionId()`: `--session`, then
+  `CB_CHAT_SESSION_ID` (set at spawn for *resumed* sessions), then a
+  backend-written per-subprocess id file named by `CB_CHAT_SESSION_ID_FILE`,
+  with a brief first-turn poll; errors out if none resolves. No
+  "most-active session" fallback — guessing can target a different live
+  conversation. **Implementation note (superseding the original B0
+  sketch):** baking the id into the spawn env only works for resumes,
+  because (a) a new conversation's SDK id is assigned *after* spawn and the
+  long-lived subprocess env can't be repaired, and (b) chat prewarm's warm
+  pool is env-blind, so a warm-consumed subprocess keeps the probe's env.
+  So for new sessions the *backend* (which mints the subprocess) allocates
+  a unique id-file path at spawn and writes the SDK id into it the instant
+  `system/init` streams; the CLI reads that file. Per-subprocess file =
+  each concurrent session sees its own id (`core/chat/session/session-id-file.ts`).
+  `cb chat self-note`/`whats-changed` may adopt this resolver later — out
+  of scope here.
 - **Pending-request primitive.** Generalize `last-audio-pending.ts` into a
   shared `src/core/pending-browser-request.ts` parameterized on the
   fulfillment payload; last-audio becomes its first consumer (mechanical
