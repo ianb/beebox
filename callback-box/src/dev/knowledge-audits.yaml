@@ -2999,6 +2999,39 @@ tests:
       contains-check, and the audit sandbox has no live chat tab to answer
       the fetch anyway.
 
+  # === See as the User (cb chat screenshot) ===
+  #
+  # One agent-facing concept: the chat agent can request a screenshot of what
+  # the user currently sees with `cb chat screenshot` — for visual/layout
+  # questions, as distinct from `whats-changed` (content) or reading source —
+  # and understands it asks the user's browser, so it can come back
+  # declined/unavailable. Surfaced in Key Commands (always-loaded agent guide)
+  # plus a sentence on the chat prompt's state-snapshot section, so a
+  # chat-mode agent should recall it without reading source.
+  #
+  # Status (2026-07-11): 1/1 passes — direct knowledge (0 reads, 0 searches).
+  # The agent named `cb chat screenshot` for the visual/layout case and knew
+  # it can be declined/unavailable, from the agent-guide line + chat-prompt
+  # sentence alone.
+
+  - id: chat-screenshot-when
+    prompt: >
+      A user in chat says a custom view they have open "looks broken — the
+      layout is all wrong." You can read the view's source, but you'd like to
+      see what they actually see rendered on their screen right now. Is there
+      a way to do that, and what should you expect to get back?
+    expected_level: knows_directly
+    chat_mode: true
+    watch_for: >
+      Names `cb chat screenshot` as the way to get a real screenshot of what
+      the user currently sees (the right reach for a visual/layout question,
+      as opposed to whats-changed for content or just reading source), and
+      knows it asks the user's browser — so it may come back declined or
+      unavailable rather than always returning an image.
+    correct_contains: ["cb chat screenshot"]
+    correct_contains_any: ["declin", "unavailable", "no-client", "no client", "may not"]
+    tags: [chat, screenshot, see-as-the-user]
+
   - id: views-write-conflict-safe
     prompt: >
       I'm writing a view where the user edits a markdown attachment and
