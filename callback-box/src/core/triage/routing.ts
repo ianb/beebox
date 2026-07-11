@@ -119,6 +119,10 @@ async function createGuessQuestion(opts: {
     options,
     askedAt: getBoxTimeISO(boxRoot),
     directive: `Move ${heldPath} from inbox/triaged/_unsure/ into inbox/triaged/<chosen-category>/. If "_other" was selected, follow the user's free-text directive instead.`,
+    learning: {
+      sink: "guide",
+      proposal: `Items like "${decision.file}" (${decision.reason || "no reasoning given"}) belong in whichever category the boxholder picks — record that placement as a triage rule so similar items route without asking again.`,
+    },
   });
 
   const filename = `Triage_${questionSlug(decision.file)}.question.card`;
