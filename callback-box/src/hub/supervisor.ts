@@ -21,9 +21,10 @@ import type { HubConfig, BoxEntry } from "./hub-config.js";
 import { HubState } from "./hub-state.js";
 import { invariant } from "../lib/invariant.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
-import { killGroup, sleep, HttpReadinessTimeoutError } from "./child-process-utils.js";
+import { killGroup, sleep, describeError } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
+import { boxHasPendingSchedules } from "./pending-schedules.js";
 // prettier-ignore
 import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBoxRoot, resolveCbBinary } from "./child-spawn.js";
 
@@ -166,27 +167,41 @@ export class Supervisor implements EndpointProvider {
     if (this.config.lazy) {
       for (const box of this.boxes.values()) box.status = "stopped";
       await this.hubState.load();
-      await this.prestartRecent();
+      await this.prestartLazy();
       return;
     }
     await Promise.all(Array.from(this.boxes.values()).map((box) => this.launch(box)));
   }
 
   /**
-   * Lazy mode with `keepRecent > 0`: instead of leaving every box stopped,
-   * pre-start the `keepRecent` most-recently-used configured boxes (by
-   * persisted `hub-state.json` recency) so a hub restart resumes the
-   * boxholder's working set rather than everything or nothing. Slugs not in
-   * the current config are skipped (a box can be removed between boots), and
-   * if fewer boxes have recorded activity, fewer are started. Launches are
-   * awaited like a non-lazy `startAll` -- a failure is reported via status,
-   * never thrown.
+   * Lazy-mode boot pre-start, in two independent passes. Recency pass
+   * (`keepRecent > 0`): pre-start the `keepRecent` most-recently-used
+   * configured boxes (by persisted `hub-state.json` recency) so a hub restart
+   * resumes the boxholder's working set rather than everything or nothing
+   * (slugs no longer in the config are skipped; fewer recorded boxes means
+   * fewer started). Schedule pass (always, even `keepRecent: 0`): pre-start any
+   * box holding pending chat schedules so its in-process timers can't be
+   * missed. Launches are awaited like a non-lazy `startAll` -- a failure is
+   * reported via status, never thrown.
    */
-  private async prestartRecent(): Promise<void> {
-    if (this.config.keepRecent <= 0) return;
+  private async prestartLazy(): Promise<void> {
+    // Recency pass (keepRecent > 0): resume the boxholder's working set by
+    // pre-starting the top-`keepRecent` most-recently-used slugs.
     const ranked = this.hubState.slugsByRecency().filter((slug) => this.boxes.has(slug));
-    const toStart = ranked.slice(0, this.config.keepRecent);
-    await Promise.all(toStart.map((slug) => this.prestartBox(slug)));
+    const recent = this.config.keepRecent > 0 ? ranked.slice(0, this.config.keepRecent) : [];
+    await Promise.all(recent.map((slug) => this.prestartBox(slug)));
+    // Schedule pass (independent, applies even with keepRecent: 0): any
+    // not-yet-running box whose chat-schedules.json holds an entry MUST come
+    // up -- its timers live in the box's `cb serve` process and a missed alarm
+    // is unacceptable. Skips boxes the recency pass already started (no
+    // double-start); an unresolvable path is warned-and-skipped inside
+    // `boxHasPendingSchedules` (it would fail on demand anyway). `prestartBox`
+    // arms the idle timer, and `evaluateIdle`'s per-cycle check then keeps the
+    // box up until its last schedule fires and the file empties.
+    for (const box of this.boxes.values()) {
+      if (box.status === "running") continue;
+      if (await boxHasPendingSchedules({ slug: box.slug, entryPath: box.entry.path })) await this.prestartBox(box.slug);
+    }
   }
 
   /** Launch one pre-start box and, if it came up, seed its in-memory recency
@@ -281,15 +296,23 @@ export class Supervisor implements EndpointProvider {
    * can drive it deterministically (the real `setTimeout` just calls this).
    * A running box that's in the keep-set -- the `config.keepRecent`
    * most-recently-active running boxes -- stays alive and re-arms its timer,
-   * so it only stops once displaced by more-recently-used boxes; otherwise it
+   * so it only stops once displaced by more-recently-used boxes. A box holding
+   * pending chat schedules is likewise kept (`kept-schedule`) and re-armed --
+   * its timers live in this process and a missed alarm is unacceptable, so it
+   * stays up until the last schedule fires and the file empties. Otherwise it
    * stops as a plain lazy hub would. Returns which branch it took.
    */
-  async evaluateIdle(slug: string): Promise<"stopped" | "kept" | "not-running"> {
+  async evaluateIdle(slug: string): Promise<"stopped" | "kept" | "kept-schedule" | "not-running"> {
     const box = this.boxes.get(slug);
     if (!box || box.status !== "running") return "not-running";
     if (this.keepSetSlugs().includes(slug)) {
       this.armIdleTimer(box);
       return "kept";
+    }
+    if (await boxHasPendingSchedules({ slug: box.slug, entryPath: box.entry.path })) {
+      console.debug(`[hub] keeping box "${slug}" alive: it has pending chat schedule(s)`);
+      this.armIdleTimer(box);
+      return "kept-schedule";
     }
     await this.stopBox(box);
     return "stopped";
@@ -484,9 +507,4 @@ export class Supervisor implements EndpointProvider {
     }, delay);
     box.restartTimer.unref();
   }
-}
-
-function describeError(e: unknown): string {
-  if (e instanceof HttpReadinessTimeoutError) return e.message;
-  return e instanceof Error ? e.message : String(e);
 }

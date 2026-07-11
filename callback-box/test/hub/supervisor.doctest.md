@@ -20,6 +20,8 @@ Two `src/hub/supervisor.ts` behaviors, both found by cross-model review:
 ```ts setup
 import { buildChildEnv, Supervisor } from "../../src/hub/supervisor.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
+import * as fs from "node:fs";
+import * as path from "node:path";
 
 /** A fake `ChildProc`: just enough surface for `Supervisor.launch()` to use
  *  (`pid`, `on("exit", ...)`, `catch()`) plus a way for the test to fire the
@@ -430,4 +432,167 @@ second.children.length
 ```ts cleanup
 await second.supervisor.stopAll();
 await rtFixture.cleanup();
+```
+
+## Chat schedules keep a lazy box running, and pre-start it at boot
+
+Boxholder directive (2026-07-11): a lazy hub must NEVER idle-stop or fail to
+start a box that holds pending chat `<schedule>` timers — they live in the
+box's `cb serve` process and a missed alarm is unacceptable. `evaluateIdle`
+therefore checks the box's on-disk `chat-schedules.json` (via the same loader
+`cb serve` re-arms from) and keeps the box alive if it holds any entry, even
+when it's outside the keep-set (`keepRecent: 0`). Once the file empties (the
+last schedule fired), the next idle evaluation stops it normally.
+
+```ts continue
+const schedFixture = await makeTmpBox();
+const validEntry = {
+  id: "sch_1",
+  label: "rice timer",
+  alarm: true,
+  announce: "check the rice",
+  content: "Ask about the rice",
+  createdAt: "2026-07-11T10:00:00.000Z",
+  firesAt: "2026-07-11T12:00:00.000Z",
+};
+await schedFixture.write(".callback-box/chat-schedules.json", JSON.stringify([validEntry]));
+
+let schedChildren = [];
+const schedSupervisor = new Supervisor({
+  config: {
+    port: undefined,
+    host: undefined,
+    boxes: { rice: { path: schedFixture.root } },
+    configPath: schedFixture.path("hub.json"),
+    lazy: true,
+    idleMs: 100000,
+    keepRecent: 0,
+  },
+  hubSecret: "test-hub-secret",
+  spawnChild() {
+    const child = makeFakeChild(940000 + schedChildren.length);
+    schedChildren.push(child);
+    return child;
+  },
+  checkReady() {
+    return Promise.resolve();
+  },
+});
+await schedSupervisor.startAll();
+```
+
+With `keepRecent: 0` the box is never in the keep-set, so an idle evaluation
+would normally stop it. But its `chat-schedules.json` holds an entry, so
+`evaluateIdle` keeps it alive instead — a distinct `kept-schedule` result:
+
+```ts continue
+await schedSupervisor.ensureRunning("rice");
+schedSupervisor.getStatuses()[0].status
+=> running
+
+JSON.stringify(schedSupervisor.keepSetSlugs())
+=> []
+
+await schedSupervisor.evaluateIdle("rice")
+=> kept-schedule
+
+schedSupervisor.getStatuses()[0].status
+=> running
+```
+
+Once the schedule fires and the file empties, the next idle evaluation stops
+the box normally:
+
+```ts continue
+await schedFixture.write(".callback-box/chat-schedules.json", JSON.stringify([]));
+await schedSupervisor.evaluateIdle("rice")
+=> stopped
+
+schedSupervisor.getStatuses()[0].status
+=> stopped
+```
+
+```ts cleanup
+await schedSupervisor.stopAll();
+await schedFixture.cleanup();
+```
+
+A lazy `startAll` also PRE-STARTS a schedule-holding box at boot — independent
+of `keepRecent` and of any persisted recency — so an overdue or soon-to-fire
+schedule fires on time after a hub restart, without waiting for a request:
+
+```ts continue
+const bootFixture = await makeTmpBox();
+await bootFixture.write(".callback-box/chat-schedules.json", JSON.stringify([validEntry]));
+
+let bootChildren = [];
+const bootSupervisor = new Supervisor({
+  config: {
+    port: undefined,
+    host: undefined,
+    boxes: { rice: { path: bootFixture.root } },
+    configPath: bootFixture.path("hub.json"),
+    lazy: true,
+    idleMs: 100000,
+    keepRecent: 0,
+  },
+  hubSecret: "test-hub-secret",
+  spawnChild() {
+    const child = makeFakeChild(950000 + bootChildren.length);
+    bootChildren.push(child);
+    return child;
+  },
+  checkReady() {
+    return Promise.resolve();
+  },
+});
+await bootSupervisor.startAll();
+
+bootSupervisor.getStatuses()[0].status
+=> running
+
+bootChildren.length
+=> 1
+```
+
+A box with no schedule file is left stopped by the same `startAll` (the scan
+only starts boxes that actually hold pending schedules):
+
+```ts continue
+const idleFixture = await makeTmpBox();
+let idleChildren = [];
+const idleSupervisor = new Supervisor({
+  config: {
+    port: undefined,
+    host: undefined,
+    boxes: { plain: { path: idleFixture.root } },
+    configPath: idleFixture.path("hub.json"),
+    lazy: true,
+    idleMs: 100000,
+    keepRecent: 0,
+  },
+  hubSecret: "test-hub-secret",
+  spawnChild() {
+    const child = makeFakeChild(960000 + idleChildren.length);
+    idleChildren.push(child);
+    return child;
+  },
+  checkReady() {
+    return Promise.resolve();
+  },
+});
+await idleSupervisor.startAll();
+
+idleSupervisor.getStatuses()[0].status
+=> stopped
+
+idleChildren.length
+=> 0
+```
+
+```ts cleanup
+await bootSupervisor.stopAll();
+await idleSupervisor.stopAll();
+await bootFixture.cleanup();
+await idleFixture.cleanup();
 ```
