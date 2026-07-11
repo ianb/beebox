@@ -87,8 +87,8 @@ export function useChatAttachments(opts: {
   const { editor } = emissionStore;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const addImageFiles = useCallback(async (files: File[]) => {
-    if (files.length === 0) return;
+  const addImageFiles = useCallback(async (files: File[]): Promise<number> => {
+    if (files.length === 0) return 0;
     // Show placeholder tiles immediately; each clears as its image finishes
     // encoding, so the gap between cmd-V and the thumbnail isn't a dead beat.
     editor.bumpPendingImages(files.length);
@@ -119,9 +119,12 @@ export function useChatAttachments(opts: {
       editor.addImage(item); // also decrements the pending count for this image
       newItems.push(item);
     }
-    if (newItems.length === 0) return;
+    if (newItems.length === 0) return 0;
     const tokens = newItems.map((a) => `[image${a.id}]`).join(" ");
     insertTokensAtCursor(tokens, { input: emissionStore.get().text, setInput: editor.setText, textareaRef, alwaysFocus: false });
+    // Count actually added — the screenshot path toasts when this is 0
+    // (a single-file capture that failed processing).
+    return newItems.length;
   }, [editor, emissionStore, textareaRef]);
 
   const removeAttachment = useCallback((id: number) => {

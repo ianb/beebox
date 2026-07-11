@@ -87,6 +87,17 @@ export const eventSchemas = {
   }),
   /** A browser tab was asked to re-upload its last audio blob. */
   "chat-last-audio-request": z.object({ requestId: z.string() }),
+  /**
+   * The chat agent asked the browser tab holding a specific chat session to
+   * capture a screenshot of what the user currently sees. Emitted transiently
+   * (never persisted): a request replayed on reconnect would target a stale
+   * moment. `expiresAt` is the ISO deadline past which the frontend ignores it.
+   */
+  "screenshot-request": z.object({
+    requestId: z.string().min(1),
+    session: z.string().min(1),
+    expiresAt: z.string().datetime(),
+  }),
   /** A card was created (optionally with a captured audio attachment). */
   "card-created": z.object({
     path: z.string(),

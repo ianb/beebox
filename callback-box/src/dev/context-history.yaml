@@ -2886,6 +2886,21 @@ test1:
       peak: 32194
       added: 0
       turns: 2
+  chat-screenshot-when:
+    - date: 2026-07-11T18:33:49.532Z
+      boxCommit: eb5b662399181e7042ae6e6411e1c8a39e9339f4
+      repoCommit: e9e954768c94325deefdac45f6410d4c0b599712
+      initial: 43895
+      peak: 43895
+      added: 0
+      turns: 2
+    - date: 2026-07-11T21:33:52.515Z
+      boxCommit: cef2c9d7cc8ff63ffabf277eb6eec5a745f43e15
+      repoCommit: 162b42bf8cebc0f1652a02cfe9db57b4fa78132b
+      initial: 43875
+      peak: 43875
+      added: 0
+      turns: 2
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

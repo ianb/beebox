@@ -31,8 +31,15 @@ This is the rest of the everyday \`cb\` surface; the full reference is
 - \`cb chat …\` — a family of commands for the live chat session:
   \`cb chat self-note "<body>" [--ref <path>] [--commit <hash>]\` posts an
   agent-authored record a scheduled sub-agent leaves for the boxholder (not a
-  conversational reply — chat knows not to answer it); others include
-  \`cb chat whats-changed\` and \`cb chat retranscribe\`. See the full reference.
+  conversational reply — chat knows not to answer it);
+  \`cb chat screenshot\` gets a real screenshot of what the user is looking at
+  *right now* in the box UI (prints an image path to Read) — reach for it on
+  visual/layout questions ("does this look right", debugging a custom view's
+  appearance), as opposed to \`cb chat whats-changed\` for *content* or just
+  reading a card/view's source; it asks the user's browser, so it may come
+  back declined or unavailable (the command's one-line output tells you
+  which). Others include \`cb chat whats-changed\` and \`cb chat retranscribe\`.
+  See the full reference.
   (This is the *live chat session* only — to leave yourself a note while
   processing a \`chat-thread\` card, put it in the \`text:\` of the \`kind: seen\`
   entry you append, not \`self-note\`.)

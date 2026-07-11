@@ -37,6 +37,7 @@ import type { Emission } from "../../input/emission";
 import { nativeEmissionFromDetail } from "./native-emission";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
+import { useScreenshotRequests } from "./screenshot-request-handler";
 
 // The native app shell (when embedding this page) queues emission events on
 // this global before React mounts. Not in the DOM lib types.
@@ -141,6 +142,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
   // Server-derived pending capture bubbles (survive reload; refined live below).
   const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
+  const screenshots = useScreenshotRequests(sessionId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
@@ -206,6 +208,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
     onCaptureStatus: applyCaptureStatus,
+    onScreenshotRequest: screenshots.onScreenshotRequest,
   });
 
   const actions = useChatActions({
@@ -278,6 +281,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
       onEnterCapture={() => setCaptureMode(true)} captureEnabled={!isEmbedded}
       captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
+      screenshots={screenshots}
       />
       {captureMode && !isEmbedded ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
     </InputStoreProvider>

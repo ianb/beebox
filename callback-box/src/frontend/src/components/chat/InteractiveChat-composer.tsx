@@ -9,6 +9,7 @@
 import TextareaAutosize from "react-textarea-autosize";
 import { Dropdown, MenuItem } from "../ui/Dropdown";
 import { ShareLocationMenuItem } from "./ShareLocationMenuItem";
+import { ScreenshotMenuItem } from "./ScreenshotMenuItem";
 import { VoiceToggleButton } from "./InteractiveChat-voice-button";
 import { MicOverlay } from "./MicOverlay";
 import { composerTextareaClasses, joinTranscript } from "./InteractiveChat-helpers";
@@ -141,7 +142,7 @@ export function ChatInputArea({
   handleKeyDown, handleSend, handleCancelTranscription, clearDraft,
   onKeyboard, onVoice, onStopDictation, onVoiceSegmentSend,
   voicePaused, onUnpause, hideMobile,
-  onPaste, onDrop, onAttachFiles, onEnterCapture, captureEnabled, captureDisabledReason, narrationEnabled,
+  onPaste, onDrop, onAttachFiles, addImageFiles, onEnterCapture, captureEnabled, captureDisabledReason, narrationEnabled,
 }: {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
   isTranscribing: boolean;
@@ -163,6 +164,8 @@ export function ChatInputArea({
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
   onDrop?: (e: React.DragEvent<HTMLTextAreaElement>) => void;
   onAttachFiles: () => void;
+  /** Ingest images into the composer (shared with paste/drop) — feeds the "Send screenshot…" item. */
+  addImageFiles: (files: File[]) => Promise<number>;
   /** Enter capture mode (full-screen viewfinder / mic). */
   onEnterCapture: () => void;
   /** Whether capture is offered (suppressed for native shells, like the mic). */
@@ -213,6 +216,7 @@ export function ChatInputArea({
             </MenuItem>
           ) : null}
           <MenuItem onClick={onAttachFiles}>Attach file…</MenuItem>
+          <ScreenshotMenuItem addImageFiles={addImageFiles} />
           <ShareLocationMenuItem />
         </Dropdown>
 
