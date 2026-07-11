@@ -200,11 +200,36 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 # further down can skip itself — a worktree just carved by `worktree add` has
 # nothing to clean.
 CHECKOUT_FRESH=false
+# Build a fresh detached worktree at $SHA, curing the corrupt/stale state we've
+# hit here: a leftover `.git/worktrees/<name>` whose gitdir/index is broken
+# survives `worktree prune` and then makes `worktree add` die with
+# `fatal: .git/index: ... Not a directory` (ENOTDIR), silently failing the prod
+# deploy. So each attempt wipes the dir, removes ANY worktree metadata still
+# pointing at this checkout (prune alone doesn't clear a corrupt one), prunes,
+# then adds — retried once, since the ENOTDIR also races git's bookkeeping and
+# clears on a second try. Only a second failure is fatal (a real repo problem,
+# not a transient). See issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
 recreate_checkout() {
-  rm -rf "$CHECKOUT"
-  git -C "$MONO_DIR" worktree prune
-  git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"
-  CHECKOUT_FRESH=true
+  local attempt wt gd
+  for attempt in 1 2; do
+    rm -rf "$CHECKOUT"
+    if [ -d "$GIT_COMMON_DIR/worktrees" ]; then
+      for wt in "$GIT_COMMON_DIR"/worktrees/*/; do
+        [ -f "$wt/gitdir" ] || continue
+        gd="$(cat "$wt/gitdir" 2>/dev/null || true)"
+        case "$gd" in "$CHECKOUT/.git"*) rm -rf "$wt" ;; esac
+      done
+    fi
+    git -C "$MONO_DIR" worktree prune 2>/dev/null || true
+    if git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"; then
+      CHECKOUT_FRESH=true
+      return 0
+    fi
+    echo "deploy: 'worktree add $CHECKOUT' failed (attempt $attempt) — settling and retrying..." >&2
+    sleep 2
+  done
+  echo "deploy: could not create build checkout $CHECKOUT after 2 attempts (not a transient)." >&2
+  return 1
 }
 if [ ! -d "$CHECKOUT" ]; then
   # Clear any stale registration left by a wiped-but-not-pruned checkout dir,
