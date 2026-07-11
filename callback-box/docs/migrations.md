@@ -262,7 +262,7 @@ commands (a wakeup-time failure). Behavior worth knowing:
   procedure is gone, so it's removed whenever present.
 - **Legacy inbox capture-session cards are intentionally left in place.** In-flight
   `*.capture-session.card` files in `box/inbox/` (including the prod retry-loop
-  victim, `issues/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
+  victim, `issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
   stay as ordinary cards for the normal triage/agent flow — they are legacy data,
   not something this migration touches.
 - Idempotent: a box with neither file (already retired, or one that never had the

@@ -455,7 +455,7 @@ prune (`install-template-file.ts:303-390`). Enumerate the field hashes
 the same way template rollouts do (`priorStockHashes` style). A
 boxholder-modified copy parks instead of deleting. In-flight inbox
 capture-session cards (including the prod retry-loop victim,
-`issues/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
+`issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
 are *not* auto-migrated: they stay in inbox as ordinary cards for the
 normal triage/agent flow; the migration note tells the agent they're
 legacy. `MicrophoneIcon`/`StopIcon` move to a shared icons module
@@ -534,7 +534,7 @@ the stale-`tmp-capture/` log line surfaces it eventually.
 - **Destination chooser / capture-into-a-landmark + instant-triage
   shortcut** — boxholder deferred; default is the current chat.
 - **PWA `share_target` / iOS share-sheet entry**
-  (`issues/2026-05-11-ios-share-sheet-capture.md`) — separate follow-up;
+  (`issues/features/2026-05-11-ios-share-sheet-capture.md`) — separate follow-up;
   Track 1's mobile-auth fix removes its main blocker, which is
   contribution enough for now.
 - **Migrating `cb scan-import`/`cb upload` off the capture-session

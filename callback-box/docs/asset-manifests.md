@@ -263,7 +263,7 @@ space, run `git filter-repo` later — separate, riskier operation.
 - **Attach-scope-only enforcement.** Right now the hook and gitignore
   scope are both `**/*.attach/**`. If agents start putting big binaries
   outside attach scopes routinely (despite the advisory), revisit.
-  Noted in [issues/2026-05-27-review-asset-manifest-scope.md](../../issues/2026-05-27-review-asset-manifest-scope.md).
+  Noted in [issues/code-quality/2026-05-27-review-asset-manifest-scope.md](../../issues/code-quality/2026-05-27-review-asset-manifest-scope.md).
 - **Manifest format.** JSON per-dir was chosen over per-asset sidecar
   and over a session-level recursive manifest. Worth revisiting if
   per-dir produces noisy diffs in practice.

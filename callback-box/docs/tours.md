@@ -46,7 +46,7 @@ Each run writes `test/tours/.artifacts/<tour>/<runId>/` (gitignored):
 - `<checkpoint>.<viewport>.ax.txt` — full accessibility-tree snapshot.
 - `<checkpoint>.<viewport>.axe.json` — axe violations (color-contrast
   is suppressed at run time pending
-  `issues/2026-05-28-color-contrast-wcag-aa-audit.md`; edit
+  `issues/code-quality/2026-05-28-color-contrast-wcag-aa-audit.md`; edit
   `tour-lib/axe.ts` `SUPPRESS_RULES` to re-enable).
 
 A capture-time degradation (page-readiness timeout, axe crash) is
