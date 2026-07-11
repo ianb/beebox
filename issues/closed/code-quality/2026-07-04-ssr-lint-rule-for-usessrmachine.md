@@ -1,6 +1,17 @@
 ---
 title: "Lint rule: force `useSSRMachine` over `@xstate/react`'s `useMachine`"
+resolution: implemented
 ---
+
+**Resolved** (main session, 2026-07-11): added a `no-restricted-imports` block to
+`callback-box/src/frontend/eslint.config.mjs` banning `useMachine` from
+`@xstate/react` with a message pointing at `useSSRMachine`
+(`src/hooks/useSSRMachine.ts`); the wrapper file itself is exempted via
+`ignores`. Zero existing violations, so it was a clean add. Verified: the wrapper
+lints clean, a probe import fires the rule with the custom message, and the whole
+frontend passes. (The preset sets no `no-restricted-imports`, so nothing was
+clobbered.) Scope note: applied to the frontend eslint config — `src/webapp` is
+backend and doesn't use `@xstate/react`, so no rule was needed there.
 
 2026-07-04 · backlog, low effort.
 
