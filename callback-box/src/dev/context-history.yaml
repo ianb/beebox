@@ -2847,6 +2847,14 @@ test1:
       peak: 41776
       added: 15243
       turns: 14
+  question-dismissed-expired-meaning:
+    - date: 2026-07-11T00:52:52.329Z
+      boxCommit: 489b19a36205830d6c087441ab3415d5e96cd345
+      repoCommit: 00bdd9083185ef27a5711973b311f63343938d92
+      initial: 41700
+      peak: 43253
+      added: 1553
+      turns: 4
   capture-message-meaning:
     - date: 2026-07-10T06:51:13.953Z
       boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
@@ -2876,5 +2884,22 @@ test1:
       repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
       initial: 32194
       peak: 32194
+      added: 0
+      turns: 2
+content:
+  search-query-phrasing:
+    - date: 2026-07-11T02:31:07.204Z
+      boxCommit: 6115fc5d3cba37d63b1e8c6584e2bb1e49a4a4c7
+      repoCommit: c9e4dce621728d1b5447dcdde367d57112bc2fe3
+      initial: 43856
+      peak: 43856
+      added: 0
+      turns: 2
+  search-exact-identifier:
+    - date: 2026-07-11T02:31:17.443Z
+      boxCommit: 6115fc5d3cba37d63b1e8c6584e2bb1e49a4a4c7
+      repoCommit: c9e4dce621728d1b5447dcdde367d57112bc2fe3
+      initial: 43841
+      peak: 43841
       added: 0
       turns: 2

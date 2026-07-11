@@ -21,7 +21,23 @@ input=$(cat)
 mkdir -p "$HOME/.cache/callback-box"
 printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-session-end-input.json"
 
+# ── Append-only lifecycle log ───────────────────────────────────────────
+# Diagnostic for the recurring "worktrees don't get cleaned up" problem. It
+# records, for EVERY invocation, whether this hook fired and what it decided
+# (cleaned / skipped-why). Deliberately at a FIXED top-level path — never a
+# per-worktree/per-name subdir — so it lives OUTSIDE everything this hook
+# deletes (the worktree, the box clone at ~/src/box-worktrees/$name, and the
+# ~/.cache/callback-box/{logs,browse,pids}/$name state). A cleanup therefore
+# can't erase the record of itself. `sweep`/`panic` don't touch this file
+# either. Never fails the hook (|| true). If a lingering worktree has NO line
+# here, the hook never fired for it (e.g. tab-kill sends no SessionEnd).
+WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
+wlog() { printf '%s pid=%s SessionEnd %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
+
 cwd=$(printf '%s' "$input" | jq -r '.cwd // empty')
+session_id=$(printf '%s' "$input" | jq -r '.session_id // empty')
+reason=$(printf '%s' "$input" | jq -r '.reason // empty')
+wlog "event: session=$session_id reason=$reason cwd=$cwd"
 
 # Determine the worktree directory. cwd is the obvious signal, but Claude
 # Code reports the session's *final* cwd — an agent that cd'd to the main
@@ -50,14 +66,17 @@ if [ -z "$worktree_path" ]; then
 fi
 
 if [ -z "$worktree_path" ] || [ ! -d "$worktree_path" ]; then
+  wlog "decision=skip:not-a-worktree-session resolved='$worktree_path'"
   exit 0
 fi
+wlog "resolved worktree=$worktree_path"
 
-cd "$worktree_path" || exit 0
+cd "$worktree_path" || { wlog "decision=skip:cd-failed wt=$worktree_path"; exit 0; }
 
 branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo "")
 if [ -z "$branch" ] || [ "$branch" = "main" ] || [ "$branch" = "HEAD" ]; then
   echo "[session-end] branch=$branch, not eligible for auto-cleanup"
+  wlog "decision=skip:branch-ineligible branch='$branch' wt=$worktree_path"
   exit 0
 fi
 
@@ -72,8 +91,13 @@ dirty=$(git status --porcelain 2>/dev/null | grep -cvE '^( D|D ) ' || true)
 
 if [ "$ahead" != "0" ] || [ "$dirty" != "0" ]; then
   echo "[session-end] worktree '$branch' not fully merged (ahead=$ahead, non-deletion dirty=$dirty) — leaving alone"
+  # Capture WHICH entries block it — untracked file vs unmerged commit is the
+  # whole diagnosis (e.g. review-ios lingered on one untracked doc).
+  blockers=$(git status --porcelain 2>/dev/null | grep -vE '^( D|D ) ' | head -6 | tr '\n' ';' || true)
+  wlog "decision=skip:unmerged branch=$branch ahead=$ahead dirty=$dirty blockers=[$blockers] wt=$worktree_path"
   exit 0
 fi
+wlog "decision=clean branch=$branch ahead=0 dirty=0 wt=$worktree_path"
 
 # IMPORTANT: derive the name from $worktree_path, not $cwd. When the
 # session ends with cwd = main (the original bug that motivated the
@@ -136,4 +160,5 @@ PID_FILE="$HOME/.cache/callback-box/pids/$name.json"
 [ -f "$LOG_FILE" ]   && rm -f  "$LOG_FILE"   && echo "[session-end]   removed $LOG_FILE"
 [ -f "$PID_FILE" ]   && rm -f  "$PID_FILE"   && echo "[session-end]   removed $PID_FILE"
 
+wlog "done: cleaned branch=$branch name=$name (box+worktree trashed, branch deleted)"
 echo "[session-end] done"

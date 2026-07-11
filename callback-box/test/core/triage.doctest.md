@@ -239,6 +239,12 @@ yaml.includes("id: todos")
 
 yaml.includes("id: _other")
 => true
+
+yaml.includes("learning:")
+=> true
+
+yaml.includes("sink: guide")
+=> true
 ```
 
 ```ts cleanup

@@ -12,12 +12,6 @@ import {
   type CommandContext,
 } from "../../core/commands/index.js";
 
-interface AnswerBody {
-  questionPath: string;
-  answer: string;
-  selectedId?: string;
-}
-
 interface CreateBody {
   path: string;
   template: string;
@@ -32,68 +26,9 @@ interface RegisterActionRoutesOptions {
 
 // Note: POST /api/actions/wakeup was removed. The box agent runs the wakeup
 // cycle (scheduler / `cb wakeup`); the web UI no longer triggers it directly.
-
-/**
- * Handle POST /api/actions/answer - Answer a question.
- */
-async function handleAnswer(args: {
-  request: FastifyRequest<{ Body: AnswerBody | undefined }>;
-  reply: FastifyReply;
-  boxRoot: string;
-  eventBus: EventBus;
-}): Promise<unknown> {
-  const { request, reply, boxRoot, eventBus } = args;
-  const { questionPath, answer, selectedId } = request.body ?? {};
-
-  if (!questionPath) {
-    return reply.status(400).send({ error: "questionPath is required" });
-  }
-  if (!answer && !selectedId) {
-    return reply.status(400).send({ error: "answer or selectedId is required" });
-  }
-
-  const ctx: CommandContext = {
-    boxRoot,
-    write: () => {},
-    writeLine: () => {},
-  };
-
-  try {
-    const result = await runCommand({
-      name: "answer",
-      args: {
-        question: questionPath,
-        answer: answer,
-        selectedId: selectedId,
-        via: "web",
-      },
-      ctx,
-    });
-
-    if (!result.success) {
-      return reply.status(400).send({ error: result.error });
-    }
-
-    // Broadcast the change
-    eventBus.emit("question-answered", {
-      path: questionPath,
-      answer,
-      selectedId,
-      timestamp: new Date().toISOString(),
-    });
-
-    return {
-      success: true,
-      message: "Question answered",
-      path: questionPath,
-    };
-  } catch (error) {
-    return reply.status(500).send({
-      error: "Failed to answer question",
-      details: (error as Error).message,
-    });
-  }
-}
+// POST /api/actions/answer was removed too — answering (and dismissing) a
+// question is the tRPC `actions.answer`/`actions.dismiss` mutation the frontend
+// actually uses; this raw duplicate was dead weight (principle 8, one way).
 
 /**
  * Handle POST /api/actions/create - Create a card.
@@ -162,11 +97,6 @@ export async function registerActionRoutes(
   options: RegisterActionRoutesOptions
 ): Promise<void> {
   const { server, boxRoot, eventBus } = options;
-
-  // POST /api/actions/answer - Answer a question
-  server.post<{ Body: AnswerBody | undefined }>("/api/actions/answer", async (request, reply) =>
-    handleAnswer({ request, reply, boxRoot, eventBus })
-  );
 
   // POST /api/actions/create - Create a card
   server.post<{ Body: CreateBody | undefined }>("/api/actions/create", async (request, reply) =>

@@ -25,46 +25,57 @@ procedure/
 
 ## Building Blocks
 
-Every step has three optional phases: **precheck**, **run**, **validate**. All use the same child elements:
+A procedure definition is a YAML-frontmatter card with a `steps:` list.
+Every step has three optional phases: **precheck**, **run**,
+**validate**. Each phase uses the same building blocks:
 
-- `<shell>` — a bash command, executed in the box root
-- `<agent>` — Claude Code invocation with inline prompt
-- `<instruction>` — natural-language success criterion, **model-judged** against the step's git diff in a `validate` phase (see [Instructions](#instructions)); gates by severity like a `shell` check.
-- `<why>` — explanation of purpose for humans, fixing agents, and review models
+- `shells:` — bash commands, executed in the box root
+- `agents:` — Claude Code invocations with inline `prompt:` (plus
+  `model:`, `max-turns:`)
+- `instructions:` — natural-language success criteria, **model-judged**
+  against the step's git diff in a `validate` phase (see
+  [Instructions](#instructions)); gate by severity like a `shells:`
+  check.
+- `whys:` — explanations of purpose for humans, fixing agents, and
+  review models
 
-**Text dedenting:** All text content is automatically dedented, so prompts can be indented naturally within the XML.
+Multi-line text uses YAML block scalars (`|-`/`>-`), so prompts and
+scripts read naturally inline.
 
 ## Step Structure
 
-```xml
-<step id="transcribe">
-<description>Transcribe any audio clips that haven't been processed yet</description>
+Condensed from a real definition
+(`templates/procedures/process-pages.procedure.card`):
 
-<precheck>
-<shell>
-count=$(ls box/inbox/capture-*/*.audio.card 2>/dev/null | wc -l)
-if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
-echo "Found $count audio clip(s) to transcribe"
-</shell>
-<why>Nothing to do if no fresh captures are pending</why>
-</precheck>
-
-<run>
-<agent model="haiku" max-turns="20">
-Your agent prompt here...
-</agent>
-</run>
-
-<validate severity="review">
-<shell>
-remaining=$(grep -l 'status="new"' box/inbox/capture-*/*.audio.card 2>/dev/null | wc -l)
-echo "Untranscribed clips remaining: $remaining"
-</shell>
-<instruction>
-Every audio clip should have either a transcription block or an explicit transcription-error.
-</instruction>
-</validate>
-</step>
+```yaml
+steps:
+  - id: intake
+    description: Classify and route saved pages
+    precheck:
+      shells:
+        - |-
+          count=$(ls box/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
+          if [ "$count" -eq 0 ]; then exit $CHECK_SKIP; fi
+          echo "Found $count page(s) to process"
+      whys:
+        - No saved pages to process
+    run:
+      agents:
+        - prompt: >-
+            Your agent prompt here...
+          model: sonnet
+          max-turns: 30
+    validate:
+      shells:
+        - |-
+          remaining=$(ls box/inbox/pages-saved/*.record.card 2>/dev/null | wc -l)
+          questions=$(ls box/questions/intake-*.question.card 2>/dev/null | wc -l)
+          [ "$remaining" -eq 0 ] || [ "$questions" -gt 0 ]
+      instructions:
+        - |-
+          Every page should either be routed to a destination, trashed,
+          or have a question created asking the user what to do.
+      severity: abort
 ```
 
 ### Shell Commands

@@ -123,6 +123,25 @@ export async function getStatus(boxRoot: string): Promise<GitStatus> {
 }
 
 /**
+ * Run a git index mutation, retrying it once after a pause on an index.lock
+ * contention error — git-lfs post-commit hooks and filter-process operations
+ * overlap the next git call in boxes that track images/audio via LFS. Any other
+ * failure is wrapped as a {@link GitCommandError}. The single home for the
+ * retry idiom every index mutator here shares.
+ */
+async function withIndexLockRetry<T>(op: () => Promise<T>): Promise<T> {
+  try {
+    return await op();
+  } catch (err) {
+    if (isIndexLockError(err)) {
+      await sleep(2000);
+      return op();
+    }
+    throw new GitCommandError(err);
+  }
+}
+
+/**
  * Stage files for commit.
  *
  * @param boxRoot - Repository root
@@ -130,16 +149,21 @@ export async function getStatus(boxRoot: string): Promise<GitStatus> {
  */
 export async function stageFiles(boxRoot: string, paths: string[]): Promise<void> {
   if (paths.length === 0) return;
-  try {
-    await simpleGit(boxRoot).add(paths);
-  } catch (err) {
-    if (isIndexLockError(err)) {
-      await sleep(2000);
-      await simpleGit(boxRoot).add(paths);
-    } else {
-      throw new GitCommandError(err);
-    }
-  }
+  await withIndexLockRetry(() => simpleGit(boxRoot).add(paths));
+}
+
+/**
+ * Unstage the given paths (reset their index entries to HEAD), leaving the
+ * working tree untouched. The inverse of {@link stageFiles} for a specific set
+ * of paths — used to undo a partial stage when a scoped commit fails, so the
+ * staged entries don't get swept into a later unrelated commit.
+ *
+ * @param boxRoot - Repository root
+ * @param paths - Files to unstage (relative to boxRoot)
+ */
+export async function unstageFiles(boxRoot: string, paths: string[]): Promise<void> {
+  if (paths.length === 0) return;
+  await withIndexLockRetry(() => simpleGit(boxRoot).raw(["reset", "--quiet", "--", ...paths]));
 }
 
 /**
@@ -162,16 +186,7 @@ export async function pathsHaveChanges(boxRoot: string, paths: string[]): Promis
  * next git operation — common in boxes that track images/audio via LFS.
  */
 export async function stageAll(boxRoot: string): Promise<void> {
-  try {
-    await simpleGit(boxRoot).raw(["add", "-A"]);
-  } catch (err) {
-    if (isIndexLockError(err)) {
-      await sleep(2000);
-      await simpleGit(boxRoot).raw(["add", "-A"]);
-    } else {
-      throw new GitCommandError(err);
-    }
-  }
+  await withIndexLockRetry(() => simpleGit(boxRoot).raw(["add", "-A"]));
   await unstageOversizedBlobs(boxRoot);
 }
 
@@ -191,16 +206,7 @@ export async function commit(
   const git = simpleGit(boxRoot);
   const commitArgs = options.amend ? ["--amend"] : [];
   if (options.noVerify) commitArgs.push("--no-verify");
-  try {
-    await git.commit(message, commitArgs);
-  } catch (err) {
-    if (isIndexLockError(err)) {
-      await sleep(2000);
-      await git.commit(message, commitArgs);
-    } else {
-      throw new GitCommandError(err);
-    }
-  }
+  await withIndexLockRetry(() => git.commit(message, commitArgs));
 
   // Get the commit hash
   const hash = await git.revparse(["HEAD"]);
@@ -232,16 +238,7 @@ export async function commitPaths(
   }
   commitArgs.push("--", ...paths);
 
-  try {
-    await git.raw(commitArgs);
-  } catch (err) {
-    if (isIndexLockError(err)) {
-      await sleep(2000);
-      await git.raw(commitArgs);
-    } else {
-      throw new GitCommandError(err);
-    }
-  }
+  await withIndexLockRetry(() => git.raw(commitArgs));
 
   const hash = await git.revparse(["HEAD"]);
   return hash.trim();

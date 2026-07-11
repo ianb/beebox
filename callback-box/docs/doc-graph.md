@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-10T23:25:27Z
-Total documents: 166
+Generated: 2026-07-11T01:52:22Z
+Total documents: 167
 
 ## Issues
 
@@ -9,7 +9,6 @@ Total documents: 166
 
 These documents are not referenced by any other document.
 
-- **deploy/prod-debug-access.md** — "Prod debug access (LOCAL — gitignored, never committed)" (56 lines)
 - **docs/implemented-plans/agent-applied-migrations.md** — "Agent-applied migrations (via procedure checklists)" (544 lines)
 - **docs/implemented-plans/architectural-review.review.md** — "Plan Engineering Review — architectural-review (codex cross-model pass)" (99 lines)
 - **docs/implemented-plans/box-schema-reload.md** — "Box-local schema reload — design & implementation plan" (354 lines)
@@ -52,7 +51,7 @@ These references point to files that don't exist.
 
 #### CLAUDE.md
 
-Title: "Callback Box" | 169 lines
+Title: "Callback Box" | 170 lines
 
 Referenced by:
 - CLAUDE.md:9 (mention) — **Dev server** — one shared router serves every checkout at `http://localhost:3210/<main|worktree>/<box>/...` (lazy star
@@ -88,6 +87,7 @@ Referenced by:
 - docs/implemented-plans/normalize-chat-links.md:80 (mention) — - **Monorepo `CLAUDE.md:` "NEVER disable or weaken a lint rule… Ask first."**
 - docs/implemented-plans/open-chat-from-card.md:265 (mention) — pane; CLAUDE.md's "don't add features beyond what the task requires."
 - docs/implemented-plans/procedure-validation-completion.md:33 (mention) — - *"Treat noisy command output as a bug"* (monorepo `CLAUDE.md`) — model calls and retries must stay quiet on the happy 
+- docs/implemented-plans/questions-end-to-end.md:113 (mention) — the box `CLAUDE.md` via `src/core/docs-gen/claude-md.ts:20`). Reused as-is
 - docs/implemented-plans/refresh-clerk.md:17 (mention) — - Monorepo `CLAUDE.md` — **"NEVER disable or weaken a lint rule to make code
 - docs/implemented-plans/remove-cardworks-and-xml.md:416 (mention) — pnpm-workspace entry. Update `callback-box/CLAUDE.md`, root `CLAUDE.md`,
 - docs/implemented-plans/remove-cardworks-deletion.md:127 (mention) — CLAUDE.md "refs starting with `attach/` resolve into this scope").
@@ -112,6 +112,7 @@ Referenced by:
 - docs/plans/prompt-surface-ia-review.md:141 (mention) — empty in every box (only auto-generated `MAP.md`/`CLAUDE.md`, zero real items)
 - docs/plans/source-available-release.md:385 (mention) — it now adds features beyond the task (`CLAUDE.md` Behavioral Notes).
 - docs/prompt-logging.md:3 (mention) — When agents run in a callback box (via `cb wakeup`, `cb reactor`, procedures, etc.), you can capture the full API traffi
+- docs/questions.md:61 (mention) — # the box CLAUDE.md — see below)
 - docs/reports/user-stories-audit-2026-06-26.md:1474 (mention) — > As a developer debugging an agent run, I want to capture full API traffic including system prompts, CLAUDE.md context,
 - docs/stack-decisions.md:1183 (mention) — `CLAUDE.md` for the user-facing workflow. The old Overmind-based dev
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:411 (mention) — The boxes are physically still at `~/src/boxes/<box>/` (outside the callback monorepo, so agents working inside a box do
@@ -206,6 +207,7 @@ References:
 - → docs/health-checks.md (mention)
 - → docs/prompt-logging.md (mention)
 - → docs/triage.md (mention)
+- → docs/questions.md (mention)
 - → docs/server-operations.md (mention)
 - → docs/adding-a-box.md (mention)
 - → docs/landmarks.md (mention)
@@ -227,7 +229,7 @@ Title: "Code Style" | 112 lines
 
 Referenced by:
 - CLAUDE.md:120 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
-- CLAUDE.md:168 (at-include) — @code-style.md
+- CLAUDE.md:169 (at-include) — @code-style.md
 - docs/engineering-principles.md:4 (link) — They sit above the mechanical rules: [`code-style.md`](../code-style.md) says
 - docs/implemented-plans/agent-applied-migrations.md:84 (mention) — - `callback-box/code-style.md` — max 2 positional params (named options), no
 - docs/implemented-plans/app-wide-csp.md:28 (mention) — - `callback-box/code-style.md:` no `any`, max 2 positional params, custom error
@@ -253,6 +255,7 @@ Referenced by:
 - docs/implemented-plans/normalize-chat-links.md:76 (mention) — - **`callback-box/code-style.md:` no default parameters; max 2 positional
 - docs/implemented-plans/open-chat-from-card.md:53 (mention) — - `callback-box/code-style.md` — no default parameters, max 2 positional params (the new
 - docs/implemented-plans/procedure-validation-completion.md:35 (mention) — - **`callback-box/code-style.md`** — no `any`; no default parameters; max 2 positional params (named-params objects); cu
+- docs/implemented-plans/questions-end-to-end.md:72 (mention) — - `callback-box/code-style.md` — Result-vs-throw convention, `withCardLock`
 - docs/implemented-plans/refresh-clerk.md:23 (mention) — - `callback-box/code-style.md` — no optional chaining, no default params, max
 - docs/implemented-plans/remove-cardworks-and-xml.md:51 (mention) — - **`callback-box/code-style.md`** — `code-style.md:25`: *"NEVER use
 - docs/implemented-plans/remove-cardworks-deletion.md:100 (mention) — - **`callback-box/code-style.md:25`** (no `any`), **`:55`** (`as` is like Rust
@@ -352,12 +355,6 @@ Referenced by:
 References:
 - → deploy/README.md (mention)
 
-#### deploy/prod-debug-access.md **[ORPHAN]**
-
-Title: "Prod debug access (LOCAL — gitignored, never committed)" | 56 lines
-
-No references in or out.
-
 #### deploy/README.md
 
 Title: "Deploy" | 289 lines
@@ -418,7 +415,7 @@ References:
 Title: "Adding a Box" | 129 lines
 
 Referenced by:
-- CLAUDE.md:150 (mention) — | Adding a box | `docs/adding-a-box.md` |
+- CLAUDE.md:151 (mention) — | Adding a box | `docs/adding-a-box.md` |
 - README.md:81 (link) — - [`docs/adding-a-box.md`](docs/adding-a-box.md) — provisioning a box behind a multi-box hub
 - deploy/README.md:104 (link) — (see [`docs/adding-a-box.md`](../docs/adding-a-box.md)); this script doesn't
 - docs/implemented-plans/boxes-as-packages-v2.md:497 (mention) — (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
@@ -462,7 +459,7 @@ Referenced by:
 - docs/implemented-plans/remove-cardworks-deletion.md:455 (mention) — `CLAUDE.md:87`/`docs/adding-schemas.md` (the cardworks bullet → `src/cards/`),
 - docs/implemented-plans/remove-cardworks-package.md:323 (mention) — `CLAUDE.md:39`/`docs/adding-schemas.md` (drop "from cardworks" phrasing where
 - docs/implemented-plans/schema-validate-hook.md:4 (mention) — > convention lives in `docs/adding-schemas.md`, the box-local schema guide
-- docs/migrations.md:303 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
+- docs/migrations.md:305 (mention) — - `docs/adding-schemas.md` — when a *schema* change (not a data shape change) is the right move instead of a migrator
 - docs/plans/docs-reorg.gap-analysis.md:44 (mention) — prime retrieval field. `docs/adding-schemas.md` never mentions it and
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - docs/reports/user-stories-audit-2026-06-26.md:764 (mention) — Files: `src/cards/schema.ts`, `src/schemas/audio.tsx`, `src/schemas/memo.ts`, `docs/adding-schemas.md`
@@ -492,7 +489,7 @@ References:
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 202 lines
+Title: "Box Layout" | 212 lines
 
 Referenced by:
 - CLAUDE.md:92 (mention) — **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the
@@ -518,6 +515,7 @@ Referenced by:
 References:
 - → CLAUDE.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
+- → docs/implemented-plans/capture-mode.md (mention)
 - → docs/triage.md (mention)
 - → docs/client-debug-log.md (mention)
 
@@ -526,7 +524,7 @@ References:
 Title: "Calendar Integration" | 89 lines
 
 Referenced by:
-- CLAUDE.md:159 (mention) — | Calendar integration | `docs/calendar.md` |
+- CLAUDE.md:160 (mention) — | Calendar integration | `docs/calendar.md` |
 - docs/connectors.md:28 (link) — | Google Calendar | `google-calendar.ts` | `.ics` files | Two-way | Yes | [calendar.md](calendar.md) |
 - docs/design/README.md:29 (link) — [`../calendar.md`](../calendar.md); scheduling → [`../scheduler.md`](../scheduler.md)
 - docs/design/interaction-model.md:28 (link) — calendar, a prime early integration, is [`../calendar.md`](../calendar.md).
@@ -563,7 +561,7 @@ Referenced by:
 - docs/implemented-plans/design-md-retired-sections.md:12 (mention) — `../cards-as-markdown.md`. Attachments and transcript-plus-original-audio
 - docs/implemented-plans/mvp-implementation-guide.md:7 (mention) — > markdown now, `../cards-as-markdown.md`), the "tailing phase" / `cb tail`
 - docs/implemented-plans/remove-cardworks-and-xml.md:417 (mention) — `docs/cards-as-markdown.md`, `docs/adding-schemas.md`.
-- docs/migrations.md:301 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/migrations.md:303 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/plans/docs-reorg.md:112 (mention) — 7. `cards-as-markdown.md` — 2,552 lines of resolved RFC with ~50
 - docs/stack-decisions.md:18 (mention) — | 15 | [Markdoc](#decision-15-markdown-parsing--markdoc) | Frontend renders markdown via `@markdoc/markdoc` (replaced re
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:702 (mention) — - **Interaction with the [Markdown cards idea](../../../issues/closed/features/2026-03-21-markdown-cards-replacing-xml.m
@@ -597,7 +595,7 @@ Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:140 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:16 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:364 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
-- docs/testing.md:520 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
+- docs/testing.md:519 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
 - src/frontend/src/components/chat/CLAUDE.md:31 (mention) — `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
 
 References:
@@ -608,7 +606,7 @@ References:
 Title: "Chat session lifecycle" | 94 lines
 
 Referenced by:
-- CLAUDE.md:154 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
+- CLAUDE.md:155 (mention) — | Chat session lifecycle | `docs/chat-session-lifecycle.md` |
 - docs/implemented-plans/architectural-review-followups.md:271 (mention) — `stream_event`s. Also fix the doc-drift: `docs/chat-session-lifecycle.md`
 - docs/implemented-plans/architectural-review.md:710 (mention) — then a `docs/chat-session-lifecycle.md` protocol doc for the
 - ../issues/code-quality/2026-07-06-chat-session-shared-core.md:50 (mention) — `callback-box/docs/chat-session-lifecycle.md`.
@@ -622,7 +620,7 @@ Title: "Client Debug Log" | 55 lines
 
 Referenced by:
 - CLAUDE.md:114 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
-- docs/box-layout.md:162 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
+- docs/box-layout.md:172 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
 - docs/server-operations.md:195 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 
@@ -675,7 +673,7 @@ References:
 Title: "Content-Security-Policy" | 80 lines
 
 Referenced by:
-- CLAUDE.md:155 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
+- CLAUDE.md:156 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
 - src/dev/CLAUDE.md:14 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
@@ -701,7 +699,7 @@ Referenced by:
 - docs/maintenance.md:17 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:116 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:429 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
-- docs/testing.md:602 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
+- docs/testing.md:601 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:10 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 
@@ -715,6 +713,7 @@ Referenced by:
 - docs/implemented-plans/architectural-review-followups.md:10 (mention) — principles (`../engineering-principles.md`) and the same execution model
 - docs/implemented-plans/architectural-review.md:29 (mention) — >   `docs/engineering-principles.md`, Track N cb-codehealth checks, Track O
 - docs/implemented-plans/capture-mode.md:24 (mention) — - `docs/engineering-principles.md` — findings trace mostly to: **#3**
+- docs/implemented-plans/questions-end-to-end.md:57 (mention) — - `docs/engineering-principles.md` — findings trace to: **1** (types are
 - docs/implemented-plans/semantic-search.md:19 (mention) — - `docs/engineering-principles.md` #3 (validate at boundaries) — the
 - docs/plans/ios-companion-app.md:19 (mention) — - `callback-box/docs/engineering-principles.md` — the ones this plan leans on:
 - ../.claude/memory/feedback_files_over_external_trackers.md:24 (mention) — - Specific applicable cases: TODO/work-queue → `TODOS.md` or similar; design notes → `docs/`; architectural decisions → 
@@ -751,7 +750,7 @@ Referenced by:
 Title: "Glossary" | 57 lines
 
 Referenced by:
-- CLAUDE.md:165 (mention) — | Glossary | `docs/glossary.md` |
+- CLAUDE.md:166 (mention) — | Glossary | `docs/glossary.md` |
 - docs/design/trust.md:40 (mention) — how firmly an inferred belief is held (`../glossary.md`, retrospective).
 - docs/plans/design-reconciliation.md:21 (mention) — chat, connectors, hub), and recent decisions (`docs/glossary.md`,
 - docs/plans/docs-reorg.gap-analysis.md:143 (mention) — `docs/glossary.md:22` vs `:42` contradict each other about it.
@@ -835,7 +834,7 @@ References:
 Title: "Knowledge Audits" | 91 lines
 
 Referenced by:
-- CLAUDE.md:157 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
+- CLAUDE.md:158 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/engineering-principles.md:159 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
 - docs/maintenance.md:32 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:119 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
@@ -860,7 +859,7 @@ Referenced by:
 - docs/implemented-plans/card-view-widgets.md:574 (mention) — **Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/plans/source-available-release.md:172 (mention) — test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
-- docs/testing.md:382 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
+- docs/testing.md:381 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
 - ../research/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** CBX's always-loaded/conditionally-loaded/referenced-but-n
 - ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/knowledge-taxonomy.md`). There is no plugin manifest, no
 - ../research/pai/information-layout.md:9 (mention) — cb's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
@@ -888,7 +887,7 @@ References:
 Title: "Landmarks" | 164 lines
 
 Referenced by:
-- CLAUDE.md:152 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
+- CLAUDE.md:153 (mention) — | Landmarks (navigation surface) | `docs/landmarks.md` |
 - docs/design/representation.md:91 (link) — and/or a triage filing destination ([`../landmarks.md`](../landmarks.md),
 - docs/implemented-plans/architectural-review.md:829 (mention) — `docs/landmarks.md` cites never-built renderer paths; a clerk docstring
 - docs/implemented-plans/clerk-webpage-capture.md:264 (mention) — destinations API, extension UI labels, docs/landmarks.md, knowledge audits.
@@ -907,10 +906,10 @@ References:
 Title: "Code Maintenance" | 98 lines
 
 Referenced by:
-- CLAUDE.md:156 (mention) — | Periodic maintenance | `docs/maintenance.md` |
+- CLAUDE.md:157 (mention) — | Periodic maintenance | `docs/maintenance.md` |
 - docs/implemented-plans/box-retrospectives.md:413 (mention) — (`enabled="false"`), `docs/box-layout.md` + `docs/maintenance.md` +
 - docs/knowledge-audits.md:22 (mention) — `docs/maintenance.md` lists this alongside the other periodic tasks.
-- docs/migrations.md:302 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
+- docs/migrations.md:304 (mention) — - `docs/maintenance.md` — where `cb migrate` and `clean-broken-refs.ts` sit in the broader maintenance surface
 - docs/plans/cli-restructure.md:138 (mention) — - **Card normalization story.** `cb format` was deleted (80-line one-off normalizer that re-serialized cards to flat XML
 - docs/plans/docs-reorg.md:392 (mention) — belongs in the maintenance cadence (it is listed in docs/maintenance.md).
 - src/dev/CLAUDE.md:8 (mention) — | `prompt-report.ts` | Generates `docs/prompts.md` (system-wide prompt inventory) | `docs/maintenance.md` |
@@ -927,7 +926,7 @@ References:
 
 #### docs/migrations.md
 
-Title: "Box Migrations" | 316 lines
+Title: "Box Migrations" | 318 lines
 
 Referenced by:
 - CLAUDE.md:138 (mention) — | Box migration runbook | `docs/migrations.md` |
@@ -938,6 +937,7 @@ Referenced by:
 - docs/implemented-plans/boxes-as-packages-v2.md:72 (mention) — | `cb migrate`: ordered registry, agent-procedure migrations with abort gates | `src/core/migrations.ts`, `docs/migratio
 - docs/implemented-plans/capture-mode.md:447 (mention) — wakeup-time failure). Migration (per `docs/migrations.md` runbook
 - docs/implemented-plans/cards-as-markdown-rfc.md:47 (mention) — **Tracking which migrations have been applied per box** is handled by `cb migrate` against the per-box append-only manif
+- docs/implemented-plans/questions-end-to-end.md:251 (mention) — `docs/migrations.md` on test1 + prod boxes. The two live test1 retro
 - docs/implemented-plans/remove-cardworks-deletion.md:456 (mention) — `docs/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:324 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
 - docs/maintenance.md:56 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
@@ -946,6 +946,7 @@ Referenced by:
 - ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
 
 References:
+- → docs/implemented-plans/questions-end-to-end.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
 - → docs/cards-as-markdown.md (mention)
 - → docs/implemented-plans/cards-as-markdown-rfc.md (mention)
@@ -961,7 +962,7 @@ Referenced by:
 
 #### docs/procedure-implementation.md
 
-Title: "Procedures" | 212 lines
+Title: "Procedures" | 223 lines
 
 Referenced by:
 - CLAUDE.md:142 (mention) — | Procedures | `docs/procedure-implementation.md` |
@@ -1001,6 +1002,22 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:1326 (mention) — 6. **Supporting documentation**: `docs/prompt-logging.md` provides detailed guidance on using the feature, confirming th
 
 References:
+- → CLAUDE.md (mention)
+
+#### docs/questions.md
+
+Title: "Questions" | 335 lines
+
+Referenced by:
+- CLAUDE.md:148 (mention) — | Questions subsystem design | `docs/questions.md` |
+- docs/implemented-plans/questions-end-to-end.md:461 (mention) — **What.** `docs/questions.md` (the subsystem's design doc: purpose frame,
+- docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
+- ../issues/closed/features/2026-05-19-questions-aging-policy.md:14 (mention) — See `docs/questions.md` § Aging.
+- ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:14 (mention) — maintainer doc at `docs/questions.md`. See that plan for the full track
+
+References:
+- → docs/implemented-plans/questions-end-to-end.md (mention)
+- → docs/implemented-plans/box-retrospectives.md (mention)
 - → CLAUDE.md (mention)
 
 #### docs/README.md
@@ -1047,7 +1064,7 @@ Referenced by:
 Title: "Server Operations" | 202 lines
 
 Referenced by:
-- CLAUDE.md:149 (mention) — | Server operations | `docs/server-operations.md` |
+- CLAUDE.md:150 (mention) — | Server operations | `docs/server-operations.md` |
 - docs/health-checks.md:9 (link) — The server runs `claude update` nightly via `claude-update.timer` → `claude-update.service` → `deploy/claude-update.sh` 
 - docs/implemented-plans/box-migration.subplan.md:157 (mention) — **Server mechanics** (`docs/server-operations.md`). Boxes are
 - docs/implemented-plans/boxes-as-packages-v2.md:498 (mention) — rewritten for the hub era; `docs/server-operations.md` and `docs/ideas.md` had stale pre-hub
@@ -1068,7 +1085,7 @@ References:
 Title: "SSR Render Testing (`cb render`)" | 185 lines
 
 Referenced by:
-- CLAUDE.md:158 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
+- CLAUDE.md:159 (mention) — | SSR page rendering (`cb render`) | `docs/ssr-render-testing.md` |
 - docs/reports/user-stories-audit-2026-06-26.md:4686 (mention) — All files exist and are properly implemented. Verified: (1) src/cli/commands/render.ts spawns render.tsx with full optio
 - ../.claude/skills/cb-guide-testing/SKILL.md:38 (mention) — - **SSR render tests** (`cb render`, `docs/ssr-render-testing.md`) —
 - ../issues/bugs/2026-07-07-cb-render-ssr-window-undefined.md:24 (mention) — couldn't use. It's also covered by `docs/ssr-render-testing.md`, so SSR is
@@ -1110,7 +1127,7 @@ Referenced by:
 
 #### docs/testing.md
 
-Title: "Testing" | 622 lines
+Title: "Testing" | 621 lines
 
 Referenced by:
 - CLAUDE.md:132 (mention) — | Testing philosophy | `docs/testing.md` |
@@ -1166,7 +1183,7 @@ Title: "Tours — scripted browser walks for rendering + a11y review" | 133 line
 
 Referenced by:
 - CLAUDE.md:133 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
-- docs/testing.md:554 (link) — them: [tours.md](tours.md).
+- docs/testing.md:553 (link) — them: [tours.md](tours.md).
 - ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:22 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 
 References:
@@ -1174,11 +1191,11 @@ References:
 
 #### docs/triage.md
 
-Title: "Triage" | 262 lines
+Title: "Triage" | 264 lines
 
 Referenced by:
 - CLAUDE.md:147 (mention) — | Triage pipeline design | `docs/triage.md` |
-- docs/box-layout.md:107 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
+- docs/box-layout.md:117 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
 - docs/connectors.md:86 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:28 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
@@ -1186,6 +1203,7 @@ Referenced by:
 - docs/design/teaching.md:22 (link) — rules at the destination ([`../triage.md`](../triage.md)).
 - docs/design/trust.md:38 (link) — ([`../triage.md`](../triage.md)).
 - docs/implemented-plans/mvp-implementation-guide.md:12 (mention) — > intake→triage→handle pipeline now, `../triage.md`), and the
+- docs/implemented-plans/questions-end-to-end.md:33 (mention) — ask time). `docs/triage.md:131` already demands this: *"needing to carry both
 - docs/knowledge-taxonomy.md:243 (mention) — - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-c
 - docs/landmarks.md:33 (mention) — A landmark is pure YAML frontmatter (no body) with one or more **roles**. The `navigation` role carries the bookmark fie
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
@@ -1195,6 +1213,10 @@ Referenced by:
 - docs/reports/user-stories-audit-2026-06-26.md:1658 (mention) — **Design alignment:** Matches triage.md §5 exactly, with all three confidence levels implemented as specified including 
 - docs/unimplemented-plans/design-vision-superseded.md:11 (mention) — > categories → implemented as the triage pipeline (`../triage.md`). Whisper/
 - ../research/pai/README.md:60 (mention) — | Pipeline | Algorithm doctrine (`$PAI/PAI/ALGORITHM/v6.3.0.md`, 673 lines of prompt) | reactor + intake→triage→handle i
+
+References:
+- → docs/questions.md (mention)
+- → docs/implemented-plans/questions-end-to-end.md (mention)
 
 ### docs/architecture/
 
@@ -1266,6 +1288,7 @@ Referenced by:
 - docs/architecture/writing-style.md:63 (mention) — - **spirit**: Which values from spirit.md does this section express or depend on? (e.g., "inspectable history", "messy i
 - docs/design/README.md:6 (link) — compass is [`../architecture/spirit.md`](../architecture/spirit.md) — **design
 - docs/design/identity.md:7 (mention) — not an app you open (ruling 3; the feel is `../architecture/spirit.md`'s
+- docs/implemented-plans/questions-end-to-end.md:369 (mention) — `docs/architecture/spirit.md:81` states the intent (*"at some point the box
 - docs/plans/design-reconciliation.md:20 (mention) — (01, 02, spirit.md, outline.md), the code as it is (triage pipeline, reactor,
 - docs/plans/docs-reorg.md:334 (mention) — `docs/design/` (8 topic files + README acknowledging spirit.md),
 
@@ -1526,6 +1549,8 @@ Title: "Box Retrospectives" | 433 lines
 Referenced by:
 - docs/design/teaching.md:19 (mention) — cards (`../implemented-plans/box-retrospectives.md`).
 - docs/glossary.md:46 (mention) — **retrospective** — The `process-retrospective` procedure (driven by `cb retro`): mines recent chat sessions for what th
+- docs/implemented-plans/questions-end-to-end.md:21 (mention) — belief (the evidence model of `docs/implemented-plans/box-retrospectives.md`:
+- docs/questions.md:32 (mention) — `docs/implemented-plans/box-retrospectives.md`: inferred beliefs cap at
 - ../issues/features/2026-07-09-memory-gardener-consolidation-loop.md:26 (mention) — - **Retro** (`src/core/retro/`, `docs/implemented-plans/box-retrospectives.md`) —
 - ../research/openclaw-hermes/deep-cbx-retro.md:9 (mention) — `callback-box/docs/implemented-plans/box-retrospectives.md` (the original plan;
 
@@ -1566,12 +1591,12 @@ Referenced by:
 - docs/adding-a-box.md:4 (link) — see "Serving" in [`docs/implemented-plans/boxes-as-packages-v2.md`](plans/boxes-as-packages-v2.md)
 - docs/box-layout.md:15 (mention) — repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full design.
 - docs/design/identity.md:45 (mention) — (`../implemented-plans/boxes-as-packages-v2.md`, including the
-- docs/migrations.md:204 (mention) — "The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`): `views/`,
+- docs/migrations.md:206 (mention) — "The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`): `views/`,
 - docs/plans/design-reconciliation.md:23 (mention) — `docs/implemented-plans/boxes-as-packages-v2.md`,
 - docs/plans/docs-reorg.md:51 (mention) — - **At least 5 plans are done-but-never-moved**: `boxes-as-packages-v2.md`
 - docs/plans/source-available-release.md:384 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server-operations.md:38 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/testing.md:304 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
+- docs/testing.md:303 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:3 (mention) — **Status:** SUPERSEDED by `docs/implemented-plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:33 (mention) — `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`.
@@ -1593,10 +1618,12 @@ References:
 Title: "Capture mode — unifying capture into the input" | 670 lines
 
 Referenced by:
+- docs/box-layout.md:99 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
 - docs/plans/cli-restructure.md:9 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`cb transcribe-captures`, `cb
 - docs/plans/input-widget.md:9 (mention) — (`docs/implemented-plans/capture-mode.md`). The remaining open section
 - docs/plans/input-widget.md:535 (link) — [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
 - docs/unimplemented-plans/capture-pipeline-redesign.md:3 (link) — **Superseded by [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)** — that plan retired the `
+- ../issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md:53 (mention) — capture-mode work (`callback-box/docs/implemented-plans/capture-mode.md`):
 
 References:
 - → docs/plans/input-widget.md (link)
@@ -1629,7 +1656,7 @@ Referenced by:
 - docs/cards-as-markdown.md:5 (mention) — This is the living reference for the card *file format* — filenames, frontmatter/body split, attachments, and refs. For 
 - docs/implemented-plans/attach-directories-superseded.md:5 (link) — **Status:** Draft. Phase 1 of the [cards-as-markdown RFC](./cards-as-markdown-rfc.md), but designed to ship independentl
 - docs/implemented-plans/remove-cardworks-and-xml.md:117 (mention) — production migration"* (`docs/implemented-plans/cards-as-markdown-rfc.md`). **Reuse:** the
-- docs/migrations.md:301 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
+- docs/migrations.md:303 (mention) — - `docs/cards-as-markdown.md` — living reference for the YAML-frontmatter format these migrators target; `docs/implement
 - docs/stack-decisions.md:805 (mention) — > **Superseded in practice (2026-05).** The frontend no longer uses react-markdown / remark / rehype — it renders via Ma
 
 References:
@@ -1922,6 +1949,29 @@ References:
 - → code-style.md (mention)
 - → docs/testing.md (mention)
 
+#### docs/implemented-plans/questions-end-to-end.md
+
+Title: "Questions, end-to-end" | 660 lines
+
+Referenced by:
+- docs/migrations.md:200 (mention) — `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle
+- docs/questions.md:6 (mention) — Design and implementation history: `docs/implemented-plans/questions-end-to-end.md`.
+- docs/triage.md:133 (mention) — The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/implemented-plans/questions-end
+- ../issues/closed/features/2026-05-19-questions-aging-policy.md:8 (mention) — aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
+- ../issues/closed/features/2026-06-09-in-chat-interactive-questions.md:9 (mention) — `docs/implemented-plans/questions-end-to-end.md` (see its "NOT in scope"): synchronous
+- ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:4 (mention) — design: ../../../callback-box/docs/implemented-plans/questions-end-to-end.md
+
+References:
+- → docs/implemented-plans/box-retrospectives.md (mention)
+- → docs/triage.md (mention)
+- → docs/engineering-principles.md (mention)
+- → code-style.md (mention)
+- → CLAUDE.md (mention)
+- → docs/migrations.md (mention)
+- → docs/architecture/spirit.md (mention)
+- → docs/questions.md (mention)
+- → docs/reports/user-stories-audit-2026-06-26.md (mention)
+
 #### docs/implemented-plans/refresh-clerk.md **[ORPHAN]**
 
 Title: "Refresh callback-clerk" | 441 lines
@@ -2087,8 +2137,8 @@ Title: "User-story audit — follow-up plans" | 428 lines
 Referenced by:
 - docs/plans/design-reconciliation.md:10 (mention) — `docs/implemented-plans/user-story-audit-followups.md`): the boxholder writes
 - docs/plans/docs-reorg.md:56 (mention) — and `user-story-audit-followups.md` (mostly done).
+- ../issues/closed/features/2026-06-26-questions-end-to-end-d1.md:17 (mention) — From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
 - ../issues/features/2026-06-26-drive-mounting-file-browsing-ui.md:7 (mention) — Surfaced by the user-story audit (`docs/plans/user-story-audit-followups.md` D9).
-- ../issues/features/2026-06-26-questions-end-to-end-d1.md:7 (mention) — From the user-story audit (`docs/plans/user-story-audit-followups.md`, bucket D).
 
 References:
 - → docs/reports/user-stories-audit-2026-06-26.md (mention)
@@ -2342,7 +2392,7 @@ References:
 Title: "The interface as cards — design" | 473 lines
 
 Referenced by:
-- CLAUDE.md:162 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
+- CLAUDE.md:163 (mention) — | Interface-as-cards design | `docs/plans/interface-as-cards.md` |
 - docs/design/identity.md:17 (link) — [interface-as-cards](../plans/interface-as-cards.md) direction built entirely
 - docs/design/interaction-model.md:17 (link) — ([interface-as-cards](../plans/interface-as-cards.md)).
 - docs/design/representation.md:85 (link) — ([interface-as-cards](../plans/interface-as-cards.md) owns that guardrail).
@@ -2391,7 +2441,7 @@ References:
 Title: "PDF Intake" | 179 lines
 
 Referenced by:
-- CLAUDE.md:160 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
+- CLAUDE.md:161 (mention) — | PDF intake design | `docs/plans/pdf-intake-design.md` |
 - docs/implemented-plans/user-story-audit-followups.md:57 (mention) — - **D4 (PDF) — design only.** `docs/plans/pdf-intake-design.md` reviewed and its
 - docs/plans/README.md:81 (mention) — - → `plans/` (still open): `pdf-intake-design.md` (not yet implemented),
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
@@ -2473,7 +2523,7 @@ References:
 Title: "Source Editor Plan" | 140 lines
 
 Referenced by:
-- CLAUDE.md:161 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
+- CLAUDE.md:162 (mention) — | Source editor plan | `docs/plans/source-editor.md` |
 - docs/plans/README.md:82 (mention) — `source-editor.md`. (`triage.md` later turned out to be fully built
 - docs/plans/docs-reorg.md:44 (mention) — `pdf-intake-design.md`, `source-editor.md`, `prompt-surface-ia-review.md`,
 
@@ -2496,6 +2546,7 @@ References:
 Title: "callback-box — User Stories" | 5768 lines
 
 Referenced by:
+- docs/implemented-plans/questions-end-to-end.md:618 (mention) — `bin/browse` checks, per `docs/reports/user-stories-audit-2026-06-26.md`'s
 - docs/implemented-plans/user-story-audit-followups.md:5 (mention) — This plan triages the 95 `IAN:` comments left on `docs/reports/user-stories-audit-2026-06-26.md` (the
 - docs/plans/source-available-release.md:173 (mention) — name), `docs/reports/user-stories-audit-2026-06-26.md:671` (real email).
 - docs/reports/user-stories-audit-2026-06-26.md:2509 (mention) — **Verifier (flagged):** The story is partially accurate. Core features (markdown export, lossy detection, warning displa

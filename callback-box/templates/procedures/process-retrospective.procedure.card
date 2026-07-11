@@ -161,10 +161,16 @@ steps:
               distinct-session recurrence warrants it (respecting the ceiling) —
               never add a near-duplicate of a belief already in the cards.
             - NEVER edit or remove a belief whose source is user-stated. If
-              evidence conflicts with one, create a question card.
+              evidence conflicts with one, create a question card with
+              learning: {sink: guide or personality — wherever the belief
+              lives, ref: that card, proposal: the conflicting claim}.
             - NEVER touch speaking-voice, and NEVER edit the briefing card body
               directly — a proposed briefing correction becomes a question card
-              quoting the evidence.
+              quoting the evidence, with learning: {sink: briefing, ref: the
+              ROOT briefing card, proposal: the one-sentence belief} declared
+              on the question so a confirmed answer records as a
+              {% correction %} block (the current briefing vocabulary — the
+              old <agent-needs-to-know> element is retired).
             - Set ref on a belief to the observation's thread card ref when it has
               one (threadRef in the ledger entry).
             - An observation may answer an item in the personality card's
@@ -183,15 +189,22 @@ steps:
               from the candidates listed in the precheck. Follow that guide's own
               schema conventions.
             - briefing: NEVER edit the briefing body. A proposed standing briefing
-              instruction becomes a question card quoting the evidence.
+              instruction becomes a question card quoting the evidence, with
+              learning: {sink: briefing, ref: root briefing, proposal: ...}.
             - context-gap: judge it. If it reveals a real missing piece of box
               DATA (e.g. a referenced card that genuinely should exist), you MAY
               create that data card. If it calls for a standing briefing
-              instruction, escalate to a question card. If it's thin or one-off,
-              skip it. Never edit the briefing body directly.
-            - question: box/questions/<Name>.question.card, following the existing
-              examples in the box; include the evidence quote and the proposed
-              change in the body.
+              instruction, escalate to a question card (same learning: {sink:
+              briefing, ...} shape as above). If it's thin or one-off, skip it.
+              Never edit the briefing body directly.
+            - question: box/questions/<Name>.question.card, following the
+              existing examples in the box; include the evidence quote and the
+              proposed change in the memo, set directive: to what the
+              follow-up agent should do (add a {% correction %} block to the
+              root briefing, or the relevant guide/personality edit), and set
+              learning: declaring the sink so the confirmed or declined belief
+              gets recorded — this is the same two-product contract every
+              question card uses (see `docs/generated/card-question.md`).
 
             STEP 5 - FINALIZE EVERY PENDING REPORT:
             For EACH pending report — including ones whose observations you skipped
