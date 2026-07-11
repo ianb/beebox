@@ -21,6 +21,15 @@ export interface QuestionInfo extends CardInfo {
   options?: string[] | undefined;
   learning?: QuestionFields["learning"] | undefined;
   answer?: QuestionFields["answer"] | undefined;
+  /**
+   * Set when the card failed to parse against `QuestionSchema` (bad
+   * frontmatter, a superRefine violation, …). An invalid card carries only
+   * its `CardInfo` fields — `status` is whatever `getSystemState` found (or
+   * undefined) — so callers must still surface it rather than dropping it:
+   * a card the boxholder needs to fix by hand is exactly the one that must
+   * not silently vanish from the list.
+   */
+  invalid?: true | undefined;
 }
 
 export interface BrowseDir {
@@ -83,8 +92,8 @@ export const statusRouter = router({
             answer: fields.answer,
           };
         } catch (e) {
-          console.warn(`Skipping invalid question card ${q.path}:`, e);
-          return { ...q };
+          console.warn(`Question card failed to parse, surfacing as invalid: ${q.path}:`, e);
+          return { ...q, invalid: true };
         }
       }),
     );

@@ -19,6 +19,7 @@ import { Text } from "./ui/Text";
 import { StatusBadge } from "./ui/StatusBadge";
 import { Stack } from "./ui/Stack";
 import { cbSource } from "../lib/source-tag";
+import { renderQuestionAnswer } from "./questions/answer-display";
 import type { RendererProps } from "../renderers";
 
 const ANSWERABLE = new Set(["pending", "expired", "dismissed"]);
@@ -53,13 +54,11 @@ export function QuestionCardView({ data }: RendererProps) {
         <Stack gap="sm">
           <Text as="h3" size="lg" weight="bold">{question.name}</Text>
           <Text as="p">{question.prompt}</Text>
-          {question.answer?.text !== undefined && question.answer.text !== "" ? (
-            <Text as="p" tone="emphasis">{question.answer.text}</Text>
-          ) : null}
+          {renderQuestionAnswer(question)}
           {question.learning?.proposal !== undefined ? (
             <Card padding="sm" background="info" border="none">
               <Text as="div" size="xs" tone="subtle" uppercase weight="semibold" className="mb-1">
-                What was learned
+                What the box wanted to learn
               </Text>
               <Text as="div" size="sm">{question.learning.proposal}</Text>
             </Card>
