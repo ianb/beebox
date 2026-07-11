@@ -16,6 +16,8 @@ import { writeFile, readFile, access, mkdir } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import path from "node:path";
 import os from "node:os";
+import { errorMessage } from "../src/lib/error-guards.js";
+import { isRecord } from "../src/lib/is-record.js";
 
 class TtsRequestError extends Error {
   readonly voice: string;
@@ -213,8 +215,8 @@ async function main(): Promise<void> {
       };
       if (trial.model) opts.model = trial.model;
       const result = await callVoxtral(audio, opts);
-      const r = result as { segments?: unknown[] };
-      const segs = (r.segments ?? []) as Array<Record<string, unknown>>;
+      const rawSegments = isRecord(result) ? result["segments"] : undefined;
+      const segs = Array.isArray(rawSegments) ? rawSegments.filter(isRecord) : [];
       console.log(`  segments=${segs.length}`);
       if (segs.length > 0) {
         console.log(`  first segment keys: ${JSON.stringify(Object.keys(segs[0]!))}`);
@@ -223,7 +225,7 @@ async function main(): Promise<void> {
         console.log(`  full response: ${JSON.stringify(result, null, 2).slice(0, 400)}`);
       }
     } catch (e) {
-      console.log(`  ERROR: ${(e as Error).message.slice(0, 300)}`);
+      console.log(`  ERROR: ${errorMessage(e).slice(0, 300)}`);
     }
   }
 }

@@ -19,6 +19,7 @@
 
 import { readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, join, relative, resolve } from "node:path";
+import { errorMessage, errnoCode } from "../../src/lib/error-guards.js";
 
 const TYPE_LINE_RE = /^type:\s*([\w-]+)\s*$/m;
 const FRONTMATTER_RE = /^---\r?\n([\S\s]*?)\r?\n---/;
@@ -30,8 +31,7 @@ async function findCards(root: string): Promise<string[]> {
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
+      if (errnoCode(e) === "ENOENT") return;
       throw e;
     }
     for (const entry of entries) {
@@ -168,7 +168,7 @@ async function main(): Promise<void> {
         renames.push({ from: f, to: r.newPath });
       }
     } catch (e) {
-      failed.push({ file: f, error: (e as Error).message });
+      failed.push({ file: f, error: errorMessage(e) });
     }
   }
 

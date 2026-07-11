@@ -6,7 +6,7 @@ make union dispatch fail to compile when a member is added. They are not for
 boundary/user-facing validation.
 
 ```ts setup
-import { assertNever, invariant, checkInvariant, InvariantError } from "../src/lib/invariant.js";
+import { assertNever, invariant, checkInvariant, tolerateNever, InvariantError } from "../src/lib/invariant.js";
 
 // A dispatch that uses assertNever as its exhaustiveness terminator.
 function label(kind: "a" | "b"): string {
@@ -94,4 +94,22 @@ JSON.stringify({ result, logged: errors })
 ```ts
 new InvariantError("boom").name
 => InvariantError
+```
+
+## `tolerateNever` — non-throwing terminator for vendor unions
+
+Same compile-time exhaustiveness demand as `assertNever`, but never throws —
+it logs and returns, for a switch over a union we don't own (e.g. a parser's
+vendor node-type union) where a best-effort caller should degrade instead of
+crash.
+
+```ts
+const warnings: string[] = [];
+const originalWarn = console.warn;
+console.warn = (...args: unknown[]) => { warnings.push(args.join(" ")); };
+// eslint-disable-next-line no-restricted-syntax -- deliberately feeding an off-union value to exercise the runtime guard
+const result = tolerateNever("z" as never, "vendorSwitch: unhandled member");
+console.warn = originalWarn;
+JSON.stringify({ result, logged: warnings })
+=> {"logged":["vendorSwitch: unhandled member: unhandled union member (degrading gracefully): z"]}
 ```

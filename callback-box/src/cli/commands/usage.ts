@@ -11,10 +11,13 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { syncUsage, queryUsage, USAGE_SCHEMA_DESCRIPTION } from "../../core/usage.js";
 import { invariant } from "../../lib/invariant.js";
+import { isRecord } from "../../lib/is-record.js";
 
 /** Print `rows` as an aligned, header-and-dashes text table. */
 function printTable(rows: Array<Record<string, unknown>>): void {
-  const keys = Object.keys(rows[0] as Record<string, unknown>);
+  const first = rows[0];
+  invariant(first !== undefined, "printTable requires at least one row");
+  const keys = Object.keys(first);
   const widths = keys.map((k) => {
     const values = rows.map((r) => String(r[k] ?? ""));
     return Math.max(k.length, ...values.map((v) => v.length));
@@ -67,7 +70,7 @@ export const usageCommand = new Command("usage")
         return;
       }
       // Print as aligned table
-      printTable(rows as Array<Record<string, unknown>>);
+      printTable(rows.filter(isRecord));
       return;
     }
 
@@ -90,5 +93,5 @@ export const usageCommand = new Command("usage")
       console.log("No usage data yet. Run some agents first.");
       return;
     }
-    printTable(rows as Array<Record<string, unknown>>);
+    printTable(rows.filter(isRecord));
   });

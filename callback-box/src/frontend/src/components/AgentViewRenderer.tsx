@@ -14,6 +14,7 @@ import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Pre } from "./ui/Pre";
 import { useViewFileHelpers, type ViewFile, type ViewFileHelpers } from "../hooks/useViewFileHelpers";
 import { trpc } from "../lib/trpc";
+import { busEventData } from "../lib/bus-events";
 import {
   ViewHostProvider,
   useViewHost,
@@ -186,6 +187,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
   const loadModule = useCallback(async () => {
     try {
       versionRef.current = Date.now();
+      // eslint-disable-next-line no-restricted-syntax -- dynamic import of a box-compiled, agent-authored view module; there is no static type for arbitrary runtime-loaded JS, so this boundary cast is unavoidable.
       const imported = await import(
         /* @vite-ignore */ `${apiBase}/views/${slug}/module.js?v=${versionRef.current}`
       ) as ViewModule;
@@ -210,7 +212,7 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
         setError(`Failed to load cards: ${resp.status}`);
         return;
       }
-      const data = await resp.json() as { cards: ViewCard[]; files: ViewFile[] };
+      const data: { cards: ViewCard[]; files: ViewFile[] } = await resp.json();
       setCards(data.cards);
       setFiles(data.files);
     } catch (e) {
@@ -243,9 +245,9 @@ export function AgentViewRenderer({ slug: rawSlug, mode, params, reportActivity,
   const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
-      if (event.event === "file-change") {
-        const data = event.data as { path?: string };
-        const changedPath = data.path || "";
+      const fileChange = busEventData(event, "file-change");
+      if (fileChange) {
+        const changedPath = fileChange.path;
         // View source changed — reload module
         if (changedPath === `views/${slug}.tsx`) {
           void loadModule();

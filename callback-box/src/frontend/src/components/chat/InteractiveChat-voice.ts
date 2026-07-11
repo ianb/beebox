@@ -31,7 +31,8 @@ import type { ReplaySpeechOptions } from "./ChatMessages";
 import type { InputStore } from "./input-store";
 
 interface SnapshotLike {
-  value: unknown;
+  // Flat machine → plain state-name string (see useSpeechDispatch's SnapshotLike).
+  value: string;
   context: { streamText: string };
 }
 

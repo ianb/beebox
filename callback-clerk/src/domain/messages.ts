@@ -3,6 +3,8 @@
  * uniform action response the popup renders from.
  */
 
+import { isRecord } from "./is-record.js";
+
 export interface CommentOnPageMessage {
   type: "commentOnPage";
   tabId: number;
@@ -22,7 +24,5 @@ export interface ActionFailure {
 export type ActionResponse = { ok: true } | ActionFailure;
 
 export function isClerkMessage(value: unknown): value is ClerkMessage {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
-  return record.type === "commentOnPage";
+  return isRecord(value) && value["type"] === "commentOnPage";
 }

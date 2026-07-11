@@ -26,6 +26,7 @@ import { isCardFile, boxPath } from "../../lib/paths.js";
 import { stageAndCommitPaths } from "../../lib/git.js";
 import { invariant } from "../../lib/invariant.js";
 import { moveDir, moveOne, type MoveOneResult } from "./move-operations.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Arguments for the move command.
@@ -116,8 +117,8 @@ async function handleDirectorySource({
     });
     state.allFilesToStage.push(...dirResult.filesToStage);
   } catch (err) {
-    state.errors.push(`Failed to move directory ${fromPath}: ${(err as Error).message}`);
-    ctx.writeLine(`Error: Failed to move directory ${fromPath}: ${(err as Error).message}`);
+    state.errors.push(`Failed to move directory ${fromPath}: ${errorMessage(err)}`);
+    ctx.writeLine(`Error: Failed to move directory ${fromPath}: ${errorMessage(err)}`);
   }
 }
 
@@ -164,8 +165,8 @@ async function handleCardSource({
     state.results.push(result);
     state.allFilesToStage.push(...result.filesToStage);
   } catch (err) {
-    state.errors.push(`Failed to move ${fromPath}: ${(err as Error).message}`);
-    ctx.writeLine(`Error: Failed to move ${fromPath}: ${(err as Error).message}`);
+    state.errors.push(`Failed to move ${fromPath}: ${errorMessage(err)}`);
+    ctx.writeLine(`Error: Failed to move ${fromPath}: ${errorMessage(err)}`);
   }
 }
 

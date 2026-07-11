@@ -20,12 +20,14 @@ import * as path from "node:path";
 import { readFile } from "node:fs/promises";
 import * as ignoreModule from "ignore";
 import type { Ignore, Options } from "ignore";
+import { errnoCode } from "../lib/error-guards.js";
 
 // `ignore` is a legacy CJS package (no `type`/`exports` in package.json) whose
 // ESM-style `.d.ts` declares a merged function+namespace default export. Under
 // NodeNext the interop types don't line up — `.default` is typed as the module
 // namespace — but at runtime it IS the callable factory (`module.exports`). One
 // centralized cast at this package boundary, using the package's own types.
+// eslint-disable-next-line no-restricted-syntax -- vendor .d.ts mistypes the CJS default export as the module namespace; verified callable at runtime, no code-level fix exists
 const ignoreFactory = ignoreModule.default as unknown as (options?: Options) => Ignore;
 
 export const VALIDATION_IGNORE_PATH = "config/cb-validate.ignore";
@@ -50,8 +52,7 @@ export async function loadValidationIgnore(boxRoot: string): Promise<ValidationI
   try {
     text = await readFile(path.join(boxRoot, VALIDATION_IGNORE_PATH), "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return ALLOW_ALL;
+    if (errnoCode(e) === "ENOENT") return ALLOW_ALL;
     throw e;
   }
 

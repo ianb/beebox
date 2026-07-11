@@ -21,6 +21,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../../src/lib/error-guards.js";
 
 const CONTENT_TYPE_HEADER = "---\ncontent-type: application/x-card+xml\n---\n";
 const FRONTMATTER_OPEN = /^---\r?\n/;
@@ -37,8 +38,7 @@ async function findCardFiles(root: string): Promise<string[]> {
     try {
       entries = await fs.readdir(dir, { withFileTypes: true });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
+      if (errnoCode(e) === "ENOENT") return;
       throw e;
     }
     for (const entry of entries) {

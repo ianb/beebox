@@ -230,6 +230,7 @@ export function createAppRouter(opts?: { history?: Parameters<typeof createRoute
   // first route segment. Trailing slash is stripped per TanStack's convention.
   // Guarded read — import.meta.env is undefined under the SSR loader / plain-Node
   // (matches lib/view-url.ts's viteBase); the bare `.BASE_URL` would throw there.
+  // eslint-disable-next-line no-restricted-syntax -- env boundary: `import.meta.env` is undefined under the SSR loader / plain-Node (see comment above + lib/view-url.ts precedent); this guarded shape read can't be expressed as a static type since import.meta's typing varies by build context.
   const rawBase = (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
   const basepath = rawBase.replace(/\/$/, "") || undefined;
   return createRouter({

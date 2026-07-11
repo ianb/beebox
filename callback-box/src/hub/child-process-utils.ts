@@ -7,6 +7,7 @@
  */
 
 import http from "node:http";
+import { errnoCode } from "../lib/error-guards.js";
 
 /**
  * HTTP-level readiness probe: TCP-accepting isn't enough, a process can
@@ -77,6 +78,6 @@ export function pidAlive(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (e) {
-    return (e as NodeJS.ErrnoException).code === "EPERM";
+    return errnoCode(e) === "EPERM";
   }
 }

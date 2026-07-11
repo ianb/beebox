@@ -17,6 +17,7 @@
  */
 
 import type { LoadedCard, FrontmatterLoadedCard } from "../card-io.js";
+import { isRecord } from "../card-io.js";
 import { resolveAttachRef } from "../../shared/attach-path.js";
 import { titleFromFilename, truncateTitle } from "../file-summary.js";
 import { splitMarkdownSections } from "./markdown-sections.js";
@@ -276,11 +277,7 @@ function foldFields(kind: string, fields: Record<string, unknown>): FoldResult {
 }
 
 function isRefObject(value: unknown): value is { ref: string } {
-  return (
-    typeof value === "object"
-    && value !== null
-    && typeof (value as { ref?: unknown }).ref === "string"
-  );
+  return isRecord(value) && typeof value["ref"] === "string";
 }
 
 function str(value: unknown): string | undefined {
@@ -293,8 +290,8 @@ function strArray(value: unknown): string[] {
 }
 
 function path2(value: unknown, key: string): unknown {
-  if (typeof value !== "object" || value === null) return undefined;
-  return (value as Record<string, unknown>)[key];
+  if (!isRecord(value)) return undefined;
+  return value[key];
 }
 
 function textBlockContents(text: unknown): string[] {

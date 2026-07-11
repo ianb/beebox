@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import { requireBoxRoot } from "../lib/paths.js";
+import { errnoCode } from "../lib/error-guards.js";
 import { getSystemState } from "../core/state.js";
 import { cardFields, parseCardText } from "../core/card-io.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
@@ -47,7 +48,7 @@ export async function generateContext(boxRoot?: string): Promise<ContextOutput> 
         options: options && options.length > 0 ? options : undefined,
       });
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Skipping invalid question card ${q.path}:`, e);
       }
     }

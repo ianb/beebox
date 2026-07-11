@@ -20,10 +20,12 @@ import {
 import type { HistoryFilterState } from "../components/history/HistoryFilterBar";
 
 export function HistoryPage() {
+  // eslint-disable-next-line no-restricted-syntax -- router boundary: `useParams({ strict: false })` returns the union of every route's params (this page mounts under a non-strict route), so the concrete { hash?, boxSlug } shape isn't statically knowable here.
   const params = useParams({ strict: false }) as { hash?: string; boxSlug: string };
   const urlHash = params.hash;
   const boxSlug = params.boxSlug;
   const navigate = useNavigate();
+  // eslint-disable-next-line no-restricted-syntax -- router boundary: `useSearch({ strict: false })` returns the union of every route's search params (this page mounts under a non-strict route), so it can't be statically typed to this page's HistorySearch shape without the cast.
   const search = useSearch({ strict: false }) as HistorySearch;
 
   const filter = useMemo(() => searchToFilter(search), [search]);

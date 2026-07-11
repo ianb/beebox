@@ -16,6 +16,7 @@
 import { appendFile, mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyInstance } from "fastify";
+import { isRecord } from "../../lib/is-record.js";
 
 const CSP_REPORT_LOG = "csp-reports.log";
 const MAX_LOG_FILE_BYTES = 200_000;
@@ -49,10 +50,9 @@ function normalizeReports(body: unknown): NormalizedReport[] {
   if (Array.isArray(body)) {
     const out: NormalizedReport[] = [];
     for (const entry of body) {
-      if (entry === null || typeof entry !== "object") continue;
-      const e = entry as { type?: unknown; body?: Record<string, unknown> };
-      if (e.type !== undefined && e.type !== "csp-violation") continue;
-      const b = e.body ?? {};
+      if (!isRecord(entry)) continue;
+      if (entry["type"] !== undefined && entry["type"] !== "csp-violation") continue;
+      const b = isRecord(entry["body"]) ? entry["body"] : {};
       out.push({
         directive: str(b["effectiveDirective"] ?? b["violatedDirective"]),
         blockedUri: str(b["blockedURL"]),
@@ -62,11 +62,10 @@ function normalizeReports(body: unknown): NormalizedReport[] {
     return out;
   }
   // Legacy form: { "csp-report": { "violated-directive", "blocked-uri", "document-uri" } }.
-  if (body !== null && typeof body === "object") {
-    const wrapper = body as Record<string, unknown>;
-    const r = wrapper["csp-report"];
-    if (r !== null && typeof r === "object") {
-      const rep = r as Record<string, unknown>;
+  if (isRecord(body)) {
+    const r = body["csp-report"];
+    if (isRecord(r)) {
+      const rep = r;
       return [
         {
           directive: str(rep["effective-directive"] ?? rep["violated-directive"]),

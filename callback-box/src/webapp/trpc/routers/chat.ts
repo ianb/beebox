@@ -13,6 +13,7 @@ import { router, publicProcedure } from "../trpc.js";
 import { chatSessionProcedures } from "./chat-session-procedures.js";
 import { chatControlProcedures } from "./chat-control-procedures.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 import {
   getDirectoryForSession,
   getLastSessionForDirectory,
@@ -91,7 +92,7 @@ export async function loadLandmarkSummaries(boxRoot: string): Promise<LandmarkSu
       const content = await fs.readFile(absPath, "utf-8");
       fields = parseLandmarkFields(content);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Skipping unreadable landmark card ${absPath}:`, e);
       }
       continue;

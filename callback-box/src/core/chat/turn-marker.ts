@@ -15,6 +15,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { getHeadSha } from "../../lib/git-range.js";
+import { isRecord } from "../card-io.js";
 
 const MARKER_DIR = ".callback-box/chat-turn-marker";
 
@@ -67,8 +68,8 @@ export function loadTurnMarker(boxRoot: string, sessionId: string): TurnMarker |
   try {
     const file = markerPath(boxRoot, sessionId);
     if (!fs.existsSync(file)) return null;
-    const data = JSON.parse(fs.readFileSync(file, "utf-8")) as Partial<TurnMarker>;
-    if (typeof data.head !== "string" || typeof data.time !== "string") return null;
+    const data: unknown = JSON.parse(fs.readFileSync(file, "utf-8"));
+    if (!isRecord(data) || typeof data.head !== "string" || typeof data.time !== "string") return null;
     return { head: data.head, time: data.time };
   } catch (_e) {
     return null;

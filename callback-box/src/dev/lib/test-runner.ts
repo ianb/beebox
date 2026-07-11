@@ -8,6 +8,8 @@ import * as path from "node:path";
 import { execSync } from "node:child_process";
 import YAML from "yaml";
 import { assertStandaloneBox } from "./box-guard.js";
+import { testSuiteSchema, type AuditTest, type TestSuite } from "./test-suite-schema.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { createAgent } from "../../core/agent/index.js";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 import { CHAT_SYSTEM_PROMPT, NARRATION_OVERLAY } from "../../core/chat/session/index.js";
@@ -22,50 +24,7 @@ import {
   type ContextStats,
 } from "./context-usage.js";
 
-export interface AuditTest {
-  id: string;
-  prompt: string;
-  expected_level: string;
-  watch_for: string;
-  correct_contains?: string[];
-  correct_contains_any?: string[];
-  /** Substrings that must NOT appear in the agent's response. */
-  response_not_contains?: string[];
-  cards_contain?: string[];
-  should_read?: string[];
-  should_not_read?: string[];
-  bash_contains?: string[];
-  style?: string;
-  tags?: string[];
-  notes?: string;
-  max_turns?: number;
-  /**
-   * Box-relative subdirectory to run the agent from — simulates a
-   * landmark session. The SDK's `cwd` becomes `<boxRoot>/<context_dir>`
-   * and the box root is added via `additionalDirectories`, mirroring
-   * what `ChatSession` does for landmark-bound chats. The directory's
-   * own `CLAUDE.md` walk-up is what's being audited.
-   */
-  context_dir?: string;
-  /**
-   * Files to write before the test (box-relative path → content). Used
-   * to stage a `CLAUDE.md` or other fixture inside `context_dir` without
-   * checking it into the box. Cleaned up after the test runs.
-   */
-  fixture?: Record<string, string>;
-  /**
-   * Run the agent with `CHAT_SYSTEM_PROMPT` instead of the default
-   * working-directory prompt. Use for tests that audit chat-mode
-   * knowledge (e.g. the `<chat-app>`, `<ack>`, `<callout>` tags) — the
-   * agent in a chat session sees these via the chat prompt, so the
-   * audit has to load them too.
-   */
-  chat_mode?: boolean;
-}
-
-export interface TestSuite {
-  tests: AuditTest[];
-}
+export type { AuditTest, TestSuite };
 
 export interface AgentBehavior {
   filesRead: string[];
@@ -101,7 +60,7 @@ export interface TestResult {
  */
 export async function loadTests(yamlPath: string): Promise<TestSuite> {
   const content = await fs.readFile(yamlPath, "utf-8");
-  return YAML.parse(content) as TestSuite;
+  return testSuiteSchema.parse(YAML.parse(content));
 }
 
 /**
@@ -267,7 +226,7 @@ async function extractBehavior(
     }
   } catch (e) {
     // Sub-agent dir may not exist if the agent never delegated — that's fine.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[test-runner] Failed to read subagent logs at ${subagentDir}:`, e);
     }
   }

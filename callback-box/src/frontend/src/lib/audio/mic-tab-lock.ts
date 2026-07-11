@@ -11,6 +11,8 @@
  * exactly the intended scope.
  */
 
+import { isRecord } from "../is-record";
+
 const CHANNEL_NAME = "callback-mic-lock";
 
 interface ClaimMessage {
@@ -37,8 +39,8 @@ function ensureChannel(): BroadcastChannel | null {
     // BroadcastChannel carries no type guarantee — another script (or a
     // stale message shape from a future version of this tab) could post
     // anything on this channel, so treat the payload as untrusted.
-    const msg = event.data as Partial<ClaimMessage> | null | undefined;
-    if (msg?.type !== "claim" || msg.tabId === tabId) return;
+    const msg = event.data;
+    if (!isRecord(msg) || msg.type !== "claim" || msg.tabId === tabId) return;
     // Another tab took the mic — yield ours. Copy first: an eviction callback
     // may release itself (mutating the set) as it runs.
     for (const evict of [...evictListeners]) evict();

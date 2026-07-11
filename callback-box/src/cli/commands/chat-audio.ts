@@ -30,6 +30,12 @@ import {
 } from "../../core/transcription/index.js";
 import { findBoxRoot } from "../../lib/paths.js";
 
+const HQ_SERVICE_SET = new Set<string>(HQ_TRANSCRIPTION_SERVICES);
+/** Type guard for the `--service` option against the known HQ services. */
+function isHqTranscriptionService(value: string): value is HqTranscriptionService {
+  return HQ_SERVICE_SET.has(value);
+}
+
 /**
  * Request headers for loopback calls to the live server: JSON content type
  * plus the per-box agent bearer when available (required to pass the auth
@@ -265,11 +271,11 @@ export const retranscribeCommand = new Command("retranscribe")
     const label = "cb chat retranscribe";
     let service: HqTranscriptionService | undefined;
     if (options.service !== undefined) {
-      if (!(HQ_TRANSCRIPTION_SERVICES as readonly string[]).includes(options.service)) {
+      if (!isHqTranscriptionService(options.service)) {
         console.error(`${label}: unknown --service ${options.service} (expected one of: ${HQ_TRANSCRIPTION_SERVICES.join(", ")})`);
         process.exit(1);
       }
-      service = options.service as HqTranscriptionService;
+      service = options.service;
     }
     if (options.diarize === true) {
       // --diarize asks for the capability; only Voxtral has it.

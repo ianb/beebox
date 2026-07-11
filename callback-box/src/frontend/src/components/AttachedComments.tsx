@@ -15,6 +15,7 @@ import { getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { cbSource } from "../lib/source-tag";
 import { RequestError } from "../lib/errors";
+import { isRecord } from "../lib/is-record";
 import { Accordion } from "./ui/Accordion";
 import { Text } from "./ui/Text";
 import { CommentsThread, parseComments } from "./CommentsThread";
@@ -22,8 +23,8 @@ import { CommentsThread, parseComments } from "./CommentsThread";
 /** Pull a `comments: { ref }` ref string out of card frontmatter, if present. */
 function commentsRefOf(frontmatter: Record<string, unknown> | undefined): string | null {
   const comments = frontmatter?.comments;
-  if (typeof comments !== "object" || comments === null || Array.isArray(comments)) return null;
-  const ref = (comments as Record<string, unknown>).ref;
+  if (!isRecord(comments)) return null;
+  const { ref } = comments;
   return typeof ref === "string" && ref !== "" ? ref : null;
 }
 

@@ -27,6 +27,7 @@ function relativeTime(dateStr: string): string {
 
 export function SessionListButton() {
   const { boxSlug } = useParams({ strict: false });
+  // eslint-disable-next-line no-restricted-syntax -- `strict: false` collapses the search type across every route; this component only ever renders under routes that carry an optional `session` string param, matching the ChatPage/HistoryPage convention.
   const search = useSearch({ strict: false }) as { session?: string };
   const [open, setOpen] = useState(false);
   const [sessions, setSessions] = useState<ChatSessionInfo[]>([]);
@@ -37,7 +38,7 @@ export function SessionListButton() {
   useEffect(() => {
     if (!open) return;
     const handleClick = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (menuRef.current && e.target instanceof Node && !menuRef.current.contains(e.target)) {
         setOpen(false);
       }
     };

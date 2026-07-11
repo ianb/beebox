@@ -20,6 +20,7 @@
  */
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { isRecord } from "../lib/is-record.js";
 
 /**
  * Result of splitting a card's text into frontmatter prefix and body.
@@ -92,8 +93,8 @@ export function parseFrontmatterObject(content: string): Record<string, unknown>
     // frontmatter" so scans skip the card rather than crashing.
     return null;
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  return parsed as Record<string, unknown>;
+  if (!isRecord(parsed)) return null;
+  return parsed;
 }
 
 /**

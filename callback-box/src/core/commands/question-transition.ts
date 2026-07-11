@@ -25,6 +25,7 @@ import { toRelativePath, isCardFile } from "../../lib/paths.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../../lib/file-lock.js";
 import { cardFields, parseCardText } from "../card-io.js";
+import { errorMessage, errnoCode } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import {
   QuestionSchema,
@@ -165,7 +166,7 @@ async function loadForTransition(
   } catch (err) {
     return {
       ok: false,
-      result: { success: false, error: `Could not parse question: ${(err as Error).message}` },
+      result: { success: false, error: `Could not parse question: ${errorMessage(err)}` },
     };
   }
 
@@ -201,7 +202,7 @@ async function applyAndCommit(
     try {
       original = await fs.readFile(write.absPath, "utf-8");
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+      if (errnoCode(e) === "ENOENT") {
         original = null;
       } else {
         throw e;
@@ -248,7 +249,7 @@ async function applyAndCommit(
     }
     return {
       ok: false,
-      result: { success: false, error: `Failed to commit transition: ${(err as Error).message}` },
+      result: { success: false, error: `Failed to commit transition: ${errorMessage(err)}` },
     };
   }
 

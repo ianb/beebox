@@ -9,6 +9,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runReactor } from "../../core/reactor/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const reactorCommand = new Command("reactor")
   .description("Process pending jobs")
@@ -44,7 +45,7 @@ export const reactorCommand = new Command("reactor")
         console.log(`Warning: ${result.jobsRemaining} job(s) still remaining`);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

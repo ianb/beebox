@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { glob } from "glob";
 import type { Connector, SyncResult } from "./index.js";
 import { registerConnector } from "./index.js";
@@ -65,7 +66,7 @@ async function readDriveIdFromCard(cardPath: string): Promise<string | null> {
     invariant(xmlMatch[1] !== undefined, "capture group 1 is non-optional in xmlMatch");
     return xmlMatch[1];
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[google-drive] Could not read drive-id from ${cardPath}, skipping: ${e instanceof Error ? e.message : String(e)}`);
     }
     return null;
@@ -160,7 +161,7 @@ class GoogleDriveConnector implements Connector {
         updated.push(...result.updated);
         pushed.push(...result.pushed);
       } catch (err) {
-        console.error(`[google-drive] Error syncing ${relCardPath}: ${(err as Error).message}`);
+        console.error(`[google-drive] Error syncing ${relCardPath}: ${errorMessage(err)}`);
       }
     }
 
@@ -174,7 +175,7 @@ class GoogleDriveConnector implements Connector {
             existingDriveIds: new Set(
               await Promise.all(
                 cardPaths.map((p) => readDriveIdFromCard(path.join(this.boxRoot, p))),
-              ).then((ids) => ids.filter(Boolean) as string[]),
+              ).then((ids) => ids.filter((id): id is string => Boolean(id))),
             ),
             service,
             state,
@@ -183,7 +184,7 @@ class GoogleDriveConnector implements Connector {
           updated.push(...newFiles.updated);
           pushed.push(...newFiles.pushed);
         } catch (err) {
-          console.error(`[google-drive] Error syncing folder ${folder.localPath}: ${(err as Error).message}`);
+          console.error(`[google-drive] Error syncing folder ${folder.localPath}: ${errorMessage(err)}`);
         }
       }
     }

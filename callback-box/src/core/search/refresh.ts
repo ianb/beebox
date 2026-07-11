@@ -42,6 +42,7 @@ import {
 } from "./refresh-file.js";
 import { runEmbedPass } from "./embed-pass.js";
 import type { EmbeddingsService } from "../../services/openai-embeddings.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export interface OpenSearchIndexResult {
   db: SearchIndex;
@@ -199,7 +200,7 @@ async function refreshUnderLock(
       const indexProof = await persistSearchIndex(db, boxRoot);
       await saveManifest(boxRoot, { manifest, indexProof });
     } catch (e) {
-      warnings.push(`could not persist search index (${(e as Error).message}); results served from memory`);
+      warnings.push(`could not persist search index (${errorMessage(e)}); results served from memory`);
     }
   } else if (dirtyManifest) {
     // No document changed — only stat/mtime or skip records moved. The index

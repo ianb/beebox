@@ -4,10 +4,12 @@ import * as path from "node:path";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
 import { splitCardContent, type CardSchema } from "../../../cards/index.js";
+import { isRecord } from "../../../lib/is-record.js";
 import { parseCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { parse as parseYaml } from "yaml";
+import { errorMessage } from "../../../lib/error-guards.js";
 
 export interface FrontmatterCardResponse {
   path: string;
@@ -42,14 +44,14 @@ function loadFrontmatterCard(input: {
     delete fields["type"];
     frontmatter = fields;
   } catch (e) {
-    validationError = (e as Error).message;
+    validationError = errorMessage(e);
     // Still surface what we can — split the file and parse YAML loosely.
     const split = splitCardContent(raw);
     body = split.body;
     try {
-      const fm = parseYaml(split.frontmatterText);
-      if (fm !== null && typeof fm === "object" && !Array.isArray(fm)) {
-        frontmatter = fm as Record<string, unknown>;
+      const fm: unknown = parseYaml(split.frontmatterText);
+      if (isRecord(fm)) {
+        frontmatter = fm;
       }
     } catch (_e) {
       // YAML itself is malformed — leave frontmatter undefined.
@@ -92,7 +94,7 @@ export const cardRouter = router({
       try {
         raw = await fs.readFile(fullPath, "utf-8");
       } catch (e) {
-        const msg = (e as Error).message;
+        const msg = errorMessage(e);
         if (msg.includes("ENOENT") || msg.includes("no such file")) {
           throw new TRPCError({ code: "NOT_FOUND", message: `Card not found: ${relPath}` });
         }
@@ -116,7 +118,7 @@ export const cardRouter = router({
         path: relPath,
         kind: "frontmatter" as const,
         type: fileType ?? "",
-        frontmatter: undefined as Record<string, unknown> | undefined,
+        frontmatter: undefined,
         body: split.hasFrontmatter ? split.body : raw,
         validationError: split.hasFrontmatter ? undefined : "Card has no frontmatter block",
       };

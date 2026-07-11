@@ -78,6 +78,7 @@ function effective(list: Registration[]): TemplateDefinition {
 export function registerTemplate<T extends ZodRawShape>(
   definition: TemplateDefinition<T>
 ): void {
+  // eslint-disable-next-line no-restricted-syntax -- variance bridge (double cast required — TS rejects the direct conversion as non-overlapping): TemplateDefinition<T>'s `generate`/`attachments` are contravariant in the arg type, so a concrete-shape definition isn't assignable to the erased TemplateDefinition<ZodRawShape> the registry stores; sound because register only stores + returns it, never calls generate with a wider arg
   register(definition as unknown as TemplateDefinition, BUILTIN_OWNER);
 }
 

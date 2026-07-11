@@ -22,6 +22,7 @@ import {
   saveManifest,
   sha256File,
 } from "./asset-manifest.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 
 /** A directory whose name ends in `.attach`. */
 export interface AttachScope {
@@ -134,7 +135,7 @@ export async function findAttachScopes(boxRoot: string): Promise<AttachScope[]> 
       // A directory we can't read (race with a delete, permissions, or a
       // non-dir that slipped through) just contributes no attach scopes. Log so
       // an unexpected IO failure during the walk is visible.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not read ${absDir} while finding attach scopes, skipping:`, e);
       }
       return;
@@ -185,7 +186,7 @@ export async function scanAttachScope(
       kind: "manifest-malformed",
       attachDir: scope.relPath,
       name: null,
-      message: (e as Error).message,
+      message: errorMessage(e),
     });
     return result;
   }

@@ -31,6 +31,7 @@ import { create, type Orama } from "@orama/orama";
 import { persistToFile, restoreFromFile } from "@orama/plugin-data-persistence/server";
 import { EMBEDDING_DIMENSIONS } from "../../services/openai-embeddings.js";
 import { invariant } from "../../lib/invariant.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Bump when the document schema or extraction shape changes; a mismatch
@@ -100,10 +101,9 @@ export async function restoreSearchIndex(boxRoot: string): Promise<SearchIndex |
     return null;
   }
   try {
-    const db = await restoreFromFile("json", indexPath);
-    return db as SearchIndex;
+    return await restoreFromFile<SearchIndex>("json", indexPath);
   } catch (e) {
-    console.warn(`search: could not restore index (${(e as Error).message}); rebuilding`);
+    console.warn(`search: could not restore index (${errorMessage(e)}); rebuilding`);
     return null;
   }
 }

@@ -6,11 +6,13 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import ky, { isHTTPError } from "ky";
+import { z } from "zod";
 import { transcribeAudioVoxtral } from "./voxtral.js";
 import { transcribeAudioDeepgram } from "./deepgram.js";
 import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const OPENAI_ENDPOINT = "https://api.openai.com/v1/audio/transcriptions";
 
@@ -106,7 +108,8 @@ export interface TranscribeAudioParams {
   boxRoot?: string;
 }
 
-export type TranscriptionService = "whisper" | "voxtral" | "deepgram" | "openai-realtime" | "fake";
+export const TRANSCRIPTION_SERVICES = ["whisper", "voxtral", "deepgram", "openai-realtime", "fake"] as const;
+export type TranscriptionService = (typeof TRANSCRIPTION_SERVICES)[number];
 /**
  * Narration mode's checkpoint HQ pass — non-streaming services only.
  * - `whisper`: OpenAI's classic `whisper-1` model.
@@ -139,10 +142,11 @@ export interface TranscriptionConfig {
   hqService: HqTranscriptionService;
 }
 
-interface StoredTranscriptionConfig {
-  service?: TranscriptionService;
-  hqService?: HqTranscriptionService;
-}
+const storedTranscriptionConfigSchema = z.object({
+  service: z.enum(TRANSCRIPTION_SERVICES).optional(),
+  hqService: z.enum(HQ_TRANSCRIPTION_SERVICES).optional(),
+});
+type StoredTranscriptionConfig = z.infer<typeof storedTranscriptionConfigSchema>;
 
 export async function loadTranscriptionConfig(boxRoot?: string): Promise<TranscriptionConfig> {
   const defaults: TranscriptionConfig = { service: "voxtral", hqService: "whisper" };
@@ -152,14 +156,13 @@ export async function loadTranscriptionConfig(boxRoot?: string): Promise<Transcr
   try {
     content = await fs.readFile(configPath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return defaults;
+    if (errnoCode(e) === "ENOENT") return defaults;
     // Permissions / I/O failures are not the same as "no config" — surface
     // them rather than silently returning defaults.
     throw e;
   }
-  // JSON parse errors are real bugs (corrupted config); let them bubble.
-  const stored = JSON.parse(content) as StoredTranscriptionConfig;
+  // JSON parse / schema errors are real bugs (corrupted config); let them bubble.
+  const stored = storedTranscriptionConfigSchema.parse(JSON.parse(content));
   return {
     service: stored.service ?? defaults.service,
     hqService: stored.hqService ?? defaults.hqService,
@@ -182,14 +185,13 @@ export async function updateTranscriptionConfig(
     try {
       content = await fs.readFile(configPath, "utf-8");
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (errnoCode(e) !== "ENOENT") throw e;
       // No file yet — start fresh.
     }
     if (content !== null) {
-      // Parse errors are a real bug — let them bubble rather than silently
-      // overwriting a corrupted config.
-      current = JSON.parse(content) as StoredTranscriptionConfig;
+      // Parse / schema errors are a real bug — let them bubble rather than
+      // silently overwriting a corrupted config.
+      current = storedTranscriptionConfigSchema.parse(JSON.parse(content));
     }
     const merged: StoredTranscriptionConfig = { ...current, ...updates };
     await fs.mkdir(path.dirname(configPath), { recursive: true });
@@ -326,7 +328,7 @@ async function transcribeAudioWhisper(
           start: w.start,
           end: w.end,
         })),
-      } as DetailedTranscriptionResult;
+      } satisfies DetailedTranscriptionResult;
     }
 
     return {
@@ -345,7 +347,7 @@ async function transcribeAudioWhisper(
     }
 
     // Network or other errors are intermittent
-    throw new WhisperNetworkError((error as Error).message);
+    throw new WhisperNetworkError(errorMessage(error));
   }
 }
 
@@ -363,14 +365,19 @@ function getContentType(ext: string | undefined): string {
   return contentType ?? "audio/webm";
 }
 
+const whisperErrorBodySchema = z.object({
+  error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),
+});
+
 async function parseErrorResponse(response: Response): Promise<TranscriptionError> {
   let errorDetails: string;
   let errorCode: string | undefined;
 
   try {
-    const errorJson = (await response.json()) as { error?: { message?: string; code?: string } };
-    errorDetails = errorJson.error?.message ?? JSON.stringify(errorJson);
-    errorCode = errorJson.error?.code;
+    const raw: unknown = await response.json();
+    const errorJson = whisperErrorBodySchema.safeParse(raw).data;
+    errorDetails = errorJson?.error?.message ?? JSON.stringify(raw);
+    errorCode = errorJson?.error?.code;
   } catch (e) {
     console.warn("Whisper error response was not JSON, falling back to text body:", e);
     errorDetails = await response.text();

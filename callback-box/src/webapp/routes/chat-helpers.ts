@@ -11,6 +11,7 @@ import { z } from "zod";
 import type { SessionUser } from "../auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
 import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 // Structural shape only (id/mimeType/dataBase64 present with the right
 // primitive types) — the content-level checks (mime prefix, total byte cap)
@@ -202,7 +203,7 @@ export async function readSessionLogTail(
       await handle.close();
     }
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("[chat] failed to read session log tail, starting speaker letters at A:", e);
     }
     return "";

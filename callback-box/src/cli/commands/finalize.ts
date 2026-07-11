@@ -17,6 +17,7 @@ import { createPushConnector } from "../../connectors/push.js";
 import { checkPendingQuestionsAndNotify } from "../../core/question-alert.js";
 import { ageQuestions } from "../../core/question-aging.js";
 import { getAllConnectors } from "../../connectors/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const finalizeCommand = new Command("finalize")
   .description("Run outbound connectors (post-processing phase)")
@@ -33,7 +34,7 @@ export const finalizeCommand = new Command("finalize")
         const result = await checkPendingQuestionsAndNotify(boxRoot, { now: new Date() });
         if (result) console.log(`  Question alert: ${result.notified.length} new question(s)`);
       } catch (err) {
-        console.error(`  Question alert failed: ${(err as Error).message}`);
+        console.error(`  Question alert failed: ${errorMessage(err)}`);
       }
 
       // Ages pending questions (nudge, then expire) regardless of whether
@@ -47,7 +48,7 @@ export const finalizeCommand = new Command("finalize")
           );
         }
       } catch (err) {
-        console.error(`  Question aging failed: ${(err as Error).message}`);
+        console.error(`  Question aging failed: ${errorMessage(err)}`);
       }
     }
 
@@ -99,7 +100,7 @@ export const finalizeCommand = new Command("finalize")
           console.log("  No outbound items.");
         }
       } catch (err) {
-        console.error(`  Failed: ${(err as Error).message}`);
+        console.error(`  Failed: ${errorMessage(err)}`);
         totalErrors++;
       }
     }

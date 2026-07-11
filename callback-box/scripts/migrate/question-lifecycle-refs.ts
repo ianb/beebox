@@ -17,6 +17,7 @@
 import { readFile, writeFile, readdir } from "node:fs/promises";
 import { join, relative } from "node:path";
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
+import { errnoCode } from "../../src/lib/error-guards.js";
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return v !== null && typeof v === "object" && !Array.isArray(v);
@@ -92,8 +93,7 @@ async function findCards(root: string): Promise<string[]> {
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
+      if (errnoCode(e) === "ENOENT") return;
       throw e;
     }
     for (const entry of entries) {

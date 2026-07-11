@@ -8,6 +8,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouterState } from "@tanstack/react-router";
 import { getApiBase } from "../../api";
 import { useBusSubscription, type RealtimeEvent } from "../../hooks/useBusSubscription";
+import { busEventData } from "../../lib/bus-events";
+import { isRecord } from "../../lib/is-record";
 import { type ViewTarget } from "../../lib/view-url";
 import { Sidebar } from "../../components/Sidebar";
 import { trpc } from "../../lib/trpc";
@@ -81,9 +83,9 @@ function useBrowseListLiveRefresh(dirPath: string): void {
   const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
-      if (event.event !== "file-change") return;
-      const changed = (event.data as { path?: string }).path;
-      if (typeof changed !== "string") return;
+      const data = busEventData(event, "file-change");
+      if (!data) return;
+      const changed = data.path;
       const parent = changed.includes("/") ? changed.slice(0, changed.lastIndexOf("/")) : "";
       if (parent !== dirPath) return;
       void utils.status.browse.invalidate({ path: dirPath });
@@ -211,8 +213,9 @@ export function BrowsePage({ currentPath: currentPathArg, onNavigate }: BrowsePa
         method: "DELETE",
       });
       if (!response.ok) {
-        const payload = await response.json().catch(() => null) as { error?: string } | null;
-        throw new RequestError(payload?.error || `Delete failed (${response.status})`);
+        const payload: unknown = await response.json().catch(() => null);
+        const errText = isRecord(payload) && typeof payload["error"] === "string" ? payload["error"] : undefined;
+        throw new RequestError(errText || `Delete failed (${response.status})`);
       }
       await utils.status.browse.invalidate({ path: dirPath });
       if (selectedFilePath === path) {

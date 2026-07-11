@@ -14,6 +14,7 @@ import {
 } from "../command-runner.js";
 import { buildScriptEnv } from "../script-env.js";
 import { runCollectedChild } from "../../lib/run-child.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** Resolve the `cb` binary path, matching the pattern in scheduler.ts */
 function resolveCbPath(): string {
@@ -43,7 +44,7 @@ async function executeWakeup(
     if (code === 0) return { success: true };
     return { success: false, error: `cb wakeup exited with code ${code}` };
   } catch (err) {
-    return { success: false, error: (err as Error).message };
+    return { success: false, error: errorMessage(err) };
   }
 }
 

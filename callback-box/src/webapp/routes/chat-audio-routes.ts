@@ -27,9 +27,13 @@ import {
   CompiledSpeakingVoiceSchema,
   type CompiledSpeakingVoice,
 } from "../../schemas/personality.js";
+import { errnoCode } from "../../lib/error-guards.js";
 import { serveMockTts } from "../tts-mock.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { readSessionLogTail } from "./chat-helpers.js";
+
+/** Voice model names as a string set, for validating an untrusted `voice` param. */
+const VOICE_MODEL_SET = new Set<string>(VOICE_MODELS);
 
 interface TtsBody {
   text: string;
@@ -99,7 +103,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       console.warn("[chat] speaking-voice.json failed validation:", parsed.error.message);
       return { model: undefined, instructions: [] };
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn("[chat] failed to read speaking-voice.json:", e);
       }
       return { model: undefined, instructions: [] };
@@ -116,7 +120,7 @@ export function registerChatAudioRoutes(ctx: ChatRoutesContext): void {
       return serveMockTts(reply, { text, fixture, delayMs, chunkMs, chunkSize });
     }
 
-    const resolvedVoice = voice && (VOICE_MODELS as readonly string[]).includes(voice) ? voice : "marin";
+    const resolvedVoice = voice && VOICE_MODEL_SET.has(voice) ? voice : "marin";
 
     if (openaiAudio) {
       const ttsOpts: { voice?: string; instructions?: string } = { voice: resolvedVoice };

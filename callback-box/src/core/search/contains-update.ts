@@ -13,12 +13,14 @@ import { parse as parseYaml } from "yaml";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { buildLoadContext } from "../load-context.js";
 import { cardTypeFromPath } from "./walk.js";
+import { isRecord } from "../card-io.js";
 import {
   computeBasisForCardPath,
   loadContainsState,
   saveContainsState,
   rebaseContains,
 } from "./contains-state.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** Base class so callers can catch every contains-update failure at once. */
 export class ContainsUpdateError extends Error {
@@ -63,6 +65,13 @@ class NoFrontmatterError extends ContainsUpdateError {
   }
 }
 
+class MalformedFrontmatterError extends ContainsUpdateError {
+  constructor(relPath: string) {
+    super(`${relPath}'s frontmatter is not a YAML mapping`);
+    this.name = "MalformedFrontmatterError";
+  }
+}
+
 class InvalidAfterUpdateError extends ContainsUpdateError {
   constructor(relPath: string) {
     super(`${relPath} did not validate after the update — check the card with cb validate`);
@@ -96,13 +105,17 @@ export async function updateContainsField(
   try {
     content = await fs.readFile(absPath, "utf8");
   } catch (e) {
-    throw new CardUnreadableError(relPath, { detail: (e as Error).message });
+    throw new CardUnreadableError(relPath, { detail: errorMessage(e) });
   }
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
     throw new NoFrontmatterError(relPath);
   }
-  const fields = (parseYaml(split.frontmatterText) ?? {}) as Record<string, unknown>;
+  const parsedFrontmatter: unknown = parseYaml(split.frontmatterText) ?? {};
+  if (!isRecord(parsedFrontmatter)) {
+    throw new MalformedFrontmatterError(relPath);
+  }
+  const fields = parsedFrontmatter;
   const unchanged = fields["contains"] === text;
   if (!unchanged) {
     fields["contains"] = text;

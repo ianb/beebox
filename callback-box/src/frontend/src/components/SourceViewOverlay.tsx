@@ -106,10 +106,10 @@ function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     function handleClick(e: MouseEvent) {
       // Don't intercept clicks on our own overlay
-      if (overlayRef.current && overlayRef.current.contains(e.target as Node)) return;
+      if (overlayRef.current && e.target instanceof Node && overlayRef.current.contains(e.target)) return;
 
-      const target = e.target as Element;
-      const sourceEl = findSourceElement(target);
+      if (!(e.target instanceof Element)) return;
+      const sourceEl = findSourceElement(e.target);
 
       if (sourceEl) {
         e.preventDefault();
@@ -135,8 +135,8 @@ function SourceViewOverlayInner({ onClose }: { onClose: () => void }) {
   // Hover handler for showing labels
   useEffect(() => {
     function handleMove(e: MouseEvent) {
-      const target = e.target as Element;
-      const sourceEl = findSourceElement(target);
+      if (!(e.target instanceof Element)) return;
+      const sourceEl = findSourceElement(e.target);
 
       if (sourceEl !== hovered) {
         setHovered(sourceEl);

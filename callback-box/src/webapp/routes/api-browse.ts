@@ -11,6 +11,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { loadCardFrontmatter } from "../../core/frontmatter-field.js";
 import { parseCardName } from "../../lib/paths.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 interface BrowseCard {
   relativePath: string;
@@ -52,7 +53,7 @@ export function registerApiBrowseRoutes(options: RegisterApiBrowseRoutesOptions)
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`Could not read directory, returning empty listing: ${resolved}:`, e);
         }
         return { path: reqPath, dirs: [], cards: [] };

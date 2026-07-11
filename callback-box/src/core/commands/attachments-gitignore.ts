@@ -21,6 +21,7 @@ import { promisify } from "node:util";
 import type { CommandContext, CommandResult } from "../command-runner.js";
 import { type AssetManifest, loadManifest } from "../asset-manifest.js";
 import { invariant } from "../../lib/invariant.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -74,8 +75,7 @@ async function runInitGitignore(ctx: CommandContext): Promise<CommandResult> {
   try {
     existing = await fs.readFile(gitignorePath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw new GitignoreReadError(gitignorePath, e);
+    if (errnoCode(e) !== "ENOENT") throw new GitignoreReadError(gitignorePath, e);
   }
   if (
     existing.includes(GITIGNORE_BLOCK_MARKER) ||
@@ -209,7 +209,7 @@ async function runUntrackAssets(ctx: CommandContext): Promise<CommandResult> {
   try {
     trackedIgnored = await listTrackedIgnored(ctx.boxRoot);
   } catch (e) {
-    return { success: false, error: `git ls-files failed: ${(e as Error).message}` };
+    return { success: false, error: `git ls-files failed: ${errorMessage(e)}` };
   }
   if (trackedIgnored.length === 0) {
     ctx.writeLine("Nothing to untrack — no currently-tracked files match the gitignore.");

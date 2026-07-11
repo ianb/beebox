@@ -6,7 +6,7 @@
  * generate-docs-content.ts to keep each file under the line limit.
  */
 
-import type { ZodTypeAny } from "zod";
+import { z } from "zod";
 import { getAllTemplates } from "../../schemas/templates.js";
 import { cbCommandsScheduling } from "./cb-commands-scheduling.js";
 
@@ -74,9 +74,9 @@ function cbCommandsTemplates(): string[] {
     if (argEntries.length > 0) {
       lines.push("Arguments:");
       for (const [key, schema] of argEntries) {
-        const zodSchema = schema as ZodTypeAny;
-        const isOptional = zodSchema.isOptional();
-        const desc = zodSchema.description ?? "";
+        if (!(schema instanceof z.ZodType)) continue;
+        const isOptional = schema.isOptional();
+        const desc = schema.description ?? "";
         let line = `- \`${key}\``;
         if (isOptional) line += " (optional)";
         if (desc) line += ` — ${desc}`;

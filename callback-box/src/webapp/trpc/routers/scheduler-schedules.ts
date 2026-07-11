@@ -106,7 +106,7 @@ async function buildScheduleEntry(options: BuildEntryOptions): Promise<ScheduleE
     notBefore: parsed.notBefore,
     runs: parsed.runs,
     lastRun: state.lastRun,
-    lastResult: state.lastResult as "success" | "failure" | null,
+    lastResult: state.lastResult,
     lastError: state.lastError,
     runCount: state.runCount,
     once: parsed.once,

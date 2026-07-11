@@ -249,7 +249,7 @@ export function isDueForWakeup(script: ParsedScheduledScript, ctx: ScheduleCheck
  */
 export function isWithinBudget(
   budget: { limitMs: number; windowMs: number },
-  opts: { recentRuns: Array<{ ts: string; durationMs: number; sleepAffected?: boolean }> | undefined; now: Date },
+  opts: { recentRuns: Array<{ ts: string; durationMs: number; sleepAffected?: boolean | undefined }> | undefined; now: Date },
 ): { allowed: boolean; usedMs: number } {
   const cutoff = opts.now.getTime() - budget.windowMs;
   const runs = opts.recentRuns ?? [];

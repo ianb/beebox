@@ -13,10 +13,20 @@ import {
   boxLogFile,
   type LogEntry,
 } from "../../core/schedule/scheduler.js";
+import { isRecord } from "../../lib/is-record.js";
 
 export interface LogFilters {
   errors?: boolean | undefined;
   script?: string | undefined;
+}
+
+/**
+ * A parsed JSONL scheduler-log line is a valid {@link LogEntry} when it carries
+ * string `ts` and `event`; every other field is optional and the interface's
+ * index signature absorbs extras, so this top-level check is sound.
+ */
+function isLogEntry(value: unknown): value is LogEntry {
+  return isRecord(value) && typeof value["ts"] === "string" && typeof value["event"] === "string";
 }
 
 export async function resolveLogBoxes(boxOption: string | undefined): Promise<string[]> {
@@ -61,8 +71,8 @@ export async function readBoxEntries(boxPath: string, filters: LogFilters): Prom
   for await (const line of rl) {
     if (!line.trim()) continue;
     try {
-      const entry = JSON.parse(line) as LogEntry;
-      if (entryMatchesFilters(entry, filters)) {
+      const entry: unknown = JSON.parse(line);
+      if (isLogEntry(entry) && entryMatchesFilters(entry, filters)) {
         entries.push(entry);
       }
     } catch (e) {

@@ -5,6 +5,7 @@
  */
 
 import type { CommentaryCapture } from "./commentary.js";
+import { isRecord } from "./is-record.js";
 
 export const CAPTURE_RESULT = "commentaryCaptureResult" as const;
 
@@ -13,9 +14,5 @@ export type CaptureResultMessage =
   | { type: typeof CAPTURE_RESULT; error: string };
 
 export function isCaptureResultMessage(value: unknown): value is CaptureResultMessage {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    (value as { type?: unknown }).type === CAPTURE_RESULT
-  );
+  return isRecord(value) && value["type"] === CAPTURE_RESULT;
 }

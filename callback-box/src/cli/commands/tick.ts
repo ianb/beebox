@@ -21,6 +21,7 @@ import {
   evaluateSkip,
   executeScript,
 } from "./tick-helpers.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export interface TickOptions {
   dryRun?: boolean;
@@ -104,9 +105,9 @@ export async function runTick(boxRoot: string, options: TickOptions): Promise<Ti
       const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
       parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
     } catch (err) {
-      if (!options.quiet) console.error(`  Error parsing ${file}: ${(err as Error).message}`);
+      if (!options.quiet) console.error(`  Error parsing ${file}: ${errorMessage(err)}`);
       errorCount++;
-      scripts.push({ name: scriptName, status: "error", error: `parse: ${(err as Error).message}` });
+      scripts.push({ name: scriptName, status: "error", error: `parse: ${errorMessage(err)}` });
       continue;
     }
 

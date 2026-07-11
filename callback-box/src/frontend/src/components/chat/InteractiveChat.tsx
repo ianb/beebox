@@ -38,6 +38,14 @@ import { nativeEmissionFromDetail } from "./native-emission";
 import { useCaptureBubbles } from "./useCaptureBubbles";
 import { CaptureOverlay } from "../capture/CaptureOverlay";
 
+// The native app shell (when embedding this page) queues emission events on
+// this global before React mounts. Not in the DOM lib types.
+declare global {
+  interface Window {
+    callbackboxNativeQueue?: unknown[];
+  }
+}
+
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
  * immediately for fresh "new" landmark chats (server hasn't seen the
@@ -296,8 +304,7 @@ function useNativeEmissionBridge(opts: { enabled: boolean; dispatchEmission: (em
 }
 
 function drainNativeEmissionQueue(): unknown[] {
-  const nativeWindow = window as Window & { callbackboxNativeQueue?: unknown[] };
-  const queued = nativeWindow.callbackboxNativeQueue ?? [];
-  nativeWindow.callbackboxNativeQueue = [];
+  const queued = window.callbackboxNativeQueue ?? [];
+  window.callbackboxNativeQueue = [];
   return queued;
 }

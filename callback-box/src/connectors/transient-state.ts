@@ -11,6 +11,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 
 import { withCardLock } from "../lib/card-lock.js";
 import { acquireLock, releaseLock, LockHeldError } from "../lib/file-lock.js";
@@ -40,7 +41,7 @@ export async function loadTransientState<T>(opts: LoadOptions<T>): Promise<T> {
     // Transient state is gitignored and absent on first run — a missing file is
     // the normal path to defaultValue. Log so a corrupt/unreadable state file
     // isn't silently reset to defaults.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not load transient state for ${opts.connectorName}, using default:`, e);
     }
     return opts.defaultValue;

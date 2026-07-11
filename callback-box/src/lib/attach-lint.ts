@@ -17,6 +17,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "./error-guards.js";
 import {
   ATTACH_SUFFIX,
   cardBasename,
@@ -63,7 +64,7 @@ async function scanDir(ctx: ScanContext, absDir: string): Promise<void> {
   try {
     entries = await fs.readdir(absDir, { withFileTypes: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read directory during attach-layout scan, skipping ${absDir}:`, e);
     }
     return;

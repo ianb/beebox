@@ -7,9 +7,22 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { invariant } from "../lib/invariant.js";
+
+/**
+ * Narrow an ical.js value to an `ICAL.Time`, or `null`. ical.js's typings both
+ * oversell (`getFirstPropertyValue`/`startDate`/`iterator().next()` are declared
+ * always-`Time` but return `null`/`undefined` on a malformed or exhausted
+ * VEVENT) and undersell (a property's first value may be a string/number, not a
+ * `Time`). A real `instanceof` check replaces every ad-hoc `as ICAL.Time | null`
+ * cast with a runtime-verified narrowing.
+ */
+export function asIcalTime(value: unknown): ICAL.Time | null {
+  return value instanceof ICAL.Time ? value : null;
+}
 
 class InvalidTimespanError extends Error {
   constructor(input: string) {
@@ -109,12 +122,11 @@ export function parseIcsContent(
       return expandRecurring(event, { meta, filename, range });
     }
 
-    // Non-recurring event (or no range given): parse directly
-    // getFirstPropertyValue()'s declared return type includes `| null`; the
-    // cast narrows the union to Time without dropping that — a missing
-    // DTSTART/DTEND is a real possibility on malformed .ics input.
-    const dtstart = vevent.getFirstPropertyValue("dtstart") as ICAL.Time | null;
-    const dtend = vevent.getFirstPropertyValue("dtend") as ICAL.Time | null;
+    // Non-recurring event (or no range given): parse directly. A missing
+    // DTSTART/DTEND is a real possibility on malformed .ics input, so
+    // asIcalTime narrows to Time-or-null with a runtime check.
+    const dtstart = asIcalTime(vevent.getFirstPropertyValue("dtstart"));
+    const dtend = asIcalTime(vevent.getFirstPropertyValue("dtend"));
     const allDay = dtstart ? dtstart.isDate : false;
 
     const result: CalendarEvent = {
@@ -156,8 +168,8 @@ function expandRecurring(
   // through to `this._firstProp(...)`, which returns undefined for a
   // malformed VEVENT missing DTSTART/DTEND — the library's own doc example
   // for RecurExpansion#next() below shows the same undersell.
-  const dtstart = event.startDate as ICAL.Time | undefined;
-  const dtend = event.endDate as ICAL.Time | undefined;
+  const dtstart = asIcalTime(event.startDate);
+  const dtend = asIcalTime(event.endDate);
   const duration = dtend && dtstart
     ? dtend.subtractDate(dtstart)
     : null;
@@ -170,7 +182,7 @@ function expandRecurring(
 
   // RecurExpansion#next() is declared as always-Time, but returns a falsy
   // value once the iteration is exhausted (see the class's own usage example).
-  while ((occurrence = iter.next() as ICAL.Time | null) && count < MAX_EXPANSIONS) {
+  while ((occurrence = asIcalTime(iter.next())) && count < MAX_EXPANSIONS) {
     // Past our range — stop iterating
     if (occurrence.compare(rangeEnd) >= 0) break;
     // Before our range — skip (but count toward limit)
@@ -229,7 +241,7 @@ export async function loadAllEvents(
     // Calendar dir may not exist (no calendar synced yet) — that's a normal
     // empty result. Log so a permissions/IO failure isn't mistaken for "no
     // events".
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read calendar dir ${calendarDir}, returning no events:`, e);
     }
     return [];
@@ -327,9 +339,7 @@ export function validateIcsTimezone(content: string): string | null {
     const dtstart = vevent.getFirstProperty("dtstart");
     if (!dtstart) return "No DTSTART property found";
 
-    // getFirstValue()'s declared return type includes `| null`; preserve that
-    // instead of casting it away.
-    const dtValue = dtstart.getFirstValue() as ICAL.Time | null;
+    const dtValue = asIcalTime(dtstart.getFirstValue());
     if (dtValue && dtValue.isDate) return null; // All-day event — no timezone needed
 
     const tzid = dtstart.getParameter("tzid");

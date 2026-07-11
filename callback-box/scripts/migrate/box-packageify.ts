@@ -52,6 +52,8 @@ import * as path from "node:path";
 import { pathToFileURL } from "node:url";
 import { getStatus, isRepo, hasCommits, getHead, revertToSnapshot, stageAll, commit } from "../../src/lib/git.js";
 import { detectBoxTarget, scaffoldPackageRoot, BoxPackageConflictError } from "../../src/core/box/package.js";
+import { errorMessage } from "../../src/lib/error-guards.js";
+import { isRecord } from "../../src/lib/is-record.js";
 import { runInit } from "../../src/cli/commands/init.js";
 import { encodeProjectDir, claudeProjectsRoot } from "../../src/cli/lib/session.js";
 import { execFile } from "node:child_process";
@@ -228,7 +230,8 @@ async function moveEverythingElseToContent(boxRoot: string, contentRoot: string)
 async function stampShapeVersion2(contentRoot: string): Promise<void> {
   const markerPath = path.join(contentRoot, ".cb-box");
   const raw = await fs.readFile(markerPath, "utf-8");
-  const marker = raw.trim() === "" ? {} : (JSON.parse(raw) as Record<string, unknown>);
+  const parsed: unknown = raw.trim() === "" ? {} : JSON.parse(raw);
+  const marker = isRecord(parsed) ? parsed : {};
   marker.shapeVersion = 2;
   await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
 }
@@ -418,8 +421,9 @@ export async function runBoxPackageify(boxRoot: string, deps?: BoxPackageifyDeps
       cwd: resolvedRoot,
     });
   } catch (e) {
-    const err = e as { stdout?: string; stderr?: string };
-    const output = [err.stdout, err.stderr].filter(Boolean).join("\n").trim();
+    const stdout = isRecord(e) && typeof e["stdout"] === "string" ? e["stdout"] : undefined;
+    const stderr = isRecord(e) && typeof e["stderr"] === "string" ? e["stderr"] : undefined;
+    const output = [stdout, stderr].filter(Boolean).join("\n").trim();
     throw new PreexistingValidationError(resolvedRoot, output);
   }
 
@@ -491,7 +495,7 @@ export async function runBoxPackageify(boxRoot: string, deps?: BoxPackageifyDeps
       console.warn(
         `box-packageify: migration committed (${commitHash}), but relocating Claude Code session ` +
           `history from ${resolvedRoot} to ${contentRoot} in ~/.claude/projects failed: ` +
-          `${(e as Error).message}. Nothing was lost -- the old session directory is untouched; ` +
+          `${errorMessage(e)}. Nothing was lost -- the old session directory is untouched; ` +
           "move it by hand if you want continuity in future sessions."
       );
     }

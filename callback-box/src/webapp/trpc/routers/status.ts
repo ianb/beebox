@@ -8,6 +8,7 @@ import { loadCardFrontmatter } from "../../../core/frontmatter-field.js";
 import { parseCardName } from "../../../lib/paths.js";
 import { boxRelativePath } from "../../../shared/box-path.js";
 import { getLog } from "../../../lib/git.js";
+import { errnoCode } from "../../../lib/error-guards.js";
 import { cardFields, parseCardText } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { QuestionSchema, type QuestionFields } from "../../../schemas/question.js";
@@ -125,17 +126,19 @@ export const statusRouter = router({
       // Security: ensure we stay within boxRoot
       const resolved = path.resolve(targetDir);
       if (!resolved.startsWith(path.resolve(ctx.boxRoot))) {
-        return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
+        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+        return { path: relPath, ...empty };
       }
 
       let entries: Array<{ name: string; isDirectory: () => boolean }>;
       try {
         entries = await fs.readdir(resolved, { withFileTypes: true });
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`browse: cannot read directory ${resolved}, returning empty listing:`, e);
         }
-        return { path: relPath, dirs: [] as BrowseDir[], cards: [] as BrowseCard[], files: [] as BrowseFile[] };
+        const empty: { dirs: BrowseDir[]; cards: BrowseCard[]; files: BrowseFile[] } = { dirs: [], cards: [], files: [] };
+        return { path: relPath, ...empty };
       }
 
       const dirs: BrowseDir[] = [];
@@ -168,7 +171,7 @@ export const statusRouter = router({
             fileCount = subEntries.filter((f) => typeof f === "string" && f.endsWith(".card")).length;
           } catch (e) {
             // Can't read subdirectory — leave fileCount at 0 rather than failing the whole listing.
-            if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+            if (errnoCode(e) !== "ENOENT") {
               console.warn(`browse: cannot count cards in ${dirFullPath}:`, e);
             }
           }
@@ -193,8 +196,10 @@ export const statusRouter = router({
             cards.push({ relativePath, name: parsed.name, type: parsed.type, hasAttachments });
             continue;
           }
-          const str = (key: string): string | undefined =>
-            typeof fm[key] === "string" ? (fm[key] as string) : undefined;
+          const str = (key: string): string | undefined => {
+            const value = fm[key];
+            return typeof value === "string" ? value : undefined;
+          };
           cards.push({
             relativePath,
             name: parsed.name,

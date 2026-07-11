@@ -9,6 +9,7 @@
 import { body, cardSchema, renderFrontmatterBlock, type InferCardFields } from "../cards/index.js";
 import { z } from "zod";
 import { type FileLoader, titleFromFilename, truncateTitle } from "../core/file-summary.js";
+import { isRecord } from "../lib/is-record.js";
 
 export const MemoStatus = z.enum(["new", "processing", "processed"]);
 export type MemoStatusType = z.infer<typeof MemoStatus>;
@@ -87,23 +88,27 @@ export interface MemoAttrs {
  */
 export const memoLoader: FileLoader<MemoAttrs> = (raw) => {
   const fallback = titleFromFilename(raw.path);
-  const fields = (raw as { fields?: Partial<MemoFields> }).fields;
+  const fields = raw.fields;
   if (fields === undefined) {
     return { path: raw.path, type: "memo", title: fallback, attrs: { status: "new" } };
   }
   let title = "";
-  if (typeof fields.body === "string" && fields.body.trim() !== "") {
-    title = fields.body.trim();
-  } else if (fields.transcription?.text !== undefined && fields.transcription.text.trim() !== "") {
-    title = fields.transcription.text.trim();
+  const bodyText = fields["body"];
+  const transcription = fields["transcription"];
+  const transcriptionText = isRecord(transcription) ? transcription["text"] : undefined;
+  if (typeof bodyText === "string" && bodyText.trim() !== "") {
+    title = bodyText.trim();
+  } else if (typeof transcriptionText === "string" && transcriptionText.trim() !== "") {
+    title = transcriptionText.trim();
   }
   if (title === "") title = fallback;
   title = truncateTitle(title, 80);
+  const status = MemoStatus.safeParse(fields["status"]);
   return {
     path: raw.path,
     type: "memo",
     title,
-    attrs: { status: fields.status ?? "new" },
+    attrs: { status: status.success ? status.data : "new" },
   };
 };
 

@@ -16,6 +16,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const SECRET_RELATIVE_PATH = "config/connectors/openai.secret.json";
 
@@ -41,10 +42,10 @@ export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | 
   try {
     content = await fs.readFile(secretPath, "utf8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") {
+    if (errnoCode(e) === "ENOENT") {
       return process.env["CALLBACK_OPENAI_API_KEY"] ?? null;
     }
-    const readFailedDetail = `${SECRET_RELATIVE_PATH} could not be read: ${(e as Error).message}`;
+    const readFailedDetail = `${SECRET_RELATIVE_PATH} could not be read: ${errorMessage(e)}`;
     throw new EmbeddingsKeyError(readFailedDetail, { cause: e });
   }
 
@@ -52,7 +53,7 @@ export async function getOpenAiEmbeddingsKey(boxRoot: string): Promise<string | 
   try {
     parsed = JSON.parse(content);
   } catch (e) {
-    const parseFailedDetail = `${SECRET_RELATIVE_PATH} is not valid JSON: ${(e as Error).message}`;
+    const parseFailedDetail = `${SECRET_RELATIVE_PATH} is not valid JSON: ${errorMessage(e)}`;
     throw new EmbeddingsKeyError(parseFailedDetail, { cause: e });
   }
 

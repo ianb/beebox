@@ -39,6 +39,7 @@ import { loadViewCards } from "../../core/views/cards.js";
 import { typecheckViews } from "./view-typecheck.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import type { ViewProps } from "../../core/views/types.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** The view's slug doesn't resolve to a `views/<slug>.tsx` file. */
 class ViewNotFoundError extends Error {
@@ -164,6 +165,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     // throw does — both are the same class of authoring bug.
     let html: string;
     try {
+      // eslint-disable-next-line no-restricted-syntax -- dynamic import of a runtime-computed module URL yields an untyped namespace; cast to the known compiled-view contract (validated by the render call that follows)
       const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
       const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
       // Wrap in the node view host so the card widgets (<CardLink>/<CardRef>)
@@ -305,7 +307,7 @@ const viewTypecheckCommand = new Command("typecheck")
       }
       process.exitCode = ok ? 0 : 1;
     } catch (error) {
-      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.stderr.write(`Error: ${errorMessage(error)}\n`);
       process.exitCode = 1;
     }
   });
@@ -341,7 +343,7 @@ const viewCheckCommand = new Command("check")
       }
       process.exitCode = ok ? 0 : 1;
     } catch (error) {
-      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.stderr.write(`Error: ${errorMessage(error)}\n`);
       process.exitCode = 1;
     }
   });
@@ -368,7 +370,7 @@ const viewTestCommand = new Command("test")
         });
         process.exitCode = code;
       } catch (error) {
-        process.stderr.write(`Error: ${(error as Error).message}\n`);
+        process.stderr.write(`Error: ${errorMessage(error)}\n`);
         process.exitCode = 1;
       } finally {
         // Tear down esbuild's service child deterministically — nothing

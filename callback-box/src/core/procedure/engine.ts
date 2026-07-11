@@ -20,6 +20,7 @@ import { loadProcedureDefinition } from "./engine-parse.js";
 import { buildInitialRunCard, updateRunCardStatus } from "./engine-run-card.js";
 import { runSteps, finalizeRun } from "./engine-orchestrate.js";
 import { resolveRunDir } from "./engine-query.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export type { AgentFactory } from "./engine-types.js";
 export type { ProcedureOptions, ProcedureError } from "./engine-types.js";
@@ -210,7 +211,7 @@ export async function resumeProcedure(params: {
   try {
     run = parseProcedureRun(await fs.readFile(runCardPath, "utf-8"));
   } catch (e) {
-    return err({ cause: "parse", message: `Could not read run card: ${(e as Error).message}` });
+    return err({ cause: "parse", message: `Could not read run card: ${errorMessage(e)}` });
   }
   if (run === null) {
     return err({ cause: "parse", message: `Could not parse run card: ${runCardPath}` });

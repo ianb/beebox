@@ -185,6 +185,7 @@ async function prefetchData(opts: PrefetchOptions): Promise<{ queryClient: Query
     boxRoot,
     boxSlug: slug,
     eventBus: { emit: () => 0, emitTransient: () => {}, readSince: () => [], subscribe: () => ({ unsubscribe: () => {} }), prune: () => 0, close: () => {} },
+    // eslint-disable-next-line no-restricted-syntax -- server-side prefetch stub: `cb render` invokes only read procedures that don't touch `ctx.services`, so an empty object stands in for the full Services interface (a real registry is unavailable and unneeded on this trusted local-render path).
     services: {} as Services,
     // Server-side prefetch is a trusted local render (invoked by `cb render`,
     // not an untrusted HTTP client), so it retains the full access it had when

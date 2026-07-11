@@ -15,6 +15,9 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { randomUUID } from "node:crypto";
+import { z } from "zod";
+import { errnoCode } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 const SESSIONS_FILE = ".callback-box/chat-sessions.json";
 
@@ -23,12 +26,14 @@ const MAX_MESSAGES = 50;
 /** Max age in ms before rotating (24 hours) */
 const MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
-export interface ChatSessionRecord {
-  sessionId: string;
-  createdAt: string;
-  lastUsedAt: string;
-  messageCount: number;
-}
+const ChatSessionRecordSchema = z.object({
+  sessionId: z.string(),
+  createdAt: z.string(),
+  lastUsedAt: z.string(),
+  messageCount: z.number(),
+});
+
+export type ChatSessionRecord = z.infer<typeof ChatSessionRecordSchema>;
 
 type SessionStore = Record<string, ChatSessionRecord>;
 
@@ -36,9 +41,21 @@ export async function loadChatSessions(boxRoot: string): Promise<SessionStore> {
   const filePath = path.join(boxRoot, SESSIONS_FILE);
   try {
     const data = await fs.readFile(filePath, "utf-8");
-    return JSON.parse(data) as SessionStore;
+    const parsedRaw: unknown = JSON.parse(data);
+    const store: SessionStore = {};
+    if (isRecord(parsedRaw)) {
+      for (const [key, value] of Object.entries(parsedRaw)) {
+        const result = ChatSessionRecordSchema.safeParse(value);
+        if (result.success) {
+          store[key] = result.data;
+        } else {
+          console.warn(`Dropping malformed chat session record for thread ${key}:`, result.error.message);
+        }
+      }
+    }
+    return store;
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not load chat sessions from ${filePath}, starting empty:`, e);
     }
     return {};

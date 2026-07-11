@@ -264,7 +264,8 @@ export function classifyRings(docs: Map<string, DocInfo>): Map<string, number> {
   const always = new Set<string>([ROOT_CLAUDE]);
   const queue = [ROOT_CLAUDE];
   while (queue.length > 0) {
-    const cur = queue.shift() as string;
+    const cur = queue.shift();
+    if (cur === undefined) continue;
     const doc = docs.get(cur);
     if (!doc) continue;
     for (const ref of doc.outgoing) {

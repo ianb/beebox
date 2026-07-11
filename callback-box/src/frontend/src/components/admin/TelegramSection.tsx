@@ -5,6 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { trpcClient } from "../../lib/trpc";
+import { errorMessage } from "../../lib/error-guards";
 import {
   TelegramConnectedView,
   TelegramSetupView,
@@ -26,7 +27,7 @@ export function TelegramSection() {
       setError(null);
       return data;
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorMessage(err));
       return null;
     }
   }, []);
@@ -49,7 +50,7 @@ export function TelegramSection() {
       setBotToken("");
       await fetchStatus();
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorMessage(err));
     } finally {
       setConnecting(false);
     }
@@ -63,7 +64,7 @@ export function TelegramSection() {
       await trpcClient.admin.telegramDisconnect.mutate();
       await fetchStatus();
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorMessage(err));
     } finally {
       setDisconnecting(false);
     }

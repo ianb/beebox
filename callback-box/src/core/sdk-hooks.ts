@@ -9,8 +9,6 @@
 import type {
   HookCallbackMatcher,
   HookJSONOutput,
-  PostToolUseHookInput,
-  PreToolUseHookInput,
 } from "@anthropic-ai/claude-agent-sdk";
 import { formatLintResults } from "../cards/index.js";
 import { lint as markdownlint } from "markdownlint/promise";
@@ -19,6 +17,7 @@ import { lintCardsDispatch } from "./card-lint.js";
 import { buildLoadContext } from "./load-context.js";
 import { isViewFile, findBoxRoot } from "../lib/paths.js";
 import { lintViewFile } from "../webapp/views/compiler.js";
+import { isRecord } from "./card-io.js";
 
 function markdownConfig(boxRoot: string): Record<string, unknown> {
   return { default: false, MD009: true, MD037: true, MD038: true, MD047: true, ...linkRuleConfig(boxRoot) };
@@ -26,8 +25,8 @@ function markdownConfig(boxRoot: string): Record<string, unknown> {
 
 /** Best-effort extraction of `file_path` from a Write/Edit tool input. */
 function extractFilePath(toolInput: unknown): string | null {
-  if (toolInput === null || typeof toolInput !== "object") return null;
-  const fp = (toolInput as { file_path?: unknown }).file_path;
+  if (!isRecord(toolInput)) return null;
+  const fp = toolInput.file_path;
   return typeof fp === "string" ? fp : null;
 }
 
@@ -49,7 +48,7 @@ export function cardValidatorHook(): HookCallbackMatcher {
     hooks: [
       async (input): Promise<HookJSONOutput> => {
         if (input.hook_event_name !== "PostToolUse") return {};
-        const post = input as PostToolUseHookInput;
+        const post = input;
         const filePath = extractFilePath(post.tool_input);
         if (filePath === null) return {};
 
@@ -107,8 +106,8 @@ export function cardValidatorHook(): HookCallbackMatcher {
 
 /** Best-effort extraction of the shell `command` from a Bash tool input. */
 function extractCommand(toolInput: unknown): string | null {
-  if (toolInput === null || typeof toolInput !== "object") return null;
-  const cmd = (toolInput as { command?: unknown }).command;
+  if (!isRecord(toolInput)) return null;
+  const cmd = toolInput.command;
   return typeof cmd === "string" ? cmd : null;
 }
 
@@ -141,7 +140,7 @@ export function gitMvNudgeHook(): HookCallbackMatcher {
     hooks: [
       async (input): Promise<HookJSONOutput> => {
         if (input.hook_event_name !== "PreToolUse") return {};
-        const pre = input as PreToolUseHookInput;
+        const pre = input;
         const command = extractCommand(pre.tool_input);
         if (command === null || !isGitMvOnBoxContent(command)) return {};
         return {

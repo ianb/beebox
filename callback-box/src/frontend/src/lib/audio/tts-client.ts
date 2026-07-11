@@ -390,6 +390,7 @@ class TTSClient {
       audioData.set(chunk, offset);
       offset += chunk.length;
     }
+    // eslint-disable-next-line no-restricted-syntax -- Uint8Array.buffer is typed ArrayBufferLike, but this one was freshly allocated via `new Uint8Array(totalLength)` so it is always a plain ArrayBuffer.
     return audioData.buffer as ArrayBuffer;
   }
 }

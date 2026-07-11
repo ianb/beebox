@@ -7,6 +7,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Handler for dismiss command
@@ -27,7 +28,7 @@ async function handleDismissCommand(params: { questionPath: string }): Promise<v
       process.exit(1);
     }
   } catch (error) {
-    console.error(`Error: ${(error as Error).message}`);
+    console.error(`Error: ${errorMessage(error)}`);
     process.exit(1);
   }
 }

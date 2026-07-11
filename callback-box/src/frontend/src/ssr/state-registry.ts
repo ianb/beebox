@@ -73,6 +73,7 @@ export function buildSnapshot(opts: BuildSnapshotOptions): unknown {
   }
 
   const context = { ...stateInfo.context, ...contextOverrides };
+  // eslint-disable-next-line no-restricted-syntax -- resolveState's snapshot param is a machine-specific internal XState type unavailable here; this SSR-only helper builds the minimal { value, context } it needs and can't name the full type.
   return info.machine.resolveState({ value: stateValue, context } as never);
 }
 

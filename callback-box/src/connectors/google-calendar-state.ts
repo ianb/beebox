@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { HTTPError } from "ky";
 import { type GoogleCalendarService } from "../services/google-calendar.js";
 import { loadTransientState, updateTransientState } from "./transient-state.js";
@@ -53,7 +54,7 @@ export async function loadCalendarState(boxRoot: string): Promise<CalendarState>
     const content = await fs.readFile(calendarStatePath(boxRoot), "utf-8");
     persistent = JSON.parse(content);
   } catch (err: unknown) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) {
+    if (errnoCode(err) !== "ENOENT" && !(err instanceof SyntaxError)) {
       throw err;
     }
     persistent = { syncTokens: {}, eventFiles: {} };

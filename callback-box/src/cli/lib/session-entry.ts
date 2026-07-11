@@ -7,6 +7,7 @@
  */
 
 import { type SessionContentBlock, transformContent } from "./session-content.js";
+import { isRecord } from "../../lib/is-record.js";
 import { isCompactionSummary, isPlumbingMessage } from "./session-text.js";
 
 /**
@@ -114,10 +115,10 @@ export function buildEntry(
   if (raw.type === "system" && raw.subtype === "compact_boundary") return null;
   if (raw.type !== "user" && raw.type !== "assistant") return null;
 
-  const message = raw.message as Record<string, unknown> | undefined;
+  const message = isRecord(raw["message"]) ? raw["message"] : undefined;
   if (!message) return null;
 
-  const content = transformContent(message.content);
+  const content = transformContent(message["content"]);
 
   // Skip SDK meta prompts ("Continue from where you left off.") — wakeup plumbing.
   if (raw.isMeta === true) return null;

@@ -192,8 +192,7 @@ export function loadEnv<T extends z.ZodType>(schema: T, source?: NodeJS.ProcessE
   // Only pass keys the schema knows about, with "" treated as absent. This
   // keeps the parsed object narrow (no stray process.env keys) and honors the
   // empty-string-as-unset convention.
-  const shape = (schema as unknown as { shape?: Record<string, unknown> }).shape;
-  const known = shape ? Object.keys(shape) : Object.keys(src);
+  const known = schema instanceof z.ZodObject ? Object.keys(schema.shape) : Object.keys(src);
   const cleaned: Record<string, string> = {};
   for (const key of known) {
     const raw = src[key];

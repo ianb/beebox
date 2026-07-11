@@ -7,13 +7,16 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
+
+const mistralSecretSchema = z.object({ apiKey: z.string().optional() });
 
 export async function getMistralApiKey(boxRoot?: string): Promise<string | null> {
   if (boxRoot) {
     try {
       const secretPath = path.join(boxRoot, "config/connectors/mistral.secret.json");
       const content = await fs.readFile(secretPath, "utf-8");
-      const parsed = JSON.parse(content) as { apiKey?: string };
+      const parsed = mistralSecretSchema.parse(JSON.parse(content));
       if (parsed.apiKey) {
         return parsed.apiKey;
       }

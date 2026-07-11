@@ -17,9 +17,11 @@
 import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { isRecord } from "../../lib/is-record.js";
 import { parse as parseYaml } from "yaml";
 import { extensionToMimetype } from "../../lib/mimetype.js";
 import { applyRawFileServingHeaders } from "../serving-security.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".svg"]);
 
@@ -47,14 +49,8 @@ async function resolveImageCard(cardAbs: string): Promise<string | null> {
       } catch (_e) {
         fields = null;
       }
-      if (
-        typeof fields === "object" &&
-        fields !== null &&
-        "filename" in fields &&
-        typeof (fields as Record<string, unknown>)["filename"] === "object"
-      ) {
-        const filename = (fields as Record<string, unknown>)["filename"] as Record<string, unknown>;
-        const r = filename["ref"];
+      if (isRecord(fields) && isRecord(fields["filename"])) {
+        const r = fields["filename"]["ref"];
         if (typeof r === "string" && r.startsWith("attach/")) ref = r;
       }
     }
@@ -153,7 +149,7 @@ export function registerApiImageRoutes({
           { ext, filename }
         ).send(content);
       } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.warn(`[api-image] could not serve ${imageAbs}:`, e);
         }
         return reply.status(404).send({ error: "Not found" });

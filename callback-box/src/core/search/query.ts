@@ -4,7 +4,7 @@
  * filtering, and bounded results with a narrowing hint.
  */
 
-import { search } from "@orama/orama";
+import { search, type TypedDocument } from "@orama/orama";
 import { getSearchableTypes } from "../../schemas/registry.js";
 import { invariant } from "../../lib/invariant.js";
 import { getOpenAiEmbeddingsKey } from "./embeddings-key.js";
@@ -14,6 +14,7 @@ import {
   type EmbeddingsService,
 } from "../../services/openai-embeddings.js";
 import { openSearchIndex, type OpenSearchIndexOptions } from "./refresh.js";
+import type { SearchIndex } from "./search-store.js";
 import { generateExcerpt } from "./excerpt.js";
 import { MARKDOWN_KIND, type SearchDoc } from "./extract.js";
 
@@ -297,9 +298,25 @@ function isEmbeddingsWarning(warning: string): boolean {
 }
 
 /**
- * Orama hands documents back untyped; every doc in this index was inserted
- * as a SearchDoc (extract.ts), so this is the one place that re-asserts it.
+ * Orama types a hit's document from the index schema (`TypedDocument`), which
+ * widens the `enum`-typed `kind` field to `string | number` (Orama's enum
+ * schema type covers both). Every doc in this index was inserted as a
+ * SearchDoc (extract.ts) with a string `kind` and a string `id` (Orama's own
+ * id type is `string | number`), so the `typeof` guards below are real
+ * narrowing, not casts, and the rest of the fields already line up.
  */
-function hitDoc(hit: { document: unknown }): SearchDoc {
-  return hit.document as SearchDoc;
+function hitDoc(hit: { document: TypedDocument<SearchIndex> }): SearchDoc {
+  const doc = hit.document;
+  return {
+    id: typeof doc.id === "string" ? doc.id : String(doc.id),
+    path: doc.path,
+    fragment: doc.fragment,
+    kind: typeof doc.kind === "string" ? doc.kind : String(doc.kind),
+    title: doc.title,
+    contains: doc.contains,
+    content: doc.content,
+    created: doc.created,
+    contentHash: doc.contentHash,
+    embedding: doc.embedding,
+  };
 }

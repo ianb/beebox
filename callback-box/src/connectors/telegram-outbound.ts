@@ -5,6 +5,7 @@
  */
 
 import * as path from "node:path";
+import { errorMessage } from "../lib/error-guards.js";
 import { glob } from "glob";
 import type { ChatThreadFields } from "../schemas/chat-thread.js";
 import { stageAndCommitPaths } from "../lib/git.js";
@@ -45,7 +46,7 @@ export async function sendOutbound(ctx: OutboundContext): Promise<string[]> {
       const sent = await sendThreadOutbound(ctx, { absPath, threadRelPath });
       if (sent) pushed.push(threadRelPath);
     } catch (err) {
-      console.error(`Failed to send outbound for ${threadRelPath}: ${(err as Error).message}`);
+      console.error(`Failed to send outbound for ${threadRelPath}: ${errorMessage(err)}`);
     }
   }
 
@@ -76,7 +77,7 @@ async function sendThreadOutbound(
     // msg.text is declared required by the ChatThreadMessage schema, but
     // findUnsentAgentMessages reads the thread file via readThreadFields's raw
     // (unvalidated) YAML parse — a hand-edited or corrupted entry can omit it.
-    const text = (msg.text as string | undefined)?.trim();
+    const text = typeof msg.text === "string" ? msg.text.trim() : undefined;
     if (!text) continue;
 
     const result = await tg.sendMessage(chatId, text);

@@ -17,6 +17,17 @@ import type {
 } from "./claude-chat-types.js";
 
 /**
+ * The fake emits only the SDK-message fields `ChatSession`'s handler actually
+ * reads; `SDKMessage` is the SDK's large discriminated union, so a full literal
+ * would be test noise. This centralizes the single unavoidable cast for every
+ * `emit*` helper rather than repeating it per call site.
+ */
+function fakeSdkMessage(fields: Record<string, unknown>): SDKMessage {
+  // eslint-disable-next-line no-restricted-syntax -- test-only: minimal SDKMessage carrying just the fields the chat handler consumes (see fn comment)
+  return fields as unknown as SDKMessage;
+}
+
+/**
  * A fake `ChatBackendRun` driven from test code. Tests push SDK messages
  * onto the stream via `emit*` helpers and inspect `sent` for whatever the
  * caller pushed in via `send()`.
@@ -78,23 +89,23 @@ export function createFakeChatBackend(): FakeChatBackend {
           messageQueue.push(msg);
         },
         emitSessionInit(sessionId: string): void {
-          run.emitMessage({
+          run.emitMessage(fakeSdkMessage({
             type: "system",
             subtype: "init",
             session_id: sessionId,
             // The remaining fields aren't used by ChatSession's handler.
-          } as unknown as SDKMessage);
+          }));
         },
         emitAssistantText(text: string): void {
-          run.emitMessage({
+          run.emitMessage(fakeSdkMessage({
             type: "assistant",
             message: { role: "assistant", content: [{ type: "text", text }] },
             session_id: opts.resumeSessionId ?? "",
             parent_tool_use_id: null,
-          } as unknown as SDKMessage);
+          }));
         },
         emitResult(resultOpts?: { isError?: boolean; result?: string }): void {
-          run.emitMessage({
+          run.emitMessage(fakeSdkMessage({
             type: "result",
             subtype: resultOpts?.isError ? "error_during_execution" : "success",
             is_error: resultOpts?.isError ?? false,
@@ -104,11 +115,11 @@ export function createFakeChatBackend(): FakeChatBackend {
             num_turns: 1,
             stop_reason: "end_turn",
             total_cost_usd: 0,
-            usage: {} as unknown,
+            usage: {},
             modelUsage: {},
             permission_denials: [],
             session_id: opts.resumeSessionId ?? "",
-          } as unknown as SDKMessage);
+          }));
         },
       };
 

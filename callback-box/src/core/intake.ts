@@ -26,6 +26,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Dirent } from "node:fs";
 import { getBoxDir, isCardFile } from "../lib/paths.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 /**
  * Result of applying one intake step to one file.
@@ -109,8 +110,7 @@ async function readDir(dir: string): Promise<Dirent[]> {
   try {
     return await fs.readdir(dir, { withFileTypes: true });
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw new DirReadError(e, dir);
   }
 }

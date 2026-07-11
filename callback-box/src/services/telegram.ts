@@ -71,6 +71,7 @@ export function createTelegramService(botToken: string): TelegramService {
       return { message_id: result.message_id };
     },
     async setWebhook(url, options) {
+      // eslint-disable-next-line no-restricted-syntax -- outbound adapter: our narrow options ({secret_token?, allowed_updates?: string[]}) → grammy's richer setWebhook param type
       await bot.api.setWebhook(url, options as Parameters<typeof bot.api.setWebhook>[1]);
     },
     async deleteWebhook(options) {
@@ -92,6 +93,7 @@ export function createTelegramService(botToken: string): TelegramService {
         service: "telegram",
         operation: "getUpdates",
       });
+      // eslint-disable-next-line no-restricted-syntax -- validate-and-passthrough: validateResponse above proved the shape; narrows grammy's richer Update[] to our consumed subset (see connector-response.ts)
       return updates as TelegramUpdate[];
     },
   };

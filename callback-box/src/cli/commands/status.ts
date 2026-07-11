@@ -10,6 +10,7 @@ import { getBoxShape, findLegacySchemaFiles, describeLegacySchemaFiles } from ".
 import { loadBoxSchemas } from "../../schemas/registry.js";
 import { listSchemaLoadFailures } from "../../schemas/schema-load-status.js";
 import { getEngineVersionReport } from "../../core/engine-version.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const statusCommand = new Command("status")
   .description("Show current state summary")
@@ -119,7 +120,7 @@ export const statusCommand = new Command("status")
         }
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

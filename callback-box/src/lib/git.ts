@@ -20,6 +20,7 @@ import {
   LOG_FORMAT,
 } from "./git-internal.js";
 import { sleep } from "./sleep.js";
+import { errorMessage } from "./error-guards.js";
 import type { GitLogFormat } from "./git-internal.js";
 import { parseTrailers } from "./git-trailers.js";
 
@@ -29,10 +30,7 @@ export {
   FEEDBACK_TRAILER_KEYS,
 } from "./git-trailers.js";
 export { isNothingToCommitError } from "./git-internal.js";
-export {
-  getLogPaginated,
-  getTrailerFacets,
-} from "./git-log.js";
+export { getLogPaginated, getTrailerFacets } from "./git-log.js";
 export type {
   FileStat,
   GitLogEntryExtended,
@@ -413,7 +411,7 @@ export async function pushToRemote(boxRoot: string): Promise<PushResult> {
     await git.push();
     return { skipped: false, commitsPushed: status.ahead };
   } catch (err) {
-    return { skipped: false, commitsPushed: 0, error: (err as Error).message };
+    return { skipped: false, commitsPushed: 0, error: errorMessage(err) };
   }
 }
 

@@ -28,14 +28,17 @@ export const chatControlProcedures = {
     const persistedModel = loadPersistedChatModel(ctx.boxRoot);
     const sessionId = input.session;
     if (!sessionId) {
-      return { sessionId: null as string | null, running: false, busy: false, model: persistedModel };
+      const noSession: string | null = null;
+      return { sessionId: noSession, running: false, busy: false, model: persistedModel };
     }
     const target = registry.get(sessionId);
     if (!target) {
-      return { sessionId: sessionId as string | null, running: false, busy: false, model: persistedModel };
+      const knownSession: string | null = sessionId;
+      return { sessionId: knownSession, running: false, busy: false, model: persistedModel };
     }
+    const activeSession: string | null = target.getSessionId();
     return {
-      sessionId: target.getSessionId() as string | null,
+      sessionId: activeSession,
       running: target.isRunning(),
       busy: target.isBusy(),
       model: target.getCurrentModel(),

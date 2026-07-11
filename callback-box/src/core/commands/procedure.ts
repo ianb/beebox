@@ -4,7 +4,8 @@
  * Registers procedure-related commands with the command runner framework.
  */
 
-import { registerCommand, type CommandResult } from "../command-runner.js";
+import { z } from "zod";
+import { registerCommand, parseCommandArgs, type CommandResult } from "../command-runner.js";
 import { startProcedure, resumeProcedure } from "../procedure/engine.js";
 import { listProcedures, procedureStatus } from "../procedure/engine-query.js";
 import { gcProcedureRuns } from "../procedure/gc.js";
@@ -61,23 +62,31 @@ registerCommand({
     },
   ],
   execute: async (ctx, args) => {
-    const name = args["name"] as string;
+    const { name, dryRun, force, step, directive } = parseCommandArgs(args, procedureRunArgsSchema);
     const options: ProcedureOptions = {};
-    if (args["dryRun"]) {
+    if (dryRun) {
       options.dryRun = true;
     }
-    if (args["force"]) {
+    if (force) {
       options.force = true;
     }
-    if (args["step"]) {
-      options.step = args["step"] as string;
+    if (step) {
+      options.step = step;
     }
-    if (args["directive"]) {
-      options.directive = args["directive"] as string;
+    if (directive) {
+      options.directive = directive;
     }
 
     return toCommandResult(await startProcedure({ ctx, procedureNameOrPath: name, options }));
   },
+});
+
+const procedureRunArgsSchema = z.object({
+  name: z.string(),
+  dryRun: z.boolean().optional(),
+  force: z.boolean().optional(),
+  step: z.string().optional(),
+  directive: z.string().optional(),
 });
 
 registerCommand({
@@ -98,13 +107,18 @@ registerCommand({
     },
   ],
   execute: async (ctx, args) => {
+    const { runDir, directive } = parseCommandArgs(args, procedureResumeArgsSchema);
     const options: ProcedureOptions = {};
-    if (args["directive"]) {
-      options.directive = args["directive"] as string;
+    if (directive) {
+      options.directive = directive;
     }
-    const runDir = args["runDir"] as string | undefined;
     return toCommandResult(await resumeProcedure({ ctx, options, ...(runDir && { runDir }) }));
   },
+});
+
+const procedureResumeArgsSchema = z.object({
+  runDir: z.string().optional(),
+  directive: z.string().optional(),
 });
 
 registerCommand({
@@ -137,7 +151,11 @@ registerCommand({
     },
   ],
   execute: async (ctx, args) => {
-    const runDir = args["runDir"] as string | undefined;
+    const { runDir } = parseCommandArgs(args, procedureStatusArgsSchema);
     return toCommandResult(await procedureStatus(ctx, runDir));
   },
+});
+
+const procedureStatusArgsSchema = z.object({
+  runDir: z.string().optional(),
 });

@@ -6,6 +6,7 @@ import { Command } from "commander";
 import chalk from "chalk";
 import { listScenarios, getScenariosDir } from "../../scenario/loader.js";
 import { runScenario } from "../../scenario/runner.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const listCommand = new Command("list")
   .description("List available scenarios")
@@ -36,7 +37,7 @@ const runCommand = new Command("run")
         process.exit(1);
       }
     } catch (error) {
-      console.error(chalk.red(`Error: ${(error as Error).message}`));
+      console.error(chalk.red(`Error: ${errorMessage(error)}`));
       process.exit(1);
     }
   });

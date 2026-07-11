@@ -10,6 +10,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { parseFrontmatterObject } from "../cards/index.js";
 import { getBoxTimeISO } from "../lib/time.js";
 
@@ -45,7 +46,7 @@ export async function findPendingJobCard(options: {
   try {
     entries = await fs.readdir(jobsDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`findPendingJobCard: could not read ${jobsDir}, assuming no existing job:`, e);
     }
     return null;
@@ -58,7 +59,7 @@ export async function findPendingJobCard(options: {
     try {
       content = await fs.readFile(filePath, "utf-8");
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`findPendingJobCard: could not read ${filePath}, skipping:`, e);
       }
       continue;

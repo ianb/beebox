@@ -29,7 +29,9 @@ export function RecipeView({ data, onNavigate }: RendererProps) {
   const title = typeof frontmatter["title"] === "string" ? frontmatter["title"] : "Untitled";
   const description = typeof frontmatter["description"] === "string" ? frontmatter["description"] : undefined;
   const source = typeof frontmatter["source"] === "string" ? frontmatter["source"] : undefined;
-  const tags = Array.isArray(frontmatter["tags"]) ? frontmatter["tags"] as string[] : [];
+  const tags = Array.isArray(frontmatter["tags"])
+    ? frontmatter["tags"].filter((tag): tag is string => typeof tag === "string")
+    : [];
   const body = data.body ?? "";
 
   return (

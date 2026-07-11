@@ -178,7 +178,7 @@ const source: Schema = {
     // uses). React reserves `ref` as a special prop on components, so we
     // rename to `sourceRef` in the renderable tree — the React component
     // only ever sees the non-reserved name.
-    const { ref, ...rest } = node.transformAttributes(config) as { ref?: string };
+    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
     const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
     const children = node.transformChildren(config);
     return new Tag(node.inline ? "SourceInline" : "SourceBlock", renamed, children);
@@ -251,7 +251,7 @@ const substitution: Schema = {
   transform(node, config) {
     // `for` is also a reserved-ish prop in some React contexts (label's
     // `htmlFor`); rename to `forIngredient` to keep the React side clean.
-    const { for: forAttr, ...rest } = node.transformAttributes(config) as { for?: string };
+    const { for: forAttr, ...rest }: { for?: string; [key: string]: unknown } = node.transformAttributes(config);
     const renamed = forAttr === undefined ? rest : { ...rest, forIngredient: forAttr };
     return new Tag("Substitution", renamed, node.transformChildren(config));
   },
@@ -263,7 +263,7 @@ const subrecipe: Schema = {
   },
   transform(node, config) {
     // Same `ref` → `sourceRef` rename as `source` / `key-person`.
-    const { ref, ...rest } = node.transformAttributes(config) as { ref?: string };
+    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
     const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
     return new Tag("Subrecipe", renamed, node.transformChildren(config));
   },
@@ -307,7 +307,7 @@ const captureImage: Schema = {
   },
   transform(node, config) {
     // `ref` → `sourceRef` rename (React reserves `ref`), as with `source`.
-    const { ref, ...rest } = node.transformAttributes(config) as { ref?: string };
+    const { ref, ...rest }: { ref?: string; [key: string]: unknown } = node.transformAttributes(config);
     const renamed = ref === undefined ? rest : { ...rest, sourceRef: ref };
     return new Tag("CaptureImage", renamed, []);
   },

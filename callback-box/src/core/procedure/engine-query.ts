@@ -11,6 +11,7 @@ import { ok, okVoid, err, type Result } from "../../lib/result.js";
 import { invariant } from "../../lib/invariant.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ProcedureError } from "./engine-types.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Resolve a run-dir argument to an absolute path. A bare name or relative
@@ -33,7 +34,7 @@ export async function resolveRunDir(
     invariant(latest !== undefined, "sorted has at least one element (checked above)");
     return path.join(runsDir, latest);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read runs directory ${runsDir}:`, e);
     }
     return null;
@@ -62,7 +63,7 @@ export async function listProcedures(ctx: CommandContext): Promise<Result<string
 
     return ok(cards);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedures directory ${procedureDir}:`, e);
     }
     ctx.writeLine(fmt.dim("No config/procedures/ directory."));
@@ -119,7 +120,7 @@ export async function procedureStatus(
   } catch (error) {
     return err({
       cause: "parse",
-      message: `Could not read run card: ${(error as Error).message}`,
+      message: `Could not read run card: ${errorMessage(error)}`,
     });
   }
 }

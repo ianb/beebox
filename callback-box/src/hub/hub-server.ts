@@ -42,6 +42,7 @@ import type http from "node:http";
 import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
+import { isRecord } from "../lib/is-record.js";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
@@ -306,9 +307,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   const proxy = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
   // eslint-disable-next-line max-params -- http-proxy-3's ProxyServer "error" event signature is (err, req, res)
   proxy.on("error", (err: Error, _req, res) => {
-    if ("writeHead" in res && !(res as http.ServerResponse).headersSent) {
-      (res as http.ServerResponse).writeHead(502, { "content-type": "application/json" });
-      (res as http.ServerResponse).end(JSON.stringify({ error: "bad_gateway", message: err.message }));
+    // `res` is `http.ServerResponse | net.Socket` (http-proxy-3 fires this for
+    // both proxied requests and WS upgrades); the `in` guard narrows to the
+    // HTTP-response arm, which alone can send a 502 body.
+    if ("writeHead" in res && !res.headersSent) {
+      res.writeHead(502, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "bad_gateway", message: err.message }));
     } else {
       try {
         res.end();
@@ -333,7 +337,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // "/*" wildcard below regardless of registration order, so this always
   // wins for this exact path.
   app.get("/auth/google-services/callback", async (request, reply) => {
-    const { state } = request.query as { state?: string };
+    const query: unknown = request.query;
+    const state = isRecord(query) && typeof query["state"] === "string" ? query["state"] : undefined;
     const colonIdx = (state ?? "").indexOf(":");
     const boxSlug = colonIdx !== -1 ? (state ?? "").slice(0, colonIdx) : (state ?? "");
     // Routed through the same `resolveEndpoint` helper as every other

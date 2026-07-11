@@ -12,20 +12,27 @@
 
 import * as fs from "node:fs/promises";
 import YAML from "yaml";
+import { z } from "zod";
 import type { ContextStats } from "./context-usage.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
-export interface ContextHistoryEntry {
-  date: string;
-  boxCommit: string;
-  repoCommit: string;
-  initial: number;
-  peak: number;
-  added: number;
-  turns: number;
-}
+const contextHistoryEntrySchema = z.object({
+  date: z.string(),
+  boxCommit: z.string(),
+  repoCommit: z.string(),
+  initial: z.number(),
+  peak: z.number(),
+  added: z.number(),
+  turns: z.number(),
+});
+export type ContextHistoryEntry = z.infer<typeof contextHistoryEntrySchema>;
 
 /** box basename → audit id → entries (oldest first). */
-export type ContextHistory = Record<string, Record<string, ContextHistoryEntry[]>>;
+const contextHistorySchema = z.record(
+  z.string(),
+  z.record(z.string(), z.array(contextHistoryEntrySchema)),
+);
+export type ContextHistory = z.infer<typeof contextHistorySchema>;
 
 export interface RunMeasurement {
   auditId: string;
@@ -73,9 +80,14 @@ const HISTORY_HEADER =
 export async function loadHistory(historyPath: string): Promise<ContextHistory> {
   try {
     const text = await fs.readFile(historyPath, "utf-8");
-    return (YAML.parse(text) as ContextHistory | null) ?? {};
+    // Parse boundary: this is a committed, tool-maintained ledger, so a
+    // present-but-malformed file is a real bug — `.parse()` throws rather
+    // than casting past it. An empty/all-comments file parses to `null`,
+    // which is the normal "no history yet" case (same as ENOENT below).
+    const parsed: unknown = YAML.parse(text);
+    return parsed === null ? {} : contextHistorySchema.parse(parsed);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
     return {};
   }
 }

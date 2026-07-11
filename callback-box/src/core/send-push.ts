@@ -26,6 +26,7 @@ import {
   type StoredPushSubscription,
 } from "../services/push.js";
 import { endpointsForBox, removeEndpoint } from "./push-subscriptions.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 export interface SendPushResult {
   sent: number;
@@ -104,7 +105,7 @@ export async function sendPush(
       }
     } catch (e) {
       failed++;
-      console.warn(`Push send failed for an endpoint in ${boxSlug}:`, (e as Error).message);
+      console.warn(`Push send failed for an endpoint in ${boxSlug}:`, errorMessage(e));
     }
   }
 

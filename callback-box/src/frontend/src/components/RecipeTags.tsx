@@ -81,8 +81,9 @@ function formatFraction(f: Fraction): ReactNode {
 
 function scaleAmount(raw: string, scale: number): ReactNode {
   const range = raw.match(/^(.+?)\s*-\s*(.+)$/);
-  if (range !== null) {
-    return <>{scaleAmount(range[1] as string, scale)}{"–"}{scaleAmount(range[2] as string, scale)}</>;
+  const [, left, right] = range ?? [];
+  if (left !== undefined && right !== undefined) {
+    return <>{scaleAmount(left, scale)}{"–"}{scaleAmount(right, scale)}</>;
   }
   try {
     const f = new Fraction(raw).mul(scale);

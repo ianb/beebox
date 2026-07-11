@@ -6,6 +6,7 @@
  */
 
 import type { z } from "zod";
+import { errorMessage } from "../lib/error-guards.js";
 
 /**
  * Thrown by {@link parseCommandArgs} when a command's args fail validation.
@@ -160,7 +161,7 @@ export async function runCommand(params: RunCommandParams): Promise<CommandResul
   } catch (error) {
     return {
       success: false,
-      error: (error as Error).message,
+      error: errorMessage(error),
     };
   }
 }

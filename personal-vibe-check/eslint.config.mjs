@@ -22,6 +22,38 @@ const baseConfig = baseConfigRaw.map((entry) => {
   return { ...entry, plugins };
 });
 
+// ── The `as`-cast ban ─────────────────────────────────────────────
+// Treat `as` like Rust's `unsafe`: allowed only when guarded by a justifying
+// `eslint-disable-next-line no-restricted-syntax` comment or centralized in one
+// typed helper. Enforced in BOTH `.ts` and `.tsx` (extended from `.tsx`-only on
+// 2026-07-10, after the architectural review burned down the backlog of
+// ~650 casts). Shared here so the main rule block and the react:false `.tsx`
+// override below stay in lockstep instead of drifting.
+//
+//   - `as const` stays legal everywhere (the first `:not(:has(...const))`).
+//   - `as never` is caught by this same selector — a never-typed assertion is
+//     still a `TSAsExpression` with no `const` TypeReference, so it matches. It
+//     only ever "evaded" the rule because it lived in files the ban didn't cover
+//     yet (frontend / `.ts`), not because the selector misses the keyword.
+//   - XState v5 exemption: the canonical
+//       setup({ types: { context: {} as Ctx, events: {} as Ev, ... } })
+//     idiom is the sanctioned way to hand XState the context/event types it
+//     can't infer (14 frontend machine sites). The trailing `:not(...)` exempts
+//     a `TSAsExpression` sitting as a property value inside the `types:` object
+//     of a `setup(...)` call — and ONLY when the cast operand is an empty object
+//     literal (`{} as T`), which every XState type-slot cast is. So a bare
+//     `x as Foo` (even `{} as Ctx`) outside that exact position is still banned,
+//     and a `realValue as Foo` even inside a `setup({ types })` shape is still
+//     banned. This is a syntactic approximation: a `no-restricted-syntax`
+//     selector can't prove `setup` was imported from `xstate`, so a local
+//     function literally named `setup` receiving `{ types: { k: {} as T } }`
+//     would also be exempted — an accepted, negligible gap (the tightest
+//     practical AST match; a deliberate bypass already has `eslint-disable`).
+const AS_BAN_SELECTORS = [
+  { selector: 'TSAsExpression[typeAnnotation.type="TSIndexedAccessType"]', message: 'Type assertions with indexed access types like "as (typeof X)[number]" are not allowed. Use a named type instead.' },
+  { selector: 'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"])):not(CallExpression[callee.name="setup"] > ObjectExpression > Property[key.name="types"] > ObjectExpression > Property > TSAsExpression[expression.type="ObjectExpression"][expression.properties.length=0])', message: 'Type assertions with "as" are not allowed except for "as const" (and the XState `setup({ types: { … : {} as T } })` idiom). If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line no-restricted-syntax` comment explaining why, or centralize it in one typed helper.' },
+];
+
 // ── Enabled rules ──────────────────────────────────────────────────
 // Rules reviewed and accepted. Each has a comment explaining why.
 const enabledRules = {
@@ -291,6 +323,10 @@ const enabledRules = {
       message:
         "Catch clause must bind the error (use catch(e) instead of catch).",
     },
+    // The `as`-cast ban (both `.ts` and `.tsx`; react:true `.tsx` flows through
+    // this block). react:false `.tsx` gets the same selectors via the override
+    // near the bottom of this file.
+    ...AS_BAN_SELECTORS,
   ],
 
   // ── Parameter limits ──────────────────────────────────────────────
@@ -505,8 +541,7 @@ export function vibeCheck(options) {
     { selector: "FunctionDeclaration:has(SwitchStatement):not([returnType])", message: "Functions containing switch statements must have explicit return type annotations." },
     { selector: "ArrowFunctionExpression:has(SwitchStatement):not([returnType])", message: "Arrow functions containing switch statements must have explicit return type annotations." },
     { selector: "FunctionExpression:has(SwitchStatement):not([returnType])", message: "Function expressions containing switch statements must have explicit return type annotations." },
-    { selector: 'TSAsExpression[typeAnnotation.type="TSIndexedAccessType"]', message: 'Type assertions with indexed access types like "as (typeof X)[number]" are not allowed. Use a named type instead.' },
-    { selector: 'TSAsExpression:not(:has(TSTypeReference[typeName.name="const"]))', message: 'Type assertions with "as" are not allowed except for "as const". If a cast is genuinely needed (e.g. at a parse boundary), guard it with an `eslint-disable-next-line` comment explaining why, or centralize it in one typed helper.' },
+    ...AS_BAN_SELECTORS,
     { selector: "PropertyDefinition[value]", message: "Class properties cannot have default values. Initialize properties in the constructor or through methods instead." },
     { selector: "MemberExpression[object.type='MemberExpression'][object.object.name='process'][object.property.name='env']", message: "Direct access to process.env properties is not allowed. Use process.env as a whole object instead (e.g., validate(process.env))." },
     { selector: "ExportNamedDeclaration:not([source]):not(:has(VariableDeclaration)):not(:has(FunctionDeclaration)):not(:has(ClassDeclaration)):not(:has(TSInterfaceDeclaration)):not(:has(TSTypeAliasDeclaration)):not(:has(TSEnumDeclaration))", message: 'Export specifier syntax "export { ... }" is not allowed. Use direct exports instead. And make sure to only use one export per file.' },

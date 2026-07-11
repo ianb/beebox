@@ -13,6 +13,7 @@ import {
   createCliContext,
   createCollectorContext,
 } from "../../core/commands/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 interface SearchCliOptions {
   kind?: string[];
@@ -71,7 +72,7 @@ export const searchCommand = new Command("search")
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

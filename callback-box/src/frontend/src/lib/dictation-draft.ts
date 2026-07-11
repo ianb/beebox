@@ -20,6 +20,7 @@
  */
 
 import type { KeyValueStorage } from "../input/emission-persist";
+import { isRecord } from "./is-record";
 
 const KEY_PREFIX = "cb-chat-draft";
 
@@ -91,11 +92,10 @@ export function parseDraft(raw: string | null): DictationDraft | null {
     console.warn(`[dictation-draft] discarding unparseable draft: ${e instanceof Error ? e.message : String(e)}`);
     return null;
   }
-  if (value === null || typeof value !== "object") return null;
   // Parse boundary: localStorage JSON arrives untyped. Every field is
   // validated below before the typed object is returned.
-  const record = value as Record<string, unknown>;
-  const { text, narration, updatedAt } = record;
+  if (!isRecord(value)) return null;
+  const { text, narration, updatedAt } = value;
   if (typeof text !== "string" || text.trim() === "") return null;
   if (typeof narration !== "boolean") return null;
   if (typeof updatedAt !== "number" || !Number.isFinite(updatedAt)) return null;

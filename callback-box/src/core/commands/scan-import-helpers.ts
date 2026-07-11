@@ -18,6 +18,7 @@ import {
   type BatchUsage,
 } from "./scan-import-gemini.js";
 import { GeminiEmptyResponseError } from "./describe-images-helpers.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export { buildScanPrompt } from "./scan-import-gemini.js";
 export type { ScanPageAnalysis, BatchUsage } from "./scan-import-gemini.js";
@@ -238,7 +239,7 @@ async function handleBatchFailure(
   { batchPaths, err }: { batchPaths: string[]; err: unknown }
 ): Promise<OneBatchOutcome> {
   const { plan, log } = args;
-  const reason = (err as Error).message;
+  const reason = errorMessage(err);
   log(`  Error: ${reason}`);
   const retryable =
     err instanceof GeminiEmptyResponseError &&
@@ -272,7 +273,7 @@ async function retrySingletonWithoutThinking(
     }
     return { analyses: translated, usage: result.usage, failed: 0 };
   } catch (retryErr) {
-    log(`  Still failed: ${(retryErr as Error).message}`);
+    log(`  Still failed: ${errorMessage(retryErr)}`);
     return { analyses: [], usage: null, failed: 1 };
   }
 }

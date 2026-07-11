@@ -8,6 +8,7 @@ import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
 import { invariant } from "../../lib/invariant.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const moveCommand = new Command("mv")
   .description("Move/rename one or more cards and update all references")
@@ -44,7 +45,7 @@ export const moveCommand = new Command("mv")
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

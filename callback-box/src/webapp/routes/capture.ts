@@ -103,9 +103,10 @@ interface RegisterCaptureRoutesOptions {
 type UploadKind = "audio" | "photo" | "file";
 
 const UPLOAD_KINDS: readonly UploadKind[] = ["audio", "photo", "file"];
+const UPLOAD_KIND_SET = new Set<string>(UPLOAD_KINDS);
 
 function isUploadKind(value: string): value is UploadKind {
-  return (UPLOAD_KINDS as readonly string[]).includes(value);
+  return UPLOAD_KIND_SET.has(value);
 }
 
 /** Read the request's file bytes from multipart, falling back to a raw body. */

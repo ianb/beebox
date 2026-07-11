@@ -51,7 +51,7 @@ export function HeaderStrip({ status, connected }: HeaderStripProps) {
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (gitRef.current && !gitRef.current.contains(e.target as Node)) {
+      if (gitRef.current && e.target instanceof Node && !gitRef.current.contains(e.target)) {
         setShowGit(false);
       }
     }

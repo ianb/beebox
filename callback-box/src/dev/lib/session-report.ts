@@ -8,18 +8,28 @@
 
 import * as fs from "node:fs";
 import * as readline from "node:readline";
+import { z } from "zod";
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
 
-interface RawBlock {
-  type: string;
-  text?: string;
-  thinking?: string;
-  name?: string;
-  id?: string;
-  input?: Record<string, unknown>;
-  tool_use_id?: string;
-  content?: unknown;
-}
+const rawBlockSchema = z.object({
+  type: z.string(),
+  text: z.string().optional(),
+  thinking: z.string().optional(),
+  name: z.string().optional(),
+  id: z.string().optional(),
+  input: z.record(z.string(), z.unknown()).optional(),
+  tool_use_id: z.string().optional(),
+  content: z.unknown().optional(),
+});
+type RawBlock = z.infer<typeof rawBlockSchema>;
+
+/** One user/assistant line of a Claude Code session JSONL (fields we read). */
+const sessionLineSchema = z.object({
+  type: z.string().optional(),
+  message: z.object({ content: z.unknown().optional() }).optional(),
+});
+
+const resultTextBlockSchema = z.object({ type: z.literal("text"), text: z.string() });
 
 interface ToolCall {
   toolName: string;
@@ -37,7 +47,7 @@ interface ReportEntry {
 
 interface RawEntry {
   type: string;
-  content: unknown[];
+  content: RawBlock[];
 }
 
 /**
@@ -52,22 +62,29 @@ async function collectRawEntries(logPath: string): Promise<RawEntry[]> {
 
   for await (const line of rl) {
     if (!line.trim()) continue;
-    let raw: Record<string, unknown>;
+    let parsedLine: unknown;
     try {
-      raw = JSON.parse(line);
+      parsedLine = JSON.parse(line);
     } catch (_e) {
       continue;
     }
-    if (raw.type !== "user" && raw.type !== "assistant") continue;
-    const message = raw.message as Record<string, unknown> | undefined;
+    const parsed = sessionLineSchema.safeParse(parsedLine);
+    if (!parsed.success) continue;
+    const { type, message } = parsed.data;
+    if (type !== "user" && type !== "assistant") continue;
     if (!message) continue;
 
     const content = message.content;
-    const blocks: unknown[] = typeof content === "string"
+    const blocks: RawBlock[] = typeof content === "string"
       ? [{ type: "text", text: content }]
-      : Array.isArray(content) ? content : [];
+      : Array.isArray(content)
+        ? content.flatMap((b) => {
+            const block = rawBlockSchema.safeParse(b);
+            return block.success ? [block.data] : [];
+          })
+        : [];
 
-    rawEntries.push({ type: raw.type as string, content: blocks });
+    rawEntries.push({ type, content: blocks });
   }
 
   return rawEntries;
@@ -80,8 +97,7 @@ function buildResultMap(rawEntries: RawEntry[]): Map<string, string> {
   const resultMap = new Map<string, string>();
   for (const entry of rawEntries) {
     if (entry.type !== "user") continue;
-    for (const block of entry.content) {
-      const b = block as RawBlock;
+    for (const b of entry.content) {
       if (b.type === "tool_result" && b.tool_use_id) {
         resultMap.set(b.tool_use_id, extractResultText(b.content));
       }
@@ -114,7 +130,7 @@ function buildAssistantEntry(blocks: RawBlock[], resultMap: Map<string, string>)
       textParts.push(block.text.trim());
     }
     if (block.type === "tool_use" && block.name && block.id) {
-      const input = (block.input || {}) as Record<string, unknown>;
+      const input = block.input || {};
       const output = resultMap.get(block.id) || null;
       toolCalls.push({
         toolName: block.name,
@@ -142,7 +158,7 @@ async function parseForReport(logPath: string): Promise<ReportEntry[]> {
 
   const report: ReportEntry[] = [];
   for (const entry of rawEntries) {
-    const blocks = entry.content as RawBlock[];
+    const blocks = entry.content;
     const reportEntry = entry.type === "user"
       ? buildUserEntry(blocks)
       : buildAssistantEntry(blocks, resultMap);
@@ -158,9 +174,8 @@ function extractResultText(content: unknown): string {
     return content
       .map((c: unknown) => {
         if (typeof c === "string") return c;
-        const obj = c as Record<string, unknown>;
-        if (obj.type === "text" && typeof obj.text === "string") return obj.text;
-        return "";
+        const block = resultTextBlockSchema.safeParse(c);
+        return block.success ? block.data.text : "";
       })
       .filter(Boolean)
       .join("\n");

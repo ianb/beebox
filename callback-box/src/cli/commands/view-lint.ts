@@ -9,6 +9,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { listViews } from "../../webapp/views/compiler.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const viewLintCommand = new Command("lint")
   .description("Flag card-less views — every view must attach to a card type via rendersCardTypes; exit non-zero if any lack it")
@@ -33,7 +34,7 @@ export const viewLintCommand = new Command("lint")
       }
       process.exitCode = ok ? 0 : 1;
     } catch (error) {
-      process.stderr.write(`Error: ${(error as Error).message}\n`);
+      process.stderr.write(`Error: ${errorMessage(error)}\n`);
       process.exitCode = 1;
     }
   });

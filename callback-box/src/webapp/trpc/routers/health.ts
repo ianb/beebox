@@ -16,6 +16,7 @@ import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
 import { getBoxShapeOrLegacyFallback } from "../../../lib/box-shape.js";
+import { isRecord } from "../../../lib/is-record.js";
 import { engineHealthChecks } from "./health-engine.js";
 
 export interface HealthCheck {
@@ -52,12 +53,16 @@ export async function readVersionInfo(): Promise<VersionInfo> {
   const commits: Record<string, CommitInfo> = {};
   try {
     const raw = await fs.readFile(DEPLOY_INFO_PATH, "utf-8");
-    const parsed = JSON.parse(raw) as { deployedAt?: string; commits?: Record<string, CommitInfo | null> };
-    if (typeof parsed.deployedAt === "string") deployedAt = parsed.deployedAt;
-    if (parsed.commits) {
-      for (const [key, value] of Object.entries(parsed.commits)) {
-        if (value && typeof value === "object" && "hash" in value) {
-          commits[key] = value;
+    const parsed: unknown = JSON.parse(raw);
+    if (isRecord(parsed)) {
+      const parsedDeployedAt = parsed["deployedAt"];
+      if (typeof parsedDeployedAt === "string") deployedAt = parsedDeployedAt;
+      const parsedCommits = parsed["commits"];
+      if (isRecord(parsedCommits)) {
+        for (const [key, value] of Object.entries(parsedCommits)) {
+          if (isRecord(value) && typeof value["hash"] === "string" && typeof value["subject"] === "string") {
+            commits[key] = { hash: value["hash"], subject: value["subject"] };
+          }
         }
       }
     }

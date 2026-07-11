@@ -13,6 +13,7 @@ import * as path from "node:path";
 import { type Connector } from "../../connectors/index.js";
 import { runPreActions } from "../../core/preactions/index.js";
 import { getSystemState } from "../../core/state.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { stageAll, commit, getStatus, stageAndCommitPaths } from "../../lib/git.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import { createContainsBackfillJobTemplate } from "../../schemas/contains-backfill-job.js";
@@ -47,7 +48,7 @@ export async function runPreprocessors(boxRoot: string): Promise<number> {
         }
       }
     } catch (error) {
-      console.error(`  Error processing ${item.relativePath}: ${(error as Error).message}`);
+      console.error(`  Error processing ${item.relativePath}: ${errorMessage(error)}`);
     }
   }
 

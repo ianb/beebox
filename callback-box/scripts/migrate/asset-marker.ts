@@ -21,6 +21,7 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { errnoCode } from "../../src/lib/error-guards.js";
 
 const OLD_MARKER = "# cb-attach-binaries (managed by cb attachments init-gitignore)";
 const NEW_MARKER = "# cb-assets (managed by cb attachments init-gitignore)";
@@ -46,8 +47,7 @@ async function main(): Promise<void> {
   try {
     content = await readFile(gitignorePath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") {
+    if (errnoCode(e) === "ENOENT") {
       console.log("No .gitignore in box; nothing to do.");
       return;
     }

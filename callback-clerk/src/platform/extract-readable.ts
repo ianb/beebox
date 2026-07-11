@@ -42,6 +42,7 @@ export function extractReadable(): ReadablePage {
   const url = document.location.href;
 
   // Clone so Defuddle's script-stripping doesn't mutate the live DOM.
+  // eslint-disable-next-line no-restricted-syntax -- DOM boundary: `Node.cloneNode` is typed to return `Node`, but cloning a `Document` yields a `Document` at runtime; the DOM lib can't express that return-type dependency.
   const docClone = document.cloneNode(true) as Document;
   const result = new Defuddle(docClone, { url }).parse();
 

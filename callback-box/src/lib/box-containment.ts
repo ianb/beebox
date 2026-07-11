@@ -31,6 +31,7 @@
 
 import { realpath, readFile } from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "./error-guards.js";
 
 /**
  * A box-relative path (forward slashes, no leading slash, `..`-free) proven to
@@ -56,6 +57,7 @@ export function containWithinBox(boxRoot: string, absPath: string): BoxRelativeP
   const root = path.resolve(boxRoot);
   const resolved = path.resolve(absPath);
   if (resolved !== root && !resolved.startsWith(root + path.sep)) return null;
+  // eslint-disable-next-line no-restricted-syntax -- mints the BoxRelativePath brand after the containment check above proves the value is box-relative
   return path.relative(root, resolved).split(path.sep).join("/") as BoxRelativePath;
 }
 
@@ -91,7 +93,7 @@ export async function realpathContained(
   } catch (e) {
     // A target that doesn't exist yet is a missing ref, not an escape — let the
     // caller's own missing-file path handle it.
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return contained;
+    if (errnoCode(e) === "ENOENT") return contained;
     throw e;
   }
   const realRoot = await realpath(root);

@@ -15,6 +15,7 @@ import { evaluateInstructions } from "./engine-validate-model.js";
 import { invariant } from "../../lib/invariant.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ParsedPhase, ParsedStep, AgentFactory, ProcedureSeverity, ValidateStatus } from "./engine-types.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export interface PhaseShellResult {
   exitCode: number;
@@ -318,7 +319,7 @@ export async function getStepLineRange(
     }
   } catch (e) {
     // If we can't read the file, just skip the line range
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedure card for step line range ${procedureCardPath}:`, e);
     }
   }

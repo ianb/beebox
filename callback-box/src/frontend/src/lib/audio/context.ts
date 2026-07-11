@@ -186,6 +186,7 @@ function appendChunk(sourceBuffer: SourceBuffer, chunk: Uint8Array): Promise<voi
     };
     sourceBuffer.addEventListener("updateend", onUpdateEnd);
     try {
+      // eslint-disable-next-line no-restricted-syntax -- a Uint8Array is a BufferSource at runtime; the TS 5.7 ArrayBufferLike generic makes the view non-assignable to BufferSource without this bridge.
       sourceBuffer.appendBuffer(chunk as BufferSource);
     } catch (e) {
       sourceBuffer.removeEventListener("updateend", onUpdateEnd);

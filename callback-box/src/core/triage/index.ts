@@ -26,6 +26,7 @@ import {
   type TriageApplication,
   type TriageDecision,
 } from "./routing.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 class TriageAgentFailedError extends Error {
   readonly detail: string;
@@ -54,7 +55,7 @@ async function listStagedItems(boxRoot: string): Promise<StagedItem[]> {
   try {
     entries = await fs.readdir(stagedDir, { withFileTypes: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const items: StagedItem[] = [];

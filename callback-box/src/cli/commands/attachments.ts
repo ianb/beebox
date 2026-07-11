@@ -13,6 +13,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const attachmentsCommand = new Command("attachments")
   .description("Manifest-aware operations on assets");
@@ -59,7 +60,7 @@ async function dispatch(subcommand: string, relPath?: string): Promise<void> {
       process.exit(1);
     }
   } catch (error) {
-    console.error(`Error: ${(error as Error).message}`);
+    console.error(`Error: ${errorMessage(error)}`);
     process.exit(1);
   }
 }

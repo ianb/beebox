@@ -6,6 +6,7 @@ import * as path from "node:path";
 import * as fs from "node:fs/promises";
 import { BOX_LAYOUT, type BoxDirs, type BoxDirsEntry, type BoxLayoutEntry } from "./box-layout-spec.js";
 import { invariant } from "./invariant.js";
+import { isRecord } from "./is-record.js";
 
 export type { BoxDirs, BoxLayoutEntry } from "./box-layout-spec.js";
 
@@ -31,11 +32,13 @@ export class UnknownBoxDirsKeyError extends Error {
  * (`src/core/agent-guide/box-shape.ts`) — add, remove, or rename a directory
  * there, not here.
  */
-export const BOX_DIRS: BoxDirs = Object.fromEntries(
-  BOX_LAYOUT.filter(
-    (entry): entry is BoxDirsEntry => "boxDirsKey" in entry
-  ).map((entry) => [entry.boxDirsKey, entry.path])
-) as BoxDirs;
+export const BOX_DIRS: BoxDirs =
+  // eslint-disable-next-line no-restricted-syntax -- Object.fromEntries widens to a string index signature; the filtered BoxDirsEntry list reconstructs exactly the BoxDirs mapped type, which TS can't infer through fromEntries
+  Object.fromEntries(
+    BOX_LAYOUT.filter(
+      (entry): entry is BoxDirsEntry => "boxDirsKey" in entry
+    ).map((entry) => [entry.boxDirsKey, entry.path])
+  ) as BoxDirs;
 
 /** Look up a `box-layout-spec.ts` entry by its `BOX_DIRS` key, for callers that also need its prose. */
 export function boxLayoutEntry(boxDirsKey: keyof BoxDirs): BoxLayoutEntry {
@@ -81,15 +84,17 @@ async function packageRootContentDir(dir: string): Promise<string | null> {
     return null;
   }
 
-  let parsed: { dependencies?: Record<string, unknown> };
+  let parsed: unknown;
   try {
-    parsed = JSON.parse(raw) as { dependencies?: Record<string, unknown> };
+    parsed = JSON.parse(raw);
   } catch (_e) {
     // Malformed package.json — fail closed, same as "not a box" here.
     return null;
   }
 
-  if (!parsed.dependencies || !("callback-box" in parsed.dependencies)) return null;
+  if (!isRecord(parsed)) return null;
+  const deps = parsed["dependencies"];
+  if (!isRecord(deps) || !("callback-box" in deps)) return null;
   return contentRoot;
 }
 

@@ -10,10 +10,10 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
+import { z } from "zod";
 
-interface StubsTime {
-  time?: string;
-}
+const stubsTimeSchema = z.object({ time: z.string().optional() });
+type StubsTime = z.infer<typeof stubsTimeSchema>;
 
 const stubsCache = new Map<string, StubsTime | null>();
 
@@ -26,9 +26,10 @@ function loadParentStubs(boxRoot: string): StubsTime | null {
   const stubsPath = path.join(boxRoot, "../stubs.yaml");
   try {
     const content = fs.readFileSync(stubsPath, "utf-8");
-    const parsed = parseYaml(content) as StubsTime | null;
-    stubsCache.set(boxRoot, parsed ?? null);
-    return parsed ?? null;
+    const result = stubsTimeSchema.safeParse(parseYaml(content));
+    const parsed = result.success ? result.data : null;
+    stubsCache.set(boxRoot, parsed);
+    return parsed;
   } catch (e) {
     // No stubs.yaml in most boxes (it's a scenario-test fixture); a missing
     // file is the normal case and stays silent. A present-but-malformed file

@@ -13,6 +13,7 @@ import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { isAuthEnabled, isHubMode, getSessionEmail, resolveRequestIdentity, getOwnerEmail, verifyDiagBearerKey } from "./auth.js";
 import { readVersionInfo } from "./trpc/routers/health.js";
 import { transferEndpoint } from "../core/push-subscriptions.js";
+import { z } from "zod";
 import { listParkedTemplateUpdates } from "../core/install-template-file.js";
 import { listSchemaLoadFailures } from "../schemas/schema-load-status.js";
 import { loadBoxSchemas } from "../schemas/registry.js";
@@ -21,6 +22,17 @@ import { filterAccessibleBoxes } from "./box-access.js";
 import type { BoxSpec } from "./server-types.js";
 import { buildCspPolicy, reportingEndpointsHeader, type CspMode } from "../lib/csp.js";
 import { verifyMobileBearer, verifyMobileToken } from "../core/mobile/pairing.js";
+
+/** Body of `POST /api/push/resubscribe` — validated at the HTTP boundary. */
+const resubscribeBodySchema = z.object({
+  oldEndpoint: z.string().nullish(),
+  subscription: z
+    .object({
+      endpoint: z.string().optional(),
+      keys: z.object({ p256dh: z.string().optional(), auth: z.string().optional() }).optional(),
+    })
+    .optional(),
+});
 
 const ASSET_EXTENSIONS = /\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i;
 
@@ -207,10 +219,8 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
   // is server-wide, so we just transfer the old endpoint's box opt-ins to the
   // rotated one. Best-effort — the next page visit re-subscribes regardless.
   server.post("/api/push/resubscribe", async (request, reply) => {
-    const body = request.body as {
-      oldEndpoint?: string | null;
-      subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
-    } | undefined;
+    const parsedBody = resubscribeBodySchema.safeParse(request.body);
+    const body = parsedBody.success ? parsedBody.data : undefined;
     const sub = body?.subscription;
     if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys.auth) {
       return reply.status(400).send({ error: "missing subscription" });

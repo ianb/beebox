@@ -1,6 +1,9 @@
 import * as crypto from "node:crypto";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { z } from "zod";
+import { errnoCode } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 const MOBILE_DEVICES_RELATIVE_PATH = ".callback-box/mobile-devices.secret.json";
 const PAIRING_TOKEN_BYTES = 32;
@@ -29,6 +32,15 @@ interface MobileDeviceStore {
   devices: MobileDevice[];
 }
 
+const MobileDeviceSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  tokenHash: z.string(),
+  createdAt: z.string(),
+  lastUsedAt: z.string().optional(),
+  revokedAt: z.string().optional(),
+});
+
 export interface PairingTicket {
   token: string;
   expiresAt: string;
@@ -54,10 +66,15 @@ function hashToken(token: string): string {
 
 function readDeviceStore(boxRoot: string): MobileDeviceStore {
   try {
-    const parsed = JSON.parse(fs.readFileSync(mobileDevicesPath(boxRoot), "utf-8")) as Partial<MobileDeviceStore>;
-    return { devices: Array.isArray(parsed.devices) ? parsed.devices.filter(isMobileDevice) : [] };
+    const parsed: unknown = JSON.parse(fs.readFileSync(mobileDevicesPath(boxRoot), "utf-8"));
+    const rawDevices = isRecord(parsed) && Array.isArray(parsed.devices) ? parsed.devices : [];
+    const devices = rawDevices
+      .map((d) => MobileDeviceSchema.safeParse(d))
+      .filter((r) => r.success)
+      .map((r) => r.data);
+    return { devices };
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("[pairing] failed to read mobile device store:", e);
     }
     return { devices: [] };
@@ -68,15 +85,6 @@ function writeDeviceStore(boxRoot: string, store: MobileDeviceStore): void {
   const file = mobileDevicesPath(boxRoot);
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, JSON.stringify(store, null, 2) + "\n", { mode: 0o600 });
-}
-
-function isMobileDevice(value: unknown): value is MobileDevice {
-  if (value === null || typeof value !== "object") return false;
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.id === "string"
-    && typeof candidate.label === "string"
-    && typeof candidate.tokenHash === "string"
-    && typeof candidate.createdAt === "string";
 }
 
 function timingSafeStringEqual(a: string, b: string): boolean {

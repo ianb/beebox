@@ -16,6 +16,8 @@ import { generateContext } from "../webapp/context.js";
 import { notifyBoxholder, notifyChannels } from "./notify-boxholder.js";
 import type { TelegramService } from "../services/telegram.js";
 import type { PushService } from "../services/push.js";
+import { errnoCode } from "../lib/error-guards.js";
+import { z } from "zod";
 
 const LATCH_PATH = ".callback-box/notified-questions.json";
 
@@ -34,13 +36,18 @@ export interface QuestionLatch {
   nudged: Record<string, string>;
 }
 
+const questionLatchSchema = z.object({
+  paths: z.array(z.string()).optional(),
+  nudged: z.record(z.string(), z.string()).optional(),
+});
+
 export async function loadQuestionLatch(boxRoot: string): Promise<QuestionLatch> {
   try {
     const raw = await fs.readFile(path.join(boxRoot, LATCH_PATH), "utf-8");
-    const data = JSON.parse(raw) as Partial<QuestionLatch>;
+    const data = questionLatchSchema.parse(JSON.parse(raw));
     return { paths: data.paths ?? [], nudged: data.nudged ?? {} };
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Could not read notified-questions latch, treating as empty:", e);
     }
     return { paths: [], nudged: {} };

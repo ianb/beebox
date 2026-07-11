@@ -15,6 +15,8 @@ import { splitCardContent } from "../../cards/index.js";
 import { createChatHuskTemplate } from "../../schemas/chat.js";
 import { loadHistoryEntries, resolveSessionLogPath } from "./session/history.js";
 import { getSessionMetadata } from "../../cli/lib/session.js";
+import { errnoCode, errorMessage } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 export const CHAT_HUSK_DIR = "store/chat/web";
 const BACKFILL_MARKER = ".callback-box/chat-husks-backfilled";
@@ -43,7 +45,7 @@ export async function findChatHusk(boxRoot: string, sessionId: string): Promise<
   try {
     names = await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return null;
+    if (errnoCode(e) === "ENOENT") return null;
     throw e;
   }
   const match = names.find((n) => n.endsWith(suffix));
@@ -89,7 +91,7 @@ export async function ensureChatHusk(
   try {
     await fs.writeFile(absPath, content, { flag: "wx" });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
+    if (errnoCode(e) !== "EEXIST") throw e;
   }
   return relPath;
 }
@@ -105,8 +107,7 @@ function parseHuskFrontmatter(content: string): Record<string, unknown> | null {
     // Malformed YAML — reported by the caller as a skipped husk.
     return null;
   }
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  return parsed as Record<string, unknown>;
+  return isRecord(parsed) ? parsed : null;
 }
 
 export interface ChatHuskEntry {
@@ -129,7 +130,7 @@ export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
   try {
     names = await fs.readdir(path.join(boxRoot, CHAT_HUSK_DIR));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const out: ChatHuskEntry[] = [];
@@ -140,7 +141,7 @@ export async function listChatHusks(boxRoot: string): Promise<ChatHuskEntry[]> {
     try {
       content = await fs.readFile(path.join(boxRoot, relPath), "utf-8");
     } catch (e) {
-      console.warn(`chat-husk: skipping unreadable ${relPath}: ${(e as Error).message}`);
+      console.warn(`chat-husk: skipping unreadable ${relPath}: ${errorMessage(e)}`);
       continue;
     }
     const fm = parseHuskFrontmatter(content);

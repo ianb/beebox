@@ -19,6 +19,7 @@ import {
 } from "../api";
 import type { ChatTurnStart } from "../api-chat";
 import { trpcClient } from "../lib/trpc";
+import { isRecord } from "../lib/is-record";
 import { settleReceipt } from "../input/targets/receipts";
 import { buildStreamEntry } from "../lib/stream-entry";
 import type { ChatMessage } from "../../../core/chat/session/messages.js";
@@ -112,17 +113,13 @@ export function handleTurnMessage(
     // speech-tag accumulator; other shapes (input_json_delta, message_start/
     // stop, ping) are ignored — the final assistant message delivers tool_use
     // blocks atomically.
-    const event = msg.event as { type?: string; delta?: { type?: string; text?: string } } | undefined;
-    if (
-      event !== undefined &&
-      event.type === "content_block_delta" &&
-      event.delta !== undefined &&
-      event.delta.type === "text_delta" &&
-      typeof event.delta.text === "string" &&
-      event.delta.text.length > 0
-    ) {
-      state.sawTextPartial = true;
-      sendBack({ type: "STREAM_TEXT", text: event.delta.text });
+    const raw = msg.event;
+    if (isRecord(raw) && raw.type === "content_block_delta" && isRecord(raw.delta)) {
+      const delta = raw.delta;
+      if (delta.type === "text_delta" && typeof delta.text === "string" && delta.text.length > 0) {
+        state.sawTextPartial = true;
+        sendBack({ type: "STREAM_TEXT", text: delta.text });
+      }
     }
     return;
   }

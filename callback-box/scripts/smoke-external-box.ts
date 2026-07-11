@@ -29,6 +29,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { setTimeout as sleep } from "node:timers/promises";
 import { PACKAGE_ROOT } from "../src/lib/package-root.js";
+import { isRecord } from "../src/lib/is-record.js";
 
 /** Native-module deps whose install scripts a fresh `pnpm install`/`dlx` must
  *  be told to trust (pnpm 10 blocks all of them by default) — kept in sync
@@ -111,8 +112,9 @@ async function findTarball(): Promise<string> {
 /** The `callback-box` package's own exports map — every key here is a public
  *  export the gate must prove importable, except the non-JS tsconfig entry. */
 async function publicExportSpecifiers(): Promise<string[]> {
-  const raw = await import(path.join(PACKAGE_ROOT, "package.json"), { with: { type: "json" } });
-  const exportsMap = (raw.default as { exports: Record<string, unknown> }).exports;
+  const raw: unknown = await import(path.join(PACKAGE_ROOT, "package.json"), { with: { type: "json" } });
+  const rawDefault = isRecord(raw) ? raw["default"] : undefined;
+  const exportsMap = isRecord(rawDefault) && isRecord(rawDefault["exports"]) ? rawDefault["exports"] : {};
   return Object.keys(exportsMap)
     .filter((key) => key !== "./tsconfig.base.json")
     .map((key) => (key === "." ? "callback-box" : "callback-box" + key.slice(1)));
@@ -284,8 +286,10 @@ async function serveAndProbe(args: { boxDir: string; port: number }): Promise<vo
     // reference today is whatever basename `content/` has.
     const boxHealthUrl = "http://localhost:" + String(args.port) + "/content/api/trpc/health.check";
     const boxHealthResponse = await waitForStatus({ url: boxHealthUrl, expectStatus: 200, timeoutMs: 5000 });
-    const boxHealthBody = (await boxHealthResponse.json()) as { result?: { data?: { status?: string } } };
-    const boxStatus = boxHealthBody.result?.data?.status;
+    const boxHealthBody: unknown = await boxHealthResponse.json();
+    const resultField = isRecord(boxHealthBody) ? boxHealthBody["result"] : undefined;
+    const dataField = isRecord(resultField) ? resultField["data"] : undefined;
+    const boxStatus = isRecord(dataField) ? dataField["status"] : undefined;
     if (!boxStatus) {
       throw new SmokeStepError(SERVE_STEP_LABEL, "unexpected /content/api/trpc/health.check body: " + JSON.stringify(boxHealthBody));
     }

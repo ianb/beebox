@@ -270,7 +270,9 @@ export function apiImageUrl(boxSlug: string, path: string): string {
 // crash in plain-Node test runners where `import.meta.env` is undefined.
 function viteBase(): string {
   try {
-    return (import.meta as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? "/";
+    // import.meta.env is Vite-typed (vite/client); the try/catch guards the
+    // plain-Node case where the whole `env` object is undefined at runtime.
+    return import.meta.env.BASE_URL;
   } catch (_e) {
     // import.meta.env is undefined in plain-Node test runners (see above).
     return "/";

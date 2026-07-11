@@ -4,7 +4,13 @@
  * (`permanent` + `code`) so callers can decide whether to retry.
  */
 
+import { z } from "zod";
 import type { TranscriptionError } from "./index.js";
+
+const voxtralErrorBodySchema = z.object({
+  error: z.object({ message: z.string().optional(), code: z.string().optional() }).optional(),
+  message: z.string().optional(),
+});
 
 export class MissingMistralKeyError extends Error implements TranscriptionError {
   readonly permanent = true;
@@ -47,13 +53,11 @@ export async function parseErrorResponse(
   let errorCode: string | undefined;
 
   try {
-    const errorJson = (await response.json()) as {
-      error?: { message?: string; code?: string };
-      message?: string;
-    };
+    const raw: unknown = await response.json();
+    const errorJson = voxtralErrorBodySchema.safeParse(raw).data;
     errorDetails =
-      errorJson.error?.message ?? errorJson.message ?? JSON.stringify(errorJson);
-    errorCode = errorJson.error?.code;
+      errorJson?.error?.message ?? errorJson?.message ?? JSON.stringify(raw);
+    errorCode = errorJson?.error?.code;
   } catch (e) {
     console.warn("Voxtral error response was not JSON, falling back to text body:", e);
     errorDetails = await response.text();

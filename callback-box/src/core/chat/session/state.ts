@@ -18,6 +18,8 @@ import { parseSessionLog, type SessionEntry } from "../../../cli/lib/session.js"
 import { effectiveTailSize } from "./messages.js";
 import type { ChatImage, ChatMessage, ChatSendInput } from "./messages.js";
 import { unionActivityKinds, mergeCardStateDetails } from "../card-activity.js";
+import { errorMessage } from "../../../lib/error-guards.js";
+import { isRecord } from "../../card-io.js";
 
 export interface SessionHistory {
   sessionId: string | null;
@@ -67,7 +69,7 @@ export async function acquireRunLock(
     const lockId = randomBytes(8).toString("hex");
     return await acquireChatActiveLock({ boxRoot, lockId, sessionId });
   } catch (e) {
-    log("error", `Failed to acquire chat-active lock: ${(e as Error).message}`);
+    log("error", `Failed to acquire chat-active lock: ${errorMessage(e)}`);
     return null;
   }
 }
@@ -80,7 +82,7 @@ export async function releaseRunLock(lockPath: string): Promise<void> {
   try {
     await releaseChatActiveLock(lockPath);
   } catch (e) {
-    log("error", `Failed to release chat-active lock: ${(e as Error).message}`);
+    log("error", `Failed to release chat-active lock: ${errorMessage(e)}`);
   }
 }
 
@@ -105,10 +107,8 @@ export function loadCurrentModel(boxRoot: string, modelFile: string): string | n
   const filePath = path.join(boxRoot, modelFile);
   try {
     if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
-        model: string | null;
-      };
-      return data.model ?? null;
+      const data: unknown = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      return isRecord(data) && typeof data.model === "string" ? data.model : null;
     }
   } catch (e) {
     log("model", `Failed to load model file: ${e}`);
@@ -152,10 +152,8 @@ export function loadSessionId(boxRoot: string, sessionFile: string | null): stri
   const filePath = path.join(boxRoot, sessionFile);
   try {
     if (fs.existsSync(filePath)) {
-      const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as {
-        sessionId: string;
-      };
-      return data.sessionId;
+      const data: unknown = JSON.parse(fs.readFileSync(filePath, "utf-8"));
+      return isRecord(data) && typeof data.sessionId === "string" ? data.sessionId : null;
     }
   } catch (e) {
     log("session", `Failed to load session file: ${e}`);

@@ -31,8 +31,16 @@ export function JsonView({ value, className }: JsonViewProps) {
  * union type), so the caller's typeof/Array.isArray checks don't narrow it
  * for us here.
  */
+// TS types `JSON.stringify` as always returning `string`, but at runtime it
+// returns `undefined` for an `undefined` input. Declaring the honest return
+// type on this one-line wrapper (rather than casting at the call site) means
+// the caller sees `string | undefined` without narrowing across the call.
+function stringifyOrUndefined(value: unknown): string | undefined {
+  return JSON.stringify(value);
+}
+
 function stringifyScalar(value: unknown): string {
-  return (JSON.stringify(value) as string | undefined) ?? "undefined";
+  return stringifyOrUndefined(value) ?? "undefined";
 }
 
 function JsonNode({ value }: { value: unknown }): ReactNode {

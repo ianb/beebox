@@ -21,6 +21,7 @@ import {
   shapeVoxtralResult,
   type VoxtralResponse,
 } from "./voxtral-request.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 // Re-exported for callers (chat-audio-routes, doctests) that post-process
 // Voxtral output without going through transcribeAudioVoxtral.
@@ -88,6 +89,6 @@ export async function transcribeAudioVoxtral(
       throw parsed;
     }
 
-    throw new VoxtralNetworkError((error as Error).message);
+    throw new VoxtralNetworkError(errorMessage(error));
   }
 }

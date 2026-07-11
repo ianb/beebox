@@ -11,20 +11,21 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import type {
   DetailedTranscriptionResult,
   TranscribeAudioParams,
   TranscriptionError,
-  WordTimestamp,
 } from "./index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /** One scripted transcription result. */
-interface FakeTranscriptionEntry {
-  text: string;
-  words?: WordTimestamp[];
-  duration?: number;
-  language?: string;
-}
+const fakeTranscriptionEntrySchema = z.object({
+  text: z.string(),
+  words: z.array(z.object({ word: z.string(), start: z.number(), end: z.number() })).optional(),
+  duration: z.number().optional(),
+  language: z.string().optional(),
+});
 
 /**
  * `config/fake-transcription.json` shape. Keys are the audio filename passed to
@@ -34,7 +35,7 @@ interface FakeTranscriptionEntry {
  *            "words": [ { "word": "hello", "start": 0, "end": 1 },
  *                       { "word": "world", "start": 1, "end": 2 } ] } }
  */
-type FakeTranscriptionScript = Record<string, FakeTranscriptionEntry>;
+const fakeTranscriptionScriptSchema = z.record(z.string(), fakeTranscriptionEntrySchema);
 
 class FakeTranscriptionNoBoxError extends Error implements TranscriptionError {
   readonly permanent = true;
@@ -69,12 +70,11 @@ export async function transcribeAudioFake(
   const { boxRoot, filename } = params;
   if (!boxRoot) throw new FakeTranscriptionNoBoxError();
   const configPath = path.join(boxRoot, "config/fake-transcription.json");
-  let script: FakeTranscriptionScript;
+  let script: z.infer<typeof fakeTranscriptionScriptSchema>;
   try {
-    script = JSON.parse(await fs.readFile(configPath, "utf-8")) as FakeTranscriptionScript;
+    script = fakeTranscriptionScriptSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    throw new FakeTranscriptionScriptError({ configPath, filename, ioError: err.message });
+    throw new FakeTranscriptionScriptError({ configPath, filename, ioError: errorMessage(e) });
   }
   const entry = script[filename] ?? script["*"];
   if (!entry) throw new FakeTranscriptionScriptError({ configPath, filename });

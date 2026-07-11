@@ -19,7 +19,9 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import { promises as fs } from "node:fs";
 import * as path from "node:path";
+import { isRecord } from "../../lib/is-record.js";
 import { Readable } from "node:stream";
+import { errorMessage } from "../../lib/error-guards.js";
 
 interface AdapterDef {
   /** Default upstream base URL; CB_ADAPTER_BASE_<NAME> overrides (tests). */
@@ -102,7 +104,7 @@ export function registerApiAdapterRoutes(options: RegisterApiAdapterRoutesOption
         upstream = await fetch(url, init);
       } catch (e) {
         return reply.status(502).send({
-          error: `Upstream ${adapterName} request failed: ${(e as Error).message}`,
+          error: `Upstream ${adapterName} request failed: ${errorMessage(e)}`,
         });
       }
 
@@ -125,8 +127,9 @@ function singleHeader(request: FastifyRequest, name: string): string | undefined
 async function readAdapterKey(boxRoot: string, adapterName: string): Promise<string | null> {
   const secretPath = path.join(boxRoot, "config", "connectors", `${adapterName}.secret.json`);
   try {
-    const parsed = JSON.parse(await fs.readFile(secretPath, "utf8")) as { apiKey?: unknown };
-    return typeof parsed.apiKey === "string" && parsed.apiKey !== "" ? parsed.apiKey : null;
+    const parsed: unknown = JSON.parse(await fs.readFile(secretPath, "utf8"));
+    const apiKey = isRecord(parsed) ? parsed["apiKey"] : undefined;
+    return typeof apiKey === "string" && apiKey !== "" ? apiKey : null;
   } catch (_e) {
     return null;
   }

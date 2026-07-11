@@ -7,6 +7,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import type { GoogleCalendarService } from "../services/google-calendar.js";
 
 export interface CalendarConfig {
@@ -42,7 +43,7 @@ export async function loadCalendarConfig(
     // No config file yet (or it's unreadable/malformed): fall back to an empty
     // config. A missing file is expected before first setup; log so a corrupt
     // file isn't silently treated as "no calendars configured".
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Could not load calendar config, using defaults:", e);
     }
     return {};

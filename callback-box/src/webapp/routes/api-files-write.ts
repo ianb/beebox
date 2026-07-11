@@ -78,7 +78,7 @@ export function registerApiFilesWriteRoutes(options: RegisterApiFilesWriteRoutes
       if ("error" in guarded) {
         return reply.status(guarded.status).send({ error: guarded.error });
       }
-      const body = (request.body ?? {}) as WriteBody;
+      const body: WriteBody = request.body ?? {};
       if (typeof body.content !== "string") {
         return reply.status(400).send({ error: 'Body must be {"content": "<text>"}' });
       }

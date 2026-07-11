@@ -7,7 +7,7 @@ import { readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { createHash } from "node:crypto";
 import path from "node:path";
-import { DOCS_DIR } from "./generate-doc-images-types.js";
+import { DOCS_DIR, imageMetadataSchema } from "./generate-doc-images-types.js";
 import type { ImageMetadata, ImagePrompt } from "./generate-doc-images-types.js";
 
 const IMAGE_PATTERN = /^!\[([^\]]+)]\(([^)]+\.png)\)\s*$/;
@@ -88,7 +88,8 @@ export async function readMetadata(imagePath: string): Promise<ImageMetadata | n
   if (!existsSync(metaPath)) return null;
   try {
     const raw = await readFile(metaPath, "utf8");
-    return JSON.parse(raw) as ImageMetadata;
+    const result = imageMetadataSchema.safeParse(JSON.parse(raw));
+    return result.success ? result.data : null;
   } catch (_e) {
     return null;
   }

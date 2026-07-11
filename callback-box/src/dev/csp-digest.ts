@@ -26,6 +26,7 @@ import * as path from "node:path";
 import { Command } from "commander";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { isRecord } from "../core/card-io.js";
 
 const CURSOR_FILE = "csp-digest-cursor.json";
 // The package root, not the operational root — a v2 box's log lives under
@@ -80,10 +81,9 @@ export function parseCspLog(logText: string): CspEntry[] {
       // Not JSON (partial write / legacy line) — drop it, don't fail the digest.
       continue;
     }
-    if (obj === null || typeof obj !== "object") continue;
-    const o = obj as Record<string, unknown>;
-    if (typeof o["ts"] !== "string") continue;
-    entries.push({ ts: o["ts"], directive: str(o["directive"]), blocked: str(o["blocked"]), doc: str(o["doc"]) });
+    if (!isRecord(obj)) continue;
+    if (typeof obj["ts"] !== "string") continue;
+    entries.push({ ts: obj["ts"], directive: str(obj["directive"]), blocked: str(obj["blocked"]), doc: str(obj["doc"]) });
   }
   return entries;
 }

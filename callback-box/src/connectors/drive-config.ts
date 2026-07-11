@@ -9,6 +9,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 
 export interface DriveFolderMount {
   driveFolderId: string;
@@ -29,7 +30,7 @@ export async function loadDriveConfig(boxRoot: string): Promise<DriveConfig> {
     // No config file yet (or it's unreadable/malformed): fall back to an empty
     // config. A missing file is expected before first setup; log so a corrupt
     // file isn't silently treated as "no folder mounts".
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn("Could not load drive config, using defaults:", e);
     }
     return {};

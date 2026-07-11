@@ -14,80 +14,68 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { enforceStagingLimits } from "./staging-limits.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /**
  * Preparation/lifecycle state. `failed:<step>` records which preparation step
  * failed (Track 3), kept loud and inspectable on disk.
  */
-export type StagingSessionState =
-  | "open"
-  | "sealed"
-  | "preparing"
-  | "delivering"
-  | "delivered"
-  | `failed:${string}`;
+const StagingSessionStateSchema = z.union([
+  z.literal("open"), z.literal("sealed"), z.literal("preparing"), z.literal("delivering"), z.literal("delivered"),
+  z.templateLiteral(["failed:", z.string()]),
+]);
+export type StagingSessionState = z.infer<typeof StagingSessionStateSchema>;
 
 /** One recording start. Chunks are ordered as uploaded (WebM header rule). */
-export interface StagingSegment {
-  id: string;
-  startedAt: string;
-  chunks: string[];
-}
+const StagingSegmentSchema = z.object({ id: z.string(), startedAt: z.string(), chunks: z.array(z.string()) });
+export type StagingSegment = z.infer<typeof StagingSegmentSchema>;
 
 /**
  * A captured photo. `source` (camera-user/-environment/gallery) is retained
  * beyond the plan's listed shape because finalize needs it to set the image
  * card's `source`.
  */
-export interface StagingPhoto {
-  filename: string;
-  capturedAt: string;
-  source: string;
-  originalName?: string;
-  mimeType?: string;
-}
+const StagingPhotoSchema = z.object({
+  filename: z.string(), capturedAt: z.string(), source: z.string(),
+  originalName: z.string().optional(), mimeType: z.string().optional(),
+});
+export type StagingPhoto = z.infer<typeof StagingPhotoSchema>;
 
 /** A disk-uploaded file. */
-export interface StagingFile {
-  filename: string;
-  uploadedAt: string;
-  originalName: string;
-  mimeType: string;
-}
+const StagingFileSchema = z.object({
+  filename: z.string(), uploadedAt: z.string(), originalName: z.string(), mimeType: z.string(),
+});
+export type StagingFile = z.infer<typeof StagingFileSchema>;
 
-export interface StagingSession {
-  id: string;
-  createdAt: string;
-  lastActivityAt: string;
-  targetSessionId: string | null;
-  /**
-   * Identifier (email) of the authenticated user who started the capture, or
-   * `null` when unauthenticated (auth-disabled dev). The resume query filters on
-   * this so one box user can never resume/submit another's in-flight capture
-   * (X4). `null` matches `null` — legacy sessions predating this field read as
-   * `null` and stay resumable only by an unauthenticated caller.
-   */
-  createdBy: string | null;
-  state: StagingSessionState;
-  segments: StagingSegment[];
-  photos: StagingPhoto[];
-  files: StagingFile[];
-  /**
-   * Bytes accumulated across every staged upload, tracked at add time so the
-   * per-session cap (X3) is a cheap running compare rather than a disk walk.
-   * Optional for legacy manifests written before the cap existed (read as 0).
-   */
-  totalBytes?: number;
-  /**
-   * Set true only when the abandonment sweep (Track 5) seals a session the user
-   * never finalized. It flows through to the capture card's `partial: true`
-   * frontmatter and the `<capture partial="1">` wrapper — a deliberate "Submit
-   * now" or normal "Done" finalize leaves this unset (partial: false).
-   */
-  partial?: boolean;
-}
+/**
+ * `createdBy` is the identifier (email) of the authenticated user who started
+ * the capture, or `null` when unauthenticated (auth-disabled dev). The resume
+ * query filters on this so one box user can never resume/submit another's
+ * in-flight capture (X4). `null` matches `null` — legacy sessions predating
+ * this field read as `null` and stay resumable only by an unauthenticated
+ * caller.
+ *
+ * `totalBytes` accumulates across every staged upload, tracked at add time so
+ * the per-session cap (X3) is a cheap running compare rather than a disk walk.
+ * Optional for legacy manifests written before the cap existed (read as 0).
+ *
+ * `partial` is set true only when the abandonment sweep (Track 5) seals a
+ * session the user never finalized. It flows through to the capture card's
+ * `partial: true` frontmatter and the `<capture partial="1">` wrapper — a
+ * deliberate "Submit now" or normal "Done" finalize leaves this unset
+ * (partial: false).
+ */
+const StagingSessionSchema = z.object({
+  id: z.string(), createdAt: z.string(), lastActivityAt: z.string(),
+  targetSessionId: z.string().nullable(), createdBy: z.string().nullable().default(null),
+  state: StagingSessionStateSchema,
+  segments: z.array(StagingSegmentSchema), photos: z.array(StagingPhotoSchema), files: z.array(StagingFileSchema),
+  totalBytes: z.number().optional(), partial: z.boolean().optional(),
+});
+export type StagingSession = z.infer<typeof StagingSessionSchema>;
 
 /** Raised when a session vanished between read and write (e.g. cancelled). */
 export class StagingSessionGoneError extends Error {
@@ -137,7 +125,7 @@ export async function readStagingSession(opts: {
 }): Promise<StagingSession | null> {
   try {
     const raw = await fs.readFile(sessionJsonPath(opts.boxRoot, opts.id), "utf-8");
-    return JSON.parse(raw) as StagingSession;
+    return StagingSessionSchema.parse(JSON.parse(raw));
   } catch (_e) {
     return null;
   }
@@ -399,7 +387,7 @@ export async function listStagingSessions(opts: { boxRoot: string }): Promise<St
   try {
     ids = await fs.readdir(stagingBaseDir(boxRoot));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const sessions = await Promise.all(ids.map((id) => readStagingSession({ boxRoot, id })));

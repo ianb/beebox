@@ -16,8 +16,11 @@ import { execFile } from "node:child_process";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { promisify } from "node:util";
+import { z } from "zod";
 import { listBoxCardFiles, listBoxMarkdownFiles } from "../list-cards.js";
 import { checkUrls, extractExternalUrls, isCheckableUrl, type UrlVerdict } from "./url-fetch.js";
+import { errnoCode } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 const execFileP = promisify(execFile);
 
@@ -45,6 +48,22 @@ interface PendingEntry {
   lastTried: string;
   detail: string;
 }
+const BrokenEntrySchema = z.object({
+  status: z.number().nullable(),
+  since: z.string(),
+  lastChecked: z.string(),
+  detail: z.string(),
+});
+const PendingEntrySchema = z.object({
+  attempts: z.number(),
+  lastTried: z.string(),
+  detail: z.string(),
+});
+const UrlCheckCacheSchema = z.object({
+  version: z.literal(1),
+  broken: z.record(z.string(), BrokenEntrySchema),
+  pending: z.record(z.string(), PendingEntrySchema),
+});
 interface UrlCheckCache {
   version: 1;
   broken: Record<string, BrokenEntry>;
@@ -68,20 +87,14 @@ async function loadCache(boxRoot: string): Promise<UrlCheckCache> {
   try {
     content = await fs.readFile(filePath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return emptyCache();
+    if (errnoCode(e) === "ENOENT") return emptyCache();
     throw e;
   }
-  const parsed = JSON.parse(content) as unknown;
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    typeof (parsed as { broken?: unknown }).broken !== "object" ||
-    typeof (parsed as { pending?: unknown }).pending !== "object"
-  ) {
+  const result = UrlCheckCacheSchema.safeParse(JSON.parse(content));
+  if (!result.success) {
     throw new MalformedCacheError(filePath);
   }
-  return parsed as UrlCheckCache;
+  return result.data;
 }
 
 async function saveCache(boxRoot: string, cache: UrlCheckCache): Promise<void> {
@@ -110,8 +123,7 @@ async function gitGrepUrls(boxRoot: string, source: "WORKTREE" | "INDEX" | strin
   } catch (e) {
     // git grep exits 1 with no output when nothing matches — that's an empty set,
     // not an error. Any other failure (not a repo, bad ref) re-throws.
-    const err = e as { code?: number; stdout?: string };
-    if (err.code === 1 && (err.stdout ?? "") === "") return new Set();
+    if (isRecord(e) && e.code === 1 && (e.stdout === undefined || e.stdout === "")) return new Set();
     throw e;
   }
   const out = new Set<string>();

@@ -18,6 +18,12 @@ import { isImagePath } from "./chat/message-parsing";
 import { FileView } from "./FileView";
 import { makeImg, type LinkContext, type MarkdownComponentOverrides } from "./Markdown";
 
+// Markdoc's `MarkdownComponentOverrides` map wants one homogeneous
+// `ComponentType<Record<string,unknown>>`, but `Img` below has its own
+// specific, narrower prop type. Markdoc only ever invokes it with the props
+// declared for the `image` tag (see Markdown.tsx's `buildRenderConfig`), so
+// the real prop shape is guaranteed by that contract, not by this cast.
+// eslint-disable-next-line no-restricted-syntax -- widen a specifically-typed component to the shared override-map type; Markdoc only calls it with the props declared for the `image` tag, so the real shape is guaranteed by that contract, not by this cast
 const cast = <T,>(c: T) => c as unknown as ComponentType<Record<string, unknown>>;
 
 /**

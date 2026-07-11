@@ -51,6 +51,7 @@ import { join, dirname, basename, relative, resolve, posix } from "node:path";
 import { getBoxTimeISO } from "../../src/lib/time.js";
 import { migrateQuestionCard, QUESTIONS_DIR } from "./question-lifecycle.js";
 import { repairExternalRefs } from "./question-lifecycle-refs.js";
+import { errnoCode } from "../../src/lib/error-guards.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -69,8 +70,7 @@ async function findQuestionCards(root: string): Promise<string[]> {
     try {
       entries = await readdir(dir, { withFileTypes: true });
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOENT") return;
+      if (errnoCode(e) === "ENOENT") return;
       throw e;
     }
     for (const entry of entries) {
@@ -134,8 +134,7 @@ async function rmIfExists(absPath: string): Promise<void> {
   try {
     await unlink(absPath);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
 }
 

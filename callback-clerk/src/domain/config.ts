@@ -7,6 +7,8 @@
  * segments, so boxes on any server (deployed or dev router) work alike.
  */
 
+import { isRecord } from "./is-record.js";
+
 export interface EnabledBox {
   boxUrl: string;
   slug: string;
@@ -54,8 +56,8 @@ export function isBoxEnabled(config: ClerkConfig, boxUrl: string): boolean {
 }
 
 function isEnabledBox(value: unknown): value is EnabledBox {
-  if (typeof value !== "object" || value === null) return false;
-  const record = value as Record<string, unknown>;
+  if (!isRecord(value)) return false;
+  const record = value;
   return (
     typeof record.boxUrl === "string" &&
     typeof record.slug === "string" &&
@@ -68,8 +70,8 @@ function isEnabledBox(value: unknown): value is EnabledBox {
  * (including dropbox-relay-era state) collapse to the empty config.
  */
 export function normalizeConfig(value: unknown): ClerkConfig {
-  if (typeof value !== "object" || value === null) return emptyConfig();
-  const record = value as Record<string, unknown>;
+  if (!isRecord(value)) return emptyConfig();
+  const record = value;
   if (record.version !== 1 || !Array.isArray(record.boxes)) return emptyConfig();
   const boxes = record.boxes.filter(isEnabledBox);
   const activeBoxUrl =

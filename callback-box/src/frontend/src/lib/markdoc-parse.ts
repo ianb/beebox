@@ -33,6 +33,7 @@ interface LinkifyConfigurableTokenizer {
 }
 
 const tokenizer = new Tokenizer({ linkify: true });
+// eslint-disable-next-line no-restricted-syntax -- Tokenizer.parser is private and no public Markdoc API exposes the linkify-it instance; centralized one-time cast (see interface docstring above).
 (tokenizer as unknown as LinkifyConfigurableTokenizer).parser.linkify.set({
   fuzzyLink: false,
   fuzzyEmail: false,

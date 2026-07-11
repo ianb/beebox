@@ -34,6 +34,7 @@ import { splitCardContent, type LintIssue } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { resolveContainedRef } from "./ref-exists.js";
 import { realpathContained } from "../lib/box-containment.js";
+import { isRecord } from "./card-io.js";
 
 export interface NodeRefLintInput {
   /** Absolute path of the card being linted. */
@@ -164,8 +165,8 @@ function progressNodeRefs(entries: unknown): NodeRef[] {
   if (!Array.isArray(entries)) return [];
   const refs: NodeRef[] = [];
   for (const [i, entry] of entries.entries()) {
-    if (entry === null || typeof entry !== "object") continue;
-    const node = (entry as Record<string, unknown>)["node"];
+    if (!isRecord(entry)) continue;
+    const node = entry["node"];
     if (typeof node === "string") refs.push({ id: node, path: `entries[${i}].node` });
   }
   return refs;
@@ -175,8 +176,8 @@ function progressNodeRefs(entries: unknown): NodeRef[] {
 function lessonPlanNodeRefs(segments: unknown[]): NodeRef[] {
   const refs: NodeRef[] = [];
   for (const [i, segment] of segments.entries()) {
-    if (segment === null || typeof segment !== "object") continue;
-    const concepts = (segment as Record<string, unknown>)["concepts"];
+    if (!isRecord(segment)) continue;
+    const concepts = segment["concepts"];
     if (!Array.isArray(concepts)) continue;
     for (const [j, concept] of concepts.entries()) {
       if (typeof concept === "string") refs.push({ id: concept, path: `segments[${i}].concepts[${j}]` });
@@ -189,11 +190,10 @@ function lessonPlanNodeRefs(segments: unknown[]): NodeRef[] {
 function lessonPlanDeferralWarnings(segments: unknown[]): LintIssue[] {
   const issues: LintIssue[] = [];
   for (const [i, segment] of segments.entries()) {
-    if (segment === null || typeof segment !== "object") continue;
-    const seg = segment as Record<string, unknown>;
-    if (seg["mode"] !== "material") continue;
-    if (refValue(seg["material"]) !== null) continue;
-    if (seg["status"] === "planned") continue;
+    if (!isRecord(segment)) continue;
+    if (segment["mode"] !== "material") continue;
+    if (refValue(segment["material"]) !== null) continue;
+    if (segment["status"] === "planned") continue;
     issues.push({
       type: "reference",
       severity: "warning",
@@ -205,8 +205,8 @@ function lessonPlanDeferralWarnings(segments: unknown[]): LintIssue[] {
 
 /** The `{ ref: "…" }` string of a field value, or null. */
 function refValue(value: unknown): string | null {
-  if (value === null || typeof value !== "object") return null;
-  const ref = (value as Record<string, unknown>)["ref"];
+  if (!isRecord(value)) return null;
+  const ref = value["ref"];
   return typeof ref === "string" ? ref : null;
 }
 
@@ -215,8 +215,8 @@ function conceptNodeIds(concepts: unknown): Set<string> {
   const ids = new Set<string>();
   if (!Array.isArray(concepts)) return ids;
   for (const node of concepts) {
-    if (node === null || typeof node !== "object") continue;
-    const id = (node as Record<string, unknown>)["id"];
+    if (!isRecord(node)) continue;
+    const id = node["id"];
     if (typeof id === "string") ids.add(id);
   }
   return ids;
@@ -238,6 +238,6 @@ async function readCardYaml(absPath: string): Promise<Record<string, unknown> | 
   } catch (_e) {
     return null;
   }
-  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return null;
-  return fm as Record<string, unknown>;
+  if (!isRecord(fm)) return null;
+  return fm;
 }

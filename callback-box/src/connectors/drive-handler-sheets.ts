@@ -8,6 +8,8 @@
 import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 import { safeFilename } from "./chat-utils.js";
 import {
   buildSheetData,
@@ -100,7 +102,7 @@ const sheetsHandler: DriveTypeHandler = {
         } catch (e) {
           // File missing (or unreadable) — leave localContent empty so it
           // hashes as a mismatch and gets written below; note why we ignored.
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.debug(`drive-handler-sheets: could not read ${jsonPath}, treating as absent:`, e);
           }
         }
@@ -125,17 +127,18 @@ const sheetsHandler: DriveTypeHandler = {
     const currentGids = new Set(
       spreadsheet.sheets.map((s) => String(s.properties.sheetId)),
     );
+    const existingTabGidsRaw = state.extra["tabGids"];
+    const existingTabGids: Record<string, unknown> = isRecord(existingTabGidsRaw) ? existingTabGidsRaw : {};
     for (const [relPath, _hash] of Object.entries(state.contentHashes)) {
-      const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
-      const gid = tabGids[relPath];
-      if (gid && !currentGids.has(gid)) {
+      const gid = existingTabGids[relPath];
+      if (typeof gid === "string" && !currentGids.has(gid)) {
         const filePath = path.join(localDir, relPath);
         try {
           await fs.unlink(filePath);
         } catch (e) {
           // Cleanup is best-effort — the file may already be gone. Note it
           // but keep deleting the state entry below.
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.debug(`drive-handler-sheets: could not unlink stale tab file ${filePath}:`, e);
           }
         }
@@ -185,7 +188,7 @@ const sheetsHandler: DriveTypeHandler = {
     } catch (e) {
       // No card yet (first pull) — leave existingCard empty so the compare
       // below treats it as new and writes it; note why we ignored.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`drive-handler-sheets: no existing card at ${cardPath}, treating as new:`, e);
       }
     }
@@ -207,7 +210,8 @@ const sheetsHandler: DriveTypeHandler = {
     const { file, localDir, boxRoot, service, state } = opts;
     const pushed: string[] = [];
 
-    const tabGids = (state.extra["tabGids"] ?? {}) as Record<string, string>;
+    const tabGidsRaw = state.extra["tabGids"];
+    const tabGids: Record<string, unknown> = isRecord(tabGidsRaw) ? tabGidsRaw : {};
 
     for (const [relPath, storedHash] of Object.entries(state.contentHashes)) {
       if (!relPath.endsWith(".json")) continue;
@@ -219,7 +223,7 @@ const sheetsHandler: DriveTypeHandler = {
       } catch (e) {
         // No local file to push for this tab (deleted/never materialized) —
         // skip it, but note we couldn't read it.
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.debug(`drive-handler-sheets: could not read ${filePath} to push, skipping:`, e);
         }
         continue;
@@ -229,7 +233,7 @@ const sheetsHandler: DriveTypeHandler = {
       if (localHash === storedHash) continue;
 
       const gid = tabGids[relPath];
-      if (!gid) continue;
+      if (typeof gid !== "string" || gid === "") continue;
 
       const spreadsheet = await service.getSpreadsheet(file.id);
       const sheet = spreadsheet.sheets.find(

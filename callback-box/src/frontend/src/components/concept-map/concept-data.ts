@@ -7,6 +7,8 @@
  * itself is code-split; see ConceptGraph).
  */
 
+import { isRecord } from "../../lib/is-record";
+
 export type KcKind = "fact" | "concept" | "procedure" | "principle";
 export type EdgeKind =
   | "prerequisite"
@@ -15,14 +17,19 @@ export type EdgeKind =
   | "applied-in"
   | "commonly-confused-with";
 
-const KC_KINDS: readonly KcKind[] = ["fact", "concept", "procedure", "principle"];
-const EDGE_KINDS: readonly EdgeKind[] = [
+const KC_KIND_SET: ReadonlySet<string> = new Set<KcKind>([
+  "fact",
+  "concept",
+  "procedure",
+  "principle",
+]);
+const EDGE_KIND_SET: ReadonlySet<string> = new Set<EdgeKind>([
   "prerequisite",
   "complements",
   "contrasts-with",
   "applied-in",
   "commonly-confused-with",
-];
+]);
 
 export interface ParsedRelation {
   to: string;
@@ -40,21 +47,30 @@ export interface ParsedConcept {
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
-  if (value === null || typeof value !== "object" || Array.isArray(value)) return null;
   // Frontmatter parse boundary: a plain YAML object arrives untyped.
-  return value as Record<string, unknown>;
+  return isRecord(value) ? value : null;
 }
 
 function asString(value: unknown): string | null {
   return typeof value === "string" ? value : null;
 }
 
+// Real membership guards: a string present in the kind set genuinely IS that
+// literal-union member, so the predicate is sound without a cast.
+function isKcKind(value: unknown): value is KcKind {
+  return typeof value === "string" && KC_KIND_SET.has(value);
+}
+
+function isEdgeKind(value: unknown): value is EdgeKind {
+  return typeof value === "string" && EDGE_KIND_SET.has(value);
+}
+
 function asKcKind(value: unknown): KcKind {
-  return KC_KINDS.includes(value as KcKind) ? (value as KcKind) : "concept";
+  return isKcKind(value) ? value : "concept";
 }
 
 function asEdgeKind(value: unknown): EdgeKind | null {
-  return EDGE_KINDS.includes(value as EdgeKind) ? (value as EdgeKind) : null;
+  return isEdgeKind(value) ? value : null;
 }
 
 /**
@@ -138,5 +154,6 @@ export const EDGE_ORDER: readonly EdgeKind[] = [
  * we always store `{ concept }` (see graph-model), so this is sound.
  */
 export function conceptOf(data: Record<string, unknown>): ParsedConcept {
+  // eslint-disable-next-line no-restricted-syntax -- React Flow types node data as Record<string, unknown>; we always store { concept } (see graph-model), so this single centralized read is sound.
   return data["concept"] as ParsedConcept;
 }

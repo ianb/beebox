@@ -6,6 +6,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { migrateBoxViewLinks } from "../../core/views/link-migration.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const migrateViewLinksCommand = new Command("migrate-view-links")
   .description("Rewrite retired view: links in box content to plain paths ([l](view:x) -> [l](x), dropping ?zoom).")
@@ -26,7 +27,7 @@ export const migrateViewLinksCommand = new Command("migrate-view-links")
       }
       if (dryRun) console.log("\n(dry run — re-run without --dry-run to apply)");
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

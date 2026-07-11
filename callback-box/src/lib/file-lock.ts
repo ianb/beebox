@@ -96,6 +96,8 @@
 
 import * as fs from "node:fs/promises";
 import * as os from "node:os";
+import { errnoCode } from "./error-guards.js";
+import { isRecord } from "./is-record.js";
 
 export interface LockHolder {
   pid: number;
@@ -156,7 +158,7 @@ function pidExists(pid: number): boolean {
     process.kill(pid, 0);
     return true;
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ESRCH") return false;
     // EPERM means the process exists but we can't signal it (different uid).
     // Anything unexpected — be conservative and treat as live.
@@ -181,13 +183,12 @@ function isOurs(holder: LockHolder): boolean {
 }
 
 function isWellFormedHolder(value: unknown): value is LockHolder {
-  if (value === null || typeof value !== "object") return false;
-  const v = value as Record<string, unknown>;
-  return typeof v["pid"] === "number" &&
-    typeof v["bootEpochSeconds"] === "number" &&
-    typeof v["hostname"] === "string" &&
-    typeof v["acquiredAt"] === "string" &&
-    typeof v["metadata"] === "object" && v["metadata"] !== null;
+  if (!isRecord(value)) return false;
+  return typeof value["pid"] === "number" &&
+    typeof value["bootEpochSeconds"] === "number" &&
+    typeof value["hostname"] === "string" &&
+    typeof value["acquiredAt"] === "string" &&
+    typeof value["metadata"] === "object" && value["metadata"] !== null;
 }
 
 async function readHolder(path: string): Promise<LockHolder | null> {
@@ -195,7 +196,7 @@ async function readHolder(path: string): Promise<LockHolder | null> {
   try {
     content = await fs.readFile(path, "utf-8");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ENOENT") return null;
     return null;
   }
@@ -217,7 +218,7 @@ async function writeExclusive(path: string, holder: LockHolder): Promise<boolean
   try {
     handle = await fs.open(path, "wx");
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "EEXIST") return false;
     throw err;
   }
@@ -233,7 +234,7 @@ async function unlinkIgnoringMissing(path: string): Promise<void> {
   try {
     await fs.unlink(path);
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code !== "ENOENT") throw err;
   }
 }
@@ -325,7 +326,7 @@ export async function scanLocks(
   try {
     entries = await fs.readdir(dir);
   } catch (err) {
-    const code = (err as NodeJS.ErrnoException).code;
+    const code = errnoCode(err);
     if (code === "ENOENT") return result;
     throw err;
   }

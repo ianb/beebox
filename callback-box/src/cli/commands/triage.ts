@@ -8,6 +8,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const triageCommand = new Command("triage")
   .description("Run one triage pass: classify intake-complete items and route them.")
@@ -26,7 +27,7 @@ export const triageCommand = new Command("triage")
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

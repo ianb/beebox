@@ -16,6 +16,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errorMessage } from "../lib/error-guards.js";
 import { HTTPError } from "ky";
 import {
   registerConnector,
@@ -271,7 +272,7 @@ class GoogleCalendarConnector implements Connector {
       return { fullResync: false };
     } catch (err) {
       const status = err instanceof HTTPError ? err.response.status : undefined;
-      const message = (err as Error).message;
+      const message = errorMessage(err);
       if (status !== 410 && !message.includes("410")) {
         await this.saveState(state, snapshot);
         return { fullResync: false, error: `Calendar sync failed for ${calendarId}: ${message}` };

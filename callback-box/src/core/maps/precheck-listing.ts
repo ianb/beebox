@@ -14,6 +14,7 @@ import * as path from "node:path";
 import type { Dirent } from "node:fs";
 import { simpleGit } from "simple-git";
 import { isIgnored, joinChildPath } from "./precheck-ignore.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /**
  * Recursively list every directory in the box that should have a MAP.md.
@@ -47,7 +48,7 @@ export async function listMappableDirs(
     try {
       entries = await fs.readdir(abs, { withFileTypes: true });
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Failed to read directory ${abs} while walking for mappable dirs, skipping:`, e);
       }
       return 0;
@@ -134,7 +135,7 @@ export async function listChildrenOnDisk(opts: ListChildrenOnDiskOptions): Promi
   try {
     entries = await fs.readdir(abs, { withFileTypes: true });
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Failed to read directory ${abs} for on-disk children listing, treating as empty:`, e);
     }
     return [];

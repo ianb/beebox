@@ -12,6 +12,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import type { CardSchema } from "../cards/index.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
@@ -62,7 +63,7 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
   try {
     files = (await fs.readdir(outputDir)).filter((f) => f.endsWith(cardSuffix));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read output directory ${outputDir}:`, e);
     }
     return [];
@@ -81,6 +82,7 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
       // TFields shape, not the schema's own precise fields type — the single
       // centralized cast here replaces one per call site (cardFields already
       // validated `card.fields` against `schema` at runtime).
+      // eslint-disable-next-line no-restricted-syntax -- generic seam: cardFields validated card.fields against `schema` at runtime, but the loop can only promise the caller-declared TFields, not the schema's own inferred type
       const fields = cardFields(card, schema) as unknown as TFields;
       if (fields.status !== "pending") continue;
 
@@ -91,16 +93,19 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
       } else {
         fields.status = "failed";
         fields.error = failure;
+        // `fields` is the same object as `card.fields` (cardFields retypes it in
+        // place), so the mutations above are already reflected here — serialize
+        // the untyped bag directly, no cast.
         await fs.writeFile(
           absPath,
-          serializeCardText({ schema: card.schema, fields: { ...fields } as Record<string, unknown> }),
+          serializeCardText({ schema: card.schema, fields: card.fields }),
         );
         failed.push(relPath);
         console.error(`Failed to ${failureVerb} ${relPath}: ${failure}`);
       }
     } catch (err) {
       // Unreadable/unparseable card: leave it for `cb validate` to flag.
-      console.error(`Skipping ${relPath}: ${(err as Error).message}`);
+      console.error(`Skipping ${relPath}: ${errorMessage(err)}`);
     }
   }
 

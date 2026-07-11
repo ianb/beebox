@@ -12,6 +12,7 @@ import { createGoogleCalendarConnector } from "../../connectors/google-calendar.
 import { createTelegramConnector } from "../../connectors/telegram.js";
 import { createGoogleDriveConnector } from "../../connectors/google-drive.js";
 import { getAllConnectors, type Connector } from "../../connectors/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 /**
  * Run the configured connectors and report results.
@@ -66,7 +67,7 @@ export async function runConnectors(
       totalJobs += counts.jobs;
       totalErrors += counts.errors;
     } catch (err) {
-      console.error(`  Failed: ${(err as Error).message}`);
+      console.error(`  Failed: ${errorMessage(err)}`);
       totalErrors++;
     }
   }

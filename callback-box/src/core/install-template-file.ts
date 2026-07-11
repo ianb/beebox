@@ -50,7 +50,10 @@ import type { Dirent } from "node:fs";
 import * as path from "node:path";
 import { createHash } from "node:crypto";
 import { parse as parseYaml } from "yaml";
+import { z } from "zod";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
+import { errnoCode } from "../lib/error-guards.js";
+import { isRecord } from "./card-io.js";
 
 const VERSIONS_FILE = "config/template-versions.json";
 const TEMPLATE_UPDATES_DIR = "config/_template-updates";
@@ -98,13 +101,15 @@ export function isTemplateManagedPath(relPath: string): boolean {
   return TEMPLATE_MANAGED_PATTERNS.some((re) => re.test(relPath));
 }
 
-interface VersionsFile {
-  [relPath: string]: {
+const versionsFileSchema = z.record(
+  z.string(),
+  z.object({
     /** sha256 of the (normalized) template content as we last installed it. */
-    sha256: string;
-    "installed-at": string;
-  };
-}
+    sha256: z.string(),
+    "installed-at": z.string(),
+  }),
+);
+type VersionsFile = z.infer<typeof versionsFileSchema>;
 
 export interface InstallTemplateOptions {
   /** Box root absolute path. */
@@ -166,9 +171,9 @@ function sha256(s: string): string {
 function parseCard(content: string): { fm: Record<string, unknown>; body: string } | null {
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) return null;
-  const parsed = parseYaml(split.frontmatterText) as unknown;
-  if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) return null;
-  return { fm: parsed as Record<string, unknown>, body: split.body };
+  const parsed: unknown = parseYaml(split.frontmatterText);
+  if (!isRecord(parsed)) return null;
+  return { fm: parsed, body: split.body };
 }
 
 function serializeCard(fm: Record<string, unknown>, body: string): string {
@@ -256,8 +261,7 @@ async function removeParkedMirror(boxRoot: string, relPath: string): Promise<voi
   try {
     await fs.unlink(mirrorAbs);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return;
+    if (errnoCode(e) === "ENOENT") return;
     throw e;
   }
   // Sweep empty parents up to (but not including) the updates root.
@@ -267,8 +271,8 @@ async function removeParkedMirror(boxRoot: string, relPath: string): Promise<voi
     try {
       await fs.rmdir(dir);
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code === "ENOTEMPTY" || err.code === "ENOENT") break;
+      const code = errnoCode(e);
+      if (code === "ENOTEMPTY" || code === "ENOENT") break;
       throw e;
     }
     dir = path.dirname(dir);
@@ -279,11 +283,9 @@ async function readVersions(boxRoot: string): Promise<VersionsFile> {
   const abs = path.join(boxRoot, VERSIONS_FILE);
   try {
     const text = await fs.readFile(abs, "utf-8");
-    const parsed = JSON.parse(text) as VersionsFile;
-    return parsed;
+    return versionsFileSchema.parse(JSON.parse(text));
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return {};
+    if (errnoCode(e) === "ENOENT") return {};
     throw e;
   }
 }
@@ -320,8 +322,7 @@ export async function installTemplateFile(opts: InstallTemplateOptions): Promise
   try {
     localContent = await fs.readFile(targetAbs, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
 
   const templateHash = sha256(canonicalize(templateContent));
@@ -431,16 +432,15 @@ export async function pruneStaleTemplateUpdates(
   try {
     entries = await fs.readdir(rootAbs, { withFileTypes: true, recursive: true });
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
 
   const removed: string[] = [];
   for (const entry of entries) {
     if (!entry.isFile()) continue;
-    // Node 20: Dirent.parentPath is the directory containing the entry.
-    const fileAbs = path.join((entry as unknown as { parentPath: string }).parentPath, entry.name);
+    // Node 20.12+: Dirent.parentPath is the directory containing the entry.
+    const fileAbs = path.join(entry.parentPath, entry.name);
     const relPath = path.relative(rootAbs, fileAbs);
     const orphaned = !(await fileExists(path.join(boxRoot, relPath)));
     if (!orphaned) {
@@ -454,16 +454,16 @@ export async function pruneStaleTemplateUpdates(
   // Sweep empty directories from deepest first so parents become empty too.
   const dirs = entries
     .filter((e) => e.isDirectory())
-    .map((e) => path.join((e as unknown as { parentPath: string }).parentPath, e.name))
+    .map((e) => path.join(e.parentPath, e.name))
     .toSorted((a, b) => b.length - a.length);
   for (const dir of dirs) {
     try {
       await fs.rmdir(dir);
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
+      const code = errnoCode(e);
       // Not empty (still holds non-stale files) or already gone — both are
       // expected outcomes of best-effort sweeping, not errors to report.
-      if (err.code === "ENOTEMPTY" || err.code === "ENOENT") continue;
+      if (code === "ENOTEMPTY" || code === "ENOENT") continue;
       throw e;
     }
   }
@@ -489,14 +489,13 @@ export async function listParkedTemplateUpdates(boxRoot: string): Promise<string
   try {
     entries = await fs.readdir(rootAbs, { withFileTypes: true, recursive: true });
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
   const parked: string[] = [];
   for (const entry of entries) {
     if (!entry.isFile()) continue;
-    const fileAbs = path.join((entry as unknown as { parentPath: string }).parentPath, entry.name);
+    const fileAbs = path.join(entry.parentPath, entry.name);
     // Strip the boxRoot + TEMPLATE_UPDATES_DIR prefix to recover the original relpath.
     parked.push(path.relative(rootAbs, fileAbs));
   }

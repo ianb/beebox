@@ -13,6 +13,7 @@ import {
   type ParsedScheduledScript,
 } from "../../schemas/scheduled-script.js";
 import { cardFields, parseCardText } from "../../core/card-io.js";
+import { errorMessage } from "../../lib/error-guards.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { checkMissingConnectors } from "../../connectors/requirements.js";
 import {
@@ -71,7 +72,7 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
       const card = parseCardText(content, { source: file, schemas: await createCardSchemaMap(boxRoot) });
       parsed = parseScheduledScript(cardFields(card, ScheduledScriptSchema));
     } catch (err) {
-      console.error(`  Error parsing ${file}: ${(err as Error).message}`);
+      console.error(`  Error parsing ${file}: ${errorMessage(err)}`);
       continue;
     }
 
@@ -131,9 +132,9 @@ export async function runOnWakeupScripts(boxRoot: string, now: Date): Promise<nu
     } catch (err) {
       const { durationMs, sleepAffected } = fallbackTiming(err);
 
-      recordOutcome(state, { result: "failure", error: (err as Error).message, durationMs, sleepAffected, windowMs, now });
+      recordOutcome(state, { result: "failure", error: errorMessage(err), durationMs, sleepAffected, windowMs, now });
       await saveScriptState({ boxRoot, scriptName, state });
-      console.error(`  Failed: ${(err as Error).message}`);
+      console.error(`  Failed: ${errorMessage(err)}`);
     } finally {
       await releaseScriptLock({ boxRoot, scriptName });
     }

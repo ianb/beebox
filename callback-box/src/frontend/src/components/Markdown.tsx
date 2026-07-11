@@ -46,6 +46,7 @@ import {
 } from "../lib/view-url";
 import { withBase } from "../api";
 import { parseMarkdown } from "../lib/markdoc-parse";
+import { isRecord } from "../lib/is-record";
 import type { ReactNode } from "react";
 
 // Value named imports (`{ transform, … }`) don't resolve from this CommonJS
@@ -72,13 +73,12 @@ function viewHref(boxSlug: string | undefined, target: ViewTarget): string {
   return withBase(`/${boxSlug ?? ""}/views/${serializeViewUrl(target)}`);
 }
 
-function flattenText(node: ReactNode): string {
+function flattenText(node: unknown): string {
   if (typeof node === "string" || typeof node === "number") return String(node);
   if (node === null || node === undefined || typeof node === "boolean") return "";
   if (Array.isArray(node)) return node.map(flattenText).join("");
-  if (typeof node === "object") {
-    const maybe = node as { props?: { children?: ReactNode } };
-    if (maybe.props && "children" in maybe.props) return flattenText(maybe.props.children);
+  if (isRecord(node) && isRecord(node.props) && "children" in node.props) {
+    return flattenText(node.props.children);
   }
   return "";
 }
@@ -183,15 +183,24 @@ export function makeImg(ctx: LinkContext): React.ComponentType<{ src?: string; a
  * content (figure / lightbox), which is invalid inside a `<p>` and breaks
  * layout. Detect that case and unwrap.
  */
+/**
+ * Best-effort debug name for a JSX element's `type`. `displayName` is a common
+ * but non-required convention that `JSXElementConstructor` doesn't declare, so
+ * reading it needs an assertion — isolated here rather than at the call site.
+ */
+function componentDisplayName(type: string | React.JSXElementConstructor<unknown>): string {
+  if (typeof type === "string") return type;
+  // eslint-disable-next-line no-restricted-syntax -- displayName is a convention, not part of JSXElementConstructor's type; reading it off an arbitrary component reference for this debug-name heuristic can't be done without an assertion
+  return (type as { displayName?: string }).displayName ?? type.name;
+}
+
 function isLoneImageReactChildren(children: ReactNode): boolean {
   const arr = React.Children.toArray(children);
   let imgCount = 0;
   for (const child of arr) {
     if (typeof child === "string" && child.trim() === "") continue;
-    if (typeof child === "object" && "type" in child) {
-      const el = child as React.ReactElement;
-      const t = el.type as { displayName?: string; name?: string };
-      const name = t.displayName ?? t.name ?? "";
+    if (React.isValidElement(child)) {
+      const name = componentDisplayName(child.type);
       if (name === "Img" || name === "Image") {
         imgCount++;
         continue;
@@ -204,7 +213,7 @@ function isLoneImageReactChildren(children: ReactNode): boolean {
 
 function Para({ children }: { children?: ReactNode }) {
   if (isLoneImageReactChildren(children)) {
-    return children as React.ReactElement;
+    return children;
   }
   // A <div>, not a <p>: paragraphs routinely wrap block-level content here
   // (inline file previews, figures, our custom tags), which is invalid inside
@@ -289,6 +298,14 @@ function buildRenderConfig(linkCtx: LinkContext): RenderConfigBundle {
       — {typeof duration === "string" ? duration : ""} silence —
     </span>
   );
+  // Markdoc's renderer wants one homogeneous `Record<string, ComponentType<Record<string,unknown>>>`
+  // map, but each of these components has its own specific, narrower prop type
+  // (Link's {href,title,children}, Img's {src,alt,title}, etc). Markdoc only ever
+  // invokes a component with the props declared for its tag in `buildRenderConfig`
+  // above, so the real prop shape is guaranteed by that contract, not by this
+  // widening cast — centralizing it here (rather than at each call site) is the
+  // code-style.md-blessed pattern for this exact situation.
+  // eslint-disable-next-line no-restricted-syntax -- widen a specifically-typed component to the shared map type; Markdoc only calls it with the props declared for its tag, so the real shape is guaranteed by the tag config above, not by this cast
   const cast = <T,>(c: T) => c as unknown as React.ComponentType<Record<string, unknown>>;
   const components: Record<string, React.ComponentType<Record<string, unknown>>> = {
     Fragment: cast(Fragment),
@@ -354,12 +371,18 @@ export function Markdown({
     const { config, components: defaults } = buildRenderConfig(ctx);
     const ast = parseMarkdown(children);
     const t: RenderableTreeNode = transform(ast, config);
-    const merged = components === undefined ? defaults : { ...defaults, ...components };
+    // `components` is `Partial<...>`, so a plain object spread would carry
+    // possibly-`undefined` values into the merged map; only copy overrides
+    // that are actually set.
+    const merged: Record<string, React.ComponentType<Record<string, unknown>>> = { ...defaults };
+    for (const [name, override] of Object.entries(components ?? {})) {
+      if (override !== undefined) merged[name] = override;
+    }
     return { tree: t, mergedComponents: merged };
   }, [children, onNavigate, basePath, boxSlug, components, onJumpToQuote]);
 
   const rendered = renderers.react(tree, React, {
-    components: mergedComponents as Record<string, React.ComponentType<Record<string, unknown>>>,
+    components: mergedComponents,
   });
 
   if (prose === "block") {
@@ -368,5 +391,5 @@ export function Markdown({
   if (prose === "inline") {
     return <span className="prose prose-sm inline max-w-none">{rendered}</span>;
   }
-  return rendered as React.ReactElement;
+  return rendered;
 }

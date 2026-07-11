@@ -15,6 +15,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 import { parse as parseYaml } from "yaml";
 import { parseFrontmatterObject, renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { parseCardText } from "../core/card-io.js";
@@ -61,7 +63,7 @@ export async function uploadPendingDrafts(opts: {
     } catch (err) {
       result.errors.push({
         path: path.relative(opts.boxRoot, cardPath),
-        error: (err as Error).message,
+        error: errorMessage(err),
       });
     }
   }
@@ -81,7 +83,7 @@ async function findDraftCards(boxRoot: string): Promise<string[]> {
   } catch (e) {
     // No email dir (or unreadable) means no drafts to upload — expected on boxes
     // that have never received email.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug(`gmail-drafts: cannot read ${emailDir}, no drafts to upload:`, e);
     }
     return drafts;
@@ -198,8 +200,8 @@ function readDraftFields(fields: Record<string, unknown>): DraftFields {
   const body = typeof fields["body"] === "string" ? fields["body"] : "";
   const irt = fields["in-reply-to"];
   let inReplyToRef: string | undefined;
-  if (irt !== null && typeof irt === "object" && !Array.isArray(irt)) {
-    const ref = (irt as Record<string, unknown>)["ref"];
+  if (isRecord(irt)) {
+    const ref = irt["ref"];
     if (typeof ref === "string" && ref !== "") inReplyToRef = ref;
   }
   const missing = !to ? "to" : !subject ? "subject" : !body ? "body" : undefined;
@@ -319,12 +321,12 @@ async function stampDraftCard(opts: {
   try {
     fm = parseYaml(split.frontmatterText);
   } catch (e) {
-    throw new StampDraftCardError(opts.cardPath, `invalid YAML in ${opts.cardPath}: ${(e as Error).message}`);
+    throw new StampDraftCardError(opts.cardPath, `invalid YAML in ${opts.cardPath}: ${errorMessage(e)}`);
   }
-  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) {
+  if (!isRecord(fm)) {
     throw new StampDraftCardError(opts.cardPath, `frontmatter in ${opts.cardPath} is not a mapping`);
   }
-  const fields = fm as Record<string, unknown>;
+  const fields = fm;
   fields["gmail-draft-id"] = opts.draftId;
   fields["gmail-draft-url"] = opts.draftUrl;
   await fs.writeFile(opts.cardPath, renderFrontmatterBlock(fields, split.body));

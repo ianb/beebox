@@ -215,6 +215,13 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
         session_id: msg.session_id,
         message: {
           role: msg.message.role,
+          // The SDK's BetaMessage content blocks carry many more kinds
+          // (thinking, server-tool-use, web-search-result, …) than the wire
+          // ChatMessageContent we surface; we forward the blocks unmodified
+          // (same objects, only relabeling the TS type) and downstream
+          // consumers narrow on `type`, ignoring kinds they don't recognize —
+          // see ChatMessageContent's doc comment.
+          // eslint-disable-next-line no-restricted-syntax -- vendor shape mismatch: SDK content blocks are a strict superset of our wire shape; forwarded as-is, narrowed downstream by `type`
           content: msg.message.content as ChatMessageContent[],
           ...(msg.message.stop_reason !== null
             ? { stop_reason: msg.message.stop_reason }
@@ -227,12 +234,17 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
     case "user": {
       // SDK's SDKUserMessage carries content the assistant turn just consumed
       // (i.e., the user message we pushed in). Forward so the UI can echo it.
-      const content = (msg.message as { content?: ChatMessageContent[] }).content;
+      // `msg.message` is Anthropic's `MessageParam` (content: string | Array<
+      // ContentBlockParam>) — same vendor-superset mismatch as the assistant
+      // case above, so the block array is forwarded as-is rather than
+      // narrowed field-by-field.
+      const content = msg.message.content;
       const out: ChatMessageUser = {
         type: "user",
         message: {
           role: "user",
-          content: Array.isArray(content) ? content : [],
+          // eslint-disable-next-line no-restricted-syntax -- vendor shape mismatch: SDK content blocks are a strict superset of our wire shape; forwarded as-is, narrowed downstream by `type`
+          content: Array.isArray(content) ? (content as ChatMessageContent[]) : [],
         },
       };
       if (msg.session_id !== undefined) out.session_id = msg.session_id;
@@ -268,6 +280,14 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
     case "prompt_suggestion":
       // SDK-internal partials/status events; deliberately not surfaced (distinct
       // from the `unknown` sentinel below, which catches types we don't know).
+      return null;
+    case "conversation_reset":
+      // New in SDK 0.3.x: signals /clear, plan-mode exit, and fresh-session
+      // flows, and asks the surface to mount a fresh transcript under
+      // new_conversation_id. Not yet wired up on our side (chat sessions
+      // don't currently re-key on this) — dropped rather than surfaced as
+      // `unknown` since it IS a recognized type, just not one we act on yet.
+      // See issues/features/2026-07-11-adapt-conversation-reset-sdk-message.md.
       return null;
     default:
       // A future SDK version's unrecognized type: surface it as the logged,

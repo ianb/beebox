@@ -6,6 +6,7 @@
  */
 
 import { type KnownToolName, isKnownTool } from "../../shared/known-tools.js";
+import { isRecord } from "../../lib/is-record.js";
 
 /**
  * Content block from a session log entry.
@@ -66,7 +67,7 @@ export function summarizeToolResult(content: unknown): string {
   if (Array.isArray(content)) {
     return content
       .map((c: unknown) =>
-        typeof c === "string" ? c : (c as { text?: string } | null | undefined)?.text || ""
+        typeof c === "string" ? c : isRecord(c) && typeof c["text"] === "string" ? c["text"] : ""
       )
       .join("\n")
       .substring(0, 500);
@@ -80,16 +81,14 @@ function imageBlock(block: Record<string, unknown>): SessionContentBlock {
   // PDF-reading plumbing (user-role turns containing only images) is
   // filtered at the message level by callers — turns with no text content
   // get dropped entirely, so synthetic image-only plumbing stays hidden.
-  const source = block.source as
-    | { type?: string; media_type?: string; data?: string; url?: string }
-    | undefined;
+  const source = isRecord(block["source"]) ? block["source"] : undefined;
   const imgBlock: SessionContentBlock = { type: "image" };
-  if (source?.media_type) imgBlock.mediaType = String(source.media_type);
-  if (source?.type === "base64" && source.data) {
-    imgBlock.dataBase64 = String(source.data);
+  if (source?.["media_type"]) imgBlock.mediaType = String(source["media_type"]);
+  if (source?.["type"] === "base64" && source["data"]) {
+    imgBlock.dataBase64 = String(source["data"]);
   }
-  if (source?.type === "url" && source.url) {
-    imgBlock.imageUrl = String(source.url);
+  if (source?.["type"] === "url" && source["url"]) {
+    imgBlock.imageUrl = String(source["url"]);
   }
   return imgBlock;
 }
@@ -105,14 +104,14 @@ export function transformContent(content: unknown): SessionContentBlock[] {
   if (!Array.isArray(content)) return [];
 
   const blocks: SessionContentBlock[] = [];
-  for (const block of content as Array<Record<string, unknown>>) {
+  for (const block of content.filter(isRecord)) {
     if (block.type === "text") {
       blocks.push({ type: "text", text: String(block.text || "") });
       continue;
     }
 
     if (block.type === "tool_use") {
-      const input = (block.input || {}) as Record<string, unknown>;
+      const input = isRecord(block["input"]) ? block["input"] : {};
       blocks.push({
         type: "tool_use",
         toolName: String(block.name || ""),

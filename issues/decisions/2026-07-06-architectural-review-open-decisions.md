@@ -33,11 +33,42 @@ buried. None blocks the merge.
    accidental. If the narrowing is wrong, streaming/user-echo are silently
    absent on the thread path. Needs a domain answer.
 
-4. **Markdoc walkers.** Three switches over Markdoc's 28-member vendor
-   `NodeType` union are deliberately partial with graceful-degradation
-   defaults (kept via justified single-line disables). Enumerate the vendor
-   types for compile-time drift detection, or keep graceful degradation? A
-   renderer must never crash on a new node type either way.
+4. **Markdoc walkers.** **Decided + done (boxholder decision, 2026-07-10):
+   both properties, not a tradeoff** — commit `21e11b39` (`emit-nodes.ts`
+   rewrite). `src/lib/invariant.ts` gained `tolerateNever(x: never, context)`,
+   a non-throwing sibling to `assertNever`: compile time it demands a switch
+   (or, here, a `satisfies Record<Union, Handler>`) handle every member of a
+   *vendor* union (one we don't control, that can grow under a dependency
+   bump); at runtime it `console.warn`s with context and returns instead of
+   throwing, so a best-effort walker degrades instead of crashing. Use
+   `assertNever` for our own closed unions (an unhandled member is our bug —
+   fail loudly); use `tolerateNever` only for vendor unions where a crash on
+   drift would be worse than a degraded result.
+
+   `emit-nodes.ts`'s three former switches (all deliberately-partial, each
+   behind a justified `switch-exhaustiveness-check` disable) are now one
+   `Record<NodeType, NodeHandler>` dispatch table enumerating all 28 members
+   of Markdoc's `NodeType` union, `satisfies`-checked so a new member fails
+   the build. This is the `Record`-with-`satisfies` idiom from
+   code-style.md's Exhaustiveness section, not literal `switch` statements:
+   a 28-case `switch` in one function blows the `complexity` lint budget
+   (25) regardless of how the cases are grouped — ESLint's `complexity` rule
+   counts every `case` label, fallthrough or not — while the object literal
+   carries none of that branching cost. Handlers that share behavior
+   (`table`/`thead`/`tbody`/`tr`/`th`/`td`, `comment`, `error`, the generic
+   `node` type) point at one shared `degrade` function (emit children, no
+   wrapping), each with a comment naming what's lost (no grid/separators for
+   tables, silent no-op for parse errors and comments). The dispatch is
+   exhaustive at compile time via `satisfies`; `emitNode` still falls back to
+   `tolerateNever` + `degrade` at runtime for the belt-and-suspenders case
+   where a real AST node's `.type` disagrees with the declared union (a
+   vendor-boundary value TS can't runtime-verify). Behavior is unchanged for
+   every currently-used node type; new doctest coverage
+   (`test/core/markdoc/emit-nodes.doctest.md`) exercises the table and
+   parse-error degradation paths explicitly. **This pattern (enumerate the
+   vendor union via `satisfies Record` + `tolerateNever` default) is now the
+   house answer for vendor-union walkers** — reach for it before a partial
+   switch + suppressed exhaustiveness lint.
 
 5. **Frontend import boundary.** ~28 raw `../../../core/...` imports bypass
    the `@backend`/`@shared` alias contract. Options: add `@core`/`@schemas`
@@ -50,10 +81,28 @@ buried. None blocks the merge.
    grouping and not worth the export-visibility/cycle risk a barrel adds.
    Reversibly addable later. Decide: add barrels, or codify "no barrels."
 
-7. **`.ts` `as`-ban.** Extend the `.tsx`-only `as` lint ban to `.ts` now
-   that Track C removed the two dominant unsafe-cast shapes (`card.fields`
-   and CLI args), or keep it guidance-only in `.ts`? Note `as never` (used
-   in the frontend navigate consolidation) evades the current rule.
+7. **`.ts` `as`-ban. Decided + done (boxholder decision, 2026-07-10): extend
+   the ban to `.ts` and close the `as never` loophole.** The
+   `no-restricted-syntax` `as` selector in `personal-vibe-check/eslint.config.mjs`
+   now applies to both `.ts` and `.tsx` across every preset consumer (backend +
+   frontend), enforced in both react modes via a shared `AS_BAN_SELECTORS`
+   constant. Findings that reshaped the change: the `.tsx` ban was in fact only
+   live for `react:false` (backend `.tsx`) — the frontend (`react:true`) `.tsx`
+   had no `as` ban at all, and `as never` was already caught by the selector
+   wherever the ban ran; it "evaded" only by living in `.ts`/frontend files the
+   ban didn't cover, not by any selector gap. The XState v5
+   `setup({ types: { … as Ctx } })` idiom (14 machine sites) is now rule-exempted
+   by a narrow AST `:not(...)` clause so it stays legal without a disable, while a
+   bare `{} as Ctx` elsewhere still fails. Burn-down on landing: ~75 previously
+   invisible casts resolved (14 backend `.ts` + 61 frontend) — most via real
+   fixes or blessed helpers (`errorMessage`/`toError`, `isRecord`, `busEventData`,
+   zod `.unwrap()`, an `in`-narrow, a `z.enum` at a parse boundary), the residue
+   as single-line justified disables; `code-style.md`'s `as`-assertions section
+   rewritten accordingly (the ".ts/.tsx asymmetry" paragraph is now false and
+   gone). Also consolidated the duplicate `core/card-io.ts` `isRecord` onto
+   `lib/is-record.ts`. Landed on `worktree-architectural-review` in commit
+   `defbd2c7` (ban + burn-down), hardened by `7077e5ef` (codex review tightened
+   the XState exemption to empty-object casts only).
 
 Behavior-sensitive deferrals from Track G (recorded, not decisions —
 "do when touched"): DebugLog `useSyncExternalStore` port, FileView /

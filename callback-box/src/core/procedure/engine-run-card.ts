@@ -79,7 +79,10 @@ async function readRunCard(runCardPath: string): Promise<MutableRunCard> {
     throw new RunCardParseError(runCardPath);
   }
   // Parse boundary: run cards are engine-written YAML, strict-validated on
-  // load (cb validate / parseProcedureRun); the mutators trust the shape.
+  // load (cb validate / parseProcedureRun) — duplicating that Zod validation
+  // here just to satisfy these internal, engine-only mutators would be
+  // disproportionate; they trust the shape they themselves wrote.
+  // eslint-disable-next-line no-restricted-syntax -- parse boundary already strict-validated elsewhere (cb validate/parseProcedureRun); re-validating here is disproportionate for an engine-internal mutator
   return parsed as MutableRunCard;
 }
 

@@ -24,7 +24,9 @@ export const KNOWN_TOOL_NAMES = [
 
 export type KnownToolName = (typeof KNOWN_TOOL_NAMES)[number];
 
+const KNOWN_TOOL_NAME_SET = new Set<string>(KNOWN_TOOL_NAMES);
+
 /** Type guard: is `name` one of the specially-formatted built-in tools? */
 export function isKnownTool(name: string): name is KnownToolName {
-  return (KNOWN_TOOL_NAMES as readonly string[]).includes(name);
+  return KNOWN_TOOL_NAME_SET.has(name);
 }

@@ -10,6 +10,7 @@
  */
 
 import * as fs from "node:fs/promises";
+import { isRecord } from "../../lib/is-record.js";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
@@ -82,21 +83,21 @@ driveCommand
     if (handler) {
       const info = await handler.inspect(file, service);
 
-      if (info.details["tabs"]) {
-        const tabs = info.details["tabs"] as Array<{ title: string; gid: number }>;
+      const tabs = info.details["tabs"];
+      if (Array.isArray(tabs)) {
         console.log(`\nSheet tabs (${tabs.length}):`);
         for (const tab of tabs) {
-          console.log(`  - ${tab.title} (gid: ${tab.gid})`);
+          if (isRecord(tab)) console.log(`  - ${String(tab["title"])} (gid: ${String(tab["gid"])})`);
         }
       }
 
-      if (info.details["lossy"]) {
-        const lossy = info.details["lossy"] as Record<string, number>;
-        const present = Object.entries(lossy).filter(([, n]) => n > 0);
+      const lossy = info.details["lossy"];
+      if (isRecord(lossy)) {
+        const present = Object.entries(lossy).filter(([, n]) => typeof n === "number" && n > 0);
         if (present.length > 0) {
           console.log("\nLossy content (will not survive markdown push):");
           for (const [type, count] of present) {
-            console.log(`  - ${type}: ${count}`);
+            console.log(`  - ${type}: ${String(count)}`);
           }
         }
       }
@@ -107,8 +108,9 @@ driveCommand
         );
       }
 
-      if (info.details["revisionId"]) {
-        console.log(`\nRevision: ${info.details["revisionId"] as string}`);
+      const revisionId = info.details["revisionId"];
+      if (typeof revisionId === "string") {
+        console.log(`\nRevision: ${revisionId}`);
       }
 
       console.log(`\nCard type: ${handler.cardType}`);

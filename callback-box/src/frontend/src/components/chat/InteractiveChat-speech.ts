@@ -13,7 +13,10 @@ import { parseAllSpeechTags } from "../../lib/audio/speech-parsing";
 import type { ComposerEvent } from "../../machines/composerMachine";
 
 interface SnapshotLike {
-  value: unknown;
+  // The chat machine is flat, so its state value is a plain state-name string
+  // (never a nested/parallel StateValue object) — typed here so callers read it
+  // directly without an `as string` cast.
+  value: string;
   context: { streamText: string };
 }
 
@@ -78,7 +81,7 @@ export function useSpeechDispatch(opts: {
   // State transitions: reset per-turn counter, flush trailing speech, reopen
   // the mic after a non-speech reply.
   useEffect(() => {
-    const current = snapshot.value as string;
+    const current = snapshot.value;
     const prev = prevStateRef.current;
     prevStateRef.current = current;
 

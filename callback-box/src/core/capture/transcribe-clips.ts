@@ -19,7 +19,7 @@ import { renderFrontmatterBlock } from "../../cards/index.js";
 import { cardFields, parseCardText, serializeCardText } from "../card-io.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
 import { type AudioFields, AudioSchema } from "../../schemas/audio.js";
-import { transcribeAudio, type DetailedTranscriptionResult } from "../transcription/index.js";
+import { transcribeAudio } from "../transcription/index.js";
 import { attachDirFor, resolveAttachRef } from "../../shared/attach-path.js";
 
 async function loadAudioCard(cardPath: string): Promise<AudioFields> {
@@ -93,12 +93,17 @@ export async function transcribeCaptureClips(opts: {
 
     try {
       const audioBuffer = await fs.readFile(audioPath);
-      const result = (await transcribeAudio({
+      const result = await transcribeAudio({
         audioBuffer,
         filename: path.basename(audioPath),
         options: { wordTimestamps: true },
         boxRoot,
-      })) as DetailedTranscriptionResult;
+      });
+      // `wordTimestamps: true` is requested above, but not every service
+      // honors it (e.g. whisper-llm variants never return word timing) — the
+      // return type reflects that reality with `words` genuinely optional
+      // rather than asserting it away.
+      const words = "words" in result ? result.words : undefined;
 
       fields.transcript = result.text;
       if (fields.summary === undefined) fields.summary = "";
@@ -111,7 +116,7 @@ export async function transcribeCaptureClips(opts: {
       const audioCardAttachDir = attachDirFor(cardPath);
       await fs.mkdir(audioCardAttachDir, { recursive: true });
       const timingPath = path.join(audioCardAttachDir, `${audioBasename}.timing.json`);
-      const timingData = { words: result.words, duration: result.duration, language: result.language };
+      const timingData = { words, duration: result.duration, language: result.language };
       await fs.writeFile(timingPath, JSON.stringify(timingData, null, 2) + "\n");
 
       transcribed += 1;

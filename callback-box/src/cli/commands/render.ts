@@ -30,18 +30,22 @@ export const renderCommand = new Command("render")
   .option("--scenario <name>", "Render with a named scenario (e.g., streaming, empty)")
   .option("--machine <id=state>", "Override a machine state (e.g., chat=streaming)", collect, [])
   .option("--mock <path=json>", "Override tRPC query data (e.g., status.status={...})", collect, [])
-  .action(async (...actionArgs: unknown[]) => {
-    // Commander passes (boxDir, route, options, command) — extract what we need
-    const boxDir = actionArgs[0] as string;
-    const route = actionArgs[1] as string;
-    const options = actionArgs[2] as {
+  // Commander passes (boxDir, route, options, command); a typed rest tuple keeps
+  // this to one parameter (max-params) while avoiding per-arg casts.
+  .action(async (...actionArgs: [
+    boxDir: string,
+    route: string,
+    options: {
       selector?: string;
       raw?: boolean;
       listStates?: boolean;
       scenario?: string;
       machine?: string[];
       mock?: string[];
-    };
+    },
+    ...unknown[],
+  ]) => {
+    const [boxDir, route, options] = actionArgs;
 
     const projectDir = PACKAGE_ROOT;
     const renderScript = path.join(projectDir, "src/frontend/src/ssr/render.tsx");

@@ -8,7 +8,9 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import { invariant } from "../../lib/invariant.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 export const SUPPORTED_IMAGE_EXTENSIONS = [".jpg", ".jpeg", ".png", ".tif", ".tiff"];
 export const PDF_EXTENSION = ".pdf";
@@ -127,13 +129,26 @@ export interface UploadLedgerEntry {
   /** Destination kind (e.g. "scan"). */
   kind: string;
   /** Box-relative session directory the upload produced, when applicable. */
-  sessionRelDir?: string;
+  sessionRelDir?: string | undefined;
 }
 
 export interface UploadLedger {
   version: 1;
   entries: UploadLedgerEntry[];
 }
+
+const UploadLedgerEntrySchema = z.object({
+  hash: z.string(),
+  originalName: z.string(),
+  originalPath: z.string(),
+  uploadedAt: z.string(),
+  kind: z.string(),
+  sessionRelDir: z.string().optional(),
+});
+const UploadLedgerSchema = z.object({
+  version: z.literal(1),
+  entries: z.array(UploadLedgerEntrySchema),
+});
 
 export const LEDGER_REL_PATH = ".callback-box/uploads.json";
 
@@ -155,20 +170,14 @@ export async function loadLedger(boxRoot: string): Promise<UploadLedger> {
   try {
     content = await fs.readFile(ledgerPath, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return emptyLedger();
+    if (errnoCode(e) === "ENOENT") return emptyLedger();
     throw e;
   }
-  const parsed = JSON.parse(content) as unknown;
-  if (
-    typeof parsed !== "object" ||
-    parsed === null ||
-    (parsed as { version?: unknown }).version !== 1 ||
-    !Array.isArray((parsed as { entries?: unknown }).entries)
-  ) {
+  const result = UploadLedgerSchema.safeParse(JSON.parse(content));
+  if (!result.success) {
     throw new MalformedLedgerError(ledgerPath);
   }
-  return parsed as UploadLedger;
+  return result.data;
 }
 
 export async function saveLedger(boxRoot: string, ledger: UploadLedger): Promise<void> {

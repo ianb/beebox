@@ -8,6 +8,7 @@
  */
 
 import { Command } from "commander";
+import { isRecord } from "../../lib/is-record.js";
 import { loopbackHeaders, getLastAudioCommand, askAboutAudioCommand, retranscribeCommand } from "./chat-audio.js";
 
 interface SelfNoteOptions {
@@ -137,8 +138,9 @@ const whatsChangedCommand = new Command("whats-changed")
     try {
       const result = await postWhatsChanged({ serverUrl, boxName, session: options.session, card: options.card });
       if (result.status >= 200 && result.status < 300) {
-        const parsed = JSON.parse(result.body) as { report?: string };
-        console.log(parsed.report ?? "(no report)");
+        const parsed: unknown = JSON.parse(result.body);
+        const report = isRecord(parsed) && typeof parsed["report"] === "string" ? parsed["report"] : undefined;
+        console.log(report ?? "(no report)");
         return;
       }
       console.error(`cb chat whats-changed: server returned ${result.status}: ${result.body}`);

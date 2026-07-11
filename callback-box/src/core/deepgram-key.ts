@@ -12,11 +12,17 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 
 export interface DeepgramCredentials {
   apiKey: string;
   projectId: string;
 }
+
+const deepgramSecretSchema = z.object({
+  apiKey: z.string().optional(),
+  projectId: z.string().optional(),
+});
 
 export async function getDeepgramCredentials(boxRoot?: string): Promise<DeepgramCredentials | null> {
   let fileApiKey: string | undefined;
@@ -25,7 +31,7 @@ export async function getDeepgramCredentials(boxRoot?: string): Promise<Deepgram
     try {
       const secretPath = path.join(boxRoot, "config/connectors/deepgram.secret.json");
       const content = await fs.readFile(secretPath, "utf-8");
-      const parsed = JSON.parse(content) as { apiKey?: string; projectId?: string };
+      const parsed = deepgramSecretSchema.parse(JSON.parse(content));
       fileApiKey = parsed.apiKey;
       fileProjectId = parsed.projectId;
     } catch (_e) {

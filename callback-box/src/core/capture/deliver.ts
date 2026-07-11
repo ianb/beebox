@@ -17,6 +17,7 @@ import type { EventBus } from "../event-bus.js";
 import { loadHistory, getMostActive, getDirectoryForSession, resolveSessionLogPath } from "../chat/session/history.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { invariant } from "../../lib/invariant.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /** Raised when the non-busy `send()` of a capture message fails. Retryable. */
 export class CaptureDeliveryError extends Error {
@@ -163,7 +164,7 @@ export async function captureMessageAlreadyLanded(opts: {
     const raw = await fs.readFile(logPath, "utf-8");
     return raw.includes(docPath);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`[capture] Could not read transcript ${logPath} for at-most-once probe:`, e);
     }
     return false;

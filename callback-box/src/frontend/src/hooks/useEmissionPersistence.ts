@@ -36,7 +36,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { EmissionStore, ImageItem, FileItem } from "../input/emission-store";
+import type { EmissionStore, ImageItem } from "../input/emission-store";
 import {
   loadPersistedEmission,
   savePersistedEmission,
@@ -173,7 +173,7 @@ export function useEmissionPersistence(opts: {
       for (const selection of p.selections) editor.addSelection(selection);
       editor.reserveIds({
         image: maxId(p.images),
-        file: maxId(p.files as FileItem[]),
+        file: maxId(p.files),
         selection: maxId(p.selections),
       });
 

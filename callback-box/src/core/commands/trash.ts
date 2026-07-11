@@ -19,6 +19,7 @@ import { stageAndCommitPaths } from "../../lib/git.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import { NotFoundError } from "../../lib/errors.js";
 import { invariant } from "../../lib/invariant.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 class NotACardFileError extends Error {
   readonly cardPath: string;
@@ -220,8 +221,8 @@ async function executeTrash(
         allAdditions.push(path.relative(ctx.boxRoot, path.join(trashDir, relatedFile)));
       }
     } catch (err) {
-      errors.push((err as Error).message);
-      ctx.writeLine(`Error: ${(err as Error).message}`);
+      errors.push(errorMessage(err));
+      ctx.writeLine(`Error: ${errorMessage(err)}`);
     }
   }
 

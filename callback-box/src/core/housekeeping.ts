@@ -8,6 +8,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { getBoxTime } from "../lib/time.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 
 /**
  * Sweep transient chat-upload files from <boxRoot>/tmp/.
@@ -30,7 +31,7 @@ export async function cleanupOldTmpUploads(
     entries = await fs.readdir(tmpDir);
   } catch (e) {
     // tmp/ may not exist yet (no uploads ever made) — nothing to clean.
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.debug(`cleanupOldTmpUploads: cannot read ${tmpDir}, skipping:`, e);
     }
     return 0;
@@ -45,7 +46,7 @@ export async function cleanupOldTmpUploads(
     } catch (e) {
       // Entry vanished between readdir and stat (race), or is unreadable —
       // skip it; the next sweep will catch it if it still matters.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`cleanupOldTmpUploads: cannot stat ${fullPath}, skipping:`, e);
       }
       continue;
@@ -59,7 +60,7 @@ export async function cleanupOldTmpUploads(
       const ageDays = Math.floor((now - stat.mtimeMs) / (24 * 60 * 60 * 1000));
       onLog?.(`  Removed: tmp/${entry} (${ageDays} days old)`);
     } catch (err) {
-      onLog?.(`  Warning: could not remove tmp/${entry}: ${(err as Error).message}`);
+      onLog?.(`  Warning: could not remove tmp/${entry}: ${errorMessage(err)}`);
     }
   }
 

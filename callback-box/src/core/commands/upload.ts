@@ -29,6 +29,8 @@ import {
   type UploadLedgerEntry,
   type ScanGroup,
 } from "./upload-helpers.js";
+import { errorMessage } from "../../lib/error-guards.js";
+import { isRecord } from "../card-io.js";
 
 const UploadArgsSchema = z.object({
   files: z.array(z.string()).optional(),
@@ -42,9 +44,10 @@ export type UploadArgs = z.infer<typeof UploadArgsSchema>;
 
 const SUPPORTED_KINDS = ["scan"] as const;
 type UploadKind = (typeof SUPPORTED_KINDS)[number];
+const SUPPORTED_KINDS_SET: ReadonlySet<string> = new Set(SUPPORTED_KINDS);
 
 function isSupportedKind(kind: string): kind is UploadKind {
-  return (SUPPORTED_KINDS as readonly string[]).includes(kind);
+  return SUPPORTED_KINDS_SET.has(kind);
 }
 
 /** Validate the raw upload args. Returns an error string, or the typed args. */
@@ -157,8 +160,8 @@ async function processGroup(
     return { status: "failed" };
   }
 
-  const data = result.data as { sessionRelDir?: string } | undefined;
-  const sessionRelDir = data && typeof data.sessionRelDir === "string" ? data.sessionRelDir : undefined;
+  const { data } = result;
+  const sessionRelDir = isRecord(data) && typeof data.sessionRelDir === "string" ? data.sessionRelDir : undefined;
   for (const { file, hash } of hashes) {
     if (findEntry(ledger, hash) !== undefined) continue;
     const entry: UploadLedgerEntry = {
@@ -197,7 +200,7 @@ async function executeUpload(
   try {
     groups = groupScanFiles(limitedFiles);
   } catch (e) {
-    return { success: false, error: (e as Error).message };
+    return { success: false, error: errorMessage(e) };
   }
 
   ctx.writeLine(`Found ${groups.length} group${groups.length === 1 ? "" : "s"}:`);

@@ -26,6 +26,7 @@
 import { contentHash } from "../lib/content-hash.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import type {
   DriveTypeHandler,
   InspectResult,
@@ -149,6 +150,7 @@ function lossyToTemplateItems(
   counts: LossyCounts,
 ): Array<{ type: GdocLossyType; count: number }> {
   const items: Array<{ type: GdocLossyType; count: number }> = [];
+  // eslint-disable-next-line no-restricted-syntax -- Object.keys widens to string[]; counts is a LossyCounts so its own keys are exactly keyof LossyCounts
   for (const key of Object.keys(counts) as Array<keyof LossyCounts>) {
     if (counts[key] > 0) items.push({ type: key, count: counts[key] });
   }
@@ -168,7 +170,7 @@ async function tryGetDocument(
   try {
     return await service.getDocument(opts.fileId);
   } catch (e) {
-    const msg = (e as Error).message;
+    const msg = errorMessage(e);
     console.warn(
       "[google-drive] Could not fetch Docs API metadata for " +
         opts.fileName + ": " + msg +
@@ -242,7 +244,7 @@ const docsHandler: DriveTypeHandler = {
         localContent = await fs.readFile(mdPath, "utf-8");
       } catch (e) {
         // File missing — treat as no local edit, will be written below
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+        if (errnoCode(e) !== "ENOENT") {
           console.debug(`[google-drive] No local markdown at ${mdPath}, treating as no local edit:`, e);
         }
       }
@@ -310,7 +312,7 @@ const docsHandler: DriveTypeHandler = {
       existingCard = await fs.readFile(cardPath, "utf-8");
     } catch (e) {
       // New card — no existing file to diff against
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`[google-drive] No existing card at ${cardPath}, treating as new:`, e);
       }
     }
@@ -341,7 +343,7 @@ const docsHandler: DriveTypeHandler = {
       localContent = await fs.readFile(mdPath, "utf-8");
     } catch (e) {
       // Nothing to push — no local markdown file exists.
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug(`[google-drive] No local markdown at ${mdPath}, nothing to push:`, e);
       }
       return { pushed: [] };
@@ -380,7 +382,8 @@ const docsHandler: DriveTypeHandler = {
     // Both signals are best-effort: revisionId only kicks in when both the
     // stored and current values are available (Docs API scope present at
     // both pull-time and push-time). modifiedTime always works.
-    const storedRevision = state.extra["headRevisionId"] as string | undefined;
+    const rawStoredRevision = state.extra["headRevisionId"];
+    const storedRevision = typeof rawStoredRevision === "string" ? rawStoredRevision : undefined;
     const doc = await tryGetDocument(service, { fileId: file.id, fileName: file.name });
     const remoteDiverged =
       file.modifiedTime !== state.lastModified ||

@@ -11,6 +11,7 @@ import {
   runCommand,
   type CommandContext,
 } from "../../core/commands/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 interface CreateBody {
   path: string;
@@ -85,7 +86,7 @@ async function handleCreate(args: {
   } catch (error) {
     return reply.status(500).send({
       error: "Failed to create card",
-      details: (error as Error).message,
+      details: errorMessage(error),
     });
   }
 }

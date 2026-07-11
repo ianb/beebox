@@ -18,6 +18,7 @@ import {
 } from "../../../core/landmark/resolve.js";
 import { readLandmarkFeatures } from "../../../core/landmark/features.js";
 import { parseLandmarkFields, type LandmarkNavigationData } from "../../../schemas/landmark.js";
+import { errorMessage } from "../../../lib/error-guards.js";
 
 export interface LandmarkPayload {
   /** Box-relative path of the landmark card. */
@@ -75,7 +76,7 @@ async function loadLandmarkPayload(
     const content = await fs.readFile(absPath, "utf-8");
     fields = parseLandmarkFields(content);
   } catch (e) {
-    console.warn(`landmarks: failed to read ${relPath}: ${(e as Error).message}`);
+    console.warn(`landmarks: failed to read ${relPath}: ${errorMessage(e)}`);
     return null;
   }
   if (fields === null) return null;

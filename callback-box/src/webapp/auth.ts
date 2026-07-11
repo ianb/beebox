@@ -10,6 +10,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import type { FastifyRequest } from "fastify";
+import { errnoCode } from "../lib/error-guards.js";
 
 const COOKIE_NAME = "cb_session";
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -36,7 +37,7 @@ function getSessionSecret(): string {
   } catch (e) {
     // Missing file is the normal first-run case (generate below). Anything
     // else (permissions, corruption) we'd want to notice before overwriting.
-    const code = e instanceof Error && "code" in e ? (e as NodeJS.ErrnoException).code : undefined;
+    const code = errnoCode(e);
     if (code !== "ENOENT") {
       console.warn(`Failed to read session secret at ${secretFile}, regenerating:`, e);
     }
@@ -189,7 +190,7 @@ export function verifySession(cookie: string): SessionUser | null {
  * Extract the authenticated user from a request's session cookie.
  */
 export function getSessionUser(request: FastifyRequest): SessionUser | null {
-  const cookie = (request.cookies as Record<string, string | undefined>)[COOKIE_NAME];
+  const cookie = request.cookies[COOKIE_NAME];
   if (!cookie) return null;
   return verifySession(cookie);
 }

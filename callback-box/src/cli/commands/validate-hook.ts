@@ -7,6 +7,7 @@
  */
 
 import * as path from "node:path";
+import { isRecord } from "../../lib/is-record.js";
 import { formatLintResults } from "../../cards/index.js";
 import {
   lintMarkdownFiles,
@@ -30,12 +31,15 @@ import { loadValidationIgnore } from "../../core/validation-ignore.js";
  */
 async function readHookFilePath(): Promise<string | undefined> {
   const chunks: Buffer[] = [];
-  for await (const chunk of process.stdin) chunks.push(chunk as Buffer);
+  for await (const chunk of process.stdin) {
+    if (Buffer.isBuffer(chunk)) chunks.push(chunk);
+  }
   const raw = Buffer.concat(chunks).toString("utf-8").trim();
   if (raw === "") return undefined;
   try {
-    const parsed = JSON.parse(raw) as { tool_input?: { file_path?: unknown } };
-    const fp = parsed.tool_input?.file_path;
+    const parsed: unknown = JSON.parse(raw);
+    const toolInput = isRecord(parsed) ? parsed["tool_input"] : undefined;
+    const fp = isRecord(toolInput) ? toolInput["file_path"] : undefined;
     return typeof fp === "string" ? fp : undefined;
   } catch (_e) {
     // stdin wasn't valid JSON: per this helper's contract the hook just exits 0

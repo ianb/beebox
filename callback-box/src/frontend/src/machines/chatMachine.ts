@@ -9,6 +9,7 @@
  */
 
 import { setup, assign } from "xstate";
+import { invariant } from "../lib/invariant";
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
 import {
   HISTORY_TAIL,
@@ -188,19 +189,22 @@ export const chatMachine = setup({
         id: "chatStream",
         src: "stream",
         input: ({ event, context }) => {
-          const sendEvent = event as Extract<ChatEvent, { type: "SEND" }>;
+          // `streaming` is only ever entered by SEND (idle → streaming), so the
+          // triggering event narrows to that variant — assert it rather than
+          // cast past XState's broader event-union type on `input`.
+          invariant(event.type === "SEND", "chatStream can only be invoked by a SEND event");
           return {
             sessionInput: context.sessionInput,
-            message: sendEvent.message,
-            messageId: sendEvent.messageId,
-            ...(sendEvent.images && sendEvent.images.length > 0
-              ? { images: sendEvent.images }
+            message: event.message,
+            messageId: event.messageId,
+            ...(event.images && event.images.length > 0
+              ? { images: event.images }
               : {}),
             ...(context.sessionInput === "new" && context.contextDir !== undefined
               ? { contextDir: context.contextDir }
               : {}),
             ...(context.sessionInput === "new" && context.seedFeatures ? { seedFeatures: context.seedFeatures } : {}),
-            ...cardFieldsFromEvent(sendEvent),
+            ...cardFieldsFromEvent(event),
           };
         },
       },

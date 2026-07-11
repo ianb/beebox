@@ -20,6 +20,8 @@ import { readFile } from "node:fs/promises";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../cards/index.js";
 import { parseCardFileName } from "../shared/card-name.js";
+import { errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
@@ -130,7 +132,12 @@ export function parseCardText(
       `invalid ${resolved} frontmatter:\n${formatZodIssues(fmParse.error.issues)}`
     );
   }
-  const fmFields = fmParse.data as Record<string, unknown>;
+  // frontmatterSchema is a `z.object(...)`, so a successful parse always yields
+  // a mapping; the guard narrows the `ZodType`-typed `unknown` result honestly.
+  if (!isRecord(fmParse.data)) {
+    throw new CardIOError(source, "frontmatter did not validate to a mapping");
+  }
+  const fmFields = fmParse.data;
 
   const bodyValue = validateCardBody({ schema, body: split.body, resolved, source });
 
@@ -217,13 +224,14 @@ export function cardFields<S extends CardSchema>(
   // the schema objects are identical, or by the re-parse above under a box
   // override. This is the single centralized cast that the per-site
   // `as unknown as XFields` casts collapse into.
+  // eslint-disable-next-line no-restricted-syntax -- the one sanctioned cast: fields are Zod-validated against `schema` above; InferCardFields<S> can't be inferred from the runtime-generic Record
   return card.fields as InferCardFields<S>;
 }
 
-/** Narrow an unknown to a plain (non-array) object. */
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Re-exported from the generic home in `lib/is-record` so the many core
+// consumers that import `isRecord` from here keep working without a churn of
+// import-path edits; new code should import from `lib/is-record` directly.
+export { isRecord };
 
 /**
  * Collect every `{ ref: string }` reference reachable in a card's fields,
@@ -276,15 +284,14 @@ function parseFrontmatterMapping(frontmatterText: string, source: string): Recor
   try {
     frontmatter = parseYaml(frontmatterText);
   } catch (e) {
-    const err = e as Error;
-    throw new CardIOError(source, `invalid YAML frontmatter: ${err.message}`);
+    throw new CardIOError(source, `invalid YAML frontmatter: ${errorMessage(e)}`);
   }
   // YAML parses an empty block as `null`; treat that as an empty mapping
   // so cards whose only frontmatter field got stripped still parse.
   if (Array.isArray(frontmatter) || (frontmatter !== null && typeof frontmatter !== "object")) {
     throw new CardIOError(source, "frontmatter must be a YAML mapping");
   }
-  return (frontmatter as Record<string, unknown> | null) ?? {};
+  return isRecord(frontmatter) ? frontmatter : {};
 }
 
 /**
@@ -299,7 +306,8 @@ function resolveCardType(input: {
   type: string | undefined;
 }): string {
   const { fm, source, type } = input;
-  const yamlType = typeof fm["type"] === "string" ? (fm["type"] as string) : undefined;
+  const fmType = fm["type"];
+  const yamlType = typeof fmType === "string" ? fmType : undefined;
   const resolved = type ?? typeFromFilename(source) ?? yamlType;
   if (resolved === undefined) {
     throw new CardIOError(

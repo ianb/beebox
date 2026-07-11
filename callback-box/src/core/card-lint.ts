@@ -30,11 +30,12 @@ import {
   type LintIssue,
 } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
-import { parseCardText, typeFromFilename, type LoadCardContext } from "./card-io.js";
+import { parseCardText, typeFromFilename, isRecord, type LoadCardContext } from "./card-io.js";
 import { extractBodyRefs } from "./body-refs.js";
 import { resolveRefExists } from "./ref-exists.js";
 import { lintLessonPlanNodeRefs, lintProgressNodeRefs } from "./lint-node-refs.js";
 import { conceptMapShapeWarnings } from "../schemas/concept-map.js";
+import { errorMessage } from "../lib/error-guards.js";
 
 export interface LintDispatchOptions {
   /**
@@ -82,7 +83,7 @@ async function lintOne(path: string, options: LintDispatchOptions): Promise<Lint
   try {
     content = await readFile(path, "utf8");
   } catch (e) {
-    return errorResult(path, (e as Error).message);
+    return errorResult(path, errorMessage(e));
   }
 
   const split = splitCardContent(content);
@@ -132,7 +133,7 @@ async function lintFrontmatterCard(input: {
   try {
     parsed = parseCardText(content, { source: path, schemas: options.ctx.cardSchemas, type });
   } catch (e) {
-    return errorResult(path, (e as Error).message);
+    return errorResult(path, errorMessage(e));
   }
   // Broken refs are surfaced as WARNINGS, not errors. Refs commonly go
   // stale via legitimate operations (the referent got moved, archived,
@@ -159,7 +160,7 @@ async function lintFrontmatterCard(input: {
       warnings.push({
         type: "reference",
         severity: "warning",
-        message: `Reference at ${refPath} failed to resolve: ${(e as Error).message}`,
+        message: `Reference at ${refPath} failed to resolve: ${errorMessage(e)}`,
       });
     }
   }
@@ -206,11 +207,11 @@ function unknownKeyWarnings(input: { content: string; schema: CardSchema }): Lin
     // parseCardText (which threw → errorResult); nothing to add here.
     return [];
   }
-  if (fm === null || typeof fm !== "object" || Array.isArray(fm)) return [];
+  if (!isRecord(fm)) return [];
   const allowed = new Set<string>(["type", ...schema.globalFieldNames, ...Object.keys(schema.fields)]);
   if (schema.bodyFieldName !== null) allowed.delete(schema.bodyFieldName);
   const warnings: LintIssue[] = [];
-  for (const key of Object.keys(fm as Record<string, unknown>)) {
+  for (const key of Object.keys(fm)) {
     if (allowed.has(key)) continue;
     warnings.push({
       type: "schema",

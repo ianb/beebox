@@ -7,6 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
 import { trpcClient } from "../../lib/trpc";
+import { errorMessage } from "../../lib/error-guards";
 
 export function AllowedEmailsSection() {
   const [emails, setEmails] = useState<string[]>([]);
@@ -23,7 +24,7 @@ export function AllowedEmailsSection() {
       setOwnerEmail(data.ownerEmail ?? null);
       setError(null);
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorMessage(err));
     }
   }, []);
 
@@ -45,7 +46,7 @@ export function AllowedEmailsSection() {
       const data = await trpcClient.admin.updateBoxConfig.mutate({ allowedEmails: updated });
       setEmails(data.allowedEmails);
     } catch (err) {
-      setError((err as Error).message);
+      setError(errorMessage(err));
     } finally {
       setSaving(false);
     }

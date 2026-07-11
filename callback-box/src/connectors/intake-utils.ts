@@ -13,6 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
 import { parseFrontmatterObject, renderFrontmatterBlock } from "../cards/index.js";
 import { createIntakeJobTemplate, type IntakeJobFields } from "../schemas/intake-job.js";
 import { findPendingJobCard, timestampedJobFilename } from "./job-cards.js";
@@ -93,7 +94,7 @@ async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | 
   try {
     content = await fs.readFile(filePath, "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`readIntakeJobFields: could not read ${filePath}, skipping:`, e);
     }
     return null;
@@ -101,6 +102,7 @@ async function readIntakeJobFields(filePath: string): Promise<IntakeJobFields | 
   // Parse boundary: the loose frontmatter read yields a plain mapping, which we
   // vouch for as IntakeJobFields (validated on load elsewhere; this is a
   // best-effort append path).
+  // eslint-disable-next-line no-restricted-syntax -- parse boundary: best-effort append path; the loose frontmatter mapping is vouched for as IntakeJobFields (validated on load elsewhere)
   return parseFrontmatterObject(content) as IntakeJobFields | null;
 }
 

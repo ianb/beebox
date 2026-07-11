@@ -30,8 +30,10 @@ export function useSSRMachine<TMachine extends AnyStateMachine>(
   options?: ActorOptions<TMachine>,
 ): [StateFrom<TMachine>, Actor<TMachine>["send"], Actor<TMachine>] {
   const ssrState = useContext(SSRStateContext);
+  // eslint-disable-next-line no-restricted-syntax -- SSRStateMap is Record<string, unknown> by design (persisted snapshots keyed by machine id); the real per-machine snapshot type is recovered here at the read boundary.
   const ssrSnapshot = ssrState[machine.id] as SnapshotFrom<TMachine> | undefined;
 
+  // eslint-disable-next-line no-restricted-syntax -- the assembled options object widens past ActorOptions under the naked generic; narrowing back at this single call boundary.
   return useMachine(machine, {
     ...options,
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- SnapshotFrom<T> is a conditional type over a naked, unresolved generic (TMachine extends AnyStateMachine); the checker collapses it to `undefined` here even though every concrete instantiation carries a real snapshot type, so the fallback is genuinely live at every call site.

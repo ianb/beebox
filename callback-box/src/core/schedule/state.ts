@@ -7,12 +7,14 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { z } from "zod";
 import {
   acquireLock as acquireFileLock,
   releaseLock as releaseFileLock,
   scanLocks,
   LockHeldError,
 } from "../../lib/file-lock.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 class ScriptAlreadyRunningError extends Error {
   constructor(scriptName: string, pid: number) {
@@ -24,7 +26,7 @@ class ScriptAlreadyRunningError extends Error {
 export interface RunRecord {
   ts: string;
   durationMs: number;
-  sleepAffected?: boolean;
+  sleepAffected?: boolean | undefined;
 }
 
 /** Default window for pruning a script's run history (recordRun). */
@@ -48,6 +50,27 @@ export interface ScriptState {
   recentRuns?: RunRecord[];
 }
 
+const RunRecordSchema = z.object({
+  ts: z.string(),
+  durationMs: z.number(),
+  sleepAffected: z.boolean().optional(),
+});
+const ScriptStatePartialSchema = z
+  .object({
+    lastRun: z.string().nullable(),
+    lastResult: z.enum(["success", "failure"]).nullable(),
+    lastError: z.string().nullable(),
+    lastDurationMs: z.number().nullable(),
+    lastSuccess: z.string().nullable(),
+    consecutiveFailures: z.number(),
+    alertedAt: z.string().nullable(),
+    alertedFor: z.enum(["failing", "overdue", "invalid"]).nullable(),
+    runCount: z.number(),
+    recentRuns: z.array(RunRecordSchema).optional(),
+  })
+  .partial();
+type ScriptStatePartial = z.infer<typeof ScriptStatePartialSchema>;
+
 const EMPTY_STATE: ScriptState = {
   lastRun: null,
   lastResult: null,
@@ -64,8 +87,23 @@ const EMPTY_STATE: ScriptState = {
  * existed. Best-effort backfill: a state whose last run succeeded gets
  * lastSuccess = lastRun; one whose last run failed counts as 1 failure
  * (we can't know how many preceded it). */
-export function normalizeScriptState(raw: Partial<ScriptState>): ScriptState {
-  const state = { ...EMPTY_STATE, ...raw };
+export function normalizeScriptState(raw: ScriptStatePartial): ScriptState {
+  // Field-by-field (not `{ ...EMPTY_STATE, ...raw }`) so a `raw` value of
+  // `undefined` (never produced by JSON.parse, but allowed by the type) falls
+  // back to the default instead of overwriting it — satisfies
+  // `exactOptionalPropertyTypes` without a cast.
+  const state: ScriptState = {
+    lastRun: raw.lastRun ?? EMPTY_STATE.lastRun,
+    lastResult: raw.lastResult ?? EMPTY_STATE.lastResult,
+    lastError: raw.lastError ?? EMPTY_STATE.lastError,
+    lastDurationMs: raw.lastDurationMs ?? EMPTY_STATE.lastDurationMs,
+    lastSuccess: raw.lastSuccess ?? EMPTY_STATE.lastSuccess,
+    consecutiveFailures: raw.consecutiveFailures ?? EMPTY_STATE.consecutiveFailures,
+    alertedAt: raw.alertedAt ?? EMPTY_STATE.alertedAt,
+    alertedFor: raw.alertedFor ?? EMPTY_STATE.alertedFor,
+    runCount: raw.runCount ?? EMPTY_STATE.runCount,
+    ...(raw.recentRuns !== undefined ? { recentRuns: raw.recentRuns } : {}),
+  };
   if (raw.lastSuccess === undefined && state.lastResult === "success") {
     state.lastSuccess = state.lastRun;
   }
@@ -89,9 +127,9 @@ function stateFile(boxRoot: string, scriptName: string): string {
 export async function loadScriptState(boxRoot: string, scriptName: string): Promise<ScriptState> {
   try {
     const content = await fs.readFile(stateFile(boxRoot, scriptName), "utf-8");
-    return normalizeScriptState(JSON.parse(content) as Partial<ScriptState>);
+    return normalizeScriptState(ScriptStatePartialSchema.parse(JSON.parse(content)));
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not load schedule state for "${scriptName}", using empty state:`, e);
     }
     return { ...EMPTY_STATE };
@@ -334,7 +372,7 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
   try {
     entries = await fs.readdir(runsDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read procedure runs directory ${runsDir}:`, e);
     }
     return [];
@@ -349,7 +387,7 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
       const stat = await fs.stat(cardPath);
       mtimeMs = stat.mtimeMs;
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not stat run card ${cardPath}, skipping:`, e);
       }
       continue;
@@ -358,7 +396,7 @@ export async function loadRunningProcedures(boxRoot: string): Promise<string[]> 
     try {
       content = await fs.readFile(cardPath, "utf-8");
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn(`Could not read run card ${cardPath}, skipping:`, e);
       }
       continue;

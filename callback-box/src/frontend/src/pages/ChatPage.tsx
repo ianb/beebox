@@ -47,6 +47,7 @@ interface ChatSearch {
 }
 
 export function ChatPage() {
+  // eslint-disable-next-line no-restricted-syntax -- router boundary: `useSearch({ strict: false })` returns the union of every route's search params (this page mounts under a non-strict route), so it can't be statically typed to this page's ChatSearch shape without the cast.
   const search = useSearch({ strict: false }) as ChatSearch;
   const { boxSlug } = useParams({ strict: false });
   const navigate = useNavigate();

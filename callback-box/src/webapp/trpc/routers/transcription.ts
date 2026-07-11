@@ -7,6 +7,7 @@ import {
   updateTranscriptionConfig,
 } from "../../../core/transcription/index.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
+import { errorMessage } from "../../../lib/error-guards.js";
 
 const TEMP_KEY_TTL_SECONDS = 20 * 60; // 20 minutes
 
@@ -112,7 +113,7 @@ export const transcriptionRouter = router({
         body: JSON.stringify(requestBody),
       });
     } catch (e) {
-      const detail = (e as Error).message;
+      const detail = errorMessage(e);
       console.error("[openaiRealtimeKey] network error:", detail);
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
@@ -139,7 +140,7 @@ export const transcriptionRouter = router({
       );
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: `OpenAI returned non-JSON response (${response.status}): ${(e as Error).message}`,
+        message: `OpenAI returned non-JSON response (${response.status}): ${errorMessage(e)}`,
       });
     }
     // Handle both flat and nested response shapes — the docs show flat

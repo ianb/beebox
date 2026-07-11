@@ -12,6 +12,30 @@ import { resolveBoxPublicUrl } from "../../../lib/public-url.js";
 import { baseServerUrl } from "../../base-server-url.js";
 import { googleAdminProcedures } from "./admin-google.js";
 import { withCardLock } from "../../../lib/card-lock.js";
+import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
+
+/**
+ * Shape of `config/box.json`, validated on read (config is untrusted input).
+ * `.default()` on every field lets a missing file or missing key read as the
+ * documented default rather than casting an untyped `JSON.parse` result.
+ */
+const boxConfigSchema = z.object({
+  allowedEmails: z.array(z.string()).default([]),
+  publicUrl: z.string().nullable().default(null),
+  googleServices: z
+    .object({
+      calendar: z.boolean().optional(),
+      gmail: z.boolean().optional(),
+      drive: z.boolean().optional(),
+    })
+    .default({}),
+});
+
+/** Shape of `config/connectors/gmail.json`, validated on read. */
+const gmailConfigSchema = z.object({
+  query: z.string().default(""),
+  labels: z.array(z.string()).default([]),
+});
 
 /**
  * Per-box admin router (Telegram, box config).
@@ -42,7 +66,7 @@ export const adminRouter = router({
       return {
         configured: true,
         botToken: config.botToken,
-        error: (err as Error).message,
+        error: errorMessage(err),
         boxSlug: ctx.boxSlug,
       };
     }
@@ -58,7 +82,7 @@ export const adminRouter = router({
       } catch (err) {
         throw new TRPCError({
           code: "BAD_REQUEST",
-          message: `Invalid bot token: ${(err as Error).message}`,
+          message: `Invalid bot token: ${errorMessage(err)}`,
         });
       }
 
@@ -86,7 +110,7 @@ export const adminRouter = router({
             botUsername: me.username,
             botFirstName: me.first_name,
             webhookUrl,
-            webhookError: (err as Error).message,
+            webhookError: errorMessage(err),
           };
         }
       }
@@ -112,7 +136,7 @@ export const adminRouter = router({
     try {
       await fs.unlink(configPath);
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.warn("Could not remove Telegram config file (may already be gone):", e);
       }
     }
@@ -122,47 +146,36 @@ export const adminRouter = router({
 
   boxConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/box.json");
+    let config: z.infer<typeof boxConfigSchema>;
     try {
-      const raw = await fs.readFile(configPath, "utf-8");
-      const config = JSON.parse(raw);
-      return {
-        boxSlug: ctx.boxSlug,
-        allowedEmails: (config.allowedEmails ?? []) as string[],
-        publicUrl: (config.publicUrl ?? null) as string | null,
-        ownerEmail: process.env.CB_OWNER_EMAIL || null,
-        googleServices: (config.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
-      };
+      config = boxConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("box.json missing or unreadable, returning default box config:", e);
       }
-      return {
-        boxSlug: ctx.boxSlug,
-        allowedEmails: [] as string[],
-        publicUrl: null as string | null,
-        ownerEmail: process.env.CB_OWNER_EMAIL || null,
-        googleServices: {} as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
-      };
+      config = boxConfigSchema.parse({});
     }
+    return {
+      boxSlug: ctx.boxSlug,
+      allowedEmails: config.allowedEmails,
+      publicUrl: config.publicUrl,
+      ownerEmail: process.env.CB_OWNER_EMAIL || null,
+      googleServices: config.googleServices,
+    };
   }),
 
   gmailConfig: ownerProcedure.query(async ({ ctx }) => {
     const configPath = path.join(ctx.boxRoot, "config/connectors/gmail.json");
+    let config: z.infer<typeof gmailConfigSchema>;
     try {
-      const raw = await fs.readFile(configPath, "utf-8");
-      const config = JSON.parse(raw);
-      return {
-        query: typeof config.query === "string" ? config.query : "",
-        labels: Array.isArray(config.labels)
-          ? (config.labels.filter((l: unknown): l is string => typeof l === "string"))
-          : ([] as string[]),
-      };
+      config = gmailConfigSchema.parse(JSON.parse(await fs.readFile(configPath, "utf-8")));
     } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      if (errnoCode(e) !== "ENOENT") {
         console.debug("gmail.json missing or unreadable, returning empty Gmail config:", e);
       }
-      return { query: "", labels: [] as string[] };
+      config = gmailConfigSchema.parse({});
     }
+    return { query: config.query, labels: config.labels };
   }),
 
   updateGmailConfig: ownerProcedure
@@ -211,7 +224,7 @@ export const adminRouter = router({
         try {
           existing = JSON.parse(await fs.readFile(configPath, "utf-8"));
         } catch (e) {
-          if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+          if (errnoCode(e) !== "ENOENT") {
             console.debug("box.json missing or unreadable, starting fresh config:", e);
           }
         }
@@ -234,10 +247,11 @@ export const adminRouter = router({
           message: `Update box config: ${changed.join(", ")}`,
         });
 
+        const saved = boxConfigSchema.parse(existing);
         return {
           success: true,
-          allowedEmails: (existing.allowedEmails ?? []) as string[],
-          googleServices: (existing.googleServices ?? {}) as Partial<Record<"calendar" | "gmail" | "drive", boolean>>,
+          allowedEmails: saved.allowedEmails,
+          googleServices: saved.googleServices,
         };
       });
     }),

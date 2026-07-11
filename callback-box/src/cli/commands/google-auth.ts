@@ -13,6 +13,7 @@ import { Command } from "commander";
 import Fastify from "fastify";
 import open from "open";
 import { requireBoxRoot } from "../../lib/paths.js";
+import { isRecord } from "../../lib/is-record.js";
 import {
   loadGoogleTokens,
   saveGoogleTokens,
@@ -20,6 +21,7 @@ import {
   createOAuth2Client,
   GOOGLE_SCOPES,
 } from "../../connectors/google-auth.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const googleAuthCommand = new Command("google-auth")
   .description("Set up Google OAuth2 credentials")
@@ -99,10 +101,9 @@ export const googleAuthCommand = new Command("google-auth")
           server.get(
             "/oauth/callback",
             async (request, reply) => {
-              const { code, error } = request.query as {
-                code?: string;
-                error?: string;
-              };
+              const query: unknown = request.query;
+              const code = isRecord(query) && typeof query["code"] === "string" ? query["code"] : undefined;
+              const error = isRecord(query) && typeof query["error"] === "string" ? query["error"] : undefined;
 
               if (error) {
                 await reply.type("text/html").send(errorPage("Authorization denied"));
@@ -139,7 +140,7 @@ export const googleAuthCommand = new Command("google-auth")
                 await reply.type("text/html").send(errorPage("Token exchange failed"));
                 resolve({
                   success: false,
-                  error: `Token exchange failed: ${(err as Error).message}`,
+                  error: `Token exchange failed: ${errorMessage(err)}`,
                 });
               }
             }
@@ -161,7 +162,7 @@ export const googleAuthCommand = new Command("google-auth")
               console.error("Failed to start OAuth callback server:", err);
               resolve({
                 success: false,
-                error: `Failed to start server: ${(err as Error).message}`,
+                error: `Failed to start server: ${errorMessage(err)}`,
               });
             });
         }

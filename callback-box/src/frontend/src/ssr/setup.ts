@@ -7,14 +7,18 @@
 // document polyfill — react-textarea-autosize reads document.documentElement at import time.
 // NOTE: Do NOT set globalThis.window here — tRPC server checks `typeof window === 'undefined'`
 // to detect server environments. Setting window would make it think we're a browser and throw.
-(globalThis as Record<string, unknown>).document = {
-  addEventListener() {},
-  removeEventListener() {},
-  createElement() { return {}; },
-  getElementById() { return null; },
-  querySelector() { return null; },
-  documentElement: { currentStyle: null, style: {} },
-};
+// `Object.assign` writes the stub without an `as` cast (the DOM lib types
+// `globalThis.document` as `Document`, which a stub isn't).
+Object.assign(globalThis, {
+  document: {
+    addEventListener() {},
+    removeEventListener() {},
+    createElement() { return {}; },
+    getElementById() { return null; },
+    querySelector() { return null; },
+    documentElement: { currentStyle: null, style: {} },
+  },
+});
 
 /**
  * Set up the window polyfill with the actual route.
@@ -22,7 +26,7 @@
  * but BEFORE rendering (so getApiBase() can read window.location).
  */
 export function setRoute(fullPath: string): void {
-  (globalThis as Record<string, unknown>).window = {
+  const windowStub = {
     location: {
       pathname: fullPath,
       search: "",
@@ -31,8 +35,9 @@ export function setRoute(fullPath: string): void {
     addEventListener() {},
     removeEventListener() {},
   };
-  // TanStack Router (router-core) reads a bare `self` at construction; in a
-  // browser `self === window`. Mirror that so SSR router creation doesn't throw
-  // `self is not defined`. Set after window so they reference the same stub.
-  (globalThis as Record<string, unknown>).self = (globalThis as Record<string, unknown>).window;
+  // `Object.assign` writes the stubs without an `as` cast past the DOM lib's
+  // `Window` types. TanStack Router (router-core) reads a bare `self` at
+  // construction; in a browser `self === window`. Mirror that (same stub
+  // reference) so SSR router creation doesn't throw `self is not defined`.
+  Object.assign(globalThis, { window: windowStub, self: windowStub });
 }

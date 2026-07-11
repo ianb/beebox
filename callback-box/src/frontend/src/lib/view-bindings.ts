@@ -13,6 +13,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { trpcClient } from "./trpc";
+import { busEventData } from "./bus-events";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 
 export interface CardViewBinding {
@@ -92,9 +93,8 @@ export function useCardViewBinding(type: string | undefined): CardViewBinding | 
   const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
-      if (event.event !== "file-change") return;
-      const data = event.data as { path?: string };
-      if (typeof data.path !== "string" || !/^views\/.+\.tsx$/.test(data.path)) return;
+      const change = busEventData(event, "file-change");
+      if (!change || !/^views\/.+\.tsx$/.test(change.path)) return;
       invalidateBindings();
       load();
     }, [load]),

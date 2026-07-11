@@ -18,6 +18,7 @@ import { collectInlineRefs } from "../../cards/index.js";
 import { ensureAgentCommitted, captureBaseline } from "../agent/index.js";
 import { buildReactorSystemPrompt, buildReactorUserPrompt } from "./prompts.js";
 import type { ProcessJobsOptions, JobWithContent } from "./types.js";
+import { errnoCode } from "../../lib/error-guards.js";
 
 /**
  * Process agent jobs in a single batched agent session.
@@ -122,7 +123,7 @@ export async function buildJobDescription(job: JobWithContent, boxRoot: string):
     } catch (e) {
       if (e instanceof RefEscapesBoxError) {
         console.warn(`buildJobDescription: ref "${ref}" in ${job.relPath} resolves outside the box via symlink; omitting`);
-      } else if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+      } else if (errnoCode(e) !== "ENOENT") {
         // Referenced file doesn't exist — omit it; the agent will discover this.
         console.debug(`Could not inline ref ${ref}:`, e);
       }

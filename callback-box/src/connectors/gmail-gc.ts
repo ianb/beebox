@@ -26,6 +26,8 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { errnoCode } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent } from "../cards/index.js";
 import { attachDirFor } from "../shared/attach-path.js";
@@ -44,8 +46,8 @@ function frontmatterOf(content: string): Record<string, unknown> {
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) return {};
   const parsed: unknown = parseYaml(split.frontmatterText);
-  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-    return parsed as Record<string, unknown>;
+  if (isRecord(parsed)) {
+    return parsed;
   }
   return {};
 }
@@ -56,7 +58,7 @@ async function readThreadId(cardAbs: string): Promise<string | null> {
   try {
     content = await fs.readFile(cardAbs, "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code !== "ENOENT") {
+    if (errnoCode(e) !== "ENOENT") {
       console.warn(`Gmail GC: could not read thread card ${cardAbs}:`, e);
     }
     return null;
@@ -70,7 +72,7 @@ async function freeTrashDest(dest: string): Promise<string> {
   try {
     await fs.access(dest);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return dest;
+    if (errnoCode(e) === "ENOENT") return dest;
     throw e;
   }
   const stamp = new Date().toISOString().replaceAll(/[.:]/g, "-");
@@ -95,7 +97,7 @@ async function trashThread(opts: { boxRoot: string; cardAbs: string }): Promise<
   try {
     await fs.access(srcAttach);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return staged;
+    if (errnoCode(e) === "ENOENT") return staged;
     throw e;
   }
   const destAttach = attachDirFor(destCard);
@@ -115,7 +117,7 @@ async function pruneJobRefs(boxRoot: string, removedRefs: string[]): Promise<str
   try {
     files = await fs.readdir(jobsDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
+    if (errnoCode(e) === "ENOENT") return [];
     throw e;
   }
 
@@ -147,8 +149,8 @@ async function pruneJobRefs(boxRoot: string, removedRefs: string[]): Promise<str
 
 /** Extract a `{ ref }` item's path, or "" for anything malformed. */
 function refOf(item: unknown): string {
-  if (item && typeof item === "object" && "ref" in item) {
-    const ref = (item as { ref?: unknown }).ref;
+  if (isRecord(item) && "ref" in item) {
+    const ref = item["ref"];
     return typeof ref === "string" ? ref : "";
   }
   return "";
@@ -181,7 +183,7 @@ export async function reconcileOrphans(opts: {
   try {
     entries = await fs.readdir(emailDir);
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { withdrawn: [] };
+    if (errnoCode(e) === "ENOENT") return { withdrawn: [] };
     throw e;
   }
   const threadCards = entries.filter((e) => e.endsWith(".email-thread.card"));

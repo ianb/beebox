@@ -19,6 +19,7 @@
 
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { z } from "zod";
 import {
   loadCardFromText,
   type FrontmatterLoadedCard,
@@ -28,6 +29,7 @@ import {
 import { declareInputFiles, effectiveContains } from "./extract.js";
 import { writeJsonAtomic } from "./search-store.js";
 import { contentHash } from "../../lib/content-hash.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const STATE_FILENAME = "contains-state.json";
 // v2: containsText records the *effective* contains (per-kind description
@@ -37,19 +39,21 @@ const STATE_VERSION = 2;
 /** Fields that never count toward the contains basis. */
 const BASIS_EXCLUDED_FIELDS = new Set(["contains", "title", "type", "status"]);
 
-export interface ContainsCardState {
+const containsCardStateSchema = z.object({
   /** The card's `contains` text ("" when the card has none yet). */
-  containsText: string;
+  containsText: z.string(),
   /** Basis hash when `containsText` was last seen to change. */
-  basisAtWrite: string;
+  basisAtWrite: z.string(),
   /** Basis hash from the most recent refresh. */
-  currentBasis: string;
-}
+  currentBasis: z.string(),
+});
+export type ContainsCardState = z.infer<typeof containsCardStateSchema>;
 
-export interface ContainsState {
-  version: number;
-  cards: Record<string, ContainsCardState>;
-}
+const containsStateSchema = z.object({
+  version: z.number(),
+  cards: z.record(z.string(), containsCardStateSchema),
+});
+export type ContainsState = z.infer<typeof containsStateSchema>;
 
 export function emptyContainsState(): ContainsState {
   return { version: STATE_VERSION, cards: {} };
@@ -67,16 +71,15 @@ export async function loadContainsState(boxRoot: string): Promise<ContainsState>
     return emptyContainsState();
   }
   try {
-    // Parse boundary: disk JSON is untrusted, so keep `version`/`cards`
-    // typed `unknown` rather than casting straight to `ContainsState` — a
-    // cast there would make the shape checks below vacuously "always true"
-    // instead of real validation of file content we didn't write ourselves.
-    const parsed = JSON.parse(raw) as { version: unknown; cards: unknown };
-    if (parsed.version !== STATE_VERSION) return emptyContainsState();
-    if (typeof parsed.cards !== "object" || parsed.cards === null) return emptyContainsState();
-    return { version: parsed.version, cards: parsed.cards as ContainsState["cards"] };
+    // Parse boundary: disk JSON is untrusted — validate the full shape with
+    // zod rather than casting, so a corrupt or foreign-shaped sidecar falls
+    // back to "fresh" instead of flowing unchecked data downstream.
+    const parsed: unknown = JSON.parse(raw);
+    const result = containsStateSchema.safeParse(parsed);
+    if (!result.success || result.data.version !== STATE_VERSION) return emptyContainsState();
+    return result.data;
   } catch (e) {
-    console.warn(`contains-state unreadable (${(e as Error).message}); starting fresh`);
+    console.warn(`contains-state unreadable (${errorMessage(e)}); starting fresh`);
     return emptyContainsState();
   }
 }

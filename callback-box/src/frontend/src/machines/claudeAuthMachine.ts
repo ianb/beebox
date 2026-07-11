@@ -10,6 +10,7 @@
 import { setup, assign, fromPromise, fromCallback } from "xstate";
 import { trpcClient } from "../lib/trpc";
 import { RequestError } from "../lib/errors";
+import { errorMessage } from "../lib/error-guards";
 
 interface ClaudeStatus {
   loggedIn?: boolean;
@@ -111,7 +112,7 @@ export const claudeAuthMachine = setup({
         onError: {
           target: "idle",
           actions: assign(({ event }) => ({
-            error: (event.error as Error).message,
+            error: errorMessage(event.error),
           })),
         },
       },
@@ -136,7 +137,7 @@ export const claudeAuthMachine = setup({
         onError: {
           target: "idle",
           actions: assign(({ event }) => ({
-            error: (event.error as Error).message,
+            error: errorMessage(event.error),
           })),
         },
       },
@@ -178,7 +179,7 @@ export const claudeAuthMachine = setup({
         onError: {
           target: "idle",
           actions: assign(({ event }) => ({
-            error: (event.error as Error).message,
+            error: errorMessage(event.error),
           })),
         },
       },

@@ -17,6 +17,7 @@
  */
 
 import * as path from "node:path";
+import { errorMessage } from "../lib/error-guards.js";
 import {
   registerConnector,
   type Connector,
@@ -112,14 +113,14 @@ class TelegramConnector implements Connector {
       updated.push(...result.updated);
       jobs.push(...result.jobs);
     } catch (err) {
-      errors.push(`Polling catch-up failed: ${(err as Error).message}`);
+      errors.push(`Polling catch-up failed: ${errorMessage(err)}`);
     }
 
     // Phase 2: Set webhook for real-time updates
     try {
       await this.setupWebhook(config);
     } catch (err) {
-      errors.push(`Webhook setup failed: ${(err as Error).message}`);
+      errors.push(`Webhook setup failed: ${errorMessage(err)}`);
     }
 
     // Phase 3: Check callback timers
@@ -127,7 +128,7 @@ class TelegramConnector implements Connector {
       const callbackJobs = await this.checkCallbackTimers();
       jobs.push(...callbackJobs);
     } catch (err) {
-      errors.push(`Callback timer check failed: ${(err as Error).message}`);
+      errors.push(`Callback timer check failed: ${errorMessage(err)}`);
     }
 
     // Phase 4: Send outbound messages from thread files
@@ -139,7 +140,7 @@ class TelegramConnector implements Connector {
       });
       pushed.push(...sentThreads);
     } catch (err) {
-      errors.push(`Outbound send failed: ${(err as Error).message}`);
+      errors.push(`Outbound send failed: ${errorMessage(err)}`);
     }
 
     // Phase 5: Send pending telegram-message cards from box/output/
@@ -151,7 +152,7 @@ class TelegramConnector implements Connector {
       });
       pushed.push(...sentCards);
     } catch (err) {
-      errors.push(`Output card send failed: ${(err as Error).message}`);
+      errors.push(`Output card send failed: ${errorMessage(err)}`);
     }
 
     const result: SyncResult = {

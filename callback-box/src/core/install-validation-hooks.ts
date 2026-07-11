@@ -44,10 +44,12 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { execFileSync, type StdioOptions } from "node:child_process";
+import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
+import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
+import { errnoCode } from "../lib/error-guards.js";
 
 /**
  * Resolve `bin/cb` to embed in a box's git hooks. Embedding an absolute path
@@ -84,9 +86,9 @@ function resolveCbBin(): string {
     // on success" rule bans.
     const opts = {
       cwd: PACKAGE_ROOT,
-      encoding: "utf8" as const,
-      stdio: ["ignore", "pipe", "ignore"] as StdioOptions,
-    };
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+    } satisfies ExecFileSyncOptionsWithStringEncoding;
     const top = execFileSync("git", ["rev-parse", "--show-toplevel"], opts).trim();
     const commonDir = execFileSync(
       "git", ["rev-parse", "--path-format=absolute", "--git-common-dir"], opts,
@@ -251,15 +253,28 @@ fi
 `;
 }
 
-interface SettingsShape {
-  hooks?: {
-    PostToolUse?: Array<{
-      matcher?: string;
-      hooks?: Array<{ type: string; command: string }>;
-    }>;
-  };
-  [k: string]: unknown;
-}
+// `.claude/settings.json` is a user-owned config file with many keys we
+// don't model (permissions, other hook events, ...) — `.passthrough()` at
+// every level preserves them verbatim through a read-modify-write cycle
+// instead of silently dropping them, matching the old cast's zero-cost
+// round-trip behavior while still validating the shape we actually touch.
+const settingsHookSchema = z.object({
+  type: z.string(),
+  command: z.string(),
+}).passthrough();
+
+const settingsPostToolUseEntrySchema = z.object({
+  matcher: z.string().optional(),
+  hooks: z.array(settingsHookSchema).optional(),
+}).passthrough();
+
+const settingsShapeSchema = z.object({
+  hooks: z.object({
+    PostToolUse: z.array(settingsPostToolUseEntrySchema).optional(),
+  }).passthrough().optional(),
+}).passthrough();
+
+type SettingsShape = z.infer<typeof settingsShapeSchema>;
 
 const POST_TOOL_USE_MATCHER = "Edit|Write|MultiEdit";
 
@@ -313,10 +328,9 @@ async function readJsonIfExists(filePath: string): Promise<SettingsShape> {
   try {
     const text = await fs.readFile(filePath, "utf-8");
     if (text.trim() === "") return {};
-    return JSON.parse(text) as SettingsShape;
+    return settingsShapeSchema.parse(JSON.parse(text));
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code === "ENOENT") return {};
+    if (errnoCode(e) === "ENOENT") return {};
     throw e;
   }
 }
@@ -342,8 +356,7 @@ async function installIgnoreScaffold(
   try {
     await fs.stat(seedAbs);
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
     seedExists = false;
   }
   if (!seedExists) {
@@ -361,8 +374,7 @@ async function installIgnoreScaffold(
   try {
     ruleExisting = await fs.readFile(ruleAbs, "utf-8");
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
   if (ruleExisting !== ruleBody) {
     await fs.mkdir(path.dirname(ruleAbs), { recursive: true });
@@ -411,8 +423,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
   try {
     isRepo = (await fs.stat(path.join(packageRoot, ".git"))).isDirectory();
   } catch (e) {
-    const err = e as NodeJS.ErrnoException;
-    if (err.code !== "ENOENT") throw e;
+    if (errnoCode(e) !== "ENOENT") throw e;
   }
 
   if (isRepo) {
@@ -421,8 +432,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     try {
       existing = await fs.readFile(hookAbs, "utf-8");
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (errnoCode(e) !== "ENOENT") throw e;
     }
 
     const isManaged = existing !== null && existing.includes(PRE_COMMIT_MARKER);
@@ -445,8 +455,7 @@ export async function installValidationHooks(boxRoot: string): Promise<string[]>
     try {
       postExisting = await fs.readFile(postAbs, "utf-8");
     } catch (e) {
-      const err = e as NodeJS.ErrnoException;
-      if (err.code !== "ENOENT") throw e;
+      if (errnoCode(e) !== "ENOENT") throw e;
     }
     const postMerged = upsertPostCommitBlock(postExisting, postCommitBlock(cbBin, boxRelFromPackageRoot));
     if (postMerged !== postExisting) {

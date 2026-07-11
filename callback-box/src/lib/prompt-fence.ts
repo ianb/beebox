@@ -67,5 +67,6 @@ export function fenceForPrompt(content: string): PromptSafeText {
   // The closing fence must begin its own line; ensure a trailing newline unless
   // the content is empty (an empty block has no interior line at all).
   const body = content.length === 0 || content.endsWith("\n") ? content : `${content}\n`;
+  // eslint-disable-next-line no-restricted-syntax -- sole producer of the PromptSafeText brand; runtime-erased, minted here after fencing (see module comment)
   return `${fence}\n${body}${fence}` as PromptSafeText;
 }

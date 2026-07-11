@@ -12,6 +12,7 @@
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { runCommand, createCliContext } from "../../core/commands/index.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 export const procedureCommand = new Command("procedure")
   .description("Manage and run declarative procedures");
@@ -46,7 +47,7 @@ procedureCommand
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });
@@ -75,7 +76,7 @@ procedureCommand
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });
@@ -99,7 +100,7 @@ procedureCommand
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });
@@ -123,7 +124,7 @@ procedureCommand
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });
@@ -148,7 +149,7 @@ procedureCommand
         process.exit(1);
       }
     } catch (error) {
-      console.error(`Error: ${(error as Error).message}`);
+      console.error(`Error: ${errorMessage(error)}`);
       process.exit(1);
     }
   });

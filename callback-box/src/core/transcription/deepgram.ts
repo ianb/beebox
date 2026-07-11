@@ -7,6 +7,7 @@
  */
 
 import ky, { isHTTPError } from "ky";
+import { z } from "zod";
 import type {
   TranscribeAudioParams,
   TranscriptionResult,
@@ -14,6 +15,7 @@ import type {
   TranscriptionError,
 } from "./index.js";
 import { getDeepgramCredentials } from "../deepgram-key.js";
+import { errorMessage } from "../../lib/error-guards.js";
 
 const DEEPGRAM_ENDPOINT = "https://api.deepgram.com/v1/listen";
 const DEEPGRAM_MODEL = "nova-3";
@@ -132,7 +134,7 @@ export async function transcribeAudioDeepgram(
         duration,
         language,
         words,
-      } as DetailedTranscriptionResult;
+      } satisfies DetailedTranscriptionResult;
     }
 
     return { text, duration, language };
@@ -144,7 +146,7 @@ export async function transcribeAudioDeepgram(
       const parsed = await parseErrorResponse(error.response);
       throw parsed;
     }
-    throw new DeepgramNetworkError((error as Error).message);
+    throw new DeepgramNetworkError(errorMessage(error));
   }
 }
 
@@ -167,19 +169,22 @@ function getContentType(ext: string | undefined): string {
   }
 }
 
+const deepgramErrorBodySchema = z.object({
+  err_msg: z.string().optional(),
+  err_code: z.string().optional(),
+  error: z.string().optional(),
+  message: z.string().optional(),
+});
+
 async function parseErrorResponse(response: Response): Promise<DeepgramApiError> {
   let errorDetails: string;
   let errorCode: string | undefined;
   try {
-    const errorJson = (await response.json()) as {
-      err_msg?: string;
-      err_code?: string;
-      error?: string;
-      message?: string;
-    };
+    const raw: unknown = await response.json();
+    const errorJson = deepgramErrorBodySchema.safeParse(raw).data;
     errorDetails =
-      errorJson.err_msg ?? errorJson.error ?? errorJson.message ?? JSON.stringify(errorJson);
-    errorCode = errorJson.err_code;
+      errorJson?.err_msg ?? errorJson?.error ?? errorJson?.message ?? JSON.stringify(raw);
+    errorCode = errorJson?.err_code;
   } catch (_e) {
     errorDetails = await response.text();
   }

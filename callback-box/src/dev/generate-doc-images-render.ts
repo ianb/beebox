@@ -10,6 +10,7 @@ import { promisify } from "node:util";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { GoogleGenAI } from "@google/genai";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import type { PromptPart } from "./generate-doc-images-types.js";
 
 const execFileAsync = promisify(execFile);
@@ -78,11 +79,10 @@ export async function renderMermaid(mmdPath: string): Promise<Buffer | null> {
     const buf = await readFile(tmpOut);
     return buf;
   } catch (e) {
-    const err = e as Error;
-    if ("code" in err && (err as NodeJS.ErrnoException).code === "ENOENT") {
+    if (errnoCode(e) === "ENOENT") {
       console.error("    warning: mmdc not found. Install with: pnpm add -g @mermaid-js/mermaid-cli");
     } else {
-      console.error(`    warning: mermaid render failed: ${err.message}`);
+      console.error(`    warning: mermaid render failed: ${errorMessage(e)}`);
     }
     return null;
   }

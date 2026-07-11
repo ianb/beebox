@@ -67,11 +67,15 @@ function parseItem(raw: unknown): TodoItemInfo | null {
   };
 }
 
+function isStatusCountKey(status: string, counts: TodoListInfo["counts"]): status is keyof TodoListInfo["counts"] {
+  return status in counts;
+}
+
 function countStatuses(items: TodoItemInfo[]): TodoListInfo["counts"] {
   const counts = { pending: 0, done: 0, cancelled: 0, deferred: 0 };
   for (const item of items) {
-    const status = item.status as keyof typeof counts;
-    if (status in counts) counts[status]++;
+    const { status } = item;
+    if (isStatusCountKey(status, counts)) counts[status]++;
     const sub = countStatuses(item.children);
     counts.pending += sub.pending;
     counts.done += sub.done;
@@ -98,7 +102,7 @@ function parseTodoList(frontmatter: Record<string, unknown>): TodoListInfo {
 
 interface TodoItemProps {
   item: TodoItemInfo;
-  onToggle: (itemName: string, newStatus: string) => void;
+  onToggle: (itemName: string, newStatus: TodoItemStatusType) => void;
 }
 
 /** Round-checkbox appearance for each status (box classes + inner mark). */
@@ -234,11 +238,11 @@ export function TodoListView({ data }: RendererProps) {
   const total = list.counts.pending + list.counts.done + list.counts.cancelled + list.counts.deferred;
   const completed = list.counts.done + list.counts.cancelled;
 
-  const handleToggle = (itemName: string, newStatus: string) => {
+  const handleToggle = (itemName: string, newStatus: TodoItemStatusType) => {
     updateMutation.mutate({
       listPath: data.path,
       itemName,
-      status: newStatus as "pending" | "done" | "cancelled" | "deferred",
+      status: newStatus,
     });
   };
 

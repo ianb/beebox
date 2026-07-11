@@ -9,8 +9,10 @@ import { VOICE_MODELS, type VoiceModel } from "../../../../schemas/personality";
 export const VALID_VOICES = VOICE_MODELS;
 export type TTSVoice = VoiceModel;
 
+const VOICE_SET: ReadonlySet<string> = new Set(VALID_VOICES);
+
 export function isTTSVoice(v: string): v is TTSVoice {
-  return (VALID_VOICES as readonly string[]).includes(v);
+  return VOICE_SET.has(v);
 }
 
 export interface SpeechSegment {

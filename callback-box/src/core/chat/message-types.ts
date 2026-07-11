@@ -53,10 +53,11 @@ export interface TaskEvent {
   summary?: string;
   /**
    * Lifecycle status. Terminal values are `completed | failed | stopped |
-   * killed`; in-flight values are `pending | running`. Absent on bare
-   * progress ticks.
+   * killed`; in-flight values are `pending | running | paused` (`paused` is
+   * a resumable suspension, from `task_updated` patches). Absent on bare
+   * progress ticks. `stopped` comes only from `task_notification`.
    */
-  status?: "pending" | "running" | "completed" | "failed" | "stopped" | "killed";
+  status?: "pending" | "running" | "completed" | "failed" | "stopped" | "killed" | "paused";
   /** Captured output file path, for settled tasks. */
   outputFile?: string;
   /** Elapsed wall time in ms (from the SDK `usage.duration_ms`). */

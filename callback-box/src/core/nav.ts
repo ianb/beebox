@@ -14,6 +14,8 @@ import { parseNavFields } from "../schemas/nav.js";
 import { navRouteFor } from "../shared/nav-routes.js";
 import { titleFromFilename } from "./file-summary.js";
 import { resolveBoxRelativeRef, realpathContained } from "../lib/box-containment.js";
+import { errnoCode, errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "./card-io.js";
 
 export const NAV_CARD_PATH = "nav.card";
 
@@ -48,8 +50,8 @@ async function readCardTitle(absPath: string): Promise<string | null> {
     const split = splitCardContent(content);
     if (!split.hasFrontmatter) return null;
     const fm: unknown = parseYaml(split.frontmatterText);
-    if (fm !== null && typeof fm === "object" && !Array.isArray(fm)) {
-      const title = (fm as Record<string, unknown>)["title"];
+    if (isRecord(fm)) {
+      const title = fm["title"];
       if (typeof title === "string" && title.trim() !== "") return title.trim();
     }
     return null;
@@ -64,8 +66,8 @@ export async function resolveNav(boxRoot: string): Promise<NavResolution> {
   try {
     content = await fs.readFile(path.join(boxRoot, NAV_CARD_PATH), "utf-8");
   } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return { status: "absent" };
-    return { status: "invalid", error: `could not read ${NAV_CARD_PATH}: ${(e as Error).message}` };
+    if (errnoCode(e) === "ENOENT") return { status: "absent" };
+    return { status: "invalid", error: `could not read ${NAV_CARD_PATH}: ${errorMessage(e)}` };
   }
 
   const parsed = parseNavFields(content);
