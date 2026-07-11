@@ -37,6 +37,19 @@ export interface CapturedError {
 export type WorktreePhase = "starting" | "ready" | "stopping" | "failed";
 
 /**
+ * An opaque, cancelable timer handle — the return of the `setTimer` effect
+ * (router.ts owns the effects; this module only stores the handle on the phase
+ * variants that arm timers). The real effect wraps a `setTimeout`/`clearTimeout`
+ * pair (escalation timers `unref()`'d); a test's fake clock owns the handles it
+ * hands out and fires them on demand. Kept here (pure, zero-I/O) so the lifecycle
+ * variants below can carry their timers without depending on Node's timer types.
+ */
+export interface TimerHandle {
+  /** Cancel the timer. Idempotent — safe to call after it has fired. */
+  cancel(): void;
+}
+
+/**
  * `starting` — children are being spawned / probed; `startPromise` resolves to
  * the handle once the start reaches a terminal phase. Concurrent callers and WS
  * upgrades await it rather than racing a second start.
@@ -67,7 +80,7 @@ export interface ReadyLifecycle {
   // field update, deliberately NOT a transition). Everything else is fixed for
   // the generation.
   lastActivity: number;
-  idleTimer: NodeJS.Timeout | null;
+  idleTimer: TimerHandle | null;
 }
 
 /**
@@ -93,6 +106,11 @@ export interface StoppingLifecycle {
   readonly fastifyPid: number | undefined;
   readonly dashboardPort: number | null;
   readonly browseEnv: NodeJS.ProcessEnv | null;
+  // The SIGTERM→SIGKILL escalation timer for this generation's children, stored
+  // so teardown can cancel it (e.g. full-router shutdown) and a test's fake
+  // clock can reach it. Fire-and-forget today; storing it is the recorded small
+  // improvement of the effects work. `null` only transiently before it's armed.
+  killTimer: TimerHandle | null;
 }
 
 /** `failed` — startup failed; stays in the map so the error page + retry work.
