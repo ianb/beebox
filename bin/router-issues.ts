@@ -414,13 +414,20 @@ const ISSUES_CSS = `
   .badge-modified { background: #eef3fb; color: #2255aa; }
   .badge-renamed { background: #f3eefb; color: #6f42c1; }
   .badge.uncommitted { border: 1px dashed currentColor; }
-  ul.issues { list-style: none; padding: 0; margin: 0 0 0.5em; }
-  ul.issues li { padding: 0.55em 0; border-bottom: 1px solid #f0f0f0; }
-  ul.issues a.title { font-weight: 600; text-decoration: none; }
-  ul.issues .meta { color: #999; font: 12px ui-monospace, Menlo, monospace; margin-left: 0.6em; }
-  h2.cat { display: flex; align-items: baseline; gap: 0.5em; }
+  ul.issues { list-style: none; padding: 0; margin: 0 0 1.6em; border: 1px solid #e3e3e3; border-radius: 8px; overflow: hidden; }
+  ul.issues li { display: flex; align-items: center; justify-content: space-between; gap: 1.2em; padding: 0.7em 1em; border-bottom: 1px solid #eee; }
+  ul.issues li:last-child { border-bottom: none; }
+  ul.issues li:hover { background: #f6f8fa; }
+  ul.issues .issue-main { min-width: 0; }
+  ul.issues a.title { display: block; font-weight: 600; text-decoration: none; color: #222; }
+  ul.issues a.title:hover { color: #2255aa; text-decoration: underline; }
+  ul.issues .meta { display: block; color: #888; font: 12px ui-monospace, Menlo, monospace; margin-top: 0.2em; }
+  ul.issues .issue-pills { flex: 0 0 auto; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.2em; max-width: 45%; }
+  ul.issues .issue-pills .chip, ul.issues .issue-pills .badge { font-size: 0.78em; opacity: 0.85; margin: 0; }
+  h2.cat { display: flex; align-items: baseline; gap: 0.5em; font-weight: 500; color: #444; }
   h2.cat .count { color: #999; font-size: 0.7em; font-weight: 400; }
   details.closed-group summary { cursor: pointer; color: #888; margin: 0.6em 0; }
+  details.closed-group ul.issues { margin-top: 0.5em; }
   table.facts { border-collapse: collapse; margin: 0.8em 0 1.4em; font-size: 0.92em; }
   table.facts th, table.facts td { border: 1px solid #ddd; padding: 0.35em 0.7em; text-align: left; }
   table.facts th { background: #f4f4f4; width: 9em; }
@@ -503,10 +510,13 @@ function filterChipsHtml(base: string, f: Filters, facets: { categories: string[
 function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] | undefined): string {
   const href = `${base}/issues/${issue.relPath}`;
   const date = issue.slug.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? "";
+  const pills = `${facetChips(issue.frontmatter, issue.research)}${worktreeBadges(overlay)}`;
   return `<li>
-    <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
-    <span class="meta">${escapeHtml(date)} · ${escapeHtml(issue.slug)}</span>
-    <div>${facetChips(issue.frontmatter, issue.research)}${worktreeBadges(overlay)}</div>
+    <div class="issue-main">
+      <a class="title" href="${href}">${escapeHtml(issue.frontmatter.title)}</a>
+      <span class="meta">${escapeHtml(date)} · ${escapeHtml(issue.slug)}</span>
+    </div>
+    <div class="issue-pills">${pills}</div>
   </li>`;
 }
 
