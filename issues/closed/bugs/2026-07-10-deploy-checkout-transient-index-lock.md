@@ -17,15 +17,30 @@ entirely when the checkout was just (re)created (a fresh worktree has nothing
 to clean). The settle/serialize idea (third bullet in the original list) was
 not pursued — the retry/recreate handling covers the failure mode without it.
 
-**Follow-up fix** (main session, 2026-07-11): the first fix left a gap — it
-hardened the `checkout --detach` and `clean` steps but NOT `recreate_checkout()`
-itself, whose `git worktree add` is what died next (`Preparing worktree … fatal:
-.git/index: … Not a directory`) when a corrupt `.git/worktrees/<name>` metadata
-dir survived `worktree prune` and then defeated the add. `recreate_checkout()` now
-loops twice: each attempt wipes the dir, removes ANY worktree-metadata dir whose
-`gitdir` points at the checkout (curing the prune-resistant corruption), prunes,
-then adds — only a second failure is fatal. Verified with an isolated
-reproduction (dir removed + stale registration → self-healed).
+**Follow-up fix** (main session, 2026-07-11): the first fix left a gap AND
+misdiagnosed the cause. The gap: it hardened `checkout --detach`/`clean` but not
+`recreate_checkout()`'s own `git worktree add`, which died next (`Preparing
+worktree … fatal: .git/index: … Not a directory`). The real cause: **a
+concurrent-`git worktree add` race** — the deploy's worktree creation collides
+with a worktree *session* being spun up at the same moment (confirmed: two new
+worktrees registered within seconds of a failing deploy, and the same
+`worktree add` succeeded on a manual retry moments later). Git serializes on its
+shared `.git/index`/`index.lock`, and overlapping worktree ops ENOTDIR each
+other; the window can span ~10s when several creates overlap, so a 2×2s retry
+lost the race twice.
+
+Fix: a `run_with_backoff` helper wraps every deploy-checkout git op
+(`checkout --detach`, `clean`, and the `worktree add` inside `recreate`) with a
+0/2/4/8/16/30s backoff (~60s budget) so it outlasts the contended window before
+declaring a non-transient failure. `checkout --detach`/`clean` ride out the
+transient IN PLACE (retrying) before falling back to a recreate, since recreate
+wipes node_modules and forces a slow reinstall. `recreate_checkout()` also
+scrubs any worktree-metadata dir whose `gitdir` points at the checkout (curing a
+prune-resistant corrupt registration). Verified in isolation: fresh create,
+self-heal after a stale registration, and riding out a fail-once-then-succeed
+transient. A deeper fix (a shared lock serializing deploy's worktree ops against
+the WorktreeCreate hook) was considered but not taken — no `flock` on macOS, and
+the backoff covers the observed window; revisit if it recurs.
 
 The root `post-commit` hook backgrounds `callback-box/deploy/deploy.sh --ref <sha>`
 the instant a `main` commit completes. On one deploy the build-checkout step
