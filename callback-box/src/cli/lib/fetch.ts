@@ -82,6 +82,7 @@ function ensureEnvStubs(): void {
 
   try {
     const content = fsSync.readFileSync(stubsFile, "utf-8");
+    // eslint-disable-next-line no-restricted-syntax -- parse boundary: test-fixture stub YAML from CB_STUBS_FILE; the optional `http` shape is probed defensively (`parsed?.http`) below, so a full schema is disproportionate for a dev-only fixture loader
     const parsed = parseYaml(content) as
       | { http?: Array<{ pattern: string; response_file: string; status?: number; content_type?: string; after?: string }> }
       | null

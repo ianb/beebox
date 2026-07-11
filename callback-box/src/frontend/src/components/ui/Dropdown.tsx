@@ -100,7 +100,8 @@ export function Dropdown({ trigger, children, align: alignArg, vertical: vertica
   useEffect(() => {
     if (!open) return;
     function handlePointer(e: MouseEvent) {
-      const target = e.target as Node;
+      if (!(e.target instanceof Node)) return;
+      const target = e.target;
       const inRoot = rootRef.current !== null && rootRef.current.contains(target);
       const inMenu = menuRef.current !== null && menuRef.current.contains(target);
       if (!inRoot && !inMenu) setOpen(false);

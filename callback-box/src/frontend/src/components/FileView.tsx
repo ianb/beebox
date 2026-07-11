@@ -33,6 +33,7 @@ import type { ActivityKind } from "../../../core/chat/card-activity.js";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";
+import { busEventData } from "../lib/bus-events";
 import { SelectionCapture } from "./SelectionCapture";
 import type { AddSelectionInput } from "../lib/selection/position";
 import { Pre } from "./ui/Pre";
@@ -162,12 +163,11 @@ function useFileData(path: string): LoadResult {
   const connectedOnceRef = useRef(false);
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
-      if (event.event !== "file-change") return;
-      const d = event.data as { path?: string };
+      const fileChange = busEventData(event, "file-change");
+      if (!fileChange) return;
       // Tolerant compare: normalize both sides so a stray leading slash on this
       // view's path can't silently drop the event (the original refresh bug).
-      if (typeof d.path !== "string") return;
-      if (boxRelativePath(d.path) !== boxRelativePath(path)) return;
+      if (boxRelativePath(fileChange.path) !== boxRelativePath(path)) return;
       resync();
     }, [path, resync]),
     onConnect: useCallback(() => {

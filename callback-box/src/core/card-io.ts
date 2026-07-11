@@ -21,6 +21,7 @@ import { parse as parseYaml } from "yaml";
 import { renderFrontmatterBlock, splitCardContent, type CardSchema, type InferCardFields } from "../cards/index.js";
 import { parseCardFileName } from "../shared/card-name.js";
 import { errorMessage } from "../lib/error-guards.js";
+import { isRecord } from "../lib/is-record.js";
 
 /**
  * Errors raised by the card IO layer. Caller code can catch this specifically
@@ -227,10 +228,10 @@ export function cardFields<S extends CardSchema>(
   return card.fields as InferCardFields<S>;
 }
 
-/** Narrow an unknown to a plain (non-array) object. */
-export function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
+// Re-exported from the generic home in `lib/is-record` so the many core
+// consumers that import `isRecord` from here keep working without a churn of
+// import-path edits; new code should import from `lib/is-record` directly.
+export { isRecord };
 
 /**
  * Collect every `{ ref: string }` reference reachable in a card's fields,

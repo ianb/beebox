@@ -30,5 +30,6 @@ export function busEventData<K extends BusEventName>(
   if (event.event !== name) return null;
   // `data` arrives `unknown`; it matches `EventMap[K]` by the server-side schema
   // validation described above. Centralized here so no call site casts.
+  // eslint-disable-next-line no-restricted-syntax -- THE sanctioned cast this helper exists to centralize: bus `data` is validated against `eventSchemas` server-side (see docstring) and the runtime `event.event === name` check above pins K; no call site casts because they call busEventData instead.
   return event.data as EventMap[K];
 }

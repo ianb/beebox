@@ -47,7 +47,7 @@ function AckBadge({ ack, open, onToggle, onClose, onZoomView }: {
   useEffect(() => {
     if (!open) return;
     function handlePointer(e: MouseEvent) {
-      if (rootRef.current !== null && !rootRef.current.contains(e.target as Node)) {
+      if (rootRef.current !== null && e.target instanceof Node && !rootRef.current.contains(e.target)) {
         onClose();
       }
     }

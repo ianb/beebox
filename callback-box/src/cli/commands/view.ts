@@ -165,6 +165,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
     // throw does — both are the same class of authoring bug.
     let html: string;
     try {
+      // eslint-disable-next-line no-restricted-syntax -- dynamic import of a runtime-computed module URL yields an untyped namespace; cast to the known compiled-view contract (validated by the render call that follows)
       const viewMod = (await import(mod.moduleUrl)) as LoadedViewModule;
       const props = buildProps({ cards, files, params, boxSlug: path.basename(boxRoot) });
       // Wrap in the node view host so the card widgets (<CardLink>/<CardRef>)

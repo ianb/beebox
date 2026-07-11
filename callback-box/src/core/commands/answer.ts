@@ -28,7 +28,7 @@ const AnswerArgsSchema = z.object({
   question: z.string().optional(),
   answer: z.string().optional(),
   selectedId: z.string().optional(),
-  via: z.string().optional(),
+  via: z.enum(["web", "cli", "api"]).optional(),
 });
 export type AnswerArgs = z.infer<typeof AnswerArgsSchema>;
 
@@ -287,7 +287,7 @@ async function executeAnswer(
         ...(selectedId !== undefined && { selected: selectedId }),
       };
       fields["answered-at"] = getBoxTimeISO(ctx.boxRoot);
-      fields["answered-via"] = via as "web" | "cli" | "api";
+      fields["answered-via"] = via;
 
       const split = splitCardContent(content);
       await fs.writeFile(fullPath, renderFrontmatterBlock(fields, split.body));

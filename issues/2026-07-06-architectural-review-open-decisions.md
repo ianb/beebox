@@ -79,10 +79,26 @@ buried. None blocks the merge.
    grouping and not worth the export-visibility/cycle risk a barrel adds.
    Reversibly addable later. Decide: add barrels, or codify "no barrels."
 
-7. **`.ts` `as`-ban.** Extend the `.tsx`-only `as` lint ban to `.ts` now
-   that Track C removed the two dominant unsafe-cast shapes (`card.fields`
-   and CLI args), or keep it guidance-only in `.ts`? Note `as never` (used
-   in the frontend navigate consolidation) evades the current rule.
+7. **`.ts` `as`-ban. Decided + done (boxholder decision, 2026-07-10): extend
+   the ban to `.ts` and close the `as never` loophole.** The
+   `no-restricted-syntax` `as` selector in `personal-vibe-check/eslint.config.mjs`
+   now applies to both `.ts` and `.tsx` across every preset consumer (backend +
+   frontend), enforced in both react modes via a shared `AS_BAN_SELECTORS`
+   constant. Findings that reshaped the change: the `.tsx` ban was in fact only
+   live for `react:false` (backend `.tsx`) — the frontend (`react:true`) `.tsx`
+   had no `as` ban at all, and `as never` was already caught by the selector
+   wherever the ban ran; it "evaded" only by living in `.ts`/frontend files the
+   ban didn't cover, not by any selector gap. The XState v5
+   `setup({ types: { … as Ctx } })` idiom (14 machine sites) is now rule-exempted
+   by a narrow AST `:not(...)` clause so it stays legal without a disable, while a
+   bare `{} as Ctx` elsewhere still fails. Burn-down on landing: ~75 previously
+   invisible casts resolved (14 backend `.ts` + 61 frontend) — most via real
+   fixes or blessed helpers (`errorMessage`/`toError`, `isRecord`, `busEventData`,
+   zod `.unwrap()`, an `in`-narrow, a `z.enum` at a parse boundary), the residue
+   as single-line justified disables; `code-style.md`'s `as`-assertions section
+   rewritten accordingly (the ".ts/.tsx asymmetry" paragraph is now false and
+   gone). Also consolidated the duplicate `core/card-io.ts` `isRecord` onto
+   `lib/is-record.ts`. Landed on `worktree-architectural-review`.
 
 Behavior-sensitive deferrals from Track G (recorded, not decisions —
 "do when touched"): DebugLog `useSyncExternalStore` port, FileView /

@@ -14,6 +14,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { ImageLightbox, type LightboxImage } from "./ImageLightbox";
+import { isRecord } from "../lib/is-record";
 
 interface LightboxState {
   images: LightboxImage[];
@@ -82,13 +83,12 @@ function collectImages(): LightboxImage[] {
 }
 
 function coerceLightboxImage(value: unknown): LightboxImage | null {
-  if (typeof value !== "object" || value === null) return null;
-  const obj = value as Record<string, unknown>;
-  if (typeof obj.src !== "string" || obj.src === "") return null;
+  if (!isRecord(value)) return null;
+  if (typeof value.src !== "string" || value.src === "") return null;
   return {
-    src: obj.src,
-    alt: typeof obj.alt === "string" ? obj.alt : "",
-    caption: typeof obj.caption === "string" ? obj.caption : undefined,
+    src: value.src,
+    alt: typeof value.alt === "string" ? value.alt : "",
+    caption: typeof value.caption === "string" ? value.caption : undefined,
   };
 }
 

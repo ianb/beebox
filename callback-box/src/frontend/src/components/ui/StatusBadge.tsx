@@ -19,8 +19,12 @@ export interface StatusBadgeProps {
   title?: string;
 }
 
+function isCardStatus(status: string): status is CardStatus {
+  return status in STATUS_TONE;
+}
+
 export function StatusBadge({ status, size, children, className, title }: StatusBadgeProps) {
-  const tone = (STATUS_TONE as Record<string, BadgeTone>)[status] ?? "neutral";
+  const tone = isCardStatus(status) ? STATUS_TONE[status] : "neutral";
   return (
     <Badge tone={tone} size={size} className={className} title={title}>
       {children ?? status}

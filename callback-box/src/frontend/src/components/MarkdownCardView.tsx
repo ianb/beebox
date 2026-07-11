@@ -17,6 +17,7 @@ import { AttachedComments } from "./AttachedComments";
 import { makeEmbedComponents } from "./FigureEmbed";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/selection/quote-extract";
 import { resolveRelativePath } from "../lib/view-url";
+import { isRecord } from "../lib/is-record";
 import type { RendererProps } from "../renderers";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
@@ -99,7 +100,7 @@ function ValueView({ value }: { value: unknown }): ReactNode {
       return (
         <ul className="list-disc list-outside ml-5 space-y-0.5 marker:text-warm-400">
           {value.map((item, i) => (
-            <li key={i}>{formatScalar(item as Scalar)}</li>
+            <li key={i}>{formatScalar(item)}</li>
           ))}
         </ul>
       );
@@ -119,8 +120,8 @@ function ValueView({ value }: { value: unknown }): ReactNode {
   if (isRef(value)) {
     return <RefLink refPath={value.ref} />;
   }
-  if (typeof value === "object") {
-    return <FieldsTable fields={value as Record<string, unknown>} />;
+  if (isRecord(value)) {
+    return <FieldsTable fields={value} />;
   }
   return null;
 }

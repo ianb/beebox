@@ -50,6 +50,7 @@ export interface ChildSpawnParams {
 export type SpawnChildFn = (params: ChildSpawnParams) => ChildProc;
 
 function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
+  // eslint-disable-next-line no-restricted-syntax -- execa's ResultPromise carries a large options-derived generic that TS can't infer down to our narrow ChildProc structural view; the returned handle is used only for the fields ChildProc declares
   return execa(params.cbBinary, params.args, {
     cwd: params.cwd,
     env: params.env,

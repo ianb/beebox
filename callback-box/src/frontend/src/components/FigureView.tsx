@@ -15,6 +15,7 @@ import { getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";
 import { useViewFileHelpers } from "../hooks/useViewFileHelpers";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
+import { busEventData } from "../lib/bus-events";
 import { coerceFigureParams, parseDeclaredParams } from "../lib/figure-params";
 import { ViewErrorBoundary } from "./ViewErrorBoundary";
 import { Markdown } from "./Markdown";
@@ -69,6 +70,7 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
     try {
       versionRef.current = Date.now();
       const url = `${apiBase}/figure/module.js?path=${encodeURIComponent(entryPath)}&v=${versionRef.current}`;
+      // eslint-disable-next-line no-restricted-syntax -- dynamic import of a box-compiled, agent-authored figure module; there is no static type for arbitrary runtime-loaded JS, so this boundary cast is unavoidable.
       const imported = await import(/* @vite-ignore */ url) as FigureModule;
       setMod(imported);
       setError(imported.figureError ?? null);
@@ -86,9 +88,8 @@ export function FigureView({ data, onNavigate, params, mode, caption }: Renderer
   // Live reload: recompile when the entry source changes on disk.
   useBusSubscription({
     onEvent: useCallback((event: RealtimeEvent) => {
-      if (event.event !== "file-change") return;
-      const changed = (event.data as { path?: string }).path ?? "";
-      if (changed === entryPath) void loadModule();
+      const fileChange = busEventData(event, "file-change");
+      if (fileChange && fileChange.path === entryPath) void loadModule();
     }, [entryPath, loadModule]),
   });
 

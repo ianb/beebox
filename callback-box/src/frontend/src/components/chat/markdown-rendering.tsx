@@ -154,9 +154,23 @@ function makeChatMarkdownComponents(
   // that opens in the sidebar on click, an external link, and the retired-`view:`
   // legacy marker.
   return {
-    Para: ChatParagraph as React.ComponentType<Record<string, unknown>>,
-    Img: ChatImg as React.ComponentType<Record<string, unknown>>,
+    Para: castMarkdownComponent(ChatParagraph),
+    Img: castMarkdownComponent(ChatImg),
   };
+}
+
+/**
+ * Markdoc's component map is keyed by name with a uniform, untyped props
+ * shape; each override here has its own specific props. Narrowing the map to
+ * each component's real prop type isn't possible without losing the uniform
+ * map shape Markdoc expects, so this single named helper carries the cast —
+ * mirrors the same-shaped `cast` helper in `../Markdown.tsx`.
+ */
+function castMarkdownComponent<P extends object>(
+  component: React.ComponentType<P>,
+): React.ComponentType<Record<string, unknown>> {
+  // eslint-disable-next-line no-restricted-syntax -- Markdoc's component map requires a uniform `ComponentType<Record<string, unknown>>` signature; each override's real props are narrower, and this is the one place that crosses that boundary.
+  return component as unknown as React.ComponentType<Record<string, unknown>>;
 }
 
 /**

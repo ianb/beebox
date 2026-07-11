@@ -307,9 +307,12 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   const proxy = httpProxy.createProxyServer({ ws: true, changeOrigin: true });
   // eslint-disable-next-line max-params -- http-proxy-3's ProxyServer "error" event signature is (err, req, res)
   proxy.on("error", (err: Error, _req, res) => {
-    if ("writeHead" in res && !(res as http.ServerResponse).headersSent) {
-      (res as http.ServerResponse).writeHead(502, { "content-type": "application/json" });
-      (res as http.ServerResponse).end(JSON.stringify({ error: "bad_gateway", message: err.message }));
+    // `res` is `http.ServerResponse | net.Socket` (http-proxy-3 fires this for
+    // both proxied requests and WS upgrades); the `in` guard narrows to the
+    // HTTP-response arm, which alone can send a 502 body.
+    if ("writeHead" in res && !res.headersSent) {
+      res.writeHead(502, { "content-type": "application/json" });
+      res.end(JSON.stringify({ error: "bad_gateway", message: err.message }));
     } else {
       try {
         res.end();

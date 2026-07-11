@@ -46,6 +46,7 @@ export function Sidebar({
           ? "hidden sm:flex sm:flex-shrink-0"
           : "flex flex-1 sm:flex-initial sm:flex-shrink-0"
       }`}
+      // eslint-disable-next-line no-restricted-syntax -- React.CSSProperties' index signature doesn't cover CSS custom properties (`--foo`); this is the standard escape hatch for setting one via the inline `style` prop.
       style={{ "--sidebar-desktop-w": `${desktopWidth}px` } as React.CSSProperties}
     >
       {/* Apply desktop width via inline style scoped to sm+ */}

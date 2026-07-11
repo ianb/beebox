@@ -9,6 +9,7 @@
  */
 
 import type { EnabledBox } from "./config.js";
+import { isRecord } from "./is-record.js";
 
 export const BOX_IDENTITY_META_NAME = "callback-box";
 
@@ -26,8 +27,8 @@ export function parseBoxIdentity(source: BoxIdentitySource): EnabledBox | null {
     if (e instanceof SyntaxError) return null;
     throw e;
   }
-  if (typeof parsed !== "object" || parsed === null) return null;
-  const record = parsed as Record<string, unknown>;
+  if (!isRecord(parsed)) return null;
+  const record = parsed;
   if (typeof record.slug !== "string" || record.slug === "") return null;
   if (typeof record.title !== "string" || record.title === "") return null;
   if (typeof record.boxUrl !== "string") return null;

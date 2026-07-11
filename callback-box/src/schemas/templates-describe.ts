@@ -13,7 +13,8 @@ import { getTemplate } from "./templates-registry.js";
 function isArraySchema(schema: z.ZodTypeAny): boolean {
   if (schema instanceof z.ZodArray) return true;
   if (schema instanceof z.ZodOptional || schema instanceof z.ZodDefault) {
-    return isArraySchema((schema as z.ZodOptional<z.ZodTypeAny> | z.ZodDefault<z.ZodTypeAny>)._def.innerType);
+    // eslint-disable-next-line no-restricted-syntax -- zod's public `unwrap()` returns the core `$ZodType`; bridge to the classic `ZodTypeAny` these instanceof-based helpers use (same core/classic boundary as the loop below)
+    return isArraySchema(schema.unwrap() as z.ZodTypeAny);
   }
   return false;
 }
@@ -24,6 +25,7 @@ function isArraySchema(schema: z.ZodTypeAny): boolean {
 function getDefaultValue(schema: z.ZodTypeAny): unknown {
   if (schema instanceof z.ZodDefault) {
     const dv = schema._def.defaultValue;
+    // eslint-disable-next-line no-restricted-syntax -- zod 4 types the raw default as a value-or-thunk with no public getter; narrow the thunk arm to call it (display-only)
     return typeof dv === "function" ? (dv as () => unknown)() : dv;
   }
   return undefined;
@@ -71,6 +73,7 @@ export function describeTemplateArgs(name: string): string {
   ];
 
   for (const [key, schema] of Object.entries(shape)) {
+    // eslint-disable-next-line no-restricted-syntax -- ZodObject.shape is typed with zod's core `$ZodType`; bridging to the classic `ZodTypeAny` the describe helpers use (instanceof-narrow classic subclasses) needs this one boundary cast
     lines.push(describeArgLine(key, schema as z.ZodTypeAny));
   }
 
