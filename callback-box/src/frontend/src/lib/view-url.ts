@@ -190,10 +190,14 @@ export function classifyMarkdownHref(
  *  - `images/foo.png`, `../sibling/foo.png` — document-relative, resolved
  *    against `basePath`
  *
- * Output is always `<base>/<boxSlug>/api/files/<resolved>` for in-box paths,
+ * Output is always `<base>/<boxSlug>/api/image/<resolved>` for in-box paths,
  * where `<base>` is the Vite base URL (e.g. `/main` under the dev router, ``
  * in prod). This makes the rendered `<img>` work whether the markdown is
- * shown in chat, browse, or any deeper URL.
+ * shown in chat, browse, or any deeper URL. The `/api/image/` route (not
+ * `/api/files/`) is the canonical image URL: it serves a raw image file
+ * directly AND dereferences an `.image.card` to its attached binary (via
+ * `filename.ref`), so `![](…/foo.image.card)` renders instead of 404ing on the
+ * card file (`/api/files/` refuses to serve `.card` files).
  */
 export function resolveImageSrc(
   src: string,
@@ -203,15 +207,16 @@ export function resolveImageSrc(
   if (/^[a-z][\w+.-]*:/i.test(src)) return src;
   if (src.startsWith("//")) return src;
 
-  const apiFilesPrefix = src.startsWith("/api/files/")
-    ? "/api/files/"
-    : src.startsWith("api/files/")
-    ? "api/files/"
-    : null;
-  const path = apiFilesPrefix
-    ? boxRelativePath(src.slice(apiFilesPrefix.length))
+  // Accept the legacy `/api/files/<path>` and `/api/image/<path>` forms as a
+  // hint that the rest is already box-root-relative; both re-emit through the
+  // canonical image route.
+  const apiPrefix = ["/api/files/", "api/files/", "/api/image/", "api/image/"].find((p) =>
+    src.startsWith(p),
+  );
+  const path = apiPrefix
+    ? boxRelativePath(src.slice(apiPrefix.length))
     : resolveRelativePath(basePath, src);
-  return apiFileUrl(boxSlug ?? "", path);
+  return apiImageUrl(boxSlug ?? "", path);
 }
 
 /**
@@ -247,6 +252,18 @@ export function externalImageProxyUrl(src: string, boxSlug: string | undefined):
 export function apiFileUrl(boxSlug: string, path: string): string {
   const base = viteBase().replace(/\/$/, "");
   return `${base}/${boxSlug}/api/files/${path}`;
+}
+
+/**
+ * Build a URL for an in-box image served by the backend's `/api/image/<path>`
+ * route — the canonical image URL. Unlike `apiFileUrl`, this route resolves an
+ * `.image.card` to its attached binary (and serves a raw image file directly),
+ * so it works whether the image is stored raw or wrapped in a card. Prefer this
+ * for anything rendered as an `<img src>`; use `apiFileUrl` for non-image files.
+ */
+export function apiImageUrl(boxSlug: string, path: string): string {
+  const base = viteBase().replace(/\/$/, "");
+  return `${base}/${boxSlug}/api/image/${path}`;
 }
 
 // Read Vite's base URL. Wrapped so the bare `import.meta.env` access doesn't
