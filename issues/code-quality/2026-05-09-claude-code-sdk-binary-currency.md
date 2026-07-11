@@ -27,5 +27,16 @@ means "latest" resolves to the newest week-old release.
 
 Bumped to `^0.3.201` in the chat-steering worktree (2026-07-10); the 0.2→0.3
 break surface was tiny (task-status union renamed `stopped`→`paused` in
-`task_updated` patches). The decision this issue asks for — a recurring refresh
-process — is still open.
+`task_updated` patches).
+
+Tooling now exists (same worktree): `pnpm update-agent-sdk` at the monorepo
+root (`bin/update-agent-sdk.ts`) bumps to the newest release clearing the pnpm
+`minimumReleaseAge` guard, installs, typechecks; `--check` just reports
+staleness (exit 1 when behind). Pair with
+`callback-box/scripts/sdk-steering-probe.ts`, which re-verifies the
+undocumented mid-turn input semantics the chat session depends on. Documented
+in `callback-box/docs/maintenance.md` with a weekly cadence.
+
+Still open: whether the weekly run is a human habit (maintenance table) or
+automated (a scheduled agent session running `pnpm update-agent-sdk --check`
+and doing the bump + test + commit when behind).

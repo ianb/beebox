@@ -12,6 +12,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
+| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Weekly; `--check` to just report | Bumped `package.json` + lockfile |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
@@ -24,6 +25,24 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 
 ## Tasks
+
+### Agent SDK update — `pnpm update-agent-sdk` (monorepo root)
+
+Bumps `@anthropic-ai/claude-agent-sdk` to the newest npm release that clears
+the pnpm `minimumReleaseAge` guard, installs, and typechecks. The SDK bundles
+the Claude Code binary every box agent runs (it ignores any system `claude`),
+frozen at install time — and its `^0.x` caret never crosses 0.x minors, so
+plain `pnpm update` does NOT keep it current (this is how we once shipped a
+two-month-old agent binary without noticing).
+
+**When to run:** weekly. `--check` reports staleness without changing anything
+(exit 1 when behind).
+
+**After a bump:** run `pnpm test`, then the steering probe —
+`node --import tsx scripts/sdk-steering-probe.ts` (real API calls, ~1 min) —
+which verifies the undocumented mid-turn input semantics the chat session
+depends on still hold. Then commit; prod picks the new version up on the next
+`main` deploy.
 
 ### Knowledge audits — `npm run knowledge-audit`
 
