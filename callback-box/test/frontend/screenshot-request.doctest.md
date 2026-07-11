@@ -14,6 +14,7 @@ import {
   matchesRequestSession,
   isRequestExpired,
   captureOutcomeToAnswer,
+  classifyUploadResponse,
   screenshotReducer,
 } from "../../src/frontend/src/components/chat/screenshot-request-logic.js";
 
@@ -75,6 +76,38 @@ JSON.stringify(captureOutcomeToAnswer({ kind: "unsupported" }))
 JSON.stringify(captureOutcomeToAnswer({ kind: "error", message: "canvas 2D context unavailable" }))
 => {"kind":"failed","reason":"canvas 2D context unavailable"}
 ```
+
+## Upload response → resolution
+
+The PNG POST to the answer route settles four ways (finding 2). A 2xx shows the
+"shared" indicator. A 404 is the quiet multi-tab/expired case — another tab won
+or the request already settled, so no post, no toast, no indicator. Any other
+HTTP status means the capture happened but the *server* rejected it, so post a
+named `failed` (the server's `error` field, else a generic `upload-rejected`) so
+the agent's command settles as `failed:` instead of hanging to `timeout`. A
+thrown fetch means the channel is down — nothing can be posted, so toast locally
+rather than falsely claim it was shared.
+
+```ts
+JSON.stringify(classifyUploadResponse({ kind: "ok" }))
+=> {"kind":"indicator"}
+
+JSON.stringify(classifyUploadResponse({ kind: "http", status: 404, errorField: null }))
+=> {"kind":"quiet"}
+
+JSON.stringify(classifyUploadResponse({ kind: "http", status: 400, errorField: "bad-viewport" }))
+=> {"kind":"failed","reason":"bad-viewport"}
+
+JSON.stringify(classifyUploadResponse({ kind: "http", status: 502, errorField: null }))
+=> {"kind":"failed","reason":"upload-rejected"}
+
+JSON.stringify(classifyUploadResponse({ kind: "network" }))
+=> {"kind":"toast"}
+```
+
+The object-URL revoke timing (thumbnail freed on the non-indicator paths and on
+row unmount-before-timer) is DOM-lifecycle and stays manual-verify — it can't run
+under the Node tier.
 
 ## The queue is FIFO, one popup at a time
 

@@ -36,7 +36,13 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
   const resolvedRef = useRef(false);
   const resolve = useCallback(
     (indicator: ScreenshotIndicator | null) => {
-      if (resolvedRef.current) return;
+      if (resolvedRef.current) {
+        // A late Share landed after the auto-dismiss timer / Escape already won:
+        // the indicator it carries will never be rendered, so revoke its object
+        // URL here rather than leak it (finding 3b — the discarded-late path).
+        if (indicator !== null) URL.revokeObjectURL(indicator.thumbnailUrl);
+        return;
+      }
       resolvedRef.current = true;
       onResolved(indicator);
     },

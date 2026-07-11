@@ -23,11 +23,24 @@ function IndicatorRow({ indicator, onDismiss }: {
   onDismiss: (requestId: string) => void;
 }) {
   useEffect(() => {
-    const timer = setTimeout(() => {
+    // Revoke exactly once — whether the row ages out on the timer or unmounts
+    // first (session navigation, feature unmount). A plain timer-only revoke
+    // leaks the object URL on unmount-before-timer (finding 3b); the guard makes
+    // the (harmless) double-revoke a no-op.
+    let revoked = false;
+    const revoke = (): void => {
+      if (revoked) return;
+      revoked = true;
       URL.revokeObjectURL(indicator.thumbnailUrl);
+    };
+    const timer = setTimeout(() => {
+      revoke();
       onDismiss(indicator.requestId);
     }, INDICATOR_TTL_MS);
-    return () => clearTimeout(timer);
+    return () => {
+      clearTimeout(timer);
+      revoke();
+    };
   }, [indicator.requestId, indicator.thumbnailUrl, onDismiss]);
 
   return (

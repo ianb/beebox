@@ -79,6 +79,51 @@ export function captureOutcomeToAnswer(outcome: CaptureOutcome): ScreenshotAnswe
   }
 }
 
+/**
+ * The outcome of POSTing the captured PNG to the answer route, as far as the
+ * pure decision needs it: a 2xx (`ok`), a settled HTTP response (`http`, with the
+ * status and the server's JSON `error` field if any), or a thrown fetch
+ * (`network` — the channel is down, so no failure post is even possible).
+ */
+export type UploadResponse =
+  | { kind: "ok" }
+  | { kind: "http"; status: number; errorField: string | null }
+  | { kind: "network" };
+
+/**
+ * What to do about an upload response. `indicator` shows the "shared" row;
+ * `quiet` is the multi-tab/expired 404 (another tab won or the request settled —
+ * no post, no toast); `failed` posts `{failed: reason}` so the agent's command
+ * settles as `failed:` instead of hanging to `timeout`; `toast` is the
+ * transport-down case where nothing can be posted, so the user gets a local
+ * error rather than a false "shared".
+ */
+export type UploadResolution =
+  | { kind: "indicator" }
+  | { kind: "quiet" }
+  | { kind: "failed"; reason: string }
+  | { kind: "toast" };
+
+/**
+ * Classify an upload response into the action to take — the pure, tested
+ * decision behind finding 2. A 2xx shows the indicator; a 404 is the quiet
+ * first-wins/expired case; any other HTTP status means the server rejected a
+ * capture that DID happen, so post a named failure (server's `error` field, else
+ * a generic `upload-rejected`); a thrown fetch means the channel is down, so
+ * toast locally and let the server request time out on its own.
+ */
+export function classifyUploadResponse(response: UploadResponse): UploadResolution {
+  switch (response.kind) {
+    case "ok":
+      return { kind: "indicator" };
+    case "network":
+      return { kind: "toast" };
+    case "http":
+      if (response.status === 404) return { kind: "quiet" };
+      return { kind: "failed", reason: response.errorField ?? "upload-rejected" };
+  }
+}
+
 export interface ScreenshotState {
   /** FIFO of requests awaiting a consent popup; the head is the active popup. */
   queue: ScreenshotRequest[];

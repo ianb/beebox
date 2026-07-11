@@ -18,10 +18,13 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { getApiBase } from "../../api-core";
 import { base64ToBlob, processImageBlob } from "../../lib/image-paste";
+import { isRecord } from "../../lib/is-record";
 import { captureTabScreenshot, type CaptureOutcome } from "./screenshot-capture";
+import { toastError } from "../ui/toast-store";
 import { captureViaRelay, startRelayProbe } from "./screenshot-relay";
 import {
   captureOutcomeToAnswer,
+  classifyUploadResponse,
   isRequestExpired,
   matchesRequestSession,
   screenshotReducer,
@@ -29,6 +32,7 @@ import {
   type ScreenshotIndicator,
   type ScreenshotRequest,
   type ScreenshotViewport,
+  type UploadResolution,
 } from "./screenshot-request-logic";
 
 export type {
@@ -69,22 +73,43 @@ export function postAck(requestId: string): Promise<void> {
   return postJson(requestId, { body: { ack: true }, label: "ack" });
 }
 
-/** Multipart-upload the PNG with its fidelity + viewport. Never rejects (logs and returns). */
+/** Read the server's JSON `error` field from a rejected response, else null (best-effort). */
+async function readErrorField(res: Response): Promise<string | null> {
+  try {
+    const body: unknown = await res.json();
+    if (isRecord(body) && typeof body.error === "string" && body.error.length > 0) {
+      return body.error;
+    }
+  } catch (_e) {
+    /* ignore: a non-JSON error body just means no reason to forward */
+  }
+  return null;
+}
+
+/**
+ * Multipart-upload the PNG with its fidelity + viewport, and classify the
+ * outcome (finding 2). Never rejects: a thrown fetch (transport down) is logged
+ * and returned as `toast`; a settled response is classified by
+ * {@link classifyUploadResponse} — 2xx → indicator, 404 → quiet, other → a
+ * `failed` post carrying the server's reason. The caller acts on the resolution;
+ * a success indicator is created ONLY for `{kind: "indicator"}`.
+ */
 async function uploadScreenshot(
   requestId: string,
   opts: { blob: Blob; fidelity: Fidelity; viewport: ScreenshotViewport },
-): Promise<void> {
+): Promise<UploadResolution> {
   const form = new FormData();
   form.append("file", opts.blob, `${requestId}.png`);
   form.append("fidelity", opts.fidelity);
   form.append("viewport", JSON.stringify(opts.viewport));
   try {
     const res = await fetch(answerUrl(requestId), { method: "POST", body: form });
-    if (!res.ok && res.status !== 404) {
-      console.warn(`[screenshot] upload rejected: HTTP ${res.status}`);
-    }
+    if (res.ok) return classifyUploadResponse({ kind: "ok" });
+    if (res.status !== 404) console.warn(`[screenshot] upload rejected: HTTP ${res.status}`);
+    return classifyUploadResponse({ kind: "http", status: res.status, errorField: await readErrorField(res) });
   } catch (e) {
     console.warn(`[screenshot] upload failed: ${e instanceof Error ? e.message : String(e)}`);
+    return classifyUploadResponse({ kind: "network" });
   }
 }
 
@@ -107,16 +132,19 @@ async function answerWithCapture(
     case "failed":
       await postJson(request.requestId, { body: { failed: plan.reason }, label: "failure" });
       return null;
-    case "upload":
+    case "upload": {
+      // Post-capture, pre-objectURL: if the request already expired (the user
+      // left the native picker open past `expiresAt` then picked a source), don't
+      // create an object URL or attempt an upload that would only 404. The server
+      // times out on its own. (Finding 3a — no leak because nothing is created.)
+      if (isRequestExpired(request.expiresAt, Date.now())) return null;
+      let processed;
       try {
         // Reuse the pasted-image pipeline's downscale. It returns a
         // ProcessedImage (base64 + a preview objectUrl), not a Blob, so
         // reconstruct the upload Blob from its base64 and reuse the objectUrl as
         // the indicator thumbnail (one downscale pipeline — principle #8).
-        const processed = await processImageBlob(plan.blob);
-        const blob = base64ToBlob(processed.dataBase64, processed.mimeType);
-        await uploadScreenshot(request.requestId, { blob, fidelity, viewport: plan.viewport });
-        return { requestId: request.requestId, thumbnailUrl: processed.objectUrl };
+        processed = await processImageBlob(plan.blob);
       } catch (e) {
         await postJson(request.requestId, {
           body: { failed: e instanceof Error ? e.message : String(e) },
@@ -124,6 +152,26 @@ async function answerWithCapture(
         });
         return null;
       }
+      const blob = base64ToBlob(processed.dataBase64, processed.mimeType);
+      const resolution = await uploadScreenshot(request.requestId, { blob, fidelity, viewport: plan.viewport });
+      // The indicator (and its object URL) survives ONLY on a confirmed 2xx.
+      // Every other path revokes the thumbnail URL so it can't leak (finding 3b).
+      switch (resolution.kind) {
+        case "indicator":
+          return { requestId: request.requestId, thumbnailUrl: processed.objectUrl };
+        case "failed":
+          URL.revokeObjectURL(processed.objectUrl);
+          await postJson(request.requestId, { body: { failed: resolution.reason }, label: "failure" });
+          return null;
+        case "toast":
+          URL.revokeObjectURL(processed.objectUrl);
+          toastError("The screenshot couldn't be shared with the agent.");
+          return null;
+        case "quiet":
+          URL.revokeObjectURL(processed.objectUrl);
+          return null;
+      }
+    }
   }
 }
 
