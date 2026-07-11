@@ -312,7 +312,7 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     await fs.mkdir(config.logDir, { recursive: true });
     const logFile = path.join(config.logDir, `${name}.log`);
     const logStream = createWriteStream(logFile, { flags: "a" });
-    logStream.write(`\n=== router start ${new Date().toISOString()} ===\n`);
+    logStream.write(`\n=== router start ${new Date(effects.now()).toISOString()} ===\n`);
 
     const [frontendPort, backendPort, dashboardPort] = await Promise.all([
       effects.getPort(),

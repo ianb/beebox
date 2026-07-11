@@ -430,6 +430,7 @@ test("stale failure: a superseded start's failure self-cleans and cannot park a 
     const aPromise = h.core.ensureRunning("wt");
     const aProbes = await h.awaitProbes(2);
     assert.equal(aProbes.length, 2);
+    const handleA = h.core.getHandle("wt")!; // capture A's shell before it's superseded
     const aFastifyPid = h.spawner.lifecycleCalls()[0]!.child.pid;
     const aVitePid = h.spawner.lifecycleCalls()[1]!.child.pid;
 
@@ -445,9 +446,22 @@ test("stale failure: a superseded start's failure self-cleans and cannot park a 
     await assert.rejects(() => aPromise, /did not respond/);
 
     // B is untouched and still starting; no `failed` record clobbered its slot.
+    // (This protection is STRUCTURAL — the failure terminal transitions A's
+    // detached shell in place and never re-sets the map, so B is safe even
+    // without the guard; see the report's #5b neuter, which must ALSO reintroduce
+    // the old `worktrees.set` to break B.)
     assert.equal(h.core.getHandle("wt"), b, "B still owns the name");
     assert.equal(b!.lifecycle.phase, "starting", "B was not overwritten by A's failure");
-    // A self-cleaned its own children (the guard's observable effect).
+    // The RUNTIME guard's uniquely-observable effect: a superseded failure routes
+    // A to `stopping` (self-clean), NOT `failed`. Removing the guard alone flips
+    // this to `failed` — so this assertion depends on the guard itself.
+    assert.equal(handleA.lifecycle.phase, "stopping", "superseded A self-cleaned to stopping, not failed");
+    assert.equal(
+      handleA.lifecycle.phase === "stopping" ? handleA.lifecycle.reason : null,
+      "requested",
+      "self-clean uses the awaited 'requested' teardown contract",
+    );
+    // A self-cleaned its own children.
     const termed = h.killCalls.filter((k) => k.signal === "SIGTERM").map((k) => k.pid);
     assert.ok(termed.includes(aVitePid) && termed.includes(aFastifyPid), "A self-cleaned its children");
 
