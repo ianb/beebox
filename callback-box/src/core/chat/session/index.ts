@@ -140,6 +140,7 @@ export class ChatSession extends EventEmitter {
       boxRoot: this.boxRoot,
       options: this.options,
       resolvedContextDir: this.resolvedContextDir,
+      sessionId: this.sessionId,
     });
     this.resolvedContextDir = resolvedContextDir;
     return startOpts;

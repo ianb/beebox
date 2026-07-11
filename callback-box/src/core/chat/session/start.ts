@@ -37,6 +37,13 @@ interface StartContext {
   options: ChatSessionOptions;
   /** Current landmark-binding cache: `undefined` unresolved, `null` none. */
   resolvedContextDir: string | null | undefined;
+  /**
+   * The live session id if this run resumes a known session, else null.
+   * Passed to the subprocess as `CB_CHAT_SESSION_ID` so a mid-turn
+   * `cb chat screenshot` can target this exact conversation. A brand-new
+   * session has no id yet, so the var is left unset (never a placeholder).
+   */
+  sessionId: string | null;
 }
 
 /**
@@ -105,6 +112,9 @@ export async function buildBackendStartOptions(
   const cwd = contextDir ? path.join(ctx.boxRoot, contextDir) : ctx.boxRoot;
   const baseEnv = await buildScriptEnv(ctx.boxRoot, {
     CLAUDECODE: undefined,
+    // Only when a real id exists — a pending-new session must not advertise a
+    // placeholder that a `cb chat screenshot` would then fail to match.
+    ...(ctx.sessionId !== null ? { CB_CHAT_SESSION_ID: ctx.sessionId } : {}),
   });
   const env: Record<string, string | undefined> = {
     ...baseEnv,
