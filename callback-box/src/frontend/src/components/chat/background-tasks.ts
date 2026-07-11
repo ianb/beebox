@@ -15,7 +15,7 @@ export interface TaskEvent {
   taskId: string;
   description?: string;
   summary?: string;
-  status?: "pending" | "running" | "completed" | "failed" | "stopped" | "killed";
+  status?: "pending" | "running" | "completed" | "failed" | "stopped" | "killed" | "paused";
   elapsedMs?: number;
   lastToolName?: string;
 }
@@ -24,7 +24,7 @@ export interface TaskEvent {
 export interface LiveTask {
   taskId: string;
   description: string;
-  status: "pending" | "running" | "completed" | "failed" | "stopped" | "killed";
+  status: "pending" | "running" | "completed" | "failed" | "stopped" | "killed" | "paused";
   summary?: string;
   lastToolName?: string;
   elapsedMs?: number;

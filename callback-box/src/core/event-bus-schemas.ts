@@ -34,7 +34,7 @@ const taskEventSchema = z.object({
   description: z.string().optional(),
   summary: z.string().optional(),
   status: z
-    .enum(["pending", "running", "completed", "failed", "stopped", "killed"])
+    .enum(["pending", "running", "completed", "failed", "stopped", "killed", "paused"])
     .optional(),
   outputFile: z.string().optional(),
   elapsedMs: z.number().optional(),
