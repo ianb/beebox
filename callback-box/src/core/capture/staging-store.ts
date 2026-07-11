@@ -70,7 +70,7 @@ export type StagingFile = z.infer<typeof StagingFileSchema>;
  */
 const StagingSessionSchema = z.object({
   id: z.string(), createdAt: z.string(), lastActivityAt: z.string(),
-  targetSessionId: z.string().nullable(), createdBy: z.string().nullable(),
+  targetSessionId: z.string().nullable(), createdBy: z.string().nullable().default(null),
   state: StagingSessionStateSchema,
   segments: z.array(StagingSegmentSchema), photos: z.array(StagingPhotoSchema), files: z.array(StagingFileSchema),
   totalBytes: z.number().optional(), partial: z.boolean().optional(),
