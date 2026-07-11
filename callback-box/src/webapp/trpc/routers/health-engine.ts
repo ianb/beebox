@@ -7,7 +7,8 @@
  * engine-checkout path, created by `scaffoldPackageRoot`) went dead when the
  * engine checkout was renamed, and box-local schemas silently stopped
  * loading — the only signal was a per-schema stderr warning. See
- * `issues/2026-07-10-boxes-dead-callback-box-symlinks.md` (monorepo root).
+ * `issues/decisions/2026-07-10-boxes-dead-callback-box-symlinks.md`
+ * (monorepo root).
  */
 
 import * as fs from "node:fs/promises";
