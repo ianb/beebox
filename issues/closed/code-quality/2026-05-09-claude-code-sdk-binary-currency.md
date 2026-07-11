@@ -1,8 +1,16 @@
 ---
 title: "Keeping the bundled Claude Code SDK binary current"
-needs: [decision]
 area: callback-box
+resolution: implemented
 ---
+
+**Closed 2026-07-10** (worktree-chat-steering): decision made — deliberate
+repo-spec bumps, automated locally. `pnpm update-agent-sdk`
+(`bin/update-agent-sdk.ts`) does the bump/install/typecheck;
+`bin/update-agent-sdk-scheduled.sh --install` registers the weekday launchd
+job that runs the check and spawns a headless update session when behind;
+`callback-box/scripts/sdk-steering-probe.ts` guards the undocumented steering
+semantics. Documented in `callback-box/docs/maintenance.md`.
 
 The agent SDK (`@anthropic-ai/claude-agent-sdk`) bundles its own Claude Code binary as an optional npm dependency and ignores anything system-installed (no `$PATH` lookup, no `~/.local/bin/claude`). That binary is frozen at npm-install time, so a long-running server stays on whatever version of Claude Code was current when we last `npm install`-ed.
 
@@ -37,6 +45,5 @@ staleness (exit 1 when behind). Pair with
 undocumented mid-turn input semantics the chat session depends on. Documented
 in `callback-box/docs/maintenance.md` with a weekly cadence.
 
-Still open: whether the weekly run is a human habit (maintenance table) or
-automated (a scheduled agent session running `pnpm update-agent-sdk --check`
-and doing the bump + test + commit when behind).
+Resolved as automated: the launchd job above runs the check weekdays and only
+spends agent time when a bump is actually available.

@@ -12,7 +12,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
-| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Weekly; `--check` to just report | Bumped `package.json` + lockfile |
+| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated (launchd, weekdays); manual anytime | Bumped `package.json` + lockfile |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
@@ -35,8 +35,13 @@ frozen at install time — and its `^0.x` caret never crosses 0.x minors, so
 plain `pnpm update` does NOT keep it current (this is how we once shipped a
 two-month-old agent binary without noticing).
 
-**When to run:** weekly. `--check` reports staleness without changing anything
-(exit 1 when behind).
+**When to run:** automated — `bin/update-agent-sdk-scheduled.sh --install`
+(from the **main checkout**, once per machine) registers a launchd job that
+runs the check weekdays at 12:04 machine-local. Up to date → exits silently;
+behind → spawns a headless Claude session that does the full flow below and
+commits to `main` (or files an issue on failure). Logs:
+`~/Library/Logs/callback-box-sdk-update.log`. Manual runs (`--check` to just
+report, exit 1 when behind) work anytime.
 
 **After a bump:** run `pnpm test`, then the steering probe —
 `node --import tsx scripts/sdk-steering-probe.ts` (real API calls, ~1 min) —

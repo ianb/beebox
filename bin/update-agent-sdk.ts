@@ -12,7 +12,7 @@
  * stopped updating when upstream moved 0.2 → 0.3 — we shipped a two-month-old
  * agent binary without noticing. This script crosses minors deliberately;
  * typecheck (here) plus the test suite and the steering probe (run them after)
- * are the gate. See issues/code-quality/2026-05-09-claude-code-sdk-binary-currency.md.
+ * are the gate. History: issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md.
  *
  * After a bump, run:
  *   pnpm -C callback-box test
@@ -23,19 +23,31 @@
 
 import { execFileSync } from "node:child_process";
 import * as fs from "node:fs";
+import * as os from "node:os";
 import * as path from "node:path";
 
 const PACKAGE = "@anthropic-ai/claude-agent-sdk";
 const REPO_ROOT = path.resolve(import.meta.dirname, "..");
 const MANIFEST = path.join(REPO_ROOT, "callback-box", "package.json");
 
-function run(cmd: string, args: string[]): string {
-  return execFileSync(cmd, args, { encoding: "utf-8", cwd: REPO_ROOT });
+function run(cmd: string, { args, cwd }: { args: string[]; cwd: string }): string {
+  // When this script runs under `pnpm update-agent-sdk`, pnpm injects
+  // npm_config_* vars that npm doesn't recognize and warns about on every
+  // invocation. Strip them — subprocesses here should see clean tool config.
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value === undefined || key.startsWith("npm_config_")) continue;
+    env[key] = value;
+  }
+  return execFileSync(cmd, args, { encoding: "utf-8", cwd, env });
 }
 
 /** Publish timestamps per version, from the npm registry. */
 function publishTimes(): Map<string, Date> {
-  const raw = JSON.parse(run("npm", ["view", PACKAGE, "time", "--json"])) as Record<string, string>;
+  // cwd is the OS tmpdir, NOT the repo: the repo's .npmrc holds pnpm-only
+  // keys (node-linker, minimum-release-age) that npm warns about on every
+  // read. npm view needs no project context anyway.
+  const raw = JSON.parse(run("npm", { args: ["view", PACKAGE, "time", "--json"], cwd: os.tmpdir() })) as Record<string, string>;
   const times = new Map<string, Date>();
   for (const [version, iso] of Object.entries(raw)) {
     if (version === "created" || version === "modified") continue;
@@ -45,11 +57,24 @@ function publishTimes(): Map<string, Date> {
   return times;
 }
 
-/** The pnpm minimumReleaseAge setting in minutes (0 when unset). */
+/**
+ * The pnpm minimum-release-age setting in minutes, from the tracked root
+ * .npmrc (authoritative — it's what any checkout, including cloud/CI, sees),
+ * falling back to machine-level `pnpm config`. Refuses to run unguarded:
+ * picking a minutes-old release with no age gate is exactly the supply-chain
+ * exposure the setting exists to prevent.
+ */
 function minimumReleaseAgeMinutes(): number {
-  const out = run("pnpm", ["config", "get", "minimumReleaseAge"]).trim();
+  const npmrc = fs.readFileSync(path.join(REPO_ROOT, ".npmrc"), "utf-8");
+  const inRepo = npmrc.match(/^minimum-release-age\s*=\s*(\d+)\s*$/m);
+  if (inRepo?.[1] !== undefined) return Number.parseInt(inRepo[1], 10);
+  const out = run("pnpm", { args: ["config", "get", "minimumReleaseAge"], cwd: REPO_ROOT }).trim();
   const minutes = Number.parseInt(out, 10);
-  return Number.isNaN(minutes) ? 0 : minutes;
+  if (Number.isNaN(minutes) || minutes <= 0) {
+    console.error("update-agent-sdk: no minimum-release-age configured (.npmrc or pnpm config) — refusing to resolve unguarded");
+    process.exit(2);
+  }
+  return minutes;
 }
 
 function compareVersions(a: string, b: string): number {
