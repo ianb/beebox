@@ -8,10 +8,11 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
-import { stageFiles, commit } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 import { cardFields, parseCardText, serializeCardText, typeFromFilename } from "../../../core/card-io.js";
 import { createCardSchemaMap } from "../../../schemas/registry.js";
 import { withCardLock } from "../../../lib/card-lock.js";
+import { getBoxTimeISO } from "../../../lib/time.js";
 import { type TodoItem, type TodoItemStatusType, TodoListSchema } from "../../../schemas/todo-list.js";
 
 /**
@@ -21,22 +22,23 @@ import { type TodoItem, type TodoItemStatusType, TodoListSchema } from "../../..
  * found and mutated.
  */
 function updateInItems(input: {
+  boxRoot: string;
   items: TodoItem[];
   itemName: string;
   status: TodoItemStatusType;
 }): boolean {
-  const { items, itemName, status } = input;
+  const { boxRoot, items, itemName, status } = input;
   for (const item of items) {
     if (item.name === itemName) {
       item.status = status;
       if (status === "done") {
-        item.completed = new Date().toISOString();
+        item.completed = getBoxTimeISO(boxRoot);
       } else {
         delete item.completed;
       }
       return true;
     }
-    if (item.items !== undefined && updateInItems({ items: item.items, itemName, status })) {
+    if (item.items !== undefined && updateInItems({ boxRoot, items: item.items, itemName, status })) {
       return true;
     }
   }
@@ -78,14 +80,14 @@ export const todosRouter = router({
         const fields = cardFields(parsed, TodoListSchema);
         const found =
           fields.items !== undefined &&
-          updateInItems({ items: fields.items, itemName: input.itemName, status: input.status });
+          updateInItems({ boxRoot: ctx.boxRoot, items: fields.items, itemName: input.itemName, status: input.status });
         if (!found) {
           throw new TRPCError({ code: "NOT_FOUND", message: `Item not found: ${input.itemName}` });
         }
 
         await fs.writeFile(fullPath, serializeCardText({ schema: parsed.schema, fields: parsed.fields }));
-        await stageFiles(ctx.boxRoot, [input.listPath]);
-        await commit(ctx.boxRoot, {
+        await stageAndCommitPaths(ctx.boxRoot, {
+          paths: [input.listPath],
           message: `Update todo item "${input.itemName}" to ${input.status}`,
           trailers: { Source: "webapp", Endpoint: "todos.updateItem" },
         });

@@ -253,7 +253,7 @@ export class ChatSession extends EventEmitter {
     }
     // Background-task events fire between turns (no per-turn SSE attached), so
     // wireSession bridges them to the global event bus, not the per-turn stream.
-    if (msg.type === "task" && msg.task) { this.emit("task", msg.task); return; }
+    if (msg.type === "task") { this.emit("task", msg.task); return; }
     // Accumulate assistant text for schedule parsing
     this.turnText = accumulateAssistantText(this.turnText, msg);
 

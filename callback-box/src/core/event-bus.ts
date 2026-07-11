@@ -16,74 +16,154 @@
  *
  * DB lives at .callback-box/events.db (not git-tracked, ephemeral data).
  *
- * ## Typing scope (producer-side only)
+ * ## Typing scope — producer AND read boundary
  *
  * {@link EventMap} names every event and types its payload, so `emit`/
  * `emitTransient` reject an unknown event name (typo drift) and a mistyped
- * payload at the CALL site. This is producer-side ergonomics and claims NO
- * read-side safety: events are persisted and cross-process, so a row read back
- * through `JSON.parse` (see `parseRows`) or replayed to another process was
- * NOT produced through this typed surface. The read boundary therefore still
- * hands out `data: unknown` — a consumer must validate the payload itself.
- * Per-event zod schemas validated at the read/subscribe boundary (with an
- * unknown-event sentinel) are the tracked follow-up; see
- * `issues/2026-07-06-event-bus-read-side-schemas.md`.
+ * payload at the CALL site. `EventMap` is DERIVED from the per-event zod
+ * schemas in `event-bus-schemas.ts` (the single source of truth), and those
+ * same schemas run at the READ boundary: `parseRows` validates every row read
+ * back from SQLite (or replayed from another process). A row that fails —
+ * malformed JSON, an unknown event name, or a schema mismatch — becomes the
+ * logged, counted `unknown` sentinel rather than corrupting the stream (see
+ * `unknownEventRow`, mirroring `unknownChatMessage`), so one bad row degrades
+ * visibly without breaking dispatch of its siblings.
+ *
+ * Persisted rows are a reconnect bridge, not a source of truth. On bus open a
+ * {@link EVENT_SCHEMA_GENERATION} mismatch truncates the events table, so
+ * clients reconnecting across a deploy hit the existing full-resync path
+ * instead of replaying stale-shaped rows — "everything persisted is valid
+ * against current schemas" is an invariant, not a hope.
  */
 
 import Database from "better-sqlite3";
 import * as fs from "node:fs";
 import * as path from "node:path";
+import { eventSchemas, type BusEventName, type EventMap } from "./event-bus-schemas.js";
+
+export type { BusEventName, EventMap } from "./event-bus-schemas.js";
 
 /**
- * The events the bus carries, each mapped to its payload shape. Scalar fields
- * are typed precisely; a few nested payloads stay `unknown` deliberately, so
- * the bus stays decoupled from chat/domain types and no producer is forced to
- * restructure — the event NAME and the well-understood fields are what this
- * catches. Adding an event means adding a key here.
+ * Bumped whenever ANY event payload shape in `event-bus-schemas.ts` changes.
+ * Stored in the one-row `event_meta` table; on bus open a mismatch truncates
+ * the persisted events (see `createEventBus`). All processes of one deploy
+ * share this constant, so a startup race converges regardless.
  */
-export interface EventMap {
-  /** A watched file changed on disk (chokidar event name in `event`). */
-  "file-change": { event: string; path: string; timestamp: string };
-  /** A browser tab was asked to re-upload its last audio blob. */
-  "chat-last-audio-request": { requestId: string };
-  /** A card was created (optionally with a captured audio attachment). */
-  "card-created": { path: string; template: string; timestamp: string; audioPath?: string | undefined };
-  /** A `cb` command finished (success flag for consumers to react on). */
-  "command-complete": { command: string; success: boolean; timestamp: string };
-  /** A question card was answered via web/cli/api. */
-  "question-answered": { path: string; answer: unknown; selectedId: unknown; timestamp: string };
-  /** Cards in the box changed (coarse refresh signal). */
-  "cards-changed": { source: string };
-  /** A user message was sent into a chat session. */
-  "chat-user-message": {
-    sessionId: string | null;
-    message: string;
-    user: { email: unknown; name: unknown } | null;
-    timestamp: string;
-  };
-  /** A chat turn completed. */
-  "chat-complete": { sessionId: string | null; timestamp: string };
-  /** A background-task lifecycle event on a chat session (payload: TaskEvent). */
-  "chat-task": { sessionId: string | null; task: unknown };
-  /** A chat session's feature flags changed. */
-  "chat-features-changed": { sessionId: string; features: Record<string, string> };
-  /** A scheduled chat timer fired. */
-  "schedule-fired": { id: string; label: string; alarm: unknown; announce: unknown };
-  /** A chat session's history was (re)computed for delivery. */
-  "chat-history": { sessionId: string | null; entries: unknown[] };
-  /** A chat session id was assigned by the SDK. */
-  "chat-session-assigned": { sessionId: string };
-}
-
-/** A known event name. */
-export type BusEventName = keyof EventMap;
+export const EVENT_SCHEMA_GENERATION = 1;
 
 export interface BusEvent {
   id: number;
   event: string;
-  /** Read-side payload is untyped — see the module header's typing-scope note. */
+  /**
+   * Read-side payload, validated against the per-event schema in `parseRows`.
+   * Typed `unknown` because a bad row degrades to the `event: "unknown"`
+   * sentinel — consumers narrow on `event` before reading `data`.
+   */
   data: unknown;
   createdAt: string;
+}
+
+/** Count of persisted rows surfaced as `unknown` sentinels this process. */
+let unknownEventCount = 0;
+
+/** A raw row as stored in SQLite (payload still a JSON string). */
+interface EventRow {
+  id: number;
+  event: string;
+  data: string;
+  createdAt: string;
+}
+
+/**
+ * Reconcile the persisted schema generation against {@link EVENT_SCHEMA_GENERATION}.
+ * Persisted rows bridge reconnects only, so rows written by an older payload
+ * shape are worthless — drop them wholesale rather than replaying stale-shaped
+ * data into current consumers. Meta read + truncate + meta write run in one
+ * transaction so a startup race between processes of one deploy is unambiguous
+ * (they share the constant, so it converges anyway — the transaction just
+ * removes the interleaving).
+ */
+function reconcileSchemaGeneration(db: Database.Database): void {
+  const reconcile = db.transaction(() => {
+    const meta = db
+      .prepare("SELECT schema_generation AS gen FROM event_meta WHERE id = 1")
+      .get() as { gen: number } | undefined;
+    if (meta === undefined) {
+      // No meta row: either a fresh DB (0 events — the DELETE is a harmless
+      // no-op) or a legacy DB written before generation stamping existed. A
+      // legacy DB's rows are of an UNKNOWN generation, so treat them as stale
+      // and drop them — the same invariant a real mismatch enforces. Silent on
+      // a fresh DB; loud when it actually discards pre-generation rows.
+      const deleted = db.prepare("DELETE FROM events").run().changes;
+      db.prepare("INSERT INTO event_meta (id, schema_generation) VALUES (1, ?)").run(
+        EVENT_SCHEMA_GENERATION,
+      );
+      if (deleted > 0) {
+        console.warn(
+          `[EventBus] Initialized event-schema generation ${EVENT_SCHEMA_GENERATION}; truncated ${deleted} pre-generation event(s) of unknown shape. Reconnecting clients resync via the bus's full-resync path.`,
+        );
+      }
+      return;
+    }
+    if (meta.gen !== EVENT_SCHEMA_GENERATION) {
+      const deleted = db.prepare("DELETE FROM events").run().changes;
+      db.prepare("UPDATE event_meta SET schema_generation = ? WHERE id = 1").run(
+        EVENT_SCHEMA_GENERATION,
+      );
+      console.warn(
+        `[EventBus] Event-schema generation changed (${meta.gen} → ${EVENT_SCHEMA_GENERATION}); truncated ${deleted} persisted event(s). Reconnecting clients resync via the bus's full-resync path.`,
+      );
+    }
+  });
+  reconcile();
+}
+
+/**
+ * Produce the read-boundary sentinel for a row that failed validation (bad
+ * JSON, unknown event name, or a schema mismatch). Logs and counts every
+ * occurrence — a schema/version drift can degrade the stream but can never do
+ * so silently. Consumers narrowing on `event` ignore `"unknown"`, so one bad
+ * row degrades visibly without breaking dispatch of its siblings.
+ */
+function unknownEventRow(row: EventRow, { reason, raw }: { reason: string; raw?: unknown }): BusEvent {
+  unknownEventCount++;
+  console.warn(
+    `[EventBus] Row id=${row.id} event="${row.event}" failed read validation: ${reason} (count=${unknownEventCount}). Surfaced as an "unknown" sentinel; downstream consumers ignore it.`,
+  );
+  return {
+    id: row.id,
+    event: "unknown",
+    data: { originalEvent: row.event, raw: raw ?? row.data, error: reason },
+    createdAt: row.createdAt,
+  };
+}
+
+/**
+ * Validate one stored row against its per-event schema. A syntax-level parse
+ * failure, an unknown event name, or a schema mismatch each degrades to the
+ * `unknown` sentinel rather than throwing — the poll tick's other rows must
+ * still dispatch. On success the ORIGINAL parsed value is returned (validation
+ * gates, it never transforms), so valid rows reach consumers byte-identical to
+ * before.
+ */
+function validateRow(row: EventRow): BusEvent {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(row.data);
+  } catch (e) {
+    return unknownEventRow(row, { reason: `JSON parse failed: ${String(e)}` });
+  }
+  const schema = eventSchemas[row.event as BusEventName] as
+    | (typeof eventSchemas)[BusEventName]
+    | undefined;
+  if (schema === undefined) {
+    return unknownEventRow(row, { reason: `unknown event name "${row.event}"`, raw: parsed });
+  }
+  const result = schema.safeParse(parsed);
+  if (!result.success) {
+    return unknownEventRow(row, { reason: result.error.message, raw: parsed });
+  }
+  return { id: row.id, event: row.event, data: parsed, createdAt: row.createdAt };
 }
 
 type BusListener = (event: BusEvent) => void;
@@ -143,7 +223,13 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
       data TEXT NOT NULL,
       created_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
+    CREATE TABLE IF NOT EXISTS event_meta (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      schema_generation INTEGER NOT NULL
+    );
   `);
+
+  reconcileSchemaGeneration(db);
 
   const insertStmt = db.prepare(
     "INSERT INTO events (event, data) VALUES (?, ?)"
@@ -177,11 +263,8 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     }
   }
 
-  function parseRows(rows: Array<{ id: number; event: string; data: string; createdAt: string }>): BusEvent[] {
-    return rows.map((r) => ({
-      ...r,
-      data: JSON.parse(r.data),
-    }));
+  function parseRows(rows: EventRow[]): BusEvent[] {
+    return rows.map(validateRow);
   }
 
   function emit<K extends BusEventName>(event: K, data: EventMap[K]): number {
@@ -214,12 +297,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
   }
 
   function readSince(afterId: number): BusEvent[] {
-    const rows = readSinceStmt.all(afterId) as Array<{
-      id: number;
-      event: string;
-      data: string;
-      createdAt: string;
-    }>;
+    const rows = readSinceStmt.all(afterId) as EventRow[];
     return parseRows(rows);
   }
 
@@ -262,12 +340,7 @@ export function createEventBus(boxRoot: string, options?: CreateEventBusOptions)
     pollTimer = setInterval(() => {
       if (listeners.size === 0) return; // no one listening, skip
 
-      const rows = readSinceStmt.all(highWaterMark) as Array<{
-        id: number;
-        event: string;
-        data: string;
-        createdAt: string;
-      }>;
+      const rows = readSinceStmt.all(highWaterMark) as EventRow[];
 
       if (rows.length === 0) return;
 

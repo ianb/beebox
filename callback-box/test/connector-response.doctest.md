@@ -4,14 +4,14 @@
 schema over a raw third-party API response and throws `ConnectorResponseError`
 — naming the service and operation — the moment the shape drifts. The schemas
 (`google-gmail-schemas.ts`, `google-calendar-schemas.ts`,
-`connectors/telegram-schemas.ts`) are drift-tolerant: extra keys are ignored,
+`telegram-schemas.ts`) are drift-tolerant: extra keys are ignored,
 open-ended enum fields stay strings.
 
 ```ts setup
 import { validateResponse, ConnectorResponseError } from "../src/services/connector-response.js";
 import { gmailMessageSchema } from "../src/services/google-gmail-schemas.js";
 import { calendarEventSchema } from "../src/services/google-calendar-schemas.js";
-import { telegramUpdateSchema } from "../src/connectors/telegram-schemas.js";
+import { telegramUpdateSchema, telegramUpdatesSchema } from "../src/services/telegram-schemas.js";
 import type { z } from "zod";
 
 // Capture a ConnectorResponseError so examples can inspect it.
@@ -86,4 +86,30 @@ A message whose `chat.id` is the wrong type is rejected:
 ```ts
 telegramUpdateSchema.safeParse({ update_id: 7, message: { message_id: 1, date: 1, chat: { id: "not-a-number", type: "private" } } }).success
 => false
+```
+
+## Telegram polling — getUpdates validates the whole batch
+
+`services/telegram.ts`'s `getUpdates()` runs the raw polling response through
+`validateResponse` with `telegramUpdatesSchema` (an array of updates) before the
+ingest pipeline sees it. A well-shaped batch passes:
+
+```ts
+const batch = [
+  { update_id: 10, message: { message_id: 1, date: 1700000000, chat: { id: 1, type: "private" }, text: "hi" } },
+  { update_id: 11, callback_query: { id: "c1" } },
+];
+validateResponse(batch, { schema: telegramUpdatesSchema, service: "telegram", operation: "getUpdates" });
+"ok"
+=> ok
+```
+
+A malformed element (here a non-numeric `update_id`) throws, naming the service,
+operation, and the offending path — a drift in the Telegram API surfaces loudly
+here instead of as silent `undefined`s downstream:
+
+```ts
+const bad = vErr([{ update_id: "nope" }], { schema: telegramUpdatesSchema, service: "telegram", operation: "getUpdates" });
+JSON.stringify({ service: bad?.service, operation: bad?.operation, issues: bad?.issues })
+=> {"service":"telegram","operation":"getUpdates","issues":["0.update_id: Invalid input: expected number, received string"]}
 ```

@@ -115,7 +115,11 @@ function estimatedPlacement(body: string, spokenWords: number): { pos: number; p
     return { pos: body.length, percent };
   }
   const targetWord = Math.round(fraction * total);
-  const pos = targetWord <= 0 ? 0 : targetWord >= total ? ends[total - 1] : ends[targetWord - 1];
+  // `total` is >= 1 here (the `total === 0` case returned above), so `idx` is
+  // always a valid index into `ends`; the `?? body.length` fallback is
+  // unreachable but honest to the array-index type.
+  const idx = targetWord <= 0 ? 0 : targetWord >= total ? total - 1 : targetWord - 1;
+  const pos = ends[idx] ?? body.length;
   return { pos, percent };
 }
 
@@ -139,9 +143,11 @@ function findAnchorEnd(body: string, anchor: string): number | null {
     }
   }
   for (let i = tokens.length - anchorWords.length; i >= 0; i -= 1) {
-    const matched = anchorWords.every((word, j) => tokens[i + j].norm === word);
+    const matched = anchorWords.every((word, j) => tokens[i + j]?.norm === word);
     if (matched) {
-      return tokens[i + anchorWords.length - 1].end;
+      // `i + anchorWords.length - 1` is within `[i, tokens.length - 1]` given
+      // the loop bound above, so this index is always populated when `matched`.
+      return tokens[i + anchorWords.length - 1]?.end ?? null;
     }
   }
   return null;

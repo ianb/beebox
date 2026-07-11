@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { router, publicProcedure } from "../trpc.js";
 import { saveLocation } from "../../../core/location-store.js";
+import { getBoxTimeISO } from "../../../lib/time.js";
 
 /**
  * User location capture. The web frontend posts a Geolocation fix here (with
@@ -21,7 +22,7 @@ export const locationRouter = router({
         lat: input.lat,
         lng: input.lng,
         accuracy: input.accuracy,
-        capturedAt: new Date().toISOString(),
+        capturedAt: getBoxTimeISO(ctx.boxRoot),
         source: "web",
       });
       return { ok: true };

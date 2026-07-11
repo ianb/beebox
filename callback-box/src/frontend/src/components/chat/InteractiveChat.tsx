@@ -19,9 +19,8 @@ import { useCurrentUser } from "../../hooks/useCurrentUser";
 import { useParams } from "@tanstack/react-router";
 import { trpc } from "../../lib/trpc";
 import { useEmissionDispatch } from "./InteractiveChat-dispatch";
-import { useDictationDraft } from "../../hooks/useDictationDraft";
 import { useEmissionPersistence } from "../../hooks/useEmissionPersistence";
-import { RecoveredDictation } from "./RecoveredDictation";
+import { useRecoveredDictation } from "./InteractiveChat-recovery";
 import { ExpiredAttachmentsNotice } from "./InteractiveChat-layout";
 import { useChatModelFeatures, useChatMute, useChatSchedules, usePendingMessagePoll, useProcessingStatusPoll, useChatStallRecovery, useChatTabs, useCompanionDeepLink } from "./InteractiveChat-hooks";
 import { useCompanionCard } from "./InteractiveChat-card-hooks";
@@ -33,10 +32,11 @@ import { useChatActions } from "./InteractiveChat-actions";
 import { useBackgroundTasks } from "./BackgroundTasks";
 import { InteractiveChatBody } from "./InteractiveChat-view";
 import { createInputStoreAdapter, InputStoreProvider } from "./input-store";
-import { joinTranscript } from "./InteractiveChat-helpers";
 import type { EmissionStore } from "../../input/emission-store";
 import type { Emission } from "../../input/emission";
 import { nativeEmissionFromDetail } from "./native-emission";
+import { useCaptureBubbles } from "./useCaptureBubbles";
+import { CaptureOverlay } from "../capture/CaptureOverlay";
 
 /**
  * Resolve the directory a chat is bound to. Returns the prop value
@@ -89,9 +89,15 @@ interface InteractiveChatProps {
    * event client, but the web composer and mic controls are suppressed.
    */
   embedded?: boolean;
+  /**
+   * Open capture mode immediately on mount — the `/capture` deep link
+   * (`?capture=1`) redirects here. Consumed once via initial state; the mode is
+   * a normal user toggle afterward.
+   */
+  openCaptureOnMount?: boolean;
 }
 
-export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded }: InteractiveChatProps) {
+export function InteractiveChat({ sessionInput, contextDir, companion, card, emissionStore, embedded, openCaptureOnMount }: InteractiveChatProps) {
   const isEmbedded = embedded === true;
   const [snapshot, send] = useSSRMachine(chatMachine, {
     input: { sessionInput, contextDir },
@@ -121,6 +127,12 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
   const [showDebugLog, setShowDebugLog] = useState(false);
   const [typingMode, setTypingMode] = useState(false);
   const [typingLocked, setTypingLocked] = useState(false);
+  // Capture mode: a rare user toggle (frame state, not URL / per-keystroke), so
+  // it lives in root state; the overlay's recording-timer ticks stay in its own
+  // subtree. Seeded from the `?capture=1` deep link, consumed once.
+  const [captureMode, setCaptureMode] = useState(openCaptureOnMount === true);
+  // Server-derived pending capture bubbles (survive reload; refined live below).
+  const { bubbles: captureBubbleList, applyCaptureStatus, retry: handleCaptureRetry } = useCaptureBubbles(sessionId);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const groups = useMemo(() => groupMessages(messages), [messages]);
@@ -163,49 +175,19 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     clearDraftRef, inputStore, dispatchEmission: dispatchEmissionVoid,
   });
 
-  // Persist the in-flight transcript so an interrupted session (screen sleep,
-  // tab eviction, reload) doesn't erase it. Recovery surfaces in a dedicated
-  // widget above the composer rather than autofilling the field.
-  const { recoveredDraft, clearDraft } = useDictationDraft({
+  // Persisted in-flight transcript recovery widget; see InteractiveChat-recovery.tsx.
+  const { recoveredDictation } = useRecoveredDictation({
     boxSlug,
     transcript: voice.transcription.transcript,
     isTranscribing: voice.isTranscribing,
     narrationEnabled: model.narrationEnabled,
+    hqInFlight: voice.hqInFlight,
+    sessionId,
+    sendVoiceSegment,
+    inputStore,
+    startVoice: voice.startVoice,
+    clearDraftRef,
   });
-  useEffect(() => { clearDraftRef.current = clearDraft; });
-
-  const handleRecoverSend = useCallback(() => {
-    if (!recoveredDraft) return;
-    // No audio survives a drop, so the realtime text stands in for the HQ pass
-    // (the design's documented HQ-failure fallback). Sent as a narration
-    // <speech> message; the session's narration flag re-syncs from the server.
-    sendVoiceSegment(recoveredDraft.text);
-    clearDraft();
-  }, [recoveredDraft, sendVoiceSegment, clearDraft]);
-
-  const handleRecoverContinue = useCallback(() => {
-    if (!recoveredDraft) return;
-    // Resume the interrupted message: the recovered text becomes composer
-    // input — the prior-input slot every voice path already folds into the
-    // next utterance (keyword send prepends it; a manual stop joins onto it) —
-    // and the mic reopens.
-    inputStore.set((existing) => joinTranscript(existing, recoveredDraft.text));
-    clearDraft();
-    voice.startVoice();
-  }, [recoveredDraft, inputStore, clearDraft, voice]);
-
-  // Surface the recovery widget only when idle: hidden while the mic is open
-  // and while an HQ commit is in flight (the mic briefly idles between
-  // segments — don't flash the just-committed text as "recovered").
-  const recoveredDictation = recoveredDraft && !voice.isTranscribing && !voice.hqInFlight ? (
-    <RecoveredDictation
-      draft={recoveredDraft}
-      sessionId={sessionId}
-      onSend={handleRecoverSend}
-      onContinue={handleRecoverContinue}
-      onDiscard={clearDraft}
-    />
-  ) : null;
 
   const expiredAttachmentsNotice = (
     <ExpiredAttachmentsNotice names={expiredAttachments} onDismiss={dismissExpiredAttachments} />
@@ -215,6 +197,7 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
     sessionId, sessionInput, boxSlug, currentUser, isStreaming, send,
     fetchSchedules: schedules.fetchSchedules, setChatFeatures: model.setChatFeatures,
     onTaskEvent: backgroundTasks.onTaskEvent,
+    onCaptureStatus: applyCaptureStatus,
   });
 
   const actions = useChatActions({
@@ -284,7 +267,11 @@ export function InteractiveChat({ sessionInput, contextDir, companion, card, emi
       send={send}
       reportCardActivity={cardSend.report}
       embedded={isEmbedded}
+      captureBubbles={captureBubbleList} onCaptureRetry={handleCaptureRetry}
+      onEnterCapture={() => setCaptureMode(true)} captureEnabled={!isEmbedded}
+      captureDisabledReason={sessionId === null ? "Send a message first" : undefined}
       />
+      {captureMode && !isEmbedded ? <CaptureOverlay targetSessionId={sessionId} onExit={() => setCaptureMode(false)} /> : null}
     </InputStoreProvider>
   );
 }

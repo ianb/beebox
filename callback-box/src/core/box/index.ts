@@ -9,6 +9,7 @@ import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../../lib/paths.js";
 import { initRepo, isRepo } from "../../lib/git.js";
 import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot } from "../../cli/lib/session.js";
 import { MIGRATIONS } from "../migrations.js";
 import {
@@ -69,7 +70,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     const marker = {
       version: "1.0.0",
       shapeVersion: options.shapeVersion ?? 1,
-      created: new Date().toISOString(),
+      created: getBoxTimeISO(resolvedRoot),
     };
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
@@ -100,7 +101,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     } catch (_e) {
       // No manifest yet (fs.access throws ENOENT) — seed one. The error
       // carries no actionable info; absence is the normal create path.
-      const now = new Date().toISOString();
+      const now = getBoxTimeISO(resolvedRoot);
       const lines = MIGRATIONS
         .map((m) => `${JSON.stringify({ name: m.name, "applied-at": now })}\n`)
         .join("");

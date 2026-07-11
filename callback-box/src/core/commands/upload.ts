@@ -140,7 +140,7 @@ async function processGroup(
   const existingForHashes = hashes.map((h) => findEntry(ledger, h.hash));
   const allSeen = existingForHashes.every((e) => e !== undefined);
   if (allSeen && !force) {
-    const withSession = existingForHashes.find((e) => e !== undefined && typeof e.sessionRelDir === "string");
+    const withSession = existingForHashes.find((e) => typeof e.sessionRelDir === "string");
     const where = withSession && withSession.sessionRelDir ? ` → ${withSession.sessionRelDir}` : "";
     ctx.writeLine(
       `  skipped (all ${group.files.length} file${group.files.length === 1 ? "" : "s"} already uploaded${where}); use --force to re-import`

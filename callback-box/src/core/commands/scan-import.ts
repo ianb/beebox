@@ -40,7 +40,8 @@ import {
   type CommandResult,
 } from "../command-runner.js";
 import { createCardSchemaMap } from "../../schemas/registry.js";
-import { stageFiles, commit } from "../../lib/git.js";
+import { invariant } from "../../lib/invariant.js";
+import { stageAndCommitPaths } from "../../lib/git.js";
 import { createCaptureSessionTemplate } from "../../schemas/capture-session.js";
 import { createOrAppendIntakeJob } from "../../connectors/intake-utils.js";
 import {
@@ -108,7 +109,9 @@ async function executeScanImport(
       };
     }
     // PDFs are always filed as documents — Flash treatment for PDFs is deferred.
-    return runDocumentMode(ctx, { pdfPath: resolved[0]! });
+    const [pdfPath] = resolved;
+    invariant(pdfPath !== undefined, "resolved has exactly one entry here (non-empty inputs, length > 1 handled above)");
+    return runDocumentMode(ctx, { pdfPath });
   }
 
   const apiKey = process.env["GEMINI_KEY"] || process.env["SKE_GEMINI_API_KEY"];
@@ -260,11 +263,11 @@ async function runPhotoMode(
   await fs.writeFile(sessionCardAbsPath, sessionCardContent);
   filesToStage.push(sessionCardRelPath);
 
-  await stageFiles(ctx.boxRoot, filesToStage);
   const summaryParts: string[] = [`${bundles.length} photos`];
   if (orphanBacks.length > 0) summaryParts.push(`${orphanBacks.length} orphan backs`);
   if (unsurePages.length > 0) summaryParts.push(`${unsurePages.length} unsure`);
-  await commit(ctx.boxRoot, {
+  await stageAndCommitPaths(ctx.boxRoot, {
+    paths: filesToStage,
     message: `Scan import: ${summaryParts.join(", ")}`,
     trailers: { "Created-By": "scan-import" },
   });

@@ -3,6 +3,7 @@ import dddPlugin from "eslint-plugin-ddd";
 import reactHooksPlugin from "eslint-plugin-react-hooks";
 import unicornPlugin from "eslint-plugin-unicorn";
 import importXPlugin from "eslint-plugin-import-x";
+import jsxA11yPlugin from "eslint-plugin-jsx-a11y";
 import vibePlugin from "./plugin.mjs";
 
 // Some plugins eslint-config-agent depends on still ship legacy-eslintrc
@@ -384,6 +385,15 @@ export function vibeCheck(options) {
   // React-specific rules — only included when react option is true
   const reactRules = react
     ? {
+        // jsx-a11y recommended, minus no-autofocus. ~15 rules catching real
+        // accessibility bugs (interactive elements without keyboard
+        // handlers, images/inputs without labels, invalid anchors, etc.) —
+        // see conventions.md for the fix taxonomy. no-autofocus is off
+        // because it fights a deliberate autofocus (e.g. a chat composer
+        // that should grab focus on mount); every other recommended rule
+        // is kept as-is.
+        ...jsxA11yPlugin.flatConfigs.recommended.rules,
+        "jsx-a11y/no-autofocus": "off",
         // React hooks
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "error",
@@ -520,6 +530,7 @@ export function vibeCheck(options) {
         unicorn: unicornPlugin,
         "import-x": importXPlugin,
         "personal-vibe-check": vibePlugin,
+        ...(react ? { "jsx-a11y": jsxA11yPlugin } : {}),
       },
       settings: {
         ...reactSettings,
@@ -619,6 +630,41 @@ export function vibeCheck(options) {
         // functions passed as attributes/handlers, inherited method mismatch,
         // and conditionals like `if (asyncFn())`.
         "@typescript-eslint/no-misused-promises": "error",
+        // `return await x` inside a try/catch (or a `using`/`await using`
+        // scope) is not redundant: dropping the `await` lets the returned
+        // promise reject *after* the try block (or resource disposal) has
+        // already exited, so the rejection is attributed to the wrong frame
+        // and any `finally`/`using` cleanup that should run before the
+        // rejection propagates doesn't. Default (`in-try-catch`) mode
+        // requires `await` on returns inside try/catch/using scopes and
+        // disallows the redundant `await` on a bare tail-return elsewhere.
+        // Measured fallout in one consumer: most hits were Fastify route
+        // handlers (`return reply.send(...)` inside a try whose catch
+        // re-sends) where forcing `await` routes a rejected send into the
+        // catch block and causes a second send (FST_ERR_REP_ALREADY_SENT).
+        // Consuming projects with a route-handler directory matching this
+        // shape should disable the rule there in their OWN eslint config
+        // (see callback-box/eslint.config.mjs for the model), not here —
+        // this preset has no opinion on any one project's route layout.
+        "@typescript-eslint/return-await": "error",
+        // `x!` silences the compiler instead of proving non-null; a wrong
+        // assertion becomes a runtime crash with no type-checker warning.
+        // Burned down 2026-07-10: 190 sites converted to real narrowing
+        // (optional chaining, explicit guards, or a typed assertion helper)
+        // across callback-box (backend + frontend), callback-clerk, and
+        // agent-doctest.
+        "@typescript-eslint/no-non-null-assertion": "error",
+        // Flags conditions/optional-chains/binary-expressions that TypeScript's
+        // types prove can never be false (or never true) — usually a stale
+        // guard left over after a type narrowed, or a check that was never
+        // reachable to begin with. Burned down 2026-07-10: ~200 sites fixed
+        // across callback-box (backend + frontend), callback-clerk, and
+        // agent-doctest; 3 sites kept a justified single-line
+        // eslint-disable-next-line (agent-doctest/src/check.ts and
+        // callback-box frontend useSSRMachine.ts, router.tsx) where the
+        // condition is genuinely defensive against a case the type system
+        // can't see (e.g. a cast at a parse/runtime boundary).
+        "@typescript-eslint/no-unnecessary-condition": "error",
       },
     },
     // When react:false, .tsx files fall through to eslint-config-agent's strict

@@ -5,7 +5,7 @@ can supervise it, but nothing used to read those pipes — execa just buffers
 them in memory and they vanish when the child exits (or the hub restarts).
 That meant a chat turn's `warnErroredTurn` diagnostic (the SDK's own error
 detail on a failed turn) went to the child's stderr and was gone for good —
-see `issues/2026-07-07-box-child-stderr-not-surfaced.md`. `forwardChildOutput`
+see `issues/bugs/2026-07-07-box-child-stderr-not-surfaced.md`. `forwardChildOutput`
 appends both streams, line-buffered and tagged, to a per-box rolling log file
 so that detail survives.
 

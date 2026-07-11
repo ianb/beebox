@@ -19,7 +19,7 @@ export const procedureCommand = new Command("procedure")
 procedureCommand
   .command("run")
   .description("Start a new procedure run")
-  .argument("<name-or-path>", "Procedure name (e.g., process-captures) or path to .procedure.card")
+  .argument("<name-or-path>", "Procedure name (e.g., process-pages) or path to .procedure.card")
   .option("--dry-run", "Preview without executing")
   .option("--force", "Force even if another process is running")
   .option("--step <id>", "Run only this step, skip all others")

@@ -8,6 +8,7 @@
 // eslint-disable-next-line import-x/no-rename-default
 import ICAL from "ical.js";
 import { type CalendarEvent } from "../services/google-calendar.js";
+import { invariant } from "../lib/invariant.js";
 
 export type GoogleCalendarEvent = CalendarEvent;
 
@@ -18,14 +19,13 @@ export type GoogleCalendarEvent = CalendarEvent;
 function parseLocalTimeParts(dateTime: string): { year: number; month: number; day: number; hour: number; minute: number; second: number } | null {
   const match = dateTime.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/);
   if (!match) return null;
-  return {
-    year: parseInt(match[1]!, 10),
-    month: parseInt(match[2]!, 10),
-    day: parseInt(match[3]!, 10),
-    hour: parseInt(match[4]!, 10),
-    minute: parseInt(match[5]!, 10),
-    second: parseInt(match[6]!, 10),
-  };
+  const [year, month, day, hour, minute, second] = match.slice(1);
+  invariant(
+    year !== undefined && month !== undefined && day !== undefined
+      && hour !== undefined && minute !== undefined && second !== undefined,
+    "6 capture groups are non-optional here",
+  );
+  return { year: +year, month: +month, day: +day, hour: +hour, minute: +minute, second: +second };
 }
 
 /** Offset in minutes between a date's wall-clock time in tzid and UTC. */

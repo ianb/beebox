@@ -351,7 +351,11 @@ export function FileView({ path, mode: modeProp, rendererName, onNavigate, onAdd
 
   const userName = userSelection && userSelection.path === path ? userSelection.name : null;
   const requested = userName ?? rendererName ?? null;
-  const active = (requested ? renderers.find(r => r.name === requested) : undefined) ?? renderers[0];
+  // renderers can be empty (no renderer matches this file); the frontend
+  // tsconfig lacks noUncheckedIndexedAccess, so `renderers[0]` would type
+  // `active` as always-defined. `.at(0)` is typed `T | undefined` regardless
+  // of that flag, which keeps this check honest.
+  const active = (requested ? renderers.find(r => r.name === requested) : undefined) ?? renderers.at(0);
 
   if (!active) {
     return <div className="p-4 text-warm-600">No renderer available for this file.</div>;

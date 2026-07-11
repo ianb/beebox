@@ -24,6 +24,7 @@ import { LandmarksPage } from "./pages/landmarks/LandmarksPage";
 import { ChatsPage } from "./pages/chats/ChatsPage";
 import { SpeechTestPage } from "./pages/dev/SpeechTestPage";
 import { ComposerStatesPage } from "./pages/dev/ComposerStatesPage";
+import { CaptureModePage } from "./pages/dev/CaptureModeHarness";
 
 // --- Root route ---
 
@@ -72,6 +73,8 @@ const chatRoute = createRoute({
     card: z.string().optional(),
     // Native companion embed mode: conversation-only chat, no web composer.
     embed: z.union([z.literal("1"), z.literal(1)]).optional(),
+    // Open capture mode on load — the `/capture` deep link redirects here.
+    capture: z.union([z.literal("1"), z.literal(1)]).optional(),
   }),
 });
 
@@ -170,6 +173,13 @@ const devComposerStatesRoute = createRoute({
   component: ComposerStatesPage,
 });
 
+// Dev-only harness for capture mode (overlay + pending bubble + chip).
+const devCaptureModeRoute = createRoute({
+  getParentRoute: () => boxLayoutRoute,
+  path: "/dev/capture-mode",
+  component: CaptureModePage,
+});
+
 // Catch-all for unknown paths under a box
 const boxCatchAllRoute = createRoute({
   getParentRoute: () => boxLayoutRoute,
@@ -200,8 +210,13 @@ const routeTree = rootRoute.addChildren([
     // Dev-only routes are omitted from production builds entirely. The undefined
     // guard keeps the literal `import.meta.env.DEV` intact for Vite's build-time
     // dead-code elimination, while short-circuiting under the SSR loader / plain-
-    // Node tests where `import.meta.env` is undefined (see lib/view-url.ts).
-    ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute] : []),
+    // Node tests where `import.meta.env` is undefined (see lib/view-url.ts). Vite's
+    // ambient types declare `import.meta.env` as always-defined (true only inside a
+    // Vite-processed build), so the check is real at runtime but invisible to TS —
+    // and the literal `import.meta.env.DEV` shape has to stay intact for Vite's
+    // static DCE, ruling out the honest-cast pattern `lib/view-url.ts` uses instead.
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- see comment above
+    ...((import.meta.env !== undefined && import.meta.env.DEV) ? [devSpeechRoute, devComposerStatesRoute, devCaptureModeRoute] : []),
     boxCatchAllRoute,
   ]),
 ]);

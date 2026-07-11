@@ -881,6 +881,13 @@ test1:
       peak: 49060
       added: 2798
       turns: 10
+    - date: 2026-07-10T06:51:13.953Z
+      boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
+      repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
+      initial: 46768
+      peak: 65421
+      added: 18653
+      turns: 9
   source-tag-syntax:
     - date: 2026-07-03T10:34:32.749Z
       boxCommit: 9af1028c0ca057bdfa64b103f5fbc5c8f0573277
@@ -2785,6 +2792,13 @@ test1:
       peak: 41208
       added: 0
       turns: 1
+    - date: 2026-07-10T06:51:13.953Z
+      boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
+      repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
+      initial: 26828
+      peak: 30371
+      added: 3543
+      turns: 9
   webpage-vs-commentary:
     - date: 2026-07-03T12:10:11.783Z
       boxCommit: ace0632a8b2fad06e6e6bd1d312197b3b19c6ff0
@@ -2833,3 +2847,34 @@ test1:
       peak: 41776
       added: 15243
       turns: 14
+  capture-message-meaning:
+    - date: 2026-07-10T06:51:13.953Z
+      boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
+      repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
+      initial: 32243
+      peak: 32243
+      added: 0
+      turns: 2
+    - date: 2026-07-10T06:53:45.447Z
+      boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
+      repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
+      initial: 46710
+      peak: 46710
+      added: 0
+      turns: 2
+  capture-agent-duties:
+    - date: 2026-07-10T06:51:13.953Z
+      boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
+      repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
+      initial: 32228
+      peak: 50683
+      added: 18455
+      turns: 8
+  capture-partial-marker:
+    - date: 2026-07-10T06:51:13.953Z
+      boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
+      repoCommit: 157f7c529352eb8594792fc62757df1f5d612b47
+      initial: 32194
+      peak: 32194
+      added: 0
+      turns: 2

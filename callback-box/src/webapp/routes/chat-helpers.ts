@@ -125,7 +125,7 @@ export function extractCardFields(
   const kinds = Array.isArray(body.cardActivity) ? body.cardActivity.filter(isActivityKind) : [];
   if (kinds.length > 0) out.cardActivity = kinds;
   const details: CardStateDetails = {};
-  if (body.cardState !== null && typeof body.cardState === "object") {
+  if (typeof body.cardState === "object") {
     for (const [kind, detail] of Object.entries(body.cardState)) {
       if (isActivityKind(kind) && typeof detail === "string" && detail !== "") details[kind] = detail;
     }

@@ -6,6 +6,8 @@
  * produced showing exactly where things diverge.
  */
 
+import { invariant } from "./invariant.js";
+
 // ── Wildcards ────────────────────────────────────────────────────────────────
 
 /** Typed wildcard patterns — known type names map to regex fragments. */
@@ -60,18 +62,18 @@ function parseWildcardToken(content: string): WildcardToken {
 
   // Known type — use its pattern, default name to the type name
   if (content in WILDCARD_TYPES) {
-    return { pattern: WILDCARD_TYPES[content]!, name: content };
+    const pattern = WILDCARD_TYPES[content];
+    invariant(pattern !== undefined, "content was just confirmed to be a WILDCARD_TYPES key");
+    return { pattern, name: content };
   }
 
   // Unknown token — treat as anonymous wildcard (use «name=*» for named capture)
   return { pattern: "[\\s\\S]*", name: null };
 }
 
-export interface MatchResult {
-  matched: boolean;
-  diff: string | null;
-  extractions: Extractions;
-}
+export type MatchResult =
+  | { matched: true; diff: null; extractions: Extractions }
+  | { matched: false; diff: string; extractions: Extractions };
 
 /**
  * Match actual text against an expected pattern that may contain wildcards.

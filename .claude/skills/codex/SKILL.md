@@ -29,7 +29,7 @@ Don't run it unprompted; the human asks for it.
 ## Preconditions
 
 ```bash
-codex --version          # expect codex-cli installed (verified at 0.137.0)
+codex --version          # expect codex-cli installed (verified at 0.144.1)
 ```
 If missing: `npm install -g @openai/codex` and `codex login` (or `$OPENAI_API_KEY`).
 Bug surfacing: if a run exits non-zero or stalls, say so loudly with stderr — a

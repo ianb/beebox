@@ -6,6 +6,7 @@
  */
 
 import { type z, type ZodObject, type ZodRawShape } from "zod";
+import { invariant } from "../lib/invariant.js";
 
 /**
  * Template definition with typed arguments.
@@ -64,7 +65,11 @@ function register(def: TemplateDefinition, owner: string): void {
 }
 
 function effective(list: Registration[]): TemplateDefinition {
-  return list[list.length - 1]!.def;
+  const last = list.at(-1);
+  // `register()` never stores an empty array — every list in the map has at
+  // least the registration that created it.
+  invariant(last !== undefined, "templates-registry: registration list is empty");
+  return last.def;
 }
 
 /**

@@ -23,7 +23,7 @@ export interface TemplateStockEntry {
   superseded: string[];
 }
 
-export const TEMPLATE_STOCK_HASHES: Record<string, TemplateStockEntry> = {
+export const TEMPLATE_STOCK_HASHES = {
   "schemas-guide": {
     current: "f42242f4226592409bd2e95b076f9e88f0bf2270480df68e288a31ea1f6212df",
     superseded: [
@@ -56,4 +56,4 @@ export const TEMPLATE_STOCK_HASHES: Record<string, TemplateStockEntry> = {
 
     ],
   },
-};
+} satisfies Record<string, TemplateStockEntry>;

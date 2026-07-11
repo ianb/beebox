@@ -16,7 +16,10 @@ export const QUOTE_HIGHLIGHT = "cb-quote-anchor";
  * Find the range of `exact` within `root` via text-fragment matching, or null.
  */
 export function findQuoteRange(root: HTMLElement, exact: string): Range | null {
-  const range = processTextFragmentDirective({ textStart: exact }, document, root)[0];
+  // `.at(0)` (not `[0]`): "up to two matches" means the array can be empty,
+  // and `.at()` is honestly `Range | undefined` regardless of
+  // `noUncheckedIndexedAccess` (which the frontend tsconfig lacks).
+  const range = processTextFragmentDirective({ textStart: exact }, document, root).at(0);
   return range === undefined ? null : range;
 }
 

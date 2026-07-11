@@ -34,6 +34,7 @@ export function useSSRMachine<TMachine extends AnyStateMachine>(
 
   return useMachine(machine, {
     ...options,
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- SnapshotFrom<T> is a conditional type over a naked, unresolved generic (TMachine extends AnyStateMachine); the checker collapses it to `undefined` here even though every concrete instantiation carries a real snapshot type, so the fallback is genuinely live at every call site.
     snapshot: ssrSnapshot ?? options?.snapshot,
   } as ActorOptions<TMachine>);
 }

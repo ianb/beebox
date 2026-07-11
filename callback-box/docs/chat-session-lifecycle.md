@@ -9,7 +9,9 @@ The backend chat runs are long-lived SDK conversations wrapped by two classes:
   one session at a time.
 
 Both drive their SDK run through the same lifecycle, modelled as a discriminated
-union in `src/core/chat/session/lifecycle.ts`. This doc is the backend
+union in `src/core/chat/session/lifecycle.ts`, and adapt raw SDK messages through
+the same shared adapter (`adaptSdkMessage` in `src/core/chat/session/messages.ts`).
+This doc is the backend
 counterpart to the frontend's state-machine docs — the park/drain/evict/queue
 contract the backend previously left implicit.
 
@@ -73,8 +75,19 @@ move (a caller bug over internal state — not a degradable condition).
 ## Shared code
 
 The two classes share the SDK message-pump skeleton (`pumpChatRun` in
-`chat-session-consume.ts`) and the lifecycle union/transitions
-(`chat-session-lifecycle.ts`). They are **not** yet collapsed into one base
-class — see `../../issues/2026-07-06-chat-session-shared-core.md` for why (the per-turn
-bodies genuinely diverge: durability + queue draining vs `<chat-response>`
-extraction, and the deliberate SDK-message narrowing on the thread path).
+`session/consume.ts`), the lifecycle union/transitions (`session/lifecycle.ts`),
+and the SDK-message adapter (`adaptSdkMessage` in `session/messages.ts`).
+
+**The adapter is one shared function** (Track 6 convergence, 2026-07). Both
+sessions call the same `adaptSdkMessage`, so every SDK message type surfaces to
+both paths identically — there is no longer a thread-local fork that silently
+dropped types. The thread path's narrowing (it delivers only complete
+`<chat-response>` blocks over external chat) now lives as **explicit flow
+control** in `ChatThreadSession.handleMessage`: a `switch` over the message type
+where `stream_event` (partial deltas) and `task` (background-task lifecycle) are
+deliberate, commented, logged skips, and `assertNever` guards the union so a new
+SDK message type is a compile error rather than a silent drop.
+
+The two classes are **not** yet collapsed into one base class — see
+`../../issues/code-quality/2026-07-06-chat-session-shared-core.md` for why (the per-turn bodies
+genuinely diverge: durability + queue draining vs `<chat-response>` extraction).

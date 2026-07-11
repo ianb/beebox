@@ -87,7 +87,6 @@ await fullInit(tmp);
 
 await listFiles(tmp, "config/procedures")
 =>
-process-captures.procedure.card
 process-pages.procedure.card
 process-retrospective.procedure.card
 refresh-maps.procedure.card

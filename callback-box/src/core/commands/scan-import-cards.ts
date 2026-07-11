@@ -18,6 +18,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { parseCardText, serializeCardText } from "../card-io.js";
+import { invariant } from "../../lib/invariant.js";
 import { type CardSchema } from "../../cards/index.js";
 import { createImageTemplate } from "../../schemas/image.js";
 import { createTextQuestionTemplate } from "../../schemas/question.js";
@@ -34,6 +35,18 @@ interface PhotoBundleEmitContext {
   filesToStage: string[];
   imageRefs: string[];
   questionPaths: string[];
+}
+
+/**
+ * Look up a page's archived scratch-copy path. `index` is a page index
+ * produced by `resolveScanPages`/`bundleResolvedPages` from the same
+ * `archivePages` array (one archived copy per input page), so it's always
+ * in range.
+ */
+function archivedPagePath(archivePages: string[], index: number): string {
+  const p = archivePages[index];
+  invariant(p !== undefined, "page index is within the archivePages range it was derived from");
+  return p;
 }
 
 export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<void> {
@@ -57,13 +70,13 @@ export async function emitPhotoBundle(emitCtx: PhotoBundleEmitContext): Promise<
   // Photo and its back live in the image card's attach scope.
   const photoAttachAbs = path.join(sessionAttachAbsDir, `${photoBasename}.attach`);
   await fs.mkdir(photoAttachAbs, { recursive: true });
-  await fs.rename(archivePages[bundle.photoIndex]!, path.join(photoAttachAbs, photoFilename));
+  await fs.rename(archivedPagePath(archivePages, bundle.photoIndex), path.join(photoAttachAbs, photoFilename));
   filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.attach/${photoFilename}`);
 
   let backFilename: string | null = null;
   if (bundle.backIndex !== null) {
     backFilename = `${photoBasename}-back.jpg`;
-    await fs.rename(archivePages[bundle.backIndex]!, path.join(photoAttachAbs, backFilename));
+    await fs.rename(archivedPagePath(archivePages, bundle.backIndex), path.join(photoAttachAbs, backFilename));
     filesToStage.push(`${sessionAttachRelDir}/${photoBasename}.attach/${backFilename}`);
   }
 
@@ -118,7 +131,7 @@ export async function emitOrphanBackQuestion(
   const basename = `orphan-back-${idx}`;
   const filename = `${basename}.jpg`;
   // Loose image (no card) — lives directly in the session's attach scope.
-  await fs.rename(archivePages[orphan.index]!, path.join(sessionAttachAbsDir, filename));
+  await fs.rename(archivedPagePath(archivePages, orphan.index), path.join(sessionAttachAbsDir, filename));
   filesToStage.push(`${sessionAttachRelDir}/${filename}`);
   const ocrText = orphan.analysis.text_blocks.map((b) => b.text).join("\n").trim();
   const memo = [
@@ -145,7 +158,7 @@ export async function emitUnsureQuestion(
   const idx = String(index + 1).padStart(3, "0");
   const basename = `unsure-${idx}`;
   const filename = `${basename}.jpg`;
-  await fs.rename(archivePages[page.index]!, path.join(sessionAttachAbsDir, filename));
+  await fs.rename(archivedPagePath(archivePages, page.index), path.join(sessionAttachAbsDir, filename));
   filesToStage.push(`${sessionAttachRelDir}/${filename}`);
   const memo = [
     `Could not classify page ${page.index + 1}.`,

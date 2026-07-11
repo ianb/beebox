@@ -187,7 +187,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   const { server, boxRoot, eventBus, registry, scheduleManager, processedMessageIds } = ctx;
 
   // POST /api/chat/send - Send a message and stream the response
-  server.post<{ Body: SendBody }>("/api/chat/send", async (request, reply) => {
+  server.post<{ Body: SendBody | undefined }>("/api/chat/send", async (request, reply) => {
     const parsed = sendBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
@@ -297,7 +297,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   });
 
   // POST /api/chat/self-note — inject a self-note into a session transcript.
-  server.post<{ Body: SelfNoteBody }>("/api/chat/self-note", async (request, reply) => {
+  server.post<{ Body: SelfNoteBody | undefined }>("/api/chat/self-note", async (request, reply) => {
     const parsed = selfNoteBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });
@@ -343,7 +343,7 @@ export function registerChatSendRoutes(ctx: ChatRoutesContext): void {
   // session; the report is committed (marker.head..HEAD) plus the uncommitted
   // working tree, optionally scoped to a card path. No registry liveness needed
   // — the marker is on disk, and a missing one yields the labeled fallback.
-  server.post<{ Body: WhatsChangedBody }>("/api/chat/whats-changed", async (request, reply) => {
+  server.post<{ Body: WhatsChangedBody | undefined }>("/api/chat/whats-changed", async (request, reply) => {
     const parsed = whatsChangedBodySchema.safeParse(request.body ?? {});
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.issues[0]?.message ?? "invalid request body" });

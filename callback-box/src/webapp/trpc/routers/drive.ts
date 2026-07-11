@@ -4,7 +4,7 @@ import { TRPCError } from "@trpc/server";
 import { getGoogleAuth } from "../../../connectors/google-auth.js";
 import { isGoogleServiceAllowed } from "../../../core/box/config.js";
 import { loadDriveConfig, saveDriveConfig } from "../../../connectors/drive-config.js";
-import { stageFiles, commit } from "../../../lib/git.js";
+import { stageAndCommitPaths } from "../../../lib/git.js";
 import { createGoogleAuthService } from "../../../services/google-auth.js";
 import { createGoogleDriveService } from "../../../services/google-drive.js";
 import type { GoogleDriveService } from "../../../services/google-drive.js";
@@ -55,8 +55,10 @@ export const driveRouter = router({
     .mutation(async ({ input, ctx }) => {
       const config = input.folders ? { folders: input.folders } : {};
       await saveDriveConfig(ctx.boxRoot, config);
-      await stageFiles(ctx.boxRoot, ["config/connectors/google-drive.json"]);
-      await commit(ctx.boxRoot, { message: "Update Drive sync config" });
+      await stageAndCommitPaths(ctx.boxRoot, {
+        paths: ["config/connectors/google-drive.json"],
+        message: "Update Drive sync config",
+      });
       return { success: true };
     }),
 });

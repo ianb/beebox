@@ -4,20 +4,54 @@
  * device, upload, camera, and file-input sub-hooks.
  */
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, type Dispatch, type SetStateAction } from "react";
 import { ChunkedRecorder, type ChunkCallbackParams } from "../../lib/audio/recorder";
-import {
-  loadDevicePrefs,
-  createCaptureSession,
-  finalizeCaptureSession,
-  cancelCaptureSession,
-} from "./capture-api";
+import { loadDevicePrefs, saveResumeSessionId, clearResumeSessionId, type UploadState } from "./capture-api";
+import { useCaptureApi } from "./capture-api-context";
 import { useCaptureDevices } from "./useCaptureDevices";
 import { useCaptureUploads } from "./useCaptureUploads";
 import { useCaptureInputs } from "./useCaptureInputs";
 import { useCaptureCamera } from "./useCaptureCamera";
 
-export function useCaptureSession() {
+/**
+ * Capture-mode recorder timeslice: 5s (vs the recorder's 20s default) shortens
+ * the crash loss window to the tail since the last `dataavailable` (Track 5).
+ */
+const CAPTURE_TIMESLICE_MS = 5_000;
+
+/**
+ * A staging session the user chose to resume (Track 5). Adopting it means new
+ * media must be numbered ABOVE the counts already on disk, or a fresh
+ * `photo-001`/`audio-0-…` would overwrite the resumed session's media — so the
+ * existing counts seed the client's upload indices.
+ */
+export interface CaptureResumeTarget {
+  id: string;
+  photoCount: number;
+  fileCount: number;
+  segmentCount: number;
+}
+
+/**
+ * @param targetSessionId - the chat session capture was started from, recorded
+ *   on the staging session so delivery lands in that chat. `null` for a fresh
+ *   or unresolved chat (delivery falls back to most-active / a new session).
+ * @param onExit - called after Done (finalize) or Cancel to close the capture
+ *   surface and return to the composer. In capture-mode-in-chat there is no
+ *   "loop into a fresh session" as the standalone page had — one capture, then
+ *   back to chat.
+ * @param resume - when set (the user chose "Resume" in the crash-resume prompt),
+ *   adopt that open staging session instead of creating a fresh one; new media
+ *   is numbered above its existing counts and a new recording is a new segment.
+ */
+export function useCaptureSession(opts: {
+  targetSessionId: string | null;
+  onExit: () => void;
+  resume?: CaptureResumeTarget | null;
+}) {
+  const { targetSessionId, onExit } = opts;
+  const resume = opts.resume ?? null;
+  const { finalizeCaptureSession, cancelCaptureSession } = useCaptureApi();
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [recording, setRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -30,7 +64,7 @@ export function useCaptureSession() {
   const uploads = useCaptureUploads();
   const { videoDevices, devicePrefs, refreshDevices, setVideoDevices, setAudioDevices } = devices;
   const { setPhotoStates, setFileStates, uploadPhoto, uploadFile, handleChunk } = uploads;
-  const { awaitPending, clearPendingAndFailed, resetState } = uploads;
+  const { awaitPending, clearPendingAndFailed } = uploads;
 
   const camera = useCaptureCamera({
     videoDeviceId: devicePrefs.videoDeviceId, videoDevices, isMobile, setError, refreshDevices,
@@ -40,24 +74,18 @@ export function useCaptureSession() {
   const recorderRef = useRef<ChunkedRecorder | null>(null);
   const timerRef = useRef<number | null>(null);
   const recordStartRef = useRef<number>(0);
+  // Each recording start is a new segment (toggle-off → toggle-on = new segment).
+  // Seeded from a resumed session's existing segment count so new recordings
+  // don't reuse an on-disk segment index.
+  const segmentCountRef = useRef<number>(resume ? resume.segmentCount : 0);
 
-  // Create session on mount + enumerate devices
-  useEffect(() => {
-    let cancelled = false;
-    createCaptureSession().then((result) => {
-      if (!cancelled) setSessionId(result.sessionId);
-    }).catch((err: Error) => {
-      if (!cancelled) setError(`Session creation failed: ${err.message}`);
-    });
-    navigator.mediaDevices.enumerateDevices().then((d) => {
-      if (cancelled) return;
-      setVideoDevices(d.filter((dev) => dev.kind === "videoinput"));
-      setAudioDevices(d.filter((dev) => dev.kind === "audioinput"));
-    }).catch((_e: Error) => {
-      // Permission not yet granted — devices populate after first use
-    });
-    return () => { cancelled = true; };
-  }, [setVideoDevices, setAudioDevices]);
+  // Adopt (resume) or create the staging session on mount, then enumerate
+  // devices. On resume, seed the upload-count arrays so new media numbers above
+  // what's already staged; on create, persist the id for a later resume prompt.
+  useBootstrapStagingSession({
+    targetSessionId, resume,
+    setSessionId, setError, setVideoDevices, setAudioDevices, setPhotoStates, setFileStates,
+  });
 
   useEffect(() => {
     if (recording) {
@@ -73,16 +101,26 @@ export function useCaptureSession() {
 
   const toggleRecording = useCallback(async () => {
     if (recording) {
-      if (recorderRef.current) { recorderRef.current.stop(); recorderRef.current = null; }
+      // Await the final dataavailable so the tail chunk uploads before the
+      // segment closes (a bare stop() would drop it — Track 5 loss window).
+      if (recorderRef.current) { await recorderRef.current.stopAsync(); recorderRef.current = null; }
       setRecording(false);
       setRecordingTime(0);
     } else {
       if (!sessionId) return;
       try {
         const prefs = loadDevicePrefs();
+        // A fresh recording start = a new segment; each segment gets its own
+        // ChunkedRecorder (its own WebM header) and a stable id + index.
+        const segmentIndex = segmentCountRef.current;
+        segmentCountRef.current += 1;
+        const segmentId = crypto.randomUUID();
+        const segmentStartedAt = new Date().toISOString();
         const recorder = new ChunkedRecorder({
-          onChunk: (chunk: ChunkCallbackParams) => handleChunk({ sessionId, ...chunk }),
+          onChunk: (chunk: ChunkCallbackParams) =>
+            handleChunk({ sessionId, segmentId, segmentIndex, segmentStartedAt, ...chunk }),
           deviceId: prefs.audioDeviceId ?? undefined,
+          timesliceMs: CAPTURE_TIMESLICE_MS,
         });
         recorderRef.current = recorder;
         await recorder.start();
@@ -127,13 +165,8 @@ export function useCaptureSession() {
     if (sessionId) uploads.retryFailedUploads(sessionId);
   }, [sessionId, uploads]);
 
-  const startFreshSession = useCallback(async () => {
-    try {
-      const result = await createCaptureSession();
-      setSessionId(result.sessionId);
-    } catch (err) { setError(`New session failed: ${err instanceof Error ? err.message : "unknown"}`); }
-  }, []);
-
+  // Seal the staging session (fires background preparation → delivery) and exit
+  // capture mode. A server-derived pending bubble takes over from here.
   const handleDone = useCallback(async () => {
     if (!sessionId || finalizing) return;
     setFinalizing(true);
@@ -146,25 +179,28 @@ export function useCaptureSession() {
       }
       await awaitPending();
       await finalizeCaptureSession(sessionId);
-      setSessionId(null); resetState(); setError(null); setFinalizing(false);
+      clearResumeSessionId(); // sealed — no longer resumable
+      camera.stopCamera();
       clearPendingAndFailed();
-      await startFreshSession();
+      onExit();
     } catch (err) { setError(`Finalize failed: ${err instanceof Error ? err.message : "unknown"}`); setFinalizing(false); }
-  }, [sessionId, finalizing, recording, awaitPending, resetState, clearPendingAndFailed, startFreshSession]);
+  }, [sessionId, finalizing, recording, awaitPending, finalizeCaptureSession, camera, clearPendingAndFailed, onExit]);
 
   const handleCancel = useCallback(async () => {
-    if (!sessionId) return;
-    if (recording && recorderRef.current) { recorderRef.current.stop(); recorderRef.current = null; setRecording(false); }
+    // Await the tail chunk even on cancel: it may become a resumable session.
+    if (recording && recorderRef.current) { await recorderRef.current.stopAsync(); recorderRef.current = null; setRecording(false); }
     clearPendingAndFailed();
     camera.stopCamera();
-    try {
-      await cancelCaptureSession(sessionId);
-    } catch (err) {
-      console.error("Cancel failed:", err);
+    if (sessionId) {
+      try {
+        await cancelCaptureSession(sessionId);
+        clearResumeSessionId(); // discarded — no longer resumable
+      } catch (err) {
+        console.error("Cancel failed:", err);
+      }
     }
-    setSessionId(null); resetState(); setError(null); setRecordingTime(0);
-    await startFreshSession();
-  }, [sessionId, recording, camera, clearPendingAndFailed, resetState, startFreshSession]);
+    onExit();
+  }, [sessionId, recording, camera, cancelCaptureSession, clearPendingAndFailed, onExit]);
 
   return {
     state: { sessionId, recording, recordingTime, error, finalizing, showSettings },
@@ -176,4 +212,53 @@ export function useCaptureSession() {
       retryFailedUploads, handleDone, handleCancel,
     },
   };
+}
+
+/**
+ * Mount-time staging-session bootstrap: adopt a resumed session (seeding the
+ * upload-count arrays so new media numbers above what's on disk) or create a
+ * fresh one (persisting its id for a later resume prompt), then enumerate
+ * devices. Extracted from {@link useCaptureSession} to keep it within its line
+ * budget; runs exactly once per capture-mode entry.
+ */
+function useBootstrapStagingSession(opts: {
+  targetSessionId: string | null;
+  resume: CaptureResumeTarget | null;
+  setSessionId: Dispatch<SetStateAction<string | null>>;
+  setError: Dispatch<SetStateAction<string | null>>;
+  setVideoDevices: (devices: MediaDeviceInfo[]) => void;
+  setAudioDevices: (devices: MediaDeviceInfo[]) => void;
+  setPhotoStates: Dispatch<SetStateAction<UploadState[]>>;
+  setFileStates: Dispatch<SetStateAction<UploadState[]>>;
+}): void {
+  const { targetSessionId, resume, setSessionId, setError } = opts;
+  const { setVideoDevices, setAudioDevices, setPhotoStates, setFileStates } = opts;
+  const { createCaptureSession } = useCaptureApi();
+
+  useEffect(() => {
+    let cancelled = false;
+    if (resume) {
+      // Adopt the open session and seed the upload counts so the next photo is
+      // `photo-${photoCount+1}` (not `photo-001`, which would clobber on disk).
+      setSessionId(resume.id);
+      setPhotoStates(Array.from<UploadState>({ length: resume.photoCount }).fill("uploaded"));
+      setFileStates(Array.from<UploadState>({ length: resume.fileCount }).fill("uploaded"));
+    } else {
+      createCaptureSession(targetSessionId).then((result) => {
+        if (cancelled) return;
+        setSessionId(result.sessionId);
+        saveResumeSessionId(result.sessionId);
+      }).catch((err: Error) => {
+        if (!cancelled) setError(`Session creation failed: ${err.message}`);
+      });
+    }
+    navigator.mediaDevices.enumerateDevices().then((d) => {
+      if (cancelled) return;
+      setVideoDevices(d.filter((dev) => dev.kind === "videoinput"));
+      setAudioDevices(d.filter((dev) => dev.kind === "audioinput"));
+    }).catch((_e: Error) => {
+      // Permission not yet granted — devices populate after first use
+    });
+    return () => { cancelled = true; };
+  }, [targetSessionId, resume, createCaptureSession, setSessionId, setError, setVideoDevices, setAudioDevices, setPhotoStates, setFileStates]);
 }

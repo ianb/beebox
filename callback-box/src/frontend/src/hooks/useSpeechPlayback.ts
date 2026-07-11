@@ -53,7 +53,7 @@ export function useSpeechPlayback(options?: SpeechPlaybackOptions): SpeechPlayba
   const isPlaying = snapshot.matches("playing");
   const { playingMessageId } = snapshot.context;
   const remainingCount = snapshot.context.queue.length;
-  const head = snapshot.context.queue[0];
+  const head = snapshot.context.queue.at(0);
   const playingSegmentIndex = head !== undefined ? head.index : null;
 
   // Escape key stops playback

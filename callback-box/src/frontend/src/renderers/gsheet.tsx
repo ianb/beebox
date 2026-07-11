@@ -60,13 +60,14 @@ function SheetView({ data }: RendererProps) {
 
   useEffect(() => {
     if (!sheet) return;
+    const tabs = sheet.tabs;
     let cancelled = false;
 
     async function loadTabs() {
       setLoading(true);
       const results = new Map<string, CellValue[][]>();
 
-      for (const tab of sheet!.tabs) {
+      for (const tab of tabs) {
         try {
           const filePath = resolveRelativePath(data.path, tab.ref);
           const resp = await fetch(`${getApiBase()}/files/${filePath}`);
@@ -93,7 +94,7 @@ function SheetView({ data }: RendererProps) {
 
   if (!sheet) return null;
 
-  const firstTabGid = sheet.tabs.length > 0 ? sheet.tabs[0].gid : "";
+  const firstTabGid = sheet.tabs[0]?.gid ?? "";
   const selectedGid = activeTabGid || firstTabGid;
   const currentTab = sheet.tabs.find((t) => t.gid === selectedGid);
   const currentRows = currentTab ? (tabData.get(currentTab.title) ?? []) : [];

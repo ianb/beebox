@@ -149,8 +149,8 @@ async function liveDecide(
     systemPrompt: systemPrompt(instructions),
     prompt: userPrompt(items),
   });
-  if (!result.success || result.data === null) {
-    throw new TriageAgentFailedError(result.error ?? "no data");
+  if (!result.success) {
+    throw new TriageAgentFailedError(result.error);
   }
   return result.data;
 }

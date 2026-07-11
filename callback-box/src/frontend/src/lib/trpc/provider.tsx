@@ -17,7 +17,7 @@ const queryClient = new QueryClient({
 // fetch or mutation is in flight. Starts "true" at module load so a
 // snapshot taken before the first commit never sees a premature "false";
 // the indicator below flips it based on live query state.
-if (typeof document !== "undefined" && document.body) {
+if (typeof document !== "undefined") {
   document.body.dataset.cbLoading = "true";
 }
 

@@ -119,7 +119,7 @@ function ValueView({ value }: { value: unknown }): ReactNode {
   if (isRef(value)) {
     return <RefLink refPath={value.ref} />;
   }
-  if (value !== null && typeof value === "object") {
+  if (typeof value === "object") {
     return <FieldsTable fields={value as Record<string, unknown>} />;
   }
   return null;

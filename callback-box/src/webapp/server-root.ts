@@ -212,7 +212,7 @@ export function registerRootInfoRoutes(server: FastifyInstance, boxes: BoxSpec[]
       subscription?: { endpoint?: string; keys?: { p256dh?: string; auth?: string } };
     } | undefined;
     const sub = body?.subscription;
-    if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys?.auth) {
+    if (!sub?.endpoint || !sub.keys?.p256dh || !sub.keys.auth) {
       return reply.status(400).send({ error: "missing subscription" });
     }
     await transferEndpoint({

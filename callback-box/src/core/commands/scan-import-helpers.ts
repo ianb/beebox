@@ -9,6 +9,7 @@
  * place.
  */
 
+import { invariant } from "../../lib/invariant.js";
 import { sleep } from "../../lib/sleep.js";
 import {
   analyzeScanBatchWithGemini,
@@ -87,7 +88,8 @@ export interface RunScanBatchesResult {
 
 /**
  * Run all batches with sliding overlap, retrying RECITATION/MAX_TOKENS by
- * splitting the batch in half (mirrors describe-images.ts behavior).
+ * splitting the batch in half (the same retry pattern the retired
+ * `cb describe-images` command used).
  *
  * After a successful batch, batch-relative indices in each analysis (both
  * `index` and `paired_with_index`) are translated to global PDF page indices
@@ -172,7 +174,11 @@ interface RunOneBatchArgs {
 
 async function runOneBatch(args: RunOneBatchArgs): Promise<OneBatchOutcome> {
   const { plan, log } = args;
-  const batchPaths = plan.globalIndices.map((g) => args.imagePaths[g]!);
+  const batchPaths = plan.globalIndices.map((g) => {
+    const p = args.imagePaths[g];
+    invariant(p !== undefined, "planScanBatches only emits indices within imagePaths' range");
+    return p;
+  });
 
   // Transient-error retry: try the same batch up to 3 times with exponential
   // backoff before giving up or splitting.
@@ -295,7 +301,7 @@ function translateIndices(raw: RawScanAnalysis, globalIndices: number[]): ScanPa
     return null;
   }
   let pairedGlobal: number | null = null;
-  if (raw.paired_with_index !== null && raw.paired_with_index !== undefined) {
+  if (raw.paired_with_index !== null) {
     const partner = globalIndices[raw.paired_with_index];
     if (partner !== undefined) pairedGlobal = partner;
   }

@@ -2,7 +2,7 @@
  * Audio transcription using Mistral Voxtral API.
  */
 
-import ky, { type HTTPError } from "ky";
+import ky, { isHTTPError } from "ky";
 import type {
   TranscribeAudioParams,
   TranscriptionResult,
@@ -83,9 +83,8 @@ export async function transcribeAudioVoxtral(
     }
 
     // ky HTTPError — parse the response for error details
-    const httpErr = error as HTTPError;
-    if (httpErr.response) {
-      const parsed = await parseErrorResponse(httpErr.response);
+    if (isHTTPError(error)) {
+      const parsed = await parseErrorResponse(error.response);
       throw parsed;
     }
 

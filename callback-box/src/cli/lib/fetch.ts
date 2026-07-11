@@ -17,6 +17,7 @@ import * as fsSync from "node:fs";
 import * as path from "node:path";
 import { parse as parseYaml } from "yaml";
 import { parseDuration } from "../../schemas/scheduled-script.js";
+import { invariant } from "../../lib/invariant.js";
 
 export interface FetchStub {
   /** URL pattern — exact match, or prefix match if ends with * */
@@ -81,7 +82,10 @@ function ensureEnvStubs(): void {
 
   try {
     const content = fsSync.readFileSync(stubsFile, "utf-8");
-    const parsed = parseYaml(content) as { http?: Array<{ pattern: string; response_file: string; status?: number; content_type?: string; after?: string }> };
+    const parsed = parseYaml(content) as
+      | { http?: Array<{ pattern: string; response_file: string; status?: number; content_type?: string; after?: string }> }
+      | null
+      | undefined;
     if (parsed?.http && parsed.http.length > 0) {
       scenarioDir = path.dirname(stubsFile);
       stubs = parsed.http.map((h) => ({
@@ -175,8 +179,8 @@ function findMatchingStub(url: string): FetchStub | null {
 /**
  * Build a Response from a matched stub.
  */
-async function buildStubResponse(stub: FetchStub): Promise<Response> {
-  const filePath = path.resolve(scenarioDir!, stub.responseFile);
+async function buildStubResponse(stub: FetchStub, stubDir: string): Promise<Response> {
+  const filePath = path.resolve(stubDir, stub.responseFile);
   const body = await fs.readFile(filePath);
   const contentType = stub.contentType ?? inferContentType(filePath);
   const status = stub.status ?? 200;
@@ -209,13 +213,17 @@ export function installStrictFetch(): void {
     if (stubs && scenarioDir) {
       const stub = findMatchingStub(url);
       if (stub) {
-        return buildStubResponse(stub);
+        return buildStubResponse(stub, scenarioDir);
       }
     }
 
     // Allow-listed URLs pass through to real fetch
     if (isAllowListed(url)) {
-      return originalFetch!(input, init);
+      invariant(
+        originalFetch !== null,
+        "originalFetch must be set before strictFetch can run — installStrictFetch() assigns it before installing this handler as globalThis.fetch"
+      );
+      return originalFetch(input, init);
     }
 
     // Strict mode: no stub matched and not allow-listed
@@ -242,7 +250,7 @@ export async function boxFetch(
 
   const stub = findMatchingStub(url);
   if (stub) {
-    return buildStubResponse(stub);
+    return buildStubResponse(stub, scenarioDir);
   }
 
   // No stub matched — fall through to real fetch

@@ -16,6 +16,8 @@ import { isNoResponseOnly, parseAcks, type AckIndication } from "../../lib/struc
 import type { SessionContentBlock } from "../../api";
 import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
+import { CaptureBubbleView, type CaptureBubbleModel } from "./capture-bubble";
+import { invariant } from "../../lib/invariant";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a
@@ -91,7 +93,8 @@ export type DataItem =
   | { kind: "group"; group: MessageGroup; groupIndex: number; acks?: AckIndication[]; streaming?: boolean }
   | { kind: "marker"; marker: ModelMarker }
   | { kind: "processing" }
-  | { kind: "pendingHq"; text: string };
+  | { kind: "pendingHq"; text: string }
+  | { kind: "captureBubble"; model: CaptureBubbleModel };
 
 function assistantGroupText(group: MessageGroup): string {
   if (group.type !== "assistant") return "";
@@ -105,7 +108,12 @@ export function dataItemKey(d: DataItem): string {
     case "marker": return `marker-${d.marker.id}`;
     case "processing": return "processing";
     case "pendingHq": return "pendingHq";
-    case "group": return d.group.entries[0].uuid;
+    case "captureBubble": return `capture-${d.model.id}`;
+    case "group": {
+      const first = d.group.entries[0];
+      invariant(first !== undefined, "message group has no entries");
+      return first.uuid;
+    }
   }
 }
 
@@ -135,9 +143,10 @@ export function buildDataItems(opts: {
   liveTurnId: string | null;
   processingShown: boolean;
   pendingHqDraft: string | null;
+  captureBubbles: CaptureBubbleModel[];
   debugView: boolean;
 }): DataItem[] {
-  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, debugView } = opts;
+  const { groups, modelMarkers, streamingShown, streamText, streamTools, liveTurnId, processingShown, pendingHqDraft, captureBubbles, debugView } = opts;
   const items: DataItem[] = [];
   for (const m of modelMarkers) {
     if (m.afterGroupCount === 0) items.push({ kind: "marker", marker: m });
@@ -147,7 +156,11 @@ export function buildDataItems(opts: {
       const allText = assistantGroupText(group);
       const groupAcks = parseAcks(allText);
       if (groupAcks.length > 0) {
-        const last = items[items.length - 1];
+        // `.at(-1)` (not `items[items.length - 1]`): its return type is
+        // honestly `T | undefined` regardless of `noUncheckedIndexedAccess`
+        // (which the frontend tsconfig lacks) — a plain index read would
+        // type as always-defined even though `items` can be empty here.
+        const last = items.at(-1);
         if (last && last.kind === "group" && last.group.type === "user") {
           last.acks = [...(last.acks ?? []), ...groupAcks];
         }
@@ -168,6 +181,7 @@ export function buildDataItems(opts: {
     }
   }
   if (pendingHqDraft !== null) items.push({ kind: "pendingHq", text: pendingHqDraft });
+  for (const model of captureBubbles) items.push({ kind: "captureBubble", model });
   if (streamingShown) {
     // The live turn renders as a *provisional* assistant group through the same
     // GroupItem/AssistantMessage path as the finalized turn, keyed by liveTurnId
@@ -195,6 +209,8 @@ export interface RenderItemContext {
   onZoomView: OnZoomView;
   proseEnabled: boolean;
   lastAssistantGroupIndex: number;
+  /** Retry a failed pending capture (re-seals the staging session). */
+  handleCaptureRetry: (id: string) => void;
 }
 
 /**
@@ -278,6 +294,9 @@ export function renderDataItem(item: DataItem, ctx: RenderItemContext): ReactNod
   }
   if (item.kind === "pendingHq") {
     return <PendingHqMessage text={item.text} />;
+  }
+  if (item.kind === "captureBubble") {
+    return <CaptureBubbleView model={item.model} onRetry={ctx.handleCaptureRetry} />;
   }
   return <GroupItem group={item.group} groupIndex={item.groupIndex} acks={item.acks} streaming={item.streaming} ctx={ctx} />;
 }

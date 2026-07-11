@@ -98,6 +98,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // comment in the script) — a half-converted box is unsafe, not just
   // incomplete.
   { name: "box-packageify", script: "scripts/migrate/box-packageify.ts" },
+  // Prune the retired process-captures procedure card + its one-shot trigger
+  // from boxes (installProcedures never prunes). Stock copies are deleted by
+  // hash match; a boxholder-modified copy is parked for review. See
+  // docs/implemented-plans/capture-mode.md (Track 7).
+  { name: "retire-process-captures", script: "scripts/migrate/retire-process-captures.ts" },
 ];
 
 export const MANIFEST_PATH = "config/migrations.jsonl";

@@ -11,6 +11,7 @@
 import * as fs from "node:fs/promises";
 import type { Dirent } from "node:fs";
 import * as path from "node:path";
+import { invariant } from "../lib/invariant.js";
 import {
   type AssetManifest,
   type AssetManifestEntry,
@@ -234,10 +235,12 @@ export async function scanAttachScope(
   // (This catches `mv old new` within the same attach dir.)
   const renamedFroms = new Set<string>();
   for (const newName of newFiles) {
-    const newEntry = hashCache.get(newName)!;
+    const newEntry = hashCache.get(newName);
+    invariant(newEntry !== undefined, `hashCache missing entry for new file "${newName}"`);
     for (const orphan of orphans) {
       if (renamedFroms.has(orphan)) continue;
-      const orphanEntry = manifest.files[orphan]!;
+      const orphanEntry = manifest.files[orphan];
+      invariant(orphanEntry !== undefined, `manifest missing orphaned entry "${orphan}"`);
       if (orphanEntry.sha256 === newEntry.sha256) {
         manifest.files[newName] = orphanEntry;  // preserve original entry metadata
         delete manifest.files[orphan];
@@ -251,14 +254,20 @@ export async function scanAttachScope(
   // For new files that weren't part of a rename, claim them.
   for (const name of newFiles) {
     if (result.renamed.some((r) => r.to === name)) continue;
-    manifest.files[name] = hashCache.get(name)!;
+    const entry = hashCache.get(name);
+    invariant(entry !== undefined, `hashCache missing entry for new file "${name}"`);
+    manifest.files[name] = entry;
     result.claimed.push(name);
   }
 
   // For changed files (stat differs but file existed in manifest):
   for (const name of changedFiles) {
-    const oldEntry = manifest.files[name]!;
-    const fresh = hashCache.get(name)!;
+    const oldEntry = manifest.files[name];
+    const fresh = hashCache.get(name);
+    invariant(
+      oldEntry !== undefined && fresh !== undefined,
+      `missing manifest/hash entry for changed file "${name}"`
+    );
     if (oldEntry.sha256 === fresh.sha256) {
       // Hash unchanged — just refresh the mtime so the stat-shortcut works next time.
       manifest.files[name] = { ...oldEntry, mtime: fresh.mtime };

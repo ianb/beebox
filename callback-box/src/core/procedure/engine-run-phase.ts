@@ -23,8 +23,12 @@ import {
   getStepLineRange,
 } from "./engine-phase.js";
 
-/** Max self-heal retries for a `severity: review` validation failure. */
-export const MAX_REVIEW_RETRIES = 1;
+/**
+ * Max self-heal retries for a `severity: review` validation failure. Typed
+ * `number` (not the narrowed literal `1`) since it's a tunable knob — the
+ * plural-vs-singular check below stays meaningful if this value changes.
+ */
+export const MAX_REVIEW_RETRIES: number = 1;
 
 /** Hard cost ceiling (USD) per review-retry agent invocation — runaway guard. */
 const REVIEW_RETRY_BUDGET_USD = 2;
@@ -69,12 +73,17 @@ type RunPhaseParams = ExecuteStepParams & {
 async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string | undefined }> {
   const { ctx, boxRoot, step, procedure, procedureCardPath, runCardPath, relProcedurePath } =
     params;
-  const run = step.run!;
+  invariant(step.run, "runRunAgents requires a run phase (checked by executeStep before invoking)");
+  const { run } = step;
   const agentFactory = params.createAgent ?? realCreateAgent;
   const agentName = `procedure-${procedure.name}-${step.id}`;
 
   if (params.retry) {
-    const agentDef = run.agents[0]!;
+    const [agentDef] = run.agents;
+    invariant(
+      agentDef !== undefined,
+      "retry path only reached when run.agents.length === 1 (checked in runAndValidate)"
+    );
     ctx.writeLine(fmt.dim("  Re-running agent with validation feedback..."));
     const agent = agentFactory({
       name: agentName,
@@ -93,7 +102,7 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
     }
     const agentResult = await agent.invoke(invokeOpts);
     if (!agentResult.success) {
-      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));
+      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error}`));
     }
     return { sessionId: agent.sessionId ?? params.retry.sessionId };
   }
@@ -132,7 +141,7 @@ async function runRunAgents(params: RunPhaseParams): Promise<{ sessionId: string
     const agentResult = await agent.invoke(invokeOpts);
     sessionId = agent.sessionId ?? undefined;
     if (!agentResult.success) {
-      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error ?? "unknown error"}`));
+      ctx.writeLine(fmt.fail(`Agent failed: ${agentResult.error}`));
     }
   }
 
@@ -149,7 +158,8 @@ async function runRunShells(
   params: ExecuteStepParams
 ): Promise<{ runStdout: string | undefined; runFailure: RunShellFailure | undefined }> {
   const { ctx, boxRoot, step } = params;
-  const run = step.run!;
+  invariant(step.run, "runRunShells requires a run phase (checked by executeStep before invoking)");
+  const { run } = step;
   if (run.shells.length === 0) {
     return { runStdout: undefined, runFailure: undefined };
   }

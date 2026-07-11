@@ -107,12 +107,13 @@ export class KeywordPattern {
     for (let i = 0; i < words.length; i++) {
       const rest = words.slice(i);
       const matchResults = this.matcher.match(rest);
-      if (matchResults.length > 0) {
+      const firstResult = matchResults[0];
+      if (firstResult !== undefined) {
         return new InputMatch({
           leading: words.slice(0, i),
-          captured: matchResults[0].captured,
-          remaining: matchResults[0].remaining,
-          tags: matchResults[0].tags,
+          captured: firstResult.captured,
+          remaining: firstResult.remaining,
+          tags: firstResult.tags,
         });
       }
     }

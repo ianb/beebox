@@ -5,9 +5,10 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import ky, { type HTTPError } from "ky";
+import ky, { isHTTPError } from "ky";
 import { transcribeAudioVoxtral } from "./voxtral.js";
 import { transcribeAudioDeepgram } from "./deepgram.js";
+import { transcribeAudioFake } from "./fake.js";
 import { withCardLock } from "../../lib/card-lock.js";
 import { buildMultipartForm, type MultipartPart } from "../../lib/multipart.js";
 
@@ -105,7 +106,7 @@ export interface TranscribeAudioParams {
   boxRoot?: string;
 }
 
-export type TranscriptionService = "whisper" | "voxtral" | "deepgram" | "openai-realtime";
+export type TranscriptionService = "whisper" | "voxtral" | "deepgram" | "openai-realtime" | "fake";
 /**
  * Narration mode's checkpoint HQ pass — non-streaming services only.
  * - `whisper`: OpenAI's classic `whisper-1` model.
@@ -208,6 +209,9 @@ export async function transcribeAudio(
   params: TranscribeAudioParams
 ): Promise<TranscriptionResult | DetailedTranscriptionResult> {
   const config = await loadTranscriptionConfig(params.boxRoot);
+  if (config.service === "fake") {
+    return transcribeAudioFake(params);
+  }
   if (config.service === "voxtral") {
     return transcribeAudioVoxtral(params);
   }
@@ -336,9 +340,8 @@ async function transcribeAudioWhisper(
     }
 
     // ky HTTPError — parse the response for error details
-    const httpErr = error as HTTPError;
-    if (httpErr.response) {
-      throw await parseErrorResponse(httpErr.response);
+    if (isHTTPError(error)) {
+      throw await parseErrorResponse(error.response);
     }
 
     // Network or other errors are intermittent

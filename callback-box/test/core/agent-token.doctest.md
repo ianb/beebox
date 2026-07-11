@@ -81,6 +81,9 @@ route validation — proof it reached the handler).
 
 ```ts
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-client-id";
+// registerAuthRoutes fails loudly on an ID-without-secret half-config
+// (MissingOAuthClientSecretError), so the fake credentials must be a pair.
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-client-secret";
 const ctx = await makeTestServer();
 const anon = await ctx.request({ method: "POST", url: "/api/chat/self-note", payload: {} });
 print(`anonymous: ${anon.statusCode} ${anon.body.error}`);
@@ -107,5 +110,6 @@ last-audio with bearer: 504 no-client
 
 ```ts cleanup
 delete process.env.GOOGLE_OAUTH_CLIENT_ID;
+delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 await ctx.cleanup();
 ```

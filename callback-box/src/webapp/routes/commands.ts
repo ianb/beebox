@@ -49,7 +49,7 @@ export async function executeCommandStreaming(options: {
   };
 
   try {
-    const result = await runCommand({ name: command, args: args ?? {}, ctx });
+    const result = await runCommand({ name: command, args, ctx });
     const resultLine: OutputLine = result.success
       ? { type: "result", success: true, data: result.data }
       : { type: "result", success: false, data: result.data, error: result.error ?? "Unknown error" };

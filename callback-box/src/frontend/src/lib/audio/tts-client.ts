@@ -18,6 +18,7 @@ import { getAudioCache, cacheKey } from "./cache";
 import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
 import { RequestError } from "../errors";
+import { invariant } from "../invariant";
 
 /** Thrown when playback is stopped before/while a queued utterance plays. */
 class PlaybackStoppedError extends Error {
@@ -219,7 +220,8 @@ class TTSClient {
   private async processQueue(): Promise<void> {
     if (this.playing || this.queue.length === 0) return;
 
-    const item = this.queue.shift()!;
+    const item = this.queue.shift();
+    invariant(item !== undefined, "processQueue only runs when the queue is non-empty");
     this.setPlaying(true);
 
     try {

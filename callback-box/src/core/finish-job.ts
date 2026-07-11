@@ -6,8 +6,9 @@
 
 import * as path from "node:path";
 import * as fs from "node:fs/promises";
-import { stageFiles, commit } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 import { readCardFrontmatter } from "./card-io.js";
+import { invariant } from "../lib/invariant.js";
 
 class JobDeleteError extends Error {
   readonly jobPath: string;
@@ -40,7 +41,9 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
     const parts = path.basename(jobRelPath).split(".");
     // parts: ["foo", "intake", "job", "card"]
     if (parts.length >= 4) {
-      jobType = parts[parts.length - 3]!; // "intake"
+      const candidate = parts[parts.length - 3];
+      invariant(candidate !== undefined, "checked parts.length >= 4 above, so index parts.length - 3 is in range");
+      jobType = candidate; // "intake"
     }
   } catch (_e) {
     // Reading the card here is best-effort context for the commit message;
@@ -60,8 +63,6 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
   }
 
   // Stage and commit the deletion
-  await stageFiles(boxRoot, [jobRelPath]);
-
   const commitMsg = description
     ? `Finish job: ${description}`
     : `Finish ${jobType || "unknown"} job`;
@@ -71,5 +72,5 @@ export async function finishJob(params: FinishJobParams): Promise<void> {
     trailers["Job-Type"] = jobType;
   }
 
-  await commit(boxRoot, { message: commitMsg, trailers });
+  await stageAndCommitPaths(boxRoot, { paths: [jobRelPath], message: commitMsg, trailers });
 }

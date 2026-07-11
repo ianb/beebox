@@ -6,14 +6,15 @@
  * attachment lives as a sibling file sharing the card's basename.
  *
  * `audio` was historically handled here too; that path is dead now —
- * capture-session audio is transcribed by `cb transcribe-captures`
- * which uses the per-audio-card attach scope.
+ * capture-session audio is transcribed by the capture preparation worker
+ * (src/core/capture/transcribe-clips.ts).
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { PreAction, PreActionContext } from "./types.js";
 import { transcribeAudio, type TranscriptionError } from "../transcription/index.js";
+import { getBoxTimeISO } from "../../lib/time.js";
 
 /** Audio file extensions we can transcribe. */
 const AUDIO_EXTENSIONS = [".webm", ".mp3", ".m4a", ".wav", ".ogg", ".flac"];
@@ -61,7 +62,12 @@ export const transcribePreAction: PreAction = {
         boxRoot: ctx.boxRoot,
       });
 
-      applyFrontmatterTranscription({ fields: ctx.frontmatter.fields, text: result.text, language: result.language });
+      applyFrontmatterTranscription({
+        fields: ctx.frontmatter.fields,
+        text: result.text,
+        language: result.language,
+        boxRoot: ctx.boxRoot,
+      });
 
       return {
         modified: true,
@@ -69,7 +75,7 @@ export const transcribePreAction: PreAction = {
       };
     } catch (error) {
       const transcriptionError = error as TranscriptionError;
-      const attemptedAt = new Date().toISOString();
+      const attemptedAt = getBoxTimeISO(ctx.boxRoot);
       applyFrontmatterError(ctx.frontmatter.fields, {
         permanent: transcriptionError.permanent,
         ...(transcriptionError.code !== undefined && { code: transcriptionError.code }),
@@ -119,12 +125,13 @@ function applyFrontmatterTranscription(input: {
   fields: Record<string, unknown>;
   text: string;
   language: string;
+  boxRoot: string;
 }): void {
-  const { fields, text, language } = input;
+  const { fields, text, language, boxRoot } = input;
   delete fields["transcription-error"];
   const entry: TranscriptionFields = {
     language,
-    "transcribed-at": new Date().toISOString(),
+    "transcribed-at": getBoxTimeISO(boxRoot),
     text,
   };
   fields["transcription"] = entry;

@@ -89,7 +89,8 @@ export function CommitDetail({
   return (
     <div className="h-full flex flex-col bg-white" {...cbSource("commit", commit.hash)}>
       {onBack ? <MobileBackButton label="Back to commits" onClick={onBack} /> : null}
-      <div className="flex-1 overflow-auto" tabIndex={0} aria-label="Commit details">
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- role="region" + tabIndex=0 is the W3C APG "scrollable region" pattern (lets a keyboard user Page-Down/arrow-scroll the mostly-read-only diff view); the rule's default config only whitelists role="tabpanel", not "region" */}
+      <div className="flex-1 overflow-auto" tabIndex={0} role="region" aria-label="Commit details">
       {/* Commit info */}
       <CommitTab
         commit={commit}

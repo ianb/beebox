@@ -216,12 +216,12 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
         message: {
           role: msg.message.role,
           content: msg.message.content as ChatMessageContent[],
-          ...(msg.message.stop_reason !== null && msg.message.stop_reason !== undefined
+          ...(msg.message.stop_reason !== null
             ? { stop_reason: msg.message.stop_reason }
             : {}),
         },
       };
-      if (msg.uuid) result.uuid = msg.uuid;
+      result.uuid = msg.uuid;
       return result;
     }
     case "user": {
@@ -245,7 +245,7 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
         event: msg.event,
         parent_tool_use_id: msg.parent_tool_use_id,
       };
-      if (msg.uuid) out.uuid = msg.uuid;
+      out.uuid = msg.uuid;
       return out;
     }
     case "result": {

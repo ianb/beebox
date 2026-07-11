@@ -24,7 +24,7 @@ export class WordMatcher extends Matcher {
     this.word = normalizeWord(word);
   }
   match(input: InputWord[]) {
-    if (input.length > 0 && wordsEqual(input[0].normalized, this.word)) {
+    if (input[0] !== undefined && wordsEqual(input[0].normalized, this.word)) {
       return [
         {
           captured: input.slice(0, 1),

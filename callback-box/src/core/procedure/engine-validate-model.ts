@@ -15,6 +15,7 @@
 import { z } from "zod";
 import { createAgent as realCreateAgent } from "../agent/index.js";
 import { MODEL_MAP, type AgentFactory } from "./engine-types.js";
+import { MODEL_ID } from "../model-ids.js";
 
 /** Structured verdict the review model returns for an instruction check. */
 export const InstructionVerdict = z.object({
@@ -94,7 +95,7 @@ export async function evaluateInstructions(
   params: EvaluateInstructionsParams
 ): Promise<{ passed: boolean; review: string }> {
   const { boxRoot, instructions, whys, diff, name } = params;
-  const modelId = MODEL_MAP[params.model ?? DEFAULT_REVIEW_MODEL] ?? MODEL_MAP[DEFAULT_REVIEW_MODEL]!;
+  const modelId = MODEL_MAP[params.model ?? DEFAULT_REVIEW_MODEL] ?? MODEL_ID.sonnet;
 
   const factory = params.createAgent ?? realCreateAgent;
   const agent = factory({ name });
@@ -113,7 +114,7 @@ export async function evaluateInstructions(
     // Model unavailable / schema-invalid output → fail-closed.
     return {
       passed: false,
-      review: `Instruction validation could not obtain a verdict: ${result.error ?? "unknown error"}`,
+      review: `Instruction validation could not obtain a verdict: ${result.error}`,
     };
   }
 

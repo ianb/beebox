@@ -17,6 +17,7 @@ import { createEmailMessageTemplate } from "../schemas/email-message.js";
 import { type FetchedMessage, makeSnippet, safeDirectoryName } from "./gmail-mime.js";
 import type { ThreadNote } from "./gmail-commit.js";
 import { preserveAgentFields } from "./preserve-agent-fields.js";
+import { invariant } from "../lib/invariant.js";
 
 const MESSAGE_CARD_RE = /^msg-\d+\.email-message\.card$/;
 
@@ -192,8 +193,12 @@ async function writeThreadCard(opts: {
     for (const label of msg.labels) allLabels.add(label);
   }
 
-  const firstMsg = threadMessages[0]!;
-  const lastMsg = threadMessages[threadMessages.length - 1]!;
+  const firstMsg = threadMessages[0];
+  const lastMsg = threadMessages[threadMessages.length - 1];
+  invariant(
+    firstMsg !== undefined && lastMsg !== undefined,
+    "groupByThread never produces an empty thread bucket",
+  );
   const threadOpts: Parameters<typeof createEmailThreadTemplate>[0] = {
     threadId,
     subject,
@@ -231,7 +236,8 @@ async function writeOneThread(opts: {
 
   threadMessages.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-  const firstMsg = threadMessages[0]!;
+  const firstMsg = threadMessages[0];
+  invariant(firstMsg !== undefined, "groupByThread never produces an empty thread bucket");
   const subject = firstMsg.subject;
 
   const existingBasename = await findExistingBasename(emailDir, threadId);
@@ -247,7 +253,7 @@ async function writeOneThread(opts: {
   for (const [i, threadMessage] of threadMessages.entries()) {
     const msgNum = String(existingCount + i + 1).padStart(3, "0");
     const { created, cardFilename } = await writeMessage({
-      tmsg: threadMessage!,
+      tmsg: threadMessage,
       msgNum,
       attachDir: actualAttachDir,
       boxRoot,

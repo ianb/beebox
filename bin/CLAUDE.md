@@ -15,7 +15,7 @@ is absolute). Fail-closed — `ALLOWED_NAMES` lists the hardcoded deploy service
 (`callback`, `cb-test1`) and placeholders (`me`, `you`, `user`, `x`) that
 aren't personal-identity leaks; any other username trips it. Fix a hit with a repo-relative or
 `~/…` path, not by widening the allowlist. Background:
-`issues/closed/2026-07-05-report-workflows-emit-relative-paths.md`.
+`issues/closed/bugs/2026-07-05-report-workflows-emit-relative-paths.md`.
 
 ## Commit blocklist (`commit-blocklist-check.ts`)
 
@@ -54,6 +54,18 @@ hub then lazily spawns/idle-collects a `cb serve` child per box within
 that worktree, so boxes cold-start and idle-stop independently of the
 worktree they live in. `CB_DEV_NO_HUB=1` reverts to the router spawning
 a single legacy `server-main.ts` Fastify process per worktree instead.
+
+`router.ts` holds the process-supervision/proxying machinery only; the
+`/<worktree>/dev/` HTML rendering (manifest, markdown doc browser, static
+artifact serving) lives in the sibling `router-docs.ts`, imported one-way
+(`router.ts` → `router-docs.ts`, never back) to avoid a value-import cycle.
+
+**Before changing worktree lifecycle code** (`ensureRunning`, `startWorktree`,
+`stopWorktree`, `onChildExit`, `removePidFile`, the PID-file or `worktrees`-map
+shapes), read `bin/docs/router-protocol.md` — it promotes four incident-derived
+concurrency invariants (each has a pointing comment at its code site in
+`router.ts`) out of inline comments into one durable place, so they survive
+future edits instead of being easy to read past or accidentally undo.
 URL-prefixed serving uses Vite's `base` option; HMR, API calls, and the
 tRPC WebSocket all flow through the router.
 
@@ -111,6 +123,21 @@ On session exit with no changes the worktree is auto-removed and the
 `WorktreeRemove` hook deletes the cloned box and tells the router to stop
 the worktree's dev server. With uncommitted changes, Claude Code prompts
 to keep or remove.
+
+## Multiple agents sharing one worktree
+
+A plan can spawn several concurrent task agents committing straight to the
+same shared worktree/branch (e.g. the architectural-review round). `git add
+<paths>` followed by a bare `git commit` is not atomic across processes: one
+agent's already-staged-but-uncommitted changes can be swept into a
+concurrently-running `git commit` (or a `lint-staged` stash/restore cycle)
+from another agent, landing under the wrong commit's attribution. The fix is
+always **path-scoped commits**: `git add <paths> && git commit -- <paths>`
+(or the `stageAndCommitPaths` helper in `callback-box/src/lib/git.ts`),
+never a bare `git commit` — scoping the commit to exactly the paths this
+agent staged means an interleaved sweep from another agent can't get
+co-committed under this one's message. This is a convention, not a lock:
+each agent is responsible for scoping its own commits.
 
 ## `/<worktree>/dev/` serving
 

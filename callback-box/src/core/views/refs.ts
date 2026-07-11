@@ -19,6 +19,7 @@
 import { promises as fs } from "node:fs";
 import { relative } from "node:path";
 import { resolveRefExists } from "../ref-exists.js";
+import { invariant } from "../../lib/invariant.js";
 
 /** Matches `cardRef="…"` / `cardRef='…'` with a literal string value. */
 const CARD_REF_ATTR = /\bcardRef\s*=\s*(["'])([^"']*)\1/g;
@@ -37,8 +38,9 @@ export function extractViewRefs(source: string): ViewRef[] {
   CARD_REF_ATTR.lastIndex = 0;
   let index = 0;
   while ((match = CARD_REF_ATTR.exec(source)) !== null) {
+    invariant(match[2] !== undefined, "CARD_REF_ATTR's value capture group always participates in a match");
     const line = source.slice(0, match.index).split("\n").length;
-    out.push({ path: `view:${line}:${index}`, ref: match[2]! });
+    out.push({ path: `view:${line}:${index}`, ref: match[2] });
     index += 1;
   }
   return out;

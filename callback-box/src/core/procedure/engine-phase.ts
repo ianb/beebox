@@ -12,6 +12,7 @@ import { fmt } from "../../lib/format.js";
 import { getBoxTime } from "../../lib/time.js";
 import { runShell, CHECK_SKIP_CODE } from "./shell.js";
 import { evaluateInstructions } from "./engine-validate-model.js";
+import { invariant } from "../../lib/invariant.js";
 import type { CommandContext } from "../command-runner.js";
 import type { ParsedPhase, ParsedStep, AgentFactory, ProcedureSeverity, ValidateStatus } from "./engine-types.js";
 
@@ -86,8 +87,8 @@ export async function executeValidation(
   params: ExecuteValidationParams
 ): Promise<{ status: ValidateStatus; stdout?: string; review?: string }> {
   const { ctx, boxRoot, step, procedureName } = params;
-  const validate = step.validate!;
-  const { phase, severity } = validate;
+  invariant(step.validate, "executeValidation requires step.validate (checked by callers before invoking)");
+  const { phase, severity, model } = step.validate;
   let status: ValidateStatus = "pass";
   let stdout = "";
   let review: string | undefined = undefined;
@@ -122,7 +123,7 @@ export async function executeValidation(
       whys: phase.whys,
       diff,
       name: `procedure-${procedureName}-validate`,
-      ...(validate.model && { model: validate.model }),
+      ...(model && { model }),
       ...(params.createAgent && { createAgent: params.createAgent }),
     });
     review = verdict.review;
@@ -184,14 +185,14 @@ export async function ensureGitClean(params: EnsureGitCleanParams): Promise<stri
     const allFiles = [...gitStatus.staged, ...gitStatus.modified, ...gitStatus.untracked];
     const summary = buildFallbackSummary(allFiles);
 
-    return await commit(boxRoot, {
+    return commit(boxRoot, {
       message: `[procedure] ${stepId}: ${summary}`,
       trailers,
     });
   }
 
   // Git is clean — get the latest commit ref
-  return await getHead(boxRoot);
+  return getHead(boxRoot);
 }
 
 /**
@@ -199,6 +200,11 @@ export async function ensureGitClean(params: EnsureGitCleanParams): Promise<stri
  */
 function buildFallbackSummary(files: string[]): string {
   if (files.length === 0) return "uncommitted changes";
+  if (files.length === 1) {
+    const [only] = files;
+    invariant(only !== undefined, "files has exactly one element (checked above)");
+    return `update ${path.basename(only)}`;
+  }
 
   // Extract basenames and count by directory
   const dirCounts = new Map<string, number>();
@@ -209,14 +215,12 @@ function buildFallbackSummary(files: string[]): string {
 
   // If all files are in one directory, mention it
   if (dirCounts.size === 1) {
-    const entry = [...dirCounts.entries()][0]!;
-    const dir = entry[0];
-    const count = entry[1];
+    const entries = [...dirCounts.entries()];
+    const entry = entries[0];
+    invariant(entry !== undefined, "dirCounts has exactly one entry (size checked above)");
+    const [dir] = entry;
     const shortDir = dir.replace(/^.*?\//, ""); // trim leading segment
-    if (count === 1) {
-      return `update ${path.basename(files[0]!)}`;
-    }
-    return `update ${count} files in ${shortDir}`;
+    return `update ${files.length} files in ${shortDir}`;
   }
 
   // Multiple dirs — summarize
@@ -290,8 +294,7 @@ export async function getStepLineRange(
     let endLine: number | undefined;
     let stepIndent = "";
 
-    for (const [i, line_] of lines.entries()) {
-      const line = line_!;
+    for (const [i, line] of lines.entries()) {
       const m = idRe.exec(line);
       if (startLine === undefined) {
         if (m && m[2] === stepId) {

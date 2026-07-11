@@ -17,15 +17,13 @@ export const viewLintCommand = new Command("lint")
     try {
       const boxRoot = await requireBoxRoot();
       const metas = await listViews(boxRoot);
-      const cardless = metas
-        .filter((m) => !m.rendersCardTypes || m.rendersCardTypes.length === 0)
-        .map((m) => m.slug);
+      const cardless = metas.filter((m) => m.rendersCardTypes.length === 0).map((m) => m.slug);
       const ok = cardless.length === 0;
       if (options.json === true) {
         process.stdout.write(JSON.stringify({ ok, cardless }) + "\n");
       } else {
         for (const m of metas) {
-          if (m.rendersCardTypes && m.rendersCardTypes.length > 0) {
+          if (m.rendersCardTypes.length > 0) {
             process.stdout.write(`✓ ${m.slug} → ${m.rendersCardTypes.join(", ")}\n`);
           } else {
             process.stderr.write(`✗ ${m.slug} — no rendersCardTypes; attach it to a card type or remove it\n`);

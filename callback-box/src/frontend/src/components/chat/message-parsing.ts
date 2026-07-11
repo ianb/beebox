@@ -10,6 +10,7 @@ import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "../../../../core/chat/features.js";
 import { entrySelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
+import { invariant } from "../../lib/invariant";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -46,18 +47,18 @@ const FILE_REF_LINE_RE = /\[file(\d+)]:\s*(\S+)/g;
 const TMP_FILENAME_PREFIX_RE = /^tmp\/[^/_]+_(.+)$/;
 
 export function extractFileAttachments(text: string): FileAttachmentRef[] {
-  const block = text.match(ATTACHMENTS_BLOCK_RE);
-  if (!block) return [];
-  const inner = block[1];
+  const inner = text.match(ATTACHMENTS_BLOCK_RE)?.[1];
+  if (inner === undefined) return [];
   const refs: FileAttachmentRef[] = [];
   for (const m of inner.matchAll(FILE_REF_LINE_RE)) {
-    const id = parseInt(m[1], 10);
+    const idStr = m[1];
     const p = m[2];
-    const stripped = p.match(TMP_FILENAME_PREFIX_RE);
+    if (idStr === undefined || p === undefined) continue;
+    const stripped = p.match(TMP_FILENAME_PREFIX_RE)?.[1];
     refs.push({
-      id,
+      id: parseInt(idStr, 10),
       path: p,
-      displayName: stripped ? stripped[1] : p,
+      displayName: stripped ?? p,
     });
   }
   return refs;
@@ -71,7 +72,8 @@ export function getUserName(entry: SessionEntry): string | null {
   if (entry.user) return entry.user;
   const firstText = entry.content.find((b) => b.type === "text")?.text || "";
   const match = firstText.match(/<(?:typed|speech)\b[^>]*\buser="([^"]*)"/);
-  if (match) return match[1].replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
+  const user = match?.[1];
+  if (user !== undefined) return user.replace(/&quot;/g, "\"").replace(/&amp;/g, "&");
   return null;
 }
 
@@ -158,7 +160,10 @@ export function groupMessages(entries: SessionEntry[]): MessageGroup[] {
       continue;
     }
     if (entry.type === "assistant") {
-      const last = groups[groups.length - 1];
+      // `.at(-1)`: its return type is honestly `T | undefined` (a plain
+      // index read would type as always-defined without
+      // `noUncheckedIndexedAccess`, which the frontend tsconfig lacks).
+      const last = groups.at(-1);
       if (last && last.type === "assistant") {
         last.entries.push(entry);
         continue;
@@ -182,11 +187,15 @@ export function parseTaskNotification(text: string): TaskNotification | null {
   const match = text.match(/<task-notification>[\S\s]*?<task-id>([^<]*)<\/task-id>[\S\s]*?<status>([^<]*)<\/status>[\S\s]*?<summary>([^<]*)<\/summary>[\S\s]*?<\/task-notification>/);
   if (!match) return null;
   const outputMatch = text.match(/<output-file>([^<]*)<\/output-file>/);
+  // No group in the pattern is optional/alternated, so a successful overall
+  // match guarantees every capture participated (possibly as ""); the `?? ""`
+  // fallbacks are unreachable in practice but honest to the regex-match type.
+  const [, taskId = "", status = "", summary = ""] = match;
   return {
-    taskId: match[1]!,
-    status: match[2]!,
-    summary: match[3]!,
-    outputFile: outputMatch ? outputMatch[1] : undefined,
+    taskId,
+    status,
+    summary,
+    outputFile: outputMatch?.[1],
   };
 }
 
@@ -195,7 +204,7 @@ const IMAGE_EXTS = new Set([".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".
 export function isImagePath(path: string): boolean {
   // Strip any ?query / #hash before checking the extension, so a cache-busted
   // image (`photo.png?v=1`) is still recognized as an image, not an embed.
-  const clean = path.split(/[#?]/, 1)[0]!;
+  const [clean = ""] = path.split(/[#?]/, 1);
   const dot = clean.lastIndexOf(".");
   if (dot <= 0) return false;
   return IMAGE_EXTS.has(clean.slice(dot).toLowerCase());
@@ -220,7 +229,7 @@ function extractImagesFromMarkdown(
   { out, boxSlug }: { out: LightboxImage[]; boxSlug: string | undefined },
 ): void {
   for (const match of text.matchAll(MARKDOWN_IMAGE_RE)) {
-    const alt = match[1];
+    const alt = match[1] ?? "";
     const rawSrc = match[2];
     // `![…](…)` is the embed syntax: an image src belongs in the lightbox, but a
     // card/file embed (an in-box, non-image path) does not — skip it.
@@ -287,9 +296,11 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
       } else if (block.type === "text" && block.text?.trim()) {
         flat.push({ type: "text", text: block.text });
       } else if (block.type === "tool_use") {
-        const last = flat[flat.length - 1];
+        // `.at(-1)`: see the note in `groupMessages` above.
+        const last = flat.at(-1);
         if (last && last.type === "tools") {
-          last.tools!.push(block);
+          invariant(last.tools, "a 'tools' part must always carry a tools array");
+          last.tools.push(block);
         } else {
           flat.push({ type: "tools", tools: [block] });
         }

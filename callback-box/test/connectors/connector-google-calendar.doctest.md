@@ -355,3 +355,56 @@ state.syncTokens.primary
 ```ts cleanup
 await box.cleanup();
 ```
+
+## The sync commit is path-scoped (never sweeps unrelated staged files)
+
+The connector builds an EXPLICIT changed-file list and commits exactly it,
+rather than staging a directory and running a bare `commit()`. So a concurrent
+mutator's already-staged file — here an unrelated `notes.md` staged before the
+sync — is NOT co-committed under the calendar connector's attribution; it stays
+staged and uncommitted.
+
+```ts
+const box = await makeTmpBox({ git: true });
+await initBox(box.root);
+box.commitAll("init box");
+
+const calendar = createFakeGoogleCalendar({
+  calendars: [{ id: "primary", summary: "Main", primary: true, accessRole: "owner" }],
+  events: [
+    {
+      id: "evt-review",
+      status: "confirmed",
+      summary: "Review",
+      updated: "2026-06-01T10:00:00Z",
+      start: { dateTime: "2026-06-04T15:00:00Z" },
+      end: { dateTime: "2026-06-04T16:00:00Z" },
+    },
+  ],
+});
+
+// A concurrent actor stages an unrelated file just before the sync commits.
+await writeFile(join(box.root, "notes.md"), "work in progress\n");
+execSync("git add notes.md", { cwd: box.root });
+
+const connector = createGoogleCalendarConnector(box.root, { calendar, now: NOW });
+await connector.sync();
+
+// The calendar commit touched calendar files, but NOT the unrelated notes.md.
+const committed = execSync("git show --name-only --pretty=format: HEAD", { cwd: box.root, encoding: "utf-8" });
+committed.includes("notes.md")
+=> false
+```
+
+`notes.md` is still staged and uncommitted — the sync left it exactly where the
+concurrent actor put it.
+
+```ts continue
+const staged = execSync("git diff --cached --name-only", { cwd: box.root, encoding: "utf-8" });
+staged.trim()
+=> notes.md
+```
+
+```ts cleanup
+await box.cleanup();
+```

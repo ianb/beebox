@@ -41,7 +41,10 @@ function readCardParams(frontmatter: Record<string, unknown> | undefined): Recor
 
 function ViewCard({ data, params }: RendererProps) {
   const name = typeof data.frontmatter?.["view"] === "string" ? data.frontmatter["view"] : "";
-  const Component = VIEW_COMPONENTS[name];
+  // An unrecognized `name` is the expected error path this component exists
+  // to render (see file doc comment) — genuinely absent, not just a typing
+  // artifact of the frontend tsconfig lacking noUncheckedIndexedAccess.
+  const Component = Object.hasOwn(VIEW_COMPONENTS, name) ? VIEW_COMPONENTS[name] : undefined;
   if (!Component) {
     return (
       <Card padding="md" border="subtle" muted>

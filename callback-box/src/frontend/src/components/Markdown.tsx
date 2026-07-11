@@ -95,7 +95,10 @@ function flattenText(node: ReactNode): string {
 function makeLink(ctx: LinkContext): React.ComponentType<{ href?: string; title?: string; children?: ReactNode }> {
   return function Link({ href, title, children }) {
     if (typeof href !== "string" || href === "") {
-      return <a title={title}>{children}</a>;
+      // No href to link to (malformed input) — render as inline text, not an
+      // `<a>` with no destination, which is unreachable by keyboard/screen
+      // reader and fails jsx-a11y/anchor-is-valid.
+      return <span title={title}>{children}</span>;
     }
     const classified = classifyMarkdownHref(href);
     if (classified.kind === "legacy-view") {
@@ -185,7 +188,7 @@ function isLoneImageReactChildren(children: ReactNode): boolean {
   let imgCount = 0;
   for (const child of arr) {
     if (typeof child === "string" && child.trim() === "") continue;
-    if (typeof child === "object" && child !== null && "type" in child) {
+    if (typeof child === "object" && "type" in child) {
       const el = child as React.ReactElement;
       const t = el.type as { displayName?: string; name?: string };
       const name = t.displayName ?? t.name ?? "";

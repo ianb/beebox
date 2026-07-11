@@ -19,7 +19,7 @@ export function AllowedEmailsSection() {
   const fetchConfig = useCallback(async () => {
     try {
       const data = await trpcClient.admin.boxConfig.query();
-      setEmails(data.allowedEmails ?? []);
+      setEmails(data.allowedEmails);
       setOwnerEmail(data.ownerEmail ?? null);
       setError(null);
     } catch (err) {
@@ -43,7 +43,7 @@ export function AllowedEmailsSection() {
     setError(null);
     try {
       const data = await trpcClient.admin.updateBoxConfig.mutate({ allowedEmails: updated });
-      setEmails(data.allowedEmails ?? updated);
+      setEmails(data.allowedEmails);
     } catch (err) {
       setError((err as Error).message);
     } finally {

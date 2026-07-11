@@ -9,7 +9,6 @@
  */
 
 import { setup, assign } from "xstate";
-import { interruptChat } from "../api";
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
 import {
   HISTORY_TAIL,
@@ -34,6 +33,7 @@ import {
   promoteLastToPending,
   applyStreamError,
   clearInterrupt,
+  sendInterrupt,
 } from "./chat-actions";
 
 export { HISTORY_TAIL, MIN_REAL_USER_MESSAGES };
@@ -279,9 +279,7 @@ export const chatMachine = setup({
           actions: [
             assign({ interrupting: true }),
             ({ context }) => {
-              if (context.sessionId) {
-                interruptChat({ sessionId: context.sessionId }).catch(() => {});
-              }
+              if (context.sessionId) sendInterrupt(context.sessionId);
             },
           ],
         },

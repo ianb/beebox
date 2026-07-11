@@ -1,9 +1,13 @@
 /**
  * Image card schema — photos from capture sessions.
  *
- * Created by the capture connector. Processed by `cb describe-images`
- * (Gemini Flash) to add description, OCR text blocks, subject bbox,
- * rotation, and document metadata.
+ * Created by the capture preparation worker (or `cb scan-import` for
+ * standalone photo/PDF batches). A capture-session image starts at
+ * `status: new`; the chat agent working the parent capture card fills in
+ * description/OCR/rotation/document metadata itself (via subagents reading
+ * the image file) as part of annotating that capture. `cb scan-import` runs
+ * its own Gemini analysis at import time instead, so its image cards can
+ * arrive already `analyzed`.
  *
  * Layout: `photo-001.image.card` next to `photo-001.attach/photo-001.jpg`.
  * `filename.ref:` points into the attach scope via the `attach/` virtual
@@ -121,11 +125,13 @@ Frontmatter fields:
 - \`rotation\` — degrees clockwise the image needs to be rotated to
   appear upright: \`"0"\`, \`"90"\`, \`"180"\`, or \`"270"\`.
 
-Analysis is done by \`cb describe-images\`, which sends images to
-Gemini Flash for OCR, description, subject detection, and rotation,
-and extracts EXIF metadata. Pass multiple image cards or image files
-to process them as a batch (provides better context when images are
-related). Use \`--no-rename\` to skip automatic renaming.
+For an image that arrived as part of a capture, analysis is your
+job: OCR any text and write a description via a subagent that reads
+the actual image file (don't infer content from the transcript
+alone), then fill in the fields above and set \`status: analyzed\`.
+For an image dropped by \`cb scan-import\`, analysis already ran
+(Gemini) at import time — treat those fields as authoritative unless
+something looks wrong.
 
 Status: new (unanalyzed) → analyzed (description filled in) → invalid
 (accidental capture, too blurry, not useful).`,
@@ -171,9 +177,9 @@ export const imageLoader: FileLoader<ImageAttrs> = (raw) => {
 };
 
 /**
- * Build the file content for a new image card. Used by the capture
- * connector when first storing a photo — analysis fields are filled
- * in later by `cb describe-images`.
+ * Build the file content for a new image card. Used when first storing a
+ * captured photo — analysis fields are filled in later by the chat agent
+ * annotating the parent capture card.
  */
 export function createImageTemplate(options: {
   capturedAt: string;

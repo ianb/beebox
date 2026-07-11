@@ -23,6 +23,7 @@ import {
 import { loadFetchStubs, clearFetchStubs, installStrictFetch, uninstallStrictFetch, type FetchStub } from "../cli/lib/fetch.js";
 import { loadScenario, loadStubs, getScenarioDir, getBoxRoot } from "./loader.js";
 import type { ScenarioStep, ValidationCheck } from "./types.js";
+import { invariant } from "../lib/invariant.js";
 
 class WrongBranchError extends Error {
   constructor(currentBranch: string) {
@@ -274,7 +275,8 @@ export async function runScenario(options: RunScenarioOptions): Promise<Scenario
   let failed = false;
 
   for (let i = 0; i < scenario.steps.length; i++) {
-    const step = scenario.steps[i]!;
+    const step = scenario.steps[i];
+    invariant(step !== undefined, `scenario.steps[${i}] must exist for 0 <= i < scenario.steps.length`);
 
     if (failed) {
       stepResults.push({ name: step.name, status: "skipped", validations: [] });

@@ -100,7 +100,7 @@ export function AssistantMessage({
   const hasSpeech = hasAssistantSpeech(allText);
   const isPlaying = speechPlaying === true;
   const segments = useMemo(() => (hasSpeech ? parseAllSpeechTags(allText) : []), [hasSpeech, allText]);
-  const messageId = entries.length > 0 ? entries[0].uuid : "";
+  const messageId = entries[0]?.uuid ?? "";
   const hasSilentThinking = entries.some((e) =>
     e.content.some((b) => b.type === "thinking" && !b.text?.trim()),
   );
@@ -251,7 +251,8 @@ export function SelfNoteMessage({ note }: { note: SelfNoteInfo }) {
   );
 }
 
-export { UserMessage, UserMessageText } from "./user-message";
+export { UserMessage } from "./user-message";
+export { UserMessageText } from "./user-message-text";
 export { MarkdownContent } from "./markdown-rendering";
 export { ToolList } from "./activity-rendering";
 export { groupMessages, extractChatImages, type MessageGroup } from "./message-parsing";

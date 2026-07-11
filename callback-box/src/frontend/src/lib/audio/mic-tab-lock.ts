@@ -33,8 +33,11 @@ function ensureChannel(): BroadcastChannel | null {
   if (channel) return channel;
   if (typeof BroadcastChannel === "undefined") return null;
   channel = new BroadcastChannel(CHANNEL_NAME);
-  channel.onmessage = (event: MessageEvent<ClaimMessage>) => {
-    const msg = event.data;
+  channel.onmessage = (event: MessageEvent<unknown>) => {
+    // BroadcastChannel carries no type guarantee — another script (or a
+    // stale message shape from a future version of this tab) could post
+    // anything on this channel, so treat the payload as untrusted.
+    const msg = event.data as Partial<ClaimMessage> | null | undefined;
     if (msg?.type !== "claim" || msg.tabId === tabId) return;
     // Another tab took the mic — yield ours. Copy first: an eviction callback
     // may release itself (mutating the set) as it runs.

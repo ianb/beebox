@@ -308,8 +308,9 @@ export class ChatSessionPool {
     this.active = null;
 
     // Ensure the parked session ID is saved
-    if (sessionId && store[threadRef]) {
-      store[threadRef]!.sessionId = sessionId;
+    const entry = store[threadRef];
+    if (sessionId && entry) {
+      entry.sessionId = sessionId;
       await this.saveStore(store);
     }
   }

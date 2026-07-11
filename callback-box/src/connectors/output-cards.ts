@@ -15,7 +15,7 @@ import * as path from "node:path";
 import { cardFields, parseCardText, serializeCardText } from "../core/card-io.js";
 import type { CardSchema } from "../cards/index.js";
 import { createCardSchemaMap } from "../schemas/registry.js";
-import { stageFiles, commit } from "../lib/git.js";
+import { stageAndCommitPaths } from "../lib/git.js";
 
 const OUTPUT_DIR = "box/output";
 
@@ -106,12 +106,12 @@ export async function deliverPendingOutputCards<TFields extends DeliverableCardF
 
   const changed = [...sent, ...failed];
   if (changed.length > 0) {
-    await stageFiles(boxRoot, changed);
     const summary = [
       ...(sent.length > 0 ? [describeSent(sent.length)] : []),
       ...(failed.length > 0 ? [`${failed.length} failed`] : []),
     ].join(", ");
-    await commit(boxRoot, {
+    await stageAndCommitPaths(boxRoot, {
+      paths: changed,
       message: `${outboxLabel}: ${summary}`,
       trailers: {
         "Pushed-By": pushedBy,

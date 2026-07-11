@@ -5,6 +5,7 @@
 
 import type { TestResult } from "./test-runner.js";
 import type { ContextHistoryEntry } from "./context-history.js";
+import { invariant } from "../../lib/invariant.js";
 
 export interface ReportOptions {
   boxRoot: string;
@@ -47,7 +48,10 @@ export function generateReport(options: ReportOptions): string {
 
 /** Most recent prior baseline for an audit, or undefined on its first run. */
 function lastBaseline(entries: ContextHistoryEntry[] | undefined): number | undefined {
-  return entries && entries.length > 0 ? entries[entries.length - 1]!.initial : undefined;
+  if (!entries || entries.length === 0) return undefined;
+  const last = entries[entries.length - 1];
+  invariant(last !== undefined, "entries must be non-empty (checked above)");
+  return last.initial;
 }
 
 /** Rounded thousands delta between a current and prior baseline. */
@@ -85,13 +89,16 @@ export function renderContextSummary(
   results: TestResult[],
   priorHistory: Record<string, ContextHistoryEntry[]>,
 ): string[] {
-  const rows = results
-    .filter((r) => r.behavior.context !== null)
-    .map((r) => ({
-      id: r.test.id,
-      initial: r.behavior.context!.initialTokens,
-      prior: lastBaseline(priorHistory[r.test.id]),
-    }));
+  const rows = results.flatMap((r) => {
+    if (r.behavior.context === null) return [];
+    return [
+      {
+        id: r.test.id,
+        initial: r.behavior.context.initialTokens,
+        prior: lastBaseline(priorHistory[r.test.id]),
+      },
+    ];
+  });
   if (rows.length === 0) return [];
   rows.sort((a, b) => b.initial - a.initial);
 
@@ -99,7 +106,8 @@ export function renderContextSummary(
   for (const row of rows) {
     lines.push(`| ${row.id} | ${tokensToK(row.initial)} | ${formatDeltaCell(row.initial, row.prior)} |`);
   }
-  const lowest = rows[rows.length - 1]!;
+  const lowest = rows[rows.length - 1];
+  invariant(lowest !== undefined, "rows must be non-empty (checked above)");
   lines.push("");
   lines.push(`Lowest baseline ≈ pure always-on tier: ${tokensToK(lowest.initial)} (\`${lowest.id}\`).`);
   lines.push("");

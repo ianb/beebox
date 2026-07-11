@@ -44,10 +44,10 @@ export function sessionDividerForWindow(
 ): string {
   const range = formatTimeRange(shown.start, shown.end);
   const started = meta.startTime;
-  const isContinuation = started !== null && started.getTime() < shown.start.getTime();
-  const suffix = isContinuation
-    ? ` (continues from ${formatTimestamp(started!)})`
-    : "";
+  const suffix =
+    started !== null && started.getTime() < shown.start.getTime()
+      ? ` (continues from ${formatTimestamp(started)})`
+      : "";
   return `═══ Session ${meta.sessionId}  ${range}${suffix} ═══`;
 }
 

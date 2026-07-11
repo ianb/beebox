@@ -9,6 +9,8 @@
  * Adapted from ske's `extractMarkdownSections` (predecessor project).
  */
 
+import { invariant } from "../../lib/invariant.js";
+
 export interface MarkdownSection {
   /** Hierarchical heading path, e.g. "/Components/Programs". */
   fragment: string;
@@ -58,9 +60,16 @@ export function splitMarkdownSections(bodyText: string): SplitBody {
     }
     flush();
     sawHeading = true;
-    const level = heading[1]!.length;
-    const title = heading[2]!.trim();
-    while (stack.length > 0 && stack[stack.length - 1]!.level >= level) {
+    invariant(
+      heading[1] !== undefined && heading[2] !== undefined,
+      "both capture groups always participate when the heading regex matches"
+    );
+    const level = heading[1].length;
+    const title = heading[2].trim();
+    while (stack.length > 0) {
+      const top = stack[stack.length - 1];
+      invariant(top !== undefined, "stack.length > 0 guarantees a last element");
+      if (top.level < level) break;
       stack.pop();
     }
     stack.push({ level, title });

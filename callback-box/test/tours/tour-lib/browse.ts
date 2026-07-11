@@ -101,13 +101,22 @@ export class BrowseSession {
     await this.run(["set", "viewport", String(width), String(height)]);
   }
 
-  async waitForReady(): Promise<void> {
+  /**
+   * Returns false when the readiness wait timed out — the caller decides
+   * whether to surface that (checkpoint captures record it as a finding so
+   * a loading-state screenshot isn't silently reviewed as the real page).
+   */
+  async waitForReady(): Promise<boolean> {
     // Belt-and-suspenders: bin/browse auto-waits on `open`, but explicit waits
     // before reads catch the case where DOM is updated by SSE/mutations
     // after the page first settles.
-    await this.run(["wait", "--fn", "document.body.dataset.cbLoading === 'false'"]).catch(() => {
+    try {
+      await this.run(["wait", "--fn", "document.body.dataset.cbLoading === 'false'"]);
+      return true;
+    } catch (_e) {
       // Non-fatal — proceed even if the readiness wait times out.
-    });
+      return false;
+    }
   }
 
   async findRef(role: string, name: string): Promise<string | null> {

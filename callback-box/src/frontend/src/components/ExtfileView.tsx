@@ -24,7 +24,7 @@ import { AttachedCommentary, type JumpToQuote } from "./AttachedCommentary";
 /** The `sha256:<hex>` value from a version-markers string, or null. */
 function sha256Of(markers: string): string | null {
   const match = /sha256:([\da-f]+)/.exec(markers);
-  return match === null ? null : match[1] ?? null;
+  return match?.[1] ?? null;
 }
 
 /** The live file pane: fetch, drift badge, and registry-rendered content. */

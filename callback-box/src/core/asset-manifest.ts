@@ -17,6 +17,7 @@ import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
+import { invariant } from "../lib/invariant.js";
 
 export interface AssetManifestEntry {
   /** File size in bytes. */
@@ -118,7 +119,9 @@ export async function saveManifest(
   const filePath = manifestPath(attachDir);
   const sortedFiles: Record<string, AssetManifestEntry> = {};
   for (const key of Object.keys(manifest.files).toSorted()) {
-    sortedFiles[key] = manifest.files[key]!;
+    const entry = manifest.files[key];
+    invariant(entry !== undefined, `manifest missing entry for key "${key}" from its own Object.keys()`);
+    sortedFiles[key] = entry;
   }
   const json = JSON.stringify({ files: sortedFiles }, null, 2) + "\n";
   const tmp = `${filePath}.tmp`;

@@ -1,4 +1,4 @@
-import { useReducer, useRef, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
+import { useReducer, useRef, type CSSProperties, type ReactNode } from "react";
 import { useLightbox } from "../LightboxProvider";
 import { cn } from "../../lib/cn";
 
@@ -107,39 +107,52 @@ function ImgElement({ src, alt, size, bordered, rotationStyle, title, onActivate
   const handleClick = () => {
     if (onActivate !== null && imgRef.current) onActivate(imgRef.current);
   };
-  const handleKeyDown = (e: KeyboardEvent<HTMLImageElement>) => {
-    if (onActivate !== null && (e.key === "Enter" || e.key === " ") && imgRef.current) {
-      e.preventDefault();
-      onActivate(imgRef.current);
-    }
-  };
-  const cursorClass = interactive ? (lightbox ? "cursor-zoom-in" : "cursor-pointer") : "";
-  const classes = cn(
-    SIZE_CLASSES[size],
-    "rounded",
-    bordered ? "border border-warm-300" : "",
-    interactive ? `${cursorClass} focus:outline-none focus-visible:ring-2 focus-visible:ring-accent` : "",
-    extraClass,
-  );
 
-  return (
+  // `img` is a non-interactive element by ARIA default: it can't legitimately
+  // take role="button" (jsx-a11y/no-noninteractive-element-to-interactive-role),
+  // and faking click/keydown handlers on it means hand-rolling focus, tabIndex,
+  // and Enter/Space activation that a real <button> gets for free. So the
+  // interactive case wraps the img in an actual <button> instead of dressing
+  // the img up as one.
+  const imgNode = (
     <img
       ref={imgRef}
       src={src}
       alt={alt}
-      className={classes}
+      // In the interactive case the button is the outermost element, so
+      // context styles that space the image against surrounding flow (e.g.
+      // prose typography's vertical img margins) must not land on the img —
+      // trapped inside the button they become dead clickable height instead
+      // of collapsing into the layout. m-0 suppresses them; the button
+      // carries the caller's spacing classes (extraClass) instead.
+      className={cn(SIZE_CLASSES[size], "rounded", bordered ? "border border-warm-300" : "", interactive ? "m-0" : extraClass)}
       style={rotationStyle}
-      onClick={interactive ? handleClick : undefined}
-      onKeyDown={interactive ? handleKeyDown : undefined}
       onError={onError}
       title={title}
-      role={interactive ? "button" : undefined}
-      tabIndex={interactive ? 0 : undefined}
-      aria-label={interactive && lightbox ? `${alt} (click to zoom)` : undefined}
       data-image-src={lightbox ? src : undefined}
       data-image-alt={lightbox ? alt : undefined}
       data-image-caption={lightbox && lightboxCaption !== undefined ? lightboxCaption : undefined}
     />
+  );
+
+  if (!interactive) {
+    return imgNode;
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      aria-label={lightbox ? `${alt} (click to zoom)` : undefined}
+      className={cn(
+        "block border-0 bg-transparent p-0",
+        lightbox ? "cursor-zoom-in" : "cursor-pointer",
+        "focus:outline-none focus-visible:ring-2 focus-visible:ring-accent",
+        extraClass,
+      )}
+    >
+      {imgNode}
+    </button>
   );
 }
 
@@ -238,7 +251,7 @@ export function Image(props: ImageProps) {
   const primaryFailed = failedImageUrls.has(src);
   const fallbackFailed = fallbackSrc !== undefined && failedImageUrls.has(fallbackSrc);
   const usingFallback = primaryFailed && fallbackSrc !== undefined && !fallbackFailed;
-  const displaySrc = usingFallback && fallbackSrc !== undefined ? fallbackSrc : src;
+  const displaySrc = usingFallback ? fallbackSrc : src;
   const errored = primaryFailed && (fallbackSrc === undefined || fallbackFailed);
   const handleError = () => {
     failedImageUrls.add(displaySrc);

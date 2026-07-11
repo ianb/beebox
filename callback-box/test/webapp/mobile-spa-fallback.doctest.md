@@ -15,8 +15,12 @@ import { registerSpaFallback } from "../../src/webapp/server-root.js";
 
 const ORIGINAL_HUB_SECRET = process.env.CB_HUB_SECRET;
 const ORIGINAL_GOOGLE_CLIENT_ID = process.env.GOOGLE_OAUTH_CLIENT_ID;
+const ORIGINAL_GOOGLE_CLIENT_SECRET = process.env.GOOGLE_OAUTH_CLIENT_SECRET;
 process.env.CB_HUB_SECRET = "test-hub-secret-for-mobile-spa-fallback";
+// Fake OAuth credentials come as a pair — an ID-without-secret half-config
+// is now a loud MissingOAuthClientSecretError at auth-route registration.
 process.env.GOOGLE_OAUTH_CLIENT_ID = "test-google-client-for-mobile-spa-fallback";
+process.env.GOOGLE_OAUTH_CLIENT_SECRET = "test-google-secret-for-mobile-spa-fallback";
 
 const box = await makeTmpBox();
 const server = Fastify();
@@ -83,4 +87,6 @@ if (ORIGINAL_HUB_SECRET === undefined) delete process.env.CB_HUB_SECRET;
 else process.env.CB_HUB_SECRET = ORIGINAL_HUB_SECRET;
 if (ORIGINAL_GOOGLE_CLIENT_ID === undefined) delete process.env.GOOGLE_OAUTH_CLIENT_ID;
 else process.env.GOOGLE_OAUTH_CLIENT_ID = ORIGINAL_GOOGLE_CLIENT_ID;
+if (ORIGINAL_GOOGLE_CLIENT_SECRET === undefined) delete process.env.GOOGLE_OAUTH_CLIENT_SECRET;
+else process.env.GOOGLE_OAUTH_CLIENT_SECRET = ORIGINAL_GOOGLE_CLIENT_SECRET;
 ```

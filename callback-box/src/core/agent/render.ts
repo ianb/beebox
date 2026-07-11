@@ -94,7 +94,7 @@ function renderResultMessage(msg: Extract<SDKMessage, { type: "result" }>): stri
 export function renderSdkMessage(msg: SDKMessage): string {
   if (msg.type === "system" && msg.subtype === "init") {
     const sid = msg.session_id;
-    return fmt.dim(`[session ${sid.slice(0, 8)} model=${msg.model ?? "default"}]\n`);
+    return fmt.dim(`[session ${sid.slice(0, 8)} model=${msg.model}]\n`);
   }
   if (msg.type === "assistant") {
     return renderAssistantMessage(msg);

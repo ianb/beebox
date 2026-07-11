@@ -36,13 +36,25 @@ export function safeFilename(text: string, fallback?: string): string {
   return sanitizeFilenameStem(sanitize(text), { fallback });
 }
 
+/**
+ * Raw YAML parse of a thread file's frontmatter — before the schema's own
+ * `entries: z.array(ThreadEntry).default([])` has had a chance to run.
+ * `ChatThreadFields` promises a validated card (entries always present); this
+ * function skips zod validation for speed, so it must be honest that an
+ * older or hand-edited thread file can genuinely omit `entries:`.
+ */
+type RawChatThreadFields = Omit<ChatThreadFields, "entries"> & {
+  entries?: ChatThreadFields["entries"];
+};
+
 async function readThreadFields(absPath: string): Promise<ChatThreadFields> {
   const content = await fs.readFile(absPath, "utf-8");
   const split = splitCardContent(content);
   if (!split.hasFrontmatter) {
     throw new MissingFrontmatterError(absPath);
   }
-  return parseYaml(split.frontmatterText) as ChatThreadFields;
+  const raw = parseYaml(split.frontmatterText) as RawChatThreadFields;
+  return { ...raw, entries: raw.entries ?? [] };
 }
 
 async function writeThreadFields(absPath: string, fields: ChatThreadFields): Promise<void> {
@@ -128,7 +140,7 @@ export async function appendMessageToThread(options: {
   // and drop one append.
   await withCardLock(absPath, async () => {
     const fields = await readThreadFields(absPath);
-    fields.entries = [...(fields.entries ?? []), createMessageEntry(options.message)];
+    fields.entries = [...fields.entries, createMessageEntry(options.message)];
     await writeThreadFields(absPath, fields);
   });
 }
@@ -144,7 +156,7 @@ export async function findUnsentAgentMessages(
 }> {
   const fields = await readThreadFields(absPath);
   const unsent: ChatThreadMessage[] = [];
-  for (const entry of fields.entries ?? []) {
+  for (const entry of fields.entries) {
     if (entry.kind === "message" && entry.sender === "agent" && entry.sent === undefined) {
       unsent.push(entry);
     }
@@ -166,7 +178,7 @@ export async function stampSentMessage(options: {
   // concurrent append/participant write on the same thread.
   await withCardLock(options.absPath, async () => {
     const fields = await readThreadFields(options.absPath);
-    for (const entry of fields.entries ?? []) {
+    for (const entry of fields.entries) {
       if (
         entry.kind === "message" &&
         entry.sender === "agent" &&

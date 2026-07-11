@@ -232,6 +232,42 @@ Exercised end-to-end on a scratch clone of `~/src/boxes/test1` via
 `pnpm smoke:packageify` (`scripts/smoke-packageify.ts`) — never against the
 real box.
 
+### `retire-process-captures` (prune — retired pipeline cleanup)
+
+`scripts/migrate/retire-process-captures.ts` is a **prune**, not a card
+conversion: it removes the retired `process-captures` procedure card and its
+one-shot trigger from a box, because `installProcedures` only ever adds/updates
+template files — it never prunes — so deleting the template upstream leaves the
+stale copies behind on every already-initialized box, now calling deleted `cb`
+commands (a wakeup-time failure). Behavior worth knowing:
+
+- **Hash-gated delete vs. park.** `config/procedures/process-captures.procedure.card`
+  is deleted only when its content hash matches one of the shipped stock versions
+  enumerated in the script (`SHIPPED_PROCEDURE_HASHES` — the same canonical form
+  `installTemplateFile` compares: raw bytes, since a procedure card has no
+  `normalize`/`boxOwnedFields`). A boxholder-**modified** copy is not destroyed —
+  it's parked to `config/_template-updates/config/procedures/…` (the standard
+  template-review location) and cleared from the active procedures dir so it stops
+  firing the deleted commands. Recompute/extend the hash list from
+  `git show <ref>:callback-box/templates/procedures/process-captures.procedure.card | shasum -a 256`.
+  **Expect PARK on long-lived boxes, and treat it as success:** only two
+  frontmatter-era template versions ever shipped, and box-side migrations
+  (the XML→frontmatter card conversion, box-packageify) rewrote installed
+  copies in place — so any box older than 2026-06-18, or migrated since,
+  won't byte-match a shipped hash even if the boxholder never touched the
+  card (observed on test1: parked, correctly). The parked file needs no
+  merge work — review it for custom steps worth keeping, then delete it.
+- **The trigger** (`config/schedules/process-captures.scheduled-script.card`) is
+  auto-generated box state (never boxholder-authored) and always broken once the
+  procedure is gone, so it's removed whenever present.
+- **Legacy inbox capture-session cards are intentionally left in place.** In-flight
+  `*.capture-session.card` files in `box/inbox/` (including the prod retry-loop
+  victim, `issues/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
+  stay as ordinary cards for the normal triage/agent flow — they are legacy data,
+  not something this migration touches.
+- Idempotent: a box with neither file (already retired, or one that never had the
+  pipeline) is a clean no-op.
+
 ## Manual runs (for debugging)
 
 The per-schema scripts are runnable standalone (`npx tsx scripts/migrate/<name>.ts <boxRoot> --apply`). Useful for debugging a single migration or for one-off boxes. The manifest is **not** updated when scripts are run directly — that only happens via `cb migrate`. If you do this and want it to count, append the entry yourself or run `cb migrate --apply` afterwards.

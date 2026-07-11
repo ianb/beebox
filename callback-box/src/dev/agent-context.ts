@@ -21,6 +21,7 @@ import {
   wordCount,
   type AssembledContext,
 } from "./lib/context-assembly.js";
+import { invariant } from "../lib/invariant.js";
 
 function usage(): never {
   console.error("Usage: pnpm agent-context <situation> --box <path> [--skill <name>] [--card-type <type>] [--landmark <dir>] [--output <file>]");
@@ -88,7 +89,8 @@ let landmarkDir: string | undefined;
 let output: string | null = null;
 
 for (let i = 0; i < args.length; i++) {
-  const arg = args[i]!;
+  const arg = args[i];
+  invariant(arg !== undefined, `args[${i}] must exist for 0 <= i < args.length`);
   if (arg === "--box") { boxRoot = args[++i] ?? null; }
   else if (arg === "--skill") { skill = args[++i]; }
   else if (arg === "--card-type") { cardType = args[++i]; }

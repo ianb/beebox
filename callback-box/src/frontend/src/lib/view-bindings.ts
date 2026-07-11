@@ -28,7 +28,7 @@ function fetchBindings(): Promise<Map<string, CardViewBinding>> {
     try {
       const metas = await trpcClient.views.list.query();
       for (const meta of [...metas].toSorted((a, b) => a.slug.localeCompare(b.slug))) {
-        for (const type of meta.rendersCardTypes ?? []) {
+        for (const type of meta.rendersCardTypes) {
           if (!map.has(type)) map.set(type, { slug: meta.slug, name: meta.name });
         }
       }

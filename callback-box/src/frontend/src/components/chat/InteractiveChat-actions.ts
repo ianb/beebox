@@ -14,6 +14,7 @@ import { extractImageFiles } from "../../lib/image-paste";
 import { unlockAudioContext } from "../../lib/audio/context";
 import { href, toSearch } from "../../lib/routing";
 import { newMessageId } from "./InteractiveChat-helpers";
+import { toastError } from "../ui/toast-store";
 import { type SelectionItem } from "../../lib/selection/serialize";
 import { useTranscriptAutoscroll } from "../../hooks/useTranscriptAutoscroll";
 import { createTypedEmission, type Emission } from "../../input/emission";
@@ -123,15 +124,14 @@ export function useChatActions(opts: ChatActionsOpts) {
 
   const handleRestartProcess = useCallback(() => {
     if (!sessionId) return;
-    // User-initiated action (policy rule 5): a silent no-op here used to
-    // leave the user thinking the restart happened. There's no generic
-    // action-error banner in this component today (the machine's `error`
-    // context is stream-specific and gated to the "streaming" state, so
-    // dispatching STREAM_ERROR here would silently no-op outside a live
-    // turn) -- log at error level as the interim signal until a real
-    // user-facing surfacing exists (see issues/ for the follow-up).
+    // User-initiated action (policy rule 5): surface a failed restart to the
+    // user, not just the console -- a silent no-op used to leave them thinking
+    // the restart happened. The machine's `error` context is stream-specific
+    // (gated to the "streaming" state), so the generic toast channel is the
+    // right surface here.
     restartChatSubprocess({ sessionId }).catch((e: unknown) => {
       console.error(`[chat] restart process failed for session ${sessionId}:`, e);
+      toastError("Failed to restart the agent process", { cause: e });
     });
   }, [sessionId]);
 
@@ -158,7 +158,10 @@ export function useChatActions(opts: ChatActionsOpts) {
         send({ type: "PREPEND_MESSAGES", messages: result.entries });
       })
       .catch((e: unknown) => {
-        console.warn(`[chat] load-older history fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+        // User-initiated action (policy rule 5): the user clicked "load older"
+        // and is waiting on it -- surface the failure, don't just log.
+        console.error(`[chat] load-older history fetch failed: ${e instanceof Error ? e.message : String(e)}`);
+        toastError("Failed to load earlier messages", { cause: e });
       })
       .finally(() => setLoadingOlder(false));
   }, [loadingOlder, messages.length, totalEntries, send, sessionId, setLoadingOlder]);

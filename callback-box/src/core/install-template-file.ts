@@ -293,7 +293,9 @@ async function writeVersions(boxRoot: string, versions: VersionsFile): Promise<v
   await fs.mkdir(path.dirname(abs), { recursive: true });
   // Sorted keys for stable diffs.
   const sorted: VersionsFile = {};
-  for (const k of Object.keys(versions).toSorted()) sorted[k] = versions[k]!;
+  for (const [k, v] of Object.entries(versions).toSorted(([a], [b]) => a.localeCompare(b))) {
+    sorted[k] = v;
+  }
   await fs.writeFile(abs, JSON.stringify(sorted, null, 2) + "\n");
 }
 

@@ -49,10 +49,11 @@ export function BoxRedirect() {
   }, []);
 
   useEffect(() => {
-    if (!loading && boxes.length === 1) {
+    const [onlyBox] = boxes;
+    if (!loading && boxes.length === 1 && onlyBox !== undefined) {
       // navigate()'s promise only rejects on a superseded/redirected
       // navigation (not a user-facing failure) -- fire-and-forget.
-      void navigate({ to: "/$boxSlug", params: { boxSlug: boxes[0]!.slug }, replace: true });
+      void navigate({ to: "/$boxSlug", params: { boxSlug: onlyBox.slug }, replace: true });
     }
   }, [loading, boxes, navigate]);
 

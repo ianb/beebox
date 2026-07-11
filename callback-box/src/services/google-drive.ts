@@ -7,6 +7,15 @@
 
 import ky, { type KyInstance } from "ky";
 import type { GoogleAuthService } from "./google-auth.js";
+import { validateResponse } from "./connector-response.js";
+import {
+  driveGetFileSchema,
+  driveFileListSchema,
+  spreadsheetMetadataSchema,
+  sheetValuesSchema,
+  documentStructureSchema,
+  driveCommentListSchema,
+} from "./google-drive-schemas.js";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -144,13 +153,15 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
 
   return {
     async getFile(fileId) {
-      return driveApi
+      const data = await driveApi
         .get(`files/${encodeURIComponent(fileId)}`, {
           searchParams: {
             fields: "id,name,mimeType,modifiedTime,owners(emailAddress,displayName),parents,webViewLink",
           },
         })
         .json<DriveFile>();
+      validateResponse(data, { schema: driveGetFileSchema, service: "drive", operation: "getFile" });
+      return data;
     },
 
     async listFiles(folderId) {
@@ -166,6 +177,7 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
         const data = await driveApi
           .get("files", { searchParams })
           .json<{ files?: DriveFile[]; nextPageToken?: string }>();
+        validateResponse(data, { schema: driveFileListSchema, service: "drive", operation: "listFiles" });
         if (data.files) items.push(...data.files);
         pageToken = data.nextPageToken;
       } while (pageToken);
@@ -185,6 +197,7 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
         const data = await driveApi
           .get("files", { searchParams })
           .json<{ files?: DriveFile[]; nextPageToken?: string }>();
+        validateResponse(data, { schema: driveFileListSchema, service: "drive", operation: "listSpreadsheets" });
         if (data.files) items.push(...data.files);
         pageToken = data.nextPageToken;
       } while (pageToken);
@@ -192,13 +205,15 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
     },
 
     async getSpreadsheet(fileId) {
-      return sheetsApi
+      const data = await sheetsApi
         .get(`spreadsheets/${encodeURIComponent(fileId)}`, {
           searchParams: {
             fields: "spreadsheetId,properties.title,sheets.properties(sheetId,title)",
           },
         })
         .json<SpreadsheetMetadata>();
+      validateResponse(data, { schema: spreadsheetMetadataSchema, service: "drive", operation: "getSpreadsheet" });
+      return data;
     },
 
     async getSheetValues(fileId, opts) {
@@ -211,6 +226,7 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
           },
         )
         .json<{ values?: string[][] }>();
+      validateResponse(data, { schema: sheetValuesSchema, service: "drive", operation: "getSheetValues" });
       return data.values || [];
     },
 
@@ -241,9 +257,11 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
     },
 
     async getDocument(fileId) {
-      return docsApi
+      const data = await docsApi
         .get(`documents/${encodeURIComponent(fileId)}`)
         .json<DocumentStructure>();
+      validateResponse(data, { schema: documentStructureSchema, service: "drive", operation: "getDocument" });
+      return data;
     },
 
     async listComments(fileId) {
@@ -261,6 +279,7 @@ export function createGoogleDriveService(auth: GoogleAuthService): GoogleDriveSe
         const data = await driveApi
           .get(`files/${encodeURIComponent(fileId)}/comments`, { searchParams })
           .json<{ comments?: DriveComment[]; nextPageToken?: string }>();
+        validateResponse(data, { schema: driveCommentListSchema, service: "drive", operation: "listComments" });
         if (data.comments) items.push(...data.comments);
         pageToken = data.nextPageToken;
       } while (pageToken);

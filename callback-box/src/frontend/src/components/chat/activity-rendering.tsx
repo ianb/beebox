@@ -11,7 +11,13 @@ import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 /**
  * Human-readable description of a single tool call.
  */
-const toolDescribers: Record<string, (input: Record<string, unknown>, block: SessionContentBlock) => string> = {
+type ToolDescriber = (input: Record<string, unknown>, block: SessionContentBlock) => string;
+
+// `Map`, not `Record`: `Map.get()` is honestly typed `V | undefined` for an
+// unknown key, whereas a `Record` index read types as always-defined without
+// `noUncheckedIndexedAccess` (which the frontend tsconfig lacks) even though
+// most tool names genuinely aren't in this table.
+const toolDescribers = new Map<string, ToolDescriber>(Object.entries({
   Read: (input) => {
     const p = String(input.file_path || "");
     return p ? `Read ${shortPath(p)}` : "Read a file";
@@ -36,14 +42,14 @@ const toolDescribers: Record<string, (input: Record<string, unknown>, block: Ses
   TodoWrite: () => "Updated task list",
   Agent: (input) => String(input.description || "Delegated a task"),
   Task: (input) => String(input.description || "Delegated a task"),
-};
+} satisfies Record<string, ToolDescriber>));
 
 /** Tools that are boring enough to not need an expandable details view */
 const nonExpandableTools = new Set(["Read", "Glob"]);
 
 function describeToolCall(block: SessionContentBlock): string {
   const input = block.input || {};
-  const describer = toolDescribers[block.toolName || ""];
+  const describer = toolDescribers.get(block.toolName || "");
   if (describer) return describer(input, block);
   return block.inputSummary || block.toolName || "Tool call";
 }

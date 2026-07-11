@@ -97,9 +97,6 @@ export async function consumeAgentStream(
       assignedSessionId = msg.session_id;
       options.onSessionId?.(msg.session_id);
     }
-    if (msg.type === "result") {
-      resultMessage = msg;
-    }
     const rendered = renderSdkMessage(msg);
     if (rendered) {
       outputBuf += rendered;
@@ -114,8 +111,8 @@ export async function consumeAgentStream(
     });
 
     const iterator: AsyncIterator<SDKMessage> = q[Symbol.asyncIterator]();
-    while (true) {
-      const next =
+    for (;;) {
+      const next: IteratorResult<SDKMessage> | typeof DEADLINE =
         resultMessage === null
           ? await iterator.next()
           : await withDeadline(iterator.next(), STREAM_END_GRACE_MS);
@@ -127,6 +124,9 @@ export async function consumeAgentStream(
         break;
       }
       if (next.done === true) break;
+      if (next.value.type === "result") {
+        resultMessage = next.value;
+      }
       handleMessage(next.value);
     }
   } catch (e) {

@@ -23,9 +23,9 @@ export function runFakeStream(
   },
 ): () => void {
   const parts = message.trim().split(/\s+/);
-  const chunks = Number.parseInt(parts[1], 10) || 200;
-  const intervalMs = Number.parseInt(parts[2], 10) || 40;
-  const chunkLen = Number.parseInt(parts[3], 10) || 25;
+  const chunks = Number.parseInt(parts[1] ?? "", 10) || 200;
+  const intervalMs = Number.parseInt(parts[2] ?? "", 10) || 40;
+  const chunkLen = Number.parseInt(parts[3] ?? "", 10) || 25;
   const toolAt = Math.floor(chunks / 3);
 
   const para = "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum. ";
