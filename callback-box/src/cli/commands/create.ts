@@ -37,10 +37,15 @@ export const createCommand = new Command("create")
   .option("-a, --attachment <path>", "Path to an attachment file")
   .option("--list-templates", "List all available templates")
   .option("--describe-template <name>", "Show details about a specific template")
-  .action(async (targetPath: string | undefined, ...rest: unknown[]) => {
-    // Commander passes variadic args as second param, options as third
-    const kvArgs = (rest[0] ?? []) as string[];
-    const options = (rest[1] ?? {}) as CreateOptions;
+  // Commander passes (targetPath, variadic kv args, options); a typed rest tuple
+  // keeps this to one parameter (max-params) while avoiding per-arg casts.
+  .action(async (...actionArgs: [
+    targetPath: string | undefined,
+    kvArgs: string[],
+    options: CreateOptions,
+    ...unknown[],
+  ]) => {
+    const [targetPath, kvArgs, options] = actionArgs;
 
     // Box-local templates register as a side effect of loading the box's
     // schemas. --list-templates / --describe-template run before the box is

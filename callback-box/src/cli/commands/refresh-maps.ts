@@ -23,12 +23,22 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
+import { isRecord } from "../../lib/is-record.js";
 import { precheck, type MapBrief } from "../../core/maps/precheck.js";
 import { finalize } from "../../core/maps/finalize.js";
 import { CHECK_SKIP_CODE } from "../../core/procedure/shell.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 
 const BRIEF_FILE = path.join(".callback-box", "refresh-maps-brief.json");
+
+/**
+ * The cached brief (our own JSON, round-tripped from `precheck`) is a valid
+ * {@link MapBrief} when it carries a boolean `needsWork` and a `tasks` array.
+ * Task internals are trusted — we wrote the file.
+ */
+function isMapBrief(value: unknown): value is MapBrief {
+  return isRecord(value) && typeof value["needsWork"] === "boolean" && Array.isArray(value["tasks"]);
+}
 
 async function saveBrief(boxRoot: string, brief: MapBrief): Promise<void> {
   const dir = path.join(boxRoot, ".callback-box");
@@ -42,7 +52,8 @@ async function saveBrief(boxRoot: string, brief: MapBrief): Promise<void> {
 async function readSavedBrief(boxRoot: string): Promise<MapBrief | null> {
   try {
     const raw = await fs.readFile(path.join(boxRoot, BRIEF_FILE), "utf-8");
-    return JSON.parse(raw) as MapBrief;
+    const parsed: unknown = JSON.parse(raw);
+    return isMapBrief(parsed) ? parsed : null;
   } catch (e) {
     if (errnoCode(e) !== "ENOENT") {
       console.warn("refresh-maps: could not read saved brief, treating as absent:", e);

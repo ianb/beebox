@@ -93,5 +93,5 @@ export const usageCommand = new Command("usage")
       console.log("No usage data yet. Run some agents first.");
       return;
     }
-    printTable(rows as Array<Record<string, unknown>>);
+    printTable(rows.filter(isRecord));
   });

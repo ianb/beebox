@@ -15,6 +15,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { Command } from "commander";
 import { requireBoxRoot } from "../../lib/paths.js";
+import { isRecord } from "../../lib/is-record.js";
 import { detectBoxTarget } from "../../core/box/package.js";
 import {
   MIGRATIONS,
@@ -53,6 +54,11 @@ class ManifestReadError extends Error {
   }
 }
 
+/** A manifest line is a valid {@link ManifestEntry} with string `name` + `applied-at`. */
+function isManifestEntry(value: unknown): value is ManifestEntry {
+  return isRecord(value) && typeof value["name"] === "string" && typeof value["applied-at"] === "string";
+}
+
 async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
   const abs = path.join(boxRoot, MANIFEST_PATH);
   try {
@@ -61,7 +67,8 @@ async function readManifest(boxRoot: string): Promise<ManifestEntry[] | null> {
     for (const line of text.split("\n")) {
       const trimmed = line.trim();
       if (trimmed === "") continue;
-      entries.push(JSON.parse(trimmed) as ManifestEntry);
+      const parsed: unknown = JSON.parse(trimmed);
+      if (isManifestEntry(parsed)) entries.push(parsed);
     }
     return entries;
   } catch (e) {
