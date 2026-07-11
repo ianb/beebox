@@ -13,12 +13,18 @@
  * Photo flow output (`<sessionAttach>` = `scan-….attach`):
  *   <sessionAttach>/photo-NNN.image.card + photo-NNN.attach/photo-NNN.jpg
  *     and (optionally) photo-NNN-back.jpg in the same image attach scope
- *   <sessionAttach>/photo-NNN.review.question.card (optional)
- *   <sessionAttach>/orphan-back-NNN.jpg + orphan-back-NNN.question.card
- *   <sessionAttach>/unsure-NNN.jpg + unsure-NNN.question.card
+ *   <sessionAttach>/orphan-back-NNN.jpg, unsure-NNN.jpg  (loose JPEGs stay here)
+ *   box/questions/<session-slug>-photo-NNN.review.question.card (optional)
+ *   box/questions/<session-slug>-orphan-back-NNN.question.card
+ *   box/questions/<session-slug>-unsure-NNN.question.card
  *   box/inbox/<name>.capture-session.card  (at inbox level)
  *   <sessionAttach>/source.file.card + source.attach/source.pdf
  *     (when imported from a PDF source)
+ *
+ * Question cards live in `box/questions/`, not the attach scope, so the
+ * system's pending/notification/aging machinery (which only scans
+ * `box/questions/`) sees them; each carries a `context:` ref back into the
+ * attach scope for the item it's about.
  *
  * Document flow output:
  *   <sessionAttach>/source.file.card + source.attach/source.pdf
@@ -219,6 +225,7 @@ async function runPhotoMode(
       index: i,
       bundle,
       startedAt,
+      boxRoot: ctx.boxRoot,
       sessionAttachAbsDir,
       sessionAttachRelDir,
       archivePages,
@@ -231,22 +238,26 @@ async function runPhotoMode(
   for (const [i, orphan] of orphanBacks.entries()) {
     await emitOrphanBackQuestion(orphan, {
       index: i,
+      boxRoot: ctx.boxRoot,
       sessionAttachAbsDir,
       sessionAttachRelDir,
       archivePages,
       filesToStage,
       questionPaths,
+      askedAt: startedAt,
     });
   }
 
   for (const [i, page] of unsurePages.entries()) {
     await emitUnsureQuestion(page, {
       index: i,
+      boxRoot: ctx.boxRoot,
       sessionAttachAbsDir,
       sessionAttachRelDir,
       archivePages,
       filesToStage,
       questionPaths,
+      askedAt: startedAt,
     });
   }
 

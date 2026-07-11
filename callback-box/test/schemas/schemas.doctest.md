@@ -133,6 +133,7 @@ createSelectQuestionTemplate({
     { id: "a", label: "Choice A" },
     { id: "b", label: "Choice B" },
   ],
+  askedAt: "2026-07-10T09:00:00-07:00",
 })
 =>
 ---
@@ -146,6 +147,7 @@ input:
       label: Choice A
     - id: b
       label: Choice B
+asked-at: 2026-07-10T09:00:00-07:00
 ---
 
 ```
@@ -156,7 +158,11 @@ Special characters in content pass through YAML verbatim:
 createSelectQuestionTemplate({
   memo: "Context with <special> & chars",
   prompt: "What's \"this\"?",
-  options: [{ id: "a", label: "Option <A>" }],
+  options: [
+    { id: "a", label: "Option <A>" },
+    { id: "b", label: "Option <B>" },
+  ],
+  askedAt: "2026-07-10T09:00:00-07:00",
 })
 =>
 ---
@@ -168,6 +174,9 @@ input:
   options:
     - id: a
       label: Option <A>
+    - id: b
+      label: Option <B>
+asked-at: 2026-07-10T09:00:00-07:00
 ---
 
 ```

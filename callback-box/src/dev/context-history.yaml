@@ -2847,6 +2847,14 @@ test1:
       peak: 41776
       added: 15243
       turns: 14
+  question-dismissed-expired-meaning:
+    - date: 2026-07-11T00:52:52.329Z
+      boxCommit: 489b19a36205830d6c087441ab3415d5e96cd345
+      repoCommit: 00bdd9083185ef27a5711973b311f63343938d92
+      initial: 41700
+      peak: 43253
+      added: 1553
+      turns: 4
   capture-message-meaning:
     - date: 2026-07-10T06:51:13.953Z
       boxCommit: af13e5f74f266a24b982c84531e3ffb6f792299d
