@@ -1,22 +1,79 @@
 # Remove box-shape v1 (legacy) + de-template box skills
 
-> **Status (2026-07-11):** Track 1 (skills de-templating) is being implemented —
-> unaffected by review. **Track 2 (v1 removal) below is SUPERSEDED pending a
-> redesign** — a cross-model review (`remove-box-shape-v1.review.md`) found its
-> root-model mechanism wrong on three counts and its true cost mis-estimated:
-> (a) the `{shapeVersion:2, packageRoot:boxRoot}` fallback is an *impossible*
-> shape — v2's packageRoot is the *parent* of boxRoot — so it breaks `boxCodePaths`
-> and every `relative(packageRoot, boxRoot)` caller; (b) `compiler.ts`'s
-> `defaultBoxShape()` is a genuine third "engine-hosted" resolution mode, not v1,
-> and can't be relabeled v2; (c) the dominant cost is that `makeTmpBox()` (~579
-> calls) writes an empty marker meaning v1 and `initBox()` defaults to v1 (55
-> sites), so the *entire* test suite builds v1 boxes — removing v1 means
-> redesigning fixture construction to build real v2 package layouts, and the
-> strict-shape flip + fixture redesign + init/detect changes + converter
-> retirement must land atomically. Also: `box-packageify` is retired to a
-> tombstone (append-only migration invariant), not deleted. **Do not implement
-> Track 2 from this draft** — it needs a fresh root-model design first. Track 1
-> stands on its own and ships independently.
+> **Status (2026-07-11):** Track 1 (skills de-templating) — **DONE** (commit
+> `b358885a`). Track 2 (v1 removal) — the original Direction below was superseded
+> by the cross-model review (`remove-box-shape-v1.review.md`); the corrected
+> root-model design is locked in **"Track 2 — locked design"** immediately below
+> and is what gets implemented. The draft Direction further down is kept only as
+> historical context.
+
+## Track 2 — locked design (root model + sequence)
+
+Supersedes the draft Track 2 Direction below. Grounded in a full design
+investigation; every prior review finding is resolved here.
+
+**Decisions.**
+- **Minimal valid v2 box** (`box-shape.ts:65-85`): `getBoxShape` needs exactly
+  (1) `<pkg>/content/.cb-box` = non-empty JSON `{"shapeVersion":2}`, (2)
+  `<pkg>/package.json` declaring `callback-box` in deps or devDeps (name/version
+  unchecked). `packageRoot = dirname(boxRoot)` — so **boxRoot ≠ packageRoot
+  always**; a synthesized `{v2, packageRoot:boxRoot}` is structurally impossible
+  and is never created. View-compile / box-schema fixtures also need
+  `<pkg>/node_modules/callback-box` → engine `PACKAGE_ROOT` symlink.
+- **One v2 builder.** Extract `scaffoldV2Box(target)` (composing the existing
+  `scaffoldPackageRoot` in `core/box/package.ts` + `initBox({shapeVersion:2})`);
+  `cb init`, the `init-v2` doctest, and the test fixtures all delegate to it
+  (kills the inline duplication in `cli/commands/init.ts` + `init-v2.doctest.md`).
+- **Fixtures.** `makeTmpBox` (`test/helpers/doctest-helpers.ts`) builds a real v2
+  package, returns the **content-root** as `root`/`path()`, and exposes a new
+  `packageRoot` for the ~15-20 callers that reach package-level paths; a
+  `{deps:true}` opt-in adds the `node_modules/callback-box` symlink. ~85-90% of
+  the 138 fixture files are transparent (they only read/write cards under root).
+  `test-server.ts` `getTemplateBox` switches to the same builder.
+- **`getBoxShape` strict.** Delete `LEGACY_SHAPE_VERSION`; a marker without
+  `shapeVersion ≥ 2` → `BoxShapeError`. Collapse `boxCodePaths` /
+  `…RelativeToBoxRoot` to the single v2 arm; drop `findLegacySchemaFiles`'s
+  legacy short-circuit.
+- **Delete `getBoxShapeOrLegacyFallback` — synthesize nothing.** Guaranteed-marker
+  callers (all of the init/docs/skills/templates family, `trick`, `serve`,
+  `health*`, `engine-version`, `list-cards`) → strict `getBoxShape`. The 4
+  genuinely arbitrary-path callers (`csp-digest`, `csp-report`, `box-guard`,
+  `rebuildBoxSchemas`) handle "not a box" locally (they only need the `boxRoot`
+  they already passed). If a shared helper is kept, it is **ENOENT-only** and
+  returns a discriminated `{found:true,shape}|{found:false,boxRoot}` — never a
+  fake `BoxShape` — and rethrows `SyntaxError`/`EACCES`/other IO.
+- **Compiler engine-hosted mode.** Replace `defaultBoxShape()` with a
+  discriminated `ViewHostContext = {kind:"box-package"; packageRoot} |
+  {kind:"engine-hosted"}`; `writeNodeViewModule` branches on `kind`
+  (`engine-hosted` = the current double-symlink; `box-package` =
+  `packageRoot/node_modules`). `compiler.ts:229` default → `engine-hosted`;
+  `routes/views.ts`, `cli/view.ts`, `listViews` → `box-package` from the real shape.
+- **`box-packageify` tombstone.** Keep the registry entry name (append-only
+  invariant); replace the 537-line converter with an idempotent **v2-assert
+  no-op** (exit 0 if `shapeVersion===2`, else fail loud). Delete
+  `scripts/smoke-packageify.ts` + the `smoke:packageify` script + the converter
+  doctest; delete `detectBoxTarget`'s `update-legacy` mode and
+  `upgrade.ts`'s `LegacyBoxUpgradeError` guard.
+
+**Sequence (each step ends green — this is the safe decomposition of the review's
+"indivisible" chunk):**
+- **1a — Fixtures → v2, predicate still bilingual.** Extract `scaffoldV2Box`;
+  rewrite `makeTmpBox`/`test-server`; fix the ~15-20 flat-root breakers; flip
+  `initBox` default to v2 + collapse its shape branches + fix its ~55 direct
+  callers. `getBoxShape` still accepts v1, so the now-v2 fixtures pass. **Full
+  suite green.**
+- **1b — Strict predicate.** `getBoxShape` strict + `boxCodePaths` collapse +
+  delete the fallback + `detectBoxTarget`/`upgrade` v1 arms + `box-packageify`
+  tombstone + box-shape doctest rewritten as the single-shape spec. Fixtures are
+  already v2, so green.
+- **1c — Engine-hosted compiler.** `ViewHostContext` union; node-view-runtime
+  branches on `kind`.
+- **1d — Branch deletions.** Resolve-hook machinery (`registry.ts`, guarded
+  solely by `===1`), `engine-version`, `health-engine`, `serve`, `agent-guide`.
+- **1e — Docs** (was Track 3): `box-layout.md`, `migrations.md`, `box-layout-spec`
+  `shapeNotes`, H4 check-off in `boxes-as-packages-v2.md`.
+
+Codex diff-review breakpoint after 1a+1b (the core), before 1c+.
 
 All boxes are shapeVersion 2 (boxholder ruling, 2026-07). This plan removes the
 v1/legacy box shape entirely — the bilingual shape predicate, the resolve-hook
