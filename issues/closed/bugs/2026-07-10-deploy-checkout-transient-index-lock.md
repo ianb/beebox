@@ -17,6 +17,16 @@ entirely when the checkout was just (re)created (a fresh worktree has nothing
 to clean). The settle/serialize idea (third bullet in the original list) was
 not pursued — the retry/recreate handling covers the failure mode without it.
 
+**Follow-up fix** (main session, 2026-07-11): the first fix left a gap — it
+hardened the `checkout --detach` and `clean` steps but NOT `recreate_checkout()`
+itself, whose `git worktree add` is what died next (`Preparing worktree … fatal:
+.git/index: … Not a directory`) when a corrupt `.git/worktrees/<name>` metadata
+dir survived `worktree prune` and then defeated the add. `recreate_checkout()` now
+loops twice: each attempt wipes the dir, removes ANY worktree-metadata dir whose
+`gitdir` points at the checkout (curing the prune-resistant corruption), prunes,
+then adds — only a second failure is fatal. Verified with an isolated
+reproduction (dir removed + stale registration → self-healed).
+
 The root `post-commit` hook backgrounds `callback-box/deploy/deploy.sh --ref <sha>`
 the instant a `main` commit completes. On one deploy the build-checkout step
 died immediately:
