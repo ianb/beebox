@@ -98,7 +98,9 @@ buried. None blocks the merge.
    as single-line justified disables; `code-style.md`'s `as`-assertions section
    rewritten accordingly (the ".ts/.tsx asymmetry" paragraph is now false and
    gone). Also consolidated the duplicate `core/card-io.ts` `isRecord` onto
-   `lib/is-record.ts`. Landed on `worktree-architectural-review`.
+   `lib/is-record.ts`. Landed on `worktree-architectural-review` in commit
+   `defbd2c7` (ban + burn-down), hardened by `7077e5ef` (codex review tightened
+   the XState exemption to empty-object casts only).
 
 Behavior-sensitive deferrals from Track G (recorded, not decisions —
 "do when touched"): DebugLog `useSyncExternalStore` port, FileView /
