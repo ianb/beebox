@@ -1,10 +1,23 @@
 /**
  * Orama index storage: schema, file locations, restore, atomic persist.
  *
- * Persistence format is JSON, not msgpack ("binary"): the radix tree nests
- * one object level per branching character, and a real corpus's OCR'd
- * numbers branch deeper than msgpack's hard depth limit of 100
- * ("Too deep objects in depth 101"). JSON.stringify has no such limit.
+ * Persistence format is JSON, and a 2026-07 attempt to switch to "binary"
+ * (msgpack) is worth remembering before anyone retries it:
+ * - msgpack's depth-100 encode limit is REAL on real corpora — the radix
+ *   tree nests one level per character, and long indexed identifier
+ *   strings (attach paths, doc ids, `contains` sentences) exceed it.
+ *   `normalizeContent` (extract.ts) only splits body content, so a
+ *   synthetic benchmark that passed missed this; a real box failed with
+ *   "Too deep objects in depth 101". (Raising the limit needs a vendored
+ *   patch — the persistence plugin doesn't expose encode options.)
+ * - Even patched, it's no win where it counts: on a real ~2.5k-card box
+ *   with ~1k vectors, restore — paid on EVERY search — measured ~10%
+ *   SLOWER than JSON.parse (both are seconds-scale with vectors; msgpack
+ *   decode crawls the deep nesting, JSON.parse is native). Binary's 40%
+ *   disk saving doesn't buy back the hot path.
+ * The seconds-scale restore cost of a vector-bearing index is structural
+ * (vectors persist in both the doc store and the vector index; the whole
+ * index restores as one blob) — an upstream Orama gap, not a format choice.
  *
  * The index and its manifest are disposable per-checkout caches in
  * `.callback-box/`. The persist order (index first, manifest last) makes a
@@ -54,6 +67,8 @@ invariant(
 export type SearchIndex = Orama<typeof searchOramaSchema>;
 
 const INDEX_FILENAME = "search-index.json";
+/** Left behind by the short-lived binary-format experiment (2026-07). */
+const LEGACY_INDEX_FILENAME = "search-index.msp";
 const MANIFEST_FILENAME = "search-index-manifest.json";
 const LOCK_FILENAME = "search-index.lock";
 
@@ -119,6 +134,9 @@ export async function persistSearchIndex(db: SearchIndex, boxRoot: string): Prom
   const tmp = `${indexPath}.tmp`;
   await persistToFile(db, "json", tmp);
   await fs.rename(tmp, indexPath);
+  // Sweep the binary-experiment leftover so the cache dir doesn't carry a
+  // dead 20MB file forever.
+  await fs.rm(path.join(path.dirname(indexPath), LEGACY_INDEX_FILENAME), { force: true });
   return indexPersistedFor(boxRoot);
 }
 
