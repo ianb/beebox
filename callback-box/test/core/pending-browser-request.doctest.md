@@ -165,3 +165,29 @@ print(`unknown none: ${reg.reportNone("nope")}`);
 unknown ack: false
 unknown none: false
 ```
+
+## `cancel` abandons a request; a late answer is refused
+
+`cancel` is for a long-poll whose caller vanished (CLI killed / connection
+dropped). It removes the entry and clears its timers WITHOUT resolving the
+outcome — so the abandoned promise never settles (don't await it) — and a
+browser answering afterwards settles nothing, which the route maps to 404.
+Idempotent: a second cancel (or one on an unknown id) returns `false`.
+
+```ts
+const reg = createPendingBrowserRequests<ScreenshotAnswer>();
+const { requestId } = reg.create({ timeoutMs: 5000, ackGraceMs: 5000 });
+print(`cancel: ${reg.cancel(requestId)}`);
+print(`size after cancel: ${reg.size()}`);
+print(`late fulfill: ${reg.fulfill(requestId, { kind: "image", bytes: "late" })}`);
+print(`late ack: ${reg.ack(requestId)}`);
+print(`cancel again: ${reg.cancel(requestId)}`);
+print(`unknown cancel: ${reg.cancel("nope")}`);
+=>
+cancel: true
+size after cancel: 0
+late fulfill: false
+late ack: false
+cancel again: false
+unknown cancel: false
+```

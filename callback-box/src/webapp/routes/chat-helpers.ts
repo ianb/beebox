@@ -99,7 +99,7 @@ export const whatsChangedBodySchema = z.object({
 export type WhatsChangedBody = z.infer<typeof whatsChangedBodySchema>;
 
 /** Soft cap on total base64 image payload per request (25 MB). */
-const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
+export const MAX_IMAGE_BYTES = 25 * 1024 * 1024;
 
 /**
  * Classify a request's User-Agent into the snapshot's `channel` value so

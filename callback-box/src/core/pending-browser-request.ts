@@ -58,6 +58,17 @@ export interface PendingBrowserRequests<TFulfillment> {
   fulfill(requestId: string, fulfillment: TFulfillment): boolean;
   /** A client answered "nothing here". False when the id is unknown or settled. */
   reportNone(requestId: string): boolean;
+  /**
+   * Abandon a request: remove its entry and clear its timers WITHOUT resolving
+   * the outcome promise. For a long-poll whose caller has gone away (CLI killed,
+   * connection dropped) — the awaiter no longer exists, so there is nothing to
+   * resolve, and the entry's removal makes a late browser answer settle nothing
+   * (route maps it to 404). Idempotent. False when the id is unknown or already
+   * settled. The abandoned outcome promise stays pending and is GC'd once its
+   * (now-unreferenced) awaiter unwinds. Callers must NOT keep awaiting it — race
+   * it against an abort signal (see chat-screenshot-routes.ts).
+   */
+  cancel(requestId: string): boolean;
   /** Unsettled request count (observability + tests). */
   size(): number;
 }
@@ -129,6 +140,16 @@ export function createPendingBrowserRequests<TFulfillment>(
         clearTimeout(entry.timeoutTimer);
         entry.graceTimer = setTimeout(() => settle(requestId, { status: "none" }), graceMs);
       }
+      return true;
+    },
+    cancel(requestId) {
+      const entry = pending.get(requestId);
+      if (entry === undefined) return false;
+      pending.delete(requestId);
+      clearTimeout(entry.timeoutTimer);
+      if (entry.graceTimer !== null) clearTimeout(entry.graceTimer);
+      if (entry.ackTimer !== null) clearTimeout(entry.ackTimer);
+      // Deliberately does NOT call entry.resolve: the awaiter is gone.
       return true;
     },
     size() {
