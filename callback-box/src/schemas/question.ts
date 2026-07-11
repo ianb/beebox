@@ -261,6 +261,8 @@ For select questions, make options mutually exclusive. For confirm questions, ma
 
 export type QuestionFields = InferCardFields<typeof QuestionSchema>;
 
+type QuestionContextEntryFields = z.infer<typeof QuestionContextEntry>;
+
 interface CreateSelectQuestionTemplateParams {
   memo: string;
   prompt: string;
@@ -269,6 +271,7 @@ interface CreateSelectQuestionTemplateParams {
   directive?: string;
   learning?: QuestionLearningFields;
   expiresAfter?: string;
+  context?: QuestionContextEntryFields[];
 }
 
 export function createSelectQuestionTemplate(
@@ -282,6 +285,7 @@ export function createSelectQuestionTemplate(
   };
   if (params.learning !== undefined) fields["learning"] = params.learning;
   if (params.directive !== undefined) fields["directive"] = params.directive;
+  if (params.context !== undefined) fields["context"] = params.context;
   fields["asked-at"] = params.askedAt;
   if (params.expiresAfter !== undefined) fields["expires-after"] = params.expiresAfter;
   return renderFrontmatterBlock(fields);
@@ -294,6 +298,7 @@ interface CreateQuestionTemplateParams {
   directive?: string;
   learning?: QuestionLearningFields;
   expiresAfter?: string;
+  context?: QuestionContextEntryFields[];
 }
 
 export function createTextQuestionTemplate(params: CreateQuestionTemplateParams): string {
@@ -305,6 +310,7 @@ export function createTextQuestionTemplate(params: CreateQuestionTemplateParams)
   };
   if (params.learning !== undefined) fields["learning"] = params.learning;
   if (params.directive !== undefined) fields["directive"] = params.directive;
+  if (params.context !== undefined) fields["context"] = params.context;
   fields["asked-at"] = params.askedAt;
   if (params.expiresAfter !== undefined) fields["expires-after"] = params.expiresAfter;
   return renderFrontmatterBlock(fields);
@@ -319,6 +325,7 @@ export function createConfirmQuestionTemplate(params: CreateQuestionTemplatePara
   };
   if (params.learning !== undefined) fields["learning"] = params.learning;
   if (params.directive !== undefined) fields["directive"] = params.directive;
+  if (params.context !== undefined) fields["context"] = params.context;
   fields["asked-at"] = params.askedAt;
   if (params.expiresAfter !== undefined) fields["expires-after"] = params.expiresAfter;
   return renderFrontmatterBlock(fields);
