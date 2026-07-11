@@ -40,6 +40,7 @@ function taskStatusStyle(status: string): { color: string; label: string | null 
       return { color: "text-danger-dark", label: status };
     case "running":
     case "pending":
+    case "paused":
       return { color: "text-info", label: status };
     default:
       return { color: "text-warm-600", label: null };

@@ -12,6 +12,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 | Task | Command | Cadence | Output |
 |------|---------|---------|--------|
+| Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated (launchd, weekdays); manual anytime | Bumped `package.json` + lockfile |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
 | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
@@ -24,6 +25,32 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 
 ## Tasks
+
+### Agent SDK update — `pnpm update-agent-sdk` (monorepo root)
+
+Bumps the exact pin of `@anthropic-ai/claude-agent-sdk` to the newest npm
+release at least **2 days** old, installs, and typechecks. The SDK bundles the
+Claude Code binary every box agent runs (it ignores any system `claude`),
+frozen at install time. The SDK rides a faster lane than every other
+dependency: the root `.npmrc` excludes the SDK family from the global 7-day
+`minimum-release-age` gate, and the script enforces its own 2-day gate — which
+is why the pin must stay exact (a caret plus the exclusion would resolve to
+minutes-old releases; and historically a `^0.x` caret also silently stopped
+crossing 0.x minors, which once left us on a two-month-old agent binary).
+
+**When to run:** automated — `bin/update-agent-sdk-scheduled.sh --install`
+(from the **main checkout**, once per machine) registers a launchd job that
+runs the check weekdays at 12:04 machine-local. Up to date → exits silently;
+behind → spawns a headless Claude session that does the full flow below and
+commits to `main` (or files an issue on failure). Logs:
+`~/Library/Logs/callback-box-sdk-update.log`. Manual runs (`--check` to just
+report, exit 1 when behind) work anytime.
+
+**After a bump:** run `pnpm test`, then the steering probe —
+`node --import tsx scripts/sdk-steering-probe.ts` (real API calls, ~1 min) —
+which verifies the undocumented mid-turn input semantics the chat session
+depends on still hold. Then commit; prod picks the new version up on the next
+`main` deploy.
 
 ### Knowledge audits — `npm run knowledge-audit`
 
