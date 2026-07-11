@@ -1,10 +1,10 @@
 ---
+title: "Box engine symlinks: should anything repair a dead link automatically?"
+needs: [decision]
 area: callback-box
 filed-by: agent
 discovered-in: worktree-orama-semantic-search — live-testing semantic search on the estate box
 ---
-
-# Box engine symlinks are absolute-path bootstraps that nothing repairs
 
 Found 2026-07-10: 13 of 13 local boxes under `~/src/boxes/` had a dead
 `node_modules/callback-box` symlink, so any box-local schema (`estate`'s
