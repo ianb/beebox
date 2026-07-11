@@ -185,13 +185,18 @@ something as fact rather than guess. Where you are decides the mechanism:
   a fallback for when you failed. Set \`learning: {sink, ref?, proposal}\`
   declaring the belief you're testing and where it lands (\`guide\`,
   \`briefing\`, or \`personality\`; sink \`briefing\` must target the root
-  briefing card). If a job hits ambiguity it can't resolve, finish by asking —
-  don't guess past it.
+  briefing card). When the boxholder answers, the follow-up job records the
+  confirmed (or denied) belief in that sink as a \`source: user-stated\` fact
+  — the strongest evidence tier, since the boxholder said it directly. If a
+  job hits ambiguity it can't resolve, finish by asking — don't guess past
+  it.
 
 Before asking, check \`box/questions/\` — including \`answered\`, \`dismissed\`,
 and \`expired\` cards, not just \`pending\` ones. An existing answer is a
 \`user-stated\` fact; don't re-ask it. A dismissal or expiry means the
-boxholder didn't care to answer that — raise the bar before asking again.
+boxholder didn't care to answer that — raise the bar before asking again, but
+note neither closes the question: both stay answerable later (expiry only
+demotes visibility from the active view; it's not a rejection).
 
 Always set \`directive:\` — what to do with the answer; the system creates a
 follow-up job carrying it once the user answers. Set \`expires-after:\` for a

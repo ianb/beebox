@@ -149,6 +149,8 @@ program
     const timestamp = new Date().toISOString().replace(/[.:]/g, "-").substring(0, 19);
     const outputPath = options.output ?? path.join(DEFAULT_OUTPUT_DIR, `audit-report-${timestamp}.md`);
 
+    // reports/ is gitignored, so a fresh worktree checkout doesn't have it.
+    await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, report, "utf-8");
     console.log(`\nReport written to: ${outputPath}`);
 
