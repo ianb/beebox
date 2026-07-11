@@ -1,6 +1,6 @@
 # Questions, end-to-end
 
-Status: proposed 2026-07-10, not yet implemented.
+Status: implemented 2026-07, on branch `worktree-questions-end-to-end`.
 
 Redesign of the questions subsystem so that it does the job it exists for:
 the box asks the boxholder things it cannot decide alone, the boxholder
@@ -618,3 +618,42 @@ Each chunk is a commit-sized unit with its tests; the plan ships as one unit
   `bin/browse` checks, per `docs/reports/user-stories-audit-2026-06-26.md`'s
   method note) as the acceptance pass — the subsystem this plan exists to
   fix was flagged by exactly that method.
+
+## Implementation notes
+
+Deviations and additions that surfaced during implementation, beyond what
+the tracks above already describe (Track B's atomicity section already
+carries its own "revised per codex review" note inline — this section is
+for findings that landed *after* a track's direction was written, not a
+restatement of it):
+
+- **Parse-time lifecycle coherence** (`refineQuestionLifecycle` in
+  `src/schemas/question.ts`) — a codex finding on Tracks A+B: the schema
+  ties each `status` to the lifecycle fields it must (and must not) carry
+  (`answer`/`answered-at`/`answered-via` for `answered`, `dismissed-at` for
+  `dismissed`, `expired-at` for `expired`), enforced by a `superRefine` at
+  load time — not just at the point a transition writes the card. This
+  closes a hole the original plan didn't call out: a hand-edited or
+  partially-migrated card carrying stale lifecycle fields for its current
+  status would otherwise load successfully.
+- **Fail-closed path containment** — `resolveContainedQuestionPath`
+  (`src/core/commands/question-transition.ts`) rejects a `question` path
+  that resolves outside the box (`../` segments, or an absolute path
+  escaping `boxRoot`) before any transition touches disk; the web tRPC
+  boundary additionally rejects absolute paths outright. Not explicitly
+  scoped in Track B's direction, but required by the same "validate at
+  boundaries" principle the track cites.
+- **`applyAndCommit` also unstages on rollback**, not just restores working-
+  tree content — `stageAndCommitPaths` stages before it commits, so a
+  failed commit otherwise leaves the transition's paths sitting in the
+  index for an unrelated later commit to sweep up.
+- **Templates split out**: `createSelectQuestionTemplate` /
+  `createTextQuestionTemplate` / `createConfirmQuestionTemplate` moved to
+  `src/schemas/templates-question.ts` (out of the shared
+  `src/schemas/templates.ts` catalogue) to keep that file under its
+  300-line budget once the templates grew `directive`/`learning`/
+  `expires-after` parameters.
+- **Migration script exit code**: `migrate/question-lifecycle` exits `2`
+  (soft failure, not a hard error) when select-options violations remain
+  after the pass, so a runbook can distinguish "ran, needs a human look at
+  N remaining cards" from a genuine script crash.
