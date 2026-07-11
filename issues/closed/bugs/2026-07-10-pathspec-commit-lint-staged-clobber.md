@@ -12,9 +12,15 @@ callback-box and callback-clerk. `--no-stash` is safe here specifically
 because both lint-staged configs are check-only eslint (no `--fix`) — there's
 no task-written output that the stash/backup was ever protecting, so removing
 the backup only removes the failure-path `git reset --hard HEAD` + partial-
-restore that did the clobbering. The independent partial-staged-file hiding
-(lint-staged always hides unstaged hunks from a partially-staged file before
-running tasks, stash or no) is unaffected. Reproduced in a scratch repo:
+restore that did the clobbering. A codex cross-review then caught a second
+trap: with `--no-stash` (which implies `--no-revert`), a task FAILURE skips
+restoring the unstaged hunks lint-staged hid from partially-staged files — an
+upstream bug (missing `return` in `restoreUnstagedChangesSkipped`,
+`lint-staged/lib/state.js`), reproduced in a scratch repo (the hunk was
+silently dropped). So the hook also passes `--no-hide-partially-staged`:
+nothing is ever hidden, eslint sees working-tree content for partially-staged
+files (as typecheck already does), verified hunk-safe on the failure path.
+Reproduced in a scratch repo:
 racing an edit to an unrelated tracked file into the middle of a failing
 lint-staged task showed default mode reverting that edit to its
 pre-run committed state on the revert-to-original-state path, while
