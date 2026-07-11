@@ -2774,6 +2774,12 @@ tests:
 
   # === Search and the contains: field ===
   #
+  # Status (2026-07-10): the two hybrid-search phrasing audits
+  # (search-query-phrasing, search-exact-identifier) pass on first run,
+  # 0 files read — descriptive sentence-shaped query for vague recall;
+  # bare token + --mode text for an exact identifier, with correct
+  # reasoning about when phrasing matters.
+  #
   # Status (2026-06-12): All 3 pass on first run. Agent answers from the
   # agent guide without re-reading docs (0 files read); search-over-grep
   # reaches for cb search (2 cb search invocations, no grep).
@@ -2803,6 +2809,36 @@ tests:
       is named first.
     correct_contains: ["cb search"]
     tags: [search, navigation]
+
+  - id: search-query-phrasing
+    prompt: >
+      You half-remember a card about a letter from some insurance
+      company regarding a pension — but not the company name or any
+      exact wording. What exact cb search command do you run?
+    expected_level: knows_directly
+    watch_for: >
+      Phrases a descriptive, sentence-shaped query (search is
+      meaning-ranked against each card's contains summary when
+      embeddings are configured) rather than one or two guessed
+      keywords — and doesn't fall back to grep/ls because no exact
+      words are known.
+    correct_contains: ["cb search", "pension"]
+    tags: [search, behavioral]
+
+  - id: search-exact-identifier
+    prompt: >
+      You need every card mentioning ticket number 10494 — an exact
+      identifier. How do you search, and does query phrasing matter
+      here?
+    expected_level: knows_directly
+    watch_for: >
+      Knows the bare rare token is enough (keyword ranking nails exact
+      identifiers wherever they appear), that surrounding filler words
+      neither help nor hurt much, and that --mode text exists to force
+      keyword-only ranking. Doesn't claim quoting gives exact-phrase
+      match.
+    correct_contains: ["10494"]
+    tags: [search]
 
   - id: contains-stale-response
     prompt: >

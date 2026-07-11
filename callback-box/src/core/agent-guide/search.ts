@@ -16,19 +16,30 @@ relevance, and weights the \`contains:\` field heavily. Standalone \`.md\` files
 index too (as kind \`markdown\`); operational card types (jobs, runs) aren't
 indexed — find those with \`cb ls\`.
 
-**Query style:** lead with the distinctive words you remember — names, unusual
-terms, numbers. Extra words help only when they describe the specific target;
-generic domain words dilute the ranking. It's relevance-ranked, not exact-match
-— there is no keyword or quoted-phrase mode.
+**Query style:** when the box has an embeddings key configured, search ranks by
+*meaning* as well as words (each card's \`contains:\` sentence is matched
+semantically, fused with keyword ranking). So for vague recall, describe the
+card in one sentence — shaped like the \`contains:\` line you hope exists — and
+include any exact tokens you remember (names, numbers, IDs): the sentence
+carries the semantic match, the rare tokens nail the keyword match. Both in one
+query is the optimum, not a compromise. For an exact-identifier hunt the bare
+token alone works. Without an embeddings key, ranking is keyword-only: lead
+with distinctive words. Either way it's relevance-ranked — quoting a phrase
+does not do exact-match.
 
 Examples:
 
-- \`cb search "carbonara"\` — find the pasta recipe
-- \`cb search "dentist reschedule" --kind email-message\` — the email about it, emails only
-- \`cb search "Maria phone" --path people\` — her number, under \`people/\`
+- \`cb search "the letter about the pension from the insurance company"\` — vague
+  recall: describe it; meaning-ranked even though no word may match exactly
+- \`cb search "dentist appointment moved to a new date" --kind email-message\` —
+  a summary-shaped sentence, emails only
+- \`cb search "Maria phone" --path people\` — exact tokens + a path filter
+- \`cb search "10494" --mode text\` — an exact identifier; \`--mode text\` forces
+  keyword-only ranking (offline, deterministic)
 
 **Filters:** \`--kind <type>\` (repeatable), \`--path <prefix>\`, \`--limit N\`
-(default 10); \`--json\` for the structured envelope.
+(default 10); \`--mode <text|hybrid>\` (omitted = automatic: semantic+keyword
+when available); \`--json\` for the structured envelope.
 
 **A result** shows the card's path (with a \`#fragment\` locator when the match is
 inside the card) and title, then the card's \`contains:\` sentence and a matched

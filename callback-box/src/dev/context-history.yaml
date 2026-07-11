@@ -2886,3 +2886,20 @@ test1:
       peak: 32194
       added: 0
       turns: 2
+content:
+  search-query-phrasing:
+    - date: 2026-07-11T02:31:07.204Z
+      boxCommit: 6115fc5d3cba37d63b1e8c6584e2bb1e49a4a4c7
+      repoCommit: c9e4dce621728d1b5447dcdde367d57112bc2fe3
+      initial: 43856
+      peak: 43856
+      added: 0
+      turns: 2
+  search-exact-identifier:
+    - date: 2026-07-11T02:31:17.443Z
+      boxCommit: 6115fc5d3cba37d63b1e8c6584e2bb1e49a4a4c7
+      repoCommit: c9e4dce621728d1b5447dcdde367d57112bc2fe3
+      initial: 43841
+      peak: 43841
+      added: 0
+      turns: 2

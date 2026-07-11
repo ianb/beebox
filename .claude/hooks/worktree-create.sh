@@ -42,6 +42,12 @@ input=$(cat)
 mkdir -p "$HOME/.cache/callback-box"
 printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-create-input.json"
 
+# Shared append-only lifecycle log (see session-end.sh for rationale) — the
+# create end of the lifecycle, so a lingering worktree can be traced back to
+# when/how it was made vs. when its session-end fired.
+WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
+wlog() { printf '%s pid=%s WorktreeCreate %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
+
 requested_path=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
 base_ref=$(printf '%s'       "$input" | jq -r '.base_ref // .baseRef // "main"')
 name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
@@ -62,11 +68,13 @@ BOX_SRC="$HOME/src/boxes/test1"
 BOX_DEST="$HOME/src/box-worktrees/$NAME/test1"
 
 echo "[worktree-create] name=$NAME base=$base_ref path=$worktree_path"
+wlog "event: name=$NAME base=$base_ref path=$worktree_path"
 
 # 1. Create (or re-attach to) the worktree.
 mkdir -p "$(dirname "$worktree_path")"
 if git worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
   echo "[worktree-create] worktree already registered at $worktree_path — resume, skipping setup"
+  wlog "resume: existing worktree reused name=$NAME"
   printf '%s\n' "$worktree_path" >&3
   exit 0
 elif git show-ref --verify --quiet "refs/heads/$new_branch"; then
