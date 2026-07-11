@@ -43,7 +43,28 @@ export interface PidStore {
   remove(name: string, expect?: PidExpectation): Promise<void>;
 }
 
-export function createPidStore(pidDir: string): PidStore {
+/**
+ * The filesystem operations the store performs, injectable so the invariant-#6
+ * serialization test can gate reads/writes/unlinks on test-controlled barriers
+ * (the real per-name promise chain is the thing under test; a synchronous fake
+ * couldn't force the read-then-unlink interleaving the serialization prevents).
+ * Defaults to real `node:fs/promises`.
+ */
+export interface PidStoreFs {
+  mkdir(dir: string): Promise<void>;
+  readFile(path: string): Promise<string>;
+  writeFile(path: string, content: string): Promise<void>;
+  unlink(path: string): Promise<void>;
+}
+
+const realFs: PidStoreFs = {
+  mkdir: (dir) => fs.mkdir(dir, { recursive: true }).then(() => undefined),
+  readFile: (p) => fs.readFile(p, "utf8"),
+  writeFile: (p, content) => fs.writeFile(p, content),
+  unlink: (p) => fs.unlink(p),
+};
+
+export function createPidStore(pidDir: string, backend: PidStoreFs = realFs): PidStore {
   // One serialization chain per worktree name. The stored tail swallows
   // outcomes so a failed op neither wedges the chain nor surfaces as an
   // unhandled rejection; the promise handed back to the caller still carries
@@ -67,8 +88,8 @@ export function createPidStore(pidDir: string): PidStore {
   }
 
   async function writeImpl(name: string, data: PidRecord): Promise<void> {
-    await fs.mkdir(pidDir, { recursive: true });
-    await fs.writeFile(path.join(pidDir, `${name}.json`), JSON.stringify(data, null, 2));
+    await backend.mkdir(pidDir);
+    await backend.writeFile(path.join(pidDir, `${name}.json`), JSON.stringify(data, null, 2));
   }
 
   async function removeImpl(name: string, expect: PidExpectation | undefined): Promise<void> {
@@ -77,7 +98,7 @@ export function createPidStore(pidDir: string): PidStore {
       try {
         // JSON.parse returns `any`; the annotation narrows it at this parse
         // boundary without an `as` cast (matching sweepStaleChildren's shape).
-        const data: Partial<PidRecord> = JSON.parse(await fs.readFile(fullPath, "utf8"));
+        const data: Partial<PidRecord> = JSON.parse(await backend.readFile(fullPath));
         if (data.vitePid !== expect.vitePid || data.fastifyPid !== expect.fastifyPid) {
           // A newer generation owns the slot now — leave it alone.
           return;
@@ -87,7 +108,7 @@ export function createPidStore(pidDir: string): PidStore {
       }
     }
     try {
-      await fs.unlink(fullPath);
+      await backend.unlink(fullPath);
     } catch {
       // Already gone — fine.
     }
