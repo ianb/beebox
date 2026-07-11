@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-11T01:47:40Z
+Generated: 2026-07-11T01:52:22Z
 Total documents: 167
 
 ## Issues
@@ -489,7 +489,7 @@ References:
 
 #### docs/box-layout.md
 
-Title: "Box Layout" | 202 lines
+Title: "Box Layout" | 212 lines
 
 Referenced by:
 - CLAUDE.md:92 (mention) — **Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the
@@ -515,6 +515,7 @@ Referenced by:
 References:
 - → CLAUDE.md (mention)
 - → docs/implemented-plans/boxes-as-packages-v2.md (mention)
+- → docs/implemented-plans/capture-mode.md (mention)
 - → docs/triage.md (mention)
 - → docs/client-debug-log.md (mention)
 
@@ -594,7 +595,7 @@ Referenced by:
 - docs/implemented-plans/chat-composer-rerender.md:140 (mention) — 4. Manual procedure in `docs/chat-scroll-testing.md` (stick-to-bottom,
 - docs/implemented-plans/chat-scroll-redesign.md:16 (mention) — > desktop Chrome via `bin/browse` (procedure: `docs/chat-scroll-testing.md`):
 - docs/implemented-plans/chat-stream-finalize-unify.md:364 (mention) — procedure in `docs/chat-scroll-testing.md` (extended), not doctests
-- docs/testing.md:520 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
+- docs/testing.md:519 (link) — checklist) lives in [chat-scroll-testing.md](chat-scroll-testing.md). The
 - src/frontend/src/components/chat/CLAUDE.md:31 (mention) — `docs/chat-scroll-testing.md`** (drives the app via `bin/browse`; layout
 
 References:
@@ -619,7 +620,7 @@ Title: "Client Debug Log" | 55 lines
 
 Referenced by:
 - CLAUDE.md:114 (mention) — - **Check client debug logs when debugging frontend issues.** The browser forwards console errors to the server (now via
-- docs/box-layout.md:162 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
+- docs/box-layout.md:172 (mention) — | `client-debug.log` | Browser console errors forwarded from the frontend. See `docs/client-debug-log.md`. |
 - docs/server-operations.md:195 (link) — For SSH-only debugging: `ssh root@<server> tail /home/callback/boxes/<box>/.callback-box/client-debug.log`. See [`client
 - ../.claude/skills/cb-guide-api/SKILL.md:38 (mention) — misbehaves (`docs/client-debug-log.md`).
 
@@ -698,7 +699,7 @@ Referenced by:
 - docs/maintenance.md:17 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:116 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:429 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
-- docs/testing.md:602 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
+- docs/testing.md:601 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
 - src/dev/CLAUDE.md:10 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 
@@ -858,7 +859,7 @@ Referenced by:
 - docs/implemented-plans/card-view-widgets.md:574 (mention) — **Altitude.** Per `docs/knowledge-taxonomy.md:307` view authoring sits at
 - docs/plans/docs-reorg.md:341 (mention) — (triage.md, event-bus.md, knowledge-taxonomy.md, …) and ruled
 - docs/plans/source-available-release.md:172 (mention) — test data), `docs/knowledge-taxonomy.md:468-491` (agent inferring the real
-- docs/testing.md:382 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
+- docs/testing.md:381 (link) — See [knowledge-taxonomy.md](knowledge-taxonomy.md) for the full knowledge taxonomy and test prompt guide.
 - ../research/openclaw-hermes/compare-context-memory.md:92 (mention) — **Layered instruction files, narrowed by role, is universal.** CBX's always-loaded/conditionally-loaded/referenced-but-n
 - ../research/openclaw-hermes/compare-skills-tools.md:84 (mention) — explicitly not agent-editable (`docs/knowledge-taxonomy.md`). There is no plugin manifest, no
 - ../research/pai/information-layout.md:9 (mention) — cb's comparable thinking is `docs/knowledge-taxonomy.md` (the knows-directly /
@@ -961,7 +962,7 @@ Referenced by:
 
 #### docs/procedure-implementation.md
 
-Title: "Procedures" | 212 lines
+Title: "Procedures" | 223 lines
 
 Referenced by:
 - CLAUDE.md:142 (mention) — | Procedures | `docs/procedure-implementation.md` |
@@ -1126,7 +1127,7 @@ Referenced by:
 
 #### docs/testing.md
 
-Title: "Testing" | 622 lines
+Title: "Testing" | 621 lines
 
 Referenced by:
 - CLAUDE.md:132 (mention) — | Testing philosophy | `docs/testing.md` |
@@ -1182,7 +1183,7 @@ Title: "Tours — scripted browser walks for rendering + a11y review" | 133 line
 
 Referenced by:
 - CLAUDE.md:133 (mention) — | Tours (browser walks for UI/a11y review) | `docs/tours.md` |
-- docs/testing.md:554 (link) — them: [tours.md](tours.md).
+- docs/testing.md:553 (link) — them: [tours.md](tours.md).
 - ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:22 (mention) — Filed while formalizing tours (docs/tours.md); the 2026-07-10 fixes to
 
 References:
@@ -1194,7 +1195,7 @@ Title: "Triage" | 264 lines
 
 Referenced by:
 - CLAUDE.md:147 (mention) — | Triage pipeline design | `docs/triage.md` |
-- docs/box-layout.md:107 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
+- docs/box-layout.md:117 (mention) — | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal tri
 - docs/connectors.md:86 (mention) — - `intake-utils.ts` — `createOrAppendIntakeJob()` for creating reactor inbox-processing jobs (legacy reactor path, disti
 - docs/design/README.md:28 (link) — triage pipeline → [`../triage.md`](../triage.md); calendar →
 - docs/design/processing.md:36 (link) — [`../triage.md`](../triage.md). Possible outcomes for an item: archive it
@@ -1595,7 +1596,7 @@ Referenced by:
 - docs/plans/docs-reorg.md:51 (mention) — - **At least 5 plans are done-but-never-moved**: `boxes-as-packages-v2.md`
 - docs/plans/source-available-release.md:384 (mention) — concerns (`docs/implemented-plans/boxes-as-packages-v2.md` is the roadmap). Doing
 - docs/server-operations.md:38 (mention) — | Box manifest (which boxes the scheduler still sees — retirement deferred, see `docs/implemented-plans/boxes-as-package
-- docs/testing.md:304 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
+- docs/testing.md:303 (mention) — **Directory structure:** `cb init` now scaffolds the v2 package layout by default (package.json/tsconfig/src/ plus an op
 - docs/unimplemented-plans/README.md:16 (mention) — | `boxes-as-packages-v1-superseded.md` | Superseded by `../implemented-plans/boxes-as-packages-v2.md` (2026-07-03), whic
 - docs/unimplemented-plans/boxes-as-packages-v1-superseded.md:3 (mention) — **Status:** SUPERSEDED by `docs/implemented-plans/boxes-as-packages-v2.md` (2026-07-03), which re-derives
 - ../issues/decisions/2026-07-04-box-registry-manifests.md:33 (mention) — `callback-box/docs/implemented-plans/boxes-as-packages-v2.md`.
@@ -1617,10 +1618,12 @@ References:
 Title: "Capture mode — unifying capture into the input" | 670 lines
 
 Referenced by:
+- docs/box-layout.md:99 (mention) — `docs/implemented-plans/capture-mode.md`; agent duties:
 - docs/plans/cli-restructure.md:9 (mention) — **2026-07 update:** the capture-processing commands this plan discusses renaming/grouping (`cb transcribe-captures`, `cb
 - docs/plans/input-widget.md:9 (mention) — (`docs/implemented-plans/capture-mode.md`). The remaining open section
 - docs/plans/input-widget.md:535 (link) — [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)
 - docs/unimplemented-plans/capture-pipeline-redesign.md:3 (link) — **Superseded by [../implemented-plans/capture-mode.md](../implemented-plans/capture-mode.md)** — that plan retired the `
+- ../issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md:53 (mention) — capture-mode work (`callback-box/docs/implemented-plans/capture-mode.md`):
 
 References:
 - → docs/plans/input-widget.md (link)

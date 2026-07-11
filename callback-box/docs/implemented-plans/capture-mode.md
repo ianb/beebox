@@ -455,7 +455,7 @@ prune (`install-template-file.ts:303-390`). Enumerate the field hashes
 the same way template rollouts do (`priorStockHashes` style). A
 boxholder-modified copy parks instead of deleting. In-flight inbox
 capture-session cards (including the prod retry-loop victim,
-`issues/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
+`issues/closed/bugs/2026-07-07-capture-pipeline-retries-broken-capture-forever.md`)
 are *not* auto-migrated: they stay in inbox as ordinary cards for the
 normal triage/agent flow; the migration note tells the agent they're
 legacy. `MicrophoneIcon`/`StopIcon` move to a shared icons module

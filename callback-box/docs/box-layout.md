@@ -87,7 +87,17 @@ repository" in `docs/implemented-plans/boxes-as-packages-v2.md` for the full des
 ├── tricks/                  agent-authored scripts (optional)
 ├── views/                   custom view definitions (optional)
 └── tmp/                     scratch space (not committed)
+    └── capture-staging/     in-flight capture-mode media: one session dir
+                             per capture (chunks/photos + session.json),
+                             swept when abandoned (partial delivery)
 ```
+
+Prepared captures land in a `tmp-capture/` directory inside the target
+chat's context area (tracked and committed, unlike `tmp/`) as a
+capture-session card + attach scope; the chat agent annotates and files
+them out — `tmp-capture/` must not accumulate. Flow reference:
+`docs/implemented-plans/capture-mode.md`; agent duties:
+`docs/generated/card-capture-session.md`.
 
 ## Marker and runtime files (root)
 
@@ -103,7 +113,7 @@ Items move through these directories as they're processed. **Location is state**
 
 | Directory | Purpose |
 |-----------|---------|
-| `box/inbox/` | Incoming items awaiting triage. Created by capture UI, connectors, `cb create`. |
+| `box/inbox/` | Incoming items awaiting triage. Created by connectors, `cb create`, `cb scan-import`. (Composer captures don't land here — they deliver to chat; see below.) |
 | `box/inbox/unhandled/` | Items with no clear destination after triage. Pre-existing catch-all; predates the formal triage pipeline (its lifecycle is `docs/triage.md` Open Question #9). |
 | `box/inbox/intake/` | Items being prepared before triage (transcription, OCR, filename normalization). See `docs/triage.md`. |
 | `box/inbox/staged/` | Intake-complete; waiting for the triage agent. |

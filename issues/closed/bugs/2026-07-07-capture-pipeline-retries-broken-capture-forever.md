@@ -46,3 +46,14 @@ so #1 is a template change with the usual stock-vs-box-local rollout question
 
 Immediate stopgap while this is unfixed: disable that box's process-captures
 schedule, or quarantine that one May-14 capture out of the inbox.
+
+---
+
+**Closed 2026-07-10.** The pipeline this describes was retired by the
+capture-mode work (`callback-box/docs/implemented-plans/capture-mode.md`):
+the `retire-process-captures` migration removes the procedure card and
+trigger from deployed boxes (parking modified copies), so the retry loop
+cannot fire; the broken capture card itself stays in inbox as legacy data
+for normal triage. The underlying failure class is also closed by design —
+the new pipeline's sweep logs stale `failed:*` sessions once per run and
+never auto-retries them.
