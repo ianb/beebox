@@ -1,5 +1,23 @@
 # Remove box-shape v1 (legacy) + de-template box skills
 
+> **Status (2026-07-11):** Track 1 (skills de-templating) is being implemented —
+> unaffected by review. **Track 2 (v1 removal) below is SUPERSEDED pending a
+> redesign** — a cross-model review (`remove-box-shape-v1.review.md`) found its
+> root-model mechanism wrong on three counts and its true cost mis-estimated:
+> (a) the `{shapeVersion:2, packageRoot:boxRoot}` fallback is an *impossible*
+> shape — v2's packageRoot is the *parent* of boxRoot — so it breaks `boxCodePaths`
+> and every `relative(packageRoot, boxRoot)` caller; (b) `compiler.ts`'s
+> `defaultBoxShape()` is a genuine third "engine-hosted" resolution mode, not v1,
+> and can't be relabeled v2; (c) the dominant cost is that `makeTmpBox()` (~579
+> calls) writes an empty marker meaning v1 and `initBox()` defaults to v1 (55
+> sites), so the *entire* test suite builds v1 boxes — removing v1 means
+> redesigning fixture construction to build real v2 package layouts, and the
+> strict-shape flip + fixture redesign + init/detect changes + converter
+> retirement must land atomically. Also: `box-packageify` is retired to a
+> tombstone (append-only migration invariant), not deleted. **Do not implement
+> Track 2 from this draft** — it needs a fresh root-model design first. Track 1
+> stands on its own and ships independently.
+
 All boxes are shapeVersion 2 (boxholder ruling, 2026-07). This plan removes the
 v1/legacy box shape entirely — the bilingual shape predicate, the resolve-hook
 machinery it required, the in-place conversion script, and the docs/tests that
