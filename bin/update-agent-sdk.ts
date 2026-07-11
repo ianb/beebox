@@ -1,10 +1,9 @@
 #!/usr/bin/env node --import tsx
 /**
- * Agent SDK updater (`pnpm update-agent-sdk`): bumps
+ * Agent SDK updater (`pnpm update-agent-sdk`): bumps the EXACT pin of
  * `@anthropic-ai/claude-agent-sdk` in callback-box/package.json to the newest
- * npm release that clears the pnpm `minimumReleaseAge` guard, installs, and
- * typechecks. `--check` only reports staleness (exit 1 when behind) without
- * touching anything.
+ * npm release at least two days old, installs, and typechecks. `--check` only
+ * reports staleness (exit 1 when behind) without touching anything.
  *
  * Why this exists: the SDK bundles the Claude Code binary the box agents run
  * (it ignores $PATH and any system `claude`), frozen at install time. And a
@@ -13,6 +12,12 @@
  * agent binary without noticing. This script crosses minors deliberately;
  * typecheck (here) plus the test suite and the steering probe (run them after)
  * are the gate. History: issues/closed/code-quality/2026-05-09-claude-code-sdk-binary-currency.md.
+ *
+ * The pin must stay EXACT (no caret): the SDK family is excluded from the
+ * repo's global 7-day minimum-release-age so it can ride this faster 2-day
+ * lane, and with the age gate excluded a caret would resolve straight to a
+ * minutes-old release. The exact pin makes this script the only thing that
+ * moves the version, and the 2-day gate lives here.
  *
  * After a bump, run:
  *   pnpm -C callback-box test
@@ -58,23 +63,23 @@ function publishTimes(): Map<string, Date> {
 }
 
 /**
- * The pnpm minimum-release-age setting in minutes, from the tracked root
- * .npmrc (authoritative — it's what any checkout, including cloud/CI, sees),
- * falling back to machine-level `pnpm config`. Refuses to run unguarded:
- * picking a minutes-old release with no age gate is exactly the supply-chain
- * exposure the setting exists to prevent.
+ * The SDK family tracks a FASTER lane than the repo's global 7-day
+ * minimum-release-age: Claude Code ships near-daily and we want its fixes and
+ * agent-behavior changes within days, not a week behind. Two days is enough
+ * for a bad release to be yanked. The root .npmrc excludes
+ * `@anthropic-ai/claude-agent-sdk*` from the global gate specifically so this
+ * script's gate governs instead — verified below; without the exclusion,
+ * `pnpm install` would refuse anything younger than the global gate anyway.
  */
+const SDK_MINIMUM_RELEASE_AGE_MINUTES = 2 * 24 * 60;
+
 function minimumReleaseAgeMinutes(): number {
   const npmrc = fs.readFileSync(path.join(REPO_ROOT, ".npmrc"), "utf-8");
-  const inRepo = npmrc.match(/^minimum-release-age\s*=\s*(\d+)\s*$/m);
-  if (inRepo?.[1] !== undefined) return Number.parseInt(inRepo[1], 10);
-  const out = run("pnpm", { args: ["config", "get", "minimumReleaseAge"], cwd: REPO_ROOT }).trim();
-  const minutes = Number.parseInt(out, 10);
-  if (Number.isNaN(minutes) || minutes <= 0) {
-    console.error("update-agent-sdk: no minimum-release-age configured (.npmrc or pnpm config) — refusing to resolve unguarded");
+  if (!/^minimum-release-age-exclude\[\]=@anthropic-ai\/claude-agent-sdk\*\s*$/m.test(npmrc)) {
+    console.error("update-agent-sdk: root .npmrc is missing `minimum-release-age-exclude[]=@anthropic-ai/claude-agent-sdk*` — the global gate would block the fast lane. Restore it.");
     process.exit(2);
   }
-  return minutes;
+  return SDK_MINIMUM_RELEASE_AGE_MINUTES;
 }
 
 function compareVersions(a: string, b: string): number {
@@ -131,7 +136,9 @@ function rewriteManifest(target: string): void {
     console.error(`update-agent-sdk: no ${PACKAGE} entry in ${MANIFEST}`);
     process.exit(2);
   }
-  fs.writeFileSync(MANIFEST, manifest.replace(specRe, `"@anthropic-ai/claude-agent-sdk": "^${target}"`));
+  // Exact pin, no caret — see the header: with the SDK family excluded from
+  // the global age gate, a range would resolve to brand-new releases.
+  fs.writeFileSync(MANIFEST, manifest.replace(specRe, `"@anthropic-ai/claude-agent-sdk": "${target}"`));
 }
 
 const checkOnly = process.argv.includes("--check");

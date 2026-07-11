@@ -28,12 +28,15 @@ A second category catches the kind of code-health issues that pile up if nobody 
 
 ### Agent SDK update — `pnpm update-agent-sdk` (monorepo root)
 
-Bumps `@anthropic-ai/claude-agent-sdk` to the newest npm release that clears
-the pnpm `minimumReleaseAge` guard, installs, and typechecks. The SDK bundles
-the Claude Code binary every box agent runs (it ignores any system `claude`),
-frozen at install time — and its `^0.x` caret never crosses 0.x minors, so
-plain `pnpm update` does NOT keep it current (this is how we once shipped a
-two-month-old agent binary without noticing).
+Bumps the exact pin of `@anthropic-ai/claude-agent-sdk` to the newest npm
+release at least **2 days** old, installs, and typechecks. The SDK bundles the
+Claude Code binary every box agent runs (it ignores any system `claude`),
+frozen at install time. The SDK rides a faster lane than every other
+dependency: the root `.npmrc` excludes the SDK family from the global 7-day
+`minimum-release-age` gate, and the script enforces its own 2-day gate — which
+is why the pin must stay exact (a caret plus the exclusion would resolve to
+minutes-old releases; and historically a `^0.x` caret also silently stopped
+crossing 0.x minors, which once left us on a two-month-old agent binary).
 
 **When to run:** automated — `bin/update-agent-sdk-scheduled.sh --install`
 (from the **main checkout**, once per machine) registers a launchd job that
