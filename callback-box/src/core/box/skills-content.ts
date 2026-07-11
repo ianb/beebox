@@ -243,13 +243,13 @@ full field reference.
 
 /**
  * The `calendar` skill: authoring `.ics` events for two-way Google Calendar
- * sync. Generated per-box so the example carries the box's real timezone and a
- * correct VTIMEZONE block the agent can copy verbatim (hand-writing DST rules
- * is exactly the error this prevents). The caller (box-skills.ts) resolves
- * both.
+ * sync. A static constant: the box's timezone is referenced by the `BOX_TZ`
+ * placeholder (already on the `Timezone:` line in the agent's system context),
+ * and the box-specific VTIMEZONE block is fetched at author time with
+ * `cb calendar vtimezone` rather than baked in (hand-writing DST rules is
+ * exactly the error this prevents).
  */
-export function calendarSkill({ timezone, vtimezone }: { timezone: string; vtimezone: string }): string {
-  return `---
+export const CALENDAR_SKILL = `---
 name: calendar
 description: Work with the box's calendar — view, create, edit, or delete Google Calendar events by authoring .ics files in store/calendar/. Use when scheduling, adding/changing/removing an event, setting up a meeting or appointment, or any task that touches the box's calendar.
 ---
@@ -265,7 +265,10 @@ Calendar events live as \`.ics\` files in \`store/calendar/\`. Sync with Google 
 - **Edit an event:** modify a tracked \`.ics\` file directly. The next sync pushes the changes.
 - **Delete an event:** add an \`X-CB-DELETE:<reason>\` property to a tracked \`.ics\` file. The next sync deletes it from Google Calendar.
 
-**Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected. This box's timezone is \`${timezone}\`; the example below carries its correct VTIMEZONE block — copy it as-is.
+**Timezone requirement:** non-all-day events MUST include a VTIMEZONE component and a TZID parameter on DTSTART/DTEND. Never create floating-time events — they'll be rejected.
+
+- \`BOX_TZ\` in the example below is this box's timezone — it's on the \`Timezone:\` line already in your system context (or run \`cb calendar vtimezone\`, which prints it). Substitute it wherever \`BOX_TZ\` appears.
+- Get the box's exact VTIMEZONE block by running \`cb calendar vtimezone\` and paste it verbatim into the VCALENDAR (hand-writing DST rules is error-prone).
 
 Example minimal \`.ics\` for a new event:
 
@@ -273,19 +276,18 @@ Example minimal \`.ics\` for a new event:
 BEGIN:VCALENDAR
 VERSION:2.0
 PRODID:-//Callback Box//EN
-${vtimezone.trim()}
+<paste the output of \`cb calendar vtimezone\` here>
 BEGIN:VEVENT
 UID:unique-id-here
 SUMMARY:Dentist appointment
-DTSTART;TZID=${timezone}:20260401T140000
-DTEND;TZID=${timezone}:20260401T150000
+DTSTART;TZID=BOX_TZ:20260401T140000
+DTEND;TZID=BOX_TZ:20260401T150000
 X-CB-REASON:confirmed in the reschedule email
 X-CB-REF:/store/archive/Dentist_Reschedule.email-message.card
 END:VEVENT
 END:VCALENDAR
 \`\`\`
 `;
-}
 
 /** The `drive` skill: reading/editing/syncing Google Drive sheets and docs. */
 export const DRIVE_SKILL = `---
@@ -419,19 +421,10 @@ description: Formalize a repeated operation as a reusable script you can rerun w
 
 A **trick** is a reusable script — you package a useful operation once and rerun it with \`cb trick <name>\`, instead of redoing it by hand each time. The signal to make one is *repetition*: the second time you find yourself running the same multi-step task, that's when it's worth formalizing.
 
-Each trick lives in \`tricks/scripts/<name>/\` with an \`index.ts\`. Read \`tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one.
+Each trick lives in \`src/tricks/scripts/<name>/\` with an \`index.ts\`. Read \`src/tricks/scripts/CLAUDE.md\` for the authoring shape (the script environment, arguments, how it's invoked) before writing one.
 
 Tricks are box-local by default, but the operation itself needn't be box-specific — a general utility (an image generation, a format conversion) is a fine trick if it's something this box does repeatedly.
 `;
-
-/**
- * v2 (package-layout) variant of the tricks skill: tricks live at
- * `src/tricks/` (the package root), not `tricks/` (the box root). Derived by
- * substitution — same pattern as `TRICKS_CLAUDE_MD_V2` in `box-templates.ts`
- * — so the two paths named here can't drift out of lockstep by hand-editing
- * only one.
- */
-export const TRICKS_SKILL_V2 = TRICKS_SKILL.replaceAll("tricks/scripts/", "src/tricks/scripts/");
 
 /**
  * The `views` skill: authoring a .tsx view. Rare, mechanics-heavy box-building

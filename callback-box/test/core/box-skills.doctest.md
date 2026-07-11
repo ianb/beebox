@@ -51,6 +51,15 @@ await generateSkills(box.root);
 const cal = await readFile(box.path(".claude/skills/calendar/SKILL.md"), "utf8");
 cal.startsWith("---\nname: calendar\n") && cal.includes("description:") && cal.includes("# Calendar")
 => true
+```
+
+The `calendar` skill is a static constant: it references the box timezone by the
+`BOX_TZ` placeholder and points at `cb calendar vtimezone` for the VTIMEZONE block,
+rather than baking either in.
+
+```ts continue
+cal.includes("TZID=BOX_TZ:") && cal.includes("cb calendar vtimezone")
+=> true
 
 const drv = await readFile(box.path(".claude/skills/drive/SKILL.md"), "utf8");
 drv.startsWith("---\nname: drive\n") && drv.includes("description:") && drv.includes("# Google Drive")
@@ -69,4 +78,12 @@ const texts = await Promise.all(names.map((name) => readFile(box.path(".claude/s
 const bad = names.filter((name, i) => !(texts[i].startsWith("---\nname: " + name + "\n") && texts[i].includes("description:")));
 bad.join(",")
 =>
+```
+
+The `tricks` skill is now a single static constant with the package-layout
+script path (`src/tricks/scripts/`), no shape fork:
+
+```ts continue
+texts[names.indexOf("tricks")].includes("src/tricks/scripts/")
+=> true
 ```
