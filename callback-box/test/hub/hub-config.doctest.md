@@ -221,6 +221,69 @@ JSON.stringify({ lazy: lazyConfig.lazy, idleMs: lazyConfig.idleMs })
 => {"lazy":true,"idleMs":60000}
 ```
 
+## `keepRecent` defaults to 0, parses with `lazy`, and requires `lazy: true`
+
+Boxholder directive (2026-07-11): `keepRecent` keeps the N most-recently-used
+boxes alive in an otherwise idle-stopping lazy hub (and pre-starts them on a
+hub restart). It defaults to 0 (pure idle-stop) and is only meaningful with
+`lazy: true` — a positive value on a resident hub is a fail-closed config
+error, since every box there already stays up.
+
+```ts continue
+const defaultKeep = await loadHubConfig(plainConfigPath);
+defaultKeep.keepRecent
+=> 0
+```
+
+```ts continue
+const keepConfigPath = await writeConfig(box3.root, {
+  boxes: { test1: { path: "./boxes/test1" } },
+  lazy: true,
+  keepRecent: 2,
+});
+(await loadHubConfig(keepConfigPath)).keepRecent
+=> 2
+```
+
+`keepRecent > 0` without `lazy: true` is rejected, and the message names the
+constraint:
+
+```ts continue
+const keepNoLazyPath = await writeConfig(box3.root, {
+  boxes: { test1: { path: "./boxes/test1" } },
+  keepRecent: 1,
+});
+const keepErr = await tryLoad(keepNoLazyPath);
+keepErr instanceof HubConfigError
+=> true
+
+keepErr.message.includes("keepRecent") && keepErr.message.includes("lazy")
+=> true
+```
+
+`keepRecent: 0` without `lazy` is fine (it's the default — nothing to keep):
+
+```ts continue
+const keepZeroPath = await writeConfig(box3.root, {
+  boxes: { test1: { path: "./boxes/test1" } },
+  keepRecent: 0,
+});
+(await tryLoad(keepZeroPath)) instanceof HubConfigError
+=> false
+```
+
+A negative or non-integer `keepRecent` is a schema error:
+
+```ts continue
+const keepNegPath = await writeConfig(box3.root, {
+  boxes: { test1: { path: "./boxes/test1" } },
+  lazy: true,
+  keepRecent: -1,
+});
+(await tryLoad(keepNegPath)) instanceof HubConfigError
+=> true
+```
+
 ```ts cleanup
 await box3.cleanup();
 ```

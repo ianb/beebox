@@ -193,6 +193,7 @@ const lazyConfig = {
   configPath: lazyFixture.path("hub.json"),
   lazy: true,
   idleMs: 30,
+  keepRecent: 0,
 };
 const lazySupervisor = new Supervisor({
   config: lazyConfig,
@@ -266,4 +267,167 @@ lazyChildren.length
 ```ts cleanup
 await lazySupervisor.stopAll();
 await lazyFixture.cleanup();
+```
+
+## `keepRecent`: the most-recently-used running box is exempt from idle-stop, and is displaced when another box becomes more recent
+
+Boxholder directive (2026-07-11): with `keepRecent: 1` a lazy hub keeps the
+single most-recently-used box alive instead of idle-stopping it, so a burst of
+use leaves one box warm ("basically free"). The idle-fire decision is exposed
+as `evaluateIdle(slug)` (the real `setTimeout` just calls it) so the doctest
+drives it deterministically via an injected clock, with a large `idleMs` so no
+real timer fires mid-test.
+
+```ts continue
+const keepFixture = await makeTmpBox();
+let keepChildren = [];
+function keepSpawnChild() {
+  const child = makeFakeChild(920000 + keepChildren.length);
+  keepChildren.push(child);
+  return child;
+}
+function keepCheckReady() {
+  return Promise.resolve();
+}
+
+let clock = 1000;
+const keepConfig = {
+  port: undefined,
+  host: undefined,
+  boxes: { a: { path: keepFixture.root }, b: { path: keepFixture.root } },
+  configPath: keepFixture.path("hub.json"),
+  lazy: true,
+  idleMs: 100000,
+  keepRecent: 1,
+};
+const keepSupervisor = new Supervisor({
+  config: keepConfig,
+  hubSecret: "test-hub-secret",
+  spawnChild: keepSpawnChild,
+  checkReady: keepCheckReady,
+  now: () => clock,
+});
+await keepSupervisor.startAll();
+```
+
+Use box `a` (at t=1000), then box `b` (at t=2000): `b` is now the more-recent
+box, so the keep-set is `[b]`.
+
+```ts continue
+clock = 1000;
+await keepSupervisor.ensureRunning("a");
+clock = 2000;
+await keepSupervisor.ensureRunning("b");
+JSON.stringify(keepSupervisor.keepSetSlugs())
+=> ["b"]
+```
+
+`a`'s idle timer firing stops it (not in the keep-set); `b`'s firing keeps it
+alive (most-recently-used) and re-arms:
+
+```ts continue
+await keepSupervisor.evaluateIdle("a")
+=> stopped
+
+await keepSupervisor.evaluateIdle("b")
+=> kept
+
+JSON.stringify(keepSupervisor.getStatuses().map((s) => ({ slug: s.slug, status: s.status })))
+=> [{"slug":"a","status":"stopped"},{"slug":"b","status":"running"}]
+```
+
+Now use `a` again (at t=3000): it becomes the most-recent box, displacing `b`
+from the keep-set. `b`'s next idle evaluation therefore stops it:
+
+```ts continue
+clock = 3000;
+await keepSupervisor.ensureRunning("a");
+JSON.stringify(keepSupervisor.keepSetSlugs())
+=> ["a"]
+
+await keepSupervisor.evaluateIdle("b")
+=> stopped
+
+await keepSupervisor.evaluateIdle("a")
+=> kept
+```
+
+```ts cleanup
+await keepSupervisor.stopAll();
+await keepFixture.cleanup();
+```
+
+## `keepRecent`: recency persists across a hub restart — `startAll` pre-starts the top-`keepRecent` slugs
+
+Activity recorded in one Supervisor is flushed to `hub-state.json` (a sibling
+of the config file) on `stopAll()`; a fresh Supervisor over the same config
+reads it back and its lazy `startAll` pre-starts the top-`keepRecent` boxes by
+persisted recency instead of leaving everything stopped.
+
+```ts continue
+const rtFixture = await makeTmpBox();
+function makeRtSupervisor() {
+  const children = [];
+  const config = {
+    port: undefined,
+    host: undefined,
+    boxes: { a: { path: rtFixture.root }, b: { path: rtFixture.root } },
+    configPath: rtFixture.path("hub.json"),
+    lazy: true,
+    idleMs: 100000,
+    keepRecent: 1,
+  };
+  let t = 5000;
+  const supervisor = new Supervisor({
+    config,
+    hubSecret: "test-hub-secret",
+    spawnChild() {
+      const child = makeFakeChild(930000 + children.length);
+      children.push(child);
+      return child;
+    },
+    checkReady() {
+      return Promise.resolve();
+    },
+    now: () => (t += 1000),
+  });
+  return { supervisor, children };
+}
+
+const first = makeRtSupervisor();
+await first.supervisor.startAll();
+```
+
+First boot: no persisted state yet, so `startAll` pre-starts nothing:
+
+```ts continue
+JSON.stringify(first.supervisor.getStatuses().map((s) => s.status))
+=> ["stopped","stopped"]
+```
+
+Use `a` then `b` (so `b` is most-recent), then shut down — `stopAll` flushes
+recency to disk:
+
+```ts continue
+await first.supervisor.ensureRunning("a");
+await first.supervisor.ensureRunning("b");
+await first.supervisor.stopAll();
+```
+
+A fresh Supervisor over the same config pre-starts the single most-recent box
+(`b`) on `startAll`, leaving `a` stopped:
+
+```ts continue
+const second = makeRtSupervisor();
+await second.supervisor.startAll();
+JSON.stringify(second.supervisor.getStatuses().map((s) => ({ slug: s.slug, status: s.status })))
+=> [{"slug":"a","status":"stopped"},{"slug":"b","status":"running"}]
+
+second.children.length
+=> 1
+```
+
+```ts cleanup
+await second.supervisor.stopAll();
+await rtFixture.cleanup();
 ```
