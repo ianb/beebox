@@ -47,6 +47,17 @@
           }
         ]
       }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/auto-sweep.sh session-start"
+          }
+        ]
+      }
     ]
   }
 }
