@@ -21,7 +21,7 @@
  * before shipping the bump.
  */
 
-import { query, type Options, type SDKMessage, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
+import { query, type Options, type SDKUserMessage } from "@anthropic-ai/claude-agent-sdk";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -60,8 +60,7 @@ function userMsg(scenario: Scenario, text: string): SDKUserMessage {
     parent_tool_use_id: null,
     ...(scenario.priority !== undefined ? { priority: scenario.priority } : {}),
   };
-  // Cast is sound: SDKUserMessage declares fields (uuid) the SDK fills in
-  // itself — same construction as services/claude-chat.ts run.send().
+  // eslint-disable-next-line no-restricted-syntax -- sound: SDKUserMessage declares fields (uuid) the SDK fills in itself — same construction as services/claude-chat.ts run.send()
   return msg as SDKUserMessage;
 }
 
@@ -109,7 +108,7 @@ async function runScenario(scenario: Scenario): Promise<Observation> {
     settle = setTimeout(() => input.end(), 30_000);
   };
 
-  for await (const msg of q as AsyncIterable<SDKMessage>) {
+  for await (const msg of q) {
     if (msg.type === "stream_event") {
       deltas++;
       if (scenario.pushOn === "text-delta" && deltas >= 5) pushSteer();
