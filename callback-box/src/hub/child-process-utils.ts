@@ -54,6 +54,14 @@ export class HttpReadinessTimeoutError extends Error {
   }
 }
 
+/** Human-readable message for an error caught during a box launch: the
+ *  readiness-timeout class already carries a descriptive message, everything
+ *  else falls back to its `.message` or a string form. */
+export function describeError(e: unknown): string {
+  if (e instanceof HttpReadinessTimeoutError) return e.message;
+  return e instanceof Error ? e.message : String(e);
+}
+
 export function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }

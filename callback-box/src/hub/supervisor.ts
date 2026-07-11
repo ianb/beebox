@@ -15,62 +15,26 @@
  */
 
 import * as path from "node:path";
-import { execa, type ResultPromise } from "execa";
 import getPorts from "get-port";
-import { getBoxShape, type BoxShape } from "../lib/box-shape.js";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { fileExists } from "../lib/file-exists.js";
+import { getBoxShape } from "../lib/box-shape.js";
 import type { HubConfig, BoxEntry } from "./hub-config.js";
+import { HubState } from "./hub-state.js";
+import { invariant } from "../lib/invariant.js";
 import type { Endpoint, EndpointProvider } from "./endpoints.js";
-import { waitForHttp, killGroup, sleep, HttpReadinessTimeoutError } from "./child-process-utils.js";
+import { killGroup, sleep, describeError } from "./child-process-utils.js";
 import { buildChildEnv } from "./child-env.js";
 import { forwardChildOutput } from "./child-output-log.js";
+import { boxHasPendingSchedules } from "./pending-schedules.js";
+// prettier-ignore
+import { type ChildProc, type SpawnChildFn, type CheckReadyFn, defaultSpawnChild, defaultCheckReady, resolveBoxRoot, resolveCbBinary } from "./child-spawn.js";
 
-type ChildProc = ResultPromise<{ stdio: ["ignore", "pipe", "pipe"]; detached: true; cleanup: true }>;
-
-// `buildChildEnv` moved to `./child-env.ts` to keep this file under the
-// 300-line cap; re-exported here so existing importers (including
-// `test/hub/supervisor.doctest.md`) don't need to change their import path.
+// `buildChildEnv` (env allowlist) and the child-spawn/box-resolution
+// primitives moved to sibling files to keep this one under the 300-line cap;
+// `buildChildEnv` is re-exported here so existing importers
+// (`test/hub/supervisor.doctest.md`) don't need to change their import path.
+// `resolveBoxRoot` importers point at `./child-spawn.js` directly.
 export { buildChildEnv };
 
-/** Params for spawning a box child process -- see `SpawnChildFn`. */
-export interface ChildSpawnParams {
-  cbBinary: string;
-  args: string[];
-  cwd: string;
-  env: NodeJS.ProcessEnv;
-}
-
-/**
- * Injectable child-process spawner. Real `execa` by default; tests override
- * it to simulate a child that never becomes ready, deterministically and
- * without a real process -- see `test/hub/supervisor.doctest.md`'s restart
- * race coverage.
- */
-export type SpawnChildFn = (params: ChildSpawnParams) => ChildProc;
-
-function defaultSpawnChild(params: ChildSpawnParams): ChildProc {
-  // eslint-disable-next-line no-restricted-syntax -- execa's ResultPromise carries a large options-derived generic that TS can't infer down to our narrow ChildProc structural view; the returned handle is used only for the fields ChildProc declares
-  return execa(params.cbBinary, params.args, {
-    cwd: params.cwd,
-    env: params.env,
-    stdio: ["ignore", "pipe", "pipe"],
-    detached: true,
-    cleanup: true,
-  }) as ChildProc;
-}
-
-/** Injectable readiness probe -- real `waitForHttp` by default; tests
- *  override it to fail immediately instead of waiting out
- *  `READY_TIMEOUT_MS` for real, so the restart race in
- *  `test/hub/supervisor.doctest.md` runs in milliseconds. */
-export type CheckReadyFn = (params: { port: number; label: string }) => Promise<void>;
-
-function defaultCheckReady(params: { port: number; label: string }): Promise<void> {
-  return waitForHttp({ port: params.port, reqPath: "/healthz", timeoutMs: READY_TIMEOUT_MS, label: params.label });
-}
-
-const READY_TIMEOUT_MS = 30_000;
 const KILL_GRACE_MS = 2000;
 /** After this many consecutive crash-loop restarts, stop retrying and mark
  *  the box unhealthy until `reloadUnhealthy()` (SIGHUP) is called. No
@@ -79,40 +43,6 @@ const KILL_GRACE_MS = 2000;
 const MAX_CONSECUTIVE_FAILURES = 5;
 const BASE_BACKOFF_MS = 1000;
 const MAX_BACKOFF_MS = 30_000;
-
-export class BoxResolutionError extends Error {
-  constructor(entryPath: string) {
-    super(
-      "Configured box path " + entryPath + " has no .cb-box marker at itself or at its " +
-        "content/ subdirectory -- not a callback box (checked both the v2 package-root " +
-        "and legacy/v2 content-dir shapes)."
-    );
-    this.name = "BoxResolutionError";
-  }
-}
-
-/**
- * Resolve a `hub.json` entry's `path` (may be a v2 PACKAGE root or a
- * content dir -- the plan's bilingual layout, resolved downward here the
- * way `findBoxRoot` resolves upward from a cwd) to the actual box
- * (content) root that `getBoxShape` expects.
- */
-export async function resolveBoxRoot(entryPath: string): Promise<string> {
-  if (await fileExists(path.join(entryPath, ".cb-box"))) return entryPath;
-  const nested = path.join(entryPath, "content");
-  if (await fileExists(path.join(nested, ".cb-box"))) return nested;
-  throw new BoxResolutionError(entryPath);
-}
-
-/** The box's own installed `cb` when present (v2, installed), else the
- *  running engine's own `cb` (legacy boxes, or a v2 box mid-transition
- *  that hasn't been `pnpm install`ed yet -- same fallback the plan
- *  specifies for the transition window). */
-async function resolveCbBinary(shape: BoxShape): Promise<string> {
-  const ownBin = path.join(shape.packageRoot, "node_modules", ".bin", "cb");
-  if (await fileExists(ownBin)) return ownBin;
-  return path.join(PACKAGE_ROOT, "bin", "cb");
-}
 
 export type BoxRunStatus = "starting" | "running" | "unhealthy" | "stopped";
 
@@ -175,6 +105,10 @@ export interface SupervisorOptions {
   /** Injectable readiness probe -- real `waitForHttp` (`defaultCheckReady`)
    *  unless a test overrides it. See `CheckReadyFn`. */
   checkReady?: CheckReadyFn;
+  /** Injectable clock (defaults to `Date.now`), shared with `HubState`, so
+   *  doctests can drive idle/keep-set ordering deterministically instead of
+   *  waiting out real timers. See `test/hub/supervisor.doctest.md`. */
+  now?: () => number;
 }
 
 /**
@@ -189,12 +123,16 @@ export class Supervisor implements EndpointProvider {
   private readonly hubSecret: string;
   private readonly spawnChild: SpawnChildFn;
   private readonly checkReady: CheckReadyFn;
+  private readonly now: () => number;
+  private readonly hubState: HubState;
 
   constructor(options: SupervisorOptions) {
     this.config = options.config;
     this.hubSecret = options.hubSecret;
     this.spawnChild = options.spawnChild ?? defaultSpawnChild;
     this.checkReady = options.checkReady ?? defaultCheckReady;
+    this.now = options.now ?? Date.now;
+    this.hubState = new HubState({ configPath: options.config.configPath, now: this.now });
     for (const [slug, entry] of Object.entries(options.config.boxes)) {
       this.boxes.set(slug, {
         slug,
@@ -228,9 +166,55 @@ export class Supervisor implements EndpointProvider {
   async startAll(): Promise<void> {
     if (this.config.lazy) {
       for (const box of this.boxes.values()) box.status = "stopped";
+      await this.hubState.load();
+      await this.prestartLazy();
       return;
     }
     await Promise.all(Array.from(this.boxes.values()).map((box) => this.launch(box)));
+  }
+
+  /**
+   * Lazy-mode boot pre-start, in two independent passes. Recency pass
+   * (`keepRecent > 0`): pre-start the `keepRecent` most-recently-used
+   * configured boxes (by persisted `hub-state.json` recency) so a hub restart
+   * resumes the boxholder's working set rather than everything or nothing
+   * (slugs no longer in the config are skipped; fewer recorded boxes means
+   * fewer started). Schedule pass (always, even `keepRecent: 0`): pre-start any
+   * box holding pending chat schedules so its in-process timers can't be
+   * missed. Launches are awaited like a non-lazy `startAll` -- a failure is
+   * reported via status, never thrown.
+   */
+  private async prestartLazy(): Promise<void> {
+    // Recency pass (keepRecent > 0): resume the boxholder's working set by
+    // pre-starting the top-`keepRecent` most-recently-used slugs.
+    const ranked = this.hubState.slugsByRecency().filter((slug) => this.boxes.has(slug));
+    const recent = this.config.keepRecent > 0 ? ranked.slice(0, this.config.keepRecent) : [];
+    await Promise.all(recent.map((slug) => this.prestartBox(slug)));
+    // Schedule pass (independent, applies even with keepRecent: 0): any
+    // not-yet-running box whose chat-schedules.json holds an entry MUST come
+    // up -- its timers live in the box's `cb serve` process and a missed alarm
+    // is unacceptable. Skips boxes the recency pass already started (no
+    // double-start); an unresolvable path is warned-and-skipped inside
+    // `boxHasPendingSchedules` (it would fail on demand anyway). `prestartBox`
+    // arms the idle timer, and `evaluateIdle`'s per-cycle check then keeps the
+    // box up until its last schedule fires and the file empties.
+    for (const box of this.boxes.values()) {
+      if (box.status === "running") continue;
+      if (await boxHasPendingSchedules({ slug: box.slug, entryPath: box.entry.path })) await this.prestartBox(box.slug);
+    }
+  }
+
+  /** Launch one pre-start box and, if it came up, seed its in-memory recency
+   *  from the persisted value (so the keep-set ordering matches what the last
+   *  hub incarnation saw) and arm its idle timer. */
+  private async prestartBox(slug: string): Promise<void> {
+    const box = this.boxes.get(slug);
+    invariant(box, `prestart slug "${slug}" must be configured (filtered on boxes.has above)`);
+    const persisted = this.hubState.lastActivity(slug);
+    await this.launch(box);
+    if (!this.get(slug)) return; // launch failed -- reported via status
+    box.lastActivity = persisted ?? this.now();
+    this.armIdleTimer(box);
   }
 
   /**
@@ -286,16 +270,64 @@ export class Supervisor implements EndpointProvider {
     return endpoint;
   }
 
-  /** Reset (or start) a box's idle timer. Lazy mode only -- a no-op
-   *  otherwise, since resident boxes never idle-stop. */
+  /** Record a request against a box: refresh its in-memory + persisted
+   *  recency and (re)arm its idle timer. Lazy mode only -- a no-op otherwise,
+   *  since resident boxes never idle-stop. */
   private touch(box: ManagedBox): void {
     if (!this.config.lazy) return;
-    box.lastActivity = Date.now();
+    box.lastActivity = this.now();
+    this.hubState.record(box.slug);
+    this.armIdleTimer(box);
+  }
+
+  /** (Re)start a box's idle timer without touching recency -- the timer fires
+   *  into `evaluateIdle`, which either stops the box or keeps it (keep-set)
+   *  and re-arms. */
+  private armIdleTimer(box: ManagedBox): void {
     if (box.idleTimer) clearTimeout(box.idleTimer);
     box.idleTimer = setTimeout(() => {
-      void this.stopBox(box);
+      void this.evaluateIdle(box.slug);
     }, this.config.idleMs);
     box.idleTimer.unref();
+  }
+
+  /**
+   * The idle-timer's decision, factored out of the timer callback so doctests
+   * can drive it deterministically (the real `setTimeout` just calls this).
+   * A running box that's in the keep-set -- the `config.keepRecent`
+   * most-recently-active running boxes -- stays alive and re-arms its timer,
+   * so it only stops once displaced by more-recently-used boxes. A box holding
+   * pending chat schedules is likewise kept (`kept-schedule`) and re-armed --
+   * its timers live in this process and a missed alarm is unacceptable, so it
+   * stays up until the last schedule fires and the file empties. Otherwise it
+   * stops as a plain lazy hub would. Returns which branch it took.
+   */
+  async evaluateIdle(slug: string): Promise<"stopped" | "kept" | "kept-schedule" | "not-running"> {
+    const box = this.boxes.get(slug);
+    if (!box || box.status !== "running") return "not-running";
+    if (this.keepSetSlugs().includes(slug)) {
+      this.armIdleTimer(box);
+      return "kept";
+    }
+    if (await boxHasPendingSchedules({ slug: box.slug, entryPath: box.entry.path })) {
+      console.debug(`[hub] keeping box "${slug}" alive: it has pending chat schedule(s)`);
+      this.armIdleTimer(box);
+      return "kept-schedule";
+    }
+    await this.stopBox(box);
+    return "stopped";
+  }
+
+  /** The current keep-set: the `config.keepRecent` most-recently-active
+   *  running boxes (by in-memory `lastActivity`). Empty when `keepRecent` is
+   *  0. Exposed for `evaluateIdle` and its doctests. */
+  keepSetSlugs(): string[] {
+    if (this.config.keepRecent <= 0) return [];
+    return Array.from(this.boxes.values())
+      .filter((box) => box.status === "running")
+      .toSorted((a, b) => (b.lastActivity ?? 0) - (a.lastActivity ?? 0))
+      .slice(0, this.config.keepRecent)
+      .map((box) => box.slug);
   }
 
   /**
@@ -326,6 +358,7 @@ export class Supervisor implements EndpointProvider {
   /** SIGTERM every live child, SIGKILL any survivor after the grace
    *  period, same discipline as the dev router's teardown. */
   async stopAll(): Promise<void> {
+    if (this.config.lazy) await this.hubState.flush();
     const boxes = Array.from(this.boxes.values());
     for (const box of boxes) {
       if (box.restartTimer) clearTimeout(box.restartTimer);
@@ -408,6 +441,12 @@ export class Supervisor implements EndpointProvider {
       box.status = "running";
       box.consecutiveFailures = 0;
       box.lastError = undefined;
+      // A lazy child can reach "running" through paths that never call
+      // touch() -- a crash-loop backoff retry, or a keepRecent pre-start that
+      // failed once and recovered. Without an idle timer such a box would sit
+      // resident forever, outside both idle-stop and the keep-set. Arm it
+      // here unconditionally; callers that do touch() just re-arm.
+      if (this.config.lazy) this.armIdleTimer(box);
     } catch (e) {
       if (box.generation !== generation) return; // superseded mid-startup
       const message = describeError(e);
@@ -468,9 +507,4 @@ export class Supervisor implements EndpointProvider {
     }, delay);
     box.restartTimer.unref();
   }
-}
-
-function describeError(e: unknown): string {
-  if (e instanceof HttpReadinessTimeoutError) return e.message;
-  return e instanceof Error ? e.message : String(e);
 }

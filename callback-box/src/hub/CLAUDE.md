@@ -22,6 +22,28 @@ and idle-stops it after `idleMs` — the same semantics `bin/router.ts` uses
 for dev worktrees. Non-lazy (the default) starts every box resident at hub
 boot and never idle-stops them.
 
+`keepRecent: N` (lazy-only; a positive value on a resident hub is a config
+error) keeps the N most-recently-used boxes alive instead of idle-stopping
+them: when a box's idle timer fires, it re-arms instead of stopping if it's
+among the `keepRecent` most-recently-active running boxes (`keepSetSlugs()`),
+so it only stops once displaced by more-recently-used boxes. Recency is
+persisted to `hub-state.json` (a sibling of the loaded config file — see
+`hub-state.ts`): `touch()` records per-slug activity, `stopAll()` flushes it,
+and a lazy `startAll()` pre-starts the top-`keepRecent` slugs by persisted
+recency so a hub restart (every deploy restarts it) resumes the working set
+rather than everything or nothing. Defaults to 0 (pure idle-stop). The
+idle-fire decision is factored into `evaluateIdle(slug)` so it's testable
+without real timers; the clock is injectable (`SupervisorOptions.now`).
+
+**Chat schedules override idle-stop.** A box holding pending chat `<schedule>`
+timers must stay running — they live in its `cb serve` process and a missed
+alarm is unacceptable. `evaluateIdle` checks the box's on-disk
+`chat-schedules.json` (via `pending-schedules.ts`, reusing the same loader
+`cb serve` re-arms from) and keeps a schedule-holding box alive
+(`kept-schedule`) even outside the keep-set, re-checking each idle cycle until
+the file empties. `startAll` also pre-starts every schedule-holding box at
+boot, independent of `keepRecent`, so schedules fire on time after a restart.
+
 ## SIGHUP only clears the crash-loop latch
 
 SIGHUP (`Supervisor.reloadUnhealthy()`) gives any box that's exhausted its

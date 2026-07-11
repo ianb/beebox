@@ -29,6 +29,12 @@ const chatScheduleSchema = z.object({
   content: z.string(),
   createdAt: z.string().datetime(),
   firesAt: z.string().datetime(),
+  // Id of the chat session whose turn created this schedule, so the fire can
+  // land back in the originating conversation. Optional: entries persisted
+  // before this field existed lack it and stay valid (they fall back to the
+  // most-active session when they fire). Also loaded hub-side via
+  // `loadChatSchedules` — purely additive, so no hub change is needed.
+  sessionId: z.string().optional(),
 });
 
 export type ChatSchedule = z.infer<typeof chatScheduleSchema>;
@@ -53,6 +59,64 @@ function log(...args: unknown[]): void {
   console.log("[ChatSchedules]", ...args);
 }
 
+/**
+ * Load and validate the persisted chat schedules for a box, WITHOUT
+ * constructing a manager or arming any timers. This is the single source of
+ * truth for "what schedules does this box have on disk" — the
+ * `ChatScheduleManager` re-arms exactly these entries on serve boot, and the
+ * hub supervisor (`src/hub/pending-schedules.ts`) checks exactly these entries
+ * to decide whether a lazy box must stay running. Sharing the loader means the
+ * hub's notion of "pending" can never drift from what serve would re-arm.
+ *
+ * Semantics mirror serve's tolerance for a bad file: a missing/unreadable/
+ * malformed file yields no schedules (serve would boot with none), and an
+ * individual invalid entry is skipped with a named warning rather than
+ * crashing the load. Returns ALL surviving entries, including overdue-unfired
+ * ones — an overdue schedule still needs the box up to fire.
+ */
+export function loadChatSchedules({
+  boxRoot,
+  schedulesFile,
+}: {
+  boxRoot: string;
+  schedulesFile?: string | undefined;
+}): ChatSchedule[] {
+  const filePath = path.join(boxRoot, schedulesFile || SCHEDULES_FILE);
+  if (!fs.existsSync(filePath)) return [];
+
+  let raw: string;
+  try {
+    raw = fs.readFileSync(filePath, "utf-8");
+  } catch (e) {
+    log(`Failed to read schedules file, starting with no schedules: ${e}`);
+    return [];
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (e) {
+    log(`Malformed chat-schedules.json (not JSON), starting with no schedules: ${e}`);
+    return [];
+  }
+  if (!Array.isArray(parsed)) {
+    log("Malformed chat-schedules.json (expected an array), starting with no schedules");
+    return [];
+  }
+
+  const schedules: ChatSchedule[] = [];
+  for (const [index, entry] of parsed.entries()) {
+    const result = chatScheduleSchema.safeParse(entry);
+    if (!result.success) {
+      const issues = result.error.issues.map((issue) => issue.message).join("; ");
+      log(`Skipping invalid schedule (${describeEntry(entry, index)}): ${issues}`);
+      continue;
+    }
+    schedules.push(result.data);
+  }
+  return schedules;
+}
+
 export class ChatScheduleManager {
   private boxRoot: string;
   private schedulesFile: string;
@@ -75,6 +139,8 @@ export class ChatScheduleManager {
     announce: string | null;
     content: string;
     durationMs: number;
+    /** Originating chat session id; omitted for callers that don't track one. */
+    sessionId?: string;
   }): ChatSchedule {
     const id = `sch_${Date.now()}_${this.idCounter++}`;
     const now = new Date();
@@ -88,6 +154,7 @@ export class ChatScheduleManager {
       content: opts.content,
       createdAt: now.toISOString(),
       firesAt: firesAt.toISOString(),
+      ...(opts.sessionId !== undefined ? { sessionId: opts.sessionId } : {}),
     };
 
     this.schedules.set(id, schedule);
@@ -216,43 +283,9 @@ export class ChatScheduleManager {
   }
 
   private loadFromDisk(): void {
-    const filePath = path.join(this.boxRoot, this.schedulesFile);
-    if (!fs.existsSync(filePath)) return;
-
-    let raw: string;
-    try {
-      raw = fs.readFileSync(filePath, "utf-8");
-    } catch (e) {
-      log(`Failed to read schedules file, starting with no schedules: ${e}`);
-      return;
-    }
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(raw);
-    } catch (e) {
-      log(`Malformed chat-schedules.json (not JSON), starting with no schedules: ${e}`);
-      return;
-    }
-    if (!Array.isArray(parsed)) {
-      log("Malformed chat-schedules.json (expected an array), starting with no schedules");
-      return;
-    }
-
-    let skipped = 0;
-    for (const [index, entry] of parsed.entries()) {
-      const result = chatScheduleSchema.safeParse(entry);
-      if (!result.success) {
-        const issues = result.error.issues.map((issue) => issue.message).join("; ");
-        log(`Skipping invalid schedule (${describeEntry(entry, index)}): ${issues}`);
-        skipped++;
-        continue;
-      }
-      this.schedules.set(result.data.id, result.data);
-    }
-
-    const skippedNote = skipped > 0 ? ` (${skipped} invalid entr${skipped === 1 ? "y" : "ies"} skipped)` : "";
-    log(`Loaded ${this.schedules.size} schedule(s) from disk${skippedNote}`);
+    const loaded = loadChatSchedules({ boxRoot: this.boxRoot, schedulesFile: this.schedulesFile });
+    for (const schedule of loaded) this.schedules.set(schedule.id, schedule);
+    if (loaded.length > 0) log(`Loaded ${loaded.length} schedule(s) from disk`);
   }
 
   private saveToDisk(): void {

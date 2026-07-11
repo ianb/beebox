@@ -10,7 +10,8 @@
 import { Command } from "commander";
 import * as crypto from "node:crypto";
 import { loadHubConfig, defaultHubConfigPath, HubConfigError } from "../../hub/hub-config.js";
-import { Supervisor, resolveBoxRoot } from "../../hub/supervisor.js";
+import { Supervisor } from "../../hub/supervisor.js";
+import { resolveBoxRoot } from "../../hub/child-spawn.js";
 import { createHubServer, type HubHealth } from "../../hub/hub-server.js";
 import { loadEnv, hubEnvSchema } from "../../lib/env.js";
 import type { BoxSpec } from "../../webapp/server-types.js";

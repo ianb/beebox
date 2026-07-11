@@ -18,7 +18,7 @@
  *
  * This module owns the wiring that the raw handlers share: registry lifecycle,
  * per-session event bridging to the bus, and the schedule manager that fires
- * timers into the most-active session.
+ * timers back into the session that created them (chat-schedule-fire.ts).
  */
 
 import type { FastifyInstance } from "fastify";
@@ -36,6 +36,7 @@ import {
   parseScheduleTags,
   parseCancelScheduleTags,
 } from "../../core/chat/schedules.js";
+import { fireChatSchedule } from "./chat-schedule-fire.js";
 import { registerChatUploadRoutes } from "./chat-uploads.js";
 import type { ChatRoutesContext } from "./chat-context.js";
 import { setChatRuntime, clearChatRuntime } from "../chat-runtime.js";
@@ -107,8 +108,13 @@ export async function registerChatRoutes(
     // Parse schedule tags out of completed turns.
     session.on("turn-text", (text: string) => {
       const newSchedules = parseScheduleTags(text);
+      // Stamp each schedule with the emitting session's id so its fire lands
+      // back in this conversation. The id is assigned by the time a turn
+      // completes; if it's somehow still null, omit it (falls back to the
+      // most-active session, like a legacy entry).
+      const sessionId = session.getSessionId();
       for (const s of newSchedules) {
-        scheduleManager.addSchedule(s);
+        scheduleManager.addSchedule(sessionId !== null ? { ...s, sessionId } : s);
       }
       const cancels = parseCancelScheduleTags(text);
       for (const label of cancels) {
@@ -147,52 +153,12 @@ export async function registerChatRoutes(
     });
   }
 
-  // Schedule manager — fires schedules into the most-active session.
+  // Schedule manager — fires each schedule back into its originating session
+  // (see chat-schedule-fire.ts); legacy entries without a session id fall back
+  // to the most-active one.
   const scheduleManager = new ChatScheduleManager(boxRoot, {
-    async onFire({ schedule }) {
-      eventBus.emit("schedule-fired", {
-        id: schedule.id,
-        label: schedule.label,
-        alarm: schedule.alarm,
-        announce: schedule.announce,
-      });
-
-      const targetId = await getMostActive(boxRoot);
-      if (!targetId) {
-        console.warn("[schedule] No most-active session, dropping fire");
-        return;
-      }
-      const session = registry.getOrCreate(targetId);
-      wireSession(session);
-
-      const firedAt = new Date().toISOString();
-      const firedMessage = [
-        "<schedule-fired label=\"" + schedule.label + "\" scheduled-at=\"" + schedule.createdAt + "\" fired-at=\"" + firedAt + "\">",
-        schedule.content,
-        "",
-        "A scheduled timer \"" + schedule.label + "\" has fired. Respond if you have something useful to say.",
-        "</schedule-fired>",
-      ].join("\n");
-
-      const onScheduleDone = () => {
-        session.getHistory()
-          .then((history) => {
-            eventBus.emit("chat-history", {
-              sessionId: history.sessionId,
-              entries: history.entries,
-            });
-          })
-          .catch((_e) => {});
-      };
-      session.once("done", onScheduleDone);
-
-      registry.enforceLiveCap(targetId);
-      registry.touch(targetId, { subprocessUse: true });
-      const sent = await session.send(firedMessage);
-      if (!sent) {
-        session.removeListener("done", onScheduleDone);
-      }
-    },
+    onFire: ({ schedule }) =>
+      fireChatSchedule({ boxRoot, registry, eventBus, wireSession }, schedule),
   });
 
   // Shared context handed to each route module.

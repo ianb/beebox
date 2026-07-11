@@ -18,7 +18,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { z } from "zod";
-import { resolveBoxRoot } from "./supervisor.js";
+import { resolveBoxRoot } from "./child-spawn.js";
 import { invariant } from "../lib/invariant.js";
 
 /**
@@ -73,6 +73,18 @@ const hubConfigFileSchema = z.strictObject({
    *  when `lazy: true`. Defaults to 5 minutes, matching the dev router's
    *  `IDLE_TIMEOUT_MS`. */
   idleMs: z.number().int().positive().optional(),
+  /**
+   * Keep the N most-recently-used boxes alive in lazy mode instead of
+   * idle-stopping every box (boxholder directive, 2026-07-11): most boxes
+   * still idle-stop after `idleMs`, but the `keepRecent` most-recently-active
+   * running boxes stay resident, and a hub restart pre-starts that set rather
+   * than everything or nothing. Recency is persisted in `hub-state.json`, a
+   * sibling of this config file — see `src/hub/hub-state.ts`. Only meaningful
+   * with `lazy: true`; a positive value on a resident hub is a config error
+   * (every box already stays up, so there's nothing to keep alive). Defaults
+   * to 0 — no box is exempt, pure idle-stop, the prior behavior.
+   */
+  keepRecent: z.number().int().min(0).optional(),
 });
 
 export type BoxEntry = z.infer<typeof boxEntrySchema>;
@@ -92,6 +104,11 @@ export interface HubConfig {
   /** Always populated (falls back to `DEFAULT_IDLE_MS`), even when `lazy` is false, so
    *  callers never need to know the default separately. */
   idleMs: number;
+  /** Number of most-recently-used boxes a lazy hub keeps resident (and
+   *  pre-starts on restart) rather than idle-stopping. Always populated
+   *  (falls back to 0). Only meaningful when `lazy` is true — a positive
+   *  value with `lazy: false` is rejected at load. */
+  keepRecent: number;
 }
 
 export class HubConfigError extends Error {
@@ -227,13 +244,25 @@ export async function loadHubConfig(configPath: string): Promise<HubConfig> {
     );
   }
 
+  const lazy = result.data.lazy ?? false;
+  const keepRecent = result.data.keepRecent ?? 0;
+  if (keepRecent > 0 && !lazy) {
+    throw new HubConfigError(
+      `Hub config at ${configPath}: keepRecent (${keepRecent}) requires lazy: true. It keeps ` +
+        "the most-recently-used boxes alive in an otherwise idle-stopping lazy hub, which is " +
+        "meaningless for a resident (non-lazy) hub where every box already stays up. Set " +
+        "lazy: true, or remove keepRecent."
+    );
+  }
+
   return {
     port: result.data.port,
     host: result.data.host,
     boxes,
     configPath: path.resolve(configPath),
-    lazy: result.data.lazy ?? false,
+    lazy,
     idleMs: result.data.idleMs ?? DEFAULT_IDLE_MS,
+    keepRecent,
   };
 }
 
