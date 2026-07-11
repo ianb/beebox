@@ -16,6 +16,15 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+# Shared git-worktree mutex — serialize sweep's removes/prune against a deploy
+# build-checkout or worktree-create (best-effort; see bin/git-worktree-lock.sh).
+if [ -f "$REPO_DIR/bin/git-worktree-lock.sh" ]; then
+  # shellcheck source=git-worktree-lock.sh
+  . "$REPO_DIR/bin/git-worktree-lock.sh"
+else
+  cb_worktree_lock() { :; }
+  cb_worktree_unlock() { :; }
+fi
 STATE_DIR="$HOME/.cache/callback-box"
 ROUTER_PID_FILE="$STATE_DIR/router.pid"
 PID_DIR="$STATE_DIR/pids"
@@ -144,6 +153,9 @@ case "$cmd" in
       active_cwds=$(lsof -a -d cwd -p "$claude_pids" -Fn 2>/dev/null | sed -n 's/^n//p' | sort -u)
     fi
 
+    # Serialize the removes/prune below against a concurrent deploy
+    # build-checkout or worktree-create. Dry-run mutates nothing → no lock.
+    [ "$dry_run" = false ] && cb_worktree_lock "sweep"
     removed=0
     for d in "$WT_ROOT"/*; do
       [ -e "$d" ] || continue
@@ -219,6 +231,7 @@ case "$cmd" in
       orphan_pids=$((orphan_pids + 1))
     done
 
+    [ "$dry_run" = false ] && cb_worktree_unlock
     suffix=""
     [ "$dry_run" = true ] && suffix=" (dry-run; nothing removed)"
     echo "sweep done: $removed worktrees, $orphan_browse browse, $orphan_logs logs, $orphan_pids pids$suffix"

@@ -194,6 +194,22 @@ fi
 
 echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 
+# Serialize the git-worktree ops below against concurrent worktree-session
+# creation, sweep, and session-end — they corrupt each other's `.git/worktrees/`
+# bookkeeping (the actual cause of the `.deploy-checkout` deaths). Best-effort:
+# never blocks the deploy indefinitely; the retry/backoff below is the backstop.
+# Held only around checkout CREATION — once `.deploy-checkout` is a valid
+# worktree a concurrent `worktree prune` leaves it alone, so we release before
+# the slow build.
+if [ -f "$MAIN_ROOT/bin/git-worktree-lock.sh" ]; then
+  # shellcheck source=../../bin/git-worktree-lock.sh
+  . "$MAIN_ROOT/bin/git-worktree-lock.sh"
+else
+  cb_worktree_lock() { :; }
+  cb_worktree_unlock() { :; }
+fi
+cb_worktree_lock "deploy"
+
 # --- Build-checkout lifecycle ----------------------------------------------
 # The checkout is a disposable cache; recreating it is always safe.
 # CHECKOUT_FRESH tracks whether recreate_checkout ran below, so the clean step
@@ -280,6 +296,10 @@ if [[ "$CHECKOUT_FRESH" != true ]]; then
     recreate_checkout
   fi
 fi
+
+# Done mutating worktrees — the checkout is now valid and prune-safe. Release
+# so worktree-session creation isn't blocked during the slow build/rsync below.
+cb_worktree_unlock
 
 # --- Clean-reinstall trigger ------------------------------------------------
 # patch-package mutates files inside node_modules, so reusing node_modules across

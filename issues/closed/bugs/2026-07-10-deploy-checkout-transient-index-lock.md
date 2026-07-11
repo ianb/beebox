@@ -42,6 +42,24 @@ transient. A deeper fix (a shared lock serializing deploy's worktree ops against
 the WorktreeCreate hook) was considered but not taken — no `flock` on macOS, and
 the backoff covers the observed window; revisit if it recurs.
 
+**Definitive fix** (main session, 2026-07-11): it recurred, harder. Two findings:
+(1) the worktree auto-sweep added on `post-merge` (for the separate
+worktree-cleanup problem) runs `git worktree prune` on the SAME trigger as the
+deploy — a deterministic collision that corrupted `.deploy-checkout`
+mid-creation; removed it (cleanup runs on SessionStart only). (2) even without
+it, the deploy races worktree-*session* creation (a `git worktree add` from a
+session spinning up) — the backoff can't win a race that lasts as long as the
+contended window, so a deploy died FATAL after ~60s. Took the shared lock after
+all: `bin/git-worktree-lock.sh`, an atomic `mkdir` mutex (no `flock` needed on
+macOS), best-effort (never blocks a caller indefinitely — PID-liveness + 2-min
+mtime staleness reclaim, and proceeds without the lock rather than deadlocking).
+Every git-worktree-mutating span now brackets itself with it:
+`callback-box/deploy/deploy.sh` (around checkout creation, released before the
+build), `.claude/hooks/worktree-create.sh` (around `worktree add`),
+`.claude/hooks/session-end.sh` (around the cleanup `prune`), and `bin/worktrees`
+sweep. Unit-verified: mutual exclusion, dead-PID reclaim, best-effort
+proceed-without-lock on timeout.
+
 The root `post-commit` hook backgrounds `callback-box/deploy/deploy.sh --ref <sha>`
 the instant a `main` commit completes. On one deploy the build-checkout step
 died immediately:

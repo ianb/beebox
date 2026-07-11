@@ -48,6 +48,18 @@ printf '%s\n' "$input" > "$HOME/.cache/callback-box/last-worktree-create-input.j
 WORKTREE_LOG="$HOME/.cache/callback-box/worktree-cleanup.log"
 wlog() { printf '%s pid=%s WorktreeCreate %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$$" "$*" >> "$WORKTREE_LOG" 2>/dev/null || true; }
 
+# Shared git-worktree mutex (bin/git-worktree-lock.sh): serialize our
+# `git worktree add` against a concurrent deploy build-checkout / sweep /
+# session-end so they don't corrupt each other's .git/worktrees bookkeeping.
+HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$HOOK_DIR/../../bin/git-worktree-lock.sh" ]; then
+  # shellcheck source=../../bin/git-worktree-lock.sh
+  . "$HOOK_DIR/../../bin/git-worktree-lock.sh"
+else
+  cb_worktree_lock() { :; }
+  cb_worktree_unlock() { :; }
+fi
+
 requested_path=$(printf '%s' "$input" | jq -r '.worktree_path // .worktreePath // .path // empty')
 base_ref=$(printf '%s'       "$input" | jq -r '.base_ref // .baseRef // "main"')
 name_from_input=$(printf '%s' "$input" | jq -r '.name // .worktree_name // empty')
@@ -79,9 +91,13 @@ if git worktree list --porcelain | grep -qxF "worktree $worktree_path"; then
   exit 0
 elif git show-ref --verify --quiet "refs/heads/$new_branch"; then
   echo "[worktree-create] branch $new_branch already exists — attaching without -b"
+  cb_worktree_lock "worktree-create:$NAME"
   git worktree add "$worktree_path" "$new_branch"
+  cb_worktree_unlock
 else
+  cb_worktree_lock "worktree-create:$NAME"
   git worktree add -b "$new_branch" "$worktree_path" "$base_ref"
+  cb_worktree_unlock
 fi
 
 # 2. Clone the test box if it doesn't already exist (idempotent).
