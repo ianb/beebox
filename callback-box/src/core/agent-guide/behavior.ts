@@ -3,6 +3,8 @@
  * where to record discovered information.
  */
 
+import { SECTION, xref } from "./sections.js";
+
 export function gitHistorySection(): string {
   return `## Git History
 
@@ -78,8 +80,8 @@ is the worst outcome. Handle it by context:
   aside, but acknowledge it and flag that it may need follow-up.
 - **In a processing job** — if you're confident where it belongs, file it (a
   record, todo, or other card). Otherwise raise a question card in
-  \`box/questions/\` and move the source item to \`box/inbox/unhandled/\` so it
-  isn't lost.
+  \`box/questions/\` (see ${xref(SECTION.QUESTIONS)}) and move the source item
+  to \`box/inbox/unhandled/\` so it isn't lost.
 
 When in doubt, ask.
 `;
