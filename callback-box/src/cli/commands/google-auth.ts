@@ -13,6 +13,7 @@ import { Command } from "commander";
 import Fastify from "fastify";
 import open from "open";
 import { requireBoxRoot } from "../../lib/paths.js";
+import { isRecord } from "../../lib/is-record.js";
 import {
   loadGoogleTokens,
   saveGoogleTokens,
@@ -100,10 +101,9 @@ export const googleAuthCommand = new Command("google-auth")
           server.get(
             "/oauth/callback",
             async (request, reply) => {
-              const { code, error } = request.query as {
-                code?: string;
-                error?: string;
-              };
+              const query: unknown = request.query;
+              const code = isRecord(query) && typeof query["code"] === "string" ? query["code"] : undefined;
+              const error = isRecord(query) && typeof query["error"] === "string" ? query["error"] : undefined;
 
               if (error) {
                 await reply.type("text/html").send(errorPage("Authorization denied"));

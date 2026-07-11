@@ -42,6 +42,7 @@ import type http from "node:http";
 import type { Socket } from "node:net";
 import fs from "node:fs";
 import path from "node:path";
+import { isRecord } from "../lib/is-record.js";
 import Fastify, { type FastifyInstance } from "fastify";
 import fastifyCookie from "@fastify/cookie";
 import fastifyStatic from "@fastify/static";
@@ -333,7 +334,8 @@ export async function createHubServer(options: HubServerOptions): Promise<http.S
   // "/*" wildcard below regardless of registration order, so this always
   // wins for this exact path.
   app.get("/auth/google-services/callback", async (request, reply) => {
-    const { state } = request.query as { state?: string };
+    const query: unknown = request.query;
+    const state = isRecord(query) && typeof query["state"] === "string" ? query["state"] : undefined;
     const colonIdx = (state ?? "").indexOf(":");
     const boxSlug = colonIdx !== -1 ? (state ?? "").slice(0, colonIdx) : (state ?? "");
     // Routed through the same `resolveEndpoint` helper as every other

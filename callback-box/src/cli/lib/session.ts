@@ -9,6 +9,7 @@ import * as fs from "node:fs";
 import * as readline from "node:readline";
 import * as path from "node:path";
 import * as os from "node:os";
+import { isRecord } from "../../lib/is-record.js";
 
 import { type SessionEntry, buildEntry } from "./session-entry.js";
 import { stripChatAppTags } from "../../core/chat/features.js";
@@ -128,7 +129,8 @@ export async function listSessions(
 function parseJsonlLine(line: string, where: string): Record<string, unknown> | null {
   if (!line.trim()) return null;
   try {
-    return JSON.parse(line) as Record<string, unknown>;
+    const parsed: unknown = JSON.parse(line);
+    return isRecord(parsed) ? parsed : null;
   } catch (e) {
     console.debug(`${where}: skipping unparseable JSONL line:`, e);
     return null;
@@ -138,7 +140,7 @@ function parseJsonlLine(line: string, where: string): Record<string, unknown> | 
 /** Normalize a raw `message.content` field into an array of block records. */
 function contentBlocks(content: unknown): Array<Record<string, unknown>> {
   if (typeof content === "string") return [{ type: "text", text: content }];
-  if (Array.isArray(content)) return content as Array<Record<string, unknown>>;
+  if (Array.isArray(content)) return content.filter(isRecord);
   return [];
 }
 
@@ -239,7 +241,7 @@ export async function getSessionMetadata(args: {
     if (!raw) continue;
     if (raw.type !== "user" && raw.type !== "assistant") continue;
 
-    const message = raw.message as Record<string, unknown> | undefined;
+    const message = isRecord(raw["message"]) ? raw["message"] : undefined;
     if (!message) continue;
 
     // Skip SDK meta prompts and synthetic assistant responses
