@@ -164,6 +164,16 @@ export interface CardSchemaConfig<TFields extends Record<string, FieldDecl>> {
    */
   validate?: (input: CardValidateInput) => LintIssue[];
   /**
+   * A parse-time cross-field refinement applied to the whole frontmatter object
+   * (after `fields` + global fields are assembled). Unlike {@link validate}
+   * (which runs at lint time and returns issues), this is enforced by
+   * `frontmatterSchema.safeParse` itself, so a card that violates it fails to
+   * LOAD — fail-closed for invariants that must never reach interior code
+   * (e.g. a question whose `status` and lifecycle timestamps disagree). Runs on
+   * the parsed object; add issues via the Zod refinement context.
+   */
+  superRefine?: (fields: Record<string, unknown>, ctx: z.core.$RefinementCtx) => void;
+  /**
    * Reconciliation policy for template cards this schema covers (see
    * {@link TemplateMergePolicy}). Only meaningful for card types callback-box
    * ships and updates as templates; omit it and any edit parks the update.
@@ -297,19 +307,27 @@ export function cardSchema<
     frontmatterShape[name] = validator;
     globalFieldNames.push(name);
   }
+  // Lenient (not `.strict()`): an unknown frontmatter key is stripped in
+  // memory, so a card that has drifted past its schema still loads, renders,
+  // and indexes — it lives in a usable middle-ground rather than vanishing.
+  // The unknown key is surfaced separately as a lint *warning* (see
+  // card-lint.ts) so it gets cleaned off disk eventually. A missing required
+  // field or wrong type still fails here at parse — those are genuine
+  // can't-use-this-card errors, not recoverable cruft.
+  const baseFrontmatter = z.object(frontmatterShape);
+  // A card-level `superRefine` keeps `frontmatterSchema` an object-typed schema
+  // in zod 4 (checks attach to the object; `def.type`/`def.shape` survive), so
+  // ref-walking and serialization still introspect it as an object.
+  const frontmatterSchema: ZodType =
+    config.superRefine !== undefined
+      ? baseFrontmatter.superRefine(config.superRefine)
+      : baseFrontmatter;
   const schema: CardSchema<TTag, TFields> = {
     type,
     fields: config.fields,
     bodyFieldName,
     bodyField,
-    // Lenient (not `.strict()`): an unknown frontmatter key is stripped in
-    // memory, so a card that has drifted past its schema still loads, renders,
-    // and indexes — it lives in a usable middle-ground rather than vanishing.
-    // The unknown key is surfaced separately as a lint *warning* (see
-    // card-lint.ts) so it gets cleaned off disk eventually. A missing required
-    // field or wrong type still fails here at parse — those are genuine
-    // can't-use-this-card errors, not recoverable cruft.
-    frontmatterSchema: z.object(frontmatterShape),
+    frontmatterSchema,
     globalFieldNames,
     searchable: config.searchable === undefined ? true : config.searchable,
     category: config.category === undefined ? "authored" : config.category,

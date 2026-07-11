@@ -6,10 +6,11 @@
  * just imports <AppNav>.
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link, useParams, useRouterState } from "@tanstack/react-router";
 import { useCurrentUser, type CurrentUser } from "../hooks/useCurrentUser";
 import { useNavLinks } from "../hooks/useNavLinks";
+import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { trpc } from "../lib/trpc";
 import { useErrorCount, clearErrorCount } from "./DebugLog";
 import { Dropdown, MenuItem, MenuDivider } from "./ui/Dropdown";
@@ -106,9 +107,34 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   });
   const freshCount = chatPicker.data ? chatPicker.data.freshCount : 0;
 
+  // Pending-question count — the primary "there is activity" surface
+  // (docs/implemented-plans/questions-end-to-end.md Track C): shown on the Questions
+  // nav entry, and separately as an always-visible mobile badge since the
+  // mobile nav list only appears once the hamburger menu is opened.
+  const utils = trpc.useUtils();
+  const statusQuery = trpc.status.status.useQuery();
+  const pendingQuestions = statusQuery.data ? statusQuery.data.counts.pendingQuestions : 0;
+
+  useBusSubscription({
+    onEvent: useCallback(
+      (event: RealtimeEvent) => {
+        if (
+          event.event === "question-answered" ||
+          event.event === "question-dismissed" ||
+          event.event === "question-expired" ||
+          event.event === "card-created" ||
+          event.event === "file-change"
+        ) {
+          void utils.status.status.invalidate();
+        }
+      },
+      [utils],
+    ),
+  });
+
   // Card-driven when the box has a root nav.card; the builtin list
   // (shared/nav-routes.ts) is the fallback floor. See docs/implemented-plans/nav-card.md.
-  const links = useNavLinks({ base, freshCount });
+  const links = useNavLinks({ base, freshCount, pendingQuestions });
 
   const currentLabel = links.find((l) => l.match(location.pathname))?.label ?? "Dashboard";
 
@@ -139,6 +165,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
             <span className="font-medium">{currentLabel}</span>
           </div>
           <div className="flex items-center gap-2">
+            <QuestionsBadge base={base} count={pendingQuestions} />
             <button
               onClick={() => setMenuOpen(!menuOpen)}
               className="p-1.5 rounded hover:bg-white/10"
@@ -212,6 +239,26 @@ function FreshBadge({ count }: { count: number }) {
     <span className="ml-1.5 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-white/20 text-white text-[10px] font-semibold align-middle">
       {count}
     </span>
+  );
+}
+
+/**
+ * Always-visible pending-questions link for the mobile compact bar, where
+ * the rest of the nav (including the Questions link's own badge) is hidden
+ * behind the hamburger menu. Zero pending renders nothing.
+ */
+function QuestionsBadge({ base, count }: { base: string; count: number }) {
+  if (count === 0) return null;
+  return (
+    <Link
+      to={href(`${base}/questions`)}
+      className="flex items-center gap-1 text-xs bg-white/20 text-white px-1.5 py-0.5 rounded-full hover:bg-white/30 transition-colors"
+      title={`${count} pending question${count !== 1 ? "s" : ""}`}
+      aria-label={`${count} pending question${count !== 1 ? "s" : ""}`}
+    >
+      <span aria-hidden="true">?</span>
+      {count}
+    </Link>
   );
 }
 

@@ -173,7 +173,6 @@ printCalls(tg.callLog);
 | Google Calendar | `createFakeGoogleCalendar()` | `{ calendars?, events? }` | `.calendars[]`, `.events[]` |
 | OpenAI Audio | `createFakeOpenAIAudio()` | `{ transcriptionText? }` | `.calls[]` |
 | IMAP | `createFakeImap()` | `{ messages? }` | `.connected`, `.lockedMailbox` |
-| Capture Relay | `createFakeCaptureRelay()` | `{ sessions?, manifests? }` | `.sessions[]` |
 | Google Auth | `createFakeGoogleAuth()` | `{ accessToken? }` | — |
 
 ### Connector testing pattern

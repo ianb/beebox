@@ -101,7 +101,7 @@ export const eventSchemas = {
     timestamp: z.string(),
   }),
   /**
-   * A question card was answered via web/cli/api. `answer`/`selectedId` ride
+   * A question card was answered via web/cli. `answer`/`selectedId` ride
    * from an untyped HTTP body (raw route) or an optional-string tRPC input, so
    * they stay genuinely arbitrary in value. Both are `.optional()`: an answer
    * carries only ONE of them, and `JSON.stringify` drops the undefined key, so
@@ -113,6 +113,16 @@ export const eventSchemas = {
     path: z.string(),
     answer: z.unknown().optional(),
     selectedId: z.unknown().optional(),
+    timestamp: z.string(),
+  }),
+  /** A question card was dismissed (the boxholder declined to answer it). */
+  "question-dismissed": z.object({
+    path: z.string(),
+    timestamp: z.string(),
+  }),
+  /** A pending question aged past its expiry window (the aging sweep, `cb finalize`). */
+  "question-expired": z.object({
+    path: z.string(),
     timestamp: z.string(),
   }),
   /** Cards in the box changed (coarse refresh signal). */

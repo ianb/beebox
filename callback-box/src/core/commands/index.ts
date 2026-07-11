@@ -8,6 +8,7 @@
 import "./create.js";
 import "./connector-sync.js";
 import "./answer.js";
+import "./dismiss.js";
 import "./trash.js";
 import "./move.js";
 import "./procedure.js";

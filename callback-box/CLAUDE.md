@@ -145,6 +145,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 | Agent-set chat timers (`<schedule>` tag) | `docs/chat-schedules.md` |
 | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
 | Triage pipeline design | `docs/triage.md` |
+| Questions subsystem design | `docs/questions.md` |
 | Deployment | `deploy/README.md` |
 | Server operations | `docs/server-operations.md` |
 | Adding a box | `docs/adding-a-box.md` |
