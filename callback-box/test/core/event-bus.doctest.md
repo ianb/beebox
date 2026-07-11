@@ -31,6 +31,7 @@ const samples = {
   "command-complete": { command: "wakeup", success: true, timestamp: TS },
   "question-answered": { path: "Q.question.card", answer: "yes", selectedId: "opt-1", timestamp: TS },
   "question-dismissed": { path: "Q.question.card", timestamp: TS },
+  "question-expired": { path: "Q.question.card", timestamp: TS },
   "cards-changed": { source: "telegram" },
   "chat-user-message": { sessionId: "s1", message: "hi", user: { email: "a@example.com", name: "Ada" }, timestamp: TS },
   "chat-complete": { sessionId: "s1", timestamp: TS },
@@ -44,12 +45,12 @@ const samples = {
 
 ## Every event round-trips through its schema
 
-The sample catalog covers all 14 events, and each parses cleanly against the
+The sample catalog covers all 15 events, and each parses cleanly against the
 schema the read boundary uses:
 
 ```ts
 Object.keys(samples).length
-=> 14
+=> 15
 
 JSON.stringify(Object.keys(samples).sort()) === JSON.stringify(Object.keys(eventSchemas).sort())
 => true
