@@ -3,7 +3,7 @@
 **Status:** implemented — the design doc for the queue-only question
 subsystem; not yet re-verified line-by-line against current code.
 
-Design and implementation history: `docs/plans/questions-end-to-end.md`.
+Design and implementation history: `docs/implemented-plans/questions-end-to-end.md`.
 
 ## Purpose
 
@@ -330,5 +330,5 @@ agent-guide context:
   `expired`/`dismissed` statuses created here are the substrate a future
   detector would read; the detector itself is undesigned.
 
-See `docs/plans/questions-end-to-end.md` for the full rationale, prior art,
+See `docs/implemented-plans/questions-end-to-end.md` for the full rationale, prior art,
 and failure-mode analysis behind these decisions.

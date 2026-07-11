@@ -5,7 +5,7 @@ resolution: implemented
 ---
 
 **Closed 2026-07-10:** Implemented in `src/core/question-aging.ts` (the
-aging sweep, Track D of `docs/plans/questions-end-to-end.md`) — nudge once
+aging sweep, Track D of `docs/implemented-plans/questions-end-to-end.md`) — nudge once
 at 7 days pending (default), expire at 30 days pending (default), both
 overridable per-question via `expires-after:`. Expiry sets `status:
 expired` + `expired-at` and demotes the question from the active

@@ -11,7 +11,7 @@
  * already no-ops itself when no channel is configured, so expiry runs
  * regardless; only nudge *delivery* is channel-gated by that same no-op.
  *
- * See docs/plans/questions-end-to-end.md (Track D).
+ * See docs/implemented-plans/questions-end-to-end.md (Track D).
  */
 
 import * as fs from "node:fs/promises";
@@ -37,14 +37,14 @@ import { createEventBus } from "./event-bus.js";
 /**
  * Default pending-question expiry window, when a card carries no
  * `expires-after` override. A deliberate default from the plan
- * (docs/plans/questions-end-to-end.md Track D) — questions age out of the
+ * (docs/implemented-plans/questions-end-to-end.md Track D) — questions age out of the
  * active view on a schedule but stay answerable (demoted, not closed).
  */
 export const DEFAULT_EXPIRE_AFTER_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 /**
  * Default nudge threshold, when a card carries no `expires-after` override.
- * A deliberate default from the plan (docs/plans/questions-end-to-end.md
+ * A deliberate default from the plan (docs/implemented-plans/questions-end-to-end.md
  * Track D). When `expires-after` IS overridden, the nudge fires at half that
  * window instead (see `nudgeThresholdMs`).
  */

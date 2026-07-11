@@ -108,7 +108,7 @@ export function AppNav({ onToggleDebugLog, onToggleSourceView }: { onToggleDebug
   const freshCount = chatPicker.data ? chatPicker.data.freshCount : 0;
 
   // Pending-question count — the primary "there is activity" surface
-  // (docs/plans/questions-end-to-end.md Track C): shown on the Questions
+  // (docs/implemented-plans/questions-end-to-end.md Track C): shown on the Questions
   // nav entry, and separately as an always-visible mobile badge since the
   // mobile nav list only appears once the hamburger menu is opened.
   const utils = trpc.useUtils();

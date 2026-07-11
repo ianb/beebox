@@ -1,15 +1,15 @@
 # Questions, end-to-end
 
-Status: implemented 2026-07, on branch `worktree-questions-end-to-end`.
+**Status:** implemented 2026-07 — landed on `worktree-questions-end-to-end`.
 
 Redesign of the questions subsystem so that it does the job it exists for:
 the box asks the boxholder things it cannot decide alone, the boxholder
 answers with minimal friction, the answer both acts and **teaches** — every
 answer lands as a concrete, durable change to the box's knowledge (guide,
 briefing, or personality), not just a one-shot side effect. Resolves
-`/issues/2026-06-26-questions-end-to-end-d1.md` and
-`/issues/2026-05-19-questions-aging-policy.md`; explicitly rejects
-`/issues/2026-06-09-in-chat-interactive-questions.md` (see NOT in scope).
+`/issues/closed/features/2026-06-26-questions-end-to-end-d1.md` and
+`/issues/closed/features/2026-05-19-questions-aging-policy.md`; explicitly rejects
+`/issues/closed/features/2026-06-09-in-chat-interactive-questions.md` (see NOT in scope).
 
 ## The purpose frame
 

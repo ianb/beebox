@@ -149,7 +149,7 @@ tests:
   # did confirmatory reading (13 files) but named learning.sink +
   # source: user-stated correctly.
   #
-  # Track F (docs/plans/questions-end-to-end.md) additions. These probe the
+  # Track F (docs/implemented-plans/questions-end-to-end.md) additions. These probe the
   # two-product answer contract (directive + learning) and lifecycle facts
   # (dismissed/expired remain answerable) that the plan's "purpose frame"
   # depends on agents actually carrying. Deliberately NOT audited: the aging

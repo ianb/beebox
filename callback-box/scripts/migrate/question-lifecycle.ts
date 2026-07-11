@@ -1,6 +1,6 @@
 /**
  * Pure per-card transform for the question-lifecycle migration (Track A,
- * `docs/plans/questions-end-to-end.md`). See `question-lifecycle-run.ts` for
+ * `docs/implemented-plans/questions-end-to-end.md`). See `question-lifecycle-run.ts` for
  * the CLI driver (tree walk, git dates, file writes) and the module doc
  * comment there for the full description of what this migrator does.
  *

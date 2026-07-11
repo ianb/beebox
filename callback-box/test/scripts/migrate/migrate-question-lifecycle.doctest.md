@@ -2,7 +2,7 @@
 
 `scripts/migrate/question-lifecycle.ts` is the pure per-card transform behind
 the `question-lifecycle` migration (Track A,
-`docs/plans/questions-end-to-end.md`): strip `answered-by:`, backfill
+`docs/implemented-plans/questions-end-to-end.md`): strip `answered-by:`, backfill
 `asked-at:` on pending cards, relocate stray question cards into
 `box/questions/` with a `context:` ref back to their original scope, fix
 retired `<agent-needs-to-know>` directive references, and report (never

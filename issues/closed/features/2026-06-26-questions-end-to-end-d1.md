@@ -1,12 +1,12 @@
 ---
 title: "questions end to end d1"
 needs: [design]
-design: ../../../callback-box/docs/plans/questions-end-to-end.md
+design: ../../../callback-box/docs/implemented-plans/questions-end-to-end.md
 area: callback-box
 resolution: implemented
 ---
 
-**Closed 2026-07-10:** Implemented by `docs/plans/questions-end-to-end.md`
+**Closed 2026-07-10:** Implemented by `docs/implemented-plans/questions-end-to-end.md`
 (worktree `worktree-questions-end-to-end`) — confirm-type questions now
 render as Yes/No buttons (type-driven `QuestionForm`), the triage
 option-id scheme and answer round-trip got a full atomic-transition rewrite

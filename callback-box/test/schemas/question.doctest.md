@@ -3,7 +3,7 @@
 Question cards ask the user something and route the answer back for
 processing. An answer has two products: the immediate effect (`directive:`)
 and, optionally, durable knowledge the answer teaches (`learning:` — see
-`docs/plans/questions-end-to-end.md`). This covers the `input` cross-field
+`docs/implemented-plans/questions-end-to-end.md`). This covers the `input` cross-field
 refinement, the status/learning/expiry vocabulary, and the three template
 builders. Round-trip answer behavior lives in
 `test/core/commands/answer-command.doctest.md`.

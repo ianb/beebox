@@ -6,7 +6,7 @@ resolution: wontfix
 ---
 
 **Closed 2026-07-10 (wontfix):** Decided during
-`docs/plans/questions-end-to-end.md` (see its "NOT in scope"): synchronous
+`docs/implemented-plans/questions-end-to-end.md` (see its "NOT in scope"): synchronous
 chat is a different situation from the async question queue — in chat the
 agent just asks in prose, the boxholder is right there to answer, and a
 retrospective converts that conversation into learning afterward.

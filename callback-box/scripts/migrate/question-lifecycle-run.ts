@@ -2,7 +2,7 @@
 
 /**
  * CLI driver for the question-lifecycle migration (Track A,
- * `docs/plans/questions-end-to-end.md`). The pure per-card transform lives in
+ * `docs/implemented-plans/questions-end-to-end.md`). The pure per-card transform lives in
  * `question-lifecycle.ts`; this file does the tree walk, resolves git dates
  * and destination names, writes the results, and reports.
  *
