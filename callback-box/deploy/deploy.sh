@@ -200,40 +200,55 @@ echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 # further down can skip itself — a worktree just carved by `worktree add` has
 # nothing to clean.
 CHECKOUT_FRESH=false
-# Build a fresh detached worktree at $SHA, curing the corrupt/stale state we've
-# hit here: a leftover `.git/worktrees/<name>` whose gitdir/index is broken
-# survives `worktree prune` and then makes `worktree add` die with
-# `fatal: .git/index: ... Not a directory` (ENOTDIR), silently failing the prod
-# deploy. So each attempt wipes the dir, removes ANY worktree metadata still
-# pointing at this checkout (prune alone doesn't clear a corrupt one), prunes,
-# then adds — retried once, since the ENOTDIR also races git's bookkeeping and
-# clears on a second try. Only a second failure is fatal (a real repo problem,
-# not a transient). See issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
-recreate_checkout() {
-  local attempt wt gd
-  for attempt in 1 2; do
-    rm -rf "$CHECKOUT"
-    if [ -d "$GIT_COMMON_DIR/worktrees" ]; then
-      for wt in "$GIT_COMMON_DIR"/worktrees/*/; do
-        [ -f "$wt/gitdir" ] || continue
-        gd="$(cat "$wt/gitdir" 2>/dev/null || true)"
-        case "$gd" in "$CHECKOUT/.git"*) rm -rf "$wt" ;; esac
-      done
+
+# Retry a git-worktree op that transiently ENOTDIRs when a CONCURRENT
+# `git worktree add` (a worktree session spinning up) races git's shared
+# `.git/index` / `index.lock` — the actual cause of the deploy-checkout deaths
+# (`fatal: .git/index: ... Not a directory`, `Unable to create
+# .../index.lock: Not a directory`). It clears once the other op finishes; the
+# contended window can span ~10s when several worktree-creates overlap, so back
+# off up to ~60s before giving up. See
+# issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
+run_with_backoff() {
+  local label="$1"; shift
+  local delay
+  for delay in 0 2 4 8 16 30; do
+    if [ "$delay" != 0 ]; then
+      echo "deploy: $label failed (concurrent git op?) — settling ${delay}s and retrying..." >&2
+      sleep "$delay"
     fi
-    git -C "$MONO_DIR" worktree prune 2>/dev/null || true
-    if git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA"; then
-      CHECKOUT_FRESH=true
-      return 0
-    fi
-    echo "deploy: 'worktree add $CHECKOUT' failed (attempt $attempt) — settling and retrying..." >&2
-    sleep 2
+    if "$@"; then return 0; fi
   done
-  echo "deploy: could not create build checkout $CHECKOUT after 2 attempts (not a transient)." >&2
   return 1
 }
+
+# One recreate attempt: wipe the dir, drop ANY worktree metadata still pointing
+# at this checkout (a corrupt one survives `worktree prune` and defeats
+# `worktree add`), prune, then add. Wrapped in run_with_backoff by
+# recreate_checkout so the concurrent-git race is ridden out too.
+recreate_checkout_once() {
+  rm -rf "$CHECKOUT"
+  local wt gd
+  if [ -d "$GIT_COMMON_DIR/worktrees" ]; then
+    for wt in "$GIT_COMMON_DIR"/worktrees/*/; do
+      [ -f "$wt/gitdir" ] || continue
+      gd="$(cat "$wt/gitdir" 2>/dev/null || true)"
+      case "$gd" in "$CHECKOUT/.git"*) rm -rf "$wt" ;; esac
+    done
+  fi
+  git -C "$MONO_DIR" worktree prune 2>/dev/null || true
+  git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA" || return 1
+  CHECKOUT_FRESH=true
+}
+recreate_checkout() {
+  if run_with_backoff "recreate build checkout" recreate_checkout_once; then return 0; fi
+  echo "deploy: FATAL — could not create build checkout $CHECKOUT after ~60s of retries." >&2
+  echo "  Not a transient; git worktree state may be genuinely broken. Inspect with:" >&2
+  echo "    git -C $MONO_DIR worktree list  &&  ls -la $GIT_COMMON_DIR/worktrees/" >&2
+  return 1
+}
+
 if [ ! -d "$CHECKOUT" ]; then
-  # Clear any stale registration left by a wiped-but-not-pruned checkout dir,
-  # then create the detached worktree at the target sha.
   recreate_checkout
 elif ! checkout_belongs_to_repo; then
   echo "deploy: build checkout $CHECKOUT does not belong to this repo (repo moved/renamed?)." >&2
@@ -243,18 +258,12 @@ fi
 
 # Reset the checkout to the target sha. (Redundant right after a fresh
 # `worktree add`, which already checked out $SHA, but harmless and keeps the
-# path uniform for the reuse case.) A transient git failure here (observed:
-# ENOTDIR writing a worktree's index.lock, racing git's own bookkeeping) is
-# retried once after a short sleep; if it still fails, the checkout is a
-# disposable cache, so wipe and recreate it from scratch rather than dying
-# mid-deploy.
-if ! git -C "$CHECKOUT" checkout --detach "$SHA"; then
-  echo "deploy: checkout --detach $SHA failed — retrying once..." >&2
-  sleep 2
-  if ! git -C "$CHECKOUT" checkout --detach "$SHA"; then
-    echo "deploy: checkout --detach $SHA failed again — recreating the build checkout." >&2
-    recreate_checkout
-  fi
+# path uniform for the reuse case.) Retried with backoff BEFORE falling back to
+# recreate — a recreate wipes node_modules and forces a slow full reinstall, so
+# riding out the transient in-place is much cheaper.
+if ! run_with_backoff "checkout --detach $SHA" git -C "$CHECKOUT" checkout --detach "$SHA"; then
+  echo "deploy: checkout --detach $SHA unrecoverable in place — recreating the build checkout." >&2
+  recreate_checkout
 fi
 
 # Clean EVERYTHING ignored/untracked except node_modules and the meta file. This
@@ -262,17 +271,13 @@ fi
 # src/frontend/dist) from a previous ref must never ship. node_modules is
 # preserved so the pnpm install below stays a fast reconcile (Vite's cache lives
 # inside node_modules, so it survives too); the meta file records the
-# last-installed sha and must outlive the clean. Same transient-failure
+# last-installed sha and must outlive the clean. Same backoff-then-recreate
 # handling as the checkout above; skipped entirely when the checkout was just
 # (re)created fresh, since a brand-new worktree has nothing to clean.
 if [[ "$CHECKOUT_FRESH" != true ]]; then
-  if ! git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .; then
-    echo "deploy: git clean failed — retrying once..." >&2
-    sleep 2
-    if ! git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .; then
-      echo "deploy: git clean failed again — recreating the build checkout." >&2
-      recreate_checkout
-    fi
+  if ! run_with_backoff "git clean" git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .; then
+    echo "deploy: git clean unrecoverable in place — recreating the build checkout." >&2
+    recreate_checkout
   fi
 fi
 

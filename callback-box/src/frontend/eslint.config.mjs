@@ -45,4 +45,30 @@ export default [
       ],
     },
   },
+  {
+    // XState's `useMachine` is SSR-unsafe used directly. The project's
+    // `useSSRMachine` wrapper (src/hooks/useSSRMachine.ts) hydrates the machine
+    // snapshot from SSRStateContext, so SSR safety is guaranteed rather than
+    // convention-only — a bare `useMachine` compiles and runs fine on the
+    // client but breaks (or silently diverges) under SSR. Enforce the wrapper
+    // everywhere except the wrapper itself.
+    // (issues/code-quality/2026-07-04-ssr-lint-rule-for-usessrmachine.md)
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/hooks/useSSRMachine.ts"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@xstate/react",
+              importNames: ["useMachine"],
+              message:
+                "Import `useSSRMachine` from src/hooks/useSSRMachine.ts instead of `useMachine` from @xstate/react — the wrapper hydrates the machine snapshot from SSRStateContext so SSR is safe; a bare useMachine only works client-side.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
