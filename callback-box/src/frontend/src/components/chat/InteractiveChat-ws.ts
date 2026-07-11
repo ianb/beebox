@@ -24,6 +24,7 @@ import { bumpFileVersion } from "../../lib/file-version";
 import type { ChatEvent } from "../../machines/chat-types";
 import type { TaskEvent } from "./background-tasks";
 import type { CaptureLiveStatus } from "./capture-bubble";
+import type { ScreenshotRequest } from "./screenshot-request-handler";
 
 /**
  * Server response shape of GET /api/chat/voice-config (mirrors the backend's
@@ -58,6 +59,8 @@ interface SecondaryEventDeps {
   onTaskEvent: (task: TaskEvent) => void;
   /** A capture staging session changed state — refine the pending bubble. */
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
+  /** The agent asked this session's tab for a screenshot (`cb chat screenshot`). */
+  onScreenshotRequest: (request: ScreenshotRequest) => void;
 }
 
 /**
@@ -66,7 +69,7 @@ interface SecondaryEventDeps {
  * main dispatcher to keep each handler's branching legible.
  */
 function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): void {
-  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus } = deps;
+  const { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = deps;
   const capture = busEventData(event, "capture-status");
   if (capture) {
     // `sessionId` on the event is null until delivery, so we don't filter by
@@ -90,6 +93,13 @@ function handleSecondaryEvent(event: RealtimeEvent, deps: SecondaryEventDeps): v
     // The box agent ran `cb chat get-last-audio` — answer with this tab's
     // cached recording (or "none"; the server waits out other tabs).
     void fulfillLastAudioRequest(lastAudio.requestId);
+    return;
+  }
+  const screenshot = busEventData(event, "screenshot-request");
+  if (screenshot) {
+    // The box agent ran `cb chat screenshot`. The handler matches this view's
+    // session EXACTLY (never `forSession`), acks, and runs the consent flow.
+    onScreenshotRequest(screenshot);
     return;
   }
   const features = busEventData(event, "chat-features-changed");
@@ -123,8 +133,9 @@ export function useChatWs(opts: {
   setChatFeatures: (features: Record<string, string>) => void;
   onTaskEvent: (task: TaskEvent) => void;
   onCaptureStatus: (data: { stagingId: string; status: CaptureLiveStatus }) => void;
+  onScreenshotRequest: (request: ScreenshotRequest) => void;
 }) {
-  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus } = opts;
+  const { sessionId, sessionInput, boxSlug, currentUser, isStreaming, send, fetchSchedules, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest } = opts;
   const navigate = useNavigate();
   const search = useSearch({ strict: false });
 
@@ -175,9 +186,9 @@ export function useChatWs(opts: {
           });
         }
       } else {
-        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus });
+        handleSecondaryEvent(event, { sessionId, sessionInput, isStreaming, send, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest });
       }
-    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onCaptureStatus]),
+    }, [fetchSchedules, send, currentUser, sessionId, sessionInput, isStreaming, setChatFeatures, onTaskEvent, onCaptureStatus, onScreenshotRequest]),
   });
 
   // Update the URL when the machine learns the assigned session id. Fires for
