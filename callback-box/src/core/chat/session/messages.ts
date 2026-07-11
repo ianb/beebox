@@ -281,6 +281,14 @@ export function adaptSdkMessage(msg: SDKMessage): ChatMessage | null {
       // SDK-internal partials/status events; deliberately not surfaced (distinct
       // from the `unknown` sentinel below, which catches types we don't know).
       return null;
+    case "conversation_reset":
+      // New in SDK 0.3.x: signals /clear, plan-mode exit, and fresh-session
+      // flows, and asks the surface to mount a fresh transcript under
+      // new_conversation_id. Not yet wired up on our side (chat sessions
+      // don't currently re-key on this) — dropped rather than surfaced as
+      // `unknown` since it IS a recognized type, just not one we act on yet.
+      // See issues/features/2026-07-11-adapt-conversation-reset-sdk-message.md.
+      return null;
     default:
       // A future SDK version's unrecognized type: surface it as the logged,
       // counted wire-tolerance sentinel rather than dropping it silently.
