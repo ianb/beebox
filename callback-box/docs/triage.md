@@ -130,6 +130,8 @@ Two distinct cuts:
 
 This is the case the question system is *for*. The current question card design covers `select`, `text`, `confirm` with a `directive` that creates a follow-up job. Triage will push on it — needing to address multiple items at once, needing to carry both a rule-update and a placement instruction in one answer. **Evolve the question system to fit this case**; don't work around its limits. This is the most demanding use of questions we're going to build; if it works here, it's working.
 
+The rule-update-plus-placement evolution landed: `learning:` (`docs/questions.md`, `docs/plans/questions-end-to-end.md`) lets a question declare both the immediate placement (`directive:`) and the durable rule the answer teaches (`learning: {sink, ref?, proposal}`) in one card. `createGuessQuestion` (`src/core/triage/routing.ts`) populates it. Question batching (multiple held items in one card) is still not built — see that plan's NOT-in-scope.
+
 Open: does the second-pass placement need its own agent invocation, or can a simpler script handle "the answer told me where each item goes; move them"?
 
 ## Intake (stage 1)

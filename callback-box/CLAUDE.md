@@ -142,6 +142,7 @@ When you get corrected on a convention, pattern, or workflow that wasn't documen
 | Agent-set chat timers (`<schedule>` tag) | `docs/chat-schedules.md` |
 | Capturing full agent-invocation API traffic | `docs/prompt-logging.md` |
 | Triage pipeline design | `docs/triage.md` |
+| Questions subsystem design | `docs/questions.md` |
 | Deployment | `deploy/README.md` |
 | Server operations | `docs/server-operations.md` |
 | Adding a box | `docs/adding-a-box.md` |
