@@ -196,6 +196,9 @@ interface Harness {
   awaitProbes(count: number): Promise<Deferred[]>;
   /** Names the resolver should treat as unknown (→ 404 from startWorktree). */
   unknownNames: Set<string>;
+  /** When set, the NEXT `pidStore.write` call rejects with this and clears
+   *  itself (a disk-full/permission failure between spawn and waitForHttp). */
+  failNextPidWrite: { value: unknown | undefined };
   cleanup(): Promise<void>;
 }
 
@@ -209,6 +212,7 @@ async function makeHarness(): Promise<Harness> {
 
   let probeMode: "auto" | "manual" = "auto";
   let pendingProbes: Deferred[] = [];
+  const failNextPidWrite: { value: unknown | undefined } = { value: undefined };
 
   const effects: RouterEffects = {
     spawn: spawner.spawn,
@@ -229,7 +233,13 @@ async function makeHarness(): Promise<Harness> {
     // In-memory pidfile store for the core harness (the barrier-gated store that
     // proves serialization is exercised separately, in the pidfile test below).
     pidStore: {
-      write: async () => undefined,
+      write: async () => {
+        if (failNextPidWrite.value !== undefined) {
+          const err = failNextPidWrite.value;
+          failNextPidWrite.value = undefined;
+          throw err;
+        }
+      },
       remove: async (name, expect) => {
         removeCalls.push({ name, expect });
       },
@@ -264,6 +274,7 @@ async function makeHarness(): Promise<Harness> {
     killCalls,
     removeCalls,
     unknownNames,
+    failNextPidWrite,
     manualProbes: () => {
       probeMode = "manual";
     },
@@ -468,6 +479,70 @@ test("stale failure: a superseded start's failure self-cleans and cannot park a 
     // Drain B so it doesn't leak into later tests.
     for (const p of bProbesEarly) p.resolve();
     await bPromise;
+  } finally {
+    await h.cleanup();
+  }
+});
+
+test("pidStore.write failure between spawn and waitForHttp still kills both children (cross-phase review)", async () => {
+  const h = await makeHarness();
+  try {
+    h.failNextPidWrite.value = new Error("ENOSPC: no space left on device");
+    await assert.rejects(() => h.core.ensureRunning("wt"), /ENOSPC/);
+
+    const fastifyPid = h.spawner.lifecycleCalls()[0]!.child.pid;
+    const vitePid = h.spawner.lifecycleCalls()[1]!.child.pid;
+
+    // Before the cross-phase fix, this failure fell OUTSIDE the only try/catch
+    // (which wrapped just the waitForHttp probes), so neither child was killed,
+    // no pidfile cleanup ran, and no terminal transition happened — a leaked
+    // vite+fastify pair with a still-`starting` (then dropped) handle.
+    const termed = h.killCalls.filter((k) => k.signal === "SIGTERM").map((k) => k.pid).sort();
+    assert.deepEqual(termed, [fastifyPid, vitePid].sort(), "both children killed despite the pre-probe failure");
+    assert.ok(
+      h.removeCalls.some((r) => r.name === "wt"),
+      "pidfile cleanup ran even though the write that would have created it failed",
+    );
+    assert.equal(h.core.getHandle("wt")?.lifecycle.phase, "failed", "parked as `failed`, not a phantom `starting`");
+  } finally {
+    await h.cleanup();
+  }
+});
+
+// --- shutdown (cross-phase review: stopAllChildren vs. in-flight starts) -----
+
+test("shutdown supersedes an in-flight start: it self-cleans instead of publishing after teardown", async () => {
+  const h = await makeHarness();
+  try {
+    h.manualProbes();
+    const startP = h.core.ensureRunning("wt");
+    const probes = await h.awaitProbes(2); // start is now parked in waitForHttp
+    assert.equal(probes.length, 2);
+    assert.equal(h.core.getHandle("wt")?.lifecycle.phase, "starting", "still mid cold-start");
+
+    const fastifyPid = h.spawner.lifecycleCalls()[0]!.child.pid;
+    const vitePid = h.spawner.lifecycleCalls()[1]!.child.pid;
+
+    // Full-router shutdown runs WHILE the start is still in flight.
+    const shutdownP = h.core.stopAllChildren();
+
+    // stopAllChildren must have unlinked the starting handle immediately
+    // (synchronously, before its own `sleep(500)`) — it can't wait on the
+    // start's own probes to resolve since it doesn't control them.
+    assert.equal(h.core.getHandle("wt"), undefined, "starting handle superseded up front");
+
+    // Readiness now resolves — the start finds itself superseded and self-cleans.
+    for (const p of probes) p.resolve();
+    await startP;
+    await shutdownP;
+
+    const termed = h.killCalls.filter((k) => k.signal === "SIGTERM").map((k) => k.pid).sort();
+    assert.deepEqual(termed, [fastifyPid, vitePid].sort(), "shutdown's supersession made the start self-clean");
+    assert.ok(
+      h.removeCalls.some((r) => r.name === "wt" && r.expect?.vitePid === vitePid),
+      "the superseded start removed its own pidfile",
+    );
+    assert.equal(h.core.getHandle("wt"), undefined, "still nothing published after shutdown resolved");
   } finally {
     await h.cleanup();
   }

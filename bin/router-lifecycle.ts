@@ -106,10 +106,14 @@ export interface StoppingLifecycle {
   readonly fastifyPid: number | undefined;
   readonly dashboardPort: number | null;
   readonly browseEnv: NodeJS.ProcessEnv | null;
-  // The SIGTERM→SIGKILL escalation timer for this generation's children, stored
-  // so teardown can cancel it (e.g. full-router shutdown) and a test's fake
-  // clock can reach it. Fire-and-forget today; storing it is the recorded small
-  // improvement of the effects work. `null` only transiently before it's armed.
+  // The SIGTERM→SIGKILL escalation timer for this generation's children,
+  // stored so a test's fake clock can reach it and so a caller holding this
+  // handle directly (not just by name) could cancel it. In practice `stopping`
+  // handles are always unlinked from the map before this transition (see the
+  // phase docstring above), so full-router shutdown never sees this handle
+  // again and can't reach the timer through it — it stays fire-and-forget
+  // there; storing it is the recorded small improvement of the effects work.
+  // `null` only transiently before it's armed.
   killTimer: TimerHandle | null;
 }
 

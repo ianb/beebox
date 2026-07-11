@@ -53,7 +53,8 @@ it is itself TOCTOU. The store now enforces both together.
 
 ## 2. Registering a worktree's start must be atomic — no `await` between check and set
 
-**Where:** `ensureRunning` in `bin/router.ts`.
+**Where:** `ensureRunning` in `bin/router-core.ts` (moved here from `router.ts`
+in Phase B, 2026-07-11).
 
 `ensureRunning` checks the `worktrees` map, and if the worktree isn't already
 running or starting, registers a `"starting"` placeholder and kicks off
@@ -71,8 +72,9 @@ lookup/404 check that used to happen — and `await` — before registration.
 
 ## 3. Swallow the execa child-process promise immediately at spawn time
 
-**Where:** `startWorktree` in `bin/router.ts`, on both the `fastify` and
-`vite` `execa()` results.
+**Where:** `startWorktree` in `bin/router-core.ts` (moved here from
+`router.ts` in Phase B, 2026-07-11), on both the `fastify` and `vite`
+`execa()` results.
 
 `execa()` returns a promise that rejects when the child exits non-zero — a
 router routinely killing children on idle-shutdown or generation replacement
@@ -91,7 +93,8 @@ promise.
 
 ## 4. A teardown must verify the exiting child still belongs to the map's current entry
 
-**Where:** `onChildExit` in `bin/router.ts`.
+**Where:** `onChildExit` in `bin/router-core.ts` (moved here from `router.ts`
+in Phase B, 2026-07-11).
 
 Fastify drains open browser sockets for up to ~10s after `SIGTERM` before its
 process actually exits. By the time that delayed `exit` event fires, a
@@ -112,8 +115,9 @@ comment).
 
 ## 5. A completed startup must re-check it's still the current generation before publishing
 
-**Where:** `startWorktree`'s terminal sites in `bin/router.ts` (the `ready` and
-`failed` transitions), guarded by `worktrees.get(name) === handle`.
+**Where:** `startWorktree`'s terminal sites in `bin/router-core.ts` (moved
+here from `router.ts` in Phase B, 2026-07-11; the `ready` and `failed`
+transitions), guarded by `worktrees.get(name) === handle`.
 
 A cold start runs for seconds (spawn → dashboard → `waitForHttp`, up to 30s).
 During that window the generation it belongs to can be superseded: a
@@ -134,7 +138,20 @@ and resolves **without publishing** — it never reappears in the map. With the
 stable-shell model this is one identity check at each terminal site, because the
 handle registered by `ensureRunning` in `starting` is the *same object* the
 terminal transitions flip in place; there is no map-replacement step that could
-outrace the guard. (A separate, legitimate restart still happens when a *live*
+outrace the guard.
+
+**Correction (2026-07-11, cross-phase review): the failure catch's SCOPE was
+not wide enough.** Only `waitForHttp`'s own `try`/`catch` reached this guarded
+check — a rejection from the dashboard-start spawn or `pidStore.write`, both of
+which run *after* both children are spawned but *before* that `try`, bypassed
+it entirely: neither child got killed, no pidfile cleanup ran, and no terminal
+transition happened, leaking both processes. The fix widens the `try` to cover
+dashboard-start through `waitForHttp` as one region sharing the same catch (a
+`failurePhase` variable tracks which stage failed, for the captured-error
+page), so every completion path — not just the readiness probes — now reaches
+this guard.
+
+(A separate, legitimate restart still happens when a *live*
 HTTP request is mid-flight: `proxyWithRetry` re-runs `ensureRunning` against a
 non-ready handle and cold-starts a fresh generation — that's the request
 re-establishing intent, not the superseded start resurrecting itself.)
@@ -226,6 +243,24 @@ option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
   runtime guard's uniquely-observable job is routing a superseded failure to
   `stopping` (self-clean) vs `failed`, which the #5b test asserts.
 - transition table + stable-shell identity → `bin/router-lifecycle.test.ts`.
+
+**Cross-phase review fixes (2026-07-11):** the phased reviews each looked at
+one sub-phase in isolation; a follow-up whole-composition pass found two gaps
+only visible across all three:
+
+- Invariant #5's guarded-publication catch didn't cover the whole cold-start
+  region — see the Correction under invariant #5 above. Covered by
+  "pidStore.write failure…" in `bin/router-core.test.ts`.
+- `stopAllChildren()` (full-router shutdown) killed only `ready`/`stopping`
+  generations' children; an in-flight `starting` generation has no PIDs on its
+  handle yet, so it was neither unlinked nor awaited and could finish spawning
+  *after* shutdown's teardown, orphaning a fresh vite+fastify pair. Fixed by
+  having `stopAllChildren` unlink any `starting` handle (superseding it, so
+  invariant #5's own guard makes it self-clean) and await its settlement;
+  `router.ts`'s `shutdown()` also now closes the HTTP server *before* draining
+  children, so no new request can trigger a fresh `ensureRunning()` during the
+  drain. Covered by "shutdown supersedes an in-flight start…" in
+  `bin/router-core.test.ts`.
 
 Deliberate non-goals recorded at close-out: status accuracy for the in-flight
 `stopping` phase (handles are unlinked before the transition, so it's never

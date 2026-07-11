@@ -183,7 +183,9 @@ export interface RouterCore {
    *  anything was cleared. */
   clearFailed(name: string): boolean;
   /** Full-router shutdown: SIGTERM every generation's children, schedule the
-   *  SIGKILL escalation, wait the drain, and remove every child pidfile. */
+   *  SIGKILL escalation, wait the drain, remove every child pidfile, and
+   *  supersede+await any in-flight `starting` generations so they self-clean
+   *  (invariant #5) instead of publishing after this resolves. */
   stopAllChildren(): Promise<void>;
 }
 
@@ -396,39 +398,47 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     vite.stdout?.on("data", (d: Buffer) => viteOutputRing.write(d.toString("utf8")));
     vite.stderr?.on("data", (d: Buffer) => viteOutputRing.write(d.toString("utf8")));
 
-    // Kill any orphaned dashboard daemon for this socket dir before starting a new one.
-    await stopDashboardCmd(browseEnv);
-
-    let dashboardStarted = false;
-    try {
-      await effects.spawn(
-        "node",
-        [config.agentBrowserBin, "dashboard", "start", "--port", String(dashboardPort)],
-        { env: browseEnv, stdio: "ignore", timeout: 15000 },
-      );
-      dashboardStarted = true;
-      log(`[${name}] dashboard ready on :${dashboardPort}`);
-    } catch (err) {
-      log(`[${name}] dashboard failed to start: ${errMessage(err)}`);
-    }
-
-    await effects.pidStore.write(name, {
-      name,
-      vitePid: vite.pid,
-      fastifyPid: fastify.pid,
-      frontendPort,
-      backendPort,
-      dashboardPort: dashboardStarted ? dashboardPort : null,
-      socketDir,
-      profileDir,
-      routerPid: config.routerPid,
-      startedAt: effects.now(),
-    });
-
     const expect: PidExpectation = { vitePid: vite.pid, fastifyPid: fastify.pid };
-
-    // Wait for both to serve HTTP — not just accept TCP.
+    let dashboardStarted = false;
+    // Tracks which stage a failure below happened in, for the failed-startup
+    // page. Everything from here through waitForHttp shares ONE try/catch: a
+    // synchronous/rejected failure at ANY of these stages (dashboard start
+    // already catches its own; a rejected pidStore.write is the one that used
+    // to slip past uncaught) must reach the same cleanup + guarded-publication
+    // logic as a waitForHttp timeout, not bypass it and leak the two children.
+    let failurePhase = "dashboard-start";
     try {
+      // Kill any orphaned dashboard daemon for this socket dir before starting a new one.
+      await stopDashboardCmd(browseEnv);
+
+      try {
+        await effects.spawn(
+          "node",
+          [config.agentBrowserBin, "dashboard", "start", "--port", String(dashboardPort)],
+          { env: browseEnv, stdio: "ignore", timeout: 15000 },
+        );
+        dashboardStarted = true;
+        log(`[${name}] dashboard ready on :${dashboardPort}`);
+      } catch (err) {
+        log(`[${name}] dashboard failed to start: ${errMessage(err)}`);
+      }
+
+      failurePhase = "pidStore.write";
+      await effects.pidStore.write(name, {
+        name,
+        vitePid: vite.pid,
+        fastifyPid: fastify.pid,
+        frontendPort,
+        backendPort,
+        dashboardPort: dashboardStarted ? dashboardPort : null,
+        socketDir,
+        profileDir,
+        routerPid: config.routerPid,
+        startedAt: effects.now(),
+      });
+
+      // Wait for both to serve HTTP — not just accept TCP.
+      failurePhase = "waitForHttp";
       await Promise.all([
         effects.waitForHttp(frontendPort, baseUrl, 30000, `vite/${name}`),
         effects.waitForHttp(backendPort, "/healthz", 30000, `fastify/${name}`),
@@ -438,10 +448,12 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
       // The dashboard daemon started before waitForHttp; stop it too so a failed
       // startup doesn't leak an agent-browser process.
       if (dashboardStarted) await stopDashboardCmd(browseEnv);
+      // Safe even if pidStore.write above never ran (or never got this far) —
+      // remove() falls through to a no-op unlink when the record is missing.
       await effects.pidStore.remove(name, expect);
       const captured: CapturedError = {
         message: errMessage(err),
-        phase: "waitForHttp",
+        phase: failurePhase,
         viteOutput: viteOutputRing.read(),
         fastifyOutput: fastifyOutputRing.read(),
         at: effects.now(),
@@ -616,7 +628,22 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
   }
 
   async function stopAllChildren(): Promise<void> {
-    for (const handle of worktrees.values()) {
+    // A `starting` handle owns no PIDs yet (they're only published on the
+    // ready/failed/stopping variants), so this sweep can't kill its children
+    // directly. Instead unlink it from the map right now, which supersedes it:
+    // the in-flight startWorktree's own guarded-publication check (invariant
+    // #5, `worktrees.get(name) !== handle`) will see itself replaced and
+    // self-clean (kill ITS children, remove ITS pidfile) once it reaches that
+    // check, instead of publishing `ready`/`failed` after this teardown has
+    // already run. Awaited below so shutdown doesn't return before that
+    // self-clean has actually happened.
+    const supersededStarts: Promise<WorktreeHandle>[] = [];
+    for (const [name, handle] of [...worktrees.entries()]) {
+      if (handle.lifecycle.phase === "starting") {
+        worktrees.delete(name);
+        supersededStarts.push(handle.lifecycle.startPromise);
+        continue;
+      }
       const ready = readyLifecycle(handle);
       if (ready?.idleTimer) effects.clearTimer(ready.idleTimer);
       const { vitePid, fastifyPid } = childPids(handle.lifecycle);
@@ -634,6 +661,7 @@ export function createRouterCore(effects: RouterEffects, config: RouterCoreConfi
     for (const name of worktrees.keys()) {
       await effects.pidStore.remove(name);
     }
+    await Promise.allSettled(supersededStarts);
   }
 
   function clearFailed(name: string): boolean {

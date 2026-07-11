@@ -977,10 +977,15 @@ async function main(): Promise<void> {
     if (shuttingDown) return;
     shuttingDown = true;
     log(`shutting down: ${reason}`);
+    // Stop accepting new connections/requests FIRST, before tearing down
+    // children below — otherwise a request arriving during stopAllChildren's
+    // drain can still reach ensureRunning() and cold-start a fresh generation
+    // after cleanup has already run for everything else.
+    server.close();
+    setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
     await core.stopAllChildren();
     await fs.unlink(ROUTER_PID_FILE).catch(() => {});
-    server.close(() => process.exit(0));
-    setTimeout(() => process.exit(0), KILL_GRACE_MS + 500).unref();
+    process.exit(0);
   };
 
   process.on("SIGINT", () => {
