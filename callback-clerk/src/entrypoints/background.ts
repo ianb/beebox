@@ -12,8 +12,17 @@ import {
   type CommentaryCapture,
 } from "../domain/commentary.js";
 import { isCaptureResultMessage } from "../domain/capture-messages.js";
+import {
+  captureErrorReason,
+  isUrlUnderBoxUrl,
+} from "../domain/relay-auth.js";
+import {
+  isRelayCaptureMessage,
+  type CaptureResult,
+} from "../domain/relay-messages.js";
 import { ClerkApiError, postCommentary } from "../platform/clerk-api.js";
 import { loadConfig } from "../platform/config-storage.js";
+import { syncRelayRegistration } from "../platform/relay-registration.js";
 
 class NoActiveBoxError extends Error {
   constructor() {
@@ -109,6 +118,59 @@ function dispatch(message: ClerkMessage): Promise<void> {
   return commentOnPage(message.tabId, message.destinationDir);
 }
 
+async function isActiveTab(windowId: number, tabId: number): Promise<boolean> {
+  const [active] = await chrome.tabs.query({ active: true, windowId });
+  return active?.id === tabId;
+}
+
+// Handles a relay capture request (Track C). Stateless across messages — MV3
+// workers terminate unpredictably, so there is no queue and no in-flight map;
+// each request is authorized and answered within this one turn. The enabled-box
+// URL check (not the page's assertion) is the authorization boundary; the
+// active-tab checks bound capture to the tab that asked. See the plan's trust
+// model and "Known residual race".
+async function handleRelayCapture(
+  sender: chrome.runtime.MessageSender,
+): Promise<CaptureResult> {
+  const tab = sender.tab;
+  const tabId = tab?.id;
+  const tabUrl = tab?.url;
+  const windowId = tab?.windowId;
+  if (tab === undefined || tabId === undefined || tabUrl === undefined || windowId === undefined) {
+    return { ok: false, reason: "error", message: "relay capture: message had no sender tab" };
+  }
+
+  // (a) sender URL must be under an enabled box's boxUrl (full origin incl. port).
+  const config = await loadConfig();
+  if (!config.boxes.some((box) => isUrlUnderBoxUrl(tabUrl, box.boxUrl))) {
+    return { ok: false, reason: "not-enabled" };
+  }
+
+  // (b) the sender must be its window's active tab (captureVisibleTab has no
+  // tabId param — it grabs whatever is active).
+  if (!(await isActiveTab(windowId, tabId))) {
+    return { ok: false, reason: "not-capturable" };
+  }
+
+  // (c) capture.
+  let dataUrl: string;
+  try {
+    dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return { ok: false, reason: captureErrorReason(message), message };
+  }
+
+  // (d) re-verify the active tab is still the sender — a tab switch DURING the
+  // capture call can substitute another tab's pixels. Discard on mismatch. This
+  // shrinks but cannot close the race (documented residual risk).
+  if (!(await isActiveTab(windowId, tabId))) {
+    return { ok: false, reason: "not-capturable" };
+  }
+
+  return { ok: true, dataUrl };
+}
+
 function failureResponse(error: unknown): ActionFailure {
   if (error instanceof ClerkApiError) {
     return { ok: false, status: error.status, message: error.message };
@@ -156,11 +218,30 @@ function toastInTab(tabId: number, params: { text: string; isError: boolean }): 
 
 export default defineBackground(() => {
   // eslint-disable-next-line max-params -- Chrome API callback signature
-  chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (isRelayCaptureMessage(message)) {
+      handleRelayCapture(sender)
+        .then(sendResponse)
+        .catch((e: unknown) => {
+          const errMessage = e instanceof Error ? e.message : String(e);
+          sendResponse({ ok: false, reason: "error", message: errMessage });
+        });
+      return true;
+    }
     if (!isClerkMessage(message)) return;
     dispatch(message)
       .then(() => sendResponse({ ok: true }))
       .catch((e: unknown) => sendResponse(failureResponse(e)));
     return true;
   });
+
+  // Reconcile the relay content-script registration with the stored config on
+  // startup, in case config and registrations drifted (extension update,
+  // storage edited while the worker was down, a prior enable that failed to
+  // register). syncRelayRegistration is idempotent.
+  void loadConfig()
+    .then(syncRelayRegistration)
+    .catch((e: unknown) => {
+      console.error("[callback-clerk] relay registration sync failed on startup:", e);
+    });
 });
