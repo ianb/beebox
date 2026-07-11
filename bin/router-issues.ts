@@ -510,10 +510,6 @@ function issueRowHtml(base: string, issue: IssueRecord, overlay: OverlayEntry[] 
   </li>`;
 }
 
-function categoryLabel(category: string): string {
-  return category;
-}
-
 async function readWorktreeOnlyIssue(worktreeRoot: string, relPath: string): Promise<IssueRecord | null> {
   try {
     const src = await fs.readFile(path.join(worktreeRoot, "issues", relPath), "utf8");
@@ -541,6 +537,11 @@ async function renderIssueIndex(base: string, mainIssuesRoot: string, worktreesR
   }
 
   const f = parseFilters(query);
+  // Worktree-only issues honor the same filters as main's (they are all
+  // touched-by-a-worktree by definition, so that predicate is always true).
+  const worktreeOnlyVisible = worktreeOnly.filter(({ issue }) =>
+    (f.status === "all" || (f.status === "closed" ? issue.closed : !issue.closed)) && matches(issue, f, true),
+  );
   const facets = {
     categories: [...CATEGORIES],
     areas: [...new Set(issues.map((i) => i.frontmatter.area).filter((a): a is string => !!a))].sort(),
@@ -570,13 +571,13 @@ async function renderIssueIndex(base: string, mainIssuesRoot: string, worktreesR
         ? `<ul class="issues">${bucket.closed.map((i) => issueRowHtml(base, i, overlay.byPath.get(i.relPath))).join("")}</ul>`
         : "");
     const count = f.status === "closed" ? bucket.closed.length : bucket.open.length;
-    return `<h2 class="cat">${escapeHtml(categoryLabel(cat))} <span class="count">${count}</span></h2>${f.status === "closed" ? closedList : openList}${f.status === "all" ? closedList : ""}`;
+    return `<h2 class="cat">${escapeHtml(cat)} <span class="count">${count}</span></h2>${f.status === "closed" ? closedList : openList}${f.status === "all" ? closedList : ""}`;
   }).join("");
 
-  const worktreeOnlyHtml = worktreeOnly.length
-    ? `<h2 class="cat">worktree-only <span class="count">${worktreeOnly.length}</span></h2>
+  const worktreeOnlyHtml = worktreeOnlyVisible.length
+    ? `<h2 class="cat">worktree-only <span class="count">${worktreeOnlyVisible.length}</span></h2>
        <p style="color:#888;font-size:0.85em;margin-top:0">Issues that exist only on a worktree, not yet on main.</p>
-       <ul class="issues">${worktreeOnly.map(({ issue, entries }) => issueRowHtml(base, issue, entries)).join("")}</ul>`
+       <ul class="issues">${worktreeOnlyVisible.map(({ issue, entries }) => issueRowHtml(base, issue, entries)).join("")}</ul>`
     : "";
 
   const body = `<h1>issues</h1>
@@ -714,6 +715,8 @@ export async function serveIssues(params: {
     return;
   }
 
-  const relPath = decodeURIComponent(rel.replace(/^\//, ""));
+  // `rel` arrives already percent-decoded by serveDev — don't decode again
+  // (a second pass would throw URIError on any literal "%" in a filename).
+  const relPath = rel.replace(/^\//, "");
   await renderIssueDetail(base, mainIssuesRoot, worktreesRoot, relPath, res);
 }
