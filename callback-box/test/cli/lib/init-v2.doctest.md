@@ -37,6 +37,7 @@ import { generateSkills } from "../../../src/core/box/skills.js";
 import { installValidationHooks } from "../../../src/core/install-validation-hooks.js";
 import { stageAll, getLog, getStatus, isRepo, initRepo } from "../../../src/lib/git.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";
+import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 import { loadBoxSchemas, invalidateBoxSchemas } from "../../../src/schemas/registry.js";
 
 const execFileP = promisify(execFile);
@@ -153,6 +154,17 @@ Object.keys(pkg.dependencies)
   "react",
   "react-dom"
 ]
+```
+
+The `callback-box` spec defaults to `link:<engine checkout>` when the
+running engine is a source checkout (this test run) — a bare `^<version>`
+range is unresolvable off-registry and would abort the box's own
+`pnpm install` with a 404. Install tools that pin a tarball override via
+`CB_INIT_CALLBACK_BOX_SPEC` (see `scaffoldPackageRoot`):
+
+```ts continue
+pkg.dependencies["callback-box"] === `link:${PACKAGE_ROOT}`
+=> true
 ```
 
 `devDependencies` carries `typescript`/`@types/node`/`@types/react` — the
