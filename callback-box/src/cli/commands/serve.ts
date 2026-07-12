@@ -19,7 +19,7 @@ import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { getBoxShape } from "../../lib/box-shape.js";
+import { getBoxShapeIfPresent } from "../../lib/box-shape.js";
 import { findBoxRoot } from "../../lib/paths.js";
 
 /**
@@ -30,8 +30,11 @@ import { findBoxRoot } from "../../lib/paths.js";
  * The meaningful name is its PACKAGE root's basename instead.
  */
 async function defaultSlugFor(boxRoot: string): Promise<string> {
-  const shape = await getBoxShape(boxRoot);
-  return path.basename(shape.packageRoot);
+  // A real v2 box's slug is its PACKAGE root's basename (the content root's is
+  // always the literal "content"). A marker-less directory (the documented
+  // plain-directory serve mode) has no shape — fall back to its own basename.
+  const lookup = await getBoxShapeIfPresent(boxRoot);
+  return path.basename(lookup.found ? lookup.shape.packageRoot : boxRoot);
 }
 
 /**

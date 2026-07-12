@@ -32,7 +32,12 @@ const engineVersion = await realEngineVersion();
 => true
 ```
 
-## A legacy (shapeVersion 1) box has no separate installed engine
+## A v2 box with no installed engine reports `installed: null`
+
+`getInstalledEngineVersion` reads the box's PACKAGE root's
+`node_modules/callback-box/package.json` (`box.packageRoot`, the parent of the
+operational `box.root`). A fresh fixture has no such install, so it's `null` —
+and the report shows no mismatch (a null side never mismatches).
 
 ```ts
 const box = await makeTmpBox();
@@ -50,18 +55,21 @@ JSON.stringify({ installed: report.installed, mismatch: report.mismatch })
 await box.cleanup();
 ```
 
-## A v2 box pinned to a different version than the serving engine reports a mismatch
+## A v2 box whose installed engine differs from the serving engine reports a mismatch
+
+The pinned/installed engine lives at `<packageRoot>/node_modules/callback-box/`
+— a level up from `box.root`. Install a fake one at version `0.0.1`; the serving
+engine (this build) is a different version, so `mismatch` is true.
 
 ```ts
 const box = await makeTmpBox();
-await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
-await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": "0.0.1" } }));
-await box.write("node_modules/callback-box/package.json", JSON.stringify({ version: "0.0.1" }));
+await fs.mkdir(path.join(box.packageRoot, "node_modules/callback-box"), { recursive: true });
+await fs.writeFile(path.join(box.packageRoot, "node_modules/callback-box/package.json"), JSON.stringify({ version: "0.0.1" }));
 
-await getInstalledEngineVersion(box.path("content"))
+await getInstalledEngineVersion(box.root)
 => 0.0.1
 
-const report = await getEngineVersionReport(box.path("content"));
+const report = await getEngineVersionReport(box.root);
 JSON.stringify({ installed: report.installed, mismatch: report.mismatch })
 => {"installed":"0.0.1","mismatch":true}
 ```
@@ -70,16 +78,15 @@ JSON.stringify({ installed: report.installed, mismatch: report.mismatch })
 await box.cleanup();
 ```
 
-## A v2 box pinned to the SAME version as the serving engine reports no mismatch
+## A v2 box whose installed engine matches the serving engine reports no mismatch
 
 ```ts
 const box = await makeTmpBox();
 const engineVersion = await realEngineVersion();
-await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
-await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": engineVersion } }));
-await box.write("node_modules/callback-box/package.json", JSON.stringify({ version: engineVersion }));
+await fs.mkdir(path.join(box.packageRoot, "node_modules/callback-box"), { recursive: true });
+await fs.writeFile(path.join(box.packageRoot, "node_modules/callback-box/package.json"), JSON.stringify({ version: engineVersion }));
 
-const report = await getEngineVersionReport(box.path("content"));
+const report = await getEngineVersionReport(box.root);
 report.mismatch
 => false
 ```

@@ -125,6 +125,23 @@ export async function getBoxShapeIfPresent(boxRoot: string): Promise<BoxShapeLoo
   }
 }
 
+/**
+ * Resolve a path that may be a v2 box's PACKAGE root OR its operational
+ * (`content/`) root to the operational root — where box data and the
+ * `.callback-box/` dir live. Dev tools that scan `~/src/boxes/*` are handed
+ * package roots, whose `.cb-box` marker lives one level down in `content/`.
+ * Returns the resolved input unchanged when neither the path nor its `content/`
+ * child is a box. Malformed/unreadable markers still throw (via
+ * `getBoxShapeIfPresent`).
+ */
+export async function resolveOperationalRoot(inputPath: string): Promise<string> {
+  const direct = await getBoxShapeIfPresent(inputPath);
+  if (direct.found) return direct.shape.boxRoot;
+  const nested = await getBoxShapeIfPresent(path.join(path.resolve(inputPath), "content"));
+  if (nested.found) return nested.shape.boxRoot;
+  return path.resolve(inputPath);
+}
+
 async function readBoxMarker(boxRoot: string): Promise<BoxMarker> {
   const markerPath = path.join(boxRoot, BOX_MARKER);
   const raw = await fs.readFile(markerPath, "utf-8");

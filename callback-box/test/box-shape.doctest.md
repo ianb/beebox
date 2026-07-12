@@ -16,7 +16,8 @@ sections below use it directly; the error cases overwrite `box.root`'s
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxShape, boxCodePaths, BoxShapeError } from "../src/lib/box-shape.js";
+import * as os from "node:os";
+import { getBoxShape, getBoxShapeIfPresent, resolveOperationalRoot, boxCodePaths, BoxShapeError } from "../src/lib/box-shape.js";
 import { makeTmpBox } from "./helpers/doctest-helpers.js";
 
 const tryGetBoxShape = async (boxRoot) => {
@@ -163,5 +164,71 @@ JSON.stringify(relCodePaths(shape))
 ```
 
 ```ts cleanup
+await box.cleanup();
+```
+
+## `getBoxShapeIfPresent` tolerates a marker-less path but not a broken one
+
+Found on a real box:
+
+```ts
+const box = await makeTmpBox();
+const lookup = await getBoxShapeIfPresent(box.root);
+JSON.stringify({ found: lookup.found, shapeVersion: lookup.found ? lookup.shape.shapeVersion : null })
+=> {"found":true,"shapeVersion":2}
+```
+
+```ts continue
+await box.cleanup();
+```
+
+A directory with no `.cb-box` is "not a box" (`found: false`), never a fabricated shape:
+
+```ts
+const plain = await fs.mkdtemp(path.join(os.tmpdir(), "cb-nobox-"));
+const lookup = await getBoxShapeIfPresent(plain);
+lookup.found
+=> false
+```
+
+```ts continue
+await fs.rm(plain, { recursive: true, force: true });
+```
+
+A malformed marker is a real error and still throws — it is NOT mistaken for "no box":
+
+```ts
+const bad = await fs.mkdtemp(path.join(os.tmpdir(), "cb-badbox-"));
+await fs.writeFile(path.join(bad, ".cb-box"), "{not json");
+const outcome = await getBoxShapeIfPresent(bad).then(() => "did-not-throw", () => "threw");
+outcome
+=> threw
+```
+
+```ts continue
+await fs.rm(bad, { recursive: true, force: true });
+```
+
+## `resolveOperationalRoot` maps a package root to its content root
+
+Given the package root, it resolves to the operational (`content/`) root where box data lives:
+
+```ts
+const box = await makeTmpBox();
+(await resolveOperationalRoot(box.packageRoot)) === box.root
+=> true
+```
+
+```ts continue
+// The operational root resolves to itself, and a non-box path is returned unchanged.
+const self = (await resolveOperationalRoot(box.root)) === box.root;
+const plain = await fs.mkdtemp(path.join(os.tmpdir(), "cb-plain-"));
+const passthrough = (await resolveOperationalRoot(plain)) === path.resolve(plain);
+JSON.stringify({ self, passthrough })
+=> {"self":true,"passthrough":true}
+```
+
+```ts continue
+await fs.rm(plain, { recursive: true, force: true });
 await box.cleanup();
 ```
