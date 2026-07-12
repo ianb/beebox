@@ -176,11 +176,9 @@ can't — and doesn't need to).
  * Derived by substitution rather than duplicated by hand so the two stay in
  * lockstep — everything else about writing a schema is identical.
  *
- * A v2 box's schemas dir gets no resolve-hook fakery (see
- * `registry.ts`'s `ensureResolveHooks` doc) — only `callback-box/*`
- * specifiers resolve there, via the package's own `node_modules`. The v1
- * guide's `import ... from "zod"` / `from "yaml"` examples would fail to
- * load in a v2 box, so those lines and the "Available Imports" section are
+ * A box's schemas dir resolves only `callback-box/*` specifiers, via the
+ * package's own `node_modules` — bare `import ... from "zod"` / `from "yaml"`
+ * don't resolve there, so those lines and the "Available Imports" section are
  * rewritten to the `callback-box/schema` re-export instead.
  */
 const SCHEMAS_CLAUDE_MD_V2 = SCHEMAS_CLAUDE_MD.replaceAll("config/schemas/", "src/schemas/")
@@ -328,8 +326,8 @@ Full documentation: \`docs/generated/views.md\`
 
 /**
  * Install tricks scaffold files (package.json, CLAUDE.md) if they don't
- * exist. Shape-aware: a legacy box's tricks live at `boxRoot/tricks/`; a v2
- * box's live at `packageRoot/src/tricks/` (`boxCodePaths` resolves either).
+ * exist. A box's tricks live at `packageRoot/src/tricks/` (`boxCodePaths`
+ * resolves it).
  */
 /** Write `content` to `filePath` only if nothing is there yet (ENOENT is the
  *  expected, silent "scaffold it" case — the error itself carries no
@@ -349,15 +347,9 @@ export async function installTricksFiles(boxRoot: string): Promise<void> {
 
   await writeFileIfMissing(path.join(tricksDir, "package.json"), TRICKS_PACKAGE_JSON);
 
-  // The CLAUDE.md guide: legacy stays a plain create-if-missing write; a v2
-  // box's copy goes through the template tracker like the schemas/views
-  // guides above, so `cb upgrade` can roll out future guide changes without
-  // clobbering a customized copy.
-  if (shape.shapeVersion === 1) {
-    await writeFileIfMissing(path.join(tricksDir, "scripts/CLAUDE.md"), TRICKS_CLAUDE_MD);
-    return;
-  }
-
+  // The CLAUDE.md guide goes through the template tracker like the
+  // schemas/views guides, so `cb upgrade` can roll out future guide changes
+  // without clobbering a customized copy.
   await installTemplateFile({
     boxRoot,
     relPath: "../src/tricks/scripts/CLAUDE.md",
@@ -379,11 +371,8 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
   relPath: string;
   content: string;
 }> = [
-  { name: "schemas-guide", relPath: "config/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD },
-  { name: "views-guide", relPath: "views/CLAUDE.md", content: VIEWS_CLAUDE_MD },
-  // v2 (package-layout) counterparts — same tracker, but the file lives one
-  // level up at the package root (`src/...`), reached via a `../`-prefixed
-  // relPath (see the "v2 (package-layout) boxes" note in
+  // The file lives one level up at the package root (`src/...`), reached via a
+  // `../`-prefixed relPath (see the "v2 (package-layout) boxes" note in
   // install-template-file.ts). Separate ledger entries so a future divergence
   // in any one guide never has to be threaded through a shared entry.
   { name: "schemas-guide-v2", relPath: "../src/schemas/CLAUDE.md", content: SCHEMAS_CLAUDE_MD_V2 },
@@ -394,27 +383,16 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
 /**
  * Install (or refresh) the box-local schemas guide.
  *
- * Both shapes go through the template tracker: refreshed when unmodified,
- * parked under `config/_template-updates/` when the boxholder has customized
- * it (prior stock hashes come from the ledger so a box on any shipped
- * version overwrites cleanly). A v2 box's copy lives at the package root
- * (`src/schemas/CLAUDE.md`), reached via the `../`-prefixed relPath
- * convention (see install-template-file.ts) — tracker coverage from a fresh
- * `cb init` is what lets `cb upgrade` (Track E) roll out guide updates later
- * without clobbering a customized copy.
+ * Goes through the template tracker: refreshed when unmodified, parked under
+ * `config/_template-updates/` when the boxholder has customized it (prior
+ * stock hashes come from the ledger so a box on any shipped version overwrites
+ * cleanly). The copy lives at the package root (`src/schemas/CLAUDE.md`),
+ * reached via the `../`-prefixed relPath convention (see
+ * install-template-file.ts) — tracker coverage from a fresh `cb init` is what
+ * lets `cb upgrade` (Track E) roll out guide updates later without clobbering a
+ * customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
-  const shape = await getBoxShape(boxRoot);
-  if (shape.shapeVersion === 1) {
-    await installTemplateFile({
-      boxRoot,
-      relPath: "config/schemas/CLAUDE.md",
-      templateContent: SCHEMAS_CLAUDE_MD,
-      priorStockHashes: TEMPLATE_STOCK_HASHES["schemas-guide"].superseded,
-    });
-    return;
-  }
-
   await installTemplateFile({
     boxRoot,
     relPath: "../src/schemas/CLAUDE.md",
@@ -424,23 +402,11 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
 }
 
 /**
- * Install (or refresh) the box-local views guide. Same legacy-vs-v2 split as
+ * Install (or refresh) the box-local views guide. Same template-tracker path as
  * `installSchemasGuide` above; the guide's text needs no path substitution
- * for v2 (it never names its own directory).
+ * (it never names its own directory).
  */
 export async function installViewsGuide(boxRoot: string): Promise<void> {
-  const shape = await getBoxShape(boxRoot);
-  if (shape.shapeVersion === 1) {
-    await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
-    await installTemplateFile({
-      boxRoot,
-      relPath: "views/CLAUDE.md",
-      templateContent: VIEWS_CLAUDE_MD,
-      priorStockHashes: TEMPLATE_STOCK_HASHES["views-guide"].superseded,
-    });
-    return;
-  }
-
   await installTemplateFile({
     boxRoot,
     relPath: "../src/views/CLAUDE.md",

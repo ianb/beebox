@@ -79,15 +79,12 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
 
-  // Create all standard directories (safe to re-run). Written after the
-  // marker so a fresh v2 box's shape is already on disk: `.claude`/
-  // `.claude/rules` (BOX_DIRS) only belong under a legacy box's root — a v2
-  // box's `.claude/` lives at the package root instead (generateRules/
-  // generateSkills/installValidationHooks write it there), so those two
-  // entries are skipped here for a v2 box rather than leaving a vestigial,
-  // always-empty `content/.claude/`.
-  const shape = await getBoxShape(resolvedRoot);
-  await ensureDirectories(resolvedRoot, { skipClaudeDir: shape.shapeVersion !== 1 });
+  // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
+  // (BOX_DIRS) are never created under the box root: a box's `.claude/` lives at
+  // the package root instead (generateRules/generateSkills/installValidationHooks
+  // write it there), so `ensureDirectories` skips those two entries rather than
+  // leaving a vestigial, always-empty `content/.claude/`.
+  await ensureDirectories(resolvedRoot);
 
   // Seed the migration manifest for fresh boxes with every known migration
   // marked applied — a brand-new box's data is created in the current
@@ -146,20 +143,11 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
 `;
   await fs.writeFile(path.join(resolvedRoot, ".gitattributes"), gitattributes);
 
-  // Always write .gitignore (keep in sync with cb version). The "trick
-  // dependencies" entry only applies to a legacy (v1) box, whose tricks live
-  // at `boxRoot/tricks/` — inside this very .gitignore's tree. A v2 box's
-  // tricks live at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`)
-  // entirely, so an entry here would never match anything; that box's
-  // `src/tricks/node_modules/` is already covered by the package root's own
-  // `.gitignore` (`ROOT_GITIGNORE` in `./box-package.js`).
-  const tricksGitignoreBlock =
-    shape.shapeVersion === 1
-      ? `
-# Trick dependencies (installed by agent)
-tricks/node_modules/
-`
-      : "";
+  // Always write .gitignore (keep in sync with cb version). A box's tricks live
+  // at `packageRoot/src/tricks/`, outside `boxRoot` (`content/`) entirely, so no
+  // trick-dependencies entry belongs here; that box's `src/tricks/node_modules/`
+  // is already covered by the package root's own `.gitignore` (`ROOT_GITIGNORE`
+  // in `./box-package.js`).
   const gitignore = `# Callback Box .gitignore
 # Lock files
 .cb-lock
@@ -180,7 +168,7 @@ docs/generated/
 
 # Schedule state (machine-local)
 config/schedules/.state/
-${tricksGitignoreBlock}
+
 # Chat file uploads (transient, swept by cb wakeup housekeeping)
 tmp/
 
@@ -236,18 +224,15 @@ tmp/
 /**
  * Ensure all standard directories exist.
  *
+ * `BOX_DIRS.claude`/`BOX_DIRS.rules` (`.claude/`, `.claude/rules/`) are always
+ * skipped: a box's `.claude/` lives at the package root instead (see
+ * `initBox`'s caller), so creating them under the box root would leave a
+ * vestigial, always-empty `content/.claude/`.
+ *
  * @param boxRoot - The box root directory
- * @param options.skipClaudeDir - Skip `BOX_DIRS.claude`/`BOX_DIRS.rules`
- *   (`.claude/`, `.claude/rules/`) — set for a v2 box, whose `.claude/` lives
- *   at the package root instead (see `initBox`'s caller).
  */
-export async function ensureDirectories(
-  boxRoot: string,
-  options?: { skipClaudeDir?: boolean }
-): Promise<void> {
-  const skip: Set<string> = options?.skipClaudeDir
-    ? new Set([BOX_DIRS.claude, BOX_DIRS.rules])
-    : new Set();
+export async function ensureDirectories(boxRoot: string): Promise<void> {
+  const skip: Set<string> = new Set([BOX_DIRS.claude, BOX_DIRS.rules]);
   const dirs = Object.values(BOX_DIRS).filter((dir) => !skip.has(dir));
 
   for (const dir of dirs) {

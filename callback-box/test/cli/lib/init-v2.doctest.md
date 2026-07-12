@@ -213,10 +213,9 @@ schemasGuide.includes("src/schemas/")
 
 The v2 schemas guide teaches `import { z } from "callback-box/schema"` (and
 `stringifyYaml` from the same specifier) — not the bare `zod`/`yaml`
-specifiers the v1 guide uses, which a v2 box's `src/schemas/` has no
-resolve-hook fakery to make resolvable (see `registry.ts`'s
-`ensureResolveHooks` doc and `test/schemas/box-schemas-v2.doctest.md`'s "bare
-zod import fails" case):
+specifiers, which a v2 box's `src/schemas/` can't resolve (only
+`callback-box/*` resolves there, via the package's own `node_modules`; see
+`test/schemas/box-schemas-v2.doctest.md`'s "bare zod import fails" case):
 
 ```ts continue
 schemasGuide.includes('from "callback-box/schema"')

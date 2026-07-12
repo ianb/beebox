@@ -35,24 +35,21 @@ export async function getServingEngineVersion(): Promise<string | null> {
 }
 
 /**
- * The version of `callback-box` a v2 box has installed in its OWN
+ * The version of `callback-box` a box has installed in its OWN
  * `node_modules/` (what `cb upgrade` bumps and what a real `pnpm install`
- * resolves). `null` for a legacy (shapeVersion 1) box, which has no
- * separate installed engine — it always runs under whatever process serves
- * it — and `null` if the box's `node_modules/callback-box/package.json`
+ * resolves). `null` if the box's `node_modules/callback-box/package.json`
  * can't be read (not installed yet, or the dev-convenience symlink from
  * `scaffoldPackageRoot` points somewhere unreadable).
  */
 export async function getInstalledEngineVersion(boxRoot: string): Promise<string | null> {
   const shape = await getBoxShape(boxRoot);
-  if (shape.shapeVersion === 1) return null;
   return readVersionField(path.join(shape.packageRoot, "node_modules/callback-box/package.json"));
 }
 
 export interface EngineVersionReport {
   /** The version of the engine process currently serving this box. */
   serving: string | null;
-  /** The version this box has pinned/installed (v2 only; null for legacy). */
+  /** The version this box has pinned/installed (null if not readable). */
   installed: string | null;
   /** True only when both are known and differ. */
   mismatch: boolean;

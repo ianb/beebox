@@ -3,17 +3,14 @@
  *
  * All card schemas are registered here and exported for use
  * by the CardLoader factory. Box-local schemas are loaded dynamically at
- * runtime from the box's schemas dir — `config/schemas/` for a legacy
- * (shapeVersion 1) box, or `src/schemas/` at the package root for a
- * shapeVersion 2 box (see `boxCodePaths` in `../cli/lib/box-shape.js`).
+ * runtime from the box's schemas dir — `src/schemas/` at the package root
+ * (see `boxCodePaths` in `../lib/box-shape.js`).
  */
 
 import { readdir, readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { registerHooks } from "node:module";
-import { PACKAGE_ROOT } from "../lib/package-root.js";
 import { boxCodePaths, getBoxShapeIfPresent } from "../lib/box-shape.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
@@ -125,80 +122,7 @@ export const cardSchemas: CardSchema[] = [
 ];
 
 /**
- * Specifiers a box-local schema file may import from callback-box's tree:
- * - `callback-box/cards` — the public card-primitive surface (cardSchema,
- *   body, splitCardContent, …); the specifier new box schemas should use.
- * - `zod` — peer dependency every schema needs.
- * - `yaml` — frontmatter card templates `stringify` their fields with it (the
- *   scaffolding in box-templates.ts shows exactly this).
- */
-const SCHEMA_DEPS = new Set(["callback-box", "zod", "yaml"]);
-
-/**
- * Virtual parent URL at callback-box's package root (NOT inside
- * node_modules). Rewriting a box schema's parentURL to this makes Node
- * resolve bare deps (`zod`, `yaml`) from callback-box's node_modules
- * AND self-references (`callback-box/cards`) via callback-box's own
- * `exports` map. Pointing it *inside* node_modules would break the
- * self-reference: Node's LOOKUP_PACKAGE_SCOPE returns null at a
- * node_modules boundary, so the package's own exports never match. The
- * file need not exist — only the directory's package.json scope is read.
- */
-const CB_VIRTUAL_PARENT = pathToFileURL(join(PACKAGE_ROOT, "_virtual.js")).href;
-
-/**
- * Register module resolution hooks so that box-local schema files
- * (under config/schemas/) can import `callback-box/cards`, `zod`, and
- * `yaml` even though none of those resolve from the box's own
- * node_modules.
- *
- * Uses Node's synchronous registerHooks API which chains correctly
- * with tsx's async loader hooks.
- */
-let hooksRegistered = false;
-function ensureResolveHooks(): void {
-  if (hooksRegistered) return;
-  hooksRegistered = true;
-
-  registerHooks({
-    // eslint-disable-next-line max-params -- Node's registerHooks API requires 3 params
-    resolve(specifier, context, nextResolve) {
-      // Check if a box schema file is importing a known package
-      const bare = specifier.split("/")[0] ?? "";
-      if (
-        SCHEMA_DEPS.has(bare) &&
-        context.parentURL?.includes("/config/schemas/")
-      ) {
-        // Resolve as if imported from callback-box's node_modules
-        return nextResolve(specifier, {
-          ...context,
-          parentURL: CB_VIRTUAL_PARENT,
-        });
-      }
-      return nextResolve(specifier, context);
-    },
-  });
-}
-
-/**
- * Ensure config/schemas/ has a package.json with "type": "module"
- * so Node treats .ts files as ESM (needed for registerHooks to apply).
- */
-async function ensureEsmPackageJson(schemasDir: string): Promise<void> {
-  const pkgJsonPath = join(schemasDir, "package.json");
-  try {
-    const { stat } = await import("node:fs/promises");
-    await stat(pkgJsonPath);
-  } catch (_e) {
-    // package.json is absent (stat throws ENOENT) — that's the expected
-    // trigger to create it; the error carries no other actionable info.
-    const { writeFile } = await import("node:fs/promises");
-    await writeFile(pkgJsonPath, '{"type":"module"}\n');
-  }
-}
-
-/**
- * Box-local schemas, segregated by format. A box's `config/schemas/*.ts`
+ * Box-local schemas, segregated by format. A box's `src/schemas/*.ts`
  * files default-export a frontmatter `cardSchema()`.
  */
 export interface BoxSchemas {
@@ -327,17 +251,11 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const tsFiles = files.filter(f => f.endsWith(".ts") && !f.startsWith("."));
   if (tsFiles.length === 0) return noBoxSchemas();
 
-  // A v2 box's schemas dir sits inside the package root, whose own
-  // package.json is already "type": "module" and whose own
-  // node_modules/callback-box (installed like any other dependency) serves
-  // `callback-box/cards` and `callback-box/schema` via native resolution — no
-  // resolve hook, and no bare `zod`/`yaml` (only the callback-box specifiers
-  // resolve). The `=== 1` branch below is retired dead code (step 1d).
-  if (lookup.shape.shapeVersion === 1) {
-    await ensureEsmPackageJson(schemasDir);
-    ensureResolveHooks();
-  }
-
+  // A box's schemas dir sits inside the package root, whose own package.json is
+  // already "type": "module" and whose own node_modules/callback-box (installed
+  // like any other dependency) serves `callback-box/cards` and
+  // `callback-box/schema` via native resolution — no resolve hook, and no bare
+  // `zod`/`yaml` (only the callback-box specifiers resolve).
   const records = boxFileRecords.get(boxRoot) ?? new Map<string, SchemaFileRecord>();
   const seen = new Set<string>();
   const loadedCard: CardSchema[] = [];

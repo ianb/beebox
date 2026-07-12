@@ -3543,9 +3543,9 @@ tests:
   # === Box Packageify (boxes-as-packages-v2, Track H5) ===
   #
   # Only meaningful for a shapeVersion 2+ (package-layout) box —
-  # `boxCodeLocationSection` (agent-guide/box-shape.ts) renders empty for a
-  # legacy box, so these audits assume the box under test is v2 (test1 is,
-  # as of the 2026-07 fleet conversion).
+  # `boxCodeLocationSection` (agent-guide/box-shape.ts) teaches the
+  # package-root code layout, so these audits assume the box under test is v2
+  # (test1 is, as of the 2026-07 fleet conversion).
   #
   # Status (2026-07-04): 4/4 pass against ~/src/boxes/test1 (a real converted
   # v2 box). box-packageify-cb-upgrade needed a source fix first: the agent
