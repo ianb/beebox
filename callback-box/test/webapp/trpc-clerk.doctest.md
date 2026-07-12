@@ -9,7 +9,7 @@ error rather than a silent misfile.
 ```ts setup
 import { appRouter } from "../../src/webapp/trpc/router.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-import { readFile, readdir } from "node:fs/promises";
+import { readFile, readdir, mkdir, writeFile } from "node:fs/promises";
 import * as path from "node:path";
 
 function caller(boxRoot) {
@@ -86,4 +86,57 @@ const err2 = await caller(box.root).clerk.commentary({
 print(err2);
 =>
 BAD_REQUEST
+```
+
+## commentaryDestinations lists commentary spots and passes the output schema
+
+The query carries a Zod `.output(commentaryDestinationsOutput)` — a real box
+response (including a `symbol: null` landmark) must satisfy it, otherwise tRPC
+throws before returning. Seed one landmark with a symbol and one without, then
+list.
+
+```ts
+const dbox = await makeTmpBox({ git: true });
+async function seedLandmark(dir, cardBody) {
+  await mkdir(path.join(dbox.root, dir), { recursive: true });
+  await writeFile(path.join(dbox.root, dir, `${path.basename(dir)}.landmark.card`), cardBody, "utf-8");
+}
+await seedLandmark("store/reading", `---
+navigation:
+  label: Reading
+  symbol: 📚
+destinations:
+  - for: [commentary]
+    rules: Reading list.
+---
+`);
+await seedLandmark("store/notes", `---
+navigation:
+  label: Notes
+destinations:
+  - for: [commentary]
+    rules: Loose notes.
+---
+`);
+const dest = await caller(dbox.root).clerk.commentaryDestinations();
+print(JSON.stringify(dest, null, 2));
+=>
+{
+  "destinations": [
+    {
+      "dir": "store/notes",
+      "label": "Notes",
+      "symbol": null
+    },
+    {
+      "dir": "store/reading",
+      "label": "Reading",
+      "symbol": "📚"
+    }
+  ]
+}
+```
+
+```ts cleanup
+await dbox.cleanup();
 ```
