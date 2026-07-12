@@ -492,7 +492,7 @@ to `content/`).
 **Status: H1–H3, H5 DONE (2026-07-04).** The `box-packageify` migration script landed, the whole
 laptop + server fleet converted, and the server now runs `cb hub` (per-box children) in place of
 the old shared `callback-serve`. H4 (deletions) is **mostly done** — the v1 shape and its
-resolve-hook machinery are now removed (`docs/plans/remove-box-shape-v1.md`); see the rewritten
+resolve-hook machinery are now removed (`docs/implemented-plans/remove-box-shape-v1.md`); see the rewritten
 paragraph below for exactly what shipped and what's intentionally still here. H5 (knowledge
 audits + docs rewrite) is done: four `box-packageify` audits landed and pass against `test1`
 (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
@@ -532,7 +532,7 @@ fleet, they don't all retire on the same schedule:
   intentional dev convenience, kept on purpose.
 - **Resolve hook — DONE (2026-07-11).** Every box everywhere is now confirmed v2 (boxholder
   ruling, 2026-07), so the v1 shape and the resolve-hook machinery it required were removed
-  entirely — see `docs/plans/remove-box-shape-v1.md`. `getBoxShape` is now strict (a marker
+  entirely — see `docs/implemented-plans/remove-box-shape-v1.md`. `getBoxShape` is now strict (a marker
   without `shapeVersion ≥ 2` fails loud), `box-packageify` is a retired v2-assert no-op, and
   the `ensureEsmPackageJson`/`ensureResolveHooks` hook registry in `schemas/registry.ts` is
   deleted (v2 boxes resolve schemas natively via their package-root `node_modules`). This

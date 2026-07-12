@@ -207,7 +207,7 @@ conversion is gone: `scripts/migrate/box-packageify.ts` is now an **idempotent
 no-op** (it asserts the box is a valid `shapeVersion === 2` package and exits 0,
 or fails loud otherwise), and the 537-line converter logic, its smoke script, and
 its doctests were deleted with the v1 shape (see
-`docs/plans/remove-box-shape-v1.md`).
+`docs/implemented-plans/remove-box-shape-v1.md`).
 
 The name is kept deliberately. `config/migrations.jsonl` is **append-only** and
 `src/core/migrations.ts` is the ordered canonical list `cb migrate` compares it

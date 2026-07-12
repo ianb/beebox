@@ -315,7 +315,7 @@ Each scenario is a self-contained directory under `~/src/boxes/scenarios/<name>/
       config/        # connector configs, schedules, etc.
     ...
 ```
-The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still flat on disk (`box/inbox/`, `config/` directly under `box/`, no `content/` nesting) with a pre-v2 `.cb-box` marker. The v1/legacy box shape has since been removed (`docs/plans/remove-box-shape-v1.md`), so `getBoxShape` is strict and rejects any marker without `shapeVersion: 2` — these scenarios need converting to the v2 package layout above rather than being a supported second shape.
+The existing scenarios in the table above (`intake-basic`, `tick-basic`, `tick-chain`) predate this and are still flat on disk (`box/inbox/`, `config/` directly under `box/`, no `content/` nesting) with a pre-v2 `.cb-box` marker. The v1/legacy box shape has since been removed (`docs/implemented-plans/remove-box-shape-v1.md`), so `getBoxShape` is strict and rejects any marker without `shapeVersion: 2` — these scenarios need converting to the v2 package layout above rather than being a supported second shape.
 
 **Steps to create:**
 
