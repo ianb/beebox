@@ -44,7 +44,23 @@ buried. None blocks the merge.
    ([bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md](../bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md)).
    Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
-2. **Clerk↔server contract.** The extension talks to the box via hand-built
+2. **Clerk↔server contract. Decided + done (boxholder decision, 2026-07-12):
+   generated-and-CI-checked contract.** The two clerk procedures' zod
+   schemas moved to a self-contained leaf module
+   (`webapp/trpc/routers/clerk-contract.ts`, with `.output()` schemas);
+   `bin/snapshot-clerk-contract.ts` generates
+   `callback-clerk/src/contract/clerk-contract.generated.ts` (whitelist
+   printer that throws on unsupported zod constructs); a pre-commit
+   dispatcher branch regenerates + diffs on any contract-file change;
+   clerk's hand-declared shapes deleted in favor of generated types, with
+   runtime envelope/shape validation replacing the unchecked `res.json()`
+   cast. Accepted, recorded gaps: deployed-extension skew is handled by
+   degradation (clear ClerkApiError telling the user to update), not
+   prevented; the staleness gate's working-tree mechanism has
+   partial-staging escape edges (self-correcting via clerk's typecheck of
+   the generated imports). Plan:
+   `callback-box/docs/plans/clerk-contract-and-import-boundary.md`.
+   Original framing: The extension talks to the box via hand-built
    tRPC URLs + a hand-duplicated payload shape (no shared typed contract,
    unlike the in-repo frontend's `AppRouter` import). Options: shared
    workspace package (version-skew risk, since clerk deploys independently)
@@ -94,7 +110,30 @@ buried. None blocks the merge.
    house answer for vendor-union walkers** — reach for it before a partial
    switch + suppressed exhaustiveness lint.
 
-5. **Frontend import boundary.** ~28 raw `../../../core/...` imports bypass
+5. **Frontend import boundary. Decided + done (boxholder decision,
+   2026-07-12): rule + type-only aliases + value relocations.** 34
+   escaping imports resolved: 21 type-only sites now use new
+   `@core`/`@schemas` aliases (tsconfig-only, deliberately absent from
+   vite so they can't carry runtime code); 13 value imports fixed by
+   relocating pure modules into `src/shared/` (model-ids, filename,
+   parse-attrs, voice-models, chat-tags, self-note, card-activity-kinds)
+   — the worst offender (VOICE_MODELS via personality.tsx) had been
+   bundling the whole personality compile graph into the client, verified
+   gone from the vite bundle. Enforcement:
+   `@typescript-eslint/no-restricted-imports` in the frontend's own
+   eslint config (project-local ADDITION, not a preset change) banning
+   raw relative escapes at every real depth AND value imports through the
+   aliases (`allowTypeImports`) — load-bearing because tsx/`cb render`
+   resolve the aliases even though vite doesn't. Seven doctested/bundled
+   files are explicitly exempted (the doctest runner uses the root
+   tsconfig, no aliases — they keep raw-relative `shared/` imports).
+   Recorded: whether to promote the boundary rule into the shared preset
+   is a future boxholder question; `docs/module-map.md` now documents the
+   `shared/ → lib/` edge; follow-up filed for consolidating the
+   frontend's local helper copies
+   (`../code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md`).
+   Plan: `callback-box/docs/plans/clerk-contract-and-import-boundary.md`.
+   Original framing: ~28 raw `../../../core/...` imports bypass
    the `@backend`/`@shared` alias contract. Options: add `@core`/`@schemas`
    aliases (build-config churn across tsconfig+vite+eslint-resolver; doesn't
    *enforce*) or a frontend-local `no-restricted-imports` rule (a preset
