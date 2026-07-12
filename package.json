@@ -9,6 +9,7 @@
     "prepare": "husky",
     "postinstall": "patch-package",
     "dev": "bin/worktrees serve",
+    "doctor": "node --import tsx bin/doctor.ts",
     "path-leak-check": "node --import tsx bin/path-leak-check.ts",
     "commit-blocklist-check": "node --import tsx bin/commit-blocklist-check.ts",
     "update-agent-sdk": "node --import tsx bin/update-agent-sdk.ts",
