@@ -8,7 +8,7 @@
 export type BoxLayoutArea = "box" | "store" | "config" | "people-places" | "tricks" | "agent-config" | "legacy";
 
 export interface BoxLayoutEntry {
-  /** Path relative to the box root (legacy) or `content/` root (package/v2). */
+  /** Path relative to the box root (`content/`). */
   path: string;
   /**
    * Key this entry is exposed as on `BOX_DIRS`, for directories canonical
@@ -27,6 +27,4 @@ export interface BoxLayoutEntry {
    * `config`/`tricks`/`agent-config` entries aren't in that table at all.
    */
   agentDescription?: string;
-  /** How this directory's shape or meaning differs between legacy and package (v2) boxes, if at all. */
-  shapeNotes?: string;
 }

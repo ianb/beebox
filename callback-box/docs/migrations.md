@@ -199,40 +199,22 @@ All scripts live in `scripts/migrate/`.
 
 `question-lifecycle` (`scripts/migrate/question-lifecycle-run.ts`, pure transform in `scripts/migrate/question-lifecycle.ts`) is the Track A cleanup for `docs/implemented-plans/questions-end-to-end.md`: strips the retired `answered-by:` field, backfills `asked-at:` on pending questions from the card's earliest `git add` date, relocates question cards living outside `box/questions/` (scan-import's attach-scope questions) into `box/questions/` with a `context:` ref back to their original scope, rewrites directives that reference the retired briefing `<agent-needs-to-know>` element to the current `{% correction %}` vocabulary, and reports (never silently fixes) any `select` question with fewer than two options.
 
-### `box-packageify` (structural — legacy → v2 package layout)
+### `box-packageify` (retired — v2-assert no-op)
 
-The newest registered migration, `scripts/migrate/box-packageify.ts`, converts a
-whole legacy (shapeVersion 1) box in place into the v2 package layout (see
-"The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`): `views/`,
-`config/schemas/`, and `tricks/` move to `src/{views,schemas,tricks}/`;
-everything else moves to `content/`; `.git` and `.claude/` stay at the
-top-level directory, which becomes the package root. It's structurally
-unlike every migrator above it, in three ways worth calling out:
+`box-packageify` used to convert a whole box in place from the old flat
+(shapeVersion 1) layout into the v2 package layout. Every box is now v2, so the
+conversion is gone: `scripts/migrate/box-packageify.ts` is now an **idempotent
+no-op** (it asserts the box is a valid `shapeVersion === 2` package and exits 0,
+or fails loud otherwise), and the 537-line converter logic, its smoke script, and
+its doctests were deleted with the v1 shape (see
+`docs/plans/remove-box-shape-v1.md`).
 
-- **It self-commits.** Every other migrator leaves its changes (and the
-  manifest entry) uncommitted for review — `cb migrate` never auto-commits.
-  `box-packageify` is the deliberate exception: a box caught mid-conversion
-  is neither a valid legacy box nor a valid v2 box, so the whole transform
-  (moves, scaffold, `cb init`'s regen tail) lands as ONE commit, wrapped in a
-  snapshot + `revertToSnapshot` (the same helper `cb upgrade` uses — factored
-  into `src/lib/git.ts`) so any failure at any step restores the box
-  byte-for-byte. The manifest entry itself is still left uncommitted, same as
-  always — `cb migrate`'s own bookkeeping, not the script's.
-- **It moves the box root out from under `cb migrate`'s own loop.** Because
-  the box's `config/migrations.jsonl` moves from `<box>/config/...` to
-  `<box>/content/config/...`, `src/cli/commands/migrate.ts` re-resolves the
-  operational root (via `detectBoxTarget`) after every script/procedure runs,
-  not just once at the top — see the comment on the `boxRoot` reassignment
-  there.
-- **Memory continuity.** `~/.claude/projects/<cwd-key>/` (Claude Code's
-  session-transcript directory) is keyed by the operating cwd, which moves
-  from the box root to `content/`. `relocateClaudeProjectDir` (in the same
-  script) moves that directory to the new key, never clobbering an existing
-  one at the destination — see its doc comment for the conflict case.
-
-Exercised end-to-end on a scratch clone of `~/src/boxes/test1` via
-`pnpm smoke:packageify` (`scripts/smoke-packageify.ts`) — never against the
-real box.
+The name is kept deliberately. `config/migrations.jsonl` is **append-only** and
+`src/core/migrations.ts` is the ordered canonical list `cb migrate` compares it
+against — dropping a name that boxes have already recorded as applied would make
+their manifests reference a migration the engine no longer knows, breaking the
+invariant. A registered no-op preserves it: already-migrated boxes match, and a
+box that never recorded it runs a harmless v2-assert.
 
 ### `retire-process-captures` (prune — retired pipeline cleanup)
 

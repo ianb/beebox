@@ -243,9 +243,6 @@ export const BOX_LAYOUT = [
     path: "config/schemas",
     area: "config",
     description: "Box-local card-type definitions (Zod + `callback-box/cards`). Has its own CLAUDE.md.",
-    shapeNotes:
-      "Legacy (v1) location. A package (v2) box's code-facing schemas dir moves to the package " +
-      "root's `src/schemas/` — see `boxCodePaths()` in `src/lib/box-shape.ts`.",
   },
   {
     boxDirsKey: "procedures",
@@ -266,9 +263,6 @@ export const BOX_LAYOUT = [
     path: "tricks/scripts",
     area: "tricks",
     description: "Agent-authored scripts. The agent can write small helpers here.",
-    shapeNotes:
-      "Legacy (v1) location. A package (v2) box's code-facing tricks dir moves to the package root's " +
-      "`src/tricks/` — see `boxCodePaths()` in `src/lib/box-shape.ts`.",
   },
   {
     boxDirsKey: "tricksLib",
@@ -283,9 +277,6 @@ export const BOX_LAYOUT = [
     path: ".claude",
     area: "agent-config",
     description: "Agent configuration: CLAUDE.md, rules, memory, Claude Code settings.",
-    shapeNotes:
-      "Legacy (v1) location. A package (v2) box's `.claude/` moves to the package root — see " +
-      "\"Shape versions\" in `docs/box-layout.md`.",
   },
   {
     boxDirsKey: "rules",

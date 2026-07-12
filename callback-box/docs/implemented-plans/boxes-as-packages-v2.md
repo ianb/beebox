@@ -491,7 +491,8 @@ to `content/`).
 ### Track H — Fleet migration
 **Status: H1–H3, H5 DONE (2026-07-04).** The `box-packageify` migration script landed, the whole
 laptop + server fleet converted, and the server now runs `cb hub` (per-box children) in place of
-the old shared `callback-serve`. H4 (deletions) is **partially done** — see the rewritten
+the old shared `callback-serve`. H4 (deletions) is **mostly done** — the v1 shape and its
+resolve-hook machinery are now removed (`docs/plans/remove-box-shape-v1.md`); see the rewritten
 paragraph below for exactly what shipped and what's intentionally still here. H5 (knowledge
 audits + docs rewrite) is done: four `box-packageify` audits landed and pass against `test1`
 (a real converted v2 box); `README.md`, `docs/adding-a-box.md`, and `deploy/README.md` are
@@ -529,13 +530,13 @@ fleet, they don't all retire on the same schedule:
   `boxes.json`, serve every box from one process) still exists as Track G's dev-loop escape
   hatch: a plain `pnpm dev`-style local run without standing up a hub. Not dead code — an
   intentional dev convenience, kept on purpose.
-- **Resolve hook — DEFERRED, not forgotten.** `test1` (`docs/box-layout.md`'s "primary test
-  box") is itself now converted to v2 — as of this H5 pass, its `.cb-box` marker declares
-  `shapeVersion: 2` and it has a real package root. This plan previously stated `test1` was
-  kept legacy-shape on purpose as a canary; that's now stale. The hook stays deferred anyway —
-  it comes out only once every box everywhere is confirmed v2, and that inventory hasn't been
-  done as part of this pass — but the "which box still needs it" premise needs re-checking
-  rather than assumed to still be `test1`.
+- **Resolve hook — DONE (2026-07-11).** Every box everywhere is now confirmed v2 (boxholder
+  ruling, 2026-07), so the v1 shape and the resolve-hook machinery it required were removed
+  entirely — see `docs/plans/remove-box-shape-v1.md`. `getBoxShape` is now strict (a marker
+  without `shapeVersion ≥ 2` fails loud), `box-packageify` is a retired v2-assert no-op, and
+  the `ensureEsmPackageJson`/`ensureResolveHooks` hook registry in `schemas/registry.ts` is
+  deleted (v2 boxes resolve schemas natively via their package-root `node_modules`). This
+  discharges the deferral: the "which box still needs it" question is closed — none do.
 - **Rsync deploy of the engine — STAYS.** Deploy (`deploy/deploy.sh`, the post-commit hook)
   still rsyncs the built engine to the server; it has not been replaced by release-tarball +
   `cb fleet upgrade` distribution (Track F/E). That channel exists for boxes that consume
