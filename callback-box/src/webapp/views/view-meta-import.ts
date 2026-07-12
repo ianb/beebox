@@ -16,8 +16,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { z } from "zod";
-import { writeNodeViewModule } from "./node-view-runtime.js";
-import type { BoxShape } from "../../lib/box-shape.js";
+import { writeNodeViewModule, type ViewHostContext } from "./node-view-runtime.js";
 
 const RUNNER_FILENAME = "extract-meta-runner.mjs";
 const IMPORT_TIMEOUT_MS = 3_000;
@@ -83,8 +82,8 @@ function runInSubprocess(dir: string, moduleUrl: string): Promise<ImportedViewMe
  * failed (including a timeout) — the caller degrades to a filename + error
  * marker in that case, never throws.
  */
-export async function importViewMetadata(nodeOutput: string, boxShape: BoxShape): Promise<ImportedViewMeta | null> {
-  const mod = await writeNodeViewModule(nodeOutput, boxShape);
+export async function importViewMetadata(nodeOutput: string, host: ViewHostContext): Promise<ImportedViewMeta | null> {
+  const mod = await writeNodeViewModule(nodeOutput, host);
   try {
     await fs.writeFile(path.join(mod.dir, RUNNER_FILENAME), RUNNER_SOURCE, "utf-8");
     return await runInSubprocess(mod.dir, mod.moduleUrl);

@@ -21,6 +21,29 @@ import { pathToFileURL } from "node:url";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import type { BoxShape } from "../../lib/box-shape.js";
 
+/**
+ * Where a node-target-compiled view resolves its `react`/`callback-box`
+ * imports from — the two genuinely distinct resolution modes:
+ *
+ * - `box-package` — a real box package carries its own `node_modules`
+ *   (`node_modules/callback-box` plus the `react` it imports directly);
+ *   resolve straight through it.
+ * - `engine-hosted` — there is no box package (the engine itself hosts the
+ *   compile, e.g. a compiler caller that doesn't pass a box); resolve through
+ *   the running callback-box's own copies (`PACKAGE_ROOT`).
+ *
+ * This is an explicit choice, not a box shape: it names which of the two
+ * filesystem dances `writeNodeViewModule` performs.
+ */
+export type ViewHostContext =
+  | { kind: "box-package"; packageRoot: string }
+  | { kind: "engine-hosted" };
+
+/** Map a resolved box shape to its `box-package` view-host context. */
+export function boxPackageHost(shape: BoxShape): ViewHostContext {
+  return { kind: "box-package", packageRoot: shape.packageRoot };
+}
+
 export interface NodeViewModule {
   /** `file://` URL of the written compiled module — pass to `import()`. */
   moduleUrl: string;
@@ -33,27 +56,26 @@ export interface NodeViewModule {
 /**
  * Write a node-target-compiled view module (`output`, from
  * `compileView(path, { target: "node" })`) to a temp dir with `node_modules`
- * wired up for the box's shape:
+ * wired up for the given view-host context:
  *
- * - Shape 1 (legacy) boxes have no real `node_modules` of their own — resolve
- *   through the running callback-box's own copies (`PACKAGE_ROOT`), same as
- *   `cb view test` has always done. Two levels are needed here because
- *   `PACKAGE_ROOT`'s own `node_modules` is itself a symlink into the shared
- *   workspace tree in dev, so `callback-box` (self-reference, for
- *   `callback-box/view-widgets`) can't live inside it — it gets its own inner
- *   `node_modules` instead.
- * - Shape 2 (package) boxes carry a real `node_modules/callback-box` (and,
- *   since box `src/` code imports React directly, a real `node_modules/react`
- *   beside it) — resolve straight through the box package's OWN
- *   `node_modules`, no synthetic per-package symlink needed.
+ * - `engine-hosted` — no box package hosts the compile, so resolve through the
+ *   running callback-box's own copies (`PACKAGE_ROOT`), same as `cb view test`
+ *   has always done. Two levels are needed here because `PACKAGE_ROOT`'s own
+ *   `node_modules` is itself a symlink into the shared workspace tree in dev, so
+ *   `callback-box` (self-reference, for `callback-box/view-widgets`) can't live
+ *   inside it — it gets its own inner `node_modules` instead.
+ * - `box-package` — a real box package carries a `node_modules/callback-box`
+ *   (and, since box `src/` code imports React directly, a real
+ *   `node_modules/react` beside it) — resolve straight through the box
+ *   package's OWN `node_modules`, no synthetic per-package symlink needed.
  */
-export async function writeNodeViewModule(output: string, boxShape: BoxShape): Promise<NodeViewModule> {
+export async function writeNodeViewModule(output: string, host: ViewHostContext): Promise<NodeViewModule> {
   const tmpDir = path.join(os.tmpdir(), `cb-view-${randomUUID()}`);
   const innerDir = path.join(tmpDir, "view");
   await fs.mkdir(path.join(innerDir, "node_modules"), { recursive: true });
   const tmpFile = path.join(innerDir, "view.mjs");
   try {
-    if (boxShape.shapeVersion === 1) {
+    if (host.kind === "engine-hosted") {
       const reactNodeModules = path.dirname(
         path.dirname(
           createRequire(path.join(PACKAGE_ROOT, "package.json")).resolve("react/package.json"),
@@ -62,7 +84,7 @@ export async function writeNodeViewModule(output: string, boxShape: BoxShape): P
       await fs.symlink(reactNodeModules, path.join(tmpDir, "node_modules"), "dir");
       await fs.symlink(PACKAGE_ROOT, path.join(innerDir, "node_modules", "callback-box"), "dir");
     } else {
-      await fs.symlink(path.join(boxShape.packageRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
+      await fs.symlink(path.join(host.packageRoot, "node_modules"), path.join(tmpDir, "node_modules"), "dir");
     }
     await fs.writeFile(tmpFile, output, "utf-8");
     return {
