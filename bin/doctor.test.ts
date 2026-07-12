@@ -10,6 +10,7 @@ import {
   checkClaudeAuth,
   checkFrontendBuild,
   checkGitLfs,
+  checkNativeSqlite,
   checkNodeVersion,
   checkPnpm,
   checkSdkBinary,
@@ -201,6 +202,7 @@ function passingDeps(overrides: Partial<DoctorDeps>): DoctorDeps {
     engines: ">=22.11.0 <23",
     packageManager: "pnpm@10.26.2",
     resolveSdkBinary: () => "/repo/node_modules/@anthropic-ai/claude-agent-sdk-darwin-arm64/claude",
+    loadBetterSqlite3: async () => "loads and opens (SQLite 3.50.0)",
     ...overrides,
   };
 }
@@ -228,6 +230,22 @@ test("one failing check flips the aggregate JSON ok to false without hiding the 
   assert.equal(results.length, json.checks.length);
   assert.ok(results.some((r) => r.name === "Workspace installed" && !r.ok));
   assert.ok(results.some((r) => r.name === "Frontend build" && !r.ok));
+});
+
+test("checkNativeSqlite passes with the loader's detail and fails on a load error naming ABI drift", async () => {
+  const passResult = await checkNativeSqlite({ loadBetterSqlite3: async () => "loads and opens (SQLite 3.50.0)" });
+  assert.equal(passResult.ok, true);
+  assert.match(passResult.detail, /SQLite 3\.50\.0/);
+
+  const failResult = await checkNativeSqlite({
+    loadBetterSqlite3: async () => {
+      throw new Error("ERR_DLOPEN_FAILED: The module was compiled against a different Node.js version\nmore detail");
+    },
+  });
+  assert.equal(failResult.ok, false);
+  assert.match(failResult.detail, /ERR_DLOPEN_FAILED/);
+  assert.equal(failResult.detail.includes("more detail"), false);
+  assert.match(failResult.remedy ?? "", /pnpm rebuild better-sqlite3/);
 });
 
 test("formatTable marks failures with a remedy line and passes with just a detail line", () => {

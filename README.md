@@ -11,7 +11,11 @@ Four projects in one repo:
 - **callback-box/** — the main system. See its `CLAUDE.md`.
   Setting up from a fresh clone with no prior box?
   [`callback-box/docs/developer-install.md`](callback-box/docs/developer-install.md)
-  has the from-source install path.
+  has the from-source install path,
+  [`callback-box/docs/docker-install.md`](callback-box/docs/docker-install.md)
+  the container path, and
+  [`callback-box/docs/agent-install.md`](callback-box/docs/agent-install.md)
+  is for the AI assistant doing the install on someone's behalf.
 - **callback-clerk/** — Chrome extension that talks to a hosted box.
 - **agent-doctest/** — doctest framework, extracted for reuse.
 - **personal-vibe-check/** — shared ESLint/TS/Prettier preset.

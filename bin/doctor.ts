@@ -15,6 +15,8 @@
  *   - Node version satisfies root package.json `engines.node`.
  *   - pnpm present, major version matches `packageManager`.
  *   - Workspace installed from the root (hoisted `node_modules/.pnpm`).
+ *   - better-sqlite3 loads and opens a database — the direct probe for
+ *     Node-ABI drift, the failure the version pin exists to prevent.
  *   - `pandoc`, `magick`, `pdftotext` on PATH (the external-tools contract
  *     promised to agents: `callback-box/src/core/agent-guide/chat.ts`).
  *   - `git-lfs` binary present AND its filters are actually installed
@@ -52,10 +54,12 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { createRequire } from "node:module";
 // Workspace import of an engine module from root tooling. Verified to work
 // cleanly (both `tsc --noEmit` and `node --import tsx` resolve it via the
 // `.js`-extension NodeNext convention) — no awkwardness to fall back from.
 import { resolveClaudeCodeBinary } from "../callback-box/src/core/sdk-binary-path.js";
+import { isRecord } from "../callback-box/src/lib/is-record.js";
 
 const execFileAsync = promisify(execFile);
 
@@ -101,6 +105,14 @@ export interface DoctorDeps {
   engines: string;
   packageManager: string;
   resolveSdkBinary: () => string | null;
+  /**
+   * Loads better-sqlite3 and opens an in-memory database, resolving to a
+   * detail string. This is THE check that catches Node-ABI drift directly —
+   * a native module compiled against a different Node breaks at dlopen, and
+   * historically that surfaced as an opaque crash at first box boot rather
+   * than anything naming the cause.
+   */
+  loadBetterSqlite3: () => Promise<string>;
 }
 
 // ─── Minimal version-range comparison (no `semver` dependency: it's hoisted
@@ -310,6 +322,21 @@ export async function checkClaudeAuth(deps: Pick<DoctorDeps, "run">): Promise<Ch
   return fail(name, "not logged in", "run `claude auth login`");
 }
 
+export async function checkNativeSqlite(deps: Pick<DoctorDeps, "loadBetterSqlite3">): Promise<CheckResult> {
+  const name = "Native modules (better-sqlite3)";
+  try {
+    const detail = await deps.loadBetterSqlite3();
+    return pass(name, detail);
+  } catch (e) {
+    const firstLine = (e instanceof Error ? e.message : String(e)).split("\n")[0] ?? "";
+    return fail(
+      name,
+      `better-sqlite3 failed to load: ${firstLine}`,
+      "the compiled binary doesn't match this Node (ABI drift) — run `pnpm install` (or `pnpm rebuild better-sqlite3`) under the pinned Node version",
+    );
+  }
+}
+
 export function checkSdkBinary(deps: Pick<DoctorDeps, "resolveSdkBinary">): CheckResult {
   const name = "Agent SDK binary";
   const resolved = deps.resolveSdkBinary();
@@ -331,17 +358,20 @@ export function checkFrontendBuild(deps: Pick<DoctorDeps, "fileExists" | "repoRo
 // ─── Runner ───────────────────────────────────────────────────────────────
 
 export async function runChecks(deps: DoctorDeps): Promise<CheckResult[]> {
-  const [pnpmResult, workspaceResult, externalTools, gitLfsResult, claudeResult] = await Promise.all([
-    checkPnpm(deps),
-    Promise.resolve(checkWorkspaceInstalled(deps)),
-    checkExternalTools(deps),
-    checkGitLfs(deps),
-    checkClaudeAuth(deps),
-  ]);
+  const [pnpmResult, workspaceResult, nativeSqliteResult, externalTools, gitLfsResult, claudeResult] =
+    await Promise.all([
+      checkPnpm(deps),
+      Promise.resolve(checkWorkspaceInstalled(deps)),
+      checkNativeSqlite(deps),
+      checkExternalTools(deps),
+      checkGitLfs(deps),
+      checkClaudeAuth(deps),
+    ]);
   return [
     checkNodeVersion(deps),
     pnpmResult,
     workspaceResult,
+    nativeSqliteResult,
     ...externalTools,
     gitLfsResult,
     claudeResult,
@@ -393,6 +423,21 @@ async function main(): Promise<void> {
     engines,
     packageManager,
     resolveSdkBinary: resolveClaudeCodeBinary,
+    loadBetterSqlite3: async () => {
+      // createRequire, not `import()`: tsx's dynamic-import transform runs
+      // es-module-lexer over this file and chokes on it (Parse error at the
+      // header comment) — and better-sqlite3 is CJS regardless.
+      const require = createRequire(import.meta.url);
+      const BetterSqlite3 = require("better-sqlite3") as typeof import("better-sqlite3");
+      const db = new BetterSqlite3(":memory:");
+      try {
+        const row: unknown = db.prepare("select sqlite_version() as v").get();
+        const version = isRecord(row) && typeof row.v === "string" ? row.v : "unknown";
+        return `loads and opens (SQLite ${version})`;
+      } finally {
+        db.close();
+      }
+    },
   };
 
   const results = await runChecks(deps);

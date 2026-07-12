@@ -127,6 +127,7 @@ The same duty applies at creation time: **new infrastructure isn't done until it
 |-------|----------|
 | Developer install (from source) | `docs/developer-install.md` |
 | Docker install (local + VPS) | `docs/docker-install.md` |
+| Agent-driven install (for a user's AI assistant) | `docs/agent-install.md` |
 | Engineering principles | `docs/engineering-principles.md` |
 | Module map (lib/shared/types boundary) | `docs/module-map.md` |
 | Design rationale | `docs/design/README.md` |
