@@ -4,7 +4,7 @@
  */
 
 import { parseAttrs } from "../../../shared/parse-attrs.js";
-import { invariant } from "./invariant";
+import { invariant } from "../../../shared/invariant.js";
 
 export interface TagType {
   type: string;

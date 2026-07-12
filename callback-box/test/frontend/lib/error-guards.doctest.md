@@ -2,16 +2,17 @@
 
 Typed access to `unknown` caught/error values — the blessed replacement for the
 `(e as Error).message` cast (including XState `onError` `event.error`, which is
-typed `unknown`). A minimal local copy of the backend's `error-guards.ts`; see
-`src/frontend/src/lib/error-guards.ts` and the `invariant.ts` precedent for why
-the frontend keeps its own copy.
+typed `unknown`). The frontend imports these through the `@shared/error-guards`
+entry point (`src/shared/error-guards.ts`), which re-exports the one canonical
+implementation in `src/lib/error-guards.ts`; there is no separate frontend copy.
+This exercises the shared entry directly to guard the re-export seam.
 
 ```ts setup
 import {
   toError,
   errorMessage,
   NonError,
-} from "../../../src/frontend/src/lib/error-guards.js";
+} from "../../../src/shared/error-guards.js";
 ```
 
 ## toError

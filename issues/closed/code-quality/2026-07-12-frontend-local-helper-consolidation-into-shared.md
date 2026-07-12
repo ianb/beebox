@@ -4,7 +4,22 @@ area: callback-box
 filed-by: agent
 discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boundary.md Track 2)
 design: ../../callback-box/docs/plans/clerk-contract-and-import-boundary.md
+resolution: implemented
 ---
+
+**Closed by commit d997d21a** (worktree-architectural-review). All three helpers
+consolidated. Direction decided: the canonical (dependency-free) implementation
+STAYS in `src/lib/` — so `lib/` remains a leaf that imports nothing upward — and
+each gains a thin `src/shared/<name>.ts` re-export the frontend imports via
+`@shared/<name>` (the inverse — impl in `shared/`, `lib/` re-exporting up — was
+rejected because it breaks the leaf invariant). `shared/ → lib/` is the sanctioned
+downward edge, already used by `shared/parse-attrs.ts`/`shared/self-note.ts`.
+The frontend copies were behavioral *subsets* of the backend originals (invariant:
+`invariant`+`InvariantError` only; error-guards: `toError`/`errorMessage`/`NonError`
+only) — no divergence to preserve, and zero `instanceof InvariantError`/`NonError`
+sites exist, so merging the class identities is safe. Six frontend modules loaded
+outside Vite by their own doctests import shared by raw relative path and were
+added to `OUTSIDE_VITE_SHARED_RAW`. Pattern documented in `docs/module-map.md`.
 
 Track 2 of the import-boundary work stood up the pattern for sharing a value
 between frontend and backend: put it in `src/shared/` (isomorphic, bundler-safe)

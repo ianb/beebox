@@ -13,7 +13,7 @@ import {
   resolveViewParams,
   type ResolvedViewParams,
 } from "@shared/named-views";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { LandmarksList } from "../components/landmarks/LandmarksList";
 import { ChatsPicker } from "../components/session-pickers/ChatsPicker";
 import { QuestionsList } from "../components/questions/QuestionsList";

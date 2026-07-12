@@ -10,7 +10,7 @@
 import { setup, assign, fromPromise, fromCallback } from "xstate";
 import { trpcClient } from "../lib/trpc";
 import { RequestError } from "../lib/errors";
-import { errorMessage } from "../lib/error-guards";
+import { errorMessage } from "@shared/error-guards";
 
 interface ClaudeStatus {
   loggedIn?: boolean;

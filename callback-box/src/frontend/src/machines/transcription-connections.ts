@@ -8,7 +8,7 @@
  */
 
 import { getApiBase } from "../api";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { deepgramKeyManager } from "../lib/audio/deepgram-key";
 import { openaiRealtimeKeyManager } from "../lib/audio/openai-realtime-key";
 

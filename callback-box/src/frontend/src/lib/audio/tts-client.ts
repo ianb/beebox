@@ -18,7 +18,7 @@ import { getAudioCache, cacheKey } from "./cache";
 import { logSpeechEvent } from "./speech-test-log";
 import { isTTSVoice, type TTSVoice } from "./speech-parsing";
 import { RequestError } from "../errors";
-import { invariant } from "../invariant";
+import { invariant } from "@shared/invariant";
 
 /** Thrown when playback is stopped before/while a queued utterance plays. */
 class PlaybackStoppedError extends Error {

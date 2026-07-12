@@ -14,7 +14,7 @@
 
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { ImageLightbox, type LightboxImage } from "./ImageLightbox";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 
 interface LightboxState {
   images: LightboxImage[];

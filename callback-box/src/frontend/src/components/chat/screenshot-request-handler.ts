@@ -18,7 +18,7 @@
 import { useCallback, useEffect, useReducer } from "react";
 import { getApiBase } from "../../api-core";
 import { base64ToBlob, processImageBlob } from "../../lib/image-paste";
-import { isRecord } from "../../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { captureTabScreenshot, type CaptureOutcome } from "./screenshot-capture";
 import { toastError } from "../ui/toast-store";
 import { captureViaRelay, startRelayProbe } from "./screenshot-relay";

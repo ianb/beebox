@@ -24,7 +24,13 @@ by vibe.
   module** (e.g. `lib/invariant.ts`, which is dependency-free) — `lib/` is the
   lower leaf layer, so `shared/ → lib/` is a downward edge, not a cycle. It may
   NOT import `core/`, `schemas/`, `webapp/`, or any `node:`-touching `lib/`
-  module.
+  module. **Frontend-consumed leaf helper?** When a dependency-free `lib/` helper
+  (e.g. `is-record`, `invariant`, `error-guards`) is also needed by the browser —
+  which the import-boundary rule forbids from reaching into backend `lib/` — keep
+  the implementation in `lib/` (so `lib/` stays a leaf) and add a thin
+  `shared/<name>.ts` that re-exports it as the `@shared/<name>` entry point. Do
+  NOT invert this by moving the impl into `shared/` and re-exporting from `lib/`:
+  that makes `lib/` import upward into `shared/`, breaking the leaf invariant.
 
 - **`src/types/`** — **ambient `.d.ts` declarations only**: module
   augmentations and global/ambient types (e.g. the `callback-box/view-widgets`

@@ -93,6 +93,14 @@ const OUTSIDE_VITE_SHARED_RAW = [
   // Transitively loaded by the tap/tsx doctest runner via input/emission +
   // input/voice-intent (root tsconfig, no @shared resolution).
   "src/components/chat/InteractiveChat-helpers.ts",
+  // Loaded outside Vite by their own doctests (root tsconfig, no @shared
+  // resolution): each imports @shared/is-record by raw relative path.
+  "src/input/emission-persist.ts",
+  "src/lib/dictation-draft.ts",
+  "src/lib/figure-params.ts",
+  "src/lib/location-share.ts",
+  "src/components/chat/native-emission.ts",
+  "src/machines/chat-actors.ts",
 ];
 
 export default [

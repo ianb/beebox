@@ -5,7 +5,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { trpcClient } from "../../lib/trpc";
-import { errorMessage } from "../../lib/error-guards";
+import { errorMessage } from "@shared/error-guards";
 import {
   TelegramConnectedView,
   TelegramSetupView,

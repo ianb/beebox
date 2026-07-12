@@ -10,6 +10,10 @@ import * as fs from "node:fs/promises";
 import { z } from "zod";
 import type { SessionUser } from "../auth.js";
 import { resolveSessionLogPath } from "../../core/chat/session/history.js";
+import {
+  SUPPORTED_IMAGE_MEDIA_TYPES,
+  isSupportedImageMediaType,
+} from "../../services/claude-chat-content.js";
 import { isActivityKind, type ActivityKind, type CardStateDetails } from "../../core/chat/card-activity.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -20,7 +24,9 @@ import { errnoCode } from "../../lib/error-guards.js";
 const chatImageSchema = z.object({
   id: z.number(),
   mimeType: z.string(),
-  dataBase64: z.string(),
+  // min(1): an empty payload is a malformed attachment, not an image — reject
+  // it here so it can't ride to the SDK boundary's empty-`data` error.
+  dataBase64: z.string().min(1),
 });
 
 /**
@@ -154,8 +160,9 @@ export function injectUserAttr(message: string, user: SessionUser): string {
 }
 
 /**
- * Validate inbound image attachments' content-level rules (mime prefix,
- * total byte cap) — structural shape (id/mimeType/dataBase64 present with
+ * Validate inbound image attachments' content-level rules (mime type is one
+ * the Anthropic API accepts, total byte cap) — structural shape
+ * (id/mimeType/dataBase64 present with
  * the right primitive types) is already guaranteed by `sendBodySchema`
  * before this runs. Returns an error message string when a problem is
  * found (so the caller can map it to a status code), or `null` when the
@@ -166,8 +173,11 @@ export function validateImages(
 ): { error: string; status: number } | null {
   let totalBytes = 0;
   for (const img of images) {
-    if (!img.mimeType.startsWith("image/")) {
-      return { error: `unsupported mime type: ${img.mimeType}`, status: 400 };
+    if (!isSupportedImageMediaType(img.mimeType)) {
+      return {
+        error: `unsupported mime type: ${img.mimeType} (accepted: ${SUPPORTED_IMAGE_MEDIA_TYPES.join(", ")})`,
+        status: 400,
+      };
     }
     totalBytes += img.dataBase64.length;
     if (totalBytes > MAX_IMAGE_BYTES) {

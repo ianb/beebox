@@ -17,7 +17,7 @@ import type { SessionContentBlock } from "../../api";
 import { buildStreamEntry } from "../../lib/stream-entry";
 import type { ModelMarker } from "./InteractiveChat-helpers";
 import { CaptureBubbleView, type CaptureBubbleModel } from "./capture-bubble";
-import { invariant } from "../../lib/invariant";
+import { invariant } from "@shared/invariant";
 
 /**
  * Trim a streaming text buffer to the last safe boundary. Either a

@@ -3,7 +3,7 @@
  * into structured DiffFile records, plus new-file content extraction.
  */
 
-import { invariant } from "../../lib/invariant";
+import { invariant } from "@shared/invariant";
 
 export interface DiffFile {
   path: string;
