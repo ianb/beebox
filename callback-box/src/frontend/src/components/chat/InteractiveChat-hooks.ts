@@ -16,7 +16,7 @@ import type { OnZoomView } from "./ChatMessages";
 import { href, toSearch } from "../../lib/routing";
 import { parseViewUrl, serializeViewUrl } from "../../lib/view-url";
 import { toastError } from "../ui/toast-store";
-import type { ChatSchedule } from "../../../../core/chat/schedules.js";
+import type { ChatSchedule } from "@core/chat/schedules.js";
 import type { ChatEvent } from "../../machines/chat-types";
 
 /**

@@ -11,7 +11,7 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { stageFiles, commitPaths } from "../../lib/git.js";
-import { slugify } from "../../lib/filename.js";
+import { slugify } from "../../shared/filename.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import {

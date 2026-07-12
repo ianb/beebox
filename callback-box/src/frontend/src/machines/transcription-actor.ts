@@ -63,7 +63,7 @@ import {
   startVoxtralConnection,
 } from "./transcription-connections";
 import { openWithRetry } from "./transcription-wait-for-open";
-import type { TranscriptionService } from "../../../core/transcription/index.js";
+import type { TranscriptionService } from "@core/transcription/index.js";
 import type { TranscriptionEvent } from "./transcription-events";
 
 interface TranscriptionActorInput {

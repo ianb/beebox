@@ -17,9 +17,33 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
     "baseUrl": ".",
+    // Cross-boundary import aliases. Two contracts, by design:
+    //   @shared/*  -> ../shared/*   VALUE-safe: also aliased in vite.config.ts,
+    //                so runtime value imports resolve in the client bundle.
+    //                src/shared/ is isomorphic + bundler-safe.
+    //   @backend/* -> ../webapp/*   TYPE-ONLY: deliberately absent from
+    //   @core/*    -> ../core/*     vite.config.ts. The frontend imports only
+    //   @schemas/* -> ../schemas/*  *types* from these backend trees; with no
+    //                matching Vite alias, an accidental value import through
+    //                them fails the client build loudly instead of silently
+    //                bundling backend source. The lint rule in
+    //                src/frontend/eslint.config.mjs bans the raw relative
+    //                spellings so these aliases are the only sanctioned path.
+    // tsx caveat (probed 2026-07-12): a tsx run pointed at THIS tsconfig
+    // (TSX_TSCONFIG_PATH=src/frontend/tsconfig.json) DOES honor these paths and
+    // will execute a value import through @core/@schemas/@backend that the Vite
+    // build rejects — so tsx is not a guard, the eslint rule is (it bans value
+    // imports through these aliases via allowTypeImports). `cb render`
+    // (src/cli/commands/render.ts) runs tsx with THIS tsconfig, so SSR resolves
+    // the aliases too. Only the tap/tsx DOCTEST runner uses the ROOT tsconfig
+    // (no paths), where @core/@schemas/@shared are unresolvable; frontend
+    // modules exercised there import cross-boundary code by raw relative path,
+    // not by alias (see the lint-rule exemptions).
     "paths": {
       "@backend/*": ["../webapp/*"],
-      "@shared/*": ["../shared/*"]
+      "@shared/*": ["../shared/*"],
+      "@core/*": ["../core/*"],
+      "@schemas/*": ["../schemas/*"]
     }
   },
   "include": ["src", "../shared/**/*"],

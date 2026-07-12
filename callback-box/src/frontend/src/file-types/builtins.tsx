@@ -4,7 +4,7 @@
  */
 
 import { ImageCardListEntry } from "../components/file-entries/ImageCardListEntry";
-import type { ImageAttrs } from "../../../schemas/image";
+import type { ImageAttrs } from "@schemas/image";
 import { registerFileType } from "./registry";
 import {
   DocumentIcon,

@@ -182,21 +182,13 @@ export function composeChatAppSnapshot(input: {
     : `${open}/>`;
 }
 
-const CHAT_APP_TAG_RE = /<chat-app\b[^>]*?(?:\/\s*>|>[\S\s]*?<\/chat-app\s*>)\n?/gi;
-
-/**
- * Strip every `<chat-app>` snapshot tag from a message — self-closing
- * (`<chat-app …/>`) or paired with a body, including `<card-activity>`
- * children (`<chat-app …>…</chat-app>`) — for display and stored history.
- * The single source of truth so consumers can't drift from the serializer:
- * five separate copies of this regex once leaked the paired form into
- * rendered messages (each only matched an empty body). `parseChatAppDeltas`
- * keeps its own variant — it captures attrs to extract feature deltas, a
- * different job.
- */
-export function stripChatAppTags(text: string): string {
-  return text.replace(CHAT_APP_TAG_RE, "");
-}
+// `stripChatAppTags` now lives in `shared/chat-tags.ts` (extracted so the
+// frontend chat renderers can import it without dragging this backend module
+// into the client bundle). Re-exported here so this module's own callers —
+// and the CLI/self-note importers of `features.stripChatAppTags` — are
+// unaffected. `parseChatAppDeltas` below keeps its own variant: it captures
+// attrs to extract feature deltas, a different job.
+export { stripChatAppTags } from "../../shared/chat-tags.js";
 
 export interface ChatAppDelta {
   feature: string;

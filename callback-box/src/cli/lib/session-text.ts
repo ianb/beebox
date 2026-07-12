@@ -26,10 +26,10 @@ export function isCompactionSummary(text: string): boolean {
   return text.trimStart().startsWith(COMPACTION_PREFIX);
 }
 
-// Self-note parsing lives in `core/self-note.ts` (shared with the frontend
+// Self-note parsing lives in `shared/self-note.ts` (shared with the frontend
 // chat renderer). Re-exported here so callers of `cli/lib/session` — which
 // itself re-exports from this module — keep their imports.
-export { type SelfNoteInfo, parseSelfNote, parseSelfNotes, entrySelfNotes } from "../../core/self-note.js";
+export { type SelfNoteInfo, parseSelfNote, parseSelfNotes, entrySelfNotes } from "../../shared/self-note.js";
 
 /**
  * Strip voice-direction metadata and speech/typed tag shells from user text.
