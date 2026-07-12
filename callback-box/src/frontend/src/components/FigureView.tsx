@@ -9,7 +9,7 @@
  * error boundary is only a backstop for synchronous render throws).
  */
 
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getApiBase } from "../api";
 import { resolveRelativePath } from "../lib/view-url";

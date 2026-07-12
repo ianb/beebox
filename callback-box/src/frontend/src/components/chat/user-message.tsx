@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { invariant } from "../../lib/invariant";
+import { invariant } from "@shared/invariant";
 import { Image } from "../ui/Image";
 import { Pre } from "../ui/Pre";
 import { getApiBase } from "../../api";

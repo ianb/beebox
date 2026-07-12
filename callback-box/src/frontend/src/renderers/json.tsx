@@ -20,7 +20,7 @@ import { Button } from "../components/ui/Button";
 import { ExternalLink } from "../components/ui/ExternalLink";
 import { Pre } from "../components/ui/Pre";
 import { RequestError } from "../lib/errors";
-import { errorMessage } from "../lib/error-guards";
+import { errorMessage } from "@shared/error-guards";
 import { registerFileType, type RendererProps } from "./index";
 
 /** Above this size we don't auto-download/parse — show info + a load button. */

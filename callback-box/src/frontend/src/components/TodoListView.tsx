@@ -12,7 +12,7 @@
  * because the bespoke round-checkbox + status look is appearance-heavy.
  */
 
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { Dropdown, MenuItem } from "./ui/Dropdown";
 import { cbSource, cbSourceItem } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";

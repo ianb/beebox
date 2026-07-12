@@ -9,7 +9,7 @@
  */
 
 import { setup, assign } from "xstate";
-import { invariant } from "../lib/invariant";
+import { invariant } from "@shared/invariant";
 import { buildOptimisticContent, reconcilePending } from "./chat-shared";
 import {
   HISTORY_TAIL,

@@ -7,7 +7,7 @@
  * itself is code-split; see ConceptGraph).
  */
 
-import { isRecord } from "../../lib/is-record";
+import { isRecord } from "@shared/is-record";
 
 export type KcKind = "fact" | "concept" | "procedure" | "principle";
 export type EdgeKind =

@@ -17,7 +17,7 @@ import { AttachedComments } from "./AttachedComments";
 import { makeEmbedComponents } from "./FigureEmbed";
 import { extractQuoteSpeakers, isPersonRef, speakerDisplay } from "../lib/selection/quote-extract";
 import { resolveRelativePath } from "../lib/view-url";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import type { RendererProps } from "../renderers";
 import type { ReactNode } from "react";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";

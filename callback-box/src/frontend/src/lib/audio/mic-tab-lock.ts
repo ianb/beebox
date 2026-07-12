@@ -11,7 +11,7 @@
  * exactly the intended scope.
  */
 
-import { isRecord } from "../is-record";
+import { isRecord } from "@shared/is-record";
 
 const CHANNEL_NAME = "callback-mic-lock";
 

@@ -4,7 +4,7 @@
  */
 
 import { useState } from "react";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { Markdown } from "../components/Markdown";
 import { Image } from "../components/ui/Image";
 import { CheckboxField } from "../components/ui/fields";
