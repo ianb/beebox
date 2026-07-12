@@ -68,7 +68,7 @@ buried. None blocks the merge.
    prevented; the staleness gate's working-tree mechanism has
    partial-staging escape edges (self-correcting via clerk's typecheck of
    the generated imports). Plan:
-   `callback-box/docs/plans/clerk-contract-and-import-boundary.md`.
+   `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
    Original framing: The extension talks to the box via hand-built
    tRPC URLs + a hand-duplicated payload shape (no shared typed contract,
    unlike the in-repo frontend's `AppRouter` import). Options: shared
@@ -141,7 +141,7 @@ buried. None blocks the merge.
    `shared/ → lib/` edge; follow-up filed for consolidating the
    frontend's local helper copies
    (`../code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md`).
-   Plan: `callback-box/docs/plans/clerk-contract-and-import-boundary.md`.
+   Plan: `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
    Original framing: ~28 raw `../../../core/...` imports bypass
    the `@backend`/`@shared` alias contract. Options: add `@core`/`@schemas`
    aliases (build-config churn across tsconfig+vite+eslint-resolver; doesn't

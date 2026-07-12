@@ -1,6 +1,6 @@
 # Documentation Graph Report
 
-Generated: 2026-07-12T09:26:56Z
+Generated: 2026-07-12T09:31:52Z
 Total documents: 176
 
 ## Issues
@@ -979,7 +979,7 @@ Title: "Module map: where shared code lives" | 46 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
-- docs/plans/clerk-contract-and-import-boundary.md:111 (mention) — against `docs/module-map.md` and update that doc if it's silent on
+- docs/implemented-plans/clerk-contract-and-import-boundary.md:113 (mention) — against `docs/module-map.md` and update that doc if it's silent on
 - ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:140 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
 - ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — `docs/module-map.md`, the `shared/ → lib/` note added in this work).
 
@@ -1729,6 +1729,17 @@ References:
 - → src/frontend/src/components/chat/CLAUDE.md (mention)
 - → docs/chat-scroll-testing.md (mention)
 
+#### docs/implemented-plans/clerk-contract-and-import-boundary.md
+
+Title: "Clerk↔Server Contract + Frontend Import Boundary" | 181 lines
+
+Referenced by:
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:71 (mention) — `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:5 (mention) — discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boun
+
+References:
+- → docs/module-map.md (mention)
+
 #### docs/implemented-plans/clerk-webpage-capture.md
 
 Title: "Web-page commentary capture" | 561 lines
@@ -2333,17 +2344,6 @@ Referenced by:
 
 References:
 - → docs/plans/interface-as-cards.md (mention)
-
-#### docs/plans/clerk-contract-and-import-boundary.md
-
-Title: "Clerk↔Server Contract + Frontend Import Boundary" | 179 lines
-
-Referenced by:
-- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:71 (mention) — `callback-box/docs/plans/clerk-contract-and-import-boundary.md`.
-- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:5 (mention) — discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boun
-
-References:
-- → docs/module-map.md (mention)
 
 #### docs/plans/cli-restructure.md
 

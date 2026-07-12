@@ -1,11 +1,13 @@
 # Clerk↔Server Contract + Frontend Import Boundary
 
+**Status:** implemented 2026-07-12 — both tracks shipped and merged; see
+`issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md`
+items 2 and 5 for the closing record.
+
 Resolves the last two build-item entries of the architectural review's open
 decisions (`issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md`
 items 2 and 5). Scoped 2026-07-12; codex plan review 2026-07-12 (11 valid
 findings, all folded in — the design below is post-review).
-
-> **STATUS: IN IMPLEMENTATION (2026-07-12).**
 
 ## Track 1 — Clerk contract: generated-and-CI-checked
 
