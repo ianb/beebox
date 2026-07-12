@@ -164,20 +164,29 @@ in A's pin, B's doctor checks, C's verified sequence).
 
 ### Track A — One Node version, enforced (in two steps)
 
-- **What.** Node 24 everywhere; enforcement lands separately from the pin.
+- **What.** One Node version everywhere; enforcement lands separately from
+  the pin.
 - **Why this needs to change.** `callback-box/.nvmrc` says `v24.12.0`,
   `deploy/setup-server.sh:11` says `NODE_MAJOR=22`, and nothing enforces
   either — a wrong-Node `pnpm install` half-succeeds and fails later in
   native modules or runtime behavior. Boxholder: "It causes a lot of trouble
   locally too."
+- **Which version — DECIDED at implementation (2026-07-12): Node 22, not
+  24.** The plan's environment check surfaced that the *demonstrated-working*
+  version everywhere is 22: the boxholder's shell default is `v22.22.1`,
+  prod was provisioned at `NODE_MAJOR=22`, and the dev router runs on the
+  PATH node (22). The `.nvmrc` 24 pin never actually took anywhere. Pinning
+  22 makes every environment consistent and enforceable with zero machine
+  changes; moving to 24 later is a deliberate single-commit bump
+  (`.nvmrc` + `engines` + Docker base) that `engine-strict` will then
+  enforce, instead of today's silent drift.
 - **Direction.**
-  - **Step 1 — pin.** Root `.nvmrc` (`v24.12.0`; remove
+  - **Step 1 — pin.** Root `.nvmrc` (`v22.22.1`; remove
     `callback-box/.nvmrc`, version managers resolve upward). Root
-    `package.json` gains `"engines": { "node": ">=24.0.0 <25" }` and
-    `"packageManager": "pnpm@<version in use>"` (read at implementation
-    time; corepack then self-selects). `deploy/setup-server.sh:11` →
-    `NODE_MAJOR=24`. Docker base image (Track D) `FROM
-    node:24-bookworm-slim`.
+    `package.json` gains `"engines": { "node": ">=22.11.0 <23" }` and
+    `"packageManager": "pnpm@10.26.2"` (corepack then self-selects).
+    `deploy/setup-server.sh:11` already says `NODE_MAJOR=22` — unchanged.
+    Docker base image (Track D) `FROM node:22-bookworm-slim`.
   - **Step 2 — enforce.** `engine-strict=true` in root `.npmrc`, as its own
     commit, only after: (a) `node -v` confirmed ≥24 on the boxholder's
     machine AND the prod server AND the deploy checkout's environment;
