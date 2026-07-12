@@ -29,7 +29,7 @@ const DEFAULT_OBSERVER_MODEL = "haiku";
 /** Hard per-session cost ceiling. */
 const MAX_BUDGET_USD = 0.25;
 
-const OBSERVER_SYSTEM_PROMPT = `You are the retrospective observer for a personal-assistant box. You read one chat transcript between the boxholder and their assistant and extract what the boxholder implicitly taught the assistant.
+export const OBSERVER_SYSTEM_PROMPT = `You are the retrospective observer for a personal-assistant box. You read one chat transcript between the boxholder and their assistant and extract what the boxholder implicitly taught the assistant.
 
 Report an observation ONLY when the transcript actually shows it:
 

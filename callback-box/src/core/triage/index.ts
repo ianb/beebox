@@ -84,7 +84,7 @@ const TriageResponseSchema = z.object({
 
 type TriageResponse = z.infer<typeof TriageResponseSchema>;
 
-function systemPrompt(instructions: CompiledTriageInstructions): string {
+export function buildTriageSystemPrompt(instructions: CompiledTriageInstructions): string {
   return [
     "You are the triage agent for a Callback Box.",
     "",
@@ -147,7 +147,7 @@ async function liveDecide(
   const agent = createAgent({ name: "triage" });
   const result = await agent.invokeStructured(TriageResponseSchema, {
     boxRoot,
-    systemPrompt: systemPrompt(instructions),
+    systemPrompt: buildTriageSystemPrompt(instructions),
     prompt: userPrompt(items),
   });
   if (!result.success) {

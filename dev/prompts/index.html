@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt viewer</title>
+<style>
+  :root {
+    --plane:        #f9f9f7;
+    --surface:      #fcfcfb;
+    --ink:          #0b0b0b;
+    --ink-2:        #52514e;
+    --muted:        #898781;
+    --grid:         #e1e0d9;
+    --axis:         #c3c2b7;
+    --border:       rgba(11,11,11,0.10);
+    --link:         #2a78d6;
+    --accent-bg:    #eef3fb;
+    /* categorical series slots (light) */
+    --s-chat:        #2a78d6;
+    --s-chat-thread: #1baf7a;
+    --s-reactor:     #4a3aa7;
+    --s-inventory:   #eb6834;
+    --code-bg:      #f4f4f2;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --plane:        #0d0d0d;
+      --surface:      #1a1a19;
+      --ink:          #ffffff;
+      --ink-2:        #c3c2b7;
+      --muted:        #898781;
+      --grid:         #2c2c2a;
+      --axis:         #383835;
+      --border:       rgba(255,255,255,0.10);
+      --link:         #3987e5;
+      --accent-bg:    #23262b;
+      --s-chat:        #3987e5;
+      --s-chat-thread: #199e70;
+      --s-reactor:     #9085e9;
+      --s-inventory:   #d95926;
+      --code-bg:      #232321;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    font: 15px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+    color: var(--ink); background: var(--plane);
+    margin: 0; padding: 1.6em 1.2em 6em; max-width: 1000px; margin: 0 auto;
+  }
+  h1 { font-size: 1.55em; margin: 0 0 0.15em; }
+  h2 { font-size: 1.2em; margin: 2.2em 0 0.7em; padding-bottom: 0.3em; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 1.02em; margin: 1.6em 0 0.5em; color: var(--ink-2); }
+  a { color: var(--link); }
+  code { background: var(--code-bg); padding: 0.08em 0.35em; border-radius: 3px; font-size: 0.88em; }
+  .sub { color: var(--ink-2); }
+  .meta { font: 12.5px ui-monospace, Menlo, monospace; color: var(--muted); }
+  .note {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 0.8em 1em; margin: 1em 0; font-size: 0.92em; color: var(--ink-2);
+  }
+  .note strong { color: var(--ink); }
+  .note ul { margin: 0.4em 0 0; padding-left: 1.2em; }
+  table { border-collapse: collapse; width: 100%; margin: 0.6em 0; font-size: 0.9em; }
+  th, td { border: 1px solid var(--border); padding: 0.35em 0.6em; text-align: left; vertical-align: top; }
+  th { background: var(--surface); font-weight: 600; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .totals { font-size: 0.9em; color: var(--ink-2); margin: 0.3em 0 0.4em; }
+  .pill {
+    display: inline-block; font: 11px ui-monospace, monospace; padding: 0.05em 0.5em;
+    border-radius: 999px; border: 1px solid var(--border); color: var(--ink-2);
+  }
+  .pill.always { border-color: var(--s-chat); color: var(--s-chat); }
+  details.frag {
+    border: 1px solid var(--border); border-left: 3px solid var(--axis);
+    border-radius: 7px; margin: 0.55em 0; background: var(--surface); overflow: hidden;
+  }
+  details.frag[open] { border-left-color: var(--link); }
+  details.frag > summary {
+    cursor: pointer; padding: 0.55em 0.8em; list-style: none;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5em 0.8em;
+  }
+  details.frag > summary::-webkit-details-marker { display: none; }
+  .frag-name {
+    font: 600 13.5px ui-monospace, Menlo, monospace; color: var(--ink);
+    background: var(--accent-bg); padding: 0.1em 0.45em; border-radius: 4px;
+  }
+  .frag-label { color: var(--ink-2); font-size: 0.9em; }
+  .frag-meta { color: var(--muted); font: 12px ui-monospace, monospace; margin-left: auto; }
+  .frag-body { padding: 0 0.8em 0.7em; }
+  .frag-src { color: var(--muted); font: 11.5px ui-monospace, monospace; margin: 0.2em 0 0.5em; }
+  .frag-also { font-size: 0.85em; color: var(--ink-2); margin: 0.1em 0 0.4em; }
+  pre {
+    background: var(--code-bg); padding: 0.8em 0.9em; border-radius: 6px;
+    white-space: pre-wrap; word-break: break-word; overflow-x: auto;
+    font: 12.5px/1.5 ui-monospace, Menlo, monospace; margin: 0.3em 0 0; color: var(--ink);
+  }
+  .tiles { display: flex; flex-wrap: wrap; gap: 0.8em; margin: 0.8em 0; }
+  .tile {
+    flex: 1 1 160px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 9px; padding: 0.8em 1em;
+  }
+  .tile .k { font-size: 0.8em; color: var(--muted); }
+  .tile .v { font-size: 1.6em; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .tile .u { font-size: 0.75em; color: var(--muted); }
+  .chartwrap { position: relative; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 0.8em; margin: 0.8em 0; }
+  .legend { display: flex; flex-wrap: wrap; gap: 0.5em 1.1em; margin: 0.3em 0 0.6em; font-size: 0.85em; }
+  .legend span { display: inline-flex; align-items: center; gap: 0.4em; color: var(--ink-2); }
+  .legend i { width: 22px; height: 3px; border-radius: 2px; display: inline-block; }
+  svg { width: 100%; height: auto; display: block; overflow: visible; }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--surface);
+    border: 1px solid var(--border); border-radius: 7px; padding: 0.5em 0.7em;
+    font: 12px ui-monospace, monospace; color: var(--ink); box-shadow: 0 6px 24px rgba(0,0,0,0.18);
+    opacity: 0; transition: opacity 0.08s; z-index: 5; white-space: nowrap;
+  }
+  .tooltip .tt-date { color: var(--muted); margin-bottom: 0.25em; }
+  .tooltip .tt-row { display: flex; align-items: center; gap: 0.4em; }
+  .tooltip .tt-row i { width: 10px; height: 10px; border-radius: 2px; }
+  .empty { color: var(--muted); font-style: italic; }
+  #error { background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 1.4em 1.4em; }
+  #error code { font-size: 0.95em; }
+</style>
+</head>
+<body>
+<div id="app"><p class="sub">Loading…</p></div>
+<script>
+"use strict";
+
+const $app = document.getElementById("app");
+
+function el(tag, props, children) {
+  const node = document.createElement(tag);
+  if (props) {
+    for (const [k, v] of Object.entries(props)) {
+      if (v == null) continue;
+      if (k === "class") node.className = v;
+      else if (k === "text") node.textContent = v;
+      else if (k === "html") node.innerHTML = v;
+      else node.setAttribute(k, v);
+    }
+  }
+  for (const c of [].concat(children || [])) {
+    if (c == null) continue;
+    node.appendChild(typeof c === "string" ? document.createTextNode(c) : c);
+  }
+  return node;
+}
+
+const SVGNS = "http://www.w3.org/2000/svg";
+function svgEl(tag, attrs) {
+  const node = document.createElementNS(SVGNS, tag);
+  for (const [k, v] of Object.entries(attrs || {})) node.setAttribute(k, String(v));
+  return node;
+}
+
+function fmtInt(n) { return n.toLocaleString(); }
+
+// Series definitions for the size chart: three situations' always-loaded tokens
+// plus the total inventory tokens. Colors come from the validated CSS slots.
+const SERIES = [
+  { key: "chat", label: "chat", color: "var(--s-chat)" },
+  { key: "chat-thread", label: "chat-thread", color: "var(--s-chat-thread)" },
+  { key: "reactor", label: "reactor", color: "var(--s-reactor)" },
+  { key: "inventory", label: "inventory", color: "var(--s-inventory)" },
+];
+
+async function load() {
+  let data;
+  try {
+    const res = await fetch("data.json", { cache: "no-store" });
+    if (!res.ok) throw new Error("status " + res.status);
+    data = await res.json();
+  } catch (e) {
+    renderMissing();
+    return;
+  }
+  let ledger = [];
+  let ledgerSkipped = 0;
+  try {
+    const res = await fetch("size-ledger.jsonl", { cache: "no-store" });
+    if (res.ok) {
+      const txt = await res.text();
+      // Parse each line on its own so one malformed line (a truncated or
+      // hand-edited append) never blanks the whole chart — skip it, count it,
+      // and surface the count as a small warning.
+      for (const l of txt.split("\n").filter(Boolean)) {
+        try {
+          ledger.push(JSON.parse(l));
+        } catch (e) {
+          ledgerSkipped++;
+        }
+      }
+    }
+  } catch (e) { /* ledger optional */ }
+  render(data, ledger, ledgerSkipped);
+}
+
+function renderMissing() {
+  $app.replaceChildren(el("div", { id: "error" }, [
+    el("h1", { text: "Prompt viewer" }),
+    el("p", { class: "sub" }, "No data yet."),
+    el("p", null, [
+      "Generate it by running ",
+      el("code", { text: "pnpm prompt-viewer" }),
+      " in ",
+      el("code", { text: "callback-box" }),
+      " — it writes ",
+      el("code", { text: "dev/prompts/data.json" }),
+      " (and appends to the tracked size ledger).",
+    ]),
+  ]));
+}
+
+function render(data, ledger, ledgerSkipped) {
+  document.title = "Prompt viewer · " + data.commit;
+  $app.replaceChildren(
+    header(data),
+    sizeSection(data, ledger, ledgerSkipped || 0),
+    situationsSection(data),
+    inventorySection(data),
+    duplicationSection(data),
+  );
+}
+
+function header(data) {
+  const nr = [];
+  for (const s of data.situations) {
+    for (const item of s.notRendered) nr.push(s.situation + ": " + item);
+  }
+  return el("section", null, [
+    el("h1", { text: "Prompt viewer" }),
+    el("p", { class: "sub" }, "Every static prompt in the system, the assembled per-situation contexts, a duplication scan, and prompt size over time."),
+    el("p", { class: "meta" }, "generated " + data.generatedAt + " · commit " + data.commit + " · box " + data.box),
+    el("div", { class: "note" }, [
+      el("strong", { text: "This is a static reconstruction." }),
+      " Claude Code's built-in system preset and the per-turn dynamic layers below are ",
+      el("em", { text: "not" }),
+      " included, so real context is larger. For byte-exact capture see ",
+      el("code", { text: "docs/prompt-logging.md" }),
+      " (",
+      el("code", { text: "CB_LOG_PROMPTS=1" }),
+      ").",
+      nr.length ? el("ul", null, nr.map((t) => el("li", { text: t }))) : null,
+    ]),
+  ]);
+}
+
+function fragBlock(opts) {
+  // opts: { name, label, source, loading, words, tokens, text, aliases }
+  const meta = [];
+  if (opts.loading) meta.push(opts.loading + " · ");
+  meta.push(fmtInt(opts.words) + " words · ~" + fmtInt(opts.tokens) + " tok");
+  const summary = el("summary", null, [
+    el("span", { class: "frag-name", text: opts.name }),
+    opts.label ? el("span", { class: "frag-label", text: opts.label }) : null,
+    el("span", { class: "frag-meta", text: meta.join("") }),
+  ]);
+  const body = el("div", { class: "frag-body" }, [
+    opts.source ? el("div", { class: "frag-src", text: opts.source }) : null,
+    opts.aliases && opts.aliases.length
+      ? el("div", { class: "frag-also" }, [
+          "also appears as ",
+          ...opts.aliases.map((a, i) => el("code", { text: a })).flatMap((c, i) => i ? [", ", c] : [c]),
+        ])
+      : null,
+    el("pre", { text: opts.text }),
+  ]);
+  return el("details", { class: "frag", open: "" }, [summary, body]);
+}
+
+function situationsSection(data) {
+  const kids = [el("h2", { text: "Situations" })];
+  for (const s of data.situations) {
+    kids.push(el("h3", { text: s.situation }));
+    kids.push(el("p", { class: "sub", text: s.description }));
+
+    let alwaysWords = 0, alwaysTokens = 0, totalWords = 0, totalTokens = 0;
+    const rows = s.layers.map((L) => {
+      totalWords += L.words; totalTokens += L.tokens;
+      if (L.loading === "always") { alwaysWords += L.words; alwaysTokens += L.tokens; }
+      return el("tr", null, [
+        el("td", null, el("code", { text: L.name })),
+        el("td", null, L.loading === "always" ? el("span", { class: "pill always", text: L.loading }) : el("span", { class: "pill", text: L.loading })),
+        el("td", { class: "num", text: fmtInt(L.words) }),
+        el("td", { class: "num", text: fmtInt(L.tokens) }),
+      ]);
+    });
+    kids.push(el("table", null, [
+      el("thead", null, el("tr", null, [
+        el("th", { text: "fragment" }),
+        el("th", { text: "loading" }),
+        el("th", { class: "num", text: "words" }),
+        el("th", { class: "num", text: "est. tokens" }),
+      ])),
+      el("tbody", null, rows),
+    ]));
+    kids.push(el("p", { class: "totals" },
+      "Always-loaded: " + fmtInt(alwaysWords) + " words / ~" + fmtInt(alwaysTokens) +
+      " tokens · all layers: " + fmtInt(totalWords) + " words / ~" + fmtInt(totalTokens) + " tokens"));
+
+    for (const L of s.layers) {
+      kids.push(fragBlock({
+        name: L.name, label: L.label, source: L.source, loading: L.loading,
+        words: L.words, tokens: L.tokens, text: L.text, aliases: L.aliases,
+      }));
+    }
+  }
+  return el("section", null, kids);
+}
+
+function inventorySection(data) {
+  const kids = [
+    el("h2", { text: "Inventory" }),
+    el("p", { class: "sub", text: "The static prompts collected from source, grouped by category." }),
+  ];
+  const cats = [];
+  const byCat = new Map();
+  for (const e of data.inventory) {
+    if (!byCat.has(e.category)) { byCat.set(e.category, []); cats.push(e.category); }
+    byCat.get(e.category).push(e);
+  }
+  for (const cat of cats) {
+    const entries = byCat.get(cat);
+    kids.push(el("h3", { text: cat + " (" + entries.length + ")" }));
+    for (const e of entries) {
+      kids.push(fragBlock({
+        name: e.name, label: e.title, source: e.source, loading: null,
+        words: e.words, tokens: e.tokens, text: e.text, aliases: e.aliases,
+      }));
+    }
+  }
+  return el("section", null, kids);
+}
+
+function duplicationSection(data) {
+  const kids = [
+    el("h2", { text: "Duplication" }),
+    el("p", { class: "sub" }, [
+      "Shared spans of ≥ 12 words across fragment pairs (8-word shingles, identical-text fragments collapsed first). ",
+      data.duplication.length + " finding" + (data.duplication.length === 1 ? "" : "s") + ".",
+    ]),
+  ];
+  if (!data.duplication.length) {
+    kids.push(el("p", { class: "empty", text: "No overlapping spans found." }));
+    return el("section", null, kids);
+  }
+  const rows = data.duplication.map((f) => el("tr", null, [
+    el("td", null, el("code", { text: f.a })),
+    el("td", null, el("code", { text: f.b })),
+    el("td", { class: "num", text: fmtInt(f.words) }),
+    el("td", null, el("details", { class: "frag" }, [
+      el("summary", null, el("span", { class: "frag-label", text: "shared text" })),
+      el("div", { class: "frag-body" }, el("pre", { text: f.text })),
+    ])),
+  ]));
+  kids.push(el("table", null, [
+    el("thead", null, el("tr", null, [
+      el("th", { text: "fragment A" }),
+      el("th", { text: "fragment B" }),
+      el("th", { class: "num", text: "words" }),
+      el("th", { text: "shared span" }),
+    ])),
+    el("tbody", null, rows),
+  ]));
+  return el("section", null, kids);
+}
+
+// Total inventory tokens from a ledger line: fragments whose name has no "/"
+// (assembled-layer names are "<situation>/<slug>"; inventory names are bare).
+function inventoryTokens(line) {
+  let sum = 0;
+  for (const [name, v] of Object.entries(line.fragments || {})) {
+    if (!name.includes("/")) sum += v.tokens;
+  }
+  return sum;
+}
+
+function seriesValue(line, key) {
+  if (key === "inventory") return inventoryTokens(line);
+  const s = line.situations && line.situations[key];
+  return s ? s.alwaysTokens : 0;
+}
+
+function sizeSection(data, ledger, ledgerSkipped) {
+  const kids = [
+    el("h2", { text: "Size over time" }),
+    el("p", { class: "sub", text: "Always-loaded tokens per situation, plus total inventory tokens, from the size ledger." }),
+  ];
+  if (ledgerSkipped) {
+    kids.push(el("p", { class: "meta" },
+      "⚠ Skipped " + ledgerSkipped + " malformed ledger line" + (ledgerSkipped === 1 ? "" : "s") + "."));
+  }
+  if (ledger.length < 2) {
+    kids.push(el("p", { class: "sub" }, "Fewer than two ledger points — showing current numbers. The chart appears once the ledger grows."));
+    const line = ledger[ledger.length - 1];
+    const tiles = SERIES.map((s) => {
+      let v = 0;
+      if (line) v = seriesValue(line, s.key);
+      else if (s.key === "inventory") v = data.inventory.reduce((a, e) => a + e.tokens, 0);
+      else {
+        const sit = data.situations.find((x) => x.situation === s.key);
+        if (sit) v = sit.layers.filter((L) => L.loading === "always").reduce((a, L) => a + L.tokens, 0);
+      }
+      return el("div", { class: "tile" }, [
+        el("div", { class: "k", text: s.label }),
+        el("div", { class: "v", text: fmtInt(v) }),
+        el("div", { class: "u", text: (s.key === "inventory" ? "inventory" : "always-loaded") + " tokens" }),
+      ]);
+    });
+    kids.push(el("div", { class: "tiles" }, tiles));
+    return el("section", null, kids);
+  }
+  kids.push(chart(ledger));
+  return el("section", null, kids);
+}
+
+function chart(ledger) {
+  const W = 820, H = 340, ML = 62, MR = 118, MT = 18, MB = 40;
+  const plotW = W - ML - MR, plotH = H - MT - MB;
+  const times = ledger.map((l) => Date.parse(l.at));
+  const tMin = Math.min(...times), tMax = Math.max(...times);
+  const tSpan = tMax - tMin || 1;
+  let vMax = 0;
+  for (const l of ledger) for (const s of SERIES) vMax = Math.max(vMax, seriesValue(l, s.key));
+  vMax = vMax === 0 ? 1 : vMax * 1.08;
+  const x = (t) => ML + ((t - tMin) / tSpan) * plotW;
+  const y = (v) => MT + plotH - (v / vMax) * plotH;
+
+  const svg = svgEl("svg", { viewBox: "0 0 " + W + " " + H, role: "img", "aria-label": "Prompt size over time" });
+
+  // horizontal gridlines + y labels
+  const ticks = 4;
+  for (let i = 0; i <= ticks; i++) {
+    const v = (vMax / 1.08) * (i / ticks);
+    const yy = y(v);
+    svg.appendChild(svgEl("line", { x1: ML, y1: yy, x2: ML + plotW, y2: yy, stroke: "var(--grid)", "stroke-width": 1 }));
+    const lab = svgEl("text", { x: ML - 8, y: yy + 4, "text-anchor": "end", fill: "var(--muted)", "font-size": 11, "font-family": "ui-monospace, monospace" });
+    lab.textContent = fmtInt(Math.round(v));
+    svg.appendChild(lab);
+  }
+  // baseline
+  svg.appendChild(svgEl("line", { x1: ML, y1: MT + plotH, x2: ML + plotW, y2: MT + plotH, stroke: "var(--axis)", "stroke-width": 1 }));
+
+  // x labels (first, middle, last)
+  const xIdx = ledger.length <= 4 ? ledger.map((_, i) => i) : [0, Math.floor(ledger.length / 2), ledger.length - 1];
+  for (const i of xIdx) {
+    const t = times[i];
+    const lab = svgEl("text", { x: x(t), y: MT + plotH + 22, "text-anchor": "middle", fill: "var(--muted)", "font-size": 10.5, "font-family": "ui-monospace, monospace" });
+    lab.textContent = new Date(t).toISOString().slice(5, 16).replace("T", " ");
+    svg.appendChild(lab);
+  }
+
+  // series lines + end labels
+  for (const s of SERIES) {
+    const pts = ledger.map((l, i) => [x(times[i]), y(seriesValue(l, s.key))]);
+    const d = pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join(" ");
+    svg.appendChild(svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    for (const p of pts) svg.appendChild(svgEl("circle", { cx: p[0], cy: p[1], r: 2.6, fill: s.color }));
+    const last = pts[pts.length - 1];
+    const t = svgEl("text", { x: last[0] + 8, y: last[1] + 4, fill: s.color, "font-size": 11.5, "font-weight": 600, "font-family": "ui-monospace, monospace" });
+    t.textContent = s.label;
+    svg.appendChild(t);
+  }
+
+  // crosshair + hover
+  const crosshair = svgEl("line", { x1: 0, y1: MT, x2: 0, y2: MT + plotH, stroke: "var(--axis)", "stroke-width": 1, "stroke-dasharray": "3 3", opacity: 0 });
+  svg.appendChild(crosshair);
+  const hoverDots = SERIES.map((s) => {
+    const c = svgEl("circle", { r: 4, fill: "var(--surface)", stroke: s.color, "stroke-width": 2, opacity: 0 });
+    svg.appendChild(c);
+    return c;
+  });
+  const overlay = svgEl("rect", { x: ML, y: MT, width: plotW, height: plotH, fill: "transparent" });
+  svg.appendChild(overlay);
+
+  const wrap = el("div", { class: "chartwrap" });
+  const legend = el("div", { class: "legend" }, SERIES.map((s) =>
+    el("span", null, [el("i", { style: "background:" + s.color }), s.label])));
+  const tip = el("div", { class: "tooltip" });
+  wrap.appendChild(legend);
+  wrap.appendChild(svg);
+  wrap.appendChild(tip);
+
+  function nearest(clientX) {
+    const rect = svg.getBoundingClientRect();
+    const px = ((clientX - rect.left) / rect.width) * W;
+    let best = 0, bestD = Infinity;
+    for (let i = 0; i < times.length; i++) {
+      const d = Math.abs(x(times[i]) - px);
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+  function move(evt) {
+    const i = nearest(evt.clientX);
+    const cx = x(times[i]);
+    crosshair.setAttribute("x1", cx); crosshair.setAttribute("x2", cx); crosshair.setAttribute("opacity", 1);
+    SERIES.forEach((s, k) => {
+      const cy = y(seriesValue(ledger[i], s.key));
+      hoverDots[k].setAttribute("cx", cx); hoverDots[k].setAttribute("cy", cy); hoverDots[k].setAttribute("opacity", 1);
+    });
+    tip.replaceChildren(
+      el("div", { class: "tt-date", text: new Date(times[i]).toISOString().slice(0, 16).replace("T", " ") + " · " + (ledger[i].commit || "") }),
+      ...SERIES.map((s) => el("div", { class: "tt-row" }, [
+        el("i", { style: "background:" + s.color }),
+        s.label + ": " + fmtInt(seriesValue(ledger[i], s.key)),
+      ])),
+    );
+    const rect = svg.getBoundingClientRect();
+    const wrapRect = wrap.getBoundingClientRect();
+    const screenX = rect.left + (cx / W) * rect.width - wrapRect.left;
+    tip.style.opacity = 1;
+    let left = screenX + 14;
+    if (left + tip.offsetWidth > wrap.clientWidth) left = screenX - tip.offsetWidth - 14;
+    tip.style.left = Math.max(4, left) + "px";
+    tip.style.top = "12px";
+  }
+  function leave() {
+    crosshair.setAttribute("opacity", 0);
+    hoverDots.forEach((d) => d.setAttribute("opacity", 0));
+    tip.style.opacity = 0;
+  }
+  overlay.addEventListener("mousemove", move);
+  overlay.addEventListener("mouseleave", leave);
+
+  return wrap;
+}
+
+load();
+</script>
+</body>
+</html>
