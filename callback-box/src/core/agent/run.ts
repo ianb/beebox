@@ -14,6 +14,7 @@ import { cardValidatorHook, gitMvNudgeHook } from "../sdk-hooks.js";
 import { resolveClaudeCodeBinary } from "../sdk-binary-path.js";
 import { startPromptLogger, type PromptLogger } from "./prompt-logger.js";
 import { consumeAgentStream, type RunStreamOutcome } from "./stream.js";
+import { checkClaudeAuth, ClaudeAuthError } from "./auth-preflight.js";
 import { dropUndefined } from "../../lib/drop-undefined.js";
 import type { AgentResult, AgentResultBase } from "./types.js";
 
@@ -210,6 +211,26 @@ export async function runAgent(options: RunAgentOptions): Promise<AgentResult> {
       exitCode: 0,
       sessionId: options.resumeSessionId ?? options.sessionId ?? "",
     };
+  }
+
+  // Preflight: a missing/expired Claude login otherwise surfaces as an opaque
+  // SDK `success: false` — fail fast with an actionable message instead. The
+  // check caches a positive result, so per-turn calls here don't re-shell.
+  // Fakes replace `createAgent`, so this real SDK path (and its probe) is never
+  // reached by fake-injecting tests.
+  try {
+    await checkClaudeAuth();
+  } catch (e) {
+    if (e instanceof ClaudeAuthError) {
+      return {
+        success: false,
+        output: "",
+        error: e.message,
+        exitCode: -1,
+        sessionId: options.resumeSessionId ?? options.sessionId ?? "",
+      };
+    }
+    throw e;
   }
 
   const filenameHint = `${new Date().toISOString().replace(/[.:]/g, "-")}-${Math.random().toString(36).slice(2, 8)}`;

@@ -66,6 +66,13 @@ export interface ChatBackendRun {
 }
 
 export interface ChatBackend {
+  /**
+   * True only for the real SDK-backed implementation, whose `start()` spawns a
+   * Claude Code subprocess and therefore needs an active Claude login. The chat
+   * session runs its auth preflight only when this is set, so fakes (which
+   * never touch the SDK) skip it. Absent/`false` on every fake.
+   */
+  requiresClaudeAuth?: boolean | undefined;
   start(opts: ChatBackendStartOptions): ChatBackendRun;
   /**
    * Pre-warm a Claude subprocess against `opts` so the next `start()` with
