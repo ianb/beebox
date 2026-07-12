@@ -1,6 +1,15 @@
 ---
 title: "Architectural review — open boxholder decisions"
+resolution: implemented
 ---
+
+**Closed 2026-07-12: all seven decisions resolved** — router (phase 2,
+2026-07-11), clerk contract (generated+gated, 2026-07-12), thread narrowing
+(converged, 2026-07-09), markdoc walkers (enumerated+tolerateNever,
+2026-07-10), import boundary (rule+aliases+relocations, 2026-07-12), barrels
+(never, 2026-07-12), `.ts` as-ban (extended, 2026-07-10). Per-item records
+below; the Track G "do when touched" notes at the bottom are recorded
+observations, not open work.
 
 Parked judgment calls from the architectural review
 (`docs/implemented-plans/architectural-review.md`). All are safe in their current

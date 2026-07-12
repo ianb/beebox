@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-12T00:13:10Z
-Total documents: 171
+Generated: 2026-07-12T09:25:52Z
+Total documents: 172
 
 ## Issues
 
@@ -227,7 +227,7 @@ References:
 
 #### code-style.md
 
-Title: "Code Style" | 112 lines
+Title: "Code Style" | 113 lines
 
 Referenced by:
 - CLAUDE.md:120 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
@@ -281,9 +281,10 @@ Referenced by:
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:100 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
 - ../CLAUDE.md:38 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:102 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — in code-style.md so per-edit hook reports on test files stop
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:77 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:22 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/features/2026-07-05-writing-skill.md:12 (mention) — code style (that's `code-style.md`).
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -966,10 +967,13 @@ References:
 
 #### docs/module-map.md
 
-Title: "Module map: where shared code lives" | 42 lines
+Title: "Module map: where shared code lives" | 46 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
+- docs/plans/clerk-contract-and-import-boundary.md:111 (mention) — against `docs/module-map.md` and update that doc if it's silent on
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:140 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — `docs/module-map.md`, the `shared/ → lib/` note added in this work).
 
 #### docs/procedure-implementation.md
 
@@ -1506,10 +1510,10 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-05-connector-transient-state-rmw.md:23 (mention) — `docs/implemented-plans/architectural-review.md`.
 - ../issues/closed/bugs/2026-07-05-git-commit-race-audit.md:15 (mention) — Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card
 - ../issues/closed/code-quality/2026-07-06-phase2-deferred-boundaries.md:15 (mention) — (`callback-box/docs/implemented-plans/architectural-review.md`, Tracks P.2/D.2):
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:6 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:15 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
 
 References:
-- → ../issues/decisions/2026-07-06-architectural-review-open-decisions.md (link)
+- → ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
@@ -2056,7 +2060,7 @@ Title: "Router Phase 2 — WorktreeState Formalization" | 259 lines
 
 Referenced by:
 - ../bin/docs/router-protocol.md:215 (mention) — `callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:45 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:54 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
@@ -2273,6 +2277,17 @@ Referenced by:
 
 References:
 - → docs/plans/interface-as-cards.md (mention)
+
+#### docs/plans/clerk-contract-and-import-boundary.md
+
+Title: "Clerk↔Server Contract + Frontend Import Boundary" | 179 lines
+
+Referenced by:
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:71 (mention) — `callback-box/docs/plans/clerk-contract-and-import-boundary.md`.
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:5 (mention) — discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boun
+
+References:
+- → docs/module-map.md (mention)
 
 #### docs/plans/cli-restructure.md
 
