@@ -4,7 +4,7 @@
  */
 
 import { parseTags } from "../parseTags";
-import { VOICE_MODELS, type VoiceModel } from "../../../../schemas/personality";
+import { VOICE_MODELS, type VoiceModel } from "../../../../shared/voice-models.js";
 
 export const VALID_VOICES = VOICE_MODELS;
 export type TTSVoice = VoiceModel;

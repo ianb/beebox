@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-12T08:12:29Z
-Total documents: 175
+Generated: 2026-07-12T09:31:52Z
+Total documents: 176
 
 ## Issues
 
@@ -229,7 +229,7 @@ References:
 
 #### code-style.md
 
-Title: "Code Style" | 112 lines
+Title: "Code Style" | 113 lines
 
 Referenced by:
 - CLAUDE.md:120 (mention) — When you get corrected on a convention, pattern, or workflow that wasn't documented, update CLAUDE.md, code-style.md, fr
@@ -284,9 +284,10 @@ Referenced by:
 - ../.claude/skills/cb-frontend/SKILL.md:37 (mention) — - **One job per component.** A component near the 300-line cap (code-style.md)
 - ../.claude/skills/cb-plan/SKILL.md:100 (mention) — - `callback-box/code-style.md` — the checkable mechanical rules (no
 - ../CLAUDE.md:38 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:102 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — in code-style.md so per-edit hook reports on test files stop
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:77 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:22 (mention) — code-style.md) has a frontend twin. `isRecord` is pure and dependency-free, so
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/features/2026-07-05-writing-skill.md:12 (mention) — code style (that's `code-style.md`).
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -689,7 +690,7 @@ Referenced by:
 - CLAUDE.md:156 (mention) — | Content-Security-Policy | `docs/content-security-policy.md` |
 - docs/implemented-plans/app-wide-csp.md:438 (mention) — `docs/content-security-policy.md`) describing the policy, the dev/prod split,
 - docs/scheduled/csp-violation-review.md:6 (mention) — nothing — see `docs/content-security-policy.md`); this routine watches real
-- src/dev/CLAUDE.md:14 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
+- src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 
 References:
 - → docs/scheduled/csp-violation-review.md (mention)
@@ -709,11 +710,11 @@ Title: "(no title)" | 1 lines
 
 Referenced by:
 - docs/README.md:32 (mention) — - **`docs/doc-graph.md`** / **`docs/doc-graph.html`** — generated
-- docs/maintenance.md:18 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
+- docs/maintenance.md:19 (mention) — | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 - docs/plans/docs-reorg.md:116 (mention) — (5,767 generated lines), `doc-graph.md` (build artifact among
 - docs/plans/source-available-release.md:429 (mention) — - **doc-graph generator fixed at the source.** `doc-graph.md` only *quoted* the
 - docs/testing.md:601 (mention) — `npx tsx src/dev/doc-graph.ts > docs/doc-graph.md` — scans all `.md` files, extracts cross-references, reports orphans a
-- src/dev/CLAUDE.md:10 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
+- src/dev/CLAUDE.md:11 (mention) — | `doc-graph.ts` | Generates `docs/doc-graph.md` (cross-reference graph + orphan/broken-ref report) | `docs/maintenance.
 - ../issues/closed/docs-and-chores/2026-03-04-documentation-graph.md:7 (mention) — **Closed:** Implemented as `docs/doc-graph.md` (auto-generated cross-reference report, `src/dev/doc-graph-html.ts`). See
 
 #### docs/engineering-principles.md
@@ -851,7 +852,7 @@ Title: "Knowledge Audits" | 91 lines
 Referenced by:
 - CLAUDE.md:158 (mention) — | Knowledge audits | `docs/knowledge-audits.md` |
 - docs/engineering-principles.md:159 (link) — ([`docs/knowledge-audits.md`](knowledge-audits.md)).
-- docs/maintenance.md:59 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
+- docs/maintenance.md:60 (mention) — **Full guide:** `docs/knowledge-audits.md` (test structure, recording results, interpreting failures).
 - docs/plans/docs-reorg.md:119 (mention) — policy — `.gitignore` and `knowledge-audits.md` both say reports are
 - docs/reports/user-stories-audit-2026-06-26.md:5670 (mention) — Both claimed files exist at the correct paths. The implementation is complete: test-runner.ts extracts context metrics f
 - src/dev/CLAUDE.md:7 (mention) — | `knowledge-audit.ts` | Runs YAML-defined tests against a real box agent | `docs/knowledge-audits.md` |
@@ -918,7 +919,7 @@ References:
 
 #### docs/maintenance.md
 
-Title: "Code Maintenance" | 125 lines
+Title: "Code Maintenance" | 132 lines
 
 Referenced by:
 - CLAUDE.md:157 (mention) — | Periodic maintenance | `docs/maintenance.md` |
@@ -958,7 +959,7 @@ Referenced by:
 - docs/implemented-plans/remove-box-shape-v1.review.md:47 (mention) — entries." `migrations.md:80-84`: "Never reorder, rename, or remove."
 - docs/implemented-plans/remove-cardworks-deletion.md:456 (mention) — `docs/migrations.md` (retire deleted-migrator references).
 - docs/implemented-plans/remove-cardworks-package.md:324 (mention) — it now means "from `src/cards/`"); retire `docs/migrations.md` references to
-- docs/maintenance.md:83 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
+- docs/maintenance.md:90 (mention) — **Author guide + runbook:** `docs/migrations.md` (how to write a new migrator with the noisy-mode `_migrate-warnings` he
 - docs/plans/docs-reorg.gap-analysis.md:161 (mention) — `docs/migrations.md`, chat components CLAUDE.md, `chat-turn-buffer.ts`,
 - docs/plans/docs-reorg.md:90 (mention) — (`box-layout.md`, `testing.md`, `migrations.md`, `adding-schemas.md`,
 - ../.claude/skills/cb-migration/SKILL.md:12 (mention) — lives in **`callback-box/docs/migrations.md`** — read it before writing one.
@@ -974,10 +975,13 @@ References:
 
 #### docs/module-map.md
 
-Title: "Module map: where shared code lives" | 42 lines
+Title: "Module map: where shared code lives" | 46 lines
 
 Referenced by:
 - CLAUDE.md:129 (mention) — | Module map (lib/shared/types boundary) | `docs/module-map.md` |
+- docs/implemented-plans/clerk-contract-and-import-boundary.md:113 (mention) — against `docs/module-map.md` and update that doc if it's silent on
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:140 (mention) — is a future boxholder question; `docs/module-map.md` now documents the
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:38 (mention) — `docs/module-map.md`, the `shared/ → lib/` note added in this work).
 
 #### docs/procedure-implementation.md
 
@@ -1049,7 +1053,7 @@ Referenced by:
 - docs/cards-as-markdown.md:20 (mention) — **Naming and type discrimination.** `Name.type.card` — the type segment is the canonical discriminator, not a `type:` fr
 - docs/plans/README.md:68 (mention) — applies the naming conventions (`docs/README.md`). The 2026-07-04
 - docs/plans/docs-reorg.md:344 (mention) — role change). Conventions recorded in `docs/README.md`.
-- src/dev/CLAUDE.md:11 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs or live-area orphans; run by pre-commit o
+- src/dev/CLAUDE.md:12 (mention) — | `doc-check.ts` | Enforcement twin of doc-graph: exits nonzero on broken refs or live-area orphans; run by pre-commit o
 - ../.claude/agents/finish.md:189 (mention) — - **Filenames matter** — apply `callback-box/docs/README.md`'s naming rules: a
 - ../CLAUDE.md:24 (mention) — **Commit docs WITH hooks.** Docs-only commits run only fast checks (~1s — typecheck/lint are skipped automatically), so 
 
@@ -1196,7 +1200,7 @@ References:
 Title: "Security TODOs" | 25 lines
 
 Referenced by:
-- docs/maintenance.md:25 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
+- docs/maintenance.md:26 (mention) — | Accepted security gaps | — | Review when touching auth/OAuth boundaries | `docs/todo-security.md` |
 - docs/plans/docs-reorg.md:79 (mention) — decay-prone OCR vendor pricing), `todo-security.md` (orphaned TODO list),
 
 #### docs/tours.md
@@ -1265,8 +1269,8 @@ Title: "Architecture Docs" | 59 lines
 
 Referenced by:
 - docs/design/README.md:5 (link) — narrative lives in [`../architecture/`](../architecture/CLAUDE.md); the values
-- docs/maintenance.md:116 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
-- src/dev/CLAUDE.md:13 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
+- docs/maintenance.md:123 (mention) — **When to run:** after editing `docs/architecture/*.md` text that drives image prompts, or after editing `.mmd` Mermaid 
+- src/dev/CLAUDE.md:14 (mention) — | `generate-doc-images.ts` | Generates illustrations for `docs/architecture/` | `docs/architecture/CLAUDE.md` |
 
 References:
 - → docs/stack-decisions.md (mention)
@@ -1516,10 +1520,10 @@ Referenced by:
 - ../issues/closed/bugs/2026-07-05-connector-transient-state-rmw.md:23 (mention) — `docs/implemented-plans/architectural-review.md`.
 - ../issues/closed/bugs/2026-07-05-git-commit-race-audit.md:15 (mention) — Deferred from Track H (plan `docs/implemented-plans/architectural-review.md`): a card
 - ../issues/closed/code-quality/2026-07-06-phase2-deferred-boundaries.md:15 (mention) — (`callback-box/docs/implemented-plans/architectural-review.md`, Tracks P.2/D.2):
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:6 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:15 (mention) — (`docs/implemented-plans/architectural-review.md`). All are safe in their current
 
 References:
-- → ../issues/decisions/2026-07-06-architectural-review-open-decisions.md (link)
+- → ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md (link)
 - → docs/engineering-principles.md (mention)
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
@@ -1724,6 +1728,17 @@ References:
 - → CLAUDE.md (mention)
 - → src/frontend/src/components/chat/CLAUDE.md (mention)
 - → docs/chat-scroll-testing.md (mention)
+
+#### docs/implemented-plans/clerk-contract-and-import-boundary.md
+
+Title: "Clerk↔Server Contract + Frontend Import Boundary" | 181 lines
+
+Referenced by:
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:71 (mention) — `callback-box/docs/implemented-plans/clerk-contract-and-import-boundary.md`.
+- ../issues/code-quality/2026-07-12-frontend-local-helper-consolidation-into-shared.md:5 (mention) — discovered-in: worktree-architectural-review — implementing the frontend import-boundary (clerk-contract-and-import-boun
+
+References:
+- → docs/module-map.md (mention)
 
 #### docs/implemented-plans/clerk-webpage-capture.md
 
@@ -2112,7 +2127,7 @@ Title: "Router Phase 2 — WorktreeState Formalization" | 259 lines
 
 Referenced by:
 - ../bin/docs/router-protocol.md:215 (mention) — `callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:45 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
+- ../issues/closed/decisions/2026-07-06-architectural-review-open-decisions.md:54 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
@@ -2692,7 +2707,7 @@ Referenced by:
 - docs/content-security-policy.md:76 (mention) — The routine is a runbook: see `docs/scheduled/csp-violation-review.md`. To harden
 - docs/plans/docs-reorg.md:196 (mention) — `scheduled/csp-violation-review.md` is half dev reference, half the literal
 - docs/scheduled/csp-violation-review.md:11 (mention) — `callback-box/docs/scheduled/csp-violation-review.md`."* Everything it needs is
-- src/dev/CLAUDE.md:14 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
+- src/dev/CLAUDE.md:15 (mention) — | `csp-digest.ts` | Digests the JSONL CSP violation log (incremental via per-box cursor) | `docs/content-security-policy
 
 References:
 - → docs/content-security-policy.md (mention)
@@ -2857,7 +2872,7 @@ References:
 
 #### src/dev/CLAUDE.md
 
-Title: "Dev Scripts" | 18 lines
+Title: "Dev Scripts" | 19 lines
 
 Referenced by:
 - docs/implemented-plans/box-retrospectives.md:414 (mention) — glossary entries, the two knowledge-audit entries, `src/dev/CLAUDE.md`

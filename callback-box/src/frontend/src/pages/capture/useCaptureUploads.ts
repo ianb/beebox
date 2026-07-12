@@ -7,7 +7,7 @@
  */
 
 import { useState, useRef, useCallback } from "react";
-import { sanitizeFilename } from "../../../../lib/filename";
+import { sanitizeFilename } from "@shared/filename";
 import { type UploadState } from "./capture-api";
 import { useCaptureApi } from "./capture-api-context";
 

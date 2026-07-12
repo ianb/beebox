@@ -7,7 +7,7 @@
  */
 
 import type { ListProps } from "../../file-types/registry";
-import type { ImageAttrs } from "../../../../schemas/image";
+import type { ImageAttrs } from "@schemas/image";
 import { getApiBase } from "../../api";
 import { resolveRelativePath } from "../../lib/view-url";
 

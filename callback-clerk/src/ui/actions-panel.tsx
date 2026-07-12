@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import type { EnabledBox } from "../domain/config.js";
 import type { ActionResponse, ClerkMessage } from "../domain/messages.js";
-import type { CommentaryDestination } from "../domain/commentary.js";
+import type { CommentaryDestination } from "../contract/clerk-contract.generated.js";
 import { getCommentaryDestinations } from "../platform/clerk-api.js";
 
 interface Notice {

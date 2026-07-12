@@ -14,7 +14,7 @@
  * state without a backend.
  */
 
-import type { PendingCaptureCounts } from "../../../../core/capture/pending.js";
+import type { PendingCaptureCounts } from "@core/capture/pending.js";
 
 /** Live refinement from a `capture-status` bus event (more granular than the query state). */
 export type CaptureLiveStatus = "preparing" | "transcribing" | "delivered" | "failed";

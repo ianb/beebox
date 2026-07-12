@@ -10,7 +10,7 @@
  * the metadata scanners don't count them as user turns.
  */
 
-import { stripChatAppTags } from "./chat/features.js";
+import { stripChatAppTags } from "./chat-tags.js";
 import { invariant } from "../lib/invariant.js";
 
 /** Parsed self-note metadata. */

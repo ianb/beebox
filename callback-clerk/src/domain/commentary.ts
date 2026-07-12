@@ -1,11 +1,13 @@
 /**
- * Payload shaping for POST /api/clerk/commentary and helpers for the
- * "comment on this page" flow. The server contract (callback-box
- * src/webapp/routes/clerk.ts commentarySchema) requires non-empty title and
- * readableMarkdown; optional fields must be omitted, not null. When extraction
- * yields no readable content we fall back to a markdown link — never silently
- * drop the capture.
+ * Payload shaping for the `clerk.commentary` mutation and helpers for the
+ * "comment on this page" flow. The server contract (the zod leaf
+ * callback-box/src/webapp/trpc/routers/clerk-contract.ts, mirrored here by the
+ * generated `CommentaryPayload`) requires non-empty title and readableMarkdown;
+ * optional fields must be omitted, not null. When extraction yields no readable
+ * content we fall back to a markdown link — never silently drop the capture.
  */
+
+import type { CommentaryPayload } from "../contract/clerk-contract.generated.js";
 
 /** The readable rendering of a page (Defuddle markdown + metadata). */
 export interface ReadablePage {
@@ -24,26 +26,6 @@ export interface ReadablePage {
 export interface CommentaryCapture {
   page: ReadablePage;
   frozenHtml: string | null;
-}
-
-/** A landmark commentary destination, as returned by the box. */
-export interface CommentaryDestination {
-  /** Box-relative directory (empty string = box root). */
-  dir: string;
-  label: string;
-  symbol: string | null;
-}
-
-export interface CommentaryPayload {
-  url: string;
-  title: string;
-  siteName?: string;
-  byline?: string;
-  excerpt?: string;
-  readableMarkdown: string;
-  frozenHtml?: string;
-  destinationDir?: string;
-  timestamp: string;
 }
 
 export function buildCommentaryPayload(params: {
@@ -70,7 +52,7 @@ export function buildCommentaryPayload(params: {
  * `chat?session=new&companion=…`) against the box's root URL into an absolute
  * URL the extension can open in a new tab. `boxUrl` already carries the box's
  * path prefix (origin + base + slug), so the open path is appended as a
- * sibling segment — mirroring how clerk-api builds `${boxUrl}/api/clerk/…`.
+ * sibling segment — mirroring how clerk-api builds `${boxUrl}/api/trpc/clerk.…`.
  */
 export function commentaryOpenUrl(boxUrl: string, openPath: string): string {
   return `${boxUrl.replace(/\/+$/, "")}/${openPath.replace(/^\/+/, "")}`;

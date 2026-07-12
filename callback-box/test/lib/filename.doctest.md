@@ -7,7 +7,7 @@ import {
   sanitizeFilenameStem,
   sanitizeFilename,
   splitExtension,
-} from "../../src/lib/filename.js";
+} from "../../src/shared/filename.js";
 ```
 
 ## sanitizeFilenameStem

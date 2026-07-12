@@ -10,8 +10,8 @@
  * rather than failing the whole render.
  */
 
-import { stripChatAppTags } from "../../../core/chat/features.js";
-import { decodeXmlAttr } from "../../../core/self-note";
+import { stripChatAppTags } from "../../../shared/chat-tags.js";
+import { decodeXmlAttr } from "../../../shared/self-note.js";
 
 export interface AckKindDescriptor {
   /** Stable identifier used as the `kind` attribute value. */

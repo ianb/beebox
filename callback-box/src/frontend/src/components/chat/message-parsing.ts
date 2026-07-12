@@ -8,8 +8,8 @@ import type { LightboxImage } from "../ImageLightbox";
 import { isExternalUrl, resolveImageSrc } from "../../lib/view-url";
 import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
-import { stripChatAppTags } from "../../../../core/chat/features.js";
-import { entrySelfNotes, type SelfNoteInfo } from "../../../../core/self-note";
+import { stripChatAppTags } from "@shared/chat-tags";
+import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
 import { invariant } from "../../lib/invariant";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
