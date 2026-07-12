@@ -1,5 +1,8 @@
 # Router Phase 2 — WorktreeState Formalization
 
+**Status:** implemented 2026-07 — Phases A+B+C (lifecycle formalization, effects
+injection, incident tests) all landed; see the status note below for detail.
+
 The "fuller option" from the architectural review's router item
 (`issues/decisions/2026-07-06-architectural-review-open-decisions.md` item 1,
 boxholder: do it in phases): a formal worktree lifecycle with a transition

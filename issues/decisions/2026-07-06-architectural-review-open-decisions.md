@@ -42,7 +42,7 @@ buried. None blocks the merge.
    guard's unique job being `stopping`-vs-`failed` routing; (d) the filed
    name-scoped dashboard-socket hazard
    ([bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md](../bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md)).
-   Design record: `callback-box/docs/plans/router-state-formalization.md`.
+   Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 2. **Clerk↔server contract.** The extension talks to the box via hand-built
    tRPC URLs + a hand-duplicated payload shape (no shared typed contract,

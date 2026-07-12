@@ -212,7 +212,7 @@ their call sites in the boot sequence at the bottom of `router.ts`.
 Phase 1 (2026-07-09) was the conservative doc-browser extraction
 (`bin/router-docs.ts`) plus the first write-up of invariants #1–#4 — pure code
 motion, no state-machine change. Phase 2 (2026-07-11,
-`callback-box/docs/plans/router-state-formalization.md`) then did the fuller
+`callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
 option from `issues/decisions/2026-07-06-architectural-review-open-decisions.md`
 (item 1), in three sub-phases:
 

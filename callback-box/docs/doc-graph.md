@@ -1,7 +1,7 @@
 # Documentation Graph Report
 
-Generated: 2026-07-11T22:16:31Z
-Total documents: 170
+Generated: 2026-07-12T00:13:10Z
+Total documents: 171
 
 ## Issues
 
@@ -283,7 +283,7 @@ Referenced by:
 - ../CLAUDE.md:38 (mention) — **NEVER disable or weaken a lint rule to make code pass. Ask first.** Every rule in `@ianbicking/personal-vibe-check` is
 - ../issues/code-quality/2026-07-06-engine-dev-knowledge-audits.md:16 (mention) — and the rest of `docs/engineering-principles.md` / `code-style.md`.
 - ../issues/code-quality/2026-07-10-tour-lib-lint-debt.md:17 (mention) — in code-style.md so per-edit hook reports on test files stop
-- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:53 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
+- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:77 (mention) — code-style.md's Exhaustiveness section, not literal `switch` statements:
 - ../issues/docs-and-chores/2026-07-04-claude-md-review-docs-backlog.md:9 (mention) — folded into `code-style.md`, `frontend.md`, `docs/maintenance.md`, and
 - ../issues/features/2026-07-05-writing-skill.md:12 (mention) — code style (that's `code-style.md`).
 - ../research/external-skills-harvest.md:14 (mention) — of that in CLAUDE.md, code-style.md, frontend.md, the Laws, and our skills
@@ -1488,7 +1488,6 @@ References:
 Title: "Architectural Review Follow-ups — Plan" | 383 lines
 
 Referenced by:
-- ../bin/docs/router-protocol.md:106 (mention) — `callback-box/docs/implemented-plans/architectural-review-followups.md` — pure code
 - ../issues/closed/bugs/2026-07-05-connector-transient-state-rmw.md:10 (mention) — `callback-box/docs/implemented-plans/architectural-review-followups.md` Track 1.
 - ../issues/closed/bugs/2026-07-05-git-commit-race-audit.md:12 (mention) — deliberate). Plan: `callback-box/docs/implemented-plans/architectural-review-followups.md`
 - ../issues/closed/bugs/2026-07-06-parallel-agent-git-commit-race.md:10 (mention) — `callback-box/docs/implemented-plans/architectural-review-followups.md` swept ~31
@@ -2050,6 +2049,14 @@ References:
 - → code-style.md (mention)
 - → CLAUDE.md (mention)
 - → docs/testing.md (mention)
+
+#### docs/implemented-plans/router-state-formalization.md
+
+Title: "Router Phase 2 — WorktreeState Formalization" | 259 lines
+
+Referenced by:
+- ../bin/docs/router-protocol.md:215 (mention) — `callback-box/docs/implemented-plans/router-state-formalization.md`) then did the fuller
+- ../issues/decisions/2026-07-06-architectural-review-open-decisions.md:45 (mention) — Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 #### docs/implemented-plans/schema-validate-hook.md **[ORPHAN]**
 
