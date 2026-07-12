@@ -23,6 +23,28 @@ import { tmpdir } from "node:os";
  * the operational root, one level below the package root, where views live
  * at `src/views/` instead of `views/`.
  */
+/**
+ * A v1 (legacy, flat) box fixture: a single directory that is both the box
+ * root and the package root, with a `shapeVersion: 1` marker. Views live at
+ * `boxRoot/views/` — the legacy layout `listBoxViewFiles` must still resolve.
+ */
+async function makeV1ViewsBox() {
+  const root = await mkdtemp(join(tmpdir(), "cb-doctest-v1-views-"));
+  await writeFile(join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
+  await mkdir(join(root, "views"), { recursive: true });
+  return {
+    root,
+    async write(rel, content) {
+      const full = join(root, rel);
+      await mkdir(join(full, ".."), { recursive: true });
+      await writeFile(full, content);
+    },
+    async cleanup() {
+      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
+  };
+}
+
 async function makeV2ViewsBox() {
   const root = await mkdtemp(join(tmpdir(), "cb-doctest-v2-views-"));
   await writeFile(
@@ -131,12 +153,14 @@ warnings.join("\n")
 A legacy box's views live at `boxRoot/views/`:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeV1ViewsBox();
 await box.write("views/dashboard.tsx", "export default function Dashboard() { return null; }");
 (await listBoxViewFiles(box.root)).map((p) => p.endsWith("views/dashboard.tsx"))
 => [
   true
 ]
+
+await box.cleanup();
 ```
 
 A v2 (package-layout) box's views live at `packageRoot/src/views/` instead —

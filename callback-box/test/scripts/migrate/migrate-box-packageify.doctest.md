@@ -15,7 +15,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { simpleGit } from "simple-git";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+import { execSync } from "node:child_process";
 import { runBoxPackageify, throwInjectedTestFailure } from "../../../scripts/migrate/box-packageify.js";
 import { getBoxShape } from "../../../src/lib/box-shape.js";
 import { getHead, getStatus } from "../../../src/lib/git.js";
@@ -42,13 +42,61 @@ async function exists(p) {
   catch (_e) { return false; }
 }
 
+// box-packageify converts a genuine FLAT legacy (v1) box — box root IS the
+// git root and the package root, no `content/` nesting. The shared
+// `makeTmpBox` now builds v2 boxes, so this file constructs its own flat v1
+// fixture (replicating the old flat marker-only box). Deleted alongside the
+// converter in a later step.
+async function makeLegacyTmpBox() {
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), "cb-packageify-"));
+  await fs.writeFile(path.join(root, ".cb-box"), "");
+  execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+    cwd: root,
+    stdio: "pipe",
+  });
+  return {
+    root,
+    path(rel) { return path.join(root, rel); },
+    async write(rel, content) {
+      const full = path.join(root, rel);
+      await fs.mkdir(path.dirname(full), { recursive: true });
+      await fs.writeFile(full, content);
+    },
+    commitAll(message) {
+      execSync("git add -A && git commit --allow-empty -m " + JSON.stringify(message), {
+        cwd: root,
+        stdio: "pipe",
+      });
+    },
+    async list(subdir) {
+      const dir = subdir ? path.join(root, subdir) : root;
+      const entries = [];
+      async function walk(d) {
+        let items;
+        try { items = await fs.readdir(d, { withFileTypes: true }); }
+        catch { return; }
+        for (const item of items) {
+          entries.push(path.relative(root, path.join(d, item.name)));
+          if (item.isDirectory()) await walk(path.join(d, item.name));
+        }
+      }
+      await walk(dir);
+      entries.sort();
+      return entries.join("\n");
+    },
+    async cleanup() {
+      await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
+  };
+}
+
 // A synthetic legacy box: a few cards, a view, a schema (with its own stub
 // package.json, matching real boxes), a trick (with its own nested
 // package.json — this one is KEPT, unlike the schema stub), connector
 // config, and a `.claude/` dir with a memory stub — mirrors what real boxes
 // (e.g. ~/src/boxes/test1) actually carry.
 async function makeLegacyBox() {
-  const box = await makeTmpBox({ git: true });
+  const box = await makeLegacyTmpBox();
   await box.write(".cb-box", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
   await box.write("CLAUDE.md", "# Test Box\n\nBoxholder-specific notes.\n");
   await box.write("briefing.briefing.card", "---\nstatus: active\n---\nBriefing body.\n");
@@ -164,7 +212,7 @@ first, so its cards end up at `content/content/` (one level deeper, same
 as any other legacy dir) instead of breaking the whole conversion.
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeLegacyTmpBox();
 await box.write(".cb-box", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
 await box.write("CLAUDE.md", "# Test Box\n\nBoxholder-specific notes.\n");
 await box.write("content/Note.memo.card", "---\nstatus: new\ncreated: 2026-01-01T00:00:00.000Z\n---\nA memo.\n");

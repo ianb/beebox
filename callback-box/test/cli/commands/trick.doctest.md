@@ -11,7 +11,6 @@ import { mkdtemp, mkdir, writeFile, symlink, realpath, rm } from "node:fs/promis
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execSync } from "node:child_process";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 
 // Run the prebuilt CLI with the given cwd (requireBoxRoot walks up from there).
@@ -34,6 +33,36 @@ console.log("cwd:" + process.cwd());
 console.log("boxRoot:" + process.env.CB_BOX_ROOT);
 console.log("trickName:" + process.env.CB_TRICK_NAME);
 `;
+
+/**
+ * Build a v1 (legacy, flat) fixture box: a single directory that is both the
+ * box root and the package root, with a `.cb-box` marker declaring
+ * `shapeVersion: 1`. Tricks live at `boxRoot/tricks` — the legacy layout.
+ */
+async function makeV1Box(opts) {
+  const root = await mkdtemp(join(tmpdir(), "cb-v1trick-"));
+  await writeFile(join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
+  if (opts?.git) {
+    execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+      cwd: root,
+      stdio: "pipe",
+    });
+  }
+  return {
+    root,
+    path(rel) {
+      return join(root, rel);
+    },
+    async write(rel, content) {
+      const full = join(root, rel);
+      await mkdir(join(full, ".."), { recursive: true });
+      await writeFile(full, content);
+    },
+    async cleanup() {
+      await rm(root, { recursive: true, force: true });
+    },
+  };
+}
 
 /**
  * Build a v2 (package-shaped) fixture box: a package root with its own
@@ -79,7 +108,7 @@ async function makeV2Box() {
 ## v1 (legacy) box: runs from `boxRoot/tricks`, unchanged from before
 
 ```ts
-const box = await makeTmpBox({ git: true });
+const box = await makeV1Box({ git: true });
 await box.write("tricks/scripts/probe/index.ts", PROBE_TRICK);
 
 const r = await runTrickCli(box.root, ["probe"]);
@@ -109,7 +138,7 @@ await box.cleanup();
 ## v1 box: listing and not-found messages name `tricks/scripts/...`
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeV1Box();
 
 const empty = await runTrickCli(box.root, []);
 empty.stdout.includes("Create one at tricks/scripts/<name>/index.ts")

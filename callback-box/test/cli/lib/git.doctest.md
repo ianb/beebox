@@ -336,10 +336,12 @@ console.warn = _warn;
 
 const status = await getStatus(box.root);
 // small.txt is staged (added); big.bin is NOT staged (left as untracked).
-status.staged.includes("small.txt")
+// getStatus reports repo-root-relative paths; the repo root is the package
+// root, so the content-dir file shows up as `content/small.txt`.
+status.staged.includes("content/small.txt")
 => true
 
-status.staged.includes("big.bin")
+status.staged.includes("content/big.bin")
 => false
 ```
 
@@ -401,7 +403,8 @@ const committed = await getCommitDiff(box.root, await getHead(box.root));
 print(`scoped in commit: ${committed.includes("scoped.card")}`);
 print(`other in commit: ${committed.includes("other.card")}`);
 const status = await getStatus(box.root);
-print(`other still staged: ${status.staged.includes("other.card")}`);
+// getStatus paths are repo-root-relative (repo root = package root).
+print(`other still staged: ${status.staged.includes("content/other.card")}`);
 =>
 scoped in commit: true
 other in commit: false

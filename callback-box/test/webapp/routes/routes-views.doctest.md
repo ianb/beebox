@@ -4,8 +4,6 @@ The views API serves agent-generated React components. It lists available views,
 
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
 
 const VIEW_SOURCE = `
 export const name = "Test View";
@@ -31,8 +29,7 @@ The module endpoint returns compiled JavaScript (not JSON), so we use `rawReques
 
 ```ts
 const ctx = await makeTestServer();
-await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
-await ctx.seed("views/test.tsx", VIEW_SOURCE);
+await ctx.seedView("test.tsx", VIEW_SOURCE);
 
 const res = await ctx.rawRequest({ method: "GET", url: "/api/views/test/module.js" });
 res.statusCode
@@ -54,8 +51,7 @@ A view with a syntax error returns an error module (not a 500):
 
 ```ts
 const ctx = await makeTestServer();
-await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
-await ctx.seed("views/broken.tsx", "export default function() { return <div");
+await ctx.seedView("broken.tsx", "export default function() { return <div");
 
 const res = await ctx.rawRequest({ method: "GET", url: "/api/views/broken/module.js" });
 res.statusCode
@@ -87,8 +83,7 @@ The cards endpoint returns cards matching a view's dependency globs:
 
 ```ts
 const ctx = await makeTestServer();
-await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
-await ctx.seed("views/test.tsx", VIEW_SOURCE);
+await ctx.seedView("test.tsx", VIEW_SOURCE);
 await ctx.seed("box/inbox/Test.memo.card", MEMO_CARD);
 ctx.commitAll("add test data");
 
@@ -126,7 +121,7 @@ export const dependencies = ["box/**/*.card", "box/inbox/Test.attach/**/*.jsonl"
 export const modes = ["page"];
 export default function P({ cards, files }) { return <div>{files.length}</div>; }
 `;
-await ctx.seed("views/playground.tsx", PLAYGROUND_VIEW);
+await ctx.seedView("playground.tsx", PLAYGROUND_VIEW);
 await ctx.seed("box/inbox/Test.attach/sessions/history.jsonl", '{"summary":"first run"}\n{"summary":"second run"}\n');
 const res2 = await ctx.request({ method: "GET", url: "/api/views/playground/cards" });
 res2.statusCode
@@ -189,7 +184,6 @@ A view with no dependencies returns an empty card list:
 
 ```ts
 const ctx = await makeTestServer();
-await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
 
 const noDeps = `
 export const name = "Empty";
@@ -198,7 +192,7 @@ export const dependencies = [];
 export const modes = ["page"];
 export default function Empty() { return null; }
 `;
-await ctx.seed("views/empty.tsx", noDeps);
+await ctx.seedView("empty.tsx", noDeps);
 
 const res = await ctx.request({ method: "GET", url: "/api/views/empty/cards" });
 res.statusCode

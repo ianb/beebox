@@ -14,9 +14,14 @@ import { getTemplate } from "../../src/schemas/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { loadCardFromText } from "../../src/core/card-io.js";
 
+// This file exercises box-local schemas in the LEGACY (v1) layout —
+// `config/schemas/*.ts` resolved via the resolve-hook fakery. The v2
+// (package-layout) equivalent lives in test/schemas/box-schemas-v2.doctest.md.
+// `initBox`'s default is now v2, so the legacy shape is opted into explicitly
+// with shapeVersion 1 (a flat box whose root is its own package root).
 async function makeTmpBox() {
   const box = await fs.mkdtemp(path.join(os.tmpdir(), "cb-boxschemas-"));
-  await initBox(box, { skipGit: true });
+  await initBox(box, { skipGit: true, shapeVersion: 1 });
   return box;
 }
 

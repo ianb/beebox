@@ -14,13 +14,14 @@
  *   }
  */
 
-import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { rmSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
+import { createRequire } from "node:module";
 import type { FastifyInstance } from "fastify";
-import { initBox } from "../../src/core/box/index.js";
+import { scaffoldV2Box } from "../../src/core/box/package.js";
 import { createServer } from "../../src/webapp/server.js";
 import { createEventBus, type EventBus } from "../../src/core/event-bus.js";
 import type { Services } from "../../src/services/index.js";
@@ -68,9 +69,27 @@ let templateDir: string | null = null;
 function getTemplateBox(): Promise<string> {
   if (templatePromise === null) {
     templatePromise = (async () => {
+      // Build a real v2 box: package half at `dir`, operational box at
+      // `dir/content`. Git lives at the package root (`dir`). `deps` symlinks
+      // `node_modules/callback-box` so box-local schema/view resolution works
+      // in route tests that need it. `getTemplateBox` returns the PACKAGE
+      // root; `createTestServer` points the server at `<clone>/content`.
       const dir = await mkdtemp(join(tmpdir(), "cb-route-tmpl-"));
-      await initBox(dir);
-      execSync("git add -A && git commit --allow-empty -m init -q", { cwd: dir, stdio: "pipe" });
+      await scaffoldV2Box(dir, { deps: true });
+      // A real box resolves react/react-dom from its OWN node_modules (view
+      // metadata import + node-target render). `scaffoldV2Box({deps})` only
+      // symlinks callback-box, so simulate the box's react dependency by
+      // symlinking the engine's copy beside it — the same trick `cb view test`
+      // and the view doctests use. Without this, view-metadata import fails to
+      // resolve react and returns empty dependencies (a view matches no cards).
+      const reactNodeModules = dirname(dirname(createRequire(import.meta.url).resolve("react/package.json")));
+      for (const mod of ["react", "react-dom"]) {
+        await symlink(join(reactNodeModules, mod), join(dir, "node_modules", mod), "dir");
+      }
+      execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
+        cwd: dir,
+        stdio: "pipe",
+      });
       templateDir = dir;
       return dir;
     })();
@@ -95,29 +114,32 @@ export async function createTestServer(opts?: TestServerOptions): Promise<TestSe
   const template = await getTemplateBox();
   const tmpDir = await mkdtemp(join(tmpdir(), "cb-route-test-"));
 
-  // Clone the prebuilt box (dirs + git repo + initial commit) into the fresh
-  // dir — no per-boot git subprocess. See getTemplateBox above.
+  // Clone the prebuilt v2 package (package files + content/ + git repo) into
+  // the fresh dir — no per-boot git subprocess. See getTemplateBox above. The
+  // operational box root is `content/` inside the clone.
   await cp(template, tmpDir, { recursive: true });
+  const boxRoot = join(tmpDir, "content");
 
   // Build the box's event bus here and inject it so the test holds the SAME
   // instance the routes emit on (transient events never leave the process).
-  const eventBus = createEventBus(tmpDir, { pollInterval: 1000 });
+  const eventBus = createEventBus(boxRoot, { pollInterval: 1000 });
 
   // Create server pointing at this temp box
   const server = await createServer({
-    boxes: [{ slug: TEST_SLUG, boxRoot: tmpDir, eventBus }],
+    boxes: [{ slug: TEST_SLUG, boxRoot, eventBus }],
     services: opts?.services,
   });
 
   return {
     server,
-    boxRoot: tmpDir,
+    boxRoot,
     eventBus,
     cleanup: async () => {
       await server.close();
       eventBus.close();
       // maxRetries handles benign ENOTEMPTY races on macOS when background
       // writes (chat-history backfill, scheduler tick) finish just as we walk.
+      // Remove the whole package clone (tmpDir), not just content/.
       await rm(tmpDir, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     },
   };

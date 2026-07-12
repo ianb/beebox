@@ -10,11 +10,17 @@ import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promis
 import { dirname, join, relative } from "node:path";
 import { tmpdir } from "node:os";
 import { execSync } from "node:child_process";
+import { scaffoldPackageRoot } from "../../src/core/box/package.js";
 
 export interface TmpBox {
-  /** Absolute path to the temp root (avoid using in expected output). */
+  /** Absolute path to the operational box root (`<packageRoot>/content`).
+   * Avoid using in expected output — temp dir names never appear there. */
   root: string;
-  /** Join a relative path with root. */
+  /** Absolute path to the package root (parent of `root`; holds
+   * `package.json`, `node_modules/`, `src/`). Use for the ~15-20 callers that
+   * reach package-level paths (`.claude/`, `src/views`, `src/tricks`, …). */
+  packageRoot: string;
+  /** Join a relative path with the box root. */
   path(relativePath: string): string;
   /** List files and dirs under a subdir, sorted, one per line. */
   list(subdir?: string): Promise<string>;
@@ -30,23 +36,34 @@ export interface TmpBox {
   cleanup(): Promise<void>;
 }
 
-export async function makeTmpBox(opts?: { git?: boolean }): Promise<TmpBox> {
-  const root = await mkdtemp(join(tmpdir(), "cb-doctest-"));
+export async function makeTmpBox(opts?: { git?: boolean; deps?: boolean }): Promise<TmpBox> {
+  const packageRoot = await mkdtemp(join(tmpdir(), "cb-doctest-"));
 
-  // Box marker — code paths that walk up looking for a box (cb CLI, validation
-  // hooks, generateDocs) require this. Cheap to always create; tests that
-  // don't care simply ignore it.
-  await writeFile(join(root, ".cb-box"), "");
+  // Build a minimal-but-valid shapeVersion-2 box: the package half at
+  // `packageRoot` (package.json declaring callback-box, tsconfig, src/, root
+  // .gitignore) plus the operational box marker at `packageRoot/content/.cb-box`
+  // (that's `root`). `getBoxShape` needs exactly these two things. Kept cheap
+  // — the content root stays empty (as the old flat marker-only box was), so
+  // card-only fixtures that seed their own files under `root` are unaffected.
+  // `deps` opts into the `node_modules/callback-box` symlink — needed only by
+  // view-compile and box-local-schema fixtures that resolve `callback-box/*`
+  // natively.
+  await scaffoldPackageRoot(packageRoot, { symlinkCallbackBox: opts?.deps === true });
+  const root = join(packageRoot, "content");
+  await mkdir(root, { recursive: true });
+  await writeFile(join(root, ".cb-box"), JSON.stringify({ shapeVersion: 2 }) + "\n");
 
   if (opts?.git) {
+    // Git lives at the PACKAGE root (the whole v2 package is one repo).
     execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
-      cwd: root,
+      cwd: packageRoot,
       stdio: "pipe",
     });
   }
 
   const box: TmpBox = {
     root,
+    packageRoot,
     path(relativePath: string) {
       return join(root, relativePath);
     },
@@ -84,13 +101,15 @@ export async function makeTmpBox(opts?: { git?: boolean }): Promise<TmpBox> {
       return box.write(relativePath, content);
     },
     commitAll(message: string) {
+      // Git lives at the package root — commit from there so the whole tree
+      // (package files AND content/) is staged.
       execSync("git add -A && git commit --allow-empty -m " + JSON.stringify(message), {
-        cwd: root,
+        cwd: packageRoot,
         stdio: "pipe",
       });
     },
     async cleanup() {
-      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+      await rm(packageRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
     },
   };
 

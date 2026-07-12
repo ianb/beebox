@@ -179,14 +179,16 @@ A v1 (legacy) box's `config/schemas/` is the *correct* location, so the
 same check never flags it there:
 
 ```ts
-const { makeTmpBox } = await import("../helpers/doctest-helpers.js");
-const legacyBox = await makeTmpBox();
-await writeSchema(legacyBox.root, "config/schemas/widget.ts", V2_WIDGET_SCHEMA);
-const legacyShape = await getBoxShape(legacyBox.root);
+// A v1 (legacy, flat) box: the box root IS the package root, marked
+// `shapeVersion: 1`, so `config/schemas/` is the correct schema location.
+const legacyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-v1box-"));
+await fs.writeFile(path.join(legacyRoot, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
+await writeSchema(legacyRoot, "config/schemas/widget.ts", V2_WIDGET_SCHEMA);
+const legacyShape = await getBoxShape(legacyRoot);
 (await findLegacySchemaFiles(legacyShape)).length
 => 0
 ```
 
 ```ts cleanup
-await legacyBox.cleanup();
+await fs.rm(legacyRoot, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 ```

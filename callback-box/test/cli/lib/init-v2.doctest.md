@@ -30,6 +30,7 @@ import {
 import {
   detectBoxTarget,
   scaffoldPackageRoot,
+  scaffoldV2Box,
   BoxPackageConflictError,
 } from "../../../src/core/box/package.js";
 import { generateRules } from "../../../src/core/init-rules.js";
@@ -63,13 +64,15 @@ async function fullInit(targetPath) {
   const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
-  if (isFresh) await scaffoldPackageRoot(packageRoot);
-
-  const { isUpdate } = await initBox(boxRoot, {
-    skipGit: true,
-    branch: "main",
-    shapeVersion: isFresh ? 2 : undefined,
-  });
+  let isUpdate;
+  if (isFresh) {
+    // Same shared builder cli/commands/init.ts's action uses: scaffold the
+    // package half + initBox({shapeVersion:2}) + node_modules/callback-box.
+    await scaffoldV2Box(packageRoot, { deps: true });
+    isUpdate = false;
+  } else {
+    ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: "main" }));
+  }
 
   if (isFresh && !(await isRepo(packageRoot))) {
     await initRepo(packageRoot, "main");
@@ -446,8 +449,11 @@ of the package-scaffold files (`package.json`, `tsconfig.json`,
 
 ```ts
 const legacyBox = await makeTmpDir();
-// shapeVersion defaults to 1 (legacy) when not specified.
-await initBox(legacyBox, { branch: "main" });
+// Build a legacy (v1) box explicitly — this section tests that re-init leaves
+// an existing legacy box untouched (the `update-legacy` path, still present
+// until it's removed in a later step). `initBox`'s default is now v2, so the
+// legacy shape is opted into with shapeVersion 1.
+await initBox(legacyBox, { branch: "main", shapeVersion: 1 });
 await installProcedures(legacyBox);
 
 const before = (await fs.readFile(path.join(legacyBox, ".cb-box"), "utf-8"));

@@ -12,14 +12,29 @@ non-dev branch uses, so the two branches can't drift.
 
 ```ts setup
 import * as path from "node:path";
+import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolveBoxes, toBoxArgs } from "../../../src/cli/commands/serve.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
+
+// A v1 (legacy, flat) box: the box root IS the package root, marked
+// `shapeVersion: 1`, so the slug defaults to the box dir's own basename.
+async function makeV1Box() {
+  const root = await mkdtemp(path.join(tmpdir(), "cb-v1box-"));
+  await writeFile(path.join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
+  return {
+    root,
+    async cleanup() {
+      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
+    },
+  };
+}
 ```
 
 ## A legacy (shape 1) box: slug defaults to the box dir's own basename
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeV1Box();
 const boxes = await resolveBoxes([box.root], undefined);
 toBoxArgs(boxes)[0] === `${path.basename(box.root)}=${box.root}`
 => true
@@ -48,17 +63,16 @@ Passing the raw `content/` dir (the old `--dev` behavior) would have encoded
 the literal slug "content" here — wrong, and colliding across every v2 box.
 
 ```ts
+// A native v2 box: `box.root` is the operational `content/` dir; the
+// meaningful slug lives one level up at the package root.
 const box = await makeTmpBox();
-await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
-await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": "0.1.0" } }));
-const contentDir = box.path("content");
-const boxes = await resolveBoxes([contentDir], undefined);
+const boxes = await resolveBoxes([box.root], undefined);
 const args = toBoxArgs(boxes);
 
 args[0].includes("=content")
 => false
 
-args[0] === `${path.basename(box.root)}=${contentDir}`
+args[0] === `${path.basename(box.packageRoot)}=${box.root}`
 => true
 ```
 

@@ -94,7 +94,13 @@ export async function unstageOversizedBlobs(boxRoot: string): Promise<void> {
       }
     }
     if (oversized.length > 0) {
-      await git.raw(["restore", "--staged", "--", ...oversized.map((o) => o.path)]);
+      // `diff --cached` / `cat-file :path` paths are repo-root-relative, but a
+      // `restore --staged -- <path>` pathspec is interpreted relative to CWD
+      // (`boxRoot`) — on a v2 box that's `content/`, so a bare repo-relative
+      // path would resolve to `content/content/...` and match nothing, letting
+      // the oversized blob commit through. The `:/` magic prefix pins each
+      // pathspec to the repo root, matching the diff's frame in both layouts.
+      await git.raw(["restore", "--staged", "--", ...oversized.map((o) => `:/${o.path}`)]);
       const mb = (MAX_AUTO_STAGE_BYTES / (1024 * 1024)).toFixed(0);
       const list = oversized
         .map((o) => `${o.path} (${(o.bytes / (1024 * 1024)).toFixed(1)}MB)`)

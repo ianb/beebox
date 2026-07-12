@@ -29,12 +29,13 @@ export interface InitOptions {
   branch?: string | undefined;
   /**
    * The `.cb-box` marker's `shapeVersion` to write on a fresh init. Defaults
-   * to 1 (legacy: `boxRoot` doubles as the package root) — every direct
-   * caller of `initBox` (test fixtures, connector doctests, `cb init` on an
-   * existing legacy box) wants that unless it's specifically scaffolding a
-   * v2 package layout. `cb init` on a genuinely new path passes 2; see
-   * `../core/box-package.js` `scaffoldPackageRoot`, which lays down the
-   * package half this marker's shape then depends on.
+   * to 2 (the package layout: `boxRoot` is a `content/` dir nested inside a
+   * package). A fresh v2 init requires the package half to already exist
+   * (a parent `package.json` declaring `callback-box`) — `initBox` validates
+   * the shape right after writing the marker — so direct callers should go
+   * through `scaffoldV2Box` (`./package.js`), which lays down that package
+   * half first. Legacy-shape tests that deliberately build a flat v1 box (the
+   * box-packageify converter fixtures) pass `1` explicitly.
    */
   shapeVersion?: number | undefined;
 }
@@ -65,15 +66,14 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   const isUpdate = await isValidBox(resolvedRoot);
 
   if (!isUpdate) {
-    // Create marker file with metadata. Callers that don't care about the
-    // package layout (nearly everyone — test fixtures, connector doctests,
-    // `cb init` refreshing an existing legacy box) get shapeVersion 1
-    // (legacy: box root === package root) by default; `cb init` on a
-    // genuinely new path passes shapeVersion 2 alongside scaffolding the
-    // package half (see `./box-package.js`).
+    // Create marker file with metadata. Defaults to shapeVersion 2 (the
+    // package layout) — fresh boxes are always v2 now, scaffolded via
+    // `scaffoldV2Box` (`./package.js`), which lays down the package half this
+    // marker's shape depends on. The one caller that still wants a flat v1
+    // box (the box-packageify converter fixtures) passes shapeVersion 1.
     const marker = {
       version: "1.0.0",
-      shapeVersion: options.shapeVersion ?? 1,
+      shapeVersion: options.shapeVersion ?? 2,
       created: getBoxTimeISO(resolvedRoot),
     };
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
