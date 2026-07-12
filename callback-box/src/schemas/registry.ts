@@ -14,7 +14,7 @@ import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 import { registerHooks } from "node:module";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { boxCodePaths, getBoxShapeIfPresent } from "../lib/box-shape.js";
 import { errnoCode, errorMessage } from "../lib/error-guards.js";
 import { isRecord } from "../lib/is-record.js";
 import { type CardSchema } from "../cards/index.js";
@@ -294,6 +294,13 @@ async function rebuildUntilStable(boxRoot: string): Promise<BoxSchemas> {
 
 async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   const empty: BoxSchemas = { cardSchemas: [] };
+  // This box has no box-local schemas (no box, no schemas dir, or empty dir):
+  // clear its records/failures and return the empty set.
+  const noBoxSchemas = (): BoxSchemas => {
+    boxFileRecords.delete(boxRoot);
+    setSchemaLoadFailures(boxRoot, []);
+    return empty;
+  };
 
   // Drop this box's prior template registrations up front; the file scan below
   // re-registers whatever still exists. Doing it here (not after the scan) means
@@ -301,8 +308,12 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
   // its card types.
   unregisterBoxTemplates(boxRoot);
 
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
-  const schemasDir = boxCodePaths(shape).schemasDir;
+  // A path that isn't a box (no `.cb-box`) has no box-local schemas; a
+  // malformed/pre-v2 marker or a broken parent package.json still throws
+  // (getBoxShapeIfPresent rethrows non-ENOENT).
+  const lookup = await getBoxShapeIfPresent(boxRoot);
+  if (!lookup.found) return noBoxSchemas();
+  const schemasDir = boxCodePaths(lookup.shape).schemasDir;
   let files: string[];
   try {
     files = await readdir(schemasDir);
@@ -310,27 +321,19 @@ async function rebuildBoxSchemas(boxRoot: string): Promise<BoxSchemas> {
     if (errnoCode(e) !== "ENOENT") {
       console.warn(`Could not read box schemas dir ${schemasDir}, skipping box-local schemas:`, e);
     }
-    boxFileRecords.delete(boxRoot);
-    setSchemaLoadFailures(boxRoot, []);
-    return empty;
+    return noBoxSchemas();
   }
 
   const tsFiles = files.filter(f => f.endsWith(".ts") && !f.startsWith("."));
-  if (tsFiles.length === 0) {
-    boxFileRecords.delete(boxRoot);
-    setSchemaLoadFailures(boxRoot, []);
-    return empty;
-  }
+  if (tsFiles.length === 0) return noBoxSchemas();
 
-  // Legacy (v1) boxes need help to make bare specifiers resolve: a package.json
-  // with "type": "module" so .ts files load as ESM, plus resolve hooks so
-  // callback-box/cards, zod, and yaml resolve from callback-box's own
-  // node_modules. A v2 box's schemas dir sits inside the package root, whose
-  // own package.json is already "type": "module" and whose own
+  // A v2 box's schemas dir sits inside the package root, whose own
+  // package.json is already "type": "module" and whose own
   // node_modules/callback-box (installed like any other dependency) serves
   // `callback-box/cards` and `callback-box/schema` via native resolution — no
-  // hook, and no bare `zod`/`yaml` (only the callback-box specifiers resolve).
-  if (shape.shapeVersion === 1) {
+  // resolve hook, and no bare `zod`/`yaml` (only the callback-box specifiers
+  // resolve). The `=== 1` branch below is retired dead code (step 1d).
+  if (lookup.shape.shapeVersion === 1) {
     await ensureEsmPackageJson(schemasDir);
     ensureResolveHooks();
   }

@@ -40,7 +40,6 @@
     "release": "tsx scripts/release.ts",
     "smoke": "tsx scripts/smoke-external-box.ts",
     "smoke:upgrade": "tsx scripts/smoke-upgrade.ts",
-    "smoke:packageify": "tsx scripts/smoke-packageify.ts",
     "dev": "echo 'The dev server is the monorepo router. Run \\`pnpm dev\\` from the monorepo root.' && exit 1",
     "cb": "./bin/cb",
     "typecheck": "tsc --noEmit && cd src/frontend && pnpm exec tsc --noEmit",

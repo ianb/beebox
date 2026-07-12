@@ -13,7 +13,7 @@
 import * as path from "node:path";
 import { realpathSync } from "node:fs";
 import { execSync } from "node:child_process";
-import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { getBoxShapeIfPresent } from "../../lib/box-shape.js";
 
 /** Base for the cases where a box is unsafe to run audits against. */
 export class UnsafeAuditBoxError extends Error {
@@ -75,11 +75,12 @@ export async function assertStandaloneBox(boxRoot: string): Promise<void> {
   } catch (_e) {
     throw new AuditBoxNotGitRepoError(resolved);
   }
-  const shape = await getBoxShapeOrLegacyFallback(resolved);
+  const lookup = await getBoxShapeIfPresent(resolved);
   // git returns the real (symlink-resolved) path; realpath the expected root
   // too so a legit box under a symlinked prefix (e.g. macOS /var →
-  // /private/var) isn't falsely flagged as nested.
-  const expectedRoot = realpathSync(shape.packageRoot);
+  // /private/var) isn't falsely flagged as nested. When the path isn't a box,
+  // fall back to the path itself as the expected repo top level.
+  const expectedRoot = realpathSync(lookup.found ? lookup.shape.packageRoot : lookup.boxRoot);
   if (path.resolve(toplevel) !== expectedRoot) {
     throw new AuditBoxInsideRepoError(realpathSync(resolved), path.resolve(toplevel));
   }

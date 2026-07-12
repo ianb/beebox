@@ -21,7 +21,7 @@ import {
   TRICKS_SKILL,
   VIEWS_SKILL,
 } from "./skills-content.js";
-import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { getBoxShape } from "../../lib/box-shape.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */
@@ -65,7 +65,7 @@ function buildBoxSkills(): BoxSkill[] {
  * untouched.
  */
 export async function generateSkills(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot } = await getBoxShape(boxRoot);
   const written: string[] = [];
   for (const skill of buildBoxSkills()) {
     const dir = join(packageRoot, ".claude", "skills", skill.name);

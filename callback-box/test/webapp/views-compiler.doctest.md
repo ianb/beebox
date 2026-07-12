@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { compileView, listViews, buildErrorModule, invalidateView } from "../../src/webapp/views/compiler.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 ```
 
 ## Metadata extraction
@@ -236,12 +237,12 @@ errorJs.includes("export default")
 ## Listing views
 
 `listViews` resolves the views directory from the box's shape (via
-`getBoxShape`/`boxCodePaths`), so it needs a `.cb-box` marker — an empty one
-is shape 1 (legacy), whose views directory is `boxRoot/views`:
+`getBoxShape`/`boxCodePaths`), so it needs a real v2 box — its views
+directory is `<packageRoot>/src/views`:
 
 ```ts
-const tmp3 = await mkdtemp(join(tmpdir(), "views-test-"));
-await writeFile(join(tmp3, ".cb-box"), "");
+const box3 = await makeTmpBox({ deps: true });
+const tmp3 = box3.root;
 
 // No views/ directory — returns empty
 const empty = await listViews(tmp3);
@@ -250,7 +251,7 @@ empty.length
 ```
 
 ```ts continue
-const viewsDir3 = join(tmp3, "views");
+const viewsDir3 = join(box3.packageRoot, "src/views");
 await mkdir(viewsDir3, { recursive: true });
 
 await writeFile(join(viewsDir3, "dashboard.tsx"), `

@@ -25,15 +25,15 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { Command } from "commander";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { getBoxShapeIfPresent } from "../lib/box-shape.js";
 import { isRecord } from "../core/card-io.js";
 
 const CURSOR_FILE = "csp-digest-cursor.json";
 // The package root, not the operational root — a v2 box's log lives under
 // its `content/` subdirectory. `runDigest` resolves this (and any `--box`
-// override) through `getBoxShapeOrLegacyFallback` before building the log
-// path, so this constant can stay a stable, human-typeable path regardless
-// of which shape `test1` is.
+// override) through `getBoxShapeIfPresent` before building the log path, so
+// this constant can stay a stable, human-typeable path (and tolerates a path
+// that isn't a box).
 const DEFAULT_BOX = path.join(process.env.HOME ?? "~", "src/boxes/test1");
 
 /** One parsed report line. */
@@ -211,8 +211,8 @@ async function runDigest(
     resolvedLog = path.resolve(logPath);
     cursorFile = null;
   } else {
-    const shape = await getBoxShapeOrLegacyFallback(path.resolve(opts.box ?? DEFAULT_BOX));
-    resolvedLog = cspReportLogPath(shape.boxRoot);
+    const lookup = await getBoxShapeIfPresent(path.resolve(opts.box ?? DEFAULT_BOX));
+    resolvedLog = cspReportLogPath(lookup.found ? lookup.shape.boxRoot : lookup.boxRoot);
     cursorFile = opts.all === true ? null : path.join(path.dirname(resolvedLog), CURSOR_FILE);
   }
 

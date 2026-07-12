@@ -8,26 +8,10 @@ to a transient worktree), and `box-schemas` surfaces box-local schema files
 that failed to load (keep-last-good otherwise hides them).
 
 ```ts setup
-import { mkdir, mkdtemp, writeFile, symlink, rm } from "node:fs/promises";
-import { join } from "node:path";
-import { tmpdir } from "node:os";
+import { mkdir, symlink, rm } from "node:fs/promises";
 import { engineHealthChecks } from "../../src/webapp/trpc/routers/health-engine.js";
 import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
-
-// A v1 (legacy, flat) box: the box root IS the package root, marked
-// `shapeVersion: 1`, so `engineHealthChecks` skips the v2-only engine-link
-// check entirely.
-async function makeV1Box() {
-  const root = await mkdtemp(join(tmpdir(), "cb-v1box-"));
-  await writeFile(join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
-  return {
-    root,
-    async cleanup() {
-      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-    },
-  };
-}
 
 // Hand-scaffold a v2 (package-layout) shape inside a tmp box: package root
 // with a callback-box dependency, content/ as the box root.
@@ -140,19 +124,6 @@ schemas?.message.includes("widget.ts")
 => true
 ```
 
-## Legacy box: no engine-link check, schemas still checked
-
-```ts continue
-const legacy = await makeV1Box();
-const legacyChecks = await engineHealthChecks(legacy.root);
-byName(legacyChecks, "engine-link") === undefined
-=> true
-
-byName(legacyChecks, "box-schemas")?.ok
-=> true
-```
-
 ```ts cleanup
 await box.cleanup();
-await legacy.cleanup();
 ```

@@ -74,11 +74,10 @@ export interface InitOptions {
  * process.exit(1)-on-error wrapper below.
  */
 export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
-  // Detects what's already at `targetPath`: an existing legacy box (stays
-  // legacy — conversion is a later migration, not init's job), an existing
-  // v2 box (`content/` nested inside), or nothing yet. A fresh init always
-  // scaffolds the v2 package layout — see "The box repository" in
-  // docs/implemented-plans/boxes-as-packages-v2.md.
+  // Detects what's already at `targetPath`: an existing v2 box (addressed by
+  // its operational `content/` root or by its package root), or nothing yet.
+  // A fresh init always scaffolds the v2 package layout — see "The box
+  // repository" in docs/implemented-plans/boxes-as-packages-v2.md.
   const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 

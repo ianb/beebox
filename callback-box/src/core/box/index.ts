@@ -8,7 +8,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { BOX_DIRS, BOX_MARKER, boxPath } from "../../lib/paths.js";
 import { initRepo, isRepo } from "../../lib/git.js";
-import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
 import { claudeProjectsRoot } from "../../cli/lib/session.js";
 import { MIGRATIONS } from "../migrations.js";
@@ -86,7 +86,7 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   // generateSkills/installValidationHooks write it there), so those two
   // entries are skipped here for a v2 box rather than leaving a vestigial,
   // always-empty `content/.claude/`.
-  const shape = await getBoxShapeOrLegacyFallback(resolvedRoot);
+  const shape = await getBoxShape(resolvedRoot);
   await ensureDirectories(resolvedRoot, { skipClaudeDir: shape.shapeVersion !== 1 });
 
   // Seed the migration manifest for fresh boxes with every known migration
@@ -338,7 +338,7 @@ export {
  */
 export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const resolvedRoot = path.resolve(boxRoot);
-  const { packageRoot } = await getBoxShapeOrLegacyFallback(resolvedRoot);
+  const { packageRoot } = await getBoxShape(resolvedRoot);
   const localMemoryDir = path.join(packageRoot, ".claude", "memory");
   const slug = resolvedRoot.replaceAll("/", "-");
   // `claudeProjectsRoot()` (src/cli/lib/session.ts) is the one shared

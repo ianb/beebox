@@ -29,10 +29,11 @@ process.env.CALLBACK_PUSH_STORE_DIR = storeDir;
 const SUB = { endpoint: "https://push.example/qaging", keys: { p256dh: "p", auth: "a" } };
 
 const ASKED_AT = new Date("2026-01-01T00:00:00Z");
-const MARKER = JSON.stringify({ version: "1.0.0", created: ASKED_AT.toISOString() });
+const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: ASKED_AT.toISOString() });
 
-// makeTmpBox writes an empty .cb-box; ageQuestions calls getSystemState,
-// which needs a real marker (getBoxMetadata parses it as JSON).
+// makeTmpBox writes a shapeVersion-2 marker with no version/created; ageQuestions
+// calls getSystemState → getBoxMetadata, which parses those, so seed a marker
+// carrying both (it must keep shapeVersion 2 or getBoxShape rejects the box).
 async function seedBox(box) {
   await box.seed(".cb-box", MARKER);
 }

@@ -19,7 +19,7 @@ import { requireBoxRoot } from "../../lib/paths.js";
 import { stageAll, commit, getStatus } from "../../lib/git.js";
 import { buildScriptEnv } from "../../core/script-env.js";
 import { errnoCode } from "../../lib/error-guards.js";
-import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { boxCodePaths, boxCodePathsRelativeToBoxRoot, getBoxShape } from "../../lib/box-shape.js";
 
 const require = createRequire(import.meta.url);
 
@@ -150,7 +150,7 @@ export const trickCommand = new Command("trick")
   .allowExcessArguments(true)
   .action(async function (this: Command, name: string | undefined) {
     const boxRoot = await requireBoxRoot();
-    const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+    const shape = await getBoxShape(boxRoot);
     const tricksDir = boxCodePaths(shape).tricksDir;
     // The relative "tricks/scripts" (or "../src/tricks/scripts" for a
     // package box) shown in user-facing messages below, expressed from the

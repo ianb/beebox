@@ -14,7 +14,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { installTemplateFile } from "../install-template-file.js";
 import { TEMPLATE_STOCK_HASHES } from "../template-stock-hashes.js";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { boxCodePaths, getBoxShape } from "../../lib/box-shape.js";
 
 const SCHEMAS_CLAUDE_MD = `# Writing Box-Local Schemas
 
@@ -344,7 +344,7 @@ async function writeFileIfMissing(filePath: string, content: string): Promise<vo
 }
 
 export async function installTricksFiles(boxRoot: string): Promise<void> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   const tricksDir = boxCodePaths(shape).tricksDir;
 
   await writeFileIfMissing(path.join(tricksDir, "package.json"), TRICKS_PACKAGE_JSON);
@@ -404,7 +404,7 @@ export const MANAGED_STOCK_TEMPLATES: ReadonlyArray<{
  * without clobbering a customized copy.
  */
 export async function installSchemasGuide(boxRoot: string): Promise<void> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   if (shape.shapeVersion === 1) {
     await installTemplateFile({
       boxRoot,
@@ -429,7 +429,7 @@ export async function installSchemasGuide(boxRoot: string): Promise<void> {
  * for v2 (it never names its own directory).
  */
 export async function installViewsGuide(boxRoot: string): Promise<void> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   if (shape.shapeVersion === 1) {
     await fs.mkdir(path.join(boxRoot, "views"), { recursive: true });
     await installTemplateFile({

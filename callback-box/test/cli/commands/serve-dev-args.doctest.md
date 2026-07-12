@@ -12,36 +12,8 @@ non-dev branch uses, so the two branches can't drift.
 
 ```ts setup
 import * as path from "node:path";
-import { mkdtemp, writeFile, rm } from "node:fs/promises";
-import { tmpdir } from "node:os";
 import { resolveBoxes, toBoxArgs } from "../../../src/cli/commands/serve.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
-
-// A v1 (legacy, flat) box: the box root IS the package root, marked
-// `shapeVersion: 1`, so the slug defaults to the box dir's own basename.
-async function makeV1Box() {
-  const root = await mkdtemp(path.join(tmpdir(), "cb-v1box-"));
-  await writeFile(path.join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
-  return {
-    root,
-    async cleanup() {
-      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-    },
-  };
-}
-```
-
-## A legacy (shape 1) box: slug defaults to the box dir's own basename
-
-```ts
-const box = await makeV1Box();
-const boxes = await resolveBoxes([box.root], undefined);
-toBoxArgs(boxes)[0] === `${path.basename(box.root)}=${box.root}`
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## `--slug` overrides the default, and the dev-arg encoding carries it through

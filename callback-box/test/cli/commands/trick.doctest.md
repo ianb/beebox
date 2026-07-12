@@ -1,10 +1,10 @@
 # cb trick
 
 `cb trick` discovers and runs box-local agent-authored scripts. Tricks live at
-`boxCodePaths(shape).tricksDir` — `boxRoot/tricks` for a legacy (v1) box,
-`packageRoot/src/tricks` for a package (v2) box — so both the subprocess's
-cwd and every path in its listing/error messages must resolve through the
-box's actual shape rather than a hardcoded `tricks/` relative to `boxRoot`.
+`boxCodePaths(shape).tricksDir` — `packageRoot/src/tricks` for a v2
+(package-layout) box — so both the subprocess's cwd and every path in its
+listing/error messages must resolve through the box's actual shape rather
+than a hardcoded `tricks/` relative to `boxRoot`.
 
 ```ts setup
 import { mkdtemp, mkdir, writeFile, symlink, realpath, rm } from "node:fs/promises";
@@ -33,36 +33,6 @@ console.log("cwd:" + process.cwd());
 console.log("boxRoot:" + process.env.CB_BOX_ROOT);
 console.log("trickName:" + process.env.CB_TRICK_NAME);
 `;
-
-/**
- * Build a v1 (legacy, flat) fixture box: a single directory that is both the
- * box root and the package root, with a `.cb-box` marker declaring
- * `shapeVersion: 1`. Tricks live at `boxRoot/tricks` — the legacy layout.
- */
-async function makeV1Box(opts) {
-  const root = await mkdtemp(join(tmpdir(), "cb-v1trick-"));
-  await writeFile(join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
-  if (opts?.git) {
-    execSync("git init -q && git add -A && git commit --allow-empty -m init -q", {
-      cwd: root,
-      stdio: "pipe",
-    });
-  }
-  return {
-    root,
-    path(rel) {
-      return join(root, rel);
-    },
-    async write(rel, content) {
-      const full = join(root, rel);
-      await mkdir(join(full, ".."), { recursive: true });
-      await writeFile(full, content);
-    },
-    async cleanup() {
-      await rm(root, { recursive: true, force: true });
-    },
-  };
-}
 
 /**
  * Build a v2 (package-shaped) fixture box: a package root with its own
@@ -103,59 +73,6 @@ async function makeV2Box() {
     },
   };
 }
-```
-
-## v1 (legacy) box: runs from `boxRoot/tricks`, unchanged from before
-
-```ts
-const box = await makeV1Box({ git: true });
-await box.write("tricks/scripts/probe/index.ts", PROBE_TRICK);
-
-const r = await runTrickCli(box.root, ["probe"]);
-r.code
-=> 0
-```
-
-The subprocess's cwd is the box's own `tricks/` directory, and it sees the
-box root and trick name via env vars:
-
-```ts continue
-const expectedCwd = await realpath(box.path("tricks"));
-r.stdout.includes("cwd:" + expectedCwd)
-=> true
-
-r.stdout.includes("boxRoot:" + (await realpath(box.root)))
-=> true
-
-r.stdout.includes("trickName:probe")
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## v1 box: listing and not-found messages name `tricks/scripts/...`
-
-```ts
-const box = await makeV1Box();
-
-const empty = await runTrickCli(box.root, []);
-empty.stdout.includes("Create one at tricks/scripts/<name>/index.ts")
-=> true
-```
-
-```ts continue
-const missing = await runTrickCli(box.root, ["nope"]);
-missing.code
-=> 1
-
-missing.stderr.includes("Expected: tricks/scripts/nope/index.ts")
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## v2 (package-layout) box: runs from `packageRoot/src/tricks`, not `boxRoot/tricks`

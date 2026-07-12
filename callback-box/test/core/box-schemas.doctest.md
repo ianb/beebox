@@ -1,28 +1,33 @@
-# Box-Local Schemas
+# Box-Local Schemas: loading, hot-reload, and template scoping
 
-Boxes define their own card types under `config/schemas/*.ts`. Each file
-default-exports a frontmatter `cardSchema()`. `loadBoxSchemas` discovers them and
-they become first-class in the same parse/validate path as built-in ones.
+Boxes define their own card types under `src/schemas/*.ts` at the package
+root. Each file default-exports a frontmatter `cardSchema()`. `loadBoxSchemas`
+discovers them and they become first-class in the same parse/validate path as
+built-in ones. This file exercises card load/validate, hot-reload after
+invalidation, and owner-scoped templates; `test/schemas/box-schemas-v2.doctest.md`
+covers native resolution and stray-file detection.
 
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
-import { initBox } from "../../src/core/box/index.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { loadBoxSchemas, createCardSchemaMap, invalidateBoxSchemas } from "../../src/schemas/registry.js";
 import { getTemplate } from "../../src/schemas/templates.js";
 import { buildLoadContext } from "../../src/core/load-context.js";
 import { loadCardFromText } from "../../src/core/card-io.js";
 
-// This file exercises box-local schemas in the LEGACY (v1) layout —
-// `config/schemas/*.ts` resolved via the resolve-hook fakery. The v2
-// (package-layout) equivalent lives in test/schemas/box-schemas-v2.doctest.md.
-// `initBox`'s default is now v2, so the legacy shape is opted into explicitly
-// with shapeVersion 1 (a flat box whose root is its own package root).
-async function makeTmpBox() {
-  const box = await fs.mkdtemp(path.join(os.tmpdir(), "cb-boxschemas-"));
-  await initBox(box, { skipGit: true, shapeVersion: 1 });
-  return box;
+// A real v2 (package-layout) box: schemas live in `<packageRoot>/src/schemas/`
+// and resolve `callback-box/*` natively (deps:true symlinks
+// node_modules/callback-box at the engine). `box.root` is the operational
+// (content) root passed to the loaders; `box.packageRoot` holds `src/`.
+async function makeSchemaBox() {
+  return makeTmpBox({ deps: true });
+}
+async function writeSchema(box, name, content) {
+  const p = path.join(box.packageRoot, "src/schemas", name);
+  await fs.mkdir(path.dirname(p), { recursive: true });
+  await fs.writeFile(p, content);
+  return p;
 }
 
 // Returns the error class name when a card fails to load, or "no-error".
@@ -37,9 +42,9 @@ async function loadErrorName(content, source, ctx) {
 
 // A frontmatter card type: config in YAML + a markdown body. Box-local
 // frontmatter schemas import the card primitives via the public
-// `callback-box/cards` specifier (resolved by the tsx hook in registry.ts).
+// `callback-box/cards` specifier (resolved natively from the package root).
 const WIDGET_SCHEMA = `import { body, cardSchema } from "callback-box/cards";
-import { z } from "zod";
+import { z } from "callback-box/schema";
 
 export default cardSchema("widget", {
   fields: {
@@ -72,7 +77,7 @@ export default cardSchema(`;
 // A box-local schema that also exports a `template` (for `cb create`), plus a
 // variant without one — used to prove owner-scoped template (de)registration.
 const TRIP_WITH_TEMPLATE = `import { cardSchema } from "callback-box/cards";
-import { z } from "zod";
+import { z } from "callback-box/schema";
 
 export const template = {
   name: "trip-template",
@@ -86,7 +91,7 @@ export default cardSchema("trip", { fields: { dest: z.string() } });
 `;
 
 const TRIP_NO_TEMPLATE = `import { cardSchema } from "callback-box/cards";
-import { z } from "zod";
+import { z } from "callback-box/schema";
 
 export default cardSchema("trip", { fields: { dest: z.string() } });
 `;
@@ -95,10 +100,10 @@ export default cardSchema("trip", { fields: { dest: z.string() } });
 ## Loading discovers box frontmatter schemas
 
 ```ts
-const box = await makeTmpBox();
-await fs.writeFile(path.join(box, "config/schemas/widget.ts"), WIDGET_SCHEMA);
+const box = await makeSchemaBox();
+await writeSchema(box, "widget.ts", WIDGET_SCHEMA);
 
-const loaded = await loadBoxSchemas(box);
+const loaded = await loadBoxSchemas(box.root);
 [loaded.cardSchemas.length, loaded.cardSchemas[0].type].join("|")
 => 1|widget
 ```
@@ -109,7 +114,7 @@ const loaded = await loadBoxSchemas(box);
 `widget` card parses as the new format with its YAML fields and markdown body:
 
 ```ts continue
-const ctx = await buildLoadContext(box);
+const ctx = await buildLoadContext(box.root);
 const card = await loadCardFromText({ content: WIDGET_CARD, source: "My.widget.card", ctx });
 [card.kind, card.schema.type, card.fields.size, card.fields.status, card.fields.body].join("|")
 => frontmatter|widget|3|new|Hello widget body.
@@ -128,13 +133,13 @@ await loadErrorName(bad, "X.widget.card", ctx)
 `createCardSchemaMap(boxRoot)` includes box frontmatter types alongside the built-ins:
 
 ```ts continue
-const map = await createCardSchemaMap(box);
+const map = await createCardSchemaMap(box.root);
 map.has("widget")
 => true
 ```
 
 ```ts cleanup
-await fs.rm(box, { recursive: true, force: true });
+await box.cleanup();
 ```
 
 ## Edits hot-reload after invalidation (content-hash cache-bust)
@@ -144,23 +149,22 @@ A long-lived server caches the assembled schema set (and Node permanently caches
 drops the cache. The next load content-hash-busts the changed file and sees it.
 
 ```ts
-const rbox = await makeTmpBox();
-const wpath = path.join(rbox, "config/schemas/widget.ts");
-await fs.writeFile(wpath, WIDGET_SCHEMA);
-const v1 = await loadBoxSchemas(rbox);
+const rbox = await makeSchemaBox();
+const wpath = await writeSchema(rbox, "widget.ts", WIDGET_SCHEMA);
+const v1 = await loadBoxSchemas(rbox.root);
 "color" in v1.cardSchemas[0].frontmatterSchema.shape
 => false
 
 await fs.writeFile(wpath, WIDGET_SCHEMA_V2);
 
 // Without invalidation: the cached set is returned — edit not yet visible.
-const stale = await loadBoxSchemas(rbox);
+const stale = await loadBoxSchemas(rbox.root);
 "color" in stale.cardSchemas[0].frontmatterSchema.shape
 => false
 
 // After invalidation: the changed file is re-imported, edit visible.
-invalidateBoxSchemas(rbox);
-const fresh = await loadBoxSchemas(rbox);
+invalidateBoxSchemas(rbox.root);
+const fresh = await loadBoxSchemas(rbox.root);
 "color" in fresh.cardSchemas[0].frontmatterSchema.shape
 => true
 ```
@@ -172,20 +176,20 @@ last good schema rather than dropping the type. A real deletion does drop it.
 
 ```ts continue
 await fs.writeFile(wpath, WIDGET_SCHEMA_BROKEN);
-invalidateBoxSchemas(rbox);
-const kept = await loadBoxSchemas(rbox);
+invalidateBoxSchemas(rbox.root);
+const kept = await loadBoxSchemas(rbox.root);
 kept.cardSchemas.map(s => s.type).join(",")
 => widget
 
 await fs.rm(wpath);
-invalidateBoxSchemas(rbox);
-const dropped = await loadBoxSchemas(rbox);
+invalidateBoxSchemas(rbox.root);
+const dropped = await loadBoxSchemas(rbox.root);
 dropped.cardSchemas.length
 => 0
 ```
 
 ```ts cleanup
-await fs.rm(rbox, { recursive: true, force: true });
+await rbox.cleanup();
 ```
 
 ## Templates are owner-scoped across boxes
@@ -196,26 +200,26 @@ reload must not remove the other's, and only when the last owner drops it does
 the name disappear.
 
 ```ts
-const boxA = await makeTmpBox();
-const boxB = await makeTmpBox();
-await fs.writeFile(path.join(boxA, "config/schemas/trip.ts"), TRIP_WITH_TEMPLATE);
-await fs.writeFile(path.join(boxB, "config/schemas/trip.ts"), TRIP_WITH_TEMPLATE);
-await loadBoxSchemas(boxA);
-await loadBoxSchemas(boxB);
+const boxA = await makeSchemaBox();
+const boxB = await makeSchemaBox();
+await writeSchema(boxA, "trip.ts", TRIP_WITH_TEMPLATE);
+await writeSchema(boxB, "trip.ts", TRIP_WITH_TEMPLATE);
+await loadBoxSchemas(boxA.root);
+await loadBoxSchemas(boxB.root);
 getTemplate("trip-template") !== undefined
 => true
 
 // boxA drops its template (reload without it); boxB still owns it.
-await fs.writeFile(path.join(boxA, "config/schemas/trip.ts"), TRIP_NO_TEMPLATE);
-invalidateBoxSchemas(boxA);
-await loadBoxSchemas(boxA);
+await writeSchema(boxA, "trip.ts", TRIP_NO_TEMPLATE);
+invalidateBoxSchemas(boxA.root);
+await loadBoxSchemas(boxA.root);
 getTemplate("trip-template") !== undefined
 => true
 
 // boxB drops it too — now the name is gone.
-await fs.writeFile(path.join(boxB, "config/schemas/trip.ts"), TRIP_NO_TEMPLATE);
-invalidateBoxSchemas(boxB);
-await loadBoxSchemas(boxB);
+await writeSchema(boxB, "trip.ts", TRIP_NO_TEMPLATE);
+invalidateBoxSchemas(boxB.root);
+await loadBoxSchemas(boxB.root);
 getTemplate("trip-template") === undefined
 => true
 ```
@@ -224,20 +228,20 @@ Deleting a box's last schema file (so the dir scan is empty) must drop its
 templates too, not just its card types:
 
 ```ts continue
-await fs.writeFile(path.join(boxA, "config/schemas/trip.ts"), TRIP_WITH_TEMPLATE);
-invalidateBoxSchemas(boxA);
-await loadBoxSchemas(boxA);
+await writeSchema(boxA, "trip.ts", TRIP_WITH_TEMPLATE);
+invalidateBoxSchemas(boxA.root);
+await loadBoxSchemas(boxA.root);
 getTemplate("trip-template") !== undefined
 => true
 
-await fs.rm(path.join(boxA, "config/schemas/trip.ts"));
-invalidateBoxSchemas(boxA);
-const after = await loadBoxSchemas(boxA);
+await fs.rm(path.join(boxA.packageRoot, "src/schemas", "trip.ts"));
+invalidateBoxSchemas(boxA.root);
+const after = await loadBoxSchemas(boxA.root);
 [after.cardSchemas.length, getTemplate("trip-template") === undefined].join("|")
 => 0|true
 ```
 
 ```ts cleanup
-await fs.rm(boxA, { recursive: true, force: true });
-await fs.rm(boxB, { recursive: true, force: true });
+await boxA.cleanup();
+await boxB.cleanup();
 ```

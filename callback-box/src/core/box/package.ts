@@ -3,8 +3,8 @@
  * repository" in `docs/implemented-plans/boxes-as-packages-v2.md`). `cb init` on a path
  * with no existing box detects a fresh init and lays down BOTH halves: a
  * thin coding-session package at the target path, and the operational box
- * at `<target>/content/`. An existing box (legacy or v2) is left in its
- * current shape — conversion is a later migration (Track H), not init's job.
+ * at `<target>/content/`. An existing v2 box is left in place — `cb init`
+ * re-runs its provisioning without moving anything.
  */
 
 import * as fs from "node:fs/promises";
@@ -22,7 +22,7 @@ const FrontendPackageJsonSchema = z.object({
   devDependencies: z.record(z.string(), z.string()).optional(),
 });
 
-export type BoxInitMode = "fresh" | "update-legacy" | "update-v2";
+export type BoxInitMode = "fresh" | "update-v2";
 
 /**
  * Thrown when a fresh `cb init` would overwrite a package.json it didn't
@@ -41,21 +41,22 @@ export interface BoxTarget {
   /** The operational root — where `.cb-box`, `box/`, `config/`, etc. live (or will). */
   boxRoot: string;
   /** The package root — where `package.json`/`node_modules`/`src/` live (or
-   * will). Equals `boxRoot` for a legacy box. */
+   * will). The parent of `boxRoot` (the box's `content/` directory). */
   packageRoot: string;
 }
 
 /**
- * Decide what `cb init <path>` is looking at: an existing legacy box (marker
- * at the target itself), an existing v2 box (marker at `<target>/content`),
- * or nothing yet. A fresh init always scaffolds the v2 layout — there is no
- * "legacy fresh init" anymore; existing legacy boxes just keep working in
- * place until migrated (Track H).
+ * Decide what `cb init <path>` is looking at: an existing v2 box whose
+ * operational root is the target itself (marker at `<target>`, so the target
+ * IS the `content/` root and the package root is its parent), an existing v2
+ * box addressed by its package root (marker at `<target>/content`), or
+ * nothing yet. Every box is v2 — a marker at the target is that box's
+ * operational root, not a legacy flat box.
  */
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   const resolvedRoot = path.resolve(targetPath);
   if (await isValidBox(resolvedRoot)) {
-    return { mode: "update-legacy", boxRoot: resolvedRoot, packageRoot: resolvedRoot };
+    return { mode: "update-v2", boxRoot: resolvedRoot, packageRoot: path.dirname(resolvedRoot) };
   }
   const contentRoot = path.join(resolvedRoot, "content");
   if (await isValidBox(contentRoot)) {

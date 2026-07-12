@@ -201,10 +201,11 @@ export const migrateCommand = new Command("migrate")
   .option("--mark-applied <name>", "Record a single migration as applied WITHOUT running it. For a box already in that migration's post-state (e.g. a retired migrator) that never got the manifest entry. Refuses an unknown name or a manifest-less box.")
   .action(async (options: MigrateOptions) => {
     // `topPath` is the stable top-level directory `requireBoxRoot` found —
-    // it never moves. `boxRoot` (the operational root) DOES move, exactly
-    // once, if the `box-packageify` migration runs in this pass (legacy →
-    // v2 nests it under `topPath/content`); see the re-resolution after
-    // each migration in the apply loop below.
+    // it never moves. `boxRoot` (the operational root) is re-resolved from it
+    // after each migration in the apply loop below; historically the retired
+    // `box-packageify` migration relocated the box (legacy → v2), so the
+    // re-resolution stays as a safety net even though no current migration
+    // moves the operational root.
     const topPath = await requireBoxRoot();
     let boxRoot = topPath;
 
@@ -334,11 +335,11 @@ export const migrateCommand = new Command("migrate")
         console.error(`\nMigration "${m.name}" failed hard (exit code ${String(code)}). Manifest not updated for this entry. Subsequent migrations not run.`);
         process.exit(code);
       }
-      // A script can have just converted the box from legacy to v2 layout
-      // (`box-packageify`) — re-derive the operational root from the
-      // stable top-level path before touching the manifest, so the entry
-      // (and any FURTHER migration in this same pass) targets the box's
-      // current location, not its pre-migration one.
+      // Re-derive the operational root from the stable top-level path before
+      // touching the manifest, so the entry (and any FURTHER migration in this
+      // same pass) targets the box's current location. A no-op today (no
+      // migration moves the box), but retained as a safety net — the retired
+      // `box-packageify` migration used to relocate legacy → v2 here.
       boxRoot = (await detectBoxTarget(topPath)).boxRoot;
       await appendManifestEntry(boxRoot, { name: m.name, "applied-at": new Date().toISOString() });
       if (code === 2) {

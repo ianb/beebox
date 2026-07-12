@@ -11,7 +11,7 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { getBoxShape } from "../lib/box-shape.js";
 import { z } from "zod";
 
 const packageJsonVersionSchema = z.object({ version: z.string().optional() });
@@ -44,7 +44,7 @@ export async function getServingEngineVersion(): Promise<string | null> {
  * `scaffoldPackageRoot` points somewhere unreadable).
  */
 export async function getInstalledEngineVersion(boxRoot: string): Promise<string | null> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   if (shape.shapeVersion === 1) return null;
   return readVersionField(path.join(shape.packageRoot, "node_modules/callback-box/package.json"));
 }

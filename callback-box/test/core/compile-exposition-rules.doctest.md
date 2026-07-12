@@ -27,30 +27,6 @@ async function exists(p) {
  * other v2 doctests use), and `<root>/content/.cb-box` marks the
  * operational root, one level below the package root.
  */
-/**
- * A v1 (legacy, flat) box fixture: a single directory that is both the box
- * root and the package root, with a `shapeVersion: 1` marker. `.claude/`
- * lives at the box root and the generated glob is not `content/`-prefixed.
- */
-async function makeV1TmpBox() {
-  const root = await mkdtemp(join(tmpdir(), "cb-doctest-v1-"));
-  await writeFile(join(root, ".cb-box"), JSON.stringify({ shapeVersion: 1 }));
-  return {
-    root,
-    path(relativePath) {
-      return join(root, relativePath);
-    },
-    async write(relativePath, content) {
-      const fullPath = join(root, relativePath);
-      await mkdir(dirname(fullPath), { recursive: true });
-      await writeFile(fullPath, content);
-    },
-    async cleanup() {
-      await rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
-    },
-  };
-}
-
 async function makeV2TmpBox() {
   const root = await mkdtemp(join(tmpdir(), "cb-doctest-v2-"));
   await writeFile(
@@ -75,35 +51,7 @@ async function makeV2TmpBox() {
 }
 ```
 
-A card with `rules` produces a rule path-scoped to its course directory:
-
-```ts
-const box = await makeV1TmpBox();
-await box.write(
-  "store/courses/Acids.attach/Acids.exposition-plan.card",
-  "---\nrules:\n  - Open from a phenomenon\n  - Use dialog before defining\n---\nbody\n",
-);
-const written = await compileExpositionRules(box.root);
-written
-=> [
-  "exposition-store-courses-acids-attach.md"
-]
-```
-
-The rule globs the course dir and inlines the rules, with a do-not-edit header:
-
-```ts continue
-const text = await readFile(box.path(".claude/rules/exposition-store-courses-acids-attach.md"), "utf8");
-text.includes("paths:") && text.includes('"store/courses/Acids.attach/**"')
-=> true
-
-text.includes("- Open from a phenomenon") && text.includes("GENERATED")
-=> true
-
-await box.cleanup();
-```
-
-## v2 (package-layout) box: rule lands at the package root, path prefixed with `content/`
+## A card with `rules` produces a rule path-scoped to its course directory
 
 `.claude/rules` lives at the package root, one level above a v2 box's
 operational root — and the generated glob is anchored (not `**/`-prefixed),

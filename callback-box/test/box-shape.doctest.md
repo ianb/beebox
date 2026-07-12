@@ -1,18 +1,17 @@
-# cb box shape: the bilingual legacy/package layout switch
+# cb box shape: the v2 package-layout predicate
 
-`getBoxShape` reads a box's `.cb-box` marker and reports which physical
-layout it uses. Every box created before the boxes-as-packages plan has no
-`shapeVersion` field at all, and is shape 1: the box root is also the
-package root. Shape 2+ nests the box root inside a package directory, and
-that parent must declare a `callback-box` dependency — validated
+`getBoxShape` reads a box's `.cb-box` marker and resolves where its package
+root lives. Every box is shapeVersion 2 (the package layout): the box root is
+a `content/` directory nested inside a package, and the package root is its
+parent — which must declare a `callback-box` dependency, validated
 fail-closed so box-owned code never silently resolves against the wrong
-`node_modules`.
+`node_modules`. A marker whose `shapeVersion` is absent or `< 2` predates the
+package layout and is a hard `BoxShapeError`.
 
 `makeTmpBox` builds a real shape-2 box (operational root at `box.root` =
-`<packageRoot>/content`, with `box.packageRoot` the parent package). The v2
-sections below use it directly; the v1 sections overwrite `box.root`'s
-`.cb-box` marker by hand to construct the legacy case the still-bilingual
-predicate must keep accepting.
+`<packageRoot>/content`, with `box.packageRoot` the parent package). The
+sections below use it directly; the error cases overwrite `box.root`'s
+`.cb-box` marker by hand to construct the rejected inputs.
 
 ```ts setup
 import * as fs from "node:fs/promises";
@@ -26,7 +25,7 @@ const tryGetBoxShape = async (boxRoot) => {
 };
 
 // Code paths relative to the shape's own package root, so temp dir names
-// never appear in expected output and both shapes read cleanly.
+// never appear in expected output.
 const relCodePaths = (shape) => {
   const paths = boxCodePaths(shape);
   return {
@@ -37,28 +36,42 @@ const relCodePaths = (shape) => {
 };
 ```
 
-## A legacy marker (no shapeVersion field) is shape 1, package root === box root
+## A marker with no shapeVersion field predates v2 and is rejected
 
 ```ts
 const box = await makeTmpBox();
 await box.write(".cb-box", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
-const shape = await getBoxShape(box.root);
-JSON.stringify({ shapeVersion: shape.shapeVersion, samePackageRoot: shape.packageRoot === shape.boxRoot })
-=> {"shapeVersion":1,"samePackageRoot":true}
+const err = await tryGetBoxShape(box.root);
+JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsLayout: err.message.includes("box-layout.md") })
+=> {"isBoxShapeError":true,"mentionsLayout":true}
 ```
 
 ```ts cleanup
 await box.cleanup();
 ```
 
-## An empty marker is also shape 1
+## An empty marker predates v2 and is rejected
 
 ```ts
 const box = await makeTmpBox();
 await box.write(".cb-box", "");
-const shape = await getBoxShape(box.root);
-JSON.stringify({ shapeVersion: shape.shapeVersion, samePackageRoot: shape.packageRoot === shape.boxRoot })
-=> {"shapeVersion":1,"samePackageRoot":true}
+const err = await tryGetBoxShape(box.root);
+err instanceof BoxShapeError
+=> true
+```
+
+```ts cleanup
+await box.cleanup();
+```
+
+## A shapeVersion below 2 predates v2 and is rejected
+
+```ts
+const box = await makeTmpBox();
+await box.write(".cb-box", JSON.stringify({ shapeVersion: 1 }));
+const err = await tryGetBoxShape(box.root);
+JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, mentionsVersion: err.message.includes("shapeVersion 1") })
+=> {"isBoxShapeError":true,"mentionsVersion":true}
 ```
 
 ```ts cleanup
@@ -134,20 +147,6 @@ await box.write(".cb-box", JSON.stringify({ shapeVersion: 3 }));
 const err = await tryGetBoxShape(box.root);
 JSON.stringify({ isBoxShapeError: err instanceof BoxShapeError, needsNewer: err.message.includes("newer callback-box") })
 => {"isBoxShapeError":true,"needsNewer":true}
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## `boxCodePaths` for a legacy (shape 1) box: code lives inside the box root
-
-```ts
-const box = await makeTmpBox();
-await box.write(".cb-box", JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00.000Z" }));
-const shape = await getBoxShape(box.root);
-JSON.stringify(relCodePaths(shape))
-=> {"schemasDir":"config/schemas","viewsDir":"views","tricksDir":"tricks"}
 ```
 
 ```ts cleanup
