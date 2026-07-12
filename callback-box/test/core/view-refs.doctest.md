@@ -128,18 +128,7 @@ warnings.join("\n")
 
 ## listBoxViewFiles resolves views per box shape
 
-A legacy box's views live at `boxRoot/views/`:
-
-```ts
-const box = await makeTmpBox();
-await box.write("views/dashboard.tsx", "export default function Dashboard() { return null; }");
-(await listBoxViewFiles(box.root)).map((p) => p.endsWith("views/dashboard.tsx"))
-=> [
-  true
-]
-```
-
-A v2 (package-layout) box's views live at `packageRoot/src/views/` instead —
+A v2 (package-layout) box's views live at `packageRoot/src/views/` —
 `cb validate`'s view-ref check and `cb mv`'s ref-rewrite pass (both call
 `listBoxViewFiles`) need to find them there, not at the (nonexistent)
 `boxRoot/views/`:

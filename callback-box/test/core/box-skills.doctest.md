@@ -8,6 +8,12 @@ project-level skills, so a freshly-installed skill is invocable.
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { generateSkills } from "../../src/core/box/skills.js";
 import { readFile } from "node:fs/promises";
+import { join } from "node:path";
+
+// `.claude/` lives at the package root for a v2 box, not under `content/`.
+function skillFile(box, rel) {
+  return join(box.packageRoot, ".claude/skills", rel);
+}
 ```
 
 It installs the managed skills and returns their names:
@@ -34,7 +40,7 @@ Each lands at `.claude/skills/<name>/SKILL.md` with well-formed frontmatter (the
 ```ts
 const box = await makeTmpBox();
 await generateSkills(box.root);
-const text = await readFile(box.path(".claude/skills/build-course/SKILL.md"), "utf8");
+const text = await readFile(skillFile(box, "build-course/SKILL.md"), "utf8");
 text.startsWith("---\nname: build-course\n")
 => true
 
@@ -48,11 +54,20 @@ their body — so they load on demand instead of always-loaded guide sections:
 ```ts
 const box = await makeTmpBox();
 await generateSkills(box.root);
-const cal = await readFile(box.path(".claude/skills/calendar/SKILL.md"), "utf8");
+const cal = await readFile(skillFile(box, "calendar/SKILL.md"), "utf8");
 cal.startsWith("---\nname: calendar\n") && cal.includes("description:") && cal.includes("# Calendar")
 => true
+```
 
-const drv = await readFile(box.path(".claude/skills/drive/SKILL.md"), "utf8");
+The `calendar` skill is a static constant: it references the box timezone by the
+`BOX_TZ` placeholder and points at `cb calendar vtimezone` for the VTIMEZONE block,
+rather than baking either in.
+
+```ts continue
+cal.includes("TZID=BOX_TZ:") && cal.includes("cb calendar vtimezone")
+=> true
+
+const drv = await readFile(skillFile(box, "drive/SKILL.md"), "utf8");
 drv.startsWith("---\nname: drive\n") && drv.includes("description:") && drv.includes("# Google Drive")
 => true
 ```
@@ -65,8 +80,16 @@ longer carries, discovered via its trigger `description`:
 const box = await makeTmpBox();
 await generateSkills(box.root);
 const names = ["email", "location", "schedules", "tricks", "views"];
-const texts = await Promise.all(names.map((name) => readFile(box.path(".claude/skills/" + name + "/SKILL.md"), "utf8")));
+const texts = await Promise.all(names.map((name) => readFile(skillFile(box, name + "/SKILL.md"), "utf8")));
 const bad = names.filter((name, i) => !(texts[i].startsWith("---\nname: " + name + "\n") && texts[i].includes("description:")));
 bad.join(",")
 =>
+```
+
+The `tricks` skill is now a single static constant with the package-layout
+script path (`src/tricks/scripts/`), no shape fork:
+
+```ts continue
+texts[names.indexOf("tricks")].includes("src/tricks/scripts/")
+=> true
 ```

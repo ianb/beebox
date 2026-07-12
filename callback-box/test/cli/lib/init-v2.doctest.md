@@ -4,8 +4,7 @@
 layout (see "The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`):
 the target path becomes the PACKAGE root (`package.json`, `tsconfig.json`, a
 thin root `CLAUDE.md`, `.claude/`, `src/`), and the operational box lives at
-`<target>/content/`. `cb init` on an EXISTING legacy box stays legacy —
-conversion to v2 is a later migration (Track H), not init's job.
+`<target>/content/`. v2 is the only box shape.
 
 This mirrors what `src/cli/commands/init.ts`'s action does, without going
 through Commander — same style as `test/cli/lib/init.doctest.md`'s `fullInit`
@@ -30,6 +29,7 @@ import {
 import {
   detectBoxTarget,
   scaffoldPackageRoot,
+  scaffoldV2Box,
   BoxPackageConflictError,
 } from "../../../src/core/box/package.js";
 import { generateRules } from "../../../src/core/init-rules.js";
@@ -63,13 +63,15 @@ async function fullInit(targetPath) {
   const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
-  if (isFresh) await scaffoldPackageRoot(packageRoot);
-
-  const { isUpdate } = await initBox(boxRoot, {
-    skipGit: true,
-    branch: "main",
-    shapeVersion: isFresh ? 2 : undefined,
-  });
+  let isUpdate;
+  if (isFresh) {
+    // Same shared builder cli/commands/init.ts's action uses: scaffold the
+    // package half + initBox({shapeVersion:2}) + node_modules/callback-box.
+    await scaffoldV2Box(packageRoot, { deps: true });
+    isUpdate = false;
+  } else {
+    ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: "main" }));
+  }
 
   if (isFresh && !(await isRepo(packageRoot))) {
     await initRepo(packageRoot, "main");
@@ -210,10 +212,9 @@ schemasGuide.includes("src/schemas/")
 
 The v2 schemas guide teaches `import { z } from "callback-box/schema"` (and
 `stringifyYaml` from the same specifier) — not the bare `zod`/`yaml`
-specifiers the v1 guide uses, which a v2 box's `src/schemas/` has no
-resolve-hook fakery to make resolvable (see `registry.ts`'s
-`ensureResolveHooks` doc and `test/schemas/box-schemas-v2.doctest.md`'s "bare
-zod import fails" case):
+specifiers, which a v2 box's `src/schemas/` can't resolve (only
+`callback-box/*` resolves there, via the package's own `node_modules`; see
+`test/schemas/box-schemas-v2.doctest.md`'s "bare zod import fails" case):
 
 ```ts continue
 schemasGuide.includes('from "callback-box/schema"')
@@ -437,77 +438,3 @@ schemas.cardSchemas.map((s) => s.type)
 await fs.rm(target, { recursive: true, force: true });
 ```
 
-## Legacy box re-init is byte-stable — no v2 artifacts appear
-
-An existing legacy box (no `content/` nesting) run through the same `cb
-init` flow stays legacy: `detectBoxTarget` reports `update-legacy`, and none
-of the package-scaffold files (`package.json`, `tsconfig.json`,
-`node_modules/`, `src/`) appear alongside it.
-
-```ts
-const legacyBox = await makeTmpDir();
-// shapeVersion defaults to 1 (legacy) when not specified.
-await initBox(legacyBox, { branch: "main" });
-await installProcedures(legacyBox);
-
-const before = (await fs.readFile(path.join(legacyBox, ".cb-box"), "utf-8"));
-
-const { mode, boxRoot, packageRoot } = await fullInit(legacyBox);
-
-mode
-=> update-legacy
-
-boxRoot === legacyBox
-=> true
-
-packageRoot === legacyBox
-=> true
-```
-
-The marker is untouched (re-init doesn't rewrite an existing marker) and no
-v2 scaffold files were written:
-
-```ts continue
-(await fs.readFile(path.join(legacyBox, ".cb-box"), "utf-8")) === before
-=> true
-
-(await exists(path.join(legacyBox, "package.json")))
-=> false
-
-(await exists(path.join(legacyBox, "tsconfig.json")))
-=> false
-
-(await exists(path.join(legacyBox, "node_modules")))
-=> false
-
-(await exists(path.join(legacyBox, "src")))
-=> false
-```
-
-Rules and skills still land at the legacy location (`boxRoot/.claude`, since
-`packageRoot === boxRoot` here) — the shape-aware installers didn't move
-anything for a legacy box:
-
-```ts continue
-(await exists(path.join(legacyBox, ".claude/rules/card-memo.md")))
-=> true
-```
-
-The connector-calendar rule's path stays un-prefixed for a legacy box
-(`packageRoot === boxRoot`, so there's no extra level to climb):
-
-```ts continue
-const legacyCalendarRule = await fs.readFile(
-  path.join(legacyBox, ".claude/rules/connector-calendar.md"),
-  "utf-8"
-);
-legacyCalendarRule.includes('"store/calendar/**/*.ics"')
-=> true
-
-legacyCalendarRule.includes("content/store/calendar")
-=> false
-```
-
-```ts cleanup
-await fs.rm(legacyBox, { recursive: true, force: true });
-```

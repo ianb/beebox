@@ -13,8 +13,8 @@ import { createHash } from "node:crypto";
 import { glob } from "glob";
 import type { ViewMeta } from "../../core/views/types.js";
 import { getBoxShape, boxCodePaths, type BoxShape } from "../../lib/box-shape.js";
-import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { importViewMetadata } from "./view-meta-import.js";
+import { boxPackageHost, type ViewHostContext } from "./node-view-runtime.js";
 
 /**
  * Where the compiled view will run:
@@ -52,14 +52,6 @@ class EmptyEsbuildOutputError extends Error {
 
 const cache = new Map<string, CacheEntry>();
 const metaCache = new Map<string, MetaCacheEntry>();
-
-/** A shape assumed for callers that don't know (or care about) the box's real
- * shape — every existing call site that doesn't pass `boxShape` predates the
- * boxes-as-packages plan and only ever ran against the engine's own
- * `node_modules` (the v1 story), so that's the default. */
-function defaultBoxShape(viewPath: string): BoxShape {
-  return { shapeVersion: 1, boxRoot: path.dirname(viewPath), packageRoot: PACKAGE_ROOT };
-}
 
 const reactExternalPlugin: esbuild.Plugin = {
   name: "react-external",
@@ -174,8 +166,9 @@ export async function bundleView(
             "react",
             "react/jsx-runtime",
             "react/jsx-dev-runtime",
-            // Resolved from a real node_modules (v2 boxes) or the engine's own
-            // (v1, via a temp symlink) — see node-view-runtime.ts.
+            // Resolved from a real box package's node_modules (box-package host)
+            // or the engine's own (engine-hosted, via a temp symlink) — see
+            // node-view-runtime.ts.
             "callback-box/view-widgets",
             ...extraExternal,
           ],
@@ -225,8 +218,9 @@ export async function bundleView(
  * filename + "Failed to compile" marker (see `listViews`) rather than
  * vanishing from the listing.
  */
-export async function getViewMeta(viewPath: string, opts?: { boxShape?: BoxShape }): Promise<ViewMeta> {
-  const boxShape = opts?.boxShape ?? defaultBoxShape(viewPath);
+export async function getViewMeta(viewPath: string, opts?: { viewHost?: ViewHostContext }): Promise<ViewMeta> {
+  // No host given means no box package hosts this compile — the engine does.
+  const viewHost: ViewHostContext = opts?.viewHost ?? { kind: "engine-hosted" };
   const slug = slugFromFilename(viewPath);
   const fallback: Omit<ViewMeta, "lastModified"> = {
     name: slug,
@@ -258,7 +252,7 @@ export async function getViewMeta(viewPath: string, opts?: { boxShape?: BoxShape
   let meta: Omit<ViewMeta, "lastModified">;
   try {
     const { output } = await bundleView(viewPath, { target: "node" });
-    const imported = await importViewMetadata(output, boxShape);
+    const imported = await importViewMetadata(output, viewHost);
     meta = imported
       ? {
           name: imported.name ?? slug,
@@ -287,15 +281,15 @@ export async function getViewMeta(viewPath: string, opts?: { boxShape?: BoxShape
  */
 export async function compileView(
   viewPath: string,
-  opts?: { target?: ViewCompileTarget; external?: string[]; boxShape?: BoxShape }
+  opts?: { target?: ViewCompileTarget; external?: string[]; viewHost?: ViewHostContext }
 ): Promise<{ output: string; meta: ViewMeta }> {
   const bundleOpts: { target?: ViewCompileTarget; external?: string[] } = {};
   if (opts?.target !== undefined) bundleOpts.target = opts.target;
   if (opts?.external !== undefined) bundleOpts.external = opts.external;
   const { output } = await bundleView(viewPath, bundleOpts);
 
-  const metaOpts: { boxShape?: BoxShape } = {};
-  if (opts?.boxShape !== undefined) metaOpts.boxShape = opts.boxShape;
+  const metaOpts: { viewHost?: ViewHostContext } = {};
+  if (opts?.viewHost !== undefined) metaOpts.viewHost = opts.viewHost;
   const meta = await getViewMeta(viewPath, metaOpts);
 
   return { output, meta };
@@ -365,11 +359,12 @@ export async function listViews(boxRoot: string): Promise<ViewMeta[]> {
     return [];
   }
 
+  const viewHost = boxPackageHost(boxShape);
   const files = await glob("*.tsx", { cwd: viewsDir });
   const metas: ViewMeta[] = [];
   for (const file of files) {
     const viewPath = path.join(viewsDir, file);
-    metas.push(await getViewMeta(viewPath, { boxShape }));
+    metas.push(await getViewMeta(viewPath, { viewHost }));
   }
   return metas;
 }

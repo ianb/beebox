@@ -16,19 +16,6 @@ import { resolveBoxes, toBoxArgs } from "../../../src/cli/commands/serve.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 ```
 
-## A legacy (shape 1) box: slug defaults to the box dir's own basename
-
-```ts
-const box = await makeTmpBox();
-const boxes = await resolveBoxes([box.root], undefined);
-toBoxArgs(boxes)[0] === `${path.basename(box.root)}=${box.root}`
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
 ## `--slug` overrides the default, and the dev-arg encoding carries it through
 
 ```ts
@@ -48,17 +35,16 @@ Passing the raw `content/` dir (the old `--dev` behavior) would have encoded
 the literal slug "content" here — wrong, and colliding across every v2 box.
 
 ```ts
+// A native v2 box: `box.root` is the operational `content/` dir; the
+// meaningful slug lives one level up at the package root.
 const box = await makeTmpBox();
-await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
-await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": "0.1.0" } }));
-const contentDir = box.path("content");
-const boxes = await resolveBoxes([contentDir], undefined);
+const boxes = await resolveBoxes([box.root], undefined);
 const args = toBoxArgs(boxes);
 
 args[0].includes("=content")
 => false
 
-args[0] === `${path.basename(box.root)}=${contentDir}`
+args[0] === `${path.basename(box.packageRoot)}=${box.root}`
 => true
 ```
 

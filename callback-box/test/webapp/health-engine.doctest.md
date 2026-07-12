@@ -124,19 +124,6 @@ schemas?.message.includes("widget.ts")
 => true
 ```
 
-## Legacy box: no engine-link check, schemas still checked
-
-```ts continue
-const legacy = await makeTmpBox();
-const legacyChecks = await engineHealthChecks(legacy.root);
-byName(legacyChecks, "engine-link") === undefined
-=> true
-
-byName(legacyChecks, "box-schemas")?.ok
-=> true
-```
-
 ```ts cleanup
 await box.cleanup();
-await legacy.cleanup();
 ```

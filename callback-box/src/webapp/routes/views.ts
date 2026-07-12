@@ -10,6 +10,7 @@ import type { FastifyInstance } from "fastify";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { bundleView, getViewMeta, buildErrorModule, resolveViewsDir } from "../views/compiler.js";
+import { boxPackageHost } from "../views/node-view-runtime.js";
 import { loadViewCards } from "../../core/views/cards.js";
 
 interface RegisterViewRoutesOptions {
@@ -86,7 +87,7 @@ export async function registerViewRoutes(options: RegisterViewRoutesOptions): Pr
       // getViewMeta never throws (a broken view degrades to empty
       // dependencies, matching "no cards selected" rather than a hard error —
       // the module.js endpoint above is where a compile failure surfaces).
-      const meta = await getViewMeta(viewPath, { boxShape });
+      const meta = await getViewMeta(viewPath, { viewHost: boxPackageHost(boxShape) });
 
       // A live page silently omits cards that fail to load, so the `skipped`
       // diagnostics are dropped here; `cb view test` surfaces them instead.

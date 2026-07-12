@@ -13,6 +13,7 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import type { Dirent } from "node:fs";
 import { simpleGit } from "simple-git";
+import { gitBoxPrefix } from "../../lib/git.js";
 import { isIgnored, joinChildPath } from "./precheck-ignore.js";
 import { errnoCode } from "../../lib/error-guards.js";
 
@@ -92,10 +93,19 @@ interface ListChildrenAtCommitOptions {
  */
 export async function listChildrenAtCommit(opts: ListChildrenAtCommitOptions): Promise<string[]> {
   const { boxRoot, dirRel, commit, patterns } = opts;
-  const ref = dirRel === "" ? commit : `${commit}:${dirRel}`;
+  // `<commit>:<path>` is interpreted relative to the CWD when git runs inside a
+  // subdirectory of the repo. On a v2 box the box root (`content/`) is exactly
+  // such a subdir, so `<commit>:store` would resolve to `content/content/store`
+  // (empty) and maps would never detect a change. `--full-tree` pins the path
+  // to the repo root, and we spell it out repo-root-relative by prefixing the
+  // box's in-repo path (`content/`); on a legacy box the prefix is empty and
+  // the whole-tree case stays a bare `<commit>`.
+  const prefix = await gitBoxPrefix(boxRoot);
+  const repoRel = `${prefix}${dirRel}`.replace(/\/$/, "");
+  const ref = repoRel === "" ? commit : `${commit}:${repoRel}`;
   let raw: string;
   try {
-    raw = await simpleGit(boxRoot).raw(["ls-tree", ref]);
+    raw = await simpleGit(boxRoot).raw(["ls-tree", "--full-tree", ref]);
   } catch (e) {
     // ls-tree fails when the dir didn't exist at this commit (e.g. comparing
     // against an older asOf where the path was absent). Treat as empty listing

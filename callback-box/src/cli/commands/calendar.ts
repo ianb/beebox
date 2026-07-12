@@ -6,6 +6,7 @@
  *   cb calendar 3d           — next 3 days
  *   cb calendar 2w           — next 2 weeks
  *   cb calendar today        — today only
+ *   cb calendar vtimezone    — print the box's VTIMEZONE block (for .ics events)
  *   cb calendar calendars    — list available calendars (from Google API)
  *   cb calendar add <id>     — add a calendar to sync
  *   cb calendar remove <id>  — remove a calendar from sync
@@ -30,6 +31,8 @@ import {
   formatEvent,
   parseTimespan,
 } from "../../connectors/calendar-utils.js";
+import { vtimezoneBlock } from "../../connectors/google-calendar-ics.js";
+import { loadBoxTimezone } from "../../core/box/config.js";
 
 function startOfDay(date: Date): Date {
   const d = new Date(date);
@@ -78,6 +81,16 @@ export const calendarCommand = new Command("calendar")
     for (const event of filtered) {
       console.log(formatEvent(event));
     }
+  });
+
+calendarCommand
+  .command("vtimezone")
+  .description("Print this box's VTIMEZONE block (paste into an .ics event)")
+  .action(async (): Promise<void> => {
+    const boxRoot = await requireBoxRoot();
+    const timezone =
+      (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
+    console.log(vtimezoneBlock(timezone).trim());
   });
 
 calendarCommand

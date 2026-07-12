@@ -47,7 +47,7 @@ import * as path from "node:path";
 import { execFileSync, type ExecFileSyncOptionsWithStringEncoding } from "node:child_process";
 import { z } from "zod";
 import { PACKAGE_ROOT } from "../lib/package-root.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { getBoxShape } from "../lib/box-shape.js";
 import { VALIDATION_IGNORE_PATH } from "./validation-ignore.js";
 import { errnoCode } from "../lib/error-guards.js";
 
@@ -391,7 +391,7 @@ async function installIgnoreScaffold(
  * can decide whether to commit / report.
  */
 export async function installValidationHooks(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot } = await getBoxShape(boxRoot);
   const boxRelFromPackageRoot = path.relative(packageRoot, boxRoot);
 
   const changed: string[] = [

@@ -14,7 +14,7 @@ import { join, dirname, relative } from "node:path";
 import { splitCardContent } from "../cards/index.js";
 import { parse as parseYaml } from "yaml";
 import { listBoxCardFiles } from "./list-cards.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { getBoxShape } from "../lib/box-shape.js";
 import { errnoCode } from "../lib/error-guards.js";
 import { isRecord } from "./card-io.js";
 
@@ -79,7 +79,7 @@ function renderRule(input: { courseDir: string; rulePath: string; rules: string[
  * (`content/`) or it never matches anything under the operational root.
  */
 export async function compileExpositionRules(boxRoot: string): Promise<string[]> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   const rulesDir = join(shape.packageRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });
 

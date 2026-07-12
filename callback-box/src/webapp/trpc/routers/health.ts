@@ -15,7 +15,7 @@ import { getMistralApiKey } from "../../../core/mistral-key.js";
 import { resolveNav, NAV_CARD_PATH } from "../../../core/nav.js";
 import { getDeepgramCredentials } from "../../../core/deepgram-key.js";
 import { loadTranscriptionConfig } from "../../../core/transcription/index.js";
-import { getBoxShapeOrLegacyFallback } from "../../../lib/box-shape.js";
+import { getBoxShape } from "../../../lib/box-shape.js";
 import { isRecord } from "../../../lib/is-record.js";
 import { engineHealthChecks } from "./health-engine.js";
 
@@ -146,7 +146,7 @@ export async function runHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
   // the PACKAGE root one level up — content/ is a plain subdirectory with no
   // .git of its own (see "One git repository at the repo root" in
   // docs/implemented-plans/boxes-as-packages-v2.md).
-  const { packageRoot: gitRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot: gitRoot } = await getBoxShape(boxRoot);
   const gitObjectsDir = path.join(gitRoot, ".git/objects");
   const gitWritable = await isWritable(gitObjectsDir);
   checks.push({

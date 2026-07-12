@@ -6,8 +6,17 @@ and renders fine but is silently wrong (e.g. `c.tagName` after the card-shape
 cleanup), which the render gate (`cb view check`) can't see.
 
 ```ts setup
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { typecheckViews } from "../../../src/cli/commands/view-typecheck.js";
+
+// Views live at the package root (`<packageRoot>/src/views`) for a v2 box.
+async function writeView(box, rel, content) {
+  const full = join(box.packageRoot, "src", "views", rel);
+  await mkdir(dirname(full), { recursive: true });
+  await writeFile(full, content);
+}
 
 const HEAD = `export const name = "x";
 export const description = "x";
@@ -52,11 +61,11 @@ export default function V({ cards }: { cards: VC[] }) {
 ## A stale-typed view (removed field) fails; clean passes; `as any` slips through
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/stale.tsx", STALE);
-await box.write("views/clean.tsx", CLEAN);
-await box.write("views/anycast.tsx", ANYCAST);
-await box.write("views/noise.tsx", NOISE);
+const box = await makeTmpBox({ deps: true });
+await writeView(box, "stale.tsx", STALE);
+await writeView(box, "clean.tsx", CLEAN);
+await writeView(box, "anycast.tsx", ANYCAST);
+await writeView(box, "noise.tsx", NOISE);
 
 const result = await typecheckViews(box.root);
 result.ok

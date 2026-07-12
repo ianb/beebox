@@ -102,6 +102,22 @@ export async function isRepo(dir: string): Promise<boolean> {
 }
 
 /**
+ * The box's path within its git repository — POSIX-style, with a trailing
+ * slash (e.g. `"content/"`), or `""` when the box root IS the repo root.
+ *
+ * A shapeVersion-2 box's git repo lives at the PACKAGE root, one level above
+ * the operational box root (`content/`); a legacy box's git root coincides
+ * with the box root. Git porcelain/`ls-tree`/`diff` output is repo-root-
+ * relative, so box-relative code that compares against its own box-relative
+ * paths (view gitStatus, maps delta detection, the oversized-blob guard)
+ * must account for this prefix. `git rev-parse --show-prefix` reports exactly
+ * it (empty from the repo root).
+ */
+export async function gitBoxPrefix(boxRoot: string): Promise<string> {
+  return (await simpleGit(boxRoot).revparse(["--show-prefix"])).trim();
+}
+
+/**
  * Get the status of the repository.
  */
 export async function getStatus(boxRoot: string): Promise<GitStatus> {

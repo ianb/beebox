@@ -18,7 +18,17 @@ below.
 ```ts setup
 import { makeTestServer, TEST_SLUG } from "../helpers/doctest-server.js";
 import * as path from "node:path";
+import { mkdir, writeFile } from "node:fs/promises";
 import { invalidateBoxSchemas } from "../../src/schemas/registry.js";
+
+// Box-local schemas live at `<packageRoot>/src/schemas/` for a v2 box — one
+// level up from the operational box root — resolved natively through the
+// box's own `node_modules/callback-box` (the test server scaffolds it).
+async function writeSchema(server, name, content) {
+  const full = path.join(path.dirname(server.boxRoot), "src/schemas", name);
+  await mkdir(path.dirname(full), { recursive: true });
+  await writeFile(full, content);
+}
 
 const GOOD_SCHEMA = `import { cardSchema } from "callback-box/cards";
 import { z } from "callback-box/schema";
@@ -34,7 +44,7 @@ process.env.CB_DIAG_API_KEY = "test-diag-key";
 
 ```ts
 const server = await makeTestServer();
-await server.seed("config/schemas/widget.ts", GOOD_SCHEMA);
+await writeSchema(server, "widget.ts", GOOD_SCHEMA);
 
 const headers = { authorization: "Bearer test-diag-key" };
 const clean = await server.rootRequest({ method: "GET", url: "/healthz", headers });
@@ -46,7 +56,7 @@ A schema edited to a broken state is picked up on the very next `/healthz`
 call — with no other code path having loaded schemas for this box first:
 
 ```ts continue
-await server.seed("config/schemas/widget.ts", BROKEN_SCHEMA);
+await writeSchema(server, "widget.ts", BROKEN_SCHEMA);
 invalidateBoxSchemas(server.boxRoot);
 
 const broken = await server.rootRequest({ method: "GET", url: "/healthz", headers });

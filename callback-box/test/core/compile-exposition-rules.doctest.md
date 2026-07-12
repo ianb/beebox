@@ -51,33 +51,7 @@ async function makeV2TmpBox() {
 }
 ```
 
-A card with `rules` produces a rule path-scoped to its course directory:
-
-```ts
-const box = await makeTmpBox();
-await box.write(
-  "store/courses/Acids.attach/Acids.exposition-plan.card",
-  "---\nrules:\n  - Open from a phenomenon\n  - Use dialog before defining\n---\nbody\n",
-);
-const written = await compileExpositionRules(box.root);
-written
-=> [
-  "exposition-store-courses-acids-attach.md"
-]
-```
-
-The rule globs the course dir and inlines the rules, with a do-not-edit header:
-
-```ts continue
-const text = await readFile(box.path(".claude/rules/exposition-store-courses-acids-attach.md"), "utf8");
-text.includes("paths:") && text.includes('"store/courses/Acids.attach/**"')
-=> true
-
-text.includes("- Open from a phenomenon") && text.includes("GENERATED")
-=> true
-```
-
-## v2 (package-layout) box: rule lands at the package root, path prefixed with `content/`
+## A card with `rules` produces a rule path-scoped to its course directory
 
 `.claude/rules` lives at the package root, one level above a v2 box's
 operational root — and the generated glob is anchored (not `**/`-prefixed),

@@ -17,7 +17,7 @@ import { promises as fs } from "node:fs";
 import { glob } from "glob";
 import { loadCardFile } from "../card-io.js";
 import { buildLoadContext } from "../load-context.js";
-import { getStatus, isRepo } from "../../lib/git.js";
+import { getStatus, gitBoxPrefix, isRepo } from "../../lib/git.js";
 import { fileEtag } from "../../webapp/file-etag.js";
 import { attachDirFor } from "../../shared/attach-path.js";
 import type { ViewCard, ViewFile } from "./types.js";
@@ -130,8 +130,14 @@ type GitStatusLookup = (relPath: string) => "dirty" | "untracked" | null;
 async function buildGitStatusLookup(boxRoot: string): Promise<GitStatusLookup | null> {
   if (!(await isRepo(boxRoot))) return null;
   const status = await getStatus(boxRoot);
-  const dirty = new Set([...status.modified, ...status.staged]);
-  const untracked = status.untracked;
+  // getStatus paths are repo-root-relative; a v2 box's repo root is the
+  // package root, so they carry a `content/` prefix while `file.path` (the
+  // lookup key) is box-relative. Strip the prefix so both frames match —
+  // without this, no view file is ever annotated dirty/untracked on a v2 box.
+  const prefix = await gitBoxPrefix(boxRoot);
+  const strip = (p: string): string => (prefix !== "" && p.startsWith(prefix) ? p.slice(prefix.length) : p);
+  const dirty = new Set([...status.modified, ...status.staged].map(strip));
+  const untracked = status.untracked.map(strip);
   return (relPath: string) => {
     if (dirty.has(relPath)) return "dirty";
     for (const entry of untracked) {

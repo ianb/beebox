@@ -33,7 +33,7 @@ import { renderToString } from "react-dom/server";
 import { load as cheerioLoad } from "cheerio";
 import { requireBoxRoot } from "../../lib/paths.js";
 import { compileView, listViews, resolveViewsDir } from "../../webapp/views/compiler.js";
-import { writeNodeViewModule } from "../../webapp/views/node-view-runtime.js";
+import { writeNodeViewModule, boxPackageHost } from "../../webapp/views/node-view-runtime.js";
 import { viewLintCommand } from "./view-lint.js";
 import { loadViewCards } from "../../core/views/cards.js";
 import { typecheckViews } from "./view-typecheck.js";
@@ -124,6 +124,7 @@ interface RenderViewOptions {
 async function renderView(options: RenderViewOptions): Promise<number> {
   const { boxRoot, slug, focusPath, raw, allowInvalidCards } = options;
   const { viewsDir, boxShape } = await resolveViewsDir(boxRoot);
+  const viewHost = boxPackageHost(boxShape);
   const viewPath = path.join(viewsDir, `${slug}.tsx`);
   try {
     await fs.access(viewPath);
@@ -132,7 +133,7 @@ async function renderView(options: RenderViewOptions): Promise<number> {
   }
 
   // Compile for Node (real React) and load the same data the app passes.
-  const { output, meta } = await compileView(viewPath, { target: "node", boxShape });
+  const { output, meta } = await compileView(viewPath, { target: "node", viewHost });
   const { cards, files, skipped } = await loadViewCards(boxRoot, meta.dependencies);
 
   // --path sets params.path (it does NOT filter cards — the running app
@@ -152,11 +153,10 @@ async function renderView(options: RenderViewOptions): Promise<number> {
   // The compiled module imports `react`/`react/jsx-runtime` as bare specifiers
   // and must resolve them to the SAME instance the host react-dom/server uses
   // (single instance — hooks work, no dispatcher mismatch). writeNodeViewModule
-  // sets up a temp node_modules for the box's shape: a legacy box has no real
-  // node_modules of its own, so it resolves through the running callback-box's
-  // copies; a package box carries a real node_modules/callback-box (and react
-  // beside it), so it resolves through THAT directly.
-  const mod = await writeNodeViewModule(output, boxShape);
+  // sets up a temp node_modules for the view-host context: a real box package
+  // carries a node_modules/callback-box (and react beside it), so it resolves
+  // through THAT directly (box-package host).
+  const mod = await writeNodeViewModule(output, viewHost);
   try {
     process.setSourceMapsEnabled(true);
 

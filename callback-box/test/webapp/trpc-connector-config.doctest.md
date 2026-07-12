@@ -65,12 +65,14 @@ JSON.stringify(cfg)
 
 ```ts continue
 // Commit scoped to just the config file; the decoy stayed uncommitted.
-const files = (await simpleGit(box.root).raw(["show", "--name-only", "--format=", "HEAD"])).trim();
+const files = (await simpleGit(box.root).raw(["show", "--name-only", "--relative", "--format=", "HEAD"])).trim();
 files
 => config/connectors/google-calendar.json
 
+// `status` porcelain paths are always repo-root-relative (repo root = package
+// root), so the content-dir decoy shows as `content/store/decoy.md`.
 JSON.stringify((await simpleGit(box.root).status()).not_added)
-=> ["store/decoy.md"]
+=> ["content/store/decoy.md"]
 ```
 
 ```ts cleanup

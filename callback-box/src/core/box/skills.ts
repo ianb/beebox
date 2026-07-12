@@ -13,18 +13,15 @@ import { mkdir, writeFile } from "node:fs/promises";
 import {
   BUILD_COURSE_SKILL,
   FIGURE_EXAMPLES,
-  calendarSkill,
+  CALENDAR_SKILL,
   DRIVE_SKILL,
   EMAIL_SKILL,
   LOCATION_SKILL,
   SCHEDULES_SKILL,
   TRICKS_SKILL,
-  TRICKS_SKILL_V2,
   VIEWS_SKILL,
 } from "./skills-content.js";
-import { vtimezoneBlock } from "../../connectors/google-calendar-ics.js";
-import { loadBoxTimezone } from "./config.js";
-import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { getBoxShape } from "../../lib/box-shape.js";
 
 interface BoxSkill {
   /** Skill directory name; matches the frontmatter `name`. */
@@ -36,29 +33,24 @@ interface BoxSkill {
 }
 
 /**
- * The skills cb installs into every box. The calendar skill is generated
- * per-box: its .ics example carries the box's configured timezone (falling
- * back to the server's zone when none is configured) with a correct VTIMEZONE
- * block, so the agent copies real values instead of adapting a sample zone.
+ * The skills cb installs into every box. Every managed skill is a static
+ * constant; per-box values the calendar skill needs (the box timezone, its
+ * VTIMEZONE block) are reached at author time via the `BOX_TZ` placeholder and
+ * `cb calendar vtimezone`, so nothing here is parameterized on the box.
  */
-async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
-  const timezone =
-    (await loadBoxTimezone(boxRoot)) ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const vtimezone = vtimezoneBlock(timezone).replaceAll("\r\n", "\n");
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
-  const tricksSkillContent = shape.shapeVersion === 1 ? TRICKS_SKILL : TRICKS_SKILL_V2;
+function buildBoxSkills(): BoxSkill[] {
   return [
     {
       name: "build-course",
       content: BUILD_COURSE_SKILL,
       files: [{ name: "figure-examples.md", content: FIGURE_EXAMPLES }],
     },
-    { name: "calendar", content: calendarSkill({ timezone, vtimezone }) },
+    { name: "calendar", content: CALENDAR_SKILL },
     { name: "drive", content: DRIVE_SKILL },
     { name: "email", content: EMAIL_SKILL },
     { name: "location", content: LOCATION_SKILL },
     { name: "schedules", content: SCHEDULES_SKILL },
-    { name: "tricks", content: tricksSkillContent },
+    { name: "tricks", content: TRICKS_SKILL },
     { name: "views", content: VIEWS_SKILL },
   ];
 }
@@ -73,9 +65,9 @@ async function buildBoxSkills(boxRoot: string): Promise<BoxSkill[]> {
  * untouched.
  */
 export async function generateSkills(boxRoot: string): Promise<string[]> {
-  const { packageRoot } = await getBoxShapeOrLegacyFallback(boxRoot);
+  const { packageRoot } = await getBoxShape(boxRoot);
   const written: string[] = [];
-  for (const skill of await buildBoxSkills(boxRoot)) {
+  for (const skill of buildBoxSkills()) {
     const dir = join(packageRoot, ".claude", "skills", skill.name);
     await mkdir(dir, { recursive: true });
     await writeFile(join(dir, "SKILL.md"), skill.content);

@@ -28,6 +28,11 @@ const NOW = new Date("2026-06-29T12:00:00Z");
 
 ```ts
 const box = await makeTmpBox({ git: true });
+// Isolate the (global, slug-keyed) push store per box: every v2 box's
+// content-root basename is the literal "content", so a shared store would
+// leak subscriptions between subtests. Real deployments get unique slugs
+// (basename of the package root) instead.
+process.env.CALLBACK_PUSH_STORE_DIR = path.join(box.packageRoot, "push-store");
 const slug = path.basename(box.root);
 await addSubscription({ boxSlug: slug, subscription: SUB, now: NOW });
 
@@ -61,6 +66,7 @@ await box.cleanup();
 
 ```ts
 const box = await makeTmpBox({ git: true });
+process.env.CALLBACK_PUSH_STORE_DIR = path.join(box.packageRoot, "push-store");
 const slug = path.basename(box.root);
 await addSubscription({ boxSlug: slug, subscription: GONE, now: NOW });
 

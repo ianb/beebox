@@ -7,7 +7,7 @@
 
 import * as path from "node:path";
 import { glob } from "glob";
-import { boxCodePaths, getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { boxCodePaths, getBoxShape } from "../lib/box-shape.js";
 
 const CARD_GLOB_IGNORE = ["node_modules/**", ".git/**", "tmp/**", ".callback-box/**"];
 
@@ -87,7 +87,7 @@ export async function listBoxMarkdownFiles(boxRoot: string): Promise<string[]> {
  * at `packageRoot/src/views/` (`boxCodePaths` resolves either).
  */
 export async function listBoxViewFiles(boxRoot: string): Promise<string[]> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   const viewsDir = boxCodePaths(shape).viewsDir;
   const files = await glob("*.tsx", {
     cwd: viewsDir,

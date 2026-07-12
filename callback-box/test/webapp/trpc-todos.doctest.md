@@ -28,7 +28,7 @@ function caller(boxRoot) {
 
 // Files touched by the newest commit (proves the commit's path scoping).
 async function committedFiles(boxRoot) {
-  const out = await simpleGit(boxRoot).raw(["show", "--name-only", "--format=", "HEAD"]);
+  const out = await simpleGit(boxRoot).raw(["show", "--name-only", "--relative", "--format=", "HEAD"]);
   return out.trim();
 }
 
@@ -98,9 +98,11 @@ await committedFiles(box.root)
 ```
 
 ```ts continue
-// The decoy is still an uncommitted, untracked working-tree file.
+// The decoy is still an uncommitted, untracked working-tree file. `status`
+// porcelain paths are always repo-root-relative (repo root = package root),
+// so it shows as `content/store/notes/decoy.md`.
 JSON.stringify((await simpleGit(box.root).status()).not_added)
-=> ["store/notes/decoy.md"]
+=> ["content/store/notes/decoy.md"]
 ```
 
 ```ts cleanup
