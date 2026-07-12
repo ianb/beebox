@@ -15,6 +15,7 @@ A second category catches the kind of code-health issues that pile up if nobody 
 | Agent SDK update | `pnpm update-agent-sdk` (monorepo root) | Automated (launchd, weekdays); manual anytime | Bumped `package.json` + lockfile |
 | Knowledge audits | `pnpm knowledge-audit` | After prompt/schema/CLAUDE.md changes; monthly otherwise | Status comments in `knowledge-audits.yaml` |
 | Prompt report | `pnpm prompt-report` | After prompt or schema-instruction changes | `docs/prompts.md` |
+| Prompt viewer | `pnpm prompt-viewer` | After prompt or schema-instruction changes | `dev/prompts/data.json` + size ledger (browse at `/<worktree>/dev/prompts/`) |
 | Doc graph | `pnpm doc-graph` | After restructuring docs | `docs/doc-graph.md` |
 | Dead-code sweep | `pnpm lint:knip` | Before releases; when code feels accumulated | Console |
 | Supplemental lint | `pnpm lint:oxlint` | Periodic | Console |
@@ -67,6 +68,12 @@ Walks the codebase collecting every prompt, instruction, and rule (system prompt
 **When to run:** after meaningful changes to prompt logic or schema instructions. Periodically to catch drift across the prompt surface.
 
 **Output:** `docs/prompts.md` (committed). Review the diff to see what changed.
+
+### Prompt viewer — `npm run prompt-viewer`
+
+The browsable counterpart to the prompt report. Collects the same static inventory (shared `src/dev/lib/prompt-inventory.ts`) plus the fully assembled chat / chat-thread / reactor contexts for a box, runs a simple duplication scan, and writes `dev/prompts/data.json` (gitignored) for the hand-written `dev/prompts/index.html` page. Every fragment gets a stable kebab-case name so a reviewer can cite prompts precisely. It also appends one line to the tracked `dev/prompts/size-ledger.jsonl` (skipped when the numbers are unchanged) to chart prompt size over time. Browse at `/<worktree>/dev/prompts/`.
+
+**When to run:** after prompt or schema-instruction changes; `--box <path>` targets a specific box, `--no-ledger` skips the ledger append (for one-off experiments against other boxes).
 
 ### Doc graph — `npm run doc-graph`
 
