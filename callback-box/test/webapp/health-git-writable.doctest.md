@@ -11,9 +11,12 @@ with no `.git` of its own (see "One git repository at the repo root" in
 ```ts setup
 import * as fs from "node:fs/promises";
 import { runHealthChecks } from "../../src/webapp/trpc/routers/health.js";
+import { createFakeClaudeCli } from "../../src/services/claude-cli.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 const gitWritableCheck = (checks) => checks.find((c) => c.name === "git-writable");
+// Inject a fake so the claude-auth check never shells out to real `claude`.
+const claudeCli = createFakeClaudeCli({ loggedIn: true });
 ```
 
 ## Legacy box: `.git/objects` lives at the box root itself
@@ -21,7 +24,7 @@ const gitWritableCheck = (checks) => checks.find((c) => c.name === "git-writable
 ```ts
 const box = await makeTmpBox();
 await fs.mkdir(box.path(".git/objects"), { recursive: true });
-const checks = await runHealthChecks(box.root);
+const checks = await runHealthChecks(box.root, { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":true,"message":".git/objects is writable","severity":"error"}
 ```
@@ -40,7 +43,7 @@ const box = await makeTmpBox();
 await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
 await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": "0.1.0" } }));
 await fs.mkdir(box.path("content/.git/objects"), { recursive: true });
-const checks = await runHealthChecks(box.path("content"));
+const checks = await runHealthChecks(box.path("content"), { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":false,"message":".git/objects is not writable — all commits will fail (run: chown -R callback:callback «*»)","severity":"error"}
 ```
@@ -56,7 +59,7 @@ const box = await makeTmpBox();
 await box.write("content/.cb-box", JSON.stringify({ shapeVersion: 2 }));
 await box.write("package.json", JSON.stringify({ name: "my-box", dependencies: { "callback-box": "0.1.0" } }));
 await fs.mkdir(box.path(".git/objects"), { recursive: true });
-const checks = await runHealthChecks(box.path("content"));
+const checks = await runHealthChecks(box.path("content"), { claudeCli });
 JSON.stringify(gitWritableCheck(checks))
 => {"name":"git-writable","ok":true,"message":".git/objects is writable","severity":"error"}
 ```
