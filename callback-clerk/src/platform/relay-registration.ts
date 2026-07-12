@@ -45,30 +45,52 @@ export async function syncRelayRegistration(config: ClerkConfig): Promise<void> 
   const matches = desiredMatches(config);
   const current = await currentRegistration();
 
+  // TEMP diagnostics (remove once relay injection is confirmed working): show
+  // the desired patterns, whether we already hold host permission for them, and
+  // the current registration — so a failing enable is diagnosable from the SW
+  // console without re-running with a debugger attached.
+  let hasPermission: boolean | string;
+  try {
+    hasPermission = matches.length === 0 ? true : await chrome.permissions.contains({ origins: matches });
+  } catch (e) {
+    hasPermission = `contains() threw: ${e instanceof Error ? e.message : String(e)}`;
+  }
+  console.info(
+    "[relay-reg] sync:",
+    JSON.stringify({ boxes: config.boxes.map((b) => b.boxUrl), matches, hasPermissionForMatches: hasPermission, alreadyRegistered: current !== undefined }),
+  );
+
   if (matches.length === 0) {
     if (current !== undefined) {
       await chrome.scripting.unregisterContentScripts({ ids: [RELAY_SCRIPT_ID] });
+      console.info("[relay-reg] unregistered (no enabled boxes)");
     }
     return;
   }
 
-  if (current === undefined) {
-    await chrome.scripting.registerContentScripts([
-      {
-        id: RELAY_SCRIPT_ID,
-        js: [RELAY_SCRIPT_JS],
-        matches,
-        runAt: "document_idle",
-        allFrames: false,
-        persistAcrossSessions: true,
-      },
-    ]);
-    return;
-  }
+  const script: chrome.scripting.RegisteredContentScript = {
+    id: RELAY_SCRIPT_ID,
+    js: [RELAY_SCRIPT_JS],
+    matches,
+    runAt: "document_idle",
+    allFrames: false,
+    persistAcrossSessions: true,
+  };
 
-  if (!sameMatches(current.matches, matches)) {
-    await chrome.scripting.updateContentScripts([
-      { id: RELAY_SCRIPT_ID, js: [RELAY_SCRIPT_JS], matches },
-    ]);
+  try {
+    if (current === undefined) {
+      await chrome.scripting.registerContentScripts([script]);
+      console.info("[relay-reg] registered", JSON.stringify(matches));
+    } else if (!sameMatches(current.matches, matches)) {
+      await chrome.scripting.updateContentScripts([{ id: RELAY_SCRIPT_ID, js: [RELAY_SCRIPT_JS], matches }]);
+      console.info("[relay-reg] updated", JSON.stringify(matches));
+    } else {
+      console.info("[relay-reg] already up to date");
+    }
+  } catch (e) {
+    // Surface loudly AND rethrow — the caller (enable-box) also logs. The most
+    // likely cause is a match pattern not covered by a granted host permission.
+    console.error("[relay-reg] registerContentScripts FAILED for", JSON.stringify(matches), e);
+    throw e;
   }
 }

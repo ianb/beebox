@@ -14,7 +14,7 @@
  * Under `components/`, so it may use semantic color classes directly.
  */
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "../ui/Button";
 import { Row } from "../ui/Row";
 import { Text } from "../ui/Text";
@@ -81,10 +81,23 @@ export function ScreenshotConsentPopup({ request, onResolved }: {
     };
   }, [decline]);
 
+  // Once Share is clicked we unmount the dialog IMMEDIATELY, before the capture
+  // grabs its frame — otherwise getDisplayMedia photographs this very dialog
+  // ("The agent wants to see this screen" ends up in the screenshot). Setting
+  // state here still keeps the click's user activation: `shareViaPopup`'s first
+  // statement calls getDisplayMedia synchronously, before React flushes this
+  // re-render, and the frame isn't grabbed until the picker resolves (seconds
+  // later, by which time this overlay is gone).
+  const [sharing, setSharing] = useState(false);
   const share = async (): Promise<void> => {
+    setSharing(true);
     const indicator = await shareViaPopup(request);
     resolve(indicator);
   };
+
+  // Dialog hidden while the capture is in flight (see `share`), so it never
+  // appears in the frame. The request stays active until `share` resolves.
+  if (sharing) return null;
 
   return (
     <div

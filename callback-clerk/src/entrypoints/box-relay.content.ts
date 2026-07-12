@@ -36,10 +36,16 @@ function readIdentityMeta(): string | null {
  */
 async function isEnabledBoxPage(): Promise<boolean> {
   const config = await loadConfig();
-  if (!config.boxes.some((box) => isUrlUnderBoxUrl(location.href, box.boxUrl))) return false;
+  const urlMatch = config.boxes.some((box) => isUrlUnderBoxUrl(location.href, box.boxUrl));
   const metaContent = readIdentityMeta();
-  if (metaContent === null) return false;
-  return parseBoxIdentity({ metaContent, tabUrl: location.href }) !== null;
+  const identityOk = metaContent !== null && parseBoxIdentity({ metaContent, tabUrl: location.href }) !== null;
+  // TEMP diagnostics (remove once relay is confirmed working): if the content
+  // script injected but stays silent, this shows which gate closed it.
+  console.info(
+    "[relay] isEnabledBoxPage:",
+    JSON.stringify({ href: location.href, enabledBoxes: config.boxes.map((b) => b.boxUrl), urlMatch, hasMeta: metaContent !== null, identityOk }),
+  );
+  return urlMatch && identityOk;
 }
 
 function postToPage(message: ReturnType<typeof relayReady>): void {
@@ -80,10 +86,12 @@ export default defineContentScript({
   registration: "runtime",
   matches: [],
   async main() {
+    console.info("[relay] content script injected on", location.href);
     if (!(await isEnabledBoxPage())) return;
     window.addEventListener("message", onMessage);
     // Announce for a page that loads AFTER us; a page that loaded BEFORE us
     // handshakes via relay-ping (handled above). Either ordering works.
+    console.info("[relay] active — announcing relay-ready");
     postToPage(relayReady());
   },
 });
