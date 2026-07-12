@@ -13,7 +13,7 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { getBoxShapeOrLegacyFallback } from "../../../lib/box-shape.js";
+import { getBoxShape } from "../../../lib/box-shape.js";
 import { getInstalledEngineVersion } from "../../../core/engine-version.js";
 import { loadBoxSchemas } from "../../../schemas/registry.js";
 import { listSchemaLoadFailures } from "../../../schemas/schema-load-status.js";
@@ -29,9 +29,9 @@ const MAX_FAILURES_SHOWN = 3;
  */
 export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]> {
   const checks: HealthCheck[] = [];
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
 
-  if (shape.shapeVersion >= 2) {
+  {
     const linkPath = path.join(shape.packageRoot, "node_modules", "callback-box");
     let target: string | null = null;
     try {

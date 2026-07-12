@@ -6,8 +6,34 @@ migration uses (`cb view check`) and the broken-view detector. `ok` is true only
 when every view renders.
 
 ```ts setup
+import { mkdir, writeFile, symlink } from "node:fs/promises";
+import { dirname, join } from "node:path";
+import { createRequire } from "node:module";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { checkViews } from "../../../src/cli/commands/view.js";
+import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
+
+const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
+
+// A v2 box renders views by resolving react/react-dom from its OWN
+// `node_modules` (writeNodeViewModule symlinks `packageRoot/node_modules`
+// into the render tmpdir). `makeTmpBox({ deps: true })` only symlinks
+// `callback-box`, so a real box's `react` dependency is simulated by
+// symlinking the engine's copy beside it — the same trick `cb view test`
+// uses for a legacy box (src/cli/commands/view.ts).
+async function makeViewBox() {
+  const box = await makeTmpBox({ deps: true });
+  const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
+  await symlink(join(reactNodeModules, "react"), join(box.packageRoot, "node_modules", "react"), "dir");
+  return box;
+}
+
+// Views live at the package root (`<packageRoot>/src/views`) for a v2 box.
+async function writeView(box, rel, content) {
+  const full = join(box.packageRoot, "src", "views", rel);
+  await mkdir(dirname(full), { recursive: true });
+  await writeFile(full, content);
+}
 
 const MEMO_CARD = `---
 status: new
@@ -41,9 +67,9 @@ export default function Broken({ cards }) {
 ## A mix of good and broken views fails, and names which
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/good.tsx", GOOD_VIEW);
-await box.write("views/broken.tsx", BROKEN_VIEW);
+const box = await makeViewBox();
+await writeView(box, "good.tsx", GOOD_VIEW);
+await writeView(box, "broken.tsx", BROKEN_VIEW);
 await box.write("box/inbox/Test.memo.card", MEMO_CARD);
 
 const result = await checkViews({ boxRoot: box.root, timeoutMs: 20000 });
@@ -67,8 +93,8 @@ await box.cleanup();
 ## A box with no broken views passes
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/good.tsx", GOOD_VIEW);
+const box = await makeViewBox();
+await writeView(box, "good.tsx", GOOD_VIEW);
 
 const result = await checkViews({ boxRoot: box.root, timeoutMs: 20000 });
 result.ok

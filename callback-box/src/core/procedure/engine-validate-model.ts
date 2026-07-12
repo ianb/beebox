@@ -50,7 +50,7 @@ export interface EvaluateInstructionsParams {
  * Build the judge's system prompt — the task framing, kept stable so the
  * verdict depends on the inputs, not the phrasing.
  */
-function buildJudgePrompt(params: {
+export function buildJudgePrompt(params: {
   instructions: string[];
   whys: string[];
   diff: string;

@@ -8,8 +8,9 @@ The comparison itself lives in `getEngineVersionReport`
 `test/core/engine-version.doctest.md` — this doctest only checks the field
 is wired into the route.
 
-A legacy (shapeVersion 1) test box — what `makeTestServer` scaffolds — has no
-separate installed engine, so it never contributes a mismatch:
+A test box with no separately-installed engine — what `makeTestServer`
+scaffolds (a v2 box without a `node_modules/callback-box`) — reports a null
+installed version, so it never contributes a mismatch:
 
 ```ts setup
 import { makeTestServer } from "../helpers/doctest-server.js";

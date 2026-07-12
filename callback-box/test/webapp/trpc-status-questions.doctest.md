@@ -17,9 +17,10 @@ function contextFor(box) {
   return statusRouter.createCaller(ctx);
 }
 
-// makeTmpBox writes an empty .cb-box; status.questions calls getSystemState,
-// which needs a real marker (getBoxMetadata parses it as JSON).
-const MARKER = JSON.stringify({ version: "1.0.0", created: "2026-01-01T00:00:00Z" });
+// makeTmpBox writes a shapeVersion-2 marker with no version/created;
+// status.questions calls getSystemState → getBoxMetadata, which parses those,
+// so seed a marker carrying both (keeping shapeVersion 2 for getBoxShape).
+const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: "2026-01-01T00:00:00Z" });
 
 const VALID = `---
 status: pending

@@ -122,7 +122,7 @@ cb prompt "What's the difference between a guide card and a procedure card?"
 cb prompt "How would you create a brand new card type for this box?"
 ```
 - **Expected level: Discoverable** — the agent guide doesn't directly describe box-local schemas, but the schemas dir's `CLAUDE.md` exists and is discoverable
-- Watch for: does the agent look at `src/schemas/` (or `config/schemas/` on a legacy box) and find the CLAUDE.md? Or does it say "you can't"?
+- Watch for: does the agent look at `src/schemas/` and find the CLAUDE.md? Or does it say "you can't"?
 
 ## 3. CLI Commands
 
@@ -237,7 +237,7 @@ cb prompt "How would I add a daily task?"
 ## Extending the Box: What CAN the Agent Do?
 
 ### Things the agent CAN do today (in-box):
-- **Create new card types/schemas** — write `.ts` files exporting a `cardSchema()` (a v2 box's schemas dir is `src/schemas/` at the package root; a legacy box's is `config/schemas/` — see the schemas guide installed by `cb init`)
+- **Create new card types/schemas** — write `.ts` files exporting a `cardSchema()` (the schemas dir is `src/schemas/` at the package root — see the schemas guide installed by `cb init`)
 - **Create new procedures** — write a procedure card to `config/procedures/`
 - **Modify guides** — edit `config/*.guide.card` to change per-domain processing rules (intake triage, feedback handling, calendar review)
 - **Modify landmark `<triage-destination>`** — edit a directory's landmark to change pipeline routing rules (the cross-cutting intake → triage → handle pipeline; see `docs/triage.md`)
@@ -251,11 +251,11 @@ cb prompt "How would I add a daily task?"
 
 ### Box-Local Schemas
 
-Agents can define new card types by creating `.ts` files that default-export a `cardSchema()` (frontmatter + markdown body — the same shape and API as built-in schemas, imported from `callback-box/cards`). A v2 box's schemas dir is `src/schemas/` at the package root; a legacy box's is `config/schemas/`.
+Agents can define new card types by creating `.ts` files that default-export a `cardSchema()` (frontmatter + markdown body — the same shape and API as built-in schemas, imported from `callback-box/cards`). The schemas dir is `src/schemas/` at the package root.
 
 After adding a schema, run `cb init` to regenerate rules and docs so the agent and `cb validate` recognize the new type.
 
-The schemas-guide `CLAUDE.md` (installed by `cb init` at `src/schemas/CLAUDE.md` for a v2 box, `config/schemas/CLAUDE.md` for a legacy box) teaches the agent how to create schemas.
+The schemas-guide `CLAUDE.md` (installed by `cb init` at `src/schemas/CLAUDE.md`) teaches the agent how to create schemas.
 
 ### Test Prompts for Extension:
 

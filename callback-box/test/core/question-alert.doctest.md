@@ -23,7 +23,7 @@ function question(prompt) {
   return `---\nstatus: pending\nprompt: ${prompt}\ninput:\n  type: text\n---\n`;
 }
 
-const MARKER = JSON.stringify({ version: "1.0.0", created: NOW.toISOString() });
+const MARKER = JSON.stringify({ shapeVersion: 2, version: "1.0.0", created: NOW.toISOString() });
 ```
 
 ## A newly-pending question notifies once, then latches

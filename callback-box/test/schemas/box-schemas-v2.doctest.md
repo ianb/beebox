@@ -174,19 +174,3 @@ describeLegacySchemaFiles(shape, legacyFiles).includes("src/schemas/")
 ```ts cleanup
 await fs.rm(root, { recursive: true, force: true, maxRetries: 5, retryDelay: 50 });
 ```
-
-A v1 (legacy) box's `config/schemas/` is the *correct* location, so the
-same check never flags it there:
-
-```ts
-const { makeTmpBox } = await import("../helpers/doctest-helpers.js");
-const legacyBox = await makeTmpBox();
-await writeSchema(legacyBox.root, "config/schemas/widget.ts", V2_WIDGET_SCHEMA);
-const legacyShape = await getBoxShape(legacyBox.root);
-(await findLegacySchemaFiles(legacyShape)).length
-=> 0
-```
-
-```ts cleanup
-await legacyBox.cleanup();
-```

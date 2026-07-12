@@ -16,7 +16,8 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
 import { execSync } from "node:child_process";
-import { runUpgrade, UpgradeStepFailedError, LegacyBoxUpgradeError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
+import { runUpgrade, UpgradeStepFailedError, DirtyWorkingTreeError } from "../../../src/cli/commands/upgrade.js";
+import { BoxShapeError } from "../../../src/lib/box-shape.js";
 import { getStatus, getHead, getLog } from "../../../src/lib/git.js";
 
 const OLD_VERSION = "0.1.0";
@@ -257,14 +258,14 @@ thrown instanceof DirtyWorkingTreeError
 await fs.rm(packageRoot, { recursive: true, force: true });
 ```
 
-## A legacy (shapeVersion 1) box refuses with a clear error
+## A box that predates the v2 package layout refuses with a clear error
 
 ```ts
 const legacyRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-upgrade-legacy-"));
 await fs.writeFile(path.join(legacyRoot, ".cb-box"), "");
 execSync("git init -q && git add -A && git commit -q -m init --allow-empty", { cwd: legacyRoot });
 const thrown = await tryUpgrade(legacyRoot, makeFakeRunner({ packageRoot: legacyRoot, calls: [] }), legacyRoot);
-thrown instanceof LegacyBoxUpgradeError
+thrown instanceof BoxShapeError
 => true
 ```
 

@@ -64,7 +64,7 @@ report.includes("add trip card")
 report.includes("Uncommitted working tree")
 => true
 
-report.includes("Untracked: store/Notes.memo.card")
+report.includes("Untracked: content/store/Notes.memo.card")
 => true
 ```
 

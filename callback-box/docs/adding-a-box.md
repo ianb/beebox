@@ -87,8 +87,7 @@ services (Telegram, etc.) can reach them.
 
 ## 4. Connector secrets
 
-Per-box secrets go in the box's own `content/config/connectors/` (or
-`config/connectors/` for a legacy-shape box):
+Per-box secrets go in the box's own `content/config/connectors/`:
 
 ```bash
 echo '{"botToken":"...","webhookSecret":"..."}' > config/connectors/telegram.secret.json

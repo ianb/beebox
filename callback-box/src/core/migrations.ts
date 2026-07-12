@@ -92,11 +92,11 @@ export const MIGRATIONS: ReadonlyArray<Migration> = [
   // Strip file-metadata timestamps (created-at/updated-at/added-at) from guide +
   // personality cards — git is the record; they were also a template-churn source.
   { name: "strip-entry-timestamps", script: "scripts/migrate/strip-entry-timestamps.ts" },
-  // Convert a legacy (shapeVersion 1) box in place into the v2 package
-  // layout (Track H, docs/implemented-plans/boxes-as-packages-v2.md). Unlike every
-  // migration above, this one commits its own change (see the module doc
-  // comment in the script) — a half-converted box is unsafe, not just
-  // incomplete.
+  // RETIRED tombstone. Once converted a legacy (shapeVersion 1) box in place
+  // into the v2 package layout (Track H, docs/implemented-plans/boxes-as-packages-v2.md).
+  // All boxes are v2 and the v1 shape is gone, so the converter is now an
+  // idempotent v2-assert no-op — but the name stays registered (append-only
+  // manifest, never remove an entry). See the script's module doc comment.
   { name: "box-packageify", script: "scripts/migrate/box-packageify.ts" },
   // Question-card lifecycle cleanup for the Track A schema change
   // (docs/implemented-plans/questions-end-to-end.md): strip answered-by,

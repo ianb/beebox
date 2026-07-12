@@ -11,14 +11,14 @@ Both writes are idempotent and merge-aware. The settings file preserves unrelate
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import * as os from "node:os";
 import { installValidationHooks } from "../../src/core/install-validation-hooks.js";
+import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
+// A real v2 box with git initialized at the package root, so pre-commit can
+// be written. `box.root` is the operational content root; `box.packageRoot`
+// (its parent) holds `.claude/` and `.git/`.
 async function makeBox() {
-  const box = await fs.mkdtemp(path.join(os.tmpdir(), "cb-hooks-"));
-  // Pretend it's a git repo so pre-commit can be written.
-  await fs.mkdir(path.join(box, ".git/hooks"), { recursive: true });
-  return box;
+  return makeTmpBox({ git: true });
 }
 ```
 
@@ -26,14 +26,14 @@ async function makeBox() {
 
 ```ts
 const box = await makeBox();
-const changed = await installValidationHooks(box);
+const changed = await installValidationHooks(box.root);
 changed.sort()
 => [
   ".claude/rules/cb-validate-ignore.md",
   ".claude/settings.json",
   ".git/hooks/post-commit",
   ".git/hooks/pre-commit",
-  "config/cb-validate.ignore"
+  "content/config/cb-validate.ignore"
 ]
 ```
 
@@ -41,7 +41,7 @@ The settings file has a single PostToolUse entry with the cb path embedded:
 
 ```ts continue
 const settings = JSON.parse(
-  await fs.readFile(path.join(box, ".claude/settings.json"), "utf-8")
+  await fs.readFile(path.join(box.packageRoot, ".claude/settings.json"), "utf-8")
 );
 settings.hooks.PostToolUse.length
 => 1
@@ -56,7 +56,7 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 The pre-commit hook is executable and includes the manager marker:
 
 ```ts continue
-const hookPath = path.join(box, ".git/hooks/pre-commit");
+const hookPath = path.join(box.packageRoot, ".git/hooks/pre-commit");
 const hookBody = await fs.readFile(hookPath, "utf-8");
 hookBody.includes("# callback-box validation hook (managed)")
 => true
@@ -70,8 +70,8 @@ const stat = await fs.stat(hookPath);
 
 ```ts
 const box = await makeBox();
-await installValidationHooks(box);
-const second = await installValidationHooks(box);
+await installValidationHooks(box.root);
+const second = await installValidationHooks(box.root);
 second
 => []
 ```
@@ -82,19 +82,19 @@ Existing user settings under unrelated top-level keys are preserved verbatim:
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, ".claude"), { recursive: true });
+await fs.mkdir(path.join(box.packageRoot, ".claude"), { recursive: true });
 await fs.writeFile(
-  path.join(box, ".claude/settings.json"),
+  path.join(box.packageRoot, ".claude/settings.json"),
   JSON.stringify({
     permissions: { allow: ["Bash(npm test)"] },
     model: "claude-sonnet-4-6",
   }, null, 2)
 );
 
-await installValidationHooks(box);
+await installValidationHooks(box.root);
 
 const settings = JSON.parse(
-  await fs.readFile(path.join(box, ".claude/settings.json"), "utf-8")
+  await fs.readFile(path.join(box.packageRoot, ".claude/settings.json"), "utf-8")
 );
 JSON.stringify(settings.permissions)
 => {"allow":["Bash(npm test)"]}
@@ -116,9 +116,9 @@ A user-installed PostToolUse hook for a different matcher (or different command)
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, ".claude"), { recursive: true });
+await fs.mkdir(path.join(box.packageRoot, ".claude"), { recursive: true });
 await fs.writeFile(
-  path.join(box, ".claude/settings.json"),
+  path.join(box.packageRoot, ".claude/settings.json"),
   JSON.stringify({
     hooks: {
       PostToolUse: [
@@ -128,10 +128,10 @@ await fs.writeFile(
   }, null, 2)
 );
 
-await installValidationHooks(box);
+await installValidationHooks(box.root);
 
 const settings = JSON.parse(
-  await fs.readFile(path.join(box, ".claude/settings.json"), "utf-8")
+  await fs.readFile(path.join(box.packageRoot, ".claude/settings.json"), "utf-8")
 );
 settings.hooks.PostToolUse.length
 => 2
@@ -151,9 +151,9 @@ If the existing settings file references a stale cb path (the old `validate "$f"
 
 ```ts
 const box = await makeBox();
-await fs.mkdir(path.join(box, ".claude"), { recursive: true });
+await fs.mkdir(path.join(box.packageRoot, ".claude"), { recursive: true });
 await fs.writeFile(
-  path.join(box, ".claude/settings.json"),
+  path.join(box.packageRoot, ".claude/settings.json"),
   JSON.stringify({
     hooks: {
       PostToolUse: [
@@ -166,10 +166,10 @@ await fs.writeFile(
   }, null, 2)
 );
 
-await installValidationHooks(box);
+await installValidationHooks(box.root);
 
 const settings = JSON.parse(
-  await fs.readFile(path.join(box, ".claude/settings.json"), "utf-8")
+  await fs.readFile(path.join(box.packageRoot, ".claude/settings.json"), "utf-8")
 );
 settings.hooks.PostToolUse.length
 => 1
@@ -183,20 +183,20 @@ settings.hooks.PostToolUse[0].hooks[0].command.endsWith(" validate --hook")
 If `.git/` doesn't exist (e.g. a `--skip-git` box, or a non-box directory), only the settings file gets written; the pre-commit step is skipped instead of bootstrapping a stray `.git/hooks/` directory:
 
 ```ts
-const box = await fs.mkdtemp(path.join(os.tmpdir(), "cb-hooks-no-git-"));
-const changed = await installValidationHooks(box);
+const box = await makeTmpBox();
+const changed = await installValidationHooks(box.root);
 changed.sort()
 => [
   ".claude/rules/cb-validate-ignore.md",
   ".claude/settings.json",
-  "config/cb-validate.ignore"
+  "content/config/cb-validate.ignore"
 ]
 ```
 
 No phantom `.git/` directory was created:
 
 ```ts continue
-await fs.access(path.join(box, ".git")).then(() => true).catch(() => false)
+await fs.access(path.join(box.packageRoot, ".git")).then(() => true).catch(() => false)
 => false
 ```
 
@@ -206,13 +206,13 @@ A pre-commit hook that doesn't carry our marker is the user's own and stays put:
 
 ```ts
 const box = await makeBox();
-const hookPath = path.join(box, ".git/hooks/pre-commit");
+const hookPath = path.join(box.packageRoot, ".git/hooks/pre-commit");
 await fs.writeFile(hookPath, "#!/bin/sh\necho user hook\n");
 await fs.chmod(hookPath, 0o755);
 
 const origConsoleWarn = console.warn;
 console.warn = () => {};
-const changed = await installValidationHooks(box);
+const changed = await installValidationHooks(box.root);
 console.warn = origConsoleWarn;
 
 changed.includes(".git/hooks/pre-commit")
@@ -234,12 +234,12 @@ non-blocking `--urls-since HEAD~1` command, and it's executable:
 
 ```ts
 const box = await makeBox();
-await installValidationHooks(box);
-const body = await fs.readFile(path.join(box, ".git/hooks/post-commit"), "utf-8");
+await installValidationHooks(box.root);
+const body = await fs.readFile(path.join(box.packageRoot, ".git/hooks/post-commit"), "utf-8");
 [
   body.includes("# >>> callback-box url-check (managed) >>>"),
   body.includes("validate --urls --urls-since HEAD~1"),
-  (await fs.stat(path.join(box, ".git/hooks/post-commit"))).mode & 0o111 ? true : false,
+  (await fs.stat(path.join(box.packageRoot, ".git/hooks/post-commit"))).mode & 0o111 ? true : false,
 ]
 => [
   true,
@@ -256,11 +256,11 @@ nothing changes:
 
 ```ts
 const box = await makeBox();
-const postPath = path.join(box, ".git/hooks/post-commit");
+const postPath = path.join(box.packageRoot, ".git/hooks/post-commit");
 const lfs = "#!/bin/sh\ngit lfs post-commit \"$@\"\n";
 await fs.writeFile(postPath, lfs);
 
-await installValidationHooks(box);
+await installValidationHooks(box.root);
 const merged = await fs.readFile(postPath, "utf-8");
 [merged.startsWith(lfs), merged.includes("callback-box url-check (managed)")]
 => [
@@ -270,7 +270,7 @@ const merged = await fs.readFile(postPath, "utf-8");
 ```
 
 ```ts continue
-const again = await installValidationHooks(box);
+const again = await installValidationHooks(box.root);
 [again.includes(".git/hooks/post-commit"), (await fs.readFile(postPath, "utf-8")) === merged]
 => [
   false,
@@ -289,18 +289,18 @@ silencing errors:
 
 ```ts
 const box = await makeBox();
-await installValidationHooks(box);
+await installValidationHooks(box.root);
 
-const seed = await fs.readFile(path.join(box, "config/cb-validate.ignore"), "utf-8");
+const seed = await fs.readFile(path.join(box.root, "config/cb-validate.ignore"), "utf-8");
 // Every non-blank line is a comment — nothing is actively ignored out of the box.
 seed.split("\n").filter((l) => l.trim() !== "").every((l) => l.trimStart().startsWith("#"))
 => true
 ```
 
 ```ts continue
-const rule = await fs.readFile(path.join(box, ".claude/rules/cb-validate-ignore.md"), "utf-8");
+const rule = await fs.readFile(path.join(box.packageRoot, ".claude/rules/cb-validate-ignore.md"), "utf-8");
 [
-  rule.includes(`- "config/cb-validate.ignore"`),  // path-conditional scope
+  rule.includes(`- "content/config/cb-validate.ignore"`),  // path-conditional scope
   rule.includes("operator-owned") || rule.includes("boxholder"),
   rule.includes("Never add an entry here to silence"),
 ]
@@ -316,14 +316,14 @@ only when the file is absent, so a second install (or a deploy-sync) leaves a
 customized file untouched:
 
 ```ts continue
-await fs.writeFile(path.join(box, "config/cb-validate.ignore"), "vendor/**\n");
-const again = await installValidationHooks(box);
+await fs.writeFile(path.join(box.root, "config/cb-validate.ignore"), "vendor/**\n");
+const again = await installValidationHooks(box.root);
 again.includes("config/cb-validate.ignore")
 => false
 ```
 
 ```ts continue
-(await fs.readFile(path.join(box, "config/cb-validate.ignore"), "utf-8")).trim()
+(await fs.readFile(path.join(box.root, "config/cb-validate.ignore"), "utf-8")).trim()
 => vendor/**
 ```
 

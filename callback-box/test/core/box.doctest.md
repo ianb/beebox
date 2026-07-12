@@ -1,12 +1,18 @@
 # Box Initialization
 
-`initBox` creates the directory structure for a callback box. `isValidBox` checks if a directory is a properly initialized box. `findBoxRoot` walks up from a subdirectory to find the box root.
+`scaffoldV2Box` creates a shapeVersion-2 box: a package root (`package.json`,
+`tsconfig.json`, `src/`) with the operational box nested at `content/`.
+`initBox` creates the operational directory structure inside that content
+root. `isValidBox` checks if a directory is a properly initialized box.
+`findBoxRoot` walks up (and one level down, for a package root) to find the
+box root.
 
 ```ts setup
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as os from "node:os";
-import { initBox, isValidBox, getBoxMetadata } from "../../src/core/box/index.js";
+import { isValidBox, getBoxMetadata, initBox } from "../../src/core/box/index.js";
+import { scaffoldV2Box } from "../../src/core/box/package.js";
 import { findBoxRoot, BOX_MARKER } from "../../src/lib/paths.js";
 
 async function makeTmpDir() {
@@ -33,15 +39,14 @@ async function listDirs(root) {
 
 ## Directory structure
 
-`initBox` creates the full directory tree:
+A fresh v2 box's operational tree lives under `content/`. `.claude/` is not
+here — it lives at the package root — but the operational directories are:
 
 ```ts
 const tmp = await makeTmpDir();
-await initBox(tmp, { skipGit: true });
-await listDirs(tmp)
+const { boxRoot } = await scaffoldV2Box(tmp);
+await listDirs(boxRoot)
 =>
-.claude
-.claude/rules
 box
 box/inbox
 box/inbox/intake
@@ -77,21 +82,23 @@ store/usage
 tricks
 tricks/lib
 tricks/scripts
-views
 ```
 
 The box marker file contains version metadata:
 
 ```ts continue
-const marker = JSON.parse(await fs.readFile(path.join(tmp, BOX_MARKER), "utf-8"));
+const marker = JSON.parse(await fs.readFile(path.join(boxRoot, BOX_MARKER), "utf-8"));
 marker.version
 => 1.0.0
+
+marker.shapeVersion
+=> 2
 ```
 
 A properly initialized directory is recognized as a valid box:
 
 ```ts continue
-await isValidBox(tmp)
+await isValidBox(boxRoot)
 => true
 ```
 
@@ -107,44 +114,40 @@ await isValidBox(empty)
 
 ## Finding the box root
 
-`findBoxRoot` walks up from any subdirectory to find the nearest box root:
+`findBoxRoot` walks up from any subdirectory to find the nearest box root
+(the `content/` operational root):
 
 ```ts
-const box = await makeTmpDir();
-await initBox(box, { skipGit: true });
-const found = await findBoxRoot(path.join(box, "box", "inbox"));
-found === box
+const tmp = await makeTmpDir();
+const { boxRoot } = await scaffoldV2Box(tmp);
+const found = await findBoxRoot(path.join(boxRoot, "box", "inbox"));
+found === boxRoot
 => true
 ```
 
 ## Finding a v2 box from its PACKAGE root
 
-A v2 box's operational root moves to `<packageRoot>/content/` (marker at
+A v2 box's operational root is `<packageRoot>/content/` (marker at
 `content/.cb-box`, not at the package root itself). `findBoxRoot` also
 checks one level down: a directory with no `.cb-box` of its own, but a
 `content/.cb-box` AND a `package.json` declaring a `callback-box`
 dependency, resolves to `content/`.
 
 ```ts
-const packageRoot = await makeTmpDir();
-const v2Box = path.join(packageRoot, "content");
-await initBox(v2Box, { skipGit: true });
-await fs.writeFile(
-  path.join(packageRoot, "package.json"),
-  JSON.stringify({ name: "my-box", dependencies: { "callback-box": "^1.0.0" } })
-);
+const tmp = await makeTmpDir();
+const { packageRoot, boxRoot } = await scaffoldV2Box(tmp);
 
 const fromPackageRoot = await findBoxRoot(packageRoot);
-fromPackageRoot === v2Box
+fromPackageRoot === boxRoot
 => true
 ```
 
 Running from inside `content/` itself, or a subdirectory of it, still resolves the same way (the `.cb-box` marker there is found first, before the downward check is even considered):
 
 ```ts continue
-const fromContentRoot = await findBoxRoot(v2Box);
-const fromContentSubdir = await findBoxRoot(path.join(v2Box, "box", "inbox"));
-fromContentRoot === v2Box && fromContentSubdir === v2Box
+const fromContentRoot = await findBoxRoot(boxRoot);
+const fromContentSubdir = await findBoxRoot(path.join(boxRoot, "box", "inbox"));
+fromContentRoot === boxRoot && fromContentSubdir === boxRoot
 => true
 ```
 
@@ -161,7 +164,8 @@ A directory with a `content/.cb-box` but NO `package.json` declaring `callback-b
 ```ts continue
 const lookalikeRoot = await makeTmpDir();
 const lookalikeContent = path.join(lookalikeRoot, "content");
-await initBox(lookalikeContent, { skipGit: true });
+await fs.mkdir(lookalikeContent, { recursive: true });
+await fs.writeFile(path.join(lookalikeContent, ".cb-box"), JSON.stringify({ shapeVersion: 2 }));
 await findBoxRoot(lookalikeRoot)
 => null
 ```
@@ -171,19 +175,19 @@ await findBoxRoot(lookalikeRoot)
 `getBoxMetadata` reads the marker file. Running `initBox` again preserves the original created timestamp:
 
 ```ts
-const box2 = await makeTmpDir();
-await initBox(box2, { skipGit: true });
-const meta1 = await getBoxMetadata(box2);
+const tmp = await makeTmpDir();
+const { boxRoot } = await scaffoldV2Box(tmp);
+const meta1 = await getBoxMetadata(boxRoot);
 meta1.version
 => 1.0.0
 ```
 
 ```ts continue
-await initBox(box2, { skipGit: true });
-const meta2 = await getBoxMetadata(box2);
+await initBox(boxRoot, { skipGit: true });
+const meta2 = await getBoxMetadata(boxRoot);
 meta2.created === meta1.created
 => true
 
-await isValidBox(box2)
+await isValidBox(boxRoot)
 => true
 ```

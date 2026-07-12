@@ -2901,6 +2901,21 @@ test1:
       peak: 43875
       added: 0
       turns: 2
+  calendar-vtimezone-authoring:
+    - date: 2026-07-11T22:36:45.303Z
+      boxCommit: cef2c9d7cc8ff63ffabf277eb6eec5a745f43e15
+      repoCommit: 5868052d86062f2b97e5925cd8d774333c72ef20
+      initial: 38338
+      peak: 42343
+      added: 4005
+      turns: 12
+    - date: 2026-07-11T22:39:14.680Z
+      boxCommit: cef2c9d7cc8ff63ffabf277eb6eec5a745f43e15
+      repoCommit: 5868052d86062f2b97e5925cd8d774333c72ef20
+      initial: 38376
+      peak: 42536
+      added: 4160
+      turns: 12
 content:
   search-query-phrasing:
     - date: 2026-07-11T02:31:07.204Z

@@ -50,3 +50,7 @@ ios-app/build/
 # tracked, to preserve the convention. See scratch/README.md.
 scratch/*
 !scratch/README.md
+
+# Prompt viewer generated data (regenerate with `pnpm prompt-viewer` in
+# callback-box). The size ledger (size-ledger.jsonl) and index.html are tracked.
+dev/prompts/data.json

@@ -64,7 +64,7 @@ export interface ScenarioResult {
   passed: boolean;
 }
 
-const VALIDATION_SYSTEM_PROMPT = `You are a test validator. You will be given a description of what to check and the current state of a box (a file-based workspace).
+export const VALIDATION_SYSTEM_PROMPT = `You are a test validator. You will be given a description of what to check and the current state of a box (a file-based workspace).
 
 Examine the box contents and determine whether the described condition is met.
 
