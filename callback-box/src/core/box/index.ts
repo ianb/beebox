@@ -27,17 +27,6 @@ export interface InitOptions {
   skipGit?: boolean | undefined;
   /** Initial branch name */
   branch?: string | undefined;
-  /**
-   * The `.cb-box` marker's `shapeVersion` to write on a fresh init. Defaults
-   * to 2 (the package layout: `boxRoot` is a `content/` dir nested inside a
-   * package). A fresh v2 init requires the package half to already exist
-   * (a parent `package.json` declaring `callback-box`) — `initBox` validates
-   * the shape right after writing the marker — so direct callers should go
-   * through `scaffoldV2Box` (`./package.js`), which lays down that package
-   * half first. Legacy-shape tests that deliberately build a flat v1 box (the
-   * box-packageify converter fixtures) pass `1` explicitly.
-   */
-  shapeVersion?: number | undefined;
 }
 
 export interface InitResult {
@@ -66,18 +55,25 @@ export async function initBox(boxRoot: string, options?: InitOptions): Promise<I
   const isUpdate = await isValidBox(resolvedRoot);
 
   if (!isUpdate) {
-    // Create marker file with metadata. Defaults to shapeVersion 2 (the
-    // package layout) — fresh boxes are always v2 now, scaffolded via
-    // `scaffoldV2Box` (`./package.js`), which lays down the package half this
-    // marker's shape depends on. The one caller that still wants a flat v1
-    // box (the box-packageify converter fixtures) passes shapeVersion 1.
+    // Create the marker. Every box is shapeVersion 2 (the package layout): the
+    // box root is a `content/` dir nested inside a package. A fresh v2 init
+    // requires the package half to already exist (a parent `package.json`
+    // declaring `callback-box`), so direct callers go through `scaffoldV2Box`
+    // (`./package.js`), which lays that down first.
     const marker = {
       version: "1.0.0",
-      shapeVersion: options.shapeVersion ?? 2,
+      shapeVersion: 2,
       created: getBoxTimeISO(resolvedRoot),
     };
     await fs.writeFile(markerPath, JSON.stringify(marker, null, 2) + "\n");
   }
+
+  // Fail fast: validate the box is a well-formed v2 package (marker + parent
+  // package.json declaring callback-box) BEFORE creating directories, the
+  // migration manifest, config, or `.gitignore`. A missing/invalid package
+  // half or a stale pre-v2 marker throws here, before any of those mutations
+  // land — so a bad init can't leave a half-written box behind.
+  await getBoxShape(resolvedRoot);
 
   // Create all standard directories (safe to re-run). `.claude`/`.claude/rules`
   // (BOX_DIRS) are never created under the box root: a box's `.claude/` lives at

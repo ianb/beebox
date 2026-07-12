@@ -4,8 +4,7 @@
 layout (see "The box repository" in `docs/implemented-plans/boxes-as-packages-v2.md`):
 the target path becomes the PACKAGE root (`package.json`, `tsconfig.json`, a
 thin root `CLAUDE.md`, `.claude/`, `src/`), and the operational box lives at
-`<target>/content/`. `cb init` on an EXISTING legacy box stays legacy —
-conversion to v2 is a later migration (Track H), not init's job.
+`<target>/content/`. v2 is the only box shape.
 
 This mirrors what `src/cli/commands/init.ts`'s action does, without going
 through Commander — same style as `test/cli/lib/init.doctest.md`'s `fullInit`

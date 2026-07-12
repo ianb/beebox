@@ -282,7 +282,7 @@ export async function scaffoldV2Box(
   const packageRoot = path.resolve(target);
   await scaffoldPackageRoot(packageRoot, { symlinkCallbackBox: options?.deps ?? false });
   const boxRoot = path.join(packageRoot, "content");
-  await initBox(boxRoot, { skipGit: true, shapeVersion: 2 });
+  await initBox(boxRoot, { skipGit: true });
   return { packageRoot, boxRoot };
 }
 

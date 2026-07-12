@@ -56,7 +56,7 @@ async function makeV2Fixture() {
   const target = await fs.mkdtemp(path.join(os.tmpdir(), "cb-hub-e2e-"));
   const { boxRoot, packageRoot } = await detectBoxTarget(target);
   await scaffoldPackageRoot(packageRoot);
-  await initBox(boxRoot, { skipGit: true, branch: "main", shapeVersion: 2 });
+  await initBox(boxRoot, { skipGit: true, branch: "main" });
   await installProcedures(boxRoot);
   await installGuides(boxRoot);
   await installSchedules(boxRoot);

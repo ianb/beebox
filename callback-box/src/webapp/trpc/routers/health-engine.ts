@@ -31,7 +31,7 @@ export async function engineHealthChecks(boxRoot: string): Promise<HealthCheck[]
   const checks: HealthCheck[] = [];
   const shape = await getBoxShape(boxRoot);
 
-  if (shape.shapeVersion >= 2) {
+  {
     const linkPath = path.join(shape.packageRoot, "node_modules", "callback-box");
     let target: string | null = null;
     try {
