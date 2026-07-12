@@ -2,7 +2,9 @@
 
 Setting up callback-box from a fresh clone, for hacking on the codebase
 itself. This is the from-source path — no personal infrastructure, no
-prior box.
+prior box. To *run* callback-box without hacking on it (locally or on a
+server), the Docker path is simpler: see
+[docker-install.md](docker-install.md).
 
 ## Prerequisites
 

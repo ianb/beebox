@@ -115,8 +115,7 @@ sequencing, several citation corrections).
   (`callback-box/package.json` `"cb": "./bin/cb"`). **Decided (C2):** add
   a thin root convenience script, `"cb": "pnpm --dir callback-box cb"` —
   verified with `pnpm cb --help` from the repo root. The doc's canonical
-  sequence still uses `cd callback-box && pnpm cb …`, or
-  Track C adds a root convenience script.
+  sequence still uses `cd callback-box && pnpm cb …`.
 - **Secret-file conventions.** `*.secret.json` gitignore convention
   (`docs/box-layout.md:194`), Telegram validate-then-persist
   (`src/webapp/trpc/routers/admin.ts:60-78`). Reused as-is; this plan adds
