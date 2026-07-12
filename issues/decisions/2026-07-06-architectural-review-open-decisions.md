@@ -100,7 +100,9 @@ buried. None blocks the merge.
    *enforce*) or a frontend-local `no-restricted-imports` rule (a preset
    change needing sign-off; actually enforces). P3-d deferred this.
 
-6. **Barrels.** Plan leaned "adopt for dirs with 3+ files"; P3-d deferred,
+6. **Barrels. Decided (boxholder, 2026-07-12): NO barrels — codified in
+   `callback-box/code-style.md` ("it's just indirection").**
+   Original framing: Plan leaned "adopt for dirs with 3+ files"; P3-d deferred,
    judging the discoverability win already delivered by the directory
    grouping and not worth the export-visibility/cycle risk a barrel adds.
    Reversibly addable later. Decide: add barrels, or codify "no barrels."
