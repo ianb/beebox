@@ -6,10 +6,18 @@
 
 import type { FastifyInstance } from "fastify";
 import type { Services } from "../services/index.js";
+import type { EventBus } from "../core/event-bus.js";
 
 export interface BoxSpec {
   slug: string;
   boxRoot: string;
+  /**
+   * Pre-built event bus to use for this box. Production leaves this undefined
+   * (the server creates one per box); tests inject a bus they also hold a
+   * reference to, so they can subscribe to the SAME in-memory instance and
+   * observe transient events (e.g. `screenshot-request`) the server emits.
+   */
+  eventBus?: EventBus | undefined;
 }
 
 export interface ServerOptions {

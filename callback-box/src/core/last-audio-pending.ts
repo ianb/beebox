@@ -3,16 +3,20 @@
  * (`cb chat get-last-audio` → POST /api/chat/last-audio/request) and the
  * browser tab(s) answering it.
  *
- * Lifecycle of one request: `create()` parks a promise under a request id;
- * the route broadcasts that id to connected chat tabs; each tab answers with
- * either its cached recording (`fulfill`) or "I have nothing" (`reportNone`).
- * The first audio answer wins. A "none" answer doesn't settle immediately —
- * another tab may still hold the recording — it starts a short grace window
- * and only resolves `none` when no audio arrives within it. If nothing
- * answers at all, the request times out (`timeout` = no client connected).
+ * This is a thin specialization of the generic
+ * {@link createPendingBrowserRequests} primitive: last-audio never uses the
+ * ack phase, so its outcomes are only `audio` (a `fulfill`), `none` (a
+ * `reportNone` that outlasts the grace window), and `timeout` (nothing
+ * answered — the route maps this to "no client connected"). The generic
+ * `fulfilled` status is renamed `audio` here so existing callers and the
+ * doctest keep their `status === "audio"` / `result.fulfillment.audio` shape.
  */
 
-import { randomUUID } from "node:crypto";
+import {
+  createPendingBrowserRequests,
+  type PendingOutcome,
+} from "./pending-browser-request.js";
+import { invariant } from "../lib/invariant.js";
 
 export interface LastAudioFulfillment {
   audio: Buffer;
@@ -28,15 +32,13 @@ export type LastAudioOutcome =
   | { status: "none" }
   | { status: "timeout" };
 
-interface PendingEntry {
-  resolve: (outcome: LastAudioOutcome) => void;
-  timeoutTimer: NodeJS.Timeout;
-  graceTimer: NodeJS.Timeout | null;
-}
-
 export interface LastAudioPending {
-  /** Park a new request; `outcome` resolves on answer or timeout. */
-  create(opts: { timeoutMs: number; requestId?: string | undefined }): {
+  /**
+   * Park a new request; `outcome` resolves on answer or timeout. The id is
+   * generated internally and returned — never caller-supplied (see
+   * {@link createPendingBrowserRequests}).
+   */
+  create(opts: { timeoutMs: number }): {
     requestId: string;
     outcome: Promise<LastAudioOutcome>;
   };
@@ -56,49 +58,39 @@ interface CreateLastAudioPendingOptions {
   graceMs?: number;
 }
 
-const DEFAULT_GRACE_MS = 2000;
+/** Map the generic outcome onto last-audio's `audio`/`none`/`timeout` shape. */
+function toLastAudioOutcome(outcome: PendingOutcome<LastAudioFulfillment>): LastAudioOutcome {
+  switch (outcome.status) {
+    case "fulfilled":
+      return { status: "audio", fulfillment: outcome.fulfillment };
+    case "none":
+      return { status: "none" };
+    case "timeout":
+      return { status: "timeout" };
+    case "no-client":
+      // last-audio never passes `ackGraceMs`, so there is no ack phase and
+      // this branch is unreachable.
+      invariant(false, "last-audio has no ack phase; no-client is impossible");
+  }
+}
 
 export function createLastAudioPending(options?: CreateLastAudioPendingOptions): LastAudioPending {
-  const graceMs = options?.graceMs ?? DEFAULT_GRACE_MS;
-  const pending = new Map<string, PendingEntry>();
-
-  function settle(requestId: string, outcome: LastAudioOutcome): boolean {
-    const entry = pending.get(requestId);
-    if (entry === undefined) return false;
-    pending.delete(requestId);
-    clearTimeout(entry.timeoutTimer);
-    if (entry.graceTimer !== null) clearTimeout(entry.graceTimer);
-    entry.resolve(outcome);
-    return true;
-  }
-
+  const inner = createPendingBrowserRequests<LastAudioFulfillment>(
+    options?.graceMs === undefined ? undefined : { graceMs: options.graceMs }
+  );
   return {
-    create({ timeoutMs, requestId }) {
-      const id = requestId ?? randomUUID();
-      let resolve!: (outcome: LastAudioOutcome) => void;
-      const outcome = new Promise<LastAudioOutcome>((r) => {
-        resolve = r;
-      });
-      const timeoutTimer = setTimeout(() => settle(id, { status: "timeout" }), timeoutMs);
-      pending.set(id, { resolve, timeoutTimer, graceTimer: null });
-      return { requestId: id, outcome };
+    create({ timeoutMs }) {
+      const { requestId: id, outcome } = inner.create({ timeoutMs });
+      return { requestId: id, outcome: outcome.then(toLastAudioOutcome) };
     },
     fulfill(requestId, fulfillment) {
-      return settle(requestId, { status: "audio", fulfillment });
+      return inner.fulfill(requestId, fulfillment);
     },
     reportNone(requestId) {
-      const entry = pending.get(requestId);
-      if (entry === undefined) return false;
-      if (entry.graceTimer === null) {
-        // A client did answer, so the full no-client timeout no longer
-        // applies — the grace window is the only clock from here.
-        clearTimeout(entry.timeoutTimer);
-        entry.graceTimer = setTimeout(() => settle(requestId, { status: "none" }), graceMs);
-      }
-      return true;
+      return inner.reportNone(requestId);
     },
     size() {
-      return pending.size;
+      return inner.size();
     },
   };
 }

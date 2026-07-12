@@ -62,6 +62,66 @@ the eslint config is `vibeCheck({ react: true })` with **no overrides**; fix
 code, never weaken rules (see monorepo CLAUDE.md). Monorepo root owns git
 hooks; this package has no husky setup.
 
+## Box relay (Track C — silent captureVisibleTab)
+
+An enabled box's frontend can ask for a real screenshot (no picker) via a
+page↔extension relay. Wiring:
+
+- `src/entrypoints/box-relay.content.ts` — dynamically-registered content
+  script (`registration: "runtime"`, injected via
+  `chrome.scripting.registerContentScripts`, NOT in the manifest). It holds no
+  authority: it verifies the page is an enabled box page, announces
+  `relay-ready`, answers a `relay-ping`, and forwards `capture-request` to the
+  background.
+- `src/platform/relay-registration.ts` — `syncRelayRegistration(config)`
+  registers/updates/unregisters the script with match patterns derived from
+  each enabled box's full boxUrl. Called on enable, disable, and background
+  startup (drift reconciliation); `persistAcrossSessions: true`.
+- `src/domain/relay-auth.ts` — `boxUrlToMatchPatterns` /`isUrlUnderBoxUrl` /
+  `captureErrorReason` (pure, unit-tested).
+- `src/domain/relay-messages.ts` — the postMessage + runtime message shapes and
+  guards (pure, unit-tested).
+- `background.ts` `handleRelayCapture(sender)` — the real gate. Uses `sender`
+  only to identify the tab id, then **re-queries the live tab**
+  (`chrome.tabs.get`) and authorizes on its CURRENT url (under an enabled boxUrl,
+  full origin incl. port) — never the send-time `sender.tab.url` snapshot, which
+  a same-document navigation can move off the box (TOCTOU). Before AND after
+  `captureVisibleTab` it re-checks that the tab is still active and still under
+  the SAME box; quota→`busy`. Stateless across messages (MV3 workers die
+  unpredictably).
+
+**Match-pattern semantics (important):** Chrome match patterns cannot express a
+port — a pattern's host is portless and matches ALL ports. On the dev router
+many boxes share `localhost:3210` and are distinguished only by path, so the
+content script is path-scoped (`http://localhost/main/test1/*`) and the
+background's port-aware `isUrlUnderBoxUrl` prefix check is the real
+authorization boundary. See the module comments.
+
+**Manual verification (no MV3 test harness exists — the chrome.* paths are
+verified by hand):**
+
+1. `pnpm build`, then load `dist/chrome-mv3/` unpacked at `chrome://extensions`
+   (or run a headed `BROWSE_CLERK=1 bin/browse` session).
+2. Open a worktree box page (e.g.
+   `http://localhost:3210/<worktree>/test1/`) and enable it from the popup
+   (grants the per-origin host permission).
+3. At `chrome://extensions` → the clerk's service worker → confirm a registered
+   content script (`chrome.scripting.getRegisteredContentScripts()` in the
+   worker console shows `callback-clerk-box-relay` with the box's match
+   patterns).
+4. In the box page's devtools console, probe the relay:
+   ```js
+   addEventListener("message", (e) => e.data?.source === "callback-clerk-relay" && console.log("relay:", e.data));
+   postMessage({ source: "callback-box-app", type: "relay-ping" }, location.origin);      // → relay-ready
+   postMessage({ source: "callback-box-app", type: "capture-request", correlationId: "1" }, location.origin); // → capture-response {ok:true,dataUrl}
+   ```
+5. Switch to another tab immediately after sending a capture-request → expect
+   `{ ok: false, reason: "not-capturable" }`. Fire >2 requests/sec → expect
+   `{ ok: false, reason: "busy" }`. Try the same postMessage on a non-box page
+   (relay not injected there) → no `relay-ready`, no response.
+6. Disable the box → the registration disappears (`getRegisteredContentScripts`
+   empty).
+
 ## Auth model (for Tracks B/C)
 
 No credentials are stored in the extension. The user's browser session with

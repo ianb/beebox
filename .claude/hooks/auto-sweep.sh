@@ -7,9 +7,13 @@
 # checkout, so session-end.sh logs `skip:not-a-worktree-session` and never
 # cleans; see worktree-cleanup.log). A triggered sweep removes merged + clean +
 # inactive worktrees regardless of how their session ended. Called from:
-#   - .husky/post-merge   → a merge landed on main, so a just-finished worktree
-#                           is now merged and eligible.
-#   - SessionStart hook   → catch-all for tab-close / orphaned-session cases.
+#   - SessionStart hook   → the sweep trigger. Catches /finish-in-main-context,
+#                           tab-close, and orphaned-session cases at the next
+#                           session start.
+# NOT wired to .husky/post-merge: sweep's `git worktree prune` is not
+# concurrency-safe against the deploy that post-merge also launches (it
+# corrupts the deploy's .deploy-checkout). Re-adding needs a shared worktree
+# lock first.
 #
 # Safe to auto-run: `bin/worktrees sweep` removes a worktree only when it is
 # fully merged into main, clean (no non-deletion dirt), AND has no active

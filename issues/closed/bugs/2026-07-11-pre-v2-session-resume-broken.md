@@ -3,7 +3,14 @@ title: "Pre-v2-migration chat sessions are unresumable on prod (project-dir hash
 area: callback-box
 filed-by: agent
 discovered-in: worktree-memory-use — live-testing chat-schedule firing under the lazy hub
+resolution: wontfix
 ---
+
+Closed 2026-07-11: the delivery-loss half (tension 2) was fixed the same day —
+schedule fires now fall back to a fresh session (`f54f44d2`,
+`routes/chat-schedule-fire.ts`), so nothing is silently lost. The data-repair
+half (migrating pre-v2 project dirs so old sessions resume) the boxholder
+explicitly doesn't care about; old sessions stay unresumable.
 
 Resuming any chat session created before a box's v2 `content/` migration fails
 immediately: the SDK returns `error_during_execution` with `num_turns=0

@@ -156,20 +156,26 @@ await ctx.cleanup();
 
 ## Route: full loop — long-poll answered by a multipart upload
 
-The caller-supplied `requestId` stands in for the bus broadcast (the test
-has no browser subscribed to the event stream). The long-poll is started,
-the "browser" answers with audio + metadata fields, and the long-poll
-response carries the bytes and the metadata headers.
+The "browser" learns the server-minted request id from the transient
+`chat-last-audio-request` bus event (the same instance the route emits on —
+no id is caller-supplied). The long-poll is started, the "browser" answers with
+audio + metadata fields, and the long-poll response carries the bytes and the
+metadata headers.
 
 ```ts
 const ctx = await makeTestServer();
+const gotId = new Promise((resolve) => {
+  ctx.eventBus.subscribe({ listener: (e) => {
+    if (e.event === "chat-last-audio-request") resolve(e.data.requestId);
+  }});
+});
 const longPoll = ctx.rawRequest({
   method: "POST",
   url: "/api/chat/last-audio/request",
-  payload: { timeoutMs: 5000, requestId: "test-req-1" },
+  payload: { timeoutMs: 5000 },
 });
-// Let the long-poll register its pending entry before answering.
-await new Promise((resolve) => setTimeout(resolve, 50));
+// The id is emitted synchronously as the request parks.
+const requestId = await gotId;
 const boundary = "----cbtestboundary";
 const upload = [
   `--${boundary}`,
@@ -190,7 +196,7 @@ const upload = [
 ].join("\r\n");
 const answer = await ctx.request({
   method: "POST",
-  url: "/api/chat/last-audio/test-req-1",
+  url: `/api/chat/last-audio/${requestId}`,
   payload: upload,
   headers: { "content-type": `multipart/form-data; boundary=${boundary}` },
 });

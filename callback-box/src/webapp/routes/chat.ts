@@ -43,6 +43,7 @@ import { setChatRuntime, clearChatRuntime } from "../chat-runtime.js";
 import { registerChatSendRoutes, loadProcessedMessageIds } from "./chat-send-routes.js";
 import { registerChatAudioRoutes } from "./chat-audio-routes.js";
 import { registerChatLastAudioRoutes } from "./chat-last-audio-routes.js";
+import { registerChatScreenshotRoutes } from "./chat-screenshot-routes.js";
 
 interface RegisterChatRoutesOptions {
   server: FastifyInstance;
@@ -187,6 +188,7 @@ export async function registerChatRoutes(
   registerChatSendRoutes(ctx);
   registerChatAudioRoutes(ctx);
   registerChatLastAudioRoutes(ctx);
+  registerChatScreenshotRoutes(ctx);
 
   // Surface session-id assignments as SSE events so a tab waiting on a
   // pending "new" send can pick up the real id and update its URL.

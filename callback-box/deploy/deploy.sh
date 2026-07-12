@@ -5,17 +5,25 @@ set -euo pipefail
 #
 # The old mechanism rsynced the invoking working tree directly, so a dirty tree
 # (or a mid-deploy edit) could ship source that matched no commit and lie in
-# deploy-info.json. This version builds from a persistent, detached `git
-# worktree` (the "build checkout") that we reset to the target ref before
-# building, and rsyncs FROM that checkout. The user's active working tree is
-# never touched, cleaned, or rebuilt by a deploy.
+# deploy-info.json. This version builds from a persistent "build checkout" that
+# we reset to the target ref before building, and rsyncs FROM that checkout. The
+# user's active working tree is never touched, cleaned, or rebuilt by a deploy.
+#
+# The build checkout is a standalone local `git clone --shared`, NOT a git
+# worktree. A worktree shares the main repo's `.git/worktrees/` bookkeeping,
+# which concurrent worktree ops (sessions spinning up, cleanup hooks, sweep,
+# Claude Code's own `git worktree remove`) kept corrupting mid-creation, failing
+# the deploy — see the Build-checkout lifecycle section below and
+# issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
 #
 # Mechanism:
 #   * `--ref <ref>` (default: HEAD of the invoking repo) is resolved to a full
 #     SHA immediately, so a commit landed mid-deploy can't produce a mixed ship.
 #   * The build checkout lives at <main-repo-root>/.deploy-checkout and is SHARED
 #     across every worktree of this repo (keyed to the shared git common dir), so
-#     concurrent worktrees reuse one checkout + one warm node_modules.
+#     concurrent deploys reuse one clone + one warm node_modules. `--shared`
+#     points its object store at the main repo, so a just-committed sha needs no
+#     fetch and no object copy.
 #   * Per deploy we `checkout --detach <sha>` + `git clean -fdx` (preserving only
 #     node_modules and the meta file) so a stale gitignored dist/ from a previous
 #     ref can never ship — that clean is the whole point: it kills the "commit-X
@@ -138,24 +146,18 @@ REQUESTED_FILE="$MAIN_ROOT/.deploy-requested"
 # (the exact failure that bit server-ip) leaves the old absolute gitdir dangling,
 # so this catches it and we recreate from scratch below.
 checkout_belongs_to_repo() {
-  local gitfile="$CHECKOUT/.git"
-  [ -f "$gitfile" ] || return 1
-  local line
-  read -r line < "$gitfile" || return 1
-  case "$line" in
-    "gitdir: "*) ;;
-    *) return 1 ;;
-  esac
-  local gitdir="${line#gitdir: }"
-  # Canonicalize both sides; if the recorded gitdir no longer exists (repo
-  # moved), the cd fails and we report mismatch.
-  local resolved_gitdir resolved_common
-  resolved_gitdir="$(cd "$gitdir" 2>/dev/null && pwd -P)" || return 1
-  resolved_common="$(cd "$GIT_COMMON_DIR" 2>/dev/null && pwd -P)" || return 1
-  case "$resolved_gitdir" in
-    "$resolved_common"/worktrees/*) return 0 ;;
-    *) return 1 ;;
-  esac
+  # $CHECKOUT is a standalone local clone (its own `.git` DIR), not a worktree.
+  # It belongs to this repo iff its shared object store (alternates) points at
+  # the current main repo's objects. A mismatch (repo moved, or a leftover
+  # worktree-form `.git` gitlink from the old design) triggers a wipe + reclone.
+  [ -d "$CHECKOUT/.git" ] || return 1
+  local alt="$CHECKOUT/.git/objects/info/alternates"
+  [ -f "$alt" ] || return 1
+  local line resolved_alt resolved_want
+  read -r line < "$alt" || return 1
+  resolved_alt="$(cd "$line" 2>/dev/null && pwd -P)" || return 1
+  resolved_want="$(cd "$GIT_COMMON_DIR/objects" 2>/dev/null && pwd -P)" || return 1
+  [ "$resolved_alt" = "$resolved_want" ]
 }
 
 # --- Locking: latest-wins ---------------------------------------------------
@@ -194,91 +196,35 @@ fi
 
 echo "Deploying ref '$RAW_REF' ($SHA) from build checkout $CHECKOUT"
 
-# --- Build-checkout lifecycle ----------------------------------------------
-# The checkout is a disposable cache; recreating it is always safe.
-# CHECKOUT_FRESH tracks whether recreate_checkout ran below, so the clean step
-# further down can skip itself — a worktree just carved by `worktree add` has
-# nothing to clean.
+# --- Build-checkout lifecycle (persistent local --shared clone) -------------
+# `.deploy-checkout` is a SEPARATE local clone, NOT a git worktree — deliberately.
+# A worktree shares the main repo's `.git/worktrees/` bookkeeping, which every
+# concurrent worktree op mutates: worktree sessions spinning up, cleanup hooks,
+# `bin/worktrees sweep`, AND Claude Code's own `git worktree remove` on session
+# exit. Those repeatedly corrupted the worktree mid-creation and failed the prod
+# deploy (ENOTDIR on `.git/index`). A clone has its OWN `.git` dir and is immune
+# to all of it — no serialization/backoff/lock needed. `--shared` points its
+# object store at the main repo via alternates, so a just-committed $SHA is
+# visible with no fetch and no object copy; node_modules persists across deploys
+# (gitignored; untouched by checkout/clean).
+# See issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
 CHECKOUT_FRESH=false
-
-# Retry a git-worktree op that transiently ENOTDIRs when a CONCURRENT
-# `git worktree add` (a worktree session spinning up) races git's shared
-# `.git/index` / `index.lock` — the actual cause of the deploy-checkout deaths
-# (`fatal: .git/index: ... Not a directory`, `Unable to create
-# .../index.lock: Not a directory`). It clears once the other op finishes; the
-# contended window can span ~10s when several worktree-creates overlap, so back
-# off up to ~60s before giving up. See
-# issues/bugs/2026-07-10-deploy-checkout-transient-index-lock.md.
-run_with_backoff() {
-  local label="$1"; shift
-  local delay
-  for delay in 0 2 4 8 16 30; do
-    if [ "$delay" != 0 ]; then
-      echo "deploy: $label failed (concurrent git op?) — settling ${delay}s and retrying..." >&2
-      sleep "$delay"
-    fi
-    if "$@"; then return 0; fi
-  done
-  return 1
-}
-
-# One recreate attempt: wipe the dir, drop ANY worktree metadata still pointing
-# at this checkout (a corrupt one survives `worktree prune` and defeats
-# `worktree add`), prune, then add. Wrapped in run_with_backoff by
-# recreate_checkout so the concurrent-git race is ridden out too.
-recreate_checkout_once() {
+if [ ! -d "$CHECKOUT/.git" ] || ! checkout_belongs_to_repo; then
+  echo "Creating build clone at $CHECKOUT (shared object store)..."
   rm -rf "$CHECKOUT"
-  local wt gd
-  if [ -d "$GIT_COMMON_DIR/worktrees" ]; then
-    for wt in "$GIT_COMMON_DIR"/worktrees/*/; do
-      [ -f "$wt/gitdir" ] || continue
-      gd="$(cat "$wt/gitdir" 2>/dev/null || true)"
-      case "$gd" in "$CHECKOUT/.git"*) rm -rf "$wt" ;; esac
-    done
-  fi
-  git -C "$MONO_DIR" worktree prune 2>/dev/null || true
-  git -C "$MONO_DIR" worktree add --detach "$CHECKOUT" "$SHA" || return 1
+  git clone --shared --quiet --no-checkout "$MAIN_ROOT" "$CHECKOUT"
   CHECKOUT_FRESH=true
-}
-recreate_checkout() {
-  if run_with_backoff "recreate build checkout" recreate_checkout_once; then return 0; fi
-  echo "deploy: FATAL — could not create build checkout $CHECKOUT after ~60s of retries." >&2
-  echo "  Not a transient; git worktree state may be genuinely broken. Inspect with:" >&2
-  echo "    git -C $MONO_DIR worktree list  &&  ls -la $GIT_COMMON_DIR/worktrees/" >&2
-  return 1
-}
-
-if [ ! -d "$CHECKOUT" ]; then
-  recreate_checkout
-elif ! checkout_belongs_to_repo; then
-  echo "deploy: build checkout $CHECKOUT does not belong to this repo (repo moved/renamed?)." >&2
-  echo "  Wiping and recreating it — it's a disposable build cache, so this is safe." >&2
-  recreate_checkout
 fi
 
-# Reset the checkout to the target sha. (Redundant right after a fresh
-# `worktree add`, which already checked out $SHA, but harmless and keeps the
-# path uniform for the reuse case.) Retried with backoff BEFORE falling back to
-# recreate — a recreate wipes node_modules and forces a slow full reinstall, so
-# riding out the transient in-place is much cheaper.
-if ! run_with_backoff "checkout --detach $SHA" git -C "$CHECKOUT" checkout --detach "$SHA"; then
-  echo "deploy: checkout --detach $SHA unrecoverable in place — recreating the build checkout." >&2
-  recreate_checkout
-fi
+# Point the clone at $SHA. Objects are shared with the main repo, so a
+# just-committed sha resolves with no fetch.
+git -C "$CHECKOUT" checkout --detach --quiet "$SHA"
 
-# Clean EVERYTHING ignored/untracked except node_modules and the meta file. This
-# is the clean-artifact boundary: a stale gitignored dist/ (callback-box/dist,
-# src/frontend/dist) from a previous ref must never ship. node_modules is
-# preserved so the pnpm install below stays a fast reconcile (Vite's cache lives
-# inside node_modules, so it survives too); the meta file records the
-# last-installed sha and must outlive the clean. Same backoff-then-recreate
-# handling as the checkout above; skipped entirely when the checkout was just
-# (re)created fresh, since a brand-new worktree has nothing to clean.
+# Clean stale ignored/untracked (notably a previous ref's `dist/`, which must
+# never ship) except node_modules and the meta file. Skipped on a fresh clone —
+# nothing stale yet, and node_modules doesn't exist until the install below.
 if [[ "$CHECKOUT_FRESH" != true ]]; then
-  if ! run_with_backoff "git clean" git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .; then
-    echo "deploy: git clean unrecoverable in place — recreating the build checkout." >&2
-    recreate_checkout
-  fi
+  git -C "$CHECKOUT" clean -fdx -e node_modules -e .deploy-last-sha .
 fi
 
 # --- Clean-reinstall trigger ------------------------------------------------

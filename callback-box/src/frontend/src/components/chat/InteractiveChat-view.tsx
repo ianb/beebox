@@ -19,6 +19,8 @@ import { TargetStrip } from "./TargetStrip";
 import { chatTargetStatus } from "../../input/targets/chat-target";
 import { DebugLogPanel } from "../DebugLog";
 import { BackgroundTasks } from "./BackgroundTasks";
+import { ScreenshotRequestUI } from "./ScreenshotRequestUI";
+import type { ScreenshotRequestController } from "./screenshot-request-handler";
 import type { LiveTask } from "./background-tasks";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import type { MessageGroup } from "./ChatMessages";
@@ -96,6 +98,8 @@ interface ChatBodyProps {
    * a capture can't misdirect into another chat (X1).
    */
   captureDisabledReason?: string | undefined;
+  /** Agent-initiated screenshot requests: FIFO consent popup + ephemeral indicator rows. */
+  screenshots: ScreenshotRequestController;
 }
 
 function HeaderRegion(props: ChatBodyProps) {
@@ -184,7 +188,7 @@ function ComposerRegion(props: ChatBodyProps) {
     captureDisabledReason,
   } = props;
   const { transcription, isTranscribing, voicePaused, stopDictation, clearDraft, handleCancelTranscription, startVoice, unpauseVoice } = voice;
-  const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange } = attach;
+  const { fileInputRef, removeAttachment, removeFileAttachment, handleAttachFiles, handleFileInputChange, addImageFiles } = attach;
   // Subscribed here, not at the InteractiveChat root — a paste/upload must
   // only re-render this composer region, not the companion view pane
   // (see InteractiveChat-attachments.ts module doc).
@@ -230,6 +234,7 @@ function ComposerRegion(props: ChatBodyProps) {
           onPaste={handlePaste}
           onDrop={handleDrop}
           onAttachFiles={handleAttachFiles}
+          addImageFiles={addImageFiles}
           onEnterCapture={onEnterCapture}
           captureEnabled={captureEnabled}
           captureDisabledReason={captureDisabledReason}
@@ -308,6 +313,7 @@ export function InteractiveChatBody(props: ChatBodyProps) {
       statusBanners={
         <>
           <BackgroundTasks tasks={props.backgroundTasks} />
+          <ScreenshotRequestUI controller={props.screenshots} />
           <ChatStatusBanners
             error={error}
             transcriptionError={voice.transcription.error}

@@ -240,11 +240,13 @@ Return a report whose language matches the truth. Be straight about: **scope**
 from "not really verified" — merging on green tests is fine, claiming more isn't).
 
 Do NOT run the worktree cleanup — it happens automatically now that the branch
-is merged + clean. Two backstops handle it: the `.husky/post-merge` sweep fires
-the moment your merge lands on main (removing the worktree even though the
-finishing session presents as a main session, which defeats `SessionEnd`), and
+is merged + clean. Two backstops handle it: the `SessionStart` sweep
+(`.claude/hooks/auto-sweep.sh`, `bin/worktrees sweep`) removes the merged+clean
+worktree the next time any session starts — this covers the case where a
+/finish presents as a main session, which defeats `SessionEnd` — and
 `SessionEnd` (`.claude/hooks/session-end.sh`) cleans up on a clean worktree exit.
-You may mention cleanup is coming.
+(Not post-merge: that raced the concurrent deploy's git-worktree ops.) You may
+mention cleanup is coming.
 
 ## Return contract
 

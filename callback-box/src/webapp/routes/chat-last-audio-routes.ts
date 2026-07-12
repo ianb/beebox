@@ -33,8 +33,6 @@ const MAX_TEXT_HEADER_CHARS = 1500;
 interface LastAudioRequestBody {
   /** How long to wait for a browser answer. Clamped to [100, 30000]. */
   timeoutMs?: number;
-  /** Caller-chosen request id — for tests and debugging correlation. */
-  requestId?: string;
 }
 
 interface LastAudioAnswerBody {
@@ -62,10 +60,7 @@ export function registerChatLastAudioRoutes(ctx: ChatRoutesContext): void {
       const body = request.body ?? {};
       const requestedTimeout = typeof body.timeoutMs === "number" ? body.timeoutMs : DEFAULT_TIMEOUT_MS;
       const timeoutMs = Math.min(Math.max(requestedTimeout, MIN_TIMEOUT_MS), MAX_TIMEOUT_MS);
-      const requestIdOverride = typeof body.requestId === "string" && body.requestId.length > 0 && body.requestId.length <= 80
-        ? body.requestId
-        : undefined;
-      const { requestId, outcome } = pendingRequests.create({ timeoutMs, requestId: requestIdOverride });
+      const { requestId, outcome } = pendingRequests.create({ timeoutMs });
       eventBus.emitTransient("chat-last-audio-request", { requestId });
 
       const result = await outcome;
