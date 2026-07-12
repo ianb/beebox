@@ -1,0 +1,67 @@
+# callback-box — one box, one compose project.
+#
+# Local:  docker compose run --rm box cb init /data/box   # once
+#         docker compose run --rm box claude auth login    # once (or use
+#                                                           # CLAUDE_CODE_OAUTH_TOKEN)
+#         docker compose up -d
+#         open http://localhost:3210/box/
+#
+# VPS:    same, plus `docker compose --profile public up -d` for Caddy + TLS.
+#
+# See docs/docker-install.md for the full local + VPS walkthrough.
+
+services:
+  box:
+    build:
+      # Context is the monorepo root — the release tarball is built from the
+      # whole workspace. Relative to this compose file, that is two levels up.
+      context: ../..
+      dockerfile: callback-box/docker/Dockerfile
+    restart: unless-stopped
+    # Loopback-only by default: the box is reachable from the host but NOT
+    # from the network. Publishing wider (a VPS's public interface) is an
+    # explicit operator choice — do it via the Caddy profile below, not by
+    # widening this mapping.
+    ports:
+      - "127.0.0.1:3210:3210"
+    volumes:
+      # The box package — a git repo the operator owns. Survives everything.
+      - ./data/box:/data/box
+      # Claude `auth login` credentials (CLAUDE_CONFIG_DIR in the image points
+      # here). A NAMED volume so it survives `docker compose down` and container
+      # rebuilds; `down -v` destroys it (re-login needed).
+      - claude-auth:/app/claude-config
+    # Optional: provider keys (see the parent .env.example) and, as the
+    # headless-auth fallback, CLAUDE_CODE_OAUTH_TOKEN from a laptop-side
+    # `claude setup-token`. Absent .env is fine.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Overrides the image's baked git identity for the box's commits.
+      CB_GIT_NAME: ${CB_GIT_NAME:-Callback Box}
+      CB_GIT_EMAIL: ${CB_GIT_EMAIL:-callback-box@box.example.com}
+
+  # Public HTTPS front door — only started with `--profile public`. Absent
+  # from a plain `docker compose up`. Terminates TLS (auto-cert from Let's
+  # Encrypt) for $CB_DOMAIN and proxies to the box.
+  caddy:
+    image: caddy:2
+    profiles: ["public"]
+    restart: unless-stopped
+    depends_on:
+      - box
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      CB_DOMAIN: ${CB_DOMAIN:?set CB_DOMAIN to your domain in .env before using the public profile}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  claude-auth:
+  caddy-data:
+  caddy-config:
