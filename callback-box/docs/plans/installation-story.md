@@ -98,17 +98,24 @@ sequencing, several citation corrections).
   container lifecycle must do, not as a claim that building an image tests
   it (it doesn't; Track D adds its own lifecycle test).
 - **`cb serve --dev` is backend-only.** `serve.ts:123` execs
-  `node --watch` over the backend; `docs/stack-decisions.md` ("Done. Three
-  entry points…") pairs it with a `Procfile.dev` (Overmind: backend + vite
-  together) for a full dev loop. A clean clone has **no built frontend** —
-  `dist` frontend output comes from `build:frontend`/`release.ts`. The
-  quickstart therefore builds the frontend once and uses plain `serve`;
-  the contributor dev-loop story is settled by the Track C spike, with
-  `Procfile.dev` as the existing candidate.
-- **`cb` is not reachable from the monorepo root.** Root `package.json` has
+  `node --watch` over the backend; `docs/stack-decisions.md` used to pair
+  it with a `Procfile.dev` (Overmind: backend + vite together), but
+  Decision 24 deleted `Procfile.dev`/Overmind — it is no longer a
+  candidate. A clean clone has **no built frontend** — `dist` frontend
+  output comes from `build:frontend`/`release.ts`. The quickstart
+  therefore builds the frontend once and uses plain `serve`. The
+  contributor dev-loop (Track C spike, verified): two terminals, no
+  Overmind — terminal 1 `cd callback-box && pnpm cb serve --dev --port
+  3211 ~/boxes/dev1` (backend watch); terminal 2 `cd
+  callback-box/src/frontend && FRONTEND_PORT=3210 BACKEND_PORT=3211 pnpm
+  dev` (Vite + HMR, proxies `/api` and `/auth` to the backend). Documented
+  in `docs/developer-install.md`.
+- **`cb` is not reachable from the monorepo root.** Root `package.json` had
   no `cb` script; the binary belongs to the `callback-box` package
-  (`callback-box/package.json` `"cb": "./bin/cb"`). The quickstart must say
-  `cd callback-box && pnpm cb …` (or `pnpm --dir callback-box cb …`), or
+  (`callback-box/package.json` `"cb": "./bin/cb"`). **Decided (C2):** add
+  a thin root convenience script, `"cb": "pnpm --dir callback-box cb"` —
+  verified with `pnpm cb --help` from the repo root. The doc's canonical
+  sequence still uses `cd callback-box && pnpm cb …`, or
   Track C adds a root convenience script.
 - **Secret-file conventions.** `*.secret.json` gitignore convention
   (`docs/box-layout.md:194`), Telegram validate-then-persist
@@ -268,37 +275,47 @@ in A's pin, B's doctor checks, C's verified sequence).
   `ANTHROPIC_API_KEY` as required (the code deletes it:
   `src/cli/bootstrap.ts:31`, `src/core/script-env.ts:106`).
 - **Direction.**
-  - **Doc**: `docs/developer-install.md` (linked from the root README's
-    orientation, which release-plan Track E owns). Content: prerequisites
-    (Node 24 via version manager; pnpm via corepack; `brew install pandoc
-    imagemagick poppler git-lfs` / apt equivalents; `git lfs install`;
-    Claude Code CLI + `claude auth login`), then the exact sequence:
+  - **Doc**: `docs/developer-install.md` — written and linked from the
+    root README's Layout section (C2; superseded the plan-time note that
+    release-plan Track E owns the link — the small pointer landed here
+    instead). Content: prerequisites (Node 22, matching Track A's decided
+    pin — not 24, the plan's original draft was stale before Track A even
+    settled; pnpm via corepack; `brew install pandoc imagemagick poppler
+    git-lfs` / apt equivalents; `git lfs install`; Claude Code CLI +
+    `claude auth login`), then the exact sequence (verified on this
+    worktree, C1 spike):
 
     ```
     git clone … && cd <repo>
     pnpm install
-    pnpm doctor
+    pnpm run doctor
     pnpm --dir callback-box build:frontend
     cd callback-box
     pnpm cb init ~/boxes/dev1
     (cd ~/boxes/dev1 && pnpm install)      # v2 boxes are packages
-    pnpm cb serve ~/boxes/dev1/content
+    pnpm cb serve ~/boxes/dev1
     ```
 
-    with "run `pnpm doctor` whenever anything misbehaves." States the auth
-    model plainly: subscription login is the supported path;
-    `ANTHROPIC_API_KEY` is ignored by design. (Exact commands are the
-    spike's to confirm — e.g. whether `cb serve ~/boxes/dev1` discovers
-    `content/` or needs it explicit.)
-  - **Spike: the contributor dev loop.** `--dev` watches the backend only
-    (`serve.ts:123`); the existing full loop is `Procfile.dev` + Overmind
-    (`docs/stack-decisions.md`). The spike runs both on a clean clone and
-    decides what the doc documents for people hacking on callback-box
-    itself (as opposed to running it); Overmind is a heavy prerequisite to
-    impose, so the likely outcome is: quickstart = built-frontend + plain
-    `serve`; a short "working on the frontend" subsection = two terminals
-    (vite + `serve --dev`) or Procfile. Whatever ships is exercised first
-    (run-the-verification-you-author).
+    with "run `pnpm run doctor` whenever anything misbehaves" (note the
+    `run` — `pnpm doctor` alone is shadowed by pnpm's own builtin `doctor`
+    subcommand). States the auth model plainly: subscription login is the
+    supported path; `ANTHROPIC_API_KEY` is ignored by design. **Resolved
+    by the spike**: `cb serve ~/boxes/dev1` (the package root, no
+    `/content` suffix) — `cb serve <package-root>` resolves down to
+    `content/` on its own (a fix landed alongside the spike, commit
+    `0d2fbfb8`); `cb init` also now defaults the box's `callback-box` dep
+    to `link:<checkout>` from a source checkout with no env var needed.
+  - **Contributor dev loop — resolved.** `--dev` watches the backend only
+    (`serve.ts:123`). `Procfile.dev` + Overmind, the previous full-loop
+    candidate (`docs/stack-decisions.md`), is gone — deleted by Decision
+    24, so it is off the table, not a choice to make. The verified
+    two-terminal recipe (no extra process supervisor): terminal 1 `cd
+    callback-box && pnpm cb serve --dev --port 3211 ~/boxes/dev1`
+    (backend watch); terminal 2 `cd callback-box/src/frontend &&
+    FRONTEND_PORT=3210 BACKEND_PORT=3211 pnpm dev` (Vite + HMR, proxies
+    `/api` and `/auth`). Quickstart stays built-frontend + plain `serve`;
+    this is the "working on the frontend" subsection. Exercised as part of
+    landing the doc (run-the-verification-you-author).
   - **`.env.example`** at `callback-box/.env.example`: every optional
     provider var (`THINKING_OPENAI_API_KEY`, `CALLBACK_DEEPGRAM_API_KEY` +
     project, `CALLBACK_MISTRAL_API_KEY`, `GEMINI_KEY`, VAPID trio,
@@ -312,9 +329,16 @@ in A's pin, B's doctor checks, C's verified sequence).
     not be handled; see docs/developer-install.md`) instead of `|| true`
     silence. Doctor makes it a failed check.
 - **Vocabulary lock-ins.** None.
-- **First implementation chunk.** The dev-loop spike (it decides what the
-  doc can promise), then doc + `.env.example` + lfs-warning as one commit.
-  The final clean-clone walkthrough happens at rollout, not per-chunk.
+- **First implementation chunk (C1) — done.** The dev-loop spike, verified
+  on a clean clone; landed two fixes (commit `0d2fbfb8`): `cb init`
+  defaults the box's `callback-box` dep to `link:<checkout>`, and `cb
+  serve <package-root>` resolves down to `content/`.
+- **Second implementation chunk (C2) — done.** `docs/developer-install.md`,
+  `callback-box/.env.example`, the `deploy/README.md` correction, and the
+  husky git-lfs stderr warnings (`post-commit`, `post-merge`, `pre-push`),
+  plus a root `"cb": "pnpm --dir callback-box cb"` convenience script
+  (verified with `pnpm cb --help` from the repo root). The final
+  clean-clone walkthrough happens at rollout, not per-chunk.
 
 ### Track D — Docker image + compose: local install that doubles as cloud
 
@@ -493,9 +517,11 @@ validation surface changes. Per the template, stated explicitly:
   bakes its prerequisites in, so the doctor matters far less there; the
   entrypoint readiness check covers the container-specific failure modes.
 - **Root convenience `cb` script** (`"cb": "pnpm --dir callback-box cb"`)
-  vs documenting `cd callback-box` — cosmetic; settle while writing the
-  quickstart (Track C first chunk). Lean: add the root script; it removes
-  a whole class of wrong-directory confusion for newcomers.
+  vs documenting `cd callback-box` — cosmetic. **Resolved in C2: adopted.**
+  Added to the root `package.json`, verified with `pnpm cb --help` from
+  the repo root; it removes a whole class of wrong-directory confusion for
+  newcomers. The doc's canonical sequence still uses `cd callback-box`,
+  which works everywhere; the root script is mentioned as optional sugar.
 - **Exact `packageManager` pnpm version** — read from the machine at
   implementation time (`pnpm --version`); pinning is the decision, the
   number is mechanical.
