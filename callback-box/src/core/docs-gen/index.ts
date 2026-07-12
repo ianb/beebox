@@ -33,7 +33,7 @@ import { installSchemasGuide, installViewsGuide } from "../box/templates.js";
 import { pruneStaleTemplateUpdates, isTemplateManagedPath } from "../install-template-file.js";
 import { generateRules } from "../init-rules.js";
 import { installValidationHooks } from "../install-validation-hooks.js";
-import { getBoxShapeOrLegacyFallback, type BoxShape } from "../../lib/box-shape.js";
+import { getBoxShape, type BoxShape } from "../../lib/box-shape.js";
 import { isRepo, hasCommits, getStatus, stageFiles, commitPaths } from "../../lib/git.js";
 import { AGENT_GUIDE_DIR, AGENT_GUIDE_FILE, DOCS_DIR, withDocId } from "./shared.js";
 import { generateCbCommands } from "./cb-commands.js";
@@ -324,7 +324,7 @@ function toBoxRelativePath(gitPath: string, shape: { packageRoot: string; boxRoo
  * unrelated hazard in a repo-in-a-repo dev/test environment.
  */
 export async function commitTemplateSyncChanges(boxRoot: string): Promise<void> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   const { packageRoot } = shape;
   if (!(await isRepo(packageRoot))) return;
   if (!(await hasCommits(packageRoot))) return;
@@ -489,7 +489,7 @@ export async function generateDocs(boxRoot: string, options?: GenerateDocsOption
 
   // Determines whether the agent guide teaches the package-layout code
   // location rules — see "boxCodeLocationSection" in agent-guide/box-shape.ts.
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
 
   // Compile personality first so we can include it in the agent guide
   const personalitySection = await compilePersonalities(boxRoot, debug);

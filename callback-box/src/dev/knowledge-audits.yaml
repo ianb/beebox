@@ -3543,9 +3543,9 @@ tests:
   # === Box Packageify (boxes-as-packages-v2, Track H5) ===
   #
   # Only meaningful for a shapeVersion 2+ (package-layout) box —
-  # `boxCodeLocationSection` (agent-guide/box-shape.ts) renders empty for a
-  # legacy box, so these audits assume the box under test is v2 (test1 is,
-  # as of the 2026-07 fleet conversion).
+  # `boxCodeLocationSection` (agent-guide/box-shape.ts) teaches the
+  # package-root code layout, so these audits assume the box under test is v2
+  # (test1 is, as of the 2026-07 fleet conversion).
   #
   # Status (2026-07-04): 4/4 pass against ~/src/boxes/test1 (a real converted
   # v2 box). box-packageify-cb-upgrade needed a source fix first: the agent
@@ -3690,3 +3690,35 @@ tests:
       "the user only partially wants this filed").
     correct_contains_any: ["cut off", "cut short", "missing", "mid-thought", "incomplete"]
     tags: [capture, chat, behavioral]
+
+  # === Calendar: authoring .ics events ===
+  #
+  # The calendar skill is de-templated (Track 1 of remove-box-shape-v1): it no
+  # longer bakes the box timezone / VTIMEZONE into the skill body. Instead it
+  # uses the `BOX_TZ` placeholder (the box's timezone, on the `Timezone:` line
+  # in system context) and points at `cb calendar vtimezone` for the DST block.
+  # This audit checks the agent reaches for those rather than hand-writing a
+  # VTIMEZONE. knows_about: the calendar skill is on-demand (may involve reading
+  # the skill before answering).
+  #
+  # Status (2026-07-11): PASS on first run after regenerating the box's skills
+  # from the de-templated source. The agent loaded the calendar skill, used
+  # TZID=<box's timezone>, and ran `cb calendar vtimezone` to get the VTIMEZONE
+  # block verbatim rather than hand-writing DST rules. (An earlier run failed
+  # only because the box carried the pre-change templated SKILL.md on disk.)
+
+  - id: calendar-vtimezone-authoring
+    prompt: >
+      Add a 2pm dentist appointment to the calendar for next Tuesday. Walk
+      through how you'd author the .ics event — specifically how you handle
+      the timezone and VTIMEZONE block.
+    expected_level: knows_about
+    watch_for: >
+      Uses the box's own timezone (BOX_TZ — from the Timezone: line already in
+      system context) for the TZID, and gets the VTIMEZONE block by running
+      `cb calendar vtimezone` and pasting it verbatim, rather than hand-writing
+      DST rules or inventing a sample zone. Should NOT fabricate a VTIMEZONE
+      component from memory.
+    correct_contains: ["cb calendar vtimezone"]
+    correct_contains_any: ["BOX_TZ", "Timezone:", "system context", "box's timezone"]
+    tags: [calendar, box-tz]

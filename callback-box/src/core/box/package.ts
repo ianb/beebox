@@ -3,14 +3,14 @@
  * repository" in `docs/implemented-plans/boxes-as-packages-v2.md`). `cb init` on a path
  * with no existing box detects a fresh init and lays down BOTH halves: a
  * thin coding-session package at the target path, and the operational box
- * at `<target>/content/`. An existing box (legacy or v2) is left in its
- * current shape — conversion is a later migration (Track H), not init's job.
+ * at `<target>/content/`. An existing v2 box is left in place — `cb init`
+ * re-runs its provisioning without moving anything.
  */
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import { z } from "zod";
-import { isValidBox } from "./index.js";
+import { initBox, isValidBox } from "./index.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 
 const EnginePackageJsonSchema = z.object({
@@ -22,7 +22,7 @@ const FrontendPackageJsonSchema = z.object({
   devDependencies: z.record(z.string(), z.string()).optional(),
 });
 
-export type BoxInitMode = "fresh" | "update-legacy" | "update-v2";
+export type BoxInitMode = "fresh" | "update-v2";
 
 /**
  * Thrown when a fresh `cb init` would overwrite a package.json it didn't
@@ -61,21 +61,22 @@ export interface BoxTarget {
   /** The operational root — where `.cb-box`, `box/`, `config/`, etc. live (or will). */
   boxRoot: string;
   /** The package root — where `package.json`/`node_modules`/`src/` live (or
-   * will). Equals `boxRoot` for a legacy box. */
+   * will). The parent of `boxRoot` (the box's `content/` directory). */
   packageRoot: string;
 }
 
 /**
- * Decide what `cb init <path>` is looking at: an existing legacy box (marker
- * at the target itself), an existing v2 box (marker at `<target>/content`),
- * or nothing yet. A fresh init always scaffolds the v2 layout — there is no
- * "legacy fresh init" anymore; existing legacy boxes just keep working in
- * place until migrated (Track H).
+ * Decide what `cb init <path>` is looking at: an existing v2 box whose
+ * operational root is the target itself (marker at `<target>`, so the target
+ * IS the `content/` root and the package root is its parent), an existing v2
+ * box addressed by its package root (marker at `<target>/content`), or
+ * nothing yet. Every box is v2 — a marker at the target is that box's
+ * operational root, not a legacy flat box.
  */
 export async function detectBoxTarget(targetPath: string): Promise<BoxTarget> {
   const resolvedRoot = path.resolve(targetPath);
   if (await isValidBox(resolvedRoot)) {
-    return { mode: "update-legacy", boxRoot: resolvedRoot, packageRoot: resolvedRoot };
+    return { mode: "update-v2", boxRoot: resolvedRoot, packageRoot: path.dirname(resolvedRoot) };
   }
   const contentRoot = path.join(resolvedRoot, "content");
   if (await isValidBox(contentRoot)) {
@@ -171,9 +172,17 @@ async function readEngineVersions(): Promise<EngineVersions> {
  * scaffold files (`tsconfig.json`, `CLAUDE.md`, `.gitignore`) are only
  * written when absent, so a directory that already has its own is left
  * alone.
+ * @param options.symlinkCallbackBox - Whether to symlink
+ *   `node_modules/callback-box` at the running engine's `PACKAGE_ROOT`.
+ *   Production `cb init` wants it (native schema/view resolution); cheap
+ *   fixtures that only read/write cards don't, and skip it. Defaults to true.
  * @throws BoxPackageConflictError if `packageRoot` already has a `package.json`
  */
-export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
+export async function scaffoldPackageRoot(
+  packageRoot: string,
+  options?: { symlinkCallbackBox?: boolean }
+): Promise<void> {
+  const symlinkCallbackBox = options?.symlinkCallbackBox ?? true;
   await fs.mkdir(packageRoot, { recursive: true });
 
   const packageJsonPath = path.join(packageRoot, "package.json");
@@ -242,11 +251,49 @@ export async function scaffoldPackageRoot(packageRoot: string): Promise<void> {
 
   await fs.mkdir(path.join(packageRoot, "src"), { recursive: true });
 
-  const nodeModulesDir = path.join(packageRoot, "node_modules");
-  if (!(await pathExists(nodeModulesDir))) {
-    await fs.mkdir(nodeModulesDir, { recursive: true });
-    await fs.symlink(PACKAGE_ROOT, path.join(nodeModulesDir, "callback-box"), "dir");
+  if (symlinkCallbackBox) {
+    const nodeModulesDir = path.join(packageRoot, "node_modules");
+    if (!(await pathExists(nodeModulesDir))) {
+      await fs.mkdir(nodeModulesDir, { recursive: true });
+      await fs.symlink(PACKAGE_ROOT, path.join(nodeModulesDir, "callback-box"), "dir");
+    }
   }
+}
+
+/** A scaffolded v2 box: the package root and its nested operational box root. */
+export interface ScaffoldedV2Box {
+  /** Where `package.json`/`node_modules`/`src/` live. */
+  packageRoot: string;
+  /** The operational box root — `<packageRoot>/content` (holds `.cb-box`). */
+  boxRoot: string;
+}
+
+/**
+ * Build a valid shapeVersion-2 box: scaffold the coding-session package at
+ * `target`, then `initBox` the operational box at `<target>/content`. This is
+ * the single composition that `cb init` (fresh), the `init-v2` doctest, and
+ * every test fixture (`makeTmpBox`, `test-server`) delegate to, so a valid v2
+ * layout is produced exactly one way.
+ *
+ * Does NOT initialize git or run `cb init`'s card installers — callers that
+ * need those add them on top (production `cb init` inits git at the package
+ * root and runs the installers; fixtures skip both).
+ *
+ * @param target - The package root to create (its `content/` becomes the box).
+ * @param options.deps - Symlink `node_modules/callback-box` at the running
+ *   engine (native schema/view resolution). Needed by view-compile /
+ *   box-local-schema fixtures; skipped by default so card-only fixtures pay
+ *   nothing.
+ */
+export async function scaffoldV2Box(
+  target: string,
+  options?: { deps?: boolean }
+): Promise<ScaffoldedV2Box> {
+  const packageRoot = path.resolve(target);
+  await scaffoldPackageRoot(packageRoot, { symlinkCallbackBox: options?.deps ?? false });
+  const boxRoot = path.join(packageRoot, "content");
+  await initBox(boxRoot, { skipGit: true });
+  return { packageRoot, boxRoot };
 }
 
 /** Whether `filePath` exists, tolerating (only) the not-found case. */

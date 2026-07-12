@@ -13,9 +13,6 @@
 import { boxLayoutEntry, type BoxDirs } from "../../lib/paths.js";
 import { boxCodePathsRelativeToBoxRoot, type BoxShape } from "../../lib/box-shape.js";
 
-/** The shape version of every box created before the boxes-as-packages plan. */
-const LEGACY_SHAPE_VERSION = 1;
-
 /** One row of the agent-facing directory table: its spec path (unless `path` overrides it) and description. */
 function row(boxDirsKey: keyof BoxDirs, options?: { path: string }): string {
   const entry = boxLayoutEntry(boxDirsKey);
@@ -59,14 +56,10 @@ ${rows}`;
 
 /**
  * Where box-authored code lives, and what's editable, for a package (shape
- * 2+) box. A legacy box keeps its schemas/views/tricks inside the box root
- * itself — nothing to add, so this renders empty and is dropped by the guide
- * assembler in `index.ts`, leaving legacy guide output byte-identical to
- * before shape-awareness existed.
+ * 2+) box: schemas/views/tricks live at the package root, reached from the box
+ * root via `../src/...`.
  */
 export function boxCodeLocationSection(shape: BoxShape): string {
-  if (shape.shapeVersion === LEGACY_SHAPE_VERSION) return "";
-
   const { schemasDir, viewsDir, tricksDir } = boxCodePathsRelativeToBoxRoot(shape);
 
   return `## Box-Owned Code

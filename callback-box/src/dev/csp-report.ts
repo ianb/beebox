@@ -42,7 +42,7 @@ import * as path from "node:path";
 import { promisify } from "node:util";
 import { z } from "zod";
 import { cspReportLogPath } from "../webapp/routes/api-csp-report.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { resolveOperationalRoot } from "../lib/box-shape.js";
 import { digestEntries, entriesSince, newestTs, parseCspLog, type CspDigest, type CspEntry } from "./csp-digest.js";
 
 const execFileP = promisify(execFile);
@@ -113,9 +113,8 @@ async function gatherLocal(): Promise<Source[]> {
   for (const d of dirents) {
     if (!d.isDirectory()) continue;
     // `d.name` is the package root's basename; a v2 box's log lives under its
-    // `content/` subdirectory, so resolve the shape before building the path.
-    const shape = await getBoxShapeOrLegacyFallback(path.join(BOXES_DIR, d.name));
-    const logPath = cspReportLogPath(shape.boxRoot);
+    // `content/` subdirectory, so resolve to the operational root first.
+    const logPath = cspReportLogPath(await resolveOperationalRoot(path.join(BOXES_DIR, d.name)));
     if (!existsSync(logPath)) continue;
     const text = await fs.readFile(logPath, "utf-8").catch(() => "");
     sources.push({ scope: "local", box: d.name, entries: parseCspLog(text) });

@@ -400,7 +400,7 @@ committed.includes("notes.md")
 concurrent actor put it.
 
 ```ts continue
-const staged = execSync("git diff --cached --name-only", { cwd: box.root, encoding: "utf-8" });
+const staged = execSync("git diff --cached --name-only --relative", { cwd: box.root, encoding: "utf-8" });
 staged.trim()
 => notes.md
 ```

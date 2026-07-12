@@ -52,23 +52,25 @@ export async function syncRelayRegistration(config: ClerkConfig): Promise<void> 
     return;
   }
 
-  if (current === undefined) {
-    await chrome.scripting.registerContentScripts([
-      {
-        id: RELAY_SCRIPT_ID,
-        js: [RELAY_SCRIPT_JS],
-        matches,
-        runAt: "document_idle",
-        allFrames: false,
-        persistAcrossSessions: true,
-      },
-    ]);
-    return;
-  }
+  const script: chrome.scripting.RegisteredContentScript = {
+    id: RELAY_SCRIPT_ID,
+    js: [RELAY_SCRIPT_JS],
+    matches,
+    runAt: "document_idle",
+    allFrames: false,
+    persistAcrossSessions: true,
+  };
 
-  if (!sameMatches(current.matches, matches)) {
-    await chrome.scripting.updateContentScripts([
-      { id: RELAY_SCRIPT_ID, js: [RELAY_SCRIPT_JS], matches },
-    ]);
+  try {
+    if (current === undefined) {
+      await chrome.scripting.registerContentScripts([script]);
+    } else if (!sameMatches(current.matches, matches)) {
+      await chrome.scripting.updateContentScripts([{ id: RELAY_SCRIPT_ID, js: [RELAY_SCRIPT_JS], matches }]);
+    }
+  } catch (e) {
+    // Surface loudly AND rethrow — the caller (enable-box) logs too. Registration
+    // failing silently is what made this hard to diagnose the first time.
+    console.error("[relay-reg] registerContentScripts failed for", JSON.stringify(matches), e);
+    throw e;
   }
 }

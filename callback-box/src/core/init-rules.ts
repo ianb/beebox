@@ -11,7 +11,7 @@
 import { join, relative } from "node:path";
 import { mkdir, writeFile, readdir, unlink } from "node:fs/promises";
 import { cardSchemas, loadBoxSchemas } from "../schemas/registry.js";
-import { getBoxShapeOrLegacyFallback } from "../lib/box-shape.js";
+import { getBoxShape } from "../lib/box-shape.js";
 import { errnoCode } from "../lib/error-guards.js";
 
 export interface ConnectorRule {
@@ -69,7 +69,7 @@ Use \`cb calendar today\`, \`cb calendar upcoming\`, or \`cb calendar <timespan>
  * Called by `cb init`.
  */
 export async function generateRules(boxRoot: string): Promise<string[]> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
+  const shape = await getBoxShape(boxRoot);
   const { packageRoot } = shape;
   const rulesDir = join(packageRoot, ".claude", "rules");
   await mkdir(rulesDir, { recursive: true });

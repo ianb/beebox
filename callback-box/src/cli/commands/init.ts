@@ -9,7 +9,7 @@
 
 import { Command } from "commander";
 import { initBox, installProcedures, installGuides, installSchedules, installPersonality, installBriefing, installRootLandmark, symlinkClaudeMemory } from "../../core/box/index.js";
-import { detectBoxTarget, scaffoldPackageRoot } from "../../core/box/package.js";
+import { detectBoxTarget, scaffoldV2Box } from "../../core/box/package.js";
 import { stageAll, commit, initRepo, isRepo } from "../../lib/git.js";
 import { generateRules } from "../../core/init-rules.js";
 import { generateSkills } from "../../core/box/skills.js";
@@ -74,30 +74,28 @@ export interface InitOptions {
  * process.exit(1)-on-error wrapper below.
  */
 export async function runInit(targetPath: string, options: InitOptions): Promise<void> {
-  // Detects what's already at `targetPath`: an existing legacy box (stays
-  // legacy — conversion is a later migration, not init's job), an existing
-  // v2 box (`content/` nested inside), or nothing yet. A fresh init always
-  // scaffolds the v2 package layout — see "The box repository" in
-  // docs/implemented-plans/boxes-as-packages-v2.md.
+  // Detects what's already at `targetPath`: an existing v2 box (addressed by
+  // its operational `content/` root or by its package root), or nothing yet.
+  // A fresh init always scaffolds the v2 package layout — see "The box
+  // repository" in docs/implemented-plans/boxes-as-packages-v2.md.
   const { mode, boxRoot, packageRoot } = await detectBoxTarget(targetPath);
   const isFresh = mode === "fresh";
 
-  // `--skip-git` only skips git initialization/commit (handled below and in
-  // announceAndInitGit) — the package scaffold (package.json, tsconfig.json,
-  // CLAUDE.md, .gitignore) still needs to exist on a fresh init regardless,
-  // or initBox's shapeVersion-2 check fails immediately after.
+  // A fresh init scaffolds the whole v2 box (package half + operational box at
+  // `content/`) via the shared builder — `scaffoldV2Box` runs
+  // `scaffoldPackageRoot` then `initBox({shapeVersion:2})`, with the
+  // `node_modules/callback-box` symlink (deps) for native schema/view
+  // resolution. It deliberately skips git (the PACKAGE root is the git root,
+  // one level up, initialized explicitly below) and `cb init`'s card
+  // installers (run below). An existing box (legacy or v2) just re-runs
+  // `initBox` in place.
+  let isUpdate: boolean;
   if (isFresh) {
-    await scaffoldPackageRoot(packageRoot);
+    await scaffoldV2Box(packageRoot, { deps: true });
+    isUpdate = false;
+  } else {
+    ({ isUpdate } = await initBox(boxRoot, { skipGit: true, branch: options.branch }));
   }
-
-  // initBox always operates on the operational root (`boxRoot`) and
-  // never touches git itself here — for a fresh v2 init, git's root is
-  // the PACKAGE root, one level up, which we init explicitly below.
-  const { isUpdate } = await initBox(boxRoot, {
-    skipGit: true,
-    branch: options.branch,
-    shapeVersion: isFresh ? 2 : undefined,
-  });
 
   await announceAndInitGit({ isFresh, isUpdate, boxRoot, packageRoot, options });
 

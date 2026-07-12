@@ -41,18 +41,6 @@ import { toError, errorMessage } from "../../lib/error-guards.js";
 
 const OLD_ENGINE_CB_BIN = path.join(PACKAGE_ROOT, "bin", "cb");
 
-export class LegacyBoxUpgradeError extends Error {
-  constructor(boxRoot: string) {
-    super(
-      `${boxRoot} is a legacy (shapeVersion 1) box — \`cb upgrade\` only works on v2 ` +
-        "(package-layout) boxes, which pin their own callback-box dependency. Convert it " +
-        "first with the box-packageify migration (see docs/implemented-plans/boxes-as-packages-v2.md, " +
-        "Track H) — not yet implemented."
-    );
-    this.name = "LegacyBoxUpgradeError";
-  }
-}
-
 export class DirtyWorkingTreeError extends Error {
   constructor(packageRoot: string) {
     super(`${packageRoot} has uncommitted changes. Commit or stash them before \`cb upgrade\` — it needs a clean starting point to snapshot.`);
@@ -253,7 +241,6 @@ export async function runUpgrade(options: UpgradeOptions, deps?: UpgradeDeps): P
   const runCommand = deps?.runCommand ?? defaultRunner();
   const boxRoot = await requireBoxRoot(deps?.startPath);
   const shape = await getBoxShape(boxRoot);
-  if (shape.shapeVersion === 1) throw new LegacyBoxUpgradeError(boxRoot);
   const packageRoot = shape.packageRoot;
 
   // Step 0: preflight (fail-closed, nothing mutated yet — so no revert path

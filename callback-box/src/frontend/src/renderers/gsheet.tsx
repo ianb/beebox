@@ -3,7 +3,7 @@
  */
 
 import { useState, useEffect } from "react";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { getApiBase } from "../api";
 import { TabBar } from "../components/ui/TabBar";
 import { Text } from "../components/ui/Text";

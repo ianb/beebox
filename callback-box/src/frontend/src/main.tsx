@@ -8,7 +8,7 @@ import "./index.css";
 import "./renderers/setup";
 import { registerBuiltinFileTypes } from "./file-types";
 import { withBase } from "./api";
-import { invariant } from "./lib/invariant";
+import { invariant } from "@shared/invariant";
 
 registerBuiltinFileTypes();
 

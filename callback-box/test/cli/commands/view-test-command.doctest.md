@@ -7,9 +7,30 @@ stack. It loads the same cards the running app would pass the view.
 ```ts setup
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { spawn } from "node:child_process";
-import { join } from "node:path";
+import { mkdir, writeFile, symlink } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
+import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 
 const PKG = process.cwd();
+const requireFromEngine = createRequire(join(PACKAGE_ROOT, "package.json"));
+
+// A v2 box renders views by resolving react from its OWN `node_modules`.
+// `makeTmpBox({ deps: true })` only symlinks `callback-box`, so simulate a
+// real box's `react` dependency by symlinking the engine's copy beside it.
+async function makeViewBox() {
+  const box = await makeTmpBox({ deps: true });
+  const reactNodeModules = dirname(dirname(requireFromEngine.resolve("react/package.json")));
+  await symlink(join(reactNodeModules, "react"), join(box.packageRoot, "node_modules", "react"), "dir");
+  return box;
+}
+
+// Views live at the package root (`<packageRoot>/src/views`) for a v2 box.
+async function writeView(box, rel, content) {
+  const full = join(box.packageRoot, "src", "views", rel);
+  await mkdir(dirname(full), { recursive: true });
+  await writeFile(full, content);
+}
 
 // Run the prebuilt CLI with the box as cwd (requireBoxRoot walks up from there).
 function runViewTest(boxRoot, args) {
@@ -36,10 +57,10 @@ Body
 A view that renders off its `cards` prop produces HTML and exits 0:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeViewBox();
 await box.write("box/inbox/A.memo.card", MEMO_CARD);
 await box.write("box/inbox/B.memo.card", MEMO_CARD);
-await box.write("views/count.tsx", `
+await writeView(box, "count.tsx", `
 export const name = "Count";
 export const dependencies = ["box/**/*.card"];
 export const modes = ["page"];
@@ -68,8 +89,8 @@ A view that throws during render exits 1 with the error and a stack that maps
 back to the `.tsx` source (not the compiled output):
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/boom.tsx", `
+const box = await makeViewBox();
+await writeView(box, "boom.tsx", `
 export const name = "Boom";
 export const dependencies = [];
 export const modes = ["page"];
@@ -106,8 +127,8 @@ A view that throws while the module evaluates (not in the component body) gets
 the same source-mapped diagnostics — the import shares the render's error block:
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/topthrow.tsx", `
+const box = await makeViewBox();
+await writeView(box, "topthrow.tsx", `
 export const name = "TopThrow";
 export const dependencies = [];
 export const modes = ["page"];
@@ -140,8 +161,8 @@ await box.cleanup();
 bug v1 surfaces rather than silently returning empty:
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/early.tsx", `
+const box = await makeViewBox();
+await writeView(box, "early.tsx", `
 export const name = "Early";
 export const dependencies = [];
 export const modes = ["page"];
@@ -168,7 +189,7 @@ await box.cleanup();
 ## Nonexistent view
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeViewBox();
 const r = await runViewTest(box.root, ["ghost"]);
 r.code
 => 1
@@ -189,8 +210,8 @@ await box.cleanup();
 the command warns (but still renders):
 
 ```ts
-const box = await makeTmpBox();
-await box.write("views/page.tsx", `
+const box = await makeViewBox();
+await writeView(box, "page.tsx", `
 export const name = "Page";
 export const dependencies = ["store/**/*.card"];
 export const modes = ["page"];
@@ -220,9 +241,9 @@ When a dependency glob selects a card that fails to load, the command renders,
 reports it, and exits non-zero unless `--allow-invalid-cards`:
 
 ```ts
-const box = await makeTmpBox();
+const box = await makeViewBox();
 await box.write("box/inbox/Bad.bogus.card", "---\nstatus: new\n---\nno schema\n");
-await box.write("views/list.tsx", `
+await writeView(box, "list.tsx", `
 export const name = "List";
 export const dependencies = ["box/**/*.card"];
 export const modes = ["page"];

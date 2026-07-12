@@ -13,7 +13,7 @@ export const ROOT = PACKAGE_ROOT;
 
 // Output paths of report emitters. Their contents quote other files verbatim,
 // so extracting references from them would falsely inflate incoming counts.
-const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html"]);
+const EMITTER_OUTPUTS = new Set(["docs/doc-graph.md", "docs/doc-graph.html", "docs/prompts.md"]);
 
 const EXCLUDE_DIRS = ["node_modules", ".tap", ".thinking", ".claude", "dist", "src/dev/reports"];
 const EXCLUDE_PATTERNS = [/\.doctest\.md$/];

@@ -16,7 +16,7 @@
  */
 
 import * as path from "node:path";
-import { isRepo, getStatus, getHead, hasCommits } from "../../lib/git.js";
+import { isRepo, getStatus, getHead, hasCommits, gitBoxPrefix } from "../../lib/git.js";
 import { loadMapState } from "./state.js";
 import {
   DEFAULT_IGNORE_PATTERNS,
@@ -85,11 +85,19 @@ export async function precheck(options: PrecheckOptions): Promise<MapBrief> {
     return { needsWork: false, skippedReason: "no_commits", tasks: [] };
   }
   const status = await getStatus(boxRoot);
+  // getStatus paths are repo-root-relative; on a v2 box the repo root is the
+  // package root, so they carry a `content/` prefix. Strip it back to
+  // box-relative before the `procedure/runs/` filter below — otherwise the
+  // filter never matches and refresh-maps bails as `uncommitted_work` inside
+  // its own procedure step (the exact case the filter exists to allow).
+  const prefix = await gitBoxPrefix(boxRoot);
+  const strip = (p: string): string => (prefix !== "" && p.startsWith(prefix) ? p.slice(prefix.length) : p);
   // Filter out paths inside procedure/runs — the procedure engine
   // intentionally writes uncommitted state there as a "step is running"
   // signal, so blanket-bailing on uncommitted work would prevent
   // refresh-maps from running inside its own procedure step.
   const dirtyPaths = [...status.staged, ...status.modified, ...status.untracked]
+    .map(strip)
     .filter((p) => !p.startsWith("procedure/runs/"));
   if (dirtyPaths.length > 0) {
     return { needsWork: false, skippedReason: "uncommitted_work", tasks: [] };

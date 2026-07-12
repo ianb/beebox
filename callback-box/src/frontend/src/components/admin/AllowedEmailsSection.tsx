@@ -7,7 +7,7 @@ import { useState, useEffect, useCallback } from "react";
 import { TextField } from "../ui/fields";
 import { Button } from "../ui/Button";
 import { trpcClient } from "../../lib/trpc";
-import { errorMessage } from "../../lib/error-guards";
+import { errorMessage } from "@shared/error-guards";
 
 export function AllowedEmailsSection() {
   const [emails, setEmails] = useState<string[]>([]);

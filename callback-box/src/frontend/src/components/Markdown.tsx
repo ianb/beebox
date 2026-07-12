@@ -46,7 +46,7 @@ import {
 } from "../lib/view-url";
 import { withBase } from "../api";
 import { parseMarkdown } from "../lib/markdoc-parse";
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import type { ReactNode } from "react";
 
 // Value named imports (`{ transform, … }`) don't resolve from this CommonJS

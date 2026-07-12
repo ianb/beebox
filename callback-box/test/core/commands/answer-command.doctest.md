@@ -18,7 +18,7 @@ async function answer(box, args) {
 
 // Files touched by the HEAD commit, one path per line, sorted.
 function headFiles(root) {
-  return execSync("git diff-tree --no-commit-id --name-only -r HEAD", { cwd: root, stdio: "pipe" })
+  return execSync("git diff-tree --no-commit-id --name-only -r --relative HEAD", { cwd: root, stdio: "pipe" })
     .toString()
     .trim()
     .split("\n")

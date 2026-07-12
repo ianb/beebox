@@ -1,17 +1,16 @@
 # cb trick
 
 `cb trick` discovers and runs box-local agent-authored scripts. Tricks live at
-`boxCodePaths(shape).tricksDir` — `boxRoot/tricks` for a legacy (v1) box,
-`packageRoot/src/tricks` for a package (v2) box — so both the subprocess's
-cwd and every path in its listing/error messages must resolve through the
-box's actual shape rather than a hardcoded `tricks/` relative to `boxRoot`.
+`boxCodePaths(shape).tricksDir` — `packageRoot/src/tricks` for a v2
+(package-layout) box — so both the subprocess's cwd and every path in its
+listing/error messages must resolve through the box's actual shape rather
+than a hardcoded `tricks/` relative to `boxRoot`.
 
 ```ts setup
 import { mkdtemp, mkdir, writeFile, symlink, realpath, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn, execSync } from "node:child_process";
-import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import { PACKAGE_ROOT } from "../../../src/lib/package-root.js";
 
 // Run the prebuilt CLI with the given cwd (requireBoxRoot walks up from there).
@@ -74,59 +73,6 @@ async function makeV2Box() {
     },
   };
 }
-```
-
-## v1 (legacy) box: runs from `boxRoot/tricks`, unchanged from before
-
-```ts
-const box = await makeTmpBox({ git: true });
-await box.write("tricks/scripts/probe/index.ts", PROBE_TRICK);
-
-const r = await runTrickCli(box.root, ["probe"]);
-r.code
-=> 0
-```
-
-The subprocess's cwd is the box's own `tricks/` directory, and it sees the
-box root and trick name via env vars:
-
-```ts continue
-const expectedCwd = await realpath(box.path("tricks"));
-r.stdout.includes("cwd:" + expectedCwd)
-=> true
-
-r.stdout.includes("boxRoot:" + (await realpath(box.root)))
-=> true
-
-r.stdout.includes("trickName:probe")
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
-```
-
-## v1 box: listing and not-found messages name `tricks/scripts/...`
-
-```ts
-const box = await makeTmpBox();
-
-const empty = await runTrickCli(box.root, []);
-empty.stdout.includes("Create one at tricks/scripts/<name>/index.ts")
-=> true
-```
-
-```ts continue
-const missing = await runTrickCli(box.root, ["nope"]);
-missing.code
-=> 1
-
-missing.stderr.includes("Expected: tricks/scripts/nope/index.ts")
-=> true
-```
-
-```ts cleanup
-await box.cleanup();
 ```
 
 ## v2 (package-layout) box: runs from `packageRoot/src/tricks`, not `boxRoot/tricks`

@@ -12,12 +12,12 @@
  * because the bespoke round-checkbox + status look is appearance-heavy.
  */
 
-import { isRecord } from "../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { Dropdown, MenuItem } from "./ui/Dropdown";
 import { cbSource, cbSourceItem } from "../lib/source-tag";
 import { trpc } from "../lib/trpc";
 import type { RendererProps } from "../renderers";
-import type { TodoItemStatusType } from "../../../schemas/todo-list";
+import type { TodoItemStatusType } from "@schemas/todo-list";
 
 const STATUS_OPTIONS: ReadonlyArray<{ value: TodoItemStatusType; label: string }> = [
   { value: "pending", label: "Pending" },

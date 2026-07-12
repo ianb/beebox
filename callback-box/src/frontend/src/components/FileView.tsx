@@ -29,7 +29,7 @@ import { getApiBase, withBase } from "../api";
 import { useBusSubscription, type RealtimeEvent } from "../hooks/useBusSubscription";
 import { getRenderers, type FileData, type FileRenderer } from "../renderers";
 import type { NavigateHint, ViewTarget } from "../lib/view-url";
-import type { ActivityKind } from "../../../core/chat/card-activity.js";
+import type { ActivityKind } from "@core/chat/card-activity.js";
 import { isBinaryPath, pathExt } from "../lib/binary-files";
 import { boxRelativePath } from "@shared/box-path";
 import { RequestError } from "../lib/errors";

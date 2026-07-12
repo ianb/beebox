@@ -23,7 +23,7 @@
  * the relay was never seen (extension installed mid-session).
  */
 
-import { isRecord } from "../../lib/is-record";
+import { isRecord } from "@shared/is-record";
 import { base64ToBlob } from "../../lib/image-paste";
 import type { CaptureOutcome } from "./screenshot-capture";
 

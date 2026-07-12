@@ -28,9 +28,9 @@ import { commitTemplateSyncChanges } from "../../src/core/docs-gen/index.js";
 import { getStatus, getLog } from "../../src/lib/git.js";
 
 /** A real git repo shaped like a v2 box package root, matching
- *  `getBoxShapeOrLegacyFallback`'s expectations: a `content/.cb-box`
- *  shapeVersion-2 marker and a `package.json` declaring the `callback-box`
- *  dependency (see `requireCallbackBoxDependency` in `box-shape.ts`). */
+ *  `getBoxShape`'s expectations: a `content/.cb-box` shapeVersion-2 marker
+ *  and a `package.json` declaring the `callback-box` dependency (see
+ *  `requireCallbackBoxDependency` in `box-shape.ts`). */
 async function makeV2Fixture() {
   const packageRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-gendocs-v2-"));
   const boxRoot = path.join(packageRoot, "content");
@@ -43,15 +43,6 @@ async function makeV2Fixture() {
   await fs.writeFile(path.join(packageRoot, ".gitignore"), "node_modules/\n");
   execSync("git init -q && git add -A && git commit -q -m init", { cwd: packageRoot });
   return { packageRoot, boxRoot };
-}
-
-/** A real git repo shaped like a legacy (shapeVersion 1) box — repo root IS
- *  boxRoot, so the sync path's normalization should be a no-op. */
-async function makeLegacyFixture() {
-  const boxRoot = await fs.mkdtemp(path.join(os.tmpdir(), "cb-gendocs-v1-"));
-  await fs.writeFile(path.join(boxRoot, ".cb-box"), "");
-  execSync("git init -q && git add -A && git commit -q -m init --allow-empty", { cwd: boxRoot });
-  return { boxRoot };
 }
 
 async function tracked(repoRoot) {
@@ -109,34 +100,4 @@ JSON.stringify(log[0].trailers)
 
 ```ts cleanup
 await fs.rm(packageRoot, { recursive: true, force: true });
-```
-
-## v1 (legacy) box: behavior is unchanged — repo root IS boxRoot, so normalization is a no-op
-
-```ts
-const { boxRoot } = await makeLegacyFixture();
-await fs.mkdir(path.join(boxRoot, "config"), { recursive: true });
-await fs.writeFile(path.join(boxRoot, "config/calendar.guide.card"), "---\n---\nhi\n");
-await fs.writeFile(path.join(boxRoot, "notes.md"), "unrelated dirty file\n");
-
-await commitTemplateSyncChanges(boxRoot);
-
-await tracked(boxRoot)
-=>
-.cb-box
-config/calendar.guide.card
-```
-
-```ts continue
-const status = await getStatus(boxRoot);
-JSON.stringify(status.untracked)
-=> ["notes.md"]
-
-const log = await getLog(boxRoot, 1);
-log[0].subject
-=> Sync templates from upstream
-```
-
-```ts cleanup
-await fs.rm(boxRoot, { recursive: true, force: true });
 ```

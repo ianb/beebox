@@ -15,7 +15,7 @@
 import { z } from "zod";
 import { createAgent as realCreateAgent } from "../agent/index.js";
 import { MODEL_MAP, type AgentFactory } from "./engine-types.js";
-import { MODEL_ID } from "../model-ids.js";
+import { MODEL_ID } from "../../shared/model-ids.js";
 
 /** Structured verdict the review model returns for an instruction check. */
 export const InstructionVerdict = z.object({
@@ -50,7 +50,7 @@ export interface EvaluateInstructionsParams {
  * Build the judge's system prompt — the task framing, kept stable so the
  * verdict depends on the inputs, not the phrasing.
  */
-function buildJudgePrompt(params: {
+export function buildJudgePrompt(params: {
   instructions: string[];
   whys: string[];
   diff: string;

@@ -26,7 +26,9 @@
 
 import type { EmissionDraft, ImageItem, FileItem } from "./emission-store";
 import type { SelectionItem } from "../lib/selection/serialize";
-import { isRecord } from "../lib/is-record";
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
+import { isRecord } from "../../../shared/is-record.js";
 
 /** The subset of Storage this module touches (fakeable in doctests). */
 export interface KeyValueStorage {

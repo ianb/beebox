@@ -10,9 +10,9 @@
 import { useMemo } from "react";
 import type { SessionEntry, SessionContentBlock } from "../api";
 import { trpc } from "../lib/trpc";
-import type { FileSummary } from "../../../core/file-summary";
+import type { FileSummary } from "@core/file-summary";
 import { parseAcks } from "../lib/structured-output-parsing";
-import { boxRelativePath } from "../../../shared/box-path.js";
+import { boxRelativePath } from "@shared/box-path.js";
 import { isExternalUrl } from "../lib/view-url";
 
 // Tool-input keys we treat as "agent touched this file". Deliberately

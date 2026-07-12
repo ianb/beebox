@@ -89,7 +89,7 @@ plugins/          Claude Code plugins (card-validator hook)
 
 There's no `src/test-lib/`. Doctest infrastructure is the monorepo-level `agent-doctest/` package (the loader/runner) plus this project's `test/helpers/` (test-server, fake-agent, fixture-replay, etc.).
 
-**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the primary test box. Newer boxes (`shapeVersion: 2`, incl. `test1`) are packages — the operational box is the `content/` subdirectory, and box code imports only the public `callback-box/{cards,schema,view-widgets}` specifiers, never engine internals. Full on-disk shape: `docs/box-layout.md`.
+**Boxes** live at `~/src/boxes/` (outside this repo so agents don't inherit this CLAUDE.md); `~/src/boxes/test1/` is the primary test box. Boxes are packages (`shapeVersion: 2`, the only shape) — the operational box is the `content/` subdirectory, and box code imports only the public `callback-box/{cards,schema,view-widgets}` specifiers, never engine internals. Full on-disk shape: `docs/box-layout.md`.
 
 ## Key Concepts
 

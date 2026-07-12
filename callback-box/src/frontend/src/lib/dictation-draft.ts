@@ -20,7 +20,9 @@
  */
 
 import type { KeyValueStorage } from "../input/emission-persist";
-import { isRecord } from "./is-record";
+// Raw relative (not `@shared/…`): loaded outside Vite by the tap/tsx doctest
+// runner (root tsconfig, no @shared resolution) — see OUTSIDE_VITE_SHARED_RAW.
+import { isRecord } from "../../../shared/is-record.js";
 
 const KEY_PREFIX = "cb-chat-draft";
 

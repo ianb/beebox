@@ -9,9 +9,13 @@
 
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { z } from "zod";
 import { TRPCError } from "@trpc/server";
 import { router, publicProcedure } from "../trpc.js";
+import {
+  commentaryInput,
+  commentaryOutput,
+  commentaryDestinationsOutput,
+} from "./clerk-contract.js";
 import { createWebpageTemplate } from "../../../schemas/webpage.js";
 import { createCommentaryTemplate } from "../../../schemas/commentary.js";
 import { attachmentPath } from "../../../shared/attach-path.js";
@@ -19,31 +23,16 @@ import { listDestinations } from "../../../core/landmark/list-destinations.js";
 import { safeFilename } from "../../../connectors/chat-utils.js";
 import { stageAndCommitPaths } from "../../../lib/git.js";
 
-const commentaryInput = z.object({
-  url: z.string().url(),
-  title: z.string().min(1),
-  siteName: z.string().optional(),
-  byline: z.string().optional(),
-  excerpt: z.string().optional(),
-  // The readable rendering of the page (Defuddle markdown), stored in-box.
-  readableMarkdown: z.string().min(1),
-  // The frozen, self-contained page (SingleFile HTML) — optional attachment.
-  frozenHtml: z.string().optional(),
-  // Box-relative dir of a landmark commentary destination; omitted → inbox.
-  destinationDir: z.string().optional(),
-  timestamp: z.string().optional(),
-});
-
 /** Default filing spot when no commentary destination is chosen. */
 const DEFAULT_COMMENTARY_DIR = "box/inbox";
 
 export const clerkRouter = router({
-  commentaryDestinations: publicProcedure.query(async ({ ctx }) => {
+  commentaryDestinations: publicProcedure.output(commentaryDestinationsOutput).query(async ({ ctx }) => {
     const destinations = await listDestinations(ctx.boxRoot, "commentary");
     return { destinations };
   }),
 
-  commentary: publicProcedure.input(commentaryInput).mutation(async ({ input, ctx }) => {
+  commentary: publicProcedure.input(commentaryInput).output(commentaryOutput).mutation(async ({ input, ctx }) => {
     const boxRoot = ctx.boxRoot;
     const capturedAt = input.timestamp ?? new Date().toISOString();
 

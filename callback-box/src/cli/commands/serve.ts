@@ -19,21 +19,23 @@ import { spawn } from "node:child_process";
 import * as path from "node:path";
 import { startServer, DEFAULT_PORT, type BoxSpec } from "../../webapp/server.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
-import { getBoxShapeOrLegacyFallback } from "../../lib/box-shape.js";
+import { getBoxShapeIfPresent } from "../../lib/box-shape.js";
 import { findBoxRoot, BOX_MARKER } from "../../lib/paths.js";
 import { isValidBox } from "../../core/box/index.js";
 
 /**
- * The slug a box gets when nothing overrides it. For a legacy (shapeVersion
- * 1) box this is the box dir's own basename, same as always. For a v2 box
- * `boxRoot` is the `content/` directory (see "The box repository" in
+ * The slug a box gets when nothing overrides it. A box's `boxRoot` is the
+ * `content/` directory (see "The box repository" in
  * `docs/implemented-plans/boxes-as-packages-v2.md`), so `path.basename(boxRoot)` would
  * always be the literal string "content" — the F1 gap the plan calls out.
- * The meaningful name for a v2 box is its PACKAGE root's basename instead.
+ * The meaningful name is its PACKAGE root's basename instead.
  */
 async function defaultSlugFor(boxRoot: string): Promise<string> {
-  const shape = await getBoxShapeOrLegacyFallback(boxRoot);
-  return path.basename(shape.shapeVersion >= 2 ? shape.packageRoot : shape.boxRoot);
+  // A real v2 box's slug is its PACKAGE root's basename (the content root's is
+  // always the literal "content"). A marker-less directory (the documented
+  // plain-directory serve mode) has no shape — fall back to its own basename.
+  const lookup = await getBoxShapeIfPresent(boxRoot);
+  return path.basename(lookup.found ? lookup.shape.packageRoot : boxRoot);
 }
 
 /**

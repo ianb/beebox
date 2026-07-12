@@ -9,8 +9,6 @@ are chatty); git state rides on view metadata instead.
 ```ts setup
 import { makeTestServer } from "../../helpers/doctest-server.js";
 import { getStatus } from "../../../src/lib/git.js";
-import { mkdir, writeFile } from "node:fs/promises";
-import { join } from "node:path";
 ```
 
 ## PUT creates (with parent dirs) and returns the file's identity
@@ -152,8 +150,7 @@ again.body.committed
 ## View metadata carries gitStatus until a commit clears it
 
 ```ts continue
-await mkdir(join(ctx.boxRoot, "views"), { recursive: true });
-await ctx.seed("views/pg.tsx", `
+await ctx.seedView("pg.tsx", `
 export const name = "PG";
 export const description = "pg";
 export const dependencies = ["store/playground/**/*.jsonl", "store/notes/**/*.md"];

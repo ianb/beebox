@@ -30,7 +30,7 @@ import type { useChatVoice } from "./InteractiveChat-voice";
 import { useChatAttachmentValues, type useChatAttachments } from "./InteractiveChat-attachments";
 import type { useChatSelections } from "./InteractiveChat-selections";
 import type { useChatActions } from "./InteractiveChat-actions";
-import type { ActivityKind } from "../../../../core/chat/card-activity.js";
+import type { ActivityKind } from "@core/chat/card-activity.js";
 import type { CaptureBubbleModel } from "./capture-bubble";
 
 interface ChatBodyProps {
