@@ -89,6 +89,7 @@ export function relativizeHome(text: string): string {
 
 const INVENTORY_CATEGORIES: Array<{ category: string; test: (title: string) => boolean }> = [
   { category: "System prompts", test: (t) => /^(Reactor|Chat|Commit)/.test(t) },
+  { category: "Subagent prompts", test: (t) => /^(Retro Observer|Scenario Validator|Procedure Judge|Triage)/.test(t) },
   { category: "Schemas", test: (t) => t.startsWith("Schema:") },
   { category: "Connector rules", test: (t) => t.startsWith("Connector") },
   { category: "Procedures", test: (t) => t.startsWith("Procedure:") },

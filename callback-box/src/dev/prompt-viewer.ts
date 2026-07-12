@@ -92,7 +92,19 @@ async function lastLedgerContent(path: string): Promise<string | null> {
   const lines = raw.split("\n").filter(Boolean);
   const last = lines.at(-1);
   if (last === undefined) return null;
-  const parsed: LedgerLine = JSON.parse(last);
+  let parsed: LedgerLine;
+  try {
+    parsed = JSON.parse(last);
+  } catch (_e) {
+    // A malformed final line (e.g. a truncated/hand-edited append) must not
+    // abort generation. Warn and treat as "no comparable previous content" so
+    // this run appends a fresh, well-formed line rather than throwing.
+    const lineNumber = raw.split("\n").length - (raw.endsWith("\n") ? 1 : 0);
+    console.warn(
+      `Ignoring malformed final line ${String(lineNumber)} in ledger ${path}; appending a new line.`,
+    );
+    return null;
+  }
   return JSON.stringify({ situations: parsed.situations, fragments: parsed.fragments });
 }
 

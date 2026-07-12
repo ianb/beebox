@@ -176,14 +176,24 @@ async function load() {
     return;
   }
   let ledger = [];
+  let ledgerSkipped = 0;
   try {
     const res = await fetch("size-ledger.jsonl", { cache: "no-store" });
     if (res.ok) {
       const txt = await res.text();
-      ledger = txt.split("\n").filter(Boolean).map((l) => JSON.parse(l));
+      // Parse each line on its own so one malformed line (a truncated or
+      // hand-edited append) never blanks the whole chart — skip it, count it,
+      // and surface the count as a small warning.
+      for (const l of txt.split("\n").filter(Boolean)) {
+        try {
+          ledger.push(JSON.parse(l));
+        } catch (e) {
+          ledgerSkipped++;
+        }
+      }
     }
   } catch (e) { /* ledger optional */ }
-  render(data, ledger);
+  render(data, ledger, ledgerSkipped);
 }
 
 function renderMissing() {
@@ -202,11 +212,11 @@ function renderMissing() {
   ]));
 }
 
-function render(data, ledger) {
+function render(data, ledger, ledgerSkipped) {
   document.title = "Prompt viewer · " + data.commit;
   $app.replaceChildren(
     header(data),
-    sizeSection(data, ledger),
+    sizeSection(data, ledger, ledgerSkipped || 0),
     situationsSection(data),
     inventorySection(data),
     duplicationSection(data),
@@ -372,11 +382,15 @@ function seriesValue(line, key) {
   return s ? s.alwaysTokens : 0;
 }
 
-function sizeSection(data, ledger) {
+function sizeSection(data, ledger, ledgerSkipped) {
   const kids = [
     el("h2", { text: "Size over time" }),
     el("p", { class: "sub", text: "Always-loaded tokens per situation, plus total inventory tokens, from the size ledger." }),
   ];
+  if (ledgerSkipped) {
+    kids.push(el("p", { class: "meta" },
+      "⚠ Skipped " + ledgerSkipped + " malformed ledger line" + (ledgerSkipped === 1 ? "" : "s") + "."));
+  }
   if (ledger.length < 2) {
     kids.push(el("p", { class: "sub" }, "Fewer than two ledger points — showing current numbers. The chart appears once the ledger grows."));
     const line = ledger[ledger.length - 1];

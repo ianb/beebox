@@ -25,6 +25,7 @@ import {
   buildReactorSystemPrompt,
   buildReactorUserPrompt,
 } from "../../core/reactor/prompts.js";
+import { buildTimezoneContext } from "../../core/box/config.js";
 import { findBoxRoot } from "../../lib/paths.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import {
@@ -91,7 +92,7 @@ export async function assembleContext(
   const layers: ContextLayer[] = [];
   const notRendered: string[] = [];
 
-  layers.push(...systemPromptLayers(situation, { ...options, boxRoot }));
+  layers.push(...(await systemPromptLayers(situation, { ...options, boxRoot })));
   const packageLayer = await packageClaudeMdLayer(roots);
   if (packageLayer !== null) layers.push(packageLayer);
   layers.push(await claudeMdLayer(boxRoot));
@@ -117,6 +118,11 @@ export async function assembleContext(
       "Per-run: the actual job descriptions (job card content + inlined refs + schema instructions) interpolated into the user prompt.",
     );
   }
+  if (options.landmarkDir !== undefined) {
+    notRendered.push(
+      `Landmark cwd: this chat runs with its working directory set to the landmark directory (\`${options.landmarkDir}\`), so any directory-local CLAUDE.md / MAP.md there (and in its ancestors up to the box root) also loads into context. Those are not rendered here — only the box-root CLAUDE.md above is.`,
+    );
+  }
 
   return { situation, description, boxRoot, layers, notRendered };
 }
@@ -136,12 +142,19 @@ class UnknownSituationError extends Error {
   }
 }
 
-function systemPromptLayers(
+async function systemPromptLayers(
   situation: string,
   options: AssembleOptions,
-): ContextLayer[] {
+): Promise<ContextLayer[]> {
+  // The runtime appends the box timezone context to each situation's system
+  // prompt (chat: buildBackendStartOptions; chat-thread: startRun; reactor:
+  // runAgent). Empty string when no timezone is configured, so assembly is
+  // unchanged in that case — matching the runtime.
+  const tzContext = await buildTimezoneContext(options.boxRoot);
   if (situation === "chat") {
-    let text = CHAT_SYSTEM_PROMPT + NARRATION_OVERLAY;
+    // Composed exactly as start.ts does: prompt + tz + overlay, then the
+    // landmark session note (when scoped to a landmark directory) appended last.
+    let text = CHAT_SYSTEM_PROMPT + tzContext + NARRATION_OVERLAY;
     if (options.landmarkDir !== undefined) {
       text += buildLandmarkSessionNote(options.landmarkDir);
     }
@@ -153,6 +166,7 @@ function systemPromptLayers(
     }];
   }
   if (situation === "chat-thread") {
+    // thread.ts appends the tz context after the thread system prompt.
     return [{
       name: "Chat-thread system prompt (placeholders unexpanded)",
       source: "src/core/chat/session/thread.ts",
@@ -161,16 +175,16 @@ function systemPromptLayers(
         threadRef: "${threadRef}",
         chatDescription: "${chatDescription}",
         sessionViewBaseUrl: "${sessionViewBaseUrl}",
-      }),
+      }) + tzContext,
     }];
   }
-  // reactor
+  // reactor — runAgent appends the tz context after the system prompt.
   return [
     {
       name: "Reactor system prompt",
       source: "src/core/reactor/prompts.ts",
       loading: "always",
-      text: buildReactorSystemPrompt(options.boxRoot),
+      text: buildReactorSystemPrompt(options.boxRoot) + tzContext,
     },
     {
       name: "Reactor user prompt (template)",

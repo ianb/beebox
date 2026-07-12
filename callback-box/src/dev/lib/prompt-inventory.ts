@@ -13,6 +13,10 @@ import { buildReactorSystemPrompt, buildReactorUserPrompt } from "../../core/rea
 import { CHAT_SYSTEM_PROMPT } from "../../core/chat/session/index.js";
 import { buildThreadSystemPrompt } from "../../core/chat/session/thread.js";
 import { COMMIT_NUDGE_PROMPT } from "../../core/agent/index.js";
+import { OBSERVER_SYSTEM_PROMPT } from "../../core/retro/observer.js";
+import { VALIDATION_SYSTEM_PROMPT } from "../../scenario/runner.js";
+import { buildJudgePrompt } from "../../core/procedure/engine-validate-model.js";
+import { buildTriageSystemPrompt } from "../../core/triage/index.js";
 import { connectorRules } from "../../core/init-rules.js";
 import { PACKAGE_ROOT } from "../../lib/package-root.js";
 import { errnoCode } from "../../lib/error-guards.js";
@@ -74,6 +78,42 @@ export async function collectPrompts(): Promise<PromptEntry[]> {
     source: "src/core/agent/index.ts → COMMIT_NUDGE_PROMPT",
     scope: "Sent as a follow-up user message when an agent session ends with uncommitted changes. Resumes the session to force a commit.",
     text: COMMIT_NUDGE_PROMPT,
+  });
+
+  // ── 1b. Single-purpose subagent prompts ──────────────────────────
+  // Tool-scoped LLM passes with their own system prompt, spawned outside
+  // the reactor/chat loop for one specific judgment or extraction.
+
+  entries.push({
+    title: "Retro Observer System Prompt",
+    source: "src/core/retro/observer.ts → OBSERVER_SYSTEM_PROMPT",
+    scope: "System prompt for the retrospective observer — one tool-less LLM pass (cheap tier) per chat session during a retro scan, extracting what the boxholder implicitly taught the assistant into structured observations.",
+    text: OBSERVER_SYSTEM_PROMPT,
+  });
+
+  entries.push({
+    title: "Scenario Validator System Prompt",
+    source: "src/scenario/runner.ts → VALIDATION_SYSTEM_PROMPT",
+    scope: "System prompt for a scenario step's `prompt`-type validation check (non-dry-run): a fresh agent inspects the box state and answers PASS/FAIL against the check's described condition.",
+    text: VALIDATION_SYSTEM_PROMPT,
+  });
+
+  entries.push({
+    title: "Procedure Judge System Prompt (template)",
+    source: "src/core/procedure/engine-validate-model.ts → buildJudgePrompt()",
+    scope: "System prompt for a procedure `validate` phase's model-evaluated instruction check (defaults to sonnet, fail-closed). The step's instructions, `whys:`, and git diff are interpolated; the model returns a structured pass/fail verdict.",
+    text: buildJudgePrompt({
+      instructions: ["${instruction}"],
+      whys: ["${why}"],
+      diff: "${diff}",
+    }),
+  });
+
+  entries.push({
+    title: "Triage System Prompt (template)",
+    source: "src/core/triage/index.ts → buildTriageSystemPrompt()",
+    scope: "System prompt for the triage subagent (`cb wakeup` preprocessing): categorizes each staged inbox item with a confidence level. The box's compiled per-landmark triage instructions are interpolated as the ruleset.",
+    text: buildTriageSystemPrompt({ doc: "${triageInstructions}", categories: [] }),
   });
 
   // ── 2. Schema instructions ───────────────────────────────────────

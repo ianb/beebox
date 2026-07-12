@@ -60,6 +60,37 @@ findDuplication([
 => []
 ```
 
+## A shared span must be contiguous in BOTH fragments
+
+A run of A's shingles only counts as one span when it is a single contiguous
+passage in B too. A's shingles scattered across unrelated parts of B are not
+merged into one long span (the diagonal-tracking guarantee).
+
+```ts
+// A 12-word passage = 5 overlapping 8-word shingles.
+const passage = "w0 w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11";
+
+// (a) The passage appears CONTIGUOUSLY in b → one finding, the whole span.
+const contiguous = findDuplication([
+  { name: "a", text: `alpha ${passage} omega` },
+  { name: "b", text: `beta ${passage} psi` },
+]);
+contiguous.length
+=> 1
+
+contiguous[0].words
+=> 12
+
+// (b) b contains each of a's five shingles, but as isolated passages separated
+// by junk words — contiguous in a, scattered in b → NOT merged, nothing reported.
+const scattered = "w0 w1 w2 w3 w4 w5 w6 w7 j0 w1 w2 w3 w4 w5 w6 w7 w8 j1 w2 w3 w4 w5 w6 w7 w8 w9 j2 w3 w4 w5 w6 w7 w8 w9 w10 j3 w4 w5 w6 w7 w8 w9 w10 w11";
+findDuplication([
+  { name: "a", text: passage },
+  { name: "b", text: scattered },
+])
+=> []
+```
+
 ## Identical-text fragments are collapsed, never self-matched
 
 The same content appearing under two names (e.g. once in the inventory and once

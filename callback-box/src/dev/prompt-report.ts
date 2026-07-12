@@ -47,7 +47,7 @@ function generateMarkdown(entries: PromptEntry[]): string {
   // Group entries by category
   const categories = [
     { name: "Agent System Prompts", prefix: ["Reactor", "Chat", "Commit"] },
-    { name: "Job-Specific Prompts", prefix: ["News", "Feedback", "Guide Revision"] },
+    { name: "Subagent Prompts", prefix: ["Retro Observer", "Scenario Validator", "Procedure Judge", "Triage"] },
     { name: "Schema Instructions", prefix: ["Schema:"] },
     { name: "Connector Rules", prefix: ["Connector"] },
     { name: "Procedure Templates", prefix: ["Procedure:"] },

@@ -4,10 +4,12 @@
  *
  * Method: normalize each fragment to a word list (lowercase, punctuation → space,
  * collapse whitespace), take overlapping 8-word shingles, and for each fragment
- * pair find runs of consecutive shingles that also occur in the other fragment.
- * Consecutive shingles overlap by 7 words, so a run of matching shingle
- * positions collapses into one maximal shared span automatically. Spans of ≥ 12
- * words are reported.
+ * pair find runs of shingles that are contiguous in BOTH fragments. Each of A's
+ * shingles is looked up at its position(s) in B, and a run extends only while
+ * consecutive A-positions map to consecutive B-positions (the same diagonal) —
+ * so a shared span must be a single contiguous passage in each fragment, not a
+ * collection of A-shingles that happen to appear scattered across B. Maximal
+ * same-diagonal runs of ≥ 12 words are reported.
  *
  * Reported span text is the NORMALIZED span (the lowercased, punctuation-stripped
  * words) taken from fragment `a` — chosen over reconstructing the original
@@ -69,22 +71,43 @@ interface Span {
 }
 
 /**
- * Maximal spans of `aWords` where each covering 8-word shingle also appears in
- * `bWords`. Consecutive matching shingle positions merge into one span.
+ * Maximal spans of `aWords` that appear as a single contiguous passage in
+ * `bWords`. Each A-shingle is matched against its position(s) in B, and a run
+ * extends only while consecutive A-positions map to consecutive B-positions
+ * (the same diagonal) — so A-shingles scattered across unrelated parts of B
+ * never merge into one long span.
  */
 function sharedSpans(aWords: string[], bWords: string[]): Span[] {
-  const bShingles = new Set(shingles(bWords, SHINGLE_SIZE));
   const aShingles = shingles(aWords, SHINGLE_SIZE);
+  const bShingles = shingles(bWords, SHINGLE_SIZE);
+
+  // Each distinct B-shingle → the positions where it occurs in B.
+  const bPositions = new Map<string, number[]>();
+  for (const [j, sh] of bShingles.entries()) {
+    const list = bPositions.get(sh);
+    if (list) list.push(j);
+    else bPositions.set(sh, [j]);
+  }
+
+  const matches = (i: number, j: number): boolean =>
+    i >= 0 && i < aShingles.length && j >= 0 && j < bShingles.length &&
+    (aShingles[i] ?? "") === (bShingles[j] ?? "");
+
   const spans: Span[] = [];
-  let runStart = -1;
-  for (let i = 0; i <= aShingles.length; i++) {
-    const matched = i < aShingles.length && bShingles.has(aShingles[i] ?? "");
-    if (matched) {
-      if (runStart === -1) runStart = i;
-    } else if (runStart !== -1) {
-      // Last matching shingle was at i-1, covering words up to (i-1)+SHINGLE_SIZE.
-      spans.push({ start: runStart, end: i - 1 + SHINGLE_SIZE });
-      runStart = -1;
+  const seen = new Set<string>();
+  for (const [i, aSh] of aShingles.entries()) {
+    for (const j of bPositions.get(aSh) ?? []) {
+      // Only start a run at a diagonal's head (its predecessor doesn't match),
+      // so each maximal run is emitted once from its first shingle.
+      if (matches(i - 1, j - 1)) continue;
+      let len = 1;
+      while (matches(i + len, j + len)) len++;
+      // A run of `len` shingles from A-position i covers words [i, i+len-1+SHINGLE_SIZE).
+      const span = { start: i, end: i + len - 1 + SHINGLE_SIZE };
+      const key = `${String(span.start)}:${String(span.end)}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      spans.push(span);
     }
   }
   return spans;
