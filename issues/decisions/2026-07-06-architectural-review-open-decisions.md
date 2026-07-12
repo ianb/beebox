@@ -8,17 +8,41 @@ landed state — surfaced here into the active issue queue because the plan
 doc moves to `docs/implemented-plans/` on merge, where open questions get
 buried. None blocks the merge.
 
-1. **Router refactor depth.** `bin/router.ts` recurring race bugs (6 of its
-   last 20 commits were concurrency fixes to the same comment-guarded
-   machinery). **Phased (boxholder decision, 2026-07-09): the conservative
-   phase is DONE** — commit `16ad6d11` (followups Track 8) extracted the
-   doc-browser + HTML views into `bin/router-docs.ts` (router.ts 2019 → 1409
-   lines) and promoted the four incident comments into
-   `bin/docs/router-protocol.md` (pointer comments kept at each code site).
-   **Still OPEN — the fuller option** (the hard-code scan's case): a formal
-   `WorktreeState` transition function, injected clock/spawner, unit tests
-   with fakes. The boxholder explicitly wants to keep going with the router
-   work in later phases. Shared dev infra — coordinate with the boxholder.
+1. **Router refactor depth. DONE (phase 2 complete, 2026-07-11).** Phase 1
+   (conservative, boxholder decision 2026-07-09): commit `16ad6d11` extracted
+   the doc-browser + HTML views into `bin/router-docs.ts` and promoted the four
+   incident comments into `bin/docs/router-protocol.md`. Phase 2 (the fuller
+   option — formal lifecycle, injected effects, incident tests) then landed on
+   `worktree-architectural-review`:
+   - **Phase A** (`4b0659a5`): `bin/router-lifecycle.ts` (stable-shell handle,
+     phase union, `LEGAL_TRANSITIONS` + guarded `transitionLifecycle`) +
+     `bin/router-pidfile.ts` (per-name serialized store), adopted in `router.ts`;
+     landed live-race fixes invariants #5 (guarded publication) and #6 (pidfile
+     serialization) the four-invariant framing missed.
+   - **Phase B** (`c16db52a`): split the lifecycle engine into
+     `bin/router-core.ts` — `createRouterCore(effects, config)` owns the
+     worktrees map and drives transitions through an injected `RouterEffects`
+     surface; `router.ts` builds the real effects, wires the HTTP/WS server, and
+     runs boot + signal handlers in an import-safe `main()` (importing binds no
+     ports, installs no handlers). Tab-title refresh is now a `config.onStateChange`
+     hook, not module-level monkey-patching.
+   - **Phase C** (`2660c732`, hardened `f18dd6f2`): incident tests
+     (`bin/router-core.test.ts` for invariants #2–#6 with a manual clock /
+     controllable spawner / recording killGroup / manual probes; and
+     `bin/router-lifecycle.test.ts` for the transition table), each proven
+     non-vacuous by neutering the guard it covers.
+
+   **Recorded non-goals / deliberate deferrals:** (a) stopping-phase status
+   accuracy (handles unlinked before the transition — never observed on the map);
+   (b) proxy-retry body-replay formalization (stays a request-level concern);
+   (c) two honesty findings surfaced by the neutering (and confirmed by codex):
+   invariant #4's stale-exit safety is doubly enforced (identity + phase) so the
+   test guards the historical name-based-teardown regression, and invariant #5's
+   failure-path clobber-prevention is now structural (transition-not-set), the
+   guard's unique job being `stopping`-vs-`failed` routing; (d) the filed
+   name-scoped dashboard-socket hazard
+   ([bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md](../bugs/2026-07-11-router-superseded-selfclean-kills-replacement-dashboard.md)).
+   Design record: `callback-box/docs/implemented-plans/router-state-formalization.md`.
 
 2. **Clerk↔server contract.** The extension talks to the box via hand-built
    tRPC URLs + a hand-duplicated payload shape (no shared typed contract,

@@ -48,12 +48,13 @@ if [ "$BRANCH" = "main" ]; then
   # Rebuild the clerk extension if its sources changed in this merge.
   "$REPO_DIR/callback-clerk/build/auto-build.sh" ORIG_HEAD HEAD || true
 
-  # A merge landed on main → any just-finished worktree is now merged and
-  # eligible for cleanup. Don't rely on session-end.sh for this: a /finish that
-  # ends in main context is invisible to it (it sees the finishing session as a
-  # main session, not the worktree). Sweep here — it's safe (only removes
-  # merged+clean+inactive worktrees) and backgrounds itself.
-  "$REPO_DIR/.claude/hooks/auto-sweep.sh" post-merge || true
+  # NOTE: worktree auto-sweep deliberately does NOT run here. It calls
+  # `git worktree prune`, which is not concurrency-safe against the deploy we
+  # just backgrounded above — it corrupts the deploy's `.deploy-checkout`
+  # registration mid-creation and fails the prod deploy. Worktree cleanup runs
+  # on SessionStart instead (see .claude/hooks/auto-sweep.sh). Re-adding a
+  # post-merge sweep needs a shared lock serializing it against the deploy's
+  # git-worktree ops first.
 else
   echo "[post-merge] Skip deploy: branch is '$BRANCH' (deploys only run from 'main')"
 fi
