@@ -81,7 +81,36 @@ const res = await ctx.request({
   payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "application/pdf", dataBase64: "abc" }] },
 });
 `${res.statusCode} ${res.body.error}`
-=> 400 unsupported mime type: application/pdf
+=> 400 unsupported mime type: application/pdf (accepted: image/jpeg, image/png, image/gif, image/webp)
+```
+
+The check accepts only the four media types the Anthropic API accepts, so an
+`image/*` type the API rejects — `image/avif` (which the browser image encoder
+used to produce for pasted photos), `image/svg+xml`, `image/bmp` — is now
+rejected here with a clean 400 instead of failing opaquely downstream:
+
+```ts continue
+const avif = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "image/avif", dataBase64: "abc" }] },
+});
+`${avif.statusCode} ${avif.body.error}`
+=> 400 unsupported mime type: image/avif (accepted: image/jpeg, image/png, image/gif, image/webp)
+```
+
+An empty `dataBase64` is a malformed attachment, rejected at the zod parse
+boundary (`.min(1)`) so it can't ride to the SDK boundary's empty-`data`
+error:
+
+```ts continue
+const empty = await ctx.request({
+  method: "POST",
+  url: "/api/chat/send",
+  payload: { message: "hi", session: "new", images: [{ id: 1, mimeType: "image/png", dataBase64: "" }] },
+});
+empty.statusCode
+=> 400
 ```
 
 ```ts cleanup

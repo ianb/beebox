@@ -6,6 +6,7 @@
 import { Pre } from "../ui/Pre";
 import { JsonView } from "../ui/JsonView";
 import type { SessionContentBlock } from "../../api";
+import type { ActivityPart } from "./message-parsing";
 import { type KnownToolName, isKnownTool } from "@shared/known-tools";
 
 /**
@@ -60,7 +61,7 @@ function shortPath(p: string): string {
   return parts.slice(-2).join("/");
 }
 
-type ActivityParts = Array<{ type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }>;
+type ActivityParts = ActivityPart[];
 
 /**
  * Summarize an activity group (thinking + tools) for the collapsed header.
@@ -71,13 +72,16 @@ function summarizeActivity(parts: ActivityParts): string {
 
   const counts: Record<string, number> = {};
   for (const part of parts) {
-    if (part.type === "thinking") {
-      hasThinking = true;
-    } else if (part.tools) {
-      for (const tool of part.tools) {
-        const category = toolCategory(tool.toolName || "");
-        counts[category] = (counts[category] || 0) + 1;
-      }
+    switch (part.type) {
+      case "thinking":
+        hasThinking = true;
+        break;
+      case "tools":
+        for (const tool of part.tools) {
+          const category = toolCategory(tool.toolName || "");
+          counts[category] = (counts[category] || 0) + 1;
+        }
+        break;
     }
   }
 
@@ -183,10 +187,13 @@ function ToolDetail({ block }: { block: SessionContentBlock }) {
 function countToolCalls(parts: ActivityParts): number {
   let count = 0;
   for (const part of parts) {
-    if (part.type === "thinking") {
-      count++;
-    } else if (part.tools) {
-      count += part.tools.length;
+    switch (part.type) {
+      case "thinking":
+        count++;
+        break;
+      case "tools":
+        count += part.tools.length;
+        break;
     }
   }
   return count;
@@ -210,21 +217,23 @@ function ActivityGroupInner({ parts }: { parts: ActivityParts }) {
   return (
     <>
       {parts.map((part, i) => {
-        if (part.type === "thinking") {
-          if (!part.text?.trim()) return null;
-          return (
-            <details key={i} className="group/think">
-              <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
-                <span className="text-warm-500 group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
-                <span>thinking</span>
-              </summary>
-              <div className="mt-0.5 mb-1 ml-3 text-xs text-warm-600 italic whitespace-pre-wrap">
-                {part.text}
-              </div>
-            </details>
-          );
+        switch (part.type) {
+          case "thinking":
+            if (!part.text?.trim()) return null;
+            return (
+              <details key={i} className="group/think">
+                <summary className="cursor-pointer list-none flex items-center gap-1 text-primary hover:text-primary-dark py-0.5">
+                  <span className="text-warm-500 group-open/think:rotate-90 transition-transform text-[10px]">&#9654;</span>
+                  <span>thinking</span>
+                </summary>
+                <div className="mt-0.5 mb-1 ml-3 text-xs text-warm-600 italic whitespace-pre-wrap">
+                  {part.text}
+                </div>
+              </details>
+            );
+          case "tools":
+            return part.tools.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />);
         }
-        return part.tools?.map((tool, j) => <ToolDetail key={`${i}-${j}`} block={tool} />);
       })}
     </>
   );

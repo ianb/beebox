@@ -10,7 +10,6 @@ import { bustImageSrc } from "../../lib/file-version";
 import type { SessionEntry, SessionContentBlock } from "../../api";
 import { stripChatAppTags } from "@shared/chat-tags";
 import { entrySelfNotes, type SelfNoteInfo } from "@shared/self-note";
-import { invariant } from "../../lib/invariant";
 
 // Self-note parsing is shared with the CLI/webapp — see `core/self-note.ts`.
 // Re-exported so ChatMessages.tsx keeps importing the type from this module.
@@ -278,14 +277,23 @@ export function extractChatImages(
 
 // --- Assistant part grouping ---
 
-interface AssistantPart { type: "text" | "tools" | "thinking"; text?: string; tools?: SessionContentBlock[] }
+// A discriminated union on `type`: text/thinking parts carry `text`, a tools
+// part carries `tools`. Each variant holds exactly the field its kind
+// populates, so a consumer that narrows on `type` sees only the fields that
+// exist — no optional-field guards or runtime `invariant`s needed.
+type AssistantPart =
+  | { type: "text"; text: string }
+  | { type: "thinking"; text?: string }
+  | { type: "tools"; tools: SessionContentBlock[] };
 export interface TextGroup { kind: "text"; text: string }
-export interface ActivityPart { type: "thinking" | "tools"; text?: string; tools?: SessionContentBlock[] }
+/** The non-text members of AssistantPart — what an activity group renders. */
+export type ActivityPart =
+  | { type: "thinking"; text?: string }
+  | { type: "tools"; tools: SessionContentBlock[] };
 export interface ActivityGroupData { kind: "activity"; parts: ActivityPart[] }
 
-// AssistantPart's `type` is a plain union field, not a discriminated union, so
-// TS can't narrow it structurally. This guard is sound: a non-"text" part has
-// exactly the ActivityPart shape.
+// Narrows off the `type` discriminant: everything that isn't "text" is an
+// ActivityPart (thinking or tools).
 function isActivityPart(part: AssistantPart): part is ActivityPart {
   return part.type !== "text";
 }
@@ -306,7 +314,6 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
         // `.at(-1)`: see the note in `groupMessages` above.
         const last = flat.at(-1);
         if (last && last.type === "tools") {
-          invariant(last.tools, "a 'tools' part must always carry a tools array");
           last.tools.push(block);
         } else {
           flat.push({ type: "tools", tools: [block] });
@@ -330,7 +337,7 @@ export function groupIntoParts(entries: SessionEntry[]): Array<TextGroup | Activ
       activityBuf.push(part);
     } else {
       flushActivity();
-      grouped.push({ kind: "text", text: part.text || "" });
+      grouped.push({ kind: "text", text: part.text });
     }
   }
   flushActivity();
