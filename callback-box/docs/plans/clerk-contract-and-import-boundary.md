@@ -2,157 +2,177 @@
 
 Resolves the last two build-item entries of the architectural review's open
 decisions (`issues/decisions/2026-07-06-architectural-review-open-decisions.md`
-items 2 and 5). Scoped 2026-07-12; both scoping reports' findings are folded
-in below.
+items 2 and 5). Scoped 2026-07-12; codex plan review 2026-07-12 (11 valid
+findings, all folded in — the design below is post-review).
 
 > **STATUS: IN IMPLEMENTATION (2026-07-12).**
 
 ## Track 1 — Clerk contract: generated-and-CI-checked
 
-Ground truth (scoping): the entire contract is **two tRPC procedures**
+Ground truth: the entire contract is **two tRPC procedures**
 (`clerk.commentaryDestinations`, `clerk.commentary` —
 `callback-box/src/webapp/trpc/routers/clerk.ts:41-103`), consumed by
 hand-built fetch in `callback-clerk/src/platform/clerk-api.ts:52-78` with
 hand-declared shapes in `callback-clerk/src/domain/commentary.ts:30-47`.
-Zero live drift (verified field-for-field). Every historical wire change
-landed client+server in one commit; the skew risk is forward-looking. No CI
-exists beyond the root pre-commit dispatcher, which currently does NOT run
-clerk checks on a callback-box-only change — that's the enforcement gap.
+Zero live drift today. The enforcement gap: the pre-commit dispatcher runs
+checks per-subtree, so a callback-box-only change never exercises clerk.
 
-Design (boxholder-approved direction: generated + CI-checked stub):
+1. **Leaf contract-schema module** (codex 1): the zod schemas move to a new
+   `callback-box/src/webapp/trpc/routers/clerk-contract.ts` that is
+   SELF-CONTAINED — imports zod and nothing else (no fs/git/landmark
+   graph). It exports `commentaryInput`, `commentaryOutput`,
+   `commentaryDestinationsOutput` (new — `{ destinations: { dir: string;
+   label: string; symbol: string | null }[] }`, matching `DestinationInfo`
+   exactly including the `| null`). `clerk.ts` imports the leaf and wires
+   `.input()`/`.output()`. Self-containment is load-bearing: it makes the
+   leaf the single file whose content determines the wire shape, which is
+   what the staleness gate triggers on.
+2. **`.output()` semantics pinned** (codex 3): default zod object behavior
+   (strip unknown keys) — the schema is authoritative; adding a response
+   field REQUIRES updating the leaf schema or the field never ships. Add
+   a `commentaryDestinations` case to `trpc-clerk.doctest.md` (currently
+   only `commentary` is covered) proving current responses pass the new
+   output schemas.
+3. **Generator** `bin/snapshot-clerk-contract.ts` (codex 2): imports ONLY
+   the leaf module. Emission mechanism pinned: `z.toJSONSchema` (zod v4
+   built-in) → a tiny JSON-Schema→TS printer supporting exactly the
+   construct whitelist the leaf uses (object, string, array, optional,
+   nullable, literal/enum if added later) and THROWING on anything else
+   (so a future schema using an unsupported construct fails generation
+   loudly, never emits a wrong type). Input types from the input schema's
+   input side; output types from output schemas. Deterministic output
+   (stable key order); emits
+   `callback-clerk/src/contract/clerk-contract.generated.ts` with a
+   DO-NOT-EDIT header naming the generator and the pnpm script.
+   Generated-file hand-edits: never (codex 11).
+4. **Clerk adopts the generated types**: `CommentaryPayload` /
+   `CommentaryDestination` duplicates in `commentary.ts` are deleted in
+   favor of generated imports. Pinned (codex 11): `timestamp` follows the
+   generated (optional) type — clerk continues to always send it, but its
+   type no longer over-constrains. Fix the stale doc-drift
+   (`commentary.ts:2-4,73` points at the deleted raw-route file).
+5. **Staleness gate** (codex 4): pre-commit dispatcher branch fires when
+   staged changes touch the LEAF module, the generator, the generated
+   file, or the hook branch itself; regenerates and diffs — scoped to the
+   generated path only (`git diff --exit-code --
+   callback-clerk/src/contract/clerk-contract.generated.ts`), never a
+   bare diff (shared-checkout noise). Recorded, accepted misses: zod
+   version bumps and TS-version changes can alter emission — the
+   deterministic-generator test (run twice, byte-identical) plus the
+   whitelist-throw are the mitigation; a full re-generate happens whenever
+   anyone touches the contract anyway.
+6. **Residual-skew handling** (codex 9, spec pinned): `trpcQuery`/
+   `trpcMutation` currently do an unchecked `res.json()` cast. They gain
+   envelope validation (JSON parse guarded; `result.data` present via the
+   local `is-record` guard) and each call site validates the
+   procedure-specific minimal shape (destinations: array of records with
+   string `dir`; commentary: string[] `created` + string `open`) —
+   hand-written against the generated types, commented as the runtime
+   twin of the snapshot. Failure → `ClerkApiError` with a
+   reload/update-the-extension message; never a silent `undefined` ride.
+   Recorded in the close-out: deployed-skew is accepted and handled by
+   degradation, not prevented.
 
-1. **Output schemas on the router.** Add zod `.output()` schemas to both
-   procedures in `clerk.ts` (strict bias: output shapes become
-   validated-at-runtime and snapshotable the same way inputs are, instead
-   of inferred-only). Shapes exactly as today — `{ destinations:
-   {dir,label,symbol}[] }` and `{ created: string[], open: string }`.
-2. **Generator:** `bin/snapshot-clerk-contract.ts` imports ONLY the clerk
-   router module's schemas (not AppRouter — avoids the transitive
-   node-builtin type graph) and emits a checked-in, deterministic,
-   generated TypeScript contract file
-   `callback-clerk/src/contract/clerk-contract.generated.ts`: procedure
-   names, query/mutation kind, input/output types (derived from the zod
-   schemas via z.infer-shaped type printing or zod-to-ts-style emission —
-   implementer picks the simplest reliable mechanism; a hand-rolled
-   printer is acceptable for two procedures, but it must fail loudly on a
-   zod construct it doesn't understand, never emit a wrong type). File
-   carries a DO-NOT-EDIT header naming the generator.
-3. **Clerk adopts the generated types:** `clerk-api.ts` and
-   `commentary.ts`'s hand-declared `CommentaryPayload`/
-   `CommentaryDestination` shapes convert to importing from the generated
-   file (deleting the duplicates). Also fix the stale doc-drift: comments
-   in `commentary.ts:2-4,73` point at the deleted raw-route file
-   `webapp/routes/clerk.ts` — repoint to the tRPC router.
-4. **Staleness gate:** a pre-commit branch in the root dispatcher
-   (`.husky/` — follow the existing doc-check/path-leak-check idiom): when
-   staged changes touch `callback-box/src/webapp/trpc/routers/clerk.ts`
-   (or the generator, or the generated file), regenerate and
-   `git diff --exit-code` the generated file — a mismatch blocks the
-   commit with a message naming the regeneration command. Add a pnpm
-   script for manual regeneration.
-5. **Residual-skew handling (the gap no static check covers):** a deployed
-   extension can lag/lead the live server. `clerk-api.ts` gets minimal
-   runtime shape validation of responses (the existing local
-   `domain/is-record.ts` level, not a zod dep unless clerk already has
-   one) that turns an unexpected-shape response into a clear
-   `ClerkApiError` telling the user to update/reload the extension —
-   never a silent `undefined` ride (the scouted failure mode:
-   `commentaryOpenUrl(boxUrl, undefined)` building `${boxUrl}/undefined`).
-   Record in the issue close-out that this residual case is accepted and
-   handled by degradation, not prevented.
-
-Out of scope, recorded: no store-release versioning gate (clerk has no
-release cadence today); no generalization beyond the clerk router until a
-second consumer exists.
+Out of scope, recorded: no store-release versioning gate; no
+generalization beyond the clerk router until a second consumer exists.
 
 ## Track 2 — Frontend import boundary: rule + type-only aliases + value fixes
 
-Ground truth (scoping): 34 escaping imports across 27 files — 24 type-only
-(runtime-erased, harmless), 10 value imports that genuinely bundle backend
-source into the Vite client build (no `node:*` leakage TODAY, but no gate
-prevents it — the live landmine). `@backend/*`→`src/webapp/*` and
-`@shared/*`→`src/shared/*` are the only aliases; `@backend` is deliberately
-tsconfig-only (no Vite entry) so it cannot carry value imports — a
-load-bearing property to preserve. `src/frontend/src/ssr/render.tsx` is
-quasi-backend (the `cb render` tsx entry, not part of the Vite build) and
-gets exempted, not fixed. ESLint here has NO ts-aware import resolver
-(known-broken `eslint-import-resolver-typescript`) — enforcement must work
-on raw/node-resolvable paths; verify empirically.
+Ground truth: ~34 escaping imports across 27 files — ~24 type-only
+(erased, harmless), ~10 value imports genuinely bundling backend source
+into the Vite client build (counts approximate; the implementer
+re-enumerates as step one — codex 8). No `node:*` leakage today, but no
+gate prevents it. `@backend/*`→`src/webapp/*` (tsconfig-only, no Vite
+entry — cannot carry value imports; preserve this property) and
+`@shared/*`→`src/shared/*` (tsconfig + Vite) are the only aliases.
+`src/frontend/src/ssr/**` is quasi-backend (the `cb render` tsx entry) —
+exempt, not fixed. ESLint here has NO working ts-aware import resolver.
 
-Design decisions (aligned with the no-barrels ruling — no re-export
-indirection where a direct path exists):
-
-1. **Type-only aliases `@core/*` and `@schemas/*`** added to
-   `src/frontend/tsconfig.json` paths ONLY — deliberately NOT to
-   `vite.config.ts` `resolve.alias`, mirroring `@backend`: the alias
-   physically cannot resolve at runtime, so a future value import through
-   it fails the build instead of silently bundling backend code. Comment
-   both configs with this contract. The 24 type-only sites (+ any the
-   census missed) convert to `import type ... from "@core/..."` /
-   `"@schemas/..."`. (Chosen over webapp `export type` re-exports: those
-   are mini-barrels — indirection with an editorial layer nobody asked
-   for. The existing events.ts re-export may stay or convert, implementer
-   judgment.)
-2. **Value imports (10 lines / 9 backend modules), per-site disposition:**
-   - Already-`shared/` targets imported via raw paths (`boxRelativePath`
-     ×2, `cardTypeFromName`, `buildChatContentBlocks`): rewrite to
-     `@shared/...` — pure compliance fixes.
-   - Pure, both-sides modules currently in backend-only homes:
-     `core/model-ids.ts` (MODEL_ID), `core/parse-attrs.ts` (parseAttrs),
-     backend `lib/filename.ts` (sanitizeFilename) → RELOCATE to
-     `src/shared/` (git mv + backend import updates), which is exactly
-     what `shared/` is for. Consult `docs/module-map.md` and keep it
-     truthful (update it if the move shifts a documented boundary).
-   - Backend-flavored values (`stripChatAppTags` in core/chat/features,
-     `entrySelfNotes`/`decodeXmlAttr` in core/self-note, `VOICE_MODELS` in
-     schemas/personality): implementer judgment per site — extract the
-     pure piece to `shared/` if it separates cleanly; otherwise the
-     frontend needs its own honest implementation or the feature's parsing
-     belongs server-side. NO value re-exports through webapp (that bundles
-     it anyway and adds indirection). Every disposition documented in the
-     commit.
-3. **The rule:** `import-x/no-restricted-paths` (plugin already loaded by
-   the preset) in `src/frontend/eslint.config.mjs` — project-local
-   addition, NOT a preset change (the preset header only gates weakening;
-   flag possible future preset promotion in the issue close-out). Zones:
-   target `src/frontend/src`, from all backend roots (`core`, `webapp`,
-   `schemas`, `services`, `lib`, `cards`, `scenario`, `shared`), except
-   the sanctioned alias paths; exempt `src/frontend/src/ssr/**`.
-   MUST be verified empirically both ways: the raw `../../../core` form
-   fails at every existing depth (2- to 4-deep), and `@core`/`@shared`
-   alias imports plus ordinary intra-frontend `../lib/...` imports do NOT
-   false-positive (the frontend has its own `lib/`; only resolved-path
-   zones disambiguate it from backend `lib/` — if the broken resolver
-   makes `no-restricted-paths` unable to do this reliably, fall back to
-   `no-restricted-imports` with patterns, special-casing the `lib/` depth
-   exactly, and say so).
+1. **Type-only aliases `@core/*`, `@schemas/*`** in
+   `src/frontend/tsconfig.json` paths ONLY — deliberately absent from
+   `vite.config.ts` (mirrors `@backend`; a value import through them
+   breaks the client build instead of silently bundling). Both configs
+   commented with the contract. Convert the type-only sites. Verified
+   caveat (codex 6): tsx-based paths (`cb render`, any tsx-run tests) may
+   honor tsconfig paths and execute a value import the Vite build would
+   reject — the implementer empirically checks what `tsx` does with a
+   deliberate value-import probe through `@core` and documents the result
+   in the config comment; the lint rule (below) is the guard that doesn't
+   depend on build behavior.
+2. **Value imports, dispositions PINNED** (codex 7 — verified per module):
+   - `boxRelativePath` ×2, `cardTypeFromName` (one raw site; one already
+     compliant), `buildChatContentBlocks`: rewrite to `@shared/...`.
+   - `core/model-ids.ts` (zero imports) and `lib/filename.ts`
+     (self-declared dependency-free): `git mv` to `src/shared/`, update
+     backend importers.
+   - `core/parse-attrs.ts`: move to `src/shared/` KEEPING its
+     `lib/invariant.js` import — module-map allows `shared/` importing
+     bundler-safe `lib/` modules and `invariant.ts` is one; verify
+     against `docs/module-map.md` and update that doc if it's silent on
+     shared→lib.
+   - `VOICE_MODELS`/`VoiceModel`: currently imported from the HEAVY
+     `schemas/personality.tsx`, dragging the whole personality
+     schema/compile graph into the client bundle today (the worst live
+     offender). The value actually lives in the near-leaf
+     `schemas/personality-fields.ts`. Fix: relocate the
+     `VOICE_MODELS`/`VoiceModel` definitions to
+     `src/shared/voice-models.ts`; `personality-fields.ts` re-imports
+     from there; frontend imports `@shared/voice-models`.
+   - `stripChatAppTags`: `core/chat/features.ts` is zero-import but owns
+     more than this function — extract `stripChatAppTags` (and whatever
+     `parseSelfNotes` needs) to `src/shared/chat-tags.ts`; `features.ts`
+     imports it back.
+   - `core/self-note.ts` (`entrySelfNotes`, `decodeXmlAttr`): after the
+     chat-tags extraction its only deps are shared/chat-tags +
+     lib/invariant — relocate the whole module to
+     `src/shared/self-note.ts`.
+   Every move updates backend importers and runs their doctests.
+3. **The rule** (codex 5 — mechanism decision reversed by the review):
+   `import-x/no-restricted-paths` resolves import paths and SILENTLY
+   SKIPS unresolvable ones — with this repo's broken ts resolver, alias
+   imports would pass by accident, not by design, and would silently
+   flip to violations if the resolver is ever fixed. So the PRIMARY
+   mechanism is plain **`no-restricted-imports` with patterns** in
+   `src/frontend/eslint.config.mjs` (project-local; the preset only gates
+   weakening — record the possible future preset promotion in the
+   close-out): patterns banning the raw relative spellings at every
+   real depth (`../../core/*` through `../../../../core/*`, same for
+   `webapp`, `schemas`, `services`, `shared`, `cards`, `scenario`, and
+   the specific `../../../../lib/*` depth — the frontend's own `lib/` is
+   shallower, so the exact-depth pattern cannot false-positive; verify).
+   Spelling-based is also honest about intent: the raw spellings are
+   banned, the alias spellings are legal. Exempt `src/ssr/**` via the
+   flat-config files/ignores mechanics. Verify empirically both ways:
+   every existing raw depth fails; alias + intra-frontend relative
+   imports pass; final tree lint-clean with zero disables for this rule.
 4. **Follow-up filed, not bundled:** consolidating the frontend's local
    helper copies (`invariant.ts`, `error-guards.ts`, `is-record.ts`) into
-   `shared/` now that a sanctioned path exists — file as an issue
-   (`is-record` as the trivial pilot; the other two carry deliberate
-   "frontend counterpart" framing to re-check before merging).
+   `shared/` now that the pattern exists (`is-record` as pilot; the other
+   two carry deliberate "frontend counterpart" framing to re-check).
 
 ## Execution
 
-Two parallel agents (disjoint territories):
-- **W-clerk** (Track 1): callback-box/src/webapp/trpc/routers/clerk.ts,
-  bin/snapshot-clerk-contract.ts, .husky/ dispatcher, callback-clerk/.
-  Tests: the generator is deterministic (run twice, identical output); the
-  staleness gate trips on an intentional schema change (verify then
-  revert); clerk's suite + typecheck; trpc-clerk doctest still green
-  (output schemas must not reject current responses).
-- **W-boundary** (Track 2): src/frontend/, src/shared/, the relocated
-  core/lib modules and their backend importers, frontend eslint config.
-  Tests: full typecheck both configs; frontend suite; backend doctests
-  covering relocated modules; the rule verified empirically (violation
-  fails, alias passes) and the final tree lint-clean with zero disables
-  for this rule.
+Two parallel agents; **shared-file ownership pinned** (codex 10): neither
+agent touches the open-decisions issue or this plan's status — the
+orchestrator does both after both agents land.
+
+- **W-clerk** (Track 1): clerk router + new leaf module, generator in
+  bin/, .husky/ dispatcher branch, callback-clerk/. Tests: generator
+  determinism (twice, byte-identical); staleness gate trips on an
+  intentional leaf-schema change (verify, revert); output schemas pass
+  current responses (doctest incl. the new destinations case); clerk
+  suite + typecheck; envelope-validation unit coverage.
+- **W-boundary** (Track 2): src/frontend/ configs + sites, src/shared/
+  additions, the relocated modules and their backend importers,
+  docs/module-map.md if touched. Tests: both typechecks; frontend suite;
+  backend doctests covering every relocated module's importers; the rule
+  verified empirically per §3; the tsx-probe result documented.
 
 Both: codex review foreground before final commit (adversarial: generator
-emitting a subtly-wrong type; output schemas stricter than real responses;
-relocations changing backend import graphs; the lint zones over- or
-under-matching). Stage-own-files + plain `git commit` (no pathspec).
-Close-out: items 2 and 5 marked decided+done in the open-decisions issue
-(with the residual-skew acceptance and the preset-promotion question
-recorded); helper-consolidation follow-up filed; this plan retired by the
-finish flow.
+emitting a subtly-wrong type; output schemas rejecting real responses;
+relocations breaking backend import graphs; lint patterns over/under
+matching). Stage-own-files + plain `git commit` (no pathspec —
+lint-staged hazard). Close-out (orchestrator): items 2 and 5 decided+done
+with the residual-skew acceptance, the resolver-accident note, and the
+preset-promotion question recorded; helper-consolidation follow-up filed;
+plan retired by the finish flow.
