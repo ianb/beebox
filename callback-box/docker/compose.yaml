@@ -55,7 +55,14 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      CB_DOMAIN: ${CB_DOMAIN:?set CB_DOMAIN to your domain in .env before using the public profile}
+      # Do NOT use the `${CB_DOMAIN:?...}` required-variable form here: Compose
+      # interpolates the whole file at load time, BEFORE profile filtering, so a
+      # `:?` guard fires even for a plain `docker compose up`/`run` that never
+      # touches the caddy service — breaking the local flow. Default to empty
+      # instead; if the public profile is started without CB_DOMAIN set, Caddy
+      # itself fails loudly on the empty site address (`{$CB_DOMAIN}` in the
+      # Caddyfile). docs/docker-install.md says to set it for the public path.
+      CB_DOMAIN: ${CB_DOMAIN:-}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
