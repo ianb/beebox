@@ -74,6 +74,40 @@ function sessionsInWindow(
     });
 }
 
+/**
+ * A session is an affinity peer of the cwd's box-relative dir when it's
+ * bound to that dir itself OR to an ancestor of it (a chat bound to
+ * `store` is relevant when standing in `store/bunker`). Root-bound
+ * sessions ("") are peers only at the box root — where affinity is off
+ * anyway. This is about recorded session bindings, not landmark cards.
+ */
+function isAffinityPeer(sessionContextDir: string, cwdContextDir: string): boolean {
+  return (
+    sessionContextDir === cwdContextDir ||
+    (sessionContextDir !== "" && cwdContextDir.startsWith(sessionContextDir + "/"))
+  );
+}
+
+/**
+ * Split sessions into affinity peers of `cwdContextDir` and the rest.
+ * Peers come back deepest binding first (exact dir before ancestors),
+ * preserving the input's recency order within a depth; `others` keeps
+ * the input order untouched. Pass sessions newest-first.
+ */
+export function partitionByAffinity<T extends { contextDir: string }>(
+  sessions: T[],
+  cwdContextDir: string
+): { peers: T[]; others: T[] } {
+  const peers = sessions.filter((s) => isAffinityPeer(s.contextDir, cwdContextDir));
+  const others = sessions.filter((s) => !isAffinityPeer(s.contextDir, cwdContextDir));
+  const depth = (dir: string): number => (dir === "" ? 0 : dir.split("/").length);
+  // toSorted is stable, so equal depths keep the caller's recency order.
+  return {
+    peers: peers.toSorted((a, b) => depth(b.contextDir) - depth(a.contextDir)),
+    others,
+  };
+}
+
 /** One-line footer telling the reader how wide the discovery sweep was. */
 async function printSearchedRootsFooter(boxRoot: string): Promise<void> {
   const roots = await listSessionRoots(boxRoot);
@@ -105,11 +139,20 @@ export async function runListMode(options: {
     return;
   }
 
+  // cwd affinity applies to the non-windowed list only (`--since` stays
+  // pure chronology), and it's ordering, never a filter. Partition BEFORE
+  // the 20-item cap so a peer older than the top-20 still makes the list.
+  const affinity = !since && cwdContextDir !== "";
+  const partitioned = affinity
+    ? partitionByAffinity(allSessions, cwdContextDir)
+    : { peers: [], others: allSessions };
+  const grouping = partitioned.peers.length > 0;
+
   // Pre-filter by mtime when possible: a session whose file mtime is older
   // than the cutoff can't have any activity inside the window.
   const prefiltered = since
     ? allSessions.filter((s) => s.mtime.getTime() >= since.cutoff)
-    : allSessions.slice(0, 20);
+    : [...partitioned.peers, ...partitioned.others].slice(0, 20);
 
   const enriched = await enrichSessions(prefiltered);
 
@@ -124,16 +167,10 @@ export async function runListMode(options: {
         return bt - at;
       });
 
-  // cwd affinity: peers of the current landmark dir come first (recency
-  // preserved within each group). Never a filter — everything still prints.
-  const grouping =
-    cwdContextDir !== "" && byRecency.some((m) => m.contextDir === cwdContextDir);
-  const sorted = grouping
-    ? [
-        ...byRecency.filter((m) => m.contextDir === cwdContextDir),
-        ...byRecency.filter((m) => m.contextDir !== cwdContextDir),
-      ]
-    : byRecency;
+  // Re-group the enriched rows (enrichment sorts by start time, which may
+  // reshuffle the pre-enrichment mtime order).
+  const regrouped = grouping ? partitionByAffinity(byRecency, cwdContextDir) : null;
+  const sorted = regrouped ? [...regrouped.peers, ...regrouped.others] : byRecency;
 
   if (sorted.length === 0) {
     console.log(
@@ -151,7 +188,7 @@ export async function runListMode(options: {
       : "Recent sessions:\n"
   );
   if (grouping) {
-    console.log(fmt.dim(`(sessions in ${cwdContextDir} listed first)`));
+    console.log(fmt.dim(`(sessions bound to ${cwdContextDir} or an enclosing dir listed first)`));
     console.log();
   }
   for (const meta of sorted) {

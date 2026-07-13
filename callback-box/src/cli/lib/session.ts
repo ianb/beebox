@@ -14,6 +14,7 @@ import { type SessionEntry, buildEntry } from "./session-entry.js";
 import { stripChatAppTags } from "../../core/chat/features.js";
 import {
   listSessionRoots,
+  loadHistoryEntries,
   resolveSessionLogPath,
 } from "../../core/chat/session/history.js";
 import { listSessionFilesInDir } from "../../core/chat/session/transcript-paths.js";
@@ -57,13 +58,27 @@ export interface SessionInfo {
  * landmark-bound chat's transcript lives under its own encoded dir in
  * `~/.claude/projects/`). Sorted by modification time, newest first.
  * Roots are deduped by encoded dir name, so a file is never listed twice.
+ *
+ * Labels come from the session's own history binding when it has one:
+ * the projects-dir encoding is lossy (`store/a-b` and `store/a_b` share
+ * an encoded dir), so the root a file was found under can't be trusted
+ * to name its contextDir. The root's contextDir is only the fallback
+ * for ids history doesn't know.
  */
 export async function listSessions(boxRoot: string): Promise<SessionInfo[]> {
   const roots = await listSessionRoots(boxRoot);
+  const entries = await loadHistoryEntries(boxRoot);
+  const boundContextDirs = new Map<string, string>();
+  for (const entry of entries) {
+    if (entry.contextDir !== undefined) boundContextDirs.set(entry.id, entry.contextDir);
+  }
   const perRoot = await Promise.all(
     roots.map(async (root) => {
       const files = await listSessionFilesInDir(root.dir);
-      return files.map((f) => ({ ...f, contextDir: root.contextDir }));
+      return files.map((f) => ({
+        ...f,
+        contextDir: boundContextDirs.get(f.sessionId) ?? root.contextDir,
+      }));
     })
   );
   const sessions = perRoot.flat();

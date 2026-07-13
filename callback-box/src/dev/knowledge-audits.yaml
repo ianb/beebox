@@ -3740,4 +3740,5 @@ tests:
       Does NOT hand-hunt JSONL files under ~/.claude/projects/ or grep
       the box for transcripts.
     correct_contains: ["cb session"]
+    correct_contains_any: ["--list", "--latest"]
     tags: [sessions, cli]

@@ -25,6 +25,7 @@ import {
 import { generateSessionReport } from "../../dev/lib/session-report.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import {
+  partitionByAffinity,
   resolveSince,
   runListMode,
   runSinceMode,
@@ -119,18 +120,22 @@ export const sessionCommand = new Command("session")
           console.error("No sessions found for this box.");
           process.exit(1);
         }
-        const peer =
+        const [peer] =
           contextDir !== ""
-            ? sessions.find((s) => s.contextDir === contextDir)
-            : undefined;
+            ? partitionByAffinity(sessions, contextDir).peers
+            : [];
         const [newest] = sessions;
         invariant(newest !== undefined, "sessions must be non-empty (checked above)");
         const chosen = peer ?? newest;
-        console.log(
-          peer
-            ? `Latest session in ${contextDir} (use --list for all):`
-            : "Latest session (use --list for all):"
-        );
+        // The chooser line is for humans reading the rendered view — keep
+        // --raw and --tool-report output pure machine output.
+        if (!options.raw && !options.toolReport) {
+          console.log(
+            peer
+              ? `Latest session in ${peer.contextDir} (use --list for all):`
+              : "Latest session (use --list for all):"
+          );
+        }
         sessionId = chosen.sessionId;
         logPath = chosen.path;
       } else {
