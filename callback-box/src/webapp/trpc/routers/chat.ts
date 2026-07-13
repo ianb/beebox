@@ -20,7 +20,8 @@ import {
 } from "../../../core/chat/session/history.js";
 import { listChatHusks } from "../../../core/chat/husk.js";
 import { nearestLandmarkDir, isBoxRelativeCardPath } from "../../../core/landmark/nearest.js";
-import { getSessionLogPath, getSessionMetadata } from "../../../cli/lib/session.js";
+import { getSessionMetadata } from "../../../cli/lib/session.js";
+import { getSessionLogPath } from "../../../core/chat/session/transcript-paths.js";
 
 const FRESH_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 

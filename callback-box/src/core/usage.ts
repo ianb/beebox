@@ -14,7 +14,7 @@ import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import * as readline from "node:readline";
-import { getSessionDir } from "../cli/lib/session.js";
+import { listSessions } from "../cli/lib/session.js";
 
 const DB_REL_PATH = ".callback-box/usage.db";
 const MANIFEST_REL_PATH = "store/usage/session-manifest.jsonl";
@@ -217,14 +217,18 @@ export interface SyncResult {
 export async function syncUsage(boxRoot: string): Promise<SyncResult> {
   const db = openDb(boxRoot);
   const manifest = readManifest(boxRoot);
-  const sessionDir = getSessionDir(boxRoot);
 
-  let sessionFiles: string[];
-  try {
-    sessionFiles = fs.readdirSync(sessionDir).filter((f) => f.endsWith(".jsonl"));
-  } catch (_e) {
-    db.close();
-    return { sessionsProcessed: 0, sessionsSkipped: 0, sessionsMissing: 0 };
+  // Aggregate across every context root (box root + landmark subdirs) —
+  // landmark-bound sessions live under their own encoded dir. listSessions
+  // is newest-first; dedupe by id so an improbable same-id file in two
+  // roots is only counted once (the fresher copy wins).
+  const allSessions = await listSessions(boxRoot);
+  const seenIds = new Set<string>();
+  const sessionFiles: Array<{ sessionId: string; path: string }> = [];
+  for (const s of allSessions) {
+    if (seenIds.has(s.sessionId)) continue;
+    seenIds.add(s.sessionId);
+    sessionFiles.push({ sessionId: s.sessionId, path: s.path });
   }
 
   const getSyncState = db.prepare<[string], { file_size: number }>(
@@ -248,10 +252,7 @@ export async function syncUsage(boxRoot: string): Promise<SyncResult> {
 
   const result: SyncResult = { sessionsProcessed: 0, sessionsSkipped: 0, sessionsMissing: 0 };
 
-  for (const file of sessionFiles) {
-    const sessionId = file.replace(/\.jsonl$/, "");
-    const filePath = path.join(sessionDir, file);
-
+  for (const { sessionId, path: filePath } of sessionFiles) {
     let stat: fs.Stats;
     try {
       stat = fs.statSync(filePath);

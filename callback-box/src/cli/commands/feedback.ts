@@ -15,11 +15,11 @@ import { slugify } from "../../shared/filename.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import {
-  getSessionLogPath,
   listSessions,
   parseSessionLog,
   type SessionEntry,
 } from "../lib/session.js";
+import { resolveSessionLogPath } from "../../core/chat/session/history.js";
 
 const MAX_CONTEXT_ENTRIES = 12;
 
@@ -46,10 +46,12 @@ async function resolveSession(
 ): Promise<{ sessionId: string; logPath: string } | null> {
   const envSessionId = process.env["CLAUDE_CODE_SESSION_ID"];
   if (envSessionId) {
-    return { sessionId: envSessionId, logPath: getSessionLogPath(boxRoot, envSessionId) };
+    // contextDir-aware: a landmark-bound session's transcript lives under
+    // its own encoded projects dir, not the box root's.
+    return { sessionId: envSessionId, logPath: await resolveSessionLogPath(boxRoot, envSessionId) };
   }
   // CLAUDE_CODE_SESSION_ID is not propagated when agents are spawned by the SDK.
-  // Fall back to the most recently modified session log.
+  // Fall back to the most recently modified session log across all context roots.
   const sessions = await listSessions(boxRoot);
   const [newest] = sessions;
   if (!newest) return null;

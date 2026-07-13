@@ -12,8 +12,8 @@ import * as fs from "node:fs";
 import {
   listSessions,
   parseSessionLog,
-  type SessionMetadata,
 } from "../lib/session.js";
+import { listSessionRoots } from "../../core/chat/session/history.js";
 import { generateSessionReport } from "../../dev/lib/session-report.js";
 import { parseDuration } from "../../schemas/scheduled-script.js";
 import {
@@ -21,7 +21,9 @@ import {
   sessionDivider,
   sessionDividerForWindow,
   enrichSessions,
+  type EnrichedSession,
 } from "./session-format.js";
+import { fmt } from "../../lib/format.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import { invariant } from "../../lib/invariant.js";
 
@@ -59,9 +61,9 @@ export function resolveSince(since: string): SinceWindow {
 
 /** Sessions whose last event is at or after the cutoff, in the given order. */
 function sessionsInWindow(
-  enriched: SessionMetadata[],
+  enriched: EnrichedSession[],
   { cutoff, order }: { cutoff: number; order: "oldest-first" | "newest-first" }
-): SessionMetadata[] {
+): EnrichedSession[] {
   const dir = order === "oldest-first" ? 1 : -1;
   return enriched
     .filter((m) => m.endTime !== null && m.endTime.getTime() >= cutoff)
@@ -72,15 +74,34 @@ function sessionsInWindow(
     });
 }
 
-/** `--list`: print recent sessions, optionally filtered to a `--since` window. */
+/** One-line footer telling the reader how wide the discovery sweep was. */
+async function printSearchedRootsFooter(boxRoot: string): Promise<void> {
+  const roots = await listSessionRoots(boxRoot);
+  const landmarks = roots.length - 1;
+  console.log(
+    fmt.dim(
+      `Searched ${roots.length} project dir${roots.length === 1 ? "" : "s"} ` +
+        `(box root + ${landmarks} landmark dir${landmarks === 1 ? "" : "s"}).`
+    )
+  );
+}
+
+/**
+ * `--list`: print recent sessions, optionally filtered to a `--since` window.
+ * When run from a landmark subdirectory (`cwdContextDir` non-empty), sessions
+ * bound to that directory group first — ordering only, nothing is filtered.
+ */
 export async function runListMode(options: {
   boxRoot: string;
   since: SinceWindow | null;
+  /** Box-relative dir the command was run from ("" = box root). */
+  cwdContextDir: string;
 }): Promise<void> {
-  const { boxRoot, since } = options;
+  const { boxRoot, since, cwdContextDir } = options;
   const allSessions = await listSessions(boxRoot);
   if (allSessions.length === 0) {
     console.log("No sessions found for this box.");
+    await printSearchedRootsFooter(boxRoot);
     return;
   }
 
@@ -95,7 +116,7 @@ export async function runListMode(options: {
   // A session is in-window if any of its activity is recent enough — i.e. its
   // last event is at or after the cutoff. This catches long-running sessions
   // that started before the window but continued into it.
-  const sorted = since
+  const byRecency = since
     ? sessionsInWindow(enriched, { cutoff: since.cutoff, order: "newest-first" })
     : enriched.toSorted((a, b) => {
         const at = a.startTime?.getTime() || 0;
@@ -103,12 +124,24 @@ export async function runListMode(options: {
         return bt - at;
       });
 
+  // cwd affinity: peers of the current landmark dir come first (recency
+  // preserved within each group). Never a filter — everything still prints.
+  const grouping =
+    cwdContextDir !== "" && byRecency.some((m) => m.contextDir === cwdContextDir);
+  const sorted = grouping
+    ? [
+        ...byRecency.filter((m) => m.contextDir === cwdContextDir),
+        ...byRecency.filter((m) => m.contextDir !== cwdContextDir),
+      ]
+    : byRecency;
+
   if (sorted.length === 0) {
     console.log(
       since
         ? `No sessions with activity since ${since.label}.`
         : "No sessions found for this box."
     );
+    await printSearchedRootsFooter(boxRoot);
     return;
   }
 
@@ -117,14 +150,20 @@ export async function runListMode(options: {
       ? `Sessions with activity since ${since.label}:\n`
       : "Recent sessions:\n"
   );
+  if (grouping) {
+    console.log(fmt.dim(`(sessions in ${cwdContextDir} listed first)`));
+    console.log();
+  }
   for (const meta of sorted) {
     printListRow(meta);
   }
+  console.log();
+  await printSearchedRootsFooter(boxRoot);
 }
 
 /** Print one windowed session in the active output mode (raw/report/render). */
 async function renderWindowedSession(options: {
-  meta: SessionMetadata;
+  meta: EnrichedSession;
   since: SinceWindow;
   renderOptions: RenderOptions;
   raw: boolean;

@@ -25,7 +25,11 @@ import * as fs from "node:fs/promises";
 import * as path from "node:path";
 import * as readline from "node:readline";
 import { createReadStream } from "node:fs";
-import { listSessions, getSessionLogPath } from "../../../cli/lib/session.js";
+import {
+  getSessionDir,
+  getSessionLogPath,
+  listSessionFilesInDir,
+} from "./transcript-paths.js";
 import { errnoCode, errorMessage } from "../../../lib/error-guards.js";
 import { isRecord } from "../../card-io.js";
 
@@ -129,6 +133,47 @@ export async function loadHistoryEntries(boxRoot: string): Promise<SessionHistor
   const file = await readHistoryFile(boxRoot);
   if (file === null) return [];
   return file.sessions;
+}
+
+/** One encoded `~/.claude/projects/` directory a box's sessions may live in. */
+export interface SessionRoot {
+  /** Box-relative context dir ("" = the box root itself). */
+  contextDir: string;
+  /** Absolute path of the encoded projects directory for that cwd. */
+  dir: string;
+}
+
+/**
+ * Every `~/.claude/projects/` directory this box's sessions can live in:
+ * the box root first, then one per distinct `contextDir` recorded in the
+ * session history (landmark-bound chats run the SDK with cwd set to the
+ * subdirectory, so their transcripts land under a different encoded dir).
+ * Deduped by encoded dir name and filtered to dirs that exist on disk —
+ * except the box-root entry, which is always returned so callers have at
+ * least one root to probe and report.
+ */
+export async function listSessionRoots(boxRoot: string): Promise<SessionRoot[]> {
+  const boxRootDir = getSessionDir(boxRoot);
+  const roots: SessionRoot[] = [{ contextDir: "", dir: boxRootDir }];
+  const seen = new Set<string>([path.basename(boxRootDir)]);
+  const entries = await loadHistoryEntries(boxRoot);
+  for (const entry of entries) {
+    const contextDir = entry.contextDir;
+    if (contextDir === undefined || contextDir === "") continue;
+    const dir = getSessionDir(path.join(boxRoot, contextDir));
+    const encoded = path.basename(dir);
+    if (seen.has(encoded)) continue;
+    seen.add(encoded);
+    try {
+      await fs.access(dir);
+    } catch (_e) {
+      // Landmark dir has no transcripts on disk (all its sessions were
+      // cleaned up, or the entry is a ghost) — nothing to list there.
+      continue;
+    }
+    roots.push({ contextDir, dir });
+  }
+  return roots;
 }
 
 interface AppendHistoryOptions {
@@ -393,7 +438,12 @@ export async function runBackfillIfNeeded(boxRoot: string): Promise<void> {
   if (file.migrated) return;
 
   log("backfill", "Scanning JSONLs for web chat sessions");
-  const sessions = await listSessions(boxRoot);
+  // Scan every context root — a landmark-bound chat's transcript lives
+  // under its own encoded dir, not the box root's.
+  const roots = await listSessionRoots(boxRoot);
+  const sessions = (
+    await Promise.all(roots.map((root) => listSessionFilesInDir(root.dir)))
+  ).flat();
   const known = new Set(file.sessions.map((s) => s.id));
   let added = 0;
   for (const s of sessions) {

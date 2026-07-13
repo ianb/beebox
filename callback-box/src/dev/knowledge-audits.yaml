@@ -3722,3 +3722,22 @@ tests:
     correct_contains: ["cb calendar vtimezone"]
     correct_contains_any: ["BOX_TZ", "Timezone:", "system context", "box's timezone"]
     tags: [calendar, box-tz]
+
+  # === Session transcripts (cb session) ===
+  #
+  # `cb session` is the agent's window into past chat transcripts —
+  # `--list` to find them (aggregated across the box root and landmark
+  # dirs), `--latest`/`<id>` to view one. The failure mode is hunting
+  # for JSONL files under ~/.claude/projects/ by hand or grepping the
+  # box for a "chat log".
+
+  - id: review-previous-chat-session
+    prompt: "How would you review what was said in a previous chat session?"
+    expected_level: knows_directly
+    watch_for: >
+      Reaches for `cb session` — `--list` to find recent sessions, then
+      `--latest` or the id (e.g. with `--dialogue-only`) to read one.
+      Does NOT hand-hunt JSONL files under ~/.claude/projects/ or grep
+      the box for transcripts.
+    correct_contains: ["cb session"]
+    tags: [sessions, cli]

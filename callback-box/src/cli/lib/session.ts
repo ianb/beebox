@@ -6,14 +6,18 @@
  */
 
 import * as fs from "node:fs";
-import * as readline from "node:readline";
 import * as path from "node:path";
-import * as os from "node:os";
+import * as readline from "node:readline";
 import { isRecord } from "../../lib/is-record.js";
 
 import { type SessionEntry, buildEntry } from "./session-entry.js";
 import { stripChatAppTags } from "../../core/chat/features.js";
-import { errnoCode } from "../../lib/error-guards.js";
+import {
+  listSessionRoots,
+  resolveSessionLogPath,
+} from "../../core/chat/session/history.js";
+import { listSessionFilesInDir } from "../../core/chat/session/transcript-paths.js";
+import { ok, err, type Result } from "../../lib/result.js";
 import {
   extractSnippet,
   isCompactionSummary,
@@ -38,87 +42,56 @@ export {
 } from "./session-text.js";
 export { type SessionEntry } from "./session-entry.js";
 
-/**
- * Encode a cwd into Claude Code's `~/.claude/projects/<dir>` key. The
- * SDK replaces every non-alphanumeric character with `-`, not just `/`
- * — so paths with `_`, `.`, spaces, etc. all collapse to the same shape.
- * Match that here, otherwise `getSessionLogPath` mis-resolves for any
- * cwd containing non-`/` separators (e.g. landmark-session audits).
- */
-export function encodeProjectDir(cwd: string): string {
-  return cwd.replace(/[^\dA-Za-z]/g, "-");
+/** One session transcript discovered on disk, tagged with its context root. */
+export interface SessionInfo {
+  sessionId: string;
+  mtime: Date;
+  path: string;
+  /** Box-relative context dir the session's cwd encoded to ("" = box root). */
+  contextDir: string;
 }
 
 /**
- * Root of Claude Code's per-project transcript storage. Honors the
- * `CB_CLAUDE_PROJECTS_DIR` env override so doctests (and unusual
- * installs) can point session discovery at a fixture directory instead
- * of the real `~/.claude/projects`.
+ * List session files for a box across every context root — the box root
+ * plus each landmark subdirectory recorded in the session history (a
+ * landmark-bound chat's transcript lives under its own encoded dir in
+ * `~/.claude/projects/`). Sorted by modification time, newest first.
+ * Roots are deduped by encoded dir name, so a file is never listed twice.
  */
-export function claudeProjectsRoot(): string {
-  const override = process.env["CB_CLAUDE_PROJECTS_DIR"];
-  if (override) return override;
-  return path.join(os.homedir(), ".claude", "projects");
-}
-
-/**
- * Get the path to a Claude Code session log file. `cwd` is whatever
- * was passed as the SDK's `cwd` for the run — usually the box root,
- * but a landmark-bound chat or audit uses a subdirectory.
- */
-export function getSessionLogPath(cwd: string, sessionId: string): string {
-  const claudeDir = path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
-  return path.join(claudeDir, `${sessionId}.jsonl`);
-}
-
-/**
- * Get the Claude Code projects directory for a given SDK cwd.
- */
-export function getSessionDir(cwd: string): string {
-  return path.join(claudeProjectsRoot(), encodeProjectDir(cwd));
-}
-
-/**
- * List session files for a box, sorted by modification time (newest first).
- */
-export async function listSessions(
-  boxRoot: string
-): Promise<Array<{ sessionId: string; mtime: Date; path: string }>> {
-  const dir = getSessionDir(boxRoot);
-
-  let files: string[];
-  try {
-    files = await fs.promises.readdir(dir);
-  } catch (e) {
-    // No session dir yet (box never had a Claude Code run) is the common
-    // case — treat any read failure as "no sessions" but record it.
-    if (errnoCode(e) !== "ENOENT") {
-      console.debug("listSessions: could not read session dir, treating as empty:", e);
-    }
-    return [];
-  }
-
-  const sessions: Array<{ sessionId: string; mtime: Date; path: string }> = [];
-
-  for (const file of files) {
-    if (!file.endsWith(".jsonl")) continue;
-    const sessionId = file.replace(/\.jsonl$/, "");
-    const filePath = path.join(dir, file);
-    try {
-      const stat = await fs.promises.stat(filePath);
-      sessions.push({ sessionId, mtime: stat.mtime, path: filePath });
-    } catch (e) {
-      // File vanished between readdir and stat (concurrent cleanup) — skip
-      // it rather than fail the whole listing, but note the anomaly.
-      if (errnoCode(e) !== "ENOENT") {
-        console.debug(`listSessions: could not stat ${filePath}, skipping:`, e);
-      }
-      continue;
-    }
-  }
-
+export async function listSessions(boxRoot: string): Promise<SessionInfo[]> {
+  const roots = await listSessionRoots(boxRoot);
+  const perRoot = await Promise.all(
+    roots.map(async (root) => {
+      const files = await listSessionFilesInDir(root.dir);
+      return files.map((f) => ({ ...f, contextDir: root.contextDir }));
+    })
+  );
+  const sessions = perRoot.flat();
   sessions.sort((a, b) => b.mtime.getTime() - a.mtime.getTime());
   return sessions;
+}
+
+/**
+ * Find an explicit session id's transcript: the history file's
+ * contextDir-aware answer first, then a probe of every context root.
+ * The error arm carries every directory searched, so callers can report
+ * the full sweep on a miss rather than a single misleading path.
+ */
+export async function findSessionLog(
+  boxRoot: string,
+  sessionId: string
+): Promise<Result<string, string[]>> {
+  const historyPath = await resolveSessionLogPath(boxRoot, sessionId);
+  if (fs.existsSync(historyPath)) return ok(historyPath);
+
+  const searched: string[] = [path.dirname(historyPath)];
+  const roots = await listSessionRoots(boxRoot);
+  for (const root of roots) {
+    const candidate = path.join(root.dir, `${sessionId}.jsonl`);
+    if (fs.existsSync(candidate)) return ok(candidate);
+    if (!searched.includes(root.dir)) searched.push(root.dir);
+  }
+  return err(searched);
 }
 
 /**

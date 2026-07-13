@@ -10,7 +10,7 @@ import { BOX_DIRS, BOX_MARKER, boxPath } from "../../lib/paths.js";
 import { initRepo, isRepo } from "../../lib/git.js";
 import { getBoxShape } from "../../lib/box-shape.js";
 import { getBoxTimeISO } from "../../lib/time.js";
-import { claudeProjectsRoot } from "../../cli/lib/session.js";
+import { claudeProjectsRoot } from "../chat/session/transcript-paths.js";
 import { MIGRATIONS } from "../migrations.js";
 import {
   installSchemasGuide,
@@ -322,7 +322,7 @@ export async function symlinkClaudeMemory(boxRoot: string): Promise<boolean> {
   const { packageRoot } = await getBoxShape(resolvedRoot);
   const localMemoryDir = path.join(packageRoot, ".claude", "memory");
   const slug = resolvedRoot.replaceAll("/", "-");
-  // `claudeProjectsRoot()` (src/cli/lib/session.ts) is the one shared
+  // `claudeProjectsRoot()` (src/core/chat/session/transcript-paths.ts) is the one shared
   // resolver for `~/.claude/projects` — it also honors
   // `CB_CLAUDE_PROJECTS_DIR`, so doctests and the box-packageify smoke test
   // can point this at a fixture directory instead of the real global one.
