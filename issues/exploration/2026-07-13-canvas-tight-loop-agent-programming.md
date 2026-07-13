@@ -54,4 +54,107 @@ Prior art to lean on: p5.js has a headless-friendly instance mode; `skia-canvas`
 / `node-canvas` give a real Canvas2D (and skia-canvas some WebGL) in Node with
 no browser; frame-stepped virtual clocks are standard in game-engine testing.
 
-## Research (incomplete)
+## How to test this without touching callback-box (2026-07-13)
+
+The sandbox needs almost no agent-facing API, because Claude Code's `Read`
+tool already displays PNGs. So the whole experiment is a small standalone
+package (a new top-level dir like `sandbox/canvas-loop/`, or outside the repo
+entirely — zero callback-box changes):
+
+1. `sandbox run sketch.ts --frames 120 --events events.json` — loads a sketch
+   module (p5-style `setup`/`draw`/handlers against a headless Canvas2D),
+   steps a virtual clock frame by frame, injects scripted events at their
+   frame indices.
+2. Writes `out/transcript.md` — log lines tagged with frame numbers, with
+   `![frame-042](frame-042.png)` inline at snapshot points, deduping
+   unchanged frames.
+
+Then the actual experiment is a **Claude Code subagent**: give it the sandbox
+CLI and a visual task ("build a bouncing-ball sim with drag interaction; test
+it via scripted events"), and observe whether the write → run → Read-frames →
+iterate loop actually works for the agent — before any box integration
+exists. Success criteria worth watching: iterations-to-correct-visual, how
+often it reaches for scripted events unprompted, and whether frame-tagged
+logs get used to localize bugs.
+
+## Research (2026-07-13) — runtime + determinism prior art
+
+Full details in the research subagent run; conclusions:
+
+- **Rendering surface: `@napi-rs/canvas`** (Rust/Skia, prebuilt binaries,
+  zero system deps, fastest, active). Runner-up skia-canvas (best fidelity,
+  SVG/PDF export). Avoid node-canvas (install friction, strained
+  maintenance). No good headless WebGL2 exists — 2D only for the prototype.
+  Pin the lib version + bundle/register a font for reproducible output.
+- **Don't use real p5.js.** It can be coerced off-browser via JSDOM +
+  monkey-patched `getContext` but every such project (node-p5, p5js-node) is
+  dead, renderer internals are unstable, and p5 owns its own wall-clock rAF
+  loop — the exact thing a deterministic runtime must control. Instead:
+  a thin p5-*like* subset (~30–60 functions) over the raw context, ideally
+  p5-syntax-compatible so sketches also run in a real browser.
+- **Runtime shape — Flutter golden tests are the best analog**:
+  `tester.tap(...)` enqueues a synthetic gesture, nothing renders until an
+  explicit `pump(duration)` advances the fake clock exactly one frame,
+  then `matchesGoldenFile('foo.png')`. Copy the API shape:
+  `inject → step(n) → assert/snapshot`, events take effect on the next
+  stepped frame, never asynchronously.
+- **Event model — Elm/Redux replay**: every input (mouse, key, clock tick)
+  is a serializable `{frame, type, payload}` entry in one ordered log; the
+  run is a pure fold over (seed, log). Recording a session and scripting a
+  test produce the same artifact — injection symmetry falls out for free.
+- **Determinism discipline (lockstep-netcode lesson)**: fixed timestep
+  (`now = frameCount / fps`, advances only between frames), seeded PRNG
+  (`random()`/`noise()` provided, ambient `Date.now`/`Math.random`/
+  `performance` unreachable inside the sandbox), all events for frame N
+  dispatched before frame N draws. Sketch logs stamped with `frameCount`,
+  so log↔frame ordering is total by construction — this resolves the
+  screenshot-on-console.log race from the original idea.
+- **Golden comparison**: pixelmatch with small tolerance + optional masks;
+  per-platform/pinned-config goldens (even Skia's own test infra doesn't
+  expect cross-config byte equality); `--update-goldens` flag.
+- **Motion Canvas** is the cleanest frame-stepped runtime shape to steal
+  from: pull-based (harness owns the loop, scene code yields per frame),
+  seeded randomness as a first-class API.
+
+## Research (2026-07-13) — LLM+graphics feedback-loop prior art
+
+Nobody has built the full idea. The generate → render → look → revise loop is
+well-established (mostly in academic work, mostly static images); the
+event-injection half appears genuinely unaddressed in public prior art.
+
+- **Closest on transcript structure:
+  [Render-in-the-Loop](https://arxiv.org/html/2604.20730v1)** — SVG generation
+  as a strict interleaved `[Prompt, Code₁, Image₁, Code₂, Image₂, …]`
+  sequence; each step's canvas is deterministically rasterized (CairoSVG) and
+  fed back as visual tokens. Image-only (no logs), no events. Its
+  "Render-and-Verify" step filters no-visual-change iterations — worth
+  stealing (it's frame-dedup as a quality gate).
+- **[IntroSVG](https://arxiv.org/pdf/2603.09312)** adds textual self-critique
+  interleaved with the rendered image — nearest thing to a log+frame
+  transcript. **[MatPlotAgent](https://arxiv.org/html/2402.11453v3)** runs
+  deterministic (temp-0) matplotlib → PNG → VLM critique with capped
+  iterations, but keeps the traceback channel and the visual channel
+  separate. **[PlotGen](https://arxiv.org/pdf/2502.00988v1)** fans feedback
+  out to numeric/lexical/visual critic agents.
+  **[plot-agent](https://github.com/c-mulliken/plot-agent)** is a small MIT
+  implementation of the pattern worth reading for harness code.
+- **Interactive-canvas attempts are shallow**: the
+  [p5.js MCP editor](https://adilmoujahid.com/posts/2025/06/mcp-server-p5js-editor/)
+  is one-directional (Claude → editor; nothing flows back);
+  [tldraw make-real](https://github.com/tldraw/make-real) loops through a
+  human marking up the rendered result; screenshot MCP servers are generic
+  headless-browser grabs with no transcript convention. Practitioner
+  write-ups (Tweag's visual-feedback-loop chapter, Addy Osmani's
+  self-improving-agents post) describe the render→screenshot→critique
+  pattern but always via a browser and without frame-tagged logs or event
+  scripts.
+- Same shape applied elsewhere confirms generality: CAD
+  ([CADReview](https://arxiv.org/pdf/2505.22304)), layout/typography
+  ([VASCAR](https://arxiv.org/pdf/2412.04237)).
+
+**Gap = the idea's novelty**: (1) deterministic browser-less canvas,
+(2) one unified frame-tagged log+image transcript, (3) scripted synthetic
+event injection driving an *interactive* sketch through states as part of
+the agent's own authoring loop. No system found combines even two of the
+three cleanly; (3) exists only in game-QA/benchmark harnesses
+(VLM-judged, evaluation-oriented), never as the agent's iteration surface.
