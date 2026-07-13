@@ -13,7 +13,7 @@ import {
   getLastSessionForDirectory,
   resolveSessionLogPath,
 } from "../../src/core/chat/session/history.js";
-import { getSessionDir } from "../../src/cli/lib/session.js";
+import { getSessionDir } from "../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 
 // `getLastSessionForDirectory` skips entries whose JSONL doesn't exist

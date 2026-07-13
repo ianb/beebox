@@ -6,13 +6,15 @@ tool input summarization, TTS voice validation).
 
 ```ts setup
 import {
-  getSessionLogPath,
-  getSessionDir,
   parseSessionLog,
   transformContent,
   summarizeToolInput,
   summarizeToolResult,
 } from "../../../src/cli/lib/session.js";
+import {
+  getSessionLogPath,
+  getSessionDir,
+} from "../../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../../helpers/doctest-helpers.js";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";

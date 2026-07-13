@@ -23,7 +23,7 @@ import { ChatSession } from "../../src/core/chat/session/index.js";
 import { createFakeChatBackend } from "../../src/services/claude-chat.js";
 import { waitForTranscriptEntry } from "../../src/core/chat/session/transcript-sync.js";
 import { resolveSessionLogPath } from "../../src/core/chat/session/history.js";
-import { getSessionDir } from "../../src/cli/lib/session.js";
+import { getSessionDir } from "../../src/core/chat/session/transcript-paths.js";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { tick, plainTestPrompt } from "../helpers/chat-session-spawner-helpers.js";
 

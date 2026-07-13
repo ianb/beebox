@@ -15,7 +15,7 @@ import { slugify } from "../../shared/filename.js";
 import { invariant } from "../../lib/invariant.js";
 import { errnoCode, errorMessage } from "../../lib/error-guards.js";
 import {
-  getSessionLogPath,
+  findSessionLog,
   listSessions,
   parseSessionLog,
   type SessionEntry,
@@ -46,10 +46,15 @@ async function resolveSession(
 ): Promise<{ sessionId: string; logPath: string } | null> {
   const envSessionId = process.env["CLAUDE_CODE_SESSION_ID"];
   if (envSessionId) {
-    return { sessionId: envSessionId, logPath: getSessionLogPath(boxRoot, envSessionId) };
+    // History-aware first, then a probe of every context root — a landmark
+    // session missing from history would otherwise resolve to the box-root
+    // path and silently drop its context. On a total miss, fall through to
+    // the newest-session fallback below.
+    const found = await findSessionLog(boxRoot, envSessionId);
+    if (found.ok) return { sessionId: envSessionId, logPath: found.value };
   }
   // CLAUDE_CODE_SESSION_ID is not propagated when agents are spawned by the SDK.
-  // Fall back to the most recently modified session log.
+  // Fall back to the most recently modified session log across all context roots.
   const sessions = await listSessions(boxRoot);
   const [newest] = sessions;
   if (!newest) return null;

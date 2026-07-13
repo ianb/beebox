@@ -6,25 +6,43 @@
  * - Shows bash command descriptions (not the commands themselves)
  * - Skips tool results (we care about behavior, not output)
  * - Shows text responses from the agent
+ *
+ * Discovery spans every context root — the box root plus each landmark
+ * subdirectory whose sessions the history file knows about — and running
+ * the command from inside a landmark dir favors that dir's sessions
+ * (ordering only, never filtering).
  */
 
 import { Command } from "commander";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import { requireBoxRoot } from "../../lib/paths.js";
 import {
-  getSessionLogPath,
+  findSessionLog,
   listSessions,
   parseSessionLog,
 } from "../lib/session.js";
 import { generateSessionReport } from "../../dev/lib/session-report.js";
 import { renderEntries, type RenderOptions } from "./session-render.js";
 import {
+  partitionByAffinity,
   resolveSince,
   runListMode,
   runSinceMode,
   type SinceWindow,
 } from "./session-modes.js";
 import { invariant } from "../../lib/invariant.js";
+
+/**
+ * The box-relative directory the command was run from ("" when at the box
+ * root or outside the box entirely). Non-empty means the user is standing
+ * in a landmark subdirectory, and its sessions get ordering affinity.
+ */
+function cwdContextDir(boxRoot: string): string {
+  const rel = path.relative(boxRoot, process.cwd());
+  if (rel === "" || rel.startsWith("..") || path.isAbsolute(rel)) return "";
+  return rel;
+}
 
 export const sessionCommand = new Command("session")
   .description("View a Claude Code session transcript")
@@ -56,6 +74,7 @@ export const sessionCommand = new Command("session")
       }
     ) => {
       const boxRoot = await requireBoxRoot();
+      const contextDir = cwdContextDir(boxRoot);
 
       // --since is incompatible with an explicit ID or --latest
       if (options.since && (sessionId || options.latest)) {
@@ -76,7 +95,7 @@ export const sessionCommand = new Command("session")
 
       // --list: show recent sessions (enriched)
       if (options.list) {
-        await runListMode({ boxRoot, since });
+        await runListMode({ boxRoot, since, cwdContextDir: contextDir });
         return;
       }
 
@@ -92,30 +111,48 @@ export const sessionCommand = new Command("session")
         return;
       }
 
-      // --latest: find most recent session
+      let logPath: string;
       if (options.latest) {
+        // --latest: the newest session bound to the current landmark dir
+        // when run from one, else the newest anywhere.
         const sessions = await listSessions(boxRoot);
         if (sessions.length === 0) {
           console.error("No sessions found for this box.");
           process.exit(1);
         }
-        const [latest] = sessions;
-        invariant(latest !== undefined, "sessions must be non-empty (checked above)");
-        sessionId = latest.sessionId;
-      }
-
-      if (!sessionId) {
-        console.error(
-          "Please provide a session ID, or use --latest, --list, or --since."
-        );
-        process.exit(1);
-      }
-
-      const logPath = getSessionLogPath(boxRoot, sessionId);
-
-      if (!fs.existsSync(logPath)) {
-        console.error(`Session log not found: ${logPath}`);
-        process.exit(1);
+        const [peer] =
+          contextDir !== ""
+            ? partitionByAffinity(sessions, contextDir).peers
+            : [];
+        const [newest] = sessions;
+        invariant(newest !== undefined, "sessions must be non-empty (checked above)");
+        const chosen = peer ?? newest;
+        // The chooser line is for humans reading the rendered view — keep
+        // --raw and --tool-report output pure machine output.
+        if (!options.raw && !options.toolReport) {
+          console.log(
+            peer
+              ? `Latest session in ${peer.contextDir} (use --list for all):`
+              : "Latest session (use --list for all):"
+          );
+        }
+        sessionId = chosen.sessionId;
+        logPath = chosen.path;
+      } else {
+        if (!sessionId) {
+          console.error(
+            "Please provide a session ID, or use --latest, --list, or --since."
+          );
+          process.exit(1);
+        }
+        const found = await findSessionLog(boxRoot, sessionId);
+        if (!found.ok) {
+          console.error(`Session log not found for id: ${sessionId}`);
+          console.error("Searched:");
+          for (const dir of found.error) console.error(`  ${dir}`);
+          process.exit(1);
+        }
+        logPath = found.value;
       }
 
       // --raw: dump the file

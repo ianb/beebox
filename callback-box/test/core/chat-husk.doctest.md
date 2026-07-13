@@ -11,7 +11,7 @@ import { mkdir, writeFile, readFile as readFsFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import { makeTmpBox } from "../helpers/doctest-helpers.js";
 import { ensureChatHusk, findChatHusk, backfillChatHusks, listChatHusks } from "../../src/core/chat/husk.js";
-import { getSessionLogPath } from "../../src/cli/lib/session.js";
+import { getSessionLogPath } from "../../src/core/chat/session/transcript-paths.js";
 ```
 
 ## ensure creates the husk, named by date + short session id

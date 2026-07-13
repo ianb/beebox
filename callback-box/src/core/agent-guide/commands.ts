@@ -26,6 +26,12 @@ This is the rest of the everyday \`cb\` surface; the full reference is
   \`grep\` for finding cards by content (details in the box-search section).
 - \`cb calendar [timespan]\` — upcoming calendar events (default 7d; also
   \`today\`, \`3d\`, \`2w\`, \`1m\`).
+- \`cb session\` — read a past session's transcript (chats, wakeups, job runs):
+  \`--list\` to find recent sessions, \`--latest\` or \`<id>\` to view (\`--dialogue-only\` for just
+  the conversation, \`--tool-report\` for tool usage, \`--since 2d\` for a
+  window). To *search* a large transcript, spawn a subagent (Task tool) to
+  read it and report back the relevant part instead of pulling the whole
+  transcript into your own context.
 - \`cb procedure run <name-or-path>\` — run a procedure. Procedures are how
   one-shot structured work gets done (see \`docs/generated/procedures.md\`).
 - \`cb chat …\` — a family of commands for the live chat session:
