@@ -5,7 +5,10 @@ C1/C2, D1/D2) has landed and is verified by execution (doctor run, doctests,
 docker lifecycle smoke, dev-install sequence on a scratch clean clone). The two
 rollout-verification done-when items in "Rollout shape" below — a clean-clone
 walkthrough on a second machine and a real cheap-VPS run of the compose file —
-are still outstanding and need the boxholder.
+now have executable Docker approximations that both PASS
+(`callback-box/docker/smoke-dev-install.sh` and `smoke-vps-install.sh`, added
+2026-07-12; see "Rollout shape"); a real VPS with ACME/DNS/Tailscale and an
+interactive `claude auth login` still want a human.
 
 Make callback-box installable by an outside developer: one pinned Node version
 enforced at install time, a preflight doctor that makes every missing
@@ -578,6 +581,29 @@ the agent is told. No entries in `src/dev/knowledge-audits.yaml`.
   without the personal `~/src` layout (a temp `git clone` + fresh
   `~/boxes` path suffices), and one real cheap-VPS run of the compose file
   before the guide ships.
+- **Rollout verifications — executable approximations landed 2026-07-12.**
+  Both outstanding done-when items now have repeatable Docker harnesses in
+  `callback-box/docker/` (the runs are the deliverable; the scripts are the
+  residue):
+  - `smoke-dev-install.sh` — the clean-clone walkthrough, from a bare
+    `debian:bookworm` following `developer-install.md` step by step to a
+    served box + a `pnpm run doctor` that passes every check except headless
+    "Claude auth". **Result: PASS (~150s).** Surfaced three
+    `developer-install.md` gaps (all fixed): no stated Linux Node-22
+    mechanism, no Claude Code CLI install command, and no note that Debian's
+    ImageMagick 6 lacks the `magick` name.
+  - `smoke-vps-install.sh` — the compose file exercised against a real
+    daemon, inside a privileged `docker:dind` "VPS": build → `cb init` →
+    `up` → HTTP 200 → `--profile public` Caddy → 200 through Caddy.
+    **Result: PASS.** Caught a compose bug the existing `smoke-docker.sh`
+    could not (it uses a scratch compose file): `${CB_DOMAIN:?…}` was
+    interpolated at load time before profile filtering, so it broke even the
+    plain local `docker compose up`/`run` flow — fixed to `${CB_DOMAIN:-}`.
+  - **Still needs a human / real infra** (unchanged): real ACME/Let's Encrypt
+    issuance and DNS (the harness uses `CB_DOMAIN=localhost` → Caddy internal
+    CA, probed with `curl -k`), ports 80/443 from the public internet, the
+    Tailscale-only variant, interactive `claude auth login`, and the
+    macOS/Homebrew prerequisite path (the harness exercises Debian/apt).
 - **Knowledge audits.** None (skip recorded above).
 - **Migration.** No data-shape changes. The only flip with blast radius is
   `engine-strict`, isolated in A2; everything else is additive. The plan
