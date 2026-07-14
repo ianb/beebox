@@ -1,0 +1,15 @@
+[
+  { "frame": 20, "type": "param", "name": "rate", "value": 8 },
+  { "frame": 40, "type": "param", "name": "gravity", "value": 0.25 },
+  { "frame": 60, "type": "param", "name": "trails", "value": true },
+  { "frame": 80, "type": "param", "name": "palette", "value": "cool" },
+  { "frame": 100, "type": "trigger", "name": "burst" },
+  { "frame": 130, "type": "mousedown", "x": 130, "y": 140 },
+  { "frame": 140, "type": "mousemove", "x": 160, "y": 170 },
+  { "frame": 150, "type": "mousemove", "x": 250, "y": 200 },
+  { "frame": 160, "type": "mousemove", "x": 340, "y": 220 },
+  { "frame": 170, "type": "mousemove", "x": 400, "y": 240 },
+  { "frame": 185, "type": "mouseup", "x": 400, "y": 240 },
+  { "frame": 200, "type": "param", "name": "palette", "value": "mono" },
+  { "frame": 220, "type": "param", "name": "rate", "value": 1 }
+]

@@ -331,6 +331,53 @@ Next experiment: implement TEA tier + params in the sandbox, re-run the
 fresh-agent test on a controls-heavy task; if cycle count holds, the mutable
 tier becomes legacy.
 
+## Experiment 2 (2026-07-14) — TEA tier, Sonnet vs Opus
+
+Built the TEA tier in `sandbox/canvas-loop/` (pure `init`/`update`/`draw`
+fold, 4 param types, deep-frozen models, capability-injected View/Util, local
+`tea/*` eslint plugin + type-aware switch-exhaustiveness scoped to `*-tea.ts`,
+agent guide in `TEA.md`, orbit toy ported as the worked example). Then the
+identical controls-heavy task — a particle toy exercising every param type
+plus a press/drag/release attractor — was given to a fresh Sonnet and a fresh
+Opus agent in parallel, `TEA.md` as their only guide, with a post-hoc
+compliance audit (independent lint, smuggling grep, double-run byte-diff,
+frame inspection).
+
+Results:
+
+- **Ceremony cost ≈ zero.** Sonnet: 3 cycles; Opus: 2 — matching the mutable
+  tier's 2-cycle result. Both said the pure fold *fit* particle physics
+  (`particles.map(step).filter(alive)`); Sonnet's one friction point was
+  expressing a fractional spawn rate purely (floor + stochastic remainder).
+  Both used the mode-union pattern; Opus noted it made press/drag/release
+  "trivially correct" (a stray mousemove can't spawn a phantom attractor).
+- **Compliance was total, and prevention never had to fire.** Zero TEA
+  violations in either sketch: no module state, no mutation attempts (the
+  freeze never triggered), no async, imports confined to the types module,
+  exhaustive 8-case Msg switches, the prescribed `max-params` contract
+  comment used verbatim and nowhere else. Both independently deterministic.
+  The only lint trip — in both, identically — was
+  `unicorn/prefer-modern-math-apis` on the distance calc (→ `Math.hypot`),
+  fixed in one edit from the message alone.
+- **Frames caught render-only bugs again, in both runs**: HUD text ghosting
+  under trails (the translucent-overlay effect never clears prior text).
+  Sonnet reported it as an artifact; Opus caught it plus a too-weak
+  attraction from the frames and fixed both (opaque HUD backing rect,
+  strength retune) — the capability gap between the models showed in
+  fix-vs-report, not in compliance or cycle count.
+- **Convergent feature requests**: (1) a trails-safe overlay affordance
+  (`clearRect` or documented backing-rect guidance); (2) a scripted
+  `{frame, type: "snapshot", label}` events entry to capture peak moments
+  without perturbing state; (3) canvas-persists-across-frames stated in
+  TEA.md (trails depend on it; currently inferred from source); (4, Opus) a
+  built-in run-summary tally in the transcript header.
+
+**Verdict: TEA-shape holds at parity with the mutable tier for agents, with
+enforcement resting on shape + doc rather than tripwires.** The mutable tier
+can plausibly become legacy. Remaining decision for Ian: `max-params` for
+`*-tea.ts` (keep the per-sketch justified disable vs raise the cap for
+sketch dirs vs reshape the contract).
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
