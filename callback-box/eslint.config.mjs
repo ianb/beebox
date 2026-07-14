@@ -43,4 +43,18 @@ export default [
       "@typescript-eslint/return-await": "off",
     },
   },
+  {
+    // single-export off for the fake-agent test fixture: its exports are ONE
+    // cohesive cluster — the `createFakeAgent` factory plus the fixture's own
+    // types (`FakeAgent`, `FakeAgentOptions`, `FakeAgentInvocation`) and the
+    // error it throws. Splitting them into ~5 single-export files to satisfy the
+    // rule fragments a single test fixture across the tree — worse than leaving
+    // it whole. Scoped off with the boxholder's explicit sign-off (2026-07-14);
+    // broaden to test/helpers/** if the same cohesive-fixture pattern recurs.
+    // (issues/closed/code-quality/2026-07-04-fake-agent-single-export-split.md)
+    files: ["test/helpers/fake-agent.ts"],
+    rules: {
+      "single-export/single-export": "off",
+    },
+  },
 ];
