@@ -459,6 +459,21 @@ Combined cycle counts across experiments: precision tasks 1–3 cycles;
 aesthetic tasks 2–6. The loop's value scales with visual intractability,
 exactly as hypothesized — and determinism kept even the 6-cycle run cheap.
 
+## Follow-through (2026-07-14): drawing vocabulary completed as data
+
+Experiment 4's `ctx` reliance resolved: `polygon(points)`, a tuple-union
+`path()` command DSL (`["move",x,y] | ["quad",…] | ["bezier",…] | ["close"]`),
+`linearGradient`/`radialGradient` handles accepted as `Paint` by
+`fill`/`stroke`/`background`, `arc`, and scoped `clip(shape, fn)` (the one
+sanctioned callback — it scopes state rather than being data). All primitives
+are serializable data, preserving the command-list/browser-render option.
+Sufficiency proven empirically: the fjord — the heaviest `ctx` user — ported
+to `examples/fjord-tea.ts` with zero `ctx`, visually equivalent frames
+(verified). One remaining `ctx`-only need surfaced: `lineJoin` (the wet-rim
+stroke renders miter instead of round in the port). Also done, boxholder-
+authorized: `max-lines` raised to 600 in sketch dirs. Frame gallery of all
+five experiments published as an artifact (2026-07-14).
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
