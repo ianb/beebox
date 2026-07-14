@@ -2,7 +2,17 @@
 title: "pandoc templates markdoc transcoding"
 needs: [design]
 area: callback-box
+resolution: wontfix
 ---
+
+**Closed (2026-07-14): wontfix.** No export need has materialized — exactly the
+"sits unused for months" outcome the issue's own second open question predicted
+("file it but don't build it until a real export need shows up; honest answer
+probably the latter"). A Markdoc→Pandoc transcoder is a heavy build (the `pandoc`
+binary as a runtime dep + a per-tag transformer/fallback for every custom Markdoc
+tag) for a purely hypothetical printable-PDF/slides sink. Markdoc stays the
+authoring + rendering layer. If a concrete export target appears, refile with that
+target as the driver.
 
 [pandoc-templates.org](https://pandoc-templates.org/) is a curated
 collection of typography-conscious Pandoc templates — academic papers,
