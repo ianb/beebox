@@ -1,0 +1,11 @@
+[
+  { "frame": 0, "type": "param", "name": "showDigital", "value": true },
+  { "frame": 1, "type": "param", "name": "timeScale", "value": 3600 },
+  { "frame": 52, "type": "param", "name": "timeScale", "value": 3600 },
+  { "frame": 67, "type": "param", "name": "timeScale", "value": 3600 },
+  { "frame": 82, "type": "param", "name": "timeScale", "value": 3600 },
+  { "frame": 83, "type": "param", "name": "style", "value": "minimal" },
+  { "frame": 84, "type": "param", "name": "timeScale", "value": 60 },
+  { "frame": 90, "type": "param", "name": "showDigital", "value": false },
+  { "frame": 91, "type": "param", "name": "style", "value": "classic" }
+]

@@ -378,6 +378,39 @@ can plausibly become legacy. Remaining decision for Ian: `max-params` for
 `*-tea.ts` (keep the per-sketch justified disable vs raise the cap for
 sketch dirs vs reshape the contract).
 
+## Experiment 3 (2026-07-14) — Sonnet on a visually-difficult task (analog clock)
+
+Task designed to force visual iteration (classic clock traps: 12-at-top
+rotation offset, hour-hand minute-drift, numeral centering, layering), TEA
+tier, `showDigital` param provided as a self-verification tool. Result
+(`experiments/clock-sonnet-tea.ts`, independently verified frame-by-frame):
+
+- **One render cycle.** The rigging failed in an instructive way: Sonnet
+  front-loaded the trig, then *built itself a verification lever* — bumped
+  `timeScale` to 3600 mid-script to land frames on exact round times
+  (11:00:00 / 11:15:00 / 11:30:00) and eyeballed hands against the digital
+  readout at those unambiguous positions. Determinism converts "visually
+  difficult" into "calculable + spot-checkable at chosen instants".
+- It also caught a genuinely subtle bug **analytically, pre-run**: the
+  runtime ticks frame 0 too, which would have made an accumulating clock
+  start at 10:08:01 — invisible in pixels, caught by checking the readout
+  against hand math at frame 0. (Runtime design note: is a frame-0 tick
+  right? Sketches that accumulate per tick must special-case it.)
+- **Third independent request for a scripted snapshot events entry** — it
+  had to bait the capture policy with a no-op param event to get specific
+  frames. Now unanimous across all three experiment agents; top of the
+  feature queue. New visual-precision suggestions: a runtime protractor/
+  crosshair debug overlay, and `assertNear(actual, expected, tol)` for
+  unattended numeric checks (converges on the planned pixelmatch/golden
+  layer from the assertion side).
+- Lint: full strict preset inheritance confirmed costless again (zero trips
+  this run).
+
+Implication: mathematically-specifiable visuals won't stress the iteration
+loop — a future "hard visuals" experiment needs aesthetic/organic
+correctness (a tree that *looks like* a tree, hand-tuned easing feel) where
+there's no closed form to reason from.
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
