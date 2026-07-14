@@ -169,19 +169,19 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       });
 
       const base: AgentResultBase = {
-        output: partial.output ?? "",
-        exitCode: partial.exitCode ?? (partial.success === false ? 1 : 0),
+        output: partial.output !== undefined ? partial.output : "",
+        exitCode: partial.exitCode !== undefined ? partial.exitCode : partial.success === false ? 1 : 0,
         sessionId,
         ...(partial.structuredOutput !== undefined && { structuredOutput: partial.structuredOutput }),
         ...(partial.resultText !== undefined && { resultText: partial.resultText }),
       };
       const result: AgentResult =
         partial.success === false
-          ? { ...base, success: false, error: partial.error ?? "fake agent failure" }
+          ? { ...base, success: false, error: partial.error !== undefined ? partial.error : "fake agent failure" }
           : { ...base, success: true };
 
       invocations.push({
-        systemPrompt: resumed ? null : (opts.systemPrompt ?? null),
+        systemPrompt: resumed ? null : opts.systemPrompt !== undefined ? opts.systemPrompt : null,
         prompt: opts.prompt,
         resumed,
         options: opts,
@@ -203,7 +203,7 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
 
       const raw = await options.structuredResult({
         boxRoot: opts.boxRoot,
-        systemPrompt: opts.systemPrompt ?? null,
+        systemPrompt: opts.systemPrompt !== undefined ? opts.systemPrompt : null,
         prompt: opts.prompt,
         invocation: invocationIndex,
       });
@@ -211,7 +211,7 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
       // null models a failed/unparseable verdict; otherwise validate against
       // the caller's schema exactly as the real invokeStructured does.
       const parsed = raw === null ? null : schema.safeParse(raw);
-      const data: T | null = parsed === null ? null : parsed.success ? parsed.data : null;
+      const data = parsed === null ? null : parsed.success ? parsed.data : null;
       const structuredBase: AgentResultBase = { output: "", exitCode: data !== null ? 0 : 1, sessionId };
 
       const result: StructuredAgentResult<T> =
@@ -230,7 +230,7 @@ export function createFakeAgent(options: FakeAgentOptions): FakeAgent {
             };
 
       invocations.push({
-        systemPrompt: resumed ? null : (opts.systemPrompt ?? null),
+        systemPrompt: resumed ? null : opts.systemPrompt !== undefined ? opts.systemPrompt : null,
         prompt: opts.prompt,
         resumed,
         options: opts,
