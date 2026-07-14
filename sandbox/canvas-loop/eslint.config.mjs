@@ -59,4 +59,15 @@ const teaExhaustiveness = {
   },
 };
 
-export default [...base, teaDiscipline, teaExhaustiveness];
+// Boxholder-authorized loosening (2026-07-14): sketches carry declarative
+// scene data (palettes, layer configs, creature geometry) that the preset's
+// library-code cap of 300 punishes — the fjord experiment burned edit rounds
+// compressing working code to fit. Sketch dirs only, still a hard cap.
+const sketchLineBudget = {
+  files: ["examples/**/*.ts", "experiments/**/*.ts"],
+  rules: {
+    "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
+  },
+};
+
+export default [...base, teaDiscipline, teaExhaustiveness, sketchLineBudget];
