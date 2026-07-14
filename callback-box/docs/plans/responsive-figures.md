@@ -1,5 +1,20 @@
 # Responsive Figures
 
+> **Post-review amendments (2026-07-14, from the codex cross-model review of
+> the implemented diff):** (1) The "loud validate error" claim below for the
+> `width`/`height` removal was wrong — card schemas strip unknown keys with
+> only a lint warning (`src/cards/schema.ts`), so the removal is silent, not
+> validated; harmless here because the only setter was hand-migrated. (2) The
+> "consumed nowhere" claim missed a real consumer: the `figure-examples` box
+> skill (`src/core/box/skills-content.ts`) taught sketches reading
+> `figure.meta.width` — both examples rewritten to the responsive pattern in
+> the same change. (3) The three-runtime starter's ResizeObserver guard now
+> tracks the logical width in a variable instead of comparing
+> `renderer.domElement.width` (physical pixels), which would break under
+> `setPixelRatio`. (4) The p5 inline-style hazard the review also flagged had
+> already been caught during visual verification — the backstop's constraints
+> use `!important` variants.
+
 Figure cards (interactive p5/three/d3 sketches) overflow mobile viewports because
 sketches are authored at fixed pixel widths — and the figure schema's own
 instructions and starter sketches teach exactly that pattern. This plan fixes it

@@ -181,9 +181,12 @@ export default function (THREE, { mount, figure }) {
   const cube = new THREE.Mesh(geometry, material);
   scene.add(cube);
 
+  // Track the logical width ourselves: renderer.domElement.width is physical
+  // pixels, which diverges from the logical size under setPixelRatio.
+  let canvasW = 0;
   function resize(): void {
-    const w = width();
-    renderer.setSize(w, w);
+    canvasW = width();
+    renderer.setSize(canvasW, canvasW);
     camera.aspect = 1;
     camera.updateProjectionMatrix();
   }
@@ -199,7 +202,7 @@ export default function (THREE, { mount, figure }) {
   loop();
 
   const ro = new ResizeObserver(() => {
-    if (renderer.domElement.width !== width()) resize();
+    if (canvasW !== width()) resize();
   });
   ro.observe(mount);
 
