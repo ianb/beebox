@@ -2,8 +2,8 @@ import { createCanvas } from "@napi-rs/canvas";
 import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "./errors.js";
 import { formatArgs } from "./format.js";
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
-import { isPathShape, resolveGradient, tracePath, tracePolygon } from "./paint.js";
+import type { ClipShape, ColorStop, Ctx2D, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import { Painter } from "./painter.js";
 import { SeededRandom } from "./prng.js";
 import type { SketchHost } from "./types.js";
 
@@ -11,25 +11,14 @@ import type { SketchHost } from "./types.js";
 // no DOM, so the global CanvasTextAlign / CanvasTextBaseline aren't in scope.
 type TextAlign = "center" | "end" | "left" | "right" | "start";
 type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
-// The concrete gradient object @napi-rs returns — no DOM `CanvasGradient` global.
-type CanvasGradientValue = ReturnType<SKRSContext2D["createLinearGradient"]>;
-
-interface StyleState {
-  fillColor: Paint;
-  fillEnabled: boolean;
-  strokeColor: Paint;
-  strokeEnabled: boolean;
-  strokeW: number;
-  textSize: number;
-  textAlignH: TextAlign;
-  textAlignV: TextBaseline;
-}
 
 /**
  * A p5-like drawing surface in instance mode. The runtime constructs one Sketch
  * per run, updates its per-frame state, and calls the sketch module's
- * setup/draw/handlers against it. Drawing is deterministic: colors are CSS
- * strings, randomness comes from the seeded `random()`, and time from `millis()`.
+ * setup/draw/handlers against it. Drawing is delegated to the shared, context-
+ * generic {@link Painter} (same engine the browser harness uses); Sketch owns the
+ * headless-only concerns: canvas creation, seeded randomness, virtual time,
+ * pixel readback, and the log/snapshot host channel.
  *
  * Escape hatch: `s.ctx` exposes the raw @napi-rs/canvas SKRSContext2D for
  * anything this subset doesn't cover.
@@ -45,20 +34,10 @@ export class Sketch {
 
   #canvas: Canvas | undefined;
   #ctx: SKRSContext2D | undefined;
+  #painter: Painter | undefined;
   #host: SketchHost;
   #fps: number;
   #random: SeededRandom;
-  #style: StyleState = {
-    fillColor: "#ffffff",
-    fillEnabled: true,
-    strokeColor: "#000000",
-    strokeEnabled: false,
-    strokeW: 1,
-    textSize: 12,
-    textAlignH: "left",
-    textAlignV: "alphabetic",
-  };
-  #styleStack: StyleState[] = [];
 
   constructor(options: { host: SketchHost; seed: number; fps: number }) {
     this.#host = options.host;
@@ -72,10 +51,16 @@ export class Sketch {
       throw new SketchUsageError({ detail: "createCanvas() called more than once" });
     }
     const canvas = createCanvas(width, height);
+    const ctx = canvas.getContext("2d");
     this.#canvas = canvas;
-    this.#ctx = canvas.getContext("2d");
+    this.#ctx = ctx;
     this.width = width;
     this.height = height;
+    // The Skia context satisfies the structural Ctx2D the Painter uses; the only
+    // gap is a wider `fillStyle` union (it also allows CanvasPattern, which the
+    // engine never sets), so structural assignability needs one boundary cast.
+    // eslint-disable-next-line no-restricted-syntax -- structural-context boundary: SKRSContext2D is a superset of Ctx2D (wider fillStyle union)
+    this.#painter = new Painter({ ctx: ctx as unknown as Ctx2D, width, height });
   }
 
   get ctx(): SKRSContext2D {
@@ -100,6 +85,13 @@ export class Sketch {
     return this.#ctx;
   }
 
+  #requirePainter(): Painter {
+    if (this.#painter === undefined) {
+      throw new SketchUsageError({ detail: "call createCanvas() in setup() before drawing" });
+    }
+    return this.#painter;
+  }
+
   // ── seeded randomness ────────────────────────────────────────────
   random(): number;
   random(max: number): number;
@@ -122,194 +114,92 @@ export class Sketch {
     return picked;
   }
 
-  // ── style ────────────────────────────────────────────────────────
+  // ── style (delegated to Painter) ─────────────────────────────────
   fill(paint: Paint): void {
-    this.#style.fillColor = paint;
-    this.#style.fillEnabled = true;
+    this.#requirePainter().fill(paint);
   }
   noFill(): void {
-    this.#style.fillEnabled = false;
+    this.#requirePainter().noFill();
   }
   stroke(paint: Paint): void {
-    this.#style.strokeColor = paint;
-    this.#style.strokeEnabled = true;
+    this.#requirePainter().stroke(paint);
   }
   noStroke(): void {
-    this.#style.strokeEnabled = false;
+    this.#requirePainter().noStroke();
   }
   strokeWeight(weight: number): void {
-    this.#style.strokeW = weight;
+    this.#requirePainter().strokeWeight(weight);
   }
   textSize(size: number): void {
-    this.#style.textSize = size;
+    this.#requirePainter().textSize(size);
   }
   textAlign(horizontal: TextAlign, vertical?: TextBaseline): void {
-    this.#style.textAlignH = horizontal;
-    if (vertical !== undefined) this.#style.textAlignV = vertical;
+    if (vertical === undefined) this.#requirePainter().textAlign(horizontal);
+    else this.#requirePainter().textAlign(horizontal, vertical);
   }
 
   push(): void {
-    this.#requireCtx().save();
-    this.#styleStack.push({ ...this.#style });
+    this.#requirePainter().push();
   }
   pop(): void {
-    const restored = this.#styleStack.pop();
-    if (restored === undefined) {
+    if (!this.#requirePainter().pop()) {
       throw new SketchUsageError({ detail: "pop() called without a matching push()" });
     }
-    this.#requireCtx().restore();
-    this.#style = restored;
   }
 
   // ── transforms ───────────────────────────────────────────────────
   translate(x: number, y: number): void {
-    this.#requireCtx().translate(x, y);
+    this.#requirePainter().translate(x, y);
   }
   rotate(radians: number): void {
-    this.#requireCtx().rotate(radians);
+    this.#requirePainter().rotate(radians);
   }
   scale(x: number, y?: number): void {
-    this.#requireCtx().scale(x, y ?? x);
+    if (y === undefined) this.#requirePainter().scale(x);
+    else this.#requirePainter().scale(x, y);
   }
 
   // ── gradients ────────────────────────────────────────────────────
-  // Constructors return plain-data handles (see paint.ts); the ctx-bound
-  // CanvasGradient is built lazily in #resolvePaint at paint time.
   linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
-    const [x1, y1, x2, y2, stops] = args;
-    return { kind: "linear-gradient", x1, y1, x2, y2, stops };
+    return this.#requirePainter().linearGradient(...args);
   }
-
-  // Concentric center→radius form (the glow/sky/vignette case); stored in the
-  // general two-circle shape so the handle stays fully expressive.
   radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
-    const [x, y, radius, stops] = args;
-    return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: radius, stops };
-  }
-
-  #resolvePaint(paint: Paint): string | CanvasGradientValue {
-    if (typeof paint === "string") return paint;
-    return resolveGradient(this.#requireCtx(), paint);
+    return this.#requirePainter().radialGradient(...args);
   }
 
   // ── drawing ──────────────────────────────────────────────────────
   background(paint: Paint): void {
-    const ctx = this.#requireCtx();
-    ctx.save();
-    ctx.resetTransform();
-    // Resolve after resetTransform so a gradient's coords are canvas-space.
-    ctx.fillStyle = this.#resolvePaint(paint);
-    ctx.fillRect(0, 0, this.width, this.height);
-    ctx.restore();
+    this.#requirePainter().background(paint);
   }
-
   rect(...args: [number, number, number, number]): void {
-    const [x, y, w, h] = args;
-    const ctx = this.#requireCtx();
-    ctx.beginPath();
-    ctx.rect(x, y, w, h);
-    this.#paint();
+    this.#requirePainter().rect(...args);
   }
-
   circle(...args: [number, number, number]): void {
-    const [x, y, diameter] = args;
-    const ctx = this.#requireCtx();
-    ctx.beginPath();
-    ctx.arc(x, y, diameter / 2, 0, Math.PI * 2);
-    this.#paint();
+    this.#requirePainter().circle(...args);
   }
-
   ellipse(...args: [number, number, number, number]): void {
-    const [x, y, w, h] = args;
-    const ctx = this.#requireCtx();
-    ctx.beginPath();
-    ctx.ellipse(x, y, w / 2, h / 2, 0, 0, Math.PI * 2);
-    this.#paint();
+    this.#requirePainter().ellipse(...args);
   }
-
   line(...args: [number, number, number, number]): void {
-    const [x1, y1, x2, y2] = args;
-    const ctx = this.#requireCtx();
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    this.#stroke();
+    this.#requirePainter().line(...args);
   }
-
   triangle(...args: [number, number, number, number, number, number]): void {
-    const [x1, y1, x2, y2, x3, y3] = args;
-    const ctx = this.#requireCtx();
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.lineTo(x3, y3);
-    ctx.closePath();
-    this.#paint();
+    this.#requirePainter().triangle(...args);
   }
-
   arc(...args: [number, number, number, number, number]): void {
-    const [x, y, radius, startAngle, endAngle] = args;
-    const ctx = this.#requireCtx();
-    ctx.beginPath();
-    ctx.arc(x, y, radius, startAngle, endAngle);
-    this.#paint();
+    this.#requirePainter().arc(...args);
   }
-
-  /** Closed polygon through `points`, filled/stroked per the current state. */
   polygon(points: readonly Vec2[]): void {
-    tracePolygon(this.#requireCtx(), points);
-    this.#paint();
+    this.#requirePainter().polygon(points);
   }
-
-  /** Render a `PathCommand` list, then fill/stroke per the current state. */
   path(commands: readonly PathCommand[]): void {
-    tracePath(this.#requireCtx(), commands);
-    this.#paint();
+    this.#requirePainter().path(commands);
   }
-
-  // Clip to a polygon/path for the duration of `body`, restoring afterward. The
-  // one sanctioned callback: it scopes state (not data), and still serializes in
-  // principle as push-clip / pop-clip commands around body's draws.
   clip(shape: ClipShape, body: () => void): void {
-    this.push();
-    try {
-      const ctx = this.#requireCtx();
-      if (isPathShape(shape)) tracePath(ctx, shape);
-      else tracePolygon(ctx, shape);
-      ctx.clip();
-      body();
-    } finally {
-      this.pop();
-    }
+    this.#requirePainter().clip(shape, body);
   }
-
   text(...args: [string, number, number]): void {
-    const [content, x, y] = args;
-    const ctx = this.#requireCtx();
-    ctx.font = `${this.#style.textSize}px sans-serif`;
-    ctx.textAlign = this.#style.textAlignH;
-    ctx.textBaseline = this.#style.textAlignV;
-    if (this.#style.fillEnabled) {
-      ctx.fillStyle = this.#resolvePaint(this.#style.fillColor);
-      ctx.fillText(content, x, y);
-    }
-  }
-
-  #paint(): void {
-    const ctx = this.#requireCtx();
-    if (this.#style.fillEnabled) {
-      ctx.fillStyle = this.#resolvePaint(this.#style.fillColor);
-      ctx.fill();
-    }
-    this.#stroke();
-  }
-
-  #stroke(): void {
-    if (!this.#style.strokeEnabled) return;
-    const ctx = this.#requireCtx();
-    ctx.strokeStyle = this.#resolvePaint(this.#style.strokeColor);
-    ctx.lineWidth = this.#style.strokeW;
-    ctx.stroke();
+    this.#requirePainter().text(...args);
   }
 
   // ── transcript ───────────────────────────────────────────────────

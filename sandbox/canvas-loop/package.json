@@ -9,9 +9,10 @@
   },
   "scripts": {
     "cli": "node --import tsx src/cli.ts",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p browser/tsconfig.json",
     "lint": "eslint .",
-    "test": "node --import tsx --test test/*.test.ts test/*.test.mjs"
+    "test": "node --import tsx --test test/*.test.ts test/*.test.mjs",
+    "build:playground": "node --import tsx browser/build.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.2"
@@ -19,6 +20,7 @@
   "devDependencies": {
     "@ianbicking/personal-vibe-check": "workspace:*",
     "@types/node": "^25.9.1",
+    "esbuild": "0.25.12",
     "eslint": "^9.39.2",
     "tsx": "^4.22.3",
     "typescript": "^5.7.0"

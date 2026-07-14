@@ -5,7 +5,58 @@
 // as JSON draw commands — and keeps live `CanvasGradient`/`Path2D` objects from
 // leaking into sketch code. The `trace*`/`resolveGradient` helpers below are the
 // one place those data forms are turned into ctx calls; the engine calls them.
-import type { SKRSContext2D } from "@napi-rs/canvas";
+
+// ── Structural 2D-context subset ─────────────────────────────────────
+// The drawing engine (paint.ts helpers + Painter) is typed against this
+// structural subset rather than a concrete `SKRSContext2D`/`CanvasRenderingContext2D`.
+// Both the headless Skia context and the browser's DOM context satisfy it, so one
+// drawing implementation serves both the CLI and the browser harness. The two
+// concrete contexts are handed in through a single boundary cast each (their
+// `fillStyle` unions are wider — they include `CanvasPattern` — so structural
+// assignability doesn't hold, but every method/property the engine touches is
+// shared and behaves identically).
+
+/** Horizontal text alignment — mirrors the (unexported) `CanvasTextAlign`. */
+export type CtxTextAlign = "center" | "end" | "left" | "right" | "start";
+/** Text baseline — mirrors the (unexported) `CanvasTextBaseline`. */
+export type CtxTextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
+
+/** A gradient handle as both contexts expose it — the one shared method is `addColorStop`. */
+export interface Ctx2DGradient {
+  addColorStop(offset: number, color: string): void;
+}
+
+/** The exact 2D-context surface the drawing engine uses. */
+export interface Ctx2D {
+  fillStyle: string | Ctx2DGradient;
+  strokeStyle: string | Ctx2DGradient;
+  lineWidth: number;
+  font: string;
+  textAlign: CtxTextAlign;
+  textBaseline: CtxTextBaseline;
+  save(): void;
+  restore(): void;
+  resetTransform(): void;
+  translate(x: number, y: number): void;
+  rotate(angle: number): void;
+  scale(x: number, y: number): void;
+  beginPath(): void;
+  closePath(): void;
+  moveTo(x: number, y: number): void;
+  lineTo(x: number, y: number): void;
+  quadraticCurveTo(cpx: number, cpy: number, x: number, y: number): void;
+  bezierCurveTo(cp1x: number, cp1y: number, cp2x: number, cp2y: number, x: number, y: number): void;
+  rect(x: number, y: number, w: number, h: number): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
+  ellipse(x: number, y: number, radiusX: number, radiusY: number, rotation: number, startAngle: number, endAngle: number): void;
+  fill(): void;
+  stroke(): void;
+  clip(): void;
+  fillRect(x: number, y: number, w: number, h: number): void;
+  fillText(text: string, x: number, y: number): void;
+  createLinearGradient(x0: number, y0: number, x1: number, y1: number): Ctx2DGradient;
+  createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number): Ctx2DGradient;
+}
 
 /** A single point, `[x, y]`. The vertex form used by `polygon` and `clip`. */
 export type Vec2 = readonly [number, number];
@@ -79,7 +130,7 @@ export function isPathShape(shape: ClipShape): shape is readonly PathCommand[] {
 }
 
 /** Trace a closed polygon onto `ctx`'s current path (no fill/stroke). */
-export function tracePolygon(ctx: SKRSContext2D, points: readonly Vec2[]): void {
+export function tracePolygon(ctx: Ctx2D, points: readonly Vec2[]): void {
   ctx.beginPath();
   let started = false;
   for (const [x, y] of points) {
@@ -94,7 +145,7 @@ export function tracePolygon(ctx: SKRSContext2D, points: readonly Vec2[]): void 
 }
 
 /** Trace a `PathCommand` list onto `ctx`'s current path (no fill/stroke). */
-export function tracePath(ctx: SKRSContext2D, commands: readonly PathCommand[]): void {
+export function tracePath(ctx: Ctx2D, commands: readonly PathCommand[]): void {
   ctx.beginPath();
   for (const cmd of commands) {
     switch (cmd[0]) {
@@ -117,8 +168,8 @@ export function tracePath(ctx: SKRSContext2D, commands: readonly PathCommand[]):
   }
 }
 
-/** Build the ctx-bound `CanvasGradient` for a gradient handle. */
-export function resolveGradient(ctx: SKRSContext2D, g: Gradient): ReturnType<SKRSContext2D["createLinearGradient"]> {
+/** Build the ctx-bound gradient for a gradient handle. */
+export function resolveGradient(ctx: Ctx2D, g: Gradient): Ctx2DGradient {
   const grad =
     g.kind === "linear-gradient"
       ? ctx.createLinearGradient(g.x1, g.y1, g.x2, g.y2)

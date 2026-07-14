@@ -6,8 +6,8 @@ import teaPlugin from "./tea-lint.mjs";
 // the preset stays src-only, since it needs tsconfig project membership).
 const base = vibeCheck({
   react: false,
-  roots: ["src", "examples", "experiments", "test"],
-  ignores: ["**/*.mjs", "out/**", "experiments/out/**"],
+  roots: ["src", "examples", "experiments", "test", "browser"],
+  ignores: ["**/*.mjs", "out/**", "experiments/out/**", "browser/dist/**"],
 });
 
 // The TEA discipline (see TEA.md) applies to TEA sketches only. The mutable and
