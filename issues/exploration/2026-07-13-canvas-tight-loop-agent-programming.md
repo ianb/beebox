@@ -255,6 +255,58 @@ on demand by re-folding the log) and optionally having `draw` emit a
 **command list** instead of painting imperatively — enabling frame diffing,
 cheap dedup, and browser rendering of the same sketch without Skia.
 
+## Elm parity in TS (2026-07-14) — the TEA-shaped sketch
+
+Ian: comfortable enforcing Elm-ish semantics with lint + instructions; get as
+close to parity as possible while keeping Elm's basic concept. Also: represent
+data flow as data flow, not concrete objects — so no Tweakpane/observer-style
+widget bindings; generate plain HTML inputs from the param declaration
+(~50 lines, Vega-Lite `bind` style) and dispatch their edits as log entries.
+
+Adopt Elm's *program shape*, not just its discipline — that's where most of
+the enforcement burden disappears:
+
+```ts
+export const params = { speed: {type: "number", min: 0, max: 0.2, default: 0.06} };
+export type Model = { planets: readonly Planet[]; selected: number | null };
+export function init(u: Util): Model
+export function update(model: Model, msg: Msg, u: Util): Model
+export function draw(v: View, model: Model): void
+```
+
+`Msg` is a runtime-defined discriminated union — `tick{frame}` (time is a
+message), `mousedown/mousemove/...`, `param{name,value}`, `trigger{name}` —
+and the frame loop is a literal fold: `model = msgs.reduce(update, init())`.
+State-changes-only-via-update stops being a rule and becomes the only way
+data moves; scrub-to-frame-N, record/replay, and test symmetry are
+structural. Note `update(model, msg) → model` is a Redux reducer — the most
+training-data-saturated idiom there is for agents, so the fluency objection
+to Elm-the-language inverts here.
+
+Parity stack (strongest first):
+1. **Types**: `update`/`draw` take `DeepReadonly<Model>` — mutation is a
+   compile error.
+2. **Runtime**: deep-`Object.freeze` the model between frames — mutation
+   throws even through casts; free at sketch scale.
+3. **Determinism backstop**: run fixtures twice, byte-diff (already proven).
+   Elm *prevents* impurity; we *detect* it, totally and cheaply — any
+   smuggled effect either breaks the diff or is deterministic and replayable.
+4. **Lint** (sketch-dir scoped): `functional/immutable-data` on params,
+   `switch-exhaustiveness-check` (parity with Elm's exhaustive `case`),
+   `no-restricted-imports` (sketches import only framework types).
+5. **Instructions**: describe the walls.
+
+Deliberate deviations: `u.random()` is a run-seeded PRNG (deterministic,
+skips Elm's generator-threading ceremony); `log()`/`snapshot()` callable
+anywhere as observability (Elm's own `Debug.log` carve-out). Unreachable:
+Elm's no-library-call-has-effects guarantee — reduced by lint+diff to
+"deterministic misbehavior," which replay tolerates.
+
+Open question: TEA ceremony vs the validated mutable tier (2-cycle result).
+Next experiment: implement TEA tier + params in the sandbox, re-run the
+fresh-agent test on a controls-heavy task; if cycle count holds, the mutable
+tier becomes legacy.
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
