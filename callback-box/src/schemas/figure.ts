@@ -33,8 +33,6 @@ export const FigureSchema = cardSchema("figure", {
     entry: z.string(),
     data: z.record(z.string(), z.unknown()).optional(),
     params: z.array(FigureParam).optional(),
-    width: z.number().optional(),
-    height: z.number().optional(),
     body: body(z.string()),
   },
   instructions: `# Figure Cards
@@ -55,7 +53,8 @@ Whatever a figure is for, these make it usable and clear:
 - **Signal the affordances.** What's interactive should *look* interactive — a draggable part, a slider, a button should read as such (visible handles, hover cues), not blend into the scene.
 - **Tell the viewer what to do.** A short on-figure instruction ("drag the H⁺ to the base", "click a category") removes the guesswork; don't rely on the viewer discovering the interaction.
 - **Key what isn't self-evident.** If colours, symbols, or marks carry meaning, include a small legend; if it responds to the keyboard, name the keys.
-- **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped at the figure's declared size. Match the box's quiet visual style — no decorative noise.
+- **Legible and unclipped.** Readable text, enough contrast, no overlapping or garbled labels; lay it out so nothing is clipped. Match the box's quiet visual style — no decorative noise.
+- **Fit the container.** Size from \`mount.clientWidth\` (fall back if 0, e.g. \`|| 360\`), watch it with a \`ResizeObserver\` (disconnect in teardown), and derive layout from the current canvas size — never a fixed pixel width or a \`size\` param. Give DOM controls \`width: 100%\`. A figure must work at phone width (~390px).
 - **Verify it renders before you call it done.** Open it and screenshot it: confirm it renders, the controls and instructions are visible, and nothing is clipped.
 
 ## Frontmatter
@@ -92,11 +91,16 @@ argument because positional params are capped at two.)
 \`\`\`ts
 // attach/sketch.ts  (p5js)
 export default function (p5, { mount, figure }) {
+  const width = () => Math.min(mount.clientWidth || 360, 640);
   const instance = new p5((p) => {
-    p.setup = () => p.createCanvas(figure.params.size ?? 300, 300);
-    p.draw = () => { /* read figure.params / figure.data */ };
+    p.setup = () => p.createCanvas(width(), Math.round(width() * 0.75));
+    p.draw = () => { /* derive layout from p.width / p.height, not a constant */ };
   }, mount);
-  return () => instance.remove();
+  const ro = new ResizeObserver(() => {
+    if (instance.width !== width()) instance.resizeCanvas(width(), Math.round(width() * 0.75));
+  });
+  ro.observe(mount);
+  return () => { ro.disconnect(); instance.remove(); };
 }
 \`\`\`
 
@@ -125,15 +129,18 @@ export type FigureFields = InferCardFields<typeof FigureSchema>;
  */
 const FIGURE_STARTERS: Record<FigureRuntimeType, string> = {
   p5js: `// p5.js figure. The harness provides p5 as \`lib\` (do not import it) and a
-// mount element; read parameters from figure.params.
+// mount element. Size from the container, not a fixed pixel width, so the
+// figure fits at phone width too.
 export default function (p5, { mount, figure }) {
+  const width = () => Math.min(mount.clientWidth || 360, 640);
+  let angle = 0;
   const instance = new p5((p) => {
-    let angle = 0;
-    const size = Number(figure.params.size) || 300;
     p.setup = () => {
-      p.createCanvas(size, size);
+      p.createCanvas(width(), width());
     };
     p.draw = () => {
+      // Derive ALL layout from p.width / p.height, not captured constants —
+      // resizeCanvas below changes them without re-running setup.
       p.background(28);
       p.translate(p.width / 2, p.height / 2);
       p.rotate(angle);
@@ -141,29 +148,46 @@ export default function (p5, { mount, figure }) {
       p.noStroke();
       p.fill(120, 200, 255);
       p.rectMode(p.CENTER);
-      p.rect(0, 0, size * 0.4, size * 0.4);
+      p.rect(0, 0, p.width * 0.4, p.height * 0.4);
     };
   }, mount);
-  return () => instance.remove();
+  // The width-compare guard breaks the observer feedback loop (resizeCanvas
+  // changes the mount's height, which would otherwise refire the observer).
+  const ro = new ResizeObserver(() => {
+    if (instance.width !== width()) instance.resizeCanvas(width(), width());
+  });
+  ro.observe(mount);
+  return () => {
+    ro.disconnect();
+    instance.remove();
+  };
 }
 `,
   three: `// three.js figure. The harness provides the three namespace as \`lib\`; mount a
 // WebGL canvas into \`mount\` and return a teardown that cancels the animation
-// frame and disposes GPU resources.
+// frame and disposes GPU resources. Size from the container so the figure
+// fits at phone width too.
 export default function (THREE, { mount, figure }) {
-  const size = Number(figure.params.size) || 300;
+  const width = () => Math.min(mount.clientWidth || 360, 640);
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(70, 1, 0.1, 100);
   camera.position.z = 2.5;
 
   const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(size, size);
   mount.appendChild(renderer.domElement);
 
   const geometry = new THREE.BoxGeometry(1, 1, 1);
   const material = new THREE.MeshNormalMaterial();
   const cube = new THREE.Mesh(geometry, material);
   scene.add(cube);
+
+  function resize(): void {
+    const w = width();
+    renderer.setSize(w, w);
+    camera.aspect = 1;
+    camera.updateProjectionMatrix();
+  }
+  resize();
 
   let raf = 0;
   const loop = () => {
@@ -174,7 +198,13 @@ export default function (THREE, { mount, figure }) {
   };
   loop();
 
+  const ro = new ResizeObserver(() => {
+    if (renderer.domElement.width !== width()) resize();
+  });
+  ro.observe(mount);
+
   return () => {
+    ro.disconnect();
     cancelAnimationFrame(raf);
     geometry.dispose();
     material.dispose();
@@ -184,26 +214,32 @@ export default function (THREE, { mount, figure }) {
 }
 `,
   d3: `// D3 figure. The harness provides the d3 namespace as \`lib\`; append an <svg>
-// to \`mount\` and return a teardown that removes it.
+// with a viewBox so it scales to the container — no resize handling needed,
+// since d3.pointer() maps events into the viewBox's own coordinate system.
+// Keep the internal width modest and text >= 12px: viewBox scaling shrinks
+// text and strokes uniformly, so labels must stay legible even scaled down
+// to phone width.
 export default function (d3, { mount, figure }) {
-  const size = Number(figure.params.size) || 300;
+  const W = 600;
+  const H = 400;
   const data = [4, 8, 15, 16, 23, 42];
 
   const svg = d3
     .select(mount)
     .append("svg")
-    .attr("width", size)
-    .attr("height", size);
+    .attr("viewBox", \`0 0 \${W} \${H}\`)
+    .style("width", "100%")
+    .style("height", "auto");
 
   const x = d3
     .scaleBand()
     .domain(data.map((_, i) => String(i)))
-    .range([0, size])
+    .range([0, W])
     .padding(0.1);
   const y = d3
     .scaleLinear()
     .domain([0, d3.max(data) ?? 0])
-    .range([size, 0]);
+    .range([H, 0]);
 
   svg
     .selectAll("rect")
@@ -212,7 +248,7 @@ export default function (d3, { mount, figure }) {
     .attr("x", (_, i) => x(String(i)) ?? 0)
     .attr("y", (d) => y(d))
     .attr("width", x.bandwidth())
-    .attr("height", (d) => size - y(d))
+    .attr("height", (d) => H - y(d))
     .attr("fill", "#4ea3ff");
 
   return () => {
@@ -236,14 +272,14 @@ const RUNTIME_LABEL: Record<FigureRuntimeType, string> = {
 /**
  * Generate a starter figure card. The body is a short description; the runnable
  * code is scaffolded separately into the attach scope (see
- * {@link figureStarterSketch}). A `size` param is declared so the starter is
- * parameterizable out of the box.
+ * {@link figureStarterSketch}). No `params` are scaffolded — the starter sizes
+ * itself from the container, so `params` stays reserved for domain parameters
+ * an author declares deliberately.
  */
 export function createFigureTemplate(input: { runtime: FigureRuntimeType; title?: string }): string {
   const fields: Record<string, unknown> = {
     runtime: input.runtime,
     entry: "attach/sketch.ts",
-    params: [{ name: "size", type: "number", default: 300 }],
   };
   if (input.title !== undefined && input.title !== "") {
     fields["title"] = input.title;
