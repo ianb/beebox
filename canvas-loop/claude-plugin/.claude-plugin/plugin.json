@@ -1,0 +1,7 @@
+{
+  "name": "canvas-loop",
+  "version": "0.1.0",
+  "description": "Author and test visual/interactive Canvas2D sketches with the deterministic, browser-less canvas-loop render->transcript loop.",
+  "author": { "name": "Ian Bicking" },
+  "license": "MIT"
+}

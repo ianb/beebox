@@ -63,8 +63,33 @@ First release as a workspace library (was `sandbox/canvas-loop`).
   into a scratch temp dir, asserts byte-identical determinism, and lints it —
   read-only, nothing written under `gallery/`.
 
+- **Claude plugin (`claude-plugin/`).** Standard Claude Code plugin layout —
+  `claude-plugin/.claude-plugin/plugin.json` (names the plugin `canvas-loop`)
+  plus `skills/canvas-loop-sketch/SKILL.md`. The skill triggers on visual/
+  interactive sketch work ("I need to see what this draws", build/test a figure,
+  visualize, script input events, add a gallery exercise) and is reference-dense
+  rather than self-contained: it points at `README.md`, `TEA.md`, and
+  `gallery/README.md` by path instead of duplicating them, and states the loop
+  (write → `cli run` → Read transcript + frames), events-as-tests (incl. the
+  snapshot entry), the determinism levers, the gallery add/re-exercise flow, and
+  the verify-by-frames / stranger-test audit norms. Wired into the repo's
+  `.claude/skills/` by **copy**, not symlink (the harness reads real files, and
+  the doc-graph walker's `readdirSync`/`isDirectory` scan skips symlinked dirs) —
+  `pnpm run sync:claude-skill` regenerates the copy from the canonical
+  `claude-plugin/` source, which carries a source-of-truth banner.
+- **Docs sweep.** Root `CLAUDE.md` monorepo layout gained a `canvas-loop/` line;
+  `LIBRARY-PLAN.md` tracks 1–4 marked shipped with per-section status headers
+  (open questions left intact); the design issue
+  (`issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`) gained
+  a "Library-ified (2026-07-14)" section stating the new home, with the older
+  dated experiment logs and their `sandbox/canvas-loop/...` paths preserved as
+  history.
+
 ### Decisions recorded
 
+- **No always-on rule shipped with the Claude plugin.** The plan floated a short
+  always-on rule file alongside the skill; deferred as unearned — start
+  skill-only and let exercise experience decide whether a rule is warranted.
 - **`core` re-exports the mutable-tier `Sketch` type only.** A mutable sketch
   names `Sketch` from the single `@ianbicking/canvas-loop` specifier its lint
   discipline allows. `Sketch` is a headless, `@napi-rs`-backed class, so `core`

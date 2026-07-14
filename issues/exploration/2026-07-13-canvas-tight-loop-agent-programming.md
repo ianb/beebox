@@ -116,6 +116,25 @@ Full details in the research subagent run; conclusions:
   from: pull-based (harness owns the loop, scene code yields per frame),
   seeded randomness as a first-class API.
 
+## Library-ified (2026-07-14)
+
+The validated sandbox graduated into a workspace library. It now lives at the
+top-level `canvas-loop/` (peer of `agent-doctest/`) as `@ianbicking/canvas-loop`
+(EXPERIMENTAL, 0.1.0), split into subpath exports — `.` (core TEA contract,
+zero heavy deps), `./headless` (`@napi-rs/canvas` runner + CLI), `./react`
+(`<SketchFigure>` embed component), `./eslint` (the `tea/*` plugin). The five
+experiments below became the `canvas-loop/gallery/` exercise corpus — six
+entries, since the particle task ran twice (Sonnet and Opus); schema in
+`canvas-loop/gallery/README.md`; `experiments/` retired. A `<SketchFigure>`
+demo renders at `dev/canvas-loop.html`, and a Claude Code plugin
+(`canvas-loop/claude-plugin/`, skill `canvas-loop-sketch`, wired into
+`.claude/skills/`) packages the author→run→Read-transcript loop as agent
+guidance. The scripted `snapshot` events entry all three experiment agents
+asked for shipped. Full per-track record: `canvas-loop/CHANGELOG.md` and
+`canvas-loop/LIBRARY-PLAN.md`. The dated sections below are the original
+experiment logs — their `sandbox/canvas-loop/...` paths are preserved as
+history (the sketches they name now live under `canvas-loop/gallery/`).
+
 ## Experiment (2026-07-14) — prototype built and tested on a fresh agent
 
 The sandbox exists: **`sandbox/canvas-loop/`** (own workspace package, zero

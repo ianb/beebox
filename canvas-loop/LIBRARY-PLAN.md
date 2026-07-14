@@ -8,7 +8,17 @@ the library presentation is real but the API is expected to move as agent
 exercises teach us more. Design record:
 `issues/exploration/2026-07-13-canvas-tight-loop-agent-programming.md`.
 
+## Status (2026-07-14): all implementation tracks shipped
+
+The package move + subpath split, ESLint plugin extraction, snapshot event +
+CLI, gallery migration, React `<SketchFigure>` + dev demo, and the Claude
+plugin all landed. Per-change detail and any deviations from this plan are in
+`canvas-loop/CHANGELOG.md` (the authoritative record; each `## Status` line
+below points there). Open questions at the bottom remain open — unchanged.
+
 ## Package
+
+**Status (2026-07-14): shipped** — see `canvas-loop/CHANGELOG.md` (0.1.0).
 
 - **Move** `sandbox/canvas-loop/` → **`canvas-loop/`** (top-level, peer of
   `agent-doctest/`), workspace package **`@ianbicking/canvas-loop`**,
@@ -18,6 +28,11 @@ exercises teach us more. Design record:
   agent exercises; changes recorded in `CHANGELOG.md` (hand-written, terse).
 
 ## Subpath layout (dependency isolation is the point)
+
+**Status (2026-07-14): shipped** — `.`/`./headless`/`./react`/`./eslint`
+exports live; isolation verified by `test/self-reference.test.ts`. Deviation:
+the browser runtime sits in `browser/` and the demo in `dev-demo/` rather than
+a single `src/react/`. See `canvas-loop/CHANGELOG.md`.
 
 ```
 canvas-loop/
@@ -47,6 +62,9 @@ canvas-loop/
 
 ## React figure component (`./react`)
 
+**Status (2026-07-14): shipped** — `<SketchFigure>` (uncontrolled + controlled,
+`onEvent`, SSR-safe), demo at `dev/canvas-loop.html`. See `canvas-loop/CHANGELOG.md`.
+
 - `<SketchFigure module={sketchModule} seed? autoplay? showControls?
   showRecorder? height?/>` — wraps the existing browser TEA runner + the
   declaration-generated controls (plain HTML inputs restyled minimally; no
@@ -71,6 +89,9 @@ canvas-loop/
 
 ## ESLint plugin (`./eslint`)
 
+**Status (2026-07-14): shipped** — `src/eslint/index.mjs` with
+`configs.recommended`; the package self-hosts it. See `canvas-loop/CHANGELOG.md`.
+
 - `tea-lint.mjs` rules move to `src/eslint/` as TS with the standard plugin
   shape (`rules`, `configs: { recommended }` exporting the whole TEA
   discipline block — rules + no-restricted-imports + exhaustiveness
@@ -78,6 +99,13 @@ canvas-loop/
 - The package's own eslint.config.mjs consumes the built plugin (self-host).
 
 ## Claude plugin (`claude-plugin/`)
+
+**Status (2026-07-14): shipped** — `claude-plugin/.claude-plugin/plugin.json`
++ `skills/canvas-loop-sketch/SKILL.md`; wired into `.claude/skills/` by copy
+(`pnpm run sync:claude-skill`, source-of-truth banner in the canonical file —
+the harness reads real files, so a symlinked skill dir isn't reliably
+traversed). No always-on rule shipped (deferred; recorded in
+`canvas-loop/CHANGELOG.md`). See `canvas-loop/CHANGELOG.md`.
 
 - Standard Claude Code plugin layout so it can be installed anywhere; wired
   into this repo's `.claude/` so sessions here get it.
@@ -90,6 +118,10 @@ canvas-loop/
   CHANGELOG).
 
 ## Gallery: the agent-exercise corpus
+
+**Status (2026-07-14): shipped** — six exercises migrated into the schema;
+`gallery check` CLI + `pnpm run gallery:check` enforce determinism + lint. See
+`canvas-loop/CHANGELOG.md`.
 
 Purpose: exercises (agent-made examples) are how the library gets evaluated
 and evolved — save them with enough history/metadata to understand
@@ -125,6 +157,10 @@ canvas-loop/gallery/
 
 ## Hardening folded in (from unanimous experiment feedback)
 
+**Status (2026-07-14): snapshot event shipped**; contact-sheet / golden
+assertions / protractor / `lineJoin` remain deferred (issue notes). See
+`canvas-loop/CHANGELOG.md`.
+
 - **Scripted snapshot event**: `{frame, type: "snapshot", label?}` in events
   files — captures without perturbing state. (Do now; gallery examples
   otherwise fossilize the no-op-param workaround.)
@@ -132,6 +168,9 @@ canvas-loop/gallery/
   pixelmatch assertions, protractor overlay, `lineJoin`.
 
 ## Execution order
+
+**Status (2026-07-14): all seven steps executed** (per-track detail in
+`canvas-loop/CHANGELOG.md`).
 
 1. Package move + subpath split + import migration (biggest churn first,
    everything else lands on the new layout).

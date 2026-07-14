@@ -28,7 +28,8 @@
     "test": "TSX_TSCONFIG_PATH=src/react/tsconfig.json node --import tsx --test test/*.test.ts test/*.test.mjs test/*.test.tsx",
     "build:playground": "node --import tsx browser/build.ts",
     "build:dev-demo": "node --import tsx dev-demo/build.ts",
-    "gallery:check": "node --import tsx src/headless/cli.ts gallery check"
+    "gallery:check": "node --import tsx src/headless/cli.ts gallery check",
+    "sync:claude-skill": "mkdir -p ../.claude/skills/canvas-loop-sketch && cp claude-plugin/skills/canvas-loop-sketch/SKILL.md ../.claude/skills/canvas-loop-sketch/SKILL.md"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.2",
