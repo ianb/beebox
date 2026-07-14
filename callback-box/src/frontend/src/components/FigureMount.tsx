@@ -95,6 +95,15 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
         const lib = await loadRuntimeLib(runtime);
         if (state.cancelled) return;
         teardown = sketch(lib, { mount: el, figure: figureRef.current });
+        // Legacy backstop: an <svg> without a viewBox *crops* instead of
+        // scaling under the CSS max-width below, so patch one in from its
+        // width/height attributes. New sketches (d3 guidance) carry their own
+        // viewBox already, so this only fires for older, fixed-size sketches.
+        for (const svg of el.querySelectorAll("svg:not([viewBox])")) {
+          const w = Number(svg.getAttribute("width"));
+          const h = Number(svg.getAttribute("height"));
+          if (w > 0 && h > 0) svg.setAttribute("viewBox", `0 0 ${w} ${h}`);
+        }
       } catch (e) {
         if (!state.cancelled) onError(e instanceof Error ? e.message : String(e));
       }
@@ -117,5 +126,19 @@ export function FigureMount({ runtime, sketch, figure, onError }: FigureMountPro
     };
   }, [runtime, sketch, onError]);
 
-  return <div ref={mountRef} className="w-full" />;
+  // max-width/height:auto caps any descendant canvas/svg/input at the mount's
+  // width while preserving intrinsic aspect ratio, so a fixed-size sketch
+  // scales down instead of overflowing its column. The `!` (important) is
+  // load-bearing: p5 writes inline `width`/`height` styles on its canvas, and
+  // plain classes lose to those — height would stay fixed while max-width
+  // shrank the canvas, distorting the aspect ratio. Safe for p5 interactions:
+  // p5 2.3.0's `_updatePointerCoords` divides pointer coordinates by
+  // `canvas.scrollWidth / this.width`, compensating for CSS scaling — re-
+  // verify this on any p5 major bump.
+  return (
+    <div
+      ref={mountRef}
+      className="w-full [&_canvas]:!max-w-full [&_canvas]:!h-auto [&_svg]:!max-w-full [&_svg]:!h-auto [&_input]:!max-w-full"
+    />
+  );
 }
