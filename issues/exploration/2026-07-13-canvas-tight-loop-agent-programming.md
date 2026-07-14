@@ -411,6 +411,54 @@ loop — a future "hard visuals" experiment needs aesthetic/organic
 correctness (a tree that *looks like* a tree, hand-tuned easing feel) where
 there's no closed form to reason from.
 
+## Experiment 4 (2026-07-14) — aesthetic tasks (fjord with tides; pelican on a bicycle)
+
+Ian's hypothesis: mathematically-intractable visuals ("show a fjord affected
+by tides", "pelican on a bicycle") are where feedback is genuinely required.
+Two parallel Sonnet runs, TEA tier, prompts demanding cycle-by-cycle honesty.
+Confirmed:
+
+- **Fjord: 6 render cycles** (`experiments/fjord-sonnet-tea.ts`) — real
+  iterative visual work at last. The failures were *conceptual, not
+  numeric*: cycle 1's screen-space vertical waterline made the channel read
+  as a waterfall of sky; the fix (cycle 3) was a perspective restructure —
+  tide expressed at the water's *edges* (exposed foreshore + wet rim), not
+  as a line sliding up the screen. Later cycles were classic art iteration:
+  color continuity, composition (nested-V slopes to make walls read steep),
+  and a path-ordering bug only visible as shattered slivers. Agent's own
+  reflection: transcript logs "nearly useless" here — all judgment from
+  PNGs; loop speed (~5s/cycle) is what made 6 cycles cheap.
+- **Pelican: 2 cycles** (`experiments/pelican-sonnet-tea.ts`) — bicycle
+  right on the first render, pelican fixed in one revision (pouched bill,
+  wing visibility, eye contrast, material-color separation).
+- **Stranger-test audit (Fable, independent)**: pelican passes — genuinely
+  reads as a pelican on a bicycle; fjord passes as steep-walled tidal
+  channel with a clearly-working tide sweep, though the far-channel
+  "waterfall ghost" the agent fought never fully died and the wet-rim
+  outlines are heavy. **Self-grade vs pixels gap observed**: the pelican
+  report claims wings "draping toward the handlebars" — no handlebars are
+  visible in the frames at all (the bill occupies that space); its listed
+  weakness understates this. Self-critique was specific and mostly honest,
+  but final-frame claims still need independent eyes — an argument for the
+  planned golden/assert layer and for human-in-the-loop on aesthetics.
+- **The View subset fails organic work** — both agents leaned on the
+  `v.ctx` escape hatch for every curve; the fjord agent: "not an edge case
+  for landscape work, it's the main tool." Convergent asks: `polygon()`/
+  bezier/path primitives, gradient fills, clip regions in View; a
+  **contact-sheet output mode** (`--sheet`: tiled labeled thumbnails —
+  aesthetic judgment is comparison, and one-frame-at-a-time reading was the
+  bottleneck); reference images/proportion guides for creature asks.
+- **Lint pressure, second signal**: the fjord agent spent edit rounds
+  compressing working scene code to fit `max-lines` 300 (declarative
+  palettes/layer configs are line-hungry) and asked for a higher cap in
+  sketch dirs — joins the `max-params` contract collision as evidence that
+  sketch dirs may warrant a *considered* preset variant (Ian's call; not
+  done).
+
+Combined cycle counts across experiments: precision tasks 1–3 cycles;
+aesthetic tasks 2–6. The loop's value scales with visual intractability,
+exactly as hypothesized — and determinism kept even the 6-cycle run cheap.
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
