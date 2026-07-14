@@ -68,7 +68,9 @@ otherwise `mouseMoved`. `e` carries `{ type, x, y, key }`.
 | Group | Members |
 | --- | --- |
 | Canvas & time | `createCanvas(w, h)`, `width`, `height`, `frameCount`, `millis()` (= `frameCount / fps * 1000`) |
-| Drawing | `background`, `fill`, `noFill`, `stroke`, `noStroke`, `strokeWeight`, `rect`, `circle`, `ellipse`, `line`, `triangle`, `text`, `textSize`, `textAlign` |
+| Drawing | `background`, `fill`, `noFill`, `stroke`, `noStroke`, `strokeWeight`, `rect`, `circle`, `ellipse`, `line`, `triangle`, `arc`, `text`, `textSize`, `textAlign` |
+| Organic shapes | `polygon(points)`, `path(commands)` (data-encoded `["move"/"line"/"quad"/"bezier"/"close", …]`), `clip(shape, () => …)` (polygon/path region for the callback) |
+| Gradients | `linearGradient(x1,y1,x2,y2, stops)`, `radialGradient(x,y,radius, stops)` → an opaque handle `fill`/`stroke`/`background` accept anywhere a color string is |
 | Transform | `push`, `pop`, `translate`, `rotate`, `scale` |
 | Randomness | `random()`, `random(max)`, `random(min, max)`, `randomChoice(arr)` — seeded (`--seed`) |
 | Input state | `mouseX`, `mouseY`, `mouseIsPressed`, `keysDown` (`Set<string>`) |
@@ -78,9 +80,11 @@ Colors are **CSS color strings only** (`"#38bdf8"`, `"tomato"`, `"rgb(…)"`) �
 no p5 numeric color overloads. Habitual `console.log/warn/error` also work; they
 route into the frame-tagged transcript.
 
-**Escape hatch:** `s.ctx` is the raw `@napi-rs/canvas` `SKRSContext2D`. Anything
-the subset above doesn't cover (gradients, `arc`, `clip`, `drawImage`, …) is
-available directly on it.
+**Escape hatch:** `s.ctx` is the raw `@napi-rs/canvas` `SKRSContext2D` — still
+available for anything the subset doesn't cover (`drawImage`, shadows, `lineJoin`,
+…). But the `polygon`/`path`/`arc`/gradient/`clip` primitives above should now
+cover organic shapes; prefer them so a sketch stays serializable-in-principle
+(the primitives are declarative data, `ctx` calls are not).
 
 ## Events file
 

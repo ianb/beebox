@@ -1,0 +1,16 @@
+[
+  { "frame": 0, "type": "param", "name": "tide", "value": -1 },
+  { "frame": 20, "type": "param", "name": "tide", "value": -0.6 },
+  { "frame": 40, "type": "param", "name": "tide", "value": -0.2 },
+  { "frame": 60, "type": "param", "name": "tide", "value": 0.2 },
+  { "frame": 80, "type": "param", "name": "tide", "value": 0.6 },
+  { "frame": 100, "type": "param", "name": "tide", "value": 1 },
+  { "frame": 120, "type": "param", "name": "tide", "value": 0.6 },
+  { "frame": 140, "type": "param", "name": "tide", "value": 0.2 },
+  { "frame": 160, "type": "param", "name": "tide", "value": -0.2 },
+  { "frame": 180, "type": "param", "name": "tide", "value": -0.6 },
+  { "frame": 200, "type": "param", "name": "tide", "value": -1 },
+  { "frame": 210, "type": "param", "name": "timeOfDay", "value": "dusk" },
+  { "frame": 220, "type": "param", "name": "tide", "value": 0.5 },
+  { "frame": 240, "type": "param", "name": "tide", "value": -1 }
+]

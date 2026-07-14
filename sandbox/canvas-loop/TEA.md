@@ -46,6 +46,15 @@ Capabilities are injected, not ambient — `update` gets `Util` (randomness,
 params, log) and no drawing; `draw` gets `View` (drawing, log, snapshot, `ctx`)
 and no randomness. That withholding *is* the enforcement.
 
+`View` carries the same drawing surface as the mutable `Sketch` (see the
+[README API table](./README.md#the-sketch-api)), including the organic-shape
+primitives — `polygon`, `path` (data-encoded commands), `arc`, `clip`, and
+`linearGradient`/`radialGradient` handles that `fill`/`stroke`/`background`
+accept as a `Paint`. `v.ctx` remains the escape hatch, but these should now
+cover curves/gradients/clipping so a `draw` stays serializable-in-principle.
+[`examples/fjord-tea.ts`](./examples/fjord-tea.ts) is a worked port that draws a
+full tidal-fjord scene through them with zero `ctx`.
+
 The lint preset caps functions at 2 parameters; the `update`/`draw` contract
 signatures are the one sanctioned exception. Put this exact comment on each
 (and nowhere else):

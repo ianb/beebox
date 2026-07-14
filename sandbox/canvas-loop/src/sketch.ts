@@ -2,6 +2,8 @@ import { createCanvas } from "@napi-rs/canvas";
 import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "./errors.js";
 import { formatArgs } from "./format.js";
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import { isPathShape, resolveGradient, tracePath, tracePolygon } from "./paint.js";
 import { SeededRandom } from "./prng.js";
 import type { SketchHost } from "./types.js";
 
@@ -9,11 +11,13 @@ import type { SketchHost } from "./types.js";
 // no DOM, so the global CanvasTextAlign / CanvasTextBaseline aren't in scope.
 type TextAlign = "center" | "end" | "left" | "right" | "start";
 type TextBaseline = "alphabetic" | "bottom" | "hanging" | "ideographic" | "middle" | "top";
+// The concrete gradient object @napi-rs returns — no DOM `CanvasGradient` global.
+type CanvasGradientValue = ReturnType<SKRSContext2D["createLinearGradient"]>;
 
 interface StyleState {
-  fillColor: string;
+  fillColor: Paint;
   fillEnabled: boolean;
-  strokeColor: string;
+  strokeColor: Paint;
   strokeEnabled: boolean;
   strokeW: number;
   textSize: number;
@@ -119,15 +123,15 @@ export class Sketch {
   }
 
   // ── style ────────────────────────────────────────────────────────
-  fill(color: string): void {
-    this.#style.fillColor = color;
+  fill(paint: Paint): void {
+    this.#style.fillColor = paint;
     this.#style.fillEnabled = true;
   }
   noFill(): void {
     this.#style.fillEnabled = false;
   }
-  stroke(color: string): void {
-    this.#style.strokeColor = color;
+  stroke(paint: Paint): void {
+    this.#style.strokeColor = paint;
     this.#style.strokeEnabled = true;
   }
   noStroke(): void {
@@ -168,12 +172,33 @@ export class Sketch {
     this.#requireCtx().scale(x, y ?? x);
   }
 
+  // ── gradients ────────────────────────────────────────────────────
+  // Constructors return plain-data handles (see paint.ts); the ctx-bound
+  // CanvasGradient is built lazily in #resolvePaint at paint time.
+  linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
+    const [x1, y1, x2, y2, stops] = args;
+    return { kind: "linear-gradient", x1, y1, x2, y2, stops };
+  }
+
+  // Concentric center→radius form (the glow/sky/vignette case); stored in the
+  // general two-circle shape so the handle stays fully expressive.
+  radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
+    const [x, y, radius, stops] = args;
+    return { kind: "radial-gradient", x1: x, y1: y, r1: 0, x2: x, y2: y, r2: radius, stops };
+  }
+
+  #resolvePaint(paint: Paint): string | CanvasGradientValue {
+    if (typeof paint === "string") return paint;
+    return resolveGradient(this.#requireCtx(), paint);
+  }
+
   // ── drawing ──────────────────────────────────────────────────────
-  background(color: string): void {
+  background(paint: Paint): void {
     const ctx = this.#requireCtx();
     ctx.save();
     ctx.resetTransform();
-    ctx.fillStyle = color;
+    // Resolve after resetTransform so a gradient's coords are canvas-space.
+    ctx.fillStyle = this.#resolvePaint(paint);
     ctx.fillRect(0, 0, this.width, this.height);
     ctx.restore();
   }
@@ -222,6 +247,42 @@ export class Sketch {
     this.#paint();
   }
 
+  arc(...args: [number, number, number, number, number]): void {
+    const [x, y, radius, startAngle, endAngle] = args;
+    const ctx = this.#requireCtx();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, startAngle, endAngle);
+    this.#paint();
+  }
+
+  /** Closed polygon through `points`, filled/stroked per the current state. */
+  polygon(points: readonly Vec2[]): void {
+    tracePolygon(this.#requireCtx(), points);
+    this.#paint();
+  }
+
+  /** Render a `PathCommand` list, then fill/stroke per the current state. */
+  path(commands: readonly PathCommand[]): void {
+    tracePath(this.#requireCtx(), commands);
+    this.#paint();
+  }
+
+  // Clip to a polygon/path for the duration of `body`, restoring afterward. The
+  // one sanctioned callback: it scopes state (not data), and still serializes in
+  // principle as push-clip / pop-clip commands around body's draws.
+  clip(shape: ClipShape, body: () => void): void {
+    this.push();
+    try {
+      const ctx = this.#requireCtx();
+      if (isPathShape(shape)) tracePath(ctx, shape);
+      else tracePolygon(ctx, shape);
+      ctx.clip();
+      body();
+    } finally {
+      this.pop();
+    }
+  }
+
   text(...args: [string, number, number]): void {
     const [content, x, y] = args;
     const ctx = this.#requireCtx();
@@ -229,7 +290,7 @@ export class Sketch {
     ctx.textAlign = this.#style.textAlignH;
     ctx.textBaseline = this.#style.textAlignV;
     if (this.#style.fillEnabled) {
-      ctx.fillStyle = this.#style.fillColor;
+      ctx.fillStyle = this.#resolvePaint(this.#style.fillColor);
       ctx.fillText(content, x, y);
     }
   }
@@ -237,7 +298,7 @@ export class Sketch {
   #paint(): void {
     const ctx = this.#requireCtx();
     if (this.#style.fillEnabled) {
-      ctx.fillStyle = this.#style.fillColor;
+      ctx.fillStyle = this.#resolvePaint(this.#style.fillColor);
       ctx.fill();
     }
     this.#stroke();
@@ -246,7 +307,7 @@ export class Sketch {
   #stroke(): void {
     if (!this.#style.strokeEnabled) return;
     const ctx = this.#requireCtx();
-    ctx.strokeStyle = this.#style.strokeColor;
+    ctx.strokeStyle = this.#resolvePaint(this.#style.strokeColor);
     ctx.lineWidth = this.#style.strokeW;
     ctx.stroke();
   }

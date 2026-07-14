@@ -2,6 +2,11 @@
 // imports. Everything here is a type — capability objects (View, Util) are
 // constructed by the runtime and handed in, never imported. See TEA.md.
 import type { SKRSContext2D } from "@napi-rs/canvas";
+// Drawing-data types shared with the mutable tier, re-exported (below) so a TEA
+// sketch — which imports only this module — can name them.
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+
+export type { ClipShape, ColorStop, Gradient, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — see sketch.ts.
 export type TextAlign = "center" | "end" | "left" | "right" | "start";
@@ -108,10 +113,10 @@ export interface Util<D extends ParamsDecl = ParamsDecl> {
 export interface View {
   readonly width: number;
   readonly height: number;
-  background(color: string): void;
-  fill(color: string): void;
+  background(paint: Paint): void;
+  fill(paint: Paint): void;
   noFill(): void;
-  stroke(color: string): void;
+  stroke(paint: Paint): void;
   noStroke(): void;
   strokeWeight(weight: number): void;
   rect(x: number, y: number, w: number, h: number): void;
@@ -119,6 +124,17 @@ export interface View {
   ellipse(x: number, y: number, w: number, h: number): void;
   line(x1: number, y1: number, x2: number, y2: number): void;
   triangle(x1: number, y1: number, x2: number, y2: number, x3: number, y3: number): void;
+  arc(x: number, y: number, radius: number, startAngle: number, endAngle: number): void;
+  /** Closed polygon through `points`, filled/stroked per the current state. */
+  polygon(points: readonly Vec2[]): void;
+  /** Render a data-encoded `PathCommand` list, filled/stroked per the current state. */
+  path(commands: readonly PathCommand[]): void;
+  /** Build a linear-gradient handle usable anywhere a `Paint` is accepted. */
+  linearGradient(x1: number, y1: number, x2: number, y2: number, stops: readonly ColorStop[]): LinearGradient;
+  /** Build a concentric radial-gradient handle (center→radius) usable as a `Paint`. */
+  radialGradient(x: number, y: number, radius: number, stops: readonly ColorStop[]): RadialGradient;
+  /** Clip to a polygon/path for the duration of `body` (state saved/restored). */
+  clip(shape: ClipShape, body: () => void): void;
   text(content: string, x: number, y: number): void;
   textSize(size: number): void;
   textAlign(horizontal: TextAlign, vertical?: TextBaseline): void;

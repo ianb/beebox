@@ -1,4 +1,5 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
 import type { Sketch } from "./sketch.js";
 import type { ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "./tea.js";
 
@@ -25,17 +26,17 @@ export class TeaView implements View {
     return this.#sketch.ctx;
   }
 
-  background(color: string): void {
-    this.#sketch.background(color);
+  background(paint: Paint): void {
+    this.#sketch.background(paint);
   }
-  fill(color: string): void {
-    this.#sketch.fill(color);
+  fill(paint: Paint): void {
+    this.#sketch.fill(paint);
   }
   noFill(): void {
     this.#sketch.noFill();
   }
-  stroke(color: string): void {
-    this.#sketch.stroke(color);
+  stroke(paint: Paint): void {
+    this.#sketch.stroke(paint);
   }
   noStroke(): void {
     this.#sketch.noStroke();
@@ -59,6 +60,24 @@ export class TeaView implements View {
   }
   triangle(...args: [number, number, number, number, number, number]): void {
     this.#sketch.triangle(...args);
+  }
+  arc(...args: [number, number, number, number, number]): void {
+    this.#sketch.arc(...args);
+  }
+  polygon(points: readonly Vec2[]): void {
+    this.#sketch.polygon(points);
+  }
+  path(commands: readonly PathCommand[]): void {
+    this.#sketch.path(commands);
+  }
+  linearGradient(...args: [number, number, number, number, readonly ColorStop[]]): LinearGradient {
+    return this.#sketch.linearGradient(...args);
+  }
+  radialGradient(...args: [number, number, number, readonly ColorStop[]]): RadialGradient {
+    return this.#sketch.radialGradient(...args);
+  }
+  clip(shape: ClipShape, body: () => void): void {
+    this.#sketch.clip(shape, body);
   }
   text(...args: [string, number, number]): void {
     this.#sketch.text(...args);
