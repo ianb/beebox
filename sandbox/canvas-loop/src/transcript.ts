@@ -1,7 +1,9 @@
+import { formatValue } from "./format.js";
 import type { LogLevel } from "./types.js";
 
 export type TranscriptEntry =
   | { kind: "log"; frame: number; level: LogLevel; message: string }
+  | { kind: "param"; frame: number; name: string; value: number | boolean | string }
   | { kind: "image"; frame: number; labels: string[]; file: string; unchanged: boolean }
   | { kind: "error"; frame: number; name: string; message: string; stack: string };
 
@@ -38,6 +40,8 @@ function renderEntry(entry: TranscriptEntry): string {
   switch (entry.kind) {
     case "log":
       return `**[frame ${entry.frame}]** ${entry.level}: ${entry.message}`;
+    case "param":
+      return `**[frame ${entry.frame}]** param: ${entry.name} → ${formatValue(entry.value)}`;
     case "image":
       return renderImage(entry);
     case "error":

@@ -17,6 +17,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["src/**/*", "examples/**/*", "test/**/*"],
-  "exclude": ["node_modules", "out"]
+  "include": ["src/**/*", "examples/**/*", "experiments/**/*", "test/**/*"],
+  "exclude": ["node_modules", "out", "experiments/out"]
 }

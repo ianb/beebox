@@ -31,6 +31,10 @@ directly in tools that display markdown images (including Claude Code's `Read`).
 
 ## Writing a sketch
 
+Two tiers. This section covers the **mutable tier** (p5-style `setup`/`draw`).
+For the **TEA tier** — a pure `init`/`update`/`draw` fold with declared params,
+enforced immutability, and an exhaustive `Msg` switch — see [TEA.md](./TEA.md).
+
 A sketch is a TypeScript module exporting `setup` and `draw`, plus optional input
 handlers. Instance mode — no globals; everything hangs off the `Sketch` object `s`:
 

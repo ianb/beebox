@@ -1,0 +1,12 @@
+[
+  { "frame": 30, "type": "mousedown", "x": 297, "y": 288 },
+  { "frame": 31, "type": "mouseup", "x": 297, "y": 288 },
+  { "frame": 40, "type": "keydown", "key": "ArrowUp" },
+  { "frame": 41, "type": "keyup", "key": "ArrowUp" },
+  { "frame": 55, "type": "param", "name": "focus", "value": "Earth" },
+  { "frame": 70, "type": "param", "name": "speed-scale", "value": 2.5 },
+  { "frame": 85, "type": "param", "name": "show-orbits", "value": false },
+  { "frame": 100, "type": "mousedown", "x": 211, "y": 245 },
+  { "frame": 101, "type": "mouseup", "x": 211, "y": 245 },
+  { "frame": 110, "type": "trigger", "name": "reset" }
+]

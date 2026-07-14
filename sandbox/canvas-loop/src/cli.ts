@@ -4,8 +4,11 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { CliError } from "./errors.js";
 import { parseEvents } from "./events.js";
+import type { RunResult } from "./recorder.js";
 import { run } from "./runtime.js";
-import type { RunResult } from "./runtime.js";
+import { isTeaModule, toTeaModule } from "./tea-load.js";
+import { parseTeaEvents } from "./tea-events.js";
+import { teaRun } from "./tea-runtime.js";
 import type { Sketch } from "./sketch.js";
 import type { SketchEvent, SketchEventHandler, SketchModule } from "./types.js";
 
@@ -49,7 +52,7 @@ function intOption(params: { value: string | undefined; fallback: number; name: 
   return parsed;
 }
 
-function loadEvents(path: string): SketchEvent[] {
+function readEventsJson(path: string): unknown {
   let text: string;
   try {
     text = readFileSync(path, "utf8");
@@ -57,14 +60,12 @@ function loadEvents(path: string): SketchEvent[] {
     void e;
     throw new CliError({ detail: `cannot read events file: ${path}` });
   }
-  let json: unknown;
   try {
-    json = JSON.parse(text);
+    return JSON.parse(text);
   } catch (e) {
     void e;
     throw new CliError({ detail: `events file is not valid JSON: ${path}` });
   }
-  return parseEvents(json);
 }
 
 function reportResult(result: RunResult): void {
@@ -100,18 +101,22 @@ async function main(): Promise<void> {
   const fps = intOption({ value: values.fps, fallback: 60, name: "fps" });
   const every = intOption({ value: values.every, fallback: 30, name: "every" });
   const outDir = resolve(values.out ?? "out");
-
-  let events: SketchEvent[] = [];
   const eventsPath = values.events;
-  if (eventsPath !== undefined) events = loadEvents(resolve(eventsPath));
+  const common = { sketchPath: sketchArg, outDir, frames, seed, fps, every, eventsPath };
 
   const sketchPath = resolve(sketchArg);
   const imported: Record<string, unknown> = await import(pathToFileURL(sketchPath).href);
-  const module = toModule(imported);
 
-  reportResult(
-    run({ module, sketchPath: sketchArg, outDir, frames, seed, fps, every, events, eventsPath }),
-  );
+  if (isTeaModule(imported)) {
+    const module = toTeaModule(imported);
+    const events = eventsPath === undefined ? [] : parseTeaEvents(readEventsJson(resolve(eventsPath)), module.params);
+    reportResult(teaRun({ module, events, ...common }));
+    return;
+  }
+  const module = toModule(imported);
+  let events: SketchEvent[] = [];
+  if (eventsPath !== undefined) events = parseEvents(readEventsJson(resolve(eventsPath)));
+  reportResult(run({ module, events, ...common }));
 }
 
 try {

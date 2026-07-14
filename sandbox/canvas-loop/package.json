@@ -11,7 +11,7 @@
     "cli": "node --import tsx src/cli.ts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "node --import tsx --test test/*.test.ts"
+    "test": "node --import tsx --test test/*.test.ts test/*.test.mjs"
   },
   "dependencies": {
     "@napi-rs/canvas": "1.0.2"
