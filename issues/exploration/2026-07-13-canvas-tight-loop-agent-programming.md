@@ -163,22 +163,29 @@ p5-syntax-compatible subset keeps that door open).
 ## Open tension (2026-07-14): interactive controls shouldn't be reinvented per sketch
 
 Ian's concern after the experiment: hand-rolling every slider/button (hit-test
-+ drag state + drawing) per sketch is not awesome. Assessment: this is the
-**immediate-mode GUI** problem and it's solved — Dear ImGui / egui / microui
-(microui ≈ 1100 LOC) exist precisely for "I own a frame loop and need
-widgets without a retained toolkit." Widgets as per-frame function calls
-(`s.ui.slider("speed", 0, 0.2)` draws, handles drag, returns the value) drop
-into the deterministic loop with no architectural change; a small TS
-imgui module over the `Sketch` API is the next layer, not a research project.
++ drag state + drawing) per sketch is not awesome — and building a widget
+system of our own (even imgui-style, the first idea floated) is reinventing
+a UI toolkit.
 
-Bigger second payoff: **semantic event injection**. Library widgets are
-named, so event scripts can target meaning instead of pixels —
-`{frame, type: "ui", widget: "speed", value: 0.12}` with the runtime
-synthesizing the low-level mouse events against the widget's current
-geometry (Flutter's `tester.tap(find.byKey(...))` move). Scripts then
-survive layout changes. Raw coordinate events remain for testing the
-sketch's *own* direct-manipulation interactions (the orbit-toy planet
-click), which stay bespoke by design.
+**Preferred resolution — parameters, not widgets** (the dat.GUI/Tweakpane/leva
+pattern from creative coding): the sketch *declares* tweakable parameters
+(`speed: {min: 0, max: 0.2}`); nothing widget-like is built by us.
+
+- Headless: params need no rendering. The events file sets them directly —
+  `{frame: 30, param: "speed", value: 0.12}` — just another entry in the
+  deterministic event log; no widget geometry, no synthesized clicks.
+- Browser packaging (when sketches become box-facing): Tweakpane (tiny,
+  maintained, framework-free) or leva (React, which callback-box already is)
+  auto-generates the human control panel from the same declaration. A human's
+  slider drag and an agent's script entry converge on the same param-change
+  event — injection symmetry gets cleaner, not weaker.
+- Raw coordinate events remain for the sketch's *own* direct-manipulation
+  interactions (the orbit-toy planet click) — bespoke by design.
+
+Given up: in-canvas widgets composed into the artwork itself (game-style UI).
+If that ever matters, adopt an existing microui port (it emits abstract draw
+commands you render yourself — maps 1:1 onto Canvas2D) rather than writing a
+toolkit. Bet: the params model covers the real box use cases; start there.
 
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
