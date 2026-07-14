@@ -80,8 +80,10 @@ available directly on it.
 
 ## Events file
 
-A JSON array of events, each stamped with the frame it fires on (all events for
-frame N dispatch, in file order, before frame N's `draw`):
+A JSON array of events, each stamped with the frame it fires on. **Guarantee:
+all events for frame N dispatch, in file order, before frame N's `draw`** — so
+the world state a click sees is exactly the state after frame N−1's draw, and
+hit-testing a moving target is a pure calculation, never trial and error:
 
 ```json
 [

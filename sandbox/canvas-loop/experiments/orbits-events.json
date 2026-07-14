@@ -1,0 +1,12 @@
+[
+  { "frame": 30, "type": "mousedown", "x": 236, "y": 258 },
+  { "frame": 31, "type": "mouseup", "x": 236, "y": 258 },
+  { "frame": 40, "type": "keydown", "key": "ArrowUp" },
+  { "frame": 41, "type": "keyup", "key": "ArrowUp" },
+  { "frame": 50, "type": "keydown", "key": "ArrowUp" },
+  { "frame": 51, "type": "keyup", "key": "ArrowUp" },
+  { "frame": 90, "type": "keydown", "key": "ArrowDown" },
+  { "frame": 91, "type": "keyup", "key": "ArrowDown" },
+  { "frame": 120, "type": "mousedown", "x": 10, "y": 10 },
+  { "frame": 121, "type": "mouseup", "x": 10, "y": 10 }
+]

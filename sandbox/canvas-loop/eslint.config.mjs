@@ -5,6 +5,6 @@ import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
 // the preset stays src-only, since it needs tsconfig project membership).
 export default vibeCheck({
   react: false,
-  roots: ["src", "examples", "test"],
-  ignores: ["**/*.mjs", "out/**"],
+  roots: ["src", "examples", "experiments", "test"],
+  ignores: ["**/*.mjs", "out/**", "experiments/out/**"],
 });

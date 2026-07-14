@@ -116,6 +116,50 @@ Full details in the research subagent run; conclusions:
   from: pull-based (harness owns the loop, scene code yields per frame),
   seeded randomness as a first-class API.
 
+## Experiment (2026-07-14) — prototype built and tested on a fresh agent
+
+The sandbox exists: **`sandbox/canvas-loop/`** (own workspace package, zero
+callback-box changes) — deterministic frame-stepped Canvas2D runtime over
+`@napi-rs/canvas`, p5-like `Sketch` API (seeded RNG, virtual clock, ambient
+`Math.random`/`Date.now` disabled), events-JSON injection through the real
+handler path, frame-tagged `transcript.md` with deduped inline PNGs. 10/10
+tests incl. byte-identical double runs; see its README.
+
+Then the actual experiment: a fresh Sonnet subagent got only the README and a
+task with no existing example — an orbit toy (3 planets, click-to-select on
+*moving* targets, arrow-key speed control, HUD). Results
+(`sandbox/canvas-loop/experiments/orbits.ts`):
+
+- **2 write→run→read cycles to fully working**, verified by frames (confirmed
+  independently by inspecting the PNGs).
+- **Determinism converted hit-testing from trial-and-error into calculation**:
+  the agent precomputed exact click coordinates on a moving planet with a
+  one-liner mirroring the sketch's angle formula — first-try hit. Its own
+  comparison: a browser+screenshot loop would have needed several
+  screenshot/click/retry round trips for the same thing.
+- **Cycle 2 caught a real render-only bug the logs could never catch**: an
+  `Array.prototype.at(-1)` sentinel footgun made the HUD show "selected:
+  Earth" after deselect while the log line correctly said "deselected". Only
+  the frame image exposed it. This is the whole thesis — logs say what the
+  code believes, frames say whether rendering agrees — and the interleaving
+  made the mismatch trivial to spot.
+- **Capture policy validated**: 140 frames → ~9 images; agent called the
+  volume "exactly right". Events-file-as-test "felt natural — one file was
+  simultaneously the test scenario and the reproduction."
+- **Friction found**: (1) `experiments/` wasn't in the package's eslint
+  roots → structurally-unfixable rule noise (fixed: added to roots);
+  (2) the events-dispatch-before-draw guarantee was in the README but the
+  agent didn't register it as a guarantee and dove into runtime source
+  (fixed: stated in bold as an explicit guarantee); (3) no API gaps — the
+  `s.ctx` escape hatch was never needed.
+
+**Verdict: the tight loop works.** Next questions if this graduates from
+exploration: what the box-facing packaging looks like (skill? CLI available
+in box worktrees? a card type whose view is a sketch?), golden-frame
+assertions (pixelmatch is researched, unimplemented), and whether sketches
+should also run in a real browser canvas for user-facing display (the
+p5-syntax-compatible subset keeps that door open).
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
