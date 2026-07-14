@@ -3216,8 +3216,13 @@ tests:
 
   # === Figure cards ===
   #
-  # Status (2026-06-24): All 3 pass at knows_directly. The agent answers from
-  # the generated card-figure.md (linked in the agent guide) without searching.
+  # Status (2026-07-14): All 4 pass at knows_directly against the worktree
+  # test1 box, after the responsive-sizing rewrite of the figure instructions
+  # (size from mount.clientWidth + ResizeObserver; width/height fields and the
+  # scaffolded `size` param removed). Each answers from the regenerated
+  # card-figure.md (1 file read, 0 searches). figure-card-where-code-lives
+  # returned an empty response on its first run (0 reads, 1 turn — an API/
+  # harness glitch, not a knowledge gap) and passed on a single-id rerun.
 
   - id: figure-card-where-code-lives
     prompt: >
@@ -3256,6 +3261,20 @@ tests:
       box path — must NOT use a `view:` prefix in the syntax (that scheme is
       retired; naming it as retired to warn against it is fine).
     tags: [figure, cards, embedding]
+
+  - id: figure-card-responsive-sizing
+    prompt: >
+      You're writing the sketch for a new figure card. How do you decide the
+      canvas width, and what must happen when the container resizes?
+    expected_level: knows_directly
+    watch_for: >
+      Size from mount.clientWidth (with a fallback when it's 0, e.g. || 360),
+      not a fixed pixel width or a `size` param. Watch the container with a
+      ResizeObserver and disconnect it in teardown; derive layout from the
+      current canvas size (p.width/p.height, etc.), not a captured constant.
+      Must NOT say a fixed pixel width or a `size` param is the right approach.
+    correct_contains_any: ["clientWidth", "ResizeObserver", "container"]
+    tags: [figure, cards]
 
   # Status (2026-07-01): all three below pass against ~/src/boxes/test1 —
   # the agent recalls link-vs-embed with plain box paths (no view:/?zoom) and
