@@ -160,6 +160,26 @@ assertions (pixelmatch is researched, unimplemented), and whether sketches
 should also run in a real browser canvas for user-facing display (the
 p5-syntax-compatible subset keeps that door open).
 
+## Open tension (2026-07-14): interactive controls shouldn't be reinvented per sketch
+
+Ian's concern after the experiment: hand-rolling every slider/button (hit-test
++ drag state + drawing) per sketch is not awesome. Assessment: this is the
+**immediate-mode GUI** problem and it's solved — Dear ImGui / egui / microui
+(microui ≈ 1100 LOC) exist precisely for "I own a frame loop and need
+widgets without a retained toolkit." Widgets as per-frame function calls
+(`s.ui.slider("speed", 0, 0.2)` draws, handles drag, returns the value) drop
+into the deterministic loop with no architectural change; a small TS
+imgui module over the `Sketch` API is the next layer, not a research project.
+
+Bigger second payoff: **semantic event injection**. Library widgets are
+named, so event scripts can target meaning instead of pixels —
+`{frame, type: "ui", widget: "speed", value: 0.12}` with the runtime
+synthesizing the low-level mouse events against the widget's current
+geometry (Flutter's `tester.tap(find.byKey(...))` move). Scripts then
+survive layout changes. Raw coordinate events remain for testing the
+sketch's *own* direct-manipulation interactions (the orbit-toy planet
+click), which stay bespoke by design.
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
