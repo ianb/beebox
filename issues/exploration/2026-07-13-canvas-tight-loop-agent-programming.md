@@ -302,6 +302,30 @@ anywhere as observability (Elm's own `Debug.log` carve-out). Unreachable:
 Elm's no-library-call-has-effects guarantee — reduced by lint+diff to
 "deterministic misbehavior," which replay tolerates.
 
+**vs XState** (2026-07-14): XState's core `transition(state, event)` is
+itself a pure reducer — the conflict is the interpreter layer (actors,
+subscriptions, `invoke`, `after()` clocks): concrete objects + observers +
+their own time, all of which we'd have to virtualize, and our runtime *is*
+the interpreter. Sketch state is mostly continuous with a modal sliver —
+statecharts are strong at the sliver, clumsy at the bulk. Steal the
+thinking: modes as a discriminated-union Model field
+(`mode: {type:"idle"} | {type:"dragging", planet}`) + exhaustive switch ≈
+80% of a statechart, zero machinery. A sketch needing a deep statechart can
+embed XState's pure `transition` inside `update`; actors never.
+
+**Enforcement coverage** (property → mechanism): Model-only state → lint
+(no module-level `let`, no classes) ~95%; immutability → DeepReadonly +
+`functional/immutable-data` + runtime deep-freeze ~100%; input-via-Msg and
+time-as-data → structural (no other channel/API exists) 100%; update purity
+→ guards + restricted imports/globals + sync-only (ban async in sketches
+outright) ~95%; exhaustive Msg handling → `switch-exhaustiveness-check`
+(needs type-aware lint over sketch dirs) ~100%; draw view-only →
+**capability injection** — `draw` gets a View with only draw commands,
+`update` gets Util with `random`; nothing ambient. That's Elm's actual
+trick: not checking for effects, never handing over the function. Residue
+past lint/types is closed by detection: the double-run byte-diff — whatever
+doesn't break it is deterministic and replay-safe by definition.
+
 Open question: TEA ceremony vs the validated mutable tier (2-cycle result).
 Next experiment: implement TEA tier + params in the sandbox, re-run the
 fresh-agent test on a controls-heavy task; if cycle count holds, the mutable
