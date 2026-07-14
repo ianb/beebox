@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { teaRun } from "../src/tea-runtime.js";
-import type { LoadedTeaModule } from "../src/tea-runtime.js";
-import type { Msg, ParamsDecl, View } from "../src/tea.js";
+import { teaRun } from "../src/headless/tea-runtime.js";
+import type { LoadedTeaModule } from "../src/headless/tea-runtime.js";
+import type { Msg, ParamsDecl, View } from "../src/core/tea.js";
 import { readTranscript, teaRunOptions, tmpDir } from "./helpers.js";
 
 function noop(): void {}

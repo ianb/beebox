@@ -4,13 +4,15 @@ import { pathToFileURL } from "node:url";
 import { parseArgs } from "node:util";
 import { CliError } from "./errors.js";
 import { parseEvents } from "./events.js";
+import { checkGallery } from "./gallery.js";
+import type { GalleryCheckResult } from "./gallery.js";
 import type { RunResult } from "./recorder.js";
 import { run } from "./runtime.js";
 import { isTeaModule, toTeaModule } from "./tea-load.js";
 import { parseTeaEvents } from "./tea-events.js";
 import { teaRun } from "./tea-runtime.js";
-import type { Sketch } from "./sketch.js";
-import type { SketchEvent, SketchEventHandler, SketchModule } from "./types.js";
+import type { ScriptEvent } from "./events.js";
+import type { Sketch, SketchEventHandler, SketchModule } from "./sketch.js";
 
 const OPTIONAL_HANDLERS = [
   "mousePressed",
@@ -74,6 +76,13 @@ function reportResult(result: RunResult): void {
   if (result.errors.length > 0) process.exitCode = 1;
 }
 
+function reportGalleryResult(result: GalleryCheckResult): void {
+  for (const entry of result.entries) {
+    console.log(`${entry.ok ? "PASS" : "FAIL"}  ${entry.slug} — ${entry.detail}`);
+  }
+  if (!result.ok) process.exitCode = 1;
+}
+
 async function main(): Promise<void> {
   const parsed = parseArgs({
     args: process.argv.slice(2),
@@ -88,9 +97,19 @@ async function main(): Promise<void> {
     },
   });
   const command = parsed.positionals[0];
+  if (command === "gallery") {
+    const sub = parsed.positionals[1];
+    if (sub !== "check") {
+      throw new CliError({ detail: `unknown gallery subcommand "${sub ?? ""}"; usage: cli gallery check` });
+    }
+    reportGalleryResult(await checkGallery());
+    return;
+  }
   const sketchArg = parsed.positionals[1];
   if (command !== "run") {
-    throw new CliError({ detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags]` });
+    throw new CliError({
+      detail: `unknown command "${command ?? ""}"; usage: cli run <sketch.ts> [flags] | cli gallery check`,
+    });
   }
   if (sketchArg === undefined) {
     throw new CliError({ detail: "missing <sketch.ts> argument" });
@@ -114,7 +133,7 @@ async function main(): Promise<void> {
     return;
   }
   const module = toModule(imported);
-  let events: SketchEvent[] = [];
+  let events: ScriptEvent[] = [];
   if (eventsPath !== undefined) events = parseEvents(readEventsJson(resolve(eventsPath)));
   reportResult(run({ module, events, ...common }));
 }

@@ -1,6 +1,6 @@
 import { CliError } from "./errors.js";
 import type { LoadedTeaModule } from "./tea-runtime.js";
-import type { CanvasSize, ParamDecl, ParamsDecl } from "./tea.js";
+import type { CanvasSize, ParamDecl, ParamsDecl } from "../core/tea.js";
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;

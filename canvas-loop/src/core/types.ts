@@ -1,5 +1,3 @@
-import type { Sketch } from "./sketch.js";
-
 /** Console/log channel a line came from. */
 export type LogLevel = "log" | "warn" | "error";
 
@@ -32,17 +30,6 @@ export interface SketchInputEvent {
   key: string;
 }
 
-/** A sketch's input handler (mousePressed, keyReleased, …). */
-export type SketchEventHandler = (s: Sketch, e: SketchInputEvent) => void;
-
-/** A loaded sketch module: required setup/draw plus optional input handlers. */
-export interface SketchModule {
-  setup: (s: Sketch) => void;
-  draw: (s: Sketch) => void;
-  mousePressed?: SketchEventHandler;
-  mouseReleased?: SketchEventHandler;
-  mouseMoved?: SketchEventHandler;
-  mouseDragged?: SketchEventHandler;
-  keyPressed?: SketchEventHandler;
-  keyReleased?: SketchEventHandler;
-}
+// `SketchEventHandler` and `SketchModule` reference the mutable-tier `Sketch`
+// class (a headless, @napi-rs/canvas-backed type), so they live in
+// headless/sketch.ts — core stays free of any headless/native dependency edge.

@@ -1,51 +1,33 @@
 import { vibeCheck } from "@ianbicking/personal-vibe-check/eslint";
-import teaPlugin from "./tea-lint.mjs";
+// Self-host the TEA plugin through the package's own "./eslint" export (the
+// exports map, not a relative path) — proving the subpath resolves.
+import teaPlugin from "@ianbicking/canvas-loop/eslint";
 
 // Full strict preset, no per-project rule loosening. `roots` holds examples/
 // and test/ to the same reviewed ruleset as src/ (the type-aware block inside
 // the preset stays src-only, since it needs tsconfig project membership).
+// `react: true` because the `./react` subpath (src/react/) and the dev-demo/
+// bundle are .tsx — the React/JSX/hooks rules ADD to the preset and are inert
+// on the package's non-JSX .ts files (they key off components/hooks/JSX).
 const base = vibeCheck({
-  react: false,
-  roots: ["src", "examples", "experiments", "test", "browser"],
-  ignores: ["**/*.mjs", "out/**", "experiments/out/**", "browser/dist/**"],
+  react: true,
+  roots: ["src", "examples", "gallery", "test", "browser", "dev-demo"],
+  ignores: ["**/*.mjs", "out/**", "gallery/out/**", "browser/dist/**"],
 });
 
 // The TEA discipline (see TEA.md) applies to TEA sketches only. The mutable and
-// TEA tiers share examples/ and experiments/, so the discipline keys off the
+// TEA tiers share examples/ and gallery/, so the discipline keys off the
 // `*-tea.ts` filename convention — a mutable sketch (module-level `let`, direct
-// mutation) is left untouched. These blocks ADD rules on top of the preset —
-// they never redefine a preset rule, so nothing is weakened.
-const SKETCH_DIRS = ["examples/**/*-tea.ts", "experiments/**/*-tea.ts"];
-
-const teaDiscipline = {
-  files: SKETCH_DIRS,
-  plugins: { tea: teaPlugin },
-  rules: {
-    "tea/no-module-state": "error",
-    "tea/no-model-mutation": "error",
-    "tea/no-async-sketch": "error",
-    "tea/no-classes": "error",
-    // Sketches may import ONLY the canvas-loop framework type modules. Bans npm
-    // packages, node builtins, and reaching into other framework internals —
-    // the sketch's whole world arrives through Msg/Util/View.
-    "no-restricted-imports": [
-      "error",
-      {
-        patterns: [
-          {
-            regex: "^(?!\\.\\./src/(tea|sketch|types)\\.js$).+",
-            message: "Sketches may import only the canvas-loop framework types (../src/tea.js).",
-          },
-        ],
-      },
-    ],
-  },
-};
+// mutation) is left untouched. `configs.recommended` bundles the tea/* rules and
+// the no-restricted-imports framework restriction; it only ADDS rules on top of
+// the preset — it never redefines a preset rule, so nothing is weakened.
+const teaSketches = teaPlugin.configs.recommended;
 
 // Type-aware exhaustiveness on the Msg switch — Elm's exhaustive `case` parity.
-// Needs tsconfig project membership (experiments/ added to tsconfig include).
+// Kept out of `configs.recommended` because it needs tsconfig project membership
+// (gallery/ added to tsconfig include); wired in here on the same file glob.
 const teaExhaustiveness = {
-  files: SKETCH_DIRS,
+  files: ["examples/**/*-tea.ts", "gallery/**/*-tea.ts"],
   languageOptions: { parserOptions: { projectService: true } },
   rules: {
     "@typescript-eslint/switch-exhaustiveness-check": [
@@ -64,10 +46,10 @@ const teaExhaustiveness = {
 // library-code cap of 300 punishes — the fjord experiment burned edit rounds
 // compressing working code to fit. Sketch dirs only, still a hard cap.
 const sketchLineBudget = {
-  files: ["examples/**/*.ts", "experiments/**/*.ts"],
+  files: ["examples/**/*.ts", "gallery/**/*.ts"],
   rules: {
     "max-lines": ["error", { max: 600, skipBlankLines: true, skipComments: true }],
   },
 };
 
-export default [...base, teaDiscipline, teaExhaustiveness, sketchLineBudget];
+export default [...base, teaSketches, teaExhaustiveness, sketchLineBudget];

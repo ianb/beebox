@@ -1,4 +1,4 @@
-// A fjord with tides — a port of experiments/fjord-sonnet-tea.ts to the View
+// A fjord with tides — a port of gallery/fjord-tides/sketch-tea.ts to the View
 // drawing primitives (polygon/path/gradient/clip/arc), with ZERO `v.ctx` use.
 // The scene is identical: layered jagged cliff walls receding to a hazy
 // horizon, water filling the channel between them, a `timeOfDay` palette swap,
@@ -7,7 +7,7 @@
 //
 // Model-building (seeded point arrays, built once in `init`) is unchanged from
 // the original; only the draw side is rewritten to go through `View`.
-import type { ColorStop, DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Util, Vec2, View } from "../src/tea.js";
+import type { ColorStop, DeepReadonly, Msg, ParamsDecl, ParamValues, PathCommand, Util, Vec2, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   tide: { type: "number", min: -1, max: 1, default: 0, step: 0.05 },

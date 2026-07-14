@@ -7,8 +7,7 @@
 //
 // State is (re)initialized in setup() so a fresh run is fully deterministic even
 // when run() is called twice in the same process.
-import type { Sketch } from "../src/sketch.js";
-import type { SketchInputEvent } from "../src/types.js";
+import type { Sketch, SketchInputEvent } from "@ianbicking/canvas-loop";
 
 interface Ball {
   x: number;

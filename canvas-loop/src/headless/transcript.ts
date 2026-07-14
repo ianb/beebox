@@ -1,5 +1,5 @@
-import { formatValue } from "./format.js";
-import type { LogLevel } from "./types.js";
+import { formatValue } from "../core/format.js";
+import type { LogLevel } from "../core/types.js";
 
 export type TranscriptEntry =
   | { kind: "log"; frame: number; level: LogLevel; message: string }

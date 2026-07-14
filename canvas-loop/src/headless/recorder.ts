@@ -2,10 +2,10 @@ import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { encodePng, frameFileName, hashPixels } from "./capture.js";
 import type { Pixels } from "./capture.js";
-import { formatArgs } from "./format.js";
+import { formatArgs } from "../core/format.js";
 import { renderTranscript } from "./transcript.js";
 import type { RunMeta, TranscriptEntry } from "./transcript.js";
-import type { LogLevel, SketchHost } from "./types.js";
+import type { LogLevel, SketchHost } from "../core/types.js";
 
 /** The result of a run: where the transcript went and what happened. */
 export interface RunResult {

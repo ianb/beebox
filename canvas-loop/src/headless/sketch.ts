@@ -1,11 +1,11 @@
 import { createCanvas } from "@napi-rs/canvas";
 import type { Canvas, SKRSContext2D } from "@napi-rs/canvas";
 import { SketchUsageError } from "./errors.js";
-import { formatArgs } from "./format.js";
-import type { ClipShape, ColorStop, Ctx2D, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
-import { Painter } from "./painter.js";
-import { SeededRandom } from "./prng.js";
-import type { SketchHost } from "./types.js";
+import { formatArgs } from "../core/format.js";
+import type { ClipShape, ColorStop, Ctx2D, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
+import { Painter } from "../core/painter.js";
+import { SeededRandom } from "../core/prng.js";
+import type { SketchHost, SketchInputEvent } from "../core/types.js";
 
 // Mirror @napi-rs/canvas's (unexported) text-align unions — lib is ES2023 with
 // no DOM, so the global CanvasTextAlign / CanvasTextBaseline aren't in scope.
@@ -210,4 +210,19 @@ export class Sketch {
   snapshot(label?: string): void {
     this.#host.requestSnapshot(label);
   }
+}
+
+/** A sketch's input handler (mousePressed, keyReleased, …). */
+export type SketchEventHandler = (s: Sketch, e: SketchInputEvent) => void;
+
+/** A loaded mutable-tier sketch module: required setup/draw plus optional input handlers. */
+export interface SketchModule {
+  setup: (s: Sketch) => void;
+  draw: (s: Sketch) => void;
+  mousePressed?: SketchEventHandler;
+  mouseReleased?: SketchEventHandler;
+  mouseMoved?: SketchEventHandler;
+  mouseDragged?: SketchEventHandler;
+  keyPressed?: SketchEventHandler;
+  keyReleased?: SketchEventHandler;
 }

@@ -2,7 +2,7 @@
 // module inlined, zero runtime imports, no external requests (it is published
 // behind a strict CSP). esbuild bundles browser/app.ts (runtime + the five
 // sketches) to an IIFE; this script wraps it in a dark, minimal HTML shell with
-// inline CSS. Regenerate with `pnpm --dir sandbox/canvas-loop run build:playground`.
+// inline CSS. Regenerate with `pnpm --dir canvas-loop run build:playground`.
 import { build } from "esbuild";
 import type { OnResolveArgs, Plugin } from "esbuild";
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";

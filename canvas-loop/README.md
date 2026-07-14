@@ -1,5 +1,10 @@
 # canvas-loop
 
+> **EXPERIMENTAL.** `@ianbicking/canvas-loop@0.1.0`. This is a workspace library
+> whose API is expected to move as agent exercises teach us more — imports,
+> exports, and event shapes may change between versions. Every change is recorded
+> in [CHANGELOG.md](./CHANGELOG.md).
+
 A deterministic, browser-less, frame-stepped **Canvas2D sandbox for agent programming**.
 
 You write a p5-style sketch, run one CLI command, and get back a single
@@ -16,7 +21,7 @@ fixed timestep, randomness is seeded, and `Math.random` / `Date.now` /
 ## Run
 
 ```sh
-pnpm --dir sandbox/canvas-loop run cli run <sketch.ts> \
+pnpm --dir canvas-loop run cli run <sketch.ts> \
   [--frames 120] [--events events.json] [--out out/] \
   [--seed 42] [--fps 60] [--every 30]
 ```
@@ -39,7 +44,7 @@ A sketch is a TypeScript module exporting `setup` and `draw`, plus optional inpu
 handlers. Instance mode — no globals; everything hangs off the `Sketch` object `s`:
 
 ```ts
-import type { Sketch } from "canvas-loop"; // examples in this repo use "../src/sketch.js"
+import type { Sketch, SketchInputEvent } from "@ianbicking/canvas-loop";
 
 export function setup(s: Sketch): void {
   s.createCanvas(400, 300); // setup only
@@ -98,12 +103,18 @@ hit-testing a moving target is a pure calculation, never trial and error:
   { "frame": 6, "type": "mousedown", "x": 200, "y": 150 },
   { "frame": 8, "type": "mousemove", "x": 212, "y": 144 },
   { "frame": 17, "type": "mouseup", "x": 260, "y": 120 },
+  { "frame": 40, "type": "snapshot", "label": "mid-arc" },
   { "frame": 90, "type": "keydown", "key": "r" }
 ]
 ```
 
-Types: `mousedown`, `mouseup`, `mousemove`, `keydown`, `keyup`. `x`/`y` update
-the mouse position; `key` names the key for `keysDown` and the handler event.
+Input types: `mousedown`, `mouseup`, `mousemove`, `keydown`, `keyup`. `x`/`y`
+update the mouse position; `key` names the key for `keysDown` and the handler
+event. A `snapshot` entry (`{ "frame", "type": "snapshot", "label"? }`) is not
+input — it forces a capture of that frame without dispatching to any handler or
+touching state, and its optional `label` flows to the transcript frame heading
+(`### frame 40 — mid-arc`). Use it to pin a frame in the transcript that the
+capture policy would otherwise skip, the scriptable twin of `s.snapshot(label?)`.
 
 ## Capture policy
 
@@ -122,7 +133,7 @@ velocity); `r` resets it. It exercises `setup`/`draw`, all the mouse handlers,
 and `snapshot("released")`:
 
 ```sh
-pnpm --dir sandbox/canvas-loop run cli run examples/bounce.ts \
+pnpm --dir canvas-loop run cli run examples/bounce.ts \
   --events examples/bounce-events.json --out out
 ```
 
@@ -140,10 +151,106 @@ Produces a ~13-image transcript for 120 frames:
 ![frame 17 — released](frame-0017.png)
 ```
 
+## React figure (`./react`)
+
+`@ianbicking/canvas-loop/react` exports `<SketchFigure>` — the browser TEA runner
+(runtime + generated controls) as a React component. It is mounting + prop
+plumbing + lifecycle only; the runtime, view, and controls are the single
+browser implementation, imported, not reimplemented. `react` is an **optional
+peer dependency** — only consumers of `./react` need it; importing `.` or
+`./eslint` never resolves React.
+
+```tsx
+import { SketchFigure } from "@ianbicking/canvas-loop/react";
+import * as orbit from "./orbit-tea.js";
+
+<SketchFigure module={orbit} />;
+```
+
+**SSR-safe.** No `window`/`document`/canvas is touched at module scope or during
+render. `useSyncExternalStore` reports server-vs-client, so the server (and the
+first hydration pass) render a plain placeholder `div`; the runtime is created in
+an effect, only on the client. `react-dom/server`'s `renderToString(<SketchFigure
+module={orbit}/>)` never throws and never emits a `<canvas>` (see
+`test/react-ssr.test.tsx`).
+
+### Props
+
+| Prop | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `module` | TEA sketch module | — | The `init`/`update`/`draw` (+ `params`/`canvas`) to run. |
+| `seed` | `number` | `42` | Changing it re-runs the sketch from frame 0. |
+| `autoplay` | `boolean` | `true` | `false` renders a paused frame 0 (a Play button starts it). |
+| `showControls` | `boolean` | `true` | The generated param panel + a play/pause + restart toolbar. |
+| `showRecorder` | `boolean` | `false` | The live recorded-events (`{frame, type, …}`) viewer. |
+| `height` | `number` | — | Display height in CSS px; the canvas scales to fit (aspect preserved). |
+| `scale` | `number` | — | Display-scale multiplier over the intrinsic size (wins over `height`). |
+| `initialParams` | partial record | — | **Uncontrolled**: overrides declaration defaults for the initial run. |
+| `params` | record | — | **Controlled**: the host owns the values (see below). |
+| `onParamsChange` | `(values) => void` | — | Reports the applied param values after a change. |
+| `onEvent` | `(entry) => void` | — | Streams each recorded input entry as it dispatches. |
+
+Controls are plain HTML inputs generated from the sketch's `params` declaration
+(the same `controlModels` mapping the browser playground uses). A widget edit
+calls back into the runtime's `setParam`/`trigger` — the same path a scripted
+event takes — so widgets dispatch, they never poke model state.
+
+### Uncontrolled vs controlled
+
+- **Uncontrolled** (`initialParams`, no `params`): param state lives inside the
+  figure. `onParamsChange` reports each applied change so the host can observe
+  (e.g. persist) without owning the values.
+- **Controlled** (`params` + `onParamsChange`): the host owns the values. A
+  widget edit calls `onParamsChange`; the host updates `params`; the figure
+  diffs the new `params` and dispatches the changes through the normal `param`
+  message path (`runtime.setParam`) — never by poking model state. Host-injected
+  changes (not just widget edits) flow the same way.
+
+`onEvent` generalizes watching past params: every input — pointer, key, param,
+trigger — is already a logged `{frame, type, …}` msg, so `onEvent` is the same
+stream the recorder captures. Saving a full replayable session is likewise a
+host-side choice.
+
+### Persistence is host composition
+
+Persistence isn't a component feature — it falls out of controlled mode. Own the
+values in the host and write them wherever you like (a callback-box card,
+`localStorage`, anything):
+
+```tsx
+const KEY = "my-sketch-params";
+
+function PersistedFigure() {
+  const [params, setParams] = useState(() => {
+    const saved = localStorage.getItem(KEY);
+    return saved ? JSON.parse(saved) : { tide: 0, timeOfDay: "day" };
+  });
+  const onParamsChange = useCallback((values) => {
+    setParams(values);
+    localStorage.setItem(KEY, JSON.stringify(values)); // restore on reload
+  }, []);
+  return <SketchFigure module={fjord} params={params} onParamsChange={onParamsChange} />;
+}
+```
+
+### Demo
+
+`dev-demo/main.tsx` embeds two figures — orbit (uncontrolled, controls +
+recorder + an `onEvent` readout) and fjord (controlled, wired to `localStorage`
+with a "clear saved state" link). Build the self-contained page with:
+
+```sh
+pnpm --dir canvas-loop run build:dev-demo   # writes dev/canvas-loop.html
+```
+
+Served from disk at `/<worktree>/dev/canvas-loop.html`. The component ships its
+own minimal stylesheet (rendered inline), so a bare `<SketchFigure>` is styled
+with zero setup.
+
 ## Development
 
 ```sh
-pnpm --dir sandbox/canvas-loop test        # node --test
-pnpm --dir sandbox/canvas-loop typecheck
-pnpm --dir sandbox/canvas-loop lint         # @ianbicking/personal-vibe-check preset
+pnpm --dir canvas-loop test        # node --test
+pnpm --dir canvas-loop typecheck
+pnpm --dir canvas-loop lint         # @ianbicking/personal-vibe-check preset
 ```

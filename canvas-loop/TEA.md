@@ -11,7 +11,7 @@ Same CLI, same transcript. The runtime picks the tier by detecting an `update`
 export:
 
 ```sh
-pnpm --dir sandbox/canvas-loop run cli run examples/orbit-tea.ts \
+pnpm --dir canvas-loop run cli run examples/orbit-tea.ts \
   --events examples/orbit-tea-events.json --out out
 ```
 
@@ -20,10 +20,10 @@ so the two tiers can share `examples/`.
 
 ## Contract
 
-A TEA sketch imports **only** `../src/tea.js` (types only) and exports:
+A TEA sketch imports **only** `@ianbicking/canvas-loop` (types only) and exports:
 
 ```ts
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "../src/tea.js";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = { /* … */ } as const satisfies ParamsDecl;   // optional
 export const canvas = { width: 500, height: 400 };                 // optional (default 400×300)
@@ -121,6 +121,7 @@ error before frame 0:
   { "frame": 40, "type": "keydown", "key": "ArrowUp" },
   { "frame": 55, "type": "param", "name": "focus", "value": "Earth" },
   { "frame": 70, "type": "param", "name": "speed-scale", "value": 2.5 },
+  { "frame": 80, "type": "snapshot", "label": "after speed-up" },
   { "frame": 85, "type": "param", "name": "show-orbits", "value": false },
   { "frame": 110, "type": "trigger", "name": "reset" }
 ]
@@ -128,7 +129,12 @@ error before frame 0:
 
 Input types (`mousedown`/`mouseup`/`mousemove`/`keydown`/`keyup`) match the
 mutable tier. A `param` change adds an automatic transcript line:
-`**[frame 70]** param: speed-scale → 2.5`.
+`**[frame 70]** param: speed-scale → 2.5`. A `snapshot` entry
+(`{ "frame", "type": "snapshot", "label"? }`) folds no `Msg` — it forces a
+capture of that frame without perturbing the model, and its optional `label`
+flows to the transcript frame heading (`### frame 80 — after speed-up`). It is
+the scriptable twin of `v.snapshot(label?)`, for pinning a frame the capture
+policy would otherwise skip.
 
 ## The discipline (one list)
 
@@ -141,7 +147,7 @@ mutable tier. A `param` change adds an automatic transcript line:
   switch — a statechart's modal part, zero machinery.
 - **No async.** No `async`/`await`/`.then`/`new Promise`; runs are synchronous.
 - **Exhaustive switch on `msg.type`.** List every case; no `default`.
-- **Import only `../src/tea.js`**, types only.
+- **Import only `@ianbicking/canvas-loop`**, types only.
 
 Lint enforces all of it on `*-tea.ts` (`tea/no-module-state`,
 `tea/no-model-mutation`, `tea/no-async-sketch`, `tea/no-classes`,

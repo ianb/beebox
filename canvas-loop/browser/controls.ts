@@ -2,8 +2,12 @@
 // Given a sketch's `params` declaration, this emits plain HTML inputs (range /
 // checkbox / select / button); no widget library, no two-way binding. A widget
 // edit calls back into the runtime's `setParam`/`trigger` — the SAME path a
-// scripted event takes — so widgets dispatch, they never touch model state.
-import type { ParamDecl, ParamsDecl, ParamValues } from "../src/tea.js";
+// scripted event takes — so widgets dispatch, they never touch model state. The
+// declaration → control resolution lives in controls-model.ts, shared with the
+// React `<ParamControls>` so both UIs render an identical control set.
+import type { ParamsDecl, ParamValues } from "../src/core/tea.js";
+import type { ControlModel } from "./controls-model.js";
+import { controlModels } from "./controls-model.js";
 
 export interface ControlDeps {
   decl: ParamsDecl;
@@ -22,71 +26,75 @@ function row(name: string, control: HTMLElement): HTMLElement {
   return wrap;
 }
 
-function numberControl(deps: { name: string; param: Extract<ParamDecl, { type: "number" }>; value: number; onParam: ControlDeps["onParam"] }): HTMLElement {
+function numberControl(deps: { model: Extract<ControlModel, { kind: "number" }>; onParam: ControlDeps["onParam"] }): HTMLElement {
+  const { model } = deps;
   const input = document.createElement("input");
   input.type = "range";
-  input.min = String(deps.param.min);
-  input.max = String(deps.param.max);
-  input.step = String(deps.param.step ?? "any");
-  input.value = String(deps.value);
+  input.min = String(model.min);
+  input.max = String(model.max);
+  input.step = String(model.step);
+  input.value = String(model.value);
   const readout = document.createElement("span");
   readout.className = "param-value";
-  readout.textContent = String(deps.value);
+  readout.textContent = String(model.value);
   input.addEventListener("input", () => {
     const next = Number(input.value);
     readout.textContent = String(next);
-    deps.onParam(deps.name, next);
+    deps.onParam(model.name, next);
   });
   const holder = document.createElement("span");
   holder.className = "range-holder";
   holder.append(input, readout);
-  return row(deps.name, holder);
+  return row(model.name, holder);
 }
 
-function booleanControl(deps: { name: string; value: boolean; onParam: ControlDeps["onParam"] }): HTMLElement {
+function booleanControl(deps: { model: Extract<ControlModel, { kind: "boolean" }>; onParam: ControlDeps["onParam"] }): HTMLElement {
+  const { model } = deps;
   const input = document.createElement("input");
   input.type = "checkbox";
-  input.checked = deps.value;
-  input.addEventListener("change", () => deps.onParam(deps.name, input.checked));
-  return row(deps.name, input);
+  input.checked = model.value;
+  input.addEventListener("change", () => deps.onParam(model.name, input.checked));
+  return row(model.name, input);
 }
 
-function selectControl(deps: { name: string; param: Extract<ParamDecl, { type: "select" }>; value: string; onParam: ControlDeps["onParam"] }): HTMLElement {
+function selectControl(deps: { model: Extract<ControlModel, { kind: "select" }>; onParam: ControlDeps["onParam"] }): HTMLElement {
+  const { model } = deps;
   const select = document.createElement("select");
-  for (const option of deps.param.options) {
+  for (const option of model.options) {
     const el = document.createElement("option");
     el.value = option;
     el.textContent = option;
-    if (option === deps.value) el.selected = true;
+    if (option === model.value) el.selected = true;
     select.append(el);
   }
-  select.addEventListener("change", () => deps.onParam(deps.name, select.value));
-  return row(deps.name, select);
+  select.addEventListener("change", () => deps.onParam(model.name, select.value));
+  return row(model.name, select);
 }
 
-function triggerControl(deps: { name: string; onTrigger: ControlDeps["onTrigger"] }): HTMLElement {
+function triggerControl(deps: { model: Extract<ControlModel, { kind: "trigger" }>; onTrigger: ControlDeps["onTrigger"] }): HTMLElement {
+  const { model } = deps;
   const button = document.createElement("button");
   button.type = "button";
   button.className = "trigger-btn";
-  button.textContent = deps.name;
-  button.addEventListener("click", () => deps.onTrigger(deps.name));
+  button.textContent = model.name;
+  button.addEventListener("click", () => deps.onTrigger(model.name));
   const wrap = document.createElement("div");
   wrap.className = "param-row";
   wrap.append(button);
   return wrap;
 }
 
-function controlFor(deps: { name: string; param: ParamDecl; value: number | boolean | string | undefined; onParam: ControlDeps["onParam"]; onTrigger: ControlDeps["onTrigger"] }): HTMLElement {
-  const { name, param } = deps;
-  switch (param.type) {
+function controlFor(deps: { model: ControlModel; onParam: ControlDeps["onParam"]; onTrigger: ControlDeps["onTrigger"] }): HTMLElement {
+  const { model } = deps;
+  switch (model.kind) {
     case "number":
-      return numberControl({ name, param, value: typeof deps.value === "number" ? deps.value : param.default, onParam: deps.onParam });
+      return numberControl({ model, onParam: deps.onParam });
     case "boolean":
-      return booleanControl({ name, value: typeof deps.value === "boolean" ? deps.value : param.default, onParam: deps.onParam });
+      return booleanControl({ model, onParam: deps.onParam });
     case "select":
-      return selectControl({ name, param, value: typeof deps.value === "string" ? deps.value : param.default, onParam: deps.onParam });
+      return selectControl({ model, onParam: deps.onParam });
     case "trigger":
-      return triggerControl({ name, onTrigger: deps.onTrigger });
+      return triggerControl({ model, onTrigger: deps.onTrigger });
   }
 }
 
@@ -94,16 +102,16 @@ function controlFor(deps: { name: string; param: ParamDecl; value: number | bool
 export function buildControls(deps: ControlDeps): HTMLElement {
   const panel = document.createElement("div");
   panel.className = "params";
-  const entries = Object.entries(deps.decl);
-  if (entries.length === 0) {
+  const models = controlModels({ decl: deps.decl, values: deps.values });
+  if (models.length === 0) {
     const empty = document.createElement("p");
     empty.className = "muted";
     empty.textContent = "This sketch declares no params.";
     panel.append(empty);
     return panel;
   }
-  for (const [name, param] of entries) {
-    panel.append(controlFor({ name, param, value: deps.values[name], onParam: deps.onParam, onTrigger: deps.onTrigger }));
+  for (const model of models) {
+    panel.append(controlFor({ model, onParam: deps.onParam, onTrigger: deps.onTrigger }));
   }
   return panel;
 }

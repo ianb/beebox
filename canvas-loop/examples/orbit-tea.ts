@@ -1,4 +1,4 @@
-// Orbit toy, TEA edition — a port of experiments/orbits.ts to The Elm
+// Orbit toy, TEA edition — a port of gallery/orbit-toy/sketch.ts to The Elm
 // Architecture. A sun with three orbiting planets:
 //
 //   - declared params drive a control panel: `speed-scale` (slider) multiplies
@@ -11,7 +11,7 @@
 // All state lives in Model; the only way it changes is `update` returning a new
 // Model; selection is a discriminated-union `mode`; the switch on `msg.type` is
 // exhaustive. `draw` only paints. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "../src/tea.js";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   "speed-scale": { type: "number", min: 0, max: 3, default: 1, step: 0.1 },

@@ -1,0 +1,1 @@
+{"date": "2026-07-14", "commit": "1b8285e9", "model": "sonnet-5", "action": "authored", "cycles": 3, "outcome": "pass", "notes": "TEA tier vs Sonnet: 3 cycles, ceremony cost near zero, zero compliance violations. Frames caught HUD ghosting under trails (reported, not fixed). Ran in parallel with the identical task on Opus (../particles-opus/)."}

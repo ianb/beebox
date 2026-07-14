@@ -11,7 +11,7 @@
 //
 // No polygon/path/clip/gradient primitive in the View subset, so this uses
 // `v.ctx` (the documented escape hatch) for path fills, clipping, gradients.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "../src/tea.js";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   tide: { type: "number", min: -1, max: 1, default: 0, step: 0.05 },

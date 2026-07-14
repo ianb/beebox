@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { EventScriptError } from "../src/errors.js";
-import { parseTeaEvents } from "../src/tea-events.js";
-import type { ParamsDecl } from "../src/tea.js";
+import { EventScriptError } from "../src/headless/errors.js";
+import { parseTeaEvents } from "../src/headless/tea-events.js";
+import type { ParamsDecl } from "../src/core/tea.js";
 
 const decl: ParamsDecl = {
   speed: { type: "number", min: 0, max: 5, default: 1 },

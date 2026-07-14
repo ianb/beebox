@@ -4,7 +4,7 @@
 // `style` select toggles numerals on/off ("classic" | "minimal"); a
 // `showDigital` boolean overlays an HH:MM:SS readout for verifying the hands
 // against the underlying time. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "../src/tea.js";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   timeScale: { type: "number", min: 1, max: 3600, default: 60, step: 1 },

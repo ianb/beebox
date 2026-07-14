@@ -13,7 +13,7 @@
 // All state lives in Model; the only way it changes is `update` returning a
 // new Model; the switch on `msg.type` is exhaustive. `draw` only paints. See
 // TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "../src/tea.js";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 export const params = {
   rate: { type: "number", min: 0, max: 12, default: 3, step: 0.5 },

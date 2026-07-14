@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { run } from "../src/runtime.js";
-import type { Sketch } from "../src/sketch.js";
-import type { SketchModule } from "../src/types.js";
+import { run } from "../src/headless/runtime.js";
+import type { Sketch, SketchModule } from "../src/headless/sketch.js";
 import { readDirBytes, readTranscript, runOptions, tmpDir } from "./helpers.js";
 
 // A sketch that renders the exact same frame every time: no motion, no logs.

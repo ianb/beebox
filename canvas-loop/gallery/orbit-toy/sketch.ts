@@ -9,8 +9,7 @@
 // fresh each frame (not accumulated), so a speed change takes effect
 // immediately and hit-testing in a handler (which runs *before* that frame's
 // draw) can predict the exact on-screen spot with the same formula.
-import type { Sketch } from "../src/sketch.js";
-import type { SketchInputEvent } from "../src/types.js";
+import type { Sketch, SketchInputEvent } from "@ianbicking/canvas-loop";
 
 interface Planet {
   name: string;

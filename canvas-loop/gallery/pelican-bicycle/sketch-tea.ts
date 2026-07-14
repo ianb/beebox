@@ -5,7 +5,7 @@
 // spin, crank revolution, ground scroll); `pause` freezes everything for a
 // clean inspection frame. All motion is a pure function of `model.frame` and
 // the params, so pausing/resuming never needs extra state. See TEA.md.
-import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "../src/tea.js";
+import type { DeepReadonly, Msg, ParamsDecl, ParamValues, Util, View } from "@ianbicking/canvas-loop";
 
 type Ctx2D = View["ctx"];
 

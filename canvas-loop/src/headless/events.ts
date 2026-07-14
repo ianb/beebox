@@ -1,6 +1,6 @@
 import { EventScriptError } from "./errors.js";
-import type { Sketch } from "./sketch.js";
-import type { EventType, SketchEvent, SketchInputEvent, SketchModule } from "./types.js";
+import type { Sketch, SketchModule } from "./sketch.js";
+import type { EventType, SketchEvent, SketchInputEvent } from "../core/types.js";
 
 const EVENT_TYPES: ReadonlySet<string> = new Set<EventType>([
   "mousedown",
@@ -10,12 +10,34 @@ const EVENT_TYPES: ReadonlySet<string> = new Set<EventType>([
   "keyup",
 ]);
 
+/**
+ * A scripted snapshot: force a capture of `frame` without dispatching to any
+ * handler or touching input state. `label` (if present) flows to the transcript
+ * frame heading. Same shape in both tiers.
+ */
+export interface SnapshotDirective {
+  frame: number;
+  type: "snapshot";
+  label?: string;
+}
+
+/** One entry in a mutable-tier events script: a scripted input or a snapshot. */
+export type ScriptEvent = SketchEvent | SnapshotDirective;
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
 function isEventType(value: string): value is EventType {
   return EVENT_TYPES.has(value);
+}
+
+function readOptionalLabel(record: Record<string, unknown>, where: string): string | undefined {
+  const label = record["label"];
+  if (label !== undefined && typeof label !== "string") {
+    throw new EventScriptError({ detail: `${where}: "label" must be a string` });
+  }
+  return label;
 }
 
 function readOptionalNumber(params: { record: Record<string, unknown>; key: string; where: string }): number | undefined {
@@ -28,7 +50,7 @@ function readOptionalNumber(params: { record: Record<string, unknown>; key: stri
   return value;
 }
 
-function parseEvent(raw: unknown, index: number): SketchEvent {
+function parseEvent(raw: unknown, index: number): ScriptEvent {
   const where = `event[${index}]`;
   if (!isRecord(raw)) {
     throw new EventScriptError({ detail: `${where} must be an object` });
@@ -38,9 +60,15 @@ function parseEvent(raw: unknown, index: number): SketchEvent {
     throw new EventScriptError({ detail: `${where}: "frame" must be a non-negative integer` });
   }
   const type = raw["type"];
+  if (type === "snapshot") {
+    const directive: SnapshotDirective = { frame, type: "snapshot" };
+    const label = readOptionalLabel(raw, where);
+    if (label !== undefined) directive.label = label;
+    return directive;
+  }
   if (typeof type !== "string" || !isEventType(type)) {
     throw new EventScriptError({
-      detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|keydown|keyup`,
+      detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|keydown|keyup|snapshot`,
     });
   }
   const key = raw["key"];
@@ -57,7 +85,7 @@ function parseEvent(raw: unknown, index: number): SketchEvent {
 }
 
 /** Validate and normalize the parsed events JSON into an ordered event list. */
-export function parseEvents(raw: unknown): SketchEvent[] {
+export function parseEvents(raw: unknown): ScriptEvent[] {
   if (!Array.isArray(raw)) {
     throw new EventScriptError({ detail: "top level must be a JSON array of events" });
   }
@@ -65,8 +93,8 @@ export function parseEvents(raw: unknown): SketchEvent[] {
 }
 
 /** Group events by frame, preserving file order within each frame. */
-export function bucketByFrame(events: readonly SketchEvent[]): Map<number, SketchEvent[]> {
-  const byFrame = new Map<number, SketchEvent[]>();
+export function bucketByFrame(events: readonly ScriptEvent[]): Map<number, ScriptEvent[]> {
+  const byFrame = new Map<number, ScriptEvent[]>();
   for (const event of events) {
     const list = byFrame.get(event.frame);
     if (list === undefined) byFrame.set(event.frame, [event]);

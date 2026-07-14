@@ -1,8 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { run } from "../src/runtime.js";
-import type { Sketch } from "../src/sketch.js";
-import type { SketchModule } from "../src/types.js";
+import { run } from "../src/headless/runtime.js";
+import type { Sketch, SketchModule } from "../src/headless/sketch.js";
 import { readTranscript, runOptions, tmpDir } from "./helpers.js";
 
 function guardModule(offend: (s: Sketch) => void): SketchModule {

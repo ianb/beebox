@@ -7,7 +7,7 @@ import type { TeaScriptEvent } from "./tea-events.js";
 import { TeaUtil, TeaView } from "./tea-view.js";
 import { withGuards } from "./guards.js";
 import type { RunMeta } from "./transcript.js";
-import type { CanvasSize, Msg, ParamsDecl, ParamValues, Util, View } from "./tea.js";
+import type { CanvasSize, Msg, ParamsDecl, ParamValues, Util, View } from "../core/tea.js";
 
 const DEFAULT_CANVAS: CanvasSize = { width: 400, height: 300 };
 
@@ -128,6 +128,10 @@ class TeaRunner {
     const events = this.#eventsByFrame.get(frame) ?? [];
     this.#recorder.markEvents(events.length > 0);
     for (const event of events) {
+      if (event.type === "snapshot") {
+        this.#recorder.requestSnapshot(event.label);
+        continue;
+      }
       this.#fold(this.#toMsg(event));
     }
     this.#fold({ type: "tick", frame });
@@ -142,7 +146,7 @@ class TeaRunner {
     this.#model = frozenModel(next);
   }
 
-  #toMsg(event: TeaScriptEvent): Msg {
+  #toMsg(event: Exclude<TeaScriptEvent, { type: "snapshot" }>): Msg {
     switch (event.type) {
       case "mousedown":
       case "mouseup":

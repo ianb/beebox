@@ -4,9 +4,9 @@
 // wraps a real DOM `CanvasRenderingContext2D`; `log` forwards to the runtime's
 // transcript sink and `snapshot` is a no-op (the live canvas is always visible).
 import type { SKRSContext2D } from "@napi-rs/canvas";
-import type { ClipShape, ColorStop, Ctx2D, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../src/paint.js";
-import { Painter } from "../src/painter.js";
-import type { Paint, TextAlign, TextBaseline, View } from "../src/tea.js";
+import type { ClipShape, ColorStop, Ctx2D, LinearGradient, PathCommand, RadialGradient, Vec2 } from "../src/core/paint.js";
+import { Painter } from "../src/core/painter.js";
+import type { Paint, TextAlign, TextBaseline, View } from "../src/core/tea.js";
 
 export class BrowserView implements View {
   #painter: Painter;

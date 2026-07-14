@@ -3,7 +3,7 @@
 // serialises every interaction to the headless events-file format. All wiring
 // goes through the Runtime's input methods, so hand interaction and scripted
 // replay converge on one representation.
-import type { CanvasSize } from "../src/tea.js";
+import type { CanvasSize } from "../src/core/tea.js";
 import { buildControls } from "./controls.js";
 import { REGISTRY } from "./registry.js";
 import type { RegistryEntry } from "./sketch-types.js";

@@ -5,7 +5,8 @@ import { Sketch } from "./sketch.js";
 import type { RunMeta } from "./transcript.js";
 import { withGuards } from "./guards.js";
 import { SketchUsageError } from "./errors.js";
-import type { SketchEvent, SketchModule } from "./types.js";
+import type { SketchModule } from "./sketch.js";
+import type { ScriptEvent } from "./events.js";
 
 export interface RunOptions {
   module: SketchModule;
@@ -15,7 +16,7 @@ export interface RunOptions {
   seed: number;
   fps: number;
   every: number;
-  events: readonly SketchEvent[];
+  events: readonly ScriptEvent[];
   eventsPath: string | undefined;
 }
 
@@ -25,7 +26,7 @@ class CanvasLoopRunner {
   #options: RunOptions;
   #recorder: FrameRecorder;
   #sketch: Sketch;
-  #eventsByFrame: Map<number, SketchEvent[]>;
+  #eventsByFrame: Map<number, ScriptEvent[]>;
 
   constructor(options: RunOptions) {
     this.#options = options;
@@ -71,6 +72,10 @@ class CanvasLoopRunner {
     if (events !== undefined) {
       this.#recorder.markEvents(events.length > 0);
       for (const event of events) {
+        if (event.type === "snapshot") {
+          this.#recorder.requestSnapshot(event.label);
+          continue;
+        }
         dispatchEvent({ sketch: this.#sketch, module: this.#options.module, event });
       }
     }

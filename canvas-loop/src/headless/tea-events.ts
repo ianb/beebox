@@ -1,12 +1,13 @@
 import { EventScriptError } from "./errors.js";
-import type { ParamDecl, ParamsDecl } from "./tea.js";
+import type { ParamDecl, ParamsDecl } from "../core/tea.js";
 
-/** One entry in a TEA events script: scripted input, a param edit, or a trigger. */
+/** One entry in a TEA events script: scripted input, a param edit, a trigger, or a snapshot. */
 export type TeaScriptEvent =
   | { frame: number; type: "mousedown" | "mouseup" | "mousemove"; x?: number; y?: number }
   | { frame: number; type: "keydown" | "keyup"; key?: string }
   | { frame: number; type: "param"; name: string; value: number | boolean | string }
-  | { frame: number; type: "trigger"; name: string };
+  | { frame: number; type: "trigger"; name: string }
+  | { frame: number; type: "snapshot"; label?: string };
 
 const MOUSE_TYPES: ReadonlySet<string> = new Set(["mousedown", "mouseup", "mousemove"]);
 const KEY_TYPES: ReadonlySet<string> = new Set(["keydown", "keyup"]);
@@ -126,6 +127,17 @@ function parseMouseEvent(params: { record: Record<string, unknown>; frame: numbe
   return event;
 }
 
+function parseSnapshotEvent(params: { record: Record<string, unknown>; frame: number; where: string }): TeaScriptEvent {
+  const { record, frame, where } = params;
+  const label = record["label"];
+  if (label !== undefined && typeof label !== "string") {
+    throw new EventScriptError({ detail: `${where}: "label" must be a string` });
+  }
+  const event: TeaScriptEvent = { frame, type: "snapshot" };
+  if (label !== undefined) event.label = label;
+  return event;
+}
+
 function parseOne(params: { raw: unknown; index: number; decl: ParamsDecl }): TeaScriptEvent {
   const { raw, index, decl } = params;
   const where = `event[${index}]`;
@@ -139,10 +151,11 @@ function parseOne(params: { raw: unknown; index: number; decl: ParamsDecl }): Te
   }
   if (type === "param") return parseParamEvent({ record: raw, frame, decl, where });
   if (type === "trigger") return parseTriggerEvent({ record: raw, frame, decl, where });
+  if (type === "snapshot") return parseSnapshotEvent({ record: raw, frame, where });
   if (isMouseType(type)) return parseMouseEvent({ record: raw, frame, type, where });
   if (isKeyType(type)) return parseKeyEvent({ record: raw, frame, type, where });
   throw new EventScriptError({
-    detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|keydown|keyup|param|trigger`,
+    detail: `${where}: "type" must be one of mousedown|mouseup|mousemove|keydown|keyup|param|trigger|snapshot`,
   });
 }
 

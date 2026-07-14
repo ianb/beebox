@@ -2,9 +2,9 @@
 // (the same mulberry32 stream the CLI uses, so a recorded session replays
 // byte-for-byte headless), a live view of the resolved param values, and `log`.
 // No drawing surface — `update` cannot paint, exactly as in the headless runtime.
-import { SketchUsageError } from "../src/errors.js";
-import type { SeededRandom } from "../src/prng.js";
-import type { ParamsDecl, ParamValues, Util } from "../src/tea.js";
+import { SketchUsageError } from "../src/headless/errors.js";
+import type { SeededRandom } from "../src/core/prng.js";
+import type { ParamsDecl, ParamValues, Util } from "../src/core/tea.js";
 
 export class BrowserUtil<D extends ParamsDecl> implements Util<D> {
   #random: SeededRandom;

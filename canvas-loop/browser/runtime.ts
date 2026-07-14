@@ -6,9 +6,9 @@
 // frames (dev parity with the headless freeze), and every input is recorded as a
 // {frame, …} entry in the exact events-file format — so a session recorded here
 // replays byte-for-byte through the CLI.
-import { SeededRandom } from "../src/prng.js";
-import type { Msg, ParamsDecl, ParamValues } from "../src/tea.js";
-import type { TeaScriptEvent } from "../src/tea-events.js";
+import { SeededRandom } from "../src/core/prng.js";
+import type { Msg, ParamsDecl, ParamValues } from "../src/core/tea.js";
+import type { TeaScriptEvent } from "../src/headless/tea-events.js";
 import { BrowserUtil } from "./browser-util.js";
 import { BrowserView } from "./browser-view.js";
 import type { PlaygroundModule } from "./sketch-types.js";
@@ -17,9 +17,11 @@ const STEP_MS = 1000 / 60;
 const MAX_STEPS_PER_FRAME = 5;
 const MAX_DT_MS = 250;
 
-// A queued input before it is stamped with the frame it dispatches on.
+// A queued input before it is stamped with the frame it dispatches on. `snapshot`
+// is a scripted-only directive (a forced capture, never live UI input), so it is
+// excluded from the browser's intent stream and its recorded event log.
 type InputIntent<T> = T extends unknown ? Omit<T, "frame"> : never;
-type Intent = InputIntent<TeaScriptEvent>;
+type Intent = InputIntent<Exclude<TeaScriptEvent, { type: "snapshot" }>>;
 
 function deepFreeze(value: unknown, seen: WeakSet<object>): void {
   if (value === null || typeof value !== "object") return;
@@ -35,11 +37,15 @@ function frozen(value: unknown): unknown {
   return value;
 }
 
-function initialParams(decl: ParamsDecl): ParamValues<ParamsDecl> {
+/** A partial override of declared param defaults, applied at construct/restart. */
+export type ParamOverrides = Readonly<Record<string, number | boolean | string>>;
+
+function initialParams(decl: ParamsDecl, overrides: ParamOverrides | undefined): ParamValues<ParamsDecl> {
   const values: Record<string, number | boolean | string> = {};
   for (const [name, param] of Object.entries(decl)) {
     if (param.type === "trigger") continue;
-    values[name] = param.default;
+    const override = overrides?.[name];
+    values[name] = override ?? param.default;
   }
   return Object.freeze(values);
 }
@@ -58,6 +64,10 @@ export interface RuntimeDeps {
   seed: number;
   onFrame: (frame: number) => void;
   onLog: (entry: RuntimeLog) => void;
+  /** Partial override of declared param defaults — the initial values init() sees. */
+  initialParams?: ParamOverrides;
+  /** Streams every recorded input entry (the `{frame, type, …}` events-file line) as it is dispatched. */
+  onEvent?: (entry: TeaScriptEvent) => void;
 }
 
 export class Runtime {
@@ -80,15 +90,19 @@ export class Runtime {
   #last: number | undefined;
   #onFrame: (frame: number) => void;
   #onLog: (entry: RuntimeLog) => void;
+  #onEvent: ((entry: TeaScriptEvent) => void) | undefined;
+  #overrides: ParamOverrides | undefined;
 
   constructor(deps: RuntimeDeps) {
     this.#module = deps.module;
     this.#decl = deps.module.params ?? {};
     this.#seed = deps.seed;
     this.#random = new SeededRandom(deps.seed);
-    this.#params = initialParams(this.#decl);
+    this.#overrides = deps.initialParams;
+    this.#params = initialParams(this.#decl, this.#overrides);
     this.#onFrame = deps.onFrame;
     this.#onLog = deps.onLog;
+    this.#onEvent = deps.onEvent;
     this.#util = new BrowserUtil({
       random: this.#random,
       getParams: () => this.#params,
@@ -128,7 +142,7 @@ export class Runtime {
       getParams: () => this.#params,
       log: (args) => this.#recordLog(args),
     });
-    this.#params = initialParams(this.#decl);
+    this.#params = initialParams(this.#decl, this.#overrides);
     this.#pending = [];
     this.#log = [];
     this.#frame = 0;
@@ -211,8 +225,12 @@ export class Runtime {
     const intents = this.#pending;
     this.#pending = [];
     for (const intent of intents) {
-      this.#log.push({ frame: this.#frame, ...intent });
+      const entry: TeaScriptEvent = { frame: this.#frame, ...intent };
+      this.#log.push(entry);
       this.#fold(this.#toMsg(intent));
+      // Fire after the fold so a `param` entry's value is already applied to
+      // `#params` — a watcher reading `paramValues()` sees the new value.
+      this.#onEvent?.(entry);
     }
   }
 

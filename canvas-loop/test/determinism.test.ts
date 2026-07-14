@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-import { parseEvents } from "../src/events.js";
-import { run } from "../src/runtime.js";
-import type { SketchModule } from "../src/types.js";
+import { parseEvents } from "../src/headless/events.js";
+import { run } from "../src/headless/runtime.js";
+import type { SketchModule } from "../src/headless/sketch.js";
 import * as bounce from "../examples/bounce.js";
 import { readDirBytes, runOptions, tmpDir } from "./helpers.js";
 

@@ -1,7 +1,7 @@
 import type { SKRSContext2D } from "@napi-rs/canvas";
-import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "./paint.js";
+import type { ClipShape, ColorStop, LinearGradient, Paint, PathCommand, RadialGradient, Vec2 } from "../core/paint.js";
 import type { Sketch } from "./sketch.js";
-import type { ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "./tea.js";
+import type { ParamsDecl, ParamValues, TextAlign, TextBaseline, Util, View } from "../core/tea.js";
 
 /**
  * The drawing capability handed to `draw`. A thin facade over the shared Sketch

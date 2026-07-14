@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { test } from "node:test";
-import { Sketch } from "../src/sketch.js";
+import { Sketch } from "../src/headless/sketch.js";
 
 // A no-op host: these tests drive the Sketch engine directly and probe pixels,
 // so they don't need the recorder's log/snapshot channels.

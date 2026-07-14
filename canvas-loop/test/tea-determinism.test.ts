@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { test } from "node:test";
-import { toTeaModule } from "../src/tea-load.js";
-import { parseTeaEvents } from "../src/tea-events.js";
-import { teaRun } from "../src/tea-runtime.js";
+import { toTeaModule } from "../src/headless/tea-load.js";
+import { parseTeaEvents } from "../src/headless/tea-events.js";
+import { teaRun } from "../src/headless/tea-runtime.js";
 import * as orbitTea from "../examples/orbit-tea.js";
 import { readDirBytes, teaRunOptions, tmpDir } from "./helpers.js";
 

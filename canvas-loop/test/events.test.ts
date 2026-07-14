@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { dispatchEvent } from "../src/events.js";
-import { run } from "../src/runtime.js";
-import { Sketch } from "../src/sketch.js";
-import type { SketchEvent, SketchHost, SketchInputEvent, SketchModule } from "../src/types.js";
+import { dispatchEvent } from "../src/headless/events.js";
+import { run } from "../src/headless/runtime.js";
+import { Sketch, type SketchModule } from "../src/headless/sketch.js";
+import type { SketchEvent, SketchHost, SketchInputEvent } from "../src/core/types.js";
 import { readTranscript, runOptions, tmpDir } from "./helpers.js";
 
 const silentHost: SketchHost = { recordLog() {}, requestSnapshot() {} };

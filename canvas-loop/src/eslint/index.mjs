@@ -1,14 +1,25 @@
 /**
- * Local ESLint plugin enforcing the TEA (Elm-Architecture) sketch discipline.
- * Applied only to sketch dirs (examples/, experiments/) via eslint.config.mjs.
+ * `eslint-plugin-tea` — the canvas-loop TEA (Elm-Architecture) sketch discipline
+ * as a real ESLint plugin (the package's `./eslint` export). Stays plain `.mjs`:
+ * ESLint loads config/plugins as JS and the package has no build step, so there
+ * is nothing to compile the rules through.
+ *
  * The types + runtime deep-freeze already make violations fail; these rules are
  * the belt that fails them at lint time, before a run, with a clear message.
  *
- * Rules:
+ * Rules (also available as named exports):
  *   - no-module-state    — no top-level `let`/`var` (all state lives in Model).
  *   - no-model-mutation  — no assignment/delete/mutating-method on `model.…`.
  *   - no-async-sketch    — no async/await/.then/new Promise (runs are sync).
  *   - no-classes         — no class declarations/expressions.
+ *
+ * `configs.recommended` is a flat-config block bundling those four rules plus the
+ * `no-restricted-imports` framework-import restriction, scoped to `*-tea.ts` files.
+ * One part of the discipline is NOT in it: the type-aware
+ * `@typescript-eslint/switch-exhaustiveness-check` (exhaustive `Msg` switch).
+ * That rule needs TypeScript project information (`parserOptions.projectService`),
+ * so a consumer wires it into their own type-aware block — see this package's
+ * `eslint.config.mjs` and TEA.md for the exact snippet.
  *
  * `no-classes` is a custom rule rather than a config-level `no-restricted-syntax`
  * entry on purpose: adding a second `no-restricted-syntax` for the sketch dirs
@@ -153,6 +164,25 @@ const noClasses = {
   },
 };
 
+// Named rule exports (standard plugin shape) alongside the aggregate `rules` map.
+export { noModuleState, noModelMutation, noAsyncSketch, noClasses };
+
+/**
+ * Sketches may import ONLY the canvas-loop framework — the bare package name.
+ * Bans npm packages, node builtins, relative reaches into framework internals,
+ * and subpath imports: the sketch's whole world arrives through Msg/Util/View,
+ * type-only. Shared here so `configs.recommended` and any hand-rolled block use
+ * the identical pattern.
+ */
+export const teaImportRestriction = {
+  patterns: [
+    {
+      regex: "^(?!@ianbicking/canvas-loop$).+",
+      message: "Sketches may import only the canvas-loop framework types (@ianbicking/canvas-loop).",
+    },
+  ],
+};
+
 const plugin = {
   meta: { name: "eslint-plugin-tea" },
   rules: {
@@ -160,6 +190,25 @@ const plugin = {
     "no-model-mutation": noModelMutation,
     "no-async-sketch": noAsyncSketch,
     "no-classes": noClasses,
+  },
+  configs: {},
+};
+
+/**
+ * The TEA discipline as a ready-to-spread flat-config block, scoped to the
+ * `*-tea.ts` files. Type-aware exhaustiveness is documented but excluded (see the
+ * file header). Spread this after your base config; nothing here redefines a
+ * preset rule, so the shared config is never weakened.
+ */
+plugin.configs.recommended = {
+  files: ["**/*-tea.ts"],
+  plugins: { tea: plugin },
+  rules: {
+    "tea/no-module-state": "error",
+    "tea/no-model-mutation": "error",
+    "tea/no-async-sketch": "error",
+    "tea/no-classes": "error",
+    "no-restricted-imports": ["error", teaImportRestriction],
   },
 };
 
