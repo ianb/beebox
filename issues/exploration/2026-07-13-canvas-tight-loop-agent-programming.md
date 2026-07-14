@@ -187,6 +187,74 @@ If that ever matters, adopt an existing microui port (it emits abstract draw
 commands you render yourself — maps 1:1 onto Canvas2D) rather than writing a
 toolkit. Bet: the params model covers the real box use cases; start there.
 
+## Design sketch (2026-07-14): visualization-with-controls framework
+
+Survey of declared-input systems (Observable `viewof`, Vega-Lite
+`params`/`bind`, ISF, fxhash `fx(params)`, ipywidgets/Streamlit,
+Tweakpane/leva, Storybook args+play+Chromatic, Tangle/Idyll) plus an Elm
+assessment. Key precedents:
+
+- **Storybook is the only existing system unifying all three consumers**:
+  declared `args` → auto controls panel, `play()` → scripted interaction,
+  Chromatic → golden-image regression — one declared object drives the live
+  UI and the headless test identically. Not adoptable directly (React/DOM
+  component orientation), but the *story-as-shared-contract* pattern is the
+  structural template.
+- **ISF** (GLSL + typed-input JSON header) is the cleanest declaration
+  separation: zero UI code in the artwork; any host renders widgets from
+  metadata. **Vega-Lite** splits `params` (the value, drivable
+  programmatically with no UI) from `bind` (the optional widget) — exactly
+  the headless/browser duality. **fxhash** proves `(params, seed) → output`
+  as a pure pair is what makes offline deterministic verification work.
+- **Tweakpane/leva** bind to a plain object (simplest contract; poll it per
+  frame) but their two-way widget↔state mutation is the anti-pattern to
+  wrap: changes must flow through the event log, not mutate state directly.
+
+The sketch (fusing those with the Elm shape we already have):
+
+```ts
+export const params = {
+  speed:   { type: "number", min: 0, max: 0.2, default: 0.06 },
+  palette: { type: "select", options: ["warm", "cool"], default: "warm" },
+  paused:  { type: "boolean", default: false },
+  reset:   { type: "trigger" },
+} satisfies ParamsDecl;
+```
+
+- Sketch reads values only (`s.params.speed`), never touches a widget;
+  triggers arrive as a handler (`paramTriggered(s, "reset")`). Runtime owns
+  the authoritative param store.
+- **One frame-stamped log for everything** (the Elm Msg lesson): param
+  changes `{frame, param: "speed", value: 0.12}`, triggers, and raw
+  pointer/key events (which stay — direct manipulation like dragging a
+  planet is the sketch's own domain) are entries in the same ordered log.
+  Output = pure function of (sketch, params, seed, log).
+- **Test harness** = the existing CLI + param/trigger event types + later
+  pixelmatch golden assertions. A named fixture ("story"): params preset +
+  event script + expected snapshots, consumed identically by both harnesses.
+- **HTML harness**: same sketch module in a browser page — real canvas,
+  Tweakpane panel auto-generated from the declaration (one-way: widgets
+  render *from* the store; their edits are dispatched *as log entries*), and
+  a **record mode**: interact by hand, capture the param/pointer log as an
+  events JSON, replay it headless. Record-in-browser → replay-as-test is the
+  payoff of full symmetry.
+
+### Elm itself? (2026-07-14)
+
+Assessed adopting Elm outright: it covers ~80% of the semantics
+(purity/determinism language-enforced, `elm-program-test` ≈ our injection
+harness, messages-as-data native, time-travel debugger built in) but ~40% of
+the system — **no headless rasterization exists** (elm-canvas emits a draw-
+command list a browser custom element paints; headless we'd still build the
+Skia/transcript/CLI layer ourselves), no auto-UI-from-params standard, a
+frozen ecosystem (0.19 since 2018), a second toolchain, and — decisive —
+much weaker agent fluency than TS. Conclusion: keep TS with an Elm-shaped
+runtime; the experiment already demonstrated Elm-grade replay from a mutable
+sketch. Two Elm ideas retained: scrub-to-frame-N (any frame reconstructible
+on demand by re-folding the log) and optionally having `draw` emit a
+**command list** instead of painting imperatively — enabling frame diffing,
+cheap dedup, and browser rendering of the same sketch without Skia.
+
 ## Research (2026-07-13) — LLM+graphics feedback-loop prior art
 
 Nobody has built the full idea. The generate → render → look → revise loop is
