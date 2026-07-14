@@ -1,0 +1,27 @@
+{
+  "name": "canvas-loop",
+  "version": "0.1.0",
+  "description": "Deterministic, browser-less, frame-stepped Canvas2D sandbox for agent programming",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "cli": "node --import tsx src/cli.ts",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node --import tsx --test test/*.test.ts"
+  },
+  "dependencies": {
+    "@napi-rs/canvas": "1.0.2"
+  },
+  "devDependencies": {
+    "@ianbicking/personal-vibe-check": "workspace:*",
+    "@types/node": "^25.9.1",
+    "eslint": "^9.39.2",
+    "tsx": "^4.22.3",
+    "typescript": "^5.7.0"
+  },
+  "license": "MIT"
+}

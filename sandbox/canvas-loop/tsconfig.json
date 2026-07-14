@@ -5,10 +5,10 @@
     "moduleResolution": "NodeNext",
     "strict": true,
     "noImplicitAny": true,
+    "noUncheckedIndexedAccess": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true,
     "exactOptionalPropertyTypes": true,
-    "noUncheckedIndexedAccess": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
@@ -17,6 +17,6 @@
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["bin/**/*.ts"],
-  "exclude": ["node_modules", "callback-box", "cardworks", "agent-doctest", "sandbox", "callback-clerk", "browse"]
+  "include": ["src/**/*", "examples/**/*", "test/**/*"],
+  "exclude": ["node_modules", "out"]
 }
