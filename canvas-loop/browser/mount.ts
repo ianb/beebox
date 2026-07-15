@@ -91,8 +91,15 @@ export function attachSketch(canvas: HTMLCanvasElement, opts: AttachSketchOption
     ...(opts.onError !== undefined ? { onError: opts.onError } : {}),
   });
   runtime.setPaused(opts.paused);
-  runtime.start();
+  // Wire input BEFORE starting the loop: if listener setup throws (hostile or
+  // partial DOM shims), no rAF loop is left running with no teardown returned.
   const detachInput = wireInput(canvas, runtime);
+  try {
+    runtime.start();
+  } catch (e) {
+    detachInput();
+    throw e;
+  }
   return {
     runtime,
     teardown: () => {
@@ -198,12 +205,20 @@ export function mountSketch(mount: HTMLElement, opts: MountSketchOptions): () =>
     );
   };
 
-  if (showTransport) container.append(buildTransport({ runtime, frameLabel, renderPanel }));
-  if (showPanel) {
-    renderPanel();
-    container.append(panelHost);
+  // Any throw between a started runtime and a returned teardown would leak the
+  // rAF loop + listeners with no way to stop them — tear down before rethrowing.
+  try {
+    if (showTransport) container.append(buildTransport({ runtime, frameLabel, renderPanel }));
+    if (showPanel) {
+      renderPanel();
+      container.append(panelHost);
+    }
+    mount.append(container);
+  } catch (e) {
+    attached.teardown();
+    container.remove();
+    throw e;
   }
-  mount.append(container);
 
   return () => {
     attached?.teardown();
