@@ -13,7 +13,8 @@ import {
 } from "../../src/schemas/index.js";
 import { createIntakeJobTemplate } from "../../src/schemas/intake-job.js";
 import { WebpageSchema, createWebpageTemplate } from "../../src/schemas/webpage.js";
-import { FigureSchema, createFigureTemplate, figureStarterSketch } from "../../src/schemas/figure.js";
+import { FigureSchema, createFigureTemplate } from "../../src/schemas/figure.js";
+import { figureStarterSketch } from "../../src/schemas/figure-starters.js";
 import { ConceptMapSchema, createConceptMapTemplate } from "../../src/schemas/concept-map.js";
 import { CourseSchema, createCourseTemplate } from "../../src/schemas/course.js";
 import { ExpositionPlanSchema, createExpositionPlanTemplate } from "../../src/schemas/exposition-plan.js";

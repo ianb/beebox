@@ -22,7 +22,8 @@ import { createBriefingTemplate } from "./briefing.js";
 import { createPersonTemplate } from "./person.js";
 import { createPlaceTemplate } from "./place.js";
 import { createDocTemplate } from "./doc.js";
-import { createFigureTemplate, figureStarterSketch, FigureRuntime } from "./figure.js";
+import { createFigureTemplate, FigureRuntime } from "./figure.js";
+import { figureStarterSketch } from "./figure-starters.js";
 import { registerTemplate } from "./templates-registry.js";
 
 registerTemplate({
