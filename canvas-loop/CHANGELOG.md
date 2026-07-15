@@ -3,6 +3,27 @@
 `@ianbicking/canvas-loop` is EXPERIMENTAL: the API moves as agent exercises teach
 us more. Every change lands here — hand-written and terse.
 
+## Unreleased
+
+- **`./browser` subpath — React-free `mountSketch`.** New `browser/mount.ts`
+  exports `mountSketch(mount, opts) => teardown`, an imperative wrapper over the
+  browser TEA runtime + declaration-generated controls (shared
+  `controls-model.ts`), with no React dependency. Opts: `module`, `seed?`,
+  `autoplay?`, `panel?`, `transport?`, `initialParams?` (validated against the
+  module's param declaration — unknown keys or type mismatches warn and fall
+  back to the declared default), `onParamsChange?`, `onEvent?`. Control styles
+  ship as an importable stylesheet (`@ianbicking/canvas-loop/browser/figure.css`)
+  — no runtime `<style>` injection, so a strict host CSP can't blank them.
+  `<SketchFigure>` delegates to it (one browser implementation); the
+  dependency-isolation test extends to prove `./browser` pulls in neither React
+  nor the native canvas backend.
+- **First host integration: callback-box figure runtime.** A TEA sketch module
+  may also default-export a host figure factory
+  (`(cl, { mount, figure }) => cl.mountSketch(...)`); the headless CLI ignores
+  the default export (TEA detection keys on the named `update`). callback-box
+  adds `canvas-loop` as a fourth `figure` runtime that lazy-imports `./browser`
+  and mounts the sketch through this factory. See TEA.md's dual-export section.
+
 ## 0.1.0
 
 First release as a workspace library (was `sandbox/canvas-loop`).
