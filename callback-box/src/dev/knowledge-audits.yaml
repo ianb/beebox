@@ -148,6 +148,9 @@ tests:
   # and figure-canvas-loop-import-rule nails the reason — "the package isn't
   # resolvable inside a box, so a value import would fail at compile time;
   # type-only imports are erased" — plus the `cl`-injection detail.
+  # Re-run 2026-07-15 after the review rounds rewrote the figure instructions
+  # (params-snippet fix, warn-vs-silent wording, embed-mapping table, starters
+  # split): 2/2 still pass, unchanged — the rewrites didn't degrade recall.
 
   - id: figure-canvas-loop-runtime
     prompt: "You want an interactive, deterministic canvas figure with auto-generated slider controls. What card do you create and what runtime do you declare?"
