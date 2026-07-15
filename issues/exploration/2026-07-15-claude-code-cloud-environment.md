@@ -147,11 +147,73 @@ multi-worktree serving under `~/src/{callback-worktrees,box-worktrees}` (only
 — it just does nothing. Router state/paths that *do* matter are already
 env-overridable (`CALLBACK_MAIN_ROOT`, `CALLBACK_STATE_DIR`, `ROUTER_PORT`).
 
+### The "no preview URL" problem — and how the ecosystem solves it
+
+Gap #5 (no dev-server preview) is not a callback-box problem; it's universal to
+locked-down agent sandboxes, and the market has converged on an answer. Surveyed
+GitHub Codespaces, Gitpod/Ona, Cursor cloud agents, Devin, OpenAI Codex cloud,
+Google Jules, Replit Agent, and the preview-builders (v0/Bolt/Lovable).
+
+**The convergence — split "does it work" from "does it look right," automate only
+the first:**
+
+- **The agent drives a browser *inside the sandbox* against `localhost` and
+  surfaces screenshots back to the human.** This is the one technique every
+  serious product implements: Codex "spins up its own browser, screenshots the
+  result, attaches it to the PR"; Jules bundles Playwright and returns
+  screenshots in the diff viewer; Devin/Cursor run computer-use loops; Replit
+  drives a real browser click-through as replayable video. "Does it look right"
+  routes to human eyes via those screenshots — not a live preview.
+- **`curl`/HTTP against `localhost` is the auth-free smoke-check layer** — boot
+  the server as a background process, then hit loopback. Works unchanged in an
+  outbound-only sandbox (in Codespaces/Gitpod, loopback is explicitly the
+  auth-free path; the *external* preview URL is what trips an auth wall).
+- **Playwright screenshot / visual-regression assertions** committed as artifacts
+  are the sandbox-native answer for "looks right" too — deterministic, agent-owned
+  end-to-end, no human and no preview URL needed.
+
+**Human-reachable preview URLs are the dividing line, and Claude Code is on the
+have-not side** (with Codex and Jules): Codespaces/Gitpod/Replit forward a
+detected port to a hostname (mature, but **default-private behind an auth wall**);
+Devin exposes a genuine public `*.devinapps.com` tunnel (and is the cautionary
+tale — auto-`expose_port` is a documented prompt-injection exfiltration vector);
+the v0/Bolt/Lovable builders sidestep it by making a live preview *the product*.
+For Claude Code on the web specifically (confirmed against the docs): **no
+port-forwarding, no preview pane** — the request to surface `localhost` URLs back
+to the human was declined as not-planned. But the sandbox ships a headless browser
+(chromedriver; Playwright installable), so **in-session browser testing against
+`localhost` is fully available** — you just can't hand a human a live link.
+Background `pnpm dev &` stays alive across the agent's turns **but dies on session
+end/resume** (pipe logs to a file). Tunnels (ngrok/cloudflared) are nobody's
+blessed path — they fight the proxy/allowlist and are a security surface, not a
+feature; would need Custom-firewall domains and still isn't recommended.
+
+**callback-box is unusually well-positioned for the convergent pattern** — it
+already has the substrate the ecosystem settled on: an **agent-driven browser**
+(`agent-browser` / `bin/browse`) and **tours** (`docs/tours.md` — scripted browser
+walks for UI/a11y review). Those are built for exactly "agent drives the UI
+headless and reports back." The cloud-specific work would be pointing them at an
+in-session `localhost` server instead of the shared router URL, and surfacing
+their screenshots into the session — not inventing a new mechanism. The honest
+expectation stays: **the agent can verify "does it work" (boot + curl + headless
+Playwright/tours + screenshots); the human does not get a live interactive
+preview** and reviews via screenshots or by running locally.
+
+Everyone who automates the fix-loop reports the same failure mode — the agent
+loops (Replit "goes in circles eating credits"; Lovable "Try to fix" ~60% on
+*simple* issues). A circuit-breaker / hand-back-to-human is standard; worth
+keeping in mind if we ever wire an auto-verify loop.
+
 ### Bottom line
 
 Making this repo *usable* on Claude Code on the web is a **small, config-shaped
 task**, not a code change — but it buys a **restricted mode**: engine/library
-code work + `typecheck`/`lint`/`test` + PR, with **no running box and no UI**.
+code work + `typecheck`/`lint`/`test` + PR. The "no running box / no UI" limit is
+**softer than it first looked**: the ecosystem-standard answer (boot server as a
+background process → agent tests via `curl` + headless browser → screenshots back
+to the human) is available in-sandbox, and callback-box already owns the tooling
+for it (`agent-browser`, tours). What's genuinely absent is a *live interactive
+preview* for the human — that stays a local-only affordance.
 
 Minimal viable setup (one-time, per-environment, in the UI):
 1. Environment with **Trusted** networking, Node pinned to **22**.
@@ -164,8 +226,16 @@ Minimal viable setup (one-time, per-environment, in the UI):
 
 Open questions / decisions before doing it:
 - **Is it worth it?** The value is "kick off an engine-code task or review a PR's
-  tests from a browser/phone." Given no-UI + no-box, is that a workflow the
-  boxholder actually wants, vs. the local worktree flow that already exists?
+  tests from a browser/phone." With the browser-testing path above, an agent could
+  even boot a box + drive tours headless and report screenshots — so it's more than
+  blind engine work, just short of a live human preview. Still: is that a workflow
+  the boxholder wants vs. the local worktree flow that already exists?
+- **Wire the existing browser tooling to in-session `localhost`?** `agent-browser`/
+  `bin/browse` and tours currently target the shared router URL. Adopting the
+  convergent pattern means a mode that points them at a locally-booted
+  `pnpm dev` server in the sandbox and surfaces their screenshots into the
+  session. That's the one piece of actual code work the cloud story might justify
+  — but only if cloud sessions turn out to be a workflow worth investing in.
 - **Setup-time budget.** Does a cold `pnpm install` of a 1.1 GB / 15-package
   monorepo fit in ~5 min on 4 vCPU? Needs an actual measurement — this decides
   whether the naive setup script works or we need the SessionStart-hook split.
